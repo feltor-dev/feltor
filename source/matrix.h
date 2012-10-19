@@ -1,14 +1,15 @@
 #ifndef _TL_MATRIX_
 #define _TL_MATRIX_
 
+#include <iostream>
 #include "fftw3.h"
 
 class Matrix
 {
   private:
       //maybe an id (static int id) wouldn't be bad to identify in errors
-    const int n;
-    const int m;
+    const size_t n;
+    const size_t m;
     double **ptr;
 
   public:
@@ -17,7 +18,8 @@ class Matrix
     ~Matrix();
     Matrix( const Matrix& src);
     Matrix& operator=( const Matrix& src);
-    inline void swap( Matrix& lhs, Matrix& rhs);
+    Matrix& operator=( const double value);
+    inline void swap( Matrix& rhs);
 
     double& operator()( const size_t i, const size_t j);
     const double& operator()( const size_t i, const size_t j) const;

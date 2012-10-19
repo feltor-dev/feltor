@@ -1,14 +1,39 @@
 #include "matrix.h"
+#include "numerics/fehler.h"
 
+using namespace std;
 
 int main()
 {
-    Matrix m1(7,8);
-    Matrix m2(7,8,9);
+    cout << "Test der TL Matrixklasse\n";
+    cout << "Construction m1\n";
+    Matrix m1(2,8);
+    cout << "Construktion m2\n";
+    Matrix m2(2,8,9);
 
+    cout << "Copy m3(m2)\n";
     Matrix m3(m2);
-    m1 = m3;
+    cout << "swap m1 m2\n";
+    swap( m1, m2);
+    cout << "const Matrix\n";
+    const Matrix mc( m1);
+    cout << "try Error handling on wrong index\n";
+    try{ 
+        cout << mc(9,2);
+    }
+    catch ( Fehler& fehler){ 
+        fehler.anzeigen();}
+    cout << "Assignment m1 = m3\n";
+    m2 = m3;
+    cout << "cout m1 m2 m3 sollten alle gleich sein\n";
     cout << m1 << "\n" << m2 << "\n" << m3 << endl;
+    cout << "Assignment m1 = 0, m2=3 \n";
+    m1 = 0, m2 = 3;
+    cout << m1 << "\n" << m2 << "\n" << m3 << endl;
+    cout << "Permute clockwise\n";
+    permute_cw( m1, m2, m3);
+    cout << m1 << "\n" << m2 << "\n" << m3 << endl;
+
 
 
 
