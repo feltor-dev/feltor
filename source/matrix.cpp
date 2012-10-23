@@ -1,179 +1,139 @@
 
-#include "numerics/fehler.h"
 
-class AllocationError: public Fehler
+template <class T, enum Padding P>
+Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m)
 {
-  private:
-    size_t n, m;
-  public:
-    AllocationError( size_t n, size_t m, const char *d, const int l): Fehler( "Memory couldn't be allocated for: ", d, l), n(n), m(m){}
-    void anzeigen() const
-    {
-        Fehler::anzeigen();
-        std::cerr << "# of rows " << n << " # of cols "<<m << std::endl;
+    if( allocate){
+        ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
+        if (ptr == NULL) //might be done by fftw_malloc
+            throw AllocationError(n, m, ping);
+    } else {
+        ptr = NULL;
     }
-};
+}
 
-class BadIndex: public Fehler
+template <class T, enum Padding P>
+Matrix<T, P>::~Matrix()
 {
-  private:
-    size_t i, j;
-    size_t i_max, j_max;
-  public:
-    BadIndex( size_t i, size_t i_max, size_t j, size_t j_max, const char *d, const int l): Fehler( "Access out of bounds", d, l), i(i), j(j), i_max(i_max), j_max(j_max){}
-    void anzeigen() const
-    {
-        Fehler::anzeigen();
-        std::cerr << " in row index " << i << " of " <<i_max<< " rows and column index "<<j <<" of "<<j_max<< "columns\n";
+    if( ptr!= NULL)
+        fftw_free( ptr);
+}
+
+template <class T, enum Padding P>
+Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m){
+    if( src.ptr != NULL){
+        ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
+        if( ptr == NULL) 
+            throw AllocationError(n, m, ping);
+        memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T));
+    } else {
+        ptr = NULL;
     }
-};
-    
-
-template <class T>
-Matrix<T>::Matrix( const size_t n, const size_t m): n(n), m(m)
-{
-    ptr = new T* [n];
-    ptr[0] = (T*)fftw_malloc( n*m*sizeof(T));
-    if (ptr[0] == 0) 
-        throw AllocationError(n, m, ping);
-    else 
-        for (size_t i = 1; i < n; ++i) 
-            ptr[i] = ptr[i-1] + m;
-}
-    
-
-
-
-template <class T>
-Matrix<T>::Matrix( const size_t n, const size_t m, const T value): n(n), m(m)
-{
-    //same as in above constructor
-    ptr = new T* [n];
-    ptr[0] = (T*)fftw_malloc( n*m*sizeof(T));
-    if (ptr[0] == 0) 
-        throw AllocationError(n, m, ping);
-    else 
-        for (size_t i = 1; i < n; ++i) 
-            ptr[i] = ptr[i-1] + m;
-    //assign the value
-    for( size_t i=0; i<n; i++)
-        for( size_t j=0; j<m; j++)
-            ptr[i][j] = value;
 }
 
-template <class T>
-Matrix<T>::~Matrix()
-{
-    fftw_free(ptr[0]);
-    delete ptr;
-}
-
-template <class T>
-Matrix<T>::Matrix( const Matrix& src):n(src.n), m(src.m){
-    ptr = new T* [n];
-    ptr[0] = (T*)fftw_malloc(n*m*sizeof(T));
-    if (ptr[0] == 0) 
-        throw AllocationError(n, m, ping);
-    else 
-        for (size_t i = 1; i < n; ++i) 
-            ptr[i] = ptr[i-1] + m;
-    //copy by value
-    for( size_t i=0; i<n; i++)
-        for( size_t j=0; j<m; j++)
-            ptr[i][j] = src.ptr[i][j];
-}
-
-
-
-template <class T>
-Matrix<T>& Matrix<T>::operator=( const Matrix& src)
+template <class T, enum Padding P>
+const Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
 {
 #ifdef TL_DEBUG
     if( n!=src.n || m!=src.m)
-        throw Fehler( "Assignment error! Sizes not equal!", ping);
+        throw  Message( "Assignment error! Sizes not equal!", ping);
 #endif
     Matrix temp( src);
     swap( temp);
     return *this;
 }
 
-template <class T>
-Matrix<T>& Matrix<T>::operator=( const T value)
-{
-    for( size_t i=0; i<n; i++)
-        for( size_t j=0; j<m; j++)
-            ptr[i][j] = value;
-    return *this;
-}
-
-template <class T>
-T& Matrix<T>::operator()( const size_t i, const size_t j)
+template <class T, enum Padding P>
+T& Matrix<T, P>::operator()( const size_t i, const size_t j)
 {
 #ifdef TL_DEBUG
     if( i >= n || j >= m)
         throw BadIndex( i,n, j,m, ping);
 #endif
-    return ptr[i][j];
+    return ptr[ i*TotalNumberOf<P>::cols(m) + j];
 }
 
-template <class T>
-const T&  Matrix<T>::operator()( const size_t i, const size_t j) const
+template <class T, enum Padding P>
+const T&  Matrix<T, P>::operator()( const size_t i, const size_t j) const
 {
 #ifdef TL_DEBUG
     if( i >= n || j >= m)
         throw BadIndex( i,n, j,m, ping);
 #endif
-    return ptr[i][j];
+    return ptr[ i*TotalNumberOf<P>::cols(m) + j];
 }
 
-template <class T>
-void Matrix<T>::swap( Matrix& rhs)
+template <class T, enum Padding P>
+void Matrix<T, P>::zero(){
+#ifdef TL_DEBUG
+    if( ptr == NULL) 
+        throw  Message( "Trying to zero a void matrix!", ping);
+#endif
+    memset( ptr, 0, TotalNumberOf<P>::elements(n, m)*sizeof( T));
+}
+
+template <class T, enum Padding P>
+void Matrix<T, P>::swap( Matrix& rhs)
 {
 #ifdef TL_DEBUG
-    if( n!=rhs.n || m!=rhs.m)
-        throw Fehler( "Swap error! Sizes not equal!", ping);
+    if( TotalNumberOf<P>::elements(this->n, this->m)*sizeof(T) != TotalNumberOf<P>::elements(rhs.n, rhs.m)*sizeof(T)) 
+        throw Message( "Swap not possible! Sizes not equal!\n", ping);
+    if( this->n != rhs.n)
+        throw Message( "Swap not possible! Shape not equal!\n", ping);
 #endif
-    T ** ptr = this->ptr;
-    this->ptr = rhs.ptr;
-    rhs.ptr = ptr; 
+    T * ptr = this->ptr;
+    this->ptr = reinterpret_cast<T*>(rhs.ptr);
+    rhs.ptr = reinterpret_cast<T*>(ptr); 
 }
 
-template <class T>
-void permute_cw( Matrix<T>& first, Matrix<T>& second, Matrix<T>& third)
+template <class T, enum Padding P>
+void permute_cw( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)
 {
 #ifdef TL_DEBUG
     if( first.n!=second.n || first.m!=second.m || first.n != third.n || first.m != third.m)
-        throw Fehler( "Permutation error! Sizes not equal!", ping);
+        throw  Message( "Permutation error! Sizes not equal!", ping);
 #endif
-    T ** ptr = first.ptr;
+    T * ptr = first.ptr;
     first.ptr = third.ptr; 
     third.ptr = second.ptr;
     second.ptr = ptr;
 }
 
-template <class T>
-std::ostream& operator<< ( std::ostream& os, const Matrix<T>& mat)
+template <class T, enum Padding P>
+std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat)
 {
+#ifdef TL_DEBUG
+    if( mat.ptr == NULL)
+        throw  Message( "Trying to output a void matrix!\n", ping);
+#endif
      int w = os.width();
      for( size_t i=0; i<mat.n; i++)
      {
          for( size_t j=0; j<mat.m; j++)
          {
              os.width(w); 
-             os << mat.ptr[i][j]<<" ";	//(Feldbreite gilt immmer nur bis zur nächsten Ausgabe)
+             os << mat(i,j)<<" ";	//(Feldbreite gilt immmer nur bis zur nächsten Ausgabe)
          }
          os << "\n";
      }
      return os;
 }
-template <class T>
-std::istream& operator>>( std::istream& is, Matrix<T>& mat)
+
+template <class T, enum Padding P>
+std::istream& operator>>( std::istream& is, Matrix<T, P>& mat)
 {
+#ifdef TL_DEBUG
+    if( mat.ptr == NULL)
+        throw  Message( "Trying to write in a void matrix!\n", ping);
+#endif
     for( size_t i=0; i<mat.n; i++)
         for( size_t j=0; j<mat.m; j++)
-            is >> mat.ptr[i][j];
+            is >> mat(i, j);
     return is;
 }
+
+//*****************************************MatrixP*****************************************
+
 
 
 
