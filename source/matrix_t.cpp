@@ -6,7 +6,7 @@ using namespace std;
 using namespace toefl;
 
 typedef double type;
-typedef Matrix<type, TL_FFT_2D> DoubMat;
+typedef Matrix<type, TL_DFT_2D> DoubMat;
 type value = 0; //{5,2};
 
 int main()
@@ -23,7 +23,7 @@ int main()
     cout << "zero m1\n";
     m1.zero();
     cout << "swap m1 m2\n";
-    swap_matrices( m1, m2);
+    swap_fields( m1, m2);
     cout << "const DoubMat\n";
     const DoubMat mc( m1);
     cout << "try Error handling on wrong index\n";
@@ -41,7 +41,7 @@ int main()
     m1(1,2) += value;
     cout << m1 << endl;
     cout << "Permute clockwise\n";
-    permute_cw( m1, m2, m3);
+    permute( m1, m2, m3);
     cout << m1 << "\n" << m2 << "\n" << m3 << endl;
     return 0;
 }

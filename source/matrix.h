@@ -9,16 +9,17 @@
 namespace toefl{
 
 
-    enum Padding{ TL_NONE, TL_FFT_1D, TL_FFT_2D};
+    enum Padding{ TL_NONE, TL_DFT_1D, TL_DFT_2D};
     enum Allocate{ TL_VOID = false};
 
     template <class T, enum Padding P>
     class Matrix;
     
-        template<class T1, enum Padding P1, class T2, enum Padding P2>
-        void swap_matrices( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
+    template<class T1, enum Padding P1, class T2, enum Padding P2>
+    void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
+
     template <class T, enum Padding P>
-    void permute_cw( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third);
+    void permute( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third);
     
     template <class T, enum Padding P>
     std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat); 	//Ausgabe der Matrix 		 			cout << setw(5) << a;
@@ -33,14 +34,14 @@ namespace toefl{
     };
     
     template <>
-    struct TotalNumberOf<TL_FFT_1D>
+    struct TotalNumberOf<TL_DFT_1D>
     {
         static inline size_t cols( const size_t m){ return m - m%2 + 2;}
         static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
     };
     
     template <>
-    struct TotalNumberOf<TL_FFT_2D>
+    struct TotalNumberOf<TL_DFT_2D>
     {
         static inline size_t cols( const size_t m){ return m;}
         static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
@@ -56,7 +57,7 @@ namespace toefl{
      * (s. fftw documentation )
      *
      * @tparam T either double, complex<double> or fftw_complex
-     * @tparam P one of TL_NONE, TL_FFT_1D or TL_FFT_2D
+     * @tparam P one of TL_NONE, TL_DFT_1D or TL_DFT_2D
      */
     template <class T, enum Padding P = TL_NONE>
     class Matrix
@@ -92,16 +93,16 @@ namespace toefl{
         inline const T& operator()( const size_t i, const size_t j) const;
     
         template<class T1, enum Padding P1, class T2, enum Padding P2>
-        friend void swap_matrices( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
+        friend void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
         bool isVoid() const { return (ptr == NULL) ? true : false;}
 
-        friend void permute_cw<T, P>( Matrix& first, Matrix& second, Matrix& third);
+        friend void permute<T, P>( Matrix& first, Matrix& second, Matrix& third);
         friend std::ostream& operator<< <T, P> ( std::ostream& os, const Matrix& mat); 	//Ausgabe der Matrix 		 			cout << setw(5) << a;
         friend std::istream& operator>> <T, P> ( std::istream& is, Matrix& mat); 
     };
 
         template<class T1, enum Padding P1, class T2, enum Padding P2>
-        void swap_matrices( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs){
+        void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs){
 #ifdef TL_DEBUG
             if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
                 throw Message( "Swap not possible. Sizes not equal\n", ping);

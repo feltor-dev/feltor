@@ -87,7 +87,7 @@ void Matrix<T, P>::swap( Matrix& rhs)
 }
 
 template <class T, enum Padding P>
-void permute_cw( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)
+void permute( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)
 {
 #ifdef TL_DEBUG
     if( first.n!=second.n || first.m!=second.m || first.n != third.n || first.m != third.m)

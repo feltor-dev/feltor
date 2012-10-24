@@ -4,101 +4,70 @@
 #include "matrix.h"
 #include "fftw3.h"
 
+// was nicht geprüft wird ist, ob der Plan in der execute Funktion den richtigen "Typ" hat und (evtl macht das die fftw selbst)
+// ob der Plan für die Größe der Matrix passt (das macht die fftw aber auch nicht)
 namespace toefl{
 
-template <typename Complex>
-class FFT_MANY_1D
-{
-  private:
-    fftw_plan forward_plan;
-    fftw_plan backward_plan;
-#ifdef TL_DEBUG
-    size_t nrows;
-    size_t nelements;
-#endif
-  public:
-    FFT_MANY_1D( Matrix<double, TL_FFT_1D>& m)
+    //1d and 2d r2r plans and execute functions
+    fftw_plan plan_dst_1d( Matrix<double, TL_NONE>& inout); //implemented
+    fftw_plan plan_dst_1d( Matrix<double, TL_NONE>& in, Matrix<double, TL_NONE>& out);
+    fftw_plan plan_dst_2d( Matrix<double, TL_NONE>& inout); 
+    fftw_plan plan_dst_2d( Matrix<double, TL_NONE>& in, Matrix<double, TL_NONE>& out); 
+
+    void execute_dst_1d( const fftw_plan plan, Matrix<double, TL_NONE>& inout); //implemented
+    void execute_dst_1d( const fftw_plan plan, Matrix<double, TL_NONE>& in, Matrix<double, TL_NONE>& out);
+    void execute_dst_2d( const fftw_plan plan, Matrix<double, TL_NONE>& inout);
+    void execute_dst_2d( const fftw_plan plan, Matrix<double, TL_NONE>& in, Matrix<double, TL_NONE>& out);
+
+    //1d dft_r2c plans and execute functions
+    fftw_plan plan_dft_1d_r2c( Matrix<double, TL_DFT_1D>& inout);//implemented
+    template< typename Complex>
+    fftw_plan plan_dft_1d_r2c( Matrix<double, TL_NONE>& in, Matrix<Complex, TL_NONE>& out);
+
+    template< typename Complex>
+    void execute_dft_1d_r2c( const fftw_plan plan, Matrix< double, TL_DFT_1D>& inout, Matrix< Complex, TL_NONE>& swap);//implemented
+    template< typename Complex>
+    void execute_dft_1d_r2c( const fftw_plan plan, Matrix< double, TL_NONE>& in, Matrix< Complex, TL_NONE>& out);
+
+    //1d dft_c2r plans and execute functions
+    template< typename Complex>
+    fftw_plan plan_dft_1d_c2r( Matrix<Complex, TL_NONE>& inout,  bool odd); //init with n%2//implemented
+    template< typename Complex>
+    fftw_plan plan_dft_1d_c2r( Matrix<Complex, TL_NONE>& in,     Matrix<double, TL_NONE>& out); 
+
+    template< typename Complex>
+    void execute_dft_1d_c2r( const fftw_plan plan, Matrix< Complex, TL_NONE>& inout, Matrix< double, TL_DFT_1D>& swap);//implemented
+    template< typename Complex>
+    void execute_dft_1d_c2r( const fftw_plan plan, Matrix< Complex, TL_NONE>& in,    Matrix< double, TL_NONE>& out);
+    
+    //2d dft_r2c plans and execute functions
+    fftw_plan plan_dft_2d_r2c( Matrix<double, TL_DFT_2D>& inout);
+    template< typename Complex>
+    fftw_plan plan_dft_2d_r2c( Matrix<double, TL_NONE>& in, Matrix<Complex, TL_NONE>& out);
+
+    template< typename Complex>
+    void execute_dft_2d_r2c( const fftw_plan plan, Matrix< double, TL_DFT_2D>& inout, Matrix< Complex, TL_NONE>& swap );
+    template< typename Complex>
+    void execute_dft_2d_r2c( const fftw_plan plan, Matrix< double, TL_NONE>& in, Matrix< Complex, TL_NONE>& out);
+
+    //2d dft_c2r plans and execute functions
+    template< typename Complex>
+    fftw_plan plan_dft_2d_c2r( Matrix<Complex, TL_NONE>& inout, bool odd);
+    template< typename Complex>
+    fftw_plan plan_dft_2d_c2r( Matrix<Complex, TL_NONE>& in, Matrxi<double, TL_NONE>& out);
+
+    template< typename Complex>
+    void execute_dft_2d_c2r( const fftw_plan plan, Matrix< Complex, TL_NONE>& inout, Matrix< double, TL_DFT_2D>& swap);
+    template< typename Complex>
+    void execute_dft_2d_c2r( const fftw_plan plan, Matrix< Complex, TL_NONE>& in, Matrix< double, TL_NONE>& out);
+    
+
+/////////////////////Definitions/////////////////////////////////////////////////////////
+    
+    
+    fftw_plan plan_dst_1d( Matrix<double, TL_NONE>& m)
     {
 #ifdef TL_DEBUG
-        nrows = m.rows();
-        nelements = TotalNumberOf<TL_FFT_1D>::elements( m.rows(), m.cols());
-        if(m.isVoid())
-            throw Message( "Cannot initialize a plan for a void Matrix!\n", ping);
-#endif
-        int n[] = { (int)m.cols()}; //length of each transform
-        forward_plan = fftw_plan_many_dft_r2c(  1,  //dimension 1D
-                                    n,  //size of each dimension
-                                    m.rows(), //number of transforms
-                                    &m(0,0), //input
-                                    NULL, //embed
-                                    1, //stride in units of double
-                                    TotalNumberOf<TL_FFT_1D>::cols( m.cols()), //distance between trafos
-                                    reinterpret_cast<fftw_complex*>(&m(0,0)),
-                                    NULL,
-                                    1, //stride in units of fftw_complex
-                                    m.cols()/2 + 1, //distance between trafos
-                                    FFTW_MEASURE);
-
-        backward_plan = fftw_plan_many_dft_c2r(  1,  //dimension 1D
-                                    n,  //size of each dimension (in complex)
-                                    m.rows(), //number of transforms
-                                    reinterpret_cast<fftw_complex*>(&m(0,0)), //input
-                                    NULL, //embed
-                                    1, //stride in units of complex
-                                    m.cols()/2 + 1, //distance between trafos (in complex)
-                                    &m(0,0),
-                                    NULL,
-                                    1, //stride in units of double
-                                    TotalNumberOf<TL_FFT_1D>::cols(m.cols()), //distance between trafos (in double)
-                                    FFTW_MEASURE);
-    }
-    //the address of m(0,0) might have changed due to the swap routine
-    void r2c( Matrix<double, TL_FFT_1D>& m)
-    { 
-#ifdef TL_DEBUG
-        if(nrows != m.rows() || nelements != TotalNumberOf<TL_FFT_1D>::elements( m.rows(), m.cols())) 
-            throw Message( "Size doesn't match size of plan\n", ping);
-        if(m.isVoid())
-            throw Message( "Cannot use plan on a void Matrix!\n", ping);
-#endif
-        fftw_execute_dft_r2c( forward_plan, &m(0,0), reinterpret_cast<fftw_complex*>(&m(0,0)));
-    }
-
-    void c2r( Matrix<Complex, TL_NONE>& m)
-    { 
-#ifdef TL_DEBUG
-        if(nrows != m.rows() || nelements != 2*m.cols()*m.rows()) 
-            throw Message( "Size doesn't match size of plan\n", ping);
-        if(m.isVoid())
-            throw Message( "Cannot use plan on a void Matrix!\n", ping);
-#endif
-        fftw_execute_dft_c2r( backward_plan, reinterpret_cast<fftw_complex*>(&m(0,0)), reinterpret_cast<double*>(&m(0,0)));
-    }
-
-    ~FFT_MANY_1D()
-    {
-        fftw_destroy_plan( forward_plan);
-        fftw_destroy_plan( backward_plan);
-
-    }
-
-};
-
-
-class FFT_MANY_1D_SINE
-{
-  private:
-    fftw_plan plan;
-#ifdef TL_DEBUG
-    size_t nrows;
-    size_t nelements;
-#endif
-  public:
-    FFT_MANY_1D_SINE( Matrix<double, TL_NONE>& m)
-    {
-#ifdef TL_DEBUG
-        nrows = m.rows();
-        nelements = m.rows()*m.cols();
         if(m.isVoid())
             throw Message( "Cannot initialize a plan for a void Matrix!\n", ping);
 #endif
@@ -117,25 +86,91 @@ class FFT_MANY_1D_SINE
                                     TotalNumberOf<TL_NONE>::cols( m.cols()), //distance between trafos
                                     kind, //odd around j = -1 and j = n
                                     FFTW_MEASURE);
+        return plan;
     }
 
-    void r2r( Matrix<double, TL_NONE>& m)
-    { 
+    void execute_dst_1d( const fftw_plan plan, Matrix<double, TL_NONE>& m)
+    {
 #ifdef TL_DEBUG
-        if(nrows != m.rows() || nelements != m.cols()*m.rows()) 
-            throw Message( "Size doesn't match size of plan\n", ping);
-        if(m.isVoid())
-            throw Message( "Cannot use plan on a void Matrix!\n", ping);
+        if( m.isVoid() == true)
+            throw Message("Matrix is void!\n", ping);
 #endif
         fftw_execute_r2r( plan, &m(0,0), &m(0,0));
     }
 
-    ~FFT_MANY_1D_SINE()
+
+
+    fftw_plan plan_dft_1d_r2c( Matrix<double, TL_DFT_1D>& m)
     {
-        fftw_destroy_plan( plan);
+#ifdef TL_DEBUG
+        if(m.isVoid())
+            throw Message( "Cannot initialize a plan for a void Matrix!\n", ping);
+#endif
+        int n[] = { (int)m.cols()}; //length of each transform
+        plan = fftw_plan_many_dft_r2c(  1,  //dimension 1D
+                                    n,  //size of each dimension
+                                    m.rows(), //number of transforms
+                                    &m(0,0), //input
+                                    NULL, //embed
+                                    1, //stride in units of double
+                                    TotalNumberOf<TL_DFT_1D>::cols( m.cols()), //distance between trafos
+                                    reinterpret_cast<fftw_complex*>(&m(0,0)),
+                                    NULL,
+                                    1, //stride in units of fftw_complex
+                                    m.cols()/2 + 1, //distance between trafos
+                                    FFTW_MEASURE);
+        return plan;
     }
 
-};
+    template< typename Complex>
+    void execute_dft_1d_r2c( const fftw_plan plan, Matrix< double, TL_DFT_1D>& m, Matrix< Complex, TL_NONE>& swap)
+    {
+#ifdef TL_DEBUG
+        if( swap.isVoid() == false)
+            throw Message( "Swap matrix is not void!\n", ping);
+        if(m.isVoid())
+            throw Message( "Cannot use plan on a void Matrix!\n", ping);
+#endif
+        fftw_execute_dft_r2c( forward_plan, &m(0,0), reinterpret_cast<fftw_complex*>(&m(0,0)));
+        swap_fields( m, swap); //checkt, wenn swap nicht geht
+    }
+
+    template< typename Complex>
+    fftw_plan plan_dft_1d_c2r( Matrix<Complex, TL_NONE>& inout,  bool odd)
+    {
+#ifdef TL_DEBUG
+        if(m.isVoid())
+            throw Message( "Cannot initialize a plan for a void Matrix!\n", ping);
+#endif
+        int n[] = { 2*(int)m.cols() - 2 + odd}; //length of each transform (double)
+        plan = fftw_plan_many_dft_c2r(  1,  //dimension 1D
+                                    n,  //size of each dimension (in complex)
+                                    m.rows(), //number of transforms
+                                    reinterpret_cast<fftw_complex*>(&m(0,0)), //input
+                                    NULL, //embed
+                                    1, //stride in units of complex
+                                    m.cols(), //distance between trafos (in complex)
+                                    reinterpret_cast<double*>&m(0,0),
+                                    NULL,
+                                    1, //stride in units of double
+                                    n[0], //distance between trafos (in double)
+                                    FFTW_MEASURE);
+        return plan;
+    }
+
+    template< typename Complex>
+    void execute_dft_1d_c2r( const fftw_plan plan, Matrix< Complex, TL_NONE>& m, Matrix< double, TL_DFT_1D>& swap)
+    {
+#ifdef TL_DEBUG
+        if( swap.isVoid() == false)
+            throw Message( "Swap matrix is not void!\n", ping);
+        if(m.isVoid())
+            throw Message( "Cannot use plan on a void Matrix!\n", ping);
+#endif
+        fftw_execute_dft_c2r( plan, reinterpret_cast<fftw_complex*>(&m(0,0)), reinterpret_cast<double*>(&m(0,0)));
+        swap_fields( m, swap);
+    }
+
 
 }
 #endif //_TL_FFT_
