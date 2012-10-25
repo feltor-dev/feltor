@@ -88,7 +88,8 @@ namespace toefl{
         inline void zero();
         inline void swap( Matrix& rhs);
 
-
+        const bool operator!=( const Matrix& rhs) const; 
+        const bool operator==( const Matrix& rhs) const {return !((*this != rhs));}
         //hier sollte kein overhead für vektoren liegen weil der Compiler den 
         //Zugriff m(0,i) auf ptr[i] optimieren sollte
         inline T& operator()( const size_t i, const size_t j);
@@ -103,19 +104,34 @@ namespace toefl{
         friend std::istream& operator>> <T, P> ( std::istream& is, Matrix& mat); 
     };
 
-        template<class T1, enum Padding P1, class T2, enum Padding P2>
-        void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs){
+    template<class T1, enum Padding P1, class T2, enum Padding P2>
+    void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs){
+
 #ifdef TL_DEBUG
-            if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
-                throw Message( "Swap not possible. Sizes not equal\n", ping);
-            if( lhs.n != rhs.n)
-                throw Message( "Swap not possible! Shape not equal!\n", ping);
+        if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
+            throw Message( "Swap not possible. Sizes not equal\n", ping);
+        if( lhs.n != rhs.n)
+            throw Message( "Swap not possible! Shape not equal!\n", ping);
 #endif
-            T1 * ptr = lhs.ptr;
-            lhs.ptr = reinterpret_cast<T1*>(rhs.ptr);
-            rhs.ptr = reinterpret_cast<T2*>(ptr); 
-        }
+        T1 * ptr = lhs.ptr;
+        lhs.ptr = reinterpret_cast<T1*>(rhs.ptr);
+        rhs.ptr = reinterpret_cast<T2*>(ptr); 
+    }
 #include "matrix.cpp"
+    template< class T, enum Padding P>
+    const bool Matrix<T,P>::operator!= ( const Matrix& rhs) const
+    {
+#ifdef TL_DEBUG
+        if( n != rhs.n || m != rhs.m)
+            throw Message( "Comparison not possible! Sizes not equal!\n", ping);
+#endif
+        for( size_t i = 0; i < n; i++)
+            for( size_t j = 0; j < m; j++)
+                if( (*this)( i, j) != rhs( i, j))  
+                    return true;
+        return false;
+    }
+
 
 
 }
