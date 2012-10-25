@@ -11,11 +11,11 @@ using namespace toefl;
 int main()
 {
     cout << "Test of the fft wrapper routines\n";
-    cout << "Construct a real Matrix (2,9)\n";
+    cout << "Construct a real Matrix (1,9)\n";
     cout << "That means 9 inner points i.e. 10 intervalls and 11 grid points\n";
-    Matrix<double> m1(2, 9);
+    Matrix<double> m1(1, 9);
     cout << "Make the plan befor initialization!\n";
-    FFT_MANY_1D_SINE sine_trafo( m1);
+    fftw_plan sine_plan = plan_dst_1d( m1);
     double dx = 1./(8.+2.);
     for( size_t i = 0; i < m1.rows(); i++)
         for ( size_t j=0; j < m1.cols(); j++)
@@ -23,35 +23,35 @@ int main()
     cout <<fixed <<setprecision(2)<< m1 << endl;
     cout << "Every line has on sine Mode with k = (i+1)\n";
     cout << "The output should show one mode each \n";
-    sine_trafo.r2r( m1);
+    execute_dst_1d( sine_plan, m1);
     cout << m1<< endl;
     cout << "Backtrafo\n";
     cout << "Output should be input times 20\n";
-    sine_trafo.r2r( m1);
+    execute_dst_1d( sine_plan, m1);
     cout << m1 <<endl;
 
     cout << "Test 2\n";
-    Matrix<double, TL_FFT_1D> m2(2,11);
-    Matrix<complex<double>, TL_NONE> m2_( 2, 6, TL_VOID);
-    FFT_MANY_1D<complex<double>> fourier_trafo( m2);
+    Matrix<double, TL_DFT_1D> m2(1,10);
+    Matrix<complex<double>, TL_NONE> m2_( 1, 6, TL_VOID);
+    fftw_plan forward_plan = plan_dft_1d_r2c( m2);
+    swap_fields( m2, m2_);
+    fftw_plan backward_plan = plan_dft_1d_c2r( m2_, m2.cols()%2);
+    swap_fields( m2, m2_);
 
-    dx = 1./11.;
+    dx = 1./10.;
     for( size_t i = 0; i < m2.rows(); i++)
         for ( size_t j=0; j < m2.cols(); j++)
             m2(i, j) = cos( 2*(i+1)*M_PI*j*dx); 
     cout << "Trafo of:\n";
     cout << m2 <<endl;
     cout << "forward trafo\n";
-    fourier_trafo.r2c( m2);
-    cout << m2 <<endl;
-    swap_matrices( m2, m2_);
+    execute_dft_1d_r2c( forward_plan, m2, m2_);
     cout << "result should be one cosine mode\n";
     cout << m2_ <<endl;
 
     try{
-    fourier_trafo.c2r( m2_);}
+    execute_dft_1d_c2r( backward_plan, m2_, m2);}
     catch(Message& m){m.display();}
-    swap_matrices( m2, m2_);
     cout << "backtrafo\n";
     cout << m2 <<endl;
 

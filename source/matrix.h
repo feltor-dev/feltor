@@ -84,11 +84,13 @@ namespace toefl{
     
         const size_t rows() const {return n;}
         const size_t cols() const {return m;}
-        T* get() const{ return ptr;}
+        T* getPtr() const{ return ptr;}
         inline void zero();
         inline void swap( Matrix& rhs);
 
 
+        //hier sollte kein overhead für vektoren liegen weil der Compiler den 
+        //Zugriff m(0,i) auf ptr[i] optimieren sollte
         inline T& operator()( const size_t i, const size_t j);
         inline const T& operator()( const size_t i, const size_t j) const;
     

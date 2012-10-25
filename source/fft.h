@@ -54,7 +54,7 @@ namespace toefl{
     template< typename Complex>
     fftw_plan plan_dft_2d_c2r( Matrix<Complex, TL_NONE>& inout, bool odd);
     template< typename Complex>
-    fftw_plan plan_dft_2d_c2r( Matrix<Complex, TL_NONE>& in, Matrxi<double, TL_NONE>& out);
+    fftw_plan plan_dft_2d_c2r( Matrix<Complex, TL_NONE>& in, Matrix<double, TL_NONE>& out);
 
     template< typename Complex>
     void execute_dft_2d_c2r( const fftw_plan plan, Matrix< Complex, TL_NONE>& inout, Matrix< double, TL_DFT_2D>& swap);
@@ -73,7 +73,7 @@ namespace toefl{
 #endif
         int n[] = { (int)m.cols()}; //length of each transform
         fftw_r2r_kind kind[] = {FFTW_RODFT00};
-        plan = fftw_plan_many_r2r(  1,  //dimension 1D
+        fftw_plan plan = fftw_plan_many_r2r(  1,  //dimension 1D
                                     n,  //size of each dimension
                                     m.rows(), //number of transforms
                                     &m(0,0), //input
@@ -107,7 +107,7 @@ namespace toefl{
             throw Message( "Cannot initialize a plan for a void Matrix!\n", ping);
 #endif
         int n[] = { (int)m.cols()}; //length of each transform
-        plan = fftw_plan_many_dft_r2c(  1,  //dimension 1D
+        fftw_plan plan = fftw_plan_many_dft_r2c(  1,  //dimension 1D
                                     n,  //size of each dimension
                                     m.rows(), //number of transforms
                                     &m(0,0), //input
@@ -131,29 +131,29 @@ namespace toefl{
         if(m.isVoid())
             throw Message( "Cannot use plan on a void Matrix!\n", ping);
 #endif
-        fftw_execute_dft_r2c( forward_plan, &m(0,0), reinterpret_cast<fftw_complex*>(&m(0,0)));
+        fftw_execute_dft_r2c( plan, &m(0,0), reinterpret_cast<fftw_complex*>(&m(0,0)));
         swap_fields( m, swap); //checkt, wenn swap nicht geht
     }
 
     template< typename Complex>
-    fftw_plan plan_dft_1d_c2r( Matrix<Complex, TL_NONE>& inout,  bool odd)
+    fftw_plan plan_dft_1d_c2r( Matrix<Complex, TL_NONE>& m,  bool odd)
     {
 #ifdef TL_DEBUG
         if(m.isVoid())
             throw Message( "Cannot initialize a plan for a void Matrix!\n", ping);
 #endif
-        int n[] = { 2*(int)m.cols() - 2 + odd}; //length of each transform (double)
-        plan = fftw_plan_many_dft_c2r(  1,  //dimension 1D
+        int n[] ={2*(int)m.cols() - ((odd==true)?1:2) }; //{ (int)m.cols()};  //length of each transform (double)
+        fftw_plan plan = fftw_plan_many_dft_c2r(  1,  //dimension 1D
                                     n,  //size of each dimension (in complex)
                                     m.rows(), //number of transforms
                                     reinterpret_cast<fftw_complex*>(&m(0,0)), //input
                                     NULL, //embed
                                     1, //stride in units of complex
                                     m.cols(), //distance between trafos (in complex)
-                                    reinterpret_cast<double*>&m(0,0),
+                                    reinterpret_cast<double*>(&m(0,0)),
                                     NULL,
                                     1, //stride in units of double
-                                    n[0], //distance between trafos (in double)
+                                    2*(int)m.cols(), //distance between trafos (in double)
                                     FFTW_MEASURE);
         return plan;
     }
