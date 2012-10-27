@@ -25,7 +25,7 @@ Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m){
         ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
         if( ptr == NULL) 
             throw AllocationError(n, m, ping);
-        memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T));
+        memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
     } else {
         ptr = NULL;
     }

@@ -56,6 +56,8 @@ namespace toefl{
      * Padding needs to be enabled for in-place r2c fourier transforms. 
      * (s. fftw documentation )
      *
+     * Uses memcpy and memset so don't use any user defined type
+     *
      * @tparam T either double, complex<double> or fftw_complex
      * @tparam P one of TL_NONE, TL_DFT_1D or TL_DFT_2D
      */
@@ -66,7 +68,7 @@ namespace toefl{
     
       protected:
           //maybe an id (static int id) wouldn't be bad to identify in errors
-        const size_t n;
+        const size_t n; 
         const size_t m;
         T *ptr;
       public:

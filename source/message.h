@@ -6,6 +6,7 @@
 #ifndef _MESSAGE_
 #define _MESSAGE_
 
+#include <iostream>
 /*! for the simplified construction of a Message use this Macro*/
 #define ping __FILE__, __LINE__ 
 
