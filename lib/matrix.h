@@ -101,13 +101,23 @@ namespace toefl{
          */
         Matrix( const size_t rows, const size_t cols, const bool allocate = true);
         ~Matrix();
+        /*! @brief deep copy of an existing Matrix using memcpy
+         *
+         */
         Matrix( const Matrix& src);
         const Matrix& operator=( const Matrix& src);
     
         const size_t rows() const {return n;}
         const size_t cols() const {return m;}
-        T* getPtr() const{ return ptr;}
+        T* getPtr(){ return ptr;}
+        /*! @brief uses memset to set memory to 0
+         */
         inline void zero();
+        /*! @brief checks if matrix is empty i.e. no memory is allocated
+         *
+         * @return true if memory isn't allocated 
+         */
+        bool isVoid() const { return (ptr == NULL) ? true : false;}
 
         const bool operator!=( const Matrix& rhs) const; 
         const bool operator==( const Matrix& rhs) const {return !((*this != rhs));}
@@ -132,10 +142,9 @@ namespace toefl{
     
         template<class T1, enum Padding P1, class T2, enum Padding P2>
         friend void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
-        bool isVoid() const { return (ptr == NULL) ? true : false;}
 
         friend void permute_fields<T, P>( Matrix& first, Matrix& second, Matrix& third);
-        friend std::ostream& operator<< <T, P> ( std::ostream& os, const Matrix& mat); 	//Ausgabe der Matrix 		 			cout << setw(5) << a;
+        friend std::ostream& operator<< <T, P> ( std::ostream& os, const Matrix& mat);
         friend std::istream& operator>> <T, P> ( std::istream& is, Matrix& mat); 
     };
     template <enum Padding P>
