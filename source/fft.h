@@ -2,6 +2,7 @@
 #define _TL_FFT_
 
 #include "matrix.h"
+#include <complex>
 #include "fftw3.h"
 
 // was nicht geprüft wird ist, ob der Plan in der execute Funktion den richtigen "Typ" hat und (evtl macht das die fftw selbst)
@@ -18,6 +19,13 @@ namespace toefl{
     void execute_dst_1d( const fftw_plan plan, Matrix<double, TL_NONE>& in, Matrix<double, TL_NONE>& out);
     void execute_dst_2d( const fftw_plan plan, Matrix<double, TL_NONE>& inout);
     void execute_dst_2d( const fftw_plan plan, Matrix<double, TL_NONE>& in, Matrix<double, TL_NONE>& out);
+
+    //1d dft_c2c plans and execute functions
+    fftw_plan plan_dft_1d( Matrix<complex<double>, TL_NONE>& inout); 
+    fftw_plan plan_dft_1d( Matrix<complex<double>, TL_NONE>& in, Matrix<complex<double>, TL_NONE>& out);
+
+    void execute_dft_1d( const fftw_plan plan, Matrix<complex<double>, TL_NONE>& inout); 
+    void execute_dft_1d( const fftw_plan plan, Matrix<complex<double>, TL_NONE>& in, Matrix<complex<double>, TL_NONE>& out);
 
     //1d dft_r2c plans and execute functions
     fftw_plan plan_dft_1d_r2c( Matrix<double, TL_DFT_1D>& inout);//implemented

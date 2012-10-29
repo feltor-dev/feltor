@@ -19,33 +19,16 @@ namespace toefl{
     void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
 
     template <class T, enum Padding P>
-    void permute( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third);
+    void permute_fields( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third);
     
     template <class T, enum Padding P>
-    std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat); 	//Ausgabe der Matrix 		 			cout << setw(5) << a;
+    std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat); 
     template <class T, enum Padding P>
     std::istream& operator>> ( std::istream& is, Matrix<T, P>& mat); 
+
+    template< typename T>
+    void transpose( Matrix< T, TL_NONE>& inout, Matrix< T, TL_NONE>& swap);
     
-    template <enum Padding P>
-    struct TotalNumberOf
-    {
-        static inline size_t cols( const size_t m){return m;}
-        static inline size_t elements( const size_t n, const size_t m){return n*m;}
-    };
-    
-    template <>
-    struct TotalNumberOf<TL_DFT_1D>
-    {
-        static inline size_t cols( const size_t m){ return m - m%2 + 2;}
-        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
-    };
-    
-    template <>
-    struct TotalNumberOf<TL_DFT_2D>
-    {
-        static inline size_t cols( const size_t m){ return m;}
-        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
-    };
     
     /*! @brief Matrix class of constant size that provides fftw compatible 2D fields
      *
@@ -101,9 +84,29 @@ namespace toefl{
         friend void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
         bool isVoid() const { return (ptr == NULL) ? true : false;}
 
-        friend void permute<T, P>( Matrix& first, Matrix& second, Matrix& third);
+        friend void permute_fields<T, P>( Matrix& first, Matrix& second, Matrix& third);
         friend std::ostream& operator<< <T, P> ( std::ostream& os, const Matrix& mat); 	//Ausgabe der Matrix 		 			cout << setw(5) << a;
         friend std::istream& operator>> <T, P> ( std::istream& is, Matrix& mat); 
+    };
+    template <enum Padding P>
+    struct TotalNumberOf
+    {
+        static inline size_t cols( const size_t m){return m;}
+        static inline size_t elements( const size_t n, const size_t m){return n*m;}
+    };
+    
+    template <>
+    struct TotalNumberOf<TL_DFT_1D>
+    {
+        static inline size_t cols( const size_t m){ return m - m%2 + 2;}
+        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
+    };
+    
+    template <>
+    struct TotalNumberOf<TL_DFT_2D>
+    {
+        static inline size_t cols( const size_t m){ return m;}
+        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
     };
 
     template<class T1, enum Padding P1, class T2, enum Padding P2>

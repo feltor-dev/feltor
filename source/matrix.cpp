@@ -49,6 +49,8 @@ T& Matrix<T, P>::operator()( const size_t i, const size_t j)
 #ifdef TL_DEBUG
     if( i >= n || j >= m)
         throw BadIndex( i,n, j,m, ping);
+    if( ptr == NULL) 
+        throw Message( "Trying to access a void matrix!", ping);
 #endif
     return ptr[ i*TotalNumberOf<P>::cols(m) + j];
 }
@@ -59,6 +61,8 @@ const T&  Matrix<T, P>::operator()( const size_t i, const size_t j) const
 #ifdef TL_DEBUG
     if( i >= n || j >= m)
         throw BadIndex( i,n, j,m, ping);
+    if( ptr == NULL) 
+        throw Message( "Trying to access a void matrix!", ping);
 #endif
     return ptr[ i*TotalNumberOf<P>::cols(m) + j];
 }
@@ -87,7 +91,7 @@ void Matrix<T, P>::swap( Matrix& rhs)
 }
 
 template <class T, enum Padding P>
-void permute( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)
+void permute_fields( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)
 {
 #ifdef TL_DEBUG
     if( first.n!=second.n || first.m!=second.m || first.n != third.n || first.m != third.m)
@@ -132,7 +136,24 @@ std::istream& operator>>( std::istream& is, Matrix<T, P>& mat)
     return is;
 }
 
-//*****************************************MatrixP*****************************************
+//certainly optimizable transposition algorithm for inplace Matrix transposition
+template <class T>
+void transpose( Matrix< T, TL_NONE>& inout, Matrix< T, TL_NONE>& swap)
+{
+#ifdef TL_DEBUG
+    if( swap.isVoid() == false) throw Message("Swap Matrix is not void in transpose algorithm!", ping);
+    if( swap.rows() != inout.cols()|| swap.cols() != inout.rows()) throw Message("Swap Matrix has wrong size for transposition!", ping);
+#endif
+    T temp;
+    for (size_t i = 0; i < inout.rows; i ++) {
+        for (size_t j = i; j < inout.cols; j ++) {
+            temp = inout(i,j);
+            inout(i,j) = inout( j,i);
+            inout(j,i) = temp;
+        }
+    }
+    swap_fields( inout, swap);
+}
 
 
 
