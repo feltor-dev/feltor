@@ -41,7 +41,7 @@ int main()
     m1(1,2) += value;
     cout << m1 << endl;
     cout << "Permute clockwise\n";
-    permute( m1, m2, m3);
+    permute_fields( m1, m2, m3);
     cout << m1 << "\n" << m2 << "\n" << m3 << endl;
     return 0;
 }

@@ -1,10 +1,19 @@
 #ifndef _TL_FFT_
 #define _TL_FFT_
 
-#include "matrix.h"
 #include <complex>
+#include "matrix.h"
 #include "fftw3.h"
+#include <algorithm>
 
+/* fftw guru interface
+ *
+ * fftw_iodim{int n,  // Größe der Dimension des Index 
+ *            int is, //in stride
+ *            int os} //out strid
+ * rank, fftw_iodim dims[rank] //describe how you come to the next point inside a trafo for every index i.e. dims[0] describes the first index of the matrix m[i0][i1]...[i_rank-1]
+ * howmany_rank, fftw_iodim howmany_dims[howmany_rank] //describe how you come to the first point of the next trafo
+ */
 // was nicht geprüft wird ist, ob der Plan in der execute Funktion den richtigen "Typ" hat und (evtl macht das die fftw selbst)
 // ob der Plan für die Größe der Matrix passt (das macht die fftw aber auch nicht)
 namespace toefl{
@@ -21,11 +30,11 @@ namespace toefl{
     void execute_dst_2d( const fftw_plan plan, Matrix<double, TL_NONE>& in, Matrix<double, TL_NONE>& out);
 
     //1d dft_c2c plans and execute functions
-    fftw_plan plan_dft_1d( Matrix<complex<double>, TL_NONE>& inout); 
-    fftw_plan plan_dft_1d( Matrix<complex<double>, TL_NONE>& in, Matrix<complex<double>, TL_NONE>& out);
+    fftw_plan plan_dft_1d( Matrix<std::complex<double>, TL_NONE>& inout); 
+    fftw_plan plan_dft_1d( Matrix<std::complex<double>, TL_NONE>& in, Matrix<std::complex<double>, TL_NONE>& out);
 
-    void execute_dft_1d( const fftw_plan plan, Matrix<complex<double>, TL_NONE>& inout); 
-    void execute_dft_1d( const fftw_plan plan, Matrix<complex<double>, TL_NONE>& in, Matrix<complex<double>, TL_NONE>& out);
+    void execute_dft_1d( const fftw_plan plan, Matrix<std::complex<double>, TL_NONE>& inout); 
+    void execute_dft_1d( const fftw_plan plan, Matrix<std::complex<double>, TL_NONE>& in, Matrix<std::complex<double>, TL_NONE>& out);
 
     //1d dft_r2c plans and execute functions
     fftw_plan plan_dft_1d_r2c( Matrix<double, TL_DFT_1D>& inout);//implemented
@@ -81,8 +90,8 @@ namespace toefl{
 #endif
         int n[] = { (int)m.cols()}; //length of each transform
         fftw_r2r_kind kind[] = {FFTW_RODFT00};
-        fftw_plan plan = fftw_plan_many_r2r(  1,  //dimension 1D
-                                    n,  //size of each dimension
+        fftw_plan plan = fftw_plan_many_r2r(  1,  //dimension 1D(rank)
+                                    n,  //size of each dimension (# of elements)
                                     m.rows(), //number of transforms
                                     &m(0,0), //input
                                     NULL, //embed

@@ -9,7 +9,7 @@
 namespace toefl{
 
 
-    enum Padding{ TL_NONE, TL_DFT_1D, TL_DFT_2D};
+    enum Padding{ TL_NONE, TL_DFT_1D, TL_DFT_2D, TL_DST_DFT};
     enum Allocate{ TL_VOID = false};
 
     template <class T, enum Padding P>
@@ -90,7 +90,7 @@ namespace toefl{
         const size_t n; 
         const size_t m;
         T *ptr;
-        inline void swap( Matrix& rhs);
+        //inline void swap( Matrix& rhs);
       public:
         /*! @brief allocates continous memory on the heap
          *
@@ -167,6 +167,12 @@ namespace toefl{
         static inline size_t cols( const size_t m){ return m;}
         static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
     };
+    template <>
+    struct TotalNumberOf<TL_DST_DFT>
+    {
+        static inline size_t cols( const size_t m){ return m;}
+        static inline size_t elements( const size_t n, const size_t m){return m*(n - n%2 + 2);}
+    };
 
     template<class T1, enum Padding P1, class T2, enum Padding P2>
     void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs){
@@ -174,8 +180,6 @@ namespace toefl{
 #ifdef TL_DEBUG
         if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
             throw Message( "Swap not possible. Sizes not equal\n", ping);
-        if( lhs.n != rhs.n)
-            throw Message( "Swap not possible! Shape not equal!\n", ping);
 #endif
         T1 * ptr = lhs.ptr;
         lhs.ptr = reinterpret_cast<T1*>(rhs.ptr);
@@ -185,6 +189,10 @@ namespace toefl{
 template <class T, enum Padding P>
 Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m)
 {
+#ifdef TL_DEBUG
+    if( n==0|| m==0)
+        throw Message("Use TL_VOID to not allocate any memory!\n", ping);
+#endif
     if( allocate){
         ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
         if (ptr == NULL) //might be done by fftw_malloc
@@ -219,9 +227,10 @@ const Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
 #ifdef TL_DEBUG
     if( n!=src.n || m!=src.m)
         throw  Message( "Assignment error! Sizes not equal!", ping);
+    if( ptr == NULL || src.ptr == NULL)
+        throw Message( "Assigning to or from a void matrix!", ping);
 #endif
-    Matrix temp( src);
-    swap( temp);
+    memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
     return *this;
 }
 
@@ -258,6 +267,7 @@ void Matrix<T, P>::zero(){
     memset( ptr, 0, TotalNumberOf<P>::elements(n, m)*sizeof( T));
 }
 
+/*
 template <class T, enum Padding P>
 void Matrix<T, P>::swap( Matrix& rhs)
 {
@@ -271,6 +281,7 @@ void Matrix<T, P>::swap( Matrix& rhs)
     this->ptr = reinterpret_cast<T*>(rhs.ptr);
     rhs.ptr = reinterpret_cast<T*>(ptr); 
 }
+*/
 
 template <class T, enum Padding P>
 void permute_fields( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)
