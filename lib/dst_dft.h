@@ -7,6 +7,12 @@
 
 namespace toefl{
 
+    /*! @brief class for twodimensional fourier transformation of Matrix
+     *
+     * A sine transformation is performed horizontally, i.e. along the lines 
+     * of the matrices, and a discrete fourier transformation is performed vertically, i.e. along the columns. 
+     * \note Do not copy or assign any Objects of this class!!
+     */
     class DST_DFT
     {
       private:
@@ -21,10 +27,39 @@ namespace toefl{
         void plan_backward_a( Matrix<double, TL_DST_DFT>&);
         void plan_backward_b( Matrix<double, TL_DST_DFT>&);
       public:
+        /*! @brief prepare transformations of given size
+         *
+         * Uses fftw. 
+         * @param real_rows # of rows in the real matrix
+         * @param real_cols # of colums in the real matrix
+         */
         DST_DFT( const size_t real_rows, const size_t real_cols);
-        void execute_dst_dft_r2c( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap);
-        void execute_dst_dft_c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DST_DFT>& swap);
+        /*! @brief execute a r2c transposing transformation
+         *
+         * First performs a linewise discrete sine transform followed
+         * by a transposition and a linewise discrete fourier transform.
+         * @param inout non void matrix of size specified in the constructor.
+         * i.e. (real_rows, real_cols)
+         * Content on output is the one of swap on input.
+         * @param swap Can be void. Size has to be (real_cols, real_rows/2 + 1).
+         * Contains the solution on output.
+         */
+        void r2c( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap);
+        /*! @brief execute a c2r transposing transformation
+         *
+         * First performs a linewise discrete fourier transform followed
+         * by a transposition and a linewise discrete sine transform.
+         * @param inout
+         * Non void complex matrix of size (real_cols, real_rows/2 + 1)
+         * Content on output is the one of swap on input.
+         * @param swap 
+         * Can be void. Size has to be (real_rows, real_cols).
+         * Contains the solution on output.
+         */
+        void c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DST_DFT>& swap);
         //make copy construction impossible because fftw_plan cannot be copied
+        /*! @brief frees all fftw plans
+         */
         ~DST_DFT();
     };
 
@@ -118,7 +153,7 @@ namespace toefl{
         backward_b = fftw_plan_guru_r2r( rank, dims, howmany_rank, howmany_dims, temp.getPtr(), temp.getPtr(), kind, FFTW_MEASURE);
     }
 
-    void DST_DFT::execute_dst_dft_r2c( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap)
+    void DST_DFT::r2c( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap)
     {
 #ifdef TL_DEBUG
         if( inout.rows() != rows|| inout.cols() != cols)
@@ -131,7 +166,7 @@ namespace toefl{
         swap_fields( inout, swap);
     }
 
-    void DST_DFT::execute_dst_dft_c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DST_DFT>& swap)
+    void DST_DFT::c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DST_DFT>& swap)
     {
 #ifdef TL_DEBUG
         if( inout.rows() != cols || inout.cols() != rows/2 + 1)

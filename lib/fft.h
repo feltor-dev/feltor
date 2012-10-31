@@ -1,3 +1,4 @@
+/* deprecated */
 #ifndef _TL_FFT_
 #define _TL_FFT_
 
@@ -6,14 +7,6 @@
 #include "fftw3.h"
 #include <algorithm>
 
-/* fftw guru interface
- *
- * fftw_iodim{int n,  // Größe der Dimension des Index 
- *            int is, //in stride
- *            int os} //out strid
- * rank, fftw_iodim dims[rank] //describe how you come to the next point inside a trafo for every index i.e. dims[0] describes the first index of the matrix m[i0][i1]...[i_rank-1]
- * howmany_rank, fftw_iodim howmany_dims[howmany_rank] //describe how you come to the first point of the next trafo
- */
 // was nicht geprüft wird ist, ob der Plan in der execute Funktion den richtigen "Typ" hat und (evtl macht das die fftw selbst)
 // ob der Plan für die Größe der Matrix passt (das macht die fftw aber auch nicht)
 namespace toefl{

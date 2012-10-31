@@ -1,3 +1,10 @@
+/*!
+ * @file
+ * @brief Implementation of the QuadMat class and the invert function
+ * @author Matthias Wiesenberger
+ * @email Matthias.Wiesenberger@uibk.ac.at
+ *
+ */
 #ifndef _QUADMAT_
 #define _QUADMAT_
 #include <iostream>
@@ -6,9 +13,12 @@
 namespace toefl{
     /*! @brief Container for quadratic fixed size matrices
      *
-     * The QuadMat stores its values itself 
-     * so T and n should be of small size to reduce object size.
-     * @tparam T double, complex<double> 
+     * The QuadMat stores its values inside the object.
+     * i.e. a QuadMat<double, 2> stores four double variables continously
+     * in memory. Therefore it is well suited for the use in the Matrix
+     * class (because memcpy and memset correctly work on this type)
+     * \note T and n should be of small size to reduce object size.
+     * @tparam T tested with double and std::complex<double> 
      * @tparam n size of the Matrix, assumed to be small (either 2 or 3)
      */
     template <class T, size_t n>
@@ -17,17 +27,27 @@ namespace toefl{
       private:
         T data[n*n];
       public:
+        /*! @brief no values are assigned*/
         QuadMat(){}
+        /*! @brief copies values of src into this*/
         QuadMat( QuadMat& src){
             for( size_t i=0; i < n*n; i++)
                 data[i] = src.data[i];
         }
+        /*! @brief copies values of src into this*/
         const QuadMat& operator=( const QuadMat& rhs){
             for( size_t i = 0; i < n*n; i++)
                 data[i] = rhs.data[i];
             return *this;
         }
     
+        /*! @brief access operator
+         *
+         * Performs a range check if TL_DEBUG is defined
+         * @param i row index
+         * @param j column index
+         * @return reference to value at that location
+         */
         T& operator()(const size_t i, const size_t j){
     #ifdef TL_DEBUG
             if( i >= n || j >= n)
@@ -35,6 +55,13 @@ namespace toefl{
     #endif
             return data[ i*n+j];
         }
+        /*! @brief const access operator
+         *
+         * Performs a range check if TL_DEBUG is defined
+         * @param i row index
+         * @param j column index
+         * @return const value at that location
+         */
         const T& operator()(const size_t i, const size_t j) const {
     #ifdef TL_DEBUG
             if( i >= n || j >= n)
@@ -42,12 +69,22 @@ namespace toefl{
     #endif
             return data[ i*n+j];
         }
+        /*! @brief two Matrices are considered equal if elements are equal
+         *
+         * @param rhs Matrix to be compared to this
+         * @return true if rhs does not equal this
+         */
         const bool operator!=( const QuadMat& rhs) const{
             for( size_t i = 0; i < n*n; i++)
                 if( data[i] != rhs.data[i])
                     return true;
             return false;
         }
+        /*! @brief two Matrices are considered equal if elements are equal
+         *
+         * @param rhs Matrix to be compared to this
+         * @return true if rhs equals this
+         */
         const bool operator==( const QuadMat& rhs) const {return !((*this != rhs));}
         /*! @brief puts a matrix linewise in output stream
          *
@@ -66,12 +103,15 @@ namespace toefl{
             return os;
         }
     };
+
     /*! @brief inverts a 2x2 matrix of given type
      *
      * \note throws a Message if Determinant is zero. 
      * @tparam T The type must support basic algorithmic functionality (i.e. +, -, * and /)
      * @param m the matrix contains its invert on return
      */
+    template<class T>
+    void invert(QuadMat<T, 2>& m);
     template<class T>
     void invert(QuadMat<T, 2>& m) 
     {

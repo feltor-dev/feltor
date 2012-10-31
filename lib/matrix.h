@@ -5,43 +5,37 @@
 #include <cstring> //memcpy and memset
 #include "fftw3.h"
 #include "exceptions.h"
+#include "padding.h"
 
 namespace toefl{
 
 
-    enum Padding{ TL_NONE, TL_DFT_1D, TL_DFT_2D, TL_DST_DFT};
     enum Allocate{ TL_VOID = false};
 
+    // forward declare friend functions of Matrix class
     template <class T, enum Padding P>
     class Matrix;
     
-    /*! @brief swap memories of two equally sized matrices
-     *
-         * Performs a range check if TL_DEBUG is defined
-         * The sizes of the actually allocated memory, which depend on padding and the value type, have to be equal.
- 
-     */
     template<class T1, enum Padding P1, class T2, enum Padding P2>
     void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
-
-    /*! @brief permute memory of matrices with the same type
-     *
-     * Permutation is done clockwise i.e. 
-     * third becomes first, second becomes third and first becomes second
-     */
     template <class T, enum Padding P>
     void permute_fields( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third);
-    
+    /*! @brief print a Matrix to the given outstream
+     *
+     * Matrix is printed linewise with a newline after each line.
+     * @param os the outstream
+     * @param mat the matrix to be printed
+     * @return the outstream
+     */
     template <class T, enum Padding P>
     std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat); 
     template <class T, enum Padding P>
     std::istream& operator>> ( std::istream& is, Matrix<T, P>& mat); 
-
-    template< typename T>
-    void transpose( Matrix< T, TL_NONE>& inout, Matrix< T, TL_NONE>& swap);
+    //template< typename T>
+    //void transpose( Matrix< T, TL_NONE>& inout, Matrix< T, TL_NONE>& swap);
     
     
-    /*! @brief Matrix class of constant size that provides fftw compatible 2D fields
+    /*! @brief Matrix class of constant size that provides fftw compatible dynamically allocated 2D fields
      *
      * The primary goal of the Matrix class is to provide a way to have 
      * a dynamically continuously allocated 2d field for either real or complex values. 
@@ -77,8 +71,11 @@ namespace toefl{
      * behaves like an unpadded field in all situations except that it is fourier
      * transformable. See the fft.h file for further information on that topic. 
      *
-     * @tparam T either double, complex<double> 
-     * @tparam P one of TL_NONE(default), TL_DFT_1D or TL_DFT_2D
+     * @tparam T tested with double and std::complex<double> 
+     * @tparam P one of TL_NONE(default), TL_DFT_1D, TL_DFT_2D, TL_DST_DFT, TL_DFT_DFT
+     * \note The fftw_complex type does not work as a template paramter. (Mainly due to the comparison and istream and outstream methods)
+     * However std::complex<double> should be byte compatible so you can use reinterpret_cast<fftw_complex*>() on the pointer you get with getPtr() to use fftw routines!
+     * \note No errors are thrown if the macro TL_DEBUG is not defined
      */
     template <class T, enum Padding P = TL_NONE>
     class Matrix
@@ -87,51 +84,98 @@ namespace toefl{
     
       protected:
           //maybe an id (static int id) wouldn't be bad to identify in errors
-        const size_t n; 
-        const size_t m;
-        T *ptr;
+        const size_t n; //!< # of columns
+        const size_t m; //!< # of rows
+        T *ptr; //!< pointer to allocated memory
         //inline void swap( Matrix& rhs);
       public:
         /*! @brief allocates continous memory on the heap
          *
-         * @param rows number of rows
-         * @param cols number of columns
+         * @param rows logical number of rows (cannot be changed during objects lifetime)
+         * @param cols logical number of columns (cannot be changed during objects lifetime)
          * @param allocate determines whether memory should actually be allocated.
-         *  Use TL_VOID if matrix should be empty!
+         *  Use TL_VOID if matrix should be empty! Then only the swap_fields function can make
+         *  the matrix usable. 
+         *  \note The physical size of the actually allocated memory depends on the padding type. 
+         *  (In the case that memory is allocated)
          */
         Matrix( const size_t rows, const size_t cols, const bool allocate = true);
+        /*! @brief frees all allocated memory
+         */
         ~Matrix();
         /*! @brief deep copy of an existing Matrix using memcpy
          *
+         * @param src the source matrix. 
+         * \note throws an error if src is void or doesn't have the same size.
+         * If src is void then so will be this.
          */
         Matrix( const Matrix& src);
+        /*! @brief deep assignment using memcpy
+         *
+         * @param src the right hand side
+         * @return this
+         * \note throws an error if src is void or doesn't have the same size.
+         */
         const Matrix& operator=( const Matrix& src);
     
+        /*! @brief number of rows
+         *
+         * Return the  number of rows the object manages (the one you specified in the constructor)
+         * even if 
+         * no memory (or more in the padded case) is allocated. 
+         * This number doesn't change during the lifetime of the object.
+         * @return number of columns
+         */
         const size_t rows() const {return n;}
+        /*! @brief number of columns
+         *
+         * Return the number of columns the object manages (the one you specified in the constructor), even if 
+         * no memory is allocated. This number doesn't change
+         * during the lifetime of the object.
+         * @return number of columns
+         */
         const size_t cols() const {return m;}
+        /*! @brief get the address of the first element
+         *
+         * Replaces the use of &m(0,0) which is kind of clumsy!
+         * @return pointer to allocated memory
+         * \note DO NOT DELETE THIS POINTER!! This class manages the memory it allocates by itself.
+         */
         T* getPtr(){ return ptr;}
         /*! @brief uses memset to set memory to 0
          */
         inline void zero();
-        /*! @brief checks if matrix is empty i.e. no memory is allocated
+        /*! @brief checks whether matrix is empty i.e. no memory is allocated
          *
          * @return true if memory isn't allocated 
          */
         bool isVoid() const { return (ptr == NULL) ? true : false;}
 
+        /*! @brief two Matrices are considered equal if elements are equal
+         *
+         * @param rhs Matrix to be compared to this
+         * @return true if rhs does not equal this
+         */
         const bool operator!=( const Matrix& rhs) const; 
+        /*! @brief two Matrices are considered equal if elements are equal
+         *
+         * @param rhs Matrix to be compared to this
+         * @return true if rhs equals this
+         */
         const bool operator==( const Matrix& rhs) const {return !((*this != rhs));}
         //hier sollte kein overhead für vektoren liegen weil der Compiler den 
         //Zugriff m(0,i) auf ptr[i] optimieren sollte
-        /* !@brief access operator
+
+        /*! @brief access operator
          *
          * Performs a range check if TL_DEBUG is defined
          * @param i row index
          * @param j column index
-         * @return reference value at that location
+         * @return reference to value at that location
          */
         inline T& operator()( const size_t i, const size_t j);
-        /* !@brief const access operator
+
+        /*! @brief const access operator
          *
          * Performs a range check if TL_DEBUG is defined
          * @param i row index
@@ -140,43 +184,46 @@ namespace toefl{
          */
         inline const T& operator()( const size_t i, const size_t j) const;
     
+        // friend functions
+        /*! @brief swap memories of two equally sized matrices of arbitrary type
+         *
+         * Performs a range check if TL_DEBUG is defined. 
+         * The sizes of the actually allocated memory, which depend on padding and the value type, have to be equal.
+         * @param lhs changes memory with rhs
+         * @param rhs changes memory with lhs
+         */
         template<class T1, enum Padding P1, class T2, enum Padding P2>
         friend void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
-
+        /*! @brief permute memory of matrices with the same type
+         *
+         * @param first becomes second
+         * @param second becomes third
+         * @param third becomes first
+         */
         friend void permute_fields<T, P>( Matrix& first, Matrix& second, Matrix& third);
-        friend std::ostream& operator<< <T, P> ( std::ostream& os, const Matrix& mat);
+        /*! @brief print a Matrix to the given outstream
+         *
+         * Matrix is printed linewise with a newline after each line.
+         * @param os the outstream
+         * @param mat the matrix to be printed
+         * @return the outstream
+         */
+        friend std::ostream& operator<< <T,P> ( std::ostream& os, const Matrix& mat);
+        /*! @brief read values into a Matrix from given istream
+         *
+         * The values are filled linewise into the matrix. Values are seperated by 
+         * whitespace charakters. (i.e. newline, blank, etc)
+         * @param is the istream
+         * @param mat the Matrix into which the values are written
+         * @return the istream
+         */
         friend std::istream& operator>> <T, P> ( std::istream& is, Matrix& mat); 
     };
-    template <enum Padding P>
-    struct TotalNumberOf
-    {
-        static inline size_t cols( const size_t m){return m;}
-        static inline size_t elements( const size_t n, const size_t m){return n*m;}
-    };
-    
-    template <>
-    struct TotalNumberOf<TL_DFT_1D>
-    {
-        static inline size_t cols( const size_t m){ return m - m%2 + 2;}
-        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
-    };
-    
-    template <>
-    struct TotalNumberOf<TL_DFT_2D>
-    {
-        static inline size_t cols( const size_t m){ return m;}
-        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
-    };
-    template <>
-    struct TotalNumberOf<TL_DST_DFT>
-    {
-        static inline size_t cols( const size_t m){ return m;}
-        static inline size_t elements( const size_t n, const size_t m){return m*(n - n%2 + 2);}
-    };
 
+    /////////////////////////////////////DEFINITIONS///////////////////////////////////////////////////////////////////////////////
     template<class T1, enum Padding P1, class T2, enum Padding P2>
-    void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs){
-
+    void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs)
+    {
 #ifdef TL_DEBUG
         if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
             throw Message( "Swap not possible. Sizes not equal\n", ping);
@@ -186,167 +233,169 @@ namespace toefl{
         rhs.ptr = reinterpret_cast<T2*>(ptr); 
     }
 
-template <class T, enum Padding P>
-Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m)
-{
-#ifdef TL_DEBUG
-    if( n==0|| m==0)
-        throw Message("Use TL_VOID to not allocate any memory!\n", ping);
-#endif
-    if( allocate){
-        ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
-        if (ptr == NULL) //might be done by fftw_malloc
-            throw AllocationError(n, m, ping);
-    } else {
-        ptr = NULL;
-    }
-}
-
-template <class T, enum Padding P>
-Matrix<T, P>::~Matrix()
-{
-    if( ptr!= NULL)
-        fftw_free( ptr);
-}
-
-template <class T, enum Padding P>
-Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m){
-    if( src.ptr != NULL){
-        ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
-        if( ptr == NULL) 
-            throw AllocationError(n, m, ping);
-        memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
-    } else {
-        ptr = NULL;
-    }
-}
-
-template <class T, enum Padding P>
-const Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
-{
-#ifdef TL_DEBUG
-    if( n!=src.n || m!=src.m)
-        throw  Message( "Assignment error! Sizes not equal!", ping);
-    if( ptr == NULL || src.ptr == NULL)
-        throw Message( "Assigning to or from a void matrix!", ping);
-#endif
-    memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
-    return *this;
-}
-
-template <class T, enum Padding P>
-T& Matrix<T, P>::operator()( const size_t i, const size_t j)
-{
-#ifdef TL_DEBUG
-    if( i >= n || j >= m)
-        throw BadIndex( i,n, j,m, ping);
-    if( ptr == NULL) 
-        throw Message( "Trying to access a void matrix!", ping);
-#endif
-    return ptr[ i*TotalNumberOf<P>::cols(m) + j];
-}
-
-template <class T, enum Padding P>
-const T&  Matrix<T, P>::operator()( const size_t i, const size_t j) const
-{
-#ifdef TL_DEBUG
-    if( i >= n || j >= m)
-        throw BadIndex( i,n, j,m, ping);
-    if( ptr == NULL) 
-        throw Message( "Trying to access a void matrix!", ping);
-#endif
-    return ptr[ i*TotalNumberOf<P>::cols(m) + j];
-}
-
-template <class T, enum Padding P>
-void Matrix<T, P>::zero(){
-#ifdef TL_DEBUG
-    if( ptr == NULL) 
-        throw  Message( "Trying to zero a void matrix!", ping);
-#endif
-    memset( ptr, 0, TotalNumberOf<P>::elements(n, m)*sizeof( T));
-}
-
-/*
-template <class T, enum Padding P>
-void Matrix<T, P>::swap( Matrix& rhs)
-{
-#ifdef TL_DEBUG
-    if( TotalNumberOf<P>::elements(this->n, this->m)*sizeof(T) != TotalNumberOf<P>::elements(rhs.n, rhs.m)*sizeof(T)) 
-        throw Message( "Swap not possible! Sizes not equal!\n", ping);
-    if( this->n != rhs.n)
-        throw Message( "Swap not possible! Shape not equal!\n", ping);
-#endif
-    T * ptr = this->ptr;
-    this->ptr = reinterpret_cast<T*>(rhs.ptr);
-    rhs.ptr = reinterpret_cast<T*>(ptr); 
-}
-*/
-
-template <class T, enum Padding P>
-void permute_fields( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)
-{
-#ifdef TL_DEBUG
-    if( first.n!=second.n || first.m!=second.m || first.n != third.n || first.m != third.m)
-        throw  Message( "Permutation error! Sizes not equal!", ping);
-#endif
-    T * ptr = first.ptr;
-    first.ptr = third.ptr; 
-    third.ptr = second.ptr;
-    second.ptr = ptr;
-}
-
-template <class T, enum Padding P>
-std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat)
-{
-#ifdef TL_DEBUG
-    if( mat.ptr == NULL)
-        throw  Message( "Trying to output a void matrix!\n", ping);
-#endif
-     int w = os.width();
-     for( size_t i=0; i<mat.n; i++)
-     {
-         for( size_t j=0; j<mat.m; j++)
-         {
-             os.width(w); 
-             os << mat(i,j)<<" ";	//(Feldbreite gilt immmer nur bis zur nächsten Ausgabe)
-         }
-         os << "\n";
-     }
-     return os;
-}
-
-template <class T, enum Padding P>
-std::istream& operator>>( std::istream& is, Matrix<T, P>& mat)
-{
-#ifdef TL_DEBUG
-    if( mat.ptr == NULL)
-        throw  Message( "Trying to write in a void matrix!\n", ping);
-#endif
-    for( size_t i=0; i<mat.n; i++)
-        for( size_t j=0; j<mat.m; j++)
-            is >> mat(i, j);
-    return is;
-}
-
-//certainly optimizable transposition algorithm for inplace Matrix transposition
-template <class T>
-void transpose( Matrix< T, TL_NONE>& inout, Matrix< T, TL_NONE>& swap)
-{
-#ifdef TL_DEBUG
-    if( swap.isVoid() == false) throw Message("Swap Matrix is not void in transpose algorithm!", ping);
-    if( swap.rows() != inout.cols()|| swap.cols() != inout.rows()) throw Message("Swap Matrix has wrong size for transposition!", ping);
-#endif
-    T temp;
-    for (size_t i = 0; i < inout.rows; i ++) {
-        for (size_t j = i; j < inout.cols; j ++) {
-            temp = inout(i,j);
-            inout(i,j) = inout( j,i);
-            inout(j,i) = temp;
+    template <class T, enum Padding P>
+    Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m)
+    {
+    #ifdef TL_DEBUG
+        if( n==0|| m==0)
+            throw Message("Use TL_VOID to not allocate any memory!\n", ping);
+    #endif
+        if( allocate){
+            ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
+            if (ptr == NULL) //might be done by fftw_malloc
+                throw AllocationError(n, m, ping);
+        } else {
+            ptr = NULL;
         }
     }
-    swap_fields( inout, swap);
-}
+    
+    template <class T, enum Padding P>
+    Matrix<T, P>::~Matrix()
+    {
+        if( ptr!= NULL)
+            fftw_free( ptr);
+    }
+    
+    template <class T, enum Padding P>
+    Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m){
+        if( src.ptr != NULL){
+            ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
+            if( ptr == NULL) 
+                throw AllocationError(n, m, ping);
+            memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
+        } else {
+            ptr = NULL;
+        }
+    }
+    
+    template <class T, enum Padding P>
+    const Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
+    {
+    #ifdef TL_DEBUG
+        if( n!=src.n || m!=src.m)
+            throw  Message( "Assignment error! Sizes not equal!", ping);
+        if( ptr == NULL || src.ptr == NULL)
+            throw Message( "Assigning to or from a void matrix!", ping);
+    #endif
+        memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
+        return *this;
+    }
+    
+    template <class T, enum Padding P>
+    T& Matrix<T, P>::operator()( const size_t i, const size_t j)
+    {
+    #ifdef TL_DEBUG
+        if( i >= n || j >= m)
+            throw BadIndex( i,n, j,m, ping);
+        if( ptr == NULL) 
+            throw Message( "Trying to access a void matrix!", ping);
+    #endif
+        return ptr[ i*TotalNumberOf<P>::cols(m) + j];
+    }
+    
+    template <class T, enum Padding P>
+    const T&  Matrix<T, P>::operator()( const size_t i, const size_t j) const
+    {
+    #ifdef TL_DEBUG
+        if( i >= n || j >= m)
+            throw BadIndex( i,n, j,m, ping);
+        if( ptr == NULL) 
+            throw Message( "Trying to access a void matrix!", ping);
+    #endif
+        return ptr[ i*TotalNumberOf<P>::cols(m) + j];
+    }
+    
+    template <class T, enum Padding P>
+    void Matrix<T, P>::zero(){
+    #ifdef TL_DEBUG
+        if( ptr == NULL) 
+            throw  Message( "Trying to zero a void matrix!", ping);
+    #endif
+        memset( ptr, 0, TotalNumberOf<P>::elements(n, m)*sizeof( T));
+    }
+    
+    /*
+    template <class T, enum Padding P>
+    void Matrix<T, P>::swap( Matrix& rhs)
+    {
+    #ifdef TL_DEBUG
+        if( TotalNumberOf<P>::elements(this->n, this->m)*sizeof(T) != TotalNumberOf<P>::elements(rhs.n, rhs.m)*sizeof(T)) 
+            throw Message( "Swap not possible! Sizes not equal!\n", ping);
+        if( this->n != rhs.n)
+            throw Message( "Swap not possible! Shape not equal!\n", ping);
+    #endif
+        T * ptr = this->ptr;
+        this->ptr = reinterpret_cast<T*>(rhs.ptr);
+        rhs.ptr = reinterpret_cast<T*>(ptr); 
+    }
+    */
+    
+    template <class T, enum Padding P>
+    void permute_fields( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)
+    {
+    #ifdef TL_DEBUG
+        if( first.n!=second.n || first.m!=second.m || first.n != third.n || first.m != third.m)
+            throw  Message( "Permutation error! Sizes not equal!", ping);
+    #endif
+        T * ptr = first.ptr;
+        first.ptr = third.ptr; 
+        third.ptr = second.ptr;
+        second.ptr = ptr;
+    }
+    
+    template <class T, enum Padding P>
+    std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat)
+    {
+    #ifdef TL_DEBUG
+        if( mat.ptr == NULL)
+            throw  Message( "Trying to output a void matrix!\n", ping);
+    #endif
+         int w = os.width();
+         for( size_t i=0; i<mat.n; i++)
+         {
+             for( size_t j=0; j<mat.m; j++)
+             {
+                 os.width(w); 
+                 os << mat(i,j)<<" ";	//(Feldbreite gilt immmer nur bis zur nächsten Ausgabe)
+             }
+             os << "\n";
+         }
+         return os;
+    }
+    
+    template <class T, enum Padding P>
+    std::istream& operator>>( std::istream& is, Matrix<T, P>& mat)
+    {
+    #ifdef TL_DEBUG
+        if( mat.ptr == NULL)
+            throw  Message( "Trying to write in a void matrix!\n", ping);
+    #endif
+        for( size_t i=0; i<mat.n; i++)
+            for( size_t j=0; j<mat.m; j++)
+                is >> mat(i, j);
+        return is;
+    }
+    
+    /*
+    //certainly optimizable transposition algorithm for inplace Matrix transposition
+    template <class T>
+    void transpose( Matrix< T, TL_NONE>& inout, Matrix< T, TL_NONE>& swap)
+    {
+    #ifdef TL_DEBUG
+        if( swap.isVoid() == false) throw Message("Swap Matrix is not void in transpose algorithm!", ping);
+        if( swap.rows() != inout.cols()|| swap.cols() != inout.rows()) throw Message("Swap Matrix has wrong size for transposition!", ping);
+    #endif
+        T temp;
+        for (size_t i = 0; i < inout.rows; i ++) {
+            for (size_t j = i; j < inout.cols; j ++) {
+                temp = inout(i,j);
+                inout(i,j) = inout( j,i);
+                inout(j,i) = temp;
+            }
+        }
+        swap_fields( inout, swap);
+    }
+    */
 
     template< class T, enum Padding P>
     const bool Matrix<T,P>::operator!= ( const Matrix& rhs) const
@@ -357,7 +406,7 @@ void transpose( Matrix< T, TL_NONE>& inout, Matrix< T, TL_NONE>& swap)
 #endif
         for( size_t i = 0; i < n; i++)
             for( size_t j = 0; j < m; j++)
-                if( (*this)( i, j) != rhs( i, j))  
+                if( (*this)( i, j) != rhs( i, j) )  
                     return true;
         return false;
     }
