@@ -38,23 +38,46 @@ namespace toefl{
             }
     }
 
+    /*! @brief Pointwise multiply a coefficient Matrix with a Matrix
+     * 
+     * Useful for multiplications in fourier space: m_T(kx, ky)*c_T(kx,ky).
+     * @tparam T1 type of the coefficients i.e. double or std::complex<double>
+     * @tparam T type of the matrix elements, default is std::complex<double>
+     * @param c the coefficient matrix 
+     * @param m0 contains solution on output
+     */
+    template< typename T1, typename T = std::complex<double> >
+    void multiply_coeff( const Matrix< T1, TL_NONE>& c, Matrix< T, TL_NONE>& m0)
+    {
+#ifdef TL_DEBUG
+        if( c.rows() != m0.rows() || c.cols() != m0.cols())
+            throw Message( "Cannot multiply coefficients! Sizes not equal!", ping);
+        if( c.isVoid() || m0.isVoid())
+            throw Message( "Cannot work with void Matrices!\n", ping);
+#endif
+        for( size_t i = 0; i<c.rows(); i++)
+            for( size_t j=0; j<c.cols(); j++)
+                m0(i,j) *= c(i,j);
+    }
+
+
     /*! @brief pointwise multiply the 2 x 2 Matrix of coefficients by a 2-vector of matrices  
      *
      * Compute the system m0 = c00*m0 + c01*m1, m1 = c11*m0 + c10*m1 where all
      * of the elements are matrices and matrix-matrix multiplications are done pointwise.
      * @tparam T1 type of the coefficients i.e. double or std::complex<double>
-     * @tparam T type of the matrix elements, i.e. double or std::complex<double>
+     * @tparam T type of the matrix elements, default is std::complex<double>
      * @param c the coefficient matrix made by make_coeff
      * @param m0 zeroth element of the vector, contains solution on output
      * @param m1 first element of the vector, contains solution on output
      */
-    template< typename T1, typename T>
+    template< typename T1, typename T = std::complex<double> >
     void multiply_coeff( const Matrix< QuadMat< T1,2>, TL_NONE>& c, Matrix< T, TL_NONE>& m0, Matrix< T, TL_NONE>& m1)
     {
 #ifdef TL_DEBUG
         if( c.rows() != m0.rows() || m0.rows() != m1.rows())
             if( c.cols() != m0.cols() || m0.cols() != m1.cols())
-                throw Message( "Cannot multiply cicients! T1izes not equal!", ping);
+                throw Message( "Cannot multiply coefficients! Sizes not equal!", ping);
         if( c.isVoid() || m0.isVoid() || m1.isVoid())
             throw Message( "Cannot work with void Matrices!\n", ping);
 #endif
@@ -79,13 +102,13 @@ namespace toefl{
      * @param m1 first element of the vector, contains solution on output
      * @param m2 second element of the vector, contains solution on output
      */
-    template< typename T1, typename T>
+    template< typename T1, typename T = std::complex<double> >
     void multiply_coeff( const Matrix< QuadMat<T1,3>, TL_NONE>& c, Matrix< T, TL_NONE>& m0, Matrix<T, TL_NONE>& m1, Matrix<T, TL_NONE>& m2)
     {
 #ifdef TL_DEBUG
         if( c.rows() != m0.rows() || m0.rows() != m1.rows())
             if( c.cols() != m0.cols() || m0.cols() != m1.cols())
-                throw Message( "Cannot multiply cicients! T1izes not equal!", ping);
+                throw Message( "Cannot multiply coefficients! T1izes not equal!", ping);
         if( c.isVoid() || m0.isVoid() || m1.isVoid() || m2.isVoid())
             throw Message( "Cannot work with void Matrices!\n", ping);
 #endif
