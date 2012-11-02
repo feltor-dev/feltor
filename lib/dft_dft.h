@@ -52,7 +52,7 @@ namespace toefl{
          * @param swap can be void. Size has to be (real_cols/2 + 1, real_rows).
          * Contains the solution on output.
          */
-        void r2c( Matrix<double, TL_DFT_DFT>& inout, Matrix<complex, TL_NONE>& swap);
+        void r2c( Matrix<double, TL_DFT_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
 
         /*! @brief execute a c2r transposing transformation
          *
@@ -65,7 +65,7 @@ namespace toefl{
          * Can be void. Size has to be (real_rows, real_cols).
          * Contains the solution on output.
          */
-        void c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT_DFT>& swap);
+        void c2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DFT_DFT>& swap);
         //make copy construction impossible because fftw_plan cannot be copied
         /*! @brief frees the fftw plans
          */

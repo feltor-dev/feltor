@@ -44,7 +44,7 @@ namespace toefl{
          * @param swap Can be void. Size has to be (real_cols, real_rows/2 + 1).
          * Contains the solution on output.
          */
-        void r2c( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap);
+        void r2c( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
         /*! @brief execute a c2r transposing transformation
          *
          * First performs a linewise discrete fourier transform followed
@@ -56,7 +56,7 @@ namespace toefl{
          * Can be void. Size has to be (real_rows, real_cols).
          * Contains the solution on output.
          */
-        void c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DST_DFT>& swap);
+        void c2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DST_DFT>& swap);
         //make copy construction impossible because fftw_plan cannot be copied
         /*! @brief frees all fftw plans
          */
