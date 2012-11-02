@@ -12,6 +12,15 @@ namespace toefl{
 
     enum BC{ TL_PER, TL_DIR};
     
+    /*! @brief compute an interior point in the arakawa scheme
+     *
+     * @tparm M the type of the matrix
+     * @param i0 row index
+     * @param j0 column index
+     * @param lhs left hand side
+     * @param rhs right hand size
+     * @return unnormalized value of the arakawa bracket
+     */
     template< class M>
     static double interior( const size_t i0, const size_t j0, const M& lhs, const M& rhs);
     template< class M>

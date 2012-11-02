@@ -41,7 +41,7 @@ namespace toefl{
          * @param inout non void matrix of size specified in the constructor.
          * i.e. (real_rows, real_cols)
          * Content on output is the one of swap on input.
-         * @param swap Can be void. Size has to be (real_cols, real_rows/2 + 1).
+         * @param swap_T Can be void. Size has to be (real_cols, real_rows/2 + 1).
          * Contains the solution on output.
          */
         void r2c( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
@@ -49,10 +49,10 @@ namespace toefl{
          *
          * First performs a linewise discrete fourier transform followed
          * by a transposition and a linewise discrete sine transform.
-         * @param inout
+         * @param inout_T
          * Non void complex matrix of size (real_cols, real_rows/2 + 1)
          * Content on output is the one of swap on input.
-         * @param swap 
+         * @param swap
          * Can be void. Size has to be (real_rows, real_cols).
          * Contains the solution on output.
          */

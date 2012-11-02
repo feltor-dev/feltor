@@ -17,7 +17,7 @@ namespace toefl{
  */
 
 
-    /*! @brief class for twodimensional dft transformation of Matrix
+    /*! @brief Class for 2d discrete fourier transformations of Matrix
      *
      * \note Do not copy or assign any Objects of this class!!
      */
@@ -35,30 +35,30 @@ namespace toefl{
         void plan_backward_b( Matrix<double, TL_DFT_DFT>&);
         void plan_backward_a( Matrix<double, TL_DFT_DFT>&);
       public:
-        /*! @brief prepare transformations of given size
+        /*! @brief Prepare a 2d discrete fourier transformation of given size
          *
          * Uses fftw. 
          * @param real_rows # of rows in the real matrix
          * @param real_cols # of colums in the real matrix
          */
         DFT_DFT( const size_t real_rows, const size_t real_cols);
-        /*! @brief execute a r2c transposing transformation
+        /*! @brief Execute a r2c transposing transformation
          *
          * First performs a linewise discrete fourier transform followed
          * by a transposition and another linewise discrete fourier transform.
          * @param inout non void matrix of size specified in the constructor.
          * i.e. (real_rows, real_cols)
          * Content on output is the one of swap on input.
-         * @param swap can be void. Size has to be (real_cols/2 + 1, real_rows).
+         * @param swap_T Can be void. Size has to be (real_cols/2 + 1, real_rows).
          * Contains the solution on output.
          */
         void r2c( Matrix<double, TL_DFT_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
 
-        /*! @brief execute a c2r transposing transformation
+        /*! @brief Execute a c2r transposing transformation
          *
-         * First performs a linewise discrete fourier transform followed
+         * First perform a linewise discrete fourier transform followed
          * by a transposition and another linewise discrete fourier transform.
-         * @param inout
+         * @param inout_T
          * Non void matrix of size (real_cols/2 + 1, real_rows)
          * Content on output is the one of swap on input.
          * @param swap 
@@ -67,7 +67,7 @@ namespace toefl{
          */
         void c2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DFT_DFT>& swap);
         //make copy construction impossible because fftw_plan cannot be copied
-        /*! @brief frees the fftw plans
+        /*! @brief Free the fftw plans
          */
         ~DFT_DFT();
     };
