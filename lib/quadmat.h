@@ -41,6 +41,13 @@ namespace toefl{
             return *this;
         }
     
+        /*! @brief set memory to 0
+         */
+        void zero()
+        {
+            for( size_t i = 0; i < n*n; i++)
+                data[i] = 0;
+        }
         /*! @brief access operator
          *
          * Performs a range check if TL_DEBUG is defined

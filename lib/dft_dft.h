@@ -1,9 +1,10 @@
-#ifndef _TL_FFT_2D_
-#define _TL_FFT_2D_
+#ifndef _TL_DFT_DFT_
+#define _TL_DFT_DFT_
 
 #include <complex>
 #include "matrix.h"
 #include "fftw3.h"
+#include "fft.h"
 
 namespace toefl{
 
@@ -30,10 +31,8 @@ namespace toefl{
         fftw_plan forward_b;
         fftw_plan backward_b;
         fftw_plan backward_a;
-        void plan_forward_a( Matrix<double, TL_DFT_DFT>&);
         void plan_forward_b( Matrix<double, TL_DFT_DFT>&);
         void plan_backward_b( Matrix<double, TL_DFT_DFT>&);
-        void plan_backward_a( Matrix<double, TL_DFT_DFT>&);
       public:
         /*! @brief Prepare a 2d discrete fourier transformation of given size
          *
@@ -52,7 +51,7 @@ namespace toefl{
          * @param swap_T Can be void. Size has to be (real_cols/2 + 1, real_rows).
          * Contains the solution on output.
          */
-        void r2c( Matrix<double, TL_DFT_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
+        void r2c_T( Matrix<double, TL_DFT_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
 
         /*! @brief Execute a c2r transposing transformation
          *
@@ -65,7 +64,7 @@ namespace toefl{
          * Can be void. Size has to be (real_rows, real_cols).
          * Contains the solution on output.
          */
-        void c2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DFT_DFT>& swap);
+        void c_T2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DFT_DFT>& swap);
         //make copy construction impossible because fftw_plan cannot be copied
         /*! @brief Free the fftw plans
          */
@@ -75,16 +74,23 @@ namespace toefl{
     DFT_DFT::DFT_DFT( const size_t r, const size_t c):rows(r), cols(c)
     {
         Matrix<double, TL_DFT_DFT> temp(rows, cols);
-        plan_forward_a(temp);
+        forward_a = plan_dft_1d_r2c( rows, cols, temp.getPtr(), reinterpret_cast<fftw_complex*>(temp.getPtr()), FFTW_MEASURE);
         plan_forward_b(temp);
         plan_backward_b(temp);
-        plan_backward_a(temp);
+        backward_a = plan_dft_1d_c2r( rows, cols, reinterpre_cast<fftw_complex*>(temp.getPtr()), FFTW_MEASURE) ;
 #ifdef TL_DEBUG
         if(forward_a == 0 || forward_b == 0)
             throw Message( "Forward Planner routine failed!", ping);
         if(backward_b == 0 || backward_a == 0)
             throw Message( "Backward Planner routine failed!", ping);
 #endif
+    }
+    DFT_DFT::~DFT_DFT()
+    {
+        fftw_free( forward_a);
+        fftw_free( backward_b);
+        fftw_free( forward_b);
+        fftw_free( backward_a);
     }
     //plan a r2c inplace routine of lines without transpositions
     void DFT_DFT::plan_forward_a( Matrix<double, TL_DFT_DFT>& temp)
@@ -102,7 +108,7 @@ namespace toefl{
         forward_a = fftw_plan_guru_dft_r2c( rank, dims, howmany_rank, howmany_dims, temp.getPtr(), reinterpret_cast<fftw_complex*>(temp.getPtr()), FFTW_MEASURE);
     }
 
-    //plan a c2c transposing transformation
+    //plan a c_T2c transposing transformation (i.e. read transposed)
     void DFT_DFT::plan_forward_b( Matrix<double, TL_DFT_DFT>& temp)
     {
         int rank = 1;
@@ -118,7 +124,7 @@ namespace toefl{
         forward_b = fftw_plan_guru_dft( rank, dims, howmany_rank, howmany_dims, reinterpret_cast<fftw_complex*>(temp.getPtr()), reinterpret_cast<fftw_complex*>(temp.getPtr()), FFTW_FORWARD, FFTW_MEASURE);
     }
 
-    //transposing c2c transformation
+    //transposing c2c_T transformation (i.e. write transposed)
     void DFT_DFT::plan_backward_b( Matrix<double, TL_DFT_DFT>& temp)
     {
         //backward_b
@@ -150,14 +156,7 @@ namespace toefl{
         howmany_dims[0].os = cols + 2 - cols%2; //(double)
         backward_a = fftw_plan_guru_dft_c2r( rank, dims, howmany_rank, howmany_dims, reinterpret_cast<fftw_complex*>(temp.getPtr()), temp.getPtr(), FFTW_MEASURE);
     }
-    DFT_DFT::~DFT_DFT()
-    {
-        fftw_free( forward_a);
-        fftw_free( backward_b);
-        fftw_free( forward_b);
-        fftw_free( backward_a);
-    }
-    void DFT_DFT::r2c( Matrix<double, TL_DFT_DFT>& inout, Matrix<complex, TL_NONE>& swap)
+    void DFT_DFT::r2c_T( Matrix<double, TL_DFT_DFT>& inout, Matrix<complex, TL_NONE>& swap)
     {
 #ifdef TL_DEBUG
         if( inout.rows() != rows|| inout.cols() != cols)
@@ -170,7 +169,7 @@ namespace toefl{
         swap_fields( inout, swap);
 
     }
-    void DFT_DFT::c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT_DFT>& swap)
+    void DFT_DFT::c_T2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT_DFT>& swap)
     {
 #ifdef TL_DEBUG
         if( inout.rows() != cols/2+1|| inout.cols() != rows) 
@@ -184,5 +183,5 @@ namespace toefl{
     }
 
 }
-#endif // _TL_FFT_2D_
+#endif // _TL_DFT_DFT_
 

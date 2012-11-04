@@ -120,7 +120,7 @@ int main()
                 lhs2( i-1, j )  = lhs( i, j) = i + 7*j;
                 rhs2( i-1, j )  = rhs( i, j) = 2*i +3*j;
             }
-        cout << "test of periodic BC\n";
+        cout << "test of periodic_dirichlet BC\n";
         cout << "lhs\n" << lhs<<"rhs\n"<<rhs<<endl;
         for( int i=1; i<4; i++)
             for( int j=0; j<5; j++)

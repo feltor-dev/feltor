@@ -1,3 +1,4 @@
-doc: Doxyfile
+.PHONY: doc
+doc: 
 	doxygen Doxyfile
 

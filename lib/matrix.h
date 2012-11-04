@@ -271,13 +271,16 @@ namespace toefl{
     template <class T, enum Padding P>
     const Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
     {
+        if( src != *this)
+        {
     #ifdef TL_DEBUG
-        if( n!=src.n || m!=src.m)
-            throw  Message( "Assignment error! Sizes not equal!", ping);
-        if( ptr == NULL || src.ptr == NULL)
-            throw Message( "Assigning to or from a void matrix!", ping);
+            if( n!=src.n || m!=src.m)
+                throw  Message( "Assignment error! Sizes not equal!", ping);
+            if( ptr == NULL || src.ptr == NULL)
+                throw Message( "Assigning to or from a void matrix!", ping);
     #endif
-        memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
+            memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
+        }
         return *this;
     }
     

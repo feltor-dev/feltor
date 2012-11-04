@@ -8,6 +8,8 @@
 #ifndef _ARAKAWA_
 #define _ARAKAWA_
 
+#include "quadmat.h"
+
 namespace toefl{
 
     enum BC{ TL_PER, TL_DIR};
@@ -221,24 +223,22 @@ namespace toefl{
     template< class M>
     double boundary( const size_t i0, const size_t j0, const M& lhs, const M& rhs) 
     {
-        double jacob;
+        static QuadMat<double, 3> l, r;
         const size_t rows = lhs.rows(), cols = lhs.cols();
         const size_t ip = (i0==(rows-1)) ? 0 : i0+1;
         const size_t im = (i0==0) ? (rows-1) : i0-1;
         const size_t jp = (j0==(cols-1)) ? 0 : j0+1;
         const size_t jm = (j0==0) ? (cols-1) : j0-1;
-     //  xxx
-     //  x x (access pattern)
-     //  xxx
-        jacob  = rhs(i0,jm) * ( lhs(ip,j0) -lhs(im,j0) -lhs(im,jm) +lhs(ip,jm) );
-        jacob += rhs(i0,jp) * (-lhs(ip,j0) +lhs(im,j0) -lhs(ip,jp) +lhs(im,jp) );
-        jacob += rhs(ip,j0) * ( lhs(i0,jp) -lhs(i0,jm) +lhs(ip,jp) -lhs(ip,jm) );
-        jacob += rhs(im,j0) * (-lhs(i0,jp) +lhs(i0,jm) +lhs(im,jm) -lhs(im,jp) );
-        jacob += rhs(ip,jm) * ( lhs(ip,j0) -lhs(i0,jm) );
-        jacob += rhs(ip,jp) * ( lhs(i0,jp) -lhs(ip,j0) );
-        jacob += rhs(im,jm) * ( lhs(i0,jm) -lhs(im,j0) );
-        jacob += rhs(im,jp) * ( lhs(im,j0) -lhs(i0,jp) );
-        return jacob;
+
+        //assignment
+        for( size_t i = 0; i < 3; i++)
+            for( size_t j = 0; j < 3; j++)
+            {
+                l(i,j) = lhs( (i == 1)? i0 : ((i==0)?im:ip), (j == 1)? j0 : ((j==0)?jm:jp));
+                r(i,j) = rhs( (i == 1)? i0 : ((i==0)?im:ip), (j == 1)? j0 : ((j==0)?jm:jp));
+            }
+
+        return interior( 1, 1, l, r);
     }
     
     
@@ -253,6 +253,9 @@ namespace toefl{
     {
         return i>=0 ? i%m : mod( i + m, m);
     }
+
+    // bessere idee: lege statische 3x3 Matrix an, kopiere Werte rein und übergib diese an interior
+    // da dies nur die Randwerte betrifft sollte der overhaed nicht groß sein
     /*! @brief calculates and edge point in the Arakawa scheme
      *
      * The paramters s0 and s1 indicate the interior of the matrix.
@@ -273,6 +276,8 @@ namespace toefl{
     template <int s0, int s1, class M> //indicates where the interior is
     double edge( const size_t i0, const size_t j0, const M& lhs, const M& rhs) 
     {
+        static QuadMat<double, 3> l, r;
+        l.zero(), r.zero();
         const size_t rows = lhs.rows(), cols = lhs.cols();
         size_t s[2], s_01[2], s_10[2], s_0m[2], s_11[2], s_1m[2];
         double jacob;
@@ -291,15 +296,27 @@ namespace toefl{
     
         s_10[0] += s[0], s_01[0] += s[0], s_0m[0] += s[0], s_11[0]+=s[0], s_1m[0] += s[0];
         s_10[1] += s[1], s_01[1] += s[1], s_0m[1] += s[1], s_11[1]+=s[1], s_1m[1] += s[1];
+
+        s_10[0] = mod( s_10[0], rows);
+        s_10[1] = mod( s_10[1], cols);
+        s_0m[0] = mod( s_0m[0], rows);
+        s_0m[1] = mod( s_0m[1], cols);
+        s_01[0] = mod( s_01[0], rows);
+        s_01[1] = mod( s_01[1], cols);
+        s_11[0] = mod( s_11[0], rows);
+        s_11[1] = mod( s_11[1], cols);
+        s_1m[0] = mod( s_1m[0], rows);
+        s_1m[1] = mod( s_1m[1], cols);
         
      //  0xx  000  
      //  0 x  x x  etc.
      //  0xx  xxx
-        const double& rhs_10 = rhs( mod(s_10[0], rows), mod( s_10[1], cols)), &lhs_10 = lhs( mod(s_10[0], rows), mod( s_10[1], cols));
-        const double& rhs_0m = rhs( mod(s_0m[0], rows), mod( s_0m[1], cols)), &lhs_0m = lhs( mod(s_0m[0], rows), mod( s_0m[1], cols));
-        const double& rhs_01 = rhs( mod(s_01[0], rows), mod( s_01[1], cols)), &lhs_01 = lhs( mod(s_01[0], rows), mod( s_01[1], cols));
-        const double& rhs_11 = rhs( mod(s_11[0], rows), mod( s_11[1], cols)), &lhs_11 = lhs( mod(s_11[0], rows), mod( s_11[1], cols));
-        const double& rhs_1m = rhs( mod(s_1m[0], rows), mod( s_1m[1], cols)), &lhs_1m = lhs( mod(s_1m[0], rows), mod( s_1m[1], cols));
+
+        const double& rhs_10 = rhs( s_10[0],  s_10[1]), &lhs_10 = lhs( s_10[0],  s_10[1]);
+        const double& rhs_0m = rhs( s_0m[0],  s_0m[1]), &lhs_0m = lhs( s_0m[0],  s_0m[1]);
+        const double& rhs_01 = rhs( s_01[0],  s_01[1]), &lhs_01 = lhs( s_01[0],  s_01[1]);
+        const double& rhs_11 = rhs( s_11[0],  s_11[1]), &lhs_11 = lhs( s_11[0],  s_11[1]);
+        const double& rhs_1m = rhs( s_1m[0],  s_1m[1]), &lhs_1m = lhs( s_1m[0],  s_1m[1]);
     
         jacob  = rhs_0m * ( lhs_10  +lhs_1m );
         jacob += rhs_01 * ( -lhs_10 -lhs_11 );
