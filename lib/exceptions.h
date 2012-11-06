@@ -27,7 +27,19 @@ namespace toefl{
         void display() const
         {
              Message::display();
-            std::cerr << " in index (" << i << ", " <<j << ") of "<< i_max<< " rows and  "<<j_max<< " columns\n";
+             std::cerr << " in index (" << i << ", " <<j << ") of "<< i_max<< " rows and  "<<j_max<< " columns\n";
+        }
+    };
+    class BoeserIndex: public Message			
+    {
+      private:
+        int index;
+      public:
+        BoeserIndex( const int i, const char* d, const int l):Message("Bad Index: ",d ,l), index(i) {}	
+        void display() const
+        {
+            Message::display();
+            std::cerr << index <<std::endl;
         }
     };
 

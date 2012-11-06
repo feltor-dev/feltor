@@ -14,8 +14,10 @@
 
 namespace toefl{
 
-    /*! @brief this function inverts the coefficient matrix and places them in a container  
+    /*! @brief This function inverts the coefficient matrix and places them in a container  
      *
+     * If in the system Lv = w of dimension n
+     * you have the matrix of coefficients L then this functions computes L^-1.
      * @tparam T double or complex<double>
      * @tparam F the Functor class or function type (provides F( QuadMat<T, n>, size_t, size_t) 
      * @tparam n the size of the problem ( 2 or 3)
@@ -25,7 +27,7 @@ namespace toefl{
      * and the second y i.e. the transpose of your field matrices!
      */
     template< class F, class T, size_t n> //f( QuadMat< T, n>, size_t k, size_t l)
-    void make_coeff( F& f_T, Matrix< QuadMat<T,n>, TL_NONE>& coeff_T)
+    void invert_coeff( F& f_T, Matrix< QuadMat<T,n>, TL_NONE>& coeff_T)
     {
         const size_t nkx = coeff.rows(), nky = coeff.cols();
         QuadMat<T,n> temp;
@@ -67,7 +69,7 @@ namespace toefl{
      * of the elements are matrices and matrix-matrix multiplications are done pointwise.
      * @tparam T1 type of the coefficients i.e. double or std::complex<double>
      * @tparam T type of the matrix elements, default is std::complex<double>
-     * @param c the coefficient matrix made by make_coeff
+     * @param c the coefficient matrix 
      * @param m0 zeroth element of the vector, contains solution on output
      * @param m1 first element of the vector, contains solution on output
      */
@@ -97,7 +99,7 @@ namespace toefl{
      * of the elements are matrices and matrix-matrix multiplications are done pointwise.
      * @tparam T1 type of the coefficients i.e. double or std::complex<double>
      * @tparam T type of the matrix elements, i.e. double or std::complex<double>
-     * @param c the coefficient matrix made by make_coeff
+     * @param c the coefficient matrix 
      * @param m0 zeroth element of the vector, contains solution on output
      * @param m1 first element of the vector, contains solution on output
      * @param m2 second element of the vector, contains solution on output

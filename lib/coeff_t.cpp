@@ -69,7 +69,7 @@ int main()
     Matrix< QuadMat<MyComplex,2> > data( nx, ny);
     try{
         Matrix< QuadMat<MyComplex,2>> coeff( nx, ny);
-        make_coeff< CalcComplexCoeff, MyComplex, 2 > (f, coeff);
+        invert_coeff< CalcComplexCoeff, MyComplex, 2 > (f, coeff);
         cout << coeff << endl;
         data = coeff;
         Matrix< QuadMat<MyComplex,2>> data2( coeff);
@@ -81,7 +81,7 @@ int main()
     cout << data << endl;
 
     Matrix< QuadMat<double,2>> container( nx, ny);
-    make_coeff< CalcRealCoeff, double, 2> (g, container);
+    invert_coeff< CalcRealCoeff, double, 2> (g, container);
     cout << container << endl;
 
     return 0;

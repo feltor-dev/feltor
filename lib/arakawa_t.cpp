@@ -33,10 +33,10 @@ int main()
     jac3(3,3) = c*corner<-1,-1>( 3,3, lhs, rhs);
     jac3(1,3) = c*corner<1,-1>( 1, 3, lhs, rhs);
     jac3(3,1) = c*corner<-1,1>( 3,1, lhs, rhs);
-    jac3(1,2) = c*edge<1,0>(1,2,lhs, rhs);
-    jac3(2,1) = c*edge<0,1>(2,1,lhs, rhs);
-    jac3(3,2) = c*edge<-1,0>(3,2,lhs, rhs);
-    jac3(2,3) = c*edge<0,-1>(2,3,lhs, rhs);
+    jac3(1,2) = c*edge<1,0>(1,2,lhs, rhs, 0);
+    jac3(2,1) = c*edge<0,1>(2,1,lhs, rhs, 0);
+    jac3(3,2) = c*edge<-1,0>(3,2,lhs, rhs, 0);
+    jac3(2,3) = c*edge<0,-1>(2,3,lhs, rhs, 0);
     jac3(2,2) = c*boundary( 2,2, lhs, rhs);
     if( jac == jac3) 
         cout << "corner and edge test passed\n";

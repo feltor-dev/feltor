@@ -1,14 +1,15 @@
 /*!
- * @file
- * @brief Implementation of the arakawa scheme
- * @author Matthias Wiesenberger
- * @email Matthias.Wiesenberger@uibk.ac.at
+ * \file
+ * \brief Implementation of the arakawa scheme
+ * \author Matthias Wiesenberger
+ * \email Matthias.Wiesenberger@uibk.ac.at
  * 
  */
 #ifndef _ARAKAWA_
 #define _ARAKAWA_
 
 #include "quadmat.h"
+#include "vector.h"
 
 namespace toefl{
 
@@ -28,7 +29,7 @@ namespace toefl{
     template< class M>
     static double boundary( const size_t i0, const size_t j0, const M& lhs, const M& rhs);
     template< int s0, int s1, class M>
-    static double edge( const size_t i0, const size_t j0, const M& lhs, const M& rhs);
+    static double edge( const size_t i0, const size_t j0, const M& lhs, const M& rhs, const unsigned = 0);
     template< int s0, int s1, class M>
     static double corner( const size_t i0, const size_t j0, const M& lhs, const M& rhs);
     
@@ -254,6 +255,12 @@ namespace toefl{
         return i>=0 ? i%m : mod( i + m, m);
     }
 
+    void mod( Vector<int, 2>& v, const size_t rows, const size_t cols)
+    {
+        v[0] = mod(v[0], rows);
+        v[1] = mod(v[1], cols);
+    }
+
     // bessere idee: lege statische 3x3 Matrix an, kopiere Werte rein und übergib diese an interior
     // da dies nur die Randwerte betrifft sollte der overhaed nicht groß sein
     /*! @brief calculates and edge point in the Arakawa scheme
@@ -271,60 +278,108 @@ namespace toefl{
      *  @param j0 col index of the edge point
      *  @param lhs left hand side M
      *  @param rhs right hand side M
+     *  @param bc0 boundary condition for the ghost cells 
      *  @return the unnormalized value of the Arakawa bracket
      */
     template <int s0, int s1, class M> //indicates where the interior is
-    double edge( const size_t i0, const size_t j0, const M& lhs, const M& rhs) 
+    double edge( const size_t i0, const size_t j0, const M& lhs, const M& rhs, const unsigned bc0 = 0) 
     {
         static QuadMat<double, 3> l, r;
-        l.zero(), r.zero();
         const size_t rows = lhs.rows(), cols = lhs.cols();
-        size_t s[2], s_01[2], s_10[2], s_0m[2], s_11[2], s_1m[2];
-        double jacob;
-    
-        s[0] = i0, s[1] = j0;
-        //Vektoren in x und y Richtung
-        s_10[0] = s0; s_01[0] = -s1;
-        s_10[1] = s1; s_01[1] = s0;
-        s_0m[0] = -s_01[0]; 
-        s_0m[1] = -s_01[1]; 
-        s_11[0] = s_10[0] + s_01[0];
-        s_11[1] = s_10[1] + s_01[1];
-    
-        s_1m[0] = s_10[0] + s_0m[0];
-        s_1m[1] = s_10[1] + s_0m[1];
-    
-        s_10[0] += s[0], s_01[0] += s[0], s_0m[0] += s[0], s_11[0]+=s[0], s_1m[0] += s[0];
-        s_10[1] += s[1], s_01[1] += s[1], s_0m[1] += s[1], s_11[1]+=s[1], s_1m[1] += s[1];
+        static QuadMat< Vector<int,2>, 3> indexMap;
+        static Vector< Vector<int,2>, 3> ghostIdx;
+        static Vector< Vector<int,2>, 6> materialIdx;
+        l.zero(), r.zero();
+        Vector<int, 2> idx, s, ex,ey;
+        s[0] = s0, s[1] = s1;
+        idx[0] = i0, idx[1] = j0;
 
-        s_10[0] = mod( s_10[0], rows);
-        s_10[1] = mod( s_10[1], cols);
-        s_0m[0] = mod( s_0m[0], rows);
-        s_0m[1] = mod( s_0m[1], cols);
-        s_01[0] = mod( s_01[0], rows);
-        s_01[1] = mod( s_01[1], cols);
-        s_11[0] = mod( s_11[0], rows);
-        s_11[1] = mod( s_11[1], cols);
-        s_1m[0] = mod( s_1m[0], rows);
-        s_1m[1] = mod( s_1m[1], cols);
+        //ghostIdx stores the indices of l and r that are ghost cells
+        ghostIdx[1][0] = 1-s0;
+        ghostIdx[1][1] = 1-s1;
+        ghostIdx[0] = ghostIdx[1] + s.perp();
+        ghostIdx[2] = ghostIdx[1] - s.perp();
+        //std::cout << ghostIdx << std::endl;
+        //matrialIdx stores the indices of l and r that are not ghost cells
+        materialIdx[0] = ghostIdx[0] + s;
+        materialIdx[1] = ghostIdx[1] + s;
+        materialIdx[2] = ghostIdx[2] + s;
+        materialIdx[3] = ghostIdx[0] + 2*s;
+        materialIdx[4] = ghostIdx[1] + 2*s;
+        materialIdx[5] = ghostIdx[2] + 2*s;
+        //std::cout << materialIdx << std::endl;
+        ex[0] = 0, ex[1] = 1;
+        ey = ex.perp();
+        //indexMap maps the indices of l and r to indices of lhs and rhs
+        indexMap(1,1) = idx;
+        indexMap(1,2) = idx + ex;
+        indexMap(1,0) = idx - ex;
+        indexMap(0,1) = idx + ey;
+        indexMap(0,2) = indexMap(0,1) + ex;
+        indexMap(0,0) = indexMap(0,1) - ex;
+        indexMap(2,1) = idx - ey;
+        indexMap(2,0) = indexMap(2,1) - ex;
+        indexMap(2,2) = indexMap(2,1) + ex;
+        //std::cout << indexMap << std::endl;
         
-     //  0xx  000  
-     //  0 x  x x  etc.
-     //  0xx  xxx
-
-        const double& rhs_10 = rhs( s_10[0],  s_10[1]), &lhs_10 = lhs( s_10[0],  s_10[1]);
-        const double& rhs_0m = rhs( s_0m[0],  s_0m[1]), &lhs_0m = lhs( s_0m[0],  s_0m[1]);
-        const double& rhs_01 = rhs( s_01[0],  s_01[1]), &lhs_01 = lhs( s_01[0],  s_01[1]);
-        const double& rhs_11 = rhs( s_11[0],  s_11[1]), &lhs_11 = lhs( s_11[0],  s_11[1]);
-        const double& rhs_1m = rhs( s_1m[0],  s_1m[1]), &lhs_1m = lhs( s_1m[0],  s_1m[1]);
+        //absolute position
+        for( size_t i = 0; i < 3; i++)
+            for( size_t j = 0; j < 3; j++)
+                mod(indexMap(i,j), rows, cols);
+        Vector< int, 2> temp;
+        //assign material values
+        for( size_t i = 0; i < 6; i++)
+        {
+            temp = materialIdx[i];
+            l(temp[0], temp[1]) = lhs(indexMap(temp[0], temp[1])[0], indexMap(temp[0], temp[1])[1]);
+            r(temp[0], temp[1]) = rhs(indexMap(temp[0], temp[1])[0], indexMap(temp[0], temp[1])[1]);
+        }
+        //assign ghost values
+        switch(bc0)
+        {
+            case(-1):
+                for( size_t i = 0; i < 3; i++)
+                {
+                    l(ghostIdx[i][0],ghostIdx[i][1]) = -l((ghostIdx[i]+s)[0], (ghostIdx[i]+s)[1]);
+                    r(ghostIdx[i][0],ghostIdx[i][1]) = -r((ghostIdx[i]+s)[0], (ghostIdx[i]+s)[1]);
+                }
+            case(0):
+                for( size_t i = 0; i < 3; i++)
+                {
+                    l(ghostIdx[i][0], ghostIdx[i][1]) = 0;
+                    r(ghostIdx[i][0], ghostIdx[i][1]) = 0;
+                }
+                //std::cout << l << std::endl;
+                break;
+            case(1):
+                for( size_t i = 0; i < 3; i++)
+                {
+                    l(ghostIdx[i][0],ghostIdx[i][1]) = +l((ghostIdx[i]+s)[0], (ghostIdx[i]+s)[1]);
+                    r(ghostIdx[i][0],ghostIdx[i][1]) = +r((ghostIdx[i]+s)[0], (ghostIdx[i]+s)[1]);
+                }
+                break;
+            case(2):
+                for( size_t i = 0; i < 3; i++)
+                {
+                    l(ghostIdx[i][0],ghostIdx[i][1]) = +l((ghostIdx[i]+2*s)[0], (ghostIdx[i]+2*s)[1]);
+                    r(ghostIdx[i][0],ghostIdx[i][1]) = +r((ghostIdx[i]+2*s)[0], (ghostIdx[i]+2*s)[1]);
+                }
+                break;
+            default:
+                throw Message( "Unknown boundary condition", ping);
+        }
+        
     
+        /*
         jacob  = rhs_0m * ( lhs_10  +lhs_1m );
         jacob += rhs_01 * ( -lhs_10 -lhs_11 );
         jacob += rhs_10 * ( lhs_01 -lhs_0m +lhs_11 -lhs_1m );
         jacob += rhs_1m * ( lhs_10 -lhs_0m );
         jacob += rhs_11 * ( lhs_01 -lhs_10 );
+        */
     
-        return jacob;
+        //compute arakawa bracket
+        return interior(1,1,l,r);
     }
     
     
