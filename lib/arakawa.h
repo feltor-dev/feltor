@@ -8,8 +8,8 @@
 #ifndef _ARAKAWA_
 #define _ARAKAWA_
 
+#include "ghostmatrix.h"
 #include "quadmat.h"
-#include "vector.h"
 
 namespace toefl{
 
@@ -46,7 +46,7 @@ namespace toefl{
          */
         Arakawa( const double h): c(1.0/(12.0*h*h)){}
         template< class GhostM, class M>
-        void operator()( const GhostM& lhs, const GhostM& rhs, const M& jac)
+        void operator()( const GhostM& lhs, const GhostM& rhs, M& jac);
     };
     
     
@@ -112,7 +112,7 @@ namespace toefl{
     /*! @brief calculates a boundary point in the Arakawa scheme
      *
      *  It assumes periodic BC on the edges!
-     *  @tparam M M class that has to provide m.at(i, j) access (e.g. GhostMatrix), a rows() and a cols() method.
+     *  @tparam M M class that has to provide m.at(i, j) access (e.g. GhostMatrix)
      *      (type is normally inferred by the compiler)
      *  @param i0 row index of the edge point
      *  @param j0 col index of the edge point
@@ -124,16 +124,13 @@ namespace toefl{
     double boundary( const size_t i0, const size_t j0, const M& lhs, const M& rhs) 
     {
         static QuadMat<double, 3> l, r;
-        const size_t rows = lhs.rows(), cols = lhs.cols();
-
         //assignment
         for( size_t i = 0; i < 3; i++)
             for( size_t j = 0; j < 3; j++)
             {
-                l(i,j) = lhs.at( i0 -1 + i, j0 - 1 + i);
-                r(i,j) = rhs.at( i0 -1 + i, j0 - 1 + i);
+                l(i,j) = lhs.at( i0 -1 + i, j0 - 1 + j);
+                r(i,j) = rhs.at( i0 -1 + i, j0 - 1 + j);
             }
-
         return interior( 1, 1, l, r);
     }
 }

@@ -17,7 +17,7 @@ namespace toefl{
      * A GhostMatrix is a Matrix with the additional access operator at()
      * with which boundary (including ghost) values can be manipulated.
      */
-    template< typename T, enum Padding P>
+    template< typename T, enum Padding P = TL_NONE>
     class GhostMatrix: public Matrix<T,P>
     {
       private:
@@ -45,6 +45,9 @@ namespace toefl{
          * @return material value or ghost value
          */
         inline const T& at( const int i, const int j) const;
+
+        void display( std::ostream& os);
+
     };
     
     template< typename T, enum Padding P>
@@ -92,6 +95,16 @@ namespace toefl{
         if( j == m) 
             return ghostCols( i, 1);
         return (*this)(i,j);
+    }
+    template< typename T, enum Padding P>
+    void GhostMatrix<T,P>::display( std::ostream& os)
+    {
+        for(int i = -1; i < (int)this->n + 1; i++)
+        {
+            for ( int j = -1; j < (int)this->m + 1; j++)
+                os << (this->at)(i,j) << " ";
+            os << "\n";
+        }
     }
 
 }
