@@ -2,7 +2,7 @@
 #define _TL_MATRIX_
 
 #include <iostream>
-#include <cstring> //memcpy and memset
+//#include <cstring> //memcpy and memset
 #include "fftw3.h"
 #include "exceptions.h"
 #include "padding.h"
@@ -103,15 +103,17 @@ namespace toefl{
         /*! @brief frees all allocated memory
          */
         ~Matrix();
-        /*! @brief deep copy of an existing Matrix using memcpy
+        /*! @brief deep copy of an existing Matrix 
          *
+         * Copy of 1e6 double takes less than 0.01s
          * @param src the source matrix. 
          * \note throws an error if src is void or doesn't have the same size.
          * If src is void then so will be this.
          */
         Matrix( const Matrix& src);
-        /*! @brief deep assignment using memcpy
+        /*! @brief deep assignment 
          *
+         * Copy of 1e6 double takes less than 0.01s
          * @param src the right hand side
          * @return this
          * \note throws an error if src is void or doesn't have the same size.
@@ -142,7 +144,9 @@ namespace toefl{
          * \note DO NOT DELETE THIS POINTER!! This class manages the memory it allocates by itself.
          */
         T* getPtr(){ return ptr;}
-        /*! @brief uses memset to set memory to 0
+        /*! @brief uses operator= to set memory to 0
+         *
+         * takes less than 0.01s for 1e6 elements
          */
         inline void zero();
         /*! @brief checks whether matrix is empty i.e. no memory is allocated
@@ -262,7 +266,8 @@ namespace toefl{
             ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
             if( ptr == NULL) 
                 throw AllocationError(n, m, ping);
-            memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
+            for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
+                ptr[i] = src.ptr[i];
         } else {
             ptr = NULL;
         }
@@ -279,7 +284,8 @@ namespace toefl{
             if( ptr == NULL || src.ptr == NULL)
                 throw Message( "Assigning to or from a void matrix!", ping);
     #endif
-            memcpy( ptr, src.ptr, TotalNumberOf<P>::elements(n, m)*sizeof(T)); //memcpy here!!!!
+            for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
+                ptr[i] = src.ptr[i];
         }
         return *this;
     }
@@ -314,24 +320,10 @@ namespace toefl{
         if( ptr == NULL) 
             throw  Message( "Trying to zero a void matrix!", ping);
     #endif
-        memset( ptr, 0, TotalNumberOf<P>::elements(n, m)*sizeof( T));
+        for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
+            ptr[i] = (T)0;
+        //memset( ptr, 0, TotalNumberOf<P>::elements(n, m)*sizeof( T));
     }
-    
-    /*
-    template <class T, enum Padding P>
-    void Matrix<T, P>::swap( Matrix& rhs)
-    {
-    #ifdef TL_DEBUG
-        if( TotalNumberOf<P>::elements(this->n, this->m)*sizeof(T) != TotalNumberOf<P>::elements(rhs.n, rhs.m)*sizeof(T)) 
-            throw Message( "Swap not possible! Sizes not equal!\n", ping);
-        if( this->n != rhs.n)
-            throw Message( "Swap not possible! Shape not equal!\n", ping);
-    #endif
-        T * ptr = this->ptr;
-        this->ptr = reinterpret_cast<T*>(rhs.ptr);
-        rhs.ptr = reinterpret_cast<T*>(ptr); 
-    }
-    */
     
     template <class T, enum Padding P>
     void permute_fields( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& third)

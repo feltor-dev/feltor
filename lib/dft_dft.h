@@ -8,6 +8,7 @@
 
 namespace toefl{
 
+    //FORGET THAT, FFTW_2D is faster!!
 /* fftw guru interface
  *
  * fftw_iodim{int n,  // Größe der Dimension des Index 
@@ -31,6 +32,8 @@ namespace toefl{
         fftw_plan forward_b;
         fftw_plan backward_b;
         fftw_plan backward_a;
+        fftw_plan transpose;
+        fftw_plan transpose_T;
         void plan_forward_b( Matrix<double, TL_DFT_DFT>&);
         void plan_backward_b( Matrix<double, TL_DFT_DFT>&);
       public:
@@ -75,9 +78,14 @@ namespace toefl{
     {
         Matrix<double, TL_DFT_DFT> temp(rows, cols);
         forward_a = plan_dft_1d_r2c( rows, cols, temp.getPtr(), reinterpret_cast<fftw_complex*>(temp.getPtr()), FFTW_MEASURE);
-        plan_forward_b(temp);
-        plan_backward_b(temp);
-        backward_a = plan_dft_1d_c2r( rows, cols, reinterpre_cast<fftw_complex*>(temp.getPtr()), FFTW_MEASURE) ;
+        forward_b = plan_dft_1d_c2c( cols/2+1, rows, fftw_cast(temp.getPtr()), fftw_cast(temp.getPtr()), FFTW_FORWARD, FFTW_MEASURE);
+        backward_b = plan_dft_1d_c2c( cols/2+1, rows, fftw_cast(temp.getPtr()), fftw_cast(temp.getPtr()), FFTW_BACKWARD, FFTW_MEASURE);
+        //plan_forward_b(temp);
+        //plan_backward_b(temp);
+        backward_a = plan_dft_1d_c2r( rows, cols, reinterpret_cast<fftw_complex*>(temp.getPtr()), temp.getPtr(), FFTW_MEASURE) ;
+
+        transpose = plan_transpose( rows, cols/2 + 1, fftw_cast(temp.getPtr()), fftw_cast(temp.getPtr()),  FFTW_MEASURE);
+        transpose_T = plan_transpose( cols/2 + 1, rows, fftw_cast(temp.getPtr()), fftw_cast(temp.getPtr()),  FFTW_MEASURE);
 #ifdef TL_DEBUG
         if(forward_a == 0 || forward_b == 0)
             throw Message( "Forward Planner routine failed!", ping);
@@ -91,21 +99,8 @@ namespace toefl{
         fftw_free( backward_b);
         fftw_free( forward_b);
         fftw_free( backward_a);
-    }
-    //plan a r2c inplace routine of lines without transpositions
-    void DFT_DFT::plan_forward_a( Matrix<double, TL_DFT_DFT>& temp)
-    {
-        int rank = 1;
-        fftw_iodim dims[rank];
-        dims[0].n  = cols;
-        dims[0].is = 1; //(double)
-        dims[0].os = 1; //(complex)
-        int howmany_rank = 1;
-        fftw_iodim howmany_dims[howmany_rank];
-        howmany_dims[0].n  = rows;
-        howmany_dims[0].is = cols + 2 - cols%2; //(double)
-        howmany_dims[0].os = cols/2 + 1;//(complex)
-        forward_a = fftw_plan_guru_dft_r2c( rank, dims, howmany_rank, howmany_dims, temp.getPtr(), reinterpret_cast<fftw_complex*>(temp.getPtr()), FFTW_MEASURE);
+        fftw_free( transpose);
+        fftw_free( transpose_T);
     }
 
     //plan a c_T2c transposing transformation (i.e. read transposed)
@@ -141,21 +136,6 @@ namespace toefl{
         backward_b = fftw_plan_guru_dft( rank, dims, howmany_rank, howmany_dims, reinterpret_cast<fftw_complex*>(temp.getPtr()), reinterpret_cast<fftw_complex*>(temp.getPtr()), FFTW_BACKWARD, FFTW_MEASURE);
     }
 
-    //linewise c2r transformation
-    void DFT_DFT::plan_backward_a( Matrix<double, TL_DFT_DFT>& temp)
-    {
-        int rank = 1;
-        fftw_iodim dims[rank];
-        dims[0].n  = cols;
-        dims[0].is = 1; //(complex)
-        dims[0].os = 1; //(double)
-        int howmany_rank = 1;
-        fftw_iodim howmany_dims[howmany_rank];
-        howmany_dims[0].n  = rows;
-        howmany_dims[0].is = cols/2 + 1; //(complex)
-        howmany_dims[0].os = cols + 2 - cols%2; //(double)
-        backward_a = fftw_plan_guru_dft_c2r( rank, dims, howmany_rank, howmany_dims, reinterpret_cast<fftw_complex*>(temp.getPtr()), temp.getPtr(), FFTW_MEASURE);
-    }
     void DFT_DFT::r2c_T( Matrix<double, TL_DFT_DFT>& inout, Matrix<complex, TL_NONE>& swap)
     {
 #ifdef TL_DEBUG
@@ -165,7 +145,9 @@ namespace toefl{
             throw Message( "Swap Matrix in 2d_r2c doesn't have the right size!", ping);
 #endif
         fftw_execute_dft_r2c( forward_a, inout.getPtr(), reinterpret_cast<fftw_complex*>(inout.getPtr()));
+        fftw_execute_dft( transpose, fftw_cast(inout.getPtr()), fftw_cast(inout.getPtr()));
         fftw_execute_dft    ( forward_b, reinterpret_cast<fftw_complex*>(inout.getPtr()), reinterpret_cast<fftw_complex*>(inout.getPtr()));
+        //fftw_execute_dft( transpose_T, fftw_cast(inout.getPtr()), fftw_cast(inout.getPtr()));
         swap_fields( inout, swap);
 
     }
@@ -177,9 +159,11 @@ namespace toefl{
         if( swap.rows() != rows || swap.cols() != cols)
             throw Message( "Swap Matrix in 2d_c2r doesn't have the right size!", ping);
 #endif
-        fftw_execute_dft( backward_b, reinterpret_cast<fftw_complex*>(inout.getPtr()), reinterpret_cast<fftw_complex*>(inout.getPtr()));
-        fftw_execute_dft_c2r( backward_a, reinterpret_cast<fftw_complex*>(inout.getPtr()), reinterpret_cast<double*>(inout.getPtr()));
         swap_fields( inout, swap);
+        //fftw_execute_dft( transpose, fftw_cast(swap.getPtr()), fftw_cast(swap.getPtr()));
+        fftw_execute_dft( backward_b, reinterpret_cast<fftw_complex*>(swap.getPtr()), reinterpret_cast<fftw_complex*>(swap.getPtr()));
+        fftw_execute_dft( transpose_T, fftw_cast(swap.getPtr()), fftw_cast(swap.getPtr()));
+        fftw_execute_dft_c2r( backward_a, reinterpret_cast<fftw_complex*>(swap.getPtr()), reinterpret_cast<double*>(swap.getPtr()));
     }
 
 }

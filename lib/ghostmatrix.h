@@ -47,6 +47,10 @@ namespace toefl{
         inline const T& at( const int i, const int j) const;
 
         void display( std::ostream& os);
+        template< size_t row>
+        inline T& ghostRow( const int col) {return ghostRow( row,col);}
+        template< size_t col>
+        inline T& ghostCol( const int row) { return ghostCol( row, col);}
 
     };
     

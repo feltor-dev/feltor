@@ -92,8 +92,7 @@ namespace toefl{
     };
     Poisson::Poisson(const Physical phys):a_i(phys.a_i), mu_i(phys.mu_i), tau_i(phys.tau_i),
                                           a_z(phys.a_z), mu_z(phys.mu_z), tau_z(phys.tau_z) 
-    {
-    }
+                                          {}
     
     void Equations::operator()(QuadMat< complex, 2>& c, const complex dx, const complex dy) 
     {

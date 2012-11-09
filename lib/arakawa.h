@@ -8,7 +8,6 @@
 #ifndef _ARAKAWA_
 #define _ARAKAWA_
 
-#include "ghostmatrix.h"
 #include "quadmat.h"
 
 namespace toefl{
@@ -45,6 +44,18 @@ namespace toefl{
          * @param h the physical grid constant
          */
         Arakawa( const double h): c(1.0/(12.0*h*h)){}
+        /*! @brief Arakawa scheme working with ghostcells
+         *
+         * This function takes less than 0.03s for 1e6 elements
+         * and is of O(N).
+         * But could be twice as fast if only the interior function 
+         * and no GhostMatrix were used! 
+         * @tparam GhostM the type of the GhostMatrix
+         * @tparam M    the type of the Matrix
+         * @param lhs the left function in the Poisson bracket
+         * @param rhs the right function in the Poisson bracket
+         * @param jac the Poisson bracket contains solution on output
+         */
         template< class GhostM, class M>
         void operator()( const GhostM& lhs, const GhostM& rhs, M& jac);
     };
@@ -66,6 +77,12 @@ namespace toefl{
                 jac(i0,j0)  = c*interior( i0, j0, lhs, rhs);
             jac(i0,cols-1)  = c*boundary( i0, cols-1, lhs, rhs);
         }
+        for( size_t i0 = 1; i0 < rows-1; i0++)
+        {
+            jac(i0,0)       = c*boundary( i0, 0, lhs, rhs);
+            jac(i0,cols-1)  = c*boundary( i0, cols-1, lhs, rhs);
+        }
+        
         for( size_t j0 = 0; j0 < cols; j0++)
             jac(rows-1,j0)  = c*boundary( rows-1, j0, lhs, rhs);
     }
