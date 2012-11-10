@@ -23,7 +23,7 @@ int main()
     t.toc();
     cout << "Assignment took " << t.diff() << " seconds\n";
     t.tic();
-    b.zero();
+    b = a;
     t.toc();
     cout << "Member function took " << t.diff()<<" seconds\n";
     return 0;

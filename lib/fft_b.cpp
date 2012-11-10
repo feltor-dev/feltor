@@ -8,7 +8,7 @@ using namespace std;
 using namespace toefl;
 
 
-unsigned rows = 2*500, cols = 4*500;
+unsigned rows = 500, cols = 4*500;
 
 int main()
 {
@@ -23,7 +23,7 @@ int main()
     fftw_execute( transpose);
     t.toc();
 
-    cout << "Out of place transpose takes " << t.diff() << " seconds\n";
+    cout << "Transposition takes " << t.diff() << " seconds\n";
 
     Matrix<double, TL_DFT_1D> m2(rows,cols);
     Matrix<complex<double>, TL_NONE> m2_( rows, cols/2+1);

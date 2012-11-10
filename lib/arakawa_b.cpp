@@ -12,7 +12,7 @@ const double c = 1./(12.*h*h);
 const double hysq = -c;
 const int nymax = 2049;
 const int nxmax = 513;
-    int rows = 500, cols = 2*2000;
+    int rows = 500, cols = 2000;
     unsigned loop = 1;
     int nx1 = rows, ny1 = cols;
 void arakawa2(double (*uuu)[nymax], double (*vvv)[nymax], double (*www)[nymax])

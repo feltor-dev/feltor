@@ -13,26 +13,29 @@ int main()
 {
     cout << "Test \n";
     double dx;
-    Matrix<double, TL_DFT_1D> m2(1,10);
-    Matrix<complex<double>, TL_NONE> m2_( 1, 6, TL_VOID);
-    fftw_plan forward_plan = plan_dft_1d_r2c( m2);
-    swap_fields( m2, m2_);
-    fftw_plan backward_plan = plan_dft_1d_c2r( m2_, m2.cols()%2);
-    swap_fields( m2, m2_);
+    size_t rows = 1; 
+    size_t cols = 10;
+    Matrix<double, TL_DFT_1D> m2(rows,cols);
+    Matrix<complex<double>, TL_NONE> m2_( rows, cols/2+1, TL_VOID);
+    fftw_plan forward_plan  = plan_dft_1d_r2c(rows, cols, m2.getPtr(), fftw_cast(m2.getPtr()), FFTW_MEASURE);
+    fftw_plan backward_plan = plan_dft_1d_c2r(rows, cols, fftw_cast(m2.getPtr()), m2.getPtr(), FFTW_MEASURE);
 
     dx = 1./10.;
     for( size_t i = 0; i < m2.rows(); i++)
         for ( size_t j=0; j < m2.cols(); j++)
             m2(i, j) = cos( 2*(i+1)*M_PI*j*dx); 
     cout << "Trafo of:\n";
+    cout << setprecision(2) << fixed;
     cout << m2 <<endl;
     cout << "forward trafo\n";
-    execute_dft_1d_r2c( forward_plan, m2, m2_);
+    fftw_execute_dft_r2c( forward_plan, m2.getPtr(), fftw_cast(m2.getPtr()));
+    swap_fields( m2, m2_);
     cout << "result should be one cosine mode\n";
     cout << m2_ <<endl;
+    swap_fields( m2, m2_);
 
     try{
-    execute_dft_1d_c2r( backward_plan, m2_, m2);}
+        fftw_execute_dft_c2r( backward_plan, fftw_cast(m2.getPtr()), m2.getPtr());}
     catch(Message& m){m.display();}
     cout << "backtrafo\n";
     cout << m2 <<endl;

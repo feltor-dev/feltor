@@ -7,6 +7,11 @@
 
 namespace toefl
 {
+    /*! @brief class to make a r2r Transformation using FFTW
+     * 
+     * Note that RODFT00 IS significantly slower ( approx 1 oder of magnitude)
+     * than RODFT01  
+     */
     class DST_DST
     {
       private:
@@ -16,30 +21,17 @@ namespace toefl
         fftw_plan transpose_fw;
         fftw_plan transpose_bw;
       public:
-        DST_DST( const size_t rows, const size_t cols, const fftw_r2r_kind kind);
+        DST_DST( const size_t rows, const size_t cols, const fftw_r2r_kind kind, const unsigned flags = FFTW_MEASURE);
         void r2r_T( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap_T );
         void r_T2r( Matrix<double, TL_NONE>& inout_T, Matrix<double, TL_NONE>& swap );
     };
 
 
-    DST_DST::DST_DST( const size_t rows, const size_t cols, const fftw_r2r_kind kind):rows(rows), cols(cols)
+    DST_DST::DST_DST( const size_t rows, const size_t cols, const fftw_r2r_kind kind, const unsigned flags):rows(rows), cols(cols)
     {
         Matrix<double> temp(rows, cols);
-        const unsigned flags = FFTW_MEASURE; /* other flags are possible */
         fftw_r2r_kind kind_fw = kind;
-        fftw_r2r_kind kind_bw;
-        switch( kind)
-        {
-            case( FFTW_RODFT00): kind_bw = FFTW_RODFT00;
-            break;
-            case( FFTW_RODFT01): kind_bw = FFTW_RODFT10;
-            break;
-            case( FFTW_RODFT10): kind_bw = FFTW_RODFT01;
-            break;
-            case( FFTW_RODFT11): kind_bw = FFTW_RODFT11;
-            break;
-            default: throw Message( "Kind doesn't match!", ping);
-        }
+        fftw_r2r_kind kind_bw = inverse_kind( kind);
         sine_fw = plan_dst_1d( rows, cols, temp.getPtr(), temp.getPtr(), kind_fw, flags);
         sine_bw = plan_dst_1d( rows, cols, temp.getPtr(), temp.getPtr(), kind_bw, flags);
         transpose_fw = plan_transpose( rows, cols, temp.getPtr(), temp.getPtr(), flags);
@@ -88,10 +80,5 @@ namespace toefl
    
 
 }
-
-
-
-
-
 
 #endif // _TL_DST_DST_

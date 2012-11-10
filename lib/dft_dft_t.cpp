@@ -10,7 +10,7 @@ using namespace toefl;
 int main()
 {
     Matrix<double, TL_DFT_DFT> m1(5, 10);
-    Matrix<complex<double> >   m1_( 10/2 + 1, 5);
+    Matrix<complex<double> >   m1_( 5, 10/2 + 1);
     DFT_DFT dft_dft( 5,10);
     double dx = 1./(10.), dy = 1./5;
     for( size_t i = 0; i < m1.rows(); i++)
@@ -18,10 +18,10 @@ int main()
             m1(i, j) = sin( 4.*M_PI*j*dx)*cos( 2.*M_PI*i*dy); //sin(kPix)*sin(qPiy)
     cout << setprecision(2) << fixed;
     cout << "One mode in every line, One mode in every column\n"<< m1<< endl;
-    dft_dft.r2c_T( m1, m1_);
+    dft_dft.r2c( m1, m1_);
     cout << "The transformed matrix\n"<<m1_<<endl;
     try{
-        dft_dft.c_T2r( m1_, m1);
+        dft_dft.c2r( m1_, m1);
     }catch( Message& m){m.display();}
     cout << "The backtransformed matrix (50 times input)\n"<<m1<<endl;
 
@@ -36,11 +36,12 @@ int main()
     
 
     fftw_execute( plan);
-    swap_fields( m0, m0_);
-    cout << m0_ <<endl;
-    swap_fields( m0, m0_);
     fftw_execute( plan2);
-    cout << m1 <<endl;
+    if( m1 != m0)
+        cerr << "Transformation failed!\n m1: "<<m1<<"\n m2" <<m0<<endl;
+    else
+        cout << "Test passed\n";
+
 
 
 
