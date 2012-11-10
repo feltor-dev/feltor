@@ -8,7 +8,7 @@ using namespace toefl;
 
 
 const size_t rows = 512, cols = 4*512;
-fftw_r2r_kind kind = FFTW_RODFT01;
+fftw_r2r_kind kind = FFTW_RODFT10;
 fftw_r2r_kind kind_inv = inverse_kind(kind);
 int main()
 {
@@ -32,7 +32,7 @@ int main()
 
     ////////////////////////////////////////////////////////////////////////////////
     Matrix<double, TL_NONE> m0( rows, cols);
-    Matrix<double, TL_NONE> m0_( rows, cols);
+    Matrix<double, TL_NONE> m1( rows, cols);
 
     fftw_plan forward =  fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind, kind, FFTW_MEASURE); 
     fftw_plan backward = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind_inv, kind_inv, FFTW_MEASURE); 

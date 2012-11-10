@@ -234,7 +234,9 @@ namespace toefl{
             case( FFTW_REDFT01): return FFTW_REDFT10;
             case( FFTW_REDFT10): return FFTW_REDFT01;
             case( FFTW_REDFT11): return FFTW_REDFT11;
-            default: throw Message( "Kind doesn't match!", ping);
+            case( FFTW_R2HC): return FFTW_HC2R;
+            case( FFTW_HC2R): return FFTW_R2HC;
+            default: throw Message( "fftw r2r kind unknown!", ping);
             return kind;
         }
     }
