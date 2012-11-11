@@ -232,6 +232,7 @@ namespace toefl{
         if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
             throw Message( "Swap not possible. Sizes not equal\n", ping);
 #endif
+        //test for self swap not not needed (not an error)
         T1 * ptr = lhs.ptr;
         lhs.ptr = reinterpret_cast<T1*>(rhs.ptr);
         rhs.ptr = reinterpret_cast<T2*>(ptr); 

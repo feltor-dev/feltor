@@ -7,10 +7,12 @@
 #ifndef _COEFF_
 #define _COEFF_
 
+#include <iostream>
+#include <complex>
+
 #include "matrix.h"
 #include "quadmat.h"
 #include "exceptions.h"
-#include <iostream>
 
 namespace toefl{
 
@@ -27,9 +29,9 @@ namespace toefl{
      * and the second y i.e. the transpose of your field matrices!
      */
     template< class F, class T, size_t n> //f( QuadMat< T, n>, size_t k, size_t l)
-    void invert_coeff( F& f_T, Matrix< QuadMat<T,n>, TL_NONE>& coeff_T)
+    void invert_and_store_coeff( F& f_T, Matrix< QuadMat<T,n>, TL_NONE>& coeff_T)
     {
-        const size_t nkx = coeff.rows(), nky = coeff.cols();
+        const size_t nkx = coeff_T.rows(), nky = coeff_T.cols();
         QuadMat<T,n> temp;
         for( size_t k = 0; k < nkx; k++)
             for( size_t q = 0; q < nky; q++)
@@ -48,7 +50,7 @@ namespace toefl{
      * @param c the coefficient matrix 
      * @param m0 contains solution on output
      */
-    template< typename T1, typename T = std::complex<double> >
+    template< typename T1, typename T >
     void multiply_coeff( const Matrix< T1, TL_NONE>& c, Matrix< T, TL_NONE>& m0)
     {
 #ifdef TL_DEBUG
@@ -68,12 +70,12 @@ namespace toefl{
      * Compute the system m0 = c00*m0 + c01*m1, m1 = c11*m0 + c10*m1 where all
      * of the elements are matrices and matrix-matrix multiplications are done pointwise.
      * @tparam T1 type of the coefficients i.e. double or std::complex<double>
-     * @tparam T type of the matrix elements, default is std::complex<double>
+     * @tparam T type of the matrix elements, typically std::complex<double>
      * @param c the coefficient matrix 
      * @param m0 zeroth element of the vector, contains solution on output
      * @param m1 first element of the vector, contains solution on output
      */
-    template< typename T1, typename T = std::complex<double> >
+    template< typename T1, typename T >
     void multiply_coeff( const Matrix< QuadMat< T1,2>, TL_NONE>& c, Matrix< T, TL_NONE>& m0, Matrix< T, TL_NONE>& m1)
     {
 #ifdef TL_DEBUG
@@ -104,7 +106,7 @@ namespace toefl{
      * @param m1 first element of the vector, contains solution on output
      * @param m2 second element of the vector, contains solution on output
      */
-    template< typename T1, typename T = std::complex<double> >
+    template< typename T1, typename T  >
     void multiply_coeff( const Matrix< QuadMat<T1,3>, TL_NONE>& c, Matrix< T, TL_NONE>& m0, Matrix<T, TL_NONE>& m1, Matrix<T, TL_NONE>& m2)
     {
 #ifdef TL_DEBUG

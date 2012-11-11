@@ -21,8 +21,8 @@ class CalcComplexCoeff
 void CalcComplexCoeff::operator()(QuadMat< MyComplex, 2>& coeff, const size_t k, const size_t q) const
 {
     std::complex<double> dx, dy, L, rho_m, Gamma_i, curv;
-    dx = {0, 2*M_PI*(k + 1)}; //imaginary
-    dy = {0, 2*M_PI*(q + 1)}; //imaginary
+    dx.real() = 0, dx.imag() = 2*M_PI*(k + 1); //imaginary
+    dy.real() = 0, dy.imag() = 2*M_PI*(q + 1); //imaginary
     L = dx*dx + dy*dy; 
     rho_m = a_i*mu_i*L/(1.0-tau_i*mu_i*L);
     Gamma_i = 1.0/(1.0 - 0.5*tau_i*mu_i*L);
@@ -68,20 +68,28 @@ int main()
     CalcRealCoeff g;
     Matrix< QuadMat<MyComplex,2> > data( nx, ny);
     try{
-        Matrix< QuadMat<MyComplex,2>> coeff( nx, ny);
-        invert_coeff< CalcComplexCoeff, MyComplex, 2 > (f, coeff);
+        Matrix< QuadMat<MyComplex,2> > coeff( nx, ny);
+        invert_and_store_coeff< CalcComplexCoeff, MyComplex, 2 > (f, coeff);
+        cout << "Test of complex invert\n";
         cout << coeff << endl;
         data = coeff;
-        Matrix< QuadMat<MyComplex,2>> data2( coeff);
+        cout << "Test of assignment\n";
+        if( data != coeff) 
+            cerr << "Assignment failed\n";
+        else 
+        cout << "Assignment passed\n";
+        Matrix< QuadMat<MyComplex,2> > data2( coeff);
         cout << "Test of Copy\n";
-        cout << data2 << endl;
+        if( data2 != coeff) 
+            cerr << "Copy failed!\n";
+        else 
+            cout << "Copy passed\n";
     }
     catch( Message& m){m.display();}
-    cout << "Test of assignment\n";
-    cout << data << endl;
 
-    Matrix< QuadMat<double,2>> container( nx, ny);
-    invert_coeff< CalcRealCoeff, double, 2> (g, container);
+    cout << "Test of double invert\n";
+    Matrix< QuadMat<double,2> > container( nx, ny);
+    invert_and_store_coeff< CalcRealCoeff, double, 2> (g, container);
     cout << container << endl;
 
     return 0;

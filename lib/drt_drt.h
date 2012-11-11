@@ -18,13 +18,13 @@ namespace toefl
     {
       private:
         const size_t rows, cols;
-        fftw_plan forward;
-        fftw_plan backward;
+        fftw_plan forward_;
+        fftw_plan backward_;
       public:
         DRT_DRT( const size_t, const size_t , const fftw_r2r_kind , const fftw_r2r_kind, const unsigned = FFTW_MEASURE);
         ~DRT_DRT();
-        void r2r( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
-        void r2r( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
+        void forward( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
+        void backward( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
     };
 
 
@@ -42,48 +42,48 @@ namespace toefl
         Matrix<double> m0(rows, cols);
         fftw_r2r_kind kind_inv0 = inverse_kind( kind0);
         fftw_r2r_kind kind_inv1 = inverse_kind( kind1);
-        forward  = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind0, kind1, flags); 
-        backward = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind_inv0, kind_inv1, flags); 
-        if( forward == 0)
-            throw Message( "Forward plan creation failed for DRT_DRT!", ping);
-        if( backward == 0 )
-            throw Message( "Backward plan creation failed for DRT_DRT!",ping);
+        forward_  = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind0, kind1, flags); 
+        backward_ = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind_inv0, kind_inv1, flags); 
+        if( forward_ == 0)
+            throw Message( "Forward_ plan creation failed for DRT_DRT!", ping);
+        if( backward_ == 0 )
+            throw Message( "Backward_ plan creation failed for DRT_DRT!",ping);
     }
     /*! @brief free all created fftw plans
      */
     DRT_DRT::~DRT_DRT()
     {
-        fftw_free( forward);
-        fftw_free( backward);
+        fftw_free( forward_);
+        fftw_free( backward_);
     }
 
     /*! @brief 
      */
-    void DRT_DRT::r2r( Matrix<double, TL_NONE>& m, Matrix<double, TL_NONE>& swap)
+    void DRT_DRT::forward( Matrix<double, TL_NONE>& m, Matrix<double, TL_NONE>& swap)
     {
 #ifdef TL_DEBUG 
         if( m.isVoid()) 
             throw Message ("Cannot r2r transpose a void Matrix", ping);
         if( m.rows() != rows || m.cols() != cols)
             throw Message( "Matrix for r2r transposition doesn't have the right size!", ping);
-        if( swap.rows() != cols || swap.cols() != rows)
+        if( swap.rows() != rows || swap.cols() != cols)
             throw Message( "Swap Matrix doesn't have the right size!", ping);
 #endif
-        fftw_execute_r2r( forward, m.getPtr(), m.getPtr());
+        fftw_execute_r2r( forward_, m.getPtr(), m.getPtr());
         swap_fields( m, swap);
     }
 
-    void DRT_DRT::r2r( Matrix<double, TL_NONE>& m, Matrix<double, TL_NONE>& swap)
+    void DRT_DRT::backward( Matrix<double, TL_NONE>& m, Matrix<double, TL_NONE>& swap)
     {
 #ifdef TL_DEBUG 
         if( m.isVoid()) 
             throw Message ("Cannot r2r transpose a void Matrix", ping);
-        if( m.rows() != cols || m.cols() != rows)
+        if( m.rows() != rows || m.cols() != cols)
             throw Message( "Matrix for r2r transposition doesn't have the right size!", ping);
         if( swap.rows() != rows || swap.cols() != cols)
             throw Message( "Swap Matrix doesn't have the right size!", ping);
 #endif
-        fftw_execute_r2r( backward, m.getPtr(), m.getPtr());
+        fftw_execute_r2r( backward_, m.getPtr(), m.getPtr());
         swap_fields( m, swap);
     }
    
