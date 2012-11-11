@@ -32,18 +32,17 @@ namespace toefl
      *
      * @param rows # of rows in the real matrix
      * @param cols # of colums in the real matrix
-     * @param kind0 kind of the transformation of the columns
-     * @param kind1 kind of the transformation of the rows
+     * @param kind0 hoizontal kind of transformation
+     * @param kind1 vertical kind of transformation 
      * @param flags flags for plan creation 
-
      */
     DRT_DRT::DRT_DRT( const size_t rows, const size_t cols, const fftw_r2r_kind kind0, const fftw_r2r_kind kind1, const unsigned flags):rows(rows), cols(cols)
     {
         Matrix<double> m0(rows, cols);
         fftw_r2r_kind kind_inv0 = inverse_kind( kind0);
         fftw_r2r_kind kind_inv1 = inverse_kind( kind1);
-        forward_  = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind0, kind1, flags); 
-        backward_ = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind_inv0, kind_inv1, flags); 
+        forward_  = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind1, kind0, flags); 
+        backward_ = fftw_plan_r2r_2d( rows, cols, m0.getPtr(), m0.getPtr(), kind_inv1, kind_inv0, flags); 
         if( forward_ == 0)
             throw Message( "Forward_ plan creation failed for DRT_DRT!", ping);
         if( backward_ == 0 )

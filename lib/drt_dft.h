@@ -1,5 +1,5 @@
-#ifndef _TL_DST_DFT_
-#define _TL_DST_DFT_
+#ifndef _TL_DRT_DFT_
+#define _TL_DRT_DFT_
 
 #include <complex>
 #include "matrix.h"
@@ -10,11 +10,11 @@ namespace toefl{
 
     /*! @brief class for twodimensional fourier transformation of Matrix
      *
-     * A sine transformation is performed horizontally, i.e. along the lines 
+     * A r2r transformation is performed horizontally, i.e. along the lines 
      * of the matrices, and a discrete fourier transformation is performed vertically, i.e. along the columns. 
      * \note Do not copy or assign any Objects of this class!!
      */
-    class DST_DFT
+    class DRT_DFT
     {
       private:
         typedef std::complex<double> complex;
@@ -26,15 +26,15 @@ namespace toefl{
       public:
         /*! @brief prepare transformations of given size
          *
-         * Uses fftw. 
          * @param real_rows # of rows in the real matrix
          * @param real_cols # of colums in the real matrix
-         * @param kind Kind of the sine transformation (the backtransform kind is automatically inferred from this)
+         * @param kind Kind of the r2r transformation (the backtransform kind is automatically inferred from this)
+         * @param flags one of the fftw performance flags
          */
-        DST_DFT( const size_t real_rows, const size_t real_cols, const fftw_r2r_kind kind);
+        DRT_DFT( const size_t real_rows, const size_t real_cols, const fftw_r2r_kind kind, const unsigned flags = FFTW_MEASURE);
         /*! @brief execute a r2c transposing transformation
          *
-         * First performs a linewise discrete sine transform followed
+         * First performs a linewise discrete r2r transform followed
          * by a transposition and a linewise discrete fourier transform.
          * @param inout non void matrix of size specified in the constructor.
          * i.e. (real_rows, real_cols)
@@ -42,7 +42,7 @@ namespace toefl{
          * @param swap_T Can be void. Size has to be (real_cols, real_rows/2 + 1).
          * Contains the solution on output.
          */
-        void r2c_T( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
+        void r2c_T( Matrix<double, TL_DRT_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
         /*! @brief execute a c2r transposing transformation
          *
          * First performs a linewise discrete fourier transform followed
@@ -54,33 +54,20 @@ namespace toefl{
          * Can be void. Size has to be (real_rows, real_cols).
          * Contains the solution on output.
          */
-        void c_T2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DST_DFT>& swap);
+        void c_T2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DRT_DFT>& swap);
         //make copy construction impossible because fftw_plan cannot be copied
         /*! @brief frees all fftw plans
          */
-        ~DST_DFT();
+        ~DRT_DFT();
     };
 
-    DST_DFT::DST_DFT( const size_t rows, const size_t cols, const fftw_r2r_kind kind): rows(rows), cols(cols)
+    DRT_DFT::DRT_DFT( const size_t rows, const size_t cols, const fftw_r2r_kind kind, const unsigned flags): rows(rows), cols(cols)
     {
-        const unsigned flags = FFTW_MEASURE;
-        Matrix<double, TL_DST_DFT> temp( rows, cols);
+        Matrix<double, TL_DRT_DFT> temp( rows, cols);
         fftw_r2r_kind kind_fw = kind;
-        fftw_r2r_kind kind_bw;
-        switch( kind)
-        {
-            case( FFTW_RODFT00): kind_bw = FFTW_RODFT00;
-            break;
-            case( FFTW_RODFT01): kind_bw = FFTW_RODFT10;
-            break;
-            case( FFTW_RODFT10): kind_bw = FFTW_RODFT01;
-            break;
-            case( FFTW_RODFT11): kind_bw = FFTW_RODFT11;
-            break;
-            default: throw Message( "Kind doesn't match!", ping);
-        }
-        sine_forward = plan_dst_1d( rows, cols, temp.getPtr(), temp.getPtr(),kind_fw, flags);
-        sine_backward = plan_dst_1d( rows, cols, temp.getPtr(), temp.getPtr(),kind_bw, flags);
+        fftw_r2r_kind kind_bw = inverse_kind(kind);
+        sine_forward = plan_drt_1d( rows, cols, temp.getPtr(), temp.getPtr(),kind_fw, flags);
+        sine_backward = plan_drt_1d( rows, cols, temp.getPtr(), temp.getPtr(),kind_bw, flags);
         forward = plan_dft_1d_r_T2c( rows, cols, temp.getPtr(), reinterpret_cast<fftw_complex*>(temp.getPtr()), FFTW_MEASURE);
         backward = plan_dft_1d_c2r_T( rows, cols, reinterpret_cast<fftw_complex*>(temp.getPtr()), temp.getPtr(), FFTW_MEASURE);
 #ifdef TL_DEBUG
@@ -90,7 +77,7 @@ namespace toefl{
             throw Message( "Sine trafo Planner routine failed!", ping);
 #endif
     }
-    DST_DFT::~DST_DFT()
+    DRT_DFT::~DRT_DFT()
     {
         fftw_free( forward);
         fftw_free( backward);
@@ -98,7 +85,7 @@ namespace toefl{
         fftw_free( sine_backward);
     }
 
-    void DST_DFT::r2c_T( Matrix<double, TL_DST_DFT>& inout, Matrix<complex, TL_NONE>& swap)
+    void DRT_DFT::r2c_T( Matrix<double, TL_DRT_DFT>& inout, Matrix<complex, TL_NONE>& swap)
     {
 #ifdef TL_DEBUG
         if( inout.rows() != rows|| inout.cols() != cols)
@@ -111,7 +98,7 @@ namespace toefl{
         swap_fields( inout, swap);
     }
 
-    void DST_DFT::c_T2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DST_DFT>& swap)
+    void DRT_DFT::c_T2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DRT_DFT>& swap)
     {
 #ifdef TL_DEBUG
         if( inout.rows() != cols || inout.cols() != rows/2 + 1)
@@ -126,4 +113,4 @@ namespace toefl{
 
 
 }
-#endif //_TL_DST_DFT_
+#endif //_TL_DRT_DFT_

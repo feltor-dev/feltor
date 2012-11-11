@@ -3,7 +3,7 @@
 
 namespace toefl{
 
-    enum Padding{ TL_NONE, TL_DFT_1D, TL_DFT_2D, TL_DST_DFT, TL_DFT_DFT};
+    enum Padding{ TL_NONE, TL_DFT_1D, TL_DFT_2D, TL_DRT_DFT, TL_DFT_DFT};
 
     /*! @brief template traits class for the efficient implementation of
      * the access operators in the matrix class.
@@ -31,7 +31,7 @@ namespace toefl{
         static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
     };
     template <>
-    struct TotalNumberOf<TL_DST_DFT>
+    struct TotalNumberOf<TL_DRT_DFT>
     {
         static inline size_t cols( const size_t m){ return m;}
         static inline size_t elements( const size_t n, const size_t m){return m*(n - n%2 + 2);}

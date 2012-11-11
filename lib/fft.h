@@ -36,7 +36,7 @@ namespace toefl{
     inline fftw_complex* fftw_cast( std::complex<double> * const ptr){ return reinterpret_cast<fftw_complex*> (ptr);}
     fftw_r2r_kind inverse_kind( fftw_r2r_kind kind);
     
-    fftw_plan plan_dst_1d( const size_t rows, const size_t cols, double *in, double *out, const fftw_r2r_kind kind, const unsigned flags);
+    fftw_plan plan_drt_1d( const size_t rows, const size_t cols, double *in, double *out, const fftw_r2r_kind kind, const unsigned flags);
     fftw_plan plan_transpose( const size_t rows, const size_t cols, double *in, double *out, const unsigned flags);
     fftw_plan plan_transpose( const size_t rows, const size_t cols, fftw_complex *in, fftw_complex *out, const unsigned flags);
 
@@ -68,7 +68,7 @@ namespace toefl{
      * @param out the output for the plan creation
      * @param flags fftw flags
      * @return the transposition plan
-     * \note execute with fftw_execute_r2r
+     * \note execute with fftw_execute_r2r( plan, ptr, ptr);
      */
     fftw_plan plan_transpose( const size_t rows, const size_t cols, double *in, double *out, const unsigned flags = FFTW_MEASURE)
     {
@@ -108,7 +108,7 @@ namespace toefl{
      * @param flags fftw flags
      * @return the plan
      */
-    fftw_plan plan_dst_1d( const size_t rows, const size_t cols, double *in, double *out, const fftw_r2r_kind kind, const unsigned flags = FFTW_MEASURE)
+    fftw_plan plan_drt_1d( const size_t rows, const size_t cols, double *in, double *out, const fftw_r2r_kind kind, const unsigned flags = FFTW_MEASURE)
     {
         int rank = 1, howmany_rank = 1;
         fftw_iodim dims[rank], howmany_dims[howmany_rank];
