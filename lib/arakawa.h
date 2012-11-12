@@ -49,7 +49,7 @@ namespace toefl{
          * This function takes less than 0.03s for 1e6 elements
          * and is of O(N).
          * But could be twice as fast if only the interior function 
-         * and no GhostMatrix were used! 
+         * and no GhostMatrix were used! (At least on some processors...)
          * @tparam GhostM the type of the GhostMatrix
          * @tparam M    the type of the Matrix
          * @param lhs the left function in the Poisson bracket

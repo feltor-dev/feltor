@@ -19,8 +19,8 @@ namespace toefl{
       private:
         typedef std::complex<double> complex;
         const size_t rows, cols;
-        fftw_plan sine_forward;
-        fftw_plan sine_backward;
+        fftw_plan real_forward;
+        fftw_plan real_backward;
         fftw_plan forward;
         fftw_plan backward;
       public:
@@ -34,7 +34,7 @@ namespace toefl{
         DRT_DFT( const size_t real_rows, const size_t real_cols, const fftw_r2r_kind kind, const unsigned flags = FFTW_MEASURE);
         /*! @brief execute a r2c transposing transformation
          *
-         * First performs a linewise discrete r2r transform followed
+         * First perform a linewise discrete r2r transform followed
          * by a transposition and a linewise discrete fourier transform.
          * @param inout non void matrix of size specified in the constructor.
          * i.e. (real_rows, real_cols)
@@ -45,8 +45,8 @@ namespace toefl{
         void r2c_T( Matrix<double, TL_DRT_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
         /*! @brief execute a c2r transposing transformation
          *
-         * First performs a linewise discrete fourier transform followed
-         * by a transposition and a linewise discrete sine transform.
+         * First perform a linewise discrete fourier transform followed
+         * by a transposition and a linewise discrete real transform.
          * @param inout_T
          * Non void complex matrix of size (real_cols, real_rows/2 + 1)
          * Content on output is the one of swap on input.
@@ -56,7 +56,7 @@ namespace toefl{
          */
         void c_T2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DRT_DFT>& swap);
         //make copy construction impossible because fftw_plan cannot be copied
-        /*! @brief frees all fftw plans
+        /*! @brief Free all fftw plans
          */
         ~DRT_DFT();
     };
@@ -66,14 +66,14 @@ namespace toefl{
         Matrix<double, TL_DRT_DFT> temp( rows, cols);
         fftw_r2r_kind kind_fw = kind;
         fftw_r2r_kind kind_bw = inverse_kind(kind);
-        sine_forward = plan_drt_1d( rows, cols, temp.getPtr(), temp.getPtr(),kind_fw, flags);
-        sine_backward = plan_drt_1d( rows, cols, temp.getPtr(), temp.getPtr(),kind_bw, flags);
+        real_forward = plan_drt_1d( rows, cols, temp.getPtr(), temp.getPtr(),kind_fw, flags);
+        real_backward = plan_drt_1d( rows, cols, temp.getPtr(), temp.getPtr(),kind_bw, flags);
         forward = plan_dft_1d_r_T2c( rows, cols, temp.getPtr(), reinterpret_cast<fftw_complex*>(temp.getPtr()), FFTW_MEASURE);
         backward = plan_dft_1d_c2r_T( rows, cols, reinterpret_cast<fftw_complex*>(temp.getPtr()), temp.getPtr(), FFTW_MEASURE);
 #ifdef TL_DEBUG
         if(forward == 0|| backward == 0)
             throw Message( "r2c Planner routine failed!", ping);
-        if( sine_forward == 0 || sine_backward == 0)
+        if( real_forward == 0 || real_backward == 0)
             throw Message( "Sine trafo Planner routine failed!", ping);
 #endif
     }
@@ -81,8 +81,8 @@ namespace toefl{
     {
         fftw_free( forward);
         fftw_free( backward);
-        fftw_free( sine_forward);
-        fftw_free( sine_backward);
+        fftw_free( real_forward);
+        fftw_free( real_backward);
     }
 
     void DRT_DFT::r2c_T( Matrix<double, TL_DRT_DFT>& inout, Matrix<complex, TL_NONE>& swap)
@@ -93,7 +93,7 @@ namespace toefl{
         if( swap.rows() != cols|| swap.cols() != rows/2 + 1) 
             throw Message( "Swap Matrix in 2d_r2c doesn't have the right size!", ping);
 #endif
-        fftw_execute_r2r( sine_forward, inout.getPtr(), inout.getPtr());
+        fftw_execute_r2r( real_forward, inout.getPtr(), inout.getPtr());
         fftw_execute_dft_r2c( forward, inout.getPtr(), reinterpret_cast<fftw_complex*>(inout.getPtr()));
         swap_fields( inout, swap);
     }
@@ -108,7 +108,7 @@ namespace toefl{
 #endif
         swap_fields( inout, swap);
         fftw_execute_dft_c2r( backward, reinterpret_cast<fftw_complex*>(swap.getPtr()),swap.getPtr());
-        fftw_execute_r2r( sine_backward, swap.getPtr(), swap.getPtr());
+        fftw_execute_r2r( real_backward, swap.getPtr(), swap.getPtr());
     }
 
 

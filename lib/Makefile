@@ -13,4 +13,4 @@ all: matrix_t fft_t arakawa_t coeff_t quadmat_t dft_dst_t
 	$(CXX) -O3  $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
 clean:
-	rm *_t
+	rm *_t *_b

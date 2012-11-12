@@ -35,6 +35,7 @@ namespace toefl{
     */
     inline fftw_complex* fftw_cast( std::complex<double> * const ptr){ return reinterpret_cast<fftw_complex*> (ptr);}
     fftw_r2r_kind inverse_kind( fftw_r2r_kind kind);
+    void hc2c( Matrix<double, TL_DFT_DFT>& inout, Matrix< std::complex< double> >& swap);
     
     fftw_plan plan_drt_1d( const size_t rows, const size_t cols, double *in, double *out, const fftw_r2r_kind kind, const unsigned flags);
     fftw_plan plan_transpose( const size_t rows, const size_t cols, double *in, double *out, const unsigned flags);
@@ -254,6 +255,26 @@ namespace toefl{
         howmany_dims[0].os = cols; 
         return fftw_plan_guru_dft( rank, dims, howmany_rank, howmany_dims, in, out, sign, flags);
     }
+    /*
+    void hc2c( const size_t rows, const size_t cols, double* inout)
+    {
+        size_t ccols = cols - cols%2 + 2;
+        double temp[cols];
+        for( size_t i = 0; i< rows; i++)
+        {
+            for( size_t j = 1; j < cols; j++)
+                temp[j] = inout[i*ccols + j];
+            inout[i*ccols + 1] = 0;
+            for( size_t j = 1; j < cols/2 + 1; j++)
+            {
+                inout[i*ccols + 2*j] = temp[j];
+                inout[i*ccols + 2*j+1] = temp[cols-j];
+            }
+        }
+    }
+    */
+
+
 
 
 }

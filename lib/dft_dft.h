@@ -31,7 +31,7 @@ namespace toefl{
          * @param flags flags for plan creation 
          */
         DFT_DFT( const size_t real_rows, const size_t real_cols, const unsigned flags = FFTW_MEASURE);
-        /*! @brief Execute a r2cd transformation on given Matrix
+        /*! @brief Execute a r2c transformation on given Matrix
          *
          * @param inout non void matrix of size specified in the constructor.
          * i.e. (real_rows, real_cols)

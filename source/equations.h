@@ -1,21 +1,16 @@
-#ifndef _COEFFICIENTS_
-#define _COEFFICIENTS_
+#ifndef _TL_EQUATIONS_
+#define _TL_EQUATIONS_
 
 #include "matrix.h"
 #include "vector.h"
+#include "blueprint.h"
 
 namespace toefl{
    
-    //Vorläufig
-    struct Physical
-    {
-        const double dd, nu;
-        const double g_e, g_i, g_z;
-        const double kappa_x, kappa_y;
-        const double a_i, mu_i, tau_i;
-        const double a_z, mu_z, tau_z;
-    };
     /*! @brief Yield the linear part of the local toefl equations
+     *
+     * \attention
+     * The sine functions are not eigenfunctions of simple derivatives like e.g. dx!!
      */
     class Equations
     {
@@ -157,4 +152,4 @@ namespace toefl{
 
 
 
-#endif //_COEFFICIENTS_
+#endif //_TL_EQUATIONS_

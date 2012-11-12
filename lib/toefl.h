@@ -8,19 +8,22 @@
  * This is the toefl library.
  * @par A word on indexing
  *
- * In most image container formats (e.g. PGM) and in windowing systems (e.g. GLFW) 
+ * Assuming we have a physical box, that spans the coordinate range (0,0) to (lx, ly) 
+ * we make the following correspondance between matrix elements and grid points:
+ *
+ * The first element of our matrices corresponds to the lower left corner of the box (i.e. the origin)
+ * Subsequent elements progress left to right through the remaining grid points in the lowest row of the grid
+ * and then in successively higher rows of the grid. The final element corresponds to the upper right corner 
+ * of the grid. 
+ * Note that in most image container formats (e.g. PGM) and in windowing systems (e.g. GLFW) 
  * the first element of a vector (double* field; field[0]) corresponds to the upper left corner of an image. 
  * Subsequent elements progress left-to-right in the highest row and then in successively lower rows of the image. 
  * The final element corresponds to the lower right corner of the image. (cf. http://de.wikipedia.org/wiki/Portable_Graymap)
  * This is the way you read text. 
  * In C-Convention the 2nd index of a 2-dimensional field is the continuous one.
- * That means that the X-INDEX IS THE SECOND ONE, which is the way you would write the elements of a matrix on a piece of paper.
+ * That means that the X-INDEX IS THE SECOND ONE.
  * For cases that defer from this we use the suffix _T (for transposed) in variable names, 
  * i.e. the vector double* field_T would store the y-direction continuously and the x-index would be the first one.
- *
- * Note that there are notable exceptions to this rule e.g. the OpenGl texture convention places the origin in the 
- * bottom left corner, but also interprets x-values continuously.  (mathematical coordinate system)
- *
  *
  * @par A word on CUDA coding convention
  *

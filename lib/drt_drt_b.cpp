@@ -25,11 +25,11 @@ int main()
     t.tic();
     drt_drt.forward( test, test);
     t.toc();
-    cout << "Transformation took "<<t.diff()<<"s\n";
+    cout << "Transformation took "<<t.diff()<<"ms\n";
     t.tic();
     drt_drt.backward( test, test);
     t.toc();
-    cout << "Backtransformation took "<<t.diff()<<"s\n";
+    cout << "Backtransformation took "<<t.diff()<<"ms\n";
 
     ////////////////////////////////////////////////////////////////////////////////
     Matrix<double, TL_NONE> m0( rows, cols);
@@ -43,11 +43,11 @@ int main()
     t.tic();
     fftw_execute_r2r( forward, m0.getPtr(), m0.getPtr());
     t.toc();
-    cout << "Transformation took "<<t.diff()<<"s\n";
+    cout << "Direct FFTW Transformation took "<<t.diff()<<"ms\n";
     t.tic();
     fftw_execute_r2r( backward, m0.getPtr(), m0.getPtr());
     t.toc();
-    cout << "Backtransformation took "<<t.diff()<<"s\n";
+    cout << "Direct FFTW Backtransformation took "<<t.diff()<<"ms\n";
 
     return 0 ;
 }

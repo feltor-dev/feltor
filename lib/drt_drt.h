@@ -21,21 +21,21 @@ namespace toefl
         fftw_plan forward_;
         fftw_plan backward_;
       public:
-        DRT_DRT( const size_t, const size_t , const fftw_r2r_kind , const fftw_r2r_kind, const unsigned = FFTW_MEASURE);
+        /*! @brief Prepare a 2d discrete fourier transformation of given size
+         *
+         * @param rows # of rows in the real matrix
+         * @param cols # of colums in the real matrix
+         * @param horizontal_kind hoizontal kind of transformation
+         * @param vertical_kind vertical kind of transformation 
+         * @param flags flags for plan creation 
+         */
+        DRT_DRT( const size_t rows, const size_t cols, const fftw_r2r_kind horizontal_kind , const fftw_r2r_kind vertical_kind, const unsigned = FFTW_MEASURE);
         ~DRT_DRT();
         void forward( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
         void backward( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
     };
 
 
-    /*! @brief Prepare a 2d discrete fourier transformation of given size
-     *
-     * @param rows # of rows in the real matrix
-     * @param cols # of colums in the real matrix
-     * @param kind0 hoizontal kind of transformation
-     * @param kind1 vertical kind of transformation 
-     * @param flags flags for plan creation 
-     */
     DRT_DRT::DRT_DRT( const size_t rows, const size_t cols, const fftw_r2r_kind kind0, const fftw_r2r_kind kind1, const unsigned flags):rows(rows), cols(cols)
     {
         Matrix<double> m0(rows, cols);
