@@ -24,7 +24,7 @@ namespace toefl{
         double L, rho;
         complex curv;
       public:
-        Equations( const Physical phys):p(phys) dd(phys.dd), nu(phys.nu), tau_i(phys.tau_i), tau_z(phys.tau_z), kappa_x(phys.kappa_x), kappa_y(phys.kappa_y)
+        Equations( const Physical& phys):p(phys) dd(phys.d), nu(phys.nu), tau_i(phys.tau_i), tau_z(phys.tau_z), kappa_x(phys.kappa_x), kappa_y(phys.kappa_y)
         g_e(phys.g_e), g_i(phys.g_i), g_z(phys.g_z){}
         /*! @brief compute the linear part of the toefl equations without impurities
          *
@@ -52,7 +52,7 @@ namespace toefl{
         const double a_i, mu_i, tau_i;
         const double a_z, mu_z, tau_z;
       public: 
-        Poisson( const Physical phys);
+        Poisson( const Physical& phys);
         /*! @brief Compute prefactors for ne and ni in local poisson equation
          *
          * @param phi   phi[0] multiplies with ne, phi[1]  with ni
@@ -85,7 +85,7 @@ namespace toefl{
         inline double gamma2_i( const double laplace);
         inline double gamma2_z( const double laplace);
     };
-    Poisson::Poisson(const Physical phys):a_i(phys.a_i), mu_i(phys.mu_i), tau_i(phys.tau_i),
+    Poisson::Poisson(const Physical& phys):a_i(phys.a_i), mu_i(phys.mu_i), tau_i(phys.tau_i),
                                           a_z(phys.a_z), mu_z(phys.mu_z), tau_z(phys.tau_z) 
                                           {}
     

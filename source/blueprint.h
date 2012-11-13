@@ -1,6 +1,9 @@
 #ifndef _BLUEPRINT_
 #define _BLUEPRINT_
 
+#include <iostream>
+#include "message.h"
+
 //toefl brauch libraries, um zu funktionieren
 //z.B. fftw3 für dfts, cuda für graphikkarten, oder sparse matrix solver 
 enum cap{ TL_CUVATURE, TL_COUPLING, TL_IMPURITY, TL_GLOBAL};
@@ -118,6 +121,11 @@ void BluePrint::consistencyCheck()
     if( phys.a_i <= 0 || phys.mu_i <= 0 || phys.tau_i <= 0) throw Message( "Ion species badly set\n", ping);
     if( imp && (phys.a_i <= 0 || phys.mu_i <= 0 || phys.tau_i <= 0)) throw Message( "Impuritiy species badly set\n", ping);
     if( global) throw Message( "Global solver not yet implemented\n", ping);
+    //Some Warnings
+    if( !curvature && (phys.kappa_x != 0 || phys.kappa_y != 0)) std::cerr <<  "TL_WARNING: Curvature disabled but kappa not zero (will be ignored)!\n";
+    if( !imp && (phys.a_z != 0 || phys.mu_z != 0 || phys.tau_z != 0)) 
+        std::cerr << "TL_WARNING: Impurity disabled but z species not 0 (will be ignored)!\n";
+        
 }
 
 

@@ -1,8 +1,6 @@
 #include <complex>
-#include "matrix.h"
-#include "ghostmatrix.h"
-#include "arakawa.h"
-#include "coeff.h"
+#include "tl_numerics.h"
+#include "blueprint.h"
 #include "equations.h"
 
 
@@ -12,22 +10,15 @@ namespace toefl
     class DFT_DFT_Solver
     {
         typedef std::complex<double> complex;
-        const size_t rows, cols;
         bool imp;
-        GhostMatrix<double, TL_DFT_DFT> ne[3], ni[3], nz[3];
-        GhostMatrix<double, TL_DFT_DFT> phi_e, phi_i, phi_z;
-        Matrix<double, TL_DFT_DFT> nonlinear_e[3], nonlinear_i[3], nonlinear_z[3];
-        Matrix<double, TL_DFT_DFT>& ne_temp; //reference to ne[2]
-        Matrix<double, TL_DFT_DFT>& ni_temp, nz_temp;
-        void karniadakis_permute();
-        void karniadakis_step();
+        KarniadakisField<TL_DFT_DFT> k;
+        Matrix<double, P> phi_e, phi_i, phi_z;
         /////////////////Complex (void) Matrices for fourier transforms///////////
         Matrix< complex> cne, cni, cnz;
         Matrix< complex> cphi_e, cphi_i, cphi_z;
         Matrix< complex> cne_temp, cni_temp, cnz_temp;
         ///////////////////Solvers////////////////////////
         Arakawa arakawa;
-        double alpha[3], beta[3];
         DFT_DFT dft_dft;
         /////////////////////Coefficients//////////////////////
         Matrix< QuadMat< complex, 2> > coeff_dim2;
@@ -44,16 +35,42 @@ namespace toefl
         void getField( enum target t, const Matrix<double, TL_DFT_DFT>& m);
     };
 
-    DFT_DFT_Solver::DFT_DFT_Solver( const Blueprint& blueprint)
+    DFT_DFT_Solver::DFT_DFT_Solver( const Blueprint& bp):
+        rows( rows), cols( cols),
+        imp( imp), k( rows, cols, imp),
+        phi_e( rows, cols), phi_i(rows, cols), phi_z( rows, cols, imp),
+        cne( rows, cols/2 +1, TL_VOID), cni( rows, cols/2 + 1, TL_VOID), cnz(rows, cols/2 +1, TL_VOID),
+        cphi_e( rows, cols/2+1, TL_VOID), cphi_i( rows, cols/2+1, TL_VOID), cphi_z(rows, cols/2+1, TL_VOID)
+        cne_temp( rows, cols/2 +1, TL_VOID), cni_temp( rows, cols/2 +1, TL_VOID), cnz_temp(rows, cols/2+1, TL_VOID),
+        coeff_dim2( rows, cols/2+1, TL_VOID),
+        coeff_dim3( rows, cols/2+1, TL_VOID),
+        coeff_phi_dim2( rows, cols/2+1, TL_VOID),
+        coeff_phi_dim3( rows, cols/2+1, TL_VOID),
+        coeff_Gamma_i( rows, cols),
+        coeff_Gamma_z( rows, cols, imp)
+    {
+        bp.consistencyCheck();
+        Physical phys = bp.getPhysical();
+        if( !bp.isEnabled( TL_CURVATURE))
+            phys.kappa_x = phys.kappa_y = 0; 
+        const Boundary bound = bp.getBoundary();
+        const Algorithmic alg = bp.getAlgorithmic();
+        Equations( phys);
+        Poisson( phys);
+        }
+
+
+
+
 
     void DFT_DFT_Solver::execute()
     {
-        arakawa( ne[0], phi_e, nonlinear_e[0]);
-        arakawa( ni[0], phi_i, nonlinear_i[0]);
+        arakawa( k.ne0, k.phi_e, k.nonlinear_e0);
+        arakawa( k.ni0, k.phi_i, k.nonlinear_i0);
         if( imp)
-            arakawa( nz[0], phi_z, nonlinear_z[0]);
+            arakawa( nz0, phi_z, nonlinear_z0);
         //2. perform karniadakis step
-        karniadakis_step();
+        k.step();
         //3. solve linear equation
         //3.1. transform v_temp
         dft_dft.r2c( ne_temp, cne_temp);
@@ -73,49 +90,7 @@ namespace toefl
             dft_dft.c2r( cphi_z, phi_z);
         }
         //4. permute fields
-        karniadakis_permute();
-    }
-    void DFT_DFT_Solver::karniadakis_step()
-    {
-        for( size_t i = 0; i < rows; i++)
-            for( size_t j = 0; j < cols; j++)
-            {
-                ne_temp(i,j) =    alpha[0]*ne[0](i,j) 
-                                + alpha[1]*ne[1](i,j) 
-                                + alpha[2]*ne[2](i,j)
-                                + beta[0]*nonlinear_e[0](i,j) 
-                                + beta[1]*nonlinear_e[1](i,j) 
-                                + beta[2]*nonlinear_e[2](i,j);
-                ni_temp(i,j) =    alpha[0]*ni[0](i,j) 
-                                + alpha[1]*ni[1](i,j) 
-                                + alpha[2]*ni[2](i,j)
-                                + beta[0]*nonlinear_i[0](i,j) 
-                                + beta[1]*nonlinear_i[1](i,j) 
-                                + beta[2]*nonlinear_i[2](i,j);
-            }
-        if( imp)
-            for( size_t i = 0; i < rows; i++)
-                for( size_t j = 0; j < cols; j++)
-                {
-                    nz_temp(i,j) =    alpha[0]*nz[0](i,j) 
-                                    + alpha[1]*nz[1](i,j) 
-                                    + alpha[2]*nz[2](i,j)
-                                    + beta[0]*nonlinear_z[0](i,j) 
-                                    + beta[1]*nonlinear_z[1](i,j) 
-                                    + beta[2]*nonlinear_z[2](i,j);
-                }
-    }
-    void DFT_DFT_Solver::karniadakis_permute()
-    {
-        permute_fields( ne[0], ne[1], ne[2]);
-        permute_fields( ni[0], ni[1], ni[2]);
-        permute_fields( nonlinear_e[0], nonlinear_e[1], nonlinear_e[2]);
-        permute_fields( nonlinear_i[0], nonlinear_i[1], nonlinear_i[2]);
-        if( imp)
-        {
-            permute_fields( nz[0], nz[1], nz[2]);
-            permute_fields( nonlinear_z[0], nonlinear_z[1], nonlinear_z[2]);
-        }
+        k.permute();
     }
     void DFT_DFT_Solver::multiply_coefficients()
     {
