@@ -1,6 +1,6 @@
-INCLUDE += -I/home/matthias/include
+INCLUDE += 
 CFLAGS = -Wall 
-LIBS = -lfftw3
+LIBS = -lfftw3 -lm
 CXX = g++
 
 all: matrix_t fft_t arakawa_t coeff_t quadmat_t dft_dst_t
