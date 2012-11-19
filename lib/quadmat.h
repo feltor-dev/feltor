@@ -39,7 +39,7 @@ namespace toefl{
                 data[i] = value;
         }
         /*! @brief copies values of src into this*/
-        QuadMat( QuadMat& src){
+        QuadMat( const QuadMat& src){
             for( size_t i=0; i < n*n; i++)
                 data[i] = src.data[i];
         }

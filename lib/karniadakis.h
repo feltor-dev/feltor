@@ -73,12 +73,11 @@ namespace toefl{
                 throw Message( "Cannot work with void Matrices!\n", ping);
         }
 #endif
-
         QuadMat<T, n> temp;
         for( size_t i = 0; i<rows; i++)
             for( size_t j=0; j<cols; j++)
             {
-                //Matrix Vector multiplication
+                //Matrix-Vector multiplication
                 for( unsigned k=0; k<n; k++)
                     for( unsigned q=0; q<n; q++)
                         temp(k,q) = c(i,j)(k,q)*in[q](i,j);
@@ -93,30 +92,36 @@ namespace toefl{
 
     /*! @brief Multistep timestepper object 
      *
-     * @tparam n size of the equations
+     * Construction is a bit clumsy but usage is easy. This object is a solution to the
+     * problem of computing the two steps in the karniadakis scheme. 
+     * One is in x-space the other in fourier space. The goal was to implement a solver
+     * which is oblivious to the type of boundary conditions used and can be used for two or
+     * three equations. 
+     * \todo n equations are available only when an implementation of an LU decomposition is available. (LAPACK?)
+     * @tparam n size of the equations (2 or 3)
      * @tparam S the type of Stepper coefficients you want to use
-     * @tparam T the type of fourier Coefficients used (double or std::complex<double>)
-     * @tparam P Padding of your (real) matrices
+     * @tparam T_k the type of fourier Coefficients used (double or std::complex<double>)
+     * @tparam P_x Padding of your (real) matrices
      */
-    template< size_t n, enum stepper S, typename T, enum Padding P>
+    template< size_t n, enum stepper S, typename T_k, enum Padding P_x>
     class Karniadakis
     {
       private:
         const size_t rows, cols;
-        Vector< Matrix< double, P>, n> v1, v2;
-        Vector< Matrix< double, P>, n> n1, n2;
-        Matrix< QuadMat< T, n>, TL_NONE> c;
+        Vector< Matrix< double, P_x>, n> v1, v2;
+        Vector< Matrix< double, P_x>, n> n1, n2;
+        Matrix< QuadMat< T_k, n>, TL_NONE> c;
         const double dt;
       public:
         /*! @brief Allocate storage for the last two fields in the karniadakis scheme
-         *  and invert the coefficients in fourier space
+         *  and invert the given fourier coefficients.
          *
-         * @param rows rows of your matrices
-         * @param cols columns of your matrices
-         * @param coeff The linear part of your equations in fourier space
+         * @param rows_x rows of your x-space matrices
+         * @param cols_x columns of your x-space matrices
+         * @param coeff_k The linear part of your equations in fourier space
          * @param dt the timestep
          */
-        Karniadakis(const size_t rows, const size_t cols, const Matrix< QuadMat< T, n>, TL_NONE>& coeff, const double dt);
+        Karniadakis(const size_t rows_x, const size_t cols_x, const Matrix< QuadMat< T_k, n>, TL_NONE>& coeff_k, const double dt);
 
         /*! @brief Compute the first part of the Karniadakis scheme
          *
@@ -127,20 +132,21 @@ namespace toefl{
          * The nonlinearity at timestep n.
          * Content undefined on output.
          */
-        void prestep( Vector< Matrix<double, P>, n>& v0, Vector< Matrix<double, P>, n> & n0);
+        void step_i( Vector< Matrix<double, P_x>, n>& v0, Vector< Matrix<double, P_x>, n> & n0);
         /*! @brief Compute the second part of the Karniadakis scheme
          *
          * @param v 
-         * The fourier transposed result of prestep.
+         * The fourier transposed result of step_i on input.
          * Contains the multiplied coefficients on output
+         * @tparam Fourier_T The value type of the fourier transposed matrices
          */
-        template< typename fourier_T>
-        inline void poststep( Vector< Matrix< fourier_T, TL_NONE>, n>& v);
+        template< class Fourier_T>
+        inline void step_ii( Vector< Matrix< Fourier_T, TL_NONE>, n>& v);
 
         /*! @brief Swap the stored fields of two Karniadakis objects.
          *
-         * This function is essential for initialisation of your Karniadakis scheme.
-         * The stored coeffients remain untouched, i.e. the user is reponsible 
+         * This function is essential for initialising your Karniadakis scheme.
+         * The stored coeffients remain unchanged, i.e. the user is reponsible 
          * for initialising both objects with the same coefficients. (i.e. equations)
          * @param k1 Contains fields of k2 on output.
          * @param k2 Contains fields of k1 on output.
@@ -178,7 +184,7 @@ namespace toefl{
             }
 
     template< size_t n, enum stepper S, typename T, enum Padding P>
-    void Karniadakis<n,S,T,P>::prestep( Vector< Matrix<double, P>, n>& v0, Vector< Matrix<double, P>, n> & n0)
+    void Karniadakis<n,S,T,P>::step_i( Vector< Matrix<double, P>, n>& v0, Vector< Matrix<double, P>, n> & n0)
     {
         for( unsigned k=0; k<n; k++)
         {
@@ -206,11 +212,11 @@ namespace toefl{
     }
 
     template< size_t n, enum stepper S, typename T, enum Padding P>
-    template< typename fourier_T>
-    void Karniadakis<n,S,T,P>::poststep( Vector< Matrix< fourier_T, TL_NONE>, n>& v)
+    template< typename Fourier_T>
+    void Karniadakis<n,S,T,P>::step_ii( Vector< Matrix< Fourier_T, TL_NONE>, n>& v)
     {
         //multiply coeff
-        multiply_coeff< n, T, fourier_T>( c, v, v);
+        multiply_coeff< n, T, Fourier_T>( c, v, v);
     }
 
     template< size_t n, enum stepper S1, enum stepper S2, typename T, enum Padding P>
