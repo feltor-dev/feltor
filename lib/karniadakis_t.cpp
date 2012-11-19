@@ -2,6 +2,7 @@
 #include <cmath>
 #include "karniadakis.h"
 #include "matrix.h"
+#include "quadmat.h"
 
 using namespace std;
 using namespace toefl;
@@ -15,36 +16,43 @@ int main()
     unsigned steps = 100;
     double dt = 1./(double)steps;
     double t = 0;
-    Matrix<double, TL_NONE> m( rows, cols), n( rows, cols);
-    for( size_t i = 0; i< rows; i++)
-        for( size_t j = 0; j< cols; j++)
-            m(i,j) = n(i,j) = 1;
+    //initialize the Linearity which is zero
+    Matrix< QuadMat<double,2> > coeff( rows, cols, Zero<2>());
+    Matrix<double, TL_NONE> m( rows, cols, 1.), n( rows, cols, 1.);
 
-    Karniadakis<TL_NONE> k_void( rows, cols, dt, false);
-    try{ k_void.step<TL_EULER>( m,n);}
-    catch( Message& m){ m.display();}
-    Karniadakis<TL_NONE> k(rows, cols, dt);
-    k.step<TL_EULER>( m, n);
+    Karniadakis<2, TL_EULER, double, TL_NONE> k_euler( rows, cols, coeff, dt);
+    Karniadakis<2, TL_ORDER2, double, TL_NONE> k_1( rows, cols, coeff, dt);
+    Vector< Matrix<double>, 2> v, non;
+    v[0].resize( rows, cols);
+    v[1].resize( rows, cols);
+    non[0].resize( rows, cols);
+    non[1].resize( rows, cols);
+
+    v[0] = v[1] = m;
+    non[0] = non[1] = n;
+    try{
+    k_euler.prestep( v, non);
+    k_euler.poststep( v);
+    }catch(Message& m){m.display();}
     t += dt;
-    for( size_t i = 0; i< rows; i++)
-        for( size_t j = 0; j< cols; j++)
-            n(i,j) = m(i,j) = m(i,j)/(Coefficients<TL_EULER>::gamma_0);
-    k.step<TL_ORDER2>( m, n);
+
+    swap_fields( k_euler, k_1);
+    non = v;
+    k_1.prestep( v, non);
+    k_1.poststep( v);
     t += dt;
-    for( size_t i = 0; i< rows; i++)
-        for( size_t j = 0; j< cols; j++)
-            n(i,j) = m(i,j) = m(i,j)/(Coefficients<TL_ORDER2>::gamma_0);
+    swap_fields( k_2, k_1);
+    non = v;
     for( unsigned i = 2; i < steps; i++)
     {
-        k.step<TL_ORDER3>( m, n);
+        k_2.prestep( v, non);
+        k_2.poststep( v);
         t += dt;
-        for( size_t i = 0; i< rows; i++)
-            for( size_t j = 0; j< cols; j++)
-                n(i,j) = m(i,j) = m(i,j)/(Coefficients<TL_ORDER3>::gamma_0);
+        non = v;
     }
     cout << "Exact solution is: "<< exp(1) << "\n";
     cout << "at time "<<t<<"\n";
-    cout << "Approximate solution is: \n" <<m << endl;
+    cout << "Approximate solution is: \n" <<v << endl;
 
 
     return 0;

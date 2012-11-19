@@ -29,6 +29,15 @@ namespace toefl{
       public:
         /*! @brief no values are assigned*/
         QuadMat(){}
+        /*! @brief Initialize elements to a value
+         *
+         * @param value The initial value
+         */
+        QuadMat( const T& value)
+        {
+            for( size_t i=0; i < n*n; i++)
+                data[i] = value;
+        }
         /*! @brief copies values of src into this*/
         QuadMat( QuadMat& src){
             for( size_t i=0; i < n*n; i++)
@@ -111,25 +120,48 @@ namespace toefl{
         }
     };
 
+    /*! @brief Return the One Matrix
+     * @return Matrix containing ones on the diagonal and zeroes elsewhere
+     */
+    template< size_t n>
+    QuadMat<double, n> Eins()
+    {
+        QuadMat<double, n> E(0);
+        for( unsigned i=0; i<n; i++)
+            E(i,i) = 1;
+        return E;
+    }
+    /*! @brief Return the Zero Matrix
+     * @return Matrix containing only zeroes 
+     */
+    template< size_t n>
+    QuadMat<double, n> Zero()
+    {
+        QuadMat<double, n> E(0);
+        return E;
+    }
+
     /*! @brief inverts a 2x2 matrix of given type
      *
      * \note throws a Message if Determinant is zero. 
      * @tparam T The type must support basic algorithmic functionality (i.e. +, -, * and /)
-     * @param m the matrix contains its invert on return
+     * @param in The input matrix 
+     * @param out The output matrix contains the invert of in on output.
+     *  Inversion is inplace if in and out dereference the same object.
      */
     template<class T>
-    void invert(QuadMat<T, 2>& m);
+    void invert(const QuadMat<T, 2>& in, QuadMat< T,2>& out);
     template<class T>
-    void invert(QuadMat<T, 2>& m) 
+    void invert(const QuadMat<T, 2>& m, QuadMat<T,2>& m1) 
     {
         T det, temp;
         det = m(0,0)*m(1,1) - m(0,1)*m(1,0);
         if( det== (T)0) throw Message("Determinant is Zero\n", ping);
         temp = m(0,0);
-        m(0,0) = m(1,1)/det;
-        m(0,1) /=-det;
-        m(1,0) /=-det;
-        m(1,1) = temp/det;
+        m1(0,0) = m(1,1)/det;
+        m1(0,1) /=-det;
+        m1(1,0) /=-det;
+        m1(1,1) = temp/det;
     }
     
     /*! @brief inverts a 3x3 matrix of given type
@@ -137,10 +169,14 @@ namespace toefl{
      * (overloads the 2x2 version)
      * \note throws a Message if Determinant is zero. 
      * @tparam The type must support basic algorithmic functionality (i.e. +, -, * and /)
-     * @param m the matrix contains its invert on return
+     * @param in The input matrix 
+     * @param out The output matrix contains the invert of in on output.
+     *  Inversion is inplace if in and out dereference the same object.
      */
     template< typename T>
-    void invert( QuadMat< T, 3>& m) 
+    void invert( const QuadMat< T, 3>& in, QuadMat<T,3>& out );
+    template< typename T>
+    void invert( const QuadMat< T, 3>& m, QuadMat<T,3>& m1 ) 
     {
         T det, temp00, temp01, temp02, temp10, temp11, temp20;
         det = m(0,0)*(m(1,1)*m(2,2)-m(2,1)*m(1,2))+m(0,1)*(m(1,2)*m(2,0)-m(1,0)*m(2,2))+m(0,2)*(m(1,0)*m(2,1)-m(2,0)*m(1,1));
@@ -148,20 +184,20 @@ namespace toefl{
         temp00 = m(0,0);
         temp01 = m(0,1);
         temp02 = m(0,2);
-        m(0,0) = (m(1,1)*m(2,2) - m(1,2)*m(2,1))/det;
-        m(0,1) = (m(0,2)*m(2,1) - m(0,1)*m(2,2))/det;
-        m(0,2) = (temp01*m(1,2) - m(0,2)*m(1,1))/det;
+        m1(0,0) = (m(1,1)*m(2,2) - m(1,2)*m(2,1))/det;
+        m1(0,1) = (m(0,2)*m(2,1) - m(0,1)*m(2,2))/det;
+        m1(0,2) = (temp01*m(1,2) - m(0,2)*m(1,1))/det;
     
         temp10 = m(1,0);
         temp11 = m(1,1);
-        m(1,0) = (m(1,2)*m(2,0) - m(1,0)*m(2,2))/det;
-        m(1,1) = (temp00*m(2,2) - temp02*m(2,0))/det;
-        m(1,2) = (temp02*temp10 - temp00*m(1,2))/det;
+        m1(1,0) = (m(1,2)*m(2,0) - m(1,0)*m(2,2))/det;
+        m1(1,1) = (temp00*m(2,2) - temp02*m(2,0))/det;
+        m1(1,2) = (temp02*temp10 - temp00*m(1,2))/det;
     
         temp20 = m(2,0);
-        m(2,0) = (temp10*m(2,1) - temp11*m(2,0))/det;
-        m(2,1) = (temp01*temp20 - temp00*m(2,1))/det;
-        m(2,2) = (temp00*temp11 - temp10*temp01)/det;
+        m1(2,0) = (temp10*m(2,1) - temp11*m(2,0))/det;
+        m1(2,1) = (temp01*temp20 - temp00*m(2,1))/det;
+        m1(2,2) = (temp00*temp11 - temp10*temp01)/det;
     }
 }
 #endif //_QUADMAT_

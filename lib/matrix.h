@@ -151,19 +151,23 @@ namespace toefl{
         void resize( const size_t new_rows, const size_t new_cols)
         {
             if( ptr == NULL)
-                rows = new_rows, cols = new_cols;
+                n = new_rows, m = new_cols;
+            else
+                throw Message( "Non void Matrix may not be resized!", ping);
         }
-
 
         /*! @brief Resize and allocate memory for void matrices
          *
          * @param new_rows new number of rows
          * @param new_cols new number of columns
+         * @param value Value the elements are initialized to using operator= of type T
          */
-        void allocate( const size_t new_rows, const size_t new_cols)
+        void allocate( const size_t new_rows, const size_t new_cols, const T& value = T())
         {
             resize( new_rows, new_cols);
             allocate();
+            for( size_t i=0; i < TotalNumberOf<P>::elements(n, m); i++)
+                ptr[i] = value;
         }
     
         /*! @brief number of rows
@@ -171,15 +175,15 @@ namespace toefl{
          * Return the  number of rows the object manages (the one you specified in the constructor)
          * even if 
          * no memory (or more in the padded case) is allocated. 
-         * This number doesn't change during the lifetime of the object.
+         * This number doesn't change as long as memory is allocated for that object.
          * @return number of columns
          */
         const size_t rows() const {return n;}
         /*! @brief number of columns
          *
          * Return the number of columns the object manages (the one you specified in the constructor), even if 
-         * no memory is allocated. This number doesn't change
-         * during the lifetime of the object.
+         * no memory is allocated. 
+         * This number doesn't change as long as memory is allocated for that object.
          * @return number of columns
          */
         const size_t cols() const {return m;}

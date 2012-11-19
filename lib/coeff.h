@@ -28,6 +28,7 @@ namespace toefl{
      * \note If you use a transposing fourier transform algorithm the first index of your coefficient matrices must be x in our convention
      * and the second y i.e. the transpose of your field matrices!
      */
+    /*
     template< class F, class T, size_t n> //f( QuadMat< T, n>, size_t k, size_t l)
     void invert_and_store_coeff( F& f_T, Matrix< QuadMat<T,n>, TL_NONE>& coeff_T)
     {
@@ -41,6 +42,7 @@ namespace toefl{
                 coeff_T(k,q) = temp;
             }
     }
+    */
 
     /*! @brief Pointwise multiply a coefficient Matrix with a Matrix
      * 
@@ -75,6 +77,7 @@ namespace toefl{
      * @param m0 zeroth element of the vector, contains solution on output
      * @param m1 first element of the vector, contains solution on output
      */
+    /*
     template< typename T1, typename T >
     void multiply_coeff( const Matrix< QuadMat< T1,2>, TL_NONE>& c, Matrix< T, TL_NONE>& m0, Matrix< T, TL_NONE>& m1)
     {
@@ -95,6 +98,7 @@ namespace toefl{
                 m1(i,j) = c(i,j)(1,0)*temp    + c(i,j)(1,1)*m1(i,j);
             }
     }
+    */
     /*! @brief pointwise multiply the 3 x 3 Matrix of coefficients by a 3-vector of matrices  
      *
      * Compute the system m0 = c00*m0 + c01*m1 + c02*m2, m1 = ... where all
@@ -106,13 +110,14 @@ namespace toefl{
      * @param m1 first element of the vector, contains solution on output
      * @param m2 second element of the vector, contains solution on output
      */
+    /*
     template< typename T1, typename T  >
     void multiply_coeff( const Matrix< QuadMat<T1,3>, TL_NONE>& c, Matrix< T, TL_NONE>& m0, Matrix<T, TL_NONE>& m1, Matrix<T, TL_NONE>& m2)
     {
 #ifdef TL_DEBUG
         if( c.rows() != m0.rows() || m0.rows() != m1.rows())
             if( c.cols() != m0.cols() || m0.cols() != m1.cols())
-                throw Message( "Cannot multiply coefficients! T1izes not equal!", ping);
+                throw Message( "Cannot multiply coefficients! Sizes not equal!", ping);
         if( c.isVoid() || m0.isVoid() || m1.isVoid() || m2.isVoid())
             throw Message( "Cannot work with void Matrices!\n", ping);
 #endif
@@ -129,6 +134,12 @@ namespace toefl{
             }
         
     }
+    */
+
+
+
+
+
 
 }
 

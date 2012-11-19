@@ -20,6 +20,7 @@ namespace toefl{
         static inline size_t elements( const size_t n, const size_t m){return n*m;}
     };
     
+    ///@cond
     template <>
     struct TotalNumberOf<TL_DFT_1D>
     {
@@ -45,6 +46,7 @@ namespace toefl{
         static inline size_t cols( const size_t m){ return m - m%2 + 2;}
         static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
     };
+    ///@endcond
 
 
 

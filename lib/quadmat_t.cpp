@@ -29,8 +29,8 @@ int main()
     
     cout << "invert m and n\n";
     try{
-        invert<double>( m);
-        invert( n);
+        invert<double>( m, m);
+        invert( n,n );
     }
     catch ( Message& message) {message.display();}
     cout << m <<endl;
@@ -61,8 +61,8 @@ int main()
     cout << n <<endl;
     cout << "invert m and n\n";
     try{
-        invert<std::complex<double>>( m);
-        invert( n);
+        invert<std::complex<double> >( m, m);
+        invert( n, n);
     }
     catch ( Message& message) {message.display();}
     cout << m <<endl;
