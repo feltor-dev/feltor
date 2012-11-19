@@ -17,8 +17,8 @@ namespace toefl{
         void toc(){ gettimeofday( &stop, NULL);}
         /*! \brief Return time elapsed between tic and toc
          *
-         * \return Time in milliseconds between calls of tic and toc*/
-        double diff(){ return 1e3*(stop.tv_sec - start.tv_sec) + 1e-3*(stop.tv_usec - start.tv_usec);}
+         * \return Time in seconds between calls of tic and toc*/
+        double diff(){ return (stop.tv_sec - start.tv_sec) + 1e-6*(stop.tv_usec - start.tv_usec);}
     };
 }
 

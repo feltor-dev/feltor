@@ -76,23 +76,26 @@ namespace toefl{
      * \note The fftw_complex type does not work as a template paramter. (Mainly due to the comparison and istream and outstream methods)
      * However std::complex<double> should be byte compatible so you can use reinterpret_cast<fftw_complex*>() on the pointer you get with getPtr() to use fftw routines!
      * \note No errors are thrown if the macro TL_DEBUG is not defined
+     * \note In order to use arrays of Matrices there are the two member functions
+     *  resize and allocate that are usable for void matrices!
      */
     template <class T, enum Padding P = TL_NONE>
     class Matrix
     {
       private:
-    
       protected:
           //maybe an id (static int id) wouldn't be bad to identify in errors
-        const size_t n; //!< # of columns
-        const size_t m; //!< # of rows
+        size_t n; //!< # of columns
+        size_t m; //!< # of rows
         T *ptr; //!< pointer to allocated memory
         //inline void swap( Matrix& rhs);
       public:
-        /*! @brief allocates continous memory on the heap
+        /*! @brief Construct an empty matrix*/
+        Matrix(): n(0), m(0), ptr( NULL){}
+        /*! @brief Allocate continous memory on the heap
          *
-         * @param rows logical number of rows (cannot be changed during objects lifetime)
-         * @param cols logical number of columns (cannot be changed during objects lifetime)
+         * @param rows logical number of rows (cannot be changed as long as memory is allocated for that object)
+         * @param cols logical number of columns (cannot be changed as long as memory is allocated for that object)
          * @param allocate determines whether memory should actually be allocated.
          *  Use TL_VOID if matrix should be empty! Then only the swap_fields function can make
          *  the matrix usable. 
@@ -100,7 +103,15 @@ namespace toefl{
          *  (In the case that memory is allocated)
          */
         Matrix( const size_t rows, const size_t cols, const bool allocate = true);
-        /*! @brief frees all allocated memory
+
+        /*! @brief Allocate and assign memory on the heap
+         *
+         * @param cols logical number of columns (cannot be changed as long as memory is allocated for that object)
+         * @param allocate determines whether memory should actually be allocated.
+         * @param value Use operator= of type T to assign values
+         */
+        Matrix( const size_t rows, const size_t cols, const T& value);
+        /*! @brief Free all allocated memory
          */
         ~Matrix();
         /*! @brief deep copy of an existing Matrix 
@@ -111,14 +122,49 @@ namespace toefl{
          * If src is void then so will be this.
          */
         Matrix( const Matrix& src);
-        /*! @brief deep assignment 
+        /*! @brief Deep assignment 
          *
+         * Copy every (including padded) value of the source Matrix
+         * to the existing (non void) Matrix with equal numbers of rows and columns.
          * Copy of 1e6 double takes less than 0.01s
          * @param src the right hand side
          * @return this
          * \note throws an error if src is void or doesn't have the same size.
          */
         const Matrix& operator=( const Matrix& src);
+
+        /*! @brief Allocate memory for void matrices
+         *
+         * This function uses the current values of n and m to 
+         * allocate the right amount of memory! It
+         * is useful in connection with arrays of Matrices.
+         * Throws an exception when called on non-void Matrices.
+         */
+        void allocate();
+
+        /*! @brief resize void matrices
+         *
+         * No new memory is allocated! Just usable for void matrices!
+         * @param new_rows new number of rows
+         * @param new_cols new number of columns
+         */
+        void resize( const size_t new_rows, const size_t new_cols)
+        {
+            if( ptr == NULL)
+                rows = new_rows, cols = new_cols;
+        }
+
+
+        /*! @brief Resize and allocate memory for void matrices
+         *
+         * @param new_rows new number of rows
+         * @param new_cols new number of columns
+         */
+        void allocate( const size_t new_rows, const size_t new_cols)
+        {
+            resize( new_rows, new_cols);
+            allocate();
+        }
     
         /*! @brief number of rows
          *
@@ -232,27 +278,36 @@ namespace toefl{
         if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
             throw Message( "Swap not possible. Sizes not equal\n", ping);
 #endif
-        //test for self swap not not needed (not an error)
+        //test for self swap not not necessary (not an error)
         T1 * ptr = lhs.ptr;
         lhs.ptr = reinterpret_cast<T1*>(rhs.ptr);
         rhs.ptr = reinterpret_cast<T2*>(ptr); 
     }
 
     template <class T, enum Padding P>
-    Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m)
+    Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m), ptr(NULL)
     {
     #ifdef TL_DEBUG
         if( n==0|| m==0)
             throw Message("Use TL_VOID to not allocate any memory!\n", ping);
     #endif
-        if( allocate){
-            ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
-            if (ptr == NULL) //might be done by fftw_malloc
-                throw AllocationError(n, m, ping);
-        } else {
-            ptr = NULL;
-        }
+        if( allocate)
+            this->allocate();
     }
+
+    template< class T, enum Padding P>
+    Matrix<T,P>::Matrix( const size_t n, const size_t m, const T& value):n(n),m(m),ptr(NULL)
+    {
+    #ifdef TL_DEBUG
+        if( n==0|| m==0)
+            throw Message("Use TL_VOID to not allocate any memory!\n", ping);
+    #endif
+        allocate();
+        for( unsigned i=0; i<TotalNumberOf<P>::elements(n,m); i++)
+            ptr[i] = value;
+    }
+
+
     
     template <class T, enum Padding P>
     Matrix<T, P>::~Matrix()
@@ -262,22 +317,19 @@ namespace toefl{
     }
     
     template <class T, enum Padding P>
-    Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m){
-        if( src.ptr != NULL){
-            ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
-            if( ptr == NULL) 
-                throw AllocationError(n, m, ping);
+    Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m), ptr(NULL){
+        if( src.ptr != NULL)
+        {
+            allocate();
             for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
                 ptr[i] = src.ptr[i];
-        } else {
-            ptr = NULL;
         }
     }
     
     template <class T, enum Padding P>
     const Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
     {
-        if( src != *this)
+        if( &src != this)
         {
     #ifdef TL_DEBUG
             if( n!=src.n || m!=src.m)
@@ -290,6 +342,21 @@ namespace toefl{
         }
         return *this;
     }
+
+    template <class T, enum Padding P>
+    void Matrix<T, P>::allocate()
+    {
+        if( ptr == NULL) //allocate only if matrix is void 
+        {
+            ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
+            if( ptr == NULL) 
+                throw AllocationError(n, m, ping);
+        }
+        else 
+            throw Message( "Memory already exists!", ping);
+    }
+
+
     
     template <class T, enum Padding P>
     T& Matrix<T, P>::operator()( const size_t i, const size_t j)

@@ -4,6 +4,8 @@
 //Message handling
 #include "message.h"
 #include "exceptions.h"
+//input reading
+#include "read_input.h"
 //benchmarking
 #include "timer.h"
 //Matrices and vectors
@@ -12,8 +14,9 @@
 #include "padding.h"
 #include "matrix.h"
 #include "ghostmatrix.h"
-//Arkawa scheme
+//Arkawa and karniadakis scheme
 #include "arakawa.h"
+#include "karniadakis.h"
 //Fourier transforms
 #include "fft.h"
 #include "dft_dft.h"

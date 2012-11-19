@@ -658,7 +658,8 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = lib/ \
-                         source/coefficients.h
+                         source/equations.h \
+                         source/blueprint.h
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -679,7 +680,6 @@ INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \
                          *.cxx \
-                         *.cpp \
                          *.c++ \
                          *.d \
                          *.java \

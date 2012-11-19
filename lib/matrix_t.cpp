@@ -43,5 +43,10 @@ int main()
     cout << "Permute clockwise\n";
     permute_fields( m1, m2, m3);
     cout << m1 << "\n" << m2 << "\n" << m3 << endl;
+
+    cout << "Construct m4( 2,8, value)\n";
+    DoubMat m4(2,8,42.);
+    cout << m4 <<endl;
+
     return 0;
 }
