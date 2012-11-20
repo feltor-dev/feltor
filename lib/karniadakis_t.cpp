@@ -28,26 +28,27 @@ int main()
 
         v[0] = v[1] = m;
         non[0] = non[1] = n;
-        cout << v << non <<endl;
     }catch(Message& m){m.display();}
 
-    Karniadakis<2,  TL_EULER, double, TL_NONE> k_euler( rows, cols, coeff, dt);
-    Karniadakis<2, TL_ORDER2, double, TL_NONE> k_1( rows, cols, coeff, dt);
-    Karniadakis<2, TL_ORDER3, double, TL_NONE> k_2( rows, cols, coeff, dt);
-    k_euler.step_i( v, non);
-    k_euler.step_ii( v);
+    //Test of Karniadakis scheme
+    cout << "Construct Karniadakis object...\n";
+    Karniadakis<2, double, TL_NONE> k( rows, cols, dt);
+    cout << "make various steps...\n";
+    k.invert_coeff<TL_EULER> (coeff);
+    k.step_i<TL_EULER>( v, non);
+    k.step_ii( v);
     t += dt;
-    swap_fields( k_euler, k_1);
     non = v;
-    k_1.step_i( v, non);
-    k_1.step_ii( v);
+    k.step_i<TL_ORDER2>( v, non);
+    k.invert_coeff<TL_ORDER2> (coeff);
+    k.step_ii( v);
     t += dt;
-    swap_fields( k_2, k_1);
     non = v;
+    k.invert_coeff<TL_ORDER3> (coeff);
     for( unsigned i = 2; i < steps; i++)
     {
-        k_2.step_i( v, non);
-        k_2.step_ii( v);
+        k.step_i<TL_ORDER3>( v, non);
+        k.step_ii( v);
         t += dt;
         non = v;
     }

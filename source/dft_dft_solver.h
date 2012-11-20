@@ -3,44 +3,31 @@
 #include "blueprint.h"
 #include "equations.h"
 
-
-
 namespace toefl
 {
+    template< size_t n>
     class DFT_DFT_Solver
     {
         typedef std::complex<double> complex;
         const size_t rows, cols;
         const bool imp;
         const double dt;
-        GhostMatrix<double, TL_DFT_DFT> ne, phi_e;
-        GhostMatrix<double, TL_DFT_DFT> ni, phi_i;
-        GhostMatrix<double, TL_DFT_DFT> nz, phi_z;
-        Matrix<double, TL_DFT_DFT> nonlinear_e;
-        Matrix<double, TL_DFT_DFT> nonlinear_i;
-        Matrix<double, TL_DFT_DFT> nonlinear_z;
+        Vector< GhostMatrix<double, TL_DFT_DFT>, n > dens, phi;
+        Vector< Matrix<double, TL_DFT_DFT>, n > nonlinear;
         /////////////////Complex (void) Matrices for fourier transforms///////////
-        Matrix< complex> cne, cphi_e;
-        Matrix< complex> cni, cphi_i;
-        Matrix< complex> cnz, cphi_z;
+        Vector< Matrix< complex>, n> cdens, cphi;
         ///////////////////Solvers////////////////////////
         Arakawa arakawa;
-        Karniadakis<TL_DFT_DFT> k_e, k_i, k_z;
+        Karniadakis<n, complex, TL_DFT_DFT> k;
         DFT_DFT dft_dft;
         /////////////////////Coefficients//////////////////////
-        Matrix< QuadMat< complex, 2> > coeff_dim2;
-        Matrix< QuadMat< complex, 3> > coeff_dim3;
-        Matrix< Vector< double, 2> > coeff_phi_dim2;
-        Matrix< Vector< double, 3> > coeff_phi_dim3;
-        Matrix< double> coeff_Gamma_i, coeff_Gamma_z;
+        Matrix< QuadMat< complex, n> > coeff;
+        Matrix< Vector< double, n> > coeff_phi;
+        Vector< Matrix< double>, n-1> coeff_Gamma;
         void init_coefficients( const Boundary& bound, const Physical& phys);
 
-        template< enum stepper S>
-        void invert_coefficients();
-        void multiply_coefficients();
-
-        void first_steps();
-
+        void multiply_coefficients();//multiply phi
+        void first_steps(); 
         template< enum stepper S>
         void step_();
       public:
@@ -52,12 +39,14 @@ namespace toefl
         /*! @brief Prepare Solver for execution
          *
          * This function initializes the Fourier Coefficients as well as 
-         * all low level solver needed. After that it performs two 
+         * all low level solver needed. It performs two 
          * initializing steps (by one onestep- and one twostep-method)
          * in order to get the karniadakis scheme ready. The actual time is
          * thus T_0 + 2*dt after initialisation. 
+         * @param v Container with three non void matrices
+         * @param t which Matrix is missing?
          */
-        void init( enum target t);
+        void init( Vector< Matrix<double,TL_DFT_DFT>, n>& v, enum target t);
         /*! @brief Perform a step by the 3 step Karniadakis scheme*/
         void step(){ step_<TL_ORDER3>();}
         /*! @brief Init field
@@ -67,32 +56,32 @@ namespace toefl
         void getField( enum target t, const Matrix<double, TL_DFT_DFT>& m);
     };
 
-    DFT_DFT_Solver::DFT_DFT_Solver( const Blueprint& bp):
+    template< size_t n>
+    DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
         rows( bp.getAlgorithmic().ny ), cols( bp.getAlgorithmic().nx ),
         imp( bp.isEnabled( TL_IMPURITY)),
         dt( bp.getAlgorithmic().dt),
         //fields
-        ne( rows, cols),      phi_e( ne),   
-        ni( rows, cols),      phi_i( ni),   
-        nz( rows, cols, imp), phi_z( nz),   
-        nonlinear_e( rows, cols),
-        nonlinear_i( rows, cols),                
-        nonlinear_z( rows, cols, imp),
-        //complex
-        cne( rows, cols/2 +1, TL_VOID),  cphi_e( cne), 
-        cni( rows, cols/2 +1, TL_VOID),  cphi_i( cne), 
-        cnz( rows, cols/2 +1, TL_VOID),  cphi_z( cne), 
         //Solvers
         arakawa( bp.getAlgorithmic().h),
-        k_e(rows, cols, dt), k_i( k_e), k_z(rows, cols, dt, imp),
+        k(rows, cols, dt),
         dft_dft( rows, cols, FFTW_MEASURE),
-        coeff_dim2( rows, cols/2+1, TL_VOID),
-        coeff_dim3( rows, cols/2+1, TL_VOID),
-        coeff_phi_dim2( rows, cols/2+1, TL_VOID),
-        coeff_phi_dim3( rows, cols/2+1, TL_VOID),
-        coeff_Gamma_i( rows, cols/2+1),
-        coeff_Gamma_z( rows, cols/2+1, imp)
+        coeff( rows, cols/2+1),
+        coeff_phi( rows, cols/2+1)
     {
+        //allocate vectors
+        for( unsigned k=0; k<n; k++)
+        {
+            dens[k].allocate(rows, cols);
+            phi[k].allocate( rows, cols);
+            nonlinear[k].allocate( rows, cols);
+            cdens[k].resize( rows, cols/2 +1);
+            cphi[k].resize( rows, cols/2 +1);
+        }
+        for( unsigned k=0; k<n-1; k++)
+        {
+            coeff_Gamma[k].allocate( rows, cols/2 + 1);
+        }
         bp.consistencyCheck();
         Physical phys = bp.getPhysical();
         if( !bp.isEnabled( TL_CURVATURE))
@@ -100,7 +89,8 @@ namespace toefl
         init_coefficients(bp.getBoundary(), phys);
     }
 
-    void DFT_DFT_Solver::init_coefficients( const Boundary& bound, const Physical& phys)
+    template< size_t n>
+    void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical& phys)
     {
         double laplace;
         const complex kxmin ( 0, 2.*M_PI/bound.lx);
@@ -112,89 +102,61 @@ namespace toefl
         // ki = 2Pi*i/ly, 
         // dft_dft is not transposing so i is the y index by default
         // First the coefficients for the Poisson equation
-        if(imp)
+        if(n==3)
         {
             for( unsigned i = 0; i<rows; i++)
                 for( unsigned j = 0; j<cols/2+1; j++)
                 {
                     laplace = -kxmin2*(double)(j*j) - kymin2*(double)(i*i);
-                    coeff_Gamma_i(i,j) = p.gamma1_i( laplace);
-                    coeff_Gamma_z(i,j) = p.gamma1_z(laplace);
-                    p( coeff_phi_dim3(i,j), laplace);  
-                    e( coeff_dim3( i,j), (double)j*kxmin, (double)i*kymin);
+                    coeff_Gamma[0](i,j) = p.gamma1_i( laplace);
+                    coeff_Gamma[1](i,j) = p.gamma1_z(laplace);
+                    p( coeff_phi(i,j), laplace);  
+                    e( coeff( i,j), (double)j*kxmin, (double)i*kymin);
                 }
         }
-        else
+        else if( n==2)
         {
             for( unsigned i = 0; i<rows; i++)
                 for( unsigned j = 0; j<cols/2+1; j++)
                 {
                     laplace = -kxmin2*(double)(j*j) - kymin2*(double)(i*i);
-                    coeff_Gamma_i(i,j) = p.gamma1_i( laplace);
-                    p( coeff_phi_dim2(i,j), laplace);  
-                    e( coeff_dim2( i,j), (double)j*kxmin, (double)i*kymin);
+                    coeff_Gamma[0](i,j) = p.gamma1_i( laplace);
+                    p( coeff_phi(i,j), laplace);  
+                    e( coeff( i,j), (double)j*kxmin, (double)i*kymin);
                 }
         }
     }
-    template< enum stepper S>
-    void DFT_DFT_Solver::invert_coefficients( )
+    template< size_t n>
+    void DFT_DFT_Solver<n>::multiply_coefficients()
     {
-        if(imp)
+        if( n==2)
         {
-            for( unsigned i = 0; i<rows; i++)
-                for( unsigned j = 0; j<cols/2+1; j++)
-                {
-                    for( unsigned k=0; k<3; k++)
-                        coeff_dim3(i,j)(k,k) += Coefficients<S>::gamma_0 - dt*coeff_dim3(i,j)(k,k);
-                    invert( coeff_dim3(i,j));
-                }
-        }
-        else
-        {
-            for( unsigned i = 0; i<rows; i++)
-                for( unsigned j = 0; j<cols/2+1; j++)
-                {
-                    for( unsigned k=0; k<2; k++)
-                        coeff_dim2(i,j)(k,k) += Coefficients<S>::gamma_0 - dt*coeff_dim2(i,j)(k,k);
-                    invert( coeff_dim2(i,j));
-                }
-        }
-    }
-    void DFT_DFT_Solver::multiply_coefficients()
-    {
-        if( !imp)
-        {
-            multiply_coeff( coeff_dim2, cne, cni);
             for( size_t i = 0; i < rows; i++)
                 for( size_t j = 0; j < cols/2 + 1; j++)
-                    cphi_e(i,j) = coeff_phi_dim2(i,j)[0]*cne(i,j) 
-                                + coeff_phi_dim2(i,j)[1]*cni(i,j);
+                    cphi[0](i,j) = coeff_phi(i,j)[0]*cdens[0](i,j) 
+                                +  coeff_phi(i,j)[1]*cdens[1](i,j);
             for( size_t i = 0; i < rows; i++)
                 for( size_t j = 0; j < cols/2 + 1; j++)
-                    cphi_i(i,j) = coeff_Gamma_i(i,j)*cphi_e(i,j);
+                    cphi[1](i,j) = coeff_Gamma[0](i,j)*cphi[0](i,j);
         }
-        if(imp)
+        else if( n==3)
         {
-            multiply_coeff( coeff_dim3, cne, cni, cnz);
             for( size_t i = 0; i < rows; i++)
                 for( size_t j = 0; j < cols/2 + 1; j++)
-                    cphi_e(i,j) = coeff_phi_dim3(i,j)[0]*cne(i,j) 
-                                + coeff_phi_dim3(i,j)[1]*cni(i,j) 
-                                + coeff_phi_dim3(i,j)[2]*cnz(i,j);
+                    cphi[0](i,j) = coeff_phi(i,j)[0]*cdens[0](i,j) 
+                                + coeff_phi(i,j)[1]*cdens[1](i,j) 
+                                + coeff_phi(i,j)[2]*cdens[2](i,j);
             for( size_t i = 0; i < rows; i++)
                 for( size_t j = 0; j < cols/2 + 1; j++)
                 {
-                    cphi_i(i,j) = coeff_Gamma_i(i,j)*cphi_e(i,j);
-                    cphi_z(i,j) = coeff_Gamma_z(i,j)*cphi_e(i,j);
+                    cphi[1](i,j) = coeff_Gamma[0](i,j)*cphi[0](i,j);
+                    cphi[2](i,j) = coeff_Gamma[1](i,j)*cphi[0](i,j);
                 }
         }
     }
-    void DFT_DFT_Solver::init( enum target t)
+    template< size_t n>
+    void DFT_DFT_Solver<n>::init( Vector< Matrix<double, TL_DFT_DFT>,n>& v, enum target t)
     {
-        dft_dft.r2c( ne, cne);
-        dft_dft.r2c( ni, cni);
-        if( imp) 
-            dft_dft.r2c( nz, cnz);
         switch( t) //which field must be computed?
         {
             case( TL_ELECTRONS):
@@ -207,80 +169,55 @@ namespace toefl
                 throw Message( "Impurity feature not implemented yet!\n",ping);
                 break;
             case( TL_POTENTIAL):
+                for( unsigned k=0; k<n; k++)
+                    dft_dft.r2c( v[k], cdens[k]);
                 multiply_coefficients();
                 break;
         }
-        dft_dft.c2r( cne, ne);
-        dft_dft.c2r( cni, ni);
-        dft_dft.c2r( cphi_e, phi_e);
-        dft_dft.c2r( cphi_i, phi_i);
-        if( imp)
+        for( unsigned k=0; k<n; k++)
         {
-            dft_dft.c2r( cnz, nz);
-            dft_dft.c2r( cphi_z, phi_z);
+            dft_dft.c2r( cdens[k], dens[k]);
+            dft_dft.c2r( cphi[k], phi[k]);
         }
         first_steps();
     }
 
-    void DFT_DFT_Solver::first_steps()
+    template< size_t n>
+    void DFT_DFT_Solver<n>::first_steps()
     {
-        if(imp)
-        {
-            Matrix< QuadMat<complex, 3> > temp( coeff_dim3);
-            invert_coefficients<TL_EULER>();
-            step_<TL_EULER>();
-            coeff_dim3 = temp;
-            invert_coefficients<TL_ORDER2>();
-            step_<TL_ORDER2>();
-            coeff_dim3 = temp;
-            invert_coefficients<TL_ORDER3>();
-        }
-        else
-        {
-            Matrix< QuadMat<complex, 2> > temp( coeff_dim2);
-            invert_coefficients<TL_EULER>();
-            step_<TL_EULER>();
-            coeff_dim2 = temp;
-            invert_coefficients<TL_ORDER2>();
-            step_<TL_ORDER2>();
-            coeff_dim2 = temp;
-            invert_coefficients<TL_ORDER3>();
-        }
+        k.invert_coeff<TL_EULER>( coeff);
+        step_<TL_EULER>();
+        k.invert_coeff<TL_ORDER2>( coeff);
+        step_<TL_ORDER2>();
+        k.invert_coeff<TL_ORDER3>( coeff);
     }
 
+    template< size_t n>
     template< enum stepper S>
-    void DFT_DFT_Solver::step_()
+    void DFT_DFT_Solver<n>::step_()
     {
         //1. Compute nonlinearity
-        arakawa( ne, phi_e, nonlinear_e);
-        arakawa( ni, phi_i, nonlinear_i);
-        if( imp)
-            arakawa( nz, phi_z, nonlinear_z);
+        for( unsigned j=0; j<n; j++)
+        {
+            dens[j].initGhostCells(TL_PERIODIC, TL_PERIODIC);
+            phi[j].initGhostCells(TL_PERIODIC, TL_PERIODIC);
+            arakawa( dens[j], phi[j], nonlinear[j]);
+        }
         //2. perform karniadakis step
-        k_e.step<S>( ne, nonlinear_e);
-        k_i.step<S>( ni, nonlinear_i);
-        if( imp)
-            k_z.step<S>( nz, nonlinear_z);
+        k.step_i<S>( dens, nonlinear);
         //3. solve linear equation
         //3.1. transform v_hut
-        dft_dft.r2c( ne, cne);
-        dft_dft.r2c( ni, cni);
-        if( imp) 
-            dft_dft.r2c( nz, cnz);
-        //3.2. multiply coefficients
+        for( unsigned j=0; j<n; j++)
+            dft_dft.r2c( dens[j], cdens[j]);
+        //3.2. perform karniadaksi step and multiply coefficients for phi
+        k.step_ii( cdens);
         multiply_coefficients();
         //3.3. backtransform
-        dft_dft.c2r( cne, ne);
-        dft_dft.c2r( cni, ni);
-        dft_dft.c2r( cphi_e, phi_e);
-        dft_dft.c2r( cphi_i, phi_i);
-        if( imp)
+        for( unsigned j=0; j<n; j++)
         {
-            dft_dft.c2r( cnz, nz);
-            dft_dft.c2r( cphi_z, phi_z);
+            dft_dft.c2r( cdens[j], dens[j]);
+            dft_dft.c2r( cphi[j], phi[j]);
         }
     }
-
-
 
 }

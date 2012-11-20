@@ -99,11 +99,10 @@ namespace toefl{
      * three equations. 
      * \todo n equations are available only when an implementation of an LU decomposition is available. (LAPACK?)
      * @tparam n size of the equations (2 or 3)
-     * @tparam S the type of Stepper coefficients you want to use
      * @tparam T_k the type of fourier Coefficients used (double or std::complex<double>)
      * @tparam P_x Padding of your (real) matrices
      */
-    template< size_t n, enum stepper S, typename T_k, enum Padding P_x>
+    template< size_t n, typename T_k, enum Padding P_x>
     class Karniadakis
     {
       private:
@@ -111,17 +110,31 @@ namespace toefl{
         Vector< Matrix< double, P_x>, n> v1, v2;
         Vector< Matrix< double, P_x>, n> n1, n2;
         Matrix< QuadMat< T_k, n>, TL_NONE> c;
+#ifdef TL_DEBUG
+        Matrix< QuadMat< T_k, n>, TL_NONE> c_temp; //contains the coeff of first call
+#endif
+
         const double dt;
       public:
-        /*! @brief Allocate storage for the last two fields in the karniadakis scheme
-         *  and invert the given fourier coefficients.
+        /*! @brief Allocate storage for the last two fields in the karniadakis scheme.
          *
          * @param rows_x rows of your x-space matrices
          * @param cols_x columns of your x-space matrices
-         * @param coeff_k The linear part of your equations in fourier space
          * @param dt the timestep
          */
-        Karniadakis(const size_t rows_x, const size_t cols_x, const Matrix< QuadMat< T_k, n>, TL_NONE>& coeff_k, const double dt);
+        Karniadakis(const size_t rows_x, const size_t cols_x, const double dt);
+
+        /*! @brief Init the Coefficients for step_ii
+         *
+         * Inverts your fourier coefficients with the correct gamma_0.
+         * @param coeff_k The linear part of your equations in fourier space
+         * @tparam S The set of Karniadakis-Coefficients you want to use
+         * @attention This function has to be called BEFORE a call of step_ii AND 
+         *   AFTER you switched steppers. AND OF COURSE CALL IT WITH THE SAME 
+         *   COEFFICIENTS EVERY TIME.
+         */
+        template< enum stepper S>
+        void invert_coeff( const Matrix< QuadMat< T_k, n>, TL_NONE>& coeff_k);
 
         /*! @brief Compute the first part of the Karniadakis scheme
          *
@@ -131,7 +144,9 @@ namespace toefl{
          * @param n0
          * The nonlinearity at timestep n.
          * Content undefined on output.
+         * @tparam S The set of Karniadakis-Coefficients you want to use
          */
+        template< enum stepper S>
         void step_i( Vector< Matrix<double, P_x>, n>& v0, Vector< Matrix<double, P_x>, n> & n0);
         /*! @brief Compute the second part of the Karniadakis scheme
          *
@@ -141,27 +156,22 @@ namespace toefl{
          * @tparam Fourier_T The value type of the fourier transposed matrices
          */
         template< class Fourier_T>
-        inline void step_ii( Vector< Matrix< Fourier_T, TL_NONE>, n>& v);
+        inline void step_ii( Vector< Matrix< Fourier_T, TL_NONE>, n>& v)
+        {
+#ifdef TL_DEBUG
+            if( c.isVoid()) 
+                throw Message( " rebase coefficients first!",ping);
+#endif
+            multiply_coeff< n,T_k,Fourier_T>( c,v,v);
+        }
 
-        /*! @brief Swap the stored fields of two Karniadakis objects.
-         *
-         * This function is essential for initialising your Karniadakis scheme.
-         * The stored coeffients remain unchanged, i.e. the user is reponsible 
-         * for initialising both objects with the same coefficients. (i.e. equations)
-         * @param k1 Contains fields of k2 on output.
-         * @param k2 Contains fields of k1 on output.
-         */
-        template< size_t n0, enum stepper S1, enum stepper S2, typename T0, enum Padding P0>
-        friend void swap_fields( Karniadakis<n0,S1,T0,P0>& k1, Karniadakis<n0,S2,T0,P0>& k2);
     };
 
-    template< size_t n, enum stepper S, typename T, enum Padding P>
-    Karniadakis<n,S,T,P>::Karniadakis( const size_t rows, 
+    template< size_t n, typename T, enum Padding P>
+    Karniadakis<n,T,P>::Karniadakis( const size_t rows, 
                  const size_t cols, 
-                 const Matrix< QuadMat<T,n>, TL_NONE>& coeff, 
                  const double dt):
             rows( rows), cols( cols),
-            c( coeff.rows(), coeff.cols()),
             dt( dt)
             {
                 //allocate vectors
@@ -172,19 +182,38 @@ namespace toefl{
                     n1[k].allocate(rows, cols, 0.);
                     n2[k].allocate(rows, cols, 0.);
                 }
-                //invert coefficients
-                for(unsigned i=0; i<c.rows(); i++)
-                    for( unsigned j=0; j<c.cols(); j++)
-                    {
-                        for( unsigned k=0; k<n; k++)
-                            c(i,j)(k,k) = Coefficients<S>::gamma_0 - dt*coeff(i,j)(k,k);
-                        invert( c(i,j), c(i,j));
-                    }
-
+            }
+    template< size_t n, typename T, enum Padding P>
+    template< enum stepper S>
+    void Karniadakis< n,T,P>::invert_coeff( const Matrix< QuadMat< T, n>, TL_NONE>& coeff)
+    {
+#ifdef TL_DEBUG
+        if( c.isVoid())
+        {
+            c_temp.allocate( coeff.rows(), coeff.cols());
+            c_temp = coeff;
+        }
+        else if( c.rows() != coeff.rows()|| c.cols() != coeff.cols())
+            throw Message( "You changed your coefficient size!!", ping);
+        if( c_temp != coeff) 
+            throw Message( "Your coefficients changed!!", ping);
+#endif
+        if( c.isVoid())
+            c.allocate( coeff.rows(), coeff.cols());
+        //invert coefficients
+        for(unsigned i=0; i<c.rows(); i++)
+            for( unsigned j=0; j<c.cols(); j++)
+            {
+                for( unsigned k=0; k<n; k++)
+                    c(i,j)(k,k) = Coefficients<S>::gamma_0 - dt*coeff(i,j)(k,k);
+                invert( c(i,j), c(i,j));
             }
 
-    template< size_t n, enum stepper S, typename T, enum Padding P>
-    void Karniadakis<n,S,T,P>::step_i( Vector< Matrix<double, P>, n>& v0, Vector< Matrix<double, P>, n> & n0)
+        }
+
+    template< size_t n, typename T, enum Padding P>
+    template< enum stepper S>
+    void Karniadakis<n,T,P>::step_i( Vector< Matrix<double, P>, n>& v0, Vector< Matrix<double, P>, n> & n0)
     {
         for( unsigned k=0; k<n; k++)
         {
@@ -208,30 +237,6 @@ namespace toefl{
                 }
             permute_fields( n0[k], n1[k], n2[k]);
             permute_fields( v0[k], v1[k], v2[k]);
-        }
-    }
-
-    template< size_t n, enum stepper S, typename T, enum Padding P>
-    template< typename Fourier_T>
-    void Karniadakis<n,S,T,P>::step_ii( Vector< Matrix< Fourier_T, TL_NONE>, n>& v)
-    {
-        //multiply coeff
-        multiply_coeff< n, T, Fourier_T>( c, v, v);
-    }
-
-    template< size_t n, enum stepper S1, enum stepper S2, typename T, enum Padding P>
-    void swap_fields( Karniadakis<n,S1,T,P>& k1, Karniadakis<n,S2,T,P>& k2)
-    {
-#ifdef TL_DEBUG
-        if( k1.rows!= k2.rows || k1.cols != k2.cols) 
-            throw Message( "Cannot swap fields between Karniadakis objects. Sizes not equal.",ping);
-#endif
-        for( unsigned i=0; i<n; i++)
-        {
-            swap_fields( k1.v1[i], k2.v1[i]);
-            swap_fields( k1.v2[i], k2.v2[i]);
-            swap_fields( k1.n1[i], k2.n1[i]);
-            swap_fields( k1.n2[i], k2.n2[i]);
         }
     }
 

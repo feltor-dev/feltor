@@ -6,6 +6,7 @@
 
 namespace toefl{
 
+    enum bc { TL_PERIODIC, TL_DST00, TL_DST01, TL_DST10, TL_DST11}; 
 
     /*! @brief Mimic a Matrix with ghostcells
      *
@@ -86,10 +87,7 @@ namespace toefl{
          */
         void display( std::ostream& os = std::cout);
 
-        template< size_t row>
-        inline T& ghostRow( const int col) {return ghostRow( row,col);}
-        template< size_t col>
-        inline T& ghostCol( const int row) { return ghostCol( row, col);}
+        void initGhostCells( enum bc b_rows, enum bc b_cols);
 
     };
     template< typename T, enum Padding P>
@@ -144,6 +142,115 @@ namespace toefl{
             return ghostCols( i, 1);
         return (*this)(i,j);
     }
+    template< typename T, enum Padding P>
+    void GhostMatrix<T,P>::initGhostCells( enum bc b_rows, enum bc b_cols)
+    {
+        const unsigned cols = ghostRows.cols(); 
+        const unsigned rows = ghostCols.rows(); 
+        switch(b_cols)
+        {
+            case( TL_PERIODIC): 
+                for( unsigned i=0; i<rows; i++)
+                {
+                    ghostCols( i, 0) = (*this)(i, cols-3);
+                    ghostCols( i, 1) = (*this)(i, 0);
+                }
+                break;
+            case( TL_DST00):
+                for( unsigned i=0; i<rows; i++)
+                {
+                    ghostCols( i, 0) = 0;
+                    ghostCols( i, 1) = 0;
+                }
+                break;
+            case( TL_DST01):
+                for( unsigned i=0; i<rows; i++)
+                {
+                    ghostCols( i, 0) = -(*this)(i, 0);
+                    ghostCols( i, 1) = -(*this)(i, cols-3);
+                }
+                break;
+            case( TL_DST10):
+                for( unsigned i=0; i<rows; i++)
+                {
+                    ghostCols( i, 0) = 0;
+                    ghostCols( i, 1) = (*this)(i, cols-4);
+                }
+                break;
+            case( TL_DST11):
+                for( unsigned i=0; i<rows; i++)
+                {
+                    ghostCols( i, 0) = -(*this)(i, 0);
+                    ghostCols( i, 1) = (*this)(i, cols-3);
+                }
+                break;
+        }
+        switch( b_rows)
+        {
+            case( TL_PERIODIC):
+                ghostRows(0,0) = ghostCols( rows-1, 0);
+                for( unsigned i=0; i<cols-2; i++)
+                {
+                    ghostRows( 0,i+1) = (*this)( rows-1, i);
+                }
+                ghostRows(0, cols-1) = ghostCols( rows-1, 1);
+                ghostRows(1,0) = ghostCols( 0, 0);
+                for( unsigned i=0; i<cols-2; i++)
+                {
+                    ghostRows( 1,i+1) = (*this)( 0, i);
+                }
+                ghostRows(1, cols-1) = ghostCols(0 , 1);
+                break;
+            case( TL_DST00):
+                for( unsigned i=0; i<cols; i++)
+                    ghostRows(0,i) = 0;
+                for( unsigned i=0; i<cols; i++)
+                    ghostRows(1,i) = 0;
+                break;
+            case( TL_DST01):
+                ghostRows(0,0) = -ghostCols( 0, 0);
+                for( unsigned i=0; i<cols-2; i++)
+                {
+                    ghostRows( 0,i+1) = -(*this)( 0, i);
+                }
+                ghostRows(0, cols-1) = -ghostCols( 0, 1);
+                ghostRows(1,0) = -ghostCols( rows-1, 0);
+                for( unsigned i=0; i<cols-2; i++)
+                {
+                    ghostRows( 1,i+1) = -(*this)( rows-1, i);
+                }
+                ghostRows(1, cols-1) = -ghostCols( rows-1 , 1);
+                break;
+            case( TL_DST10):
+                for( unsigned i=0; i<cols; i++)
+                    ghostRows(0,i) = 0;
+                ghostRows(1,0) = ghostCols( rows-2, 0);
+                for( unsigned i=0; i<cols-2; i++)
+                {
+                    ghostRows( 1,i+1) = (*this)( rows-2, i);
+                }
+                ghostRows(1, cols-1) = ghostCols( rows-2 , 1);
+                break;
+            case( TL_DST11):
+                ghostRows(0,0) = -ghostCols( 0, 0);
+                for( unsigned i=0; i<cols-2; i++)
+                {
+                    ghostRows( 0,i+1) = -(*this)( 0, i);
+                }
+                ghostRows(0, cols-1) = -ghostCols( 0, 1);
+                ghostRows(1,0) = ghostCols( rows-1, 0);
+                for( unsigned i=0; i<cols-2; i++)
+                {
+                    ghostRows( 1,i+1) = (*this)( rows-1, i);
+                }
+                ghostRows(1, cols-1) = ghostCols( rows-1 , 1);
+                break;
+        }
+    }
+
+
+
+
     template< typename T, enum Padding P>
     void GhostMatrix<T,P>::display( std::ostream& os)
     {
