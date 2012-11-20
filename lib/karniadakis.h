@@ -106,6 +106,7 @@ namespace toefl{
     class Karniadakis
     {
       private:
+
         const size_t rows, cols;
         Vector< Matrix< double, P_x>, n> v1, v2;
         Vector< Matrix< double, P_x>, n> n1, n2;
@@ -126,15 +127,10 @@ namespace toefl{
 
         /*! @brief Init the Coefficients for step_ii
          *
-         * Inverts your fourier coefficients with the correct gamma_0.
+         * This copies the coefficients for later use in the step_ii function.
          * @param coeff_k The linear part of your equations in fourier space
-         * @tparam S The set of Karniadakis-Coefficients you want to use
-         * @attention This function has to be called BEFORE a call of step_ii AND 
-         *   AFTER you switched steppers. AND OF COURSE CALL IT WITH THE SAME 
-         *   COEFFICIENTS EVERY TIME.
          */
-        template< enum stepper S>
-        void invert_coeff( const Matrix< QuadMat< T_k, n>, TL_NONE>& coeff_k);
+        void init_coeff( const Matrix< QuadMat< T_k, n>, TL_NONE>& coeff_k);
 
         /*! @brief Compute the first part of the Karniadakis scheme
          *
@@ -144,27 +140,21 @@ namespace toefl{
          * @param n0
          * The nonlinearity at timestep n.
          * Content undefined on output.
-         * @tparam S The set of Karniadakis-Coefficients you want to use
+         * @tparam S The set of Karniadakis-Coefficients you want to use.
          */
         template< enum stepper S>
         void step_i( Vector< Matrix<double, P_x>, n>& v0, Vector< Matrix<double, P_x>, n> & n0);
         /*! @brief Compute the second part of the Karniadakis scheme
          *
+         * Inverts the fourier Coefficients on first call.
          * @param v 
          * The fourier transposed result of step_i on input.
          * Contains the multiplied coefficients on output
          * @tparam Fourier_T The value type of the fourier transposed matrices
+         * @tparam S The set of Karniadakis-Coefficients you want to use.
          */
-        template< class Fourier_T>
-        inline void step_ii( Vector< Matrix< Fourier_T, TL_NONE>, n>& v)
-        {
-#ifdef TL_DEBUG
-            if( c.isVoid()) 
-                throw Message( " rebase coefficients first!",ping);
-#endif
-            multiply_coeff< n,T_k,Fourier_T>( c,v,v);
-        }
-
+        template< enum stepper S, class Fourier_T>
+        inline void step_ii( Vector< Matrix< Fourier_T, TL_NONE>, n>& v);
     };
 
     template< size_t n, typename T, enum Padding P>
@@ -184,32 +174,11 @@ namespace toefl{
                 }
             }
     template< size_t n, typename T, enum Padding P>
-    template< enum stepper S>
-    void Karniadakis< n,T,P>::invert_coeff( const Matrix< QuadMat< T, n>, TL_NONE>& coeff)
+    void Karniadakis< n,T,P>::init_coeff( const Matrix< QuadMat< T, n>, TL_NONE>& coeff)
     {
-#ifdef TL_DEBUG
-        if( c.isVoid())
-        {
-            c_temp.allocate( coeff.rows(), coeff.cols());
-            c_temp = coeff;
-        }
-        else if( c.rows() != coeff.rows()|| c.cols() != coeff.cols())
-            throw Message( "You changed your coefficient size!!", ping);
-        if( c_temp != coeff) 
-            throw Message( "Your coefficients changed!!", ping);
-#endif
-        if( c.isVoid())
-            c.allocate( coeff.rows(), coeff.cols());
-        //invert coefficients
-        for(unsigned i=0; i<c.rows(); i++)
-            for( unsigned j=0; j<c.cols(); j++)
-            {
-                for( unsigned k=0; k<n; k++)
-                    c(i,j)(k,k) = Coefficients<S>::gamma_0 - dt*coeff(i,j)(k,k);
-                invert( c(i,j), c(i,j));
-            }
-
-        }
+        c.allocate( coeff.rows(), coeff.cols());
+        c = coeff;
+    }
 
     template< size_t n, typename T, enum Padding P>
     template< enum stepper S>
@@ -238,6 +207,29 @@ namespace toefl{
             permute_fields( n0[k], n1[k], n2[k]);
             permute_fields( v0[k], v1[k], v2[k]);
         }
+    }
+    template< size_t n, typename T, enum Padding P>
+    template< enum stepper S, class Fourier_T>
+    void Karniadakis<n,T,P>::step_ii( Vector< Matrix< Fourier_T, TL_NONE>, n>& v)
+    {
+        static Matrix< QuadMat< T,n>, TL_NONE> coeff;
+        if( coeff.isVoid()) //invert coefficients first
+        {
+#ifdef TL_DEBUG
+        if( c.isVoid()) 
+            throw Message( "Init coefficients first!",ping);
+#endif
+            coeff.allocate( coeff.rows(), coeff.cols());
+            //invert coefficients
+            for(unsigned i=0; i<c.rows(); i++)
+                for( unsigned j=0; j<c.cols(); j++)
+                {
+                    for( unsigned k=0; k<n; k++)
+                        coeff(i,j)(k,k) = Coefficients<S>::gamma_0 - dt*coeff(i,j)(k,k);
+                    invert( coeff(i,j), coeff(i,j));
+                }
+        }
+        multiply_coeff< n,T_k,Fourier_T>( coeff,v,v);
     }
 
 
