@@ -84,6 +84,15 @@ namespace toefl{
     {
       private:
       protected:
+        void allocate_(); //normal allocate function of Matrix class (called by constructors)
+        virtual void allocate_virtual(){ allocate_();}
+        void resize_( const size_t new_rows, const size_t new_cols){
+            if( ptr == NULL)
+                n = new_rows, m = new_cols;
+            else
+                throw Message( "Non void Matrix may not be resized!", ping);
+        }
+        virtual void resize_virtual( const size_t new_rows, const size_t new_cols ){ resize_( new_rows, new_cols);}
           //maybe an id (static int id) wouldn't be bad to identify in errors
         size_t n; //!< # of columns
         size_t m; //!< # of rows
@@ -91,7 +100,7 @@ namespace toefl{
         //inline void swap( Matrix& rhs);
       public:
         /*! @brief Construct an empty matrix*/
-        Matrix(): n(0), m(0), ptr( NULL){}
+        Matrix(): n(0), m(0), ptr( NULL){ }
         /*! @brief Allocate continous memory on the heap
          *
          * @param rows logical number of rows (cannot be changed as long as memory is allocated for that object)
@@ -140,7 +149,7 @@ namespace toefl{
          * is useful in connection with arrays of Matrices.
          * Throws an exception when called on non-void Matrices.
          */
-        void allocate();
+        void allocate(){ allocate_virtual();}
 
         /*! @brief resize void matrices
          *
@@ -150,10 +159,7 @@ namespace toefl{
          */
         void resize( const size_t new_rows, const size_t new_cols)
         {
-            if( ptr == NULL)
-                n = new_rows, m = new_cols;
-            else
-                throw Message( "Non void Matrix may not be resized!", ping);
+            resize_virtual( new_rows, new_cols);
         }
 
         /*! @brief Resize and allocate memory for void matrices
@@ -164,8 +170,8 @@ namespace toefl{
          */
         void allocate( const size_t new_rows, const size_t new_cols, const T& value = T())
         {
-            resize( new_rows, new_cols);
-            allocate();
+            resize_virtual( new_rows, new_cols);
+            allocate_virtual();
             for( size_t i=0; i < TotalNumberOf<P>::elements(n, m); i++)
                 ptr[i] = value;
         }
@@ -282,7 +288,7 @@ namespace toefl{
         if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
             throw Message( "Swap not possible. Sizes not equal\n", ping);
 #endif
-        //test for self swap not not necessary (not an error)
+        //test for self swap not necessary (not an error)
         T1 * ptr = lhs.ptr;
         lhs.ptr = reinterpret_cast<T1*>(rhs.ptr);
         rhs.ptr = reinterpret_cast<T2*>(ptr); 
@@ -296,7 +302,7 @@ namespace toefl{
             throw Message("Use TL_VOID to not allocate any memory!\n", ping);
     #endif
         if( allocate)
-            this->allocate();
+            this->allocate_();
     }
 
     template< class T, enum Padding P>
@@ -306,7 +312,7 @@ namespace toefl{
         if( n==0|| m==0)
             throw Message("Use TL_VOID to not allocate any memory!\n", ping);
     #endif
-        allocate();
+        allocate_();
         for( unsigned i=0; i<TotalNumberOf<P>::elements(n,m); i++)
             ptr[i] = value;
     }
@@ -324,7 +330,7 @@ namespace toefl{
     Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m), ptr(NULL){
         if( src.ptr != NULL)
         {
-            allocate();
+            allocate_();
             for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
                 ptr[i] = src.ptr[i];
         }
@@ -348,7 +354,7 @@ namespace toefl{
     }
 
     template <class T, enum Padding P>
-    void Matrix<T, P>::allocate()
+    void Matrix<T, P>::allocate_()
     {
         if( ptr == NULL) //allocate only if matrix is void 
         {

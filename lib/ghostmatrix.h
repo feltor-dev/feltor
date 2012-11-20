@@ -16,6 +16,12 @@ namespace toefl{
      * e.g. the arakawa scheme for various boundary conditions. 
      * A GhostMatrix is a Matrix with the additional access operator at()
      * with which boundary (including ghost) values can be manipulated.
+     * @attention Be careful with the use of the allocate and resize function,
+     * after use of the swap_fields function. 
+     * The swap_fields function only swaps matrices without(!) the ghostcells. 
+     * It might then happen that the ghostcells are allocated but the matrix is void.
+     * Then the use of the allocate or resize function will throw an exception. 
+     * The ghostcells are only allocatable or resizable together with a void matrix. 
      */
     template< typename T, enum Padding P = TL_NONE>
     class GhostMatrix: public Matrix<T,P>
@@ -23,12 +29,24 @@ namespace toefl{
       private:
         Matrix<T,TL_NONE> ghostRows;
         Matrix<T,TL_NONE> ghostCols;
+        void allocate_virtual(){//Allocates not only parent matrix but also ghostMatrices
+            this->allocate_();
+            ghostRows.allocate();
+            ghostCols.allocate();
+        }
+        void resize_virtual( const size_t new_rows, const size_t new_cols){
+            this->resize_( new_rows, new_cols);
+            ghostRows.resize( 2, new_cols + 2);
+            ghostCols.resize( new_rows, 2);
+        }
+            
       public:
+        /*! @brief Construct an empty void GhostMatrix*/
+        GhostMatrix( );
         /*! @brief Same as Matrix Constructor.
          *
          * Like any other Matrix a GhostMatrix can be void, padded etc. 
-         * Note however that the ghostCells are always allocated, regardless of
-         * whether the Matrix itself is void or not.
+         * If the Matrix is void then the ghostcells are also void!
          */
         GhostMatrix( const size_t rows, const size_t cols, const bool allocate = true);
         /*! @brief Access Operator for boundary values
@@ -46,16 +64,27 @@ namespace toefl{
          */
         inline const T& at( const int i, const int j) const;
 
-        void display( std::ostream& os);
+
+        /*! @brief Display Matrix including ghostcells
+         *
+         * The use of the operator<< function of the Matrix class doesn't
+         * show the ghostcells.
+         * @param os The outstream to be used.
+         */
+        void display( std::ostream& os = std::cout);
+
         template< size_t row>
         inline T& ghostRow( const int col) {return ghostRow( row,col);}
         template< size_t col>
         inline T& ghostCol( const int row) { return ghostCol( row, col);}
 
     };
+    template< typename T, enum Padding P>
+    GhostMatrix<T,P>::GhostMatrix():Matrix<T,P>(), ghostRows(), ghostCols(){}
     
     template< typename T, enum Padding P>
-    GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const bool allocate): Matrix<T,P>(rows, cols, allocate), ghostRows( 2, cols + 2), ghostCols( rows, 2)
+    GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const bool alloc): 
+                        Matrix<T,P>(rows, cols, alloc), ghostRows( 2, cols + 2, alloc), ghostCols( rows, 2, alloc)
     {
     }
     
@@ -103,6 +132,10 @@ namespace toefl{
     template< typename T, enum Padding P>
     void GhostMatrix<T,P>::display( std::ostream& os)
     {
+#ifdef TL_DEBUG
+       if( this->ptr == NULL) 
+           throw Message( "Trying to access a void matrix!", ping);
+#endif
         for(int i = -1; i < (int)this->n + 1; i++)
         {
             for ( int j = -1; j < (int)this->m + 1; j++)

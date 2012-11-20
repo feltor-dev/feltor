@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include "ghostmatrix.h"
 #include "arakawa.h"
 #include "matrix.h"
 
