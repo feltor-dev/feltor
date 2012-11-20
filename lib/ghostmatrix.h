@@ -43,12 +43,25 @@ namespace toefl{
       public:
         /*! @brief Construct an empty void GhostMatrix*/
         GhostMatrix( );
-        /*! @brief Same as Matrix Constructor.
+        /*! @brief Allocate memory.
          *
          * Like any other Matrix a GhostMatrix can be void, padded etc. 
          * If the Matrix is void then the ghostcells are also void!
+         * @param rows Rows of the matrix
+         * @param cols Columsn of the Matrix
+         * @param allocate Whether memory shall be allocated or not
          */
         GhostMatrix( const size_t rows, const size_t cols, const bool allocate = true);
+        /*! @brief Allocate and init memory.
+         *
+         * Like any other Matrix a GhostMatrix can be void, padded etc. 
+         * If the Matrix is void then the ghostcells are also void!
+         * @param rows Rows of the matrix
+         * @param cols Columsn of the Matrix
+         * @param value 
+         *  Value the memory (including ghostcells) shall be initialized to
+         */
+        GhostMatrix( const size_t rows, const size_t cols, const T& value );
         /*! @brief Access Operator for boundary values
          *
          * @param i row index (may equal -1 and rows)
@@ -84,9 +97,11 @@ namespace toefl{
     
     template< typename T, enum Padding P>
     GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const bool alloc): 
-                        Matrix<T,P>(rows, cols, alloc), ghostRows( 2, cols + 2, alloc), ghostCols( rows, 2, alloc)
-    {
-    }
+                        Matrix<T,P>(rows, cols, alloc), ghostRows( 2, cols + 2, alloc), ghostCols( rows, 2, alloc) {}
+
+    template< typename T, enum Padding P>
+    GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const T& value): 
+                        Matrix<T,P>(rows, cols, value), ghostRows( 2, cols + 2, value), ghostCols( rows, 2, value) { }
     
     template< typename T, enum Padding P>
     T& GhostMatrix<T,P>::at( const int i, const int j)
