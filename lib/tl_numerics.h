@@ -23,9 +23,6 @@
 #include "dft_drt.h"
 #include "drt_dft.h"
 #include "drt_drt.h"
-//Coefficients
-#include "coeff.h"
-
 
 
 #endif

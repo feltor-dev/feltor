@@ -86,14 +86,21 @@ namespace toefl{
       protected:
         void allocate_(); //normal allocate function of Matrix class (called by constructors)
         virtual void allocate_virtual(){ allocate_();}
+        void resize_( const size_t new_rows, const size_t new_cols){
+            if( ptr == nullptr)
+                n = new_rows, m = new_cols;
+            else
+                throw Message( "Non void Matrix may not be resized!", ping);
+        }
+        virtual void resize_virtual( const size_t new_rows, const size_t new_cols ){ resize_( new_rows, new_cols);}
           //maybe an id (static int id) wouldn't be bad to identify in errors
-        const size_t n; //!< # of columns
-        const size_t m; //!< # of rows
+        size_t n; //!< # of columns
+        size_t m; //!< # of rows
         T *ptr; //!< pointer to allocated memory
         //inline void swap( Matrix& rhs);
       public:
         /*! @brief Construct an empty matrix*/
-        Matrix(): n(0), m(0), ptr( NULL){ }
+        Matrix(): n(0), m(0), ptr( nullptr){ }
         /*! @brief Allocate continous memory on the heap
          *
          * @param rows logical number of rows (cannot be changed as long as memory is allocated for that object)
@@ -144,7 +151,32 @@ namespace toefl{
          */
         void allocate(){ allocate_virtual();}
 
-        /*! @brief Number of rows
+        /*! @brief resize void matrices
+         *
+         * No new memory is allocated! Just usable for void matrices!
+         * @param new_rows new number of rows
+         * @param new_cols new number of columns
+         */
+        void resize( const size_t new_rows, const size_t new_cols)
+        {
+            resize_virtual( new_rows, new_cols);
+        }
+
+        /*! @brief Resize and allocate memory for void matrices
+         *
+         * @param new_rows new number of rows
+         * @param new_cols new number of columns
+         * @param value Value the elements are initialized to using operator= of type T
+         */
+        void allocate( const size_t new_rows, const size_t new_cols, const T& value = T())
+        {
+            resize_virtual( new_rows, new_cols);
+            allocate_virtual();
+            for( size_t i=0; i < TotalNumberOf<P>::elements(n, m); i++)
+                ptr[i] = value;
+        }
+    
+        /*! @brief number of rows
          *
          * Return the  number of rows the object manages (the one you specified in the constructor)
          * even if 
@@ -153,7 +185,7 @@ namespace toefl{
          * @return number of columns
          */
         const size_t rows() const {return n;}
-        /*! @brief Number of columns
+        /*! @brief number of columns
          *
          * Return the number of columns the object manages (the one you specified in the constructor), even if 
          * no memory is allocated. 
@@ -161,7 +193,7 @@ namespace toefl{
          * @return number of columns
          */
         const size_t cols() const {return m;}
-        /*! @brief Get the address of the first element
+        /*! @brief get the address of the first element
          *
          * Replaces the use of &m(0,0) which is kind of clumsy!
          * @return pointer to allocated memory
@@ -177,7 +209,7 @@ namespace toefl{
          *
          * @return true if memory isn't allocated 
          */
-        bool isVoid() const { return (ptr == NULL) ? true : false;}
+        bool isVoid() const { return (ptr == nullptr) ? true : false;}
 
         /*! @brief two Matrices are considered equal if elements are equal
          *
@@ -263,18 +295,18 @@ namespace toefl{
     }
 
     template <class T, enum Padding P>
-    Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m), ptr(NULL)
+    Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m), ptr(nullptr)
     {
     #ifdef TL_DEBUG
         if( n==0|| m==0)
             throw Message("Use TL_VOID to not allocate any memory!\n", ping);
     #endif
         if( allocate)
-            this->allocate_();
+            allocate_();
     }
 
     template< class T, enum Padding P>
-    Matrix<T,P>::Matrix( const size_t n, const size_t m, const T& value):n(n),m(m),ptr(NULL)
+    Matrix<T,P>::Matrix( const size_t n, const size_t m, const T& value):n(n),m(m),ptr(nullptr)
     {
     #ifdef TL_DEBUG
         if( n==0|| m==0)
@@ -290,13 +322,13 @@ namespace toefl{
     template <class T, enum Padding P>
     Matrix<T, P>::~Matrix()
     {
-        if( ptr!= NULL)
+        if( ptr!= nullptr)
             fftw_free( ptr);
     }
     
     template <class T, enum Padding P>
-    Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m), ptr(NULL){
-        if( src.ptr != NULL)
+    Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m), ptr(nullptr){
+        if( src.ptr != nullptr)
         {
             allocate_();
             for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
@@ -312,7 +344,7 @@ namespace toefl{
     #ifdef TL_DEBUG
             if( n!=src.n || m!=src.m)
                 throw  Message( "Assignment error! Sizes not equal!", ping);
-            if( ptr == NULL || src.ptr == NULL)
+            if( ptr == nullptr || src.ptr == nullptr)
                 throw Message( "Assigning to or from a void matrix!", ping);
     #endif
             for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
@@ -324,10 +356,10 @@ namespace toefl{
     template <class T, enum Padding P>
     void Matrix<T, P>::allocate_()
     {
-        if( ptr == NULL) //allocate only if matrix is void 
+        if( ptr == nullptr) //allocate only if matrix is void 
         {
             ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
-            if( ptr == NULL) 
+            if( ptr == nullptr) 
                 throw AllocationError(n, m, ping);
         }
         else 
@@ -342,7 +374,7 @@ namespace toefl{
     #ifdef TL_DEBUG
         if( i >= n || j >= m)
             throw BadIndex( i,n, j,m, ping);
-        if( ptr == NULL) 
+        if( ptr == nullptr) 
             throw Message( "Trying to access a void matrix!", ping);
     #endif
         return ptr[ i*TotalNumberOf<P>::cols(m) + j];
@@ -354,7 +386,7 @@ namespace toefl{
     #ifdef TL_DEBUG
         if( i >= n || j >= m)
             throw BadIndex( i,n, j,m, ping);
-        if( ptr == NULL) 
+        if( ptr == nullptr) 
             throw Message( "Trying to access a void matrix!", ping);
     #endif
         return ptr[ i*TotalNumberOf<P>::cols(m) + j];
@@ -363,7 +395,7 @@ namespace toefl{
     template <class T, enum Padding P>
     void Matrix<T, P>::zero(){
     #ifdef TL_DEBUG
-        if( ptr == NULL) 
+        if( ptr == nullptr) 
             throw  Message( "Trying to zero a void matrix!", ping);
     #endif
         for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
@@ -388,7 +420,7 @@ namespace toefl{
     std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat)
     {
     #ifdef TL_DEBUG
-        if( mat.ptr == NULL)
+        if( mat.ptr == nullptr)
             throw  Message( "Trying to output a void matrix!\n", ping);
     #endif
          int w = os.width();
@@ -408,7 +440,7 @@ namespace toefl{
     std::istream& operator>>( std::istream& is, Matrix<T, P>& mat)
     {
     #ifdef TL_DEBUG
-        if( mat.ptr == NULL)
+        if( mat.ptr == nullptr)
             throw  Message( "Trying to write in a void matrix!\n", ping);
     #endif
         for( size_t i=0; i<mat.n; i++)
@@ -417,27 +449,6 @@ namespace toefl{
         return is;
     }
     
-    /*
-    //certainly optimizable transposition algorithm for inplace Matrix transposition
-    template <class T>
-    void transpose( Matrix< T, TL_NONE>& inout, Matrix< T, TL_NONE>& swap)
-    {
-    #ifdef TL_DEBUG
-        if( swap.isVoid() == false) throw Message("Swap Matrix is not void in transpose algorithm!", ping);
-        if( swap.rows() != inout.cols()|| swap.cols() != inout.rows()) throw Message("Swap Matrix has wrong size for transposition!", ping);
-    #endif
-        T temp;
-        for (size_t i = 0; i < inout.rows; i ++) {
-            for (size_t j = i; j < inout.cols; j ++) {
-                temp = inout(i,j);
-                inout(i,j) = inout( j,i);
-                inout(j,i) = temp;
-            }
-        }
-        swap_fields( inout, swap);
-    }
-    */
-
     template< class T, enum Padding P>
     const bool Matrix<T,P>::operator!= ( const Matrix& rhs) const
     {
@@ -450,20 +461,6 @@ namespace toefl{
                 if( (*this)( i, j) != rhs( i, j) )  
                     return true;
         return false;
-    }
-
-    /*! @brief Construct a void Matrix of given size
-     *
-     * @tparam T Value type of the matrix
-     * @tparam P Padding type of the matrix
-     * 
-     * @param rows Rows of the void matrix
-     * @param cols Columns of the void matrix
-     */
-    template< class T, enum Padding P = TL_NONE>
-    Matrix<T,P> VOID( const size_t rows, const size_t cols){
-        Matrix<T,P> m( rows, cols, false);
-        return m;
     }
 
 

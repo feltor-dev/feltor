@@ -215,10 +215,12 @@ namespace toefl{
             for( unsigned j=0; j<c_inv.cols(); j++)
             {
                 c_inv(i,j) = c_origin(i,j);
+        //std::cout <<"From Karniadakis invert: \n"<< c_inv<<std::endl;
                 for( unsigned k=0; k<n; k++)
                     c_inv(i,j)(k,k) = Coefficients<S>::gamma_0 - dt*c_origin(i,j)(k,k);
                 invert( c_inv(i,j), c_inv(i,j));
             }
+        //std::cout <<"From Karniadakis invert: \n"<< c_inv<<std::endl;
 
         }
 

@@ -1,5 +1,6 @@
 
 //!\file Declare the template class Vector
+//! \deprecated !!! use std::array in c++0x
 /*! \file 
  * \author Matthias Wiesenberger
  * \date 14.10.2011

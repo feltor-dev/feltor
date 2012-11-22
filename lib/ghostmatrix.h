@@ -3,6 +3,7 @@
 
 
 #include "matrix.h"
+#include <array>
 
 namespace toefl{
 
@@ -40,13 +41,11 @@ namespace toefl{
             ghostRows.allocate();
             ghostCols.allocate();
         }
-        /*
         void resize_virtual( const size_t new_rows, const size_t new_cols){
             this->resize_( new_rows, new_cols);
             ghostRows.resize( 2, new_cols + 2);
             ghostCols.resize( new_rows, 2);
         }
-        */
             
       public:
         /*! @brief Construct an empty void GhostMatrix*/
@@ -277,7 +276,6 @@ namespace toefl{
             os << "\n";
         }
     }
-
 }
 
 

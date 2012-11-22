@@ -1,4 +1,5 @@
 #include <iostream>
+#include <array>
 #include "ghostmatrix.h"
 
 
@@ -46,8 +47,9 @@ int main()
 
     ghost.display( cout);
     
-
-
+    array<GhostMatrix<double>, 3> a{{gm,gm,gm}};
+    array<Matrix<double>, 3> b{{ghost,ghost,ghost}};
+    array<Matrix<double>,3>& ref_a = convert_array<3, double, TL_NONE> { a};
 
 
     return 0;
