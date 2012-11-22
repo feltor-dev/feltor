@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include "message.h"
+#include "exceptions.h"
 #include <math.h>
 
  //todo to improve performance review sandersons template lecture

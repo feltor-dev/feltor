@@ -39,9 +39,8 @@ int main()
     gm(1,0) = 2;
     gm(1,2) = 3;
     gm(2,1) = 9;
-    GhostMatrix<double, TL_NONE> ghost;
-    //ghost.resize(3,4);
-    ghost.allocate( 3,3);
+    GhostMatrix<double, TL_NONE> ghost(3,3,false);
+    ghost.allocate( );
     swap_fields( ghost, gm);//OK!
     ghost.initGhostCells( TL_DST10, TL_PERIODIC);
 

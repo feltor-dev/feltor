@@ -26,6 +26,8 @@ namespace toefl
         ~DFT_DRT();
         void r2c( Matrix<double, TL_DFT_1D>& inout, Matrix<complex, TL_NONE>& swap_T);
         void c2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DFT_1D>& swap);
+        DFT_DRT( DFT_DRT& ) = delete;
+        DFT_DRT& operator=( DFT_DRT&) = delete;
     };
 
        /*! @brief prepare the fftw_plans
@@ -69,7 +71,7 @@ namespace toefl
         fftw_free( r2r_backward);
     }
 
-    /*! @brief perform the r2c transformation
+    /*! @brief Perform a r2c transformation
     
     Transformations are always done inplace, if you want to preserve input copy it first. 
     \param m contains values to be transformed, contains memory of swap on output
@@ -91,7 +93,7 @@ namespace toefl
         fftw_execute_r2r( transpose_backward, m.getPtr(), m.getPtr());
         swap_fields( m, swap);
     }
-    /*! @brief perform the c2r transformation
+    /*! @brief Perform a c2r transformation
     
     Transformations are always done inplace, if you want to preserve input copy it first. 
     \param m contains values to be transformed, contains memory of swap on output

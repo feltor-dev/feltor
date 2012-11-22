@@ -51,7 +51,10 @@ namespace toefl{
          * Contains the solution on output.
          */
         inline void c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT_DFT>& swap);
-        //make copy construction impossible because fftw_plan cannot be copied
+
+        DFT_DFT( DFT_DFT& ) = delete;
+        DFT_DFT& operator=( DFT_DFT&) = delete;
+
         /*! @brief Free the fftw plans
          */
         ~DFT_DFT();

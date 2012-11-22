@@ -6,7 +6,12 @@
 
 namespace toefl{
 
-    enum bc { TL_PERIODIC, TL_DST00, TL_DST01, TL_DST10, TL_DST11}; 
+    enum bc { TL_PERIODIC, //!< Periodic boundary
+              TL_DST00, //!< dst 1
+              TL_DST01, //!< dst 2
+              TL_DST10, //!< dst 3
+              TL_DST11 //!<  dst 4
+    }; 
 
     /*! @brief Mimic a Matrix with ghostcells
      *
@@ -35,11 +40,13 @@ namespace toefl{
             ghostRows.allocate();
             ghostCols.allocate();
         }
+        /*
         void resize_virtual( const size_t new_rows, const size_t new_cols){
             this->resize_( new_rows, new_cols);
             ghostRows.resize( 2, new_cols + 2);
             ghostCols.resize( new_rows, 2);
         }
+        */
             
       public:
         /*! @brief Construct an empty void GhostMatrix*/
@@ -87,7 +94,12 @@ namespace toefl{
          */
         void display( std::ostream& os = std::cout);
 
-        void initGhostCells( enum bc b_rows, enum bc b_cols);
+        /*! @brief Initialize ghost cells according to given boundary conditions
+         *
+         * @param bc_rows Condition for the ghost rows. 
+         * @param bc_cols Condition for the ghost columns.
+         */
+        void initGhostCells( enum bc bc_rows, enum bc bc_cols);
 
     };
     template< typename T, enum Padding P>

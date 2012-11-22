@@ -33,6 +33,8 @@ namespace toefl
         ~DRT_DRT();
         void forward( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
         void backward( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
+        DRT_DRT( DRT_DRT& ) = delete;
+        DRT_DRT& operator=( DRT_DRT&) = delete;
     };
 
 

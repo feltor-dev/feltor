@@ -86,16 +86,9 @@ namespace toefl{
       protected:
         void allocate_(); //normal allocate function of Matrix class (called by constructors)
         virtual void allocate_virtual(){ allocate_();}
-        void resize_( const size_t new_rows, const size_t new_cols){
-            if( ptr == NULL)
-                n = new_rows, m = new_cols;
-            else
-                throw Message( "Non void Matrix may not be resized!", ping);
-        }
-        virtual void resize_virtual( const size_t new_rows, const size_t new_cols ){ resize_( new_rows, new_cols);}
           //maybe an id (static int id) wouldn't be bad to identify in errors
-        size_t n; //!< # of columns
-        size_t m; //!< # of rows
+        const size_t n; //!< # of columns
+        const size_t m; //!< # of rows
         T *ptr; //!< pointer to allocated memory
         //inline void swap( Matrix& rhs);
       public:
@@ -151,32 +144,7 @@ namespace toefl{
          */
         void allocate(){ allocate_virtual();}
 
-        /*! @brief resize void matrices
-         *
-         * No new memory is allocated! Just usable for void matrices!
-         * @param new_rows new number of rows
-         * @param new_cols new number of columns
-         */
-        void resize( const size_t new_rows, const size_t new_cols)
-        {
-            resize_virtual( new_rows, new_cols);
-        }
-
-        /*! @brief Resize and allocate memory for void matrices
-         *
-         * @param new_rows new number of rows
-         * @param new_cols new number of columns
-         * @param value Value the elements are initialized to using operator= of type T
-         */
-        void allocate( const size_t new_rows, const size_t new_cols, const T& value = T())
-        {
-            resize_virtual( new_rows, new_cols);
-            allocate_virtual();
-            for( size_t i=0; i < TotalNumberOf<P>::elements(n, m); i++)
-                ptr[i] = value;
-        }
-    
-        /*! @brief number of rows
+        /*! @brief Number of rows
          *
          * Return the  number of rows the object manages (the one you specified in the constructor)
          * even if 
@@ -185,7 +153,7 @@ namespace toefl{
          * @return number of columns
          */
         const size_t rows() const {return n;}
-        /*! @brief number of columns
+        /*! @brief Number of columns
          *
          * Return the number of columns the object manages (the one you specified in the constructor), even if 
          * no memory is allocated. 
@@ -193,7 +161,7 @@ namespace toefl{
          * @return number of columns
          */
         const size_t cols() const {return m;}
-        /*! @brief get the address of the first element
+        /*! @brief Get the address of the first element
          *
          * Replaces the use of &m(0,0) which is kind of clumsy!
          * @return pointer to allocated memory
@@ -482,6 +450,20 @@ namespace toefl{
                 if( (*this)( i, j) != rhs( i, j) )  
                     return true;
         return false;
+    }
+
+    /*! @brief Construct a void Matrix of given size
+     *
+     * @tparam T Value type of the matrix
+     * @tparam P Padding type of the matrix
+     * 
+     * @param rows Rows of the void matrix
+     * @param cols Columns of the void matrix
+     */
+    template< class T, enum Padding P = TL_NONE>
+    Matrix<T,P> VOID( const size_t rows, const size_t cols){
+        Matrix<T,P> m( rows, cols, false);
+        return m;
     }
 
 

@@ -9,8 +9,8 @@ using namespace toefl;
 
 int main()
 {
-    Matrix<double, TL_DFT_DFT> m1(5, 10);
-    Matrix<complex<double> >   m1_( 5, 10/2 + 1);
+    Matrix<double, TL_DFT_DFT> m1{5, 10};
+    Matrix<complex<double> >   m1_{ 5, 10/2 + 1};
     DFT_DFT dft_dft( 5,10);
     double dx = 1./(10.), dy = 1./5;
     for( size_t i = 0; i < m1.rows(); i++)
