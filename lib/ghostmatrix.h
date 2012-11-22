@@ -7,7 +7,7 @@
 
 namespace toefl{
 
-    enum bc { TL_PERIODIC, //!< Periodic boundary
+    enum bc { TL_PERIODIC = 0, //!< Periodic boundary
               TL_DST00, //!< dst 1
               TL_DST01, //!< dst 2
               TL_DST10, //!< dst 3

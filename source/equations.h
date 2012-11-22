@@ -54,8 +54,8 @@ namespace toefl{
         inline double gamma2_i( const double laplace);
         inline double gamma2_z( const double laplace);
     };
-    Poisson::Poisson(const Physical& phys):a_i(phys.a_i), mu_i(phys.mu_i), tau_i(phys.tau_i),
-                                          a_z(phys.a_z), mu_z(phys.mu_z), tau_z(phys.tau_z) 
+    Poisson::Poisson(const Physical& phys):a_i(phys.a[0]), mu_i(1.0), tau_i(phys.tau[0]),
+                                          a_z(phys.a[1]), mu_z(phys.mu_z), tau_z(phys.tau[1]) 
                                           {}
     /*! @brief Yield the linear part of the local toefl equations
      *
@@ -77,9 +77,9 @@ namespace toefl{
         Equations( const Physical& phys):
             p( phys), 
             dd(phys.d), nu(phys.nu), 
-            g_e(phys.g_e), g_i(phys.g_i), g_z(phys.g_z),
-            kappa_x(phys.kappa_x), kappa_y(phys.kappa_y),
-            tau_i(phys.tau_i), tau_z(phys.tau_z)
+            g_e(phys.g[0]), g_i(phys.g[1]), g_z(phys.g[2]),
+            kappa_x(phys.kappa[0]), kappa_y(phys.kappa[1]),
+            tau_i(phys.tau[0]), tau_z(phys.tau[1])
         {}
 
         /*! @brief compute the linear part of the toefl equations without impurities

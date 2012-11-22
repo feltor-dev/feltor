@@ -2,50 +2,54 @@
 #define _BLUEPRINT_
 
 #include <iostream>
+#include "ghostmatrix" // holds boundary conditions
 #include "message.h"
 
 namespace toefl{
 //toefl brauch libraries, um zu funktionieren
 //z.B. fftw3 für dfts, cuda für graphikkarten, oder sparse matrix solver 
 enum cap{ TL_CURVATURE, TL_COUPLING, TL_IMPURITY, TL_GLOBAL};
-enum method{ TL_KARNIADAKIS};
 enum target{ TL_ELECTRONS, TL_IONS, TL_IMPURITIES, TL_POTENTIAL};
 
 
+/*! @brief Holds the physical parameters of the problem.
+ *
+ * @note This is an aggregate and thus you can use initializer lists
+ */
 struct Physical
 {
-    double d, nu;
-    double kappa_x, kappa_y;
-    double g_e, g_i, g_z;
-    double a_i, mu_i, tau_i;
-    double a_z, mu_z, tau_z;
-    /*! @brief Construct container with all values set to zero
+    double d;  //!< The coupling constant
+    double nu; //!< The artificial viscosity
+    double g[3]; //!< The gradient for electrons 0, ions 1 and impurities 2
+    double kappa[2]; //!< The curvature in x 0 and y 1
+    double a[2]; //!< Charge of ions 0 and impurities 1
+    double mu_z; //!< The mass of impurities
+    double tau[2]; //!< temperature of ions 0 and impurities 2
+    /*! @brief This is a POD
      */ 
-    Physical(){
-        d = nu = g_e = g_i = g_z = 0;
-        kappa_x = kappa_y = 0;
-        a_i = a_z = 0;
-        mu_i = mu_z = 0; 
-        tau_i = tau_z = 0;
-    }
+    Physical() = default;
     void display( std::ostream& os = std::cout) const
     {
         os << "Physical parameters are: \n"
             <<"Coupling = "<<d<<"\n"
             <<"viscosity = "<<nu<<"\n"
-            <<"Curvature_x = "<<kappa_x<<" Curvature_y = "<<kappa_y<<"\n"
-            <<"gradients: g_e ="<<g_e<<" g_i="<<g_i<<" g_z="<<g_z<<"\n"
-            <<"Ions       a_i ="<<a_i<<" mu_i="<<mu_i<<" tau_i="<<tau_i<<"\n"
-            <<"Impurities a_z ="<<a_z<<" mu_z="<<mu_z<<" tau_z="<<tau_z<<"\n";
+            <<"Curvature_x = "<<kappa[0]<<" Curvature_y = "<<kappa[1]<<"\n"
+            <<"gradients: g[0] ="<<g[0]<<" g[1]="<<g[1]<<" g[2]="<<g[2]<<"\n"
+            <<"Ions       a[0] ="<<a[0]<<" tau[0]="<<tau[0]<<"\n"
+            <<"Impurities a[1] ="<<a[1]<<" mu_z="<<mu_z<<" tau[1]="<<tau[1]<<"\n";
     }
 };
 
+/*! @brief Describes the boundary and the boundary conditions of the problem.
+ *
+ * @note This is an aggregate and thus you can use initializer lists
+ */
 struct Boundary
 {
-    double lx;
-    double ly;
-    enum bc bc_x, bc_y;
-    Boundary():lx(0), ly(0), bc_x(TL_PERIODIC), bc_y( TL_PERIODIC){}
+    double lx; //!< Physical extension of x-direction
+    double ly; //!< Physical extension of y-direction
+    enum bc bc_x;  //!< Boundary condition in x (y is always periodic)
+    Boundary() = default;
     void display( std::ostream& os = std::cout) const
     {
         os << "Boundary parameters are: \n"
@@ -54,24 +58,26 @@ struct Boundary
             <<"Boundary conditions are ";
         switch(bc_x)
         {
-            case(TL_PERIODIC): os << "periodic in x\n";
-                               break;
-        }
-        switch(bc_y)
-        {
-            case(TL_PERIODIC): os << "periodic in y\n";
-                               break;
+            case(TL_PERIODIC): os << "periodic in x\n"; break;
+            case(   TL_DST00): os << "dst 1 like \n"; break;
+            case(   TL_DST01): os << "dst 2 like \n"; break;
+            case(   TL_DST10): os << "dst 3 like \n"; break;
+            case(   TL_DST11): os << "dst 4 like \n"; break;
         }
     }
 };
 
+/*! @brief Describes the algorithmic (notably discretization) issues of the solver.
+ *
+ * @note This is an aggregate and thus you can use initializer lists
+ */
 struct Algorithmic
 {
-    size_t nx; 
-    size_t ny;
-    double h, dt;
-    enum method algorithm;
-    Algorithmic():nx(0),ny(0), h(0), dt(0), algorithm(TL_KARNIADAKIS){}
+    size_t nx;  //!< # of gridpoints in x
+    size_t ny;  //!< # of gridpoints in y
+    double h;  //!< ly/ny
+    double dt; //!< The time step
+    Algorithmic() = default;
     void display( std::ostream& os = std::cout) const
     {
         os << "Algorithmic parameters are: \n"
@@ -107,7 +113,7 @@ class Blueprint
      * All capacities are disabled by default!
      * @param phys The physical parameters of the equations including numeric viscosity
      */
-    Blueprint( const Physical phys, const Boundary bound, const Algorithmic alg): phys(phys), bound(bound), alg(alg)
+    Blueprint( const Physical& phys, const Boundary& bound, const Algorithmic& alg): phys(phys), bound(bound), alg(alg)
     {
         curvature = coupling = imp = global = false; 
     }
@@ -171,20 +177,20 @@ void Blueprint::consistencyCheck() const
         throw toefl::Message( "Curvature enabled but zero!\n", ping);
     if( phys.nu < 0) 
         throw toefl::Message( "nu < 0!\n", ping);
-    if( phys.a_i <= 0 || phys.mu_i <= 0 || phys.tau_i < 0) 
+    if( phys.a[0] <= 0 || phys.mu_i <= 0 || phys.tau[0] < 0) 
         throw toefl::Message( "Ion species badly set\n", ping);
-    if( imp && (phys.a_z <= 0 || phys.mu_z <= 0 || phys.tau_z < 0)) 
+    if( imp && (phys.a[1] <= 0 || phys.mu_z <= 0 || phys.tau[1] < 0)) 
         throw toefl::Message( "Impuritiy species badly set\n", ping);
-    if( phys.a_i + phys.a_z != 1)
-        throw toefl::Message( "a_i + a_z != 1\n", ping);
-    if( phys.g_i != (phys.g_e - phys.a_z*phys.g_z)/(1.-phys.a_z))
-        throw toefl::Message( "g_i is wrong\n", ping);
+    if( phys.a[0] + phys.a[1] != 1)
+        throw toefl::Message( "a[0] + a[1] != 1\n", ping);
+    if( phys.g[1] != (phys.g[0] - phys.a[1]*phys.g[2])/(1.-phys.a[1]))
+        throw toefl::Message( "g[1] is wrong\n", ping);
     if( global) 
         throw toefl::Message( "Global solver not yet implemented\n", ping);
     //Some Warnings
     if( !curvature && (phys.kappa_x != 0 || phys.kappa_y != 0)) 
         std::cerr <<  "TL_WARNING: Curvature disabled but kappa not zero (will be ignored)!\n";
-    if( !imp && (phys.a_z != 0 || phys.mu_z != 0 || phys.tau_z != 0)) 
+    if( !imp && (phys.a[1] != 0 || phys.mu_z != 0 || phys.tau[1] != 0)) 
         std::cerr << "TL_WARNING: Impurity disabled but z species not 0 (will be ignored)!\n";
         
 }
