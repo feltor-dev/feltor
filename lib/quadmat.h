@@ -18,6 +18,7 @@ namespace toefl{
      * in memory. Therefore it is well suited for the use in the Matrix
      * class (because memcpy and memset correctly work on this type)
      * \note T and n should be of small size to reduce object size.
+     * \note QuadMat is an aggregate so you can use initializer lists in c++11..
      * @tparam T tested with double and std::complex<double> 
      * @tparam n size of the Matrix, assumed to be small (either 2 or 3)
      */
@@ -28,27 +29,32 @@ namespace toefl{
         T data[n*n];
       public:
         /*! @brief no values are assigned*/
-        QuadMat(){}
+        QuadMat() = default;
         /*! @brief Initialize elements to a value
          *
          * @param value The initial value
          */
         QuadMat( const T& value)
         {
-            for( size_t i=0; i < n*n; i++)
+            for( unsigned i=0; i<n*n; i++)
                 data[i] = value;
         }
-        /*! @brief copies values of src into this*/
-        QuadMat( const QuadMat& src){
-            for( size_t i=0; i < n*n; i++)
-                data[i] = src.data[i];
+        /*! @brief Use c++0x new feature*/
+        QuadMat( std::initializer_list<T> l)
+        {
+            if( l.size() != n*n)
+                throw Message( "Initializer list has wrong size", ping);
+            unsigned i=0;
+            for( auto& s: l)
+                data[i++] = s;
         }
         /*! @brief copies values of src into this*/
-        const QuadMat& operator=( const QuadMat& rhs){
-            for( size_t i = 0; i < n*n; i++)
-                data[i] = rhs.data[i];
-            return *this;
-        }
+        QuadMat( const QuadMat& src) = default;
+        /*! @brief Copies values of src into this
+         * 
+         * implicitly defined
+        */
+        QuadMat& operator=( const QuadMat& rhs) = default;
     
         /*! @brief set memory to 0
          */
