@@ -8,6 +8,8 @@
 #define _TL_TEXTURE_
 #include <iostream>
 #include <float.h>
+#include <array>
+#include "matrix.h"
 
 /*! @brief POD that contains RGB values for 256 colors*/
 struct colormap_f
@@ -108,7 +110,7 @@ colormap_ext redblue_ext()
     return M;
 }
 
-typedef Matrix<std::array<float,3>, TL_NONE> Texture_RGBf;
+typedef toefl::Matrix<std::array<float,3>, toefl::TL_NONE> Texture_RGBf; //!< This texture contains three floats per texel
 
 
 /*! @brief updates a texture with a given field for use of the glTexImage2D() function
@@ -122,20 +124,24 @@ typedef Matrix<std::array<float,3>, TL_NONE> Texture_RGBf;
 template< class M>
 void gentexture_RGBf( Texture_RGBf& tex, const M& field, const double maxabs)
 {
-    
+#ifdef TL_DEBUG
+    if( tex.rows() != field.rows() || tex.cols() != field.cols())
+        throw toefl::Message( "theta and tex have different sizes!", ping);
+#endif
     const static colormap_ext cm = redblue_ext(); // extended colormap
     
     double scalefact = 127/maxabs;
-    int k, l, value;
+    double value;
+    int k;
     
     //store the min and max values of the field
     double min = DBL_MAX; // test range DBL_MAX is the maximal floating point value
     double max = (-1.)*DBL_MAX; // test range 
     
-    for (int i=0; i < tex.height; i++)
-        for (int j=0; j < tex.width; j++)
+    for (unsigned i=0; i < tex.rows(); i++)
+        for (unsigned j=0; j < tex.cols(); j++)
         {
-            value = field[i][j];
+            value = field(i,j);
             // test range
             if (min > value) min = value;
             if (max < value) max = value;
@@ -143,51 +149,46 @@ void gentexture_RGBf( Texture_RGBf& tex, const M& field, const double maxabs)
             k = (int)floor(scalefact*value) + 192; // +192 instead of +128 due to extended colormap
             k = k<0 ? 0 : ( k>383 ? 383 : k );
             
-            l = 3 * (j + tex.width*i);
-            tex.texarray[l]   = cm.R[k];
-            tex.texarray[l+1] = cm.G[k];
-            tex.texarray[l+2] = cm.B[k];
+            tex(i,j)[0] = cm.R[k];
+            tex(i,j)[1] = cm.G[k];
+            tex(i,j)[2] = cm.B[k];
         }
-    }
-    //std::cout <<"Minimum / Maximum value:"  <<min << " "<< max;//test
-    
-    return tex;
 }
 
 /*! @brief updates a texture with a given field (special function for the temperature field)
 
-    A texture struct and a colormap are statically allocated and reused at every entry to the function. 
-    The maximum of the temperature field is known to be the rayleigh number
-    @param draw_h the height of the temperature field
-    @param draw_w the width of the temperature field
-    @return a copy the static texture 
+    A colormap is statically allocated and reused at every entry to the function. 
+    The maximum of the temperature field is known to be the rayleigh number. 
+    T = theta + R(1-z) is taken for the texture
+    @param tex A texture array. 
+    @param theta The temperature field
+    @param ray the Rayleigh number R 
 */
-void gentexture_RGBf_temp( Texture_RGBf& tex, const M& field, const double ray)
+template< class M>
+void gentexture_RGBf_temp( Texture_RGBf& tex, const M& theta, const double ray)
 {
-    static colormap_ext cm = redblue_ext(); // extended colormap
+#ifdef TL_DEBUG
+    if( tex.rows() != theta.rows() || tex.cols() != theta.cols())
+        throw toefl::Message( "theta and tex have different sizes!", ping);
+#endif
+
+    const static colormap_ext cm = redblue_ext(); // extended colormap
     
     double scalefact = 255./ray;
     double temp;
-    int k, l;
+    int k;
     
-    //double min = DBL_MAX; // test range
-    //double max = (-1.)*DBL_MAX; // test range
-    
-    for (int i=0; i < tex.height; i++)
-        for (int j=0; j < tex.width; j++)
+    for (unsigned i=0; i < tex.rows(); i++)
+        for (unsigned j=0; j < tex.cols(); j++)
         {
-            // field.temp_0 = deltatemp, but we want absolute temp!
-            temp = ( field.temp_0[i][j] + ray*(1.0-(double)i/(double)(grid.nz-1)) );
+            temp = ( theta(i,j) + ray*(1.0-(double)i/(double)(theta.rows()+1)) );
             
             k = ((int)(scalefact * temp)) + 64; // extended colormap
             k = k<0 ? 0 : ( k>383 ? 383 : k );
-            
-            l = 3 * (j + tex.width*i);
-            tex.texarray[l]   = cm.R[k];
-            tex.texarray[l+1] = cm.G[k];
-            tex.texarray[l+2] = cm.B[k];
+            tex(i,j)[0] = cm.R[k];
+            tex(i,j)[1] = cm.G[k];
+            tex(i,j)[2] = cm.B[k];
         }
-    return;
 }
 
 #endif // _TL_TEXTURE_

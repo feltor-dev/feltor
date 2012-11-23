@@ -5,11 +5,10 @@
 #include "message.h"
 #include "exceptions.h"
 //input reading
-#include "read_input.h"
+//#include "read_input.h"
 //benchmarking
 #include "timer.h"
 //Matrices and vectors
-#include "vector.h"
 #include "quadmat.h"
 #include "padding.h"
 #include "matrix.h"

@@ -2,12 +2,8 @@
 #include <iomanip>
 #include <array>
 #include <GL/glfw.h>
-#include "quadmat.h"
-#include "arakawa.h"
-#include "karniadakis.h"
-#include "matrix.h"
-#include "ghostmatrix.h"
-#include "dft_drt.h"
+#include "tl_numerics.h"
+#include "texture.h"
 
 using namespace  std;
 using namespace toefl;
@@ -17,8 +13,8 @@ typedef std::complex<double> Complex;
 
 const double R = 500;
 const double P = 10;
-const double nx = 10;
-const double nz = 10; //number of inner points
+const double nx = 12;
+const double nz = 12; //number of inner points
 const double lz = 1.;
 const double h = 1./(double)(nz+1);
 const double lx = (double)nx*h;
@@ -62,13 +58,14 @@ void step();
 
 int main()
 {
-    //////////////////////////////// glfw//////////////////////////////
+    ////////////////////////////////glfw//////////////////////////////
     int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
-    if( !glfwOpenWindow( 300, 300,  0,0,0,  0,0,0, GLFW_WINDOW))
+    if( !glfwOpenWindow( 600, 300,  0,0,0,  0,0,0, GLFW_WINDOW))
     { 
         cerr << "ERROR: glfw couldn't open window!\n";
     }
+    glfwSetWindowTitle( "Convection");
     //////////////////////////////////////////////////////////////////
     const Complex kxmin { 0, 2.*M_PI/lx},         kzmin{ 0, M_PI/lz};
     for( unsigned i=0; i<nz; i++)
@@ -83,40 +80,40 @@ int main()
     cfield[0].zero();
     cfield[1].zero();
     cphi.zero();
-    cfield[0](iz, nx/2+1-ix) = cfield[0](iz, ix) = {0, -0.5};
-    cfield[1](iz, nx/2+1-ix) = cfield[1](iz, ix) = {0,-0.5};
+    /*cfield[0](iz, nx/2+1-ix) =*/ cfield[0](iz, ix) = {0, -10};
+    /*cfield[1](iz, nx/2+1-ix) =*/ cfield[1](iz, ix) = {0,-10};
     multiply_coefficients();
+    cout << cphi<<endl;
     dft_drt.c2r( cfield[0], field[0]);
     dft_drt.c2r( cfield[1], field[1]);
     dft_drt.c2r( cphi, phi);
-    field[1].zero();
-    phi.zero();
+    cout << phi<<endl;
     //first steps
-    cout << setprecision(2)<<fixed;
     karniadakis.invert_coeff<TL_EULER>();
-    cout << field[0] <<endl;
-    cout << field[1] <<endl;
-    step<TL_EULER>();
-    cout << field[0] <<endl;
-    cout << field[1] <<endl;
-    step<TL_EULER>();
-    cout << field[0] <<endl;
-    cout << field[1] <<endl;
+    //step<TL_EULER>();
     //////////////////////////////////////////////////////////////////
+    Texture_RGBf tex( nz, nx);
+    int scale_z = 1.0;
+    glEnable(GL_TEXTURE_2D);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     while( running)
     {
+        //generate a texture
+        //gentexture_RGBf_temp( tex, field[0], R);
+        gentexture_RGBf( tex, phi, 1);
         glLoadIdentity();
-        glBegin(GL_QUADS);
-        int scale_z = 1.0;
-        glClearColor(1.f, 0.f, 0.f, 1.f);
+        glClearColor(0.f, 0.f, 0.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
+        // image comes from texarray on host
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
         glLoadIdentity();
-        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0*scale_z);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0*scale_z);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  scale_z);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  scale_z);
+        //Draw a textured quad
+        glBegin(GL_QUADS);
+            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0*scale_z);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0*scale_z);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  scale_z);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  scale_z);
         glEnd();
-        glClear( GL_COLOR_BUFFER_BIT);
         glfwSwapBuffers();
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
@@ -124,6 +121,7 @@ int main()
     glfwTerminate();
     //////////////////////////////////////////////////////////////////
     return 0;
+
 }
 
 
@@ -137,7 +135,6 @@ void multiply_coefficients()
 template< enum stepper S>
 void step()
 {
-    //std::cout << phi << std::endl<< field[0] << std::endl<< field[1];
     phi.initGhostCells( TL_DST00, TL_PERIODIC);
     for( unsigned i=0; i<2; i++)
     {
@@ -154,7 +151,7 @@ void step()
     multiply_coefficients();
     for( unsigned i=0; i<2; i++)
         dft_drt.c2r( cfield[i], field[i]);
-    dft_drt.c2r( cphi, phi); //field in ghosphi again
+    dft_drt.c2r( cphi, phi); //field in phi again
 }
 
 
