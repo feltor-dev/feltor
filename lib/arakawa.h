@@ -33,6 +33,12 @@ namespace toefl{
      \f[ 
      j(x,y) := \{l(x,y), r(x,y)\} = \partial_x l \partial_y r - \partial_y l \partial_x r 
      \f] 
+     * In the following algorithm the matrices are assumed to be the points
+     \f[ left_{ij} = l(x_j, y_i) \f]
+     \f[ right_{ij} = r(x_j, y_i) \f]
+     \f[ x_j = x_0 + hj \f]
+     \f[ y_i = z_0 + hi \f]
+     * i.e the first index is the y - direction.  
      */
     class Arakawa
     {

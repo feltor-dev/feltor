@@ -111,7 +111,6 @@ namespace toefl{
         std::array< Matrix< double, P_x>, n> n1, n2;
         Matrix< QuadMat< T_k, n>, TL_NONE> c_inv;
         Matrix< QuadMat< T_k, n>, TL_NONE> c_origin; //contains the coeff of first call
-
         const double dt;
       public:
         /*! @brief Allocate storage for the last two fields in the karniadakis scheme.
@@ -122,7 +121,7 @@ namespace toefl{
          */
         Karniadakis(const size_t rows_x, const size_t cols_x, const double dt);
 
-        /*! @brief Initialize the fourier coefficients
+        /*! @brief Swap in the fourier coefficients.
          *
          * Swaps the coefficients into the object.
          * @param coeff_origin Set of fourier coefficients, void on output.
@@ -182,6 +181,12 @@ namespace toefl{
                 throw Message( "Init coefficients first!", ping);
 #endif
             multiply_coeff< n,T_k,Fourier_T>( c_inv,v,v);
+        }
+
+        void display( std::ostream& os = std::cout) const
+        {
+            os << "The current coefficients are \n"<< c_origin
+                <<"The current inverse is\n" << c_inv<<std::endl;
         }
 
     };

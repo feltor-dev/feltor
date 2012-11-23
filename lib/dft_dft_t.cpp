@@ -7,6 +7,11 @@
 using namespace std;
 using namespace toefl;
 
+//why there are two coefficients in y direction
+/*
+ * The r2c yields one coefficient for a mode
+ * The c2c trafo afterwards yields two at k and N-k for one mode.
+ */
 int main()
 {
     Matrix<double, TL_DFT_DFT> m1{5, 10};

@@ -2,6 +2,7 @@
 #define _TL_MATRIX_
 
 #include <iostream>
+#include <array>
 //#include <cstring> //memcpy and memset
 #include "fftw3.h"
 #include "exceptions.h"
@@ -462,6 +463,21 @@ namespace toefl{
                     return true;
         return false;
     }
+
+
+    template < class T, enum Padding P = TL_NONE>
+    inline std::array< Matrix<T,P>,2> void_matrix_array( const size_t rows, const size_t cols)
+    {
+        return std::array< Matrix<T,P>,2>{{ Matrix<T,P>(rows, cols, TL_VOID), Matrix<T,P>(rows, cols, TL_VOID)}};
+    }
+    template < class T, enum Padding P = TL_NONE>
+    inline std::array< Matrix<T,P>,2> matrix_array( const size_t rows, const size_t cols)
+    {
+        return std::array< Matrix<T,P>,2>{{ Matrix<T,P>(rows, cols), Matrix<T,P>(rows, cols)}};
+    }
+    
+
+
 
 
 
