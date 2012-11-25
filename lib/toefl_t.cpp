@@ -11,17 +11,18 @@ using namespace toefl;
 
 typedef std::complex<double> Complex;
 
-const double R = 500;
+//initial mode
+const unsigned iz = 1;
+const unsigned ix = 2;
+//physical Parameter
+const double R = 500000;
 const double P = 10;
-const double nx = 12;
-const double nz = 12; //number of inner points
+const double nx = 128;
+const double nz = 63; //number of inner points
 const double lz = 1.;
 const double h = 1./(double)(nz+1);
 const double lx = (double)nx*h;
 const double dt = 1e-6;
-//initial mode
-const unsigned iz = 1;
-const unsigned ix = 2;
 
 Karniadakis<2,Complex,TL_DFT_1D> karniadakis( nz,nx,dt);
 DFT_DRT dft_drt( nz, nx, FFTW_RODFT00, FFTW_MEASURE);
@@ -73,6 +74,10 @@ int main()
         {
             rayleigh_equations( coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
             laplace_inverse( cphi_coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
+            //cphi_coefficients(i,j) /= (double)(nx*(nz+1));
+            for( unsigned k=0; k<2; k++)
+                for( unsigned q=0; q<2; q++)
+                    coefficients(i,j)(k,q) *= (double)(2*nx*(nz+1));
         }
     //init solvers
     karniadakis.init_coeff( coefficients); //swaps in coefficients
@@ -80,17 +85,23 @@ int main()
     cfield[0].zero();
     cfield[1].zero();
     cphi.zero();
-    /*cfield[0](iz, nx/2+1-ix) =*/ cfield[0](iz, ix) = {0, -10};
-    /*cfield[1](iz, nx/2+1-ix) =*/ cfield[1](iz, ix) = {0,-10};
+    cfield[0](iz, ix) = {0, -1000};
+    cfield[1](iz, ix) = {0,-1000};
     multiply_coefficients();
-    cout << cphi<<endl;
+    //cout << cphi<<endl;
     dft_drt.c2r( cfield[0], field[0]);
     dft_drt.c2r( cfield[1], field[1]);
     dft_drt.c2r( cphi, phi);
-    cout << phi<<endl;
+    //cout << phi<<endl;
     //first steps
     karniadakis.invert_coeff<TL_EULER>();
-    //step<TL_EULER>();
+    step<TL_EULER>();
+    /*
+    karniadakis.invert_coeff<TL_ORDER2>();
+    step<TL_ORDER2>();
+    karniadakis.invert_coeff<TL_ORDER3>();
+    step<TL_ORDER3>();
+    */
     //////////////////////////////////////////////////////////////////
     Texture_RGBf tex( nz, nx);
     int scale_z = 1.0;
@@ -100,7 +111,7 @@ int main()
     {
         //generate a texture
         //gentexture_RGBf_temp( tex, field[0], R);
-        gentexture_RGBf( tex, phi, 1);
+        gentexture_RGBf( tex, field[0], R);
         glLoadIdentity();
         glClearColor(0.f, 0.f, 0.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -114,7 +125,16 @@ int main()
             glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  scale_z);
             glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  scale_z);
         glEnd();
-        glfwSwapBuffers();
+        glfwSwapBuffers(); //implicitely calss glfwPollEvents()
+        //Now wait until a key is pressed
+        glfwWaitEvents(); //=glfwPollEvents() when an Event comes: reacts e.g. on mouse mvt or keyboard input
+        if( glfwGetKey('N'))
+        {
+            step<TL_EULER>();
+            cout << "Next Step\n";
+        }
+        static int i=0; 
+        cout << "Event #"<<i++<<" occured!\n ";
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
     }

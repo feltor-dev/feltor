@@ -107,10 +107,12 @@ namespace toefl{
     {
       private:
         const size_t rows, cols;
+
         std::array< Matrix< double, P_x>, n> v1, v2;
         std::array< Matrix< double, P_x>, n> n1, n2;
         Matrix< QuadMat< T_k, n>, TL_NONE> c_inv;
         Matrix< QuadMat< T_k, n>, TL_NONE> c_origin; //contains the coeff of first call
+        double prefactor;
         const double dt;
       public:
         /*! @brief Allocate storage for the last two fields in the karniadakis scheme.
@@ -125,13 +127,20 @@ namespace toefl{
          *
          * Swaps the coefficients into the object.
          * @param coeff_origin Set of fourier coefficients, void on output.
+         * @param normalisation 
+            A numerical discrete fourier transformation followed by its inverse usually
+            yields the input times a constant factor. State this factor here to normalize the 
+            output. 
          */
-        void init_coeff( Matrix<QuadMat<T_k, n> > & coeff_origin)
+        void init_coeff( Matrix<QuadMat<T_k, n> > & coeff_origin, const double normalisation)
         {
 #ifdef TL_DEBUG
+            if( normalisation < 1.)
+                throw Message( "Yield the prefactor, not its inverse!", ping);
             if( coeff_origin.isVoid())
                 throw Message("Your coefficients are void!", ping);
 #endif
+            prefactor = normalisation; 
             if( c_origin.isVoid())
             {
                 c_origin.resize( coeff_origin.rows(), coeff_origin.cols());
@@ -219,10 +228,14 @@ namespace toefl{
         for(unsigned i=0; i<c_inv.rows(); i++)
             for( unsigned j=0; j<c_inv.cols(); j++)
             {
-                c_inv(i,j) = c_origin(i,j);
         //std::cout <<"From Karniadakis invert: \n"<< c_inv<<std::endl;
                 for( unsigned k=0; k<n; k++)
-                    c_inv(i,j)(k,k) = Coefficients<S>::gamma_0 - dt*c_origin(i,j)(k,k);
+                {
+                    for( unsigned q=0; q<n; q++)
+                        c_inv(i,j)(k,q) = -prefactor*dt*c_origin(i,j)(k,q);
+                    c_inv(i,j)(k,k) += prefactor*Coefficients<S>::gamma_0;
+                    
+                }
                 invert( c_inv(i,j), c_inv(i,j));
             }
         //std::cout <<"From Karniadakis invert: \n"<< c_inv<<std::endl;
