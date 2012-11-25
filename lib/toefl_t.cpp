@@ -12,7 +12,7 @@ using namespace toefl;
 typedef std::complex<double> Complex;
 
 //initial mode
-const unsigned iz = 1;
+const unsigned iz = 0;
 const unsigned ix = 2;
 //physical Parameter
 const double R = 500000;
@@ -22,7 +22,7 @@ const double nz = 63; //number of inner points
 const double lz = 1.;
 const double h = 1./(double)(nz+1);
 const double lx = (double)nx*h;
-const double dt = 1e-6;
+const double dt = 5e-6;
 
 Karniadakis<2,Complex,TL_DFT_1D> karniadakis( nz,nx,dt);
 DFT_DRT dft_drt( nz, nx, FFTW_RODFT00, FFTW_MEASURE);
@@ -68,19 +68,15 @@ int main()
     }
     glfwSetWindowTitle( "Convection");
     //////////////////////////////////////////////////////////////////
-    const Complex kxmin { 0, 2.*M_PI/lx},         kzmin{ 0, M_PI/lz};
+    const Complex kxmin { 0, 2.*M_PI/lx}, kzmin{ 0, M_PI/lz};
     for( unsigned i=0; i<nz; i++)
         for( unsigned j=0; j<nx/2+1; j++)
         {
             rayleigh_equations( coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
             laplace_inverse( cphi_coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
-            //cphi_coefficients(i,j) /= (double)(nx*(nz+1));
-            for( unsigned k=0; k<2; k++)
-                for( unsigned q=0; q<2; q++)
-                    coefficients(i,j)(k,q) *= (double)(2*nx*(nz+1));
         }
     //init solvers
-    karniadakis.init_coeff( coefficients); //swaps in coefficients
+    karniadakis.init_coeff( coefficients, (double)(nx*2.*(nz+1))); //swaps in coefficients
     //init fields
     cfield[0].zero();
     cfield[1].zero();
@@ -96,22 +92,21 @@ int main()
     //first steps
     karniadakis.invert_coeff<TL_EULER>();
     step<TL_EULER>();
-    /*
     karniadakis.invert_coeff<TL_ORDER2>();
     step<TL_ORDER2>();
     karniadakis.invert_coeff<TL_ORDER3>();
     step<TL_ORDER3>();
-    */
     //////////////////////////////////////////////////////////////////
     Texture_RGBf tex( nz, nx);
     int scale_z = 1.0;
     glEnable(GL_TEXTURE_2D);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    cout << "PRESS N TO SEE THE NEXT TIME STEP\n";
     while( running)
     {
         //generate a texture
-        //gentexture_RGBf_temp( tex, field[0], R);
-        gentexture_RGBf( tex, field[0], R);
+        gentexture_RGBf_temp( tex, field[0], R);
+        //gentexture_RGBf( tex, field[0], R);
         glLoadIdentity();
         glClearColor(0.f, 0.f, 0.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -130,7 +125,7 @@ int main()
         glfwWaitEvents(); //=glfwPollEvents() when an Event comes: reacts e.g. on mouse mvt or keyboard input
         if( glfwGetKey('N'))
         {
-            step<TL_EULER>();
+            step<TL_ORDER3>();
             cout << "Next Step\n";
         }
         static int i=0; 
