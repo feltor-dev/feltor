@@ -30,7 +30,7 @@ int main()
     for( int i=-1; i<(int)rows+1; i++)
         for( int j=-1; j<(int)cols+1; j++)
             rhs.at(i,j) = (double)i*h; //rhs( y,x ) = y
-    lhs.initGhostCells( TL_PERIODIC, TL_PERIODIC);
+    lhs.initGhostCells( );
     //rhs.initGhostCells( TL_PERIODIC, TL_PERIODIC);
 
     cout<< "Test whether dx sin(2Pix) is calculated correctly by arakawa scheme\n";

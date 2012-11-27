@@ -15,6 +15,7 @@ int main()
 {
     
     toefl::Matrix<double> field( nz, nx);
+    cout << "Texture test: You should see the convection cell in ground state!\n";
 
     field.zero();
     ////////////////////////////////glfw//////////////////////////////
@@ -27,7 +28,6 @@ int main()
     glfwSetWindowTitle( "Texture test");
     //////////////////////////////////////////////////////////////////
     Texture_RGBf tex( nz, nx);
-    int scale_z = 1.0;
     glEnable(GL_TEXTURE_2D);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     while( running)
@@ -35,19 +35,20 @@ int main()
         //generate a texture
         gentexture_RGBf_temp( tex, field, R);
         glLoadIdentity();
-        glClearColor(0.f, 0.f, 0.f, 0.f);
+        glClearColor(0.f, 0.f, 1.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
         // image comes from texarray on host
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
         glLoadIdentity();
         //Draw a textured quad
         glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0*scale_z);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0*scale_z);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  scale_z);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  scale_z);
+            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 1.0);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, 1.0);
         glEnd();
         glfwSwapBuffers();
+        glfwWaitEvents();
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
     }

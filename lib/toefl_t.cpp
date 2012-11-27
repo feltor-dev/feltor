@@ -17,6 +17,7 @@ const unsigned ix = 2;
 //physical Parameter
 const double R = 500000;
 const double P = 10;
+const double nu = 0.0001;
 const double nx = 128;
 const double nz = 63; //number of inner points
 const double lz = 1.;
@@ -24,16 +25,18 @@ const double h = 1./(double)(nz+1);
 const double lx = (double)nx*h;
 const double dt = 5e-6;
 
+const double prefactor = (double)(nx*2*(nz));
+
 Karniadakis<2,Complex,TL_DFT_1D> karniadakis( nz,nx,dt);
-DFT_DRT dft_drt( nz, nx, FFTW_RODFT00, FFTW_MEASURE);
+DFT_DRT dft_drt( nz, nx, FFTW_RODFT10, FFTW_MEASURE);
 Arakawa arakawa(h);
 
 void rayleigh_equations( QuadMat< Complex,2>& coeff, const Complex dx, const Complex dy)
 {
     double laplace = (dx*dx + dy*dy).real(); 
     //std::cout << laplace<<std::endl;
-    coeff(0,0) = laplace, coeff(0,1) = -R*dx/laplace;
-    coeff(1,0) = -P*dx  , coeff(1,1) =  P*laplace;
+    coeff(0,0) = laplace - nu*laplace*laplace, coeff(0,1) = -R*dx/laplace;
+    coeff(1,0) = -P*dx,                        coeff(1,1) =  P*laplace;
 };
 
 inline void laplace_inverse( double& l_inv, const Complex dx, const Complex dy)
@@ -44,8 +47,8 @@ inline void laplace_inverse( double& l_inv, const Complex dx, const Complex dy)
 //Felder 
 std::array< Matrix<double, TL_DFT_1D>, 2>  field = matrix_array<double, TL_DFT_1D>( nz, nx);
 std::array< Matrix<double, TL_DFT_1D>, 2>  nonlinear = matrix_array<double,TL_DFT_1D>( nz, nx);
-      GhostMatrix<double, TL_DFT_1D>       ghostfield( nz, nx);
-      GhostMatrix<double, TL_DFT_1D>       phi( nz, nx);
+      GhostMatrix<double, TL_DFT_1D>       ghostfield( nz, nx, TL_PERIODIC, TL_DST10);
+      GhostMatrix<double, TL_DFT_1D>       phi( nz, nx, TL_PERIODIC, TL_DST10);
 //Complex fields
 std::array< Matrix<Complex, TL_NONE>, 2>    cfield = matrix_array<Complex>( nz, nx/2+1);
             Matrix<Complex, TL_NONE>        cphi( nz, nx/2+1);
@@ -76,7 +79,7 @@ int main()
             laplace_inverse( cphi_coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
         }
     //init solvers
-    karniadakis.init_coeff( coefficients, (double)(nx*2.*(nz+1))); //swaps in coefficients
+    karniadakis.init_coeff( coefficients, prefactor); //swaps in coefficients
     //init fields
     cfield[0].zero();
     cfield[1].zero();
@@ -98,7 +101,6 @@ int main()
     step<TL_ORDER3>();
     //////////////////////////////////////////////////////////////////
     Texture_RGBf tex( nz, nx);
-    int scale_z = 1.0;
     glEnable(GL_TEXTURE_2D);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     cout << "PRESS N TO SEE THE NEXT TIME STEP\n";
@@ -115,10 +117,10 @@ int main()
         glLoadIdentity();
         //Draw a textured quad
         glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0*scale_z);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0*scale_z);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  scale_z);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  scale_z);
+            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  1.0);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  1.0);
         glEnd();
         glfwSwapBuffers(); //implicitely calss glfwPollEvents()
         //Now wait until a key is pressed
@@ -136,7 +138,6 @@ int main()
     glfwTerminate();
     //////////////////////////////////////////////////////////////////
     return 0;
-
 }
 
 
@@ -150,11 +151,11 @@ void multiply_coefficients()
 template< enum stepper S>
 void step()
 {
-    phi.initGhostCells( TL_DST00, TL_PERIODIC);
+    phi.initGhostCells( );
     for( unsigned i=0; i<2; i++)
     {
         swap_fields( field[i], ghostfield);// now field is void
-        ghostfield.initGhostCells( TL_DST00, TL_PERIODIC);
+        ghostfield.initGhostCells( );
         arakawa( phi, ghostfield, nonlinear[i]);
         swap_fields( field[i], ghostfield);// now ghostfield is void
     }

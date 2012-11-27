@@ -40,16 +40,15 @@ int main()
     gm(1,0) = 2;
     gm(1,2) = 3;
     gm(2,1) = 9;
-    GhostMatrix<double, TL_NONE> ghost(3,3,false);
+    GhostMatrix<double, TL_NONE> ghost(3,3,TL_DST01, TL_PERIODIC, false);
     ghost.allocate( );
     swap_fields( ghost, gm);//OK!
-    ghost.initGhostCells( TL_DST10, TL_PERIODIC);
+    ghost.initGhostCells( );
 
     ghost.display( cout);
     
     array<GhostMatrix<double>, 3> a{{gm,gm,gm}};
     array<Matrix<double>, 3> b{{ghost,ghost,ghost}};
-    array<Matrix<double>,3>& ref_a = convert_array<3, double, TL_NONE> { a};
 
 
     return 0;

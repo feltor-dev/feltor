@@ -3,15 +3,16 @@ CFLAGS = -Wall -std=c++0x
 LIBS = -lfftw3 -lm
 CXX = g++
 
-all: matrix_t fft_t arakawa_t coeff_t quadmat_t dft_dst_t
-
-
 toefl_t: toefl_t.cpp
 	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -lglfw -lGL -o $@
 	./$@
 
 texture_t: texture_t.cpp texture.h
 	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -lglfw -lGL -o $@
+	./$@
+
+toefl_b: toefl_b.cpp
+	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -lglfw -lGL -o $@
 	./$@
     
 

@@ -32,7 +32,7 @@ const double omega_0 = 1.;
 const double theta_0 = l_kq/dx_k*omega_0;
 
 Karniadakis<2,Complex,TL_DFT_1D> karniadakis( nz,nx,dt);
-DFT_DRT dft_drt( nz, nx, FFTW_RODFT00);
+DFT_DRT dft_drt( nz, nx, FFTW_RODFT01);
 std::array< Matrix<Complex, TL_NONE>, 2> cfield = matrix_array<Complex>( nz, nx/2+1);
 std::array< Matrix<double, TL_DFT_1D>, 2> field = matrix_array<double, TL_DFT_1D>( nz, nx);
 Matrix< QuadMat< Complex, 2>> coefficients( nz, nx/2+1);
@@ -51,7 +51,7 @@ int main()
     for( unsigned i=0; i<nz; i++)
         for( unsigned j=0; j<nx/2+1; j++)
             rayleigh_equations( coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
-    karniadakis.init_coeff( coefficients, (double)(2*nx*(nz+1))); //swaps in coefficients
+    karniadakis.init_coeff( coefficients, (double)(2*nx*(nz))); //swaps in coefficients
     //Initialize the complex fields ////////////////////////
     cfield[0].zero();
     cfield[1].zero();

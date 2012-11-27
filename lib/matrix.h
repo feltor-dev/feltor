@@ -132,6 +132,8 @@ namespace toefl{
          * If src is void then so will be this.
          */
         Matrix( const Matrix& src);
+
+        Matrix( Matrix&& temporary_src);
         /*! @brief Deep assignment 
          *
          * Copy every (including padded) value of the source Matrix
@@ -141,7 +143,7 @@ namespace toefl{
          * @return this
          * \note throws an error if src is void or doesn't have the same size.
          */
-        const Matrix& operator=( const Matrix& src);
+        Matrix& operator=( const Matrix& src);
 
         /*! @brief Allocate memory for void matrices
          *
@@ -336,9 +338,13 @@ namespace toefl{
                 ptr[i] = src.ptr[i];
         }
     }
+    template <class T, enum Padding P>
+    Matrix<T, P>::Matrix(  Matrix&& src):n(src.n), m(src.m), ptr(src.ptr){
+        src.ptr = nullptr;
+    }
     
     template <class T, enum Padding P>
-    const Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
+    Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
     {
         if( &src != this)
         {

@@ -9,8 +9,8 @@ namespace toefl{
 
     enum bc { TL_PERIODIC = 0, //!< Periodic boundary
               TL_DST00, //!< dst 1
-              TL_DST01, //!< dst 2
-              TL_DST10, //!< dst 3
+              TL_DST10, //!< dst 2
+              TL_DST01, //!< dst 3
               TL_DST11 //!<  dst 4
     }; 
 
@@ -34,6 +34,7 @@ namespace toefl{
     class GhostMatrix: public Matrix<T,P>
     {
       private:
+        enum bc bc_rows, bc_cols;
         Matrix<T,TL_NONE> ghostRows;
         Matrix<T,TL_NONE> ghostCols;
         void allocate_virtual(){//Allocates not only parent matrix but also ghostMatrices
@@ -49,7 +50,7 @@ namespace toefl{
             
       public:
         /*! @brief Construct an empty void GhostMatrix*/
-        GhostMatrix( );
+        GhostMatrix( const enum bc bc_rows = TL_PERIODIC,  const enum bc bc_cols = TL_PERIODIC);
         /*! @brief Allocate memory.
          *
          * Like any other Matrix a GhostMatrix can be void, padded etc. 
@@ -58,7 +59,7 @@ namespace toefl{
          * @param cols Columsn of the Matrix
          * @param allocate Whether memory shall be allocated or not
          */
-        GhostMatrix( const size_t rows, const size_t cols, const bool allocate = true);
+        GhostMatrix( const size_t rows, const size_t cols, const enum bc bc_rows = TL_PERIODIC, const enum bc bc_cols = TL_PERIODIC, const bool allocate = true);
         /*! @brief Allocate and init memory.
          *
          * Like any other Matrix a GhostMatrix can be void, padded etc. 
@@ -68,7 +69,7 @@ namespace toefl{
          * @param value 
          *  Value the memory (including ghostcells) shall be initialized to
          */
-        GhostMatrix( const size_t rows, const size_t cols, const T& value );
+        GhostMatrix( const size_t rows, const size_t cols, const T& value, const enum bc bc_rows = TL_PERIODIC,  const enum bc bc_cols = TL_PERIODIC);
         /*! @brief Access Operator for boundary values
          *
          * @param i row index (may equal -1 and rows)
@@ -98,19 +99,18 @@ namespace toefl{
          * @param bc_rows Condition for the ghost rows. 
          * @param bc_cols Condition for the ghost columns.
          */
-        void initGhostCells( enum bc bc_rows, enum bc bc_cols);
+        inline void initGhostCells( );
 
     };
     template< typename T, enum Padding P>
-    GhostMatrix<T,P>::GhostMatrix():Matrix<T,P>(), ghostRows(), ghostCols(){}
+    GhostMatrix<T,P>::GhostMatrix(const enum bc bc_rows, const enum bc bc_cols ):  Matrix<T,P>(),bc_rows(bc_rows), bc_cols(bc_cols), ghostRows(), ghostCols(){}
     
     template< typename T, enum Padding P>
-    GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const bool alloc): 
-                        Matrix<T,P>(rows, cols, alloc), ghostRows( 2, cols + 2, alloc), ghostCols( rows, 2, alloc) {}
+    GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const enum bc bc_rows, const enum bc bc_cols , const bool alloc):
+                        Matrix<T,P>(rows, cols, alloc), bc_rows( bc_rows), bc_cols( bc_cols), ghostRows( 2, cols + 2, alloc), ghostCols( rows, 2, alloc) {}
 
     template< typename T, enum Padding P>
-    GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const T& value): 
-                        Matrix<T,P>(rows, cols, value), ghostRows( 2, cols + 2, value), ghostCols( rows, 2, value) { }
+    GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const T& value, const enum bc bc_rows,  const enum bc bc_cols):  Matrix<T,P>(rows, cols, value),bc_rows(bc_rows), bc_cols(bc_cols), ghostRows( 2, cols + 2, value), ghostCols( rows, 2, value) { }
     
     template< typename T, enum Padding P>
     T& GhostMatrix<T,P>::at( const int i, const int j)
@@ -154,11 +154,11 @@ namespace toefl{
         return (*this)(i,j);
     }
     template< typename T, enum Padding P>
-    void GhostMatrix<T,P>::initGhostCells( enum bc b_rows, enum bc b_cols)
+    void GhostMatrix<T,P>::initGhostCells()
     {
         const unsigned cols = ghostRows.cols(); 
         const unsigned rows = ghostCols.rows(); 
-        switch(b_cols)
+        switch(bc_cols)
         {
             case( TL_PERIODIC): 
                 for( unsigned i=0; i<rows; i++)
@@ -174,14 +174,14 @@ namespace toefl{
                     ghostCols( i, 1) = 0;
                 }
                 break;
-            case( TL_DST01):
+            case( TL_DST10):
                 for( unsigned i=0; i<rows; i++)
                 {
                     ghostCols( i, 0) = -(*this)(i, 0);
                     ghostCols( i, 1) = -(*this)(i, cols-3);
                 }
                 break;
-            case( TL_DST10):
+            case( TL_DST01):
                 for( unsigned i=0; i<rows; i++)
                 {
                     ghostCols( i, 0) = 0;
@@ -196,7 +196,7 @@ namespace toefl{
                 }
                 break;
         }
-        switch( b_rows)
+        switch( bc_rows)
         {
             case( TL_PERIODIC):
                 ghostRows(0,0) = ghostCols( rows-1, 0);
@@ -218,7 +218,7 @@ namespace toefl{
                 for( unsigned i=0; i<cols; i++)
                     ghostRows(1,i) = 0;
                 break;
-            case( TL_DST01):
+            case( TL_DST10):
                 ghostRows(0,0) = -ghostCols( 0, 0);
                 for( unsigned i=0; i<cols-2; i++)
                 {
@@ -232,7 +232,7 @@ namespace toefl{
                 }
                 ghostRows(1, cols-1) = -ghostCols( rows-1 , 1);
                 break;
-            case( TL_DST10):
+            case( TL_DST01):
                 for( unsigned i=0; i<cols; i++)
                     ghostRows(0,i) = 0;
                 ghostRows(1,0) = ghostCols( rows-2, 0);
