@@ -13,11 +13,11 @@ const unsigned rows = 2, cols = 100;
 const double h = 1./cols;
 int main()
 {
-    GhostMatrix<double, TL_DFT_DFT> lhs( rows, cols), rhs( rows, cols);
+    GhostMatrix<double, TL_DFT> lhs( rows, cols), rhs( rows, cols);
     Matrix<std::complex<double>> clhs( rows, cols/2+1), crhs( rows, cols);
     Matrix<std::complex<double>> cjac( rows, cols/2+1);
     Matrix<std::complex<double>> cjac_exact( rows, cols/2+1);
-    Matrix<double, TL_DFT_DFT> jac( rows, cols);
+    Matrix<double, TL_DFT> jac( rows, cols);
     Arakawa arakawa(h);
 
     DFT_DFT dft_dft( rows, cols);

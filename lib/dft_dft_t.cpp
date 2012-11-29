@@ -14,7 +14,7 @@ using namespace toefl;
  */
 int main()
 {
-    Matrix<double, TL_DFT_DFT> m1{5, 10};
+    Matrix<double, TL_DFT> m1{5, 10};
     Matrix<complex<double> >   m1_{ 5, 10/2 + 1};
     DFT_DFT dft_dft( 5,10);
     double dx = 1./(10.), dy = 1./5;
@@ -30,7 +30,7 @@ int main()
     }catch( Message& m){m.display();}
     cout << "The backtransformed matrix (50 times input)\n"<<m1<<endl;
 
-    Matrix<double, TL_DFT_DFT> m0( 5,10);
+    Matrix<double, TL_DFT> m0( 5,10);
     Matrix<complex< double> > m0_(5,10/2 + 1);
     fftw_plan plan = fftw_plan_dft_r2c_2d( 5, 10, m0.getPtr(), fftw_cast(m0.getPtr()), FFTW_MEASURE);
     fftw_plan plan2 = fftw_plan_dft_c2r_2d( 5, 10, fftw_cast(m0.getPtr()), m0.getPtr(), FFTW_MEASURE);

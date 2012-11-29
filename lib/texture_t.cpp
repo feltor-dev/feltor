@@ -1,6 +1,5 @@
 #include <iostream>
 #include <GL/glfw.h>
-#include <cmath>
 #include "texture.h"
 #include "matrix.h"
 
@@ -11,6 +10,7 @@ const unsigned nx = 10;
 //Draws a simple textured square in an open window 
 
 using namespace std;
+using namespace toefl;
 int main()
 {
     

@@ -31,10 +31,10 @@ const double R = -l_kq*l_kq*l_kq/dx_k/dx_k;
 const double omega_0 = 1.;
 const double theta_0 = l_kq/dx_k*omega_0;
 
-Karniadakis<2,Complex,TL_DFT_1D> karniadakis( nz,nx,dt);
+Karniadakis<2,Complex,TL_DFT> karniadakis( nz,nx, nz, nx/2+1,dt);
 DFT_DRT dft_drt( nz, nx, FFTW_RODFT01);
-std::array< Matrix<Complex, TL_NONE>, 2> cfield = matrix_array<Complex>( nz, nx/2+1);
-std::array< Matrix<double, TL_DFT_1D>, 2> field = matrix_array<double, TL_DFT_1D>( nz, nx);
+auto cfield = MatrixArray<Complex, TL_NONE,2>::construct( nz, nx/2+1);
+auto field  = MatrixArray<double, TL_DFT, 2 >::construct( nz, nx);
 Matrix< QuadMat< Complex, 2>> coefficients( nz, nx/2+1);
 
 void rayleigh_equations( QuadMat< Complex,2>& coeff, const Complex dx, const Complex dy)

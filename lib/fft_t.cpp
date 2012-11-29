@@ -15,7 +15,7 @@ int main()
     double dx;
     size_t rows = 1; 
     size_t cols = 10;
-    Matrix<double, TL_DFT_1D> m2(rows,cols);
+    Matrix<double, TL_DFT> m2(rows,cols);
     Matrix<complex<double>, TL_NONE> m2_( rows, cols/2+1, TL_VOID);
     fftw_plan forward_plan  = plan_dft_1d_r2c(rows, cols, m2.getPtr(), fftw_cast(m2.getPtr()), FFTW_MEASURE);
     fftw_plan backward_plan = plan_dft_1d_c2r(rows, cols, fftw_cast(m2.getPtr()), m2.getPtr(), FFTW_MEASURE);

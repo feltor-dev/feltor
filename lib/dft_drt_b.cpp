@@ -14,7 +14,7 @@ fftw_r2r_kind kind = FFTW_RODFT10;
 int main()
 {
     Timer t;
-    Matrix<double, TL_DFT_1D> test( rows, cols);
+    Matrix<double, TL_DFT> test( rows, cols);
     Matrix<complex<double> > test_( rows, cols/2 +1);
     DFT_DRT dft_drt( rows, cols, kind);
     for( size_t i = 0; i < rows; i++)

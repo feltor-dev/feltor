@@ -2,8 +2,7 @@
 #include <iomanip>
 #include <array>
 #include <GL/glfw.h>
-#include "tl_numerics.h"
-#include "texture.h"
+#include "toefl.h"
 
 using namespace  std;
 using namespace toefl;
@@ -19,15 +18,15 @@ const double R = 500000;
 const double P = 10;
 const double nu = 0.0001;
 const double nx = 128;
-const double nz = 63; //number of inner points
+const double nz = 64; //number of inner points
 const double lz = 1.;
-const double h = 1./(double)(nz+1);
+const double h = 1./(double)(nz);
 const double lx = (double)nx*h;
 const double dt = 5e-6;
 
 const double prefactor = (double)(nx*2*(nz));
 
-Karniadakis<2,Complex,TL_DFT_1D> karniadakis( nz,nx,dt);
+Karniadakis<2,Complex,TL_DFT> karniadakis( nz,nx,nz,nx/2+1,dt);
 DFT_DRT dft_drt( nz, nx, FFTW_RODFT10, FFTW_MEASURE);
 Arakawa arakawa(h);
 
@@ -44,14 +43,13 @@ inline void laplace_inverse( double& l_inv, const Complex dx, const Complex dy)
     l_inv = 1.0/(dx*dx+dy*dy).real();
 }
 
-//Felder 
-std::array< Matrix<double, TL_DFT_1D>, 2>  field = matrix_array<double, TL_DFT_1D>( nz, nx);
-std::array< Matrix<double, TL_DFT_1D>, 2>  nonlinear = matrix_array<double,TL_DFT_1D>( nz, nx);
-      GhostMatrix<double, TL_DFT_1D>       ghostfield( nz, nx, TL_PERIODIC, TL_DST10);
-      GhostMatrix<double, TL_DFT_1D>       phi( nz, nx, TL_PERIODIC, TL_DST10);
-//Complex fields
-std::array< Matrix<Complex, TL_NONE>, 2>    cfield = matrix_array<Complex>( nz, nx/2+1);
-            Matrix<Complex, TL_NONE>        cphi( nz, nx/2+1);
+//Fields
+auto field      = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
+auto nonlinear  = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
+auto cfield = MatrixArray<Complex, TL_NONE,2>::construct( nz, nx/2+1);
+GhostMatrix<double, TL_DFT> ghostfield( nz, nx, TL_PERIODIC, TL_DST10);
+GhostMatrix<double, TL_DFT> phi( nz, nx, TL_PERIODIC, TL_DST10);
+Matrix<Complex, TL_NONE> cphi( nz, nx/2+1);
 //Coefficients
 Matrix< QuadMat< Complex, 2>> coefficients( nz, nx/2+1);
 Matrix< double, TL_NONE>   cphi_coefficients( nz, nx/2+1);
@@ -107,8 +105,8 @@ int main()
     while( running)
     {
         //generate a texture
-        gentexture_RGBf_temp( tex, field[0], R);
-        //gentexture_RGBf( tex, field[0], R);
+        //gentexture_RGBf_temp( tex, field[0], R);
+        gentexture_RGBf( tex, field[0], R);
         glLoadIdentity();
         glClearColor(0.f, 0.f, 0.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);

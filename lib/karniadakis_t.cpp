@@ -19,22 +19,13 @@ int main()
     double t = 0;
 
     //initialize the linearity and the nonlinearity
-    Matrix< QuadMat<double,2> > coeff( rows, cols, Eins<2>());
+    Matrix< QuadMat<double,2> > coeff( rows, cols, One<2>());
     Matrix<double, TL_NONE> m( rows, cols, 1.), n( rows, cols, 1.);
-    std::array< Matrix<double>, 2> v, non;
-    try{
-        v[0].allocate( rows, cols);
-        v[1].allocate( rows, cols);
-        non[0].allocate( rows, cols);
-        non[1].allocate( rows, cols);
-
-        v[0] = v[1] = m;
-        non[0] = non[1] = n;
-    }catch(Message& m){m.display();}
+    std::array< Matrix<double>, 2> v{{m,m}}, non{{n,n}};
 
     //Test of Karniadakis scheme
     cout << "Construct Karniadakis object...\n";
-    Karniadakis<2, double, TL_NONE> k( rows, cols, dt);
+    Karniadakis<2, double, TL_NONE> k( rows, cols, rows, cols, dt);
     k.init_coeff( coeff, 1. );
     cout << "Make various steps...\n";
     

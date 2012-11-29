@@ -1,57 +1,57 @@
-#ifndef _PADDING_
-#define _PADDING_
+#ifndef _TL_PADDING_
+#define _TL_PADDING_
 
 namespace toefl{
 
-    /*! @brief Provide various padding types of the Matrix class */
-    enum Padding{ TL_NONE, //!< Don't use any padding
-                  TL_DFT_1D, TL_DFT_2D, TL_DRT_DFT, TL_DFT_DFT};
+/*! @brief Provide various padding types of the Matrix class */
+enum Padding{ TL_NONE, //!< Don't use any padding
+              TL_DFT, //!< Pad lines with 2-cols%2 elements for inplace DFT
+              TL_DRT_DFT //!< Add two lines at end of matrix for DFT in 2nd dimension
+            };
 
-    /*! @brief template traits class for the efficient implementation of
-     * the access operators in the matrix class.
+/*! @brief template traits class for the efficient implementation of
+ * the access operators in the matrix class.
+ *
+ * These functions are also used in copy and construction operators.
+ */
+template <enum Padding P> //i.e. TL_NONE
+struct TotalNumberOf
+{
+    /*! @brief Return # of columns including padded ones
      *
-     * These functions are also used in copy and construction operators.
+     * @param cols # of visible columns in the matrix
+     * @return Total # of columns in the matrix
      */
-    template <enum Padding P> //i.e. TL_NONE
-    struct TotalNumberOf
-    {
-        /*! @brief */
-        static inline size_t cols( const size_t m){return m;}
-        static inline size_t elements( const size_t n, const size_t m){return n*m;}
-    };
-    
-    ///@cond
-    template <>
-    struct TotalNumberOf<TL_DFT_1D>
-    {
-        static inline size_t cols( const size_t m){ return m - m%2 + 2;}
-        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
-    };
-    
-    template <>
-    struct TotalNumberOf<TL_DFT_2D>
-    {
-        static inline size_t cols( const size_t m){ return m;}
-        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
-    };
-    template <>
-    struct TotalNumberOf<TL_DRT_DFT>
-    {
-        static inline size_t cols( const size_t m){ return m;}
-        static inline size_t elements( const size_t n, const size_t m){return m*(n - n%2 + 2);}
-    };
-    template <>
-    struct TotalNumberOf<TL_DFT_DFT>
-    {
-        static inline size_t cols( const size_t m){ return m - m%2 + 2;}
-        static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
-    };
-    ///@endcond
+    static inline size_t columns( const size_t cols){return cols;}
+    /*! @brief Return total # of elements in the matrix
+     *
+     * @param rows # of visible rows in the matrix
+     * @param cols # of visible columns in the matrix
+     * @return Total # of elements in the matrix
+     */
+    static inline size_t elements( const size_t rows, const size_t cols){return rows*cols;}
+};
+
+///@cond
+template <>
+struct TotalNumberOf<TL_DFT>
+{
+    static inline size_t columns( const size_t m){ return m - m%2 + 2;}
+    static inline size_t elements( const size_t n, const size_t m){return n*(m - m%2 + 2);}
+};
+
+template <>
+struct TotalNumberOf<TL_DRT_DFT>
+{
+    static inline size_t columns( const size_t m){ return m;}
+    static inline size_t elements( const size_t n, const size_t m){return m*(n - n%2 + 2);}
+};
+///@endcond
 
 
 
-}
+} //namespace toefl
 
 
 
-#endif //_PADDING_
+#endif //_TL_PADDING_

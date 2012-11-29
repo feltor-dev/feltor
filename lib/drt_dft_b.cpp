@@ -37,11 +37,11 @@ int main()
     t.tic();
     drt_drt.forward( m0, m0);
     t.toc();
-    cout << "DRT_DRT Transformation took " << t.diff()<< "s\n";
+    cout << "DRT_DRT (R2HC) Transformation took " << t.diff()<< "s\n";
     t.tic();
     drt_drt.backward( m0, m0);
     t.toc();
-    cout << "DRT_DRT Backtransformation took " << t.diff() <<"s\n";
+    cout << "DRT_DRT (HC2R) Backtransformation took " << t.diff() <<"s\n";
 
 
     return 0 ;

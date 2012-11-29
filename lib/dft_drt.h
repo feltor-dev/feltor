@@ -1,5 +1,5 @@
-#ifndef _TL_DFT_1D_
-#define _TL_DFT_1D_
+#ifndef _TL_DFT_DRT_
+#define _TL_DFT_DRT_
 
 #include <complex>
 #include "fftw3.h"
@@ -13,6 +13,9 @@ namespace toefl
      * First transforms linewise r2c, then transposes (r2r) and transforms linewise r2r.
      * The result is transposed back (r2r). 
      * The Backward transform goes the same way in the other direction.
+     * @note Because of the extra transposes the transformation is not as fast
+     * as it could be. The fastest would be a 2d r2r transform of r2hc type. 
+     * But then the halfcomplex format is so ugly that we don't want to do this.
      */
     class DFT_DRT
     {
@@ -28,8 +31,8 @@ namespace toefl
       public:
         DFT_DRT( const size_t rows, const size_t cols, const fftw_r2r_kind kind, const unsigned = FFTW_MEASURE);
         ~DFT_DRT();
-        void r2c( Matrix<double, TL_DFT_1D>& inout, Matrix<complex, TL_NONE>& swap_T);
-        void c2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DFT_1D>& swap);
+        void r2c( Matrix<double, TL_DFT>& inout, Matrix<complex, TL_NONE>& swap_T);
+        void c2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DFT>& swap);
         DFT_DRT( DFT_DRT& ) = delete;
         DFT_DRT& operator=( DFT_DRT&) = delete;
     };
@@ -43,7 +46,7 @@ namespace toefl
         */
     DFT_DRT::DFT_DRT( const size_t rows, const size_t cols, const fftw_r2r_kind kind, const unsigned flags):rows(rows), cols(cols)
     {
-        Matrix< double, TL_DFT_1D> temp(rows, cols);
+        Matrix< double, TL_DFT> temp(rows, cols);
         forward = plan_dft_1d_r2c( rows, cols, temp.getPtr(), reinterpret_cast<fftw_complex*>(temp.getPtr()), flags);
         backward = plan_dft_1d_c2r( rows, cols, reinterpret_cast<fftw_complex*>(temp.getPtr()), temp.getPtr(), flags);
         transpose_forward = plan_transpose( rows, cols + 2 -cols%2, temp.getPtr(), temp.getPtr(), flags);
@@ -78,10 +81,10 @@ namespace toefl
     /*! @brief Perform a r2c transformation
     
     Transformations are always done inplace, if you want to preserve input copy it first. 
-    \param m contains values to be transformed, contains memory of swap on output
+    \param m contains values to be transformed, contains memory of swap on output //A DST2 is DFT10 NOT DFT01 !!
     \param swap contains transformed values on output (maybe void)
     */
-    void DFT_DRT::r2c( Matrix<double, TL_DFT_1D>& m, Matrix<complex, TL_NONE>& swap)
+    void DFT_DRT::r2c( Matrix<double, TL_DFT>& m, Matrix<complex, TL_NONE>& swap)
     {
 #ifdef TL_DEBUG
         if( m.rows() != rows || m.cols() != cols)
@@ -103,7 +106,7 @@ namespace toefl
     \param m contains values to be transformed, contains memory of swap on output
     \param swap contains transformed values on output (maybe void)
     */
-    void DFT_DRT::c2r( Matrix<complex, TL_NONE>& m, Matrix<double, TL_DFT_1D>& swap)
+    void DFT_DRT::c2r( Matrix<complex, TL_NONE>& m, Matrix<double, TL_DFT>& swap)
     {
 #ifdef TL_DEBUG
         if( swap.rows() != rows || swap.cols() != cols)
@@ -121,4 +124,4 @@ namespace toefl
     }
 }
 
-#endif //_TL_DFT_1D_
+#endif //_TL_DFT_DRT_

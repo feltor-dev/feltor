@@ -9,8 +9,10 @@
 #include <iostream>
 #include <float.h>
 #include <array>
+#include <cmath>
 #include "matrix.h"
 
+namespace toefl{
 /*! @brief POD that contains RGB values for 256 colors*/
 struct colormap_f
 {
@@ -191,4 +193,5 @@ void gentexture_RGBf_temp( Texture_RGBf& tex, const M& theta, const double ray)
         }
 }
 
+} //namespace toefl
 #endif // _TL_TEXTURE_

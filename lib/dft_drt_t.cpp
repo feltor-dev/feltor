@@ -10,7 +10,7 @@ using namespace toefl;
 
 int main()
 {
-    Matrix<double, TL_DFT_1D> test( 5, 10);
+    Matrix<double, TL_DFT> test( 5, 10);
     Matrix<complex<double> > test_( 5, 6);
     DFT_DRT dft_drt( 5, 10, FFTW_RODFT10); //A DST2 is DFT10 NOT DFT01 !!
     test.zero();

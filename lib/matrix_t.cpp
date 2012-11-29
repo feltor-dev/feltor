@@ -6,7 +6,7 @@ using namespace std;
 using namespace toefl;
 
 typedef double type;
-typedef Matrix<type, TL_DFT_DFT> DoubMat;
+typedef Matrix<type, TL_DFT> DoubMat;
 type value = 0; //{5,2};
 
 int main()

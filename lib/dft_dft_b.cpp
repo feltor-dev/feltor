@@ -10,7 +10,7 @@ using namespace toefl;
 unsigned rows = 512, cols = 4*512;
 int main()
 {
-    Matrix<double, TL_DFT_DFT> m1(rows, cols);
+    Matrix<double, TL_DFT> m1(rows, cols);
     Matrix<complex<double> >   m1_( rows, cols/2 + 1);
     Timer t;
     DFT_DFT dft_dft( rows,cols, FFTW_MEASURE);
@@ -30,8 +30,8 @@ int main()
 
     // inplace is faster than out of place
     // r2c_2d is faster than r2c_1d, transpose, c2c_1d
-    Matrix<double, TL_DFT_DFT> m0(rows, cols);
-    Matrix<double, TL_DFT_DFT> m2(rows, cols);
+    Matrix<double, TL_DFT> m0(rows, cols);
+    Matrix<double, TL_DFT> m2(rows, cols);
     Matrix<complex<double> >   m0_(rows, cols/2 + 1);
     fftw_plan plan = fftw_plan_dft_r2c_2d( rows, cols, m0.getPtr(), fftw_cast(m0.getPtr()), FFTW_MEASURE);
     fftw_plan plan2 = fftw_plan_dft_c2r_2d( rows, cols, fftw_cast(m0.getPtr()), m0.getPtr(), FFTW_MEASURE);
