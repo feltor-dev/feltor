@@ -1,4 +1,5 @@
-/*! @file This file includes all header files of the toefl library
+/*! @file 
+ * @brief This file includes all header files of the toefl library
  */
 #ifndef _TL_TOEFL_
 #define _TL_TOEFL_

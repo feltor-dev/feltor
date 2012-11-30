@@ -117,11 +117,10 @@ typedef toefl::Matrix<std::array<float,3>, toefl::TL_NONE> Texture_RGBf; //!< Th
 
 /*! @brief updates a texture with a given field for use of the glTexImage2D() function
 
-    @param field a matrix containing the field to be plotted
-    @param draw_h the height of the field
-    @param draw_w the width of the field
+    @param tex A texture array
+    @param field A matrix containing the field to be plotted
     @param maxabs the absolute of the maximum value of the field
-    @return a copy the static texture 
+    @throw A Message if tex and field don't have the same sizes
 */
 template< class M>
 void gentexture_RGBf( Texture_RGBf& tex, const M& field, const double maxabs)
@@ -165,6 +164,7 @@ void gentexture_RGBf( Texture_RGBf& tex, const M& field, const double maxabs)
     @param tex A texture array. 
     @param theta The temperature field
     @param ray the Rayleigh number R 
+    @throw A Message if tex and theta don't have the same sizes
 */
 template< class M>
 void gentexture_RGBf_temp( Texture_RGBf& tex, const M& theta, const double ray)

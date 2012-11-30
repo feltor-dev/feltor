@@ -47,8 +47,8 @@ inline void laplace_inverse( double& l_inv, const Complex dx, const Complex dy)
 auto field      = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
 auto nonlinear  = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
 auto cfield = MatrixArray<Complex, TL_NONE,2>::construct( nz, nx/2+1);
-GhostMatrix<double, TL_DFT> ghostfield( nz, nx, TL_PERIODIC, TL_DST10);
-GhostMatrix<double, TL_DFT> phi( nz, nx, TL_PERIODIC, TL_DST10);
+GhostMatrix<double, TL_DFT> ghostfield( nz, nx, TL_DST10, TL_PERIODIC);
+GhostMatrix<double, TL_DFT> phi( nz, nx, TL_DST10, TL_PERIODIC);
 Matrix<Complex, TL_NONE> cphi( nz, nx/2+1);
 //Coefficients
 Matrix< QuadMat< Complex, 2>> coefficients( nz, nx/2+1);

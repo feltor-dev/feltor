@@ -5,12 +5,29 @@
  *
  *
  * @mainpage
- * This is the toefl library.
- * @par A word on indexing
+ * Welcome to the toefl library.
+ * @par Structure of the library
+ *  The library provides a matrix class designed to cope well with inplace fourier
+ *  transformations as well as finite difference schemes like the arakawa scheme.
+ *  This data structure is the basis for three kind of solver classes. The Fourier
+ *  transform classes, the Arakawa class and the Karniadakis class which takes
+ *  care of timestepping issues. The library further provides a read function
+ *  for ASCII parameter input and a texture interface for generating
+ *  textures to be used by OpenGL visualisation. 
+ * @note Every .h file comes along with a _t.cpp and a _b.cpp file. These 
+ * are for testing and benchmarking purposes. 
+ * @par Error Checking
+ *  For performance reasons errors (like out of bound indexing) are only 
+ *  checked when the Macro TL_DEBUG is defined. (Use e.g. the gcc compiler option
+ *  -DTL_DEBUG to define it). This might decreases performance by a factor of 10, 
+ *  but is essential when you build a solver. When it is defined, instances of 
+ *  the Message class will be thrown at you and if you don't catch them will 
+ *  terminate your program. So you probably want to catch them and see what 
+ *  the message is after all ;-)
  *
+ * @par A word on indexing
  * Assuming we have a physical box, that spans the coordinate range (0,0) to (lx, ly) 
  * we make the following correspondance between matrix elements and grid points:
- *
  * The first element of our matrices corresponds to the lower left corner of the box (i.e. the origin)
  * Subsequent elements progress left to right through the remaining grid points in the lowest row of the grid
  * and then in successively higher rows of the grid. The final element corresponds to the upper right corner 
@@ -25,6 +42,12 @@
  * For cases that defer from this we use the suffix _T (for transposed) in variable names, 
  * i.e. the vector double* field_T would store the y-direction continuously and the x-index would be the first one.
  *
+ *
+ * Have fun using the toefl library.
+ * 
+ *
+ */
+/*
  * @par A word on CUDA coding convention
  *
  * When programming on the graphics card it is important to note that 
@@ -36,7 +59,4 @@
  *
  * double* d_ptr_d; is thus a pointer in device memory pointing to a double in device memory 
  * double* ptr_d; is a pointer in cpu memory that points to a double in device memory.
- *
- * 
- *
  */

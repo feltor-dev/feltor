@@ -2,7 +2,7 @@
  * @file
  * @brief Implementation of the QuadMat class and the invert function
  * @author Matthias Wiesenberger
- * @email Matthias.Wiesenberger@uibk.ac.at
+ *  Matthias.Wiesenberger@uibk.ac.at
  *
  */
 #ifndef _TL_QUADMAT_

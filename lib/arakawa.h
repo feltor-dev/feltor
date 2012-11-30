@@ -1,8 +1,8 @@
 /*!
- * \file
- * \brief Implementation of the arakawa scheme
- * \author Matthias Wiesenberger
- * \email Matthias.Wiesenberger@uibk.ac.at
+ * @file
+ * @brief Implementation of the arakawa scheme
+ * @author Matthias Wiesenberger
+ *  Matthias.Wiesenberger@uibk.ac.at
  * 
  */
 #ifndef _TL_ARAKAWA_

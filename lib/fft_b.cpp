@@ -25,7 +25,7 @@ int main()
 
     cout << "Transposition takes " << t.diff() << " seconds\n";
 
-    Matrix<double, TL_DFT_1D> m2(rows,cols);
+    Matrix<double, TL_DFT> m2(rows,cols);
     Matrix<complex<double>, TL_NONE> m2_( rows, cols/2+1);
     fftw_plan forward_plan = plan_dft_1d_r2c(rows, cols, m2.getPtr(), reinterpret_cast<fftw_complex*>(m2.getPtr()), FFTW_MEASURE);
 

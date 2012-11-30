@@ -18,9 +18,9 @@ enum stepper { TL_EULER, //!< Euler scheme (use for 1st step)
 template< enum stepper S>
 struct Coefficients
 {
-    static double const gamma_0;
-    static const double alpha[3];
-    static const double beta[3];
+    static double const gamma_0; //!< Coefficient in the dft part
+    static const double alpha[3]; //!< Coefficients for the timestep
+    static const double beta[3]; //!< Coefficients fot the nonlinear part in the timestep.
 };
 ///@cond
 template<>
@@ -169,6 +169,10 @@ class Karniadakis
         multiply_coeff< n,T_k,Fourier_T>( c_inv,v,v);
     }
 
+    /*! @brief Display the original and the inverted coefficients
+     *
+     * @param os The outstream, the coefficients are streamed to.
+     */
     void display( std::ostream& os = std::cout) const
     {
         os << "The current coefficients are \n"<< c_origin

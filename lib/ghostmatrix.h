@@ -33,15 +33,20 @@ template< typename T, enum Padding P = TL_NONE>
 class GhostMatrix: public Matrix<T,P>
 {
   public:
-    /*! @brief Construct an empty void GhostMatrix*/
-    GhostMatrix( const enum bc bc_rows = TL_PERIODIC,  const enum bc bc_cols = TL_PERIODIC);
-    /*! @brief Allocate memory.
+    /*! @brief Allocate memory for the Matrix and the ghostcells.
      *
      * Like any other Matrix a GhostMatrix can be void, padded etc. 
-     * If the Matrix is void then the ghostcells are also void!
      * @param rows Rows of the matrix
-     * @param cols Columsn of the Matrix
-     * @param allocate Whether memory shall be allocated or not
+     * @param cols Columns of the Matrix
+     * @param bc_rows The boundary condition for the rows, i.e. for the first
+     *  and the last line of the Matrix.
+     * @param bc_cols The boundary condition for the columns, i.e. the first and 
+     *  the last column. 
+     * @param allocate Whether memory shall be allocated or not. Ghostcells
+     * are always allocated.
+     * @attention The horizontal boundary condition for e.g. the r2r transforms
+     *  in DRT_DRT corresponds to the boundary condition for columns. 
+     *  Analogously the vertical boundary conditions correspond to bc_rows.
      */
     GhostMatrix( const size_t rows, const size_t cols, const enum bc bc_rows = TL_PERIODIC, const enum bc bc_cols = TL_PERIODIC, const bool allocate = true);
     /*! @brief Allocate and init memory.
@@ -50,6 +55,10 @@ class GhostMatrix: public Matrix<T,P>
      * The ghostcells are always allocated
      * @param rows Rows of the matrix
      * @param cols Columns of the Matrix
+     * @param bc_rows The boundary condition for the rows, i.e. for the first
+     *  and the last line of the Matrix.
+     * @param bc_cols The boundary condition for the columns, i.e. the first and 
+     *  the last column. 
      * @param value 
      *  Value the memory (including ghostcells) shall be initialized to
      */
@@ -80,8 +89,6 @@ class GhostMatrix: public Matrix<T,P>
 
     /*! @brief Initialize ghost cells according to given boundary conditions
      *
-     * @param bc_rows Condition for the ghost rows. 
-     * @param bc_cols Condition for the ghost columns.
      */
     inline void initGhostCells( );
   private:
@@ -91,9 +98,9 @@ class GhostMatrix: public Matrix<T,P>
         
 
 };
-template< typename T, enum Padding P>
-GhostMatrix<T,P>::GhostMatrix(const enum bc bc_rows, const enum bc bc_cols ):  Matrix<T,P>(),bc_rows(bc_rows), bc_cols(bc_cols), ghostRows(), ghostCols(){}
 
+
+////////////////////////////////////////////DEFINITIONS////////////////////////////////////////////////
 template< typename T, enum Padding P>
 GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const enum bc bc_rows, const enum bc bc_cols , const bool alloc):
                     Matrix<T,P>(rows, cols, alloc), bc_rows( bc_rows), bc_cols( bc_cols), ghostRows( 2, cols + 2), ghostCols( rows, 2) {}

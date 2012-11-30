@@ -101,8 +101,8 @@ class Matrix
 
     /*! @brief Allocate and assign memory on the heap
      *
+     * @param rows logical number of rows (cannot be changed as long as memory is allocated for that object)
      * @param cols logical number of columns (cannot be changed as long as memory is allocated for that object)
-     * @param allocate determines whether memory should actually be allocated.
      * @param value Use operator= of type T to assign values
      */
     Matrix( const size_t rows, const size_t cols, const T& value);

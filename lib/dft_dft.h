@@ -8,7 +8,7 @@
 
 namespace toefl{
 
-/*! @brief Class for 2d discrete fourier transformations of Matrix
+/*! @brief Class for 2d discrete fourier transformations of Matrix using FFTW
  *
  * Actually just a wrapper for the dft_c2r_2d/r2c_2d plans and execute
  * functions.
@@ -52,7 +52,15 @@ class DFT_DFT
      */
     inline void c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT>& swap);
 
+    /*! @brief This class shall not be copied 
+     *
+     * Mainly because fftw_plans are not copyable
+     */
     DFT_DFT( DFT_DFT& ) = delete;
+    /*! @brief This class shall not be copy assigned
+     *
+     * Mainly because fftw_plans are not copyable
+     */
     DFT_DFT& operator=( DFT_DFT&) = delete;
 
     /*! @brief Free the fftw plans
