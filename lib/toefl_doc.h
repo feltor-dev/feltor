@@ -6,6 +6,7 @@
  *
  * @mainpage
  * Welcome to the toefl library.
+ *
  * @par Structure of the library
  *  The library provides a matrix class designed to cope well with inplace fourier
  *  transformations as well as finite difference schemes like the arakawa scheme.
@@ -14,8 +15,11 @@
  *  care of timestepping issues. The library further provides a read function
  *  for ASCII parameter input and a texture interface for generating
  *  textures to be used by OpenGL visualisation. 
+ *
  * @note Every .h file comes along with a _t.cpp and a _b.cpp file. These 
- * are for testing and benchmarking purposes. 
+ * are for testing and benchmarking purposes. Type make *_t/b to compile
+ * and run a testing/benchmark program.
+ *
  * @par Error Checking
  *  For performance reasons errors (like out of bound indexing) are only 
  *  checked when the Macro TL_DEBUG is defined. (Use e.g. the gcc compiler option
@@ -41,6 +45,13 @@
  * That means that the X-INDEX IS THE SECOND ONE.
  * For cases that defer from this we use the suffix _T (for transposed) in variable names, 
  * i.e. the vector double* field_T would store the y-direction continuously and the x-index would be the first one.
+ *
+ * @par Compile and link process
+ *  The toefl library is header only i.e. you don't have to precompile anything. 
+ *  The toefl library makes use of many features of the new C++11 standard so 
+ *  be sure your Compiler supports that. 
+ *  On the other hand you will need to add -lfftw and -lm to your compile command
+ *  in order to link the fftw and math library.
  *
  *
  * Have fun using the toefl library.

@@ -5,8 +5,8 @@ namespace toefl{
 
 /*! @brief Provide various padding types of the Matrix class */
 enum Padding{ TL_NONE, //!< Don't use any padding
-              TL_DFT, //!< Pad lines with 2-cols%2 elements for inplace DFT
-              TL_DRT_DFT //!< Add two lines at end of matrix for DFT in 2nd dimension
+              TL_DFT, //!< Pad lines with 2-cols%2 elements for inplace DFT in horizontal direction.
+              TL_DRT_DFT //!< Add two 2-rows%2 lines at end of matrix for inplace DFT in vertical direction
             };
 
 /*! @brief template traits class for the efficient implementation of

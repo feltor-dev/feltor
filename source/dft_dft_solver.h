@@ -1,237 +1,279 @@
 #include <complex>
-#include "tl_numerics.h"
+#include "toefl.h"
 #include "blueprint.h"
 #include "equations.h"
 
 namespace toefl
 {
-    template< size_t n>
-    class DFT_DFT_Solver
-    {
-        typedef std::complex<double> complex;
-        const size_t rows, cols;
-        const bool imp;
-        const double dt;
-        Vector< GhostMatrix<double, TL_DFT_DFT>, n > dens, phi;
-        Vector< Matrix<double, TL_DFT_DFT>, n > nonlinear;
-        /////////////////Complex (void) Matrices for fourier transforms///////////
-        Vector< Matrix< complex>, n> cdens, cphi;
-        ///////////////////Solvers////////////////////////
-        Arakawa arakawa;
-        Karniadakis<n, complex, TL_DFT_DFT> k;
-        DFT_DFT dft_dft;
-        /////////////////////Coefficients//////////////////////
-        Matrix< Vector< double, n> > coeff_phi;
-        Vector< Matrix< double>, n-1> coeff_Gamma;
-        void init_coefficients( const Boundary& bound, const Physical& phys);
+template< size_t n>
+class DFT_DFT_Solver
+{
+  public:
+    /*! @brief Construct a solver for periodic boundary conditions
+     *
+     * @param blueprint Contains all the necessary parameters
+     */
+    DFT_DFT_Solver( const Blueprint& blueprint);
+    /*! @brief Prepare Solver for execution
+     *
+     * This function initializes the Fourier Coefficients as well as 
+     * all low level solver needed. It performs two 
+     * initializing steps (by one onestep- and one twostep-method)
+     * in order to get the karniadakis scheme ready. The actual time is
+     * thus T_0 + 2*dt after initialisation. 
+     * @param v Container with three non void matrices
+     * @param t which Matrix is missing?
+     */
+    void init( std::array< Matrix<double,TL_DFT>, n>& v, enum target t);
+    /*! @brief Perform a step by the 3 step Karniadakis scheme*/
+    void step(){ step_<TL_ORDER3>();}
+    /*! @brief Get the result*/
+    void getField( enum target t, Matrix<double, TL_DFT>& m);
+  private:
+    typedef std::complex<double> complex;
+    //methods
+    void init_coefficients( const Boundary& bound, const Physical& phys);
+    void multiply_cphi_with_poisson_coefficients();//multiply cphi
+    void first_steps(); 
+    template< enum stepper S>
+    void step_();
+    //members
+    const size_t rows, cols;
+    const bool imp;
+    const double dt;
+    /////////////////fields//////////////////////////////////
+    GhostMatrix<double, TL_DFT> ghostdens, ghostphi;
+    std::array< Matrix<double, TL_DFT>, n> dens, phi, nonlinear;
+    /////////////////Complex (void) Matrices for fourier transforms///////////
+    std::array< Matrix< complex>, n> cdens, cphi;
+    ///////////////////Solvers////////////////////////
+    Arakawa arakawa;
+    Karniadakis<n, complex, TL_DFT> karniadakis;
+    DFT_DFT dft_dft;
+    /////////////////////Coefficients//////////////////////
+    Matrix< std::array< double, n> > phi_coeff;
+    std::array< Matrix< double>, n-1> gamma_coeff;
+};
 
-        void multiply_coefficients();//multiply phi
-        void first_steps(); 
-        template< enum stepper S>
-        void step_();
-      public:
-        /*! @brief Construct a solver for periodic boundary conditions
-         *
-         * @param blueprint Contains all the necessary parameters
-         */
-        DFT_DFT_Solver( const Blueprint& blueprint);
-        /*! @brief Prepare Solver for execution
-         *
-         * This function initializes the Fourier Coefficients as well as 
-         * all low level solver needed. It performs two 
-         * initializing steps (by one onestep- and one twostep-method)
-         * in order to get the karniadakis scheme ready. The actual time is
-         * thus T_0 + 2*dt after initialisation. 
-         * @param v Container with three non void matrices
-         * @param t which Matrix is missing?
-         */
-        void init( Vector< Matrix<double,TL_DFT_DFT>, n>& v, enum target t);
-        /*! @brief Perform a step by the 3 step Karniadakis scheme*/
-        void step(){ step_<TL_ORDER3>();}
-        /*! @brief Get the result*/
-        void getField( enum target t, const Matrix<double, TL_DFT_DFT>& m);
-    };
+template< size_t n>
+DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
+    rows( bp.getAlgorithmic().ny ), cols( bp.getAlgorithmic().nx ),
+    imp( bp.isEnabled( TL_IMPURITY)),
+    dt( bp.getAlgorithmic().dt),
+    //fields
+    ghostdens{ rows, cols, TL_PERIODIC, TL_PERIODIC, TL_VOID},
+    ghostphi{ ghostdens},
+    dens{ MatrixArray<double, TL_DFT,n>::construct( rows, cols)},
+    phi{ dens}, nonlinear{ dens},
+    cdens{ MatrixArray<complex, TL_NONE, n>::construct( rows, cols/2+1)}, 
+    cphi{cdens}, 
+    //Solvers
+    arakawa( bp.getAlgorithmic().h),
+    karniadakis(rows, cols, rows, cols/2+1,dt),
+    dft_dft( rows, cols, FFTW_MEASURE),
+    //Coefficients
+    phi_coeff{ rows, cols/2+1},
+    gamma_coeff{ MatrixArray< double, TL_NONE, n-1>::construct( rows, cols/2+1)}
+{
+    bp.consistencyCheck();
+    Physical phys = bp.getPhysical();
+    if( !bp.isEnabled( TL_CURVATURE))
+        phys.kappa = 0; 
+    init_coefficients( bp.getBoundary(), phys);
+}
 
-    template< size_t n>
-    DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
-        rows( bp.getAlgorithmic().ny ), cols( bp.getAlgorithmic().nx ),
-        imp( bp.isEnabled( TL_IMPURITY)),
-        dt( bp.getAlgorithmic().dt),
-        //fields
-        //Solvers
-        arakawa( bp.getAlgorithmic().h),
-        k(rows, cols, dt),
-        dft_dft( rows, cols, FFTW_MEASURE),
-        coeff_phi( rows, cols/2+1)
-    {
-        //allocate vectors
-        for( unsigned k=0; k<n; k++)
+template< size_t n>
+void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical& phys)
+{
+    Matrix< QuadMat< complex, n> > coeff( rows, cols/2+1);
+    double laplace;
+    const complex kxmin ( 0, 2.*M_PI/bound.lx), kymin( 0, 2.*M_PI/bound.ly);
+    const double kxmin2 = 2.*2.*M_PI*M_PI/bound.lx/bound.lx,
+                 kymin2 = 2.*2.*M_PI*M_PI/bound.ly/bound.ly;
+    Equations e( phys);
+    Poisson p( phys);
+    // dft_dft is not transposing so i is the y index by default
+    for( unsigned i = 0; i<rows; i++)
+        for( unsigned j = 0; j<cols/2+1; j++)
         {
-            dens[k].allocate(rows, cols);
-            phi[k].allocate( rows, cols);
-            nonlinear[k].allocate( rows, cols);
-            cdens[k].resize( rows, cols/2 +1);
-            cphi[k].resize( rows, cols/2 +1);
+            laplace = -kxmin2*(double)(j*j) - kymin2*(double)(i*i);
+            p( phi_coeff(i,j), laplace);  
+            e( coeff( i,j), (double)j*kxmin, (double)i*kymin);
         }
-        for( unsigned k=0; k<n-1; k++)
-        {
-            coeff_Gamma[k].allocate( rows, cols/2 + 1);
-        }
-        bp.consistencyCheck();
-        Physical phys = bp.getPhysical();
-        if( !bp.isEnabled( TL_CURVATURE))
-            phys.kappa_x = phys.kappa_y = 0; 
-        init_coefficients(bp.getBoundary(), phys);
-    }
-
-    template< size_t n>
-    void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical& phys)
-    {
-        Matrix< QuadMat< complex, n> > coeff( rows, cols/2+1);
-        double laplace;
-        const complex kxmin ( 0, 2.*M_PI/bound.lx), kymin( 0, 2.*M_PI/bound.ly);
-        const double kxmin2 = 2.*2.*M_PI*M_PI/bound.lx/bound.lx,
-                     kymin2 = 2.*2.*M_PI*M_PI/bound.ly/bound.ly;
-        Equations e( phys);
-        Poisson p( phys);
-        // ki = 2Pi*i/ly, 
-        // dft_dft is not transposing so i is the y index by default
+    if( n==2)
+        for( unsigned i = 0; i<rows; i++)
+            for( unsigned j = 0; j<cols/2+1; j++)
+                gamma_coeff[0](i,j) = p.gamma1_i( laplace);
+    if(n==3)
         for( unsigned i = 0; i<rows; i++)
             for( unsigned j = 0; j<cols/2+1; j++)
             {
-                laplace = -kxmin2*(double)(j*j) - kymin2*(double)(i*i);
-                p( coeff_phi(i,j), laplace);  
-                e( coeff( i,j), (double)j*kxmin, (double)i*kymin);
+                gamma_coeff[0](i,j) = p.gamma1_i( laplace);
+                gamma_coeff[1](i,j) = p.gamma1_z( laplace);
             }
-        if( n==2)
-            for( unsigned i = 0; i<rows; i++)
-                for( unsigned j = 0; j<cols/2+1; j++)
-                    coeff_Gamma[0](i,j) = p.gamma1_i( laplace);
-        if(n==3)
-            for( unsigned i = 0; i<rows; i++)
-                for( unsigned j = 0; j<cols/2+1; j++)
-                {
-                    coeff_Gamma[0](i,j) = p.gamma1_i( laplace);
-                    coeff_Gamma[1](i,j) = p.gamma1_z( laplace);
-                }
-        k.init_coeff( coeff);
-    }
-    template< size_t n>
-    void DFT_DFT_Solver<n>::multiply_coefficients()
-    {
-        if( n==2)
-        {
-            for( size_t i = 0; i < rows; i++)
-                for( size_t j = 0; j < cols/2 + 1; j++)
-                    cphi[0](i,j) = coeff_phi(i,j)[0]*cdens[0](i,j) 
-                                 + coeff_phi(i,j)[1]*cdens[1](i,j);
-            for( size_t i = 0; i < rows; i++)
-                for( size_t j = 0; j < cols/2 + 1; j++)
-                    cphi[1](i,j) = coeff_Gamma[0](i,j)*cphi[0](i,j);
-        }
-        else if( n==3)
-        {
-            for( size_t i = 0; i < rows; i++)
-                for( size_t j = 0; j < cols/2 + 1; j++)
-                    cphi[0](i,j) = coeff_phi(i,j)[0]*cdens[0](i,j) 
-                                 + coeff_phi(i,j)[1]*cdens[1](i,j) 
-                                 + coeff_phi(i,j)[2]*cdens[2](i,j);
-            for( size_t i = 0; i < rows; i++)
-                for( size_t j = 0; j < cols/2 + 1; j++)
-                {
-                    cphi[1](i,j) = coeff_Gamma[0](i,j)*cphi[0](i,j);
-                    cphi[2](i,j) = coeff_Gamma[1](i,j)*cphi[0](i,j);
-                }
-        }
-    }
-    template< size_t n>
-    void DFT_DFT_Solver<n>::init( const Vector< Matrix<double, TL_DFT_DFT>,n>& v, enum target t)
-    {
-        for( unsigned k=0; k<n; k++)
-            dft_dft.r2c( v[k], cdens[k]);
-        switch( t) //which field must be computed?
-        {
-            case( TL_ELECTRONS): //to be read again Gammas must be multiplied as well
-                throw Message( "Electron feature not implemented yet!\n",ping);
-                swap_fields( cphi[0], cdens[n-1]);
-                for( unsigned k=n-1; k>0; k--)
-                    swap_fields( cdens[k], cdens[k-1]);
-                for( unsigned i=0; i<rows; i++)
-                    for( unsigned j=0; j<cols/2+1; j++)
-                    {
-                        cdens[0](i,j) = cphi[0](i,j)/coeff_phi(i,j)[0];
-                        for( unsigned k=1; k<n; k++)
-                            cdens[0](i,j) -= cdens[k](i,j)*coeff_phi(i,j)[k]/coeff_phi(i,j)[0];
-                    }
-                break;
-            case( TL_IONS):
-                throw Message( "Ion feature not implemented yet!\n",ping);
-                swap_fields( cphi[0], cdens[n-1]);
-                for( unsigned k=n-1; k>1; k--)
-                    swap_fields( cdens[k], cdens[k-1]);
-                for( unsigned i=0; i<rows; i++)
-                    for( unsigned j=0; j<cols/2+1; j++)
-                    {
-                        cdens[1](i,j) = (cphi[0](i,j) - coeff_phi(i,j)[2]*cdens[0](i,j)) /coeff_phi(i,j)[1];
-                        for( unsigned k=2; k<n; k++) 
-                            cdens[0](i,j) -= cdens[k](i,j)*coeff_phi(i,j)[k]/coeff_phi(i,j)[0];
-                    }
-                break;
-            case( TL_IMPURITIES):
-                throw Message( "Impurity feature not implemented yet!\n",ping);
-                swap_fields( cphi[0], cdens[n-1]);
-                for( unsigned k=n-1; k>2; k--) //i.e. never for n = 3
-                    swap_fields( cdens[k], cdens[k-1]);
-                break;
-            case( TL_POTENTIAL):
-                multiply_coefficients();
-                break;
-        }
-        for( unsigned k=0; k<n; k++)
-        {
-            dft_dft.c2r( cdens[k], dens[k]);
-            dft_dft.c2r( cphi[k], phi[k]);
-        }
-        //now the density and the potential is given
-        first_steps();
-    }
-
-    template< size_t n>
-    void DFT_DFT_Solver<n>::first_steps()
-    {
-        k.invert_coeff<TL_EULER>( );
-        step_<TL_EULER>();
-        k.invert_coeff<TL_ORDER2>( );
-        step_<TL_ORDER2>();
-        k.invert_coeff<TL_ORDER3>( );
-    }
-
-    template< size_t n>
-    template< enum stepper S>
-    void DFT_DFT_Solver<n>::step_()
-    {
-        //1. Compute nonlinearity
-        for( unsigned j=0; j<n; j++)
-        {
-            dens[j].initGhostCells( TL_PERIODIC, TL_PERIODIC);
-            phi[j].initGhostCells( TL_PERIODIC, TL_PERIODIC);
-            arakawa( dens[j], phi[j], nonlinear[j]);
-        }
-        //2. perform karniadakis step
-        k.step_i<S>( dens, nonlinear);
-        //3. solve linear equation
-        //3.1. transform v_hut
-        for( unsigned j=0; j<n; j++)
-            dft_dft.r2c( dens[j], cdens[j]);
-        //3.2. perform karniadaksi step and multiply coefficients for phi
-        k.step_ii( cdens);
-        multiply_coefficients();
-        //3.3. backtransform
-        for( unsigned j=0; j<n; j++)
-        {
-            dft_dft.c2r( cdens[j], dens[j]);
-            dft_dft.c2r( cphi[j], phi[j]);
-        }
-    }
-
+    karniadakis.init_coeff( coeff, (double)rows*cols);
 }
+template< size_t n>
+void DFT_DFT_Solver<n>::multiply_cphi_with_poisson_coefficients()
+{
+    if( n==2)
+    {
+        for( size_t i = 0; i < rows; i++)
+            for( size_t j = 0; j < cols/2 + 1; j++)
+                cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
+                             + phi_coeff(i,j)[1]*cdens[1](i,j);
+        for( size_t i = 0; i < rows; i++)
+            for( size_t j = 0; j < cols/2 + 1; j++)
+                cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
+    }
+    else if( n==3)
+    {
+        for( size_t i = 0; i < rows; i++)
+            for( size_t j = 0; j < cols/2 + 1; j++)
+                cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
+                             + phi_coeff(i,j)[1]*cdens[1](i,j) 
+                             + phi_coeff(i,j)[2]*cdens[2](i,j);
+        for( size_t i = 0; i < rows; i++)
+            for( size_t j = 0; j < cols/2 + 1; j++)
+            {
+                cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
+                cphi[2](i,j) = gamma_coeff[1](i,j)*cphi[0](i,j);
+            }
+    }
+}
+template< size_t n>
+void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum target t)
+{ 
+    for( unsigned k=0; k<n; k++)
+    {
+#ifdef TL_DEBUG
+        if( v[k].isVoid())
+            throw Message("You gave me a void Matrix!!", ping);
+#endif
+        dft_dft.r2c( v[k], cdens[k]);
+    }
+    switch( t) //which field must be computed?
+    {
+        case( TL_ELECTRONS): 
+            //bring cdens and cphi in the right order
+            swap_fields( cphi[0], cdens[n-1]);
+            for( unsigned k=n-1; k>0; k--)
+                swap_fields( cdens[k], cdens[k-1]);
+            //now solve for cdens[0]
+            for( unsigned i=0; i<rows; i++)
+                for( unsigned j=0; j<cols/2+1; j++)
+                {
+                    cdens[0](i,j) = cphi[0](i,j)/phi_coeff(i,j)[0];
+                    for( unsigned k=0; k<n && k!=0; k++)
+                        cdens[0](i,j) -= cdens[k](i,j)*phi_coeff(i,j)[k]/phi_coeff(i,j)[0];
+                }
+            break;
+        case( TL_IONS):
+            //bring cdens and cphi in the right order
+            swap_fields( cphi[0], cdens[n-1]);
+            for( unsigned k=n-1; k>1; k--)
+                swap_fields( cdens[k], cdens[k-1]);
+            //solve for cdens[1]
+            for( unsigned i=0; i<rows; i++)
+                for( unsigned j=0; j<cols/2+1; j++)
+                {
+                    cdens[1](i,j) = cphi[0](i,j) /phi_coeff(i,j)[1];
+                    for( unsigned k=0; k<n && k!=1; k++) 
+                        cdens[1](i,j) -= cdens[k](i,j)*phi_coeff(i,j)[k]/phi_coeff(i,j)[1];
+                }
+            break;
+        case( TL_IMPURITIES):
+            //bring cdens and cphi in the right order
+            swap_fields( cphi[0], cdens[n-1]);
+            for( unsigned k=n-1; k>2; k--) //i.e. never for n = 3
+                swap_fields( cdens[k], cdens[k-1]);
+            //solve for cdens[2]
+            for( unsigned i=0; i<rows; i++)
+                for( unsigned j=0; j<cols/2+1; j++)
+                {
+                    cdens[2](i,j) = cphi[0](i,j) /phi_coeff(i,j)[2];
+                    for( unsigned k=0; k<n && k!=2; k++) 
+                        cdens[2](i,j) -= cdens[k](i,j)*phi_coeff(i,j)[k]/phi_coeff(i,j)[2];
+                }
+            break;
+        case( TL_POTENTIAL):
+            //solve for cphi
+            for( unsigned i=0; i<rows; i++)
+                for( unsigned j=0; j<cols/2+1; j++)
+                {
+                    cphi[0](i,j) = 0;
+                    for( unsigned k=0; k<n && k!=2; k++) 
+                        cphi[0](i,j) += cdens[k](i,j)*phi_coeff(i,j)[k];
+                }
+            break;
+    }
+    for( size_t i = 0; i < rows; i++)
+        for( size_t j = 0; j < cols/2 + 1; j++)
+            for( unsigned k=0; k<n-1; k++)
+                cphi[k+1](i,j) = gamma_coeff[k](i,j)*cphi[0](i,j);
+    for( unsigned k=0; k<n; k++)
+    {
+        dft_dft.c2r( cdens[k], dens[k]);
+        dft_dft.c2r( cphi[k], phi[k]);
+    }
+    //now the density and the potential is given
+    first_steps();
+}
+
+template< size_t n>
+void DFT_DFT_Solver<n>::getField( Matrix<double, TL_DFT>& m, enum target t)
+{
+#ifdef TL_DEBUG
+    if(m.isVoid()) 
+        throw Message( "You may not swap in a void Matrix!\n");
+#endif
+    switch( t)
+    {
+        case( TL_ELECTRONS)
+            swap_fields( m,//Pb: double buffering? 
+    }
+
+template< size_t n>
+void DFT_DFT_Solver<n>::first_steps()
+{
+    karniadakis.template invert_coeff<TL_EULER>( );
+    step_<TL_EULER>();
+    karniadakis.template invert_coeff<TL_ORDER2>();
+    step_<TL_ORDER2>();
+    karniadakis.template invert_coeff<TL_ORDER3>();
+    step_<TL_ORDER3>();
+}
+
+template< size_t n>
+template< enum stepper S>
+void DFT_DFT_Solver<n>::step_()
+{
+    //1. Compute nonlinearity
+    for( unsigned j=0; j<n; j++)
+    {
+        swap_fields( dens[j], ghostdens); //now dens[j] is void
+        swap_fields( phi[j], ghostphi); //now phi[j] is void
+        ghostdens.initGhostCells( );
+        ghostphi.initGhostCells(  );
+        arakawa( ghostdens, ghostphi, nonlinear[j]);
+        swap_fields( dens[j], ghostdens); //now ghostdens is void
+        swap_fields( phi[j], ghostphi); //now ghostphi is void
+    }
+    //2. perform karniadakis step
+    karniadakis.template step_i<S>( dens, nonlinear);
+    //3. solve linear equation
+    //3.1. transform v_hut
+    for( unsigned j=0; j<n; j++)
+        dft_dft.r2c( dens[j], cdens[j]);
+    //3.2. perform karniadaksi step and multiply coefficients for phi
+    karniadakis.template step_ii( cdens);
+    multiply_cphi_with_poisson_coefficients();
+    //3.3. backtransform
+    for( unsigned j=0; j<n; j++)
+    {
+        dft_dft.c2r( cdens[j], dens[j]);
+        dft_dft.c2r( cphi[j],  phi[j]);
+    }
+}
+
+} //namespace toefl

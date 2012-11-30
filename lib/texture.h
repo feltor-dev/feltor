@@ -115,12 +115,16 @@ colormap_ext redblue_ext()
 typedef toefl::Matrix<std::array<float,3>, toefl::TL_NONE> Texture_RGBf; //!< This texture contains three floats per texel
 
 
-/*! @brief updates a texture with a given field for use of the glTexImage2D() function
+/*! @brief Update a texture with a given field for use of the glTexImage2D() function
 
+    Negative values are blue, positive red.
+    Values near zero are white.
     @param tex A texture array
     @param field A matrix containing the field to be plotted
     @param maxabs the absolute of the maximum value of the field
     @throw A Message if tex and field don't have the same sizes
+    @note A colormap is statically constructed and reused at every entry 
+     to the function.
 */
 template< class M>
 void gentexture_RGBf( Texture_RGBf& tex, const M& field, const double maxabs)
@@ -156,15 +160,16 @@ void gentexture_RGBf( Texture_RGBf& tex, const M& field, const double maxabs)
         }
 }
 
-/*! @brief updates a texture with a given field (special function for the temperature field)
+/*! @brief Update a texture with a given field (special function for the temperature field)
 
-    A colormap is statically allocated and reused at every entry to the function. 
     The maximum of the temperature field is known to be the rayleigh number. 
-    T = theta + R(1-z) is taken for the texture
+    T = theta + R(1-z) is taken for the texture, i.e.
+    T = R corresponds to red, T=0 to blue and T=R/2 to white.
     @param tex A texture array. 
     @param theta The temperature field
     @param ray the Rayleigh number R 
     @throw A Message if tex and theta don't have the same sizes
+    @note A colormap is statically constructed and reused at every entry to the function. 
 */
 template< class M>
 void gentexture_RGBf_temp( Texture_RGBf& tex, const M& theta, const double ray)

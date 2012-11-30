@@ -9,9 +9,11 @@ namespace toefl{
 
 /*! @brief Possible boundary conditions for the ghostmatrix class.
  * Naming follows FFTW R2R kind naming.
+ *
+ * @sa http://en.wikipedia.org/wiki/Discrete_sine_transform
  */
 enum bc { TL_PERIODIC = 0, //!< Periodic boundary
-          TL_DST00, //!< dst 1
+          TL_DST00, //!< dst (discrete sine transform) 1
           TL_DST10, //!< dst 2
           TL_DST01, //!< dst 3
           TL_DST11 //!<  dst 4
