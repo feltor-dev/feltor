@@ -145,7 +145,7 @@ class Karniadakis
      * Contains v_{temp} on output.
      * @param n0
      * The nonlinearity at timestep n.
-     * Content undefined on output.
+     * Contains the old v2 on output.
      * @tparam S The set of Karniadakis-Coefficients you want to use
      */
     template< enum stepper S>
@@ -264,13 +264,15 @@ void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::arr
         for( size_t i = 0; i < rows; i++)
             for( size_t j = 0; j < cols; j++)
             {
-                v2[k](i,j) =  Coefficients<S>::alpha[0]*v0[k](i,j) 
+                n2[k](i,j) =  Coefficients<S>::alpha[0]*v0[k](i,j) 
                          + Coefficients<S>::alpha[1]*v1[k](i,j) 
                          + Coefficients<S>::alpha[2]*v2[k](i,j)
                          + dt*( Coefficients<S>::beta[0]*n0[k](i,j) 
                               + Coefficients<S>::beta[1]*n1[k](i,j) 
                               + Coefficients<S>::beta[2]*n2[k](i,j));
             }
+        swap_fields( n2[k], v2[k]); //we want to keep v2 not n2
+
         permute_fields( n0[k], n1[k], n2[k]);
         permute_fields( v0[k], v1[k], v2[k]);
     }
