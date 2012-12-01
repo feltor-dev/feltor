@@ -110,6 +110,7 @@ int main()
     double timer[10];
     Timer t;
     static int i=0;
+    cout << "PRESS ESC OR CLOSE WINDOW TO TERMINATE PROGRAM!\n";
     while( running)
     {
         //generate a texture

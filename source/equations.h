@@ -11,11 +11,10 @@ namespace toefl{
  */
 class Poisson
 {
-  private:
-    const double a_i, mu_i, tau_i;
-    const double a_z, mu_z, tau_z;
   public: 
-    Poisson( const Physical& phys);
+    Poisson(const Physical& phys):a_i(phys.a[0]), mu_i(phys.mu[0]), tau_i(phys.tau[0]),
+                                  a_z(phys.a[1]), mu_z(phys.mu[1]), tau_z(phys.tau[1]) 
+                                      {}
     /*! @brief Compute prefactors for ne and ni in local poisson equation
      *
      * @param phi   
@@ -24,7 +23,7 @@ class Poisson
      * @param laplace 
      *  The laplacian in fourier space
      */
-    void operator()( std::array< double,2>& phi, const double laplace);
+    std::array<double,2> operator()( const double laplace) const;
     /*! @brief Compute prefactors for ne, ni and nz in local poisson equation
      *
      * @param phi   
@@ -33,30 +32,31 @@ class Poisson
      * @param laplace   
      *  The laplacian in fourier space
      */
-    void operator()( std::array< double,3>& phi, const double laplace);
+    std::array<double,3> operator()( const double laplace) const;
     /*! @brief Compute Gamma_i
      *
      * @param laplace The laplacian in fourier space
      * @return Gamma_i
      */
-    inline double gamma1_i( const double laplace);
+    inline double gamma1_i( const double laplace) const;
     /*! @brief Compute Gamma_z
      *
      * @param laplace The laplacian in fourier space
      * @return Gamma_z
      */
-    inline double gamma1_z( const double laplace);
+    inline double gamma1_z( const double laplace) const;
     /*! @brief Compute Gamma2_i
      *
      * @param laplace The laplacian in fourier space
      * @return Gamma2_i
      */
-    inline double gamma2_i( const double laplace);
-    inline double gamma2_z( const double laplace);
+    inline double gamma2_i( const double laplace) const;
+    inline double gamma2_z( const double laplace) const;
+  private:
+    const double a_i, mu_i, tau_i;
+    const double a_z, mu_z, tau_z;
 };
-Poisson::Poisson(const Physical& phys):a_i(phys.a[0]), mu_i(1.0), tau_i(phys.tau[0]),
-                                      a_z(phys.a[1]), mu_z(phys.mu[1]), tau_z(phys.tau[1]) 
-                                      {}
+
 /*! @brief Yield the linear part of the local toefl equations
  *
  * \attention
@@ -64,15 +64,6 @@ Poisson::Poisson(const Physical& phys):a_i(phys.a[0]), mu_i(1.0), tau_i(phys.tau
  */
 class Equations
 {
-  private:
-    typedef std::complex<double> complex;
-    Poisson p;
-    const double dd, nu;
-    const double g_e, g_i, g_z;
-    const double kappa_y;
-    const double tau_i, tau_z;
-    double laplace, rho;
-    complex curv;
   public:
     Equations( const Physical& phys):
         p( phys), 
@@ -89,7 +80,7 @@ class Equations
      * @param dy    The value of the y-derivative in fourier space
      * \note This way you have the freedom to use various expansion functions (e.g. sine, cosine or exponential functions) 
      */
-    void operator()( QuadMat< complex,2>& coeff, const complex dx, const complex dy);
+    QuadMat<complex,2> operator()( const complex dx, const complex dy) const ;
     /*! @brief compute the linear part of the toefl equations with impurities
      *
      * @param coeff Contains the coefficients on output
@@ -97,28 +88,40 @@ class Equations
      * @param dy    The value of the y-derivative in fourier space
      * \note This way you have the freedom to use various expansion functions (e.g. sine, cosine or exponential functions) 
      */
-    void operator()( QuadMat< complex,3>& coeff, const complex dx, const complex dy);
+    QuadMat<complex, 3> operator()(const complex dx, const complex dy) const;
+  private:
+    typedef std::complex<double> complex;
+    const Poisson p;
+    const double dd, nu;
+    const double g_e, g_i, g_z;
+    const double kappa_y;
+    const double tau_i, tau_z;
 };
 
 
-void Equations::operator()(QuadMat< complex, 2>& c, const complex dx, const complex dy) 
+QuadMat<complex,2> Equations::operator()( const complex dx, const complex dy) const
 {
-    std::array< double,2> phi;
-    laplace = (dx*dx + dy*dy).real(); 
-    p( phi, laplace); //prefactors in Poisson equations (phi = phi[0]*ne + phi[1]*ni)
-    curv = kappa_y*dy; //note that curv is complex
+    QuadMat< complex, 2>& c;
+    double laplace = (dx*dx + dy*dy).real(); 
+#ifdef TL_DEBUG
+    if( laplace == 0)
+        throw Message( "Laplace is zero in equations!",ping);
+#endif
+    std::array<double,2> _phi = p( laplace); //prefactors in Poisson equations (phi = phi[0]*ne + phi[1]*ni)
+    complex curv = kappa_y*dy; 
     complex P = -g_e*dy + curv + dd;
     complex Q = -g_i*dy*p.gamma1_i(laplace) + curv*( p.gamma1_i(laplace) + 0.5 *p.gamma2_i(laplace));
 
-    c(0,0) = P*phi[0] - curv - dd + nu*laplace*laplace; c(0,1) = P*phi[1];
-    c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv + nu*laplace*laplace;
+    c(0,0) = P*_phi[0] - curv - dd + nu*laplace*laplace; c(0,1) = P*_phi[1];
+    c(1,0) = Q*_phi[0];                      c(1,1) = Q*_phi[1] + tau_i*curv + nu*laplace*laplace;
+    return c;
 }
-void Equations::operator()(QuadMat< complex, 3>& c, const complex dx, const complex dy) 
+QuadMat<complex,3> Equations::operator()( const complex dx, const complex dy) const
 {
-    std::array< double,3> phi;
+    QuadMat< complex, 3>& c;
     laplace = (dx*dx + dy*dy).real(); 
-    p( phi, laplace);
-    curv = kappa_y*dy; //note that curv is complex
+    std::array< double,3> phi = p( laplace);
+    complex curv = kappa_y*dy; 
     complex P = -g_e*dy + curv + dd;
     complex Q = -g_i*dy*p.gamma1_i(laplace) + curv*( p.gamma1_i(laplace) + 0.5 *p.gamma2_i(laplace));
     complex R = -g_z*dy*p.gamma1_z(laplace) + curv*( p.gamma1_z(laplace) + 0.5 *p.gamma2_z(laplace));
@@ -126,37 +129,50 @@ void Equations::operator()(QuadMat< complex, 3>& c, const complex dx, const comp
     c(0,0) = P*phi[0] - curv - dd + nu*laplace*laplace; c(0,1) = P*phi[1];                       c(0,2) = P*phi[2];
     c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv + nu*laplace*laplace; c(1,2) = Q*phi[2];
     c(2,0) = R*phi[0];                      c(2,1) = R*phi[1];                       c(2,2) = R*phi[2] + tau_z*curv + nu*laplace*laplace;
+    return c;
 }
 
-void Poisson::operator()( std::array< double, 2>& c, const double laplace)
+std::array<double,2> Poisson::operator()( const double laplace) const
 {
+#ifdef TL_DEBUG
+    if( laplace == 0)
+        throw Message( "Laplace is zero in Poisson equation!", ping);
+#endif
+    std::array< double, 2>& c;
     double rho = - a_i*mu_i*laplace/(1.+ tau_i*mu_i*laplace);
     c[0] = 1./rho;
     c[1] = -a_i*gamma1_i(laplace)/rho;
+    return c;
 }
-void Poisson::operator()( std::array< double, 3>& c, const double laplace)
+std::array<double, 3> Poisson::operator()(  const double laplace) const
 {
+    std::array< double, 3>& c;
+#ifdef TL_DEBUG
+    if( laplace == 0)
+        throw Message( "Laplace is zero in Poisson equation!", ping);
+#endif
     double rho = (a_i*mu_i/(1.- tau_i*mu_i*laplace) + a_z*mu_z/(1.-tau_z*mu_z*laplace))*laplace;
     c[0] = 1./rho;
     c[1] = -a_i*gamma1_i(laplace)/rho;
     c[2] = -a_z*gamma1_z(laplace)/rho;
+    return c;
 }
-double Poisson::gamma1_i( const double laplace)
+double Poisson::gamma1_i( const double laplace) const
 {
     return (1./(1. - 0.5*tau_i*mu_i*laplace));
 }
-double Poisson::gamma1_z( const double laplace)
+double Poisson::gamma1_z( const double laplace) const
 {
     return (1./(1. - 0.5*tau_z*mu_z*laplace));
 }
-double Poisson::gamma2_i( const double laplace)
+double Poisson::gamma2_i( const double laplace) const
 {
-    double gamma = gamma1_i(laplace);
+    const double gamma = gamma1_i(laplace);
     return 0.5*tau_i*mu_i*laplace*gamma*gamma;
 }
-double Poisson::gamma2_z( const double laplace)
+double Poisson::gamma2_z( const double laplace) const
 {
-    double gamma = gamma1_z(laplace);
+    const double gamma = gamma1_z(laplace);
     return 0.5*tau_z*mu_z*laplace*gamma*gamma;
 }
 

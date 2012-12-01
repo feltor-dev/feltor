@@ -1,4 +1,5 @@
 #include <iostream>
+#include <GL/glfw.h>
 #include "toefl.h"
 #include "dft_dft_solver.h"
 #include "blueprint.h"
@@ -43,20 +44,18 @@ void init_gaussian( M& m, const double x0, const double y0,
                                   (y-y0)*(y-y0)/2./sigma_y/sigma_y) );
         }
 }
-int main()
-{
 
-    Physical phys; 
-    Algorithmic alg;
-    Boundary bound;
+void init( Physical& phys, Algorithmic& alg, Boundary& bound)
+{
     vector<double> para;
-    try{ para = read_input( "input.dat"); }
-    catch (Message& m) {  m.display(); return -1;}
+    try{ para = read_input( "input.test"); }
+    catch (Message& m) {  m.display(); return ;}
     phys.d = para[1];
     phys.g_e = phys.g[0] = para[2];
-    phys.g[2] = para[3];
+    phys.g[1] = para[3];
     phys.tau[0] = para[4];
     phys.tau[1] = para[22];
+    phys.nu = para[8];
     phys.mu[1] = para[23];
     phys.a[1] = para[24];
     phys.kappa = para[6];
@@ -73,20 +72,31 @@ int main()
     alg.h = bound.ly / (double)alg.ny;
     bound.lx = (double)alg.nx * alg.h;
     bound.bc_x = TL_PERIODIC;
-
+}
+int main()
+{
+    //Parameter initialisation
+    Physical phys; 
+    Algorithmic alg;
+    Boundary bound;
+    init( phys, alg, bound);
 
     Blueprint bp( phys, bound, alg);
+    bp.enable(TL_COUPLING);
     try{ bp.consistencyCheck();}
     catch( Message& m) {m.display(); bp.display(); return -1;}
     bp.display(cout);
+
+    //construct solver
     DFT_DFT_Solver<2> solver( bp);
 
+    //init solver
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, phi{ alg.ny, alg.nx, 0.};
-    init_gaussian( ne, 0.5,0.5, 0.1, 0.1, 0.2);
+    init_gaussian( ne,  0.5,0.5, 0.1, 0.1, 0.2);
     init_gaussian( phi, 0.5,0.5, 0.1, 0.1, 0.2);
     std::array< Matrix<double, TL_DFT>,2> arr{{ ne, phi}};
     try{
-    solver.init( arr, TL_IONS);
+    solver.init( arr, TL_POTENTIAL);
     }catch( Message& m){m.display();}
     ////////////////////////////////glfw//////////////////////////////
     int running = GL_TRUE;
@@ -95,15 +105,21 @@ int main()
     { 
         cerr << "ERROR: glfw couldn't open window!\n";
     }
-    glfwSetWindowTitle( "Gaussian test");
-    Texture_RGBf tex( nz, nx);
+    glfwSetWindowTitle( "Potential");
+    Texture_RGBf tex( alg.ny, alg.nx);
     glEnable( GL_TEXTURE_2D);
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     while( running)
     {
         //generate a texture
-        solver.getField( ne, TL_ELECTRONS);
-        gentexture_RGBf( tex, m, 1);
+        phi = solver.getField( TL_POTENTIAL);
+        double temp = 0;
+        for( unsigned i=0; i<phi.rows(); i++)
+            for( unsigned j=0; j<phi.cols(); j++)
+                if( phi(i,j) > temp) temp = phi(i,j);
+        gentexture_RGBf( tex, phi, temp);
+        cout << "temp: "<<temp <<endl;
+        //cout<< phi <<endl;
         glLoadIdentity();
         glClearColor(0.f, 0.f, 1.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -118,8 +134,16 @@ int main()
             glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, 1.0);
         glEnd();
         glfwSwapBuffers();
-        solver.step();///////////<--
+#ifdef TL_DEBUG
         glfwWaitEvents();
+        if( glfwGetKey('N'))
+        {
+#endif
+            solver.step();
+#ifdef TL_DEBUG
+            cout << "Next Step\n";
+        }
+#endif
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
     }
