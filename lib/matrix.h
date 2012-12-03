@@ -176,6 +176,15 @@ class Matrix
      * \note DO NOT DELETE THIS POINTER!! This class manages the memory it allocates by itself.
      */
     T* getPtr() { return ptr;}
+
+    /*! @brief Get the address of the first element for const reference
+     *
+     * Replaces the use of &m(0,0) which is kind of clumsy!
+     * @return pointer to allocated memory
+     * \note DO NOT DELETE THIS POINTER!! This class manages the memory it allocates by itself.
+     */
+    T const * getPtr()const {return ptr;}
+
     /*! @brief uses operator= to set memory to 0
      *
      * takes less than 0.01s for 1e6 elements
