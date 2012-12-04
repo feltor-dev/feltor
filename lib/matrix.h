@@ -173,15 +173,17 @@ class Matrix
      *
      * Replaces the use of &m(0,0) which is kind of clumsy!
      * @return pointer to allocated memory
-     * \note DO NOT DELETE THIS POINTER!! This class manages the memory it allocates by itself.
+     * \attention DO NOT DELETE THIS POINTER!! 
+     *  This class manages the memory it allocates by itself.
      */
     T* getPtr() { return ptr;}
 
     /*! @brief Get the address of the first element for const reference
      *
      * Replaces the use of &m(0,0) which is kind of clumsy!
-     * @return pointer to allocated memory
-     * \note DO NOT DELETE THIS POINTER!! This class manages the memory it allocates by itself.
+     * @return read only pointer to allocated memory
+     * \attention DO NOT DELETE THIS POINTER!! 
+     *  This class manages the memory it allocates by itself.
      */
     T const * getPtr()const {return ptr;}
 

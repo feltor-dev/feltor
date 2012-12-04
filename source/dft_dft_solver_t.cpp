@@ -1,5 +1,6 @@
 #include <iostream>
 #include <GL/glfw.h>
+#include <sstream>
 #include "toefl.h"
 #include "dft_dft_solver.h"
 #include "blueprint.h"
@@ -73,6 +74,64 @@ void init( Physical& phys, Algorithmic& alg, Boundary& bound)
     bound.lx = (double)alg.nx * alg.h;
     bound.bc_x = TL_PERIODIC;
 }
+
+void drawScene( const DFT_DFT_Solver<2>& solver, unsigned nx, unsigned ny)
+{
+    glClearColor(0.f, 0.f, 0.f, 0.f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    double temp;
+    static Texture_RGBf tex( ny, nx);
+    static Matrix<double, TL_DFT> field( ny, nx);
+    field = solver.getField( TL_ELECTRONS);
+    temp = 0;
+    for( unsigned i=0; i<field.rows(); i++)
+        for( unsigned j=0; j<field.cols(); j++)
+            if( abs(field(i,j)) > temp) temp = field(i,j);
+    gentexture_RGBf( tex, field, temp);
+    // image comes from texarray on host
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
+    glLoadIdentity();
+    //Draw a textured quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( -1.0/3.0, -1.0);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( -1.0/3.0, 1.0);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, 1.0);
+    glEnd();
+    field = solver.getField( TL_IONS);
+    temp = 0;
+    for( unsigned i=0; i<field.rows(); i++)
+        for( unsigned j=0; j<field.cols(); j++)
+            if( abs(field(i,j)) > temp) temp = field(i,j);
+    gentexture_RGBf( tex, field, temp);
+    // image comes from texarray on host
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
+    glLoadIdentity();
+    //Draw a textured quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0/3.0, -1.0);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0/3.0, -1.0);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0/3.0, 1.0);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0/3.0, 1.0);
+    glEnd();
+    field = solver.getField( TL_POTENTIAL);
+    temp = 0;
+    for( unsigned i=0; i<field.rows(); i++)
+        for( unsigned j=0; j<field.cols(); j++)
+            if( abs(field(i,j)) > temp) temp = field(i,j);
+    gentexture_RGBf( tex, field, temp);
+    // image comes from texarray on host
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
+    glLoadIdentity();
+    //Draw a textured quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f( 1.0/3.0, -1.0);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 1.0);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f( 1.0/3.0, 1.0);
+    glEnd();
+}
+
 int main()
 {
     //Parameter initialisation
@@ -92,47 +151,33 @@ int main()
 
     //init solver
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, phi{ alg.ny, alg.nx, 0.};
-    init_gaussian( ne,  0.5,0.5, 0.1, 0.1, 0.2);
-    init_gaussian( phi, 0.5,0.5, 0.1, 0.1, 0.2);
+    init_gaussian( ne,  0.5,0.5, 0.01, 0.01, 0.2);
+    init_gaussian( phi, 0.5,0.5, 0.01, 0.01, 0.2);
     std::array< Matrix<double, TL_DFT>,2> arr{{ ne, phi}};
     try{
     solver.init( arr, TL_POTENTIAL);
     }catch( Message& m){m.display();}
+
     ////////////////////////////////glfw//////////////////////////////
+    {
     int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
-    if( !glfwOpenWindow( 600, 600,  0,0,0,  0,0,0, GLFW_WINDOW))
+    unsigned width = 1800, height = 600;
+    if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
     { 
         cerr << "ERROR: glfw couldn't open window!\n";
     }
-    glfwSetWindowTitle( "Potential");
-    Texture_RGBf tex( alg.ny, alg.nx);
     glEnable( GL_TEXTURE_2D);
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    double t = 3*alg.dt;
     while( running)
     {
-        //generate a texture
-        phi = solver.getField( TL_POTENTIAL);
-        double temp = 0;
-        for( unsigned i=0; i<phi.rows(); i++)
-            for( unsigned j=0; j<phi.cols(); j++)
-                if( phi(i,j) > temp) temp = phi(i,j);
-        gentexture_RGBf( tex, phi, temp);
-        cout << "temp: "<<temp <<endl;
-        //cout<< phi <<endl;
-        glLoadIdentity();
-        glClearColor(0.f, 0.f, 1.f, 0.f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        // image comes from texarray on host
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
-        glLoadIdentity();
-        //Draw a textured quad
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 1.0);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, 1.0);
-        glEnd();
+        t+= alg.dt;
+        stringstream str; 
+        str << "ne, ni and phi ... time = "<<t;
+        glfwSetWindowTitle( (str.str()).c_str() );
+
+        drawScene( solver, alg.nx, alg.ny);
         glfwSwapBuffers();
 #ifdef TL_DEBUG
         glfwWaitEvents();
@@ -148,9 +193,8 @@ int main()
                     glfwGetWindowParam( GLFW_OPENED);
     }
     glfwTerminate();
-    //cout << setprecision(2)<<fixed;
-    //cout << m<<endl;
+    }
     //////////////////////////////////////////////////////////////////
-
+    return 0;
 
 }

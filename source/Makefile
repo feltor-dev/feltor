@@ -9,7 +9,7 @@ all:
 	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
 
-%_b: %_b.cpp %.h
+%_b: %_t.cpp %.h
 	$(CXX) -O3  $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
 clean:

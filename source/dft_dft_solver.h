@@ -30,7 +30,7 @@ class DFT_DFT_Solver
     /*! @brief Get the result*/
     void getField( Matrix<double, TL_DFT>& m, enum target t);
     /*! @brief Get the result*/
-    const Matrix<double, TL_DFT>& getField( enum target t);
+    const Matrix<double, TL_DFT>& getField( enum target t) const;
   private:
     typedef std::complex<double> complex;
     //methods
@@ -86,8 +86,8 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
     Matrix< QuadMat< complex, n> > coeff( rows, cols/2+1);
     double laplace;
     const complex kxmin ( 0, 2.*M_PI/bound.lx), kymin( 0, 2.*M_PI/bound.ly);
-    const double kxmin2 = 2.*2.*M_PI*M_PI/bound.lx/bound.lx,
-                 kymin2 = 2.*2.*M_PI*M_PI/bound.ly/bound.ly;
+    const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(bound.lx*bound.lx),
+                 kymin2 = 2.*2.*M_PI*M_PI/(double)(bound.ly*bound.ly);
     Equations e( phys);
     Poisson p( phys);
     // dft_dft is not transposing so i is the y index by default
@@ -110,11 +110,13 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
     for( unsigned k=0; k<n; k++)
         phi_coeff(0,0)[k] = 0;
     coeff( 0,0).zero();
-    karniadakis.init_coeff( coeff, (double)rows*cols);
+    //std::cout << coeff<<std::endl;
+    karniadakis.init_coeff( coeff, (double)(rows*cols));
 }
 template< size_t n>
 void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum target t)
 { 
+    //fourier transform input into cdens
     for( unsigned k=0; k<n; k++)
     {
 #ifdef TL_DEBUG
@@ -123,6 +125,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
 #endif
         dft_dft.r2c( v[k], cdens[k]);
     }
+    //std::cout << "cdens[0] \n"<<cdens[0] <<std::endl;
     switch( t) //which field must be computed?
     {
         case( TL_ELECTRONS): 
@@ -169,6 +172,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
             break;
         case( TL_POTENTIAL):
             //solve for cphi
+            std::cout << "ping\n";
             for( unsigned i=0; i<rows; i++)
                 for( unsigned j=0; j<cols/2+1; j++)
                 {
@@ -178,16 +182,22 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
                 }
             break;
     }
+    //compute the rest cphi[k]
     for( unsigned k=0; k<n-1; k++)
         for( size_t i = 0; i < rows; i++)
             for( size_t j = 0; j < cols/2 + 1; j++)
                 cphi[k+1](i,j) = gamma_coeff[k](i,j)*cphi[0](i,j);
+    //backtransform to x-space
+    //std::cout << "cphi\n"<<cphi[0]<<std::endl<<std::endl;
     for( unsigned k=0; k<n; k++)
     {
         dft_dft.c2r( cdens[k], dens[k]);
         dft_dft.c2r( cphi[k], phi[k]);
     }
-    //now the density and the potential is given
+    //std::cout << dens[0]<<std::endl<<std::endl;
+    //std::cout << dens[1]<<std::endl<<std::endl;
+    //std::cout << "phi[0]\n"<<phi[0]<<std::endl<<std::endl;
+    //now the density and the potential is given in x-space
     first_steps();
 }
 
@@ -207,7 +217,7 @@ void DFT_DFT_Solver<n>::getField( Matrix<double, TL_DFT>& m, enum target t)
     }
 }
 template< size_t n>
-const Matrix<double, TL_DFT>& DFT_DFT_Solver<n>::getField( enum target t)
+const Matrix<double, TL_DFT>& DFT_DFT_Solver<n>::getField( enum target t) const
 {
     Matrix<double, TL_DFT> const * m;
     switch( t)
@@ -271,7 +281,7 @@ void DFT_DFT_Solver<n>::step_()
         swap_fields( phi[j], ghostphi); //now phi[j] is void
         ghostdens.initGhostCells( );
         ghostphi.initGhostCells(  );
-        arakawa( ghostphi, ghostdens, nonlinear[j]);
+        arakawa( ghostdens, ghostphi, nonlinear[j]);
         swap_fields( dens[j], ghostdens); //now ghostdens is void
         swap_fields( phi[j], ghostphi); //now ghostphi is void
     }

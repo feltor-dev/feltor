@@ -43,7 +43,7 @@ int main()
     gm(3,0) = 7;
     gm(3,1) = 2;
     gm(3,2) = 1;
-    GhostMatrix<double, TL_NONE> ghost(4,3,TL_DST01, TL_PERIODIC, false);
+    GhostMatrix<double, TL_NONE> ghost(4,3,TL_PERIODIC, TL_PERIODIC, false);
     ghost.allocate( );
     swap_fields( ghost, gm);//OK!
     ghost.initGhostCells( );
