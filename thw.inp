@@ -8,7 +8,7 @@
 4)  taui (Ti/Te) 			    =	0.0		(0.0)
 5)  new impurity puff:1, cont.:0	    =	0.0		(0.0) 
 6)  mcv (magnetic curvature)		    =	0.0		(0.05)
-7)  mhw:1, ohw:0 (modified/ordinary HW)	    =   1.0		(1.0)
+7)  mhw:1, ohw:0 (modified/ordinary HW)	    =   0.0		(1.0)
 
 8)  nu (artif. hyper-viscosity) 	    =   0.001		(0.001)
 9)  nuimp (impurity viscosity)	   	    = 	0.0		(0.0)
@@ -19,10 +19,10 @@
 13) nx (grid points in x)	 	    =   128.		(256.)
 14) ny (grid points in y)	 	    =   128.		(256.)
 15) dt (time step in units c_s/L_p)	    =   0.01		(0.01)
-16) itstp (steps between output)	    =   500		(40)
+16) itstp (steps between output)	    =   50		(40)
 17) itmax (total steps)			    =   4000		(4000)
 18) OpenMP: number of parallel threads	    =	1.		(1.0)
-19) in.cond. (0: blob, 1:bath, 2:restart)   =   1.		(0.0)
+19) in.cond. (0: blob, 1:bath, 2:restart)   =   0.		(0.0)
 20) snapshots after itstp (0:off, 1:on)	    =	0.		(1.0)
 21) ibx (0:periodic, >0 Dirichlet (Dämpfungszone!!))	    =	0.0		(6.0)
 

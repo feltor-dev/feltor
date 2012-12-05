@@ -11,10 +11,18 @@ namespace toefl{
 /*! @brief Class for 2d discrete fourier transformations of Matrix using FFTW
  *
  * Actually just a wrapper for the dft_c2r_2d/r2c_2d plans and execute
- * functions.
- * \note Do not copy or assign any Objects of this class!!
- * \note The dft_c2r_2d execution of fftw is faster than the procedure linewise transformation - 
-    transposition - linewise transformation
+ * functions. Note that the dft_c2r_2d execution of fftw is faster than 
+ * the procedure 
+ * linewise transformation - transposition - linewise transformation
+ * @attention When computing derivatives using 2d r2c/c2r transform pay attention on 
+ *  the correct column coefficients in fourier space. 
+ *  The first dimension (the column transform) is effectively a c2c transform
+ *  and you thus have to be careful about coefficients >N/2+1 in order to keep the 
+ *  minimal oscillating trigonometric interpolation property. (probably you
+ *  have to worry about (N-k) factors to get the derivative. )
+ *  The last dimension (i.e. the row transform) is a r2c transform and thus only 
+ *  stores N/2+1 coefficients. Here you don't have the problem since
+ *  the c2r backtransform automatically takes care of the coefficients >N/2+1.
  */
 class DFT_DFT
 {

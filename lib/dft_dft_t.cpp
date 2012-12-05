@@ -10,42 +10,75 @@ using namespace toefl;
 //why there are two coefficients in y direction
 /*
  * The r2c yields one coefficient for a mode
- * The c2c trafo afterwards yields two at k and N-k for one mode.
+ * The c2c trafo afterwards yields two: at k and N-k for one mode.
  */
+unsigned rows = 5, cols = 10;
+complex<double> I = {0,1};
+
+/*! @brief Adds a gaussian to a given matrix
+ *
+ * The function interprets the given points as inner, cell centered points of a 
+ * square box. [0,1]x[0,1]
+ * , where the first index is the y and the second index is the x point. 
+ * (0,0) corresponds  to the lower left corner.
+ * It adds the values of the smooth function
+ * \f[
+   f(x) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}} 
+   \f]
+   where A is a constant and \f$ x,y = 0...1 \f$.
+ * \param m the matrix
+ * @param x0 x-position of maximum 0<x0<1
+ * @param y0 y-position of maximum 0<y0<1
+ * @param sigma_x Varianz in x (FWHM = 2.35*sigma_x)
+ * @param sigma_y Varianz in y (FWHM = 2.35*sigma_y)
+ * @param amplitude Value of maximum
+ */
+template< class M>
+void init_gaussian( M& m, const double x0, const double y0, 
+                          const double sigma_x, const double sigma_y,
+                          const double amplitude)
+{
+    const size_t rows = m.rows(), cols = m.cols();
+    const double hx = 1./(double)(cols), hy = 1./(double)(rows); 
+    double x,y;
+    for( unsigned i=0; i<rows; i++)
+        for( unsigned j=0; j<cols; j++)
+        {
+            x = (j+0.5)*hx;
+            y = (i+0.5)*hy;
+            m(i,j) += amplitude*
+                   exp( -(double)((x-x0)*(x-x0)/2./sigma_x/sigma_x+
+                                  (y-y0)*(y-y0)/2./sigma_y/sigma_y) );
+        }
+}
 int main()
 {
-    Matrix<double, TL_DFT> m1{5, 10};
-    Matrix<complex<double> >   m1_{ 5, 10/2 + 1};
-    DFT_DFT dft_dft( 5,10);
-    double dx = 1./(10.), dy = 1./5;
-    for( size_t i = 0; i < m1.rows(); i++)
-        for ( size_t j=0; j < m1.cols(); j++)
-            m1(i, j) = sin( 4.*M_PI*j*dx)*cos( 2.*M_PI*i*dy); //sin(kPix)*sin(qPiy)
+    Matrix<double, TL_DFT> m1{rows, cols};
+    Matrix<complex<double> >   m1_{ rows, cols/2 + 1};
+    DFT_DFT dft_dft( rows,cols);
+    double dx = 1./(double)cols, dy = 1./(double)rows;
+    init_gaussian( m1, 0.5,0.5, 0.2,0.2, 1);
+    //for( size_t i = 0; i < m1.rows(); i++)
+    //    for ( size_t j=0; j < m1.cols(); j++)
+    //        m1(i, j) = (double)j*dx; //f(x,y) = y;
     cout << setprecision(2) << fixed;
-    cout << "One mode in every line, One mode in every column\n"<< m1<< endl;
+    cout <<"The original matrix\n"<<m1<<endl;
     dft_dft.r2c( m1, m1_);
     cout << "The transformed matrix\n"<<m1_<<endl;
+    //multiply coefficients
+    for( unsigned i=0; i<rows/2+1; i++)
+        for( unsigned j=0; j<cols/2+1; j++)
+            m1_(i,j) *= -(double)(i*i+j*j)*2.*M_PI*2.*M_PI/(double)(rows*cols);
+    for( unsigned i=rows/2+1; i<rows; i++)
+        for( unsigned j=0; j<cols/2+1; j++)
+            m1_(i,j) *= -(double)((rows-i)*(rows-i)+j*j)*4.*M_PI*M_PI/(double)(rows*cols);
+
+    m1_(rows-1, cols/2) = {0,0};
+    cout << "The multiplied matrix\n"<<m1_<<endl;
     try{
         dft_dft.c2r( m1_, m1);
     }catch( Message& m){m.display();}
-    cout << "The backtransformed matrix (50 times input)\n"<<m1<<endl;
-
-    Matrix<double, TL_DFT> m0( 5,10);
-    Matrix<complex< double> > m0_(5,10/2 + 1);
-    fftw_plan plan = fftw_plan_dft_r2c_2d( 5, 10, m0.getPtr(), fftw_cast(m0.getPtr()), FFTW_MEASURE);
-    fftw_plan plan2 = fftw_plan_dft_c2r_2d( 5, 10, fftw_cast(m0.getPtr()), m0.getPtr(), FFTW_MEASURE);
-    for( size_t i = 0; i < m0.rows(); i++)
-        for ( size_t j=0; j < m0.cols(); j++)
-            m0(i, j) = sin( 4.*M_PI*j*dx)*cos( 2.*M_PI*i*dy); //sin(kPix)*sin(qPiy)
-    cout << m0 <<endl;
-    
-
-    fftw_execute( plan);
-    fftw_execute( plan2);
-    if( m1 != m0)
-        cerr << "Transformation failed!\n m1: "<<m1<<"\n m2" <<m0<<endl;
-    else
-        cout << "Test passed\n";
+    cout << "The derivative of the original\n"<<m1<<endl;
 
 
 
