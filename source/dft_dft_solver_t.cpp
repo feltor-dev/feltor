@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <GL/glfw.h>
 #include <sstream>
 #include "toefl.h"
@@ -154,6 +155,7 @@ int main()
 
     Blueprint bp( phys, bound, alg);
     bp.enable(TL_COUPLING);
+    //bp.enable(TL_CURVATURE);
     try{ bp.consistencyCheck();}
     catch( Message& m) {m.display(); bp.display(); return -1;}
     bp.display(cout);
@@ -167,7 +169,7 @@ int main()
     init_gaussian( ni, 0.5,0.5, 0.05, 0.05, 0.1);
     std::array< Matrix<double, TL_DFT>,2> arr{{ ne, ni}};
     try{
-    solver.init( arr, TL_POTENTIAL);
+        solver.init( arr, TL_POTENTIAL);
     }catch( Message& m){m.display();}
 
     ////////////////////////////////glfw//////////////////////////////
@@ -194,6 +196,7 @@ int main()
             } while( !glfwGetKey('R'));
         }
         stringstream str; 
+        str << setprecision(2) << fixed;
         str << "ne, ni and phi ... time = "<<t;
         glfwSetWindowTitle( (str.str()).c_str() );
 

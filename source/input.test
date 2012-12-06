@@ -16,10 +16,10 @@
 11) nd0 (impurity amplitude)	    	    =	1.0		(1.0)
 
 12) ly (length of y in units of rho_s)	    =   64		(64.)
-13) nx (grid points in x)	 	    =   128.		(256.)
-14) ny (grid points in y)	 	    =   128.		(256.)
+13) nx (grid points in x)	 	    =   256.		(256.)
+14) ny (grid points in y)	 	    =   256.		(256.)
 15) dt (time step in units c_s/L_p)	    =   0.01		(0.01)
-16) itstp (steps between output)	    =   5		(40)
+16) itstp (steps between output)	    =  5 		(40)
 17) itmax (total steps)			    =   4000		(4000)
 18) OpenMP: number of parallel threads	    =	1.		(1.0)
 19) in.cond. (0: blob, 1:bath, 2:restart)   =   0.		(0.0)

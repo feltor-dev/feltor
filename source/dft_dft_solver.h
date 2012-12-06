@@ -5,32 +5,66 @@
 
 namespace toefl
 {
+
+/*! @brief Solver for periodic boundary conditions of the toefl equations.
+ */
 template< size_t n>
 class DFT_DFT_Solver
 {
   public:
     /*! @brief Construct a solver for periodic boundary conditions
      *
-     * @param blueprint Contains all the necessary parameters
+     * The constructor allocates storage for the solver
+     * and initializes all fourier coefficients as well as 
+     * all low level solver needed.  
+     * @param blueprint Contains all the necessary parameters.
+     * @throw Message If your parameters are inconsistent.
      */
     DFT_DFT_Solver( const Blueprint& blueprint);
     /*! @brief Prepare Solver for execution
      *
-     * This function initializes the Fourier Coefficients as well as 
-     * all low level solver needed. It performs two 
-     * initializing steps (by one onestep- and one twostep-method)
-     * in order to get the karniadakis scheme ready. The actual time is
-     * thus T_0 + 2*dt after initialisation. 
+     * This function takes the fields and computes the missing 
+     * one according to the target parameter passed. After that
+     * it performs three initializing steps (one onestep-, 
+     * one twostep-method and the threestep-method used in the step function)
+     * in order to initialize the karniadakis scheme. The actual time is
+     * thus T_0 + 3*dt after initialisation. 
      * @param v Container with three non void matrices
      * @param t which Matrix is missing?
      */
     void init( std::array< Matrix<double,TL_DFT>, n>& v, enum target t);
     /*! @brief Perform a step by the 3 step Karniadakis scheme*/
     void step(){ step_<TL_ORDER3>();}
-    /*! @brief Get the result*/
-    void getField( Matrix<double, TL_DFT>& m, enum target t);
-    /*! @brief Get the result*/
+    /*! @brief Get the result
+        
+        You get the solution matrix of the current timestep.
+        @param t The field you want
+        @return A Read only reference to the field
+        @attention The reference is only valid until the next call to 
+            the step() function!
+    */
     const Matrix<double, TL_DFT>& getField( enum target t) const;
+    /*! @brief Get the result
+
+        Use this function when you want to call step() without 
+        destroying the solution. 
+        @param m 
+            In exchange for the solution matrix you have to provide
+            storage for further calculations. The field is swapped in.
+        @param t 
+            The field you want. 
+        @attention The fields you get are not the ones of the current
+            timestep. You get the fields that are not needed any more. 
+            This means the densities are 4 timesteps "old" whereas 
+            the potential is the one of the last timestep.
+    */
+    void getField( Matrix<double, TL_DFT>& m, enum target t);
+    /*! @brief Get the parameters of the solver.
+
+        @return The parameters in use. 
+        @note You cannot change parameters once constructed.
+     */
+    const Blueprint& blueprint() const { return blue;}
   private:
     typedef std::complex<double> complex;
     //methods
@@ -41,6 +75,7 @@ class DFT_DFT_Solver
     void step_();
     //members
     const size_t rows, cols;
+    const Blueprint blue;
     /////////////////fields//////////////////////////////////
     GhostMatrix<double, TL_DFT> ghostdens, ghostphi;
     std::array< Matrix<double, TL_DFT>, n> dens, phi, nonlinear;
@@ -58,6 +93,7 @@ class DFT_DFT_Solver
 template< size_t n>
 DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     rows( bp.getAlgorithmic().ny ), cols( bp.getAlgorithmic().nx ),
+    blue( bp),
     //fields
     ghostdens{ rows, cols, TL_PERIODIC, TL_PERIODIC, TL_VOID},
     ghostphi{ ghostdens},
@@ -128,8 +164,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
 #endif
         dft_dft.r2c( v[k], cdens[k]);
     }
-    //std::cout << "cdens[0] \n"<<cdens[0] <<std::endl;
-    //don't forget to normalize coefficients
+    //don't forget to normalize coefficients!!
     for( unsigned k=0; k<n; k++)
         for( unsigned i=0; i<rows; i++)
             for( unsigned j=0; j<cols/2+1;j++)
@@ -196,15 +231,11 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
             for( size_t j = 0; j < cols/2 + 1; j++)
                 cphi[k+1](i,j) = gamma_coeff[k](i,j)*cphi[0](i,j);
     //backtransform to x-space
-    //std::cout << "cphi\n"<<cphi[0]<<std::endl<<std::endl;
     for( unsigned k=0; k<n; k++)
     {
         dft_dft.c2r( cdens[k], dens[k]);
         dft_dft.c2r( cphi[k], phi[k]);
     }
-    //std::cout << dens[0]<<std::endl<<std::endl;
-    //std::cout << dens[1]<<std::endl<<std::endl;
-    //std::cout << "phi[0]\n"<<phi[0]<<std::endl<<std::endl;
     //now the density and the potential is given in x-space
     first_steps();
 }

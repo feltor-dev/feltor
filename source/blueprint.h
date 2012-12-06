@@ -134,7 +134,7 @@ class Blueprint
                                  break;
             case( TL_GLOBAL):    global = true;
                                  break;
-            default: throw toefl::Message( "Unknown Capacity\n", ping);
+            default: throw Message( "Unknown Capacity\n", ping);
         }
     }
     bool isEnabled( enum cap capacity) const
@@ -145,7 +145,7 @@ class Blueprint
             case( TL_COUPLING) : return coupling;
             case( TL_IMPURITY) : return imp;
             case( TL_GLOBAL):    return global;
-            default: throw toefl::Message( "Unknown Capacity\n", ping);
+            default: throw Message( "Unknown Capacity\n", ping);
         }
     }
     void consistencyCheck() const;
@@ -167,28 +167,28 @@ void Blueprint::consistencyCheck() const
 {
     //Check algorithm and boundaries
     if( alg.dt <= 0) 
-        throw toefl::Message( "dt <= 0!\n", ping);
-    if( alg.h - bound.lx/(double)alg.nx > 1e-15) 
-        throw toefl::Message( "h != lx/nx\n", ping); 
-    if( alg.h - bound.ly/(double)alg.ny > 1e-15) 
-        throw toefl::Message( "h != ly/ny\n", ping);
+        throw Message( "dt <= 0!\n", ping);
+    if( fabs( alg.h - bound.lx/(double)alg.nx) > 1e-15) 
+        throw Message( "h != lx/nx\n", ping); 
+    if( fabs( alg.h - bound.ly/(double)alg.ny) > 1e-15) 
+        throw Message( "h != ly/ny\n", ping);
     if( alg.nx == 0||alg.ny == 0) 
-        throw toefl::Message( "Set nx and ny!\n", ping);
+        throw Message( "Set nx and ny!\n", ping);
     //Check physical parameters
     if( curvature && phys.kappa == 0 ) 
-        throw toefl::Message( "Curvature enabled but zero!\n", ping);
+        throw Message( "Curvature enabled but zero!\n", ping);
     if( phys.nu < 0) 
-        throw toefl::Message( "nu < 0!\n", ping);
+        throw Message( "nu < 0!\n", ping);
     if( phys.a[0] <= 0 || phys.mu[0] <= 0 || phys.tau[0] < 0) 
-        throw toefl::Message( "Ion species badly set\n", ping);
+        throw Message( "Ion species badly set\n", ping);
     if( imp && (phys.a[1] <= 0 || phys.mu[1] <= 0 || phys.tau[1] < 0)) 
-        throw toefl::Message( "Impuritiy species badly set\n", ping);
-    if( phys.a[0] + phys.a[1] != 1)
-        throw toefl::Message( "a[0] + a[1] != 1\n", ping);
-    if( phys.g[0] != (phys.g_e - phys.a[1]*phys.g[1])/(1.-phys.a[1]))
-        throw toefl::Message( "g[0] is wrong\n", ping);
+        throw Message( "Impuritiy species badly set\n", ping);
+    if( fabs(phys.a[0] + phys.a[1] - 1) > 1e-15)
+        throw Message( "a_i + a_z != 1\n", ping);
+    if( fabs( phys.g[0] - (phys.g_e - phys.a[1]*phys.g[1])/(1.-phys.a[1])) > 1e-15)
+        throw Message( "g_i is wrong\n", ping);
     if( global) 
-        throw toefl::Message( "Global solver not yet implemented\n", ping);
+        throw Message( "Global solver not yet implemented\n", ping);
     //Some Warnings
     if( !curvature && phys.kappa != 0) 
         std::cerr <<  "TL_WARNING: Curvature disabled but kappa not zero (will be ignored)!\n";
@@ -198,6 +198,6 @@ void Blueprint::consistencyCheck() const
 }
 
 
-}
+} //namespace toefl
 
 #endif //_BLUEPRINT_
