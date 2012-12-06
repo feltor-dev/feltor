@@ -35,9 +35,9 @@ struct Physical
             <<"    Coupling:        = "<<d<<"\n"
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
-            <<"    Electrons:  g_e  = "<<g_e<<"\n"
-            <<"    Ions:       g[0] = "<<g[0] <<", a[0] = "<<a[0]<<", mu[0] = "<<mu[0]<<", tau[0] = "<<tau[0]<<"\n"
-            <<"    Impurities: g[1] = "<<g[1] <<", a[1] = "<<a[1]<<", mu[1] = "<<mu[1]<<", tau[1] = "<<tau[1]<<"\n";
+            <<"    Electrons:   g_e = "<<g_e<<"\n"
+            <<"    Ions:        g_i = "<<g[0] <<", a_i = "<<a[0]<<", mu_i = "<<mu[0]<<", tau_i = "<<tau[0]<<"\n"
+            <<"    Impurities:  g_z = "<<g[1] <<", a_z = "<<a[1]<<", mu_z = "<<mu[1]<<", tau_z = "<<tau[1]<<"\n";
     }
 };
 

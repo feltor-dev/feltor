@@ -83,7 +83,7 @@ class Equations
      * @param dy    The value of the y-derivative in fourier space
      * \note This way you have the freedom to use various expansion functions (e.g. sine, cosine or exponential functions) 
      */
-    void operator()( QuadMat<complex,2>& coeff, const complex dx, const complex dy) const ;
+    void operator()( QuadMat<complex,2>& coeff, const double laplace, const complex dy) const ;
     /*! @brief compute the linear part of the toefl equations with impurities
      *
      * @param coeff Contains the coefficients on output
@@ -91,7 +91,7 @@ class Equations
      * @param dy    The value of the y-derivative in fourier space
      * \note This way you have the freedom to use various expansion functions (e.g. sine, cosine or exponential functions) 
      */
-    void operator()(QuadMat<complex, 3>& coeff, const complex dx, const complex dy) const;
+    void operator()(QuadMat<complex, 3>& coeff, const double laplace, const complex dy) const;
   private:
     const Poisson p;
     const double dd, nu;
@@ -101,15 +101,14 @@ class Equations
 };
 
 
-void Equations::operator()( QuadMat<complex,2>& c, const complex dx, const complex dy) const
+void Equations::operator()( QuadMat<complex,2>& c, const double laplace, const complex dy) const
 {
-    const double laplace = (dx*dx + dy*dy).real(); 
-#ifdef TL_DEBUG
-    if( (dx*dx+dy*dy).imag() != 0)
-        throw Message( "Laplace has imaginary part!",ping);
     if( laplace == 0)
-        throw Message( "Laplace is zero in equations!",ping);
-#endif
+    {
+        c(0,0) = -dd; c(0,1) = 0.;
+        c(1,0) = 0;   c(1,1) = 0.;
+        return;
+    }
     std::array<double,2> phi;
     p(phi, laplace); //prefactors in Poisson equations (phi = phi[0]*ne + phi[1]*ni)
     const complex curv = kappa_y*dy; 
@@ -119,15 +118,15 @@ void Equations::operator()( QuadMat<complex,2>& c, const complex dx, const compl
     c(0,0) = P*phi[0] - curv - dd - nu*laplace*laplace; c(0,1) = P*phi[1];
     c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv - nu*laplace*laplace;
 }
-void Equations::operator()( QuadMat<complex,3>& c, const complex dx, const complex dy) const
+void Equations::operator()( QuadMat<complex,3>& c, const double laplace, const complex dy) const
 {
-    const double laplace = (dx*dx + dy*dy).real(); 
-#ifdef TL_DEBUG
-    if( (dx*dx+dy*dy).imag() != 0)
-        throw Message( "Laplace has imaginary part!",ping);
     if( laplace == 0)
-        throw Message( "Laplace is zero in equations!",ping);
-#endif
+    {
+        c(0,0) = -dd; c(0,1) = 0.; c(0,2) = 0;
+        c(1,0) = 0;   c(1,1) = 0.; c(1,2) = 0;
+        c(2,0) = 0;   c(2,1) = 0.; c(2,2) = 0;
+        return;
+    }
     std::array<double,3> phi;
     p( phi, laplace);
     const complex curv = kappa_y*dy; 

@@ -3,7 +3,7 @@
 		  ------------------------------------
 
 1)  ddd (dissip. coupling) 		    =   0.5		(0.5)
-2)  g_n (e/i density gradient)		    =   1.0		(1.0)
+2)  g_n (e/i density gradient)		    =   -1.0		(1.0)
 3)  g_z (impurity gradient)		    =   0.0		(0.0)
 4)  taui (Ti/Te) 			    =	0.0		(0.0)
 5)  new impurity puff:1, cont.:0	    =	0.0		(0.0) 

@@ -12,7 +12,7 @@ using namespace toefl;
  * The r2c yields one coefficient for a mode
  * The c2c trafo afterwards yields two: at k and N-k for one mode.
  */
-unsigned rows = 5, cols = 10;
+unsigned rows = 7, cols = 10;
 complex<double> I = {0,1};
 
 /*! @brief Adds a gaussian to a given matrix
@@ -54,7 +54,7 @@ void init_gaussian( M& m, const double x0, const double y0,
 int main()
 {
     Matrix<double, TL_DFT> m1{rows, cols};
-    Matrix<complex<double> >   m1_{ rows, cols/2 + 1};
+    Matrix<complex<double> >   m1_{ rows, cols/2 + 1}, m1_der{m1_};
     DFT_DFT dft_dft( rows,cols);
     double dx = 1./(double)cols, dy = 1./(double)rows;
     init_gaussian( m1, 0.5,0.5, 0.2,0.2, 1);
@@ -66,19 +66,26 @@ int main()
     dft_dft.r2c( m1, m1_);
     cout << "The transformed matrix\n"<<m1_<<endl;
     //multiply coefficients
-    for( unsigned i=0; i<rows/2+1; i++)
+    int ik;
+    for( unsigned i=0; i<rows; i++)
         for( unsigned j=0; j<cols/2+1; j++)
-            m1_(i,j) *= -(double)(i*i+j*j)*2.*M_PI*2.*M_PI/(double)(rows*cols);
-    for( unsigned i=rows/2+1; i<rows; i++)
-        for( unsigned j=0; j<cols/2+1; j++)
-            m1_(i,j) *= -(double)((rows-i)*(rows-i)+j*j)*4.*M_PI*M_PI/(double)(rows*cols);
-
+        {
+            ik = (i>rows/2)?(i-rows):i;
+            m1_der(i,j) = {0, 2.*M_PI*ik};
+            m1_der(i,j) *=m1_(i,j)/(double)(rows*cols);
+            m1_(i,j) *= -(double)(ik*ik+j*j)*2.*M_PI*2.*M_PI/(double)(rows*cols);
+        }
     m1_(rows-1, cols/2) = {0,0};
     cout << "The multiplied matrix\n"<<m1_<<endl;
+    cout << "The multiplied matrix\n"<<m1_der<<endl;
     try{
         dft_dft.c2r( m1_, m1);
     }catch( Message& m){m.display();}
-    cout << "The derivative of the original\n"<<m1<<endl;
+    cout << "The laplacian of the original\n"<<m1<<endl;
+    try{
+        dft_dft.c2r( m1_der, m1);
+    }catch( Message& m){m.display();}
+    cout << "The y-deriv of the original\n"<<m1<<endl;
 
 
 

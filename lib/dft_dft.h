@@ -57,6 +57,8 @@ class DFT_DFT
      * @param swap 
      * Can be void. Size has to be (real_rows, real_cols).
      * Contains the solution on output.
+     * @attention Are you sure you normalized your coefficients with 
+     * (real_rows*real_cols) before backtrafo?
      */
     inline void c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT>& swap);
 

@@ -111,9 +111,10 @@ void DFT_DRT::r2c( Matrix<double, TL_DFT>& m, Matrix<complex, TL_NONE>& swap)
 }
 /*! @brief Perform a c2r transformation
 
-Transformations are always done inplace, if you want to preserve input copy it first. 
-\param m contains values to be transformed, contains memory of swap on output
-\param swap contains transformed values on output (maybe void)
+ * Transformations are always done inplace, if you want to preserve input copy it first. 
+ * \param m contains values to be transformed, contains memory of swap on output
+ * \param swap contains transformed values on output (maybe void)
+ * @attention Are you sure you normalized your coefficients before backtrafo?
 */
 void DFT_DRT::c2r( Matrix<complex, TL_NONE>& m, Matrix<double, TL_DFT>& swap)
 {

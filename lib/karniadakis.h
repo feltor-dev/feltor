@@ -152,6 +152,8 @@ class Karniadakis
     void step_i( std::array< Matrix<double, P_x>, n>& v0, std::array< Matrix<double, P_x>, n> & n0);
     /*! @brief Compute the second part of the Karniadakis scheme
      *
+     * The result is normalized with the inverse of the normalisation factor 
+     * you specified in the init_coeff function. 
      * @param v 
      * The fourier transposed result of step_i on input.
      * Contains the multiplied coefficients on output

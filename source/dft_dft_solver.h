@@ -85,7 +85,8 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
 {
     Matrix< QuadMat< complex, n> > coeff( rows, cols/2+1);
     double laplace;
-    const complex kxmin ( 0, 2.*M_PI/bound.lx), kymin( 0, 2.*M_PI/bound.ly);
+    int ik;
+    const complex dymin( 0, 2.*M_PI/bound.ly);
     const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(bound.lx*bound.lx),
                  kymin2 = 2.*2.*M_PI*M_PI/(double)(bound.ly*bound.ly);
     Equations e( phys);
@@ -94,7 +95,8 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
     for( unsigned i = 0; i<rows; i++)
         for( unsigned j = 0; j<cols/2+1; j++)
         {
-            laplace = -kxmin2*(double)(j*j) - kymin2*(double)(i*i);
+            ik = (i>rows/2) ? (i-rows) : i; //integer division rounded down
+            laplace = - kxmin2*(double)(j*j) - kymin2*(double)(ik*ik);
             if( n == 2)
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
             else if( n == 3)
@@ -102,14 +104,15 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
                 gamma_coeff[1](i,j) = p.gamma1_z( laplace);
             }
+            if( rows%2 == 0 && i == rows/2) ik = 0;
+            e( coeff( i,j), laplace, (double)ik*dymin);
             if( laplace == 0) continue;
             p( phi_coeff(i,j), laplace);  
-            e( coeff( i,j), (double)j*kxmin, (double)i*kymin);
         }
         //for periodic bc the constant is undefined
     for( unsigned k=0; k<n; k++)
         phi_coeff(0,0)[k] = 0;
-    coeff( 0,0).zero();
+    //coeff( 0,0).zero();
     //std::cout << coeff<<std::endl;
     karniadakis.init_coeff( coeff, (double)(rows*cols));
 }
@@ -126,6 +129,11 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
         dft_dft.r2c( v[k], cdens[k]);
     }
     //std::cout << "cdens[0] \n"<<cdens[0] <<std::endl;
+    //don't forget to normalize coefficients
+    for( unsigned k=0; k<n; k++)
+        for( unsigned i=0; i<rows; i++)
+            for( unsigned j=0; j<cols/2+1;j++)
+                cdens[k](i,j) /= (double)(rows*cols);
     switch( t) //which field must be computed?
     {
         case( TL_ELECTRONS): 
@@ -172,7 +180,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
             break;
         case( TL_POTENTIAL):
             //solve for cphi
-            std::cout << "ping\n";
+            //std::cout << "ping\n";
             for( unsigned i=0; i<rows; i++)
                 for( unsigned j=0; j<cols/2+1; j++)
                 {

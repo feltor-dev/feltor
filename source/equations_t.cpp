@@ -27,14 +27,14 @@ int main()
     array<double,2> arr;
     QuadMat< complex<double>,2> m;
 
-    equations(m, dx, dy );
+    equations(m, laplace, dy );
     poisson(arr, laplace);
     double g1_i = poisson.gamma1_i( -1);
     double g1_z = poisson.gamma1_z( -1);
     //double g2_i = poisson.gamma2_i( -1);
     //double g2_z = poisson.gamma2_z( -1);
     phys.display( cout);
-    cout << "equations2 with dx = " <<dx<<" dy = "<<dy<<"\n" << m <<endl;
+    cout << "equations2 with laplace = " <<laplace<<" dy = "<<dy<<"\n" << m <<endl;
     cout <<"Poisson2 with laplace = "<<laplace
          <<"\n p0 = "<<arr[0] << " p1 "<<arr[1]<<endl;
     cout << "gamma1_i = " <<g1_i << " gamma1_z = " << g1_z <<"\n";

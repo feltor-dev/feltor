@@ -8,6 +8,8 @@
 using namespace std;
 using namespace toefl;
     
+unsigned N;
+double slit = 2./500.; //half distance between pictures in units of width
 
 /*! @brief Adds a gaussian to a given matrix
  *
@@ -69,6 +71,7 @@ void init( Physical& phys, Algorithmic& alg, Boundary& bound)
     alg.nx = para[13];
     alg.ny = para[14];
     alg.dt = para[15];
+    N = para[16];
 
     alg.h = bound.ly / (double)alg.ny;
     bound.lx = (double)alg.nx * alg.h;
@@ -87,6 +90,9 @@ void drawScene( const DFT_DFT_Solver<2>& solver, unsigned nx, unsigned ny)
     for( unsigned i=0; i<field.rows(); i++)
         for( unsigned j=0; j<field.cols(); j++)
             if( abs(field(i,j)) > temp) temp = field(i,j);
+#ifdef TL_DEBUG
+    cout <<"ne temp "<<temp<<endl;
+#endif
     gentexture_RGBf( tex, field, temp);
     // image comes from texarray on host
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
@@ -94,8 +100,8 @@ void drawScene( const DFT_DFT_Solver<2>& solver, unsigned nx, unsigned ny)
     //Draw a textured quad
     glBegin(GL_QUADS);
         glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f( -1.0/3.0, -1.0);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f( -1.0/3.0, 1.0);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( -1.0/3.0-slit, -1.0);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( -1.0/3.0-slit, 1.0);
         glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, 1.0);
     glEnd();
     field = solver.getField( TL_IONS);
@@ -103,32 +109,38 @@ void drawScene( const DFT_DFT_Solver<2>& solver, unsigned nx, unsigned ny)
     for( unsigned i=0; i<field.rows(); i++)
         for( unsigned j=0; j<field.cols(); j++)
             if( abs(field(i,j)) > temp) temp = field(i,j);
+#ifdef TL_DEBUG
+    cout <<"ni temp "<<temp<<endl;
+#endif
     gentexture_RGBf( tex, field, temp);
     // image comes from texarray on host
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
     glLoadIdentity();
     //Draw a textured quad
     glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0/3.0, -1.0);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0/3.0, -1.0);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0/3.0, 1.0);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0/3.0, 1.0);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0/3.0+slit, -1.0);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0/3.0-slit, -1.0);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0/3.0-slit, 1.0);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0/3.0+slit, 1.0);
     glEnd();
     field = solver.getField( TL_POTENTIAL);
     temp = 0;
     for( unsigned i=0; i<field.rows(); i++)
         for( unsigned j=0; j<field.cols(); j++)
             if( abs(field(i,j)) > temp) temp = field(i,j);
+#ifdef TL_DEBUG
+    cout <<"phi temp "<<temp<<endl;
+#endif
     gentexture_RGBf( tex, field, temp);
     // image comes from texarray on host
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
     glLoadIdentity();
     //Draw a textured quad
     glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f); glVertex2f( 1.0/3.0, -1.0);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f( 1.0/3.0+slit, -1.0);
         glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
         glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 1.0);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f( 1.0/3.0, 1.0);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f( 1.0/3.0+slit, 1.0);
     glEnd();
 }
 
@@ -150,10 +162,10 @@ int main()
     DFT_DFT_Solver<2> solver( bp);
 
     //init solver
-    Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, phi{ alg.ny, alg.nx, 0.};
-    init_gaussian( ne,  0.5,0.5, 0.01, 0.01, 0.2);
-    init_gaussian( phi, 0.5,0.5, 0.01, 0.01, 0.2);
-    std::array< Matrix<double, TL_DFT>,2> arr{{ ne, phi}};
+    Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ alg.ny, alg.nx, 0.};
+    init_gaussian( ne,  0.5,0.5, 0.05, 0.05, 0.1);
+    init_gaussian( ni, 0.5,0.5, 0.05, 0.05, 0.1);
+    std::array< Matrix<double, TL_DFT>,2> arr{{ ne, ni}};
     try{
     solver.init( arr, TL_POTENTIAL);
     }catch( Message& m){m.display();}
@@ -168,11 +180,19 @@ int main()
         cerr << "ERROR: glfw couldn't open window!\n";
     }
     glEnable( GL_TEXTURE_2D);
+    glfwEnable( GLFW_STICKY_KEYS);
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     double t = 3*alg.dt;
     while( running)
     {
-        t+= alg.dt;
+        glfwPollEvents();
+        if( glfwGetKey( 'S')) 
+        {
+            do
+            {
+                glfwWaitEvents();
+            } while( !glfwGetKey('R'));
+        }
         stringstream str; 
         str << "ne, ni and phi ... time = "<<t;
         glfwSetWindowTitle( (str.str()).c_str() );
@@ -183,9 +203,15 @@ int main()
         glfwWaitEvents();
         if( glfwGetKey('N'))
         {
+#else
+        for(unsigned i=0; i<N; i++)
+        {
 #endif
             solver.step();
-#ifdef TL_DEBUG
+            t+= alg.dt;
+#ifndef TL_DEBUG
+        }
+#else   
             cout << "Next Step\n";
         }
 #endif

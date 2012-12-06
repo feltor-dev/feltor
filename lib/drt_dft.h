@@ -47,12 +47,15 @@ class DRT_DFT
      *
      * First perform a linewise discrete fourier transform followed
      * by a transposition and a linewise discrete real transform.
+     * The result is the same as if you had used the drt_dft class
+     * on the transposed input.
      * @param inout_T
      * Non void complex matrix of size (real_cols, real_rows/2 + 1)
      * Content on output is the one of swap on input.
      * @param swap
      * Can be void. Size has to be (real_rows, real_cols).
      * Contains the solution on output.
+     * @attention Are you sure you normalized your coefficients before backtrafo?
      */
     void c_T2r( Matrix<complex, TL_NONE>& inout_T, Matrix<double, TL_DRT_DFT>& swap);
     /*! @brief This class shall not be copied 

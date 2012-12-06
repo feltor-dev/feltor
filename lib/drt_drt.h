@@ -51,6 +51,7 @@ class DRT_DRT
      * @param swap
      * Can be void. Size has to be equal to inout.
      * Contains the solution on output.
+     * @attention Are you sure you normalized your coefficients before backtrafo?
      */
     void backward( Matrix<double, TL_NONE>& inout, Matrix<double, TL_NONE>& swap );
     /*! @brief This class shall not be copied 
