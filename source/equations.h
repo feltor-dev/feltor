@@ -112,8 +112,8 @@ void Equations::operator()( QuadMat<complex,2>& c, const double laplace, const c
     std::array<double,2> phi;
     p(phi, laplace); //prefactors in Poisson equations (phi = phi[0]*ne + phi[1]*ni)
     const complex curv = kappa_y*dy; 
-    const complex P = g_e*dy + curv + dd;
-    const complex Q = g_i*dy*p.gamma1_i(laplace) + curv*( p.gamma1_i(laplace) /*+ 0.5 *p.gamma2_i(laplace)*/);
+    const complex P = -g_e*dy + curv + dd;
+    const complex Q = -g_i*dy*p.gamma1_i(laplace) + curv*( p.gamma1_i(laplace) /*+ 0.5 *p.gamma2_i(laplace)*/);
 
     c(0,0) = P*phi[0] - curv - dd - nu*laplace*laplace; c(0,1) = P*phi[1];
     c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv - nu*laplace*laplace;
@@ -130,9 +130,9 @@ void Equations::operator()( QuadMat<complex,3>& c, const double laplace, const c
     std::array<double,3> phi;
     p( phi, laplace);
     const complex curv = kappa_y*dy; 
-    const complex P = g_e*dy + curv + dd;
-    const complex Q = g_i*dy*p.gamma1_i(laplace) + curv*( p.gamma1_i(laplace)/* + 0.5 *p.gamma2_i(laplace)*/);
-    const complex R = g_z*dy*p.gamma1_z(laplace) + curv*( p.gamma1_z(laplace)/* + 0.5 *p.gamma2_z(laplace)*/);
+    const complex P = -g_e*dy + curv + dd;
+    const complex Q = -g_i*dy*p.gamma1_i(laplace) + curv*( p.gamma1_i(laplace)/* + 0.5 *p.gamma2_i(laplace)*/);
+    const complex R = -g_z*dy*p.gamma1_z(laplace) + curv*( p.gamma1_z(laplace)/* + 0.5 *p.gamma2_z(laplace)*/);
 
     c(0,0) = P*phi[0] - curv - dd - nu*laplace*laplace; c(0,1) = P*phi[1];                       c(0,2) = P*phi[2];
     c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv - nu*laplace*laplace; c(1,2) = Q*phi[2];

@@ -106,10 +106,10 @@ void drawScene( const DFT_DFT_Solver<2>& solver, unsigned nx, unsigned ny)
         glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, 1.0);
     glEnd();
     field = solver.getField( TL_IONS);
-    temp = 0;
-    for( unsigned i=0; i<field.rows(); i++)
-        for( unsigned j=0; j<field.cols(); j++)
-            if( abs(field(i,j)) > temp) temp = field(i,j);
+    //temp = 0;
+    //for( unsigned i=0; i<field.rows(); i++)
+    //    for( unsigned j=0; j<field.cols(); j++)
+    //        if( abs(field(i,j)) > temp) temp = field(i,j);
 #ifdef TL_DEBUG
     cout <<"ni temp "<<temp<<endl;
 #endif
@@ -154,8 +154,6 @@ int main()
     init( phys, alg, bound);
 
     Blueprint bp( phys, bound, alg);
-    bp.enable(TL_COUPLING);
-    //bp.enable(TL_CURVATURE);
     try{ bp.consistencyCheck();}
     catch( Message& m) {m.display(); bp.display(); return -1;}
     bp.display(cout);
@@ -165,8 +163,8 @@ int main()
 
     //init solver
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ alg.ny, alg.nx, 0.};
-    init_gaussian( ne,  0.5,0.5, 0.05, 0.05, 0.1);
-    init_gaussian( ni, 0.5,0.5, 0.05, 0.05, 0.1);
+    init_gaussian( ne,  0.25,0.5, 0.05, 0.05, 1e-9);
+    init_gaussian( ni, 0.25,0.5, 0.05, 0.05, 1e-9);
     std::array< Matrix<double, TL_DFT>,2> arr{{ ne, ni}};
     try{
         solver.init( arr, TL_POTENTIAL);

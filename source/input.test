@@ -2,23 +2,23 @@
 		  * Input-File fuer "TOEFL" Code T3L *
 		  ------------------------------------
 
-1)  ddd (dissip. coupling) 		    =  0.05		(0.5)
-2)  g_n (e/i density gradient)		    =   1		(1.0)
+1)  ddd (dissip. coupling) 		    =  0.0		(0.5)
+2)  g_n (e/i density gradient)		    =   +1		(1.0)
 3)  g_z (impurity gradient)		    =   0.0		(0.0)
-4)  taui (Ti/Te) 			    =	0.0		(0.0)
+4)  taui (Ti/Te) 			    =	2.0		(0.0)
 5)  new impurity puff:1, cont.:0	    =	0.0		(0.0) 
-6)  mcv (magnetic curvature)		    =	0.0		(0.05)
-7)  mhw:1, ohw:0 (modified/ordinary HW)	    =   1.0		(1.0)
+6)  mcv (magnetic curvature)		    =	+0.1		(0.05)
+7)  mhw:1, ohw:0 (modified/ordinary HW)	    =   0.0		(1.0)
 
-8)  nu (artif. hyper-viscosity) 	    =   0.001		(0.001)
+8)  nu (artif. hyper-viscosity) 	    =   0.01		(0.001)
 9)  nuimp (impurity viscosity)	   	    = 	0.0		(0.0)
 10) n00 (perturbation amplitude)    	    =   1.0		(0.1)
 11) nd0 (impurity amplitude)	    	    =	1.0		(1.0)
 
-12) ly (length of y in units of rho_s)	    =   64		(64.)
-13) nx (grid points in x)	 	    =   256.		(256.)
+12) ly (length of y in units of rho_s)	    =  128 		(64.)
+13) nx (grid points in x)	 	    =   512.		(256.)
 14) ny (grid points in y)	 	    =   256.		(256.)
-15) dt (time step in units c_s/L_p)	    =   0.01		(0.01)
+15) dt (time step in units c_s/L_p)	    =   0.01	(0.01)
 16) itstp (steps between output)	    =  5 		(40)
 17) itmax (total steps)			    =   4000		(4000)
 18) OpenMP: number of parallel threads	    =	1.		(1.0)

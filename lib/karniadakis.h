@@ -119,12 +119,13 @@ class Karniadakis
 
     /*! @brief Swap in the fourier coefficients.
      *
-     * Swaps the coefficients into the object.
+     * Swaps the coefficients into the object and allocates internal storage for the
+     * inverse matrix.
      * @param coeff_origin Set of fourier coefficients, void on output.
      * @param normalisation 
         A numerical discrete fourier transformation followed by its inverse usually
         yields the input times a constant factor. State this factor here to normalize the 
-        output. 
+        output of the step_ii function. 
      */
     void init_coeff( Matrix<QuadMat<T_k, n> > & coeff_origin, const double normalisation);
 

@@ -110,10 +110,7 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     gamma_coeff{ MatrixArray< double, TL_NONE, n-1>::construct( rows, cols/2+1)}
 {
     bp.consistencyCheck();
-    Physical phys = bp.getPhysical();
-    if( !bp.isEnabled( TL_CURVATURE))
-        phys.kappa = 0; 
-    init_coefficients( bp.getBoundary(), phys);
+    init_coefficients( bp.getBoundary(), bp.getPhysical());
 }
 
 template< size_t n>

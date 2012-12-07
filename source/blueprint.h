@@ -2,13 +2,14 @@
 #define _BLUEPRINT_
 
 #include <iostream>
+#include <cmath>
 #include "../lib/ghostmatrix.h" // holds boundary conditions
 #include "../lib/message.h"
 
 namespace toefl{
 //toefl brauch libraries, um zu funktionieren
 //z.B. fftw3 für dfts, cuda für graphikkarten, oder sparse matrix solver 
-enum cap{ TL_CURVATURE, TL_COUPLING, TL_IMPURITY, TL_GLOBAL};
+enum cap{ TL_IMPURITY, TL_GLOBAL};
 enum target{ TL_ELECTRONS, TL_IONS, TL_IMPURITIES, TL_POTENTIAL};
 
 
@@ -108,7 +109,7 @@ class Blueprint
     const Physical phys;
     const Boundary bound;
     const Algorithmic alg;
-    bool curvature, coupling, imp, global;
+    bool imp, global;
   public:
     /*! @brief Init parameters
      *
@@ -117,7 +118,7 @@ class Blueprint
      */
     Blueprint( const Physical& phys, const Boundary& bound, const Algorithmic& alg): phys(phys), bound(bound), alg(alg)
     {
-        curvature = coupling = imp = global = false; 
+        imp = global = false; 
     }
     const Physical& getPhysical() const {return phys;}
     const Boundary& getBoundary() const {return bound;}
@@ -126,10 +127,6 @@ class Blueprint
     {
         switch( capacity)
         {
-            case( TL_CURVATURE): curvature = true;
-                                 break;
-            case( TL_COUPLING) : coupling = true;
-                                 break;
             case( TL_IMPURITY) : imp = true;
                                  break;
             case( TL_GLOBAL):    global = true;
@@ -141,8 +138,6 @@ class Blueprint
     {
         switch( capacity)
         {
-            case( TL_CURVATURE): return curvature;
-            case( TL_COUPLING) : return coupling;
             case( TL_IMPURITY) : return imp;
             case( TL_GLOBAL):    return global;
             default: throw Message( "Unknown Capacity\n", ping);
@@ -154,11 +149,12 @@ class Blueprint
         phys.display( os);
         bound.display( os);
         alg.display( os);
-        os << "Capacities are \n"
-            <<"    curvature "<< curvature <<"\n"
-            <<"    coupling  "<<coupling<<"\n"
-            <<"    imp       "<<imp<<"\n"
-            <<"    global    "<<global<<"\n";
+        char enabled[] = "ENABLED", disabled[] = "DISABLED";
+
+        os << "Impurities are: \n"
+            <<"    "<<(imp?enabled:disabled)<<"\n"
+            <<"Global solvers are: \n"
+            <<"    "<<(global?enabled:disabled)<<"\n";
     }
 
 };
@@ -175,8 +171,6 @@ void Blueprint::consistencyCheck() const
     if( alg.nx == 0||alg.ny == 0) 
         throw Message( "Set nx and ny!\n", ping);
     //Check physical parameters
-    if( curvature && phys.kappa == 0 ) 
-        throw Message( "Curvature enabled but zero!\n", ping);
     if( phys.nu < 0) 
         throw Message( "nu < 0!\n", ping);
     if( phys.a[0] <= 0 || phys.mu[0] <= 0 || phys.tau[0] < 0) 
@@ -190,8 +184,6 @@ void Blueprint::consistencyCheck() const
     if( global) 
         throw Message( "Global solver not yet implemented\n", ping);
     //Some Warnings
-    if( !curvature && phys.kappa != 0) 
-        std::cerr <<  "TL_WARNING: Curvature disabled but kappa not zero (will be ignored)!\n";
     if( !imp && (phys.a[1] != 0 || phys.mu[1] != 0 || phys.tau[1] != 0)) 
         std::cerr << "TL_WARNING: Impurity disabled but z species not 0 (will be ignored)!\n";
         
