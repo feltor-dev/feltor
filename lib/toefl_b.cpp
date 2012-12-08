@@ -20,6 +20,8 @@ const double dt = 2e-6;
 //Algorithmic
 const unsigned N = 5; //inner timesteps before output
 
+const enum bc  bc_z = TL_DST10;
+const double prefactor = (double)nx*fftw_normalisation( bc_z, nz);
 
 void rayleigh_equations( QuadMat< Complex,2>& coeff, const Complex dx, const Complex dy)
 {
@@ -51,16 +53,16 @@ public:
 auto field      = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
 auto nonlinear  = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
 auto cfield     = MatrixArray<Complex, TL_NONE,2>::construct( nz, nx/2+1);
-GhostMatrix<double, TL_DFT> ghostfield( nz, nx, TL_DST10, TL_PERIODIC);
-GhostMatrix<double, TL_DFT> phi( nz, nx, TL_DST10, TL_PERIODIC);
+GhostMatrix<double, TL_DFT> ghostfield( nz, nx, bc_z, TL_PERIODIC);
+GhostMatrix<double, TL_DFT> phi( nz, nx, bc_z, TL_PERIODIC);
 Matrix<Complex, TL_NONE>    cphi( nz, nx/2+1);
 //Coefficients
 Matrix< QuadMat< Complex, 2>> coefficients( nz, nx/2+1);
 Matrix< double, TL_NONE> cphi_coefficients( nz, nx/2+1);
 
 Karniadakis<2,Complex,TL_DFT> karniadakis( nz,nx,nz,nx/2+1,dt);
-DFT_DRT dft_drt( nz, nx, FFTW_RODFT10, FFTW_MEASURE);
-const double prefactor = (double)(nx*2*(nz));
+DFT_DRT dft_drt( nz, nx, fftw_convert( bc_z), FFTW_MEASURE);
+
 Arakawa arakawa(h);
 
 void multiply_coefficients();

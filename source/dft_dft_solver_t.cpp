@@ -4,6 +4,7 @@
 #include <sstream>
 #include "toefl.h"
 #include "dft_dft_solver.h"
+#include "drt_dft_solver.h"
 #include "blueprint.h"
 
 using namespace std;
@@ -160,11 +161,14 @@ int main()
 
     //construct solver
     DFT_DFT_Solver<2> solver( bp);
+    bound.bc_x = TL_DST10;
+    Blueprint bp2( phys, bound, alg);
+    DRT_DFT_Solver<2> drt_solver( bp2);
 
     //init solver
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ alg.ny, alg.nx, 0.};
-    init_gaussian( ne,  0.25,0.5, 0.05, 0.05, 1e-9);
-    init_gaussian( ni, 0.25,0.5, 0.05, 0.05, 1e-9);
+    init_gaussian( ne,  0.5,0.5, 0.05, 0.05, 0.1);
+    init_gaussian( ni, 0.5,0.5, 0.05, 0.05, 0.1);
     std::array< Matrix<double, TL_DFT>,2> arr{{ ne, ni}};
     try{
         solver.init( arr, TL_POTENTIAL);
@@ -183,6 +187,7 @@ int main()
     glfwEnable( GLFW_STICKY_KEYS);
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     double t = 3*alg.dt;
+    Timer timer;
     while( running)
     {
         glfwPollEvents();
@@ -204,22 +209,23 @@ int main()
         glfwWaitEvents();
         if( glfwGetKey('N'))
         {
-#else
+#endif
+        timer.tic();
         for(unsigned i=0; i<N; i++)
         {
-#endif
             solver.step();
             t+= alg.dt;
-#ifndef TL_DEBUG
         }
-#else   
-            cout << "Next Step\n";
+        timer.toc();
+#ifdef TL_DEBUG
+            cout << "Next "<<N<<" Steps\n";
         }
 #endif
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
     }
     glfwTerminate();
+    cout << "Average time for one step = "<<timer.diff()/(double)N<<"s\n";
     }
     //////////////////////////////////////////////////////////////////
     return 0;

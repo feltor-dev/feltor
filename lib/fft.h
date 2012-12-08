@@ -34,14 +34,25 @@ inline fftw_complex* fftw_cast( double * const ptr){ return reinterpret_cast<fft
 * @return pointer to fftw_complex
 */
 inline fftw_complex* fftw_cast( std::complex<double> * const ptr){ return reinterpret_cast<fftw_complex*> (ptr);}
-
 /*! @brief return the inverse kind of a r2r transformation
  * 
  * @param kind Kind of the r2r transformation
  * @return its inverse kind according to fftw documentation
  */
 fftw_r2r_kind inverse_kind( fftw_r2r_kind kind);
-
+/*! @brief Convert toefl enum in fftw kind
+ *
+ * @param bc Boundary condition 
+ * @return The corresponding fftw kind
+ */
+fftw_r2r_kind fftw_convert( enum bc bc);
+/*! @brief Compute normalisation factor for given boundary type
+ * 
+ * Computes the normalisation according to fftw documentation.
+ * @param bc Boundary condition
+ * @param n Number of elements you transform
+ */
+double fftw_normalisation( enum bc bc, unsigned n);
 /*! @brief plan many linewise real transformations
 
  * @param rows # of rows of the Matrix
@@ -53,7 +64,6 @@ fftw_r2r_kind inverse_kind( fftw_r2r_kind kind);
  * @return the plan
  */
 fftw_plan plan_drt_1d( const size_t rows, const size_t cols, double *in, double *out, const fftw_r2r_kind kind, const unsigned flags);
-
 /*! @brief plan for real Matrix transposition
  *
  * (From the FFTW FAQ section)
@@ -73,7 +83,6 @@ fftw_plan plan_drt_1d( const size_t rows, const size_t cols, double *in, double 
  * \see http://www.fftw.org/faq/section3.html#transpose
  */
 fftw_plan plan_transpose( const size_t rows, const size_t cols, double *in, double *out, const unsigned flags);
-
 /*! @brief Plan a complex matrix transposition
  *
  * Same as the real version just with complex numbers.
@@ -86,7 +95,6 @@ fftw_plan plan_transpose( const size_t rows, const size_t cols, double *in, doub
  * \note execute with fftw_execute( plan, ptr, ptr);
  */
 fftw_plan plan_transpose( const size_t rows, const size_t cols, fftw_complex *in, fftw_complex *out, const unsigned flags);
-
 /*! @brief plan many linewise r2c transformations
 
  * @param real_rows # of rows of the real Matrix
@@ -97,7 +105,6 @@ fftw_plan plan_transpose( const size_t rows, const size_t cols, fftw_complex *in
  * @return the plan
  */
 fftw_plan plan_dft_1d_r2c( const size_t real_rows, const size_t real_cols, double* in, fftw_complex* out, const unsigned flags);
-
 /*! @brief plan many linewise c2r transformations
 
  * @param real_rows # of rows of the real Matrix
@@ -150,6 +157,36 @@ fftw_plan plan_transpose( const size_t rows, const size_t cols, fftw_complex *in
     return fftw_plan_guru_dft(/*rank=*/ 0, /*dims=*/ NULL,
                               /*howmany_rank=*/ 2, howmany_dims,
                               in, out, FFTW_FORWARD, flags);
+}
+
+fftw_r2r_kind fftw_convert( enum bc bc)
+{
+    fftw_r2r_kind kind = FFTW_RODFT00;
+    switch( bc)
+    {
+        case( TL_PERIODIC): 
+            throw Message( "Cannot convert TL_PERIODIC to fftw_r2r_kind!", ping);
+            break;
+        case( TL_DST00) : kind = FFTW_RODFT00; break;
+        case( TL_DST10) : kind = FFTW_RODFT10; break;
+        case( TL_DST01) : kind = FFTW_RODFT01; break;
+        case( TL_DST11) : kind = FFTW_RODFT11; break;
+    }
+    return kind;
+}
+
+double fftw_normalisation( enum bc bc, unsigned n)
+{
+    double norm = 0;
+    switch( bc)
+    {
+        case( TL_PERIODIC): norm = (double)n;           break;
+        case( TL_DST00):    norm = (double)(2*(n+1));   break;
+        case( TL_DST10):    norm = (double)(2*n);       break;
+        case( TL_DST01):    norm = (double)(2*n);       break;
+        case( TL_DST11):    norm = (double)(2*n);       break;
+    }
+    return norm;
 }
 
 fftw_plan plan_drt_1d( const size_t rows, const size_t cols, double *in, double *out, const fftw_r2r_kind kind, const unsigned flags = FFTW_MEASURE)
