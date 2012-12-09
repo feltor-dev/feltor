@@ -36,18 +36,6 @@ inline void laplace_inverse( double& l_inv, const Complex dx, const Complex dy)
     l_inv = 1.0/(dx*dx+dy*dy).real();
 }
 
-class Random{
-private:
-    const double amplitude;
-public:
-    Random( double amp):amplitude(amp){srand(time(0));}
-    double operator()(const double kx, const double ky)
-    {
-        double zuf = (double)rand();
-        return cos(zuf)*amplitude/sqrt( 1.+pow(kx*kx+ky*ky,4));
-    }
-
-};
 
 //Fields
 auto field      = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
@@ -81,13 +69,13 @@ int main()
     glfwSetWindowTitle( "Behold the convection!");
     //////////////////////////////////////////////////////////////////
     const Complex kxmin { 0, 2.*M_PI/lx}, kzmin{ 0, M_PI/lz};
-    Random r(R);
-    for( unsigned i=0; i<nz; i++) for( unsigned j=0; j<nx/2+1; j++)
+    TurbulentBath bath(R);
+    for( unsigned i=0; i<nz; i++) 
+        for( unsigned j=0; j<nx/2+1; j++)
         {
             rayleigh_equations( coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
             laplace_inverse( cphi_coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
-            cfield[0](i,j) ={ r( (double)j*kxmin.imag(), (double)(i+1)*kzmin.imag()),
-            r( (double)j*kxmin.imag(), (double)(i+1)*kzmin.imag())};
+            cfield[0](i,j) ={ bath( coefficients(i,j)(0,0).real()), bath( coefficients(i,j)(0,0).real())};
         }
     //init solvers
     karniadakis.init_coeff( coefficients, prefactor); //swaps in coefficients

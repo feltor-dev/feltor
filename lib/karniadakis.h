@@ -100,7 +100,7 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
  * three equations. 
  * \todo n equations are available only when an implementation of an LU decomposition is available. (LAPACK?)
  * @tparam n size of the equations (2 or 3)
- * @tparam T_k the type of fourier Coefficients used (double or std::complex<double>)
+ * @tparam T_k the type of fourier coefficients used (double or std::complex<double>)
  * @tparam P_x Padding of your (real) matrices
  */
 template< size_t n, typename T_k, enum Padding P_x>

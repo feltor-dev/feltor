@@ -8,6 +8,7 @@
 
 #include <complex>
 #include "matrix.h"
+#include "ghostmatrix.h"
 #include "fftw3.h"
 
 //NOTE: The 2d r2c fftw padding is not like described in the documentation! 

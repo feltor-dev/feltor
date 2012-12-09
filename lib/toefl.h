@@ -27,6 +27,8 @@
 #include "dft_drt.h"
 #include "drt_dft.h"
 #include "drt_drt.h"
+//inits
+#include "init.h"
 
 
 #endif //_TL_TOEFL_
