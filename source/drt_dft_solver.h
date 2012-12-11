@@ -95,26 +95,26 @@ class DRT_DFT_Solver
 
 template< size_t n>
 DRT_DFT_Solver<n>::DRT_DFT_Solver( const Blueprint& bp):
-    rows( bp.getAlgorithmic().ny ), cols( bp.getAlgorithmic().nx ),
+    rows( bp.algorithmic().ny ), cols( bp.algorithmic().nx ),
     crows( cols), ccols( rows/2+1),
     blue( bp),
     //fields
-    ghostdens{ rows, cols, TL_PERIODIC, bp.getBoundary().bc_x, TL_VOID},
+    ghostdens{ rows, cols, TL_PERIODIC, bp.boundary().bc_x, TL_VOID},
     ghostphi{ ghostdens},
     dens{ MatrixArray<double, TL_DRT_DFT,n>::construct( rows, cols)},
     phi{ dens}, nonlinear{ dens},
     cdens{ MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)}, 
     cphi{cdens}, 
     //Solvers
-    arakawa( bp.getAlgorithmic().h),
-    karniadakis(rows, cols, crows, ccols, bp.getAlgorithmic().dt),
-    drt_dft( rows, cols, fftw_convert( bp.getBoundary().bc_x), FFTW_MEASURE),
+    arakawa( bp.algorithmic().h),
+    karniadakis(rows, cols, crows, ccols, bp.algorithmic().dt),
+    drt_dft( rows, cols, fftw_convert( bp.boundary().bc_x), FFTW_MEASURE),
     //Coefficients
     phi_coeff{ crows, ccols},
     gamma_coeff{ MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)}
 {
     bp.consistencyCheck();
-    init_coefficients( bp.getBoundary(), bp.getPhysical());
+    init_coefficients( bp.boundary(), bp.physical());
 }
 
 //aware of BC
@@ -160,7 +160,7 @@ void DRT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DRT_DFT>,n>& v, enum
         drt_dft.r2c_T( v[k], cdens[k]);
     }
     //don't forget to normalize coefficients!!
-    double norm = fftw_normalisation( blue.getBoundary().bc_x, rows)*(double)cols;
+    double norm = fftw_normalisation( blue.boundary().bc_x, rows)*(double)cols;
     for( unsigned k=0; k<n; k++)
         for( unsigned i=0; i<crows; i++)
             for( unsigned j=0; j<ccols;j++)

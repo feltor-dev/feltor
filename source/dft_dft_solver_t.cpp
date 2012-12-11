@@ -10,48 +10,23 @@
 using namespace std;
 using namespace toefl;
     
-unsigned N;
-double slit = 2./500.; //half distance between pictures in units of width
+unsigned N; //initialized by init function
+double amp; //
+const double slit = 2./500.; //half distance between pictures in units of width
+unsigned width = 960, height = 1080; //initial window width & height
 
-/*! @brief Adds a gaussian to a given matrix
- *
- * The function interprets the given points as inner, cell centered points of a 
- * square box. [0,1]x[0,1]
- * , where the first index is the y and the second index is the x point. 
- * (0,0) corresponds  to the lower left corner.
- * It adds the values of the smooth function
- * \f[
-   f(x) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}} 
-   \f]
-   where A is a constant and \f$ x,y = 0...1 \f$.
- * \param m the matrix
- * @param x0 x-position of maximum 0<x0<1
- * @param y0 y-position of maximum 0<y0<1
- * @param sigma_x Varianz in x (FWHM = 2.35*sigma_x)
- * @param sigma_y Varianz in y (FWHM = 2.35*sigma_y)
- * @param amplitude Value of maximum
- */
-template< class M>
-void init_gaussian( M& m, const double x0, const double y0, 
-                          const double sigma_x, const double sigma_y,
-                          const double amplitude)
+void GLFWCALL WindowResize( int w, int h)
 {
-    const size_t rows = m.rows(), cols = m.cols();
-    const double hx = 1./(double)(cols), hy = 1./(double)(rows); 
-    double x,y;
-    for( unsigned i=0; i<rows; i++)
-        for( unsigned j=0; j<cols; j++)
-        {
-            x = (j+0.5)*hx;
-            y = (i+0.5)*hy;
-            m(i,j) += amplitude*
-                   exp( -(double)((x-x0)*(x-x0)/2./sigma_x/sigma_x+
-                                  (y-y0)*(y-y0)/2./sigma_y/sigma_y) );
-        }
+    glViewport( 0, 0, (GLsizei) w, (GLsizei) h);
+    width = w;
+    height = h;
 }
 
-void init( Physical& phys, Algorithmic& alg, Boundary& bound)
+void init( Blueprint& bp)
 {
+    Physical& phys = bp.physical();
+    Algorithmic& alg = bp.algorithmic();
+    Boundary& bound = bp.boundary();
     vector<double> para;
     try{ para = read_input( "input.test"); }
     catch (Message& m) {  m.display(); return ;}
@@ -74,101 +49,119 @@ void init( Physical& phys, Algorithmic& alg, Boundary& bound)
     alg.ny = para[14];
     alg.dt = para[15];
     N = para[16];
+    amp = para[10];
+    if( para[29])
+        bp.enable( TL_GLOBAL);
 
     alg.h = bound.ly / (double)alg.ny;
     bound.lx = (double)alg.nx * alg.h;
     bound.bc_x = TL_PERIODIC;
 }
 
-void drawScene( const DFT_DFT_Solver<2>& solver, unsigned nx, unsigned ny)
+template< class M>
+double abs_max( const M& field)
 {
-    glClearColor(0.f, 0.f, 0.f, 0.f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    double temp;
-    static Texture_RGBf tex( ny, nx);
-    static Matrix<double, TL_DFT> field( ny, nx);
-    field = solver.getField( TL_ELECTRONS);
-    temp = 0;
+    double temp = 0;
     for( unsigned i=0; i<field.rows(); i++)
         for( unsigned j=0; j<field.cols(); j++)
-            if( abs(field(i,j)) > temp) temp = field(i,j);
-#ifdef TL_DEBUG
-    cout <<"ne temp "<<temp<<endl;
-#endif
-    gentexture_RGBf( tex, field, temp);
+            if( fabs(field(i,j)) > temp) temp = fabs(field(i,j));
+    return temp;
+}
+    
+
+template<class M>
+void loadTexture( const M& field, double max)
+{
+    static Texture_RGBf tex( field.rows(), field.cols());
+    gentexture_RGBf( tex, field, max);
     // image comes from texarray on host
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
+}
+
+//todo correct aspect ratio 
+template<class M>
+void drawScene( const DFT_DFT_Solver<2>& solver)
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+    double scale_y = 1.;
+    double max;
+    M const * field;
+    
+    {
+    field = &solver.getField( TL_ELECTRONS);
+    max = abs_max( *field);
     glLoadIdentity();
+    loadTexture( *field, max);
+#ifdef TL_DEBUG
+    cout <<"max densitiy = "<<max<<endl;
+#endif
     //Draw a textured quad
+    //upper left
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f( -1.0, +slit);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( -slit, +slit);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( -slit, 1.0);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f( -1.0, 1.0);
+    glEnd();
+    }
+    {
+    field = &solver.getField( TL_IONS);
+    loadTexture( *field, max);
+    glLoadIdentity();
+    //upper right
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f( +slit, +slit);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, +slit);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 1.0);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f( +slit, 1.0);
+    glEnd();
+    }
+    {
+    field = &solver.getField( TL_POTENTIAL); 
+    max = abs_max(*field);
+    loadTexture( *field, max);
+#ifdef TL_DEBUG
+    cout <<"max potential = "<<max<<endl;
+#endif
+    glLoadIdentity();
+    //lower left
     glBegin(GL_QUADS);
         glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f( -1.0/3.0-slit, -1.0);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f( -1.0/3.0-slit, 1.0);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, 1.0);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( -slit, -1.0);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( -slit, -slit);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, -slit);
     glEnd();
-    field = solver.getField( TL_IONS);
-    //temp = 0;
-    //for( unsigned i=0; i<field.rows(); i++)
-    //    for( unsigned j=0; j<field.cols(); j++)
-    //        if( abs(field(i,j)) > temp) temp = field(i,j);
-#ifdef TL_DEBUG
-    cout <<"ni temp "<<temp<<endl;
-#endif
-    gentexture_RGBf( tex, field, temp);
-    // image comes from texarray on host
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
-    glLoadIdentity();
-    //Draw a textured quad
-    glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0/3.0+slit, -1.0);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0/3.0-slit, -1.0);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0/3.0-slit, 1.0);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0/3.0+slit, 1.0);
-    glEnd();
-    field = solver.getField( TL_POTENTIAL);
-    temp = 0;
-    for( unsigned i=0; i<field.rows(); i++)
-        for( unsigned j=0; j<field.cols(); j++)
-            if( abs(field(i,j)) > temp) temp = field(i,j);
-#ifdef TL_DEBUG
-    cout <<"phi temp "<<temp<<endl;
-#endif
-    gentexture_RGBf( tex, field, temp);
-    // image comes from texarray on host
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
-    glLoadIdentity();
-    //Draw a textured quad
-    glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f); glVertex2f( 1.0/3.0+slit, -1.0);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 1.0);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f( 1.0/3.0+slit, 1.0);
-    glEnd();
+    }
+    //lower right
+    //glBegin(GL_QUADS);
+    //    glTexCoord2f(0.0f, 0.0f); glVertex2f( +slit, -1.0);
+    //    glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
+    //    glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 0);
+    //    glTexCoord2f(0.0f, 1.0f); glVertex2f(+slit, -slit);
+    //glEnd();
+        
 }
 
 int main()
 {
     //Parameter initialisation
-    Physical phys; 
-    Algorithmic alg;
-    Boundary bound;
-    init( phys, alg, bound);
+    Blueprint bp;
+    init( bp);
 
-    Blueprint bp( phys, bound, alg);
     try{ bp.consistencyCheck();}
     catch( Message& m) {m.display(); bp.display(); return -1;}
     bp.display(cout);
 
     //construct solver
     DFT_DFT_Solver<2> solver( bp);
-    bound.bc_x = TL_DST10;
-    Blueprint bp2( phys, bound, alg);
-    DRT_DFT_Solver<2> drt_solver( bp2);
+    bp.boundary().bc_x = TL_DST10;
+    DRT_DFT_Solver<2> drt_solver( bp);
 
     //init solver
+    const Algorithmic& alg = bp.algorithmic();
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ alg.ny, alg.nx, 0.};
-    init_gaussian( ne,  0.5,0.5, 0.05, 0.05, 0.1);
-    init_gaussian( ni, 0.5,0.5, 0.05, 0.05, 0.1);
+    init_gaussian( ne,  0.5,0.5, 0.05, 0.05, amp);
+    init_gaussian( ni, 0.5,0.5, 0.05, 0.05, amp);
     std::array< Matrix<double, TL_DFT>,2> arr{{ ne, ni}};
     try{
         solver.init( arr, TL_POTENTIAL);
@@ -178,14 +171,17 @@ int main()
     {
     int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
-    unsigned width = 1800, height = 600;
     if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
     { 
         cerr << "ERROR: glfw couldn't open window!\n";
     }
+    glfwSetWindowSizeCallback( WindowResize);
+
     glEnable( GL_TEXTURE_2D);
     glfwEnable( GLFW_STICKY_KEYS);
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glClearColor(0.f, 0.f, 0.f, 0.f);
+
     double t = 3*alg.dt;
     Timer timer;
     while( running)
@@ -203,7 +199,7 @@ int main()
         str << "ne, ni and phi ... time = "<<t;
         glfwSetWindowTitle( (str.str()).c_str() );
 
-        drawScene( solver, alg.nx, alg.ny);
+        drawScene<Matrix<double, TL_DFT>>( solver);
         glfwSwapBuffers();
 #ifdef TL_DEBUG
         glfwWaitEvents();

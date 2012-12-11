@@ -12,7 +12,7 @@ int main()
     Algorithmic alg;
     Boundary bound;
     vector<double> para;
-    try{ para = read_input( "input.dat"); }
+    try{ para = read_input( "input.test"); }
     catch (Message& m) {  m.display(); return -1;}
     phys.d = para[1];
     phys.g_e = phys.g[0] = para[2];

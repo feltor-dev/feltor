@@ -73,6 +73,7 @@ class DFT_DFT_Solver
     //methods
     void init_coefficients( const Boundary& bound, const Physical& phys);
     void compute_cphi();//multiply cphi
+    void compute_global_terms();
     void first_steps(); 
     template< enum stepper S>
     void step_();
@@ -95,7 +96,7 @@ class DFT_DFT_Solver
 
 template< size_t n>
 DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
-    rows( bp.getAlgorithmic().ny ), cols( bp.getAlgorithmic().nx ),
+    rows( bp.algorithmic().ny ), cols( bp.algorithmic().nx ),
     blue( bp),
     //fields
     ghostdens{ rows, cols, TL_PERIODIC, TL_PERIODIC, TL_VOID},
@@ -105,15 +106,21 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     cdens{ MatrixArray<complex, TL_NONE, n>::construct( rows, cols/2+1)}, 
     cphi{cdens}, 
     //Solvers
-    arakawa( bp.getAlgorithmic().h),
-    karniadakis(rows, cols, rows, cols/2+1,bp.getAlgorithmic().dt),
+    arakawa( bp.algorithmic().h),
+    karniadakis(rows, cols, rows, cols/2+1,bp.algorithmic().dt),
     dft_dft( rows, cols, FFTW_MEASURE),
     //Coefficients
     phi_coeff{ rows, cols/2+1},
     gamma_coeff{ MatrixArray< double, TL_NONE, n-1>::construct( rows, cols/2+1)}
 {
-    bp.consistencyCheck();
-    init_coefficients( bp.getBoundary(), bp.getPhysical());
+    //bp.consistencyCheck();
+    Physical phys = bp.physical();
+    if( bp.isEnabled( TL_GLOBAL))
+    {
+        phys.g_e = phys.g[0] = phys.g[1] = 0; 
+        phys.kappa = 0;
+    }
+    init_coefficients( bp.boundary(), phys);
 }
 
 template< size_t n>
@@ -310,19 +317,44 @@ void DFT_DFT_Solver<n>::compute_cphi()
 }
 
 template< size_t n>
+void DFT_DFT_Solver<n>::compute_global_terms()
+{
+}
+
+template< size_t n>
 template< enum stepper S>
 void DFT_DFT_Solver<n>::step_()
 {
     //1. Compute nonlinearity
-    for( unsigned j=0; j<n; j++)
+    for( unsigned k=0; k<n; k++)
     {
-        swap_fields( dens[j], ghostdens); //now dens[j] is void
-        swap_fields( phi[j], ghostphi); //now phi[j] is void
+        swap_fields( dens[k], ghostdens); //now dens[k] is void
+        swap_fields( phi[k], ghostphi); //now phi[k] is void
         ghostdens.initGhostCells( );
         ghostphi.initGhostCells(  );
-        arakawa( ghostdens, ghostphi, nonlinear[j]);
-        swap_fields( dens[j], ghostdens); //now ghostdens is void
-        swap_fields( phi[j], ghostphi); //now ghostphi is void
+        arakawa( ghostdens, ghostphi, nonlinear[k]);
+        if( blue.isEnabled(TL_GLOBAL) )
+        {
+            double kappa = blue.physical().kappa;
+            double h2inv = 1./2./blue.algorithmic().h;
+            for( unsigned j=0; j<cols; j++)
+                nonlinear[k](0,j) += ghostdens(0,j)*kappa*
+                    (ghostphi.at(1,j)-ghostphi.at(-1,j))
+                    -kappa*h2inv*(ghostdens(+1,j)-ghostdens.at(-1,j));
+            for( unsigned i=1; i<rows-1; i++)
+                for( unsigned j=0; j<cols; j++)
+                {
+                    nonlinear[k](i,j) += ghostdens(i,j)*kappa*
+                        (ghostphi(i+1,j)-ghostphi(i-1,j))
+                        -kappa*h2inv*(ghostdens(i+1,j)-ghostdens(i-1,j));
+                }
+            for( unsigned j=0; j<cols; j++)
+                nonlinear[k](rows-1,j) += ghostdens(rows-1,j)*kappa*
+                    (ghostphi.at(rows,j)-ghostphi(rows-2,j))
+                    -kappa*h2inv*(ghostdens.at(rows,j)-ghostdens(rows-2,j));
+        }
+        swap_fields( dens[k], ghostdens); //now ghostdens is void
+        swap_fields( phi[k], ghostphi); //now ghostphi is void
     }
     //2. perform karniadakis step
     karniadakis.template step_i<S>( dens, nonlinear);

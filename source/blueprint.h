@@ -36,9 +36,10 @@ struct Physical
             <<"    Coupling:        = "<<d<<"\n"
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
-            <<"    Electrons:   g_e = "<<g_e<<"\n"
-            <<"    Ions:        g_i = "<<g[0] <<", a_i = "<<a[0]<<", mu_i = "<<mu[0]<<", tau_i = "<<tau[0]<<"\n"
-            <<"    Impurities:  g_z = "<<g[1] <<", a_z = "<<a[1]<<", mu_z = "<<mu[1]<<", tau_z = "<<tau[1]<<"\n";
+            <<"   Species/Parameter   g      a     mu    tau\n"
+            <<"    Electrons:         "<<g_e<<"\n"
+            <<"    Ions:              "<<g[0] <<"      "<<a[0]<<"      "<<mu[0]<<"      "<<tau[0]<<"\n"
+            <<"    Impurities:        "<<g[1] <<"      "<<a[1]<<"      "<<mu[1]<<"      "<<tau[1]<<"\n";
     }
 };
 
@@ -106,11 +107,14 @@ struct Algorithmic
  */
 class Blueprint
 {
-    const Physical phys;
-    const Boundary bound;
-    const Algorithmic alg;
+    Physical phys;
+    Boundary bound;
+    Algorithmic alg;
     bool imp, global;
   public:
+    /*! @brief Construct empty blueprint
+     */
+    Blueprint():imp(false), global(false){}
     /*! @brief Init parameters
      *
      * All capacities are disabled by default!
@@ -120,9 +124,12 @@ class Blueprint
     {
         imp = global = false; 
     }
-    const Physical& getPhysical() const {return phys;}
-    const Boundary& getBoundary() const {return bound;}
-    const Algorithmic& getAlgorithmic() const {return alg;}
+    const Physical& physical() const {return phys;}
+    const Boundary& boundary() const {return bound;}
+    const Algorithmic& algorithmic() const {return alg;}
+    Physical& physical() {return phys;}
+    Boundary& boundary() {return bound;}
+    Algorithmic& algorithmic() {return alg;}
     void enable(enum cap capacity)
     {
         switch( capacity)
@@ -181,11 +188,11 @@ void Blueprint::consistencyCheck() const
         throw Message( "a_i + a_z != 1\n", ping);
     if( fabs( phys.g[0] - (phys.g_e - phys.a[1]*phys.g[1])/(1.-phys.a[1])) > 1e-15)
         throw Message( "g_i is wrong\n", ping);
-    if( global) 
-        throw Message( "Global solver not yet implemented\n", ping);
     //Some Warnings
     if( !imp && (phys.a[1] != 0 || phys.mu[1] != 0 || phys.tau[1] != 0)) 
         std::cerr << "TL_WARNING: Impurity disabled but z species not 0 (will be ignored)!\n";
+    if( global && (phys.g_e != 0||phys.g[0] != 0||phys.g[1] != 0))
+        std::cerr << "TL_WARNING: Global solver ignores gradients\n";
         
 }
 
