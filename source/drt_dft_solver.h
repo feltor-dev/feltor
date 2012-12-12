@@ -121,7 +121,7 @@ DRT_DFT_Solver<n>::DRT_DFT_Solver( const Blueprint& bp):
 template< size_t n>
 void DRT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical& phys)
 {
-    Matrix< QuadMat< complex, n> > coeff( rows, cols/2+1);
+    Matrix< QuadMat< complex, n> > coeff( crows, ccols);
     double laplace;
     const complex dymin( 0, 2.*M_PI/bound.ly);
     const double kxmin2 = M_PI*M_PI/(double)(bound.lx*bound.lx),

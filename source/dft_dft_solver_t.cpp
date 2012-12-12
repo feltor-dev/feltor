@@ -134,7 +134,7 @@ void drawScene( const Solver& solver)
     if( solver.blueprint().isEnabled( TL_IMPURITY))
     {
         field = &solver.getField( TL_IMPURITIES); 
-        //max = abs_max(*field);
+        max = abs_max(*field);
         loadTexture( *field, max);
 #ifdef TL_DEBUG
         cout <<"max potential = "<<max<<endl;
@@ -173,6 +173,7 @@ int main()
     Blueprint bp_mod;
     init( bp_mod);
     const Blueprint bp{ bp_mod};
+    field_ratio = bp.boundary().lx/bp.boundary().ly;
 
     bp.display(cout);
     //construct solvers 
@@ -181,21 +182,22 @@ int main()
     bp_mod.boundary().bc_x = TL_DST10;
     DRT_DFT_Solver<2> drt_solver2( bp_mod);
     DRT_DFT_Solver<3> drt_solver3( bp_mod);
+
     //init solver
     const Algorithmic& alg = bp.algorithmic();
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ ne}, nz{ ne};
     try{
-        init_gaussian( ne,  0.5,0.5, 0.05, 0.05, amp);
-        init_gaussian( ni, 0.5,0.5, 0.05, 0.05, amp);
+        init_gaussian( ne, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
+        init_gaussian( ni, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
-            init_gaussian( nz, 0.5,0.5, 0.05, 0.05, imp_amp);
+            init_gaussian( nz, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
         std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, ni}};
         std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, ni, nz}};
         Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, ni_{ ne_}, nz_{ ne_};
-        init_gaussian( ne_,  0.5,0.5, 0.05, 0.05, amp);
-        init_gaussian( ni_, 0.5,0.5, 0.05, 0.05, amp);
+        init_gaussian( ne_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
+        init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
-            init_gaussian( nz_, 0.5,0.5, 0.05, 0.05, imp_amp);
+            init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
         std::array< Matrix<double, TL_DRT_DFT>,2> arr2_{{ ne_, ni_}};
         std::array< Matrix<double, TL_DRT_DFT>,3> arr3_{{ ne_, ni_, nz_}};
         if( !bp.isEnabled( TL_IMPURITY))
@@ -219,7 +221,6 @@ int main()
     int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
 
-    field_ratio = bp.boundary().lx/bp.boundary().ly;
     height = width/field_ratio;
     if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
     { 
