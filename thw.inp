@@ -20,7 +20,7 @@
 14) ny (grid points in y)	 	    =   256.		(256.)
 15) dt (time step in units c_s/L_p)	    =   0.01		(0.01)
 16) itstp (steps between output)	    =   5		(40)
-17) itmax (total steps)			    =   4000		(4000)
+17) itmax (total steps)			    =    5		(4000)
 18) OpenMP: number of parallel threads	    =	1.		(1.0)
 19) in.cond. (0: blob, 1:bath, 2:restart)   =   0.		(0.0)
 20) snapshots after itstp (0:off, 1:on)	    =	0.		(1.0)

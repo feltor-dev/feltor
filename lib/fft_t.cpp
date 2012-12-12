@@ -40,7 +40,11 @@ int main()
     cout << "backtrafo\n";
     cout << m2 <<endl;
 
+    fftw_destroy_plan( forward_plan);
+    fftw_destroy_plan( backward_plan);
 
+
+    fftw_cleanup();
     return 0;
 }
 

@@ -53,6 +53,15 @@
  *  On the other hand you will need to add -lfftw and -lm to your compile command
  *  in order to link the fftw and math library.
  *
+ * @par Memory leaks
+ *  Most of the headers have been explicitely tested for memory leaks with valgrind 
+ *  and it is fair to assume that this library doesn't generate any. 
+ *  However the fftw plans keep some persistent memory even after destroying
+ *  them and fftw_cleanup() should be called before exit of a program to 
+ *  also release this memory. 
+ *  Also in connection with direct visualisation using OpenGL (small) memory leaks
+ *  may occur because some older nvidia drivers generate memory leaks.
+ *
  *
  * Have fun using the toefl library.
  * 

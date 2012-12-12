@@ -83,8 +83,8 @@ DRT_DRT::DRT_DRT( const size_t rows, const size_t cols, const fftw_r2r_kind kind
  */
 DRT_DRT::~DRT_DRT()
 {
-    fftw_free( forward_);
-    fftw_free( backward_);
+    fftw_destroy_plan( forward_);
+    fftw_destroy_plan( backward_);
 }
 
 void DRT_DRT::forward( Matrix<double, TL_NONE>& m, Matrix<double, TL_NONE>& swap)

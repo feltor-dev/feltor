@@ -20,12 +20,13 @@ int main()
             test(i,j) = sin(M_PI*(i+1./2.)/5.);
     cout << "Testmatrix is\n" << test<<endl;
 
-    dft_drt.r2c( test, test_);
+    //dft_drt.r2c( test, test_);
     cout << "transformed matrix is\n" << test_<<endl;
 
-    dft_drt.c2r( test_, test);
+    //dft_drt.c2r( test_, test);
     cout << "backtransformed is (should be input times 100)\n" << test << endl;
 
 
+    fftw_cleanup();
     return 0 ;
 }

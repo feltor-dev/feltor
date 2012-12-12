@@ -79,12 +79,12 @@ DFT_DRT::DFT_DRT( const size_t rows, const size_t cols, const fftw_r2r_kind kind
 /*! @brief frees the fftw plans*/
 DFT_DRT::~DFT_DRT()
 {
-    fftw_free( forward);
-    fftw_free( backward);
-    fftw_free( transpose_forward);
-    fftw_free( transpose_backward);
-    fftw_free( r2r_forward);
-    fftw_free( r2r_backward);
+    fftw_destroy_plan( forward);
+    fftw_destroy_plan( backward);
+    fftw_destroy_plan( transpose_forward);
+    fftw_destroy_plan( transpose_backward);
+    fftw_destroy_plan( r2r_forward);
+    fftw_destroy_plan( r2r_backward);
 }
 
 /*! @brief Perform a r2c transformation

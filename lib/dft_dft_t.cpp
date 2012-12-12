@@ -90,5 +90,6 @@ int main()
 
 
 
+    fftw_cleanup();
     return 0;
 }

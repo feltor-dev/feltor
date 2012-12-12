@@ -47,6 +47,9 @@ int main()
     t.toc();
     cout << "Backtransformation "<<t.diff()<<"s\n";
 
+    fftw_destroy_plan( plan);
+    fftw_destroy_plan( plan2);
 
+    fftw_cleanup();
     return 0;
 }

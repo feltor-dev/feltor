@@ -4,10 +4,12 @@
 #include "matrix.h"
 
 const double R = 500;
-const unsigned nz = 10;
-const unsigned nx = 10;
+const unsigned nz = 16;
+const unsigned nx = 16;
 
 //Draws a simple textured square in an open window 
+//Note: there might be a memory leak somewhere in the nvidia driver that valgrind
+//shows
 
 using namespace std;
 using namespace toefl;
@@ -33,7 +35,7 @@ int main()
     while( running)
     {
         //generate a texture
-        gentexture_RGBf_temp( tex, field, R);
+      gentexture_RGBf_temp( tex, field, R);
         glLoadIdentity();
         glClearColor(0.f, 0.f, 1.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -53,6 +55,6 @@ int main()
                     glfwGetWindowParam( GLFW_OPENED);
     }
     glfwTerminate();
-    //////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////
     return 0;
 }

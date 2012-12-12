@@ -138,6 +138,7 @@ int main()
     cout << "Total number of steps:         " << i*N << "\n";
     glfwTerminate();
     //////////////////////////////////////////////////////////////////
+    fftw_cleanup();
     return 0;
 
 }

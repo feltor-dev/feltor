@@ -91,10 +91,10 @@ DRT_DFT::DRT_DFT( const size_t rows, const size_t cols, const fftw_r2r_kind kind
 }
 DRT_DFT::~DRT_DFT()
 {
-    fftw_free( forward);
-    fftw_free( backward);
-    fftw_free( real_forward);
-    fftw_free( real_backward);
+    fftw_destroy_plan( forward);
+    fftw_destroy_plan( backward);
+    fftw_destroy_plan( real_forward);
+    fftw_destroy_plan( real_backward);
 }
 
 void DRT_DFT::r2c_T( Matrix<double, TL_DRT_DFT>& inout, Matrix<complex, TL_NONE>& swap)

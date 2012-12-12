@@ -44,5 +44,6 @@ int main()
     cout << "DRT_DRT Backtransformation took " << t.diff() <<"s\n";
 
 
+    fftw_cleanup();
     return 0 ;
 }

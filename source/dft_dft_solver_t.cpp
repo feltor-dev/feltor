@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <GL/glfw.h>
 #include <sstream>
+
 #include "toefl.h"
 #include "dft_dft_solver.h"
 #include "drt_dft_solver.h"
@@ -17,6 +18,7 @@ unsigned width = 960, height = 1080; //initial window width & height
 
 void GLFWCALL WindowResize( int w, int h)
 {
+    // map coordinates to the whole window
     glViewport( 0, 0, (GLsizei) w, (GLsizei) h);
     width = w;
     height = h;
@@ -124,21 +126,31 @@ void drawScene( const DFT_DFT_Solver<2>& solver)
     cout <<"max potential = "<<max<<endl;
 #endif
     glLoadIdentity();
-    //lower left
+    //lower right
     glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f( -slit, -1.0);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f( -slit, -slit);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, -slit);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f( +slit, -1.0);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 0);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(+slit, -slit);
     glEnd();
     }
-    //lower right
-    //glBegin(GL_QUADS);
-    //    glTexCoord2f(0.0f, 0.0f); glVertex2f( +slit, -1.0);
-    //    glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
-    //    glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 0);
-    //    glTexCoord2f(0.0f, 1.0f); glVertex2f(+slit, -slit);
-    //glEnd();
+    if( solver.blueprint().isEnabled( TL_IMPURITY))
+    {
+        field = &solver.getField( TL_IMPURITIES); 
+        max = abs_max(*field);
+        loadTexture( *field, max);
+#ifdef TL_DEBUG
+        cout <<"max potential = "<<max<<endl;
+#endif
+        glLoadIdentity();
+        //lower left
+        glBegin(GL_QUADS);
+            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f( -slit, -1.0);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f( -slit, -slit);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, -slit);
+        glEnd();
+    }
         
 }
 

@@ -90,8 +90,8 @@ DFT_DFT::DFT_DFT( const size_t r, const size_t c, const unsigned flags):rows(r),
 }
 DFT_DFT::~DFT_DFT()
 {
-    fftw_free( forward);
-    fftw_free( backward);
+    fftw_destroy_plan( forward);
+    fftw_destroy_plan( backward);
 }
 
 

@@ -39,5 +39,6 @@ int main()
     fftw_execute_r2r( backward, m0.getPtr(), m0.getPtr());
     cout << m0 <<endl;
 
+    fftw_cleanup();
     return 0 ;
 }
