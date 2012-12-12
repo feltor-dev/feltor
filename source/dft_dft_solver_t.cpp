@@ -14,12 +14,16 @@ using namespace toefl;
 unsigned N; //initialized by init function
 double amp; //
 const double slit = 2./500.; //half distance between pictures in units of width
+double field_ratio;
 unsigned width = 960, height = 1080; //initial window width & height
 
 void GLFWCALL WindowResize( int w, int h)
 {
     // map coordinates to the whole window
-    glViewport( 0, 0, (GLsizei) w, (GLsizei) h);
+    double win_ratio = (double)w/(double)h;
+    GLint ww = (win_ratio<field_ratio) ? w : h*field_ratio ;
+    GLint hh = (win_ratio<field_ratio) ? w/field_ratio : h;
+    glViewport( 0, 0, (GLsizei) ww, hh);
     width = w;
     height = h;
 }
@@ -85,7 +89,6 @@ template<class M>
 void drawScene( const DFT_DFT_Solver<2>& solver)
 {
     glClear(GL_COLOR_BUFFER_BIT);
-    double scale_y = 1.;
     double max;
     M const * field;
     
@@ -183,6 +186,9 @@ int main()
     {
     int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
+
+    field_ratio = solver.blueprint().boundary().lx/solver.blueprint().boundary().ly;
+    height = width/field_ratio;
     if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
     { 
         cerr << "ERROR: glfw couldn't open window!\n";
