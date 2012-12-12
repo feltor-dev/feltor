@@ -37,7 +37,7 @@ struct Physical
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
             <<"   Species/Parameter   g      a     mu    tau\n"
-            <<"    Electrons:         "<<g_e<<"\n"
+            <<"    Electrons:         "<<g_e  <<"     "<<"-1"<<"      "<<"0"  <<"      "<<"1\n"
             <<"    Ions:              "<<g[0] <<"      "<<a[0]<<"      "<<mu[0]<<"      "<<tau[0]<<"\n"
             <<"    Impurities:        "<<g[1] <<"      "<<a[1]<<"      "<<mu[1]<<"      "<<tau[1]<<"\n";
     }
@@ -62,10 +62,10 @@ struct Boundary
         switch(bc_x)
         {
             case(TL_PERIODIC): os << "    PERIODIC \n"; break;
-            case(   TL_DST00): os << "    DST 1 like \n"; break;
-            case(   TL_DST10): os << "    DST 2 like \n"; break;
-            case(   TL_DST01): os << "    DST 3 like \n"; break;
-            case(   TL_DST11): os << "    DST 4 like \n"; break;
+            case(   TL_DST00): os << "    DST-1-like \n"; break;
+            case(   TL_DST10): os << "    DST-2-like \n"; break;
+            case(   TL_DST01): os << "    DST-3-like \n"; break;
+            case(   TL_DST11): os << "    DST-4-like \n"; break;
             default: os << "    Not specified!!\n"; 
         }
     }

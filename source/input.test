@@ -24,16 +24,17 @@
 18) OpenMP: number of parallel threads	    =	1.		(1.0)
 19) in.cond. (0: blob, 1:bath, 2:restart)   =   0.		(0.0)
 20) snapshots after itstp (0:off, 1:on)	    =	0.		(1.0)
-21) ibx (0:periodic, >0 Dirichlet (Dämpfungszone!!))	    =	0.0		(6.0)
+21) ibx (0:periodic, 1 Dirichlet, 2 Dir/Neu )	    =	2.0		(0.0)
 
 22) tau_z (Tz/Te*Z)    			    =   0.0		(0.0)
-23) mu_z (mz/mi*Z)			    =	0.0		(0.0)
-24) a_z	(Z*nz/ne) 	 		    =   0.0		(0.0)
+23) mu_z (mz/mi*Z)(mass)		    =	48.0		(large)
+24) a_z	(Z*nz/ne) (density)	    =   0.001		(small)
 25) nxsep  				    =	1.0		(0.5)
 26) sol parallel dissipation		    =	0.00		(0.0)
 27) sol perp dissipation		    =   0.00		(0.0)
 28) sol g_n  				    =   0.0		(0.1)
 
 29) boolean local(0) /global(1)         = 0 (0)
+30) impurities yes(1) / no(0)           = 1 (0)
 
 @ --------------------------------------

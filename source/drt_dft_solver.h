@@ -123,16 +123,22 @@ void DRT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
 {
     Matrix< QuadMat< complex, n> > coeff( rows, cols/2+1);
     double laplace;
-    const complex dymin( M_PI/bound.ly, 0);
-    const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(bound.lx*bound.lx),
-                 kymin2 = M_PI*M_PI/(double)(bound.ly*bound.ly);
+    const complex dymin( 0, 2.*M_PI/bound.ly);
+    const double kxmin2 = M_PI*M_PI/(double)(bound.lx*bound.lx),
+                 kymin2 = 4.*M_PI*M_PI/(double)(bound.ly*bound.ly);
+    double add;
+    if( bound.bc_x == TL_DST00 || bound.bc_x == TL_DST10)
+        add = 1.0;
+    else
+        add = 0.5;
+
     Equations e( phys);
     Poisson p( phys);
     // drt_dft is transposing so i is the x index 
     for( unsigned i = 0; i<crows; i++)
         for( unsigned j = 0; j<ccols; j++)
         {
-            laplace = - kxmin2*(double)(i*i) - kymin2*(double)(j*j);
+            laplace = - kxmin2*(double)((i+add)*(i+add)) - kymin2*(double)(j*j);
             if( n == 2)
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
             else if( n == 3)

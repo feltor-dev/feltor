@@ -12,7 +12,7 @@ using namespace std;
 using namespace toefl;
     
 unsigned N; //initialized by init function
-double amp; //
+double amp, imp_amp; //
 const double slit = 2./500.; //half distance between pictures in units of width
 double field_ratio;
 unsigned width = 960, height = 1080; //initial window width & height
@@ -47,8 +47,8 @@ void init( Blueprint& bp)
     phys.kappa = para[6];
 
     phys.a[0] = 1. -phys.a[1];
-    phys.g[1] = (phys.g_e - phys.a[1] * phys.g[1])/(1.-phys.a[1]);
-    phys.mu[0] = 1.0;
+    phys.g[0] = (phys.g_e - phys.a[1] * phys.g[1])/(1.-phys.a[1]);
+    phys.mu[0] = 1.0;//single charged ions
 
     bound.ly = para[12];
     alg.nx = para[13];
@@ -56,12 +56,21 @@ void init( Blueprint& bp)
     alg.dt = para[15];
     N = para[16];
     amp = para[10];
+    imp_amp = para[11];
     if( para[29])
         bp.enable( TL_GLOBAL);
+    if( para[30])
+        bp.enable( TL_IMPURITY);
 
     alg.h = bound.ly / (double)alg.ny;
     bound.lx = (double)alg.nx * alg.h;
-    bound.bc_x = TL_PERIODIC;
+    switch( (unsigned)para[21])
+    {
+        case( 0): bound.bc_x = TL_PERIODIC; break;
+        case( 1): bound.bc_x = TL_DST10; break;
+        case( 2): bound.bc_x = TL_DST01; break;
+    }
+
 }
 
 template< class M>
@@ -84,9 +93,10 @@ void loadTexture( const M& field, double max)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
 }
 
-//todo correct aspect ratio 
-template<class M>
-void drawScene( const DFT_DFT_Solver<2>& solver)
+// The solver has to have the getField( target) function returing M
+// and the blueprint() function
+template<class M, class Solver>
+void drawScene( const Solver& solver)
 {
     glClear(GL_COLOR_BUFFER_BIT);
     double max;
@@ -121,6 +131,23 @@ void drawScene( const DFT_DFT_Solver<2>& solver)
         glTexCoord2f(0.0f, 1.0f); glVertex2f( +slit, 1.0);
     glEnd();
     }
+    if( solver.blueprint().isEnabled( TL_IMPURITY))
+    {
+        field = &solver.getField( TL_IMPURITIES); 
+        //max = abs_max(*field);
+        loadTexture( *field, max);
+#ifdef TL_DEBUG
+        cout <<"max potential = "<<max<<endl;
+#endif
+        glLoadIdentity();
+        //lower left
+        glBegin(GL_QUADS);
+            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f( -slit, -1.0);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f( -slit, -slit);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, -slit);
+        glEnd();
+    }
     {
     field = &solver.getField( TL_POTENTIAL); 
     max = abs_max(*field);
@@ -137,49 +164,54 @@ void drawScene( const DFT_DFT_Solver<2>& solver)
         glTexCoord2f(0.0f, 1.0f); glVertex2f(+slit, -slit);
     glEnd();
     }
-    if( solver.blueprint().isEnabled( TL_IMPURITY))
-    {
-        field = &solver.getField( TL_IMPURITIES); 
-        max = abs_max(*field);
-        loadTexture( *field, max);
-#ifdef TL_DEBUG
-        cout <<"max potential = "<<max<<endl;
-#endif
-        glLoadIdentity();
-        //lower left
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( -slit, -1.0);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( -slit, -slit);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, -slit);
-        glEnd();
-    }
         
 }
 
 int main()
 {
     //Parameter initialisation
-    Blueprint bp;
-    init( bp);
+    Blueprint bp_mod;
+    init( bp_mod);
+    const Blueprint bp{ bp_mod};
 
-    try{ bp.consistencyCheck();}
-    catch( Message& m) {m.display(); bp.display(); return -1;}
     bp.display(cout);
-
-    //construct solver
-    DFT_DFT_Solver<2> solver( bp);
-    bp.boundary().bc_x = TL_DST10;
-    DRT_DFT_Solver<2> drt_solver( bp);
-
+    //construct solvers 
+    DFT_DFT_Solver<2> solver2( bp);
+    DFT_DFT_Solver<3> solver3( bp);
+    bp_mod.boundary().bc_x = TL_DST10;
+    DRT_DFT_Solver<2> drt_solver2( bp_mod);
+    DRT_DFT_Solver<3> drt_solver3( bp_mod);
     //init solver
     const Algorithmic& alg = bp.algorithmic();
-    Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ alg.ny, alg.nx, 0.};
-    init_gaussian( ne,  0.5,0.5, 0.05, 0.05, amp);
-    init_gaussian( ni, 0.5,0.5, 0.05, 0.05, amp);
-    std::array< Matrix<double, TL_DFT>,2> arr{{ ne, ni}};
+    Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ ne}, nz{ ne};
     try{
-        solver.init( arr, TL_POTENTIAL);
+        init_gaussian( ne,  0.5,0.5, 0.05, 0.05, amp);
+        init_gaussian( ni, 0.5,0.5, 0.05, 0.05, amp);
+        if( bp.isEnabled( TL_IMPURITY))
+            init_gaussian( nz, 0.5,0.5, 0.05, 0.05, imp_amp);
+        std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, ni}};
+        std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, ni, nz}};
+        Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, ni_{ ne_}, nz_{ ne_};
+        init_gaussian( ne_,  0.5,0.5, 0.05, 0.05, amp);
+        init_gaussian( ni_, 0.5,0.5, 0.05, 0.05, amp);
+        if( bp.isEnabled( TL_IMPURITY))
+            init_gaussian( nz_, 0.5,0.5, 0.05, 0.05, imp_amp);
+        std::array< Matrix<double, TL_DRT_DFT>,2> arr2_{{ ne_, ni_}};
+        std::array< Matrix<double, TL_DRT_DFT>,3> arr3_{{ ne_, ni_, nz_}};
+        if( !bp.isEnabled( TL_IMPURITY))
+        {
+            if( bp.boundary().bc_x == TL_PERIODIC)
+                solver2.init( arr2, TL_POTENTIAL);
+            else
+                drt_solver2.init( arr2_, TL_POTENTIAL);
+        }
+        else
+        {
+            if( bp.boundary().bc_x == TL_PERIODIC)
+                solver3.init( arr3, TL_POTENTIAL);
+            else
+                drt_solver3.init( arr3_, TL_POTENTIAL);
+        }
     }catch( Message& m){m.display();}
 
     ////////////////////////////////glfw//////////////////////////////
@@ -187,7 +219,7 @@ int main()
     int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
 
-    field_ratio = solver.blueprint().boundary().lx/solver.blueprint().boundary().ly;
+    field_ratio = bp.boundary().lx/bp.boundary().ly;
     height = width/field_ratio;
     if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
     { 
@@ -216,8 +248,21 @@ int main()
         str << setprecision(2) << fixed;
         str << "ne, ni and phi ... time = "<<t;
         glfwSetWindowTitle( (str.str()).c_str() );
-
-        drawScene<Matrix<double, TL_DFT>>( solver);
+        
+        if( !bp.isEnabled( TL_IMPURITY))
+        {
+            if( bp.boundary().bc_x == TL_PERIODIC)
+                drawScene<Matrix<double, TL_DFT>>( solver2);
+            else
+                drawScene<Matrix<double, TL_DRT_DFT>>( drt_solver2);
+        }
+        else
+        {
+            if( bp.boundary().bc_x == TL_PERIODIC)
+                drawScene<Matrix<double, TL_DFT>>( solver3);
+            else
+                drawScene<Matrix<double, TL_DRT_DFT>>( drt_solver3);
+        }
         glfwSwapBuffers();
 #ifdef TL_DEBUG
         glfwWaitEvents();
@@ -227,7 +272,20 @@ int main()
         timer.tic();
         for(unsigned i=0; i<N; i++)
         {
-            solver.step();
+            if( !bp.isEnabled( TL_IMPURITY))
+            {
+                if( bp.boundary().bc_x == TL_PERIODIC)
+                    solver2.step( );
+                else
+                    drt_solver2.step();
+            }
+            else
+            {
+                if( bp.boundary().bc_x == TL_PERIODIC)
+                    solver3.step( );
+                else
+                    drt_solver3.step( );
+            }
             t+= alg.dt;
         }
         timer.toc();
