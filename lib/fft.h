@@ -162,7 +162,7 @@ fftw_plan plan_transpose( const size_t rows, const size_t cols, fftw_complex *in
 
 fftw_r2r_kind fftw_convert( enum bc bc)
 {
-    fftw_r2r_kind kind = FFTW_RODFT00;
+    fftw_r2r_kind kind = FFTW_R2HC; //least likely used
     switch( bc)
     {
         case( TL_PERIODIC): 

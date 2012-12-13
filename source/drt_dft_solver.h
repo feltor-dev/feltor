@@ -1,6 +1,8 @@
 #ifndef _DRT_DFT_SOLVER_
 #define _DRT_DFT_SOLVER_
 
+#include <complex>
+
 #include "toefl.h"
 #include "blueprint.h"
 #include "equations.h"
@@ -114,10 +116,13 @@ DRT_DFT_Solver<n>::DRT_DFT_Solver( const Blueprint& bp):
     gamma_coeff{ MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)}
 {
     bp.consistencyCheck();
-    if( bp.isEnabled( TL_GLOBAL)) 
-        std::cerr << "DFT_DRT Solver cannot solve global equations and ignores \
-                 parameter!\n";
-    init_coefficients( bp.boundary(), bp.physical());
+    Physical phys = bp.physical();
+    if( bp.isEnabled( TL_GLOBAL))
+    {
+        phys.g_e = phys.g[0] = phys.g[1] = 0; 
+        phys.kappa = 0;
+    }
+    init_coefficients( bp.boundary(), phys);
 }
 
 //aware of BC
@@ -135,7 +140,7 @@ void DRT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
     else
         add = 0.5;
 
-    Equations e( phys);
+    Equations e( phys, blue.isEnabled( TL_MHW));
     Poisson p( phys);
     // drt_dft is transposing so i is the x index 
     for( unsigned i = 0; i<crows; i++)
@@ -319,30 +324,50 @@ template< enum stepper S>
 void DRT_DFT_Solver<n>::step_()
 {
     //1. Compute nonlinearity
-    for( unsigned j=0; j<n; j++)
+    for( unsigned k=0; k<n; k++)
     {
-        swap_fields( dens[j], ghostdens); //now dens[j] is void
-        swap_fields( phi[j], ghostphi); //now phi[j] is void
+        swap_fields( dens[k], ghostdens); //now dens[j] is void
+        swap_fields( phi[k], ghostphi); //now phi[j] is void
         ghostdens.initGhostCells( );
         ghostphi.initGhostCells(  );
-        arakawa( ghostdens, ghostphi, nonlinear[j]);
-        swap_fields( dens[j], ghostdens); //now ghostdens is void
-        swap_fields( phi[j], ghostphi); //now ghostphi is void
+        arakawa( ghostdens, ghostphi, nonlinear[k]);
+        if( blue.isEnabled(TL_GLOBAL) )
+        {
+            double kappa = blue.physical().kappa;
+            double h2inv = 1./2./blue.algorithmic().h;
+            for( unsigned j=0; j<cols; j++)
+                nonlinear[k](0,j) += ghostdens(0,j)*kappa*
+                    (ghostphi.at(1,j)-ghostphi.at(-1,j))
+                    -kappa*h2inv*(ghostdens(+1,j)-ghostdens.at(-1,j));
+            for( unsigned i=1; i<rows-1; i++)
+                for( unsigned j=0; j<cols; j++)
+                {
+                    nonlinear[k](i,j) += ghostdens(i,j)*kappa*
+                        (ghostphi(i+1,j)-ghostphi(i-1,j))
+                        -kappa*h2inv*(ghostdens(i+1,j)-ghostdens(i-1,j));
+                }
+            for( unsigned j=0; j<cols; j++)
+                nonlinear[k](rows-1,j) += ghostdens(rows-1,j)*kappa*
+                    (ghostphi.at(rows,j)-ghostphi(rows-2,j))
+                    -kappa*h2inv*(ghostdens.at(rows,j)-ghostdens(rows-2,j));
+        }
+        swap_fields( dens[k], ghostdens); //now ghostdens is void
+        swap_fields( phi[k], ghostphi); //now ghostphi is void
     }
     //2. perform karniadakis step
     karniadakis.template step_i<S>( dens, nonlinear);
     //3. solve linear equation
     //3.1. transform v_hut
-    for( unsigned j=0; j<n; j++)
-        drt_dft.r2c_T( dens[j], cdens[j]);
+    for( unsigned k=0; k<n; k++)
+        drt_dft.r2c_T( dens[k], cdens[k]);
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
     compute_cphi();
     //3.3. backtransform
-    for( unsigned j=0; j<n; j++)
+    for( unsigned k=0; k<n; k++)
     {
-        drt_dft.c_T2r( cdens[j], dens[j]);
-        drt_dft.c_T2r( cphi[j],  phi[j]);
+        drt_dft.c_T2r( cdens[k], dens[k]);
+        drt_dft.c_T2r( cphi[k],  phi[k]);
     }
 }
 }//namespace toefl

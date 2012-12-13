@@ -68,8 +68,8 @@ class Equations
 {
     typedef std::complex<double> complex;
   public:
-    Equations( const Physical& phys):
-        p( phys), 
+    Equations( const Physical& phys, bool mhw = false):
+        p( phys), mhw( mhw),
         dd(phys.d), nu(phys.nu), 
         g_e(phys.g_e), g_i(phys.g[0]), g_z(phys.g[1]),
         kappa_y(phys.kappa),
@@ -94,6 +94,7 @@ class Equations
     void operator()(QuadMat<complex, 3>& coeff, const double laplace, const complex dy) const;
   private:
     const Poisson p;
+    const bool mhw;
     const double dd, nu;
     const double g_e, g_i, g_z;
     const double kappa_y;
@@ -103,26 +104,30 @@ class Equations
 
 void Equations::operator()( QuadMat<complex,2>& c, const double laplace, const complex dy) const
 {
+    double d = dd;
+    if( mhw && dy == complex(0)) d = 0;// the mean value is a delta in fourier space
     if( laplace == 0)
     {
-        c(0,0) = -dd; c(0,1) = 0.;
+        c(0,0) = -d; c(0,1) = 0.;
         c(1,0) = 0;   c(1,1) = 0.;
         return;
     }
     std::array<double,2> phi;
     p(phi, laplace); //prefactors in Poisson equations (phi = phi[0]*ne + phi[1]*ni)
     const complex curv = kappa_y*dy; 
-    const complex P = g_e*dy + curv + dd;
+    const complex P = g_e*dy + curv + d;
     const complex Q = g_i*dy*p.gamma1_i(laplace) + curv*( p.gamma1_i(laplace) /*+ 0.5 *p.gamma2_i(laplace)*/);
 
-    c(0,0) = P*phi[0] - curv - dd - nu*pow(laplace, 4); c(0,1) = P*phi[1];
+    c(0,0) = P*phi[0] - curv - d - nu*pow(laplace, 4); c(0,1) = P*phi[1];
     c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv - nu*pow(laplace,4);
 }
 void Equations::operator()( QuadMat<complex,3>& c, const double laplace, const complex dy) const
 {
+    double d = dd;
+    if( mhw && dy == complex(0)) d = 0;// the mean value is a delta in fourier space
     if( laplace == 0)
     {
-        c(0,0) = -dd; c(0,1) = 0.; c(0,2) = 0;
+        c(0,0) = -d;  c(0,1) = 0.; c(0,2) = 0;
         c(1,0) = 0;   c(1,1) = 0.; c(1,2) = 0;
         c(2,0) = 0;   c(2,1) = 0.; c(2,2) = 0;
         return;
@@ -130,11 +135,11 @@ void Equations::operator()( QuadMat<complex,3>& c, const double laplace, const c
     std::array<double,3> phi;
     p( phi, laplace);
     const complex curv = kappa_y*dy; 
-    const complex P = g_e*dy + curv + dd;
+    const complex P = g_e*dy + curv + d;
     const complex Q = g_i*dy*p.gamma1_i(laplace) + curv*( p.gamma1_i(laplace)/* + 0.5 *p.gamma2_i(laplace)*/);
     const complex R = g_z*dy*p.gamma1_z(laplace) + curv*( p.gamma1_z(laplace)/* + 0.5 *p.gamma2_z(laplace)*/);
 
-    c(0,0) = P*phi[0] - curv - dd - nu*pow(laplace,2); c(0,1) = P*phi[1];                       c(0,2) = P*phi[2];
+    c(0,0) = P*phi[0] - curv - d - nu*pow(laplace,2); c(0,1) = P*phi[1];                       c(0,2) = P*phi[2];
     c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv - nu*pow(laplace,2); c(1,2) = Q*phi[2];
     c(2,0) = R*phi[0];                      c(2,1) = R*phi[1];                       c(2,2) = R*phi[2] + tau_z*curv - nu*pow(laplace,2);
 }

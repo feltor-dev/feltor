@@ -5,7 +5,7 @@
 1)  ddd (dissip. coupling) 		    =  0.5		(0.5)
 2)  g_n (e/i density gradient)		    =   +1		(1.0)
 3)  g_z (impurity gradient)		    =   0.0		(0.0)
-4)  taui (Ti/Te) 			    = 1		(0.0)
+4)  taui (Ti/Te) 			    = 0		(0.0)
 5)  new impurity puff:1, cont.:0	    =	0.0		(0.0) 
 6)  mcv (magnetic curvature)		    =	+0.0		(0.05)
 7)  mhw:1, ohw:0 (modified/ordinary HW)	    =   0.0		(1.0)
@@ -17,7 +17,7 @@
 
 12) ly (length of y in units of rho_s)	    =  64 		(64.)
 13) nx (grid points in x)	 	    =   128 		(256.)
-14) ny (grid points in y)	 	    =   128		(256.)
+14) ny (grid points in y)	 	    =   128 		(256.)
 15) dt (time step in units c_s/L_p)	    =   0.01	(0.01)
 16) itstp (steps between output)	    =  5 		(40)
 17) itmax (total steps)			    =   4000		(4000)
@@ -26,7 +26,7 @@
 20) snapshots after itstp (0:off, 1:on)	    =	0.		(1.0)
 21) ibx (0:periodic, 1 Dirichlet, 2 Dir/Neu )	    =	1.0		(0.0)
 
-22) tau_z (Tz/Te*Z)    			    =   1.0		(0.0)
+22) tau_z (Tz/Te*Z)    			    =   0.0		(0.0)
 23) mu_z (mz/mi*Z)(mass)		    =	48.0		(large)
 24) a_z	(Z*nz/ne) (density)	    =   0.001		(small)
 25) nxsep  				    =	1.0		(0.5)
@@ -35,6 +35,6 @@
 28) sol g_n  				    =   0.0		(0.1)
 
 29) boolean local(0) /global(1)         = 0 (0)
-30) impurities yes(1) / no(0)           = 1 (0)
+30) impurities yes(1) / no(0)           = 0 (0)
 
 @ --------------------------------------

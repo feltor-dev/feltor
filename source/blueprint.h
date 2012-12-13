@@ -7,10 +7,21 @@
 #include "../lib/message.h"
 
 namespace toefl{
-//toefl brauch libraries, um zu funktionieren
-//z.B. fftw3 für dfts, cuda für graphikkarten, oder sparse matrix solver 
-enum cap{ TL_IMPURITY, TL_GLOBAL};
-enum target{ TL_ELECTRONS, TL_IONS, TL_IMPURITIES, TL_POTENTIAL};
+/*! @brief Possible capacities of a toefl solver
+ */
+enum cap{   TL_IMPURITY, //!< Include impurities
+            TL_GLOBAL, //!< Solve global equations
+            TL_MHW //!< Modify parallel term in electron density equation
+};
+
+/*! @brief Possible targets for memory buffer
+ */
+enum target{ 
+    TL_ELECTRONS, //!< Electron density
+    TL_IONS, //!< Ion density
+    TL_IMPURITIES, //!< Impurity density
+    TL_POTENTIAL //!< Potential
+};
 
 
 /*! @brief Holds the physical parameters of the problem.
@@ -110,19 +121,21 @@ class Blueprint
     Physical phys;
     Boundary bound;
     Algorithmic alg;
-    bool imp, global;
+    bool imp, global, mhw;
   public:
     /*! @brief Construct empty blueprint
      */
-    Blueprint():imp(false), global(false){}
+    Blueprint():imp(false), global(false), mhw(false){}
     /*! @brief Init parameters
      *
      * All capacities are disabled by default!
      * @param phys The physical parameters of the equations including numeric viscosity
+     * @param bound The parameters describing boundary and boundary conditions
+     * @param alg The parameters describing algorithmic issues
      */
     Blueprint( const Physical& phys, const Boundary& bound, const Algorithmic& alg): phys(phys), bound(bound), alg(alg)
     {
-        imp = global = false; 
+        imp = global = mhw = false; 
     }
     const Physical& physical() const {return phys;}
     const Boundary& boundary() const {return bound;}
@@ -134,11 +147,10 @@ class Blueprint
     {
         switch( capacity)
         {
-            case( TL_IMPURITY) : imp = true;
-                                 break;
-            case( TL_GLOBAL):    global = true;
-                                 break;
-            default: throw Message( "Unknown Capacity\n", ping);
+            case( TL_IMPURITY) : imp = true;     break;
+            case( TL_GLOBAL):    global = true;  break;
+            case( TL_MHW):       mhw = true;     break;
+            default: throw Message( "Unknown Capacity\n", ping); //is this necessary?
         }
     }
     bool isEnabled( enum cap capacity) const
@@ -147,6 +159,7 @@ class Blueprint
         {
             case( TL_IMPURITY) : return imp;
             case( TL_GLOBAL):    return global;
+            case( TL_MHW):       return mhw;
             default: throw Message( "Unknown Capacity\n", ping);
         }
     }
@@ -161,7 +174,9 @@ class Blueprint
         os << "Impurities are: \n"
             <<"    "<<(imp?enabled:disabled)<<"\n"
             <<"Global solvers are: \n"
-            <<"    "<<(global?enabled:disabled)<<"\n";
+            <<"    "<<(global?enabled:disabled)<<"\n"
+            <<"Modified Hasegawa Wakatani: \n"
+            <<"    "<<(mhw?enabled:disabled)<<"\n";
     }
 
 };

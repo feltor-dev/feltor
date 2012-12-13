@@ -2,6 +2,7 @@
 #define _DFT_DFT_SOLVER_
 
 #include <complex>
+
 #include "toefl.h"
 #include "blueprint.h"
 #include "equations.h"
@@ -113,7 +114,7 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     phi_coeff{ rows, cols/2+1},
     gamma_coeff{ MatrixArray< double, TL_NONE, n-1>::construct( rows, cols/2+1)}
 {
-    //bp.consistencyCheck();
+    bp.consistencyCheck();
     Physical phys = bp.physical();
     if( bp.isEnabled( TL_GLOBAL))
     {
@@ -132,7 +133,7 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
     const complex dymin( 0, 2.*M_PI/bound.ly);
     const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(bound.lx*bound.lx),
                  kymin2 = 2.*2.*M_PI*M_PI/(double)(bound.ly*bound.ly);
-    Equations e( phys);
+    Equations e( phys, blue.isEnabled( TL_MHW));
     Poisson p( phys);
     // dft_dft is not transposing so i is the y index by default
     for( unsigned i = 0; i<rows; i++)
@@ -156,7 +157,6 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
     for( unsigned k=0; k<n; k++)
         phi_coeff(0,0)[k] = 0;
     //coeff( 0,0).zero();
-    //std::cout << coeff<<std::endl;
     karniadakis.init_coeff( coeff, (double)(rows*cols));
 }
 template< size_t n>
@@ -222,7 +222,6 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
             break;
         case( TL_POTENTIAL):
             //solve for cphi
-            //std::cout << "ping\n";
             for( unsigned i=0; i<rows; i++)
                 for( unsigned j=0; j<cols/2+1; j++)
                 {
@@ -360,19 +359,20 @@ void DFT_DFT_Solver<n>::step_()
     karniadakis.template step_i<S>( dens, nonlinear);
     //3. solve linear equation
     //3.1. transform v_hut
-    for( unsigned j=0; j<n; j++)
-        dft_dft.r2c( dens[j], cdens[j]);
+    for( unsigned k=0; k<n; k++)
+        dft_dft.r2c( dens[k], cdens[k]);
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
     compute_cphi();
     //3.3. backtransform
-    for( unsigned j=0; j<n; j++)
+    for( unsigned k=0; k<n; k++)
     {
-        dft_dft.c2r( cdens[j], dens[j]);
-        dft_dft.c2r( cphi[j],  phi[j]);
+        dft_dft.c2r( cdens[k], dens[k]);
+        dft_dft.c2r( cphi[k],  phi[k]);
     }
 }
 
 
 } //namespace toefl
+
 #endif //_DFT_DFT_SOLVER_

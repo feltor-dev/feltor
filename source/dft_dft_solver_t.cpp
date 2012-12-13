@@ -62,6 +62,8 @@ void init( Blueprint& bp)
         bp.enable( TL_GLOBAL);
     if( para[30])
         bp.enable( TL_IMPURITY);
+    if( para[7])
+        bp.enable( TL_MHW);
 
     alg.h = bound.ly / (double)alg.ny;
     bound.lx = (double)alg.nx * alg.h;
@@ -179,7 +181,8 @@ int main()
     //construct solvers 
     DFT_DFT_Solver<2> solver2( bp);
     DFT_DFT_Solver<3> solver3( bp);
-    bp_mod.boundary().bc_x = TL_DST10;
+    if( bp.boundary().bc_x == TL_PERIODIC)
+        bp_mod.boundary().bc_x = TL_DST10;
     DRT_DFT_Solver<2> drt_solver2( bp_mod);
     DRT_DFT_Solver<3> drt_solver3( bp_mod);
 
@@ -302,6 +305,7 @@ int main()
     cout << "Average time for one step = "<<timer.diff()/(double)N<<"s\n";
     }
     //////////////////////////////////////////////////////////////////
+    fftw_cleanup();
     return 0;
 
 }
