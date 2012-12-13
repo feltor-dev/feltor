@@ -106,7 +106,7 @@ with coefficients
 \end{align}
 That means we first have to compute the nonlinearity $\vec N(\vec v^{n})$ and add everything up to $\vec {\hat v}^n$. The second step consists of a fourier transformation of $\vec v^n_{temp}$ and the inversion 
 of $(\gamma_0 - \Delta t \vec L)$ in fourier space. Note that this is a simple 
-$(3\times3)$ matrix inversion as long as our base functions are eigenvectors of $\vec L$. (cf. chapter \ref{sec:Fourier}) Depending on the boundary conditions we have to choose different base functions.
+$(3\times3)$ matrix inversion as long as our base functions are eigenvectors of $\vec L$. (cf. chapter \ref{sec:fourier}) Depending on the boundary conditions we have to choose different base functions.
 Note that from $n^{n+1}_e$, $n^{n+1}_i$ and $n^{n+1}_z$ in fourier space we also have to compute $\phi^{n+1}$, $\Gamma_{1i}\phi^{n+1}$ and $\Gamma_{1z}\phi^{n+1}$ for the arakawa bracket of the next step.
 Also note that by choosing other values for the coefficients (\ref{eq:coefficients}) 
 we can end up with an Euler or a 2nd order scheme which is important for the 
@@ -140,12 +140,40 @@ All in all we require
 \label{eq:boundary_conditions}
 \end{subequations}
 \section{Fourier transformations}
-\label{sec:Fourier}
+\label{sec:fourier}
 We know that the base functions $e^{iky}$ are eigenfunctions of every linear
 operator with complex eigenvalues. That means that when we transform Equation \ref{eq:linear_part} in $y$ we simply replace $\partial_y$ by $ik$ and $\partial_y^2$ by $-k^2$. 
 In the $x$-direction a sine transformation of type I or II is the method of choice 
 to naturally fulfill the Dirichlet boundary conditions. Note that sine functions $\sin(k x)$ are 
 eigenfunction of $\partial_x^2$ so all operators are diagonal.
+
+\section{ Modified Hasegawa-Wakatani Model}
+\label{seq:modified}
+This section follows the paper (Numata:2007). The resistive coupling term
+in equations (\ref{eq:toefl_equations}) results from the parallel 
+derivative of parallel electron current. However the components 
+$k_z=0$ and $k_y=0$ do not contribute to the parallel current in a tokamak
+and 
+these components may not appear in the respective term. 
+We thus modify the term $d(\phi - n_e)$ to 
+\begin{align}
+d(\phi - <\phi>_y - (n_e - <n_e>_y)
+\end{align}
+with the flux-surface average
+\begin{align}
+ <f>_y = \frac{1}{l_y}\int_0^{l_y}f(x,y)dy
+\end{align}
+Note that the averaging operator is linear and reduces to a Kronecker-delta
+ $\delta_{k0}$ in fourier space. With this modification zonal flows 
+ may emerge during the simulation.
+ The main result of the paper is that for large gradients and 
+ small coupling the saturated sate is turbulence dominated and 
+ vice versa for small gradients and large coupling the saturated state 
+ is dominated by zonal flows suppressing turbulence.
+
+
+
+
 
 
 %\begin{figure}[htbp]

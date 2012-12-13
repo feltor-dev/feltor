@@ -8,9 +8,9 @@
 4)  taui (Ti/Te) 			    = 0		(0.0)
 5)  new impurity puff:1, cont.:0	    =	0.0		(0.0) 
 6)  mcv (magnetic curvature)		    =	+0.0		(0.05)
-7)  mhw:1, ohw:0 (modified/ordinary HW)	    =   0.0		(1.0)
+7)  mhw:1, ohw:0 (modified/ordinary HW)	    =   1.0		(1.0)
 
-8)  nu (artif. hyper-viscosity) 	    =   0.001		(0.001)
+8)  nu (artif. hyper-viscosity) 	    =   0.1		(0.001)
 9)  nuimp (impurity viscosity)	   	    = 	0.0		(0.0)
 10) n00 (perturbation amplitude)    	    =   1.0		(0.1)
 11) nd0 (impurity amplitude)	    	    =	0.1		(1.0)
