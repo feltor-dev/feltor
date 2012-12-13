@@ -114,6 +114,9 @@ DRT_DFT_Solver<n>::DRT_DFT_Solver( const Blueprint& bp):
     gamma_coeff{ MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)}
 {
     bp.consistencyCheck();
+    if( bp.isEnabled( TL_GLOBAL)) 
+        std::cerr << "DFT_DRT Solver cannot solve global equations and ignores \
+                 parameter!\n";
     init_coefficients( bp.boundary(), bp.physical());
 }
 

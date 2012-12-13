@@ -16,6 +16,7 @@ double amp, imp_amp; //
 const double slit = 2./500.; //half distance between pictures in units of width
 double field_ratio;
 unsigned width = 960, height = 1080; //initial window width & height
+stringstream window_str;  //window name
 
 void GLFWCALL WindowResize( int w, int h)
 {
@@ -102,14 +103,13 @@ void drawScene( const Solver& solver)
     double max;
     M const * field;
     
-    {
+    { //draw electrons
     field = &solver.getField( TL_ELECTRONS);
     max = abs_max( *field);
     glLoadIdentity();
     loadTexture( *field, max);
-#ifdef TL_DEBUG
-    cout <<"max densitiy = "<<max<<endl;
-#endif
+    window_str << scientific;
+    window_str <<"ne / "<<max<<"\t";
     //Draw a textured quad
     //upper left
     glBegin(GL_QUADS);
@@ -119,9 +119,11 @@ void drawScene( const Solver& solver)
         glTexCoord2f(0.0f, 1.0f); glVertex2f( -1.0, 1.0);
     glEnd();
     }
-    {
+
+    { //draw Ions
     field = &solver.getField( TL_IONS);
     loadTexture( *field, max);
+    window_str <<" ni / "<<max<<"\t";
     glLoadIdentity();
     //upper right
     glBegin(GL_QUADS);
@@ -131,14 +133,13 @@ void drawScene( const Solver& solver)
         glTexCoord2f(0.0f, 1.0f); glVertex2f( +slit, 1.0);
     glEnd();
     }
+
     if( solver.blueprint().isEnabled( TL_IMPURITY))
     {
         field = &solver.getField( TL_IMPURITIES); 
         max = abs_max(*field);
         loadTexture( *field, max);
-#ifdef TL_DEBUG
-        cout <<"max potential = "<<max<<endl;
-#endif
+        window_str <<" nz / "<<max<<"\t";
         glLoadIdentity();
         //lower left
         glBegin(GL_QUADS);
@@ -148,13 +149,12 @@ void drawScene( const Solver& solver)
             glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, -slit);
         glEnd();
     }
-    {
+
+    { //draw potential
     field = &solver.getField( TL_POTENTIAL); 
     max = abs_max(*field);
     loadTexture( *field, max);
-#ifdef TL_DEBUG
-    cout <<"max potential = "<<max<<endl;
-#endif
+    window_str <<" phi / "<<max<<"\t";
     glLoadIdentity();
     //lower right
     glBegin(GL_QUADS);
@@ -245,11 +245,8 @@ int main()
                 glfwWaitEvents();
             } while( !glfwGetKey('R'));
         }
-        stringstream str; 
-        str << setprecision(2) << fixed;
-        str << "ne, ni and phi ... time = "<<t;
-        glfwSetWindowTitle( (str.str()).c_str() );
         
+        //draw scene
         if( !bp.isEnabled( TL_IMPURITY))
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
@@ -264,6 +261,10 @@ int main()
             else
                 drawScene<Matrix<double, TL_DRT_DFT>>( drt_solver3);
         }
+        window_str << setprecision(2) << fixed;
+        window_str << " &&   time = "<<t;
+        glfwSetWindowTitle( (window_str.str()).c_str() );
+        window_str.str("");
         glfwSwapBuffers();
 #ifdef TL_DEBUG
         glfwWaitEvents();
