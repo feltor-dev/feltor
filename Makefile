@@ -1,4 +1,7 @@
+all: equations.pdf
+
 .PHONY: doc
+
 doc: 
 	doxygen Doxyfile
 
