@@ -11,7 +11,7 @@ typedef std::complex<double> Complex;
 //physical Parameter
 const double R = 500000;
 const double P = 10;
-const double nx = 512;
+const double nx = 256;
 const double nz = 128; //number of inner points
 const double lz = 1.;
 const double h = 1./(double)(nz);

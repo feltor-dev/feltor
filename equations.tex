@@ -144,8 +144,47 @@ All in all we require
 We know that the base functions $e^{iky}$ are eigenfunctions of every linear
 operator with complex eigenvalues. That means that when we transform Equation \ref{eq:linear_part} in $y$ we simply replace $\partial_y$ by $ik$ and $\partial_y^2$ by $-k^2$. 
 In the $x$-direction a sine transformation of type I or II is the method of choice 
-to naturally fulfill the Dirichlet boundary conditions. Note that sine functions $\sin(k x)$ are 
-eigenfunction of $\partial_x^2$ so all operators are diagonal.
+to naturally fulfill the Dirichlet boundary conditions. Type III and IV are 
+however also possible and correspond to von Neumann conditions on the right side. 
+Note that sine functions $\sin(k x)$ are 
+eigenfunction of $\partial_x^2$ so all operators remain diagonal.
+\section{Conditions for gradients and charges}
+\label{sec:conditions}
+We now derive some conditions for the choice of parameters. 
+We want that the background densities $n_{s0}$ produce no net charge density. This
+corresponds to the condition:
+\begin{align}
+    \sum_s Z_s n_{s0}(x,y) = 0
+\label{eq:neutrality}
+\end{align}
+where $Z_s$ is the charge of the s-species.
+In the toefl equations (\ref{eq:toefl_equations}) all quantities are fluctuating
+quantities i.e. the gradients have been separated. We assume that the 
+simulation box is small enough that the background fields can be approximated by
+first terms of the Taylor expansions: 
+\begin{align}
+    n_{s0}(x) &\approx n_{s0}(x_0) + \frac{\partial n_{s0}(x_0)}{\partial x} (x-x_0)\nonumber \\
+           &= n_{s0}(x_0)( 1 + g_s(x-x_0))
+\end{align}
+which defines the gradients $g_s = \partial_x \ln n_{s0}$.
+We thus have from condition (\ref{eq:neutrality}) and the requirement that 
+every oder of the Taylor expansion must vanish seperately
+\begin{subequations}
+\begin{align}
+    -n_{e0} + n_{i0} + Z_zn_{z0} &= 0\\
+    -n_{e0}g_e + n_{i0}g_i + Z_zn_{z0}g_z &= 0
+\end{align}
+\end{subequations}
+(We assume that ions are always single charged.) This translates into the conditions
+\begin{subequations}
+\begin{align}
+    a_i + a_z &= 1\\
+    a_ig_i + a_z g_z &= g_e
+\end{align}
+\label{eq:condition}
+\end{subequations}
+with $a_s = Z_s\frac{n_{s0}}{n_{e0}}$, ($a_e = -1$).
+
 
 \section{ Modified Hasegawa-Wakatani Model}
 \label{seq:modified}
@@ -170,6 +209,54 @@ Note that the averaging operator is linear and reduces to a Kronecker-delta
  small coupling the saturated sate is turbulence dominated and 
  vice versa for small gradients and large coupling the saturated state 
  is dominated by zonal flows suppressing turbulence.
+\section{ The limit d=0: Rayleigh-Benard convection in 2D}
+\label{sec:rayleigh-benard}
+Here we focus on the case $d=0$, also neglecting impurities and the hyperviscous 
+terms in equations (\ref{eq:toefl_equations}) for the following discussion. 
+Finally we set $\tau_i=0$, i.e. cold ions, $a_i=1$ and $g_i=g_e=g$.
+If the curvature vanishes equations (\ref{eq:toefl_equations}) reduce to the Euler 
+equations i.e. simple continuity equations for the densities. 
+Now we consider the case of nonvanishing curvature $\kappa$:
+\begin{subequations}
+\begin{align}
+    \partial_t n_e &= -\{\phi,n_e\} +\kappa\partial_y(\phi - n_e)  + g\partial_y\phi \\
+    \partial_t n_i &= -\{\phi,n_i\} +\kappa\partial_y\phi  + g\partial_y\phi \\
+    \Delta\phi &= n_e - n_i
+\end{align}
+\label{eq:toefl_pre_rb}
+\end{subequations}
+We set $n_e - n_i =: \omega$ (the vorticity) and obtain:
+\begin{subequations}
+\begin{align}
+    \partial_t n_e &= -\{\phi,n_e\} +(\kappa+g)\partial_y\phi - \kappa\partial_y n_e \\
+    \partial_t \omega &=-\{\phi, \omega\} -\kappa \partial_y n_e \\
+    \Delta\phi &= \omega 
+\end{align}
+\label{eq:toefl_rb}
+\end{subequations}
+With the identification $n_e = \vartheta$, $\kappa = P$ and $\kappa+g=R$ we see that these are
+the equations for the Rayleigh-Benard convection except for the term 
+$-\kappa\partial_y n_e$
+in the electron density equation.
+This term however does not change the onset of convection i.e. the 
+typical convection cells still emerge especially in the case $\kappa \ll g$. 
+After all it's a simple advective term 
+i.e. advection with constant velocity $\kappa$ in y-direction. It might
+however change the mode from stationary to oscillatory. 
+The essential term is the buoyancy term in the vorticity equation and the
+sign of $\kappa$ determines the direction of the ``gravitational field''. 
+
+Note that the use of periodic boundary conditions is somewhat problematic in 
+the described case. When thinking in terms of convection a heat blob rises due to
+buoyancy forces. With a periodic cell in the x-direction it is as if the 
+temperature gradient were infinit in the x-direction. A rising blob will thus
+gain an infinit amount of energy from the gravitational field (or curvature)
+and accelerate without bond over time. 
+This is the case especiallyi if viscosity is absent or small and will finally 
+crash every simulation.
+For convective problems the homogenous dirichlet boundary conditions are thus more 
+appropriate.
+
 
 
 

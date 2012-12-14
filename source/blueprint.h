@@ -200,9 +200,9 @@ void Blueprint::consistencyCheck() const
     if( imp && (phys.a[1] <= 0 || phys.mu[1] <= 0 || phys.tau[1] < 0)) 
         throw Message( "Impuritiy species badly set\n", ping);
     if( fabs(phys.a[0] + phys.a[1] - 1) > 1e-15)
-        throw Message( "a_i + a_z != 1\n", ping);
-    if( fabs( phys.g[0] - (phys.g_e - phys.a[1]*phys.g[1])/(1.-phys.a[1])) > 1e-15)
-        throw Message( "g_i is wrong\n", ping);
+        throw Message( "a_i + a_z != 1 (background not neutral)\n", ping);
+    if( fabs( phys.g_e - phys.a[0]*phys.g[0]- phys.a[1]*phys.g[1]) > 1e-15)
+        throw Message( "Background is not neutral! \n", ping);
     //Some Warnings
     if( !imp && (phys.a[1] != 0 || phys.mu[1] != 0 || phys.tau[1] != 0)) 
         std::cerr << "TL_WARNING: Impurity disabled but z species not 0 (will be ignored)!\n";
