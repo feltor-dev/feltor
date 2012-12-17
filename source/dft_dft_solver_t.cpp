@@ -186,36 +186,37 @@ int main()
     DRT_DFT_Solver<2> drt_solver2( bp_mod);
     DRT_DFT_Solver<3> drt_solver3( bp_mod);
 
-    //init solver
+    //init solver such that potential is zero 
     const Algorithmic& alg = bp.algorithmic();
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ ne}, nz{ ne};
     try{
         init_gaussian( ne, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
-        init_gaussian( ni, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
+        //init_gaussian( ni, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
             init_gaussian( nz, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
         std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, ni}};
         std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, ni, nz}};
         Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, ni_{ ne_}, nz_{ ne_};
         init_gaussian( ne_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
-        init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
+        //init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
             init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
         std::array< Matrix<double, TL_DRT_DFT>,2> arr2_{{ ne_, ni_}};
         std::array< Matrix<double, TL_DRT_DFT>,3> arr3_{{ ne_, ni_, nz_}};
+        //now set the field to be computed
         if( !bp.isEnabled( TL_IMPURITY))
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
-                solver2.init( arr2, TL_POTENTIAL);
+                solver2.init( arr2, TL_IONS);
             else
-                drt_solver2.init( arr2_, TL_POTENTIAL);
+                drt_solver2.init( arr2_, TL_IONS);
         }
         else
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
-                solver3.init( arr3, TL_POTENTIAL);
+                solver3.init( arr3, TL_IONS);
             else
-                drt_solver3.init( arr3_, TL_POTENTIAL);
+                drt_solver3.init( arr3_, TL_IONS);
         }
     }catch( Message& m){m.display();}
 
