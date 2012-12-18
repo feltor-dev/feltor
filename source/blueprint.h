@@ -32,8 +32,8 @@ struct Physical
 {
     double d;  //!< The coupling constant
     double nu; //!< The artificial viscosity
-    double g_e; //!< The background gradient for electrons
     double kappa; //!< The curvature in y-direction
+    double g_e; //!< The background gradient for electrons
     double g[2]; //!< The background gradient for ions 0 and impurities 1
     double a[2]; //!< Charge of ions 0 and impurities 1
     double mu[2]; //!< The mass of ions 0 and impurities 1
@@ -41,16 +41,20 @@ struct Physical
     /*! @brief This is a POD
      */ 
     Physical() = default;
+    /*! @brief Print Physical parameters to outstream
+     *
+     * @param os The outstream
+     */
     void display( std::ostream& os = std::cout) const
     {
         os << "Physical parameters are: \n"
             <<"    Coupling:        = "<<d<<"\n"
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
-            <<"   Species/Parameter   g      a     mu    tau\n"
-            <<"    Electrons:         "<<g_e  <<"     "<<"-1"<<"      "<<"0"  <<"      "<<"1\n"
-            <<"    Ions:              "<<g[0] <<"      "<<a[0]<<"      "<<mu[0]<<"      "<<tau[0]<<"\n"
-            <<"    Impurities:        "<<g[1] <<"      "<<a[1]<<"      "<<mu[1]<<"      "<<tau[1]<<"\n";
+            <<"   Species/Parameter   g\ta\tmu\ttau\n"
+            <<"    Electrons:         "<<g_e  <<"\t"<<"-1"<<"\t"<<"0"<<"\t"<<"1\n"
+            <<"    Ions:              "<<g[0] <<"\t"<<a[0]<<"\t"<<mu[0]<<"\t"<<tau[0]<<"\n"
+            <<"    Impurities:        "<<g[1] <<"\t"<<a[1]<<"\t"<<mu[1]<<"\t"<<tau[1]<<"\n";
     }
 };
 
@@ -64,6 +68,10 @@ struct Boundary
     double ly; //!< Physical extension of y-direction
     enum bc bc_x;  //!< Boundary condition in x (y is always periodic)
     Boundary() = default;
+    /*! @brief Print Boundary parameters to outstream
+     *
+     * @param os The outstream
+     */
     void display( std::ostream& os = std::cout) const
     {
         os << "Boundary parameters are: \n"
@@ -93,6 +101,10 @@ struct Algorithmic
     double h;  //!< ly/ny (Only quadratic grid elements are usable.)
     double dt; //!< The time step
     Algorithmic() = default;
+    /*! @brief Print Algorithmic parameters to outstream
+     *
+     * @param os The outstream
+     */
     void display( std::ostream& os = std::cout) const
     {
         os << "Algorithmic parameters are: \n"
@@ -137,12 +149,28 @@ class Blueprint
     {
         imp = global = mhw = false; 
     }
+    /*! @brief Get Physical 
+     */
     const Physical& physical() const {return phys;}
+    /*! @brief Get Boundary 
+     */
     const Boundary& boundary() const {return bound;}
+    /*! @brief Get Algorithmic 
+     */
     const Algorithmic& algorithmic() const {return alg;}
+    /*! @brief Set Physical 
+     */
     Physical& physical() {return phys;}
+    /*! @brief Set Boundary 
+     */
     Boundary& boundary() {return bound;}
+    /*! @brief Set Algorithmic 
+     */
     Algorithmic& algorithmic() {return alg;}
+    /*! @brief Enable a capacity 
+     *
+     * @param capacity Capacity to be enabled
+     */
     void enable(enum cap capacity)
     {
         switch( capacity)
@@ -153,6 +181,10 @@ class Blueprint
             default: throw Message( "Unknown Capacity\n", ping); //is this necessary?
         }
     }
+    /*! @brief Check if a capacity is enabled
+     *
+     * @param capacity Capacity to check for
+     */
     bool isEnabled( enum cap capacity) const
     {
         switch( capacity)
@@ -163,7 +195,14 @@ class Blueprint
             default: throw Message( "Unknown Capacity\n", ping);
         }
     }
+    /*! @brief Perform several consistency checks on the set of parameters
+     *
+     */
     void consistencyCheck() const;
+    /*! @brief Print all parameters to an outstream
+     *
+     * @param os The outstream
+     */
     void display( std::ostream& os = std::cout) const
     {
         phys.display( os);

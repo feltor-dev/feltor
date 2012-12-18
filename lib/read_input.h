@@ -2,6 +2,7 @@
 #define _TL_READ_INPUT_
 
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include "../lib/message.h"
 
@@ -25,7 +26,11 @@ std::vector<double> read_input(const char * filename)
     double read;
     std::ifstream is( filename);
     if( is.fail()) //fail() returns true when either eof is reached or failbit or badbit is set
-        throw Message( "Error opening file \n", ping);
+    {
+        std::stringstream s;
+        s << "Error opening file '" << filename << "'";
+        throw Message( s.str().c_str() , ping);
+    }
     while(is.good())
     {
         is.get( s);

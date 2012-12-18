@@ -1,0 +1,14 @@
+Welcome to the TOEFL code 'INNTO'
+Type make to install the documentation and open with
+    firefox doc/html/index.html
+
+To install the code you need to have fftw3, OpenGl and 
+glfw (http://www.glfw.org/download.html) 
+installed in standard locations. 
+Then go to the source directory and type make. 
+In the lib directory type make toefl to see a test program running the
+rayleigh-benard convection code. 
+
+
+
+

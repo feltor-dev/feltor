@@ -29,51 +29,56 @@ void GLFWCALL WindowResize( int w, int h)
     height = h;
 }
 
-void init( Blueprint& bp)
+Blueprint read( char const * file)
 {
+    Blueprint bp;
     Physical& phys = bp.physical();
     Algorithmic& alg = bp.algorithmic();
     Boundary& bound = bp.boundary();
     vector<double> para;
-    try{ para = read_input( "input.test"); }
-    catch (Message& m) {  m.display(); return ;}
-    phys.d = para[1];
-    phys.g_e = phys.g[0] = para[2];
-    phys.g[1] = para[3];
-    phys.tau[0] = para[4];
-    phys.tau[1] = para[22];
-    phys.nu = para[8];
-    phys.mu[1] = para[23];
-    phys.a[1] = para[24];
-    phys.kappa = para[6];
+    try{ para = read_input( file); }
+    catch (Message& m) 
+    {  
+        m.display(); 
+        throw m;
+    }
+    alg.nx = para[1];
+    alg.ny = para[2];
+    alg.dt = para[3];
 
-    phys.a[0] = 1. -phys.a[1];
-    phys.g[0] = (phys.g_e - phys.a[1] * phys.g[1])/(1.-phys.a[1]);
-    phys.mu[0] = 1.0;//single charged ions
-
-    bound.ly = para[12];
-    alg.nx = para[13];
-    alg.ny = para[14];
-    alg.dt = para[15];
-    N = para[16];
-    amp = para[10];
-    imp_amp = para[11];
-    if( para[29])
-        bp.enable( TL_GLOBAL);
-    if( para[30])
-        bp.enable( TL_IMPURITY);
-    if( para[7])
-        bp.enable( TL_MHW);
-
-    alg.h = bound.ly / (double)alg.ny;
-    bound.lx = (double)alg.nx * alg.h;
-    switch( (unsigned)para[21])
+    bound.ly = para[4];
+    switch( (unsigned)para[5])
     {
         case( 0): bound.bc_x = TL_PERIODIC; break;
         case( 1): bound.bc_x = TL_DST10; break;
         case( 2): bound.bc_x = TL_DST01; break;
     }
+    amp = para[6];
+    imp_amp = para[7];
+    if( para[8])
+        bp.enable( TL_MHW);
 
+    phys.d = para[9];
+    phys.nu = para[10];
+    phys.kappa = para[11];
+    phys.g_e = phys.g[0] = para[12];
+    phys.tau[0] = para[13];
+    if( para[14])
+        bp.enable( TL_IMPURITY);
+    phys.g[1] = para[15];
+    phys.a[1] = para[16];
+    phys.mu[1] = para[17];
+    phys.tau[1] = para[18];
+
+    phys.a[0] = 1. -phys.a[1];
+    phys.g[0] = (phys.g_e - phys.a[1] * phys.g[1])/(1.-phys.a[1]);
+    phys.mu[0] = 1.0;//single charged ions
+
+    N = para[19];
+
+    alg.h = bound.ly / (double)alg.ny;
+    bound.lx = (double)alg.nx * alg.h;
+    return bp;
 }
 
 template< class M>
@@ -169,13 +174,26 @@ void drawScene( const Solver& solver)
         
 }
 
-int main()
+int main( int argc, char* argv[])
 {
     //Parameter initialisation
     Blueprint bp_mod;
-    init( bp_mod);
-    const Blueprint bp{ bp_mod};
+    if( argc == 1)
+    {
+        bp_mod = read("input.txt");
+    }
+    else if( argc == 2)
+    {
+        bp_mod = read( argv[1]);
+    }
+    else
+    {
+        cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
+        return -1;
+    }
+    const Blueprint bp = bp_mod;
     field_ratio = bp.boundary().lx/bp.boundary().ly;
+    
 
     bp.display(cout);
     //construct solvers 

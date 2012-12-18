@@ -14,6 +14,10 @@ namespace toefl{
 class Poisson
 {
   public: 
+    /*! @brief Initialize physical parameters
+     *
+     * @param phys Set the species parameters
+     */
     Poisson(const Physical& phys):a_i(phys.a[0]), mu_i(phys.mu[0]), tau_i(phys.tau[0]),
                                   a_z(phys.a[1]), mu_z(phys.mu[1]), tau_z(phys.tau[1]) 
                                       {}
@@ -68,6 +72,11 @@ class Equations
 {
     typedef std::complex<double> complex;
   public:
+    /*! @brief Initialize physical parameters
+     *
+     * @param phys Set the species parameters
+     * @param mhw   Specify if coupling should be modified
+     */
     Equations( const Physical& phys, bool mhw = false):
         p( phys), mhw( mhw),
         dd(phys.d), nu(phys.nu), 
@@ -79,7 +88,7 @@ class Equations
     /*! @brief compute the linear part of the toefl equations without impurities
      *
      * @param coeff Contains the coefficients on output
-     * @param dx    The value of the x-derivative in fourier space
+     * @param laplace The value of the laplacian in fourier space
      * @param dy    The value of the y-derivative in fourier space
      * \note This way you have the freedom to use various expansion functions (e.g. sine, cosine or exponential functions) 
      */
@@ -87,7 +96,7 @@ class Equations
     /*! @brief compute the linear part of the toefl equations with impurities
      *
      * @param coeff Contains the coefficients on output
-     * @param dx    The value of the x-derivative in fourier space
+     * @param laplace    The value of the laplacian in fourier space
      * @param dy    The value of the y-derivative in fourier space
      * \note This way you have the freedom to use various expansion functions (e.g. sine, cosine or exponential functions) 
      */

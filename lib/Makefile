@@ -11,7 +11,7 @@ texture_t: texture_t.cpp texture.h
 	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -lglfw -lGL -o $@
 	./$@
 
-toefl_b: toefl_b.cpp
+toefl: toefl_b.cpp
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -lglfw -lGL -o $@
 	./$@
     

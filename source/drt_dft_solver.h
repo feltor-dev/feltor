@@ -20,7 +20,7 @@ class DRT_DFT_Solver
      *
      * The constructor allocates storage for the solver
      * and initializes all fourier coefficients as well as 
-     * all low level solver needed.  
+     * all low level solvers needed.  
      * @param blueprint Contains all the necessary parameters.
      * @throw Message If your parameters are inconsistent.
      */
@@ -119,8 +119,8 @@ DRT_DFT_Solver<n>::DRT_DFT_Solver( const Blueprint& bp):
     Physical phys = bp.physical();
     if( bp.isEnabled( TL_GLOBAL))
     {
-        phys.g_e = phys.g[0] = phys.g[1] = 0; 
-        phys.kappa = 0;
+        cerr << "WARNING: GLOBAL solver not implemented yet! \n\
+             Switch to local solver...\n"
     }
     init_coefficients( bp.boundary(), phys);
 }
@@ -331,26 +331,6 @@ void DRT_DFT_Solver<n>::step_()
         ghostdens.initGhostCells( );
         ghostphi.initGhostCells(  );
         arakawa( ghostdens, ghostphi, nonlinear[k]);
-        if( blue.isEnabled(TL_GLOBAL) )
-        {
-            double kappa = blue.physical().kappa;
-            double h2inv = 1./2./blue.algorithmic().h;
-            for( unsigned j=0; j<cols; j++)
-                nonlinear[k](0,j) += ghostdens(0,j)*kappa*
-                    (ghostphi.at(1,j)-ghostphi.at(-1,j))
-                    -kappa*h2inv*(ghostdens(+1,j)-ghostdens.at(-1,j));
-            for( unsigned i=1; i<rows-1; i++)
-                for( unsigned j=0; j<cols; j++)
-                {
-                    nonlinear[k](i,j) += ghostdens(i,j)*kappa*
-                        (ghostphi(i+1,j)-ghostphi(i-1,j))
-                        -kappa*h2inv*(ghostdens(i+1,j)-ghostdens(i-1,j));
-                }
-            for( unsigned j=0; j<cols; j++)
-                nonlinear[k](rows-1,j) += ghostdens(rows-1,j)*kappa*
-                    (ghostphi.at(rows,j)-ghostphi(rows-2,j))
-                    -kappa*h2inv*(ghostdens.at(rows,j)-ghostdens(rows-2,j));
-        }
         swap_fields( dens[k], ghostdens); //now ghostdens is void
         swap_fields( phi[k], ghostphi); //now ghostphi is void
     }
