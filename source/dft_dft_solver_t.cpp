@@ -191,6 +191,8 @@ int main()
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ ne}, nz{ ne};
     try{
         init_gaussian( ne, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
+        init_gaussian( ne, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
+        init_gaussian( ne, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
         //init_gaussian( ni, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
             init_gaussian( nz, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
@@ -198,6 +200,8 @@ int main()
         std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, ni, nz}};
         Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, ni_{ ne_}, nz_{ ne_};
         init_gaussian( ne_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
+        init_gaussian( ne_, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
+        init_gaussian( ne_, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
         //init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
             init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
