@@ -62,6 +62,11 @@
  *  Also in connection with direct visualisation using OpenGL (small) memory leaks
  *  may occur because some older nvidia drivers generate memory leaks.
  *
+ * @par The INNTO code
+ *  INNTO stands for Innsbruck toefl. The innto code is included 
+ *  in the toefl library. Its documentation comes in a seperate 
+ *  tex-file in the main directory which can be compiled using make.
+ *
  *
  * Have fun using the toefl library.
  * 

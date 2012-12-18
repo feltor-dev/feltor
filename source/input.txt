@@ -1,14 +1,18 @@
 
-         * Input-File fuer "TOEFL" Code "INNTO" *
-         ----------------------------------------
+                * Input-File for "INNTO" Code *
+                -------------------------------
+
+Default input file.
+The parameters in brackets lead to drift wave turbulence with 
+zonal flows.
 
 ---------------------Algorithmic parameters-------------------
 1) nx (grid points in x)                =   256     (256.)
-2) ny (grid points in y)                =   128     (256.)
+2) ny (grid points in y)                =   256     (256.)
 3) dt (time step in units c_s/L_p)      =   0.01    (0.01)
 ------------------Boundary and initial conditions-------------
 4)  ly (length of y in units of rho_s)         =   64    (64.)
-5)  bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   1     (0.0)
+5)  bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   1     (1.0)
 6)  n00 (perturbation amplitude)               =   1.0   (1.0)
 7)  nd0 (impurity amplitude)                   =   0.1   (0.1)
 ---------------------Physical parameters----------------------
@@ -26,5 +30,5 @@ quasineutrality condition)
 17) mu_z (mz/mi*Z)(mass)                =   48.0    (large)
 18) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
 ---------------------Miscellaneous----------------------------
-19) itstp (steps between output)        =   10      (5)
+19) itstp (steps between output)        =   5      (5)
 @ ------------------------------------------------------------

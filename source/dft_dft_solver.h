@@ -119,8 +119,8 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     Physical phys = bp.physical();
     if( bp.isEnabled( TL_GLOBAL))
     {
-        cerr << "WARNING: GLOBAL solver not implemented yet! \n\
-             Switch to local solver...\n"
+        std::cerr << "WARNING: GLOBAL solver not implemented yet! \n\
+             Switch to local solver...\n";
     }
     init_coefficients( bp.boundary(), phys);
 }

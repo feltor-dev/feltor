@@ -206,25 +206,33 @@ int main( int argc, char* argv[])
 
     //init solver such that potential is zero 
     const Algorithmic& alg = bp.algorithmic();
-    Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, ni{ ne}, nz{ ne};
+    Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
     try{
         init_gaussian( ne, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         init_gaussian( ne, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
         init_gaussian( ne, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
         //init_gaussian( ni, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
+        {
             init_gaussian( nz, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
-        std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, ni}};
-        std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, ni, nz}};
-        Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, ni_{ ne_}, nz_{ ne_};
+            init_gaussian( nz, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
+            init_gaussian( nz, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
+        }
+        std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, phi}};
+        std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, nz, phi}};
+        Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, nz_{ ne_}, phi_{ ne_};
         init_gaussian( ne_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         init_gaussian( ne_, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
         init_gaussian( ne_, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
         //init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
+        {
             init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
-        std::array< Matrix<double, TL_DRT_DFT>,2> arr2_{{ ne_, ni_}};
-        std::array< Matrix<double, TL_DRT_DFT>,3> arr3_{{ ne_, ni_, nz_}};
+            init_gaussian( nz_, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
+            init_gaussian( nz_, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
+        }
+        std::array< Matrix<double, TL_DRT_DFT>,2> arr2_{{ ne_, phi_}};
+        std::array< Matrix<double, TL_DRT_DFT>,3> arr3_{{ ne_, nz_, phi_}};
         //now set the field to be computed
         if( !bp.isEnabled( TL_IMPURITY))
         {
@@ -261,15 +269,21 @@ int main( int argc, char* argv[])
 
     double t = 3*alg.dt;
     Timer timer;
+    cout<< "HIT ESC to terminate program \n"
+        << "HIT S   to stop simulation \n"
+        << "HIT R   to continue simulation!\n";
     while( running)
     {
+        //ask if simulation shall be stopped
         glfwPollEvents();
         if( glfwGetKey( 'S')) 
         {
             do
             {
                 glfwWaitEvents();
-            } while( !glfwGetKey('R'));
+            } while( !glfwGetKey('R') && 
+                     !glfwGetKey( GLFW_KEY_ESC) && 
+                      glfwGetWindowParam( GLFW_OPENED) );
         }
         
         //draw scene
