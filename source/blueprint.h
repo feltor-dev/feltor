@@ -212,8 +212,8 @@ class Blueprint
 
         os << "Impurities are: \n"
             <<"    "<<(imp?enabled:disabled)<<"\n"
-            <<"Global solvers are: \n"
-            <<"    "<<(global?enabled:disabled)<<"\n"
+            //<<"Global solvers are: \n"
+            //<<"    "<<(global?enabled:disabled)<<"\n"
             <<"Modified Hasegawa Wakatani: \n"
             <<"    "<<(mhw?enabled:disabled)<<"\n";
     }

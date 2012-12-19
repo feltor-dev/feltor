@@ -204,32 +204,32 @@ int main( int argc, char* argv[])
     DRT_DFT_Solver<2> drt_solver2( bp_mod);
     DRT_DFT_Solver<3> drt_solver3( bp_mod);
 
-    //init solver such that potential is zero 
     const Algorithmic& alg = bp.algorithmic();
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
+    // place some gaussian blobs in the field
     try{
         init_gaussian( ne, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
-        init_gaussian( ne, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
-        init_gaussian( ne, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
+        //init_gaussian( ne, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
+        //init_gaussian( ne, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
         //init_gaussian( ni, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
             init_gaussian( nz, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
-            init_gaussian( nz, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian( nz, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
+            //init_gaussian( nz, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
+            //init_gaussian( nz, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
         }
         std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, phi}};
         std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, nz, phi}};
         Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, nz_{ ne_}, phi_{ ne_};
         init_gaussian( ne_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
-        init_gaussian( ne_, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
-        init_gaussian( ne_, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
+        //init_gaussian( ne_, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
+        //init_gaussian( ne_, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
         //init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
             init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
-            init_gaussian( nz_, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian( nz_, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
+            //init_gaussian( nz_, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
+            //init_gaussian( nz_, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
         }
         std::array< Matrix<double, TL_DRT_DFT>,2> arr2_{{ ne_, phi_}};
         std::array< Matrix<double, TL_DRT_DFT>,3> arr3_{{ ne_, nz_, phi_}};
