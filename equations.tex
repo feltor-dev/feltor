@@ -1,0 +1,274 @@
+\documentclass[a4paper,12pt]{scrartcl}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+
+
+\usepackage{mathbbol}
+
+\usepackage{graphicx} % Include figure files
+\usepackage[margin=10pt,font=small,labelfont=bf,labelsep=colon, format = plain, indention = .5cm]{caption} %schöne Untertitel
+
+\renewcommand{\vec}[1]{{\mathbf{#1}}}
+%opening
+\title{Report}
+\author{Matthias  Wiesenberger}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    Revision of dimensionlesss toefl equations for implicit karniadakis scheme.
+\end{abstract}
+
+\section{The Toefl Equations}
+
+In order to use the Karniadakis scheme our equations have to be of the form 
+\begin{align}
+ \partial_t \vec v = \vec N(\vec v) + \vec L( \vec v)
+\end{align}
+where $\vec v = (n_e, n_i, n_z)$, $\vec N$ symbolizes the nonlinear part and $\vec L$ the linear part. 
+The toefl equations are: (A hat above a quantity symbolizes an operator)
+\begin{subequations}
+\begin{align}
+    \partial_t n_e &= -\{\phi,n_e\} +\hat\kappa(\phi - n_e) + d(\phi - n_e) + g_e\partial_y\phi - \nu\Delta^2n_e \\
+    \partial_t n_i &= -\{\hat\Gamma_{1i}\phi,n_i\} +\hat\kappa(\hat\Gamma_{1i}\phi +\tau_i n_i) + g_i\partial_y\hat\Gamma_{1i}\phi - \nu\Delta^2n_i \\
+    \partial_t n_z &= -\{\hat\Gamma_{1z}\phi,n_z\} +\hat\kappa(\hat\Gamma_{1z}\phi +\tau_z n_z) + g_z\partial_y\hat\Gamma_{1z}\phi - \nu\Delta^2n_z
+\end{align}
+\label{eq:toefl_equations}
+\end{subequations}
+In our equations each species is specified by the dimensionless temperature $\tau_s$, the
+dimensionless charge $a_s$ and the dimensionless mass $\mu_s$. Each species
+has a background gradient $g_s$. Note that 
+$\tau_e = a_e = -1$ and $\mu_e = 0$. $\nu$ is a artificial numerical viscosity.
+The nonlinear part consists of the Arakawa brackets
+\begin{align}
+    N_e(\vec v) &= \{n_e,\ \phi\}\\
+    N_i(\vec v) &= \{n_i,\ \hat\Gamma_{1i}\phi\}\\
+    N_z(\vec v) &= \{n_z,\ \hat\Gamma_{1z}\phi\}
+\end{align}
+where $\phi = \phi(\vec v)$ is given by the local (linear) Poisson equation
+\begin{align}
+    \phi = \frac{1}{\hat\rho}(n_e -a_i\hat\Gamma_{1i}n_i -a_z\hat\Gamma_{1z}n_z) =: \hat\phi_e n_e + \hat\phi_i n_i + \hat\phi_z n_z
+\end{align}
+$\hat\rho$ and $\hat\Gamma_1$ are written as 
+\begin{align}
+    \hat\rho &= \frac{a_i\mu_i \Delta}{1-\tau_i\mu_i\Delta} + \frac{a_z\mu_z\Delta}{1-\tau_z\mu_z\Delta}\\
+    \hat\Gamma_{1i} &= [1-0.5\tau_i\mu_i\Delta]^{-1}\\
+    \hat\Gamma_{1z} &= [1-0.5\tau_z\mu_z\Delta]^{-1}\\
+    %\hat\Gamma_{2i} &= \frac{1}{2} \tau_i \mu_i \Delta \hat\Gamma_{1i}^2\\
+    %\hat\Gamma_{2z} &= \frac{1}{2} \tau_z \mu_z \Delta \hat\Gamma_{1z}^2\\
+    \Delta          &= \partial_x^2 + \partial_y^2
+\end{align}
+which in fourier space reduce to (real) coefficients (dependent on the set of expansion functions used).
+The linear part of our equations can be written in matrix form as
+\begin{align}
+    \begin{pmatrix}
+        \hat L_e ( n_e, n_i, n_z) \\
+        \hat L_i ( n_e, n_i, n_z) \\
+        \hat L_z ( n_e, n_i, n_z)
+    \end{pmatrix} = 
+    \begin{pmatrix}
+        \hat P_e\hat \phi_e - \hat\kappa -d -\nu\Delta^2 & \hat P_e\hat \phi_i &\hat P_e \hat \phi_z\\
+        \hat P_i\hat \phi_e & \hat P_i \hat \phi_i + \hat\kappa \tau_i - \nu\Delta^2 & \hat P_i \hat \phi_z \\
+        \hat P_z\hat \phi_e & \hat P_z \hat \phi_i & \hat P_z \hat \phi_z + \hat\kappa \tau_z - \nu\Delta^2
+    \end{pmatrix}
+    \begin{pmatrix}
+        n_e \\n_i\\n_z
+    \end{pmatrix}
+    \label{eq:linear_part}
+\end{align}
+with 
+\begin{align}
+    \hat \kappa &= \kappa_y \partial_y \\
+    \hat P_e &= \hat\kappa + d +g_e\partial_y \\
+    \hat P_i &= \hat\kappa \hat\Gamma_{1i}  + g_i \partial_y \hat\Gamma_{1i}\\
+    \hat P_z &= \hat\kappa \hat\Gamma_{1z} + g_z \partial_y\hat\Gamma_{1z}
+\end{align}
+Note that the operators $\hat P_s$ are the prefactors of $\phi$ in equation (\ref{eq:toefl_equations}).
+
+The Karniadakis scheme now consists of the following two steps:
+\begin{align}
+    \vec {\hat v}^n &= \sum_{q=0}^2 \alpha_q\vec v^{n-q} + \Delta t(\sum_{q=0}^2\beta_q \vec N(\vec v^{n-q})) \ &\text{in x-space} \\
+    (\gamma_0 \vec \Eins  - \Delta t \vec L) \vec v^{n+1} &= \vec {\hat v}^n  \ &\text{in k-space}
+\end{align}
+with coefficients
+\begin{align}
+    \alpha_0 &= 3 \  &&\beta_0 = 3 \nonumber \\
+    \alpha_1 &= -\frac{3}{2} && \beta_1 = -3 && \gamma_0 = \frac{11}{6}\label{eq:coefficients}\\
+    \alpha_2 &= \frac{1}{3} && \beta_2 = 1 \nonumber
+\end{align}
+That means we first have to compute the nonlinearity $\vec N(\vec v^{n})$ and add everything up to $\vec {\hat v}^n$. The second step consists of a fourier transformation of $\vec v^n_{temp}$ and the inversion 
+of $(\gamma_0 - \Delta t \vec L)$ in fourier space. Note that this is a simple 
+$(3\times3)$ matrix inversion as long as our base functions are eigenvectors of $\vec L$. (cf. chapter \ref{sec:fourier}) Depending on the boundary conditions we have to choose different base functions.
+Note that from $n^{n+1}_e$, $n^{n+1}_i$ and $n^{n+1}_z$ in fourier space we also have to compute $\phi^{n+1}$, $\Gamma_{1i}\phi^{n+1}$ and $\Gamma_{1z}\phi^{n+1}$ for the arakawa bracket of the next step.
+Also note that by choosing other values for the coefficients (\ref{eq:coefficients}) 
+we can end up with an Euler or a 2nd order scheme which is important for the 
+initialisation of the Karniadakis scheme.
+
+\section{ Boundary conditions} 
+The quantities $n_e$, $n_i$, $n_z$ and $\phi$ are (small) fluctuating quantities on top of
+some (fixed) background gradients. Since the topology of our simulation box is periodic in the $y$-direction 
+we choose periodic boundary conditions in $y$. 
+Periodc boundary conditions in $x$ are sufficient as long as the gradient length scale is large 
+compared to the simulation box length $l_x$.
+Other boundary conditions are those where the fluctuating quantities 
+$n_e$, $n_i$ and $n_z$ vanish at $z=0$ and $z=l_x$. 
+When discussing boundary conditions for $\phi$, take into account that the actually measurable 
+quantity is the electric field $\vec E$ respectively the $\vec E \times \vec B$ velocity $\vec v_E$.
+We require $v_x $ respectively $E_y = \partial_y\phi$ to vanish at the boundary, which means that the 
+boundary is impermeable for the fluid. With the gauge freedom for the potential $\phi$
+we translate this into the condition $\phi( x=0,l_x, y) = 0$. Since our simulation box is
+inside the plasma we require that the plasma streams freely along the boundary wall.
+(Free slip boundary conditions)
+This means that the gradient $\partial_x v_y = \partial_x^2 \phi$ has to vanish (no fricition). 
+All in all we require
+\begin{subequations}
+\begin{align}
+    n_s( x=0, y,t) = n_s( x=l_x, y,t) = 0 \\
+    \phi( x=0, y,t) = \phi( x=l_x, y,t) = 0\\
+    \partial_x^2\phi( x=0, y,t) = \partial_x^2\phi( x=l_x, y,t) = 0\\
+    n_s( x, y+l_y, t) = n_s( x, y,t) \\
+    \phi( x, y+l_y, t) = \phi( x, y,t)
+\end{align}
+\label{eq:boundary_conditions}
+\end{subequations}
+\section{Fourier transformations}
+\label{sec:fourier}
+We know that the base functions $e^{iky}$ are eigenfunctions of every linear
+operator with complex eigenvalues. That means that when we transform Equation \ref{eq:linear_part} in $y$ we simply replace $\partial_y$ by $ik$ and $\partial_y^2$ by $-k^2$. 
+In the $x$-direction a sine transformation of type I or II is the method of choice 
+to naturally fulfill the Dirichlet boundary conditions. Type III and IV are 
+however also possible and correspond to von Neumann conditions on the right side. 
+Note that sine functions $\sin(k x)$ are 
+eigenfunction of $\partial_x^2$ so all operators remain diagonal.
+\section{Conditions for gradients and charges}
+\label{sec:conditions}
+We now derive some conditions for the choice of parameters. 
+We want that the background densities $n_{s0}$ produce no net charge density. This
+corresponds to the condition:
+\begin{align}
+    \sum_s Z_s n_{s0}(x,y) = 0
+\label{eq:neutrality}
+\end{align}
+where $Z_s$ is the charge of the s-species.
+In the toefl equations (\ref{eq:toefl_equations}) all quantities are fluctuating
+quantities i.e. the gradients have been separated. We assume that the 
+simulation box is small enough that the background fields can be approximated by
+first terms of the Taylor expansions: 
+\begin{align}
+    n_{s0}(x) &\approx n_{s0}(x_0) + \frac{\partial n_{s0}(x_0)}{\partial x} (x-x_0)\nonumber \\
+           &= n_{s0}(x_0)( 1 + g_s(x-x_0))
+\end{align}
+which defines the gradients $g_s = \partial_x \ln n_{s0}$.
+We thus have from condition (\ref{eq:neutrality}) and the requirement that 
+every oder of the Taylor expansion must vanish seperately
+\begin{subequations}
+\begin{align}
+    -n_{e0} + n_{i0} + Z_zn_{z0} &= 0\\
+    -n_{e0}g_e + n_{i0}g_i + Z_zn_{z0}g_z &= 0
+\end{align}
+\end{subequations}
+(We assume that ions are always single charged.) This translates into the conditions
+\begin{subequations}
+\begin{align}
+    a_i + a_z &= 1\\
+    a_ig_i + a_z g_z &= g_e
+\end{align}
+\label{eq:condition}
+\end{subequations}
+with $a_s = Z_s\frac{n_{s0}}{n_{e0}}$, ($a_e = -1$).
+
+
+\section{ Modified Hasegawa-Wakatani Model}
+\label{seq:modified}
+This section follows the paper (Numata:2007). The resistive coupling term
+in equations (\ref{eq:toefl_equations}) results from the parallel 
+derivative of parallel electron current. However the components 
+$k_z=0$ and $k_y=0$ do not contribute to the parallel current in a tokamak
+and 
+these components may not appear in the respective term. 
+We thus modify the term $d(\phi - n_e)$ to 
+\begin{align}
+d(\phi - <\phi>_y - (n_e - <n_e>_y)
+\end{align}
+with the flux-surface average
+\begin{align}
+ <f>_y = \frac{1}{l_y}\int_0^{l_y}f(x,y)dy
+\end{align}
+Note that the averaging operator is linear and reduces to a Kronecker-delta
+ $\delta_{k0}$ in fourier space. With this modification zonal flows 
+ may emerge during the simulation.
+ The main result of the paper is that for large gradients and 
+ small coupling the saturated sate is turbulence dominated and 
+ vice versa for small gradients and large coupling the saturated state 
+ is dominated by zonal flows suppressing turbulence.
+\section{ The limit d=0: Rayleigh-Benard convection in 2D}
+\label{sec:rayleigh-benard}
+Here we focus on the case $d=0$, also neglecting impurities and the hyperviscous 
+terms in equations (\ref{eq:toefl_equations}) for the following discussion. 
+Finally we set $\tau_i=0$, i.e. cold ions, $a_i=1$ and $g_i=g_e=g$.
+If the curvature vanishes equations (\ref{eq:toefl_equations}) reduce to the Euler 
+equations i.e. simple continuity equations for the densities. 
+
+Now we consider the case of nonvanishing curvature $\kappa$:
+\begin{subequations}
+\begin{align}
+    \partial_t n_e &= -\{\phi,n_e\} +\kappa\partial_y(\phi - n_e)  + g\partial_y\phi \\
+    \partial_t n_i &= -\{\phi,n_i\} +\kappa\partial_y\phi  + g\partial_y\phi \\
+    \Delta\phi &= n_e - n_i
+\end{align}
+\label{eq:toefl_pre_rb}
+\end{subequations}
+We set $n_e - n_i =: \omega$ (the vorticity) and obtain:
+\begin{subequations}
+\begin{align}
+    \partial_t n_e &= -\{\phi,n_e\} +(\kappa+g)\partial_y\phi - \kappa\partial_y n_e \\
+    \partial_t \omega &=-\{\phi, \omega\} -\kappa \partial_y n_e \\
+    \Delta\phi &= \omega 
+\end{align}
+\label{eq:toefl_rb}
+\end{subequations}
+With the identification $n_e = \vartheta$, $\kappa = P$ and $\kappa+g=R$ we see that these are
+the equations for the Rayleigh-Benard convection except for the term 
+$-\kappa\partial_y n_e$
+in the electron density equation. 
+This term however does not change the onset of convection i.e. the 
+typical convection cells still emerge especially in the case $\kappa \ll g$. 
+After all it's a simple advective term 
+i.e. advection with constant velocity $\kappa$ in y-direction. It might
+however change the mode from stationary to oscillatory. 
+The essential term is the buoyancy term in the vorticity equation and the
+sign of $\kappa$ determines the direction of the ``gravitational field''. 
+
+Note that the use of periodic boundary conditions is somewhat problematic in 
+the described case. When thinking in terms of convection a heat blob rises due to
+buoyancy forces. With a periodic cell in the x-direction it is as if the 
+temperature gradient were infinit in the x-direction. A rising blob will thus
+gain an infinit amount of energy from the gravitational field (or curvature)
+and accelerate without bond over time. 
+This is the case especiallyi if viscosity is absent or small and will finally 
+crash every simulation.
+For convective problems the homogenous dirichlet boundary conditions are thus more 
+appropriate.
+
+
+
+
+
+
+
+%\begin{figure}[htbp]
+% \centering
+% \includegraphics[width = 0.5\textwidth]{cos.eps}
+% \caption[optional für Bildreferenz]
+%  {Untertext blalslslslsl} 
+%\label{Abb:Konvektionszelle_Teilchen}
+%\end{figure}
+\end{document}
