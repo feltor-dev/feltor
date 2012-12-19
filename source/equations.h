@@ -75,7 +75,9 @@ class Equations
     /*! @brief Initialize physical parameters
      *
      * @param phys Set the species parameters
-     * @param mhw   Specify if coupling should be modified
+     * @param mhw  (Modified Hasegawa Wakatani)
+     *  Specify if coupling should be modified, i.e. subtract zonal
+     *  averages
      */
     Equations( const Physical& phys, bool mhw = false):
         p( phys), mhw( mhw),

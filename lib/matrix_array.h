@@ -10,7 +10,7 @@ namespace toefl{
  * @tparam T same as Matrix
  * @tparam P same as Matrix
  * @tparam n Size of the array to be constructed
- * @note This class exists mainly for internal reasons!
+ * @attention This class exists mainly for internal reasons!
  */
 template< class T, enum Padding P, size_t n>
 struct MatrixArray

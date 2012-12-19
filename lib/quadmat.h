@@ -147,8 +147,8 @@ QuadMat<double, n> One()
         E(i,i) = 1;
     return E;
 }
-/*! @brief Return the Zero Matrix
- * @return Matrix containing only zeroes 
+/*! @brief Return the Zero QuadMat
+ * @return QuadMat containing only zeroes 
  */
 template< size_t n>
 QuadMat<double, n> Zero()
