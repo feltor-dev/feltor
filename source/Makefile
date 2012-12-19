@@ -20,4 +20,4 @@ innto_t: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3  $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
 clean:
-	rm *_t *_b innto innto_t
+	rm *_t *_b innto 

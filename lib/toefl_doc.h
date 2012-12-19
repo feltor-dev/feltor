@@ -5,7 +5,7 @@
  *
  *
  * @mainpage
- * Welcome to the toefl library.
+ * Welcome to the TOEFL library and the INNTO code.
  *
  * @par Structure of the library
  *  The library provides a matrix class designed to cope well with inplace fourier
@@ -18,13 +18,13 @@
  *
  * @note Every .h file comes along with a _t.cpp and a _b.cpp file. These 
  * are for testing and benchmarking purposes. Type make *_t/b to compile
- * and run a testing/benchmark program.
+ * and run a testing/benchmark program. (e.g. make arakawa_t)
  *
  * @par Error Checking
  *  For performance reasons errors (like out of bound indexing) are only 
  *  checked when the Macro TL_DEBUG is defined. (Use e.g. the gcc compiler option
  *  -DTL_DEBUG to define it). This might decreases performance by a factor of 10, 
- *  but is essential when you build a solver. When it is defined, instances of 
+ *  but it's essential when you build a new solver. When it is defined, instances of 
  *  the Message class will be thrown at you and if you don't catch them will 
  *  terminate your program. So you probably want to catch them and see what 
  *  the message is after all ;-)
@@ -47,11 +47,12 @@
  * i.e. the vector double* field_T would store the y-direction continuously and the x-index would be the first one.
  *
  * @par Compile and link process
- *  The toefl library is header only i.e. you don't have to precompile anything. 
- *  The toefl library makes use of many features of the new C++11 standard so 
+ *  The TOEFL library is header only i.e. you don't have to precompile anything. 
+ *  The TOEFL library makes use of many features of the new C++11 standard so 
  *  be sure your Compiler supports that. 
  *  On the other hand you will need to add -lfftw and -lm to your compile command
- *  in order to link the fftw and math library.
+ *  in order to link the fftw and math library. Some headers like
+ *  texture.h will also require you to have OpenGL installed.
  *
  * @par Memory leaks
  *  Most of the headers have been explicitely tested for memory leaks with valgrind 
@@ -63,12 +64,13 @@
  *  may occur because some older nvidia drivers generate memory leaks.
  *
  * @par The INNTO code
- *  INNTO stands for Innsbruck toefl. The innto code is included 
- *  in the toefl library. Its documentation comes in a seperate 
+ *  INNTO stands for Innsbruck TOEFL. The innto code is included 
+ *  in and build on top of the TOEFL library. 
+ *  Its documentation comes in a seperate 
  *  tex-file in the main directory which can be compiled using make.
  *
  *
- * Have fun using the toefl library.
+ * Have fun using the TOEFL library.
  * 
  *
  */

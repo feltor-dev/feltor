@@ -1,3 +1,8 @@
+/*! \file
+ * @brief Implementation of some matrix initialisation routines 
+ * @author Matthias Wiesenberger
+ *  Matthias.Wiesenberger@uibk.ac.at
+ */
 #ifndef _TL_INIT_
 #define _TL_INIT_
 
