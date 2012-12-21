@@ -1,20 +1,22 @@
 INCLUDE += 
+CXX = g++
 CFLAGS = -Wall -std=c++0x
 LIBS = -lfftw3 -lm
-CXX = g++
+
+GLFLAGS=-lglfw -lrt -lGL
+
+toefl: toefl_b.cpp
+	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
+	./$@
 
 toefl_t: toefl_t.cpp
-	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -lglfw -lGL -o $@
+	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
 	./$@
 
 texture_t: texture_t.cpp texture.h
-	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -lglfw -lGL -o $@
+	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
 	./$@
 
-toefl: toefl_b.cpp
-	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -lglfw -lGL -o $@
-	./$@
-    
 
 %_t: %_t.cpp %.h
 	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@

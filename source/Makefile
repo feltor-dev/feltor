@@ -1,6 +1,6 @@
 INCLUDE += -I../lib
 CFLAGS = -Wall -std=c++0x
-LIBS = -lfftw3 -lm -lGL -lglfw
+LIBS = -lfftw3 -lm -lGL -lglfw -lrt
 CXX = g++
 
 all: innto
