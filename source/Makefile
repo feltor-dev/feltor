@@ -1,5 +1,5 @@
 INCLUDE += -I../lib
-CFLAGS = -Wall -std=c++0x
+CFLAGS = -Wall -std=c++0x -fopenmp
 LIBS = -lfftw3 -lm -lGL -lglfw -lrt
 CXX = g++
 

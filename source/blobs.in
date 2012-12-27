@@ -33,4 +33,5 @@ quasineutrality condition)
 18) tau_z (Tz/Te*Z)                     =   0.0     
 ---------------------Miscellaneous----------------------------
 19) itstp (steps between output)        =   1      
+20) OMP_NUM_THREADS                     =   2      (4)
 @ ------------------------------------------------------------

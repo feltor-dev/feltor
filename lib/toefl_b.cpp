@@ -42,6 +42,7 @@ auto field      = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
 auto nonlinear  = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
 auto cfield     = MatrixArray<Complex, TL_NONE,2>::construct( nz, nx/2+1);
 GhostMatrix<double, TL_DFT> phi( nz, nx, bc_z, TL_PERIODIC);
+GhostMatrix<double, TL_DFT> ghostfield( nz, nx, bc_z, TL_PERIODIC, TL_VOID);
 Matrix<Complex, TL_NONE>    cphi( nz, nx/2+1);
 //Coefficients
 Matrix< QuadMat< Complex, 2>> coefficients( nz, nx/2+1);
@@ -155,10 +156,9 @@ template< enum stepper S>
 void step()
 {
     phi.initGhostCells( );
-#pragma omp parallel
+#pragma omp parallel firstprivate(ghostfield)
     {
-    GhostMatrix<double, TL_DFT> ghostfield( nz, nx, bc_z, TL_PERIODIC, TL_VOID);
-#pragma omp for schedule(dynamic,1)
+#pragma omp for 
     for( unsigned i=0; i<2; i++)
     {
         swap_fields( field[i], ghostfield);// now field is void

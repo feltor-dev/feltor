@@ -2,7 +2,7 @@ INCLUDE +=
 CXX = g++
 CFLAGS = -Wall -std=c++0x -fopenmp
 LIBS = -lfftw3 -lm
-DEBUG = -g
+DEBUG = 
 
 GLFLAGS=-lglfw -lrt -lGL
 

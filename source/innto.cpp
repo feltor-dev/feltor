@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <GL/glfw.h>
 #include <sstream>
+#include <omp.h>
 
 #include "toefl.h"
 #include "dft_dft_solver.h"
@@ -75,6 +76,8 @@ Blueprint read( char const * file)
     phys.mu[0] = 1.0;//single charged ions
 
     N = para[19];
+    omp_set_num_threads( para[20]);
+    cout<< "With "<<omp_get_max_threads()<<" threads\n";
 
     alg.h = bound.ly / (double)alg.ny;
     bound.lx = (double)alg.nx * alg.h;
@@ -272,11 +275,13 @@ int main( int argc, char* argv[])
 
     double t = 3*alg.dt;
     Timer timer;
+    Timer overhead;
     cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
     while( running)
     {
+        overhead.tic();
         //ask if simulation shall be stopped
         glfwPollEvents();
         if( glfwGetKey( 'S')) 
@@ -340,9 +345,11 @@ int main( int argc, char* argv[])
 #endif
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
+        overhead.toc();
     }
     glfwTerminate();
     cout << "Average time for one step = "<<timer.diff()/(double)N<<"s\n";
+    cout << "Overhead for visualisation, etc. per step = "<<(overhead.diff()-timer.diff())/(double)N<<"s\n";
     }
     //////////////////////////////////////////////////////////////////
     fftw_cleanup();
