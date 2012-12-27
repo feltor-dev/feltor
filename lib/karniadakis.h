@@ -75,6 +75,7 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
     }
 #endif
     QuadMat<T, n> temp;
+#pragma omp for 
     for( size_t i = 0; i<rows; i++)
         for( size_t j=0; j<cols; j++)
         {
@@ -254,6 +255,7 @@ template< size_t n, typename T, enum Padding P>
 template< enum stepper S>
 void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::array< Matrix<double, P>, n> & n0)
 {
+#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
 #ifdef TL_DEBUG

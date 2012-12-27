@@ -1,12 +1,13 @@
 INCLUDE += 
 CXX = g++
-CFLAGS = -Wall -std=c++0x
+CFLAGS = -Wall -std=c++0x -fopenmp
 LIBS = -lfftw3 -lm
+DEBUG = -g
 
 GLFLAGS=-lglfw -lrt -lGL
 
 toefl: toefl_b.cpp
-	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
+	$(CXX) $(DEBUG) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
 	./$@
 
 toefl_t: toefl_t.cpp
