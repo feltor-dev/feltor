@@ -325,6 +325,7 @@ template< size_t n>
 template< enum stepper S>
 void DRT_DFT_Solver<n>::step_()
 {
+    //is false-sharing an issue here?
 #pragma omp parallel 
     {
     GhostMatrix<double, TL_DRT_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
