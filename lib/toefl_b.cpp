@@ -28,7 +28,7 @@ void rayleigh_equations( QuadMat< Complex,2>& coeff, const Complex dx, const Com
     double laplace = (dx*dx + dy*dy).real(); 
     //std::cout << laplace<<std::endl;
     coeff(0,0) = laplace, coeff(0,1) = -R*dx/laplace;
-    coeff(1,0) = -P*dx  , coeff(1,1) =  P*laplace;
+    coeff(1,0) = -P*dx  , coeff(1,1) = P*laplace;
 };
 
 inline void laplace_inverse( double& l_inv, const Complex dx, const Complex dy)

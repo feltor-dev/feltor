@@ -273,4 +273,14 @@ appropriate.
 %  {Untertext blalslslslsl} 
 %\label{Abb:Konvektionszelle_Teilchen}
 %\end{figure}
+\section{Blob dynamics in the SOL}
+If in the previous model we further set $g=0$ i.e. we model regions with 
+a flat background density, the fluid is stable with respect to small density 
+perturbations. However if we place a relatively large density blob in the
+simulation cell, this blob will rise due to buouyancy/interchange forces. 
+Note that in this case periodic boundary conditions in $x$ direction are possible.
+The numerical demanding problem is the resolution of large density gradients
+that are present in the vicinity of the blob. Especially Arakawa's scheme produces
+numerical oscillations in the wake of the blob. A shock capturing scheme or  
+high resolution might cure the problem.
 \end{document}

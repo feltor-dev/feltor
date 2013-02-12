@@ -9,8 +9,8 @@ Then enable a small curvature. Time step can be relatively
 large as well as the perturbation amplitude.
 
 ---------------------Algorithmic parameters-------------------
-1) nx (grid points in x)                =   512
-2) ny (grid points in y)                =   256 
+1) nx (grid points in x)                =   128
+2) ny (grid points in y)                =   128 
 3) dt (time step in units c_s/L_p)      =   0.3    
 ------------------Boundary and initial conditions-------------
 4)  ly (length of y in units of rho_s)         =   128    

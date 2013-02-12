@@ -12,26 +12,34 @@ using namespace toefl;
 unsigned rows = 512, cols = 4*512;
 int main()
 {
-    const int kmax = 2;
+    const unsigned kmax = 2;
     omp_set_num_threads(kmax);
     cout << "Test with "<<omp_get_max_threads()<< " threads\n";
     cout << "Size of one array element: " << sizeof( Matrix<double, TL_DFT>) <<"\n";
     auto m1 = MatrixArray<double, TL_DFT, kmax>::construct(rows, cols);
     auto m1_ = MatrixArray<complex<double>, TL_NONE, kmax >::construct( rows, cols/2 + 1);
+    double a[100];
+    Matrix<double, TL_DFT> mm( rows, cols);
+    Matrix<complex<double>, TL_NONE> mm_( rows, cols/2+1);
     Timer t;
     DFT_DFT dft_dft( rows,cols, FFTW_MEASURE);
+    DFT_DFT dft_dft2( rows,cols, FFTW_MEASURE);
     //double dx = 1./(cols), dy = 1./rows;
     for( unsigned k=0; k<kmax; k++)
     for( size_t i = 0; i < m1[0].rows(); i++)
         for ( size_t j=0; j < m1[0].cols(); j++)
-            m1[k](i, j) = i * i + j - 17;//sin( 4.*M_PI*j*dx)*cos( 2.*M_PI*i*dy); //sin(kPix)*sin(qPiy)
+            mm(i,j) = m1[k](i, j) = i * i + j - 17;//sin( 4.*M_PI*j*dx)*cos( 2.*M_PI*i*dy); //sin(kPix)*sin(qPiy)
 #pragma omp parallel
     {
 #pragma omp master
     t.tic();
-#pragma omp for
-    for( unsigned k=0; k<kmax; k++)
-        dft_dft.r2c( m1[k], m1_[k]);
+#pragma omp sections 
+    {
+#pragma omp section
+        dft_dft.r2c( m1[0], m1_[0]);
+#pragma omp section
+        dft_dft.r2c( mm, mm_);
+    }
 #pragma omp master
     t.toc();
     }
