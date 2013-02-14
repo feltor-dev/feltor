@@ -86,7 +86,7 @@ class Matrix
 {
   public:
     /*! @brief Construct an empty matrix*/
-    //Matrix(): n(0), m(0), ptr( nullptr){ }
+    //Matrix(): n(0), m(0), ptr( NULL){ }
     /*! @brief Allocate continous memory on the heap
      *
      * @param rows logical number of rows (cannot be changed as long as memory is allocated for that object)
@@ -196,7 +196,7 @@ class Matrix
      *
      * @return true if memory isn't allocated 
      */
-    bool isVoid() const { return (ptr == nullptr) ? true : false;}
+    bool isVoid() const { return (ptr == NULL) ? true : false;}
 
     /*! @brief two Matrices are considered equal if elements are equal
      *
@@ -289,7 +289,7 @@ void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs)
 }
 
 template <class T, enum Padding P>
-Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m), ptr(nullptr)
+Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n), m(m), ptr(NULL)
 {
 #ifdef TL_DEBUG
     if( n==0|| m==0)
@@ -300,7 +300,7 @@ Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n)
 }
 
 template< class T, enum Padding P>
-Matrix<T,P>::Matrix( const size_t n, const size_t m, const T& value):n(n),m(m),ptr(nullptr)
+Matrix<T,P>::Matrix( const size_t n, const size_t m, const T& value):n(n),m(m),ptr(NULL)
 {
 #ifdef TL_DEBUG
     if( n==0|| m==0)
@@ -316,13 +316,13 @@ Matrix<T,P>::Matrix( const size_t n, const size_t m, const T& value):n(n),m(m),p
 template <class T, enum Padding P>
 Matrix<T, P>::~Matrix()
 {
-    if( ptr!= nullptr)
+    if( ptr!= NULL/*NULL*/)
         fftw_free( ptr);
 }
 
 template <class T, enum Padding P>
-Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m), ptr(nullptr){
-    if( src.ptr != nullptr)
+Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m), ptr(NULL){
+    if( src.ptr != NULL)
     {
         allocate_();
         for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
@@ -331,7 +331,7 @@ Matrix<T, P>::Matrix( const Matrix& src):n(src.n), m(src.m), ptr(nullptr){
 }
 template <class T, enum Padding P>
 Matrix<T, P>::Matrix(  Matrix&& src):n(src.n), m(src.m), ptr(src.ptr){
-    src.ptr = nullptr;
+    src.ptr = NULL;
 }
 
 template <class T, enum Padding P>
@@ -342,7 +342,7 @@ Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
 #ifdef TL_DEBUG
         if( n!=src.n || m!=src.m)
             throw  Message( "Assignment error! Sizes not equal!", ping);
-        if( ptr == nullptr || src.ptr == nullptr)
+        if( ptr == NULL || src.ptr == NULL)
             throw Message( "Assigning to or from a void matrix!", ping);
 #endif
         for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
@@ -359,11 +359,11 @@ Matrix<T, P>& Matrix<T, P>::operator=( Matrix&& src)
 #ifdef TL_DEBUG
         if( n!=src.n || m!=src.m)
             throw  Message( "Assignment error! Sizes not equal!", ping);
-        if( ptr == nullptr || src.ptr == nullptr)
+        if( ptr == NULL || src.ptr == NULL)
             throw Message( "Assigning to or from a void matrix!", ping);
 #endif
         ptr = src.ptr; 
-        src.ptr = nullptr;
+        src.ptr = NULL;
     }
     return *this;
 }
@@ -371,10 +371,10 @@ Matrix<T, P>& Matrix<T, P>::operator=( Matrix&& src)
 template <class T, enum Padding P>
 void Matrix<T, P>::allocate_()
 {
-    if( ptr == nullptr) //allocate only if matrix is void 
+    if( ptr == NULL) //allocate only if matrix is void 
     {
         ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
-        if( ptr == nullptr) 
+        if( ptr == NULL) 
             throw AllocationError(n, m, ping);
     }
     else 
@@ -389,7 +389,7 @@ T& Matrix<T, P>::operator()( const size_t i, const size_t j)
 #ifdef TL_DEBUG
     if( i >= n || j >= m)
         throw BadIndex( i,n, j,m, ping);
-    if( ptr == nullptr) 
+    if( ptr == NULL) 
         throw Message( "Trying to access a void matrix!", ping);
 #endif
     return ptr[ i*TotalNumberOf<P>::columns(m) + j];
@@ -401,7 +401,7 @@ const T&  Matrix<T, P>::operator()( const size_t i, const size_t j) const
 #ifdef TL_DEBUG
     if( i >= n || j >= m)
         throw BadIndex( i,n, j,m, ping);
-    if( ptr == nullptr) 
+    if( ptr == NULL) 
         throw Message( "Trying to access a void matrix!", ping);
 #endif
     return ptr[ i*TotalNumberOf<P>::columns(m) + j];
@@ -410,7 +410,7 @@ const T&  Matrix<T, P>::operator()( const size_t i, const size_t j) const
 template <class T, enum Padding P>
 void Matrix<T, P>::zero(){
 #ifdef TL_DEBUG
-    if( ptr == nullptr) 
+    if( ptr == NULL) 
         throw  Message( "Trying to zero a void matrix!", ping);
 #endif
     for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
@@ -435,7 +435,7 @@ template <class T, enum Padding P>
 std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat)
 {
 #ifdef TL_DEBUG
-    if( mat.ptr == nullptr)
+    if( mat.ptr == NULL)
         throw  Message( "Trying to output a void matrix!\n", ping);
 #endif
      int w = os.width();
@@ -455,7 +455,7 @@ template <class T, enum Padding P>
 std::istream& operator>>( std::istream& is, Matrix<T, P>& mat)
 {
 #ifdef TL_DEBUG
-    if( mat.ptr == nullptr)
+    if( mat.ptr == NULL)
         throw  Message( "Trying to write in a void matrix!\n", ping);
 #endif
     for( size_t i=0; i<mat.n; i++)

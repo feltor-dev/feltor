@@ -11,7 +11,7 @@ int main()
   {
     QuadMat<double, 2> m; 
     QuadMat<double, 3> n; 
-    m = {1,2,3, 4};
+    //m = {1,2,3, 4};
     for( size_t i=0; i<3; i++)
         for( size_t j=0; j<3; j++)
             n( i, j) = i + j;
