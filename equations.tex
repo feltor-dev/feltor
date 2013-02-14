@@ -243,7 +243,9 @@ This term however does not change the onset of convection i.e. the
 typical convection cells still emerge especially in the case $\kappa \ll g$. 
 After all it's a simple advective term 
 i.e. advection with constant velocity $\kappa$ in y-direction. It might
-however change the mode from stationary to oscillatory. 
+however change the mode from stationary to oscillatory. (This is
+supported by O E Garcia [private correspondence]. The term must be neglected
+in order to arrive at the convection equations).
 The essential term is the buoyancy term in the vorticity equation and the
 sign of $\kappa$ determines the direction of the ``gravitational field''. 
 
@@ -271,4 +273,14 @@ appropriate.
 %  {Untertext blalslslslsl} 
 %\label{Abb:Konvektionszelle_Teilchen}
 %\end{figure}
+\section{Blob dynamics in the SOL}
+If in the previous model we further set $g=0$ i.e. we model regions with 
+a flat background density, the fluid is stable with respect to small density 
+perturbations. However if we place a relatively large density blob in the
+simulation cell, this blob will rise due to buouyancy/interchange forces. 
+Note that in this case periodic boundary conditions in $x$ direction are possible.
+The numerical demanding problem is the resolution of large density gradients
+that are present in the vicinity of the blob. Especially Arakawa's scheme produces
+numerical oscillations in the wake of the blob. A shock capturing scheme or  
+high resolution might cure the problem.
 \end{document}

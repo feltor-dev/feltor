@@ -28,7 +28,7 @@ void rayleigh_equations( QuadMat< Complex,2>& coeff, const Complex dx, const Com
     double laplace = (dx*dx + dy*dy).real(); 
     //std::cout << laplace<<std::endl;
     coeff(0,0) = laplace, coeff(0,1) = -R*dx/laplace;
-    coeff(1,0) = -P*dx  , coeff(1,1) =  P*laplace;
+    coeff(1,0) = -P*dx  , coeff(1,1) = P*laplace;
 };
 
 inline void laplace_inverse( double& l_inv, const Complex dx, const Complex dy)
@@ -41,8 +41,8 @@ inline void laplace_inverse( double& l_inv, const Complex dx, const Complex dy)
 auto field      = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
 auto nonlinear  = MatrixArray< double, TL_DFT, 2>::construct( nz, nx);
 auto cfield     = MatrixArray<Complex, TL_NONE,2>::construct( nz, nx/2+1);
-GhostMatrix<double, TL_DFT> ghostfield( nz, nx, bc_z, TL_PERIODIC);
 GhostMatrix<double, TL_DFT> phi( nz, nx, bc_z, TL_PERIODIC);
+GhostMatrix<double, TL_DFT> ghostfield( nz, nx, bc_z, TL_PERIODIC, TL_VOID);
 Matrix<Complex, TL_NONE>    cphi( nz, nx/2+1);
 //Coefficients
 Matrix< QuadMat< Complex, 2>> coefficients( nz, nx/2+1);
@@ -146,6 +146,7 @@ int main()
 
 void multiply_coefficients()
 {
+#pragma omp for
     for( unsigned i=0; i<cphi.rows(); i++)
         for( unsigned j=0; j<cphi.cols(); j++)
             cphi(i,j) = cphi_coefficients(i,j)*cfield[1](i,j); //double - complex Mult.
@@ -155,6 +156,9 @@ template< enum stepper S>
 void step()
 {
     phi.initGhostCells( );
+#pragma omp parallel firstprivate(ghostfield)
+    {
+#pragma omp for 
     for( unsigned i=0; i<2; i++)
     {
         swap_fields( field[i], ghostfield);// now field is void
@@ -163,13 +167,18 @@ void step()
         swap_fields( field[i], ghostfield);// now ghostfield is void
     }
     karniadakis.step_i<S>( field, nonlinear);
+#pragma omp for
     for( unsigned i=0; i<2; i++)
         dft_drt.r2c( field[i], cfield[i]);
     karniadakis.step_ii( cfield);
+#pragma omp master
     swap_fields( cphi, phi); //now phi is void
+#pragma omp barrier
     multiply_coefficients();
+#pragma omp for
     for( unsigned i=0; i<2; i++)
         dft_drt.c2r( cfield[i], field[i]);
+    }
     dft_drt.c2r( cphi, phi); //field in phi again
 }
 

@@ -82,7 +82,7 @@ class DFT_DFT_Solver
     const size_t crows, ccols;
     const Blueprint blue;
     /////////////////fields//////////////////////////////////
-    GhostMatrix<double, TL_DFT> ghostdens, ghostphi;
+    //GhostMatrix<double, TL_DFT> ghostdens, ghostphi;
     std::array< Matrix<double, TL_DFT>, n> dens, phi, nonlinear;
     /////////////////Complex (void) Matrices for fourier transforms///////////
     std::array< Matrix< complex>, n> cdens, cphi;
@@ -101,8 +101,6 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     crows( rows), ccols( cols/2+1),
     blue( bp),
     //fields
-    ghostdens{ rows, cols, TL_PERIODIC, TL_PERIODIC, TL_VOID},
-    ghostphi{ ghostdens},
     dens{ MatrixArray<double, TL_DFT,n>::construct( rows, cols)},
     phi{ dens}, nonlinear{ dens},
     cdens{ MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)}, 
@@ -295,21 +293,25 @@ void DFT_DFT_Solver<n>::compute_cphi()
 {
     if( n==2)
     {
+#pragma omp for 
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j);
+#pragma omp for 
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
     }
     else if( n==3)
     {
+#pragma omp for 
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j) 
                              + phi_coeff(i,j)[2]*cdens[2](i,j);
+#pragma omp for 
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
             {
@@ -323,7 +325,12 @@ template< size_t n>
 template< enum stepper S>
 void DFT_DFT_Solver<n>::step_()
 {
+    //TODO: Is false sharing an issue here?
+#pragma omp parallel 
+    {
+    GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
     //1. Compute nonlinearity
+#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
         swap_fields( dens[k], ghostdens); //now dens[k] is void
@@ -338,16 +345,19 @@ void DFT_DFT_Solver<n>::step_()
     karniadakis.template step_i<S>( dens, nonlinear);
     //3. solve linear equation
     //3.1. transform v_hut
+#pragma omp for 
     for( unsigned k=0; k<n; k++)
         dft_dft.r2c( dens[k], cdens[k]);
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
     compute_cphi();
     //3.3. backtransform
+#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
         dft_dft.c2r( cdens[k], dens[k]);
         dft_dft.c2r( cphi[k],  phi[k]);
+    }
     }
 }
 

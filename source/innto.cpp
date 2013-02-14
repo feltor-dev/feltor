@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <GL/glfw.h>
 #include <sstream>
+#include <omp.h>
 
 #include "toefl.h"
 #include "dft_dft_solver.h"
@@ -53,18 +54,19 @@ Blueprint read( char const * file)
         case( 1): bound.bc_x = TL_DST10; break;
         case( 2): bound.bc_x = TL_DST01; break;
     }
-    amp = para[6];
-    imp_amp = para[7];
-    if( para[8])
+    if( para[6])
         bp.enable( TL_MHW);
 
-    phys.d = para[9];
-    phys.nu = para[10];
-    phys.kappa = para[11];
-    phys.g_e = phys.g[0] = para[12];
-    phys.tau[0] = para[13];
-    if( para[14])
+    phys.d = para[7];
+    phys.nu = para[8];
+    phys.kappa = para[9];
+
+    amp = para[10];
+    phys.g_e = phys.g[0] = para[11];
+    phys.tau[0] = para[12];
+    if( para[13])
         bp.enable( TL_IMPURITY);
+    imp_amp = para[14];
     phys.g[1] = para[15];
     phys.a[1] = para[16];
     phys.mu[1] = para[17];
@@ -75,6 +77,8 @@ Blueprint read( char const * file)
     phys.mu[0] = 1.0;//single charged ions
 
     N = para[19];
+    omp_set_num_threads( para[20]);
+    cout<< "With "<<omp_get_max_threads()<<" threads\n";
 
     alg.h = bound.ly / (double)alg.ny;
     bound.lx = (double)alg.nx * alg.h;
@@ -208,15 +212,15 @@ int main( int argc, char* argv[])
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
     // place some gaussian blobs in the field
     try{
-        init_gaussian( ne, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
-        //init_gaussian( ne, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
-        //init_gaussian( ne, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
-        //init_gaussian( ni, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
+        //init_gaussian( ne, 0.1,0.2, 10./128./field_ratio, 10./128., amp);
+        //init_gaussian( ne, 0.1,0.4, 10./128./field_ratio, 10./128., -amp);
+        init_gaussian( ne, 0.8,0.4, 10./128./field_ratio, 10./128., amp);
+        //init_gaussian( ne, 0.1,0.8, 10./128./field_ratio, 10./128., -amp);
+        //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
-            init_gaussian( nz, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
-            //init_gaussian( nz, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
-            //init_gaussian( nz, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
+            init_gaussian( nz, 0.8,0.4, 0.05/field_ratio, 0.05, -imp_amp);
+            //init_gaussian_column( nz, 0.2, 0.05/field_ratio, imp_amp);
         }
         std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, phi}};
         std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, nz, phi}};
@@ -227,7 +231,7 @@ int main( int argc, char* argv[])
         //init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
-            init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, imp_amp);
+            init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, -imp_amp);
             //init_gaussian( nz_, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
             //init_gaussian( nz_, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
         }
@@ -269,11 +273,13 @@ int main( int argc, char* argv[])
 
     double t = 3*alg.dt;
     Timer timer;
+    Timer overhead;
     cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
     while( running)
     {
+        overhead.tic();
         //ask if simulation shall be stopped
         glfwPollEvents();
         if( glfwGetKey( 'S')) 
@@ -337,9 +343,11 @@ int main( int argc, char* argv[])
 #endif
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
+        overhead.toc();
     }
     glfwTerminate();
     cout << "Average time for one step = "<<timer.diff()/(double)N<<"s\n";
+    cout << "Overhead for visualisation, etc. per step = "<<(overhead.diff()-timer.diff())/(double)N<<"s\n";
     }
     //////////////////////////////////////////////////////////////////
     fftw_cleanup();

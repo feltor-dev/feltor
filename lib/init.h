@@ -48,6 +48,40 @@ void init_gaussian( M& m, const double x0, const double y0,
         }
 }
 
+/*! @brief Adds a gaussian column to a given matrix
+ *
+ * The function interprets the given points as inner, cell centered points of a 
+ * square box. [0,1]x[0,1]
+ * , where the first index is the y and the second index is the x point. 
+ * (0,0) corresponds  to the lower left corner.
+ * It adds the values of the smooth function
+ * \f[
+   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} }
+   \f]
+   where A is a constant and \f$ x,y = 0...1 \f$.
+ * \param m the matrix
+ * @param x0 x-position of maximum 0<x0<1
+ * @param sigma_x Varianz in x (FWHM = 2.35*sigma_x)
+ * @param amplitude Value of maximum
+ */
+template< class M>
+void init_gaussian_column( M& m, const double x0, const double sigma_x, const double amplitude)
+{
+    const size_t rows = m.rows(), cols = m.cols();
+    const double hx = 1./(double)(cols); 
+    double x;
+    for( unsigned i=0; i<rows; i++)
+        for( unsigned j=0; j<cols; j++)
+        {
+            x = (j+0.5)*hx;
+            m(i,j) += amplitude*
+                   exp( -(double)((x-x0)*(x-x0)/2./sigma_x/sigma_x));
+        }
+}
+        
+
+
+
 /*! @brief Functor for turbulent bath coefficients
  * 
  */

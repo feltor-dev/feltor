@@ -138,7 +138,7 @@ double interior( const size_t i0, const size_t j0, const M& lhs, const M& rhs)
 template< class M>
 double boundary( const size_t i0, const size_t j0, const M& lhs, const M& rhs) 
 {
-    static QuadMat<double, 3> l, r;
+    QuadMat<double, 3> l, r;
     //assignment
     for( size_t i = 0; i < 3; i++)
         for( size_t j = 0; j < 3; j++)

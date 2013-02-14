@@ -38,6 +38,7 @@ class QuadMat
             data[i] = value;
     }
     /*! @brief Use c++0x new feature*/
+    /*
     QuadMat( std::initializer_list<T> l)
     {
         if( l.size() != n*n)
@@ -46,6 +47,7 @@ class QuadMat
         for( auto& s: l)
             data[i++] = s;
     }
+    */
 
     /*! @brief set memory to 0
      */
