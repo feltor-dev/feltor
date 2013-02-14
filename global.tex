@@ -48,17 +48,18 @@ long wavelength approximation of the gyroscreening potential given in [Scott, 20
 [Strintzi, 2004] justify that the approximation of $J_0$ only in the 
 gyroscreening potential is indeed consistent. We remark that the gyroscreening
 term is not a field energy term in this case, contrary to derivations that 
-use linearized polarization. We also remark that we follow [Scott, 2010] and do
-not include the electrostatic field energy in the field energy terms of the
-Lagrangian density.
+use linearized polarization. 
+%We also remark that we follow [Scott, 2010] and do
+%not include the electrostatic field energy in the field energy terms of the
+%Lagrangian density.
 \section{Nonlinear Poisson and the continuity equation}
 We omit the derivation and directly state the result of [Strintzi, 2004] for 
 the gyrofluid equations. Taken
-from their appendix, the polarization equation reads in the limit
-of large polarizability
+from their appendix, the polarization equation reads:% in the limit
+%of large polarizability
 \begin{align}
     \sum_z\left[ \Gamma_{1z} (neZ)_z + 
-    \vec \nabla \cdot \frac{(nm)_zc^2}{B^2}\vec\nabla \phi\right] = 0 
+    \vec \nabla \cdot \frac{(nm)_zc^2}{B^2}\vec\nabla \phi\right] = 4\pi \Delta \phi
     \label{eq:poisson}
 \end{align}
 where $\Gamma_{1z} := \left( 1-\frac{\rho_z^2}{2}\Delta \right)^{-1/2}$,
@@ -88,7 +89,7 @@ We use
         x = \rho_s x', \ \ \ \ \  v = c_s v', \ \ \ \ \ 
             &\partial_t = \Omega \partial_t', \\
         \phi = \frac{T_e}{e}\phi',\ \ \ \ \
-            &n_z  = \frac{1}{\rho_s^3}n_z'
+        &n_z  = n_{z0} n_z'%\frac{1}{\rho_s^3}n_z'
         \label{}
     \end{align}
     \label{}
@@ -98,21 +99,26 @@ We use
 the ion sound speed at electron temperature $c_s = \sqrt{\frac{T_e}{m_i}}$. 
 Note that $c_s = \Omega \rho_s$
 and $\frac{B}{c}\Omega \rho_s^2 = \frac{T_e}{e}$.
+Also $n_z'$ now should be of order one. 
 Furthermore we write
 \begin{subequations}
     \begin{align}
         \mu_z = \frac{m_z}{Zm_i}\\
-        \tau_z = \frac{T_z}{ZT_e}
+        \tau_z = \frac{T_z}{ZT_e} \\
+        a_z = \frac{Zn_{z0}}{n_{e0}}
         \label{}
     \end{align}
     \label{}
 \end{subequations}
 With this choice Poisson's equation reads (omitting ')
 \begin{align}
-    \sum_z \left[ Z \Gamma_{1z}n_z + Z\mu_z\nabla\cdot(n_z \nabla\phi)\right] = 0
+    \sum_z \left[ a_z \Gamma_{1z}n_z + a_z\mu_z\nabla\cdot(n_z \nabla\phi)\right] = 4\pi \left(  \frac{\lambda_D}{\rho_s} \right)^2 \Delta \phi 
     \label{}
 \end{align}
-with $\Gamma_{1z} = \left(1-\frac{1}{2}\tau_z\mu_z \Delta\right)^{-1}$. 
+with $\Gamma_{1z} = \left(1-\frac{1}{2}\tau_z\mu_z \Delta\right)^{-1}$ and the 
+Debye length $\lambda_D^2 = \frac{T_e}{n_{e0}e^2}$. We note 
+that $\lambda_D \ll \rho_s$ and neglect the term on the right side.
+
 The dimension of the curvature operator is found to be
 $\kappa = \frac{\Omega e}{T_e}\kappa'$, 
 so that the dimension of $\kappa(\phi)$ is $\Omega$.
@@ -136,8 +142,8 @@ have to solve the system
     n_{i/z}\kappa(\Gamma_{1i/z}\phi) + \tau_{i/z}\kappa(n_{i/z}) \\
     %\frac{\partial n_z}{\partial t} + \{\Gamma_{1z}\phi, n_z\} &= n_z\kappa(\Gamma_{1z}\phi) +
     %\tau_z\kappa(n_z) \\
-    \vec \nabla\cdot\left[ (\mu_i n_i + Z \mu_z\ n_z)\vec \nabla \phi \right] &= 
-        n_e - \Gamma_{1i}n_i + Z \Gamma_{1z} n_z
+    \vec \nabla\cdot\left[ (\mu_i n_i + a_z \mu_z\ n_z)\vec \nabla \phi \right] &= 
+        n_e - \Gamma_{1i}n_i + a_z \Gamma_{1z} n_z
         \label{}
     \end{align}
     \label{}

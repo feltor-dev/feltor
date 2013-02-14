@@ -54,18 +54,19 @@ Blueprint read( char const * file)
         case( 1): bound.bc_x = TL_DST10; break;
         case( 2): bound.bc_x = TL_DST01; break;
     }
-    amp = para[6];
-    imp_amp = para[7];
-    if( para[8])
+    if( para[6])
         bp.enable( TL_MHW);
 
-    phys.d = para[9];
-    phys.nu = para[10];
-    phys.kappa = para[11];
-    phys.g_e = phys.g[0] = para[12];
-    phys.tau[0] = para[13];
-    if( para[14])
+    phys.d = para[7];
+    phys.nu = para[8];
+    phys.kappa = para[9];
+
+    amp = para[10];
+    phys.g_e = phys.g[0] = para[11];
+    phys.tau[0] = para[12];
+    if( para[13])
         bp.enable( TL_IMPURITY);
+    imp_amp = para[14];
     phys.g[1] = para[15];
     phys.a[1] = para[16];
     phys.mu[1] = para[17];
@@ -218,11 +219,8 @@ int main( int argc, char* argv[])
         //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
-            init_gaussian( nz, 0.5,0.1, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian( nz, 0.5,0.3, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian( nz, 0.5,0.5, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian( nz, 0.5,0.7, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian( nz, 0.5,0.9, 0.05/field_ratio, 0.05, -imp_amp);
+            init_gaussian( nz, 0.8,0.4, 0.05/field_ratio, 0.05, imp_amp);
+            //init_gaussian_column( nz, 0.2, 0.05/field_ratio, imp_amp);
         }
         std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, phi}};
         std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, nz, phi}};
