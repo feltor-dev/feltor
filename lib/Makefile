@@ -1,6 +1,6 @@
 INCLUDE += 
 CXX = g++
-CFLAGS = -Wall -std=c++0x -fopenmp
+CFLAGS = -Wall -fopenmp -std=c++0x
 LIBS = -lfftw3 -lm
 DEBUG = 
 
