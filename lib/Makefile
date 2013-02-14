@@ -4,7 +4,7 @@ CFLAGS = -Wall -fopenmp -std=c++0x
 LIBS = -lfftw3 -lm
 DEBUG = 
 
-GLFLAGS=-lglfw -lrt -lGL
+GLFLAGS=-lglfw -lrt -lGL #you might add some libs here, check your glfw installation
 
 toefl: toefl_b.cpp
 	$(CXX) $(DEBUG) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
