@@ -16,6 +16,11 @@ class Operator
         for( unsigned i=0; i<n*n; i++)
             ptr[i] = value;
     }
+    Operator( const T arr[n][n]) {
+        for( unsigned i=0; i<n; i++)
+            for( unsigned j=0; j<n; j++)
+                ptr[i*n+j] = arr[i][j];
+    }
 
     /*! @brief access operator
      *
