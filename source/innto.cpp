@@ -219,7 +219,7 @@ int main( int argc, char* argv[])
         //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
-            init_gaussian( nz, 0.8,0.4, 0.05/field_ratio, 0.05, imp_amp);
+            init_gaussian( nz, 0.8,0.4, 0.05/field_ratio, 0.05, -imp_amp);
             //init_gaussian_column( nz, 0.2, 0.05/field_ratio, imp_amp);
         }
         std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, phi}};
