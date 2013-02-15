@@ -1,6 +1,7 @@
 #ifndef _DG_GAUSS_LEGENDRE_
 #define _DG_GAUSS_LEGENDRE_
 
+//obsolete (now in DLT in dlt.h)
 namespace dg
 {
 

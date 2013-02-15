@@ -17,7 +17,7 @@
 \renewcommand{\vec}[1]{{\mathbf{#1}}}
 %opening
 \title{The nonlocal toefl equations}
-\author{Matthias  Wiesenberger}
+\author{Matthias Wiesenberger}
 
 \begin{document}
 
@@ -59,7 +59,7 @@ from their appendix, the polarization equation reads:% in the limit
 %of large polarizability
 \begin{align}
     \sum_z\left[ \Gamma_{1z} (neZ)_z + 
-    \vec \nabla \cdot \frac{(nm)_zc^2}{B^2}\vec\nabla \phi\right] = 4\pi \Delta \phi
+    \vec \nabla \cdot \frac{(nm)_zc^2}{B^2}\vec\nabla \phi\right] = \frac{1}{4\pi}\Delta \phi
     \label{eq:poisson}
 \end{align}
 where $\Gamma_{1z} := \left( 1-\frac{\rho_z^2}{2}\Delta \right)^{-1/2}$,
@@ -112,12 +112,13 @@ Furthermore we write
 \end{subequations}
 With this choice Poisson's equation reads (omitting ')
 \begin{align}
-    \sum_z \left[ a_z \Gamma_{1z}n_z + a_z\mu_z\nabla\cdot(n_z \nabla\phi)\right] = 4\pi \left(  \frac{\lambda_D}{\rho_s} \right)^2 \Delta \phi 
+    \sum_z \left[ a_z \Gamma_{1z}n_z + a_z\mu_z\nabla\cdot(n_z \nabla\phi)\right] = \frac{1}{4\pi}\left(  \frac{\lambda_D}{\rho_s} \right)^2 \Delta \phi 
     \label{}
 \end{align}
 with $\Gamma_{1z} = \left(1-\frac{1}{2}\tau_z\mu_z \Delta\right)^{-1}$ and the 
 Debye length $\lambda_D^2 = \frac{T_e}{n_{e0}e^2}$. We note 
-that $\lambda_D \ll \rho_s$ and neglect the term on the right side.
+that $\lambda_D \ll \rho_s$ and neglect the term on the right side. (Q: is this
+actually a condition for the up-to-now free parameter $n_{e0}$?)
 
 The dimension of the curvature operator is found to be
 $\kappa = \frac{\Omega e}{T_e}\kappa'$, 
@@ -150,12 +151,31 @@ have to solve the system
 \end{subequations}
 
 \section{Boundary conditions}
-In the $y$-direction all quantities are to be periodic.
-
-
-
-
-
+We follow [Garcia et al., Phys. Scr. T122 89, 2006] in the choice of 
+the boundary conditions. 
+In the $y$ coordinate all quantities are periodic. 
+In the $x$ coordinate we distinguish between the inner wall situated at $x=0$ and
+the outer wall situated at $x=L_x$.
+We impede all particle fluxes on the inner boundary by setting
+\begin{align}
+    \phi = 0, \ \ \frac{\partial n_z}{\partial x} = 0
+    \label{}
+\end{align} 
+and model the incoming particle flux as a source term $S\propto exp\left( -\frac{x^2}{2\sigma_x^2} \right)$, i.e. a half gaussian situated at the edge. 
+On the other side we choose
+\begin{align}
+    \phi = 0, \ \ n_z-1=0
+    \label{}
+\end{align}
+i.e. we stop the convective flux accross the boundaries but allow for a diffusive
+flux. (A diffusive term is still absent in our equations, note 
+that $\kappa = \kappa_y\partial_y$, i.e. curvature driven flux is in $y$ only)
+The SOL is modelled via a damping term in the density equations. (Q: What happens
+with the coupling term $d(\phi-n_e)$ in HW equations and what is 
+with the modified HW and zonal flows?) If the last closed flux surface is situated
+at $x_l$ the particle density is damped towards $n_0$ in the whole region
+next to the SOL. $\delta \propto [1+\tanh(\frac{x-x_l}{\sigma_l}]$. This
+models particle losses due to open field lines.
 
 
 \end{document}
