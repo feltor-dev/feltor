@@ -172,7 +172,10 @@ flux. (A diffusive term is still absent in our equations, note
 that $\kappa = \kappa_y\partial_y$, i.e. curvature driven flux is in $y$ only)
 The SOL is modelled via a damping term in the density equations. (Q: What happens
 with the coupling term $d(\phi-n_e)$ in HW equations and what is 
-with the modified HW and zonal flows?) If the last closed flux surface is situated
+with the modified HW and zonal flows?
+A: In the SOL the parallel current is damped (almost) to zero (seen e.g. in GEMR 
+simulations) by the limiter, i.e. we set $d=0$ for $x>x_l$) 
+If the last closed flux surface is situated
 at $x_l$ the particle density is damped towards $n_0$ in the whole region
 next to the SOL. $\delta \propto [1+\tanh(\frac{x-x_l}{\sigma_l}]$. This
 models particle losses due to open field lines.

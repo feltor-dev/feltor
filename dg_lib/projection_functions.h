@@ -1,6 +1,8 @@
 #ifndef _DG_PROJECTION_
 #define _DG_PROJECTION_
 
+#include <iostream>
+
 namespace dg{
 
 double pipj( unsigned i, unsigned j)
@@ -38,7 +40,7 @@ double rilj( unsigned i, unsigned j)
 }
 double lirj( unsigned i, unsigned j)
 {
-    return rily(i,j);
+    return rilj(j,i);
 }
 double lilj( unsigned i, unsigned j)
 {
@@ -46,5 +48,7 @@ double lilj( unsigned i, unsigned j)
         return 1.;
     return -1.;
 }
+}
+
 
 #endif //_DG_PROJECTION_

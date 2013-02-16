@@ -15,6 +15,7 @@ int main()
     Operator<double, 4> Forward4(  DLT<4>::forward);
     Operator<double, 4> Backward4( DLT<4>::backward);
 
+    cout << "Hopefully Forward times Backward gives One\n";
     cout << Forward2*Backward2<<endl;
     cout << Forward3*Backward3<<endl;
     cout << Forward4*Backward4<<endl;
@@ -27,6 +28,7 @@ int main()
             x+= Forward2(i,j)*DLT<2>::abscissa[j];
         cout << x <<endl;
     }
+
 
 
 

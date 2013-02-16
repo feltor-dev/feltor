@@ -7,10 +7,10 @@ namespace dg{
 
  The Matrix and Vector class are assumed to be double valued
  @tparam Matrix The matrix class no requirements except for the 
-            BLAS routines
+            CG_BLAS routines
  @tparam Vector The Vector class: needs to be assignable, copyable, 
             v(unsigned) constructible, and deletable. 
- The following 3 pseudo - BLAS routines need to be callable
+ The following 3 pseudo - CG_BLAS routines need to be callable
  double ddot( const Vector& v1, const Vector& v2)
  void daxpby( double alpha, const Vector& x, double beta, Vector& y)
  void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y)
@@ -20,14 +20,14 @@ namespace dg{
  TO DO: check for better stopping criteria using condition number estimates
 */
 template < class Vector>
-class BLAS1
+class CG_BLAS1
 {
-    double ddtot( const Vector& x, const Vector& y);
+    double ddot( const Vector& x, const Vector& y);
     void daxpby( double alpha, const Vector& x, double beta, Vector& y);
 };
 
 template < class Matrix, class Vector>
-class BLAS2
+class CG_BLAS2
 {
     void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y);
 };
@@ -51,20 +51,20 @@ class CG
 template< class Matrix, class Vector>
 unsigned CG::solve( const Matrix& A, Vector& x, const Vector& b)
 {
-    double nrm2b = BLAS1<Vector>::ddot(b,b);
+    double nrm2b = CG_BLAS1<Vector>::ddot(b,b);
     p = r = b;
-    BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
+    CG_BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
     double nrm2r_old = ddot( r, r); //and store the norm of it
     double alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
-        BLAS2<Matrix, Vector>::dsymv( 1., A, p, 0., ap);
+        CG_BLAS2<Matrix, Vector>::dsymv( 1., A, p, 0., ap);
         alpha = nrm2r_old /ddot( p, ap);
-        BLAS1<Vector>::daxpby( alpha, p, 1.,x);
-        BLAS1<Vector>::daxpby( -alpha, ap, 1., r);
+        CG_BLAS1<Vector>::daxpby( alpha, p, 1.,x);
+        CG_BLAS1<Vector>::daxpby( -alpha, ap, 1., r);
         nrm2r_new = ddot( r,r);
         if( sqrt( nrm2r_new/nrm2b) < eps) return i;
-        BLAS1<Vector>::daxpby(1., r, nrm2r_new/nrm2r_old, p );
+        CG_BLAS1<Vector>::daxpby(1., r, nrm2r_new/nrm2r_old, p );
     }
     return max_iter;
 }

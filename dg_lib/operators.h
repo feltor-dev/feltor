@@ -2,6 +2,7 @@
 #define _DG_OPERATORS_
 
 #include <iostream>
+#include <array>
 
 namespace dg{
 
@@ -20,6 +21,12 @@ class Operator
         for( unsigned i=0; i<n; i++)
             for( unsigned j=0; j<n; j++)
                 ptr[i*n+j] = arr[i][j];
+    }
+    Operator( double (&f)(unsigned, unsigned))
+    {
+        for( unsigned i=0; i<n; i++)
+            for( unsigned j=0; j<n; j++)
+                ptr[i*n+j] = f(i,j);
     }
 
     /*! @brief access operator
@@ -42,7 +49,22 @@ class Operator
     const T& operator()(const size_t i, const size_t j) const {
         return ptr[ i*n+j];
     }
-    Operator operator-()
+
+    Operator transpose() const 
+    {
+        double temp;
+        Operator o(*this);
+        for( unsigned i=0; i<n; i++)
+            for( unsigned j=0; j<i; j++)
+            {
+                temp = o.ptr[i*n+j];
+                o.ptr[i*n+j] = o.ptr[j*n+i];
+                o.ptr[j*n+i] = temp;
+            }
+        return o;
+    }
+
+    Operator operator-() const
     {
         Operator temp;
         for( unsigned i=0; i<n*n; i++)
@@ -67,8 +89,15 @@ class Operator
             ptr[i] *= value;
         return *this;
     }
-
-    friend Operator operator+( const Operator& lhs, const Operator& rhs)
+    std::array<T,n> operator*(const std::array<T,n>& arr) 
+    {
+        std::array<T,n> temp{{(T)0}};
+        for(unsigned i=0; i<n; i++)
+            for( unsigned j=0; j<n; j++)
+                temp[i] += ptr[i*n+j]*arr[j];
+        return temp;
+    }
+    friend Operator operator+( const Operator& lhs, const Operator& rhs) 
     {
         Operator temp(lhs); 
         temp+=rhs;

@@ -1,7 +1,7 @@
 
 INCLUDE += 
 CXX = g++
-CFLAGS = -Wall 
+CFLAGS = -Wall -std=c++0x
 LIBS = -lfftw3 -lm
 DEBUG = 
 

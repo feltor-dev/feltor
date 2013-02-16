@@ -5,6 +5,10 @@
 using namespace std;
 using namespace dg;
 
+double initializer( unsigned i, unsigned j)
+{
+    return i+2*j;
+}
 
 int main()
 {
@@ -20,6 +24,10 @@ int main()
     A-=B;
     cout << A*B;
 
+    cout << "Operator and its transpose:\n";
+    Operator<double, 4> C( initializer);
+    cout << C <<endl;
+    cout << C.transpose()<<endl;
 
 
     return 0;
