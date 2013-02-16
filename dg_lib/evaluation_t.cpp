@@ -37,16 +37,8 @@ int main()
     //for( unsigned i=0; i<num_int; i++)
         //cout << w[i][0] << " "<<w[i][1]<< " "<<w[i][2]<<endl;
 
-    double norm_x=0, norm_l=0;
-    for( unsigned i=0; i<num_int; i++)
-        for( unsigned j=0; j<P; j++)
-        {
-            norm_x += DLT<P>::weight[j]*v[i][j]*v[i][j];
-            norm_l += 2./(2.*j+1.)*w[i][j]*w[i][j];
-        }
-
-    cout << "Square norm in x "<<norm_x<<endl;
-    cout << "Square norm in l "<<norm_l<<endl;
+    cout << "Square norm in x "<<square_norm<P>( v, XSPACE)<<endl;
+    cout << "Square norm in l "<<square_norm<P>( w, LSPACE)<<endl;
 
 
 

@@ -25,6 +25,30 @@ std::vector<std::array<double,n>> evaluate( Function& f, double a, double b, uns
     return v;
 }
 
+enum Sign{ XSPACE, LSPACE};
+
+template< size_t n>
+double square_norm( std::vector<std::array<double, n>> v, enum Sign s)
+{
+    double norm=0;
+    unsigned N = v.size();
+    if( s == XSPACE)
+    {
+        for( unsigned i=0; i<N; i++)
+            for( unsigned j=0; j<n; j++)
+                norm += DLT<n>::weight[j]*v[i][j]*v[i][j];
+    }
+    else
+    {
+        for( unsigned i=0; i<N; i++)
+            for( unsigned j=0; j<n; j++)
+                norm += 2./(2.*(double)j+1.)*v[i][j]*v[i][j];
+    }
+    return norm;
+}
+
+
+
 
 
 }

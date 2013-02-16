@@ -20,16 +20,16 @@ namespace dg{
  TO DO: check for better stopping criteria using condition number estimates
 */
 template < class Vector>
-class CG_BLAS1
+struct CG_BLAS1
 {
-    double ddot( const Vector& x, const Vector& y);
-    void daxpby( double alpha, const Vector& x, double beta, Vector& y);
+    static double ddot( const Vector& x, const Vector& y);
+    static void daxpby( double alpha, const Vector& x, double beta, Vector& y);
 };
 
 template < class Matrix, class Vector>
-class CG_BLAS2
+struct CG_BLAS2
 {
-    void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y);
+    static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y);
 };
 
 template< class Matrix, class Vector>
@@ -49,7 +49,7 @@ class CG
 };
 
 template< class Matrix, class Vector>
-unsigned CG::solve( const Matrix& A, Vector& x, const Vector& b)
+unsigned CG<Matrix, Vector>::solve( const Matrix& A, Vector& x, const Vector& b)
 {
     double nrm2b = CG_BLAS1<Vector>::ddot(b,b);
     p = r = b;
@@ -68,6 +68,9 @@ unsigned CG::solve( const Matrix& A, Vector& x, const Vector& b)
     }
     return max_iter;
 }
+
+
+} //namespace dg
 
 
 
