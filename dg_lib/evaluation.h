@@ -2,6 +2,7 @@
 #define _DG_EVALUATION_
 
 #include "dlt.h"
+#include "cg.h"
 #include <vector>
 #include <array>
 namespace dg
@@ -25,10 +26,73 @@ std::vector<std::array<double,n>> evaluate( Function& f, double a, double b, uns
     return v;
 }
 
-enum Sign{ XSPACE, LSPACE};
+enum Space{ XSPACE, LSPACE};
 
+template < size_t n >
+struct CG_BLAS2<Space, std::vector<std::array<double, n>>>
+{
+    typedef std::vector<std::array<double, n>> Vector;
+    static void dsymv( double alpha, const Space& s, const Vector& x, double beta, Vector& y)
+    {
+        unsigned N = x.size();
+        if( s == XSPACE)
+        {
+            for( unsigned i=0; i < N; i++)
+                for( unsigned j=0; j<n; j++)
+                    y[i][j] = alpha*DLT<n>::weight[j]*x[i][j] + beta*y[i][j];
+        }
+        else
+        {
+            for( unsigned i=0; i < N; i++)
+                for( unsigned j=0; j<n; j++)
+                    y[i][j] = alpha*2./(2.*(double)j+1.)*x[i][j] + beta*y[i][j];
+        }
+    }
+
+    static double ddot( const Vector& x, const Space& s, const Vector& y)
+    {
+        double norm=0;
+        unsigned N = x.size();
+        if( s == XSPACE)
+        {
+            for( unsigned i=0; i<N; i++)
+                for( unsigned j=0; j<n; j++)
+                    norm += DLT<n>::weight[j]*x[i][j]*y[i][j];
+        }
+        else
+        {
+            for( unsigned i=0; i<N; i++)
+                for( unsigned j=0; j<n; j++)
+                    norm += 2./(2.*(double)j+1.)*x[i][j]*y[i][j];
+        }
+        return norm;
+    }
+};
+/*
+template < size_t n >
+struct CG_BLAS2<LSPACE, std::vector<std::array<double, n>>>
+{
+    typedef std::vector<std::array<double>, n> Vector;
+    static void dsymv( double alpha, const LSPACE& m, const Vector& x, double beta, Vector& y)
+    {
+        unsigned N = x.size();
+        for( unsigned i=0; i < N; i++)
+            for( unsigned j=0; j<n; j++)
+                y[i][j] = alpha*2./(2.*(double)j+1.)*x[i][j] + beta*y[i][j];
+    }
+
+    static void ddot( const Vector& x, const LSPACE& P, const Vector& y);
+    {
+        double norm = 0;
+        unsigned N = v.size();
+        for( unsigned i=0; i<N; i++)
+            for( unsigned j=0; j<n; j++)
+                norm += 2./(2.*(double)j + 1.)*x[i][j]*y[i][j];
+        return norm;
+    }
+};
 template< size_t n>
-double square_norm( std::vector<std::array<double, n>> v, enum Sign s)
+double square_norm( const std::vector<std::array<double, n>>& v, enum Space s)
 {
     double norm=0;
     unsigned N = v.size();
@@ -46,6 +110,8 @@ double square_norm( std::vector<std::array<double, n>> v, enum Sign s)
     }
     return norm;
 }
+*/
+
 
 
 

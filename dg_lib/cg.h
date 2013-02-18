@@ -34,7 +34,7 @@ struct CG_BLAS2
 {
     static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y);
     //preconditioned CG needs diagonal scaling:
-    static void ddot( const Vector& x, const Matrix& P, const Vector& y);
+    static double ddot( const Vector& x, const Matrix& P, const Vector& y);
 };
 //CUDA relevant: BLAS routines must block until result is ready 
 
@@ -78,10 +78,10 @@ unsigned CG<Matrix, Vector>::operator()( const Matrix& A, Vector& x, const Vecto
 }
 
 template< class Matrix, class Vector, class Preconditioner>
-class CG
+class PCG
 {
   public:
-    CG( unsigned size):r(size), p(r), ap(r), eps(1e-10), max_iter(size){}
+    PCG( unsigned size):r(size), p(r), ap(r), eps(1e-10), max_iter(size){}
     void set_eps( double eps_rel) {eps = eps_rel;}
     double get_eps( ) {return eps;}
     void set_max( unsigned new_max) {max_iter = new_max;}
@@ -98,7 +98,8 @@ class CG
 //ddot(r,r), axpby()
 //to 
 //ddot( r,P,r), dsymv(P)
-//i.e. it will be slower 
+//i.e. it will be slower, if P needs to be stored
+//(but in our case P_{ii} can be computed directly
 //compared to normal preconditioned compare
 //ddot(r,P,r), dsymv(P)
 //to
@@ -109,9 +110,9 @@ class CG
 //significantly more elements than z whence ddot(r,A,r) is far slower than ddot(r,z)
 */
 template< class Matrix, class Vector, class Preconditioner>
-unsigned CG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P)
+unsigned PCG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P)
 {
-    double nrm2b = PCG_BLAS2<Preconditioner, Vector>::ddot( b,P,b);
+    double nrm2b = CG_BLAS2<Preconditioner, Vector>::ddot( b,P,b);
     r = b; CG_BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
     CG_BLAS2<Preconditioner, Vector>::dsymv(1.,P, r, 0., p );//<-- compute p_0
     double nrm2r_old = CG_BLAS2<Preconditioner, Vector>::ddot( r,P,r); //and store the norm of it

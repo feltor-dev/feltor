@@ -143,8 +143,8 @@ have to solve the system
     n_{i/z}\kappa(\Gamma_{1i/z}\phi) + \tau_{i/z}\kappa(n_{i/z}) \\
     %\frac{\partial n_z}{\partial t} + \{\Gamma_{1z}\phi, n_z\} &= n_z\kappa(\Gamma_{1z}\phi) +
     %\tau_z\kappa(n_z) \\
-    \vec \nabla\cdot\left[ (\mu_i n_i + a_z \mu_z\ n_z)\vec \nabla \phi \right] &= 
-        n_e - \Gamma_{1i}n_i + a_z \Gamma_{1z} n_z
+    \vec \nabla\cdot\left[ (a_i \mu_i n_i + a_z \mu_z\ n_z)\vec \nabla \phi \right] &= 
+        n_e - \Gamma_{1i}n_i - a_z \Gamma_{1z} n_z
         \label{}
     \end{align}
     \label{}
@@ -177,7 +177,7 @@ A: In the SOL the parallel current is damped (almost) to zero (seen e.g. in GEMR
 simulations) by the limiter, i.e. we set $d=0$ for $x>x_l$) 
 If the last closed flux surface is situated
 at $x_l$ the particle density is damped towards $n_0$ in the whole region
-next to the SOL. $\delta \propto [1+\tanh(\frac{x-x_l}{\sigma_l}]$. This
+next to the SOL. $\delta \propto [1+\tanh(\frac{x-x_l}{\sigma_l})]$. This
 models particle losses due to open field lines.
 
 
