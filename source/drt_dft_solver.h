@@ -101,17 +101,17 @@ DRT_DFT_Solver<n>::DRT_DFT_Solver( const Blueprint& bp):
     crows( cols), ccols( rows/2+1),
     blue( bp),
     //fields
-    dens{ MatrixArray<double, TL_DRT_DFT,n>::construct( rows, cols)},
-    phi{ dens}, nonlinear{ dens},
-    cdens{ MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)}, 
-    cphi{cdens}, 
+    dens( MatrixArray<double, TL_DRT_DFT,n>::construct( rows, cols)),
+    phi( dens), nonlinear( dens),
+    cdens( MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)), 
+    cphi(cdens), 
     //Solvers
     arakawa( bp.algorithmic().h),
     karniadakis(rows, cols, crows, ccols, bp.algorithmic().dt),
     drt_dft( rows, cols, fftw_convert( bp.boundary().bc_x), FFTW_MEASURE),
     //Coefficients
-    phi_coeff{ crows, ccols},
-    gamma_coeff{ MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)}
+    phi_coeff( crows, ccols),
+    gamma_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols))
 {
     bp.consistencyCheck();
     Physical phys = bp.physical();

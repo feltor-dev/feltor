@@ -10,9 +10,9 @@
 #include "cg.h"
 
 
-#define P 4
+#define P 2
 typedef std::vector<std::array<double, P>> Vector;
-typedef dg::Laplace_Dir<P> Matrix;
+typedef dg::Laplace<P> Matrix;
 
 namespace dg{
 template < >
@@ -35,7 +35,7 @@ struct CG_BLAS1<Vector>
     {
         for( unsigned i=0; i<x.size(); i++)
             for( unsigned j=0; j<P; j++)
-                y[i][j]+= alpha*x[i][j]+beta*y[i][j];
+                y[i][j] = alpha*x[i][j]+beta*y[i][j];
     }
 
 };
@@ -60,7 +60,7 @@ struct CG_BLAS2< Laplace<P>, Vector>
         {
             y[0][i] = beta*y[0][i];
             for( unsigned j=0; j<P; j++)
-                y[0][i] += alpha*(b(j,i)*x[N][j] + a(i,j)*x[0][j] + b(i,j)*x[1][j]);
+                y[0][i] += alpha*(b(j,i)*x[N-1][j] + a(i,j)*x[0][j] + b(i,j)*x[1][j]);
         }
         for( unsigned k=1; k<N-1; k++)
             for( unsigned i=0; i<P; i++)
@@ -71,9 +71,9 @@ struct CG_BLAS2< Laplace<P>, Vector>
             }
         for( unsigned i=0; i<P; i++)
         {
-            y[N][i] = beta*y[N][i];
+            y[N-1][i] = beta*y[N-1][i];
             for( unsigned j=0; j<P; j++)
-                y[N][i] += alpha*(b(j,i)*x[N-1][j] + a(i,j)*x[N][j] + b(i,j)*x[0][j]);
+                y[N-1][i] += alpha*(b(j,i)*x[N-2][j] + a(i,j)*x[N-1][j] + b(i,j)*x[0][j]);
         }
     }
 };
@@ -87,7 +87,7 @@ struct CG_BLAS2< Laplace_Dir<P>, Vector>
             y[0] = alpha*(              Ap*x[0]+ Bp*x[1] ) + beta*y[0];
             y[1] = alpha*(  Bp^T*x[0] + Ap*x[1]+ B*x[2]  ) + beta*y[1];
             y[k] = alpha*( B^T*x[k-1] + A*x[k] + B*x[k+1]) + beta*y[k];
-            y[N] = alpha*( B^T*x[N-1] + A*x[N]           ) + beta*y[N];
+          y[N-1] = alpha*( B^T*x[N-2] + A*x[N-1]         ) + beta*y[N-1];
         */
         const dg::Operator<double, P> & a = m.get_a();
         const dg::Operator<double, P> & b = m.get_b();
@@ -116,9 +116,9 @@ struct CG_BLAS2< Laplace_Dir<P>, Vector>
             }
         for( unsigned i=0; i<P; i++)
         {
-            y[N][i] = beta*y[N][i];
+            y[N-1][i] = beta*y[N-1][i];
             for( unsigned j=0; j<P; j++)
-                y[N][i] += alpha*(b(j,i)*x[N-1][j] + a(i,j)*x[N][j] );
+                y[N-1][i] += alpha*(b(j,i)*x[N-2][j] + a(i,j)*x[N-1][j] );
         }
     }
 };
@@ -127,21 +127,44 @@ struct CG_BLAS2< Laplace_Dir<P>, Vector>
 using namespace std;
 using namespace dg;
 
-double sinus(double x){ return sin(x);}
-double Msinus(double x){ return -sin(x);}
+double sinus(double x){ return sin(2*M_PI*x);}
+double secondsinus(double x){ return 4.*M_PI*M_PI*sin(2*M_PI*x);}
 
 
 int main()
 {
-    const unsigned num_int = 10;
-    Laplace_Dir<P> l(1.);
-    Vector v = evaluate< double(&)(double), P>( sinus, 0,1, num_int);
-    Vector solution = evaluate< double(&)(double), P>( Msinus, 0,1, num_int);
-    Vector w(v);
-    dg::CG_BLAS2<Matrix, Vector>::dsymv( 1., l, v, 0, w);
+    const unsigned num_int = 100;
+    const double h = 1./(double)num_int;
+    Matrix l(4./h/h); //the constant makes all projection operators correct
+    cout << l.get_a()<<endl;
+    cout << l.get_b()<<endl;
+    Operator<double,P> forward( DLT<P>::forward);
+
+    Vector x = evaluate< double(&)(double), P>( sinus, 0,1, num_int);
+    Vector solution = evaluate< double(&)(double), P>( secondsinus, 0,1, num_int);
+    cout << "Square norm of sine is : "<<square_norm( x, XSPACE)*h/2.<<endl;
+    cout << "Square norm of solution is : "<<square_norm( solution, XSPACE)*h/2.<<endl;
+    
+    forward*=h/2.;
+    for( unsigned i=0; i<num_int; i++)
+        x[i] = forward*x[i];
+    for( unsigned i=0; i<num_int; i++)
+        solution[i] = forward*solution[i];
+    cout << "Square norm of sine is : "<<square_norm( x, LSPACE)/h*2.<<endl;
+    cout << "Square norm of solution is : "<<square_norm( solution, LSPACE)/h*2.<<endl;
+    //for( unsigned i=0; i<num_int; i++)
+    //    cout << x[i][0]<<endl;
+    Vector b(num_int);
+    Vector w(num_int);
+    dg::CG_BLAS2<Matrix, Vector>::dsymv( 1., l, x, 0, w);
+    cout << "Norm of w is: "<<square_norm( w, LSPACE)/2.*h<<endl;
+    dg::CG_BLAS2<T, Vector>::dsymv( 2/h, T(), w, 0, w);
+    //for( unsigned i=0; i<num_int; i++)
+        //cout << w[i][0]<<endl;
+    cout << "Norm of w is: "<<square_norm( w, LSPACE)/2.*h<<endl;
     dg::CG_BLAS1<Vector>::daxpby( 1., solution, -1., w);
-    cout << "Square norm of error is: \n";
-    cout << square_norm( w, LSPACE)<<endl;
+    cout << "Normalized Square norm of error is: \n";
+    cout << square_norm( w, LSPACE)/h*2.<<endl;
 
 
     return 0;

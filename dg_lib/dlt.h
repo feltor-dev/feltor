@@ -15,9 +15,14 @@ struct DLT
 
 //values taken from http://processingjs.nihongoresources.com/bezierinfo/legendre-gauss-values.php
 template<>
+const double DLT<1>::weight[1] = 
+{2.};
+template <>
+const double DLT<1>::abscissa[1] = 
+{0.}; 
+template<>
 const double DLT<2>::weight[2] = 
 { 1., 1.};
-
 template<>
 const double DLT<2>::abscissa[2] = 
 { -0.5773502691896257, 0.5773502691896257 };
@@ -40,6 +45,14 @@ template<>
 const double DLT<5>::abscissa[5] = 
 { -0.9061798459386640,-0.5384693101056831,0.0,0.5384693101056831,0.9061798459386640};
 
+template<>
+const double DLT<1>::forward[1][1] = {
+    {1.}
+};
+template<>
+const double DLT<1>::backward[1][1] = {
+    {1.}
+};
 template<>
 const double DLT<2>::forward[2][2] = {
     { 0.5                , 0.5}, 

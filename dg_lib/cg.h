@@ -42,7 +42,7 @@ template< class Matrix, class Vector>
 class CG
 {
   public:
-    CG( unsigned size):r(size), p(r), ap(r), eps(1e-10), max_iter(size){}
+    CG( unsigned size, double eps = 1e-10):r(size), p(r), ap(r), eps(eps), max_iter(size){}
     void set_eps( double eps_rel) {eps = eps_rel;}
     double get_eps( ) {return eps;}
     void set_max( unsigned new_max) {max_iter = new_max;}
@@ -81,7 +81,7 @@ template< class Matrix, class Vector, class Preconditioner>
 class PCG
 {
   public:
-    PCG( unsigned size):r(size), p(r), ap(r), eps(1e-10), max_iter(size){}
+    PCG( unsigned size, double eps = 1e-10):r(size), p(r), ap(r), eps(eps), max_iter(size){}
     void set_eps( double eps_rel) {eps = eps_rel;}
     double get_eps( ) {return eps;}
     void set_max( unsigned new_max) {max_iter = new_max;}

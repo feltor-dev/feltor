@@ -11,7 +11,7 @@ class Container
 {
     std::array< Matrix<double>, 3> a;
     public:
-    Container( size_t rows, size_t cols): a{MatrixArray<double, TL_NONE,3>::construct(rows,cols)}{}
+    Container( size_t rows, size_t cols): a(MatrixArray<double, TL_NONE,3>::construct(rows,cols)){}
 };
 
 int main()
