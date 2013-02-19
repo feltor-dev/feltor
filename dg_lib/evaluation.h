@@ -26,8 +26,18 @@ std::vector<std::array<double,n>> evaluate( Function& f, double a, double b, uns
     return v;
 }
 
-class T{};
-class S{};
+struct T{
+    T( double h = 2.):h_(h){}
+    const double& h() const {return h_;}
+  private:
+    double h_;
+};
+struct S{
+    S( double h = 2.):h_(h){}
+    const double& h() const {return h_;}
+  private:
+    double h_;
+};
 template< size_t n>
 struct CG_BLAS2<T, std::vector<std::array<double, n>>>
 {
@@ -37,7 +47,7 @@ struct CG_BLAS2<T, std::vector<std::array<double, n>>>
         unsigned N = x.size();
         for( unsigned i=0; i < N; i++)
             for( unsigned j=0; j<n; j++)
-                y[i][j] = alpha*(2.*(double)j+1.)/2.*x[i][j] + beta*y[i][j];
+                y[i][j] = alpha*(2.*(double)j+1.)/t.h()*x[i][j] + beta*y[i][j];
     }
 
     static double ddot( const Vector& x, const T& t, const Vector& y)
@@ -46,7 +56,7 @@ struct CG_BLAS2<T, std::vector<std::array<double, n>>>
         unsigned N = x.size();
         for( unsigned i=0; i<N; i++)
             for( unsigned j=0; j<n; j++)
-                product += (2.*(double)j+1.)/2.*x[i][j]*y[i][j];
+                product += (2.*(double)j+1.)/t.h()*x[i][j]*y[i][j];
         return product;
     }
 };
@@ -59,7 +69,7 @@ struct CG_BLAS2<S, std::vector<std::array<double, n>>>
         unsigned N = x.size();
         for( unsigned i=0; i < N; i++)
             for( unsigned j=0; j<n; j++)
-                y[i][j] = alpha*2./(2.*(double)j+1.)*x[i][j] + beta*y[i][j];
+                y[i][j] = alpha*s.h()/(2.*(double)j+1.)*x[i][j] + beta*y[i][j];
     }
 
     static double ddot( const Vector& x, const S& s, const Vector& y)
@@ -68,7 +78,7 @@ struct CG_BLAS2<S, std::vector<std::array<double, n>>>
         unsigned N = x.size();
         for( unsigned i=0; i<N; i++)
             for( unsigned j=0; j<n; j++)
-                product += 2./(2.*(double)j+1.)*x[i][j]*y[i][j];
+                product += s.h()/(2.*(double)j+1.)*x[i][j]*y[i][j];
         return product;
     }
 }; //redundant code LSPACE does the same!

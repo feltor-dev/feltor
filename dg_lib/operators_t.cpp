@@ -28,6 +28,11 @@ int main()
     Operator<double, 4> C( initializer);
     cout << C <<endl;
     cout << C.transpose()<<endl;
+    cout << "Negation -C \n";
+    cout << -C<<endl;
+    cout << "Access operator C(1,2) \n";
+    cout << C(1,2)<<endl;
+
 
 
     return 0;

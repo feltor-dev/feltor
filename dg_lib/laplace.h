@@ -11,7 +11,7 @@ template<size_t n>
 class Laplace
 {
   public:
-    Laplace( double c = 1);
+    Laplace( double h = 2.);
     const Operator<double,n>& get_a() const {return a;}
     const Operator<double,n>& get_b() const {return b;}
   private:
@@ -20,17 +20,20 @@ class Laplace
 };
 
 template<size_t n>
-Laplace<n>::Laplace( double c) 
+Laplace<n>::Laplace( double h) 
 {
     Operator<double, n> l( lilj);
     Operator<double, n> r( rirj);
     Operator<double, n> lr( lirj);
     Operator<double, n> rl( rilj);
     Operator<double, n> d( pidxpj);
-    Operator<double, n> s( pipj);
     Operator<double, n> t( pipj_inv);
-    t *= c;
+    t *= 2./h;
 
+    //std::cout << d << std::endl<< l<<std::endl;
+    //std::cout << "(d+l)T(d+l)^T \n";
+    //std::cout << (d+l)*t*(d+l).transpose()<<std::endl;
+    //std::cout << lr*t*rl<<std::endl;
     a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
     b = -((d+l)*t*rl+rl);
 };
@@ -39,11 +42,11 @@ template<size_t n>
 class Laplace_Dir
 {
   public:
-    Laplace_Dir( double c = 1);
+    Laplace_Dir( double h = 2.);
     const Operator<double,n>& get_a() const {return a;}
     const Operator<double,n>& get_b() const {return b;}
-    const Operator<double,n>& get_ap() const {return a;}
-    const Operator<double,n>& get_bp() const {return b;}
+    const Operator<double,n>& get_ap() const {return ap;}
+    const Operator<double,n>& get_bp() const {return bp;}
   private:
     Operator<double, n> a,b;
     Operator<double, n> ap,bp;
@@ -51,7 +54,7 @@ class Laplace_Dir
 };
 
 template<size_t n>
-Laplace_Dir<n>::Laplace_Dir( double c) 
+Laplace_Dir<n>::Laplace_Dir( double h) 
 {
     Operator<double, n> l( lilj);
     Operator<double, n> r( rirj);
@@ -60,7 +63,7 @@ Laplace_Dir<n>::Laplace_Dir( double c)
     Operator<double, n> d( pidxpj);
     Operator<double, n> s( pipj);
     Operator<double, n> t( pipj_inv);
-    t *= c;
+    t *= 2./h;
 
     a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
     b = -((d+l)*t*rl+rl);

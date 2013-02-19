@@ -6,8 +6,8 @@ using namespace std;
 
 int main()
 {
-    dg::Laplace<1> l(2*100);
-    dg::Laplace_Dir<1> ld(1);
+    dg::Laplace<2> l(1./100.);
+    dg::Laplace_Dir<2> ld(1./100.);
     cout << l.get_a()<<endl;
     cout << l.get_b()<<endl;
     cout << ld.get_ap() <<endl;

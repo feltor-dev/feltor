@@ -48,10 +48,11 @@ struct CG_BLAS2< Laplace<P>, Vector>
     static void dsymv( double alpha, const dg::Laplace<P>& m, const Vector& x, double beta, Vector& y)
     {
         /*
-            y[0] = alpha*( B^T*x[N]   + A*x[0] + B*x[1]  ) + beta*y[0];
+            y[0] = alpha*( B^T*x[N-1] + A*x[0] + B*x[1]  ) + beta*y[0];
             y[k] = alpha*( B^T*x[k-1] + A*x[k] + B*x[k+1]) + beta*y[k];
             y[N] = alpha*( B^T*x[N-1] + A*x[N] + B*x[0]  ) + beta*y[N];
         */
+        std::cout << "Hello\n";
         const dg::Operator<double, P> & a = m.get_a();
         const dg::Operator<double, P> & b = m.get_b();
         const unsigned N = x.size();
@@ -135,7 +136,7 @@ int main()
 {
     const unsigned num_int = 100;
     const double h = 1./(double)num_int;
-    Matrix l(4./h/h); //the constant makes all projection operators correct
+    Matrix l(h); //the constant makes all projection operators correct
     cout << l.get_a()<<endl;
     cout << l.get_b()<<endl;
     Operator<double,P> forward( DLT<P>::forward);
@@ -143,28 +144,45 @@ int main()
     Vector x = evaluate< double(&)(double), P>( sinus, 0,1, num_int);
     Vector solution = evaluate< double(&)(double), P>( secondsinus, 0,1, num_int);
     cout << "Square norm of sine is : "<<square_norm( x, XSPACE)*h/2.<<endl;
-    cout << "Square norm of solution is : "<<square_norm( solution, XSPACE)*h/2.<<endl;
+    cout << "Square norm of solution (779.273) is : "<<square_norm( solution, XSPACE)*h/2.<<endl;
     
-    forward*=h/2.;
     for( unsigned i=0; i<num_int; i++)
         x[i] = forward*x[i];
     for( unsigned i=0; i<num_int; i++)
         solution[i] = forward*solution[i];
-    cout << "Square norm of sine is : "<<square_norm( x, LSPACE)/h*2.<<endl;
-    cout << "Square norm of solution is : "<<square_norm( solution, LSPACE)/h*2.<<endl;
+    cout << "Square norm of sine is : "<<CG_BLAS2<S,Vector>::ddot(x,S(h),x) << endl;
+    cout << "Square norm of solution is : "<<CG_BLAS2<S, Vector>::ddot( solution, S(h), solution) <<endl;
+    //cout << "Solution: \n";
     //for( unsigned i=0; i<num_int; i++)
-    //    cout << x[i][0]<<endl;
+    //{
+    //    for( unsigned j=0; j<P; j++)
+    //        cout << solution[i][j]<<" ";
+    //    cout << "\n";
+    //}
     Vector b(num_int);
     Vector w(num_int);
     dg::CG_BLAS2<Matrix, Vector>::dsymv( 1., l, x, 0, w);
-    cout << "Norm of w is: "<<square_norm( w, LSPACE)/2.*h<<endl;
-    dg::CG_BLAS2<T, Vector>::dsymv( 2/h, T(), w, 0, w);
+    //cout << "Sine approximation\n";
     //for( unsigned i=0; i<num_int; i++)
-        //cout << w[i][0]<<endl;
-    cout << "Norm of w is: "<<square_norm( w, LSPACE)/2.*h<<endl;
+    //{
+    //    for( unsigned j=0; j<P; j++)
+    //        cout << x[i][j]<<" ";
+    //    cout << "\n";
+    //}
+    dg::CG_BLAS2<T, Vector>::dsymv( 1., T(h), w, 0, w);
+    double w_norm2 = CG_BLAS2<S, Vector>::ddot(w, S(h), w);
+    cout << "Square norm of w is: "<< w_norm2 << endl;
+    //cout << "Approximation: \n";
+    //for( unsigned i=0; i<num_int; i++)
+    //{
+    //    for( unsigned j=0; j<P; j++)
+    //        cout << w[i][j]<<" ";
+    //    cout << "\n";
+    //}
     dg::CG_BLAS1<Vector>::daxpby( 1., solution, -1., w);
-    cout << "Normalized Square norm of error is: \n";
-    cout << square_norm( w, LSPACE)/h*2.<<endl;
+    cout << "Relative error in L2 norm is \n";
+    
+    cout << sqrt(CG_BLAS2<S, Vector>::ddot(w, S(h), w)/w_norm2)<<endl;
 
 
     return 0;
