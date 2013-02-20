@@ -5,7 +5,7 @@
 using namespace dg; 
 using namespace std;
 
-#define P 4  //can go arbitrarily high
+#define P 2  //can go arbitrarily high
 int main()
 {
     Operator<double, P> l( lilj);
@@ -34,5 +34,19 @@ int main()
     cout << s*t<<endl;
     cout << "D*D is \n";
     cout << d*d<<endl;
+    Operator<double, P> A = (d+l)*t*(d+l).transpose() + lr*t*rl ;
+    Operator<double, P> B = -(d+l)*t*rl ;
+    array<double,P> a{{0,0}}, b{{2*2,2*2}}, c{{4*4,2*4}};
+    a = t*B.transpose()*a; 
+    b = t*A*b;
+    c = t*B*c;
+    cout << a[0] + b[0] + c[0] <<endl;
+    cout << a[1] + b[1] + c[1] <<endl;
+
+    
+
+
+
+
     return 0;
 }

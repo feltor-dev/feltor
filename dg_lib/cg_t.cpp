@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <array>
 #include <cmath>
@@ -52,7 +53,6 @@ struct CG_BLAS2< Laplace<P>, Vector>
             y[k] = alpha*( B^T*x[k-1] + A*x[k] + B*x[k+1]) + beta*y[k];
             y[N] = alpha*( B^T*x[N-1] + A*x[N] + B*x[0]  ) + beta*y[N];
         */
-        std::cout << "Hello\n";
         const dg::Operator<double, P> & a = m.get_a();
         const dg::Operator<double, P> & b = m.get_b();
         const unsigned N = x.size();
@@ -134,7 +134,7 @@ double secondsinus(double x){ return 4.*M_PI*M_PI*sin(2*M_PI*x);}
 
 int main()
 {
-    const unsigned num_int = 100;
+    const unsigned num_int = 1000;
     const double h = 1./(double)num_int;
     Matrix l(h); //the constant makes all projection operators correct
     cout << l.get_a()<<endl;
@@ -150,18 +150,9 @@ int main()
         x[i] = forward*x[i];
     for( unsigned i=0; i<num_int; i++)
         solution[i] = forward*solution[i];
-    cout << "Square norm of sine is : "<<CG_BLAS2<S,Vector>::ddot(x,S(h),x) << endl;
-    cout << "Square norm of solution is : "<<CG_BLAS2<S, Vector>::ddot( solution, S(h), solution) <<endl;
-    //cout << "Solution: \n";
-    //for( unsigned i=0; i<num_int; i++)
-    //{
-    //    for( unsigned j=0; j<P; j++)
-    //        cout << solution[i][j]<<" ";
-    //    cout << "\n";
-    //}
-    Vector b(num_int);
-    Vector w(num_int);
-    dg::CG_BLAS2<Matrix, Vector>::dsymv( 1., l, x, 0, w);
+    double s_norm2 = CG_BLAS2<S,Vector>::ddot(x,S(h),x); 
+
+    cout << "Square norm of sine is : "<<s_norm2 <<endl;    cout << "Square norm of solution is : "<<CG_BLAS2<S, Vector>::ddot( solution, S(h), solution) <<endl;
     //cout << "Sine approximation\n";
     //for( unsigned i=0; i<num_int; i++)
     //{
@@ -169,9 +160,17 @@ int main()
     //        cout << x[i][j]<<" ";
     //    cout << "\n";
     //}
+    //cout << "Solution: \n";
+    //for( unsigned i=0; i<num_int; i++)
+    //{
+    //    for( unsigned j=0; j<P; j++)
+    //        cout << solution[i][j]<<" ";
+    //    cout << "\n";
+    //}
+    Vector w(num_int);
+    dg::CG_BLAS2<Matrix, Vector>::dsymv( 1., l, x, 0, w);
     dg::CG_BLAS2<T, Vector>::dsymv( 1., T(h), w, 0, w);
     double w_norm2 = CG_BLAS2<S, Vector>::ddot(w, S(h), w);
-    cout << "Square norm of w is: "<< w_norm2 << endl;
     //cout << "Approximation: \n";
     //for( unsigned i=0; i<num_int; i++)
     //{
@@ -179,10 +178,16 @@ int main()
     //        cout << w[i][j]<<" ";
     //    cout << "\n";
     //}
+    cout << "Square norm of w is: "<< w_norm2 << endl;
     dg::CG_BLAS1<Vector>::daxpby( 1., solution, -1., w);
     cout << "Relative error in L2 norm is \n";
+
+    ofstream os( "error.dat");
+    for( unsigned i=0; i<num_int; i++)
+        os << (double)i*h << " "<< w[i][0] << " "<<solution[i][0]<<" "
+           << w[i][1]<< " "<<solution[i][1]<<"\n";
     
-    cout << sqrt(CG_BLAS2<S, Vector>::ddot(w, S(h), w)/w_norm2)<<endl;
+    cout << sqrt(CG_BLAS2<S, Vector>::ddot(w, S(h), w)/s_norm2)<<endl;
 
 
     return 0;

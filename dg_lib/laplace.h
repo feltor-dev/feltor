@@ -30,6 +30,7 @@ Laplace<n>::Laplace( double h)
     Operator<double, n> t( pipj_inv);
     t *= 2./h;
 
+    std::cout << t <<std::endl;
     //std::cout << d << std::endl<< l<<std::endl;
     //std::cout << "(d+l)T(d+l)^T \n";
     //std::cout << (d+l)*t*(d+l).transpose()<<std::endl;

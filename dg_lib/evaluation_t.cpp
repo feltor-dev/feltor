@@ -15,7 +15,7 @@ double function( double x)
     counter++;
     return exp(x);
 }
-#define P 4
+#define P 2
 typedef std::vector<std::array<double,P>> ArrVec;
 int main()
 {
@@ -48,6 +48,7 @@ int main()
      
     double normalized = norm/2./(double)num_int;
     double solution = (exp(2.)-exp(0))/2.;
+    //double solution = 0.5;
     cout << "Square norm normalized to [0,1] "<< norm/2./(double)num_int<<endl;
     cout << "Correct result for exp(x) is "<<(exp(2.)-exp(0))/2.<<endl;
     cout << "relative  error is "<< (normalized-solution)/solution <<endl;
