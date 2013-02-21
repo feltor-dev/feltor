@@ -10,17 +10,15 @@
 #include "dlt.h"
 #include "cg.h"
 
-
-#define P 3
-typedef std::vector<std::array<double, P>> ArrVec;
-typedef dg::Laplace<P> Matrix;
-
 using namespace std;
 using namespace dg;
 
-double sinus(double x){ return x*x*x/*sin(2*M_PI*x)*/;}
-double secondsinus(double x){ return -6*x/*4.*M_PI*M_PI*sin(2*M_PI*x)*/;}
+double sinus(double x){ return /*x*x*x*/sin(2*M_PI*x);}
+double secondsinus(double x){ return /*-6*x*/4.*M_PI*M_PI*sin(2*M_PI*x);}
 
+#define P 2
+typedef std::vector<std::array<double, P>> ArrVec;
+typedef dg::Laplace<P> Matrix;
 
 int main()
 {
@@ -71,6 +69,13 @@ int main()
     cout << "Square norm of w is: "<< w_norm2 << endl;
     dg::BLAS1<ArrVec>::daxpby( 1., solution, -1., w);
     cout << "Relative error in L2 norm is \n";
+    cout << sqrt(BLAS2<S, ArrVec>::ddot(w, S(h), w)/s_norm2)<<endl;
+    //compute jumps in w
+    auto jump = dg::evaluate_jump(w);
+    unsigned interior = jump.size();
+    cout << "Jumps of approximation \n";
+    for( unsigned i=0; i<interior; i++)
+        cout << jump[i] <<endl;
 
     /*
     ofstream os( "error.dat");
@@ -79,7 +84,6 @@ int main()
            << w[i][1]<< " "<<solution[i][1]<<"\n";
            */
     
-    cout << sqrt(BLAS2<S, ArrVec>::ddot(w, S(h), w)/s_norm2)<<endl;
 
 
     return 0;

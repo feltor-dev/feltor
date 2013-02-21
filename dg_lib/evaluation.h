@@ -26,6 +26,19 @@ std::vector<std::array<double,n>> evaluate( Function& f, double a, double b, uns
     return v;
 }
 
+template< size_t n>
+std::vector< double> evaluate_jump( const std::vector< std::array<double, n>>& v)
+{
+    //compute the interior jumps of a DG approximation
+    unsigned N = v.size();
+    std::vector<double> jump(N-1, 0.);
+    for( unsigned i=0; i<N-1; i++)
+        for( unsigned j=0; j<n; j++)
+            jump[i] += v[i][j] - v[i+1][j]*( (j%2==0)?(1):(-1));
+    return jump;
+}
+
+
 struct T{
     T( double h = 2.):h_(h){}
     const double& h() const {return h_;}
@@ -152,7 +165,7 @@ double square_norm( const std::vector<std::array<double, n>>& v, enum Space s)
 
 
 
-}
+} //namespace dg
 
 
 #endif // _DG_EVALUATION_
