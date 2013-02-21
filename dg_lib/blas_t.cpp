@@ -17,7 +17,6 @@ int main()
     unsigned N = 10;
     vector< array<double,P>> v = dg::evaluate< double(&)(double), P>( function,0.,1., N);
     vector< array<double,P>> w(v);
-    dg::BLAS1<ArrVec>::daxpby( 7., v, 3., w);
     cout << "v is a sine \n";
     for( unsigned i=0; i<N; i++)
     {
@@ -25,6 +24,7 @@ int main()
             cout << v[i][j] << " ";
         cout << "\n";
     }
+    dg::BLAS1<ArrVec>::daxpby( 10., w, 0., w);
     cout << "w is 10 sine \n";
     for( unsigned i=0; i<N; i++)
     {

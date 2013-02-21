@@ -20,7 +20,7 @@ struct BLAS1
      *
      * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
      * @param x Left Vector
-     * @param y Right Vector
+     * @param y Right Vector might equal Left Vector
      * @return Scalar product
      */
     static double ddot( const Vector& x, const Vector& y);
@@ -32,7 +32,7 @@ struct BLAS1
      * and daxpy is memory bound. (Is there no original daxpby routine because 
      * the name is too long??)
      * @param alpha Scalar  
-     * @param x Vector x 
+     * @param x Vector x migtht equal y 
      * @param beta Scalar
      * @param y Vector y contains solution on output
      */
@@ -50,15 +50,14 @@ struct BLAS2
     /*! @brief Symmetric Matrix Vector product
      *
      * This routine computes \f[ y = \alpha M x + \beta y \f]
-     * where \f[ M\f] is a symmetric matrix.
+     * where \f[ M\f] is a symmetric matrix. 
      * @param alpha A Scalar
      * @param m The Matrix
-     * @param x A Vector
+     * @param x A Vector different from y (except in the case where m is diagonal)
      * @param beta A Scalar
      * @param y contains solution on output
      */
     static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y);
-    //preconditioned CG needs diagonal scaling:
     /*! @brief General dot produt
      *
      * This routine computes the scalar product defined by the symmetric positive definit 
@@ -67,10 +66,18 @@ struct BLAS2
      * precalculate \f[ Py\f] and then call the BLAS1::ddot routine!
      * @param x Left Vector
      * @param P The diagonal Matrix
-     * @param y Right Vector
+     * @param y Right Vector might equal Left Vector
      * @return Scalar product
      */
     static double ddot( const Vector& x, const Matrix& P, const Vector& y);
+
+    //preconditioned CG needs diagonal scaling:
+    /*! @brief Diagonal Scaling
+     *
+     * @param m Diagonal Matrix
+     * @param x Vector elements are scaled by diagonal matrix entries
+     */
+    //static void ddimv( const Matrix& m, Vector& x);
 };
 
 template <size_t n>
@@ -92,6 +99,14 @@ struct BLAS1<std::vector<std::array<double,n>>>
     }
     static void daxpby( double alpha, const Vector& x, double beta, Vector& y)
     {
+        if( alpha == 0.)
+        {
+            if( beta == 1.) return;
+            for( unsigned i=0; i<x.size(); i++)
+                for( unsigned j=0; j<n; j++)
+                    y[i][j] = beta*y[i][j];
+            return; 
+        }
         for( unsigned i=0; i<x.size(); i++)
             for( unsigned j=0; j<n; j++)
                 y[i][j] = alpha*x[i][j]+beta*y[i][j];

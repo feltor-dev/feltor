@@ -1,6 +1,7 @@
 #ifndef _DG_LAPLACE_
 #define _DG_LAPLACE_
 
+#include <assert.h>
 #include "blas.h"
 #include "projection_functions.h"
 #include "operators.h"
@@ -31,7 +32,6 @@ Laplace<n>::Laplace( double h)
     Operator<double, n> t( pipj_inv);
     t *= 2./h;
 
-    std::cout << t <<std::endl;
     //std::cout << d << std::endl<< l<<std::endl;
     //std::cout << "(d+l)T(d+l)^T \n";
     //std::cout << (d+l)*t*(d+l).transpose()<<std::endl;
@@ -46,7 +46,8 @@ struct BLAS2< Laplace<n>, std::vector<std::array<double,n>>>
     typedef Laplace<n> Matrix;
     typedef std::vector<std::array<double,n>> Vector;
     static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y)
-    {
+    { //what is if x and y are the same??
+        assert( &x != &y); 
         /*
             y[0] = alpha*( B^T*x[N-1] + A*x[0] + B*x[1]  ) + beta*y[0];
             y[k] = alpha*( B^T*x[k-1] + A*x[k] + B*x[k+1]) + beta*y[k];
