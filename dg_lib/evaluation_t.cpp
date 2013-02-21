@@ -32,7 +32,7 @@ int main()
     for( unsigned i=0; i<num_int; i++)
         w[i] = forward*v[i];
     t.tic(); 
-    double norm = CG_BLAS2<Space, ArrVec>::ddot( w, LSPACE, w);
+    double norm = BLAS2<Space, ArrVec>::ddot( w, LSPACE, w);
     t.toc();
     
     cout << "Square norm in x "<<norm <<endl;
@@ -40,7 +40,7 @@ int main()
 
     cout << "Square norm in x "<<square_norm<P>( v, XSPACE)<<endl;
     cout << "Square norm in l "<<square_norm<P>( w, LSPACE)<<endl;
-    cout << "Square norm      "<<CG_BLAS2<S, ArrVec>::ddot( w, S(), w)<<endl;
+    cout << "Square norm      "<<BLAS2<S, ArrVec>::ddot( w, S(), w)<<endl;
     t.tic();
     square_norm<P>( w, LSPACE);
     t.toc();

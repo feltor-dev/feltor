@@ -2,7 +2,7 @@
 #define _DG_EVALUATION_
 
 #include "dlt.h"
-#include "cg.h"
+#include "blas.h"
 #include <vector>
 #include <array>
 namespace dg
@@ -39,7 +39,7 @@ struct S{
     double h_;
 };
 template< size_t n>
-struct CG_BLAS2<T, std::vector<std::array<double, n>>>
+struct BLAS2<T, std::vector<std::array<double, n>>>
 {
     typedef std::vector<std::array<double, n>> Vector;
     static void dsymv( double alpha, const T& t, const Vector& x, double beta, Vector& y)
@@ -61,7 +61,7 @@ struct CG_BLAS2<T, std::vector<std::array<double, n>>>
     }
 };
 template< size_t n>
-struct CG_BLAS2<S, std::vector<std::array<double, n>>>
+struct BLAS2<S, std::vector<std::array<double, n>>>
 {
     typedef std::vector<std::array<double, n>> Vector;
     static void dsymv( double alpha, const S& s, const Vector& x, double beta, Vector& y)
@@ -85,7 +85,7 @@ struct CG_BLAS2<S, std::vector<std::array<double, n>>>
 enum Space{ XSPACE, LSPACE};
 
 template < size_t n >
-struct CG_BLAS2<Space, std::vector<std::array<double, n>>>
+struct BLAS2<Space, std::vector<std::array<double, n>>>
 {
     typedef std::vector<std::array<double, n>> Vector;
     static void dsymv( double alpha, const Space& s, const Vector& x, double beta, Vector& y)
