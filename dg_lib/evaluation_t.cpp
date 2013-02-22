@@ -23,7 +23,7 @@ int main()
     cout << "Polynomial order is (P-1): "<<P-1<<endl; 
     unsigned num_int = 30;
     double h = 1./(double)num_int;
-    //evaluate exp function and transform to l space
+    //evaluate exp function and transform to l space using various methods
     auto v = evaluate< double(&)(double), P>( function,0.,1., num_int);
     auto w(v);
     Operator<double,P> forward( DLT<P>::forward);

@@ -62,7 +62,7 @@ template< class Matrix, class Vector, class Preconditioner>
 class PCG
 {
   public:
-    PCG( unsigned size, double eps = 1e-10):r(size), p(r), ap(r), eps(eps), max_iter(size){}
+    PCG( const Vector& copy, double eps = 1e-10):r(copy), p(r), ap(r), eps(eps), max_iter(size){}
     void set_eps( double eps_rel) {eps = eps_rel;}
     double get_eps( ) {return eps;}
     void set_max( unsigned new_max) {max_iter = new_max;}
