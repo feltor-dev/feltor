@@ -29,6 +29,11 @@ int main()
     Operator<double,P> forward( DLT<P>::forward);
     for( unsigned i=0; i<num_int; i++)
         w[i] = forward*v[i];
+    auto x = expand< double(&)(double),P> ( function, 0.,1., num_int);
+    BLAS1<ArrVec>::daxpby( 1., w, -1., x);
+    cout << "Test of the expand function\n";
+    cout << x <<endl;
+    cout << "Should be only zeros\n";
     //compute the square norm with various methods
     double norm = BLAS2<Space, ArrVec>::ddot( w, LSPACE, w);
     cout << "Square norm in x "<<norm <<endl;
