@@ -8,7 +8,6 @@
 #include "evaluation.h"
 #include "laplace.h"
 #include "dlt.h"
-#include "cg.h"
 
 using namespace std;
 using namespace dg;

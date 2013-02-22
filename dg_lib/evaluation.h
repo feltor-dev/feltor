@@ -27,6 +27,15 @@ std::vector<std::array<double,n>> evaluate( Function& f, double a, double b, uns
     return v;
 }
 
+template< class Function, size_t n>
+std::vector<std::array<double,n>> expand( Function& f, double a, double b, unsigned num_int)
+{
+    auto v = evaluat<std::vector<std::array<double,n>> ( f, a, b, num_int);
+    dg::Operator<double,n> forward( dg::DLT<n>::forward);
+    for( unsigned i=0; i<N; i++)
+        y0[i] = forward*y0[i];
+
+
 template< size_t n>
 std::vector< double> evaluate_jump( const std::vector< std::array<double, n>>& v)
 {
