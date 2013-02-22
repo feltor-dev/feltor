@@ -13,7 +13,7 @@ template<size_t n>
 class Laplace
 {
   public:
-    Laplace( double h = 2.);
+    Laplace( double h = 2., double alpha = 1.);
     const Operator<double,n>& get_a() const {return a;}
     const Operator<double,n>& get_b() const {return b;}
   private:
@@ -22,7 +22,7 @@ class Laplace
 };
 
 template<size_t n>
-Laplace<n>::Laplace( double h) 
+Laplace<n>::Laplace( double h, double alpha) 
 {
     Operator<double, n> l( lilj);
     Operator<double, n> r( rirj);
@@ -36,8 +36,8 @@ Laplace<n>::Laplace( double h)
     //std::cout << "(d+l)T(d+l)^T \n";
     //std::cout << (d+l)*t*(d+l).transpose()<<std::endl;
     //std::cout << lr*t*rl<<std::endl;
-    a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
-    b = -((d+l)*t*rl+rl);
+    a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
+    b = -((d+l)*t*rl+alpha*rl);
 };
 
 template <size_t n>

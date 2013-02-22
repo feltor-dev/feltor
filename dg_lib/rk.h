@@ -22,6 +22,13 @@ struct rk_coeff
     static const double alpha[k][k];
     static const double beta[k];
 };
+/*
+template<>
+const double rk_coeff<1>::alpha[1][1] = { {1}};
+template<>
+const double rk_coeff<1>::beta[1] = {1};
+*/
+
 //from Cockburn paper
 template<>
 const double rk_coeff<2>::alpha[2][2] = {
@@ -77,6 +84,7 @@ template< size_t k, class Functor>
 void RK<k, Functor>::operator()( Functor& f, const Vec& u0, Vec& u1, double dt)
 {
     assert( &u0 != &u1);
+    assert( k>1 && "Euler still has to be implemented!" );
     f(u0, u_[0]);
     BLAS1<Vec>::daxpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
     for( unsigned i=1; i<k-1; i++)

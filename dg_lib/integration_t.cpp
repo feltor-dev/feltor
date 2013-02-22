@@ -7,13 +7,14 @@
 #include "rk.h"
 
 
-#define P 2
-#define K 2
-const double Time = 0.01;
-const unsigned NT = 2;
-
+#define P 4
+#define K 3
 const double Lx = 2.*M_PI;
-const unsigned N = 100;
+const unsigned N = 40;
+
+const double Time = 0.8; 
+const unsigned NT = (unsigned)(Time*N*N/0.001/Lx/Lx); //courant condition  dt <= dx*dx/D
+
 
 double sine( double x)
 {

@@ -37,7 +37,7 @@ int main()
     Vec y1 = y0;
 
     double h = 1./(double)num_int;
-    dg::RK<4, Functor> rk(y0);
+    dg::RK<2, Functor> rk(y0);
     Functor f;
     for( unsigned i=1; i<=num_int/2; i++)
     {

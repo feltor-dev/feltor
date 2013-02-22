@@ -1,10 +1,11 @@
 #ifndef _DG_EVALUATION_
 #define _DG_EVALUATION_
 
-#include "dlt.h"
-#include "blas.h"
+#include <iostream>
 #include <vector>
 #include <array>
+#include "dlt.h"
+#include "blas.h"
 namespace dg
 {
 
@@ -166,6 +167,19 @@ double square_norm( const std::vector<std::array<double, n>>& v, enum Space s)
 
 
 } //namespace dg
+
+template <size_t n>
+std::ostream& operator<<( std::ostream& os, const std::vector<std::array<double, n>>& v)
+{
+    unsigned N = v.size();
+    for( unsigned i=0; i<N; i++)
+    {
+        for( unsigned j=0; j<n; j++)
+            os << v[i][j] << " ";
+        os << "\n";
+    }
+    return os;
+}
 
 
 #endif // _DG_EVALUATION_
