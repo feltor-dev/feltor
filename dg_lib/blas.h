@@ -1,6 +1,7 @@
 #ifndef _DG_BLAS_
 #define _DG_BLAS_
 
+#include <assert.h>
 #include <vector>
 #include <array>
 
@@ -86,6 +87,7 @@ struct BLAS1<std::vector<std::array<double,n>>>
     typedef std::vector<std::array<double,n>> Vector;
     static double ddot( const Vector& x, const Vector& y)
     {
+        assert( x.size() == y.size());
         double sum = 0;
         double s = 0;
         for( unsigned i=0; i<x.size(); i++)
@@ -99,6 +101,7 @@ struct BLAS1<std::vector<std::array<double,n>>>
     }
     static void daxpby( double alpha, const Vector& x, double beta, Vector& y)
     {
+        assert( x.size() == y.size());
         if( alpha == 0.)
         {
             if( beta == 1.) return;

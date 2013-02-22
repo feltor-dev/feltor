@@ -1,6 +1,7 @@
 #ifndef _DG_CG_
 #define _DG_CG_
 
+#include <cmath>
 #include "blas.h"
 namespace dg{
 
@@ -23,7 +24,7 @@ template< class Matrix, class Vector>
 class CG
 {
   public:
-    CG( unsigned size, double eps = 1e-10):r(size), p(r), ap(r), eps(eps), max_iter(size){}
+    CG( const Vector& copy, unsigned max_iter, double eps = 1e-10):r(copy), p(r), ap(r), eps(eps), max_iter(max_iter){}
     void set_eps( double eps_rel) {eps = eps_rel;}
     double get_eps( ) {return eps;}
     void set_max( unsigned new_max) {max_iter = new_max;}
@@ -62,7 +63,7 @@ template< class Matrix, class Vector, class Preconditioner>
 class PCG
 {
   public:
-    PCG( const Vector& copy, double eps = 1e-10):r(copy), p(r), ap(r), eps(eps), max_iter(size){}
+    PCG( const Vector& copy, unsigned max_iter, double eps = 1e-10):r(copy), p(r), ap(r), eps(eps), max_iter(max_iter){}
     void set_eps( double eps_rel) {eps = eps_rel;}
     double get_eps( ) {return eps;}
     void set_max( unsigned new_max) {max_iter = new_max;}
