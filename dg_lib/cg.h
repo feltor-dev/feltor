@@ -24,20 +24,17 @@ template< class Matrix, class Vector>
 class CG
 {
   public:
-    CG( const Vector& copy, unsigned max_iter, double eps = 1e-10):r(copy), p(r), ap(r), eps(eps), max_iter(max_iter){}
-    void set_eps( double eps_rel) {eps = eps_rel;}
-    double get_eps( ) {return eps;}
+    CG( const Vector& copy, unsigned max_iter):r(copy), p(r), ap(r), max_iter(max_iter){}
     void set_max( unsigned new_max) {max_iter = new_max;}
     unsigned get_max() {return max_iter;}
-    unsigned operator()( const Matrix& A, Vector& x, const Vector& b);//solve?
+    unsigned operator()( const Matrix& A, Vector& x, const Vector& b, double eps = 1e-12);//solve?
   private:
     Vector r, p, ap; //could contain solutions of previous iterations?
-    double eps;
     unsigned max_iter;
 };
 
 template< class Matrix, class Vector>
-unsigned CG<Matrix, Vector>::operator()( const Matrix& A, Vector& x, const Vector& b)
+unsigned CG<Matrix, Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, double eps)
 {
     double nrm2b = BLAS1<Vector>::ddot(b,b);
     r = b; BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
@@ -63,15 +60,12 @@ template< class Matrix, class Vector, class Preconditioner>
 class PCG
 {
   public:
-    PCG( const Vector& copy, unsigned max_iter, double eps = 1e-10):r(copy), p(r), ap(r), eps(eps), max_iter(max_iter){}
-    void set_eps( double eps_rel) {eps = eps_rel;}
-    double get_eps( ) {return eps;}
+    PCG( const Vector& copy, unsigned max_iter):r(copy), p(r), ap(r), max_iter(max_iter){}
     void set_max( unsigned new_max) {max_iter = new_max;}
     unsigned get_max() {return max_iter;}
-    unsigned operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P);//solve?
+    unsigned operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, double eps = 1e-12);//solve?
   private:
     Vector r, p, ap; //could contain solutions of previous iterations?
-    double eps;
     unsigned max_iter;
 };
 
@@ -92,7 +86,7 @@ class PCG
 //significantly more elements than z whence ddot(r,A,r) is far slower than ddot(r,z)
 */
 template< class Matrix, class Vector, class Preconditioner>
-unsigned PCG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P)
+unsigned PCG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, double eps)
 {
     double nrm2b = BLAS2<Preconditioner, Vector>::ddot( b,P,b);
     r = b; BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 

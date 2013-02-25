@@ -109,20 +109,21 @@ Laplace_Dir<n>::Laplace_Dir( double h)
     a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
     b = -((d+l)*t*rl+rl);
     ap = d*t*d.transpose() + l + r;
-    bp = -((d+l)*t*rl + rl);
+    bp = -(d*t*rl + rl);
 };
 
 
 template <size_t n>
 struct BLAS2< Laplace_Dir<n>, std::vector<std::array<double,n>>>
 {
-    typedef Laplace<n> Matrix;
+    typedef Laplace_Dir<n> Matrix;
     typedef std::vector<std::array<double,n>> Vector;
     static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y)
     {
+        assert( &x != &y); 
         /*
             y[0] = alpha*(              Ap*x[0]+ Bp*x[1] ) + beta*y[0];
-            y[1] = alpha*(  Bp^T*x[0] + Ap*x[1]+ B*x[2]  ) + beta*y[1];
+            y[1] = alpha*(  Bp^T*x[0] + A*x[1]+ B*x[2]  ) + beta*y[1];
             y[k] = alpha*( B^T*x[k-1] + A*x[k] + B*x[k+1]) + beta*y[k];
           y[N-1] = alpha*( B^T*x[N-2] + A*x[N-1]         ) + beta*y[N-1];
         */

@@ -23,6 +23,7 @@ typedef dg::Laplace<P> Matrix;
 
 int main()
 {
+    cout << "Test and see the supraconvergence phenomenon!\n";
     cout << "Order is (P-1): "<<P<<endl;
     const double h = 1./(double)num_int;
     Matrix l(h); 

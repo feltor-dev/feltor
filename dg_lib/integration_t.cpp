@@ -30,6 +30,7 @@ int main()
     double h = Lx/(double)N;
     double dt = Time/(double)NT;
 
+    std::cout << "Test RK scheme on diffusion equation\n";
     //generate y0 in l-space
     auto y0 = dg::evaluate< double(&)(double), P>( sine, 0., Lx, N);
     dg::Operator<double,P> forward( dg::DLT<P>::forward);
