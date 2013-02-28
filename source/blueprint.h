@@ -20,7 +20,8 @@ enum target{
     TL_ELECTRONS, //!< Electron density
     TL_IONS, //!< Ion density
     TL_IMPURITIES, //!< Impurity density
-    TL_POTENTIAL //!< Potential
+    TL_POTENTIAL, //!< Potential
+    TL_ALL //!< all buffers
 };
 
 

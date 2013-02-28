@@ -15,8 +15,8 @@ double function( double x)
     counter++;
     return exp(x);
 }
-#define P 3
-const unsigned num_int = 30;
+#define P 1
+const unsigned num_int = 20;
 typedef std::vector<std::array<double,P>> ArrVec;
 int main()
 {

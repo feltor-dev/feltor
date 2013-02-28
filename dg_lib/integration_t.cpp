@@ -7,13 +7,17 @@
 #include "rk.h"
 
 
-#define P 4
-#define K 3
+#define P 5 //error is order P 
+#define K 3 //independent of K if timesteps are small enough
 const double Lx = 2.*M_PI;
-const unsigned N = 40;
+const unsigned N = 200;
 
+const double nu = 0.0001;
 const double Time = 0.8; 
-const unsigned NT = (unsigned)(Time*N*N/0.001/Lx/Lx); //courant condition  dt <= dx*dx/D
+const unsigned NT = (unsigned)(nu*Time*P*P*N*N/0.01/Lx/Lx); //courant condition  dt <= dx*dx/D
+
+//If NT is large enough time error
+//doesn't count
 
 
 double sine( double x)
@@ -22,15 +26,20 @@ double sine( double x)
 }
 double solution( double x)
 {
-    return exp(-Time)*sin(x);
+    return exp(-nu*Time)*sin(x);
 }
 typedef std::vector<std::array<double, P>> Vector;
+using namespace std;
 int main()
 {
     double h = Lx/(double)N;
     double dt = Time/(double)NT;
 
     std::cout << "Test RK scheme on diffusion equation\n";
+    cout << "Polynomial order (P-1): "<< P-1<<endl;
+    cout << "RK order K " << K <<endl;
+    cout << "Number of gridpoints "<<N<<endl;
+
     //generate y0 in l-space
     auto y0 = dg::evaluate< double(&)(double), P>( sine, 0., Lx, N);
     dg::Operator<double,P> forward( dg::DLT<P>::forward);
@@ -43,7 +52,7 @@ int main()
     auto y1(y0);
 
     //generate runge right hand side and Runge-Kutta
-    dg::RHS<P> rhs( h);
+    dg::RHS<P> rhs( h, nu);
     dg::RK<K, dg::RHS<P>> rk( y0);
 
     for( unsigned i=0; i<NT; i++)

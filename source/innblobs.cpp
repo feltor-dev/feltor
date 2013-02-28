@@ -12,12 +12,16 @@
 
 using namespace std;
 using namespace toefl;
+
+const unsigned n = 3;
+typedef DFT_DFT_Solver<n> Sol;
+typedef typename Sol::Matrix_Type Mat;
     
 unsigned N; //initialized by init function
 double amp, imp_amp; //
-const double slit = 2./500.; //half distance between pictures in units of width
+const double slit = 1./500.; //half distance between pictures in units of width
 double field_ratio;
-unsigned width = 960, height = 1080; //initial window width & height
+unsigned width = 1400, height = 1080; //initial window width (height will be computed)
 stringstream window_str;  //window name
 
 void GLFWCALL WindowResize( int w, int h)
@@ -92,45 +96,57 @@ Blueprint read( char const * file)
 // The solver has to have the getField( target) function returing M
 // and the blueprint() function
 template<class Solver>
-void drawScene( const Solver& solver)
+void drawScene( const Solver& solver, target t)
 {
     glClear(GL_COLOR_BUFFER_BIT);
     double max;
     const typename Solver::Matrix_Type * field;
-    
-    { //draw electrons
-    field = &solver.getField( TL_ELECTRONS);
-    max = abs_max( *field);
-    drawTexture( *field, max, -1.0, -slit, slit*field_ratio, 1.0);
-    window_str << scientific;
-    window_str <<"ne / "<<max<<"\t";
-    //Draw a textured quad
-    //upper left
-    }
 
-    { //draw Ions
-    field = &solver.getField( TL_IONS);
-    //upper right
-    drawTexture( *field, max, slit, 1.0, slit*field_ratio, 1.0);
-    window_str <<" ni / "<<max<<"\t";
-    }
-
-    if( solver.blueprint().isEnabled( TL_IMPURITY))
+    if( t == TL_ALL)
     {
-        field = &solver.getField( TL_IMPURITIES); 
+        { //draw electrons
+        field = &solver.getField( TL_ELECTRONS);
+        max = abs_max( *field);
+        drawTexture( *field, max, -1.0, -slit, slit*field_ratio, 1.0);
+        window_str << scientific;
+        window_str <<"ne / "<<max<<"\t";
+        //Draw a textured quad
+        //upper left
+        }
+
+        { //draw Ions
+        field = &solver.getField( TL_IONS);
+        //upper right
+        drawTexture( *field, max, slit, 1.0, slit*field_ratio, 1.0);
+        window_str <<" ni / "<<max<<"\t";
+        }
+
+        if( solver.blueprint().isEnabled( TL_IMPURITY))
+        {
+            field = &solver.getField( TL_IMPURITIES); 
+            max = abs_max(*field);
+            //lower left
+            drawTexture( *field, max, -1.0, -slit, -1.0, -slit*field_ratio);
+            window_str <<" nz / "<<max<<"\t";
+        }
+
+        { //draw potential
+        field = &solver.getField( TL_POTENTIAL); 
         max = abs_max(*field);
-        //lower left
-        drawTexture( *field, max, -1.0, -slit, -1.0, -slit*field_ratio);
-        window_str <<" nz / "<<max<<"\t";
+        //lower right
+        drawTexture( *field, max, slit, 1.0, -1.0, -slit*field_ratio);
+        window_str <<" phi / "<<max<<"\t";
+        }
+    }
+    else
+    {
+        field = &solver.getField( t);
+        max = abs_max( *field);
+        drawTexture( *field, max, -1.0, 1.0, -1.0, 1.0);
+        window_str << scientific;
+        window_str <<"Max "<<max<<"\t";
     }
 
-    { //draw potential
-    field = &solver.getField( TL_POTENTIAL); 
-    max = abs_max(*field);
-    //lower right
-    drawTexture( *field, max, slit, 1.0, -1.0, -slit*field_ratio);
-    window_str <<" phi / "<<max<<"\t";
-    }
         
 }
 
@@ -140,7 +156,7 @@ int main( int argc, char* argv[])
     Blueprint bp_mod;
     if( argc == 1)
     {
-        bp_mod = read("input.txt");
+        bp_mod = read("blobs.in");
     }
     else if( argc == 2)
     {
@@ -156,57 +172,25 @@ int main( int argc, char* argv[])
     
     bp.display(cout);
     //construct solvers 
-    DFT_DFT_Solver<2> solver2( bp);
-    DFT_DFT_Solver<3> solver3( bp);
-    if( bp.boundary().bc_x == TL_PERIODIC)
-        bp_mod.boundary().bc_x = TL_DST10;
-    DRT_DFT_Solver<2> drt_solver2( bp_mod);
-    DRT_DFT_Solver<3> drt_solver3( bp_mod);
+    Sol solver( bp);
 
     const Algorithmic& alg = bp.algorithmic();
-    Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
+    Mat ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
     // place some gaussian blobs in the field
     try{
         //init_gaussian( ne, 0.1,0.2, 10./128./field_ratio, 10./128., amp);
         //init_gaussian( ne, 0.1,0.4, 10./128./field_ratio, 10./128., -amp);
-        init_gaussian( ne, 0.8,0.4, 10./128./field_ratio, 10./128., amp);
+        init_gaussian( ne, 0.2,0.5, 10./128./field_ratio, 10./128., amp);
         //init_gaussian( ne, 0.1,0.8, 10./128./field_ratio, 10./128., -amp);
         //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
-            //init_gaussian( nz, 0.8,0.4, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian_column( nz, 0.6, 0.05/field_ratio, imp_amp);
+            //init_gaussian( nz, 0.8,0.5, 0.05/field_ratio, 0.05, -imp_amp);
+            init_gaussian_column( nz, 0.4, 0.05/field_ratio, imp_amp);
         }
-        std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, phi}};
-        std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, nz, phi}};
-        Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, nz_{ ne_}, phi_{ ne_};
-        init_gaussian( ne_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
-        //init_gaussian( ne_, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
-        //init_gaussian( ne_, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
-        //init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
-        if( bp.isEnabled( TL_IMPURITY))
-        {
-            init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, -imp_amp);
-            //init_gaussian( nz_, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
-            //init_gaussian( nz_, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
-        }
-        std::array< Matrix<double, TL_DRT_DFT>,2> arr2_{{ ne_, phi_}};
-        std::array< Matrix<double, TL_DRT_DFT>,3> arr3_{{ ne_, nz_, phi_}};
+        std::array< Mat, n> arr{{ ne, nz, phi}};
         //now set the field to be computed
-        if( !bp.isEnabled( TL_IMPURITY))
-        {
-            if( bp.boundary().bc_x == TL_PERIODIC)
-                solver2.init( arr2, TL_IONS);
-            else
-                drt_solver2.init( arr2_, TL_IONS);
-        }
-        else
-        {
-            if( bp.boundary().bc_x == TL_PERIODIC)
-                solver3.init( arr3, TL_IONS);
-            else
-                drt_solver3.init( arr3_, TL_IONS);
-        }
+        solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
 
     ////////////////////////////////glfw//////////////////////////////
@@ -232,12 +216,13 @@ int main( int argc, char* argv[])
     cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
+    target targ = TL_ALL;
     while( running)
     {
         overhead.tic();
         //ask if simulation shall be stopped
         glfwPollEvents();
-        if( glfwGetKey( 'S')) 
+        if( glfwGetKey( 'S')/*||((unsigned)t%100 == 0)*/) 
         {
             do
             {
@@ -248,54 +233,24 @@ int main( int argc, char* argv[])
         }
         
         //draw scene
-        if( !bp.isEnabled( TL_IMPURITY))
-        {
-            if( bp.boundary().bc_x == TL_PERIODIC)
-                drawScene( solver2);
-            else
-                drawScene( drt_solver2);
-        }
-        else
-        {
-            if( bp.boundary().bc_x == TL_PERIODIC)
-                drawScene( solver3);
-            else
-                drawScene( drt_solver3);
-        }
+        if( glfwGetKey( '1')) targ = TL_ELECTRONS;
+        else if( glfwGetKey( '2')) targ = TL_IONS;
+        else if( glfwGetKey( '3')) targ = TL_IMPURITIES;
+        else if( glfwGetKey( '4')) targ = TL_POTENTIAL;
+        else if( glfwGetKey( '0')) targ = TL_ALL;
+        drawScene(solver, targ);
         window_str << setprecision(2) << fixed;
         window_str << " &&   time = "<<t;
         glfwSetWindowTitle( (window_str.str()).c_str() );
         window_str.str("");
         glfwSwapBuffers();
-#ifdef TL_DEBUG
-        glfwWaitEvents();
-        if( glfwGetKey('N'))
-        {
-#endif
         timer.tic();
         for(unsigned i=0; i<N; i++)
         {
-            if( !bp.isEnabled( TL_IMPURITY))
-            {
-                if( bp.boundary().bc_x == TL_PERIODIC)
-                    solver2.step( );
-                else
-                    drt_solver2.step();
-            }
-            else
-            {
-                if( bp.boundary().bc_x == TL_PERIODIC)
-                    solver3.step( );
-                else
-                    drt_solver3.step( );
-            }
+            solver.step();
             t+= alg.dt;
         }
         timer.toc();
-#ifdef TL_DEBUG
-            cout << "Next "<<N<<" Steps\n";
-        }
-#endif
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
         overhead.toc();

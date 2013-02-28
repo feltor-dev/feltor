@@ -4,11 +4,11 @@
 #include "evaluation.h"
 #include "laplace.h"
 
-#define P 4 //global relative error in L2 norm is O(h^P)
-const unsigned N = 200;  //more N means less iterations for same error
+#define P 5//global relative error in L2 norm is O(h^P)
+const unsigned N = 10;  //more N means less iterations for same error
 const double lx = 2*M_PI;
 const double h = lx/(double)N;
-const double eps = 8e-7; //# of pcg iterations increases very much if 
+const double eps = 1e-7; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 typedef std::vector<std::array<double,P>> ArrVec;

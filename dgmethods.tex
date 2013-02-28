@@ -14,7 +14,7 @@
 
 \renewcommand{\vec}[1]{{\mathbf{#1}}}
 %opening
-\title{Report}
+\title{Discontinuous Galerkin Methods}
 \author{Matthias  Wiesenberger}
 
 % in vim write a word and press F5 to get a begin-end structure (or \usepackage in the header)
@@ -25,35 +25,41 @@
 \maketitle
 
 \begin{abstract}
-    In this report we review the discontinuous Galerkin methods used to solve the global toefl equations. 
+    In this report we review the discontinuous Galerkin methods used to discretize the global toefl equations. 
 \end{abstract}
 
 \section{Introduction}
-The idea of a Discontinuous Galerkin (DG) method is to approximate the solution 
+The name discontinuous Galerkin (DG) compasses a whole family of discretization
+methods for elliptic and the spatial derivatives of hyperbolic and parabolic
+differential equations. 
+The main idea of a Discontinuous Galerkin (DG) method is to approximate the solution 
 of a differential equation by a polynomial in each grid-cell. 
 In classical finite element methods continuity is required across cell boundaries. 
-In the DG method we allow discontinuities at cell boundaries. Interior penalty 
-methods (IP) then introduce penalty terms in the differential equations 
-to guarantee that the jumps be small and vanish in the limit of infinite 
-resolution. On the other hand the Runge-Kutta DG methods (RKDG) and local 
-discontinuous Galerkin methods (LDG) rather introduce numerical fluxes. This
-approach seems closer to the physical properties of the system and we 
-will use the latter methods to solve the toefl equations.
+DG methods in contrast allow discontinuities across cell boundaries. 
+A major benefit of DG above other discretization methods is their high parallelizability,
+while retaining high order at the same time. This is because the resulting 
+ stencils remain local.
 
-In its simplified form with vanishing ion temperature and curvature they 
-ressemble the 2D incompressible Euler equations. 
-[Liu, Journal of Computational Physics, 2000] proposed a method to solve the 
-incompressible 2D Euler equations, but they used continuous finite element methods
-to solve for the stream function in Poissons equation. We will follow their approach
-in discretizing the convective part of the equations but we will use a local 
-discontinuous galerkin method for solving the Poisson equation. 
+We will use the so called local discontinuous Galerkin method (LDG) in order 
+to discretize the Laplacians and Runge-Kutta DG methods (RKDG) for 
+the consistent discretization of convective derivatives. The latter methods
+have developped hand in hand with the flux-conservative and slope-limiter 
+concepts in finite volume methods, and thus are well - suited for 
+conservation equations and can be easily made shock-capturing. 
+This hopefully balances the disadvantage of multiple right-hand-side
+evaluations above multistep or multivalue algorithms.
+We will follow [Liu, Journal of Computational Physics, 2000] 
+in discretizing the convective part of our equations.
 Local discontinuous Galerkin methods were actually introduced by [ Cockburn and Shu, 1998] for the discretisation of parabolic equations, but
 it was later found that the method and its advantages could also be used for the solution of elliptic 
-equations. 
-[Arnold et al., J. NUMER. ANAL., 2002] then highlighted the relation of this method to the interior penalty (IP) and other alternative methods. 
-[Cockburn et al., J.NUMER. ANAL. ,2001] proved a superconvergence result for the local discontinuous Galerkin approach in cartesian grids, which makes the method seem 
+equations (namely Poisson's equation). 
+[Arnold et al., J. NUMER. ANAL., 2002] highlighted the relation 
+of this method to interior penalty and other alternative methods. 
+[Cockburn et al., J.NUMER. ANAL. ,2001] proved a superconvergence result for the 
+local discontinuous Galerkin approach in cartesian grids, which makes the method seem 
 quite attractive. 
-In a first approach we use a explicit (3rd order) Runge-Kutta method for the time discretization, but we might want to try higher order methods as well.   
+In a first approach we use an explicit (3rd order) Runge-Kutta method for 
+the time discretization, but we might want to try higher order methods as well.   
 An excellent review of the Runge-Kutta discontinuous Galerkin methods can be found in [Cockburn et al., Journal of scientific Comp., 2001]. 
 
 
@@ -64,80 +70,82 @@ time step as well. An alternative approach might be to fix the spatial grid,
 use a fixed stepsize and increase or decrease the order of the polynomials to 
 achieve lower or higher resolution. 
 
-\section{The toefl equations}
-For vanishing ion-temperature we have
-\begin{subequations}
-    \begin{align}
-        (\partial_t + \vec v \cdot \nabla )n_e &= d(\phi - n_e) \\
-        (\partial_t + \vec v \cdot \nabla )n_i &= 0\\
-        \Delta \phi &= n_e - n_i
-    \end{align}
-    \label{eq:toefl}
-\end{subequations}
-The velocity is given by $\vec v = \nabla^{\perp}\phi$, with $\nabla^{\perp} = (-\partial_y, \partial_x)$.
-We pose the usual free-slip boundary conditions on $\phi$ and Dirichlet boundary 
-conditions on $n_e$ and $n_i$ in the $x-$direction. 
-\begin{align}
-    n_{e/i}(x=0) &= 0\\
-    n_{e/i}(x=1) &= g_{e/i}\\
-    \omega( x=0,1) &= 0
-    \label{eq:boundary}
-\end{align}
-In the $y-$direction periodic boundary conditions are justified.
-\section{ Spatial discretization}
-We now begin to discretize equ. (\ref{eq:toefl}) in space. 
-We choose a test-function $v$ and integrate over one element $K \in T_h(\Omega)$ 
-of our tesselation with typical element size $h$. The space of test functions is
-\begin{align}
-    V_h := \{ v \in L^2(\Omega) \ :\  v|_K\in P(K)\ \ \forall K\in T_h\}
-    \label{eq:test_space}
-\end{align}
-where $P(K)$ is the space of polynomials of degree at most $p$ on $K$. 
-In an intuitive sense the functions of this space are double valued on the edges
-$\partial K$. (Although the Lebesgue measure of $L^2(\Omega)$ doesn't permit 
-to speak of a value of a function at a certain point (null set) $P(K)$ does).
-Keep this point in mind when considering the following integrals. 
-First consider the convective part and integrate by parts. 
-\begin{subequations}
-\begin{align}
-    \int_K (\partial_t n) v dV + \int_K \vec v\cdot \nabla n v dV = \\
-    \int_K (\partial_t n) v dV + \int_{\partial K} j^{\perp}_K v dA - \int_K n \{\phi, v\}dV 
-\end{align}
-\end{subequations}
-Here $j^{\perp}_K = (\hat n_K \cdot \nabla^{\perp} \phi) n$ is the numerical flux out of cell $K$.  Note that the whole 
-ingenuity of a discontinuous galerkin solver is hidden in the appropriate choice 
-of the numerical fluxes. Recall that both $\phi$ and $n$ are discontinuous 
-on the boundaries. Our numerical flux chooses a single(!) value on each edge. (In
-fact single-valuedness is precisely the condition for a conservative scheme)
-We will choose a consistent upwind flux
-\begin{align}
-    j^{\perp}_K = \begin{cases}
-                    j_{K_i}\  \text{if}\  \hat n_K \cdot \vec v > 0  \\
-                    j_{K_e}\  \text{if}\  \hat n_K \cdot \vec v < 0 
-                    \end{cases}
-    \label{eq:flux}
-\end{align}
-The subscripts $i$ and $e$ denote the interior vs. the exterior of cell $K$.
-
-The next step would be to discretize the equations in time, but befor we do that
-we shed some light on the linear Poisson equation. 
-
-
+%\section{The toefl equations}
+%For vanishing ion-temperature we have
+%\begin{subequations}
+%    \begin{align}
+%        (\partial_t + \vec v \cdot \nabla )n_e &= d(\phi - n_e) \\
+%        (\partial_t + \vec v \cdot \nabla )n_i &= 0\\
+%        \Delta \phi &= n_e - n_i
+%    \end{align}
+%    \label{eq:toefl}
+%\end{subequations}
+%The velocity is given by $\vec v = \nabla^{\perp}\phi$, with $\nabla^{\perp} = (-\partial_y, \partial_x)$.
+%We pose the usual free-slip boundary conditions on $\phi$ and Dirichlet boundary 
+%conditions on $n_e$ and $n_i$ in the $x-$direction. 
+%\begin{align}
+%    n_{e/i}(x=0) &= 0\\
+%    n_{e/i}(x=1) &= g_{e/i}\\
+%    \omega( x=0,1) &= 0
+%    \label{eq:boundary}
+%\end{align}
+%In the $y-$direction periodic boundary conditions are justified.
+%\section{ Spatial discretization}
+%We now begin to discretize equ. (\ref{eq:toefl}) in space. 
+%We choose a test-function $v$ and integrate over one element $K \in T_h(\Omega)$ 
+%of our tesselation with typical element size $h$. The space of test functions is
+%\begin{align}
+%    V_h := \{ v \in L^2(\Omega) \ :\  v|_K\in P(K)\ \ \forall K\in T_h\}
+%    \label{eq:test_space}
+%\end{align}
+%where $P(K)$ is the space of polynomials of degree at most $p$ on $K$. 
+%In an intuitive sense the functions of this space are double valued on the edges
+%$\partial K$. (Although the Lebesgue measure of $L^2(\Omega)$ doesn't permit 
+%to speak of a value of a function at a certain point (null set) $P(K)$ does).
+%Keep this point in mind when considering the following integrals. 
+%First consider the convective part and integrate by parts. 
+%\begin{subequations}
+%\begin{align}
+%    \int_K (\partial_t n) v dV + \int_K \vec v\cdot \nabla n v dV = \\
+%    \int_K (\partial_t n) v dV + \int_{\partial K} j^{\perp}_K v dA - \int_K n \{\phi, v\}dV 
+%\end{align}
+%\end{subequations}
+%Here $j^{\perp}_K = (\hat n_K \cdot \nabla^{\perp} \phi) n$ is the numerical flux out of cell $K$.  Note that the whole 
+%ingenuity of a discontinuous galerkin solver is hidden in the appropriate choice 
+%of the numerical fluxes. Recall that both $\phi$ and $n$ are discontinuous 
+%on the boundaries. Our numerical flux chooses a single(!) value on each edge. (In
+%fact single-valuedness is precisely the condition for a conservative scheme)
+%We will choose a consistent upwind flux
+%\begin{align}
+%    j^{\perp}_K = \begin{cases}
+%                    j_{K_i}\  \text{if}\  \hat n_K \cdot \vec v > 0  \\
+%                    j_{K_e}\  \text{if}\  \hat n_K \cdot \vec v < 0 
+%                    \end{cases}
+%    \label{eq:flux}
+%\end{align}
+%The subscripts $i$ and $e$ denote the interior vs. the exterior of cell $K$.
+%
+%The next step would be to discretize the equations in time, but befor we do that
+%we shed some light on the linear Poisson equation. 
+%
+%
 \section{ Discretization of Poisson's equation}
+We begin with a discretization scheme for the Laplacian in Poisson's equation.
 We choose our spatial grid as the product room of two one dimensional
 discretizations: $T_h := I_x \times I_y$ such that element $K_{ij} = I_i \times I_j$,
-i.e. a rectangle. With this choice we are able to choose basis functions 
-of $P(K)$ via simple products of orthogonal Legendre polynomials: 
+is a rectangle. With this choice we are able to choose basis functions 
+of $P(K)$, the space of polynomials of degree at most $p$ on $K$, 
+via simple products of orthogonal Legendre polynomials: 
 $p_{ij}(x,y) := p_i(x) p_j(y)$. Poisson's equation thus can be written as
 \begin{align}
     \Delta \phi = \partial_x^2 \phi + \partial_y^2 \phi = (\Eins_y \otimes \hat O_x + \hat O_y \otimes \Eins_x) \phi = \rho
     \label{eq:product_discretization}
 \end{align}
-where $\hat O_x$ is the DG discretization of $\partial_x^2$. This means we 
+where $\hat O_{x/y}$ is the DG discretization of $\partial_{x/y}^2$. This means we 
 can concentrate on discretizing the 1D Poisson equation and then use
 equation (\ref{eq:product_discretization}) to get a formula for the 2D Poisson 
 equation.
-Before we dive into things it seems justified to take a closer look at the 
+Before we dive right into things it seems justified to take a closer look at the 
 properties of the Legendre polynomials and to define some useful quantities.
 \subsection{ The Legendre polynomials}
 Legendre polynomials can be recursively defined on $[-1,1]$ by setting
@@ -160,13 +168,13 @@ and complete in $L^2([-1,1])$ with the standard $L^2$-norm. We thus have
     c_n = \frac{2n+1}{2}\int_{-1}^{1} f(x)p_n(x)dx
     \label{eq:coefficient}
 \end{align}
-and will also write
-\begin{align}
-    \Eins = \sum_{n=0}^\infty \frac{2n+1}{2}|p_n><p_n|
-    \label{eq:completeness}
-\end{align}
-Note that the recursion formula (\ref{eq:recursion}) allows the use of 
-Clenshaw's algorithm to evaluate sums of the form (\ref{eq:expansion}).
+%and will also write
+%\begin{align}
+%    \Eins = \sum_{n=0}^\infty \frac{2n+1}{2}|p_n><p_n|
+%    \label{eq:completeness}
+%\end{align}
+%Note that the recursion formula (\ref{eq:recursion}) allows the use of 
+%Clenshaw's algorithm to evaluate sums of the form (\ref{eq:expansion}).
 We also note that $\forall n$ and $x\in[-1,1]$
 \begin{subequations}
 \begin{align}
@@ -175,12 +183,45 @@ We also note that $\forall n$ and $x\in[-1,1]$
 \end{align}
 \label{eq:boundaries}
 \end{subequations}
-We define some useful quantities for $i,j=0,1,\dots,p$
+Analogous to discrete fourier transforms there also exist discrete formulations
+of the orthogonal and completeness relations for Legendre polynomials.
+For $j=0,\dots,P-1$ we write $x_j$ and $w_j$ as abscissas and weights of 
+Gauss-Legendre integration and note
+\begin{align}
+    s_{kl} := \int_{-1}^1 p_k(x)p_l(x) dx = \sum_{j=0}^{P-1} w_jp_k (x_j)p_l(x_j) = \frac{2}{2k+1}\delta_{kl} =: s_k \delta_{kl}
+    \label{}
+\end{align}
+since Gauss-Legndre integration is exact for polynomials of degree at most $2P-1$.
+The discrete completeness relation reads
+\begin{align}
+    \sum_{k=0}^{P-1} \frac{2k+1}{2}w_j p_k(x_i)p_k(x_j) = \delta_{ij} 
+    \label{}
+\end{align}
+We thus have for $f_j = f(x_j)$
+\begin{subequations}
+\begin{align}
+    c_k = \frac{2k+1}{2}\sum_{j=0}^{P-1}w_j p_k(x_j) f_j =: \sum_{j=0}^{P-1} F_{kj}f_j\\
+    f_j = \sum_{k=0}^{P-1} p_k(x_j) c_k =: \sum_{j=0}^{P-1} B_{jk}c_k
+\end{align}
+\end{subequations}
+Note that $c_0 = \frac{1}{2}\sum_{j=0}^{P-1} w_j f_j \approx \int_{-1}^1 f(x)dx$.
+We then also have the useful formula for the approximation of the $L^2$ norm of f:
+\begin{align}
+   \int_{-1}^1 |f|^2 dx \approx \sum_{j=0}^{P-1} w_jf_j^2 = \sum_{j=0}^{P-1}s_0 F_{0j}f_j^2 = \sum_{j=0}^{P-1} s_jc_j^2  
+    \label{}
+\end{align}
+In order to use Legendre polynomials in our grid cells we have to transform them 
+appropriately:
+\begin{align}
+    p^n_j(x) = p_j( 2/h_n(x-x_n))
+    \label{}
+\end{align}
+We define some useful quantities for $i,j=0,1,\dots,P-1$
 \begin{subequations}
     \begin{align}
-        s_{ij} &:= \int_{-1}^1 p_i(x)p_j(x) dx = \frac{2}{2i+1}\delta_{ij} = s_{ji}\\ 
-        t_{ij} &:= s^{-1}_{ij} = \frac{2i+1}{2}\delta_{ij} = t_{ji}\\
-        d_{ij} &:= \int_{-1}^1 p_i(x)\partial_xp_j(x) dx\\
+        s_{ij} &:= \int_{-h/2}^{h/2} p_i(2/h x)p_j(2/h x) dx = \frac{h}{2i+1}\delta_{ij} =: s_i \delta_{ij}\\ 
+        t_{ij} &:= s^{-1}_{ij} = \frac{2i+1}{h}\delta_{ij} =: t_i \delta_{ij}\\
+        d_{ij} &:= \int_{-h/2}^{h/2} p_i(2/h x)\partial_xp_j(2/h x) dx\\
         r_{ij} &:= p_i(1)p_j(1) = 1 = r_{ji}\\
         l_{ij} &:= p_i(-1)p_j(-1) = (-1)^{i+j} = l_{ji}\\
         rl_{ij}&:= p_i(1)p_j(-1) = (-1)^j\\
@@ -192,10 +233,10 @@ In order to get the elements of $D_{ij}$ we first note that $D_{ij} = 0$ for
 $i > j-1$ because $\partial_x p_j(x)$ is a polynomial of degree $j-1$. Then
 we use the integration by parts formula to get
 \begin{align}
-    D = R - L - D^T
+    (D+L) = (R-D)^T
     \label{eq:legendre_derivative}
 \end{align}
-i.e. $D_{ij} = 1 - (-1)^{i+j}$ for $i\le (j-1)$. We thus have e.g. for $p=3$
+i.e. $D_{ij} = 1 - (-1)^{i+j}$ for $i\le (j-1)$. We thus have e.g. for $P=4$
 \begin{align}
     D = \begin{pmatrix}
         0 & 2 & 0 & 2 \\
@@ -205,21 +246,20 @@ i.e. $D_{ij} = 1 - (-1)^{i+j}$ for $i\le (j-1)$. We thus have e.g. for $p=3$
     \end{pmatrix}
     \label{eq:example_derivative}
 \end{align}
+We thus have that $S(h)$ and $T(h)$ are the only projection matrices that dependent on the gridsize $h$.
 
 \subsection{Discretization of the 1d Poisson equation}
 We want to solve 
 \begin{align}
-    -c\partial_x^2\phi(x) = \rho(x)
+    -\partial_x^2\phi(x) = \rho(x), \ \ \ x\in [0,1]
     \label{eq:1d_poisson}
 \end{align}
-where $c$ includes a possible normalisation factor stemming 
-from a coordinate transformation. We don't absorb $c$ into $\rho$ since
-the analogon is not possible in two dimensions with two different constants.
-We now rewrite Poisson's equation as two first order equations.
-Denote $j = -c\partial_x \phi$ and write
+for various boundary conditions specified later.
+We first rewrite Poisson's equation as two first order equations.
+Denote $j = -\partial_x \phi$ and write
 \begin{subequations}
 \begin{align}
-    j + c\partial_x \phi &= 0\\
+    j + \partial_x \phi &= 0\\
     \partial_x j &= \rho 
     \label{eq:poisson}
 \end{align}
@@ -229,7 +269,7 @@ support only in cell $I^n$ and
 integrate by parts.
 \begin{subequations}
     \begin{align}
-        \int_{I^n} j_h w dx &= c\int_{I^n}\phi_h\partial_x w dx - c[\phi_f w]_{x_{n-1/2}}^{x_{n+1/2}} \\
+        \int_{I^n} j_h w dx &= \int_{I^n}\phi_h\partial_x w dx - [\phi_f w]_{x_{n-1/2}}^{x_{n+1/2}} \\
         \int_{I^n} \rho v dx &= -\int_{I^n} j_h\partial_x v dx + [j_f v]_{x_{n-1/2}}^{x_{n+1/2}}
     \end{align}
     \label{eq:dg_poisson}
@@ -325,7 +365,7 @@ In equation (\ref{eq:dg_poisson}) we take $v=p_{ni}(x)$ and  $w=p_{nj}(x)$
 and get
 \begin{subequations}
     \begin{align}
-        s_{jk} j_{nk} &= c (\phi_{nk}D_{kj} - \phi_{n+1,k}p_k(-1)p_j(1) + \phi_{nk}p_k(-1)p_j(-1)\\
+        s_{jk} j_{nk} &=  (\phi_{nk}D_{kj} - \phi_{n+1,k}p_k(-1)p_j(1) + \phi_{nk}p_k(-1)p_j(-1)\\
         s_{ik} \rho_{nk} &= -j_{nk} D_{ki} + j_{nk}p_k(1)p_i(1) - j_{n-1,k}p_k(1)p_i(-1) \nonumber \\
          &+ [\phi_h](x_{n+1/2}) p_i(1) - [\phi_h](x_{n-1/2})p_i(-1) \\
         [\phi_h](x_{n+1/2}) &= \phi_{nk}p_k(1) - \phi_{n+1,k}p_k(-1)
@@ -335,9 +375,9 @@ and get
 Now we use the previously introduced operator notation to enhance readability
 \begin{subequations}
     \begin{align}
-        (\Eins \otimes S)j =& c[\Eins\otimes (D^T+L) - \Eins^{+} \otimes RL] \phi \\
-        (\Eins \otimes S)\rho =& [ -\Eins \otimes D^T + \Eins\otimes R - \Eins^{-} \otimes RL^T]j  \nonumber \\
-                +&[\Eins\otimes R - \Eins^{+}\otimes LR^T - \Eins^{-} \otimes RL^T + \Eins \otimes L]\phi\nonumber \\
+        (\Eins \otimes S)j =& [\Eins\otimes (D+L)^T - \Eins^{+} \otimes RL] \phi \\
+        (\Eins \otimes S)\rho =%& [ -\Eins \otimes D^T + \Eins\otimes R - \Eins^{-} \otimes RL^T]j  \nonumber \\
+                %+&[\Eins\otimes R - \Eins^{+}\otimes LR^T - \Eins^{-} \otimes RL^T + \Eins \otimes L]\phi\nonumber \\
                 =& [\Eins\otimes (D+L) - \Eins^-\otimes LR]j \nonumber \\
                 +& [\Eins\otimes (L+R) - \Eins^{-}\otimes LR  - \Eins^{+} \otimes RL] \phi
     \end{align}
@@ -347,24 +387,23 @@ where we used $R-D^T = D+L$ and $LR^T = RL$. Now we insert $j$ into the equation
 for $\rho$ and make use of bilinearity and the tensor product and inversion rules:
 \begin{align}
     (\Eins\otimes S)\rho = 
-    [\Eins&\otimes( cD\circ T\circ D^T + c(D\circ T\circ L+(D\circ T\circ  L)^T) 
-                    + cL\circ T\circ L + L + R) \nonumber \\
-            + \Eins^-\circ\Eins^+&\otimes (cLR\circ T\circ RL) \nonumber \\
-            - \Eins^+&\otimes (c(D+L)\circ T \circ RL + RL) \nonumber \\
-            - \Eins^-&\otimes (cLR\circ T\circ (D^T+L) + LR )]\phi
+    [\Eins&\otimes( (D+L)\circ T\circ (D+L)^T  L + R) \nonumber \\
+            + \Eins^-\circ\Eins^+&\otimes (LR\circ T\circ RL) \nonumber \\
+            - \Eins^+&\otimes ((D+L)\circ T \circ RL + RL) \nonumber \\
+            - \Eins^-&\otimes (cLR\circ T\circ (D+L)^T + LR )]\phi
     \label{eq:laplace_operator}
 \end{align}
 From this form we can explicitely see that the resulting operator matrix is 
 symmetric. (Note that $L^T = L$, $R^T = R$, $T^T = T$ and $\Eins^-\circ \Eins^+ = \Eins$ for
 periodic boundaries). 
-We name two independent matrices $A$ and $B$
+We name two independent matrices $A = (D+L)T(D+L)^T + L + R + LR T RL$ and $B = -\left( (D+L)T RL + RL \right)$ 
 and remark the tridiagonal structure of the resulting matrix
 \begin{align}
    M =  \begin{pmatrix}
-        A&B& &B \\
+        A&B& &B^T \\
         B^T&A&B& \\
          &B^T&A&B\\
-        B^T& &B^T&A
+        B& &B^T&A
     \end{pmatrix} 
     \label{eq:operator_matrix_periodic}
 \end{align}
@@ -376,7 +415,8 @@ That means that we have to solve the equation
     \label{eq:linear_system}
 \end{align}
 where $M$ is a symmetric positive definite matrix. We choose to solve 
-this via a conjugate gradient method (without preconditioning) for several reasons. 
+this via a conjugate gradient method with $T(h)$ as a preconditioner
+for several reasons. 
 First and most importantly  
 an iterative method seems better suited for parallel implementation than a
 direct solver, because the computational expensive matrix-vector products 
@@ -390,7 +430,7 @@ The second reason is that we can use the information of previous timesteps
 to extrapolate the solution to (\ref{eq:linear_system}) in the 
 current timestep.
 This guess can then be used as the seed for the iteration and hopefully 
-saves a lot of iterations and the need for a preconditioner. 
+saves iterations and the need for a sophisticated preconditioner. 
 
 We lastly remark that for peridic boundary conditions $M$ contains all 
 the information on the discretization of the Laplace operator and can be used
@@ -431,9 +471,9 @@ The equation for $\rho$ read:
     \Eins\otimes S \rho = 
     \begin{pmatrix}
         D &0 & &\\
-        -LR & (R-D^T) &0 & \\
-            & -LR & (R-D^T) &0\\
-            & & -LR & (R-D^T)
+        -LR & D+L &0 & \\
+            & -LR & D+L &0\\
+            & & -LR & D+L
     \end{pmatrix}j+\nonumber \\
     \begin{pmatrix}
         L+R & -RL & &\\
@@ -457,9 +497,9 @@ We only treat homogenous Neumann BC and state the result:
 \begin{align}
     (\Eins\otimes S) j = c
     \begin{pmatrix}
-        (D^T+L) & -RL & &  \\
-          0 & (D^T + L) & -RL & \\
-            &0& (D^T + L) & -RL \\
+        (D+L)^T & -RL & &  \\
+          0 & (D + L)^T & -RL & \\
+            &0& (D + L)^T & -RL \\
             & &0& -D  
     \end{pmatrix}
     \label{}
@@ -468,36 +508,46 @@ and
 \begin{align}
     (\Eins\otimes S) \rho =
     \begin{pmatrix}
-        (R-D^T) &0 & &\\
-        -LR & (R-D^T) &0 & \\
-            & -LR & (R-D^T) &0\\
+        (D+L) &0 & &\\
+        -LR & (D+L) &0 & \\
+            & -LR & (D+L) &0\\
             & & -LR & -D^T
     \end{pmatrix}j+
     \begin{pmatrix}
         R & -RL & &\\
-        -LR & L+R & -RL&\\
-            & -LR & L+R & -RL\\
+        -LR & (L+R) & -RL&\\
+            & -LR & (L+R) & -RL\\
             & & -LR & L
     \end{pmatrix}\phi
     \label{}
 \end{align}
+\subsection{Numerical experiments}
+We numerically confirm that the solution to $Mx=\overline \rho$ is, in the 
+L2-norm, $O(h^P)$ away from the true solution to $\partial_x^2 \phi = \rho$.
+This confirms the superconvergence property of the method. On an arbitrary grid
+one could only have expected $O(h^{P-1/2})$ convergence.
+We note however that for $P=1$ this gives suboptimal order since the classical 
+$3$-point stencil has order $2$ and not $1$. (the penalty term costs one order)
+
+With $100$ grid points we achieve approximately $10^{-6}$ accuracy for $P=3$ 
+while we
+need $1000$ grid points for $P=2$ to achieve the same accuracy and only 
+$10$ grid points with $P=5$.
+
+On the other side we also note the subtle fact of supraconvergence 
+of the discretization. 
+This means that if we apply the matrix $M$ to the discretization of $\sin(x)$ once
+we cannot(!) expect the result to converge to $\sin(x)$ for vanishing gridsize $h$. 
+Truncation error analysis shows that the scheme indeed has lower order or even is 
+inconsistent for some $P$. This seems contradictory since we have an inconsistent
+discretization on the one hand and on the other hand numerically showed 
+convergence. We note that it is the solution $x$ of $Mx=\overline\rho$ that counts.  
 
 
 
 
 
 
-
-
-
-
-%\begin{figure}[htbp]
-% \centering
-% \includegraphics[width = 0.5\textwidth]{cos.eps}
-% \caption[optional für Bildreferenz]
-%  {Untertext blalslslslsl} 
-%\label{Abb:Konvektionszelle_Teilchen}
-%\end{figure}
 \subsection{Extension to 2D}
 In 2D we want to solve
 \begin{align}
@@ -507,7 +557,7 @@ In 2D we want to solve
 on $\Omega = [-a,a]\times[-b,b]$ with Dirichlet/Neumann BC in $x$ and periodic BC
 in $y$. 
 In the previous sections we managed to derive the DG - discretized version of
-$c\partial_x^2$ for various BC of the heuristic form
+$c\partial_x^2$ for various BC of the heuristic form (valid for periodic BC)
 $M = \Eins\otimes A + \Eins^+ \otimes B + \Eins^- B^T$ where $A$ is symmetric.
 Now we want to construct $\Eins\otimes M  + M \otimes \Eins$. This form 
 suggests an organisation of expansion coefficients $\phi_{nimj}$, i.e. the 
@@ -569,7 +619,7 @@ into three equations
 \end{subequations}
 We note that the only new equation we have to discretize is the middle one.
 We want to derive a discretization that 
-reproduces the version for constant $c$ from the last section. 
+reproduces the version for constant $c=1$ from the last section. 
 We first introduce a useful notation for the product of two DG-expanded functions
 in a given cell
 \begin{align}
@@ -577,12 +627,12 @@ in a given cell
     \label{}
 \end{align}
 where $g(x)$ and $c(x)$ are arbitrary functions.
-$M_{ijk}$ is symmetric in all of its indices and $C_{ik)}$ is the 
+$M_{ijk}$ is symmetric in all of its indices and $C_{ik}$ is the 
 contraction of $M$ with $c$ (and thus also symmetric). 
 Note that the matrix $C = C_n$ 
 depends on the cell index $n$. We thus write
 \begin{align}
-    j_{ni} = T_{ij}C^n_{jk}\overline j_{nk}
+    j_{ni} = T_{ij}C_{njk}\overline j_{nk}
     \label{}
 \end{align}
 All in all, if we now insert the expression for $\overline j$ from the last section
@@ -603,8 +653,8 @@ of two function $a(x,y) = a_{ij}p_i(x)p_j(y)$ and $b(x,y) = b_{mn}p_m(x)p_n(y)$.
 We will write products of the form $M_{kim}M_{ljn}c_{ij}a_{mn} =: C_{kmln}a_{mn}$. 
 Unfortunately we cannot write $C$ as the sum of two seperate operators
 $\Eins\otimes C_x + C_y\otimes \Eins$. That means that we cannot decouple the
-two-dimensional Poisson equation as in the last section. At least it does not
-involve terms from adjacent cell. The generation of the global matrix $M$ will
+two-dimensional Poisson equation as in the last section. 
+The generation of the global matrix $M$ will
 thus be more complicated.
 
 

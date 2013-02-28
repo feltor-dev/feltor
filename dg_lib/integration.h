@@ -15,10 +15,11 @@ template< size_t n>
 struct RHS
 {
     typedef typename std::vector<std::array<double, n>> Vector;
-    RHS(double h ):h(h),lap(h){}
+    RHS(double h, double D):h(h),D(D),lap(h){}
     void operator()( const Vector& y, Vector& yp);
     private:
     double h;
+    double D;
     Laplace<n> lap;
 };
 
@@ -26,7 +27,7 @@ template<size_t n>
 void RHS<n>::operator()( const Vector& y, Vector& yp)
 {
     BLAS2<Laplace<n>, Vector>::dsymv( -1., lap, y, 0., yp);
-    BLAS2<T, Vector>::dsymv( 1., T(h), yp, 0., yp);
+    BLAS2<T, Vector>::dsymv( D, T(h), yp, 0., yp);
 }
 } // namespace dg
 

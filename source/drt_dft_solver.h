@@ -16,6 +16,7 @@ template< size_t n>
 class DRT_DFT_Solver
 {
   public:
+    typedef Matrix<double, TL_DRT_DFT> Matrix_Type;
     /*! @brief Construct a solver for dirichlet type boundary conditions
      *
      * The constructor allocates storage for the solver
