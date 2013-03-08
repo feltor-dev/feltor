@@ -9,7 +9,7 @@ zonal flows.
 ---------------------Algorithmic parameters-------------------
 1) nx (grid points in x)                =   256     (256.)
 2) ny (grid points in y)                =   256     (256.)
-3) dt (time step in units c_s/L_p)      =   0.05    (0.01)
+3) dt (time step in units c_s/L_p)      =   0.01    (0.01)
 ---------------------Boundary conditions----------------------
 4) ly (length of y in units of rho_s)         =   64    (64.)
 5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   1     (1.0)
@@ -31,6 +31,6 @@ quasineutrality condition)
 17) mu_z (mz/mi*Z)(mass)                =   48.0    (large)
 18) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
 ---------------------Miscellaneous----------------------------
-19) itstp (steps between output)        =   3      (5)
+19) itstp (steps between output)        =   2      (5)
 20) OMP_NUM_THREADS                     =   2      (4)
 @ ------------------------------------------------------------

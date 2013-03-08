@@ -180,13 +180,14 @@ int main( int argc, char* argv[])
     try{
         //init_gaussian( ne, 0.1,0.2, 10./128./field_ratio, 10./128., amp);
         //init_gaussian( ne, 0.1,0.4, 10./128./field_ratio, 10./128., -amp);
-        init_gaussian( ne, 0.2,0.5, 10./128./field_ratio, 10./128., amp);
+        //init_gaussian( ne, 0.5,0.5, 10./128./field_ratio, 10./128., amp);
+        init_gaussian( ne, 0.2,0.5, 5./128./field_ratio, 5./128., amp);
         //init_gaussian( ne, 0.1,0.8, 10./128./field_ratio, 10./128., -amp);
         //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
-            //init_gaussian( nz, 0.8,0.5, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian_column( nz, 0.4, 0.05/field_ratio, imp_amp);
+            //init_gaussian( nz, 0.5,0.5, 0.05/field_ratio, 0.05, -imp_amp);
+            init_gaussian_column( nz, 0.4, 0.025/field_ratio, imp_amp);
         }
         std::array< Mat, n> arr{{ ne, nz, phi}};
         //now set the field to be computed

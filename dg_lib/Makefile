@@ -1,12 +1,27 @@
 
 INCLUDE += 
 CXX = g++
-CFLAGS = -Wall -std=c++0x 
+NVCC = nvcc
+CFLAGS = -Wall -std=c++11
+NVCCFLAGS = --compiler-options -Wall -arch=sm_13
 LIBS = -lfftw3 -lm
 DEBUG = 
 
 %_t: %_t.cpp %.h
-	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
+	$(CXX) -DDG_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
+	./$@
+
+quadmat_t: quadmat_t.cu quadmat.cuh
+	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	./$@
+quadmat_b: quadmat_b.cu quadmat.cuh
+	$(NVCC) -O3 $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	./$@
+array_t: array_t.cu array.h
+	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	./$@
+array_b: array_b.cu array.h
+	$(NVCC) -O3 $< $(NVCCFLAGS) $(INCLUDE) -o $@
 	./$@
 
 %_b: %_b.cpp %.h
