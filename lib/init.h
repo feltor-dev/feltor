@@ -11,6 +11,10 @@
 
 namespace toefl
 {
+
+/*! @addtogroup utilities
+ * @{
+ */
 /*! @brief Adds a gaussian to a given matrix
  *
  * The function interprets the given points as inner, cell centered points of a 
@@ -79,9 +83,6 @@ void init_gaussian_column( M& m, const double x0, const double sigma_x, const do
         }
 }
         
-
-
-
 /*! @brief Functor for turbulent bath coefficients
  * 
  */
@@ -113,6 +114,7 @@ private:
 
 };
 
+///@}
 } // namespace toefl
 
 #endif // _TL_INIT_

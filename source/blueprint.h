@@ -7,6 +7,9 @@
 #include "../lib/message.h"
 
 namespace toefl{
+/*! @addtogroup parameters
+ * @{
+ */
 /*! @brief Possible capacities of a toefl solver
  */
 enum cap{   TL_IMPURITY, //!< Include impurities
@@ -220,7 +223,7 @@ class Blueprint
     }
 
 };
-
+///@}
 void Blueprint::consistencyCheck() const
 {
     //Check algorithm and boundaries
@@ -250,6 +253,7 @@ void Blueprint::consistencyCheck() const
         std::cerr << "TL_WARNING: Global solver ignores gradients\n";
         
 }
+
 
 
 } //namespace toefl

@@ -1,6 +1,10 @@
+all: equations.pdf
 
+.PHONY: doc
 
-
+doc:   
+	doxygen Doxyfile
+    
 %.pdf: %.tex
 	latex $*
 	dvips $*

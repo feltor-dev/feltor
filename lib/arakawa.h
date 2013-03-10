@@ -20,6 +20,7 @@ static double boundary( const size_t i0, const size_t j0, const M& lhs, const M&
 
 /*! @brief Implements the arakawa scheme 
  *
+ * @ingroup algorithms
  * The 2D Jacobian is defined as the Poisson bracket:
  \f[ 
  j(x,y) := \{l(x,y), r(x,y)\} = \partial_x l \partial_y r - \partial_y l \partial_x r 

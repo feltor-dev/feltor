@@ -10,6 +10,7 @@ namespace toefl{
 /*! @brief Possible boundary conditions for the ghostmatrix class.
  * Naming follows FFTW R2R kind naming.
  *
+ * @ingroup containers
  * @sa http://en.wikipedia.org/wiki/Discrete_sine_transform
  */
 enum bc { TL_PERIODIC = 0, //!< Periodic boundary
@@ -21,6 +22,7 @@ enum bc { TL_PERIODIC = 0, //!< Periodic boundary
 
 /*! @brief Mimic a Matrix with ghostcells
  *
+ * @ingroup containers
  * The idea is that the access to boundary values doesn't need to be optimized
  * since typically only a small fraction (0.1 - 1%) of the 
  * values in a matrix are boundary values. This means it doesn't hurt to 

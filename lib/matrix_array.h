@@ -7,6 +7,7 @@ namespace toefl{
 
 /*! @brief Make an array of matrices 
  *
+ * @ingroup containers
  * @tparam T same as Matrix
  * @tparam P same as Matrix
  * @tparam n Size of the array to be constructed

@@ -4,6 +4,10 @@
 
 namespace toefl{
 
+
+/*! @addtogroup exceptions
+ * @{
+ */
 /*! @brief Message to be thrown when allocation did not work*/
 class AllocationError: public  Message
 {
@@ -67,6 +71,7 @@ class BoeserIndex: public Message
 };
 ///@endcond
 
+///@}
 
 }
 

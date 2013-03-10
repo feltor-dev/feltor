@@ -10,6 +10,7 @@ namespace toefl{
 
 /*! @brief Expansion class of DRT_DRT for periodic BC in the vertical direction. 
  *
+ * @ingroup fftw
  * A r2r transformation is performed horizontally, i.e. along the lines 
  * of the matrices, and a discrete fourier transformation is performed vertically, i.e. along the columns. 
  * \note Do not copy or assign any Objects of this class!!

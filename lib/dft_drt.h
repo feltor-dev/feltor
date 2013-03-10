@@ -10,6 +10,7 @@ namespace toefl
 {
 /*! @brief Expansion class of DRT_DRT for periodic BC in the horizontal direction
  *
+ * @ingroup fftw
  * First transforms linewise r2c, then transposes (r2r) and transforms linewise r2r.
  * The result is transposed back (r2r). 
  * The Backward transform goes the same way in the other direction.

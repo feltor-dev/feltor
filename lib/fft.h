@@ -23,6 +23,10 @@
  */
 namespace toefl{
 
+/*!@addtogroup fftw
+ * @{
+ */
+
 /*! @brief reinterpret_cast a double to a fftw_complex pointer
 *
 * @param ptr a pointer to double
@@ -116,6 +120,9 @@ fftw_plan plan_dft_1d_r2c( const size_t real_rows, const size_t real_cols, doubl
  * @return the plan
  */
 fftw_plan plan_dft_1d_c2r( const size_t real_rows, const size_t real_cols, fftw_complex* in, double* out, const unsigned flags);
+/*!@ingroup fftw
+ * @}
+ */
 
 ///@cond
 fftw_plan plan_dft_1d_r2c_T( const size_t real_rows, const size_t real_cols, double* in, fftw_complex* out, const unsigned flags);

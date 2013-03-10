@@ -11,6 +11,7 @@ namespace toefl
 {
 
 /*! @brief Solver for periodic boundary conditions of the toefl equations.
+ * @ingroup solvers
  */
 template< size_t n>
 class DFT_DFT_Solver

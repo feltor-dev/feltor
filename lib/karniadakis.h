@@ -7,6 +7,7 @@
 
 namespace toefl{
 /*! @brief Kinds of Stepper coefficients for karniadakis scheme
+ * @ingroup algorithms
  */
 enum stepper { TL_EULER, //!< Euler scheme (use for 1st step)
                TL_ORDER2, //!< 2nd order scheme (use for 2nd step)
@@ -14,6 +15,7 @@ enum stepper { TL_EULER, //!< Euler scheme (use for 1st step)
              };
 
 /*! @brief template traits class for various sets of coefficients in the karniadakis scheme from the karniadakis paper
+ * @ingroup algorithms
  */
 template< enum stepper S>
 struct Coefficients
@@ -47,6 +49,7 @@ const double Coefficients<TL_ORDER3>::beta[3] = {3.,-3.,1.};
 
 /*! @brief pointwise multiply the n x n Matrix of coefficients by a n-vector of matrices  
  *
+ * @ingroup algorithms
  * Compute the system m0 = c00*m0 + c01*m1 + c02*m2 + ..., m1 = ... where all
  * of the elements are matrices and matrix-matrix multiplications are done pointwise.
  * @tparam T1 type of the coefficients i.e. double or std::complex<double>
@@ -94,6 +97,7 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
 
 /*! @brief Multistep timestepper object 
  *
+ * @ingroup algorithms
  * Construction is a bit clumsy but usage is easy. This object is a solution to the
  * problem of computing the two steps in the karniadakis scheme. 
  * One is in x-space the other in fourier space. The goal was to implement a solver

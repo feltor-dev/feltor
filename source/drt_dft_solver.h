@@ -11,6 +11,7 @@ namespace toefl
 {
 
 /*! @brief Solver for dirichlet type x-boundary conditions of the toefl equations.
+ * @ingroup solvers
  */
 template< size_t n>
 class DRT_DFT_Solver

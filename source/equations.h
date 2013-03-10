@@ -9,6 +9,9 @@
 
 namespace toefl{
    
+/*! @addtogroup equations
+ * @{
+ */
 /*! @brief Yield the coefficients for the local Poisson equation
  */
 class Poisson
@@ -111,7 +114,7 @@ class Equations
     const double kappa_y;
     const double tau_i, tau_z;
 };
-
+///@}
 
 void Equations::operator()( QuadMat<complex,2>& c, const double laplace, const complex dy) const
 {

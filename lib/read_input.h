@@ -9,6 +9,7 @@
 namespace toefl{
 /*! @brief Extract paramters from a file 
  *
+ * @ingroup utilities
  * A parameter is recognised by the character '=' directly(!) in front of it. 
  * All other characters are ignored!
  * @param filename 

@@ -5,6 +5,15 @@
 namespace toefl
 {
 
+/**
+* @brief compute the absolute maximum of a given matrix
+*
+* @ingroup utilities
+* @tparam M Matrix class
+* @param field The matrix
+*
+* @return  The maximum value of the matrix
+*/
 template< class M>
 double abs_max( const M& field)
 {
@@ -15,6 +24,18 @@ double abs_max( const M& field)
     return temp;
 }
 
+/**
+* @brief draw a textured quad from a matrix on the screen
+*
+* @ingroup utilities
+* @tparam M The matrix class
+* @param field The field to be plotted
+* @param max The value that corresponds to the highest value in the colormap
+* @param x0 x-position of lower left corner
+* @param x1 x-position of upper right corner
+* @param y0 y-position of lower left corner
+* @param y1 y-position of upper right corner
+*/
 template<class M>
 void drawTexture( const M& field, double max, double x0, double x1, double y0, double y1)
 {

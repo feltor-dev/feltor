@@ -13,6 +13,9 @@
 #include "matrix.h"
 
 namespace toefl{
+/*! @addtogroup utilities
+ * @{
+ */
 /*! @brief POD that contains RGB values for 256 colors*/
 struct colormap_f
 {
@@ -197,6 +200,8 @@ void gentexture_RGBf_temp( Texture_RGBf& tex, const M& theta, const double ray)
             tex(i,j)[2] = cm.B[k];
         }
 }
+
+///@}
 
 } //namespace toefl
 #endif // _TL_TEXTURE_

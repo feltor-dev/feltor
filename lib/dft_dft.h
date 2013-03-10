@@ -10,6 +10,7 @@ namespace toefl{
 
 /*! @brief Class for 2d discrete fourier transformations of Matrix using FFTW
  *
+ * @ingroup fftw
  * Actually just a wrapper for the dft_c2r_2d/r2c_2d plans and execute
  * functions. Note that the dft_c2r_2d execution of fftw is faster than 
  * the procedure 

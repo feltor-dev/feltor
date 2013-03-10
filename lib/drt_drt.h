@@ -9,6 +9,7 @@ namespace toefl
 {
 /*! @brief Class for 2d r2r transformation of Matrix using FFTW
  * 
+ * @ingroup fftw
  * Actually just a wrapper for the r2r_2d plans and execute functions
  * Note that RODFT00 IS significantly slower ( up to a factor of 10)
  * than RODFT01. 

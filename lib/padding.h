@@ -3,7 +3,9 @@
 
 namespace toefl{
 
-/*! @brief Provide various padding types of the Matrix class */
+/*! @brief Provide various padding types of the Matrix class
+ * @ingroup containers
+ */
 enum Padding{ TL_NONE, //!< Don't use any padding
               TL_DFT, //!< Pad lines with 2-cols%2 elements for inplace DFT in horizontal direction.
               TL_DRT_DFT //!< Add two 2-rows%2 lines at end of matrix for inplace DFT in vertical direction
@@ -12,6 +14,7 @@ enum Padding{ TL_NONE, //!< Don't use any padding
 /*! @brief template traits class for the efficient implementation of
  * the access operators in the matrix class.
  *
+ * @containers
  * These functions are also used in copy and construction operators.
  */
 template <enum Padding P> //i.e. TL_NONE

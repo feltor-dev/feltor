@@ -9,8 +9,9 @@
 
 namespace toefl{
 
-
-/*! @brief enum for telling to not allocate memory */
+/*! @brief enum for telling to not allocate memory 
+  @ingroup containers
+  */
 enum Void{ TL_VOID = false //!< Use for not allocating memory in the matrix
             };
 
@@ -35,8 +36,9 @@ template <class T, enum Padding P>
 std::istream& operator>> ( std::istream& is, Matrix<T, P>& mat); 
 
 
-/*! @brief Matrix class of constant size that provides fftw compatible dynamically allocated 2D fields
+/*! @brief Matrix class of constant size that provides fftw compatible dynamically allocated 2D fields 
  *
+ * @ingroup containers
  * The primary goal of the Matrix class is to provide a way to have 
  * a dynamically continuously allocated 2d field for either real or complex values. 
  * Once allocated the size (i.e. the number of rows and columns) of a Matrix cannot be changed any more. 

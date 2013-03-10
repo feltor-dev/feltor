@@ -15,6 +15,7 @@ namespace toefl
 
 /*! @brief class intended for the use in throw statements
  *
+ * @ingroup exceptions
  * The objects of this class store a message (that describes the error when thrown)
  * that can then be displayed in a catch block
  * \code

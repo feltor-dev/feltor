@@ -5,7 +5,9 @@
 
 
 namespace toefl{
-/*! @brief Very simple tool for performance measuring*/
+/*! @brief Very simple tool for performance measuring
+ * @ingroup utilities
+ */
 class Timer
 {
     timeval start;

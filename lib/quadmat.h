@@ -13,6 +13,7 @@
 namespace toefl{
 /*! @brief POD container for quadratic fixed size matrices
  *
+ * @ingroup containers
  * The QuadMat stores its values inside the object.
  * i.e. a QuadMat<double, 2> stores four double variables continously
  * in memory. Therefore it is well suited for the use in the Matrix
@@ -138,8 +139,9 @@ friend std::istream& operator>> ( std::istream& is, QuadMat<T,n>& mat){
 
 };
 
-/*! @brief Return the One Matrix
+/*! @brief Return the One QuadMat
  * @return Matrix containing ones on the diagonal and zeroes elsewhere
+ * @ingroup containers
  */
 template< size_t n>
 QuadMat<double, n> One()
@@ -151,6 +153,7 @@ QuadMat<double, n> One()
 }
 /*! @brief Return the Zero QuadMat
  * @return QuadMat containing only zeroes 
+ * @ingroup containers
  */
 template< size_t n>
 QuadMat<double, n> Zero()

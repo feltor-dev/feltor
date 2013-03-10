@@ -2,9 +2,25 @@
 /*! @namespace toefl
  * @brief This is the namespace for all functions and 
  * classes defined and used by the toefl solvers.
- *
- *
- * @mainpage
+ */
+/*! 
+ * @defgroup TOEFL The TOEFL library
+ * @{
+ *      @defgroup containers Containers
+ *      @defgroup algorithms Numerical schemes
+ *      @defgroup fftw FFTW wrappers
+ *      @defgroup utilities 
+ *      @defgroup exceptions
+ * @}
+ * 
+ * @defgroup INNTO The TOEFL source code
+ * @{
+ *      @defgroup parameters
+ *      @defgroup equations
+ *      @defgroup solvers
+ * @}
+ */
+/*! @mainpage
  * Welcome to the TOEFL library and the INNTO code.
  *
  * @par Structure of the library
