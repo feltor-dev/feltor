@@ -1,7 +1,7 @@
 #ifndef _DG_BLAS_
 #define _DG_BLAS_
 
-#include <assert.h>
+//#include <cassert>
 //#include <vector>
 //#include <array>
 
@@ -11,6 +11,7 @@ namespace dg{
 /*! @brief BLAS Level 1 routines 
  *
  * In an implementation Vector should be typedefed. 
+ * i.e. BLAS1::Vector should give the correct type
  * Only those routines that are actually called need to be implemented.
  * Don't forget to specialize in the dg namespace
  */
@@ -59,6 +60,15 @@ struct BLAS2
      * @param y contains solution on output
      */
     static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y);
+    /*! @brief Symmetric Matrix Vector product
+     *
+     * This routine computes \f[ y = \alpha M x + \beta y \f]
+     * where \f[ M\f] is a symmetric matrix. 
+     * @param m The Matrix
+     * @param x A Vector different from y (except in the case where m is diagonal)
+     * @param y contains solution on output
+     */
+    static void dsymv( const Matrix& m, const Vector& x, Vector& y);
     /*! @brief General dot produt
      *
      * This routine computes the scalar product defined by the symmetric positive definit 
@@ -71,50 +81,9 @@ struct BLAS2
      * @return Scalar product
      */
     static double ddot( const Vector& x, const Matrix& P, const Vector& y);
-
-    //preconditioned CG needs diagonal scaling:
-    /*! @brief Diagonal Scaling
-     *
-     * @param m Diagonal Matrix
-     * @param x Vector elements are scaled by diagonal matrix entries
-     */
-    //static void ddimv( const Matrix& m, Vector& x);
+    static double ddot( const Matrix& P, const Vector& x);
 };
 
-//template <size_t n>
-//struct BLAS1<std::vector<std::array<double,n>>>
-//{
-//    typedef std::vector<std::array<double,n>> Vector;
-//    static double ddot( const Vector& x, const Vector& y)
-//    {
-//        assert( x.size() == y.size());
-//        double sum = 0;
-//        double s = 0;
-//        for( unsigned i=0; i<x.size(); i++)
-//        {
-//            s=0;
-//            for( unsigned j=0; j<n; j++)
-//                s+= x[i][j]*y[i][j];
-//            sum +=s;
-//        }
-//        return sum;
-//    }
-//    static void daxpby( double alpha, const Vector& x, double beta, Vector& y)
-//    {
-//        assert( x.size() == y.size());
-//        if( alpha == 0.)
-//        {
-//            if( beta == 1.) return;
-//            for( unsigned i=0; i<x.size(); i++)
-//                for( unsigned j=0; j<n; j++)
-//                    y[i][j] = beta*y[i][j];
-//            return; 
-//        }
-//        for( unsigned i=0; i<x.size(); i++)
-//            for( unsigned j=0; j<n; j++)
-//                y[i][j] = alpha*x[i][j]+beta*y[i][j];
-//    }
-//};
 
 } //namespace dg
 

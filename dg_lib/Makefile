@@ -1,8 +1,8 @@
 
 INCLUDE += 
-CXX = g++
+CXX = g++ 
 NVCC = nvcc
-CFLAGS = -Wall -std=c++11
+CFLAGS = -Wall -std=c++0x
 NVCCFLAGS = --compiler-options -Wall -arch=sm_13
 LIBS = -lfftw3 -lm
 DEBUG = 

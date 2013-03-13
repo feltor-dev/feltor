@@ -1,5 +1,5 @@
-#ifndef _TL_TIMER_
-#define _TL_TIMER_
+#ifndef _DG_TIMER_
+#define _DG_TIMER_
 
 #include <sys/time.h>
 
@@ -22,4 +22,4 @@ class Timer
 };
 }
 
-#endif //_TL_TIMER_
+#endif //_DG_TIMER_

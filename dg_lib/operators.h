@@ -2,7 +2,7 @@
 #define _DG_OPERATORS_
 
 #include <iostream>
-#include <array>
+#include "array.h"
 
 namespace dg{
 
@@ -89,9 +89,9 @@ class Operator
             ptr[i] *= value;
         return *this;
     }
-    std::array<T,n> operator*(const std::array<T,n>& arr) 
+    Array<T,n> operator*(const Array<T,n>& arr) 
     {
-        std::array<T,n> temp{{(T)0}};
+        Array<T,n> temp{{(T)0}};
         for(unsigned i=0; i<n; i++)
             for( unsigned j=0; j<n; j++)
                 temp[i] += ptr[i*n+j]*arr[j];

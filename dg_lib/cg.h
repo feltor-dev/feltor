@@ -2,9 +2,10 @@
 #define _DG_CG_
 
 #include <cmath>
-#include "blas.h"
-namespace dg{
 
+#include "blas.h"
+
+namespace dg{
 
 // TO DO: check for better stopping criteria using condition number estimates
 /*!@brief class managing ressources for the conjugate gradient method
@@ -37,13 +38,16 @@ template< class Matrix, class Vector>
 unsigned CG<Matrix, Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, double eps)
 {
     double nrm2b = BLAS1<Vector>::ddot(b,b);
-    r = b; BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
+    //r = b; BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
+    //compute r <- -Ax+b
+    BLAS2<Matrix, Vector>::dsymv( A,x,r);
+    BLAS1<Vector>::axpby( 1., b, -1., r);
     p = r;
     double nrm2r_old = BLAS1<Vector>::ddot( r, r); //and store the norm of it
     double alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
-        BLAS2<Matrix, Vector>::dsymv( 1., A, p, 0., ap);
+        BLAS2<Matrix, Vector>::dsymv( A, p, ap);
         alpha = nrm2r_old /BLAS1<Vector>::ddot( p, ap);
         BLAS1<Vector>::daxpby( alpha, p, 1.,x);
         BLAS1<Vector>::daxpby( -alpha, ap, 1., r);
@@ -56,6 +60,17 @@ unsigned CG<Matrix, Vector>::operator()( const Matrix& A, Vector& x, const Vecto
     return max_iter;
 }
 
+/**
+* @brief Functor class for preconditioned conjugate gradient
+*
+* @tparam Matrix Matrix class
+* @tparam Vector Vector class
+* @tparam Preconditioner Precondtioner class
+* BLAS1<Vector> functions daxpby and ddot must be available
+* BLAS2<Matrix, Vector> function dsymv( A,x,y) must be available
+* BLAS2<Preconditioner, Vector> function dsymv( a, P, x, b, y) 
+         and ddot( P, x) must be available
+*/
 template< class Matrix, class Vector, class Preconditioner>
 class PCG
 {
@@ -89,17 +104,19 @@ template< class Matrix, class Vector, class Preconditioner>
 unsigned PCG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, double eps)
 {
     double nrm2b = BLAS2<Preconditioner, Vector>::ddot( b,P,b);
-    r = b; BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
-    BLAS2<Preconditioner, Vector>::dsymv(1.,P, r, 0., p );//<-- compute p_0
+    //r = b; BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
+    BLAS2<Matrix, Vector>::dsymv( A,x,r);
+    BLAS1<Vector>::daxpby( 1., b, -1., r);
+    BLAS2<Preconditioner, Vector>::dsymv( P, r, p );//<-- compute p_0
     double nrm2r_old = BLAS2<Preconditioner, Vector>::ddot( r,P,r); //and store the norm of it
     double alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
-        BLAS2<Matrix, Vector>::dsymv( 1., A, p, 0., ap);
+        BLAS2<Matrix, Vector>::dsymv( A, p, ap);
         alpha = nrm2r_old /BLAS1<Vector>::ddot( p, ap);
         BLAS1<Vector>::daxpby( alpha, p, 1.,x);
         BLAS1<Vector>::daxpby( -alpha, ap, 1., r);
-        nrm2r_new = BLAS2<Preconditioner, Vector>::ddot( r,P, r); //<--
+        nrm2r_new = BLAS2<Preconditioner, Vector>::ddot( P, r); //<--
         if( sqrt( nrm2r_new/nrm2b) < eps) 
             return i;
         BLAS2<Preconditioner, Vector>::dsymv(1.,P, r, nrm2r_new/nrm2r_old, p );//<--

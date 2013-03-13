@@ -11,12 +11,12 @@ class Array
 {
   public:
     /*! @brief No values are assigned*/
-    Array(){}
+    __host__ __device__ Array(){}
     /*! @brief Initialize elements to a value
      *
      * @param value The initial value
      */
-    Array( const T& value)
+    __host__ __device__ Array( const T& value)
     {
         for( unsigned i=0; i<n; i++)
             data[i] = value;
@@ -35,7 +35,7 @@ class Array
      * @param i row index
      * @return reference to value at that location
      */
-    T& operator()(const size_t i){
+    __host__ __device__ T& operator()(const size_t i){
 #ifdef DG_DEBUG
         assert( i < n);
 #endif
@@ -47,25 +47,7 @@ class Array
      * @param i row index
      * @return const reference to value at that location
      */
-    const T& operator()(const size_t i) const {
-#ifdef DG_DEBUG
-        assert( i < n );
-#endif
-        return data[ i];
-    }
-    T& operator[](const size_t i){
-#ifdef DG_DEBUG
-        assert( i < n);
-#endif
-        return data[ i];
-    }
-    /*! @brief const access operator
-     *
-     * Performs a range check if DG_DEBUG is defined
-     * @param i row index
-     * @return const reference to value at that location
-     */
-    const T& operator[](const size_t i) const {
+    __host__ __device__ const T& operator()(const size_t i) const {
 #ifdef DG_DEBUG
         assert( i < n );
 #endif
@@ -95,7 +77,7 @@ class Array
                 is >> mat(i, j);
         return is;
     }
-    friend void daxpby( T alpha, const Array& x, T beta, Array& y)
+    friend __host__ __device__ void daxpby( T alpha, const Array& x, T beta, Array& y)
     {
         for( unsigned i=0; i<n; i++)
             y.data[i] = alpha*x.data[i] + beta*y.data[i];
