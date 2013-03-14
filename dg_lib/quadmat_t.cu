@@ -39,12 +39,6 @@ int main()
     QuadMat<double, 3> k(n);
     cout << "k(n)\n" << k<<endl;
     
-    k = n;
-    cout << "k = n\n" << k<<endl;
-    cout << "comparison: \n k == n: " << (k==n) << " and k !=n " << (k!=n) <<endl;
-    n(1,1) = 0;
-    cout << "comparison with changed n: \n k == n: " << (k==n) << " and k !=n " << (k!=n) <<endl;
-
     thrust::device_vector<dg::QuadMat<double,3> > dn(100, n);
     thrust::device_vector<dg::QuadMat<double,3> > dm(100, m);
     thrust::transform( dn.begin(), dn.end(), dm.begin(), dm.begin(), daxpby_functor( 3,7));

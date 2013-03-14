@@ -1,8 +1,8 @@
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <cmath>
 
+#include "timer.h"
 #include "operators.h"
 #include "evaluation.h"
 #include "laplace.h"
@@ -16,62 +16,46 @@ double sinus(double x){ return /*x*x*x*/sin(2*M_PI*x);}
 double secondsinus(double x){ return /*-6*x*/4.*M_PI*M_PI*sin(2*M_PI*x);}
 
 #define P 5
-const unsigned num_int = 10000;
+const unsigned num_int = 1e5;
 const double lx = 1.;
 typedef std::vector<Array<double, P>> ArrVec;
 typedef dg::Laplace<P> Matrix;
 
 int main()
 {
+    Timer t;
     cout << "Test and see the supraconvergence phenomenon!\n";
     cout << "Order is (P-1): "<<P<<endl;
     cout << "# of intervals is: "<< num_int<<"\n";
     const double h = 1./(double)num_int;
     Matrix l(h); 
+    /*
     cout << " a and b: \n";
     cout << l.get_a()<<endl;
     cout << l.get_b()<<endl;
+    */
 
     ArrVec x = dg::expand< double(&)(double), P>( sinus, 0,lx, num_int);
     ArrVec solution = dg::expand< double(&)(double), P>( secondsinus, 0,lx, num_int);
-    /*
-    cout << "Square norm of sine is : "<<square_norm( x, XSPACE)*h/2.<<endl;
-    cout << "Square norm of solution (779.273) is : "<<square_norm( solution, XSPACE)*h/2.<<endl;
-    */
     
     double s_norm2 = BLAS2<S,ArrVec>::ddot(S(h),x); 
 
     cout << "Square norm of sine is : "<<s_norm2 <<endl;    
     cout << "Square norm of solution is : "<<BLAS2<S, ArrVec>::ddot( S(h), solution) <<endl;
-    //cout << "Sine approximation\n";
-    //cout << x <<endl;
-    //cout << "Solution: \n";
-    //cout << solution << endl;
     ArrVec w( num_int);
+    t.tic();
     dg::BLAS2<Matrix, ArrVec>::dsymv( l, x, w);
+    t.toc();
+    cout << "Multiplication with laplace took: "<<t.diff()<<"s\n";
+    t.tic();
     dg::BLAS2<T, ArrVec>::dsymv(  T(h), w, w);
+    t.toc();
+    cout << "Multiplication with T(h) took: "<<t.diff()<<"s\n";
     double w_norm2 = BLAS2<S, ArrVec>::ddot( S(h), w);
-    //cout << "Approximation: \n";
-    //cout << w <<endl;
     cout << "Square norm of w is: "<< w_norm2 << endl;
     dg::BLAS1<ArrVec>::daxpby( 1., solution, -1., w);
     cout << "Relative error in L2 norm is \n";
     cout << sqrt(BLAS2<S, ArrVec>::ddot(S(h), w)/s_norm2)<<endl;
-    //compute jumps in w
-    //auto jump = dg::evaluate_jump(w);
-    //unsigned interior = jump.size();
-    //cout << "Jumps of approximation \n";
-    //for( unsigned i=0; i<interior; i++)
-    //    cout << jump[i] <<endl;
-
-    /*
-    ofstream os( "error.dat");
-    for( unsigned i=0; i<num_int; i++)
-        os << (double)i*h << " "<< w[i][0] << " "<<solution[i][0]<<" "
-           << w[i][1]<< " "<<solution[i][1]<<"\n";
-           */
-    
-
 
     return 0;
 }

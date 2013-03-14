@@ -12,7 +12,7 @@ DEBUG =
 	./$@
 
 quadmat_t: quadmat_t.cu quadmat.cuh
-	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	$(NVCC) $< $(NVCCFLAGS) $(INCLUDE) -o $@
 	./$@
 quadmat_b: quadmat_b.cu quadmat.cuh
 	$(NVCC) -O3 $< $(NVCCFLAGS) $(INCLUDE) -o $@
