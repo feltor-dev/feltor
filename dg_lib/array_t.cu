@@ -3,7 +3,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "array.h"
+#include "array.cuh"
 #include "blas.h"
 
 using namespace dg;

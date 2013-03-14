@@ -5,7 +5,8 @@
 #include <thrust/device_vector.h>
 
 #include "quadmat.cuh"
-#include "timer.h"
+#include "timer.cuh"
+#include "blas/thrust_vector.cuh"
 
 typedef double real; //daxpby is memory bound so float will only increase by 2
 struct daxpby_functor
@@ -28,12 +29,14 @@ struct daxpby_functor
 };
 
 const unsigned n = 3;
-const unsigned N = 1e6; //GPU is 2-5 times faster
+const unsigned N = 1e5; //GPU is 2-5 times faster
 typedef dg::QuadMat< real, n> Matrix;
-typedef thrust::device_vector< real > Vector;
+typedef thrust::device_vector< Matrix > Vector;
 int main()
 {
     
+    cout << "QuadMat size is: "<<n<<"\n";
+    cout << "Vector size (n*n*N) is: "<<n*N<<"\n";
     dg::Timer t;
     Matrix x, y;
     for( unsigned i=0; i<n; i++)
@@ -46,38 +49,29 @@ int main()
     //Vector xx( N, x), yy( N, y);
     //make std vectors 
     std::vector<Matrix> a(N, x), b(N,y);
-    //convert to real vectors
-    std::vector<real> aa(N*n*n), bb(aa);
-    for( unsigned i=0; i<N; i++)
-        for( unsigned j=0; j<n; j++)
-            for( unsigned k=0; k<n; k++)
-            {
-                aa[i*n*n + j*n + k] = a[i](j,k);
-                bb[i*n*n + j*n + k] = b[i](j,k);
-            }
-    thrust::host_vector<real> ha( aa), hb(bb);
-    Vector da( ha), db(hb);
+    Vector da( a), db( b);
     cudaThreadSynchronize();
 
-    cudaEvent_t start, stop;
-    float time;
-    // create two events 
-    cudaEventCreate( &start); 
-    cudaEventCreate( &stop);
+    //Test dot product
+    double dot;
+    t.tic();
+    dot = dg::BLAS1< Vector>::ddot( da, db);
+    t.toc();
+    std::cout << "GPU ddot took "<<t.diff()<<"s\n";
+    std::cout << "Result: " << dot<< "\n";
 
-    cudaEventRecord( start, 0); // put event start in default stream 0 ( 0 can be omitted)
-    thrust::transform( da.begin(), da.end(), db.begin(), db.begin(), daxpby_functor( 3,7));
-    cudaEventRecord( stop, 0); // put event stop in stream 0
-    cudaEventSynchronize(stop); //since eventrecord is an asynchronous call, one has to wait before calling the next function
-    cudaEventElapsedTime( &time, start, stop); // measure elapsed time in ms 
-    std::cout << "GPU Transformation took "<<time/1000.<<"s\n";
+    //Test daxpy on device and host
+    t.tic();
+    dg::BLAS1< Vector>::daxpby( 3., da, 7., db); 
+    t.toc();
+    std::cout << "GPU daxpby took "<<t.diff()<<"s\n";
     std::cout << "Result (should be 3*x+7*y): \n" << db[db.size()-1]<< "\n";
     t.tic();
     for( unsigned i=0; i<N; i++)
         //b[i] = 3.*a[i] + 7.*b[i];
         daxpby( 3., a[i], 7, b[i]);
     t.toc();
-    std::cout << "CPU Transformation took "<<t.diff()<<"s\n";
+    std::cout << "CPU daxpby took "<<t.diff()<<"s\n";
     std::cout << "Result (should be 3*x+7*y): \n" << b[b.size()-1]<< "\n";
 
     return 0;

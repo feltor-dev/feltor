@@ -19,38 +19,50 @@ typedef thrust::device_vector< Array_t > Vector;
 
 int main()
 {
-    std::cout << "Hello\n";
+    cout << "Array size is: "<<n<<"\n";
+    cout << "Vector size (n*N) is: "<<n*N<<"\n";
     Array_t x; 
     Array_t y; 
     for( size_t i=0; i<n; i++)
     {
-        x( i) = i;
-        y( i) = (double)i-4;
+        x[ i] = i;
+        y[ i] = 2 - (double)i;
     }
     cout << x << y<<"\n";
 
     Vector dx( N, x), dy( N, y);
-    //thrust::device_vector<dg::Array<real,3> > dn(100, n);
-    //thrust::device_vector<dg::Array<real,3> > dm(100, m);
-    std::cout << "Hello\n";
+    thrust::host_vector<Array_t> hx(dx), hy(dy);
     Timer t;
+
+    //Test dot product
+    double dot;
+    t.tic();
+    dot = dg::BLAS1<Vector>::ddot( dx,dy);
+    t.toc();
+    std::cout << "GPU dot took "<<t.diff()<<"s\n";
+    std::cout << "Result: " << dot << "\n";
+    t.tic();
+    dot = 0;
+    for( unsigned i=0; i<N; i++)
+        for( unsigned j=0; j<n; j++)
+            dot += hx[i][j]*hy[i][j];
+    t.toc();
+    std::cout << "CPU dot took "<<t.diff()<<"s\n";
+    std::cout << "Result: " << dot << "\n";
+
     t.tic();
     dg::BLAS1<Vector>::daxpby( 3,dx,7,dy);
     t.toc();
     std::cout << "GPU Transformation took "<<t.diff()<<"s\n";
     std::cout << "Result (should be 3*x+7*y): \n" << dy[dy.size()-1]<< "\n";
 
-    thrust::host_vector<Array_t> hx(dx), hy(dy);
     t.tic();
     for( unsigned i=0; i<N; i++)
         for( unsigned j=0; j<n; j++)
-            hy[i](j) = 3.*hx[i](j) + 7.*hy[i](j);
+            hy[i][j] = 3.*hx[i][j] + 7.*hy[i][j];
     t.toc();
     std::cout << "CPU Transformation took "<<t.diff()<<"s\n";
     std::cout << "Result (should be 3*x+7*y): \n" << hy[hy.size()-1]<< "\n";
 
-
-
     return 0;
-
 }

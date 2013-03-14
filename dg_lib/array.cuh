@@ -1,5 +1,5 @@
-#ifndef _DG_ARRAY_
-#define _DG_ARRAY_
+#ifndef _DG_ARRAY_CUH
+#define _DG_ARRAY_CUH
 
 #include <iostream>
 #include <cassert>
@@ -35,7 +35,7 @@ class Array
      * @param i row index
      * @return reference to value at that location
      */
-    __host__ __device__ T& operator()(const size_t i){
+    __host__ __device__ T& operator[](const size_t i){
 #ifdef DG_DEBUG
         assert( i < n);
 #endif
@@ -47,7 +47,7 @@ class Array
      * @param i row index
      * @return const reference to value at that location
      */
-    __host__ __device__ const T& operator()(const size_t i) const {
+    __host__ __device__ const T& operator[](const size_t i) const {
 #ifdef DG_DEBUG
         assert( i < n );
 #endif
@@ -58,7 +58,7 @@ class Array
     friend std::ostream& operator<<(std::ostream& os, const Array<T,n>& mat)
     {
         for( size_t j = 0;j < n; j++)
-            os << mat(j) << " ";
+            os << mat[j] << " ";
         os << "\n";
         return os;
     }
@@ -72,9 +72,8 @@ class Array
      */
     friend std::istream& operator>> ( std::istream& is, Array<T,n>& mat)
     {
-        for( size_t i=0; i<n; i++)
-            for( size_t j=0; j<n; j++)
-                is >> mat(i, j);
+        for( size_t j=0; j<n; j++)
+            is >> mat[j];
         return is;
     }
     friend __host__ __device__ void daxpby( T alpha, const Array& x, T beta, Array& y)
@@ -89,4 +88,4 @@ class Array
 
 } //namespace dg
 
-#endif //_DG_ARRAY_
+#endif //_DG_ARRAY_CUH

@@ -10,6 +10,8 @@
 #include <iostream>
 #include <assert.h>
 
+#include "array.cuh"
+
 namespace dg{
 /*! @brief POD container for quadratic fixed size matrices
  *
@@ -23,7 +25,7 @@ namespace dg{
  * @tparam n size of the Matrix, assumed to be small 
  */
 template <class T, size_t n>
-class QuadMat
+class QuadMat : public dg::Array<T, n*n>
 {
   public:
     /*! @brief No values are assigned*/
@@ -32,19 +34,10 @@ class QuadMat
      *
      * @param value The initial value
      */
-    __host__ __device__ QuadMat( const T& value)
+    __host__ __device__ QuadMat( const T& value):dg::Array<T, n*n>( value)
     {
-        for( unsigned i=0; i<n*n; i++)
-            data[i] = value;
     }
 
-    /*! @brief set memory to 0
-     */
-    void zero()
-    {
-        for( size_t i = 0; i < n*n; i++)
-            data[i] = 0;
-    }
     /*! @brief access operator
      *
      * Performs a range check if DG_DEBUG is defined
@@ -56,7 +49,7 @@ class QuadMat
 #ifdef DG_DEBUG
         assert( i < n && j < n);
 #endif
-        return data[ i*n+j];
+        return (*this)[ i*n+j];
     }
     /*! @brief const access operator
      *
@@ -69,27 +62,10 @@ class QuadMat
 #ifdef DG_DEBUG
         assert( i < n && j < n);
 #endif
-        return data[ i*n+j];
+        return (*this)[ i*n+j];
     }
 
 
-    /*! @brief two Matrices are considered equal if elements are equal
-     *
-     * @param rhs Matrix to be compared to this
-     * @return true if rhs does not equal this
-     */
-    bool operator!=( const QuadMat& rhs) const{
-        for( size_t i = 0; i < n*n; i++)
-            if( data[i] != rhs.data[i])
-                return true;
-        return false;
-    }
-    /*! @brief two Matrices are considered equal if elements are equal
-     *
-     * @param rhs Matrix to be compared to this
-     * @return true if rhs equals this
-     */
-    bool operator==( const QuadMat& rhs) const {return !((*this != rhs));}
     /*! @brief puts a matrix linewise in output stream
      *
      * @param os the outstream
@@ -121,14 +97,6 @@ class QuadMat
                 is >> mat(i, j);
         return is;
     }
-    friend __host__ __device__ void daxpby( T alpha, const QuadMat& x, T beta, QuadMat& y)
-    {
-        for( unsigned i=0; i<n*n; i++)
-            y.data[i] = alpha*x.data[i] + beta*y.data[i];
-    }
-
-  private:
-    T data[n*n];
 };
 
 /*! @brief Return the One Matrix
