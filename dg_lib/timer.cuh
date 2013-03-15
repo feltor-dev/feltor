@@ -7,7 +7,7 @@ namespace dg{
 /*! @brief Very simple tool for performance measuring*/
 class Timer
 {
-    public:
+public:
     Timer(){
         cudaEventCreate( &start); 
         cudaEventCreate( &stop);
@@ -35,7 +35,7 @@ class Timer
         cudaEventElapsedTime( &time, start, stop);
         return time/1000.;
     }
-    private:
+private:
     cudaEvent_t start, stop;
 };
 

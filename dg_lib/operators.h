@@ -2,7 +2,7 @@
 #define _DG_OPERATORS_
 
 #include <iostream>
-#include "array.h"
+#include "array.cuh"
 
 namespace dg{
 

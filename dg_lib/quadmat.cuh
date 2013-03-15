@@ -46,9 +46,6 @@ class QuadMat : public dg::Array<T, n*n>
      * @return reference to value at that location
      */
     __host__ __device__ T& operator()(const size_t i, const size_t j){
-#ifdef DG_DEBUG
-        assert( i < n && j < n);
-#endif
         return (*this)[ i*n+j];
     }
     /*! @brief const access operator
@@ -59,9 +56,6 @@ class QuadMat : public dg::Array<T, n*n>
      * @return const value at that location
      */
     __host__ __device__ const T& operator()(const size_t i, const size_t j) const {
-#ifdef DG_DEBUG
-        assert( i < n && j < n);
-#endif
         return (*this)[ i*n+j];
     }
 
