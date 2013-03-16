@@ -1,8 +1,17 @@
 
 INCLUDE += 
 NVCC = nvcc
-NVCCFLAGS = --compiler-options -Wall -arch=sm_13
+NVCCFLAGS = --compiler-options -Wall -arch=sm_20
 DEBUG = 
+
+version: version.cu 
+	$(NVCC) $< $(NVCCFLAGS) -o $@
+	./$@
+
+cusp_thrust: cusp_thrust.cu 
+	$(NVCC) $< $(NVCCFLAGS) -o $@
+	./$@
+
 
 %_t: %_t.cu %.cuh
 	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@

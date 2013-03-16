@@ -11,6 +11,7 @@
 
 namespace dg
 {
+    //TODO check for alpha = 0 and beta = 1
 struct daxpby_functor
 {
     daxpby_functor( double alpha, double beta): alpha(alpha), beta(beta) {}
