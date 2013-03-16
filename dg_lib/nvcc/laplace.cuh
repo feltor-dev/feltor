@@ -4,8 +4,8 @@
 #include <cassert>
 #include <cusp/coo_matrix.h>
 
-#include "projection_functions.h"
-#include "operators.h"
+#include "functions.h"
+#include "operators.cuh"
 
 namespace dg
 {
@@ -14,30 +14,33 @@ template<size_t n>
 class Laplace
 {
   public:
-    typedef cusp::coo_matrix<unsigned, double, cusp::host_memory> HMatrix; 
-    typedef cusp::coo_matrix<unsigned, double, cusp::device_memory> DMatrix; 
+    typedef cusp::coo_matrix<int, double, cusp::host_memory> HMatrix; 
+    typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; 
     Laplace( unsigned N, double h = 2., double alpha = 1.);
     const DMatrix& get_m() const {return M;}
   private:
     Operator<double, n> a,b;
     DMatrix M;
-    void add_index( HMatrix&, unsigned&, unsigned i, unsigned j, unsigned k, unsigned l, double value );
+    void add_index( HMatrix&, int&, unsigned i, unsigned j, unsigned k, unsigned l, double value );
 
 };
 
 template<size_t n>
-void Laplace<n>::add_index( HMatrix& hm, unsigned& number, unsigned i, unsigned j, unsigned k, unsigned l, double value )
+void Laplace<n>::add_index( HMatrix& hm, int& number, unsigned i, unsigned j, unsigned k, unsigned l, double value )
 {
     hm.row_indices[number] = n*i+k;
     hm.column_indices[number] = n*j+l;
     hm.values[number] = value;
+
     number++;
+
 }
 
 
 
+//change here if you change sparse matrix type
 template<size_t n>
-Laplace<n>::Laplace( unsigned N, double h, double alpha): M( n*N, n*N, 3*n*n*N)
+Laplace<n>::Laplace( unsigned N, double h, double alpha): M( n*N, n*N, 3*n*n*N, 3*n)
 {
     HMatrix A( n*N, n*N, 3*n*n*N);
     Operator<double, n> l( lilj);
@@ -50,7 +53,7 @@ Laplace<n>::Laplace( unsigned N, double h, double alpha): M( n*N, n*N, 3*n*n*N)
     a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
     b = -((d+l)*t*rl+alpha*rl);
     //assemble the matrix
-    unsigned number = 0;
+    int number = 0;
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
@@ -79,6 +82,9 @@ Laplace<n>::Laplace( unsigned N, double h, double alpha): M( n*N, n*N, 3*n*n*N)
         for( unsigned l=0; l<n; l++)
             add_index( A, number, N-1,N-1,k,l, a(k,l));
     }
+    //std::cout << "ORDERED?\n";
+    //std::cout << A.is_sorted_by_row_and_column() << std::endl;
+    //cusp::ell_matrix<int, double, cusp::host_memory> C(A);
     M=A; //copy matrix to device
 
 };

@@ -2,7 +2,6 @@
 #define _DG_OPERATORS_
 
 #include <iostream>
-#include "array.cuh"
 
 namespace dg{
 
@@ -88,14 +87,6 @@ class Operator
         for( unsigned i=0; i<n*n; i++)
             ptr[i] *= value;
         return *this;
-    }
-    Array<T,n> operator*(const Array<T,n>& arr) 
-    {
-        Array<T,n> temp{{(T)0}};
-        for(unsigned i=0; i<n; i++)
-            for( unsigned j=0; j<n; j++)
-                temp[i] += ptr[i*n+j]*arr[j];
-        return temp;
     }
     friend Operator operator+( const Operator& lhs, const Operator& rhs) 
     {

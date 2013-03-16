@@ -15,7 +15,7 @@ using namespace dg;
 double sinus(double x){ return /*x*x*x*/sin(2*M_PI*x);}
 double secondsinus(double x){ return /*-6*x*/4.*M_PI*M_PI*sin(2*M_PI*x);}
 
-#define P 5
+#define P 3
 const unsigned num_int = 1e5;
 const double lx = 1.;
 typedef std::vector<Array<double, P>> ArrVec;
