@@ -3,6 +3,7 @@
 
 namespace dg{
 
+template< size_t n>
 struct T{
     __host__ __device__ T( double h = 2.):h_(h){}
     __host__ __device__ const double& h() const {return h_;}
@@ -10,6 +11,7 @@ struct T{
     double h_;
 };
 
+template< size_t n>
 struct S{
     __host__ __device__ S( double h = 2.):h_(h){}
     __host__ __device__ const double& h() const {return h_;}
@@ -18,6 +20,6 @@ struct S{
 };
 
 }
-#include "blas/preconditioner.h"
+#include "blas/preconditioner.cuh"
 
 #endif //_DG_PRECONDITIONER_

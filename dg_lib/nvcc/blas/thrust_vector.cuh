@@ -24,21 +24,19 @@ struct daxpby_functor
     double alpha, beta;
 };
 
-template<>
-struct BLAS1<thrust::host_vector<double> >
+template< class ThrustVector>
+double BLAS1<ThrustVector>::ddot( const Vector& x, const Vector& y)
 {
-    typedef thrust::host_vector<double> Vector;
-    static double ddot( const Vector& x, const Vector& y)
-    {
-        return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
-    }
-    
-    static void daxpby( double alpha, const Vector& x, double beta, Vector& y)
-    {
-        thrust::transform( x.begin(), x.end(), y.begin(), y.begin(), daxpby_functor( alpha, beta));
-    }
-};
+    return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
+}
 
+template< class ThrustVector>
+void BLAS1<ThrustVector>::daxpby( double alpha, const Vector& x, double beta, Vector& y)
+{
+    thrust::transform( x.begin(), x.end(), y.begin(), y.begin(), daxpby_functor( alpha, beta));
+}
+
+/*
 template<>
 struct BLAS1<thrust::device_vector<double> >
 {
@@ -53,6 +51,7 @@ struct BLAS1<thrust::device_vector<double> >
         thrust::transform( x.begin(), x.end(), y.begin(), y.begin(), daxpby_functor( alpha, beta));
     }
 };
+*/
 
 
 

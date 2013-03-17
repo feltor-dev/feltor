@@ -1,20 +1,28 @@
 #ifndef _DG_BLAS_PRECONDITIONER_
 #define _DG_BLAS_PRECONDITIONER_
 
-#include "../preconditioner.h"
+#include <thrust/tuple.h>
+#include <thrust/iterator/zip_iterator.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/transform.h>
+#include <thrust/inner_product.h>
+
+#include "../preconditioner.cuh"
+#include "../blas.h"
 
 namespace dg{
 
 template< size_t n>
-struct daxpby_functor_T
+struct dsymv_functor_T
 {
-    typedef thrust::pair< double, int> Pair;
+    typedef thrust::tuple< double, int> Pair;
     dsymv_functor_T( double alpha, double beta): alpha(alpha), beta(beta) {}
     __host__ __device__
         double operator()(const double& x,  const Pair& p)
         {
-            return alpha*x*(2.*thrust::get<1>(p)%n+1.)
-                  + beta*thrust::get<0>(p);
+            double y = alpha*x *(2.* (thrust::get<1>(p)%n)+1.)
+                        + beta*thrust::get<0>(p);
+            return y;
         }
   private:
     double alpha, beta;
@@ -23,13 +31,13 @@ struct daxpby_functor_T
 template< size_t n>
 struct dot_functor_T
 {
-    typedef thrust::pair< double, int> Pair; 
+    typedef thrust::tuple< double, int> Pair; 
     dot_functor_T( double h): h(h){}
     __host__ __device__
     double operator()( const double& x, const Pair& p) 
     {
         //generalized Multiplication
-        return x*thrust::get<0>(p)/h*(2.*thrust::get<1>(p)%n + 1.);
+        return x*thrust::get<0>(p)/h*(2.*(thrust::get<1>(p)%n) + 1.);
     }
 
     private:
@@ -37,70 +45,67 @@ struct dot_functor_T
 };
 
 
-
 template< size_t n>
-struct daxpby_functor_S
+struct dsymv_functor_S
 {
-    typedef thrust::tuple< double, int, double> Tuple;
+    typedef thrust::tuple< double, int> Pair;
     dsymv_functor_S( double alpha, double beta): alpha(alpha), beta(beta) {}
     __host__ __device__
         double operator()( const double x, const Pair& p)
         {
-            return alpha*x/(2.*thrust::get<1>(p)%n+1.)
+            return alpha*x/(2.*(thrust::get<1>(p)%n)+1.)
                   + beta*thrust::get<0>(p);
         }
   private:
     double alpha, beta;
 };
+
 template< size_t n>
 struct dot_functor_S
 {
-    typedef thrust::pair< double, int> Pair; 
-    dot_functor_T( double h): h(h){}
+    typedef thrust::tuple< double, int> Pair; 
+    dot_functor_S( double h): h(h){}
     __host__ __device__
     double operator()( const double& x, const Pair& p) 
     {
         //generalized Multiplication
-        return x*thrust::get<0>(p)*h/(2.*thrust::get<1>(p)%n + 1.);
+        return x*thrust::get<0>(p)*h/(2.*(thrust::get<1>(p)%n) + 1.);
     }
 
     private:
     double h;
 };
 
-template< size_t n>
-struct BLAS2<T, thrust::device_vector<double> >
+template< size_t n, class ThrustVector>
+struct BLAS2<T<n>, ThrustVector>
 {
-    typedef thrust::device_vector<double> Vector;
-    typedef thrust::tuple< double, int, double> Tuple;
-    static void dsymv( double alpha, const T& t, const Vector& x, double beta, Vector& y)
+    typedef T<n> Matrix;
+    typedef ThrustVector Vector;
+    static void dsymv( double alpha, const Matrix& t, const ThrustVector& x, double beta, ThrustVector& y)
     {
         // x and y might be the same
-        thrust::tranform( x.begin(), x.end(), 
+        thrust::transform( x.begin(), x.end(), 
                           thrust::make_zip_iterator( 
-                                make_pair( y.begin(), thrust::make_counting_iterator(0)) ), 
+                                thrust::make_tuple( y.begin(), thrust::make_counting_iterator<int>(0)) ), 
                           y.begin(),
-                          daxpy_functor_T<n>( alpha/t.h(), beta)
+                          dsymv_functor_T<n>( alpha/t.h(), beta)
                           );
     }
-
-
-    static void dsymv( const T& t, const Vector& x, Vector& y)
+    static void dsymv( const Matrix& t, const Vector& x, Vector& y)
     {
         dsymv( 1., t, x, 0., y);
     }
-
-    static double ddot( const Vector& x, const T& t, const Vector& y)
+    static double ddot( const Vector& x, const Matrix& t, const Vector& y)
     {
         return thrust::inner_product(  x.begin(), x.end(), 
-                                thrust::make_zip_iterator( make_pair( y.begin(), thrust::make_counting_iterator(0)) ), 
+                                thrust::make_zip_iterator( thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
                                 0.0,
                                 thrust::plus<double>(),
-                                dot_functor_T(t.h())
+                                dot_functor_T<n>(t.h())
                                 );
 
     }
-    static double ddot( const T& t, const Vector& x) 
+    static double ddot( const Matrix& t, const Vector& x) 
     {
         return ddot( x,t,x);
     }
@@ -108,38 +113,38 @@ struct BLAS2<T, thrust::device_vector<double> >
 };
 
 
-
-template< size_t n>
-struct BLAS2<S, thrust::device_vector<double> >
+template< size_t n, class ThrustVector>
+struct BLAS2<S<n>, ThrustVector >
 {
-    typedef thrust::device_vector<double> Vector;
-    static void dsymv( double alpha, const S& s, const Vector& x, double beta, Vector& y)
+    typedef ThrustVector Vector;
+    typedef S<n> Matrix;
+    static void dsymv( double alpha, const Matrix& s, const Vector& x, double beta, Vector& y)
     {
-        thrust::tranform( x.begin(), x.end(), 
+        thrust::transform( x.begin(), x.end(), 
                           thrust::make_zip_iterator( 
-                                make_pair( y.begin(), thrust::make_counting_iterator(0)) ), 
+                                thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
                           y.begin(),
-                          daxpy_functor_S<n>( alpha*s.h(), beta)
+                          dsymv_functor_S<n>( alpha*s.h(), beta)
                           );
     }
-    static void dsymv( const S& s, const Vector& x, Vector& y)
+    static void dsymv( const Matrix& s, const Vector& x, Vector& y)
     {
         dsymv( 1., s, x, 0., y);
     }
 
-    static double ddot( const Vector& x, const S& s, const Vector& y)
+    static double ddot( const Vector& x, const Matrix& s, const Vector& y)
     {
         return thrust::inner_product(  x.begin(), x.end(), 
-                                thrust::make_zip_iterator( make_pair( y.begin(), thrust::make_counting_iterator(0)) ), 
+                                thrust::make_zip_iterator( thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
                                 0.0,
                                 thrust::plus<double>(),
-                                dot_functor_S(s.h())
+                                dot_functor_S<n>(s.h())
                                 );
     }
-    static double ddot( const S& s, const Vector& x)
+    static double ddot( const Matrix& s, const Vector& x)
     {
         return ddot( x, s, x);
     }
 }; 
-}
+} //nameapce dg
 #endif //_DG_BLAS_PRECONDITIONER_

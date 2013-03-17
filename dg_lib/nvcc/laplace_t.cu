@@ -5,29 +5,35 @@
 #include "laplace.cuh"
 #include "dgvec.cuh"
 
-const unsigned P = 3;
-const unsigned N = 3;
+const unsigned n = 3;
+const unsigned N = 4;
 
 using namespace dg;
 using namespace std;
 
-typedef thrust::device_vector<double> DVector;
+typedef thrust::device_vector< double>   DVec;
+typedef thrust::host_vector< double>     HVec;
+typedef dg::ArrVec1d< double, n, HVec>  HArrVec;
+typedef dg::ArrVec1d< double, n, DVec>  DArrVec;
+
+typedef dg::Laplace<n> Matrix;
+
 int main()
 {
-    ArrVec1d<P> hv( N,  1);
+    HArrVec hv( N,  1);
     for( unsigned k=0; k<N; k++)
-        for( unsigned i=0; i<P; i++)
+        for( unsigned i=0; i<n; i++)
             hv( k, i) = i;
 
-    ArrVec1d<P> hw( N);
-    DVector dv = hv.data();
-    DVector dw = hw.data();
-    Laplace<P> lap( N);
+    HArrVec hw( N);
+    DVec dv( hv.data()), dw( hw.data());
+    Matrix lap( N);
+
     cout << "The DG Laplacian: \n";
     cusp::print( lap.get_m());
-    BLAS2< Laplace<P>, DVector>::dsymv( lap, dv, dw);
-    cusp::array1d_view<DVector::iterator> dv_view( dv.begin(), dv.end());
-    cusp::array1d_view<DVector::iterator> dw_view( dw.begin(), dw.end());
+    BLAS2< Matrix, DVec>::dsymv( lap, dv, dw);
+    cusp::array1d_view<DVec::iterator> dv_view( dv.begin(), dv.end());
+    cusp::array1d_view<DVec::iterator> dw_view( dw.begin(), dw.end());
     cusp::print( dw_view);
     return 0;
 }

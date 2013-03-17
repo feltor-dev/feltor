@@ -2,6 +2,7 @@
 #include <vector>
 #include <array>
 #include <cmath>
+
 #include "evaluation.h"
 #include "operators.h"
 #include "timer.h"

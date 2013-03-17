@@ -18,8 +18,9 @@ cusp_thrust: cusp_thrust.cu
 	./$@
 
 %_b: %_b.cu %.cuh
-	$(NVCC) -O3  $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	$(NVCC) -O3 -w  $< $(NVCCFLAGS) $(INCLUDE) -o $@ 
+	echo "Attention: No compiler warnings are issued!" 
 	./$@
 
 clean:
-	rm -f *_t *_b
+	rm -f *_t *_b cusp_thrust version

@@ -11,9 +11,10 @@ namespace dg{
  * Only those routines that are actually called need to be implemented.
  * Don't forget to specialize in the dg namespace
  */
-template < class Vector>
+template < class VectorClass>
 struct BLAS1
 {
+    typedef VectorClass Vector;
     /*! @brief Euclidean dot product between two Vectors
      *
      * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
