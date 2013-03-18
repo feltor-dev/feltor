@@ -27,11 +27,11 @@ int main()
 
     HArrVec hw( N);
     DVec dv( hv.data()), dw( hw.data());
-    Matrix lap( N);
+    Matrix lap( N, 2);
 
     cout << "The DG Laplacian: \n";
-    cusp::print( lap.get_m());
-    BLAS2< Matrix, DVec>::dsymv( lap, dv, dw);
+    cusp::print( lap.data());
+    BLAS2< Matrix::DMatrix, DVec>::dsymv( lap.data(), dv, dw);
     cusp::array1d_view<DVec::iterator> dv_view( dv.begin(), dv.end());
     cusp::array1d_view<DVec::iterator> dw_view( dw.begin(), dw.end());
     cusp::print( dw_view);

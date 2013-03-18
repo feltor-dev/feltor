@@ -8,9 +8,12 @@
 #include <thrust/inner_product.h>
 
 #include "../preconditioner.cuh"
+#include "thrust_vector.cuh" //load thrust_vector BLAS1 routines
 #include "../blas.h"
 
 namespace dg{
+
+namespace detail{
 
 template< size_t n>
 struct dsymv_functor_T
@@ -75,6 +78,7 @@ struct dot_functor_S
     private:
     double h;
 };
+}//namespace detail
 
 template< size_t n, class ThrustVector>
 struct BLAS2<T<n>, ThrustVector>
@@ -84,11 +88,18 @@ struct BLAS2<T<n>, ThrustVector>
     static void dsymv( double alpha, const Matrix& t, const ThrustVector& x, double beta, ThrustVector& y)
     {
         // x and y might be the same
+        if( alpha == 0)
+        {
+            if( beta == 1) 
+                return;
+            thrust::transform( y.begin(), y.end(), y.begin(), detail::daxpby_functor( 0, beta));
+            return;
+        }
         thrust::transform( x.begin(), x.end(), 
                           thrust::make_zip_iterator( 
                                 thrust::make_tuple( y.begin(), thrust::make_counting_iterator<int>(0)) ), 
                           y.begin(),
-                          dsymv_functor_T<n>( alpha/t.h(), beta)
+                          detail::dsymv_functor_T<n>( alpha/t.h(), beta)
                           );
     }
     static void dsymv( const Matrix& t, const Vector& x, Vector& y)
@@ -101,7 +112,7 @@ struct BLAS2<T<n>, ThrustVector>
                                 thrust::make_zip_iterator( thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
                                 0.0,
                                 thrust::plus<double>(),
-                                dot_functor_T<n>(t.h())
+                                detail::dot_functor_T<n>(t.h())
                                 );
 
     }
@@ -120,11 +131,18 @@ struct BLAS2<S<n>, ThrustVector >
     typedef S<n> Matrix;
     static void dsymv( double alpha, const Matrix& s, const Vector& x, double beta, Vector& y)
     {
+        if( alpha == 0)
+        {
+            if( beta == 1) 
+                return;
+            thrust::transform( y.begin(), y.end(), y.begin(), detail::daxpby_functor( 0, beta));
+            return;
+        }
         thrust::transform( x.begin(), x.end(), 
                           thrust::make_zip_iterator( 
                                 thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
                           y.begin(),
-                          dsymv_functor_S<n>( alpha*s.h(), beta)
+                          detail::dsymv_functor_S<n>( alpha*s.h(), beta)
                           );
     }
     static void dsymv( const Matrix& s, const Vector& x, Vector& y)
@@ -138,7 +156,7 @@ struct BLAS2<S<n>, ThrustVector >
                                 thrust::make_zip_iterator( thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
                                 0.0,
                                 thrust::plus<double>(),
-                                dot_functor_S<n>(s.h())
+                                detail::dot_functor_S<n>(s.h())
                                 );
     }
     static double ddot( const Matrix& s, const Vector& x)

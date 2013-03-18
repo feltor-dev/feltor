@@ -1,7 +1,6 @@
 #ifndef _DG_LAPLACE_CUH
 #define _DG_LAPLACE_CUH
 
-#include <cassert>
 #include <cusp/coo_matrix.h>
 
 #include "functions.h"
@@ -10,23 +9,35 @@
 namespace dg
 {
 
-template<size_t n>
+template<class container = cups::coo_matrix< int, double, cusp::host_memory> >
 class Laplace
 {
   public:
-    typedef cusp::coo_matrix<int, double, cusp::host_memory> HMatrix; 
-    typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; 
-    Laplace( unsigned N, double h = 2., double alpha = 1.);
-    const DMatrix& get_m() const {return M;}
+    typedef container Matrix;  //datatype of the underlying container
+    const container& data() const {return M;}
+    container& data() { return M;}
+    Laplace( container& m): M(m) {}
   private:
-    Operator<double, n> a,b;
-    DMatrix M;
+    Matrix& M;
+  protected:
+    typedef cusp::coo_matrix<int, double, cusp::host_memory> HMatrix; 
     void add_index( HMatrix&, int&, unsigned i, unsigned j, unsigned k, unsigned l, double value );
-
 };
 
-template<size_t n>
-void Laplace<n>::add_index( HMatrix& hm, int& number, unsigned i, unsigned j, unsigned k, unsigned l, double value )
+template< size_t n, class container>
+class Laplace_Per : public Laplace< container>
+{
+  public:
+    Laplace( unsigned N, double h, double alpha = 1.);
+    typedef Laplace<container> View;
+  private:
+    
+    Operator<double, n> a,b;
+};
+
+
+template<class container>
+void Laplace<container>::add_index( HMatrix& hm, int& number, unsigned i, unsigned j, unsigned k, unsigned l, double value )
 {
     hm.row_indices[number] = n*i+k;
     hm.column_indices[number] = n*j+l;
@@ -36,17 +47,17 @@ void Laplace<n>::add_index( HMatrix& hm, int& number, unsigned i, unsigned j, un
 
 }
 
-//change here if you change sparse matrix type
+//change next line if you change sparse matrix type
 template<size_t n>
-Laplace<n>::Laplace( unsigned N, double h, double alpha): M( n*N, n*N, 3*n*n*N, 3*n)
+Laplace<n>::Laplace( unsigned N, double h, double alpha): M( /*n*N, n*N, 3*n*n*N, 3*n*/)
 {
     HMatrix A( n*N, n*N, 3*n*n*N);
-    Operator<double, n> l( lilj);
-    Operator<double, n> r( rirj);
-    Operator<double, n> lr( lirj);
-    Operator<double, n> rl( rilj);
-    Operator<double, n> d( pidxpj);
-    Operator<double, n> t( pipj_inv);
+    Operator<double, n> l( detail::lilj);
+    Operator<double, n> r( detail::rirj);
+    Operator<double, n> lr( detail::lirj);
+    Operator<double, n> rl( detail::rilj);
+    Operator<double, n> d( detail::pidxpj);
+    Operator<double, n> t( detail::pipj_inv);
     t *= 2./h;
     a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
     b = -((d+l)*t*rl+alpha*rl);
@@ -80,9 +91,6 @@ Laplace<n>::Laplace( unsigned N, double h, double alpha): M( n*N, n*N, 3*n*n*N, 
         for( unsigned l=0; l<n; l++)
             add_index( A, number, N-1,N-1,k,l, a(k,l));
     }
-    //std::cout << "ORDERED?\n";
-    //std::cout << A.is_sorted_by_row_and_column() << std::endl;
-    //cusp::ell_matrix<int, double, cusp::host_memory> C(A);
     M=A; //copy matrix to device
 
 };
@@ -106,13 +114,13 @@ class Laplace_Dir
 template<size_t n>
 Laplace_Dir<n>::Laplace_Dir( double h) 
 {
-    Operator<double, n> l( lilj);
-    Operator<double, n> r( rirj);
-    Operator<double, n> lr( lirj);
-    Operator<double, n> rl( rilj);
-    Operator<double, n> d( pidxpj);
-    Operator<double, n> s( pipj);
-    Operator<double, n> t( pipj_inv);
+    Operator<double, n> l( detail::lilj);
+    Operator<double, n> r( detail::rirj);
+    Operator<double, n> lr( detail::lirj);
+    Operator<double, n> rl( detail::rilj);
+    Operator<double, n> d( detail::pidxpj);
+    Operator<double, n> s( detail::pipj);
+    Operator<double, n> t( detail::pipj_inv);
     t *= 2./h;
 
     a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);

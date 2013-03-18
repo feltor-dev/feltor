@@ -28,7 +28,7 @@ int main()
     ArrVec1d<double, P> hw( N);
     DVec dv = hv.data();
     DVec dw = hw.data();
-    Laplace<P> lap( N);
+    Laplace<P> lap( N, 2.);
     t.tic();
     BLAS2< Laplace<P>, DVec>::dsymv( lap, dv, dw);
     t.toc();

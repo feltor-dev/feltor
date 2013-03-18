@@ -8,6 +8,19 @@ namespace dg
 {
 
 //some utility functions on the host
+    /**
+     * @brief Evaluate a function on gaussian abscissas
+     *
+     * Evaluates f(x) on the intervall (a,b)
+     * @tparam Function Model of Unary Function
+     * @tparam n number of legendre nodes per cell
+     * @param f The function to evaluate
+     * @param a Left border
+     * @param b Right border
+     * @param num_int Number of intervalls between a and b 
+     *
+     * @return  A DG Host Vector with values
+     */
 template< class Function, size_t n>
 ArrVec1d< double, n> evaluate( Function& f, double a, double b, unsigned num_int)
 {
@@ -26,6 +39,18 @@ ArrVec1d< double, n> evaluate( Function& f, double a, double b, unsigned num_int
     return v;
 }
 
+/**
+ * @brief Evaluate and dlt transform a function 
+ *
+ * Evaluates f(x) on the intervall (a,b)
+ * @tparam Function Model of Unary Function
+ * @param f The function to evaluate
+ * @param a Left border
+ * @param b Right border
+ * @param num_int Number of intervalls between a and b 
+ *
+ * @return  A DG Host Vector with dlt transfomred values
+ */
 template< class Function, size_t n>
 ArrVec1d<double, n> expand( Function& f, double a, double b, unsigned num_int)
 {
@@ -46,6 +71,14 @@ ArrVec1d<double, n> expand( Function& f, double a, double b, unsigned num_int)
     return v;
 }
 
+/**
+ * @brief Evaluate the jumps on grid boundaries
+ *
+ * @tparam n number of legendre nodes per cell
+ * @param v A DG Host Vector 
+ *
+ * @return Vector with the jump values
+ */
 template< size_t n>
 thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
 {

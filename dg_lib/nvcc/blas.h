@@ -6,14 +6,15 @@ namespace dg{
 //CUDA relevant: BLAS routines must block until result is ready 
 /*! @brief BLAS Level 1 routines 
  *
- * In an implementation Vector should be typedefed. 
- * i.e. BLAS1::Vector should give the correct type
  * Only those routines that are actually called need to be implemented.
  * Don't forget to specialize in the dg namespace
  */
 template < class VectorClass>
 struct BLAS1
 {
+    /**
+     * @brief The Vector class
+     */
     typedef VectorClass Vector;
     /*! @brief Euclidean dot product between two Vectors
      *
@@ -25,8 +26,8 @@ struct BLAS1
     static double ddot( const Vector& x, const Vector& y);
     /*! @brief Modified BLAS 1 routine daxpy
      *
-     * This routine computes \f[ y =  \alpha x + \beta y \f]
-     * Q: Isn't it better to implement daxpy and daypx?
+     * This routine computes \f[ y =  \alpha x + \beta y \f] 
+     * Q: Isn't it better to implement daxpy and daypx? \n
      * A: unlikely, because in all three cases all elements of x and y have to be loaded
      * and daxpy is memory bound. (Is there no original daxpby routine because 
      * the name is too long??)
@@ -34,6 +35,7 @@ struct BLAS1
      * @param x Vector x migtht equal y 
      * @param beta Scalar
      * @param y Vector y contains solution on output
+     * @note In an implementation you may want to check for alpha == 0 and beta == 1
      */
     static void daxpby( double alpha, const Vector& x, double beta, Vector& y);
 };
@@ -43,9 +45,15 @@ struct BLAS1
  * In an implementation Vector and Matrix should be typedefed.
  * Only those routines that are actually called need to be implemented.
  */
-template < class Matrix, class Vector>
+template < class MatrixClass, class VectorClass>
 struct BLAS2
 {
+
+    /**
+     * @brief The Vector class
+     */
+    typedef VectorClass Vector;
+    typedef MatrixClass Matrix; //!< The Matrix class
     /*! @brief Symmetric Matrix Vector product
      *
      * This routine computes \f[ y = \alpha M x + \beta y \f]
@@ -55,12 +63,12 @@ struct BLAS2
      * @param x A Vector different from y (except in the case where m is diagonal)
      * @param beta A Scalar
      * @param y contains solution on output
+     * @note In an implementation you may want to check for alpha == 0 and beta == 1
      */
     static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y);
     /*! @brief Symmetric Matrix Vector product
      *
-     * This routine computes \f[ y = \alpha M x + \beta y \f]
-     * where \f[ M\f] is a symmetric matrix. 
+     * This routine is equivalent to dsymv( 1., m, x, 0., y);
      * @param m The Matrix
      * @param x A Vector different from y (except in the case where m is diagonal)
      * @param y contains solution on output
@@ -75,9 +83,16 @@ struct BLAS2
      * @param x Left Vector
      * @param P The diagonal Matrix
      * @param y Right Vector might equal Left Vector
-     * @return Scalar product
+     * @return Generalized scalar product
      */
     static double ddot( const Vector& x, const Matrix& P, const Vector& y);
+    /*! @brief General dot produt
+     *
+     * This routine is equivalent to the call ddot( x, P, x)
+     * @param P The diagonal Matrix
+     * @param x Right Vector
+     * @return Generalized scalar product
+     */
     static double ddot( const Matrix& P, const Vector& x);
 };
 

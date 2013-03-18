@@ -6,7 +6,7 @@
 
 namespace dg{
 
-
+//??
 template<> 
 template<class ThrustView>
 double BLAS1<ThrustView>::ddot( const Vector& x, const Vector& y)

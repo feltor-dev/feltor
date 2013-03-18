@@ -4,15 +4,20 @@
 namespace dg
 {
 
+    /**
+     * @brief Struct with useful values for discrete legendre transforms
+     *
+     * @tparam n Number of Legendre nodes per cell
+     */
 template<size_t n>
 struct DLT
 {
-    const static double forward[n][n];
-    const static double backward[n][n];
-    const static double weight[n];
-    const static double abscissa[n];
+    const static double forward[n][n]; //!< Values for forward dlt 
+    const static double backward[n][n]; //!< Values for backward dlt
+    const static double weight[n]; //!< Gaussian weights
+    const static double abscissa[n]; //!< Gaussian abscissas
 };
-
+///@cond
 //values taken from http://processingjs.nihongoresources.com/bezierinfo/legendre-gauss-values.php
 template<>
 const double DLT<1>::weight[1] = 
@@ -110,6 +115,8 @@ const double DLT<5>::backward[5][5] = {
     {1., 0.53846931010568309, -0.065076203111464548, -0.41738210372666810, -0.34450089119367744},
     {1., 0.90617984593866400, 0.73174286977813123, 0.50103117104466206, 0.24573545909491205} 
 };
+
+///@endcond
 
 } //namespace dg
 #endif //_DG_DLT_

@@ -1,10 +1,9 @@
 #ifndef _DG_PROJECTION_
 #define _DG_PROJECTION_
 
-#include <iostream>
-
 namespace dg{
 
+namespace detail{
 inline double pipj( unsigned i, unsigned j)
 {
     if( i==j) 
@@ -48,7 +47,8 @@ inline double lilj( unsigned i, unsigned j)
         return 1.;
     return -1.;
 }
-}
+} //namespace detail
+} //namespace dg
 
 
 #endif //_DG_PROJECTION_
