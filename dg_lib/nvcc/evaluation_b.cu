@@ -28,7 +28,7 @@ typedef dg::ArrVec1d< double, n, DVec>  DArrVec;
 using namespace std;
 int main()
 {
-    cout << "Array size is:             "<< n-1<<endl;
+    cout << "Array size is:             "<< n<<endl;
     cout << "Number of intervals is:    "<< N <<endl;
     double h = 1./(double)N;
     dg::Timer t;
@@ -55,12 +55,12 @@ int main()
     t.tic();
     norm = dg::BLAS2< dg::T<n>, DVec>::ddot( dg::T<n>(h), d_v.data());
     t.toc(); 
-    cout << "ddot took on device            "<< t.diff()<<"s\n";
+    cout << "ddot(v,v) took on device       "<< t.diff()<<"s\n";
 
     t.tic();
     norm = dg::BLAS2< dg::T<n>, HVec>::ddot( dg::T<n>(h), h_v.data());
     t.toc(); 
-    cout << "ddot took on host              "<< t.diff()<<"s\n\n";
+    cout << "ddot(v,v) took on host         "<< t.diff()<<"s\n\n";
     cout<< "Square normalized norm "<< norm <<"\n";
     double solution = (exp(2.) -exp(0))/2.;
     cout << "Correct square norm of exp(x) is "<<solution<<endl;

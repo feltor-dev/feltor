@@ -2,18 +2,18 @@
 #define _DG_BLAS_LAPLACE_
 
 #include <vector>
+#include <array>
 
 #include "../blas.h"
 #include "../laplace.h"
-#include "../array.h"
 
 namespace dg{
 
 template <size_t n>
-struct BLAS2< Laplace_Dir<n>, std::vector<Array<double,n>>>
+struct BLAS2< Laplace_Dir<n>, std::vector<std::array<double,n>>>
 {
     typedef Laplace_Dir<n> Matrix;
-    typedef std::vector<Array<double,n>> Vector;
+    typedef std::vector<std::array<double,n>> Vector;
     static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y)
     {
         assert( &x != &y); 
@@ -62,10 +62,10 @@ struct BLAS2< Laplace_Dir<n>, std::vector<Array<double,n>>>
 };
 
 template <size_t n>
-struct BLAS2< Laplace<n>, std::vector<Array<double,n>>>
+struct BLAS2< Laplace<n>, std::vector<std::array<double,n>>>
 {
     typedef Laplace<n> Matrix;
-    typedef std::vector<Array<double,n>> Vector;
+    typedef std::vector<std::array<double,n>> Vector;
     static void dsymv( double alpha, const Matrix& m, const Vector& x, double beta, Vector& y)
     { //what is if x and y are the same??
         assert( &x != &y); 

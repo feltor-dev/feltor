@@ -3,17 +3,18 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
 
-#include "array.h"
 #include "dlt.h"
+#include "blas.h"
 
 namespace dg
 {
 
 template< class Function, size_t n>
-std::vector<Array<double,n>> evaluate( Function& f, double a, double b, unsigned num_int)
+std::vector<std::array<double,n>> evaluate( Function& f, double a, double b, unsigned num_int)
 {
-    std::vector<Array<double,n>> v(num_int);
+    std::vector<std::array<double,n>> v(num_int);
     const double h = (b-a)/2./(double)num_int;
     double xp=1.;
     /* x = (b-a)/2N x' +a  maps the function to [0;2N]
@@ -29,7 +30,7 @@ std::vector<Array<double,n>> evaluate( Function& f, double a, double b, unsigned
 }
 
 template< class Function, size_t n>
-std::vector<Array<double,n>> expand( Function& f, double a, double b, unsigned num_int)
+std::vector<std::array<double,n>> expand( Function& f, double a, double b, unsigned num_int)
 {
     auto v = evaluate<Function,n> ( f, a, b, num_int);
     //multiply elements by forward
@@ -49,7 +50,7 @@ std::vector<Array<double,n>> expand( Function& f, double a, double b, unsigned n
 }
 
 template< size_t n>
-std::vector< double> evaluate_jump( const std::vector< Array<double, n>>& v)
+std::vector< double> evaluate_jump( const std::vector< std::array<double, n>>& v)
 {
     //compute the interior jumps of a DG approximation
     unsigned N = v.size();
@@ -61,54 +62,54 @@ std::vector< double> evaluate_jump( const std::vector< Array<double, n>>& v)
 }
 
 
-//enum Space{ XSPACE, LSPACE};
-//
-//template < size_t n >
-//struct BLAS2<Space, std::vector<std::array<double, n>>>
-//{
-//    typedef std::vector<std::array<double, n>> Vector;
-//    static void dsymv( double alpha, const Space& s, const Vector& x, double beta, Vector& y)
-//    {
-//        unsigned N = x.size();
-//        if( s == XSPACE)
-//        {
-//            for( unsigned i=0; i < N; i++)
-//                for( unsigned j=0; j<n; j++)
-//                    y[i][j] = alpha*DLT<n>::weight[j]*x[i][j] + beta*y[i][j];
-//        }
-//        else
-//        {
-//            for( unsigned i=0; i < N; i++)
-//                for( unsigned j=0; j<n; j++)
-//                    y[i][j] = alpha*2./(2.*(double)j+1.)*x[i][j] + beta*y[i][j];
-//        }
-//    }
-//
-//    static double ddot( const Vector& x, const Space& s, const Vector& y)
-//    {
-//        double norm=0;
-//        unsigned N = x.size();
-//        if( s == XSPACE)
-//        {
-//            for( unsigned i=0; i<N; i++)
-//                for( unsigned j=0; j<n; j++)
-//                    norm += DLT<n>::weight[j]*x[i][j]*y[i][j];
-//        }
-//        else
-//        {
-//            for( unsigned i=0; i<N; i++)
-//                for( unsigned j=0; j<n; j++)
-//                    norm += 2./(2.*(double)j+1.)*x[i][j]*y[i][j];
-//        }
-//        return norm;
-//    }
-//};
+enum Space{ XSPACE, LSPACE};
+
+template < size_t n >
+struct BLAS2<Space, std::vector<std::array<double, n>>>
+{
+    typedef std::vector<std::array<double, n>> Vector;
+    static void dsymv( double alpha, const Space& s, const Vector& x, double beta, Vector& y)
+    {
+        unsigned N = x.size();
+        if( s == XSPACE)
+        {
+            for( unsigned i=0; i < N; i++)
+                for( unsigned j=0; j<n; j++)
+                    y[i][j] = alpha*DLT<n>::weight[j]*x[i][j] + beta*y[i][j];
+        }
+        else
+        {
+            for( unsigned i=0; i < N; i++)
+                for( unsigned j=0; j<n; j++)
+                    y[i][j] = alpha*2./(2.*(double)j+1.)*x[i][j] + beta*y[i][j];
+        }
+    }
+
+    static double ddot( const Vector& x, const Space& s, const Vector& y)
+    {
+        double norm=0;
+        unsigned N = x.size();
+        if( s == XSPACE)
+        {
+            for( unsigned i=0; i<N; i++)
+                for( unsigned j=0; j<n; j++)
+                    norm += DLT<n>::weight[j]*x[i][j]*y[i][j];
+        }
+        else
+        {
+            for( unsigned i=0; i<N; i++)
+                for( unsigned j=0; j<n; j++)
+                    norm += 2./(2.*(double)j+1.)*x[i][j]*y[i][j];
+        }
+        return norm;
+    }
+};
 
 
 } //namespace dg
 
 template <size_t n>
-std::ostream& operator<<( std::ostream& os, const std::vector<dg::Array<double, n>>& v)
+std::ostream& operator<<( std::ostream& os, const std::vector<std::array<double, n>>& v)
 {
     unsigned N = v.size();
     for( unsigned i=0; i<N; i++)

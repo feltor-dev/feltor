@@ -1,7 +1,8 @@
 #ifndef _DG_RK_
 #define _DG_RK_
 
-#include <assert.h>
+#include <cassert>
+
 #include "blas.h"
 
 namespace dg{

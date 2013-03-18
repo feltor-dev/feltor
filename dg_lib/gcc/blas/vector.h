@@ -2,16 +2,16 @@
 #define _DG_BLAS_VECTOR_
 
 #include <vector>
+#include <array>
 
 #include "../blas.h"
-#include "../array.h"
 
 namespace dg{
 
 template <size_t n>
-struct BLAS1<std::vector<Array<double,n>>>
+struct BLAS1<std::vector<std::array<double,n>>>
 {
-    typedef std::vector<Array<double,n>> Vector;
+    typedef std::vector<std::array<double,n>> Vector;
     static double ddot( const Vector& x, const Vector& y)
     {
         assert( x.size() == y.size());

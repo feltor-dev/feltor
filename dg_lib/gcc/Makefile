@@ -11,5 +11,9 @@ DEBUG =
 %_b: %_b.cpp %.h
 	$(CXX) -O3  $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
+
+
+.PHONY: clean
+
 clean:
 	rm -f *_t *_b

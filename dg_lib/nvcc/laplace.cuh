@@ -36,8 +36,6 @@ void Laplace<n>::add_index( HMatrix& hm, int& number, unsigned i, unsigned j, un
 
 }
 
-
-
 //change here if you change sparse matrix type
 template<size_t n>
 Laplace<n>::Laplace( unsigned N, double h, double alpha): M( n*N, n*N, 3*n*n*N, 3*n)
@@ -88,6 +86,7 @@ Laplace<n>::Laplace( unsigned N, double h, double alpha): M( n*N, n*N, 3*n*n*N, 
     M=A; //copy matrix to device
 
 };
+
 
 template<size_t n>
 class Laplace_Dir

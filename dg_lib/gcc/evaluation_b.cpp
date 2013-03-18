@@ -2,8 +2,10 @@
 #include <vector>
 #include <array>
 #include <cmath>
+
 #include "evaluation.h"
 #include "operators.h"
+#include "blas/vector.h"
 #include "timer.h"
 
 using namespace dg;
@@ -21,21 +23,19 @@ class Functor
         return x;
     }
 };
-#define P 4
+#define P 3
 typedef std::vector<std::array<double,P>> ArrVec;
 int main()
 {
-    unsigned num_int = 1000000;
+    unsigned num_int = 1e5;
+    cout << "Order is (P): "<<P<<endl;
+    cout << "# of intervals is: "<< num_int<<"\n";
     Timer t;
     t.tic();
     auto v = evaluate< double(&)(double), P>( function,0.,1., num_int);
     t.toc();
     cout << "Evaluation took "<<t.diff()<<"s\n";
-    auto w(v);
-    Operator<double,P> forward( DLT<P>::forward);
-
-    for( unsigned i=0; i<num_int; i++)
-        w[i] = forward*v[i];
+    auto w = expand< double(&) (double), P> (function, 0., 1., num_int);
     double norm;
 
     //cout << "Square norm in x "<<square_norm<P>( v, XSPACE)<<endl;
@@ -46,7 +46,7 @@ int main()
     //cout << "Square norm in x "<<norm <<endl;
     //cout << "Took "<<t.diff()<<" seconds\n";
     t.tic(); 
-    norm = CG_BLAS2<Space, ArrVec>::ddot( w, LSPACE, w);
+    norm = BLAS2<Space, ArrVec>::ddot( w, LSPACE, w);
     t.toc();
     
     cout << "Square norm in x "<<norm <<endl;

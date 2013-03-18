@@ -6,9 +6,9 @@
 namespace dg{
 
 template< size_t n>
-struct BLAS2<T, std::vector<Array<double, n>>>
+struct BLAS2<T, std::vector<std::array<double, n>>>
 {
-    typedef std::vector<Array<double, n>> Vector;
+    typedef std::vector<std::array<double, n>> Vector;
     static void dsymv( double alpha, const T& t, const Vector& x, double beta, Vector& y)
     {
         // x and y might be the same
@@ -37,9 +37,9 @@ struct BLAS2<T, std::vector<Array<double, n>>>
     }
 };
 template< size_t n>
-struct BLAS2<S, std::vector<Array<double, n>>>
+struct BLAS2<S, std::vector<std::array<double, n>>>
 {
-    typedef std::vector<Array<double, n>> Vector;
+    typedef std::vector<std::array<double, n>> Vector;
     static void dsymv( double alpha, const S& s, const Vector& x, double beta, Vector& y)
     {
         unsigned N = x.size();

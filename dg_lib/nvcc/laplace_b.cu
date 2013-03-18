@@ -11,6 +11,8 @@ const unsigned N = 1e5;
 
 using namespace dg;
 using namespace std;
+double sine(double x){ return /*x*x*x*/sin(2*M_PI*x);}
+double secondsine(double x){ return /*-6*x*/4.*M_PI*M_PI*sin(2*M_PI*x);}
 
 typedef thrust::device_vector<double> DVec;
 int main()
