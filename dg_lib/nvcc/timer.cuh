@@ -1,13 +1,13 @@
-#ifndef _TL_TIMER_
-#define _TL_TIMER_
-
-
+#ifndef _DG_TIMER_
+#define _DG_TIMER_
 
 namespace dg{
-/*! @brief Very simple tool for performance measuring*/
+/*! @brief Very simple tool for performance measuring using CUDA-API 
+ * @ingroup utilities
+ */
 class Timer
 {
-    public:
+  public:
     Timer(){
         cudaEventCreate( &start); 
         cudaEventCreate( &stop);
@@ -35,10 +35,10 @@ class Timer
         cudaEventElapsedTime( &time, start, stop);
         return time/1000.;
     }
-    private:
+  private:
     cudaEvent_t start, stop;
 };
 
 }
 
-#endif //_TL_TIMER_
+#endif //_DG_TIMER_

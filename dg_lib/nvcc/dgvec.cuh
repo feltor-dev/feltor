@@ -5,14 +5,15 @@ namespace dg
 {
 
 //TODO some safety measurments
-    /**
-     * @brief DG View on a Vector
-     *
-     * Data is not owned by this class.
-     * @tparam T The value type 
-     * @tparam n The number of polynomial coefficients per cell
-     * @tparam container The underlying container data type
-     */
+/**
+ * @brief DG View on a Vector
+ *
+ * @ingroup containers
+ * Data is not owned by this class.
+ * @tparam T The value type 
+ * @tparam n The number of polynomial coefficients per cell
+ * @tparam container The underlying container data type
+ */
 template< typename T, size_t n, class container = thrust::host_vector<T> >
 class ArrVec1d_View
 {
@@ -91,14 +92,15 @@ class ArrVec1d_View
 };
 
 //an Array is a View but owns the data it views
-    /**
-     * @brief DG View on a Vector it owns
-     *
-     * Data is owned by this class.
-     * @tparam T The value type 
-     * @tparam n The number of polynomial coefficients per cell
-     * @tparam container The underlying container data type
-     */
+/**
+ * @brief DG View on a Vector it owns
+ *
+ * @ingroup containers
+ * Data is owned by this class.
+ * @tparam T The value type 
+ * @tparam n The number of polynomial coefficients per cell
+ * @tparam container The underlying container data type
+ */
 template< typename T, size_t n, class container = thrust::host_vector<T> >
 class ArrVec1d : public ArrVec1d_View<T, n, container>
 {

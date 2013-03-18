@@ -10,11 +10,13 @@ namespace dg{
 // TO DO: check for better stopping criteria using condition number estimates
 /*!@brief Functor class for the conjugate gradient method
 
+ @ingroup algorithms
  The Matrix and Vector class are assumed to be double valued
  @tparam Matrix The matrix class: no requirements except for the 
             BLAS routines
  @tparam Vector The Vector class: needs to model Assignable 
- The following 3 pseudo - BLAS routines need to be callable
+
+ The following 3 pseudo - BLAS routines need to be callable:
  \li double dot = BLAS1<Vector>::ddot( v1, v2);  
  \li BLAS1<Vector>::daxpby( alpha, x, beta, y);  
  \li BLAS2<Matrix, Vector> dsymv( m, x, y); 
@@ -93,13 +95,14 @@ unsigned CG<Matrix, Vector>::operator()( const Matrix& A, Vector& x, const Vecto
 /**
 * @brief Functor class for the preconditioned conjugate gradient method
 *
+ @ingroup algorithms
  The Matrix, Vector and Preconditioner classes are assumed to be double valued
  @tparam Matrix The matrix class: no requirements except for the 
             BLAS routines
  @tparam Vector The Vector class: needs to model Assignable 
  @tparam Preconditioner no requirements except for the blas routines
- The following 3 pseudo - BLAS routines need to be callable \n
 
+ The following 3 pseudo - BLAS routines need to be callable 
  \li double dot = BLAS1<Vector>::ddot( v1, v2); 
  \li BLAS1<Vector>::daxpby( alpha, x, beta, y);  
  \li BLAS2<Matrix, Vector> dsymv( m, x, y);     

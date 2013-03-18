@@ -7,20 +7,20 @@
 namespace dg
 {
 
-//some utility functions on the host
-    /**
-     * @brief Evaluate a function on gaussian abscissas
-     *
-     * Evaluates f(x) on the intervall (a,b)
-     * @tparam Function Model of Unary Function
-     * @tparam n number of legendre nodes per cell
-     * @param f The function to evaluate
-     * @param a Left border
-     * @param b Right border
-     * @param num_int Number of intervalls between a and b 
-     *
-     * @return  A DG Host Vector with values
-     */
+/**
+ * @brief Evaluate a function on gaussian abscissas
+ *
+ * @ingroup utilities
+ * Evaluates f(x) on the intervall (a,b)
+ * @tparam Function Model of Unary Function
+ * @tparam n number of legendre nodes per cell
+ * @param f The function to evaluate
+ * @param a Left border
+ * @param b Right border
+ * @param num_int Number of intervalls between a and b 
+ *
+ * @return  A DG Host Vector with values
+ */
 template< class Function, size_t n>
 ArrVec1d< double, n> evaluate( Function& f, double a, double b, unsigned num_int)
 {
@@ -42,6 +42,7 @@ ArrVec1d< double, n> evaluate( Function& f, double a, double b, unsigned num_int
 /**
  * @brief Evaluate and dlt transform a function 
  *
+ * @ingroup utilities
  * Evaluates f(x) on the intervall (a,b)
  * @tparam Function Model of Unary Function
  * @param f The function to evaluate
@@ -74,6 +75,7 @@ ArrVec1d<double, n> expand( Function& f, double a, double b, unsigned num_int)
 /**
  * @brief Evaluate the jumps on grid boundaries
  *
+ * @ingroup utilities
  * @tparam n number of legendre nodes per cell
  * @param v A DG Host Vector 
  *

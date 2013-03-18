@@ -4,11 +4,13 @@
 namespace dg
 {
 
-    /**
-     * @brief Struct with useful values for discrete legendre transforms
-     *
-     * @tparam n Number of Legendre nodes per cell
-     */
+namespace detail
+{
+/**
+ * @brief Struct with useful values for discrete legendre transforms
+ *
+ * @tparam n Number of Legendre nodes per cell
+ */
 template<size_t n>
 struct DLT
 {
@@ -118,5 +120,6 @@ const double DLT<5>::backward[5][5] = {
 
 ///@endcond
 
+} //namespace detail
 } //namespace dg
 #endif //_DG_DLT_

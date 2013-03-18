@@ -1,26 +1,52 @@
 #ifndef _DG_OPERATORS_
 #define _DG_OPERATORS_
 
-#include <iostream>
-
 namespace dg{
 
+/**
+* @brief Helper class mainly for the assembly of Matrices
+*
+* @ingroup containers
+* In principle it's an enhanced quadratic static array
+* but it's not meant for performance critical code. 
+* @tparam T value type
+* @tparam n size 
+*/
 template< class T, size_t n>
 class Operator
 {
   public:
-    typedef T body_type;
+    typedef T value_type;
+    /**
+    * @brief Construct empty Operator
+    */
     Operator(){}
+    /**
+    * @brief Initialize elements.
+    *
+    * @param value Every element is innitialized to.
+    */
     Operator( const T& value)
     {
         for( unsigned i=0; i<n*n; i++)
             ptr[i] = value;
     }
+    /**
+    * @brief Construct from existing array.
+    *
+    * @param arr Filled 2d array 
+    */
     Operator( const T arr[n][n]) {
         for( unsigned i=0; i<n; i++)
             for( unsigned j=0; j<n; j++)
                 ptr[i*n+j] = arr[i][j];
     }
+
+    /**
+    * @brief Construct from a function.
+    *
+    * @param f Elements are initialized by calling f with their indices.
+    */
     Operator( double (&f)(unsigned, unsigned))
     {
         for( unsigned i=0; i<n; i++)
@@ -49,6 +75,11 @@ class Operator
         return ptr[ i*n+j];
     }
 
+    /**
+    * @brief Transposition
+    *
+    * @return  A newly generated Operator containing the transpose.
+    */
     Operator transpose() const 
     {
         double temp;
@@ -124,11 +155,13 @@ class Operator
     }
     /*! @brief puts a matrix linewise in output stream
      *
+     * @tparam Ostream The stream e.g. std::cout
      * @param os the outstream
      * @param mat the matrix to output
      * @return the outstream
      */
-    friend std::ostream& operator<<(std::ostream& os, const Operator<T,n>& mat)
+    template< Ostream>
+    friend Ostream& operator<<(Ostream& os, const Operator<T,n>& mat)
     {
         for( size_t i=0; i < n ; i++)
         {
@@ -141,12 +174,14 @@ class Operator
     /*! @brief Read values into a Matrix from given istream
      *
      * The values are filled linewise into the matrix. Values are seperated by 
-     * whitespace charakters. (i.e. newline, blank, etc)
+     * whitespace characters. (i.e. newline, blank, etc)
+     * @tparam Istream The stream e.g. std::cin
      * @param is The istream
      * @param mat The Matrix into which the values are written
      * @return The istream
      */
-    friend std::istream& operator>> ( std::istream& is, Operator<T,n>& mat){
+    template< Istream>
+    friend Istream& operator>> ( Istream& is, Operator<T,n>& mat){
         for( size_t i=0; i<n; i++)
             for( size_t j=0; j<n; j++)
                 is >> mat(i, j);

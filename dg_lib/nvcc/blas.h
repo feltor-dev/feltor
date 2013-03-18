@@ -6,6 +6,7 @@ namespace dg{
 //CUDA relevant: BLAS routines must block until result is ready 
 /*! @brief BLAS Level 1 routines 
  *
+ * @ingroup blas
  * Only those routines that are actually called need to be implemented.
  * Don't forget to specialize in the dg namespace
  */
@@ -42,6 +43,7 @@ struct BLAS1
 
 /*! @brief BLAS Level 2 routines 
  *
+ * @ingroup blas
  * In an implementation Vector and Matrix should be typedefed.
  * Only those routines that are actually called need to be implemented.
  */

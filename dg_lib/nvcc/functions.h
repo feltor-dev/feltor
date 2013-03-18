@@ -3,6 +3,7 @@
 
 namespace dg{
 
+namespace create{
 namespace detail{
 inline double pipj( unsigned i, unsigned j)
 {
@@ -48,6 +49,7 @@ inline double lilj( unsigned i, unsigned j)
     return -1.;
 }
 } //namespace detail
+} //namespace create
 } //namespace dg
 
 
