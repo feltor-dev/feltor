@@ -56,11 +56,11 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_per( unsigned N, doub
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<n>( A, number, 0,0,k,l, a(k,l));
+            detail::add_index<n>( A, number, 0,0,k,l, a(k,l)); //1 x A
         for( unsigned l=0; l<n; l++)
-            detail::add_index<n>( A, number, 0,1,k,l, b(k,l));
+            detail::add_index<n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
         for( unsigned l=0; l<n; l++)
-            detail::add_index<n>( A, number, 0,N-1,k,l, b(l,k));
+            detail::add_index<n>( A, number, 0,N-1,k,l, b(l,k)); //1- x B^T
     }
     for( unsigned i=1; i<N-1; i++)
         for( unsigned k=0; k<n; k++)

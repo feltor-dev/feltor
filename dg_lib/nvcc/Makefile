@@ -22,7 +22,10 @@ cusp_thrust: cusp_thrust.cu
 	echo "Attention: No compiler warnings are issued!" 
 	./$@
 
-.PHONY: clean
+.PHONY: clean doc
+
+doc: 
+	doxygen Doxyfile
 
 clean:
 	rm -f *_t *_b cusp_thrust version

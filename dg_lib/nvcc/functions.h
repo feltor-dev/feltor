@@ -5,6 +5,12 @@ namespace dg{
 
 namespace create{
 namespace detail{
+inline double delta( unsigned i, unsigned j)
+{
+    if( i==j ) 
+        return 1.;
+    return 0.;
+}
 inline double pipj( unsigned i, unsigned j)
 {
     if( i==j) 
