@@ -12,11 +12,22 @@ namespace dg{
 */
 template< size_t n>
 struct T{
+    /**
+    * @brief Constructor
+    *
+    * @param h The grid size assumed to be constant.
+    */
     __host__ __device__ T( double h = 2.):h_(h){}
+    /**
+    * @brief 
+    *
+    * @return The grid size
+    */
     __host__ __device__ const double& h() const {return h_;}
   private:
     double h_;
 };
+
 
 /**
 * @brief The Preconditioner S 
@@ -44,7 +55,8 @@ struct S{
     double h_;
 };
 
-}
+
+} //namespace dg
 #include "blas/preconditioner.cuh"
 
 #endif //_DG_PRECONDITIONER_
