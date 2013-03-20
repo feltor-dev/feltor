@@ -15,6 +15,7 @@ namespace dg{
 
 namespace detail{
 
+/*
 template< size_t n>
 struct dsymv_functor_T
 {
@@ -46,7 +47,43 @@ struct dot_functor_T
     private:
     double h;
 };
+*/
+template< class Derived> 
+struct dsymv_functor
+{
+    typedef DiagonalPreconditioner< Derived> Preconditioner;
+    typedef thrust::tuple< double, int> Pair;
+    dsymv_functor_T( double alpha, double beta, const Preconditioner& p ): p_(p), alpha(alpha), beta(beta) {}
+    __host__ __device__
+        double operator()(const double& x,  const Pair& p)
+        {
+            double y = alpha*x *p_(thrust::get<1>(p))
+                        + beta*thrust::get<0>(p);
+            return y;
+        }
+  private:
+    Preconditioner p_;
+    double alpha, beta;
+};
 
+template< class Derived> 
+struct dot_functor
+{
+    typedef DiagonalPreconditioner< Derived> Preconditioner;
+    typedef thrust::tuple< double, int> Pair; 
+    dot_functor_T( const Preconditioner& p): p_(p){}
+    __host__ __device__
+    double operator()( const double& x, const Pair& p) 
+    {
+        //generalized Multiplication
+        return x*thrust::get<0>(p)*p_(thrust::get<1>(p));
+    }
+
+  private:
+    const Preconditioner p_;
+};
+
+/*
 
 template< size_t n>
 struct dsymv_functor_S
@@ -78,12 +115,13 @@ struct dot_functor_S
     private:
     double h;
 };
+*/
 }//namespace detail
 
-template< size_t n, class ThrustVector>
-struct BLAS2<T<n>, ThrustVector>
+template< class Derived, class ThrustVector>
+struct BLAS2<DiagonalPreconditioner<Derived>, ThrustVector>
 {
-    typedef T<n> Matrix;
+    typedef DiagonalPreconditioner< Derived> Matrix;
     typedef ThrustVector Vector;
     static void dsymv( double alpha, const Matrix& t, const ThrustVector& x, double beta, ThrustVector& y)
     {
@@ -99,7 +137,7 @@ struct BLAS2<T<n>, ThrustVector>
                           thrust::make_zip_iterator( 
                                 thrust::make_tuple( y.begin(), thrust::make_counting_iterator<int>(0)) ), 
                           y.begin(),
-                          detail::dsymv_functor_T<n>( alpha/t.h(), beta)
+                          detail::dsymv_functor<Derived>( alpha, beta, t)
                           );
     }
     static void dsymv( const Matrix& t, const Vector& x, Vector& y)
@@ -112,7 +150,7 @@ struct BLAS2<T<n>, ThrustVector>
                                 thrust::make_zip_iterator( thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
                                 0.0,
                                 thrust::plus<double>(),
-                                detail::dot_functor_T<n>(t.h())
+                                detail::dot_functor<Derived>( t)
                                 );
 
     }
@@ -124,6 +162,7 @@ struct BLAS2<T<n>, ThrustVector>
 };
 
 
+/*
 template< size_t n, class ThrustVector>
 struct BLAS2<S<n>, ThrustVector >
 {
@@ -164,5 +203,6 @@ struct BLAS2<S<n>, ThrustVector >
         return ddot( x, s, x);
     }
 }; 
+*/
 } //nameapce dg
 #endif //_DG_BLAS_PRECONDITIONER_

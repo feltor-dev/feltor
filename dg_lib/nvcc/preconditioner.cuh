@@ -3,6 +3,15 @@
 
 namespace dg{
 
+template< class Derived>
+struct DiagonalPreconditioner
+{
+    __host__ __device__
+    double operator()( int i) const {
+        return static_cast<Derived*>(this)->operator()( i);
+};
+
+
 /**
 * @brief The Preconditioner T 
 *
@@ -11,7 +20,8 @@ namespace dg{
 * @tparam n Number of Legendre nodes per cell.
 */
 template< size_t n>
-struct T{
+struct T : public DiagonalPreconditioner< T<n> > 
+{
     /**
     * @brief Constructor
     *
@@ -24,6 +34,9 @@ struct T{
     * @return The grid size
     */
     __host__ __device__ const double& h() const {return h_;}
+    __host__ __device__ double operator() ( int i) const {
+        return (double)(2*(i%n)+1)/h_;
+    }
   private:
     double h_;
 };
@@ -38,7 +51,8 @@ struct T{
 * @tparam n Number of Legendre nodes per cell.
 */
 template< size_t n>
-struct S{
+struct S : public DiagonalPreconditioner < S <n> >
+{
     /**
     * @brief Constructor
     *
@@ -51,6 +65,8 @@ struct S{
     * @return The grid size
     */
     __host__ __device__ const double& h() const {return h_;}
+    __host__ __device__ double operator() ( int i) const {
+        return h_/(double)(2*(i%n)+1);
   private:
     double h_;
 };
