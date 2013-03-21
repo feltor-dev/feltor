@@ -2,14 +2,37 @@
 #define _DG_BLAS_VECTOR_
 
 #include <thrust/inner_product.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
 
-#include "../blas.h"
+#include "../vector_categories.h"
+#include "../vector_traits.h"
 
 
 namespace dg
 {
+
+template<typename T>
+struct VectorTraits< thrust::host_vector<T> >
+{
+    typedef T value_type;
+    typedef ThrustVectorTag vector_category;
+};
+
+template<typename T>
+struct VectorTraits< thrust::device_vector<T> >
+{
+    typedef T value_type;
+    typedef ThrustVectorTag vector_category;
+};
+
+namespace blas1
+{
+
+
 namespace detail
 {
+
 struct daxpby_functor
 {
     daxpby_functor( double alpha, double beta): alpha(alpha), beta(beta) {}
@@ -43,10 +66,9 @@ struct dot_functor
     }
 };
 */ 
-} //namespace detail
 
-template< class ThrustVector>
-double BLAS1<ThrustVector>::ddot( const Vector& x, const Vector& y)
+template< class Vector>
+typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
     /*
     if( &x == &y) 
@@ -55,8 +77,12 @@ double BLAS1<ThrustVector>::ddot( const Vector& x, const Vector& y)
     return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
 }
 
-template< class ThrustVector>
-void BLAS1<ThrustVector>::daxpby( double alpha, const Vector& x, double beta, Vector& y)
+template< class Vector>
+void doAxpby( typename Vector::value_type alpha, 
+              const Vector& x, 
+              typename Vector::value_type beta, 
+              Vector& y, 
+              ThrustVectorTag)
 {
     if( alpha == 0)
     {
@@ -70,11 +96,13 @@ void BLAS1<ThrustVector>::daxpby( double alpha, const Vector& x, double beta, Ve
 
 
 
+} //namespace detail
 
-    
+} //namespace blas1
     
 } //namespace dg
 
+#include "../blas.h"
 
 
 #endif //_DG_BLAS_VECTOR_

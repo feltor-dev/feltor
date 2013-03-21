@@ -1,9 +1,7 @@
 #include <iostream> 
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
 
+#include "blas/thrust_vector.cuh"
 #include "dgvec.cuh" 
-#include "blas/thrust_vector.cuh" 
 #include "timer.cuh" 
 
 using namespace dg; 
@@ -34,10 +32,11 @@ int main()
 
     double dot;
     t.tic(); 
-    dot = dg::BLAS1<DVec>::ddot( dx_v.data(),dy); 
+    dot = dg::blas1::dot( dx_v.data(), dy); 
     t.toc();
     cout << "GPU dot(x,y) took          "<<t.diff() <<"s\n";
     cout << "Result "<<dot<<"\n";
+    /*
     t.tic(); 
     dot = dg::BLAS1<HVec>::ddot( hx.data(),hy.data());
     t.toc();
@@ -57,6 +56,7 @@ int main()
 
     cout << "CPU daxpby took            " << t.diff() <<"s\n";
     cout << "Result : " << hy(N-1, 2) << "\n";
+    */
 
     return 0;
 }
