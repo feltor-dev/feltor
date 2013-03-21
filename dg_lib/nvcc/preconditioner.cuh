@@ -2,16 +2,18 @@
 #define _DG_PRECONDITIONER_
 
 #include "matrix_categories.h"
+
 namespace dg{
 
 template< class Derived>
 struct DiagonalPreconditioner
 {
     typedef DiagonalPreconditionerTag matrix_category;
-    typedef Derived::value_type value_type;
+    typedef typename Derived::value_type value_type;
     __host__ __device__
     value_type operator()( int i) const {
         return static_cast<Derived*>(this)->implementation( i);
+    }
 };
 
 
@@ -22,16 +24,16 @@ struct DiagonalPreconditioner
 * T is the inverse of S 
 * @tparam n Number of Legendre nodes per cell.
 */
-template< class value_type, size_t n>
-struct T : public DiagonalPreconditioner< T<n> > 
+template< class T, size_t n>
+struct T1D : public DiagonalPreconditioner< T1D<T, n> > 
 {
-    typedef value_type value_type;
+    typedef T value_type;
     /**
     * @brief Constructor
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ T( value_type h = 2.):h_(h){}
+    __host__ __device__ T1D( value_type h = 2.):h_(h){}
     /**
     * @brief 
     *
@@ -54,16 +56,16 @@ struct T : public DiagonalPreconditioner< T<n> >
 * Use in Scalar product.
 * @tparam n Number of Legendre nodes per cell.
 */
-template< class value_type, size_t n>
-struct S : public DiagonalPreconditioner < S <n> >
+template< class T, size_t n>
+struct S1D : public DiagonalPreconditioner < S1D <T, n> >
 {
-    typedef value_type value_type;
+    typedef T value_type;
     /**
     * @brief Constructor
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ S( value_type h = 2.):h_(h){}
+    __host__ __device__ S1D( value_type h = 2.):h_(h){}
     /**
     * @brief 
     *

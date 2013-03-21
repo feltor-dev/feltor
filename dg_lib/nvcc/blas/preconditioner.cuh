@@ -18,7 +18,7 @@ namespace detail{
 template< class Preconditioner> 
 struct Diagonal_Symv_Functor
 {
-    typedef Preconditioner::value_type value_type;
+    typedef typename Preconditioner::value_type value_type;
     typedef thrust::tuple< value_type, int> Pair;
 
     Diagonal_Symv_Functor( value_type alpha, value_type beta, const Preconditioner& p ): p_(p), alpha(alpha), beta(beta) {}
@@ -37,7 +37,7 @@ struct Diagonal_Symv_Functor
 template< class Preconditioner> 
 struct Diagonal_Dot_Functor
 {
-    typedef Preconditioner::value_type value_type;
+    typedef typename Preconditioner::value_type value_type;
     typedef thrust::tuple< value_type, int> Pair; 
 
     Diagonal_Dot_Functor( const Preconditioner& p): p_(p){}
@@ -54,7 +54,7 @@ struct Diagonal_Dot_Functor
 
 
 template< class Matrix, class Vector>
-inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, DiagonalPreconditionerTag, ThrustVectorTag)
+inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, DiagonalPreconditionerTag, ThrustVectorTag)
 {
     {
         return doDot( x,t,x, DiagonalPreconditionerTag, ThrustVectorTag);

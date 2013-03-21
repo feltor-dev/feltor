@@ -6,7 +6,7 @@
 namespace dg{
 
 template< size_t n>
-struct T2d : public DiagonalPreconditioner< T2d< n> >
+struct T2D : public DiagonalPreconditioner< T2d< n> >
 {
     /**
     * @brief Constructor
@@ -35,14 +35,14 @@ struct T2d : public DiagonalPreconditioner< T2d< n> >
 };
 
 template< size_t n>
-struct S2d{
+struct S2D{
     /**
     * @brief Constructor
     *
     * @param h The grid size assumed to be constant.
     */
     __host__ __device__ 
-    S2d( double hx = 2., double hy = 2.): hx_(hx), hy_(hy){}
+    S2D( double hx = 2., double hy = 2.): hx_(hx), hy_(hy){}
     /**
     * @brief 
     *

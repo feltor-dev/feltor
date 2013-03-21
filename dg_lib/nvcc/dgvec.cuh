@@ -1,6 +1,8 @@
 #ifndef _DG_VECTOR_
 #define _DG_VECTOR_
 
+#include "vector_categories.h"
+
 namespace dg
 {
 
