@@ -40,7 +40,8 @@ struct T1D : public DiagonalPreconditioner< T1D<T, n> >
     * @return The grid size
     */
     __host__ __device__ const value_type& h() const {return h_;}
-    __host__ __device__ value_type implementation( int i) const {
+    __host__ __device__ value_type implementation( int i) const 
+    {
         return (value_type)(2*(i%n)+1)/h_;
     }
   private:
@@ -72,8 +73,10 @@ struct S1D : public DiagonalPreconditioner < S1D <T, n> >
     * @return The grid size
     */
     __host__ __device__ const value_type& h() const {return h_;}
-    __host__ __device__ value_type implementation( int i) const {
+    __host__ __device__ value_type implementation( int i) const 
+    {
         return h_/(value_type)(2*(i%n)+1);
+    }
   private:
     value_type h_;
 };

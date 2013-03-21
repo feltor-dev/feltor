@@ -1,6 +1,7 @@
 #ifndef _DG_VECTOR_TRAITS_
 #define _DG_VECTOR_TRAITS_
 
+#include "vector_categories.h"
 namespace dg{
 
 template< class Vector>

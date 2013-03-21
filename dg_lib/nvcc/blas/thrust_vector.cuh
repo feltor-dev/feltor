@@ -34,35 +34,14 @@ struct Axpby_Functor
     value_type alpha, beta;
 };
 
-//not faster
-/*
-struct dot_functor
-{
-    __host__ __device__
-    double operator()( const double& x)
-    {
-        return x*x;
-    }
-    __host__ __device__
-    double operator()( const double& x, const double& y)
-    {
-        return x+y;
-    }
-};
-*/ 
-
 template< class Vector>
 typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
-    /*
-    if( &x == &y) 
-        return thrust::transform_reduce( x.begin(), x.end(), detail::dot_functor(), 0.0, detail::dot_functor());
-        */
     return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
 }
 
 template< class Vector>
-void doAxpby( typename Vector::value_type alpha, 
+inline void doAxpby( typename Vector::value_type alpha, 
               const Vector& x, 
               typename Vector::value_type beta, 
               Vector& y, 
@@ -83,12 +62,7 @@ void doAxpby( typename Vector::value_type alpha,
 
 
 } //namespace detail
-
 } //namespace blas1
-    
 } //namespace dg
-
-#include "../blas.h"
-
 
 #endif //_DG_BLAS_VECTOR_

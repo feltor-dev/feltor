@@ -9,6 +9,7 @@
 #include "timer.cuh"
 #include "laplace.cuh"
 #include "dgvec.cuh"
+#include "blas.h"
 
 const unsigned P = 3;
 const unsigned N = 1e6;
@@ -42,7 +43,7 @@ int main()
     DVec dw = hw.data();
     DMatrix laplace1d = create::laplace1d_per<P>( N, 2.);
     t.tic();
-    BLAS2< DMatrix, DVec>::dsymv( laplace1d, dv, dw);
+    blas2::symv( laplace1d, dv, dw);
     t.toc();
     cout << "Multiplication with laplace took "<<t.diff()<<"s\n";
     return 0;

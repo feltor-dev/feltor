@@ -9,7 +9,6 @@
 
 #include "../preconditioner2d.cuh"
 #include "thrust_vector.cuh" //load thrust_vector BLAS1 routines
-#include "../blas.h"
 
 namespace dg{
 

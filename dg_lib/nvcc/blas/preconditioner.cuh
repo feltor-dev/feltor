@@ -9,7 +9,7 @@
 
 #include "../preconditioner.cuh"
 #include "thrust_vector.cuh" //load thrust_vector BLAS1 routines
-#include "../blas.h"
+#include "../vector_categories.h"
 
 namespace dg{
 namespace blas2{
@@ -54,10 +54,10 @@ struct Diagonal_Dot_Functor
 
 
 template< class Matrix, class Vector>
-inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, DiagonalPreconditionerTag, ThrustVectorTag)
+inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::DiagonalPreconditionerTag, dg::ThrustVectorTag)
 {
     {
-        return doDot( x,t,x, DiagonalPreconditionerTag, ThrustVectorTag);
+        return doDot( x,m,x, dg::DiagonalPreconditionerTag(), dg::ThrustVectorTag());
     }
 }
 
@@ -87,7 +87,7 @@ inline void doSymv(  typename Matrix::value_type alpha,
     {
         if( beta == 1) 
             return;
-        dg::blas1::detail::doAxpby( 0., x, beta, y, ThrustVectorTag);
+        dg::blas1::detail::doAxpby( 0., x, beta, y, dg::ThrustVectorTag());
         return;
     }
     thrust::transform( x.begin(), x.end(), 
@@ -104,7 +104,7 @@ inline void doSymv(  const Vector& x,
               DiagonalPreconditionerTag
               ThrustVectorTag)
 {
-    doSymv( 1., m, x, 0., y, DiagonalPreconditionerTag, ThrustVectorTag);
+    doSymv( 1., m, x, 0., y, dg::DiagonalPreconditionerTag(), dg::ThrustVectorTag());
 }
 
 }//namespace detail

@@ -14,7 +14,7 @@ inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const 
 {
     return dg::blas2::detail::doDot( x, m, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<Vector>::vector_category() )
+                       typename dg::VectorTraits<Vector>::vector_category() );
 }
 
 template< class Matrix, class Vector>

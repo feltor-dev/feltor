@@ -4,7 +4,6 @@
 #include <cusp/multiply.h>
 #include <cusp/array1d.h>
 
-#include "../blas2.h"
 #include "../matrix_categories.h"
 
 
@@ -16,7 +15,7 @@ namespace detail
 {
 
 template< class Matrix, class Vector>
-void blas2::doSymv( const Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, ThrustVectorTag  )
+inline void doSymv( const Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, ThrustVectorTag  )
 {
     cusp::array1d_view< typename Vector::const_iterator> cx( x.cbegin(), x.cend());
     cusp::array1d_view< typename Vector::iterator> cy( y.begin(), y.end());

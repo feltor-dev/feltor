@@ -5,6 +5,7 @@
 
 #include "laplace.cuh"
 #include "dgvec.cuh"
+#include "blas.h"
 
 const unsigned n = 3;
 const unsigned N = 4;
@@ -33,7 +34,7 @@ int main()
 
     cout << "The DG Laplacian: \n";
     cusp::print( laplace1d);
-    BLAS2< DMatrix, DVec>::dsymv( laplace1d, dv, dw);
+    blas2::symv( laplace1d, dv, dw);
     cusp::array1d_view<DVec::iterator> dv_view( dv.begin(), dv.end());
     cusp::array1d_view<DVec::iterator> dw_view( dw.begin(), dw.end());
     cusp::print( dw_view);

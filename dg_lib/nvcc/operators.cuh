@@ -160,7 +160,7 @@ class Operator
      * @param mat the matrix to output
      * @return the outstream
      */
-    template< Ostream>
+    template< class Ostream>
     friend Ostream& operator<<(Ostream& os, const Operator<T,n>& mat)
     {
         for( size_t i=0; i < n ; i++)
@@ -180,7 +180,7 @@ class Operator
      * @param mat The Matrix into which the values are written
      * @return The istream
      */
-    template< Istream>
+    template< class Istream>
     friend Istream& operator>> ( Istream& is, Operator<T,n>& mat){
         for( size_t i=0; i<n; i++)
             for( size_t j=0; j<n; j++)

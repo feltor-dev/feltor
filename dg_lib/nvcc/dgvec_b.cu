@@ -1,6 +1,6 @@
 #include <iostream> 
 
-#include "blas/thrust_vector.cuh"
+#include "blas.h"
 #include "dgvec.cuh" 
 #include "timer.cuh" 
 
