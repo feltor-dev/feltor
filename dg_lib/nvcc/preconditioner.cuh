@@ -8,7 +8,7 @@ struct DiagonalPreconditioner
 {
     __host__ __device__
     double operator()( int i) const {
-        return static_cast<Derived*>(this)->operator()( i);
+        return static_cast<Derived*>(this)->implementation( i);
 };
 
 
@@ -34,7 +34,7 @@ struct T : public DiagonalPreconditioner< T<n> >
     * @return The grid size
     */
     __host__ __device__ const double& h() const {return h_;}
-    __host__ __device__ double operator() ( int i) const {
+    __host__ __device__ double implementation( int i) const {
         return (double)(2*(i%n)+1)/h_;
     }
   private:
@@ -65,7 +65,7 @@ struct S : public DiagonalPreconditioner < S <n> >
     * @return The grid size
     */
     __host__ __device__ const double& h() const {return h_;}
-    __host__ __device__ double operator() ( int i) const {
+    __host__ __device__ double implementation( int i) const {
         return h_/(double)(2*(i%n)+1);
   private:
     double h_;

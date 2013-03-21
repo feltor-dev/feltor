@@ -26,6 +26,8 @@ class ArrVec1d_View
      * @brief Data type of the elements in the container
      */
     typedef T value_type;
+
+    typedef ThrustVectorT vector_category;
     /**
      * @brief Initialize a reference to a container
      *
@@ -133,5 +135,7 @@ class ArrVec1d : public ArrVec1d_View<T, n, container>
 };
 
 }//namespace dg
+
+#include "blas/thrust_vector.cuh"
 
 #endif //_DG_VECTOR_

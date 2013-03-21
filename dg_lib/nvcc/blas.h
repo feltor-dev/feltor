@@ -24,7 +24,10 @@ struct BLAS1
      * @param y Right Vector might equal Left Vector
      * @return Scalar product
      */
-    static double ddot( const Vector& x, const Vector& y);
+    static double ddot( const Vector& x, const Vector& y)
+    {
+        return BLAS1<Vector>::ddot( x, y, Vector::vector_category);
+    }
     /*! @brief Modified BLAS 1 routine daxpy
      *
      * This routine computes \f[ y =  \alpha x + \beta y \f] 

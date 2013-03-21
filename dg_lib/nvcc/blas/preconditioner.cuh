@@ -51,9 +51,8 @@ struct dot_functor_T
 template< class Derived> 
 struct dsymv_functor
 {
-    typedef DiagonalPreconditioner< Derived> Preconditioner;
     typedef thrust::tuple< double, int> Pair;
-    dsymv_functor_T( double alpha, double beta, const Preconditioner& p ): p_(p), alpha(alpha), beta(beta) {}
+    dsymv_functor_T( double alpha, double beta, const Derived& p ): p_(p), alpha(alpha), beta(beta) {}
     __host__ __device__
         double operator()(const double& x,  const Pair& p)
         {
@@ -62,16 +61,15 @@ struct dsymv_functor
             return y;
         }
   private:
-    Preconditioner p_;
+    Derived p_;
     double alpha, beta;
 };
 
 template< class Derived> 
 struct dot_functor
 {
-    typedef DiagonalPreconditioner< Derived> Preconditioner;
     typedef thrust::tuple< double, int> Pair; 
-    dot_functor_T( const Preconditioner& p): p_(p){}
+    dot_functor_T( const Derived& p): p_(p){}
     __host__ __device__
     double operator()( const double& x, const Pair& p) 
     {
@@ -80,7 +78,7 @@ struct dot_functor
     }
 
   private:
-    const Preconditioner p_;
+    const Derived p_;
 };
 
 /*
@@ -121,7 +119,7 @@ struct dot_functor_S
 template< class Derived, class ThrustVector>
 struct BLAS2<DiagonalPreconditioner<Derived>, ThrustVector>
 {
-    typedef DiagonalPreconditioner< Derived> Matrix;
+    typedef Derived Matrix;
     typedef ThrustVector Vector;
     static void dsymv( double alpha, const Matrix& t, const ThrustVector& x, double beta, ThrustVector& y)
     {
