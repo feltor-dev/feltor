@@ -44,7 +44,7 @@ unsigned CG<Matrix, Vector>::operator()( const Matrix& A, Vector& x, const Vecto
     //r = b; BLAS2<Matrix, Vector>::dsymv( -1., A, x, 1.,r); //compute r_0 
     //compute r <- -Ax+b
     BLAS2<Matrix, Vector>::dsymv( A,x,r);
-    BLAS1<Vector>::axpby( 1., b, -1., r);
+    BLAS1<Vector>::daxpby( 1., b, -1., r);
     p = r;
     double nrm2r_old = BLAS1<Vector>::ddot( r, r); //and store the norm of it
     double alpha, nrm2r_new;
@@ -55,6 +55,8 @@ unsigned CG<Matrix, Vector>::operator()( const Matrix& A, Vector& x, const Vecto
         BLAS1<Vector>::daxpby( alpha, p, 1.,x);
         BLAS1<Vector>::daxpby( -alpha, ap, 1., r);
         nrm2r_new = BLAS1<Vector>::ddot( r,r);
+        std::cout << "ping "<< i <<"  ";
+        std::cout << sqrt( nrm2r_new/nrm2b) <<"  ";
         if( sqrt( nrm2r_new/nrm2b) < eps) 
             return i;
         BLAS1<Vector>::daxpby(1., r, nrm2r_new/nrm2r_old, p );
@@ -120,6 +122,8 @@ unsigned PCG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vect
         BLAS1<Vector>::daxpby( alpha, p, 1.,x);
         BLAS1<Vector>::daxpby( -alpha, ap, 1., r);
         nrm2r_new = BLAS2<Preconditioner, Vector>::ddot( P, r); //<--
+        std::cout << "ping "<< i <<"\n";
+        std::cout << sqrt( nrm2r_new/nrm2b) <<"\n";
         if( sqrt( nrm2r_new/nrm2b) < eps) 
             return i;
         BLAS2<Preconditioner, Vector>::dsymv(1.,P, r, nrm2r_new/nrm2r_old, p );//<--

@@ -6,14 +6,14 @@
 #include "laplace.h"
 #include "preconditioner.h"
 
-#define P 3//global relative error in L2 norm is O(h^P)
+#define P 1//global relative error in L2 norm is O(h^P)
 const unsigned N = 10;  //more N means less iterations for same error
 const double lx = 2*M_PI;
 const double h = lx/(double)N;
-const double eps = 1e-4; //# of pcg iterations increases very much if 
+const double eps = 1e-7; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
-typedef std::vector<dg::Array<double,P>> ArrVec;
+typedef std::vector<std::array<double,P>> ArrVec;
 typedef dg::Laplace_Dir<P> Matrix;
 double sinus(double x){ return sin( x);}
 double initial( double x) {return sin(0);}
@@ -32,7 +32,8 @@ int main()
     cout << "Vector size: P*N "<< P*N <<endl;
     //compute S b
     dg::BLAS2<dg::S, ArrVec>::dsymv( dg::S(h), b, b);
-    std::cout << "Number of pcg iterations "<< pcg( A, x, b, dg::T(h), eps)<<endl;
+    //std::cout << "Number of pcg iterations "<< pcg( A, x, b, dg::T(h), eps)<<endl;
+    std::cout << "Number of cg iterations "<< cg( A, x, b,  eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
     dg::BLAS1<ArrVec>::daxpby( 1.,x,-1.,error);

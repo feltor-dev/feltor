@@ -11,6 +11,8 @@ namespace dg{
  */
 struct ThrustVectorTag {};
 
+//struct DeviceVectorTag : public ThrustVectorTag {};
+
 
 }//namespace dg
 

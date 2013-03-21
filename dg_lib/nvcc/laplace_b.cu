@@ -6,7 +6,7 @@
 #include <cusp/dia_matrix.h>
 #include <cusp/csr_matrix.h>
 
-#include "timer.cuh"
+#include "../gcc/timer.h"
 #include "laplace.cuh"
 #include "dgvec.cuh"
 #include "blas.h"
@@ -44,6 +44,7 @@ int main()
     DMatrix laplace1d = create::laplace1d_per<P>( N, 2.);
     t.tic();
     blas2::symv( laplace1d, dv, dw);
+    cudaThreadSynchronize();
     t.toc();
     cout << "Multiplication with laplace took "<<t.diff()<<"s\n";
     return 0;

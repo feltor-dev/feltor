@@ -2,7 +2,7 @@
 
 #include "blas.h"
 #include "dgvec.cuh" 
-#include "timer.cuh" 
+#include "../gcc/timer.h" 
 
 using namespace dg; 
 using namespace std; 
