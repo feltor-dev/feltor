@@ -53,36 +53,35 @@ struct Diagonal_Dot_Functor
 };
 
 
-template< class Matrix, class Vector>
-inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::DiagonalPreconditionerTag, dg::ThrustVectorTag)
-{
-    {
-        return doDot( x,m,x, dg::DiagonalPreconditionerTag(), dg::ThrustVectorTag());
-    }
-}
 
 template< class Matrix, class Vector>
 inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, DiagonalPreconditionerTag, ThrustVectorTag)
 {
-    {
-        return thrust::inner_product(  x.begin(), x.end(), 
-                                thrust::make_zip_iterator( thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
-                                0.0,
-                                thrust::plus<double>(),
-                                detail::Diagonal_Dot_Functor<Matrix>( m)
-                                );
-    }
+    return thrust::inner_product(  x.begin(), x.end(), 
+                            thrust::make_zip_iterator( thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
+                            0.0,
+                            thrust::plus<double>(),
+                            detail::Diagonal_Dot_Functor<Matrix>( m)
+                            );
 }
 
 template< class Matrix, class Vector>
-inline void doSymv(  typename Matrix::value_type alpha, 
+inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::DiagonalPreconditionerTag, dg::ThrustVectorTag)
+{
+    return doDot( x,m,x, dg::DiagonalPreconditionerTag(), dg::ThrustVectorTag());
+}
+
+template< class Matrix, class Vector>
+inline void doSymv(  
+              typename Matrix::value_type alpha, 
               const Matrix& m,
               const Vector& x, 
               typename Matrix::value_type beta, 
               Vector& y, 
-              DiagonalPreconditionerTag
+              DiagonalPreconditionerTag,
               ThrustVectorTag)
 {
+    //std::cout << "Hello Preconditioner!\n";
     if( alpha == 0)
     {
         if( beta == 1) 
@@ -98,13 +97,53 @@ inline void doSymv(  typename Matrix::value_type alpha,
                       );
 }
 template< class Matrix, class Vector>
-inline void doSymv(  const Vector& x, 
-              const Matrix& m,
+inline void doSymv(  
+              const Matrix& m, 
+              const Vector& x,
               Vector& y, 
-              DiagonalPreconditionerTag
+              DiagonalPreconditionerTag,
               ThrustVectorTag)
 {
     doSymv( 1., m, x, 0., y, dg::DiagonalPreconditionerTag(), dg::ThrustVectorTag());
+}
+
+//identities
+template< class Vector>
+inline void doSymv( const Identity<typename Vector::value_type>& m, const Vector& x, Vector& y, IdentityTag, ThrustVectorTag)
+{
+    dg::blas1::detail::doAxpby( 1., x, 1., y, dg::ThrustVectorTag());
+}
+                    
+template< class Vector>
+inline void doSymv(  
+              typename Vector::value_type alpha, 
+              const Identity<typename Vector::value_type>& m,
+              const Vector& x, 
+              typename Vector::value_type beta, 
+              Vector& y, 
+              IdentityTag,
+              ThrustVectorTag)
+{
+    //std::cout << "Hello identity!\n";
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, dg::ThrustVectorTag());
+}
+
+template< class Vector>
+inline typename Vector::value_type doDot( 
+                const Vector& x, 
+                const Identity<typename Vector::value_type>& m, 
+                const Vector& y, 
+                IdentityTag, ThrustVectorTag)
+{
+    return dg::blas1::detail::doDot( x, y, dg::ThrustVectorTag());
+}
+
+template< class Vector>
+inline typename Vector::value_type doDot( 
+                const Identity<typename Vector::value_type>& m, 
+                const Vector& x, dg::IdentityTag, dg::ThrustVectorTag)
+{
+    return dg::blas1::detail::doDot( x, x, dg::ThrustVectorTag());
 }
 
 }//namespace detail

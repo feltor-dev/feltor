@@ -86,7 +86,7 @@ class ArrVec2d_View
      * @return Reference to Ostream
      */
     template< class Ostream>
-    friend Ostream& operator<<( Ostream& os, const ArrVec1d_View& v)
+    friend Ostream& operator<<( Ostream& os, const ArrVec2d_View& v)
     {
         unsigned N = v.hv.size()/n;
         for( unsigned i=0; i<N; i++)

@@ -2,19 +2,36 @@
 #define _DG_PRECONDITIONER_
 
 #include "matrix_categories.h"
+#include "matrix_traits.h"
 
 namespace dg{
 
-template< class Derived>
+template< class T = double>
+struct Identity
+{
+    typedef T value_type;
+    typedef IdentityTag matrix_category;
+};
+
+template<class T>
+struct MatrixTraits<Identity< T>  >
+{
+    typedef T value_type;
+    typedef typename Identity<T>::matrix_category matrix_category;
+};
+
+/*
+template< class T, class Derived>
 struct DiagonalPreconditioner
 {
     typedef DiagonalPreconditionerTag matrix_category;
-    typedef typename Derived::value_type value_type;
+    typedef T value_type;
     __host__ __device__
     value_type operator()( int i) const {
         return static_cast<Derived*>(this)->implementation( i);
     }
 };
+*/
 
 
 /**
@@ -25,7 +42,7 @@ struct DiagonalPreconditioner
 * @tparam n Number of Legendre nodes per cell.
 */
 template< class T, size_t n>
-struct T1D : public DiagonalPreconditioner< T1D<T, n> > 
+struct T1D //: public DiagonalPreconditioner< T, T1D<T, n> > 
 {
     typedef T value_type;
     /**
@@ -40,12 +57,19 @@ struct T1D : public DiagonalPreconditioner< T1D<T, n> >
     * @return The grid size
     */
     __host__ __device__ const value_type& h() const {return h_;}
-    __host__ __device__ value_type implementation( int i) const 
+    __host__ __device__ value_type operator()( int i) const 
     {
         return (value_type)(2*(i%n)+1)/h_;
     }
   private:
     value_type h_;
+};
+
+template< class T, size_t n>
+struct MatrixTraits< T1D< T, n> > 
+{
+    typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
 };
 
 
@@ -58,7 +82,7 @@ struct T1D : public DiagonalPreconditioner< T1D<T, n> >
 * @tparam n Number of Legendre nodes per cell.
 */
 template< class T, size_t n>
-struct S1D : public DiagonalPreconditioner < S1D <T, n> >
+struct S1D// : public DiagonalPreconditioner < T, S1D <T, n> >
 {
     typedef T value_type;
     /**
@@ -73,16 +97,21 @@ struct S1D : public DiagonalPreconditioner < S1D <T, n> >
     * @return The grid size
     */
     __host__ __device__ const value_type& h() const {return h_;}
-    __host__ __device__ value_type implementation( int i) const 
+    __host__ __device__ value_type operator()( int i) const 
     {
         return h_/(value_type)(2*(i%n)+1);
     }
   private:
     value_type h_;
 };
+template< class T, size_t n>
+struct MatrixTraits< S1D< T, n> > 
+{
+    typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
+};
 
 
 } //namespace dg
-#include "blas/preconditioner.cuh"
 
 #endif //_DG_PRECONDITIONER_

@@ -4,6 +4,7 @@
 #include <cassert> 
 
 #include "dgvec.cuh"
+#include "dgmat.cuh"
 #include "dlt.h"
 
 namespace dg
@@ -116,7 +117,7 @@ ArrVec1d<double, n> expand( Function& f, double a, double b, unsigned num_int)
         {
             temp[i] = 0;
             for( unsigned j=0; j<n; j++)
-                temp[i] += dg::DLT<n>::forward[i][j]*v(k,j);
+                temp[i] += DLT<n>::forward[i][j]*v(k,j);
         }
         for( unsigned j=0; j<n; j++)
             v(k,j) = temp[j];
@@ -157,7 +158,7 @@ ArrVec2d< double, n> expand( BinaryOp& f, double x0, double x1, double y0, doubl
                     //multiply forward-matrix with each row k
                     temp[k][l] = 0;
                     for(  unsigned ll=0; ll<n; ll++)
-                        temp[k][l] += dg::DLT<n>::forward[l][ll]*v( i,j,k,ll);
+                        temp[k][l] += DLT<n>::forward[l][ll]*v( i,j,k,ll);
                 }
             //then transform each col
             for( unsigned k=0; k<n; k++) 
@@ -166,7 +167,7 @@ ArrVec2d< double, n> expand( BinaryOp& f, double x0, double x1, double y0, doubl
                     //multiply forward-matrix with each col 
                     v(i,j,k,l) = 0;
                     for(  unsigned kk=0; kk<n; kk++)
-                        v(i,j,k,l) += dg::DLT<n>::forward[k][kk]*temp[kk][l];
+                        v(i,j,k,l) += DLT<n>::forward[k][kk]*temp[kk][l];
                 }
         }
     return v;

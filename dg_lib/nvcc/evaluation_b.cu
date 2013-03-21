@@ -7,7 +7,7 @@
 #include "timer.cuh"
 #include "evaluation.cuh"
 #include "operators.cuh"
-#include "preconditioner.cuh"
+#include "blas.h"
 
 
 double function( double x)
@@ -43,22 +43,22 @@ int main()
     t.toc(); 
     cout << "Copy of data host2device took  "<< t.diff()<<"s\n\n";
     t.tic();
-    dg::BLAS2< dg::S<n>, DVec>::dsymv(  dg::S<n>(h), d_v.data(), d_v.data());
+    dg::blas2::symv(  dg::S1D<double, n>(h), d_v.data(), d_v.data());
     t.toc(); 
-    cout << "dsymv took on device           "<< t.diff()<<"s\n";
+    cout << "symv took on device           "<< t.diff()<<"s\n";
     t.tic();
-    dg::BLAS2< dg::S<n>, HVec>::dsymv(  dg::S<n>(h), h_v.data(), h_v.data());
+    dg::blas2::symv(  dg::S1D<double, n>(h), h_v.data(), h_v.data());
     t.toc(); 
-    cout << "dsymv took on host             "<< t.diff()<<"s\n";
+    cout << "symv took on host             "<< t.diff()<<"s\n";
 
     double norm;
     t.tic();
-    norm = dg::BLAS2< dg::T<n>, DVec>::ddot( dg::T<n>(h), d_v.data());
+    norm = dg::blas2::dot( dg::T1D<double, n>(h), d_v.data());
     t.toc(); 
     cout << "ddot(v,v) took on device       "<< t.diff()<<"s\n";
 
     t.tic();
-    norm = dg::BLAS2< dg::T<n>, HVec>::ddot( dg::T<n>(h), h_v.data());
+    norm = dg::blas2::dot( dg::T1D<double, n>(h), h_v.data());
     t.toc(); 
     cout << "ddot(v,v) took on host         "<< t.diff()<<"s\n\n";
     cout<< "Square normalized norm "<< norm <<"\n";

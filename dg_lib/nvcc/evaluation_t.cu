@@ -8,6 +8,7 @@
 #include "operators.cuh"
 #include "preconditioner.cuh"
 
+#include "blas.h"
 
 double function( double x)
 {
@@ -31,8 +32,8 @@ int main()
     double h = 1./(double)N;
     HArrVec h_v = dg::expand< double(&) (double), n>( function, 0, 1, N);
     DArrVec d_v( h_v.data());
-    dg::BLAS2< dg::S<n>, HVec>::dsymv( 1., dg::S<n>(h), h_v.data(), 0., h_v.data());
-    double norm = dg::BLAS2< dg::T<n>, DVec>::ddot( h_v.data(), dg::T<n>(h), h_v.data());
+    dg::blas2::symv( 1., dg::S1D<double, n>(h), h_v.data(), 0., h_v.data());
+    double norm = dg::blas2::dot( h_v.data(), dg::T1D<double, n>(h), h_v.data());
     cout<< "Square normalized norm "<< norm <<"\n";
     double solution = (exp(2.) -exp(0))/2.;
     cout << "Correct square norm of exp(x) is "<<solution<<endl;
