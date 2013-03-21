@@ -27,7 +27,6 @@ class ArrVec1d_View
      */
     typedef T value_type;
 
-    typedef ThrustVectorT vector_category;
     /**
      * @brief Initialize a reference to a container
      *
