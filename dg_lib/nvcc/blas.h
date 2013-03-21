@@ -2,6 +2,9 @@
 #define _DG_BLAS_
 
 #include "vector_traits.h"
+#include "blas/thrust_vector.cuh"
+
+
 namespace dg{
 
 //CUDA relevant: BLAS routines must block until result is ready 
@@ -21,49 +24,13 @@ inline typename Vector::value_type dot( const Vector& x, const Vector& y)
 }
 
 template< class Vector>
-inline void daxpy( typename Vector::value_type alpha, const Vector& x, typename Vector::value_type beta, Vector& y)
+inline void axpby( typename Vector::value_type alpha, const Vector& x, typename Vector::value_type beta, Vector& y)
 {
-    return dg::blas1::detail::doAxpby( alpha, x, beta, y, typename Vector::vector_category() );
+    return dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
 }
 
 }//namespace blas1
 
-/*
-namespace blas2
-{
-
-template< class Matrix, class Vector>
-inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const Vector& y);
-{
-    return dg::blas2::detail::doDot( x, m, y, typename Matrix::matrix_category(), typename Vector::vector_category() );
-}
-
-template< class Matrix, class Vector>
-inline typename Matrix::value_type dot( const Matrix& m, const Vector& x);
-{
-    return dg::blas2::detail::doDot( m, x, typename Matrix::matrix_category(), typename Vector::vector_category() );
-}
-
-template< class Matrix, class Vector>
-inline void symv( typename Matrix::value_type alpha, 
-                  const Matrix& m, 
-                  const Vector& x, 
-                  typename Matrix::value_type beta, 
-                  Vector& y);
-{
-    return dg::blas2::detail::doSymv( alpha, m, x, beta, y, typename Matrix::matrix_category(), typename Vector::vector_category() );
-}
-
-template< class Matrix, class Vector>
-inline void symv( const Matrix& m, 
-                  const Vector& x, 
-                  Vector& y);
-{
-    return dg::blas2::detail::doSymv( m, x, y, typename Matrix::matrix_category(), typename Vector::vector_category() );
-}
-
-} //namespace blas2
-*/
 
 
 //template < class VectorClass>
@@ -159,5 +126,7 @@ inline void symv( const Matrix& m,
 
 
 } //namespace dg
+
+#include "blas2.h"
 
 #endif //_DG_BLAS_

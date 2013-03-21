@@ -36,27 +36,25 @@ int main()
     t.toc();
     cout << "GPU dot(x,y) took          "<<t.diff() <<"s\n";
     cout << "Result "<<dot<<"\n";
-    /*
     t.tic(); 
-    dot = dg::BLAS1<HVec>::ddot( hx.data(),hy.data());
+    dot = dg::blas1::dot( hx.data(),hy.data());
     t.toc();
     cout << "CPU dot(x,y) took          "<<t.diff() <<"s\n";
     cout << "Result "<<dot<<"\n\n";
 
     t.tic(); 
-    dg::BLAS1<DVec>::daxpby( 3., dx, 7., dy_v.data()); 
+    dg::blas1::axpby( 3., dx, 7., dy_v.data()); 
     t.toc();
 
     cout << "GPU daxpby took            " << t.diff() <<"s\n";
     cout << "Result : " << dy[ dy.size() -1] << "\n";
 
     t.tic(); 
-    dg::BLAS1<HVec>::daxpby( 3., hx.data(), 7., hy.data()); 
+    dg::blas1::axpby( 3., hx.data(), 7., hy.data()); 
     t.toc();
 
     cout << "CPU daxpby took            " << t.diff() <<"s\n";
     cout << "Result : " << hy(N-1, 2) << "\n";
-    */
 
     return 0;
 }

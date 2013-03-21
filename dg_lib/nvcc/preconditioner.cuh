@@ -1,13 +1,16 @@
 #ifndef _DG_PRECONDITIONER_
 #define _DG_PRECONDITIONER_
 
+#include "matrix_categories.h"
 namespace dg{
 
 template< class Derived>
 struct DiagonalPreconditioner
 {
+    typedef DiagonalPreconditionerTag matrix_category;
+    typedef Derived::value_type value_type;
     __host__ __device__
-    double operator()( int i) const {
+    value_type operator()( int i) const {
         return static_cast<Derived*>(this)->implementation( i);
 };
 
@@ -19,26 +22,27 @@ struct DiagonalPreconditioner
 * T is the inverse of S 
 * @tparam n Number of Legendre nodes per cell.
 */
-template< size_t n>
+template< class value_type, size_t n>
 struct T : public DiagonalPreconditioner< T<n> > 
 {
+    typedef value_type value_type;
     /**
     * @brief Constructor
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ T( double h = 2.):h_(h){}
+    __host__ __device__ T( value_type h = 2.):h_(h){}
     /**
     * @brief 
     *
     * @return The grid size
     */
-    __host__ __device__ const double& h() const {return h_;}
-    __host__ __device__ double implementation( int i) const {
-        return (double)(2*(i%n)+1)/h_;
+    __host__ __device__ const value_type& h() const {return h_;}
+    __host__ __device__ value_type implementation( int i) const {
+        return (value_type)(2*(i%n)+1)/h_;
     }
   private:
-    double h_;
+    value_type h_;
 };
 
 
@@ -50,25 +54,26 @@ struct T : public DiagonalPreconditioner< T<n> >
 * Use in Scalar product.
 * @tparam n Number of Legendre nodes per cell.
 */
-template< size_t n>
+template< class value_type, size_t n>
 struct S : public DiagonalPreconditioner < S <n> >
 {
+    typedef value_type value_type;
     /**
     * @brief Constructor
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ S( double h = 2.):h_(h){}
+    __host__ __device__ S( value_type h = 2.):h_(h){}
     /**
     * @brief 
     *
     * @return The grid size
     */
-    __host__ __device__ const double& h() const {return h_;}
-    __host__ __device__ double implementation( int i) const {
-        return h_/(double)(2*(i%n)+1);
+    __host__ __device__ const value_type& h() const {return h_;}
+    __host__ __device__ value_type implementation( int i) const {
+        return h_/(value_type)(2*(i%n)+1);
   private:
-    double h_;
+    value_type h_;
 };
 
 
