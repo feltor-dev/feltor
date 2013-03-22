@@ -16,6 +16,33 @@ namespace dg{
  */
 namespace blas1
 {
+    /**
+     * @brief The Vector class
+     */
+    typedef VectorClass Vector;
+    /*! @brief Euclidean dot product between two Vectors
+     *
+     * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
+     * @param x Left Vector
+     * @param y Right Vector might equal Left Vector
+     * @return Scalar product
+     */
+    static double ddot( const Vector& x, const Vector& y);
+    /*! @brief Modified BLAS 1 routine daxpy
+     *
+     * This routine computes \f[ y =  \alpha x + \beta y \f] 
+     * Q: Isn't it better to implement daxpy and daypx? \n
+     * A: unlikely, because in all three cases all elements of x and y have to be loaded
+     * and daxpy is memory bound. (Is there no original daxpby routine because 
+     * the name is too long??)
+     * @param alpha Scalar  
+     * @param x Vector x migtht equal y 
+     * @param beta Scalar
+     * @param y Vector y contains solution on output
+     * @note In an implementation you may want to check for alpha == 0 and beta == 1
+     */
+    static void daxpby( double alpha, const Vector& x, double beta, Vector& y);
+};
 
 /*! @brief Euclidean dot product between two Vectors
  *
