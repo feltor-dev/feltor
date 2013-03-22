@@ -1,6 +1,7 @@
 #ifndef _DG_RK_
 #define _DG_RK_
 
+#include <vector>
 #include <cassert>
 
 #include "blas.h"

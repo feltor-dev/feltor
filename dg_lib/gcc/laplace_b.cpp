@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <array>
 #include <cmath>
 
 #include "timer.h"
@@ -18,7 +19,7 @@ double secondsinus(double x){ return /*-6*x*/4.*M_PI*M_PI*sin(2*M_PI*x);}
 #define P 3
 const unsigned num_int = 1e5;
 const double lx = 1.;
-typedef std::vector<Array<double, P>> ArrVec;
+typedef std::vector<std::array<double, P>> ArrVec;
 typedef dg::Laplace<P> Matrix;
 
 int main()

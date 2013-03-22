@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "evaluation.h"
+#include "preconditioner.h"
 #include "blas.h"
 #include "laplace.h"
 #include "dlt.h"
