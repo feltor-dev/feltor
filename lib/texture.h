@@ -182,7 +182,7 @@ void gentexture_RGBf_temp( Texture_RGBf& tex, const M& theta, const double ray)
         throw toefl::Message( "theta and tex have different sizes!", ping);
 #endif
 
-    const static colormap_ext cm = redblue_ext(); // extended colormap
+    const static colormap_ext cm_temp = redblue_ext(); // extended colormap
     
     double scalefact = 255./ray;
     double temp;
@@ -195,9 +195,9 @@ void gentexture_RGBf_temp( Texture_RGBf& tex, const M& theta, const double ray)
             
             k = ((int)(scalefact * temp)) + 64; // extended colormap
             k = k<0 ? 0 : ( k>383 ? 383 : k );
-            tex(i,j)[0] = cm.R[k];
-            tex(i,j)[1] = cm.G[k];
-            tex(i,j)[2] = cm.B[k];
+            tex(i,j)[0] = cm_temp.R[k];
+            tex(i,j)[1] = cm_temp.G[k];
+            tex(i,j)[2] = cm_temp.B[k];
         }
 }
 

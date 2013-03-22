@@ -157,7 +157,7 @@ void DRT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
             e( coeff( i,j), laplace, (double)j*dymin);
             p( phi_coeff(i,j), laplace);  
         }
-    double norm = fftw_normalisation( bound.bc_x, rows)*(double)cols;
+    double norm = fftw_normalisation( bound.bc_x, cols)*(double)rows;
     karniadakis.init_coeff( coeff, norm);
 }
 //unaware of BC except FFT 
@@ -174,7 +174,7 @@ void DRT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DRT_DFT>,n>& v, enum
         drt_dft.r2c_T( v[k], cdens[k]);
     }
     //don't forget to normalize coefficients!!
-    double norm = fftw_normalisation( blue.boundary().bc_x, rows)*(double)cols;
+    double norm = fftw_normalisation( blue.boundary().bc_x, cols)*(double)rows;
     for( unsigned k=0; k<n; k++)
         for( unsigned i=0; i<crows; i++)
             for( unsigned j=0; j<ccols;j++)

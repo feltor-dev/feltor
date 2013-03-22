@@ -51,6 +51,21 @@ void drawTexture( const M& field, double max, double x0, double x1, double y0, d
         glTexCoord2f(0.0f, 1.0f); glVertex2f( x0, y1);
     glEnd();
 }
+template<class M>
+void drawTemperature( const M& field, double ray, double x0, double x1, double y0, double y1)
+{
+    static Texture_RGBf temp_tex( field.rows(), field.cols());
+    gentexture_RGBf_temp( temp_tex, field, ray);
+    // image comes from texarray on host
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, temp_tex.cols(), temp_tex.rows(), 0, GL_RGB, GL_FLOAT, temp_tex.getPtr());
+    glLoadIdentity();
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f( x0, y0);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( x1, y0);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( x1, y1);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f( x0, y1);
+    glEnd();
+}
 } //namespace toefl
 
 #endif //_TL_UTILITY_
