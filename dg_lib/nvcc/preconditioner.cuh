@@ -45,6 +45,7 @@ template< class T, size_t n>
 struct T1D //: public DiagonalPreconditioner< T, T1D<T, n> > 
 {
     typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
     /**
     * @brief Constructor
     *
@@ -85,6 +86,7 @@ template< class T, size_t n>
 struct S1D// : public DiagonalPreconditioner < T, S1D <T, n> >
 {
     typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
     /**
     * @brief Constructor
     *
@@ -113,5 +115,8 @@ struct MatrixTraits< S1D< T, n> >
 
 
 } //namespace dg
+
+#include "preconditioner2d.cuh"
+
 
 #endif //_DG_PRECONDITIONER_

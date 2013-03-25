@@ -88,11 +88,15 @@ class ArrVec2d_View
     template< class Ostream>
     friend Ostream& operator<<( Ostream& os, const ArrVec2d_View& v)
     {
-        unsigned N = v.hv.size()/n;
+        unsigned N = v.hv.size()/n/n;
         for( unsigned i=0; i<N; i++)
         {
             for( unsigned j=0; j<n; j++)
-                os << v(i,j) << " ";
+            {
+                for( unsigned k=0; k<n; k++)
+                    os << v(0, i, j,k) << " ";
+                os << "\n";
+            }
             os << "\n";
         }
         return os;
