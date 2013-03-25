@@ -6,8 +6,8 @@
 #include "laplace.h"
 #include "preconditioner.h"
 
-#define P 1//global relative error in L2 norm is O(h^P)
-const unsigned N = 10;  //more N means less iterations for same error
+#define P 3//global relative error in L2 norm is O(h^P)
+const unsigned N = 100;  //more N means less iterations for same error
 const double lx = 2*M_PI;
 const double h = lx/(double)N;
 const double eps = 1e-7; //# of pcg iterations increases very much if 

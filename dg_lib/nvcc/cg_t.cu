@@ -9,26 +9,26 @@
 #include "laplace.cuh"
 #include "preconditioner.cuh"
 
-const unsigned n = 1; //global relative error in L2 norm is O(h^P)
-const unsigned N = 10;  //more N means less iterations for same error
+const unsigned n = 3; //global relative error in L2 norm is O(h^P)
+const unsigned N = 100;  //more N means less iterations for same error
 
 const double lx = 2*M_PI;
 const double h = lx/(double)N;
 const double eps = 1e-7; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
-//typedef thrust::device_vector< double>   DVec;
-typedef thrust::host_vector< double>     DVec;
+typedef thrust::device_vector< double>   DVec;
+//typedef thrust::host_vector< double>     DVec;
 typedef thrust::host_vector< double>     HVec;
 typedef dg::ArrVec1d< double, n, HVec>  HArrVec;
-typedef dg::ArrVec1d< double, n, HVec>  DArrVec;
-//typedef dg::ArrVec1d< double, n, DVec>  DArrVec;
+//typedef dg::ArrVec1d< double, n, HVec>  DArrVec;
+typedef dg::ArrVec1d< double, n, DVec>  DArrVec;
 
 typedef dg::T1D<double, n> Preconditioner;
 
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
-typedef cusp::ell_matrix<int, double, cusp::host_memory> DMatrix;
-//typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
+//typedef cusp::ell_matrix<int, double, cusp::host_memory> DMatrix;
+typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
 double sine(double x){ return sin( x);}
 double initial( double x) {return sin(0);}
@@ -36,7 +36,7 @@ using namespace std;
 int main()
 {
     HArrVec x = dg::expand<double (&)(double), n> ( initial, 0,lx, N);
-    DMatrix A = dg::create::laplace1d_per<n>( N, h); 
+    DMatrix A = dg::create::laplace1d_dir<n>( N, h); 
     dg::CG<DMatrix, DVec, Preconditioner > pcg( x.data(), n*N);
     dg::CG<DMatrix, DVec> cg( x.data(), n*N);
     HArrVec b = dg::expand<double (&)(double), n> ( sine, 0,lx, N);
