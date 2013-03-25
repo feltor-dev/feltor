@@ -22,6 +22,14 @@ cusp_thrust: cusp_thrust.cu
 	echo "Attention: No compiler warnings are issued!" 
 	./$@
 
+%2d_t: %2d_t.cu %.cuh
+	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	./$@
+
+%2d_b: %2d_b.cu %.cuh
+	$(NVCC) -O3 -w  $< $(NVCCFLAGS) $(INCLUDE) -o $@ 
+	echo "Attention: No compiler warnings are issued!" 
+	./$@
 .PHONY: clean doc
 
 doc: 
