@@ -14,20 +14,22 @@ namespace create{
 namespace detail{
 
 struct Add_index2d{
-    Add_index2d( size_t M, size_t n, size_t m):M(M), n(n), m(m) {}
+    Add_index2d( size_t M, size_t n, size_t m):M(M), n(n), m(m), number(0) {}
     void operator()(    cusp::coo_matrix<int, double, cusp::host_memory>& hm, 
-                        int& number, 
                         unsigned ip, unsigned i, unsigned jp, unsigned j, 
                         unsigned kp, unsigned k, unsigned lp, unsigned l, 
                         double value )
     {
-        hm.row_indices[number] = M*n*m*ip + n*m*jp + m*kp + lp;
-        hm.column_indices[number] = M*n*m*i + n*m*j+m*k + l;
-        hm.values[number] = value;
+        if( value == 0.) return;
+        //std::cout << "number "<<number<<" value"<< value<<"\n";
+        hm.row_indices[number]    = M*n*m*ip + n*m*jp + m*kp + lp;
+        hm.column_indices[number] = M*n*m*i  + n*m*j  + m*k  + l;
+        hm.values[number]         = value;
         number++;
     }
   private:
     size_t M, n, m;
+    unsigned number;
 };
 
 } //namespace detail
@@ -47,61 +49,55 @@ struct Add_index2d{
 template< size_t n>
 cusp::coo_matrix<int, double, cusp::host_memory> laplace2d_per( unsigned Nx, unsigned Ny, double hx, double hy, double alpha = 1.)
 {
-    cusp::coo_matrix<int, double, cusp::host_memory> A( n*n*Nx*Ny, n*n*Nx*Ny, 3*n*n*n*n*Nx*Ny);
-    Operator<double, n> l( detail::lilj);
-    Operator<double, n> r( detail::rirj);
+    cusp::coo_matrix<int, double, cusp::host_memory> A( n*n*Nx*Ny, n*n*Nx*Ny, n*n*(6*n-1)*Nx*Ny);
+    //std::cout << "# of entries "<<n*n*(6*n-1)*Nx*Ny <<std::endl;
+    Operator<double, n> l(  detail::lilj);
+    Operator<double, n> r(  detail::rirj);
     Operator<double, n> lr( detail::lirj);
     Operator<double, n> rl( detail::rilj);
-    Operator<double, n> d( detail::pidxpj);
+    Operator<double, n> d(  detail::pidxpj);
     Operator<double, n> tx( detail::pipj_inv), ty( tx);
     tx *= 2./hx;
     ty *= 2./hy;
-    Operator< double, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
-    Operator< double, n> b = -((d+l)*t*rl+alpha*rl);
+    Operator< double, n> ax = lr*tx*rl+(d+l)*tx*(d+l).transpose() + alpha*(l+r);
+    Operator< double, n> bx = -((d+l)*tx*rl+alpha*rl);
+    Operator< double, n> ay = lr*ty*rl+(d+l)*ty*(d+l).transpose() + alpha*(l+r);
+    Operator< double, n> by = -((d+l)*ty*rl+alpha*rl);
+    //std::cout << ax << ay <<std::endl;
     //assemble the matrix
-    int number = 0;
-    detail::Add_index2d add_index2d( M, n, m)
-    for( unsigned kp=0; kp<n; kp++)
-        for( unsigned k=0; k<n; k++)
-            for( unsigned lp=0; lp<m; lp++)
-                for( unsigned l=0; l<m; l++)
-                {
-                    add_index( A, number, 0,0,0,0,kp,k, lp, l, 
-                               detail::delta( kp, k)*a(lp,l) + 
-                               a( kp, k)*detail::delta(lp,l) 
-                             );
-                    add_index( A, number, 0,0,0,1,kp,k, lp, l, 
-                               detail::delta( kp, k)*b(lp,l)
-                             );
-                    add_index( A, number, 0,0,0,M-1,kp,k, lp, l, 
-                               detail::delta( kp, k)*b(l,lp) 
-                             );
-                    add_index( A, number, 0,1,0,0,kp,k, lp, l, 
-                               b( kp, k)*detail::delta( lp, l)
-                             );
-                    add_index( A, number, 0,N-1,0,0,kp,k, lp, l, 
-                               b( k, kp)*detail::delta( lp, l)
-                             );
-                }
-    for( unsigned i=1; i<N-1; i++)
-        for( unsigned k=0; k<n; k++)
+    detail::Add_index2d add_index2d( Nx, n, n);
+    for( unsigned i = 0; i < Ny; i++)
+        for( unsigned j = 0; j < Nx; j++)
         {
-            for( unsigned l=0; l<n; l++)
-                add_index(A, number, i, i-1, k, l, b(l,k));
-            for( unsigned l=0; l<n; l++)
-                add_index(A, number, i, i, k, l, a(k,l));
-            for( unsigned l=0; l<n; l++)
-                add_index(A, number, i, i+1, k, l, b(k,l));
+            unsigned ip = ((i+1) > Ny-1) ? 0 : i+1;
+            unsigned im =  (i==0) ? Ny-1 : i-1;
+            unsigned jp = ((j+1) > Nx-1) ? 0 : j+1;
+            unsigned jm =  (j==0) ? Nx-1 : j-1;
+            for( unsigned kp=0; kp<n; kp++)
+                for( unsigned k=0; k<n; k++)
+                    for( unsigned lp=0; lp<n; lp++)
+                        for( unsigned l=0; l<n; l++)
+                        {
+                            add_index2d( A, i,i,j,j,kp,k, lp, l, 
+                                       detail::delta( kp, k)*ax(lp,l) + 
+                                       ay( kp, k)*detail::delta(lp,l) 
+                                     ); // 2*n*( n*n) - n*n entries
+                            add_index2d( A, i,i,j,jp,kp,k, lp, l, 
+                                       detail::delta( kp, k)*bx(lp,l)
+                                     );//n* (n*n) entries
+                            add_index2d( A, i,i,j,jm,kp,k, lp, l, 
+                                       detail::delta( kp, k)*bx(l,lp) 
+                                     );//n* (n*n) entries
+                            add_index2d( A, i,ip,j,j,kp,k, lp, l, 
+                                       by( kp, k)*detail::delta( lp, l)
+                                     );//n* (n*n) entries
+                            add_index2d( A, i,im,j,j,kp,k, lp, l, 
+                                       by( k, kp)*detail::delta( lp, l)
+                                     );//n* (n*n) entries
+                        }
         }
-    for( unsigned k=0; k<n; k++)
-    {
-        for( unsigned l=0; l<n; l++) 
-            add_index( A, number, N-1,0,  k,l, b(k,l));
-        for( unsigned l=0; l<n; l++)
-            add_index( A, number, N-1,N-2,k,l, b(l,k));
-        for( unsigned l=0; l<n; l++)
-            add_index( A, number, N-1,N-1,k,l, a(k,l));
-    }
+    A.sort_by_row_and_column( );
+
     return A;
 };
 
