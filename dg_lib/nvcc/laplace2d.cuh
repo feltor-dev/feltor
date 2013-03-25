@@ -44,17 +44,18 @@ struct Add_index2d{
 *
 * @return Host Matrix in coordinate form 
 */
-template< size_t n, size_t m>
-cusp::coo_matrix<int, double, cusp::host_memory> laplace2d_per( unsigned N, unsigned M, double h, double alpha = 1.)
+template< size_t n>
+cusp::coo_matrix<int, double, cusp::host_memory> laplace2d_per( unsigned Nx, unsigned Ny, double hx, double hy, double alpha = 1.)
 {
-    cusp::coo_matrix<int, double, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
+    cusp::coo_matrix<int, double, cusp::host_memory> A( n*n*Nx*Ny, n*n*Nx*Ny, 3*n*n*n*n*Nx*Ny);
     Operator<double, n> l( detail::lilj);
     Operator<double, n> r( detail::rirj);
     Operator<double, n> lr( detail::lirj);
     Operator<double, n> rl( detail::rilj);
     Operator<double, n> d( detail::pidxpj);
-    Operator<double, n> t( detail::pipj_inv);
-    t *= 2./h;
+    Operator<double, n> tx( detail::pipj_inv), ty( tx);
+    tx *= 2./hx;
+    ty *= 2./hy;
     Operator< double, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
     Operator< double, n> b = -((d+l)*t*rl+alpha*rl);
     //assemble the matrix
@@ -116,6 +117,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace2d_per( unsigned N, unsi
 *
 * @return Host Matrix in coordinate form 
 */
+/*
 template< size_t n>
 cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_dir( unsigned N, double h, double alpha = 1.)
 {
@@ -170,6 +172,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_dir( unsigned N, doub
     }
     return A;
 }
+*/
 
 
 } //namespace create
@@ -180,3 +183,4 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_dir( unsigned N, doub
 #include "blas/laplace.cuh"
 
 #endif // _DG_LAPLACE2D_CUH
+

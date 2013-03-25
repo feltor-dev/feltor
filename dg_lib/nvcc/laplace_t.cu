@@ -31,6 +31,7 @@ int main()
     HArrVec hw( N);
     DVec dv( hv.data()), dw( hw.data());
     DMatrix laplace1d = create::laplace1d_per<n>(N, 2);
+    DMatrix laplace2d = create::laplace2d_per<n, n>(N,N, 2);
 
     cout << "The DG Laplacian: \n";
     cusp::print( laplace1d);
