@@ -42,6 +42,8 @@ template< size_t n>
 cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_per( unsigned N, double h, double alpha = 1.)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
+    //std::cout << A.row_indices.size(); 
+    //std::cout << A.num_cols; //this works!!
     Operator<double, n> l( detail::lilj);
     Operator<double, n> r( detail::rirj);
     Operator<double, n> lr( detail::lirj);
@@ -51,6 +53,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_per( unsigned N, doub
     t *= 2./h;
     Operator< double, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
     Operator< double, n> b = -((d+l)*t*rl+alpha*rl);
+    //std::cout << a << "\n"<<b <<std::endl;
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)

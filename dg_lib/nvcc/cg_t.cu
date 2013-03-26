@@ -9,7 +9,7 @@
 #include "laplace.cuh"
 #include "preconditioner.cuh"
 
-const unsigned n = 1; //global relative error in L2 norm is O(h^P)
+const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 const unsigned N = 10;  //more N means less iterations for same error
 
 const double lx = 2*M_PI;

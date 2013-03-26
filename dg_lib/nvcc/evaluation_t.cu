@@ -21,7 +21,7 @@ double function( double x, double y)
 }
 
 const unsigned n = 3;
-const unsigned N = 10;
+const unsigned N = 1000;
 
 const unsigned Nx = N;
 const unsigned Ny = N/2;
