@@ -11,12 +11,12 @@
 #include "laplace2d.cuh"
 #include "preconditioner.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
+const unsigned n = 2; //global relative error in L2 norm is O(h^P)
 
-const unsigned Nx = 10;  //more N means less iterations for same error
-const unsigned Ny = 10;  //more N means less iterations for same error
-const double lx = 2*M_PI;
-const double ly = 2*M_PI;
+const unsigned Nx = 32;  //more N means less iterations for same error
+const unsigned Ny = 8;  //more N means less iterations for same error
+const double lx = 2.*M_PI;
+const double ly = 2.*M_PI;
 
 const double eps = 1e-9; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
@@ -32,8 +32,8 @@ typedef dg::S2D<double, n> Postconditioner;
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
-double fct(double x, double y){ return sin(x)*1.;}
-double laplace_fct( double x, double y) { return sin(x);}
+double fct(double x, double y){ return sin(y)*sin(x);}
+double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
 double initial( double x, double y) {return sin(0);}
 using namespace std;
 int main()
@@ -62,6 +62,7 @@ int main()
     dg::blas2::symv( Postconditioner(hx, hy), db.data(), db.data());
     cudaThreadSynchronize();
     std::cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(hx, hy), eps)<<endl;
+    cudaThreadSynchronize();
     //std::cout << "Number of cg iterations "<< cg( A, dx.data(), db.data(), dg::Identity<double>(), eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
@@ -73,15 +74,17 @@ int main()
     dg::blas1::axpby( 1.,dAx.data(),-1.,res.data());
     cudaThreadSynchronize();
 
+    double xnorm = dg::blas2::dot( Postconditioner(hx, hy), dx.data());
+    cout << "L2 Norm2 of x0 is " << xnorm/hx/hx/hy/hy/2. << endl;
+    //könnte an hy/hx liegen falls sin(x)/ sin(y)
+    //cout << dx << endl;
     double eps = dg::blas2::dot( Postconditioner(hx, hy), derror.data());
     cout << "L2 Norm2 of Error is " << eps << endl;
     double norm = dg::blas2::dot( Postconditioner(hx, hy), dsolution.data());
-    /*
     cout << "L2 Norm2 of Solution is " << norm << endl;
-    cout << "True Norm2 of Solution is " << 2.*M_PI*M_PI << endl;
+    cout << "True Norm2 of Solution is " << ly*M_PI << endl;
     double normres = dg::blas2::dot( Postconditioner(hx, hy), res.data());
     cout << "L2 Norm2 of Residuum is " << normres << endl;
-    */
     std::cout << "L2 Norm of relative error is "<<sqrt( eps/norm)<<std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
 

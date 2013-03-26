@@ -12,9 +12,9 @@
 #include "blas.h"
 
 
-const unsigned n = 3;
-const unsigned Nx = 10; //minimum 3
-const unsigned Ny = 10; //minimum 3
+const unsigned n = 2;
+const unsigned Nx = 4; //minimum 3
+const unsigned Ny = 16; //minimum 3
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -32,7 +32,7 @@ typedef dg::ArrVec2d< double, n, DVec>  DArrMat;
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
-double function( double x, double y) { return sin(y);}
+double function( double x, double y) { return sin(x);}
 double function( double x) { return sin(x);}
 
 int main()
@@ -54,13 +54,13 @@ int main()
     HMatrix laplace1d = create::laplace1d_per<n>(Nx, hx);
     HMatrix laplace2d = create::tensor<n>(create::laplace1d_per<n>( Ny, hy),
                                           create::laplace1d_per<n>( Nx, hx));
-    HMatrix laplace2d_= create::laplace2d_per<n>(Nx, Ny,hx, hy);
+    //HMatrix laplace2d_= create::laplace2d_per<n>(Nx, Ny,hx, hy);
     blas2::symv( laplace1d, hv1d.data(), hw1d.data() );
     blas2::symv( laplace2d, hv2d.data(), hw2d.data() );
 
     //cout << "hw1d: \n"<<hw1d<<endl;
     //cout << "hw2d: \n"<<hw2d<<endl;
-    blas2::symv( laplace2d_, hv2d.data(), hw2d.data() );
+    //blas2::symv( laplace2d_, hv2d.data(), hw2d.data() );
     //cout << "hw2d_: \n"<<hw2d<<endl;
 
     cout << "After multiplication: \n";

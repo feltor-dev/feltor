@@ -9,10 +9,10 @@
 #include "laplace.cuh"
 #include "preconditioner.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned N = 10;  //more N means less iterations for same error
+const unsigned n = 2; //global relative error in L2 norm is O(h^P)
+const unsigned N = 4;  //more N means less iterations for same error
 
-const double lx = 2*M_PI;
+const double lx = M_PI;
 const double h = lx/(double)N;
 const double eps = 1e-7; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
@@ -61,6 +61,8 @@ int main()
     DArrVec dbx(dx);
     dg::blas2::symv(  A, dx.data(), dbx.data());
     cudaThreadSynchronize();
+
+    cout<< dx <<endl;
 
     double eps = dg::blas2::dot( dg::S1D<double, n>(h), derror.data());
     cout << "L2 Norm2 of Error is " << eps << endl;

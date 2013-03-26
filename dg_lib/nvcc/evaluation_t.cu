@@ -23,8 +23,8 @@ double function( double x, double y)
 const unsigned n = 3;
 const unsigned N = 10;
 
-const unsigned Nx = N;
-const unsigned Ny = N/2;
+const unsigned Nx = 32;
+const unsigned Ny = 8;
 
 const double lx = 2;
 const double ly = 2;

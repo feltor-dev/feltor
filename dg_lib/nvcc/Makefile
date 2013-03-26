@@ -1,7 +1,7 @@
 
 INCLUDE += 
 NVCC = nvcc
-NVCCFLAGS = --compiler-options -Wall -arch=sm_20
+NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
 DEBUG = 
 
 version: version.cu 
