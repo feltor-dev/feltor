@@ -23,7 +23,11 @@ int main()
     h_v( 0, 1, 1,1) = 7;
     h_v( 0, 1, 1,2) = 0;
     h_v( 0, 1, 2,2) = 9;
-    DArrMat d_v( h_v.data(), N);
     std::cout << h_v <<std::endl;
+    DArrMat d_v( h_v);
+    HArrMat h_v2;
+    h_v2 = d_v;
+    
+    std::cout << "After two copies\n" << h_v2 << "\n";
     return 0;
 }
