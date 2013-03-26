@@ -22,7 +22,6 @@ namespace detail{
 
 struct AddIndex2d{
     AddIndex2d( size_t M, size_t n, size_t m):M(M), n(n), m(m), number(0) {}
-    /*
     void operator()(    cusp::coo_matrix<int, double, cusp::host_memory>& hm, 
                         unsigned ip, unsigned i, unsigned jp, unsigned j, 
                         unsigned kp, unsigned k, unsigned lp, unsigned l, 
@@ -35,7 +34,6 @@ struct AddIndex2d{
         hm.values[number]         = value;
         number++;
     }
-    */
     void operator() ( cusp::array1d< int, cusp::host_memory>& Idx, 
                       unsigned i, unsigned j, unsigned k, unsigned l)
     {
@@ -66,16 +64,16 @@ cusp::coo_matrix< int, double, cusp::host_memory> tensor( const cusp::coo_matrix
     assert( rhs.num_rows%n == 0);
     unsigned Nx = rhs.num_rows/n; 
     unsigned Ny = lhs.num_rows/n; 
-    std::cout << "Nx "<< Nx << " Ny "<<Ny<<" n "<<n<<"\n";
+    //std::cout << "Nx "<< Nx << " Ny "<<Ny<<" n "<<n<<"\n";
     //taken from the cusp examples
     //dimensions of the matrix
     int num_cols = lhs.num_rows*rhs.num_rows, num_rows( num_cols);
-    std::cout << "num_cols "<<num_cols<<std::endl;
-    std::cout << "num_values_lhs "<<lhs.values.size()<<std::endl;
-    std::cout << "num_values_rhs "<<rhs.values.size()<<std::endl;
+    //std::cout << "num_cols "<<num_cols<<std::endl;
+    //std::cout << "num_values_lhs "<<lhs.values.size()<<std::endl;
+    //std::cout << "num_values_rhs "<<rhs.values.size()<<std::endl;
     // number of (i,j,v) triplets
     int num_triplets    = lhs.values.size()*rhs.num_rows + lhs.num_rows*rhs.values.size();
-    std::cout << "num_triplets "<<num_triplets<<std::endl;
+    //std::cout << "num_triplets "<<num_triplets<<std::endl;
     // allocate storage for unordered triplets
     cusp::array1d< int,     cusp::host_memory> I( num_triplets); // row indices
     cusp::array1d< int,     cusp::host_memory> J( num_triplets); // column indices
@@ -104,8 +102,8 @@ cusp::coo_matrix< int, double, cusp::host_memory> tensor( const cusp::coo_matrix
                 addIndexVal( V, lhs.values[j]);
             }
     //std::cout << "Last "<< lhs.column_indices[lhs.num_entries-1] << " "<<lhs.column_indices[lhs.num_entries-1]/n<<std::endl;
-    std::cout << "last values: " <<I[num_triplets-1]<< " "<<J[num_triplets-1] << " ";
-    std::cout << V[num_triplets-1]<<"\n";
+    //std::cout << "last values: " <<I[num_triplets-1]<< " "<<J[num_triplets-1] << " ";
+    //std::cout << V[num_triplets-1]<<"\n";
     // sort triplets by (i,j) index using two stable sorts (first by J, then by I)
     thrust::stable_sort_by_key(J.begin(), J.end(), thrust::make_zip_iterator(thrust::make_tuple(I.begin(), V.begin())));
     thrust::stable_sort_by_key(I.begin(), I.end(), thrust::make_zip_iterator(thrust::make_tuple(J.begin(), V.begin())));
@@ -118,8 +116,8 @@ cusp::coo_matrix< int, double, cusp::host_memory> tensor( const cusp::coo_matrix
                                             thrust::plus<int>(),
                                             thrust::not_equal_to< thrust::tuple<int,int> >()) + 1;
 
-    std::cout << "Num_entries "<<num_entries<<"\n";
-    std::cout << "should be   "<<n*n*(6*n-1)*Nx*Ny <<std::endl;
+    //std::cout << "Num_entries "<<num_entries<<"\n";
+    //std::cout << "should be   "<<n*n*(6*n-1)*Nx*Ny <<std::endl;
     // allocate output matrix
     cusp::coo_matrix<int, double, cusp::host_memory> A(num_rows, num_cols, num_entries);
     
@@ -131,7 +129,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> tensor( const cusp::coo_matrix
                           A.values.begin(),
                           thrust::equal_to< thrust::tuple<int,int> >(),
                           thrust::plus<double>());
-    std::cout << "last ping\n";
+    //std::cout << "last ping\n";
     return A;
 }
 
@@ -147,7 +145,6 @@ cusp::coo_matrix< int, double, cusp::host_memory> tensor( const cusp::coo_matrix
 *
 * @return Host Matrix in coordinate form 
 */
-/*
 template< size_t n>
 cusp::coo_matrix<int, double, cusp::host_memory> laplace2d_per( unsigned Nx, unsigned Ny, double hx, double hy, double alpha = 1.)
 {
@@ -170,7 +167,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace2d_per( unsigned Nx, uns
     std::cout << "bx/by\n";
     std::cout << bx <<"\n" << by <<std::endl;
     //assemble the matrix
-    detail::Add_index2d add_index2d( Nx, n, n);
+    detail::AddIndex2d add_index2d( Nx, n, n);
     for( unsigned i = 0; i < Ny; i++)
         for( unsigned j = 0; j < Nx; j++)
         {
@@ -205,7 +202,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace2d_per( unsigned Nx, uns
 
     return A;
 };
-*/
 
 /**
 * @brief Create and assemble a cusp Matrix for the Dirichlet 1d laplacian
