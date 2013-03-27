@@ -51,7 +51,7 @@ struct T1D //: public DiagonalPreconditioner< T, T1D<T, n> >
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ T1D( value_type h = 2.):h_(h){}
+    __host__ __device__ T1D( value_type h):h_(h){}
     /**
     * @brief 
     *
@@ -92,7 +92,7 @@ struct S1D// : public DiagonalPreconditioner < T, S1D <T, n> >
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ S1D( value_type h = 2.):h_(h){}
+    __host__ __device__ S1D( value_type h):h_(h){}
     /**
     * @brief 
     *

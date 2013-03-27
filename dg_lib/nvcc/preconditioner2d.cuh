@@ -13,7 +13,7 @@ struct T2D
     * @param h The grid size assumed to be constant.
     */
     __host__ __device__ 
-    T2D( value_type hx = 2., value_type hy = 2.):hx_(hx), hy_(hy){}
+    T2D( value_type hx, value_type hy):hx_(hx), hy_(hy){}
     /**
     * @brief 
     *
@@ -51,7 +51,7 @@ struct S2D
     * @param h The grid size assumed to be constant.
     */
     __host__ __device__ 
-    S2D( value_type hx = 2., value_type hy = 2.): hx_(hx), hy_(hy){}
+    S2D( value_type hx, value_type hy): hx_(hx), hy_(hy){}
     /**
     * @brief 
     *

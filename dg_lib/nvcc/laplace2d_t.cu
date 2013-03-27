@@ -42,6 +42,8 @@ int main()
     cout<< "# of cells in y: "<<Ny<<"\n";
     const double hx = lx/(double)Nx;
     const double hy = ly/(double)Ny;
+    dg::S1D<double, n> s1dx( hx);
+    dg::S1D<double, n> s1dy( hy);
     HArrMat hv2d = expand< double(&)(double, double), n>( function, 0, lx, 0, ly, Nx, Ny), hw2d( hv2d);
     HArrVec hv1d = expand< double(&)(double), n>( function, 0, lx, Nx), hw1d( hv1d);
     cout << "Before multiplication: \n";
@@ -52,8 +54,10 @@ int main()
     cout << "Norm2 2D is : "<<norm2_<<endl;
 
     HMatrix laplace1d = create::laplace1d_per<n>(Nx, hx);
-    HMatrix laplace2d = create::tensor<n>(create::laplace1d_per<n>( Ny, hy),
-                                          create::laplace1d_per<n>( Nx, hx));
+    HMatrix laplace2d = create::tensor_sum<n>(create::laplace1d_per<n>( Ny, hy), 
+                                              s1dx, 
+                                              s1dy,
+                                              create::laplace1d_per<n>( Nx, hx));
     //HMatrix laplace2d_= create::laplace2d_per<n>(Nx, Ny,hx, hy);
     blas2::symv( laplace1d, hv1d.data(), hw1d.data() );
     blas2::symv( laplace2d, hv2d.data(), hw2d.data() );

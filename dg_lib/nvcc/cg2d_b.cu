@@ -4,6 +4,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
+
+#include "timer.cuh"
 #include "evaluation.cuh"
 #include "cg.cuh"
 #include "dgmat.cuh"
@@ -11,10 +13,10 @@
 #include "laplace2d.cuh"
 #include "preconditioner.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
+const unsigned n = 2; //global relative error in L2 norm is O(h^P)
 
-const unsigned Nx = 10;  //more N means less iterations for same error
-const unsigned Ny = 10;  //more N means less iterations for same error
+const unsigned Nx = 300;  //more N means less iterations for same error
+const unsigned Ny = 300;  //more N means less iterations for same error
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -35,24 +37,34 @@ typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
 double initial( double x, double y) {return sin(0);}
+
 using namespace std;
+
 int main()
 {
+    dg::Timer t;
     const double hx = lx/(double)Nx;
     const double hy = ly/(double)Ny;
     cout<<"Expand initial condition\n";
     HArrVec x = dg::expand<double (&)(double, double), n> ( initial, 0,lx, 0, ly, Nx, Ny);
 
     cout << "Create Laplacian\n";
+    t.tic();
     DMatrix A = dg::create::tensorSum<n>( dg::create::laplace1d_per<n>( Ny, hy), 
-                                       dg::S1D<double, n>( hx),
-                                       dg::S1D<double, n>( hy),
-                                       dg::create::laplace1d_per<n>( Nx, hx)); 
+                                          dg::S1D<double, n>( hx),
+                                          dg::S1D<double, n>( hy),
+                                          dg::create::laplace1d_per<n>( Nx, hx)); 
+    t.toc();
+    cout<< "Creation took "<<t.diff()<<"s\n";
+    //create conjugate gradient
     dg::CG<DMatrix, DVec, Preconditioner > pcg( x.data(), n*n*Nx*Ny);
-    //dg::CG<DMatrix, DVec> cg( x.data(), n*N);
+    dg::CG<HMatrix, HVec, Preconditioner > pcg_host( x.data(), n*n*Nx*Ny);
     cout<<"Expand right hand side\n";
-    HArrVec b = dg::expand<double (&)(double, double), n> ( laplace_fct, 0,lx, 0,ly, Nx, Ny);
     const HArrVec solution = dg::expand<double (&)(double, double), n> ( fct, 0,lx, 0,ly, Nx, Ny);
+    HArrVec b = dg::expand<double (&)(double, double), n> ( laplace_fct, 0,lx, 0,ly, Nx, Ny);
+    //compute S b
+    dg::blas2::symv( Postconditioner(hx, hy), b.data(), b.data());
+    cudaThreadSynchronize();
 
     //copy data to device memory
     const DArrVec dsolution( solution);
@@ -60,31 +72,26 @@ int main()
     //////////////////////////////////////////////////////////////////////
     cout << "# of polynomial coefficients: "<< n <<endl;
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;
-    //compute S b
-    dg::blas2::symv( Postconditioner(hx, hy), db.data(), db.data());
-    cudaThreadSynchronize();
+    
+    t.tic();
     cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(hx, hy), eps)<<endl;
-    cudaThreadSynchronize();
-    //std::cout << "Number of cg iterations "<< cg( A, dx.data(), db.data(), dg::Identity<double>(), eps)<<endl;
-    cout << "For a precision of "<< eps<<endl;
+    t.toc();
+    cout << "... for a precision of "<< eps<<endl;
+    cout << "... on the device took "<< t.diff()<<"s\n";
+    t.tic();
+    cout << "Number of pcg iterations "<< pcg_host( A, x.data(), b.data(), Preconditioner(hx, hy), eps)<<endl;
+    t.toc();
+    cout << "... for a precision of "<< eps<<endl;
+    cout << "... on the host took   "<< t.diff()<<"s\n";
     //compute error
     DArrVec derror( dsolution);
     dg::blas1::axpby( 1.,dx.data(),-1.,derror.data());
 
-    DArrVec dAx(dx), res( db);
-    dg::blas2::symv(  A, dx.data(), dAx.data());
-    dg::blas1::axpby( 1.,dAx.data(),-1.,res.data());
-    cudaThreadSynchronize();
-
-    double xnorm = dg::blas2::dot( Postconditioner(hx, hy), dx.data());
-    cout << "L2 Norm2 of x0 is              " << xnorm << endl;
-    double eps = dg::blas2::dot( Postconditioner(hx, hy), derror.data());
-    cout << "L2 Norm2 of Error is           " << eps << endl;
+    double normerr = dg::blas2::dot( Postconditioner(hx, hy), derror.data());
+    cout << "L2 Norm2 of Error is           " << normerr << endl;
     double norm = dg::blas2::dot( Postconditioner(hx, hy), dsolution.data());
     cout << "L2 Norm2 of Solution is        " << norm << endl;
-    double normres = dg::blas2::dot( Postconditioner(hx, hy), res.data());
-    cout << "L2 Norm2 of Residuum is        " << normres << endl;
-    cout << "L2 Norm of relative error is   " <<sqrt( eps/norm)<<endl;
+    cout << "L2 Norm of relative error is   " <<sqrt( normerr/norm)<<endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
 
 
