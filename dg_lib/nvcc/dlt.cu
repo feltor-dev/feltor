@@ -19,7 +19,7 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned N = 1e6;
+const unsigned N = 1e5;
 
 typedef thrust::device_vector<double>   DVec;
 typedef thrust::host_vector<double>     HVec;
@@ -84,8 +84,10 @@ int main()
     DArrVec_ dv_2( N);
     DMatrix dm = createForward<n>( N);
 
+    Array<double, n>* begin = reinterpret_cast<Array<double, n>* >( thrust::raw_pointer_cast(&dv_.data()[0]));
+    Array<double, n>* end = begin + N-1;
     t.tic();
-    thrust::transform( dv.begin(), dv.end(), dv.begin(), Forward<n>());
+    thrust::transform( thrust::device_pointer_cast(begin), thrust::device_pointer_cast(end), thrust::device_pointer_cast(begin), Forward<n>());
     t.toc();
     cout << "Forward thrust transform took "<<t.diff()<<"s\n";
     t.tic();

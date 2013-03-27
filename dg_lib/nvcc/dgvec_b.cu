@@ -2,7 +2,8 @@
 
 #include "blas.h"
 #include "dgvec.cuh" 
-#include "../gcc/timer.h" 
+//#include "../gcc/timer.h" 
+#include "timer.cuh"
 
 using namespace dg; 
 using namespace std; 
@@ -19,8 +20,8 @@ typedef ArrVec1d< double, P, HVec> HArrVec;
 typedef ArrVec1d< double, P, DVec> DArrVec;
 int main()
 {
-    cout << "Array size is:             "<<P<<"\n";
-    cout << "Number of intervals is:    "<< N<<"\n\n";
+    cout << "# of Legendre coefficients "<<P<<"\n";
+    cout << "# of grid cells            "<< N<<"\n";
     Timer t;
     HArrVec hx( N, 3.), hy( N, 7.);
     t.tic();
@@ -34,27 +35,27 @@ int main()
     t.tic(); 
     dot = dg::blas1::dot( dx_v.data(), dy); 
     t.toc();
-    cout << "GPU dot(x,y) took          "<<t.diff() <<"s\n";
-    cout << "Result "<<dot<<"\n";
+    cout << "GPU dot(x,y) took              "<<t.diff() <<"s\n";
+    //cout << "Result "<<dot<<"\n";
     t.tic(); 
     dot = dg::blas1::dot( hx.data(),hy.data());
     t.toc();
-    cout << "CPU dot(x,y) took          "<<t.diff() <<"s\n";
-    cout << "Result "<<dot<<"\n\n";
+    cout << "CPU dot(x,y) took              "<<t.diff() <<"s\n";
+    cout << "Result "<<dot<<"\n";
 
     t.tic(); 
     dg::blas1::axpby( 3., dx, 7., dy_v.data()); 
     t.toc();
 
-    cout << "GPU daxpby took            " << t.diff() <<"s\n";
-    cout << "Result : " << dy[ dy.size() -1] << "\n";
+    cout << "GPU daxpby took                " << t.diff() <<"s\n";
+    //cout << "Result : " << dy[ dy.size() -1] << "\n";
 
     t.tic(); 
     dg::blas1::axpby( 3., hx.data(), 7., hy.data()); 
     t.toc();
 
-    cout << "CPU daxpby took            " << t.diff() <<"s\n";
-    cout << "Result : " << hy(N-1, 2) << "\n";
+    cout << "CPU daxpby took                " << t.diff() <<"s\n";
+    //cout << "Result : " << hy(N-1, 2) << "\n";
 
     return 0;
 }
