@@ -4,7 +4,6 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-
 #include "timer.cuh"
 #include "evaluation.cuh"
 #include "cg.cuh"
@@ -13,7 +12,7 @@
 #include "laplace2d.cuh"
 #include "preconditioner.cuh"
 
-const unsigned n = 2; //global relative error in L2 norm is O(h^P)
+const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 
 const unsigned Nx = 300;  //more N means less iterations for same error
 const unsigned Ny = 300;  //more N means less iterations for same error
