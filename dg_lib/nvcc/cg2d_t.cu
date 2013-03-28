@@ -47,7 +47,7 @@ int main()
     DMatrix A = dg::create::tensorSum<n>( dg::create::laplace1d_per<n>( Ny, hy), 
                                        dg::S1D<double, n>( hx),
                                        dg::S1D<double, n>( hy),
-                                       dg::create::laplace1d_per<n>( Nx, hx)); 
+                                       dg::create::laplace1d_dir<n>( Nx, hx)); 
     dg::CG<DMatrix, DVec, Preconditioner > pcg( x.data(), n*n*Nx*Ny);
     //dg::CG<DMatrix, DVec> cg( x.data(), n*N);
     cout<<"Expand right hand side\n";

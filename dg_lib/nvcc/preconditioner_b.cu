@@ -20,7 +20,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
+const unsigned n = 2; // 2 and 3: thrust Array is faster, else cusp and 5 even dg
 const unsigned N = 1e5;
 
 typedef thrust::device_vector<double>   DVec;
@@ -36,18 +36,18 @@ typedef cusp::dia_matrix<int, double, cusp::device_memory> DMatrix;
 
 template< size_t n>
 struct Diagonal{
-    Diagonal( const double h = 2.): t1d( h){}
+    Diagonal( const double h = 2.): h_( h){}
     
     __host__ __device__
     Array<double, n> operator() (const Array<double, n>& arr)
     {
         Array<double,n > temp(0.);
         for( unsigned i=0; i<n; i++)
-            temp[i] = t1d(i)*arr[i];
+            temp[i] = (2.*i+1.)/h_*arr[i];
         return temp;
     }
     private:
-    T1D<double, n> t1d;
+    double h_; 
 };
 
 template< size_t n>
@@ -93,7 +93,7 @@ int main()
     t.toc();
     cout << "Foward cusp transform took    "<<t.diff()<<"s\n";
     t.tic();
-    blas2::symv( T1D<double, n>( 2.), dv_2.data(), dv_2.data());
+    blas2::symv( 1., T1D<double, n>( 2.), dv_2.data(), 0., dv_2.data());
     t.toc();
     cout << "Foward dg transform took      "<<t.diff()<<"s\n";
 

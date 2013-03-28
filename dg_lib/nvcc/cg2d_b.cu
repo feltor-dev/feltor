@@ -52,7 +52,7 @@ int main()
     DMatrix A = dg::create::tensorSum<n>( dg::create::laplace1d_per<n>( Ny, hy), 
                                           dg::S1D<double, n>( hx),
                                           dg::S1D<double, n>( hy),
-                                          dg::create::laplace1d_per<n>( Nx, hx)); 
+                                          dg::create::laplace1d_per<n>( Nx, hx)); //dir does also work but is slow
     t.toc();
     cout<< "Creation took "<<t.diff()<<"s\n";
     //create conjugate gradient

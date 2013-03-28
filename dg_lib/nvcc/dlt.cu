@@ -18,7 +18,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
+const unsigned n = 3; //thrust transform is always faster
 const unsigned N = 1e5;
 
 typedef thrust::device_vector<double>   DVec;
@@ -67,6 +67,27 @@ cusp::coo_matrix<int, double, cusp::host_memory> createForward( unsigned N)
 
 double function( double x) { return sin(x);}
 
+void doSymv( double* ptr, thrust::input_device_iterator_tag )
+{
+    thrust::device_ptr<Array<double, n> > begin = thrust::device_pointer_cast( reinterpret_cast< Array< double, n>* >(ptr));
+    thrust::device_ptr<Array<double, n> > end = begin + N-1;
+    thrust::transform( begin, end, begin, Forward<n>());
+}
+void doSymv( double* ptr, thrust::input_host_iterator_tag)
+{
+    Array<double, n>* begin =  reinterpret_cast< Array< double, n>* >(ptr);
+    Array<double, n>* end = begin + N-1;
+    thrust::transform( begin, end, begin, Forward<n>());
+}
+
+template< class Vector>
+void symv( Vector& v)
+{
+    doSymv( thrust::raw_pointer_cast(&v[0]), typename thrust::iterator_traits< typename Vector::iterator>::iterator_category());
+}
+
+
+
 
 int main()
 {
@@ -84,10 +105,8 @@ int main()
     DArrVec_ dv_2( N);
     DMatrix dm = createForward<n>( N);
 
-    Array<double, n>* begin = reinterpret_cast<Array<double, n>* >( thrust::raw_pointer_cast(&dv_.data()[0]));
-    Array<double, n>* end = begin + N-1;
     t.tic();
-    thrust::transform( thrust::device_pointer_cast(begin), thrust::device_pointer_cast(end), thrust::device_pointer_cast(begin), Forward<n>());
+    symv( dv_.data());
     t.toc();
     cout << "Forward thrust transform took "<<t.diff()<<"s\n";
     t.tic();

@@ -60,7 +60,7 @@ struct T1D //: public DiagonalPreconditioner< T, T1D<T, n> >
     __host__ __device__ const value_type& h() const {return h_;}
     __host__ __device__ value_type operator()( int i) const 
     {
-        return (value_type)(2*(i%n)+1)/h_;
+        return (value_type)(2.*(i%n)+1.)/h_;
     }
   private:
     value_type h_;
