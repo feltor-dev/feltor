@@ -12,7 +12,7 @@ typedef double real;
 
 
 const unsigned P = 3;
-const unsigned N = 1e5;
+const unsigned N = 1e6;
 
 typedef thrust::device_vector<double> DVec;
 typedef thrust::host_vector<double> HVec;

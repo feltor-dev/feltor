@@ -19,7 +19,7 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3; //thrust transform is always faster
-const unsigned N = 1e5;
+const unsigned N = 1e6;
 
 typedef thrust::device_vector<double>   DVec;
 typedef thrust::host_vector<double>     HVec;

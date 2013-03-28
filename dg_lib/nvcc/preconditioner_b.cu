@@ -21,7 +21,7 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3; // 2 and 3: thrust Array is faster, else cusp and 5 even dg
-const unsigned N = 1e5;
+const unsigned N = 1e1;
 
 typedef thrust::device_vector<double>   DVec;
 typedef thrust::host_vector<double>     HVec;
@@ -90,18 +90,18 @@ int main()
     cout << "Forward thrust transform took "<<t.diff()<<"s\n";
 
     t.tic();
-    blas2::symv( dm, dv_.data(), dv_2.data());
-    blas1::axpby( 1., dv_2.data(), 2., dv_.data());
+    //blas2::symv( dm, dv_.data(), dv_2.data());
+    //blas1::axpby( 1., dv_2.data(), 2., dv_.data());
     t.toc();
     cout << "Foward cusp transform took    "<<t.diff()<<"s\n";
     t.tic();
+    //blas2::symv( T1D<double, n>( 2.), dv_.data(), dv_2.data());
     blas2::symv( 1., T1D<double, n>( 2.), dv_.data(), 0., dv_2.data());
     //slower than single symv( T, v, v) but faster than symv plus axpby
     t.toc();
     cout << "Foward dg transform took      "<<t.diff()<<"s\n";
 
     //test for equality...
-    /*
     hv_ = dv_;
     HArrVec_ hv_2= dv_2;
     hv = dv;
@@ -114,7 +114,6 @@ int main()
     cout << endl;
     cout << hv_ <<endl;
     cout << endl << hv_2<<endl;
-    */
 
     
     return 0;

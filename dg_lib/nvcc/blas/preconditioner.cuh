@@ -80,6 +80,7 @@ inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::
 {
     return thrust::inner_product( x.begin(), x.end(),
                                   thrust::make_counting_iterator(0),
+                                  0.0,
                                   thrust::plus<double>(),
                                   detail::Diagonal_Dot_Functor<Matrix>( m)
             ); //very fast
