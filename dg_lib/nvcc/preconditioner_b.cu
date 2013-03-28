@@ -84,16 +84,19 @@ int main()
     DMatrix dm = createDiagonal<n>( N);
 
     t.tic();
-    thrust::transform( dv.begin(), dv.end(), dv.begin(), Diagonal<n>());
+    thrust::transform( dv.begin(), dv.end(), dv2.begin(), Diagonal<n>());
+    //blas1::axpby( 1., dv2.data(), 0., dv.data());
     t.toc();
     cout << "Forward thrust transform took "<<t.diff()<<"s\n";
+
     t.tic();
-    blas2::symv( dm, dv_.data(), dv_.data());
-    //blas1::axpby( 1., dv_.data(), 2., dv_.data());
+    blas2::symv( dm, dv_.data(), dv_2.data());
+    blas1::axpby( 1., dv_2.data(), 2., dv_.data());
     t.toc();
     cout << "Foward cusp transform took    "<<t.diff()<<"s\n";
     t.tic();
-    blas2::symv( 1., T1D<double, n>( 2.), dv_2.data(), 0., dv_2.data());
+    blas2::symv( 1., T1D<double, n>( 2.), dv_.data(), 0., dv_2.data());
+    //slower than single symv( T, v, v) but faster than symv plus axpby
     t.toc();
     cout << "Foward dg transform took      "<<t.diff()<<"s\n";
 

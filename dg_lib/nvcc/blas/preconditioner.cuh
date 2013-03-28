@@ -111,7 +111,7 @@ inline void doSymv(
                        y.begin(), 
                        y.begin(),
                        detail::Diagonal_Symv_Functor<Matrix>( alpha, beta, m)
-                      );
+                      ); 
 }
 template< class Matrix, class Vector>
 inline void doSymv(  
