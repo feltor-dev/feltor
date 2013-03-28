@@ -20,7 +20,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 2; // 2 and 3: thrust Array is faster, else cusp and 5 even dg
+const unsigned n = 3; // 2 and 3: thrust Array is faster, else cusp and 5 even dg
 const unsigned N = 1e5;
 
 typedef thrust::device_vector<double>   DVec;

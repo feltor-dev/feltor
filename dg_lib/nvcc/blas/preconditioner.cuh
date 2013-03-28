@@ -23,10 +23,15 @@ struct Diagonal_Symv_Functor
 
     Diagonal_Symv_Functor( value_type alpha, value_type beta, const Preconditioner& p ): p_(p), alpha(alpha), beta(beta) {}
     __host__ __device__
-        value_type operator()(const value_type& x,  const Pair& p)
+        value_type operator()( const Pair& p, const double& x)
         {
             return alpha*x *p_(thrust::get<1>(p))
                         + beta*thrust::get<0>(p);
+        }
+    __host__ __device__
+        value_type operator()(const value_type& x, int idx)
+        {
+            return alpha*x *p_(idx);
         }
   private:
     const Preconditioner p_;
@@ -41,10 +46,16 @@ struct Diagonal_Dot_Functor
 
     Diagonal_Dot_Functor( const Preconditioner& p): p_(p){}
     __host__ __device__
-    value_type operator()( const value_type& x, const Pair& p) 
+    value_type operator()( const Pair& p, const value_type& x) 
     {
         //generalized Multiplication
         return x*thrust::get<0>(p)*p_(thrust::get<1>(p));
+    }
+    __host__ __device__
+    value_type operator()( const value_type& x, int idx) 
+    {
+        //generalized Multiplication
+        return x*x*p_( idx);
     }
 
   private:
@@ -67,7 +78,11 @@ inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, cons
 template< class Matrix, class Vector>
 inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::DiagonalPreconditionerTag, dg::ThrustVectorTag)
 {
-    return doDot( x,m,x, dg::DiagonalPreconditionerTag(), dg::ThrustVectorTag());
+    return thrust::inner_product( x.begin(), x.end(),
+                                  thrust::make_counting_iterator(0),
+                                  thrust::plus<double>(),
+                                  detail::Diagonal_Dot_Functor<Matrix>( m)
+            ); //very fast
 }
 
 template< class Matrix, class Vector>
@@ -88,9 +103,12 @@ inline void doSymv(
         dg::blas1::detail::doAxpby( 0., x, beta, y, dg::ThrustVectorTag());
         return;
     }
-    thrust::transform( x.begin(), x.end(), 
-                       thrust::make_zip_iterator( 
-                            thrust::make_tuple( y.begin(), thrust::make_counting_iterator<int>(0)) ), 
+    thrust::counting_iterator<int> first(0);
+    thrust::counting_iterator<int> last(thrust::distance( x.begin(), x.end()));
+    thrust::transform( 
+                       thrust::make_zip_iterator( thrust::make_tuple( x.begin(), first)),  
+                       thrust::make_zip_iterator( thrust::make_tuple( x.end(), last)), 
+                       y.begin(), 
                        y.begin(),
                        detail::Diagonal_Symv_Functor<Matrix>( alpha, beta, m)
                       );
@@ -103,7 +121,11 @@ inline void doSymv(
               DiagonalPreconditionerTag,
               ThrustVectorTag)
 {
-    doSymv( 1., m, x, 0., y, dg::DiagonalPreconditionerTag(), dg::ThrustVectorTag());
+    thrust::transform(  x.begin(), x.end(),
+                        thrust::make_counting_iterator<int>(0), 
+                        y.begin(),
+                        detail::Diagonal_Symv_Functor<Matrix>(1., 0., m)
+            ); //very fast
 }
 
 //identities
