@@ -37,7 +37,7 @@ class ArrVec2d_View
      * @param v This reference is stored by the object.
      * @param columns Number of lines of the matrix
      */
-    ArrVec2d_View( container& v, unsigned columns ) : hv(v), cols( columns) { }
+    ArrVec2d_View( container& v, unsigned columns ) : hv(v), cols_( columns) { }
     /**
      * @brief Access a value
      *
@@ -49,7 +49,7 @@ class ArrVec2d_View
     T& operator()( unsigned i, unsigned j, unsigned k, unsigned l)
     { 
         //assert( k, l <n ) ??
-        return hv[ i*n*n*cols + j*n*n + k*n + l];
+        return hv[ i*n*n*cols_ + j*n*n + k*n + l];
     }
     /**
      * @brief Const Access a value
@@ -61,8 +61,11 @@ class ArrVec2d_View
      */
     const T& operator()( unsigned i, unsigned j, unsigned k, unsigned l) const
     { 
-        return hv[i*n*n*cols + j*n*n + k*n + l];
+        return hv[i*n*n*cols_ + j*n*n + k*n + l];
     }
+    unsigned& cols() {return cols_;}
+    const unsigned& cols() const {return cols_;}
+
     /**
      * @brief Access the underlying container object
      *
@@ -88,18 +91,22 @@ class ArrVec2d_View
     template< class Ostream>
     friend Ostream& operator<<( Ostream& os, const ArrVec2d_View& v)
     {
-        unsigned N = v.hv.size()/n;
+        unsigned N = v.hv.size()/n/n;
         for( unsigned i=0; i<N; i++)
         {
             for( unsigned j=0; j<n; j++)
-                os << v(i,j) << " ";
+            {
+                for( unsigned k=0; k<n; k++)
+                    os << v(0, i, j,k) << " ";
+                os << "\n";
+            }
             os << "\n";
         }
         return os;
     }
   private:
     container& hv;
-    unsigned cols;
+    unsigned cols_;
 };
 
 //an Array is a View but owns the data it views
@@ -142,6 +149,24 @@ class ArrVec2d : public ArrVec2d_View<T, n, container>
       * @param value Elements are initialized to this value
       */
     ArrVec2d( unsigned rows, unsigned cols, double value=0) : View(hv, cols), hv( n*n*rows*cols, value){}
+    ArrVec2d( const ArrVec2d& src): View( hv, src.cols()), hv( src.hv){}
+
+    template< class OtherContainer >
+    ArrVec2d( const ArrVec2d< T, n, OtherContainer >& src): View( hv, src.cols() ), hv( src.data()) {}
+
+    ArrVec2d& operator=( const ArrVec2d& src)
+    {
+        this->cols() = src.cols();
+        hv = src.hv;
+        return *this;
+    }
+    template< class OtherContainer >
+    ArrVec2d& operator=(const ArrVec2d< T,n, OtherContainer>& src) 
+    {
+        this->cols() = src.cols();
+        hv = src.data(); //this might trigger warnings from thrust 
+        return *this;
+    }
   private:
     container hv;
 };

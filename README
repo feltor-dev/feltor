@@ -1,14 +1,14 @@
-Welcome to the TOEFL project
+Welcome to the TOEFL project!
 
 REQUIREMENTS
-To install the code you need to have fftw3, OpenGl and
-glfw (http://www.glfw.org/download.html) installed in standard locations. 
-If you experience linker problems with glfw be sure you add the correct 
- libraries for your system in the Makefile in the GLFLAGS or LIBS variable.
-To install the documentation you need to have Doxygen installed
-http://www.stack.nl/~dimitri/doxygen/
-Since the code uses features of the new C++11 standard be 
-sure that your compiler supports them. (minimal gcc version is 4.4)
+ - To install the code you need to have fftw3, OpenGl and
+    glfw (http://www.glfw.org/download.html) installed in standard locations. 
+ - If you experience linker problems with glfw be sure you add the correct 
+    libraries for your system in the Makefile in the GLFLAGS/LIBS variable.
+ - To install the documentation you need to have Doxygen installed
+    http://www.stack.nl/~dimitri/doxygen/
+ - Since the code uses features of the new C++11 standard be 
+    sure that your compiler supports them. (minimal gcc version is 4.4)
 
 DOCUMENTATION
 To create the documentation type
@@ -18,13 +18,13 @@ To create the documentation type
 
 
 INSTALL
-Go to the source directory and type make and run with
+ - To test your configuration go to the lib directory and type 
+    make toefl #compile and run a test program
+ - Go to the source directory and type 
     make 
-    ./innto     #default input file is input.txt
+    ./innto         #run innto code; default input file is input.txt
     ./innto "file"  #this will read parameters from file
 
-In the lib directory type make toefl to compile and run a test program.
-    make toefl
 
 
 

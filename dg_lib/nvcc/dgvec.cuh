@@ -132,6 +132,26 @@ class ArrVec1d : public ArrVec1d_View<T, n, container>
       * @param value Elements are initialized to this value
       */
     ArrVec1d( unsigned size, double value=0) : View(hv), hv( n*size, value){}
+
+    //we need explicit copy constructors because of the reference to hv
+    ArrVec1d( const ArrVec1d& src): View( hv), hv( src.hv){}
+
+    template< class OtherContainer >
+    ArrVec1d( const ArrVec1d< T, n, OtherContainer >& src): View( hv), hv( src.data()) {}
+
+    ArrVec1d& operator=( const ArrVec1d& src)
+    {
+        hv = src.hv;
+        return *this;
+    }
+    template< class OtherContainer >
+    ArrVec1d& operator=(const ArrVec1d< T,n, OtherContainer>& src) 
+    {
+        hv = src.data(); //this might trigger warnings from thrust 
+        return *this;
+    }
+
+
     private:
     container hv;
 };

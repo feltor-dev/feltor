@@ -7,8 +7,8 @@
 #include "dgvec.cuh"
 #include "blas.h"
 
-const unsigned n = 3;
-const unsigned N = 4;
+const unsigned n = 2;
+const unsigned N = 5; //minimum 3
 
 using namespace dg;
 using namespace std;
@@ -23,6 +23,8 @@ typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
 int main()
 {
+    cout<< "# of polynomial coeff per dim: "<<n<<"\n";
+    cout<< "# of cells per dim: "<<N<<"\n";
     HArrVec hv( N,  1);
     for( unsigned k=0; k<N; k++)
         for( unsigned i=0; i<n; i++)

@@ -15,10 +15,10 @@ int main()
     const unsigned kmax = 2;
     omp_set_num_threads(kmax);
     cout << "Test with "<<omp_get_max_threads()<< " threads\n";
+    cout << "Number of cells: " << rows*cols<<endl;
     cout << "Size of one array element: " << sizeof( Matrix<double, TL_DFT>) <<"\n";
     auto m1 = MatrixArray<double, TL_DFT, kmax>::construct(rows, cols);
     auto m1_ = MatrixArray<complex<double>, TL_NONE, kmax >::construct( rows, cols/2 + 1);
-    double a[100];
     Matrix<double, TL_DFT> mm( rows, cols);
     Matrix<complex<double>, TL_NONE> mm_( rows, cols/2+1);
     Timer t;

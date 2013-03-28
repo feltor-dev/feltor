@@ -190,8 +190,9 @@ unsigned CG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vecto
         blas1::axpby( -alpha, ap, 1., r);
         cudaThreadSynchronize();
         nrm2r_new = blas2::dot( P, r); //<--
-        std::cout << "ping\n";
+#ifdef DG_DEBUG
         std::cout << sqrt( nrm2r_new/nrm2b) << "\n";
+#endif //DG_DEBUG
         if( sqrt( nrm2r_new/nrm2b) < eps) 
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );//<--

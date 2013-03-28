@@ -12,7 +12,7 @@
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 const unsigned N = 100;  //more N means less iterations for same error
 
-const double lx = 2*M_PI;
+const double lx = M_PI;
 const double h = lx/(double)N;
 const double eps = 1e-7; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
@@ -52,7 +52,6 @@ int main()
     //compute S b
     dg::blas2::symv( dg::S1D<double, n>(h), db.data(), db.data());
     cudaThreadSynchronize();
-    cout << setprecision(12);
     //std::cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(h), eps)<<endl;
     std::cout << "Number of cg iterations "<< cg( A, dx.data(), db.data(), dg::Identity<double>(), eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
@@ -62,6 +61,8 @@ int main()
     DArrVec dbx(dx);
     dg::blas2::symv(  A, dx.data(), dbx.data());
     cudaThreadSynchronize();
+
+    cout<< dx <<endl;
 
     double eps = dg::blas2::dot( dg::S1D<double, n>(h), derror.data());
     cout << "L2 Norm2 of Error is " << eps << endl;

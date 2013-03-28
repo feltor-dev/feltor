@@ -45,12 +45,13 @@ template< class T, size_t n>
 struct T1D //: public DiagonalPreconditioner< T, T1D<T, n> > 
 {
     typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
     /**
     * @brief Constructor
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ T1D( value_type h = 2.):h_(h){}
+    __host__ __device__ T1D( value_type h):h_(h){}
     /**
     * @brief 
     *
@@ -59,7 +60,7 @@ struct T1D //: public DiagonalPreconditioner< T, T1D<T, n> >
     __host__ __device__ const value_type& h() const {return h_;}
     __host__ __device__ value_type operator()( int i) const 
     {
-        return (value_type)(2*(i%n)+1)/h_;
+        return (value_type)(2.*(i%n)+1.)/h_;
     }
   private:
     value_type h_;
@@ -85,12 +86,13 @@ template< class T, size_t n>
 struct S1D// : public DiagonalPreconditioner < T, S1D <T, n> >
 {
     typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
     /**
     * @brief Constructor
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ S1D( value_type h = 2.):h_(h){}
+    __host__ __device__ S1D( value_type h):h_(h){}
     /**
     * @brief 
     *
@@ -113,5 +115,8 @@ struct MatrixTraits< S1D< T, n> >
 
 
 } //namespace dg
+
+#include "preconditioner2d.cuh"
+
 
 #endif //_DG_PRECONDITIONER_

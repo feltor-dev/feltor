@@ -84,8 +84,8 @@ ArrVec2d< double, n> evaluate( BinaryOp& f, double x0, double x1, double y0, dou
                     x  = x0 + hx*( xp + DLT<n>::abscissa[l]);
                     v(i,j,k,l) = f( x, y);
                 }
-                xp+=2.;
             }
+            xp+=2.;
         }
         yp+=2.;
     }
@@ -109,6 +109,7 @@ template< class Function, size_t n>
 ArrVec1d<double, n> expand( Function& f, double a, double b, unsigned num_int)
 {
     ArrVec1d<double, n> v = evaluate<Function,n> ( f, a, b, num_int);
+    //std::cout << "Evaluation: 1D\n" << v<<std::endl;
     //multiply elements by forward
     double temp[n];
     for( unsigned k=0; k<num_int; k++)
@@ -146,6 +147,7 @@ template< class BinaryOp, size_t n>
 ArrVec2d< double, n> expand( BinaryOp& f, double x0, double x1, double y0, double y1, unsigned Nx, unsigned Ny)
 {
     ArrVec2d<double, n> v = evaluate<BinaryOp,n> ( f, x0, x1, y0, y1, Nx, Ny);
+    //std::cout << "Evaluation: 2D\n" << v<<std::endl;
     double temp[n][n];
     //DLT each dg-Box 
     for( unsigned i=0; i<Ny; i++)

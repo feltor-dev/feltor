@@ -25,9 +25,8 @@ struct Diagonal_Symv_Functor
     __host__ __device__
         value_type operator()(const value_type& x,  const Pair& p)
         {
-            value_type y = alpha*x *p_(thrust::get<1>(p))
+            return alpha*x *p_(thrust::get<1>(p))
                         + beta*thrust::get<0>(p);
-            return y;
         }
   private:
     const Preconditioner p_;
