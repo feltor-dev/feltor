@@ -60,7 +60,7 @@ struct Operator_Symv_Functor<thrust::tuple<Op,Op> >
 
     Operator_Symv_Functor( value_type alpha, value_type beta, const Pair& p ): 
                         op1( thrust::get<0>(p)), 
-                        op2( thrust::get<1>(p)), 
+                        op2( thrust::get<1>(p)),  
                         alpha(alpha), beta(beta) {}
     __host__ __device__
         matrix_type operator()( const matrix_type& x, matrix_type& y) const
@@ -105,7 +105,7 @@ struct Operator_Symv_Functor<thrust::tuple<Op,Op> >
             return y;
         }
   private:
-    const Op op1, op2;
+    const Op op1, op2; //neglecting op2 doesn't gain speed
     value_type alpha, beta;
 };
 
