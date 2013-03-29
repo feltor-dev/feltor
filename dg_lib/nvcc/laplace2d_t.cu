@@ -5,6 +5,7 @@
 
 #include "laplace.cuh"
 #include "laplace2d.cuh"
+#include "operator_matrix.cuh"
 #include "dgvec.cuh"
 #include "dgmat.cuh"
 #include "evaluation.cuh"
@@ -14,7 +15,7 @@
 
 const unsigned n = 2;
 const unsigned Nx = 4; //minimum 3
-const unsigned Ny = 16; //minimum 3
+const unsigned Ny = 4; //minimum 3
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -54,18 +55,30 @@ int main()
     cout << "Norm2 2D is : "<<norm2_<<endl;
 
     HMatrix laplace1d = create::laplace1d_per<n>(Nx, hx);
-    HMatrix laplace2d = create::tensor_sum<n>(create::laplace1d_per<n>( Ny, hy), 
+    Operator<double, n> Sop( dg::create::detail::pipj);
+    Operator<double, n> Id( dg::create::detail::delta);
+    Sop *= hy/2.;
+    HMatrix s1y = create::operatorMatrix( Sop, Ny);
+    HMatrix s1x = create::operatorMatrix( Id, Nx);
+    HMatrix ddxx = create::tensorProduct<double>( s1y, s1x);
+    cout << endl;
+    cout << endl;
+    cusp::print( s1x); 
+    cout << endl;
+    cusp::print( s1y);
+    cout << endl;
+    cusp::print( ddxx);
+    HMatrix laplace2d = create::tensorSum<n>(create::laplace1d_per<n>( Ny, hy), 
                                               s1dx, 
                                               s1dy,
                                               create::laplace1d_per<n>( Nx, hx));
-    //HMatrix laplace2d_= create::laplace2d_per<n>(Nx, Ny,hx, hy);
     blas2::symv( laplace1d, hv1d.data(), hw1d.data() );
     blas2::symv( laplace2d, hv2d.data(), hw2d.data() );
 
-    //cout << "hw1d: \n"<<hw1d<<endl;
-    //cout << "hw2d: \n"<<hw2d<<endl;
-    //blas2::symv( laplace2d_, hv2d.data(), hw2d.data() );
-    //cout << "hw2d_: \n"<<hw2d<<endl;
+    cout << "hw1d: \n"<<hw1d<<endl;
+    cout << "hw2d: \n"<<hw2d<<endl;
+    blas2::symv( ddxx, hv2d.data(), hw2d.data() );
+    cout << "hw2d_: \n"<<hw2d<<endl;
 
     cout << "After multiplication: \n";
     norm2 = blas2::dot( S1D<double, n>( hx), hw1d.data());

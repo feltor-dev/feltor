@@ -2,7 +2,7 @@
 #define _DG_OPERATOR_TUPLE_
 
 #include <thrust/tuple.h>
-#include "operators.cuh"
+#include "operator.cuh"
 #include "matrix_traits.h"
 
 namespace dg{

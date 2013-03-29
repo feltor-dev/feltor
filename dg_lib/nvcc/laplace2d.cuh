@@ -39,6 +39,38 @@ struct AddIndex2d{
 
 } //namespace detail
 
+//probably not usable because a dgTensorProduct premutes 2nd and 3rd index
+template< class T>
+cusp::coo_matrix< int, T, cusp::host_memory> tensorProduct( 
+        const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
+        const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
+{    
+    //assert quadratic matrices
+    assert( lhs.num_rows == lhs.num_cols);
+    assert( rhs.num_rows == rhs.num_cols);
+    //assert( lhs.is_sorted_by_row_and_column());
+    //assert( rhs.is_sorted_by_row_and_column());
+    //dimensions of the matrix
+    int num_rows     = lhs.num_rows*rhs.num_rows;
+    int num_cols     = num_rows;
+    int num_triplets = lhs.num_entries*rhs.num_entries;
+    // allocate storage for unordered triplets
+    cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_triplets);
+    //LHS x RHS
+    unsigned n = 0;
+    for( unsigned i=0; i<lhs.num_entries; i++)
+        for( unsigned j=0; j<rhs.num_entries; j++)
+        {
+            A.row_indices[n] = lhs.row_indices[i]*rhs.num_rows + rhs.row_indices[j];
+            A.column_indices[n] = lhs.column_indices[i]*rhs.num_cols + rhs.column_indices[j];
+            A.values[n] = lhs.values[i]*rhs.values[j];
+            n++;
+        }
+    return A;
+}
+//use cusp::add and cusp::subtract to add and multiply matrices
+
+
 /**
  * @brief Create 2D Tensor by summing 2 diagonal Tensor products
  *
@@ -110,7 +142,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> tensorSum(
 #ifdef DG_DEBUG
     std::cout << "Sort ready! Now compute unique number of nonzeros ...\n";
 #endif //DG_DEBUG
-    // compute unique number of nonzeros in the output
+    // compute unique number of ( values with different (i,j) index)  in the output
     int num_entries = thrust::inner_product(thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dJ.begin())),
                                             thrust::make_zip_iterator(thrust::make_tuple(dI.end (),  dJ.end()))   - 1,
                                             thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dJ.begin())) + 1,

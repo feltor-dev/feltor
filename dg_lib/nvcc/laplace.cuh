@@ -4,7 +4,7 @@
 #include <cusp/coo_matrix.h>
 
 #include "functions.h"
-#include "operators.cuh"
+#include "operator.cuh"
 
 namespace dg
 {

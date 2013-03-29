@@ -8,7 +8,7 @@
 #include <thrust/inner_product.h>
 
 #include "../array.cuh"
-#include "../operators.cuh"
+#include "../operator.cuh"
 #include "thrust_vector.cuh"
 #include "../vector_categories.h"
 #include "../matrix_categories.h"
