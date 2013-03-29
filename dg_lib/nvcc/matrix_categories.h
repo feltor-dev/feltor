@@ -10,6 +10,9 @@ struct DiagonalPreconditionerTag {};
 
 struct IdentityTag : public DiagonalPreconditionerTag {};
 
+struct OperatorMatrixTag {};
+
+struct OperatorTupleTag {};
 
 }//namespace dg
 

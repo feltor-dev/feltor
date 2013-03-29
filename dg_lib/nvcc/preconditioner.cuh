@@ -20,19 +20,6 @@ struct MatrixTraits<Identity< T>  >
     typedef typename Identity<T>::matrix_category matrix_category;
 };
 
-/*
-template< class T, class Derived>
-struct DiagonalPreconditioner
-{
-    typedef DiagonalPreconditionerTag matrix_category;
-    typedef T value_type;
-    __host__ __device__
-    value_type operator()( int i) const {
-        return static_cast<Derived*>(this)->implementation( i);
-    }
-};
-*/
-
 
 /**
 * @brief The Preconditioner T 
@@ -42,7 +29,7 @@ struct DiagonalPreconditioner
 * @tparam n Number of Legendre nodes per cell.
 */
 template< class T, size_t n>
-struct T1D //: public DiagonalPreconditioner< T, T1D<T, n> > 
+struct T1D 
 {
     typedef T value_type;
     typedef DiagonalPreconditionerTag matrix_category;
@@ -83,7 +70,7 @@ struct MatrixTraits< T1D< T, n> >
 * @tparam n Number of Legendre nodes per cell.
 */
 template< class T, size_t n>
-struct S1D// : public DiagonalPreconditioner < T, S1D <T, n> >
+struct S1D
 {
     typedef T value_type;
     typedef DiagonalPreconditionerTag matrix_category;

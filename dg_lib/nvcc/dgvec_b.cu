@@ -1,4 +1,5 @@
 #include <iostream> 
+#include <cusp/blas.h>
 
 #include "blas.h"
 #include "dgvec.cuh" 

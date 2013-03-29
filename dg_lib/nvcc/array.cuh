@@ -24,11 +24,14 @@ class Array
 
     /*! @brief set memory to 0
      */
-    void zero()
+    __host__ __device__ void zero()
     {
         for( size_t i = 0; i < n; i++)
             data[i] = 0;
     }
+
+    __host__ __device__ size_t size() const {return n;}
+
     /*! @brief access operator
      *
      * Performs a range check if DG_DEBUG is defined

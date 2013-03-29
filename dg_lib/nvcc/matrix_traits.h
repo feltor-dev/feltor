@@ -1,6 +1,7 @@
 #ifndef _DG_MATRIX_TRAITS_
 #define _DG_MATRIX_TRAITS_
 
+#include "matrix_categories.h"
 namespace dg{
 
 template< class Matrix>

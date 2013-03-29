@@ -1,5 +1,6 @@
 #include <iostream>
 #include "operators.cuh"
+#include "array.cuh"
 
 
 using namespace std;
@@ -14,7 +15,6 @@ int main()
 {
     Operator<double, 3> A(1);
     Operator<double, 3> B(2);
-
 
     cout << "Test of Operator class\n";
     A+=B; 

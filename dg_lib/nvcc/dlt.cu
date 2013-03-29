@@ -102,15 +102,16 @@ int main()
     DArrVec  dv( hv);
     DArrVec  dv2( N);
     DArrVec_ dv_( hv_);
-    DArrVec_ dv_2( N);
+    DArrVec_ dv_2( dv_);
     DMatrix dm = createForward<n>( N);
 
     t.tic();
-    symv( dv_.data());
+    dg::blas2::symv( Operator<double, n>( DLT<n>::forward), dv_.data(), dv_.data());
+    //symv( dv_.data());
     t.toc();
     cout << "Forward thrust transform took "<<t.diff()<<"s\n";
     t.tic();
-    blas2::symv( dm, dv_.data(), dv_.data());
+    blas2::symv( dm, dv_2.data(), dv_2.data());
     t.toc();
     cout << "Foward cusp transform took    "<<t.diff()<<"s\n";
 
@@ -124,6 +125,9 @@ int main()
             cout << hv[i][j]  << " ";
         cout << "\n";
     }
+    cout << endl;
+    cout << hv_ <<endl;
+    hv_ = dv_2;
     cout << endl;
     cout << hv_ <<endl;
     */

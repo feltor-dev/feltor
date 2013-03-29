@@ -23,7 +23,7 @@ struct Diagonal_Symv_Functor
 
     Diagonal_Symv_Functor( value_type alpha, value_type beta, const Preconditioner& p ): p_(p), alpha(alpha), beta(beta) {}
     __host__ __device__
-        value_type operator()( const Pair& p, const double& x)
+        value_type operator()( const value_type& x, const Pair& p)
         {
             return alpha*x *p_(thrust::get<1>(p))
                         + beta*thrust::get<0>(p);
@@ -46,7 +46,7 @@ struct Diagonal_Dot_Functor
 
     Diagonal_Dot_Functor( const Preconditioner& p): p_(p){}
     __host__ __device__
-    value_type operator()( const Pair& p, const value_type& x) 
+    value_type operator()( const value_type& x, const Pair& p) 
     {
         //generalized Multiplication
         return x*thrust::get<0>(p)*p_(thrust::get<1>(p));
@@ -106,10 +106,8 @@ inline void doSymv(
     }
     thrust::counting_iterator<int> first(0);
     thrust::counting_iterator<int> last(thrust::distance( x.begin(), x.end()));
-    thrust::transform( 
-                       thrust::make_zip_iterator( thrust::make_tuple( x.begin(), first)),  
-                       thrust::make_zip_iterator( thrust::make_tuple( x.end(), last)), 
-                       y.begin(), 
+    thrust::transform( x.begin(), x.end(), 
+                       thrust::make_zip_iterator( thrust::make_tuple( y.begin(), first)),  
                        y.begin(),
                        detail::Diagonal_Symv_Functor<Matrix>( alpha, beta, m)
                       ); 

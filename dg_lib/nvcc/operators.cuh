@@ -1,6 +1,10 @@
 #ifndef _DG_OPERATORS_
 #define _DG_OPERATORS_
 
+#include "array.cuh"
+#include "matrix_traits.h"
+#include "matrix_categories.h"
+
 namespace dg{
 
 /**
@@ -17,6 +21,7 @@ class Operator
 {
   public:
     typedef T value_type;
+    typedef Array<T, n> array_type;
     /**
     * @brief Construct empty Operator
     */
@@ -190,6 +195,13 @@ class Operator
 
   private:
     T ptr[n*n];
+};
+
+template< class T, size_t n>
+struct MatrixTraits< Operator<T, n> >
+{
+    typedef T value_type;
+    typedef OperatorMatrixTag matrix_category;
 };
 
 
