@@ -2,7 +2,6 @@
 
 #include <cusp/print.h>
 #include <cusp/ell_matrix.h>
-
 #include "laplace.cuh"
 #include "laplace2d.cuh"
 #include "operator_matrix.cuh"
@@ -58,9 +57,9 @@ int main()
     Operator<double, n> Sop( dg::create::detail::pipj);
     Operator<double, n> Id( dg::create::detail::delta);
     Sop *= hy/2.;
-    HMatrix s1y = create::operatorMatrix( Sop, Ny);
-    HMatrix s1x = create::operatorMatrix( Id, Nx);
-    HMatrix ddxx = create::tensorProduct<double>( s1y, s1x);
+    HMatrix s1y = create::operatorMatrix( Ny, Id);
+    HMatrix s1x = create::operatorMatrix( Nx, Id);
+    HMatrix ddxx = create::tensorProduct<double, n>( s1y, laplace1d);
     cout << endl;
     cout << endl;
     cusp::print( s1x); 

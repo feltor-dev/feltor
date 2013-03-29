@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <cusp/print.h>
+#include <cusp/elementwise.h>
 #include <cusp/ell_matrix.h>
 #include <cusp/hyb_matrix.h>
 #include <cusp/dia_matrix.h>
@@ -10,6 +11,7 @@
 #include "timer.cuh"
 #include "laplace.cuh"
 #include "laplace2d.cuh"
+#include "operator_matrix.cuh"
 #include "dgvec.cuh"
 #include "dgmat.cuh"
 #include "blas.h"
@@ -47,5 +49,25 @@ int main()
     blas2::symv( laplace2d, dv, dw);
     t.toc();
     cout << "Multiplication with laplace2d took "<<t.diff()<<"s\n";
+
+    t.tic();
+    DMatrix ddxx = create::tensorProduct<double, P>( 
+                            create::laplace1d_per<P>(Ny, 2.),
+                            create::operatorMatrix( Nx, Operator<double, P>( create::detail::pipj)));
+    DMatrix ddyy = create::tensorProduct<double, P>( 
+                            create::operatorMatrix( Ny, Operator<double, P>( create::detail::pipj)),
+                            create::laplace1d_per<P>(Nx, 2.));
+    DMatrix laplace( ddxx);
+    cusp::add( ddxx, ddyy, laplace);
+    t.toc();
+    cout <<"\n";
+    cout << "Laplace Product matrix creation took "<<t.diff()<<"s\n";
+    t.tic();
+    //blas2::symv( ddxx, dv, dw);
+    //blas2::symv( ddyy, dw, dv);
+    blas2::symv( laplace, dv, dw);
+    t.toc();
+    cout << "Multiplication with laplace2dp took "<<t.diff()<<"s\n";
+    
     return 0;
 }
