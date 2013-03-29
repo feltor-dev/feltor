@@ -12,6 +12,7 @@
 #include "thrust_vector.cuh"
 #include "../vector_categories.h"
 #include "../matrix_categories.h"
+#include "../operator_tuple.cuh"
 
 namespace dg{
 namespace blas2{
@@ -21,13 +22,13 @@ template< class Op>
 struct Operator_Symv_Functor
 {
     typedef typename Op::value_type value_type;
-    typedef typename Op::array_type array_type;
+    typedef typename Op::array_type operand_type;
 
     Operator_Symv_Functor( value_type alpha, value_type beta, const Op& op ): op_(op), alpha(alpha), beta(beta) {}
     __host__ __device__
-        array_type operator()( const array_type& x, const array_type& y)
+        operand_type operator()( const operand_type& x, const operand_type& y) const
         {
-            array_type tmp( (value_type)0);
+            operand_type tmp( (value_type)0);
             for( unsigned i=0; i<tmp.size(); i++)
             {
                 for( unsigned j=0; j<tmp.size(); j++)
@@ -37,9 +38,9 @@ struct Operator_Symv_Functor
             return tmp;
         }
     __host__ __device__
-        array_type operator()(const array_type& arr)
+        operand_type operator()(const operand_type& arr) const
         {
-            array_type tmp( (value_type)0);
+            operand_type tmp( (value_type)0);
             for( unsigned i=0; i<tmp.size(); i++)
                 for( unsigned j=0; j<tmp.size(); j++)
                     tmp[i] +=op_(i,j)*arr[j];
@@ -49,6 +50,65 @@ struct Operator_Symv_Functor
     const Op op_;
     value_type alpha, beta;
 };
+
+template<class Op>
+struct Operator_Symv_Functor<thrust::tuple<Op,Op> >
+{
+    typedef typename Op::value_type value_type;
+    typedef typename Op::matrix_type matrix_type;
+    typedef thrust::tuple< Op, Op> Pair;
+
+    Operator_Symv_Functor( value_type alpha, value_type beta, const Pair& p ): 
+                        op1( thrust::get<0>(p)), 
+                        op2( thrust::get<1>(p)), 
+                        alpha(alpha), beta(beta) {}
+    __host__ __device__
+        matrix_type operator()( const matrix_type& x, matrix_type& y) const
+        {
+            matrix_type tmp( (value_type)0);
+            unsigned n = sqrt(tmp.size());
+            //first transform each row
+            for( unsigned i=0; i<n; i++) 
+                for( unsigned j=0; j<n; j++)
+                {
+                    //multiply Op2 with each row k
+                    for(  unsigned k=0; k<n; k++)
+                        tmp[i*n+j] += op2(j, k)*x[ i*n+k];
+                }
+            //then transform each col
+            for( unsigned i=0; i<n; i++) 
+                for( unsigned j=0; j<n; j++)
+                {
+                    //multiply Op1 with each col 
+                    y[i*n+j] *= beta;
+                    for(  unsigned k=0; k<n; k++)
+                        y[i*n+j] += alpha*op1(i,k)*tmp[k*n+j];
+                }
+            return y;
+        }
+    __host__ __device__
+        matrix_type operator()(const matrix_type& x) const
+        {
+            matrix_type tmp( (value_type)0);
+            unsigned n = sqrt(tmp.size());
+            //first transform each row
+            for( unsigned i=0; i<n; i++) 
+                for( unsigned j=0; j<n; j++)
+                    for(  unsigned k=0; k<n; k++)
+                        tmp[i*n+j] += op2(j, k)*x[ i*n+k];
+            //then transform each col
+            matrix_type y( (value_type)0);
+            for( unsigned i=0; i<n; i++) 
+                for( unsigned j=0; j<n; j++)
+                    for(  unsigned k=0; k<n; k++)
+                        y[i*n+j] += op1(i,k)*tmp[k*n+j];
+            return y;
+        }
+  private:
+    const Op op1, op2;
+    value_type alpha, beta;
+};
+
 
 template< class Ptr>
 Ptr* recast( Ptr* const ptr, thrust::input_host_iterator_tag) { return ptr;}
@@ -62,10 +122,10 @@ thrust::device_ptr< Ptr> recast( Ptr* const ptr, thrust::input_device_iterator_t
 
 template< class Matrix, class Vector>
 inline void doSymv(  
-              typename Matrix::value_type alpha, 
+              typename MatrixTraits<Matrix>::value_type alpha, 
               const Matrix& m,
               const Vector& x, 
-              typename Matrix::value_type beta, 
+              typename MatrixTraits<Matrix>::value_type beta, 
               Vector& y, 
               OperatorMatrixTag,
               ThrustVectorTag)
@@ -78,10 +138,10 @@ inline void doSymv(
         return;
     }
     typename thrust::iterator_traits< typename Vector::iterator>::iterator_category tag;
-    typedef typename Matrix::array_type array_type;
-    const array_type * xbegin = reinterpret_cast<array_type const *>(thrust::raw_pointer_cast( &x[0]));  
-    array_type const * xend = xbegin + x.size()/xbegin->size() -1;  
-    array_type * ybegin = reinterpret_cast<array_type *>(thrust::raw_pointer_cast(&y[0]));  
+    typedef typename MatrixTraits<Matrix>::operand_type operand_type;
+    const operand_type * xbegin = reinterpret_cast<operand_type const *>(thrust::raw_pointer_cast( &x[0]));  
+    operand_type const * xend = xbegin + x.size()/xbegin->size();  
+    operand_type * ybegin = reinterpret_cast<operand_type *>(thrust::raw_pointer_cast(&y[0]));  
 
     thrust::transform( recast( xbegin, tag), recast(xend, tag), 
                        recast( ybegin, tag),
@@ -98,10 +158,10 @@ inline void doSymv(
               ThrustVectorTag)
 {
     typename thrust::iterator_traits< typename Vector::iterator>::iterator_category tag;
-    typedef typename Matrix::array_type array_type;
-    const array_type * xbegin = reinterpret_cast<array_type const *>(thrust::raw_pointer_cast( &x[0]));  
-    array_type const * xend = xbegin + x.size()/xbegin->size() -1;  
-    array_type * ybegin = reinterpret_cast<array_type *>(thrust::raw_pointer_cast(&y[0]));  
+    typedef typename MatrixTraits<Matrix>::operand_type operand_type;
+    const operand_type * xbegin = reinterpret_cast<operand_type const *>(thrust::raw_pointer_cast( &x[0]));  
+    operand_type const * xend = xbegin + x.size()/xbegin->size();  
+    operand_type * ybegin = reinterpret_cast<operand_type *>(thrust::raw_pointer_cast(&y[0]));  
 
     thrust::transform( recast( xbegin, tag), recast(xend, tag), 
                        recast( ybegin, tag),

@@ -67,10 +67,10 @@ inline typename Matrix::value_type dot( const Matrix& m, const Vector& x)
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
 template< class Matrix, class Vector>
-inline void symv( typename Matrix::value_type alpha, 
+inline void symv( typename MatrixTraits<Matrix>::value_type alpha, 
                   const Matrix& m, 
                   const Vector& x, 
-                  typename Matrix::value_type beta, 
+                  typename MatrixTraits<Matrix>::value_type beta, 
                   Vector& y)
 {
     return dg::blas2::detail::doSymv( alpha, m, x, beta, y, 

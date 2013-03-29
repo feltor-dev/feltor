@@ -59,6 +59,13 @@ inline void doAxpby( typename Vector::value_type alpha,
             detail::Axpby_Functor< typename Vector::value_type>( alpha, beta) );
 }
 
+template< class Vector>
+inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
+{
+    thrust::transform( x1.begin(), x1.end(), x2.begin(), y.begin(), 
+                        thrust::multiplies<typename Vector::value_type>());
+}
+
 
 
 } //namespace detail

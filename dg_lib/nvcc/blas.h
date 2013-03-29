@@ -52,6 +52,11 @@ inline void axpby( typename Vector::value_type alpha, const Vector& x, typename 
     return dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
 }
 
+template< class Vector>
+inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
+{
+    return dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+}
 }//namespace blas1
 } //namespace dg
 

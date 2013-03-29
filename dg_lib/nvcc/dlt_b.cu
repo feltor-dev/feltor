@@ -19,7 +19,7 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3; //thrust transform is always faster
-const unsigned N = 1e6;
+const unsigned N = 3e4;
 
 typedef thrust::device_vector<double>   DVec;
 typedef thrust::host_vector<double>     HVec;
@@ -66,6 +66,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> createForward( unsigned N)
 };
 
 double function( double x) { return sin(x);}
+/*
 
 void doSymv( double* ptr, thrust::input_device_iterator_tag )
 {
@@ -86,6 +87,7 @@ void symv( Vector& v)
     doSymv( thrust::raw_pointer_cast(&v[0]), typename thrust::iterator_traits< typename Vector::iterator>::iterator_category());
 }
 
+*/
 
 
 
@@ -116,22 +118,8 @@ int main()
     cout << "Foward cusp transform took    "<<t.diff()<<"s\n";
 
     //test for equality...
-    /*
     hv_ = dv_;
-    hv = dv;
-    for( unsigned i=0; i<N; i++)
-    {
-        for( unsigned j=0; j<n; j++)
-            cout << hv[i][j]  << " ";
-        cout << "\n";
-    }
-    cout << endl;
-    cout << hv_ <<endl;
-    hv_ = dv_2;
-    cout << endl;
-    cout << hv_ <<endl;
-    */
-
+    hv  = dv;
     
     return 0;
 }

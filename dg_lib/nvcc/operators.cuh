@@ -22,15 +22,18 @@ class Operator
   public:
     typedef T value_type;
     typedef Array<T, n> array_type;
+    typedef Array<T, n*n> matrix_type;
     /**
     * @brief Construct empty Operator
     */
+    __host__ __device__
     Operator(){}
     /**
     * @brief Initialize elements.
     *
     * @param value Every element is innitialized to.
     */
+    __host__ __device__
     Operator( const T& value)
     {
         for( unsigned i=0; i<n*n; i++)
@@ -41,6 +44,7 @@ class Operator
     *
     * @param arr Filled 2d array 
     */
+    __host__ __device__
     Operator( const T arr[n][n]) {
         for( unsigned i=0; i<n; i++)
             for( unsigned j=0; j<n; j++)
@@ -52,6 +56,7 @@ class Operator
     *
     * @param f Elements are initialized by calling f with their indices.
     */
+    __host__ __device__
     Operator( double (&f)(unsigned, unsigned))
     {
         for( unsigned i=0; i<n; i++)
@@ -66,6 +71,7 @@ class Operator
      * @param j column index
      * @return reference to value at that location
      */
+    __host__ __device__
     T& operator()(const size_t i, const size_t j){
         return ptr[ i*n+j];
     }
@@ -76,6 +82,7 @@ class Operator
      * @param j column index
      * @return const value at that location
      */
+    __host__ __device__
     const T& operator()(const size_t i, const size_t j) const {
         return ptr[ i*n+j];
     }
@@ -201,6 +208,7 @@ template< class T, size_t n>
 struct MatrixTraits< Operator<T, n> >
 {
     typedef T value_type;
+    typedef typename Operator<T, n>::array_type operand_type;
     typedef OperatorMatrixTag matrix_category;
 };
 
