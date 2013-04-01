@@ -10,9 +10,9 @@
 #include "timer.cuh"
 #include "array.cuh"
 #include "dlt.h"
-#include "dgvec.cuh"
+#include "arrvec1d.cuh"
 #include "evaluation.cuh"
-#include "operators.cuh"
+#include "operator.cuh"
 
 
 using namespace std;

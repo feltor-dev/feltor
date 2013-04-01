@@ -5,7 +5,7 @@
 #include <thrust/device_vector.h>
 
 #include "evaluation.cuh"
-#include "operators.cuh"
+#include "operator.cuh"
 #include "preconditioner.cuh"
 
 #include "blas.h"

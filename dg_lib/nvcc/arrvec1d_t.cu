@@ -3,7 +3,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "dgvec.cuh"
+#include "arrvec1d.cuh"
 
 const unsigned n = 3;
 const unsigned N = 5;

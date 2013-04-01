@@ -12,10 +12,6 @@ cusp_thrust: cusp_thrust.cu
 	$(NVCC) $< $(NVCCFLAGS) -o $@
 	./$@
 
-dlt: dlt.cu
-	$(NVCC) -O3 -w  $< $(NVCCFLAGS) $(INCLUDE) -o $@ 
-	./$@
-
 %_t: %_t.cu %.cuh
 	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@
 	./$@

@@ -7,9 +7,9 @@
 #include "timer.cuh"
 #include "evaluation.cuh"
 #include "cg.cuh"
-#include "dgmat.cuh"
+#include "arrvec2d.cuh"
 #include "laplace.cuh"
-#include "laplace2d.cuh"
+#include "tensor.cuh"
 #include "preconditioner.cuh"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
@@ -49,10 +49,10 @@ int main()
 
     cout << "Create Laplacian\n";
     t.tic();
-    DMatrix A = dg::create::tensorSum<n>( dg::create::laplace1d_per<n>( Ny, hy), 
-                                          dg::S1D<double, n>( hx),
-                                          dg::S1D<double, n>( hy),
-                                          dg::create::laplace1d_per<n>( Nx, hx)); //dir does also work but is slow
+    DMatrix A = dg::tensor<n>( dg::create::laplace1d_per<n>( Ny, hy), 
+                               dg::S1D<double, n>( hx),
+                               dg::S1D<double, n>( hy),
+                               dg::create::laplace1d_per<n>( Nx, hx)); //dir does also work but is slow
     t.toc();
     cout<< "Creation took "<<t.diff()<<"s\n";
     //create conjugate gradient

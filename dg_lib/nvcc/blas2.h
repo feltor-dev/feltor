@@ -1,7 +1,7 @@
 #ifndef _DG_BLAS2_
 #define _DG_BLAS2_
 
-#include "blas/laplace.cuh"
+#include "blas/cusp_matrix.cuh"
 #include "blas/preconditioner.cuh"
 #include "blas/operator.cuh"
 #include "vector_traits.h"

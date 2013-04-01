@@ -9,9 +9,9 @@
 #include "laplace.cuh"
 #include "array.cuh"
 #include "dlt.h"
-#include "dgvec.cuh"
+#include "arrvec1d.cuh"
 #include "evaluation.cuh"
-#include "operators.cuh"
+#include "operator.cuh"
 
 using namespace std;
 using namespace dg;
@@ -32,7 +32,6 @@ int main()
 {
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
-    Timer t;
     HArrVec hv = evaluate<double(&)(double, double), n>( function, 0,2.*M_PI,0, 2.*M_PI, Nx, Ny );
     DArrVec  dv( hv);
     DArrVec  dv2( hv);

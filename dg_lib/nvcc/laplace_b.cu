@@ -9,9 +9,7 @@
 //#include "../gcc/timer.h"
 #include "timer.cuh"
 #include "laplace.cuh"
-#include "laplace2d.cuh"
-#include "dgvec.cuh"
-#include "dgmat.cuh"
+#include "arrvec1d.cuh"
 #include "blas.h"
 
 const unsigned P = 3;

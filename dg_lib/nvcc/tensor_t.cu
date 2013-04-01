@@ -2,11 +2,12 @@
 
 #include <cusp/print.h>
 #include <cusp/ell_matrix.h>
+
 #include "laplace.cuh"
-#include "laplace2d.cuh"
+#include "tensor.cuh"
 #include "operator_matrix.cuh"
-#include "dgvec.cuh"
-#include "dgmat.cuh"
+#include "arrvec1d.cuh"
+#include "arrvec2d.cuh"
 #include "evaluation.cuh"
 #include "preconditioner.cuh"
 #include "blas.h"
@@ -54,12 +55,12 @@ int main()
     cout << "Norm2 2D is : "<<norm2_<<endl;
 
     HMatrix laplace1d = create::laplace1d_per<n>(Nx, hx);
-    Operator<double, n> Sop( dg::create::detail::pipj);
-    Operator<double, n> Id( dg::create::detail::delta);
+    Operator<double, n> Sop( pipj);
+    Operator<double, n> Id( delta);
     Sop *= hy/2.;
-    HMatrix s1y = create::operatorMatrix( Ny, Id);
-    HMatrix s1x = create::operatorMatrix( Nx, Id);
-    HMatrix ddxx = create::tensorProduct<double, n>( s1y, laplace1d);
+    HMatrix s1y = dg::tensor( Ny, Id);
+    HMatrix s1x = dg::tensor( Nx, Id);
+    HMatrix ddxx = tensor<double, n>( s1y, laplace1d);
     cout << endl;
     cout << endl;
     cusp::print( s1x); 
@@ -67,10 +68,10 @@ int main()
     cusp::print( s1y);
     cout << endl;
     cusp::print( ddxx);
-    HMatrix laplace2d = create::tensorSum<n>(create::laplace1d_per<n>( Ny, hy), 
-                                              s1dx, 
-                                              s1dy,
-                                              create::laplace1d_per<n>( Nx, hx));
+    HMatrix laplace2d = tensor<n>(create::laplace1d_per<n>( Ny, hy), 
+                                  s1dx, 
+                                  s1dy,
+                                  create::laplace1d_per<n>( Nx, hx));
     blas2::symv( laplace1d, hv1d.data(), hw1d.data() );
     blas2::symv( laplace2d, hv2d.data(), hw2d.data() );
 

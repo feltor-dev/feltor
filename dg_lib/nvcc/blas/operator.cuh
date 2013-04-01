@@ -51,6 +51,7 @@ struct Operator_Symv_Functor
     value_type alpha, beta;
 };
 
+//might become obsolete by the tensor function
 template<class Op>
 struct Operator_Symv_Functor<thrust::tuple<Op,Op> >
 {

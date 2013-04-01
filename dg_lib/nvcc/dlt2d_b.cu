@@ -8,14 +8,14 @@
 
 #include "blas.h"
 #include "laplace.cuh"
-#include "laplace2d.cuh"
+#include "tensor.cuh"
 #include "timer.cuh"
 #include "array.cuh"
 #include "dlt.h"
-#include "dgvec.cuh"
+#include "arrvec1d.cuh"
 #include "evaluation.cuh"
 #include "preconditioner.cuh"
-#include "operators.cuh"
+#include "operator.cuh"
 
 
 using namespace std;
@@ -60,7 +60,7 @@ int main()
     HArrVec hv2( hv);
     DArrVec  dv( hv);
     DArrVec  dv2( hv2);
-    HMatrix hm = create::tensorSum( createForward<n>(Ny), S1D<double, n>(2.), S1D<double, n>(2.), createForward<n>(Nx));
+    HMatrix hm = tensor( createForward<n>(Ny), S1D<double, n>(2.), S1D<double, n>(2.), createForward<n>(Nx));
     cout << "Transferring to device!\n";
     DMatrix dm(hm);
     Operator<double, n> forward( DLT<n>::forward);

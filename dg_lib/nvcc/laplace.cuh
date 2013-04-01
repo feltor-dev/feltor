@@ -44,12 +44,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_per( unsigned N, doub
     cusp::coo_matrix<int, double, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
     //std::cout << A.row_indices.size(); 
     //std::cout << A.num_cols; //this works!!
-    Operator<double, n> l( detail::lilj);
-    Operator<double, n> r( detail::rirj);
-    Operator<double, n> lr( detail::lirj);
-    Operator<double, n> rl( detail::rilj);
-    Operator<double, n> d( detail::pidxpj);
-    Operator<double, n> t( detail::pipj_inv);
+    Operator<double, n> l( dg::lilj);
+    Operator<double, n> r( dg::rirj);
+    Operator<double, n> lr(dg::lirj);
+    Operator<double, n> rl(dg::rilj);
+    Operator<double, n> d( dg::pidxpj);
+    Operator<double, n> t( dg::pipj_inv);
     t *= 2./h;
     Operator< double, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
     Operator< double, n> b = -((d+l)*t*rl+alpha*rl);
@@ -103,13 +103,13 @@ template< size_t n>
 cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_dir( unsigned N, double h, double alpha = 1.)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
-    Operator<double, n> l( detail::lilj);
-    Operator<double, n> r( detail::rirj);
-    Operator<double, n> lr( detail::lirj);
-    Operator<double, n> rl( detail::rilj);
-    Operator<double, n> d( detail::pidxpj);
-    Operator<double, n> s( detail::pipj);
-    Operator<double, n> t( detail::pipj_inv);
+    Operator<double, n> l( dg::lilj);
+    Operator<double, n> r( dg::rirj);
+    Operator<double, n> lr(dg::lirj);
+    Operator<double, n> rl(dg::rilj);
+    Operator<double, n> d( dg::pidxpj);
+    Operator<double, n> s( dg::pipj);
+    Operator<double, n> t( dg::pipj_inv);
     t *= 2./h;
 
     Operator<double, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
@@ -158,8 +158,5 @@ cusp::coo_matrix<int, double, cusp::host_memory> laplace1d_dir( unsigned N, doub
 } //namespace create
 
 } //namespace dg
-
-#include "blas/thrust_vector.cuh"
-#include "blas/laplace.cuh"
 
 #endif // _DG_LAPLACE_CUH

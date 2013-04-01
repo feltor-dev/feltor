@@ -13,15 +13,15 @@ int main()
 {
 
     cout << "Test of operator Matrix creation\n";
-    dg::Operator<double, 3> Op( dg::create::detail::pipj);
+    dg::Operator<double, 3> Op1( dg::pipj);
 
-    dg::Operator<double, 3> Op1( dg::DLT<3>::forward);
-    cout << "1st Operator is:\n" << Op<<"\n";
-    cout << "2nd Operator is:\n" << Op1<<"\n";
-    cout << "Tensor Product is: \n" << dg::tensorProduct(Op, Op1);
-    cusp::coo_matrix<int, double, cusp::host_memory> test1 = dg::create::operatorMatrix( Op, 2);
-    cusp::coo_matrix<int, double, cusp::host_memory> test2 = dg::create::operatorMatrix( Op1, 2);
-    cusp::coo_matrix<int, double, cusp::host_memory> test3 = dg::create::operatorMatrix(dg::tensorProduct( Op, Op1), 2);
+    dg::Operator<double, 3> Op2( dg::DLT<3>::forward);
+    cout << "1st Operator is:\n" << Op1<<"\n";
+    cout << "2nd Operator is:\n" << Op2<<"\n";
+    cout << "Tensor Product is: \n" << dg::tensor( Op1, Op2);
+    cusp::coo_matrix<int, double, cusp::host_memory> test1 = dg::tensor<double, 3>( 2, dg::delta);
+    cusp::coo_matrix<int, double, cusp::host_memory> test2 = dg::tensor<double, 3>( 2, dg::DLT<3>::forward);
+    cusp::coo_matrix<int, double, cusp::host_memory> test3 = dg::tensor(2, dg::tensor( Op1, Op2));
     cusp::print(test1);
     cusp::print(test2);
     cusp::print(test3);

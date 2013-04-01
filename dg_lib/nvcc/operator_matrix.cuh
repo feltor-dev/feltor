@@ -9,7 +9,7 @@ namespace dg
 
 
 template< class T, size_t n>
-Operator<T, n*n> tensorProduct( const Operator< T, n>& op1, const Operator<T, n>& op2)
+Operator<T, n*n> tensor( const Operator< T, n>& op1, const Operator<T, n>& op2)
 {
     Operator<T, n*n> prod;
     for( unsigned i=0; i<n; i++)
@@ -21,12 +21,12 @@ Operator<T, n*n> tensorProduct( const Operator< T, n>& op1, const Operator<T, n>
 }
 
 
-namespace create
-{
+//namespace create
+//{
 
 //creates 1 x op where 1 is the NxN identity matrix
 template< class T, size_t n>
-cusp::coo_matrix<int,T, cusp::host_memory> operatorMatrix( unsigned N, const Operator<T,n>& op)
+cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,n>& op)
 {
     //compute number of nonzeroes in op
     unsigned number =0;
@@ -53,7 +53,7 @@ cusp::coo_matrix<int,T, cusp::host_memory> operatorMatrix( unsigned N, const Ope
 
 
 
-}//namespace create
+//}//namespace create
     
 }//namespace dg
 

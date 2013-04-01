@@ -3,8 +3,8 @@
 
 #include <cassert> 
 
-#include "dgvec.cuh"
-#include "dgmat.cuh"
+#include "arrvec1d.cuh"
+#include "arrvec2d.cuh"
 #include "dlt.h"
 
 namespace dg

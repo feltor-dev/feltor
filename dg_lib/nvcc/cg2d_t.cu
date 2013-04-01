@@ -6,9 +6,9 @@
 
 #include "evaluation.cuh"
 #include "cg.cuh"
-#include "dgmat.cuh"
+#include "arrvec2d.cuh"
 #include "laplace.cuh"
-#include "laplace2d.cuh"
+#include "tensor.cuh"
 #include "preconditioner.cuh"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
@@ -44,10 +44,10 @@ int main()
     HArrVec x = dg::expand<double (&)(double, double), n> ( initial, 0,lx, 0, ly, Nx, Ny);
 
     cout << "Create Laplacian\n";
-    DMatrix A = dg::create::tensorSum<n>( dg::create::laplace1d_per<n>( Ny, hy), 
-                                       dg::S1D<double, n>( hx),
-                                       dg::S1D<double, n>( hy),
-                                       dg::create::laplace1d_dir<n>( Nx, hx)); 
+    DMatrix A = dg::tensor<n>( dg::create::laplace1d_per<n>( Ny, hy), 
+                               dg::S1D<double, n>( hx),
+                               dg::S1D<double, n>( hy),
+                               dg::create::laplace1d_dir<n>( Nx, hx)); 
     dg::CG<DMatrix, DVec, Preconditioner > pcg( x.data(), n*n*Nx*Ny);
     //dg::CG<DMatrix, DVec> cg( x.data(), n*N);
     cout<<"Expand right hand side\n";

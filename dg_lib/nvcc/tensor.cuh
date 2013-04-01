@@ -2,8 +2,8 @@
 #define _DG_LAPLACE2D_CUH
 
 #include <cassert>
-#include <cusp/coo_matrix.h>
 
+#include <cusp/coo_matrix.h>
 #include <thrust/tuple.h>
 #include <thrust/sort.h>
 #include <thrust/reduce.h>
@@ -15,7 +15,7 @@
 namespace dg
 {
 
-namespace create{
+//namespace create{
 
 namespace detail{
 
@@ -42,7 +42,7 @@ struct AddIndex2d{
 } //namespace detail
 
 template< class T, size_t n>
-cusp::coo_matrix< int, T, cusp::host_memory> tensorProduct( 
+cusp::coo_matrix< int, T, cusp::host_memory> tensor( 
         const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
         const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
 {    
@@ -62,14 +62,12 @@ cusp::coo_matrix< int, T, cusp::host_memory> tensorProduct(
     // allocate storage for unordered triplets
     cusp::array1d< int,     cusp::host_memory> I( num_triplets); // row indices
     cusp::array1d< int,     cusp::host_memory> J( num_triplets); // column indices
-    cusp::array1d< double,  cusp::host_memory> V( num_triplets); // values
+    cusp::array1d< T,  cusp::host_memory> V( num_triplets); // values
     //fill triplet arrays
     detail::AddIndex2d addIndexRow( Nx, n,n );
     detail::AddIndex2d addIndexCol( Nx, n,n );
     detail::AddIndex2d addIndexVal( Nx, n,n );
-    //First LHS x RHS
-    unsigned iA, jA, kA, lA;
-    unsigned iB, jB, kB, lB;
+    //LHS x RHS
     for( unsigned i=0; i<lhs.num_entries; i++)
         for( unsigned j=0; j<rhs.num_entries; j++)
         {
@@ -77,9 +75,9 @@ cusp::coo_matrix< int, T, cusp::host_memory> tensorProduct(
             addIndexCol( J, lhs.column_indices[i]/n, rhs.column_indices[j]/n, lhs.column_indices[i]%n, rhs.column_indices[j]%n);
             addIndexVal( V, lhs.values[i]*rhs.values[j]);
         }
-    cusp::array1d< int,     cusp::device_memory> dI( I); // row indices
-    cusp::array1d< int,     cusp::device_memory> dJ( J); // column indices
-    cusp::array1d< double,  cusp::device_memory> dV( V); // values
+    cusp::array1d< int, cusp::device_memory> dI( I); // row indices
+    cusp::array1d< int, cusp::device_memory> dJ( J); // column indices
+    cusp::array1d< T,   cusp::device_memory> dV( V); // values
 #ifdef DG_DEBUG
     std::cout << "Values ready! Now sort...\n";
 #endif //DG_DEBUG
@@ -98,7 +96,7 @@ cusp::coo_matrix< int, T, cusp::host_memory> tensorProduct(
                                             thrust::not_equal_to< thrust::tuple<int,int> >()) + 1;
 
     // allocate output matrix
-    cusp::coo_matrix<int, double, cusp::device_memory> A(num_rows, num_cols, num_entries);
+    cusp::coo_matrix<int, T, cusp::device_memory> A(num_rows, num_cols, num_entries);
 #ifdef DG_DEBUG
     std::cout << "Computation ready! Now reduce to unique number of nonzeros ...\n";
 #endif //DG_DEBUG
@@ -109,12 +107,13 @@ cusp::coo_matrix< int, T, cusp::host_memory> tensorProduct(
                           thrust::make_zip_iterator(thrust::make_tuple(A.row_indices.begin(), A.column_indices.begin())),
                           A.values.begin(),
                           thrust::equal_to< thrust::tuple<int,int> >(),
-                          thrust::plus<double>());
+                          thrust::plus<T>());
    return A;
 }
 //use cusp::add and cusp::subtract to add and multiply matrices
 
 
+//might become obsolete due to tensor and cusp::add functions
 /**
  * @brief Create 2D Tensor by summing 2 diagonal Tensor products
  *
@@ -130,7 +129,7 @@ cusp::coo_matrix< int, T, cusp::host_memory> tensorProduct(
  * @return The assembled and sorted tensor matrix
  */
 template< size_t n >
-cusp::coo_matrix< int, double, cusp::host_memory> tensorSum( 
+cusp::coo_matrix< int, double, cusp::host_memory> tensor( 
         const cusp::coo_matrix< int, double, cusp::host_memory>& lhs,
         const dg::S1D<double, n>& D1, 
         const dg::S1D<double, n>& D2, 
@@ -211,12 +210,9 @@ cusp::coo_matrix< int, double, cusp::host_memory> tensorSum(
 }
 
 
-} //namespace create
+//} //namespace create
 
 } //namespace dg
-
-#include "blas/thrust_vector.cuh"
-#include "blas/laplace.cuh"
 
 #endif // _DG_LAPLACE2D_CUH
 

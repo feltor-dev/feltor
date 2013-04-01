@@ -7,7 +7,7 @@
 //#include "../gcc/timer.h"
 #include "timer.cuh"
 #include "evaluation.cuh"
-#include "operators.cuh"
+#include "operator.cuh"
 #include "blas.h"
 
 

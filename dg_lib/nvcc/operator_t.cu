@@ -1,5 +1,7 @@
 #include <iostream>
-#include "operators.cuh"
+
+#include "operator.cuh"
+
 #include "array.cuh"
 
 

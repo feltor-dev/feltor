@@ -7,12 +7,11 @@
 
 #include "blas.h"
 #include "laplace.cuh"
-#include "timer.cuh"
 #include "array.cuh"
 #include "dlt.h"
-#include "dgvec.cuh"
+#include "arrvec1d.cuh"
 #include "evaluation.cuh"
-#include "operators.cuh"
+#include "operator.cuh"
 
 
 using namespace std;
@@ -93,7 +92,6 @@ int main()
 {
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << N<<endl;
-    Timer t;
     HArrVec_ hv_ = evaluate<double(&)(double), n>( function, 0, 2.*M_PI, N);
     HArrVec  hv( N);
     for( unsigned i=0; i<N; i++)
@@ -105,15 +103,9 @@ int main()
     DArrVec_ dv_2( dv_);
     DMatrix dm = createForward<n>( N);
 
-    t.tic();
     dg::blas2::symv( Operator<double, n>( DLT<n>::forward), dv_.data(), dv_.data());
     //symv( dv_.data());
-    t.toc();
-    cout << "Forward thrust transform took "<<t.diff()<<"s\n";
-    t.tic();
     blas2::symv( dm, dv_2.data(), dv_2.data());
-    t.toc();
-    cout << "Foward cusp transform took    "<<t.diff()<<"s\n";
 
     //test for equality...
     hv_ = dv_;

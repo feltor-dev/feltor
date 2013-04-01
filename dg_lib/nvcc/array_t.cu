@@ -27,8 +27,8 @@ int main()
     Array<double, 3> m; 
     Array<double, 3> n; 
     for( size_t i=0; i<3; i++)
-        n( i) = i;
-    n( 2 ) = 17;
+        n[ i] = i;
+    n[ 2 ] = 17;
     m=n;
 
     cout << "Test of Array class\n";
@@ -39,7 +39,7 @@ int main()
     cout << "k(n)\n" << k<<endl;
     k = n;
     cout << "k = n\n" << k<<endl;
-    n(1) = 0;
+    n[1] = 0;
 
     thrust::device_vector<dg::Array<double,3> > dn(100, n);
     thrust::device_vector<dg::Array<double,3> > dm(100, m);

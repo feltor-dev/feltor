@@ -4,7 +4,7 @@
 #include <cusp/ell_matrix.h>
 
 #include "laplace.cuh"
-#include "dgvec.cuh"
+#include "arrvec1d.cuh"
 #include "blas.h"
 
 const unsigned n = 2;
