@@ -3,8 +3,8 @@
 
 namespace dg{
 
-namespace create{
-namespace detail{
+//namespace create{
+//namespace detail{
 inline double delta( unsigned i, unsigned j)
 {
     if( i==j ) 
@@ -54,8 +54,8 @@ inline double lilj( unsigned i, unsigned j)
         return 1.;
     return -1.;
 }
-} //namespace detail
-} //namespace create
+//} //namespace detail
+//} //namespace create
 } //namespace dg
 
 

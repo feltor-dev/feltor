@@ -4,7 +4,7 @@
 #include <cassert>
 #include <vector>
 
-#include "blas.h"
+#include "blas1.h"
 
 namespace dg{
 
@@ -72,6 +72,7 @@ const double rk_coeff<4>::beta[4] = {
 //k is the order of the method
 // Vector f( const Vector& v)
 // Vector should probably be rvalue assignable
+
 /**
 * @brief Struct for RungeKutta integration
 *
@@ -124,19 +125,29 @@ void RK<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, doubl
     assert( &u0 != &u1);
     assert( k>1 && "Euler still has to be implemented!" );
     f(u0, u_[0]);
-    BLAS1<Vector>::daxpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
+    blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
+    cudaThreadSynchronize();
     for( unsigned i=1; i<k-1; i++)
     {
         f( u_[i-1], u_[i]);
-        BLAS1<Vector>::daxpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
+        blas1::axpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
+        cudaThreadSynchronize();
         for( unsigned l=1; l<=i; l++)
-            BLAS1<Vector>::daxpby( rk_coeff<k>::alpha[i][l], u_[l-1],1., u_[i]); //Fall alpha = 0 muss daxpby abfangen!!
+        {
+            blas1::axpby( rk_coeff<k>::alpha[i][l], u_[l-1],1., u_[i]); //Fall alpha = 0 muss axpby abfangen!!
+            cudaThreadSynchronize();
+        }
+
     }
     //Now add everything up to u1
     f( u_[k-2], u1);
-    BLAS1<Vector>::daxpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u1);
+    blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u1);
+    cudaThreadSynchronize();
     for( unsigned l=1; l<=k-1; l++)
-        BLAS1<Vector>::daxpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);
+    {
+        blas1::axpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);
+        cudaThreadSynchronize();
+    }
 }
 
 
