@@ -6,6 +6,11 @@
 
 namespace dg{
 
+/**
+* @brief Class containing typedefs for the use in blas2 routines
+*
+* @tparam T Value type
+*/
 template< class T = double>
 struct Identity
 {

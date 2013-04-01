@@ -30,6 +30,11 @@ class Array
             data[i] = 0;
     }
 
+    /**
+    * @brief Size of the array
+    *
+    * @return  The size n of the array
+    */
     __host__ __device__ size_t size() const {return n;}
 
     /*! @brief access operator

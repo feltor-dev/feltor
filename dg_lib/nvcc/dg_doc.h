@@ -9,7 +9,7 @@
  *      @defgroup containers Containers
  *      @defgroup blas Basic Linear Algebra Subprograms
  *      @defgroup algorithms Numerical schemes
- *      @defgroup utilities 
+ *      @defgroup utilities Utilities
  * @}
  * 
  */

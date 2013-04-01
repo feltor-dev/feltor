@@ -32,7 +32,7 @@ inline typename Vector::value_type dot( const Vector& x, const Vector& y)
     return dg::blas1::detail::doDot( x, y, typename dg::VectorTraits<Vector>::vector_category() );
 }
 
-/*! @brief Modified BLAS 1 routine daxpy
+/*! @brief Modified BLAS 1 routine axpy
  *
  * This routine computes \f[ y =  \alpha x + \beta y \f] 
  * Q: Isn't it better to implement daxpy and daypx? \n
@@ -52,6 +52,13 @@ inline void axpby( typename Vector::value_type alpha, const Vector& x, typename 
     return dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
 }
 
+/**
+* @brief A 'new' BLAS 1 routine
+*
+* @param x1 Vector x1  
+* @param x2 Vector x2 might equal x1
+* @param y  Vector y contains result on output ( might equal x1 or x2)
+*/
 template< class Vector>
 inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 {

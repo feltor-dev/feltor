@@ -41,6 +41,18 @@ struct AddIndex2d{
 
 } //namespace detail
 
+/**
+* @brief Form the DG tensor Product between two DG matrices
+*
+* @ingroup utilities
+* Takes care of correct permutation of indices.
+* @tparam T value type
+* @tparam n number of Legendre coefficients per dimension
+* @param lhs The left hand side (1D )
+* @param rhs THe right hand side (1D ) 
+*
+* @return A newly allocated cusp matrix containing the tensor product
+*/
 template< class T, size_t n>
 cusp::coo_matrix< int, T, cusp::host_memory> tensor( 
         const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
@@ -117,6 +129,7 @@ cusp::coo_matrix< int, T, cusp::host_memory> tensor(
 /**
  * @brief Create 2D Tensor by summing 2 diagonal Tensor products
  *
+ * @ingroup utilities
  * Compute the sum LHS x D1 + D2 x RHS, where x denotes a tensor
  * product, LHS denotes the matrix for the first (y-) index and RHS     
  * the one for the second (x-) index. D1 and D2 are diagonal matrices. 

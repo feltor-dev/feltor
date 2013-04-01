@@ -77,9 +77,9 @@ const double rk_coeff<4>::beta[4] = {
 * @brief Struct for RungeKutta integration
 *
 * @ingroup algorithms
-* Uses only BLAS1::daxpby routines to integrate one step.
+* Uses only blas1::axpby routines to integrate one step.
 * The coefficients are chosen in a form that require a minimum of 
-* daxpby function calls (check for alpha==0, beta==1) and else 
+* axpby function calls (check for alpha==0, beta==1) and else 
 * assumes that most of the work is done in the computation of the rhs.
 * @tparam k Order of the method
 * @tparam Functor models BinaryFunction with no return type (subroutine)
@@ -92,7 +92,7 @@ struct RK
     /**
     * @brief The vector type
     * 
-    * Must model Assignable and BLAS1<Vector>::daxpby( alpha, x, beta, y) 
+    * Must model Assignable and blas1::axpby( alpha, x, beta, y) 
     * where x and y are of type Vector must be a valid expression.
     */
     typedef typename Functor::Vector Vector; 
@@ -104,7 +104,7 @@ struct RK
     */
     RK( const Vector& copyable): u_(k-1, Vector(copyable)){ }
     /**
-    * @brief Advance one timestep
+    * @brief Advance u0 one timestep
     *
     * @param f right hand side function
     * @param u0 initial value

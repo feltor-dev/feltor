@@ -21,7 +21,7 @@ namespace blas2{
      * This routine computes the scalar product defined by the symmetric positive definit 
      * matrix P \f[ x^T P y = \sum_{i=0}^{N-1} x_i P_{ij} y_j \f]
      * where P is a diagonal matrix. (Otherwise it would be more efficient to 
-     * precalculate \f[ Py\f] and then call the BLAS1::ddot routine!
+     * precalculate \f[ Py\f] and then call the BLAS1::dot routine!
      * @param x Left Vector
      * @param P The diagonal Matrix
      * @param y Right Vector might equal Left Vector
@@ -39,7 +39,7 @@ inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const 
 
 /*! @brief General dot produt
  *
- * This routine is equivalent to the call ddot( x, P, x)
+ * This routine is equivalent to the call dot( x, P, x)
  * @param P The diagonal Matrix
  * @param x Right Vector
  * @return Generalized scalar product
