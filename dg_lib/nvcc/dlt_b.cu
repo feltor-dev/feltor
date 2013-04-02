@@ -19,7 +19,7 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3; //thrust transform is always faster
-const unsigned N = 3e4;
+const unsigned N = 27e4;
 
 typedef thrust::device_vector<double>   DVec;
 typedef thrust::host_vector<double>     HVec;
@@ -106,9 +106,10 @@ int main()
     DArrVec_ dv_( hv_);
     DArrVec_ dv_2( dv_);
     DMatrix dm = createForward<n>( N);
+    Operator<double,n > forward( dg::DLT<n>::forward);
 
     t.tic();
-    dg::blas2::symv( Operator<double, n>( DLT<n>::forward), dv_.data(), dv_.data());
+    dg::blas2::symv(1., forward, dv_.data(), 0., dv_.data());
     //symv( dv_.data());
     t.toc();
     cout << "Forward thrust transform took "<<t.diff()<<"s\n";

@@ -36,6 +36,7 @@ inline double pipj( unsigned i, unsigned j)
         return 2./(2.*(double)i+1.);
     return 0;
 }
+
 /**
 * @brief Inverse of the scalar product matrix
 *

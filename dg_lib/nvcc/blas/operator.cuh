@@ -52,6 +52,7 @@ struct Operator_Symv_Functor
 };
 
 //might become obsolete by the tensor function
+/*
 template<class Op>
 struct Operator_Symv_Functor<thrust::tuple<Op,Op> >
 {
@@ -109,6 +110,7 @@ struct Operator_Symv_Functor<thrust::tuple<Op,Op> >
     const Op op1, op2; //neglecting op2 doesn't gain speed
     value_type alpha, beta;
 };
+*/
 
 
 template< class Ptr>

@@ -20,8 +20,8 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 5; // in 1d DG transform is fastest
-const unsigned N = 1e6;
+const unsigned n = 2; // 2 and 3: thrust Array is faster, else cusp and 5 even dg
+const unsigned N = 1e1;
 
 typedef thrust::device_vector<double>   DVec;
 typedef thrust::host_vector<double>     HVec;
@@ -102,7 +102,6 @@ int main()
     cout << "Foward dg transform took      "<<t.diff()<<"s\n";
 
     //test for equality...
-    /*
     hv = dv;
     hv_ = dv_;
     HArrVec_ hv_2= dv_2;
@@ -115,7 +114,6 @@ int main()
     cout << endl;
     cout << hv_ <<endl;
     cout << endl << hv_2<<endl;
-    */
 
     
     return 0;

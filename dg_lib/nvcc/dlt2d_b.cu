@@ -16,12 +16,14 @@
 #include "evaluation.cuh"
 #include "preconditioner.cuh"
 #include "operator.cuh"
+#include "operator_matrix.cuh"
+#include "tensor.cuh"
 
 
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3; 
+const unsigned n = 2; //thrust is faster for 2, equal for 3 and slower for 4 
 const unsigned Nx = 3e2;
 const unsigned Ny = 3e2;
 
@@ -32,22 +34,6 @@ typedef ArrVec2d< double, n, HVec> HArrVec;
 typedef ArrVec2d< double, n, DVec> DArrVec;
 typedef cusp::ell_matrix<int, double, cusp::host_memory>   HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
-
-
-template< size_t n>
-cusp::coo_matrix<int, double, cusp::host_memory> createForward( unsigned N)
-{
-    cusp::coo_matrix<int, double, cusp::host_memory> A( n*N, n*N, n*n*N);
-    Operator< double, n> forward(DLT<n>::forward);
-    //std::cout << a << "\n"<<b <<std::endl;
-    //assemble the matrix
-    int number = 0;
-    for( unsigned i=0; i<N; i++)
-        for( unsigned k=0; k<n; k++)
-            for( unsigned l=0; l<n; l++)
-                create::detail::add_index<n>(A, number, i, i, k, l, forward(k,l));
-    return A;
-};
 
 double function( double x, double y ) { return sin(x)*sin(y);}
 
@@ -60,23 +46,25 @@ int main()
     HArrVec hv2( hv);
     DArrVec  dv( hv);
     DArrVec  dv2( hv2);
-    HMatrix hm = tensor( createForward<n>(Ny), S1D<double, n>(2.), S1D<double, n>(2.), createForward<n>(Nx));
-    cout << "Transferring to device!\n";
-    DMatrix dm(hm);
     Operator<double, n> forward( DLT<n>::forward);
+    HMatrix hmx = tensor<double, n>( tensor(Ny, forward), tensor<double, n>(Nx, delta));
+
+    cout << "Transferring to device!\n";
+    DMatrix dm( hmx);
+    Operator<double,n*n > forward2d = dg::tensor( forward, forward);
     t.tic();
-    dg::blas2::symv(1., thrust::make_tuple(forward, forward), dv.data(),0., dv.data());
+    dg::blas2::symv(1., forward2d, dv.data(),0., dv.data());
     t.toc();
     cout << "Forward thrust transform took      "<<t.diff()<<"s\n";
     t.tic();
-    dg::blas2::symv( thrust::make_tuple(forward, forward), dv.data(), dv.data());
+    dg::blas2::symv( forward2d, dv2.data(), dv2.data());
     t.toc();
     cout << "Forward thrust transform 2nd took  "<<t.diff()<<"s\n";
     t.tic();
     blas2::symv( dm, dv2.data(), dv2.data());
+    blas2::symv( forward, dv2.data(), dv2.data());
     t.toc();
-    cout << "Foward cusp transform took         "<<t.diff()<<"s\n";
-    cout << "Note: Cusp transform is not the same !\n";
+    cout << "Foward cusp-thrust transform took  "<<t.diff()<<"s\n";
     
     return 0;
 }
