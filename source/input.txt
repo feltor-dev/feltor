@@ -31,6 +31,6 @@ quasineutrality condition)
 17) mu_z (mz/mi*Z)(mass)                =   48.0    (large)
 18) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
 ---------------------Miscellaneous----------------------------
-19) itstp (steps between output)        =   2      (5)
-20) OMP_NUM_THREADS                     =   2      (4)
+19) itstp (steps between output)        =   10      (5)
+20) OMP_NUM_THREADS                     =   4      (4)
 @ ------------------------------------------------------------

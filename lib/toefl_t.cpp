@@ -64,6 +64,12 @@ int main()
     ////////////////////////////////glfw//////////////////////////////
     int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
+    glfwOpenWindowHint(GLFW_FSAA_SAMPLES, 4); // 4x AA
+    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
+    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
+    glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+     
+
     if( !glfwOpenWindow( 600, 300,  0,0,0,  0,0,0, GLFW_WINDOW))
     { 
         cerr << "ERROR: glfw couldn't open window!\n";

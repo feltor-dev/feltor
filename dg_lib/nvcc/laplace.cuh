@@ -5,26 +5,12 @@
 
 #include "functions.h"
 #include "operator.cuh"
+#include "creation.cuh"
 
 namespace dg
 {
 
 namespace create{
-
-namespace detail{
-
-template< size_t n>
-void add_index( cusp::coo_matrix<int, double, cusp::host_memory>& hm, 
-                int& number, 
-                unsigned i, unsigned j, unsigned k, unsigned l, 
-                double value )
-{
-    hm.row_indices[number] = n*i+k;
-    hm.column_indices[number] = n*j+l;
-    hm.values[number] = value;
-    number++;
-}
-} //namespace detail
 
 /**
 * @brief Create and assemble a cusp Matrix for the periodic 1d laplacian

@@ -27,4 +27,4 @@ texture_t: texture_t.cpp texture.h
 	$(CXX) -O3  $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
 clean:
-	rm -f *_t *_b
+	rm -f *_t *_b toefl
