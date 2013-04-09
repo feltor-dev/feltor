@@ -84,7 +84,8 @@ const double rk_coeff<4>::beta[4] = {
 * @tparam k Order of the method
 * @tparam Functor models BinaryFunction with no return type (subroutine)
         The first argument is the actual argument, The second contains
-        the return value, i.e. y' = f(y) translates to f( y, y')
+        the return value, i.e. y' = f(y) translates to f( y, y'). Moreover the 
+        class must typedef the argument type to Vector. 
 */
 template< size_t k, class Functor>
 struct RK
@@ -127,6 +128,9 @@ void RK<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, doubl
     f(u0, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
     cudaThreadSynchronize();
+#ifdef DG_DEBUG
+    std::cout << "KR1\n";
+#endif
     for( unsigned i=1; i<k-1; i++)
     {
         f( u_[i-1], u_[i]);
@@ -139,10 +143,16 @@ void RK<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, doubl
         }
 
     }
+#ifdef DG_DEBUG
+    std::cout << "KR2\n";
+#endif
     //Now add everything up to u1
     f( u_[k-2], u1);
     blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u1);
     cudaThreadSynchronize();
+#ifdef DG_DEBUG
+    std::cout << "KR3\n";
+#endif
     for( unsigned l=1; l<=k-1; l++)
     {
         blas1::axpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);

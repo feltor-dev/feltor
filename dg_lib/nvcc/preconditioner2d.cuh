@@ -1,6 +1,8 @@
 #ifndef _DG_PRECONDITIONER2D_
 #define _DG_PRECONDITIONER2D_
 
+#include "matrix_traits.h"
+
 namespace dg{
 
 template< typename T, size_t n>

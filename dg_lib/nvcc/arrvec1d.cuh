@@ -2,6 +2,7 @@
 #define _DG_VECTOR_
 
 #include "vector_categories.h"
+#include "thrust/host_vector.h"
 
 namespace dg
 {

@@ -23,7 +23,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3; //thrust is faster for 2, equal for 3 and slower for 4 
+const unsigned n = 4; //thrust is faster for 2, equal for 3 and slower for 4 
 const unsigned Nx = 3e2;
 const unsigned Ny = 3e2;
 
