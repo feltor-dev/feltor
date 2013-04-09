@@ -13,7 +13,7 @@ namespace dg
 namespace create{
 
 /**
-* @brief Create and assemble a cusp Matrix for the periodic 1d laplacian
+* @brief Create and assemble a cusp Matrix for the periodic negative 1d laplacian
 *
 * @ingroup utilities
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
@@ -23,6 +23,7 @@ namespace create{
 * @param alpha Optional parameter for penalization term
 *
 * @return Host Matrix in coordinate form 
+* @note The normalisation factor T is missing from this matrix
 */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T alpha = 1.)
@@ -74,7 +75,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T al
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the Dirichlet 1d laplacian
+* @brief Create and assemble a cusp Matrix for the Dirichlet negative 1d laplacian
 *
 * @ingroup utilities
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
@@ -84,6 +85,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T al
 * @param alpha Optional parameter for penalization term
 *
 * @return Host Matrix in coordinate form 
+* @note The normalisation factor T is missing from this matrix
 */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T alpha = 1.)
