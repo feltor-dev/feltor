@@ -25,12 +25,12 @@ struct Arakawa
     typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    Matrix bdx, bdy, forward;
-    container dxlhs, dylhs, dxrhs, dyrhs;
+    Matrix bdx, bdy, forward, backward;
+    container dxlhs, dylhs, dxrhs, dyrhs, blhs, brhs;
 };
 
 template< class T, size_t n, class container, class MemorySpace>
-Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, container test): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs)
+Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, container test): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( n*n*Nx*Ny), brhs( blhs)
 {
     typedef cusp::coo_matrix<int, value_type, cusp::host_memory> HMatrix;
 
@@ -42,7 +42,7 @@ Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double
     //create backward dlt matrix
     Operator<value_type, n> backward1d( DLT<n>::backward);
     Operator<value_type, n*n> backward2d = tensor( backward1d, backward1d);
-    HMatrix backward = tensor( Nx*Ny, backward2d);
+    backward = tensor( Nx*Ny, backward2d);
 
     //create derivatives
     HMatrix dx = dgtensor<T,n>( tensor<T,n>( Ny, delta), create::dx_per<value_type,n>( Nx, hx));
@@ -78,14 +78,27 @@ void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, co
     blas2::symv( bdy, lhs, dylhs);
     blas2::symv( bdx, rhs, dxrhs);
     blas2::symv( bdy, rhs, dyrhs);
+    blas2::symv( backward, lhs, blhs);
+    blas2::symv( backward, rhs, brhs);
     cudaThreadSynchronize();
+
+    blas1::pointwiseDot( blhs, dyrhs, result);
+    blas1::pointwiseDot( blhs, dxrhs, blhs);
+    cudaThreadSynchronize();
+
     blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
-    blas1::pointwiseDot( dxrhs, dylhs, dylhs);
+    blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
     cudaThreadSynchronize();
-    blas1::axpby( 1., dyrhs, -1., dylhs);
+
+    blas1::pointwiseDot( dxlhs, brhs, dxlhs);
+    blas1::pointwiseDot( dylhs, brhs, dylhs);
     cudaThreadSynchronize();
-    blas2::symv( forward, dylhs, result);
+
+    blas1::axpby( 1., dyrhs, -1., dxrhs);
     cudaThreadSynchronize();
+    blas2::symv( forward, dxrhs, dyrhs); // now dxrhs is free
+    cudaThreadSynchronize();
+
 }
 
 }//namespace dg
