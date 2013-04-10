@@ -1,6 +1,10 @@
 #ifndef _DG_BLAS_VECTOR_
 #define _DG_BLAS_VECTOR_
 
+#ifdef DG_DEBUG
+#include <cassert>
+#endif //DG_DEBUG
+
 #include <thrust/inner_product.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -37,6 +41,9 @@ struct Axpby_Functor
 template< class Vector>
 typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
     return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
 }
 
@@ -47,6 +54,9 @@ inline void doAxpby( typename Vector::value_type alpha,
               Vector& y, 
               ThrustVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
     if( alpha == 0)
     {
         if( beta == 1) 
@@ -62,6 +72,10 @@ inline void doAxpby( typename Vector::value_type alpha,
 template< class Vector>
 inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x1.size() == x2.size() );
+    assert( x1.size() == y.size() );
+#endif //DG_DEBUG
     thrust::transform( x1.begin(), x1.end(), x2.begin(), y.begin(), 
                         thrust::multiplies<typename Vector::value_type>());
 }

@@ -80,24 +80,30 @@ class ArrVec2d_View
     const container& data() const {return hv;}
 
     /**
-     * @brief Stream the underlying object
+     * @brief Stream the underlying object in 2D view
      *
      * @tparam Ostream e.g. std::cout 
      * @param os Object of type Ostream
      * @param v Oject to stream
      *
      * @return Reference to Ostream
+     * @note For best readability use <<setprecision(2) and <<fixed for cout
      */
     template< class Ostream>
     friend Ostream& operator<<( Ostream& os, const ArrVec2d_View& v)
     {
         unsigned N = v.hv.size()/n/n;
-        for( unsigned i=0; i<N; i++)
+        unsigned rows = N/v.cols_;
+        for( unsigned i=0; i<rows; i++)
         {
-            for( unsigned j=0; j<n; j++)
+            for( unsigned k=0; k<n; k++)
             {
-                for( unsigned k=0; k<n; k++)
-                    os << v(0, i, j,k) << " ";
+                for( unsigned j=0; j<v.cols_; j++)
+                {
+                    for( unsigned l=0; l<n; l++)
+                        os << v.hv[i*n*n*v.cols_ + j*n*n + k*n + l] << " ";
+                    os << "\t";
+                }
                 os << "\n";
             }
             os << "\n";

@@ -1,6 +1,10 @@
 #ifndef _DG_BLAS_PRECONDITIONER_
 #define _DG_BLAS_PRECONDITIONER_
 
+#ifdef DG_DEBUG
+#include <cassert>
+#endif //DG_DEBUG
+
 #include <thrust/tuple.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/iterator/counting_iterator.h>
@@ -67,6 +71,9 @@ struct Diagonal_Dot_Functor
 template< class Matrix, class Vector>
 inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, DiagonalPreconditionerTag, ThrustVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
     return thrust::inner_product(  x.begin(), x.end(), 
                             thrust::make_zip_iterator( thrust::make_tuple( y.begin(), thrust::make_counting_iterator(0)) ), 
                             0.0,
@@ -97,6 +104,9 @@ inline void doSymv(
               ThrustVectorTag)
 {
     //std::cout << "Hello Preconditioner!\n";
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
     if( alpha == 0)
     {
         if( beta == 1) 
@@ -120,6 +130,9 @@ inline void doSymv(
               DiagonalPreconditionerTag,
               ThrustVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
     thrust::transform(  x.begin(), x.end(),
                         thrust::make_counting_iterator<int>(0), 
                         y.begin(),

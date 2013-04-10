@@ -60,12 +60,12 @@ int main()
     t.tic(); 
     dg::blas1::pointwiseDot( dx, dy, dy); 
     t.toc();
-    cout << "GPU pointwise took             " << t.diff() <<"s\n";
+    cout << "GPU pointwiseDot took          " << t.diff() <<"s\n";
 
     t.tic(); 
     dg::blas1::pointwiseDot( hx.data(), hy.data(), hy.data()); 
     t.toc();
-    cout << "CPU pointwise took             " << t.diff() <<"s\n";
+    cout << "CPU pointwiseDot took          " << t.diff() <<"s\n";
 
     return 0;
 }

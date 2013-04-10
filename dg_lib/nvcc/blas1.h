@@ -4,10 +4,10 @@
 #include "vector_traits.h"
 #include "blas/thrust_vector.cuh"
 
-
 namespace dg{
 
-//CUDA relevant: BLAS routines must block until result is ready 
+    //TODO Throw messages instead of assertions because origin of message can 
+    // be better followed
 /*! @brief BLAS Level 1 routines 
  *
  * @ingroup blas
@@ -25,6 +25,7 @@ namespace blas1
  * @return Scalar product
  * @note This routine is always executed synchronously due to the 
         implicit memcpy of the result.
+ * @note If DG_DEBUG is defined a range check shall be performed
  */
 template< class Vector>
 inline typename Vector::value_type dot( const Vector& x, const Vector& y)
@@ -44,6 +45,7 @@ inline typename Vector::value_type dot( const Vector& x, const Vector& y)
  * @param beta Scalar
  * @param y Vector y contains solution on output
  * @note In an implementation you may want to check for alpha == 0 and beta == 1
+ * @note If DG_DEBUG is defined a range check shall be performed
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
 template< class Vector>
@@ -58,6 +60,7 @@ inline void axpby( typename Vector::value_type alpha, const Vector& x, typename 
 * @param x1 Vector x1  
 * @param x2 Vector x2 might equal x1
 * @param y  Vector y contains result on output ( might equal x1 or x2)
+* @note If DG_DEBUG is defined a range check shall be performed 
 */
 template< class Vector>
 inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)

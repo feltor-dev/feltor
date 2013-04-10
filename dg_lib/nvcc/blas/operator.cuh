@@ -1,6 +1,10 @@
 #ifndef _DG_BLAS_OPERATOR_
 #define _DG_BLAS_OPERATOR_
 
+#ifdef DG_DEBUG
+#include <cassert>
+#endif //DG_DEBUG
+
 #include <thrust/tuple.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/iterator/counting_iterator.h>
@@ -133,6 +137,9 @@ inline void doSymv(
               OperatorMatrixTag,
               ThrustVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
     if( alpha == 0)
     {
         if( beta == 1) 
@@ -160,6 +167,9 @@ inline void doSymv(
               OperatorMatrixTag,
               ThrustVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
     typename thrust::iterator_traits< typename Vector::iterator>::iterator_category tag;
     typedef typename MatrixTraits<Matrix>::operand_type operand_type;
     const operand_type * xbegin = reinterpret_cast<operand_type const *>(thrust::raw_pointer_cast( &x[0]));  
