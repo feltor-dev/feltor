@@ -25,14 +25,14 @@ struct Arakawa
     typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    Matrix bdx, bdy, forward, backward;
+    Matrix bdx, bdy, dxf, dyf, forward, backward;
     container dxlhs, dylhs, dxrhs, dyrhs, blhs, brhs;
 };
 
 template< class T, size_t n, class container, class MemorySpace>
 Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, container test): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( n*n*Nx*Ny), brhs( blhs)
 {
-    typedef cusp::coo_matrix<int, value_type, cusp::host_memory> HMatrix;
+    typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
 
     //create forward dlt matrix
     Operator<value_type, n> forward1d( DLT<n>::forward);
@@ -50,8 +50,13 @@ Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double
     HMatrix bdx_(dx), bdy_(dy);
     cusp::multiply( backward, dx, bdx_);
     cusp::multiply( backward, dy, bdy_);
+    HMatrix dxf_(dx), dyf_(dy);
+    cusp::multiply( dx, forward, dxf_);
+    cusp::multiply( dy, forward, dyf_);
     bdx = bdx_;
     bdy = bdy_;
+    dxf = dxf_; 
+    dyf = dyf_;
 
     /*
     //test is really the same
@@ -94,11 +99,17 @@ void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, co
     blas1::pointwiseDot( dylhs, brhs, dylhs);
     cudaThreadSynchronize();
 
-    blas1::axpby( 1., dyrhs, -1., dxrhs);
+    blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);
+    blas1::axpby( 1./3., dxlhs, -1./3., blhs);
+    blas1::axpby( 1./3., result, -1./3., dylhs);
     cudaThreadSynchronize();
-    blas2::symv( forward, dxrhs, dyrhs); // now dxrhs is free
+    blas2::symv( forward, dxrhs, dyrhs); 
+    blas2::symv( dyf, blhs, dxlhs);
+    blas2::symv( dxf, dylhs, result);
     cudaThreadSynchronize();
-
+    blas1::axpby( 1., dxlhs, 1., result);
+    cudaThreadSynchronize();
+    blas1::axpby( 1., dyrhs, 1., result);
 }
 
 }//namespace dg

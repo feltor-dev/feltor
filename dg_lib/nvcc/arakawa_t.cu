@@ -12,7 +12,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
+const unsigned n = 2;
 const unsigned Nx = 50;
 const unsigned Ny = 50;
 const double lx = 2.*M_PI;
