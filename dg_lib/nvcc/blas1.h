@@ -3,6 +3,7 @@
 
 #include "vector_traits.h"
 #include "blas/thrust_vector.cuh"
+#include "blas/std_vector.cuh"
 
 namespace dg{
 
@@ -49,7 +50,7 @@ inline typename Vector::value_type dot( const Vector& x, const Vector& y)
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
 template< class Vector>
-inline void axpby( typename Vector::value_type alpha, const Vector& x, typename Vector::value_type beta, Vector& y)
+inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, Vector& y)
 {
     return dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
 }
