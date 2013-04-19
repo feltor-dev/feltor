@@ -57,7 +57,7 @@ int main()
 {
     const double h = lx/(double)N;
     const double dt =T/(double)NT;
-    std::cout << "Test RK scheme on diffusion equation\n";
+    cout << "Test RK scheme on diffusion equation\n";
     cout << "Polynomial coefficients:  "<< n<<endl;
     cout << "RK order K:               " << k <<endl;
     cout << "Number of gridpoints:     "<<N<<endl;

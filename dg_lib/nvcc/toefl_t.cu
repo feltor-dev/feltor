@@ -1,13 +1,11 @@
 #include <iostream>
 #include <vector>
-#include <cuda_gl_interop.h>
 
-#include <GL/glfw.h>
-#include "../../lib/texture.h"
+#include "cuda_texture.cuh"
 
-
+#include "evaluation.cuh"
 #include "toefl.cuh"
-#include "rk.cuh";
+#include "rk.cuh"
 #include "arrvec2d.cuh"
 
 
@@ -15,8 +13,8 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 10;
-const unsigned Ny = 10;
+const unsigned Nx = 50;
+const unsigned Ny = 50;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -34,8 +32,8 @@ typedef dg::ArrVec2d< double, n, DVec>  DArrVec;
 double amplitude = 100;
 double x00 = 0.5*lx;
 double y00 = 0.5*ly;
-double sigma_x = 2;
-double sigma_y = 2;
+double sigma_x = 0.2;
+double sigma_y = 0.2;
 double gaussian( double x, double y)
 {
     return  amplitude*
@@ -43,74 +41,67 @@ double gaussian( double x, double y)
                                   (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
 }
 
-//N should be 3*Nx*Ny
-cudaGrahicsResource_t registerCudaOpenGLBuffer( unsigned N )
-{
-    int device;
-    cudaGraphicsResource_t* resource;
-    GLuint bufferID;
-    cudaGetDevice( &device);
-    cudaGLSetGLDevice(device ); 
-    error = cudaGetLastError();
-    if( error != cudaSuccess){
-        cout << cudaGetErrorString( error); return 1;}
-    glGenBuffers( 1, &bufferID);
-    glBindBuffer( GL_PIXEL_UNPACK_BUFFER, bufferID);
-    // the buffer shall contain a texture 
-    glBufferData( GL_PIXEL_UNPACK_BUFFER, N*sizeof(float), NULL, GL_DYNAMIC_DRAW);
+double one( double x, double y){ return 1.;}
 
-    //register the resource i.e. tell CUDA and OpenGL that buffer is used by both
-    error = cudaGraphicsGLRegisterBuffer( resource, bufferID, cudaGraphicsRegisterFlagsWriteDiscard); 
-    if( error != cudaSuccess){
-        cout << cudaGetErrorString( error); return 1;}
-    return resource;
-}
 
+using namespace std;
 
 int main()
 {
+    const double hx = lx/ (double)Nx;
+    const double hy = ly/ (double)Ny;
+    const double dt = T/(double)NT;
+    /////////////////////////////////////////////////////////////////
+    //create CUDA context that uses OpenGL textures in Glfw window
+    cudaGlfwInit( 300, 300);
+    glfwSetWindowTitle( "Texture test");
+    glClearColor( 0.f, 0.f, 1.f, 0.f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ////////////////////////////////////////////////////////////
+    cout << "# of Legendre coefficients: " << n<<endl;
+    cout << "# of grid cells:            " << Nx*Ny<<endl;
+    cout << "Timestep                    " << dt << endl;
+    cout << "# of timesteps              " << NT << endl;
     HArrVec ne = expand< double(&)(double, double), n> ( gaussian, 0, lx, 0, ly, Nx, Ny);
+    HArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
     vector<DVec> y0(2, ne.data()), y1(y0);
+    Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, 1., 1., 0.005,  0.5, 1);
+    RK< 3, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
+    for( unsigned i=0; i<NT; i++)
+    {
+        rk( test, y0, y1, dt);
+        for( unsigned j=0; j<2; j++)
+            thrust::swap(y0[j], y1[j]);
+    }
 
-    toefl::Matrix<double> visual( Nx, Ny, 0);
+
+
+
+
+    DVec visual( Nx*Ny);
+    ArrVec2d_View<double, n, DVec> neview( y0[0], Nx);
     for( unsigned i=0; i<Ny; i++)
         for( unsigned j=0; j<Nx; j++)
-            visual(i,j) = ne(i,j, 0,0 );
+            visual[i*Nx+j] = neview(i,j, 0,0 );
     ////////////////////////////////glfw//////////////////////////////
     int running = GL_TRUE;
-    if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
-    if( !glfwOpenWindow( 300, 300,  0,0,0,  0,0,0, GLFW_WINDOW))
-    { 
-        cerr << "ERROR: glfw couldn't open window!\n";
-    }
-    glfwSetWindowTitle( "Texture test");
-    //////////////////////////////////////////////////////////////////
-    Texture_RGBf tex( Ny, Nx);
-    glEnable(GL_TEXTURE_2D);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    ColorMapRedBlueExt colors( amplitude);
+    cudaGraphicsResource* resource = allocateCudaGlBuffer( 3*Nx*Ny); 
     while( running)
     {
         //generate a texture
-        gentexture_RGBf( tex, visual, amplitude);
-        glLoadIdentity();
-        glClearColor(0.f, 0.f, 1.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
-        // image comes from texarray on host
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
-        glLoadIdentity();
-        //Draw a textured quad
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0, 1.0);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0, 1.0);
-        glEnd();
+        mapColors( resource, visual, colors);
+        loadTexture( Ny, Nx);
+        drawQuad( -1., 1., -1., 1.);
         glfwSwapBuffers();
         glfwWaitEvents();
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
     }
+    freeCudaGlBuffer( resource);
     glfwTerminate();
+
     ////////////////////////////////////////////////////////////////////
 
     return 0;

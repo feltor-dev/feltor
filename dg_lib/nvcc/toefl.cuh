@@ -21,6 +21,7 @@ namespace dg
 template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
 struct Toefl
 {
+    typedef std::vector<container> Vector;
     Toefl( unsigned Nx, unsigned Ny, double hx, double hy, double a, double mu, double kappa, double d, double g, double eps = 1e-6);
 
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
@@ -47,10 +48,11 @@ Toefl<T, n, container, MemorySpace>::Toefl( unsigned Nx, unsigned Ny, double hx,
     hx( hx), hy(hy), a(a), mu(mu), kappa(kappa), d(d), g(g), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-    HMatrix A = dg::tensor<n>( dg::create::laplace1d_per<n>( Ny, hy), 
+    HMatrix A = dg::dgtensor<double, n>
+                             ( dg::create::laplace1d_per<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
                                dg::S1D<double, n>( hy),
-                               dg::create::laplace1d_per<n>( Nx, hx)); 
+                               dg::create::laplace1d_per<double, n>( Nx, hx)); 
     laplace = A;
     //create derivatives
     HMatrix dy_ = dgtensor<T,n>( create::dx_per<value_type,n>( Ny, hy), tensor<T,n>(Nx, delta));
@@ -79,14 +81,14 @@ void Toefl<T, n, container, MemorySpace>::operator()( const std::vector<containe
     blas2::symv( dy, phi, dyphi);
     blas2::symv( dy, y[0], dyne);
     cudaThreadSynchronize();
-    blas1::axpby( kappa+g, dyphi, yp[0]);
-    blas1::axpby( kappa+g, dyphi, yp[1]);
+    blas1::axpby( kappa+g, dyphi, 1., yp[0]);
+    blas1::axpby( kappa+g, dyphi, 1., yp[1]);
 
-    blas1::axpby( -kappa, dyne, yp[0]);
+    blas1::axpby( -kappa, dyne, 1., yp[0]);
     cudaThreadSynchronize();
-    blas1::axpby( d, phi, yp[0]);
+    blas1::axpby( d, phi, 1., yp[0]);
     cudaThreadSynchronize();
-    blas1::axpby( -d, y[0], yp[0]);
+    blas1::axpby( -d, y[0], 1., yp[0]);
 
 }
 

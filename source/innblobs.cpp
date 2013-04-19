@@ -6,8 +6,9 @@
 
 #include "toefl.h"
 #include "utility.h"
+#include "particle_density.h"
 #include "dft_dft_solver.h"
-#include "drt_dft_solver.h"
+//#include "drt_dft_solver.h"
 #include "blueprint.h"
 
 using namespace std;
@@ -92,13 +93,13 @@ Blueprint read( char const * file)
 }
 
     
-
 // The solver has to have the getField( target) function returing M
 // and the blueprint() function
 template<class Solver>
 void drawScene( const Solver& solver, target t)
 {
     glClear(GL_COLOR_BUFFER_BIT);
+    ParticleDensity particle( solver.getField( TL_IMPURITIES), solver.blueprint());
     double max;
     const typename Solver::Matrix_Type * field;
 
@@ -115,26 +116,30 @@ void drawScene( const Solver& solver, target t)
         }
 
         { //draw Ions
-        field = &solver.getField( TL_IONS);
+        typename Solver::Matrix_Type ions = solver.getField( TL_IONS);
+        particle.linear( ions, solver.getField( TL_POTENTIAL), ions, 0 );
         //upper right
-        drawTexture( *field, max, slit, 1.0, slit*field_ratio, 1.0);
+        drawTexture( ions, max, slit, 1.0, slit*field_ratio, 1.0);
         window_str <<" ni / "<<max<<"\t";
         }
 
         if( solver.blueprint().isEnabled( TL_IMPURITY))
         {
-            field = &solver.getField( TL_IMPURITIES); 
-            max = abs_max(*field);
+            typename Solver::Matrix_Type impurities = solver.getField( TL_IMPURITIES);
+            particle.linear( impurities, solver.getField(TL_POTENTIAL), impurities, 0 );
+            max = abs_max( impurities);
             //lower left
-            drawTexture( *field, max, -1.0, -slit, -1.0, -slit*field_ratio);
+            drawTexture( impurities, max, -1.0, -slit, -1.0, -slit*field_ratio);
             window_str <<" nz / "<<max<<"\t";
         }
 
         { //draw potential
-        field = &solver.getField( TL_POTENTIAL); 
-        max = abs_max(*field);
+        //field = &solver.getField( TL_POTENTIAL); 
+        typename Solver::Matrix_Type phi = solver.getField( TL_POTENTIAL);
+        particle.laplace( phi );
+        max = abs_max(phi);
         //lower right
-        drawTexture( *field, max, slit, 1.0, -1.0, -slit*field_ratio);
+        drawTexture( phi, max, slit, 1.0, -1.0, -slit*field_ratio);
         window_str <<" phi / "<<max<<"\t";
         }
     }
@@ -181,7 +186,7 @@ int main( int argc, char* argv[])
         //init_gaussian( ne, 0.1,0.2, 10./128./field_ratio, 10./128., amp);
         //init_gaussian( ne, 0.1,0.4, 10./128./field_ratio, 10./128., -amp);
         //init_gaussian( ne, 0.5,0.5, 10./128./field_ratio, 10./128., amp);
-        init_gaussian( ne, 0.2,0.5, 5./128./field_ratio, 5./128., amp);
+        init_gaussian( ne, 0.2,0.5, 10./128./field_ratio, 10./128., amp);
         //init_gaussian( ne, 0.1,0.8, 10./128./field_ratio, 10./128., -amp);
         //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))

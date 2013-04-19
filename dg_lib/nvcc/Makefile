@@ -3,6 +3,7 @@ INCLUDE +=
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
 DEBUG = 
+GLFLAGS=-lglfw -lrt -lGL -lGLEW #you might add some libs here, check your glfw installation
 
 version: version.cu 
 	$(NVCC) $< $(NVCCFLAGS) -o $@
@@ -10,6 +11,10 @@ version: version.cu
 
 cusp_thrust: cusp_thrust.cu 
 	$(NVCC) $< $(NVCCFLAGS) -o $@
+	./$@
+
+toefl_t: toefl_t.cu toefl.cuh
+	$(NVCC) -DTL_DEBUG $< $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
 	./$@
 
 %_t: %_t.cu %.cuh
