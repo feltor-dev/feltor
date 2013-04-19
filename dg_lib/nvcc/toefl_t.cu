@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <thrust/remove.h>
 
 #include "cuda_texture.cuh"
 
@@ -63,26 +64,22 @@ int main()
     cout << "Timestep                    " << dt << endl;
     cout << "# of timesteps              " << NT << endl;
     HArrVec ne = expand< double(&)(double, double), n> ( gaussian, 0, lx, 0, ly, Nx, Ny);
-    HArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
+    DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
+    DVec visual( Nx*Ny);
     vector<DVec> y0(2, ne.data()), y1(y0);
     Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, 1., 1., 0.005,  0.5, 1);
     RK< 3, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
+    /*
     for( unsigned i=0; i<NT; i++)
     {
         rk( test, y0, y1, dt);
         for( unsigned j=0; j<2; j++)
             thrust::swap(y0[j], y1[j]);
     }
+    */
+    //copy only the 00 index
+    thrust::remove_copy_if( y0[0].begin(), y0[0].end(), stencil.data().begin(), visual.begin(), thrust::logical_not<double>());
 
-
-
-
-
-    DVec visual( Nx*Ny);
-    ArrVec2d_View<double, n, DVec> neview( y0[0], Nx);
-    for( unsigned i=0; i<Ny; i++)
-        for( unsigned j=0; j<Nx; j++)
-            visual[i*Nx+j] = neview(i,j, 0,0 );
     ////////////////////////////////glfw//////////////////////////////
     int running = GL_TRUE;
     ColorMapRedBlueExt colors( amplitude);
