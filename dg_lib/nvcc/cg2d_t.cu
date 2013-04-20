@@ -88,7 +88,5 @@ int main()
     cout << "L2 Norm of relative error is   " <<sqrt( eps/norm)<<endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
 
-
-
     return 0;
 }

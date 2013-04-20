@@ -44,7 +44,8 @@ template< class T, size_t n, class container, class MemorySpace>
 Toefl<T, n, container, MemorySpace>::Toefl( unsigned Nx, unsigned Ny, double hx, double hy,
         double a, double mu, double kappa, double d, double g, double eps): 
     rho( n*n*Nx*Ny, 0.), phi(rho), dyne(rho), dyphi(rho), 
-    arakawa( Nx, Ny, hx, hy), pcg( rho, n*n*Nx*Ny),
+    arakawa( Nx, Ny, hx, hy), 
+    pcg( rho, n*n*Nx),// n*n*Nx*Ny),
     hx( hx), hy(hy), a(a), mu(mu), kappa(kappa), d(d), g(g), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
@@ -72,10 +73,10 @@ void Toefl<T, n, container, MemorySpace>::operator()( const std::vector<containe
     cudaThreadSynchronize();
     //compute S rho
     blas2::symv( S2D<double, n>(hx, hy), rho, rho);
-    //ArrVec2d<T, n, thrust::host_vector<T> > view(rho, 10);
-    //std::cout << view <<std::endl;
-    //ArrVec2d<T, n, thrust::host_vector<T> > view2(phi, 10);
-    //std::cout << view2 <<std::endl;
+    ArrVec2d<T, n, thrust::host_vector<T> > view(rho, 10);
+    std::cout << view <<std::endl;
+    ArrVec2d<T, n, thrust::host_vector<T> > view2(phi, 10);
+    std::cout << view2 <<std::endl;
     cudaThreadSynchronize();
     std::cout << "Number of pcg iterations "<< pcg( laplace, phi, rho, T2D<double, n>(hx, hy), eps)<<std::endl;
     for( unsigned i=0; i<y.size(); i++)

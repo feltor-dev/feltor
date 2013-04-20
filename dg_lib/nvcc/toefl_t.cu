@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
@@ -70,6 +71,7 @@ int main()
     vector<DVec> y0(2, ne.data()), y1(y0);
     Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, 1., 1., 0.005,  0.5, 1);
     RK< 3, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
+    cout<< fixed <<setprecision(2);
     for( unsigned i=0; i<1; i++)
     {
         rk( test, y0, y1, dt);

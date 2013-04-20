@@ -108,6 +108,9 @@ namespace dg{
  \li BLAS2<Matrix, Vector> dsymv( m, x, y);     
  \li double dot = BLAS2< Preconditioner, Vector>::ddot( P, v); 
  \li BLAS2< Preconditioner, Vector>::dsymv( alpha, P, x, beta, y);
+
+ @note Conjugate gradients might become unstable for positive semidefinite
+ matrices arising e.g. in the discretization of the periodic laplacian
 */
 template< class Matrix, class Vector, class Preconditioner = Identity<typename Matrix::value_type> >
 class CG
@@ -171,8 +174,12 @@ class CG
 template< class Matrix, class Vector, class Preconditioner>
 unsigned CG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, value_type eps)
 {
-    value_type nrm2b = blas2::dot( P, b);
-    if( nrm2b == 0)
+    value_type nrmb = sqrt( blas2::dot( P, b));
+#ifdef DG_DEBUG
+    std::cout << "Norm of b "<<nrmb <<"\n";
+    std::cout << "Residual errors: \n";
+#endif //DG_DEBUG
+    if( nrmb == 0)
     {
         blas1::axpby( 1., b, 0., x);
         return 0;
@@ -196,9 +203,10 @@ unsigned CG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vecto
         cudaThreadSynchronize();
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
-        std::cout << sqrt( nrm2r_new/nrm2b) << "\n";
+        std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
+        std::cout << "Relative "<<sqrt( nrm2r_new)/nrmb << "\n";
 #endif //DG_DEBUG
-        if( sqrt( nrm2r_new/nrm2b) < eps) 
+        if( sqrt( nrm2r_new) < eps*nrmb + eps) 
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
         nrm2r_old=nrm2r_new;
