@@ -22,7 +22,7 @@ int main ()
     cout << "# of Legendre nodes " << n <<"\n";
     cout << "# of cells          " << N <<"\n";
     const double hx = lx/(double)N;
-    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_per<n>( N, hx);
+    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_per<double, n>( N, hx);
     ArrVec1d<double, n> hv = expand<double(&)(double), n>( function, 0., lx, N);
     ArrVec1d<double, n> hw = hv;
 

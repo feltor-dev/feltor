@@ -38,6 +38,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_per( unsigned N, T h)
     t *= 2./h;
     Operator< T, n> a = 1./2.*t*(d-d.transpose());
     Operator< T, n> b = t*(1./2.*rl);
+    Operator< T, n> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
     //std::cout << a << "\n"<<b <<std::endl;
     //assemble the matrix
     int number = 0;
@@ -48,13 +49,13 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_per( unsigned N, T h)
         for( unsigned l=0; l<n; l++)
             detail::add_index<T, n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, 0,N-1,k,l, -b(l,k)); //- 1- x B^T
+            detail::add_index<T, n>( A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
     }
     for( unsigned i=1; i<N-1; i++)
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i-1, k, l, -b(l,k));
+                detail::add_index<T, n>(A, number, i, i-1, k, l, bp(k,l));
             for( unsigned l=0; l<n; l++)
                 detail::add_index<T, n>(A, number, i, i, k, l, a(k,l));
             for( unsigned l=0; l<n; l++)
@@ -65,7 +66,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_per( unsigned N, T h)
         for( unsigned l=0; l<n; l++) 
             detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, N-1,N-2,k,l, -b(l,k));
+            detail::add_index<T, n>( A, number, N-1,N-2,k,l, bp(k,l));
         for( unsigned l=0; l<n; l++)
             detail::add_index<T, n>( A, number, N-1,N-1,k,l, a(k,l));
     }
