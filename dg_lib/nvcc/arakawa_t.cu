@@ -26,8 +26,9 @@ typedef ArrVec2d<double, n, DVec > DArrVec;
 typedef cusp::device_memory MemorySpace;
 
 //choose some mean function
-double initial( double x, double y) { return sin(x/2)*sin(x/2)*exp(x)*sin(y/2.)*sin(y/2.)*log(y+1); }
-double function( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*sin(x/2)*log(x+1); }
+//THESE ARE NOT PERIODIC AND THUS WON'T CONVERGE TO TRUE SOLUTION
+double left( double x, double y) { return sin(x/2)*sin(x/2)*exp(x)*sin(y/2.)*sin(y/2.)*log(y+1); }
+double right( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*sin(x/2)*log(x+1); }
 double one ( double x, double y) {return 1;}
 
 
@@ -37,8 +38,8 @@ int main()
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;
-    DArrVec init = expand< double(&)(double, double), n> ( initial, 0, lx, 0, ly, Nx, Ny), step(init);
-    DArrVec phi = expand< double(&)(double, double), n> ( function, 0, lx, 0, ly, Nx, Ny);
+    DArrVec init = expand< double(&)(double, double), n> ( left, 0, lx, 0, ly, Nx, Ny), step(init);
+    DArrVec phi = expand< double(&)(double, double), n> ( right, 0, lx, 0, ly, Nx, Ny);
     DArrVec eins = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
     Arakawa<double, n, DVec, MemorySpace> arakawa( Nx, Ny, hx, hy, init.data());
 

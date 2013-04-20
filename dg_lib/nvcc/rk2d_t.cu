@@ -9,12 +9,16 @@
 #include "arakawa.cuh"
 #include "rk.cuh"
 
+//#include "cg.cuh"
+//#include "laplace.cuh"
+//#include "tensor.cuh"
+
 using namespace std;
 using namespace dg;
 
-const unsigned n = 5;
-const unsigned Nx = 20;
-const unsigned Ny = 20;
+const unsigned n = 1;
+const unsigned Nx = 40;
+const unsigned Ny = 40;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double hx = lx/(double)Nx;
@@ -43,6 +47,17 @@ struct RHS
     typedef Vector_Type Vector;
     RHS(): arakawa( Nx, Ny, hx, hy), phi( expand<double(&)(double, double), n>( function, 0, lx, 0, ly, Nx, Ny))
     {
+        //typedef cusp::ell_matrix<int, double, MemorySpace> Matrix;
+        //CG<Matrix, Vector_Type, T2D<double,n> > pcg( phi.data(), n*n*Nx*Ny);
+        //Matrix A = dg::dgtensor<double, n>( 
+        //                       dg::create::laplace1d_per<double, n>( Ny, hy), 
+        //                       dg::S1D<double, n>( hx),
+        //                       dg::S1D<double, n>( hy),
+        //                       dg::create::laplace1d_per<double, n>( Nx, hx)); 
+        //ArrVec2d<double, n, Vector> trick(phi);
+        //blas2::symv( S2D<double, n>(hx,hy), phi.data(), trick.data());
+        //cout << "Number of pcg iterations "<< pcg( A, phi.data(), trick.data(), T2D<double, n>(hx, hy), 1e-10)<<endl;
+
         //a = expand<double(&)(double, double), n>( arak, 0, lx, 0, ly, Nx, Ny);
         //cout << "phi \n" << phi<< endl;
     }
@@ -72,8 +87,6 @@ int main()
     DArrVec init = expand< double(&)(double, double), n> ( initial, 0, lx, 0, ly, Nx, Ny), step(init);
     Arakawa<double, n, DVec, MemorySpace>( Nx, Ny, hx, hy, init.data());
     const DArrVec solution = expand< double(&)(double, double), n> ( result, 0, lx, 0, ly, Nx, Ny);
-    cout << "Initial\n";
-    //cout << init << endl;
     
     RHS<DVec, MemorySpace> rhs;
     RK<3, RHS<DVec, MemorySpace> >  rk( init.data());
@@ -82,18 +95,16 @@ int main()
         rk( rhs, init.data(), step.data(), dt);
         init = step;
     }
-    cout << "Result\n";
-    //cout << init << endl;
-    cout << "True solution\n";
-    //cout << solution <<endl;
 
     blas1::axpby( 1., solution.data(), -1., init.data());
     cudaThreadSynchronize();
     cout << scientific;
     cout << "Norm of error is "<<blas2::dot( S2D<double, n>(hx, hy), init.data())<<"\n";
-    //n = 2 -> p = 1 (is error dominated by error for dx(phi)?
-    //n = 3 -> p = 3
-    //n = 5 -> p = 5
+    //n = 1 -> p = 4 ?? weird (should be 2)
+    //n = 2 -> p = 2 (is error dominated by error for dx(phi)?
+    //n = 3 -> p = 6 
+    //n = 4 -> p = 5.5
+    //n = 5 -> p = 10 !!! ( is this because of "too good" functions??)
 
 
     return 0;

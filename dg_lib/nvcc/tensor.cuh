@@ -190,6 +190,7 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor(
     cusp::array1d< int,     cusp::device_memory> dJ( J); // column indices
     cusp::array1d< T,  cusp::device_memory> dV( V); // values
 #ifdef DG_DEBUG
+    std::cout << "This function is obsolete!\n";
     std::cout << "Values ready! Now sort...\n";
 #endif //DG_DEBUG
     // sort triplets by (i,j) index using two stable sorts (first by J, then by I)
