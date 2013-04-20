@@ -13,9 +13,9 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
-const unsigned Nx = 50;
-const unsigned Ny = 50;
+const unsigned n = 2;
+const unsigned Nx = 10;
+const unsigned Ny = 10;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -69,14 +69,12 @@ int main()
     vector<DVec> y0(2, ne.data()), y1(y0);
     Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, 1., 1., 0.005,  0.5, 1);
     RK< 3, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
-    /*
-    for( unsigned i=0; i<NT; i++)
+    for( unsigned i=0; i<1; i++)
     {
         rk( test, y0, y1, dt);
         for( unsigned j=0; j<2; j++)
             thrust::swap(y0[j], y1[j]);
     }
-    */
     //copy only the 00 index
     thrust::remove_copy_if( y0[0].begin(), y0[0].end(), stencil.data().begin(), visual.begin(), thrust::logical_not<double>());
 
