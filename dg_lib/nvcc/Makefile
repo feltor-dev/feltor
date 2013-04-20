@@ -14,7 +14,7 @@ cusp_thrust: cusp_thrust.cu
 	./$@
 
 toefl_t: toefl_t.cu toefl.cuh
-	$(NVCC) -DTL_DEBUG $< $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
+	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
 	./$@
 
 %_t: %_t.cu %.cuh

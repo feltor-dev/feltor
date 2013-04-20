@@ -1,13 +1,14 @@
 #include <iostream>
 #include <vector>
 #include <thrust/remove.h>
+#include <thrust/host_vector.h>
 
 #include "cuda_texture.cuh"
 
+#include "arrvec2d.cuh"
 #include "evaluation.cuh"
 #include "toefl.cuh"
 #include "rk.cuh"
-#include "arrvec2d.cuh"
 
 
 using namespace std;
@@ -68,13 +69,16 @@ int main()
     DVec visual( Nx*Ny);
     vector<DVec> y0(2, ne.data()), y1(y0);
     Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, 1., 1., 0.005,  0.5, 1);
+    test( y0, y1);
     RK< 3, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
+    /*
     for( unsigned i=0; i<1; i++)
     {
         rk( test, y0, y1, dt);
         for( unsigned j=0; j<2; j++)
             thrust::swap(y0[j], y1[j]);
     }
+    */
     //copy only the 00 index
     thrust::remove_copy_if( y0[0].begin(), y0[0].end(), stencil.data().begin(), visual.begin(), thrust::logical_not<double>());
 

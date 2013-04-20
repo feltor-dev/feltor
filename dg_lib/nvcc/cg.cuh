@@ -172,6 +172,11 @@ template< class Matrix, class Vector, class Preconditioner>
 unsigned CG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, value_type eps)
 {
     value_type nrm2b = blas2::dot( P, b);
+    if( nrm2b == 0)
+    {
+        blas1::axpby( 1., b, 0., x);
+        return 0;
+    }
     //r = b; blas2::symv( -1., A, x, 1.,r); //compute r_0 
     blas2::symv( A,x,r);
     cudaThreadSynchronize();

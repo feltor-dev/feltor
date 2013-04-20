@@ -85,7 +85,7 @@ void mapColors( cudaGraphicsResource* resource, const ThrustVector& x, const dg:
     // get a pointer to the mapped resource
     cudaGraphicsResourceGetMappedPointer( (void**)&d_buffer, &size, resource);
 #ifdef DG_DEBUG
-    assert( x.size() == size);
+    assert( x.size() == size/3/sizeof(float));
 #endif //DG_DEBUG
     thrust::transform( x.begin(), x.end(), thrust::device_pointer_cast( d_buffer), map);
     //unmap the resource before OpenGL uses it
