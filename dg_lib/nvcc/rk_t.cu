@@ -22,16 +22,16 @@ struct RHS
     void operator()( const container& y, container& yp)
     {
         dg::blas2::symv( laplace, y, yp);
-        dg::blas2::symv( D, dg::T1D<T,n>(h), yp, 0., yp);
+        //laplace is unnormalized -laplace
+        dg::blas2::symv( -D, dg::T1D<T,n>(h), yp, 0., yp); 
     }
   private:
     double h, D;
     cusp::ell_matrix<int, T, MemorySpace> laplace;
 };
-    
 
-const unsigned n = 3;
-const unsigned N = 10;
+const unsigned n = 1;
+const unsigned N = 40;
 const double lx = 2.*M_PI;
 
 const unsigned k = 3;
@@ -59,7 +59,7 @@ int main()
     const double dt =T/(double)NT;
     cout << "Test RK scheme on diffusion equation\n";
     cout << "Polynomial coefficients:  "<< n<<endl;
-    cout << "RK order K:               " << k <<endl;
+    cout << "RK order K:               "<< k <<endl;
     cout << "Number of gridpoints:     "<<N<<endl;
 
     DArrVec y0 = expand< double(&)(double), n>( sine, 0., lx, N), y1(y0);
@@ -78,9 +78,14 @@ int main()
     DArrVec solution = expand< double(&)(double), n>( sol, 0, lx, N), error( solution);
     double norm_sol = blas2::dot( S1D<double, n>(h), solution.data());
     blas1::axpby( -1., y0.data(), 1., error.data());
+    cout << "Normalized solution is "<<  norm_sol<< endl;
     double norm_error = blas2::dot( S1D<double, n>(h), error.data());
-    cout << "Relative error is "<< sqrt( norm_error/norm_sol)<< endl;
+    cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<< endl;
+    //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
+    //n = 2 -> p = 2
+    //n = 3 -> p = 3
+    //n = 4 -> p = 4
+    //n = 5 -> p = 5
 
     return 0;
 }
-    
