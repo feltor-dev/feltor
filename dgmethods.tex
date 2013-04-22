@@ -659,4 +659,159 @@ thus be more complicated.
 
 
 
+\section{ Discretization of derivatives}
+
+We now come to the discretization of the two-dimensional Poisson bracket (Jacobian)
+\begin{align}
+    J(f,g) \equiv \partial_x f \partial_y g - \partial_y f\partial_x g
+    \label{eq:jacobian}
+\end{align}
+As [Arakawa, J. Comp. Phys., 1997] showed, it is important to numerically conserve
+the following three quantities
+\begin{subequations}
+\begin{align}
+    \int_G J(f,g) dxdy = 0 \\
+    \int_G fJ(f,g) dxdy = 0\\
+    \int_G gJ(f,g) dxdy = 0
+    \label{eq:conservation}
+\end{align}
+\end{subequations}
+which for two-dimensional incompressible fluid flow correspond to the conservation of
+total vorticity,the square vorticity and kinetic energy respectively.
+The main idea in [Arakawa, J. Comp. Phys., 1997] is
+to equally add three different discretisations of the Jacobian called $J^{++}$, 
+$J^{+x}$ and $J^{x+}$ to get a discretisaion which respects all of 
+eqns (\ref{eq:conservation}) by setting
+\begin{align}
+    J = \frac{1}{3}\left( J^{++}+J^{x+}+J^{+x} \right)   
+    \label{eq:construction}
+\end{align}
+The Jacobians are derived by first introducing a symmetric discretisation for the
+simple derivative, namely
+\begin{align}
+    (\partial_x f)_{ij} = \frac{f_{i+1,j}-f_{i-1,j}}{2h} + O(h^2)
+    \label{eq:derivative}
+\end{align}
+and 
+\begin{align}
+    (f\partial_x g)_{ij} = f_{ij}\frac{g_{i+1,j}-g_{i-1,j}}{2h}+O(h^2)
+    \label{}
+\end{align}
+The Jacobians are then defined as
+\begin{subequations}
+\begin{align}
+    J_{ij}^{++} &= (\partial_x f)_{ij} (\partial_y g)_{ij} - (\partial_y f)_{ij}(\partial_x g)_{ij} \\
+    J_{ij}^{+x} &= (\partial_x( f\partial_y g))_{ij} - (\partial_y( f\partial_x g))_{ij}\\
+    J_{ij}^{x+} &= (\partial_y( g\partial_x f))_{ij} - (\partial_y( g\partial_x f))_{ij}
+    \label{}
+\end{align}
+\label{}
+\end{subequations}
+The difference between the three formulations lies in the order of multiplications
+and derivatives. For example the first term in $J^{+x}$ means that we
+first compute the numerical derivative of $g$ in $y$, then multiply the result with 
+$f$ and then compute the numerical derivative of the result in $x$.
+Each of these Jacobians conserves one and only one of the quantities (\ref{eq:conservation}) but when they are brought together according to eqn( \ref{eq:construction})
+all quantities are conserved. 
+
+For the DG discretization of the Jacobian we now simply follow the route set by
+Arakawa. We first derive a discretization for the first derivative of a function
+and for the product of a function with a derivative. We then use eqn( \ref{eq:construction}) to derive our final discretization scheme. 
+
+\subsection{ The first derivative}
+We begin to derive the first derivative of a one-dimensional function.
+$ f = f_kp_k(x)$
+We do so
+by expanding with Legendre polynomials and then integrating by parts. For 
+simplicity we use periodic boundaries. 
+\begin{align}
+    (\partial_x f)^n_i = t_{ij}\int\partial_x f p_j(x) dx = t_{ij}\left( [\hat fp_j]_{x_{n-1/2}}^{x_{n+1/2}} - \int f \partial_x p_j dx \right)
+    \label{}
+\end{align}
+For the numerical flux $\hat f$ we choose the average on the cell boundary
+\begin{align}
+    \hat f(x_{n+1/2}) \equiv \frac{1}{2}(f^{n+1}_kp_k(-1) + f^n_k p_k(1))
+    \label{}
+\end{align}
+With the quantities previously defined we arrive at
+\begin{align}
+    (\partial_x f)^n_i= t_{ij}\left(  \frac{1}{2}[(f^{n+1}_kp_k(-1)+ f^n_kp_k(1))p_j(1) 
+                - (f^n_kp_k(-1) + f^{n-1}p_k(1))p_j(-1)] - f_k d_{kj} \right)
+    \label{}
+\end{align}
+With the notation previously introduced this reduces to 
+\begin{align}
+    \partial_x = \frac{1}{2}T\circ \left[ \Eins^+\otimes RL + \Eins \otimes (D-D^T) - \Eins^-\otimes LR\right]
+    \label{}
+\end{align}
+where we used that $D+D^T = R-L$. We now have formulated a DG discretization of the first derivative in the form of a matrix vector product. 
+We note that in the case of $P = 1$ it reduces to the familiar classical finite
+differences formula eqn(\ref{eq:derivative}).
+
+We now numerically test the order of this derivation, by computing the derivative
+of $f(x) = sin(x)$. We compute the absolute error in the $L_2$ - norm 
+\begin{align}
+    \lVert f\rVert = \sqrt{ <f,f>} \equiv \left( \int |f|^2 dx \right)^{1/2}
+    \label{eq:norm}
+\end{align}
+We compute the order $p$ by computing the derivative twice with $N=10$ and $N=20$ grid
+points.
+\begin{align*}
+    n = 1 \rightarrow p = 2 \\
+    n = 2 \rightarrow p = 1 \\
+    n = 3 \rightarrow p = 3 \\
+    n = 4 \rightarrow p = 3 \\
+    n = 5 \rightarrow p = 5
+\end{align*}
+We conclude that the method is of order $n$ for $n$ odd, and $n-1$ for $n$ even. 
+\subsection{ Product of two functions }
+If $f$ and $g$ are two functions represented by a DG approximation $f = f_kp_k$ and
+$g = g_lp_l$ then 
+\begin{align}
+    (fg)_i = t_{ij}\int (fg)p_j dx = t_{ij} f_k g_l \int p_k p_l p_j dx =: t_{ij} M_{klj} f_k g_l
+    \label{}
+\end{align}
+Note that $M$ is symmetric in all of its indices. All we need now is an expression for
+$t_{ij}M_{klj}$: for this we use the Gaussian integration formula
+\begin{align}
+    \int p_k p_l p_j dx = \sum_i w_i p_k(x_i)p_l(x_i)p_j(x_i) = \sum_i w_i B_{ik}B_{il}B_{ij}
+    \label{}
+\end{align}
+Recall that $F_{ij} = t_j w_i B_{ij}$ and arrive at
+\begin{align}
+    (fg)_i = t_{ij} M_{klj} f_k g_l = \sum_m F_{jm} B_{mk}f_k B_{ml}g_l
+    \label{}
+\end{align}
+This result is not surprising. It simply states that we can compute the product
+of two DG-expanded functions by backtransforming them to $x$-space, then performing
+a pointwise multiplication and then transforming the result to $L$-space again.
+\subsection{ The DG Jacobian}
+We are now ready to construct a discretization for the Jacobian. 
+We note 
+\begin{subequations}
+    \begin{align}
+        J^{++}_{ij} &= ((\partial_x f)(\partial_y g))_{ij} - ((\partial_y f)(\partial_x g))_{ij} \\
+        J^{+x}_{ij} &= (\partial_x ( f\partial_y g))_{ij} - (\partial_y (f\partial_x g))_{ij} \\
+        J^{x+}_{ij} &= (\partial_y (g\partial_x f))_{ij} - (\partial_x( g\partial_y f))_{ij}
+        \label{}
+    \end{align}
+    \label{}
+\end{subequations}
+Again the difference between the three formulations is when the multiplication
+and when the derivation is performed. 
+The final form of the Jacobian is then given by eq. (\ref{eq:construction}):
+\begin{align}
+    J = \frac{1}{3}(J^{++} + J^{+x} + J^{x+})
+    \label{}
+\end{align}
+
+We test our scheme
+
+
+
+
+
+
+
+
 \end{document}
