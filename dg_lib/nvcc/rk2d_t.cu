@@ -99,12 +99,12 @@ int main()
     blas1::axpby( 1., solution.data(), -1., init.data());
     cudaThreadSynchronize();
     cout << scientific;
-    cout << "Norm of error is "<<blas2::dot( S2D<double, n>(hx, hy), init.data())<<"\n";
-    //n = 1 -> p = 4 ?? weird (should be 2)
-    //n = 2 -> p = 2 (is error dominated by error for dx(phi)?
-    //n = 3 -> p = 6 
-    //n = 4 -> p = 5.5
-    //n = 5 -> p = 10 !!! ( is this because of "too good" functions??)
+    cout << "Norm of error is "<<sqrt(blas2::dot( S2D<double, n>(hx, hy), init.data()))<<"\n"; //never forget the sqrt when computing errors
+    //n = 1 -> p = 2 ( as it should be )
+    //n = 2 -> p = 1 (is error dominated by error for dx(phi)?
+    //n = 3 -> p = 3 
+    //n = 4 -> p = 3
+    //n = 5 -> p = 5 
 
 
     return 0;

@@ -18,7 +18,7 @@ namespace dg
 template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
 struct Arakawa
 {
-    Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, container test = container());
+    Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
 
     void operator()( const container& lhs, const container& rhs, container& result);
   private:
@@ -30,7 +30,7 @@ struct Arakawa
 };
 
 template< class T, size_t n, class container, class MemorySpace>
-Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, container test): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( n*n*Nx*Ny), brhs( blhs)
+Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( n*n*Nx*Ny), brhs( blhs)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
 
@@ -45,8 +45,9 @@ Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double
     backward = tensor( Nx*Ny, backward2d);
 
     //create derivatives
-    HMatrix dx = dgtensor<T,n>( tensor<T,n>( Ny, delta), create::dx_per<value_type,n>( Nx, hx));
-    HMatrix dy = dgtensor<T,n>( create::dx_per<value_type,n>( Ny, hy), tensor<T,n>(Nx, delta));
+    HMatrix dx = dgtensor<T,n>( tensor<T,n>( Ny, delta), create::dx_symm<value_type,n>( Nx, hx, bcx));
+    HMatrix dy = dgtensor<T,n>( create::dx_symm<value_type,n>( Ny, hy, bcy), tensor<T,n>(Nx, delta));
+
     HMatrix bdx_(dx), bdy_(dy);
     cusp::multiply( backward, dx, bdx_);
     cusp::multiply( backward, dy, bdy_);
@@ -78,7 +79,6 @@ Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double
 template< class T, size_t n, class container, class MemorySpace>
 void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, const container& rhs, container& result)
 {
-    //probably not consistent
     blas2::symv( bdx, lhs, dxlhs);
     blas2::symv( bdy, lhs, dylhs);
     blas2::symv( bdx, rhs, dxrhs);
@@ -99,9 +99,14 @@ void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, co
     blas1::pointwiseDot( dylhs, brhs, dylhs);
     cudaThreadSynchronize();
 
-    blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);
-    blas1::axpby( 1./3., dxlhs, -1./3., blhs);
-    blas1::axpby( 1./3., result, -1./3., dylhs);
+    //blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);
+    //blas1::axpby( 1./3., dxlhs, -1./3., blhs);
+    //blas1::axpby( 1./3., result, -1./3., dylhs);
+
+    blas1::axpby( 1., dyrhs, -1., dxrhs);
+    blas1::axpby( 0., dxlhs, -0., blhs);
+    blas1::axpby( 0., result, -0., dylhs);
+
     cudaThreadSynchronize();
     blas2::symv( forward, dxrhs, dyrhs); 
     blas2::symv( dyf, blhs, dxlhs);
