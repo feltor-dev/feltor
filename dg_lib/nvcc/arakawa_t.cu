@@ -61,7 +61,7 @@ int main()
     DArrVec eins = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
 
 
-    Arakawa<double, n, DVec, MemorySpace> arakawa( Nx, Ny, hx, hy, 0, -1);
+    Arakawa<double, n, DVec, MemorySpace> arakawa( Nx, Ny, hx, hy, -1, -1);
     arakawa( lhs.data(), rhs.data(), jac.data());
     cudaThreadSynchronize();
 
