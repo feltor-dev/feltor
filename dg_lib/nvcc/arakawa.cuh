@@ -111,10 +111,10 @@ void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, co
     //everything which needs a dy
     blas1::axpby( 1./3., result, -1./3., dylhs); //l*dyr - dyl*r     -> dylhs
 
-    //blas1::axpby( 0., dyrhs,  -0., dxrhs);
+    //blas1::axpby( 1., dyrhs,  -1., dxrhs);
     ////for testing purposes (note that you need to set criss-cross)
-    //blas1::axpby( 1., dxlhs,  -0., blhs);
-    //blas1::axpby( 0., result, -1., dylhs);
+    //blas1::axpby( 0., dxlhs,  -0., blhs);
+    //blas1::axpby( 0., result, -0., dylhs);
 
     cudaThreadSynchronize();
     blas2::symv( forward, dxrhs, dyrhs);  //back ++                 -> dyrhs

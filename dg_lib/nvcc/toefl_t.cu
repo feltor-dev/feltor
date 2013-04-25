@@ -15,16 +15,16 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 2;
-const unsigned Nx = 10;
-const unsigned Ny = 10;
+const unsigned n = 3;
+const unsigned Nx = 40;
+const unsigned Ny = 40;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
 const unsigned k = 3;
 const double nu = 0.01;
 const double T = 0.8;
-const unsigned NT = (unsigned)(nu*T*n*n*Nx*Nx/0.01/lx/lx);
+const unsigned NT = (unsigned)(nu*T*n*n*Nx*Nx/0.005/lx/lx);
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
@@ -56,7 +56,7 @@ int main()
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
-    cudaGlfwInit( 300, 300);
+    cudaGlfwInit( 600, 600);
     glfwSetWindowTitle( "Texture test");
     glClearColor( 0.f, 0.f, 1.f, 0.f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -66,34 +66,35 @@ int main()
     cout << "Timestep                    " << dt << endl;
     cout << "# of timesteps              " << NT << endl;
     HArrVec ne = expand< double(&)(double, double), n> ( gaussian, 0, lx, 0, ly, Nx, Ny);
-    DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
+    DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny), vorticity( stencil);
     DVec visual( Nx*Ny);
     vector<DVec> y0(2, ne.data()), y1(y0);
-    Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, 1., 1., 0.005,  0.5, 1);
+    Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, 1., 1., 0.,  0.5, 1);
     RK< 3, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
     cout<< fixed <<setprecision(2);
-    for( unsigned i=0; i<1; i++)
-    {
-        rk( test, y0, y1, dt);
-        for( unsigned j=0; j<2; j++)
-            thrust::swap(y0[j], y1[j]);
-    }
-    //copy only the 00 index
-    thrust::remove_copy_if( y0[0].begin(), y0[0].end(), stencil.data().begin(), visual.begin(), thrust::logical_not<double>());
 
     ////////////////////////////////glfw//////////////////////////////
     int running = GL_TRUE;
     ColorMapRedBlueExt colors( amplitude);
-    cudaGraphicsResource* resource = allocateCudaGlBuffer( 3*Nx*Ny); 
-    while( running)
+    cudaGraphicsResource* resource = allocateCudaGlBuffer( 3*Nx*Ny); while( running)
     {
-        //generate a texture
-        glClear(GL_COLOR_BUFFER_BIT);
+        rk( test, y0, y1, dt);
+        for( unsigned j=0; j<2; j++)
+            thrust::swap(y0[j], y1[j]);
+        blas1::axpby( -1., y0[0], 0., vorticity.data());
+        blas1::axpby( 1., y0[1], 1., vorticity.data());
+        cout << "Total charge is: "<< blas2::dot( stencil.data(), S2D<double, n>(hx, hy), vorticity.data()) << "\n";
+        //copy only the 00 index
+        thrust::remove_copy_if( y0[0].begin(), y0[0].end(), stencil.data().begin(), visual.begin(), thrust::logical_not<double>());
+        //generate a texture and draw the picture
+        glClear( GL_COLOR_BUFFER_BIT);
+        colors.scale() =  thrust::reduce( visual.begin(), visual.end(), 0, thrust::maximum<double>() );
         mapColors( resource, visual, colors);
         loadTexture( Ny, Nx);
         drawQuad( -1., 1., -1., 1.);
         glfwSwapBuffers();
         glfwWaitEvents();
+        //wait for user input
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
     }

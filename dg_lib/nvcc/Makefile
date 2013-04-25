@@ -17,6 +17,10 @@ toefl_t: toefl_t.cu toefl.cuh
 	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
 	./$@
 
+toefl_b: toefl_b.cu toefl.cuh
+	$(NVCC) -O3 -w $< $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
+	./$@
+
 %_t: %_t.cu %.cuh
 	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@
 	./$@
