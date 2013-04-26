@@ -30,7 +30,7 @@ struct Toefl
     typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    Matrix dy;
+    Matrix dx;
     Matrix laplace;
     container omega, phi, dxtheta, dxphi;
     Arakawa<T, n, container, MemorySpace> arakawa; 
@@ -72,6 +72,7 @@ void Toefl<T, n, container, MemorySpace>::operator()( const std::vector<containe
     cudaThreadSynchronize();
     //compute S omega 
     blas2::symv( S2D<double, n>(hx, hy), omega, omega);
+    //blas1::axpby( 0., omega, 0, phi); //make 0 initial value for phi
     /*
     ArrVec2d<T, n, thrust::host_vector<T> > view(rho, 10);
     std::cout << view <<std::endl;
@@ -86,17 +87,17 @@ void Toefl<T, n, container, MemorySpace>::operator()( const std::vector<containe
     // dx terms
     cudaThreadSynchronize();
     blas2::symv( dx, phi, dxphi);
-    blas2::symv( dx, y[1], dxtheta);
+    blas2::symv( dx, y[0], dxtheta);
     cudaThreadSynchronize();
-    blas1::axpby( -1, dxphi, 1., yp[0]);
+    blas1::axpby( 1, dxphi, 1., yp[0]);
     blas1::axpby( -Pr*Ra, dxtheta, 1., yp[1]);
 
     //laplace terms
-    blas2::symv( laplace, y[1], dxphi);
-    blas2::symv( -Pr, dg::T2D<T,n>(hx, hy), dxphi, 1., yp[1]); 
-    cudaThreadSynchronize();
     blas2::symv( laplace, y[0], dxphi);
     blas2::symv( -1., dg::T2D<T,n>(hx, hy), dxphi, 1., yp[0]); 
+    cudaThreadSynchronize();
+    blas2::symv( laplace, y[1], dxphi);
+    blas2::symv( -Pr, dg::T2D<T,n>(hx, hy), dxphi, 1., yp[1]); 
 
 
 }

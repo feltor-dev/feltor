@@ -95,9 +95,9 @@ void mapColors( const dg::ColorMapRedBlueExt& map, const ThrustVector& x, cudaGr
     cudaGraphicsUnmapResources( 1, &resource, 0);
 }
 
-void loadTexture( int rows, int cols)
+void loadTexture( int width, int height)
 {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, rows, cols, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, NULL);
 }
 
 void drawQuad( double x0, double x1, double y0, double y1)
@@ -154,7 +154,7 @@ struct Window
             bufferID = (GLuint)id;
         }
         mapColors( map, x, resource);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Ny, Nx, 0, GL_RGB, GL_FLOAT, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Nx, Ny, 0, GL_RGB, GL_FLOAT, NULL);
         glLoadIdentity();
         float x0 = -1, x1 = 1, y0 = -1, y1 = 1;
         glBegin(GL_QUADS); 
