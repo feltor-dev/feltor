@@ -17,8 +17,8 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 40;
-const unsigned Ny = 40;
+const unsigned Nx = 20;
+const unsigned Ny = 20;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double hx = lx/(double)Nx;
