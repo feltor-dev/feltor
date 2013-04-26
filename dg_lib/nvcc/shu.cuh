@@ -20,14 +20,15 @@ namespace dg
 template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
 struct Shu 
 {
+    typedef T value_type;
     typedef container Vector;
-    Shu( unsigned Nx, unsigned Ny, double hx, double hy, double D, double eps = 1e-9);
+    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    Shu( unsigned Nx, unsigned Ny, double hx, double hy, double D, double eps = 1e-6);
 
+    Matrix& lap() { return laplace;}
     void operator()( const Vector& y, Vector& yp);
   private:
-    typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     Matrix laplace;
     container rho, phi;
     Arakawa<T, n, container, MemorySpace> arakawa; 
@@ -42,16 +43,16 @@ template< class T, size_t n, class container, class MemorySpace>
 Shu<T, n, container, MemorySpace>::Shu( unsigned Nx, unsigned Ny, double hx, double hy,
         double D, double eps): 
     rho( n*n*Nx*Ny, 0.), phi(rho),
-    arakawa( Nx, Ny, hx, hy, -1, -1), 
-    pcg( rho, n*n*Nx),// n*n*Nx*Ny),
+    arakawa( Nx, Ny, hx, hy, 0, 0), 
+    pcg( rho, n*n*Nx*Ny),
     hx( hx), hy(hy), D(D), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
     HMatrix A = dg::dgtensor<double, n>
-                             ( dg::create::laplace1d_per<double, n>( Ny, hy), 
+                             ( dg::create::laplace1d_dir<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
                                dg::S1D<double, n>( hy),
-                               dg::create::laplace1d_per<double, n>( Nx, hx)); 
+                               dg::create::laplace1d_dir<double, n>( Nx, hx)); 
     laplace = A;
 }
 
@@ -62,7 +63,6 @@ void Shu<T, n, container, MemorySpace>::operator()( const Vector& y, Vector& yp)
     //laplace is unnormalized -laplace
     dg::blas2::symv( -D, dg::T2D<T,n>(hx, hy), yp, 0., yp); 
 
-    /*
     //rho = y;
     cudaThreadSynchronize();
     blas1::axpby( 1., y, 0, rho);
@@ -78,7 +78,6 @@ void Shu<T, n, container, MemorySpace>::operator()( const Vector& y, Vector& yp)
     cudaThreadSynchronize();
     blas1::axpby( 1., rho, 1., yp);
     cudaThreadSynchronize();
-    */
 
 }
 

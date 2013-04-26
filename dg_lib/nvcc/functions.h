@@ -131,6 +131,10 @@ inline double lilj( unsigned i, unsigned j)
         return 1.;
     return -1.;
 }
+
+inline double one( double x) {return 1;}
+inline double one( double x, double y) {return 1;}
+inline double one( double x, double y, double z) {return 1;}
 //} //namespace detail
 //} //namespace create
 } //namespace dg

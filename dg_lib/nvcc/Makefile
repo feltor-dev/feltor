@@ -14,19 +14,19 @@ cusp_thrust: cusp_thrust.cu
 	./$@
 
 toefl_t: toefl_t.cu toefl.cuh
-	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
+	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 	./$@
 
 toefl_b: toefl_b.cu toefl.cuh
-	$(NVCC) -O3 -w $< $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS) -o $@
+	$(NVCC) -O3 -w $< $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 	./$@
 
 %_t: %_t.cu %.cuh
-	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(GLFLAGS) $(INCLUDE) -o $@
 	./$@
 
 %_b: %_b.cu %.cuh
-	$(NVCC) -O3 -w  $< $(NVCCFLAGS) $(INCLUDE) -o $@ 
+	$(NVCC) -O3 -w  $< $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)-o $@ 
 	echo "Attention: No compiler warnings are issued!" 
 	./$@
 
