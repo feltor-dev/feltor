@@ -16,9 +16,9 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 1;
-const unsigned Nx = 40;
-const unsigned Ny = 40;
+const unsigned n = 3;
+const unsigned Nx = 20;
+const unsigned Ny = 20;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double hx = lx/(double)Nx;
@@ -44,8 +44,8 @@ double arak   ( double x, double y) { return -cos(y)*sin(y)*cos(x); }
 template< class Vector_Type, class MemorySpace>
 struct RHS
 {
-    typedef Vector_Type Vector;
-    RHS(): arakawa( Nx, Ny, hx, hy), phi( expand<double(&)(double, double), n>( function, 0, lx, 0, ly, Nx, Ny))
+    typedef std::vector<Vector_Type> Vector;
+    RHS(): arakawa( Nx, Ny, hx, hy, -1, -1), phi( expand<double(&)(double, double), n>( function, 0, lx, 0, ly, Nx, Ny))
     {
         //typedef cusp::ell_matrix<int, double, MemorySpace> Matrix;
         //CG<Matrix, Vector_Type, T2D<double,n> > pcg( phi.data(), n*n*Nx*Ny);
@@ -63,9 +63,10 @@ struct RHS
     }
     void operator()( const Vector& y, Vector& yp)
     {
-        ArrVec2d_View<double,n, const Vector> y_view( y, Nx), yp_view( yp, Nx);
+        //ArrVec2d_View<double,n, const Vector> y_view( y, Nx), yp_view( yp, Nx);
         //cout << "Y \n"<<y_view;
-        arakawa( phi.data(), y, yp);
+        for( unsigned i=0; i<y.size(); i++)
+            arakawa( phi.data(), y[i], yp[i]);
         //cout << "YP \n"<<yp_view;
         //cout << "Norm "<< dg::blas2::dot( dg::S2D<double,n >( hx, hy), yp) << endl;
         //cout << "A \n" << a ;
@@ -74,37 +75,39 @@ struct RHS
         //cin >>  x;
     }
   private:
-    Arakawa<double, n, Vector, MemorySpace> arakawa;
-    ArrVec2d<double, n, Vector> phi;
+    Arakawa<double, n, Vector_Type, MemorySpace> arakawa;
+    ArrVec2d<double, n, Vector_Type> phi;
 };
 
 int main()
 {
+    //Also test std::vector<DVec> functionality
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout << "# of timesteps                    "<< NT <<endl;
     cout <<fixed<< setprecision(2)<<endl;
-    DArrVec init = expand< double(&)(double, double), n> ( initial, 0, lx, 0, ly, Nx, Ny), step(init);
-    Arakawa<double, n, DVec, MemorySpace>( Nx, Ny, hx, hy, init.data());
+    DArrVec init = expand< double(&)(double, double), n> ( initial, 0, lx, 0, ly, Nx, Ny);
     const DArrVec solution = expand< double(&)(double, double), n> ( result, 0, lx, 0, ly, Nx, Ny);
+    std::vector<DVec> y0( 2, init.data()), y1(y0);
     
     RHS<DVec, MemorySpace> rhs;
-    RK<3, RHS<DVec, MemorySpace> >  rk( init.data());
+    RK<3, RHS<DVec, MemorySpace> >  rk( y0);
     for( unsigned i=0; i<NT; i++)
     {
-        rk( rhs, init.data(), step.data(), dt);
-        init = step;
+        rk( rhs, y0, y1, dt);
+        for( unsigned i=0; i<y0.size(); i++)
+            thrust::swap( y0[i], y1[i]); 
     }
 
-    blas1::axpby( 1., solution.data(), -1., init.data());
+    blas1::axpby( 1., solution.data(), -1., y0[0]);
     cudaThreadSynchronize();
     cout << scientific;
-    cout << "Norm of error is "<<blas2::dot( S2D<double, n>(hx, hy), init.data())<<"\n";
-    //n = 1 -> p = 4 ?? weird (should be 2)
-    //n = 2 -> p = 2 (is error dominated by error for dx(phi)?
-    //n = 3 -> p = 6 
-    //n = 4 -> p = 5.5
-    //n = 5 -> p = 10 !!! ( is this because of "too good" functions??)
+    cout << "Norm of error is "<<sqrt(blas2::dot( S2D<double, n>(hx, hy), y0[0]))<<"\n"; //never forget the sqrt when computing errors
+    //n = 1 -> p = 2 ( as it should be )
+    //n = 2 -> p = 1 (is error dominated by error for dx(phi)?
+    //n = 3 -> p = 3 
+    //n = 4 -> p = 3
+    //n = 5 -> p = 5 
 
 
     return 0;

@@ -36,7 +36,7 @@ int main()
 
     DVec dv = hv.data(), dw( dv);
     t.tic();
-    DMatrix laplace1d = create::laplace1d_per<P>( N, 2.);
+    DMatrix laplace1d = create::laplace1d_per<double, P>( N, 2.);
     t.toc();
     cout << "Laplace1d matrix creation took     "<<t.diff()<<"s\n";
     t.tic();

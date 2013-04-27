@@ -17,7 +17,7 @@ struct RHS
     typedef container Vector;
     RHS(unsigned N, T h, T D):h(h), D(D) 
     {
-        laplace = dg::create::laplace1d_per<T,n>( N, h);
+        laplace = dg::create::laplace1d_dir<T,n>( N, h);
     }
     void operator()( const container& y, container& yp)
     {
@@ -30,8 +30,8 @@ struct RHS
     cusp::ell_matrix<int, T, MemorySpace> laplace;
 };
 
-const unsigned n = 1;
-const unsigned N = 40;
+const unsigned n = 3;
+const unsigned N = 80;
 const double lx = 2.*M_PI;
 
 const unsigned k = 3;

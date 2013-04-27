@@ -90,7 +90,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T al
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T alpha = 1.)
 {
-    cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
+    cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N - 2*n*n);
     Operator<T, n> l( dg::lilj);
     Operator<T, n> r( dg::rirj);
     Operator<T, n> lr(dg::lirj);

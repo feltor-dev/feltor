@@ -11,10 +11,10 @@
 #include "tensor.cuh"
 #include "preconditioner.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
+const unsigned n = 5; //global relative error in L2 norm is O(h^P)
 
-const unsigned Nx = 20;  //more N means less iterations for same error
-const unsigned Ny = 20;  //more N means less iterations for same error
+const unsigned Nx = 80;  //more N means less iterations for same error
+const unsigned Ny = 80;  //more N means less iterations for same error
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -48,7 +48,7 @@ int main()
                                dg::create::laplace1d_per<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
                                dg::S1D<double, n>( hy),
-                               dg::create::laplace1d_per<double, n>( Nx, hx)); 
+                               dg::create::laplace1d_dir<double, n>( Nx, hx)); 
     dg::CG<DMatrix, DVec, Preconditioner > pcg( x.data(), n*n*Nx*Ny);
     //dg::CG<DMatrix, DVec> cg( x.data(), n*N);
     cout<<"Expand right hand side\n";

@@ -14,8 +14,8 @@
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 
-const unsigned Nx = 300;  //more N means less iterations for same error
-const unsigned Ny = 300;  //more N means less iterations for same error
+const unsigned Nx = 100;  //more N means less iterations for same error
+const unsigned Ny = 100;  //more N means less iterations for same error
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -49,10 +49,10 @@ int main()
 
     cout << "Create Laplacian\n";
     t.tic();
-    DMatrix A = dg::tensor<n>( dg::create::laplace1d_per<n>( Ny, hy), 
+    DMatrix A = dg::dgtensor<double, n>( dg::create::laplace1d_dir<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
                                dg::S1D<double, n>( hy),
-                               dg::create::laplace1d_per<n>( Nx, hx)); //dir does also work but is slow
+                               dg::create::laplace1d_per<double, n>( Nx, hx)); //dir does also work but is slow
     t.toc();
     cout<< "Creation took "<<t.diff()<<"s\n";
     //create conjugate gradient

@@ -9,9 +9,13 @@
 #include <GL/glfw.h>
 #include <cuda_gl_interop.h>
 
+#include <thrust/device_vector.h>
 #include <thrust/transform.h>
 
 #include "colormap.cuh"
+
+namespace dg
+{
 
 void cudaGlfwInit( int width, int height)
 {
@@ -28,7 +32,7 @@ void cudaGlfwInit( int width, int height)
     std::cout << "Using OpenGL version "
         <<glfwGetWindowParam( GLFW_OPENGL_VERSION_MAJOR)<<"."
         <<glfwGetWindowParam( GLFW_OPENGL_VERSION_MINOR)<<"\n";
-    //initialize glew
+    //initialize glew (needed for GLbuffer allocation)
     GLenum err = glewInit();
     if (GLEW_OK != err)
     {
@@ -74,9 +78,8 @@ void freeCudaGlBuffer( cudaGraphicsResource* resource)
     cudaGraphicsUnregisterResource( resource);
 }
 
-
 template< class ThrustVector>
-void mapColors( cudaGraphicsResource* resource, const ThrustVector& x, const dg::ColorMapRedBlueExt& map)
+void mapColors( const dg::ColorMapRedBlueExt& map, const ThrustVector& x, cudaGraphicsResource* resource)
 {
     dg::Color* d_buffer;
     size_t size;
@@ -92,9 +95,9 @@ void mapColors( cudaGraphicsResource* resource, const ThrustVector& x, const dg:
     cudaGraphicsUnmapResources( 1, &resource, 0);
 }
 
-void loadTexture( int rows, int cols)
+void loadTexture( int width, int height)
 {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, rows, cols, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, NULL);
 }
 
 void drawQuad( double x0, double x1, double y0, double y1)
@@ -107,6 +110,69 @@ void drawQuad( double x0, double x1, double y0, double y1)
         glTexCoord2f(1.0f, 1.0f); glVertex2f( x1, y1);
         glTexCoord2f(0.0f, 1.0f); glVertex2f( x0, y1);
     glEnd();
+}
+
+void GLFWCALL WindowResize( int w, int h)
+{
+    // map coordinates to the whole window
+    glViewport( 0, 0, (GLsizei) w, h);
+}
+
+struct Window
+{
+    Window( int width, int height) { 
+        resource = NULL;
+        Nx_ = Ny_ = 0;
+        bufferID = 0;
+        cudaGlfwInit( width, height);
+        glClearColor( 0.f, 0.f, 1.f, 0.f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glfwSetWindowSizeCallback( WindowResize);
+    }
+    ~Window( ) {
+        if( resource != NULL){
+            cudaGraphicsUnregisterResource( resource); 
+            //free the opengl buffer
+            glDeleteBuffers( 1, &bufferID);
+        }
+        //terminate glfw
+        glfwTerminate();
+    }
+    template< class T>
+    void draw( const thrust::device_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map)
+    {
+        if( Nx != Nx_ || Ny != Ny_) {
+            cudaGraphicsUnregisterResource( resource);
+            //free opengl buffer
+            GLint id; 
+            glGetIntegerv( GL_PIXEL_UNPACK_BUFFER_BINDING, &id);
+            bufferID = (GLuint)id;
+            glDeleteBuffers( 1, &bufferID);
+            //allocate new buffer
+            resource = allocateCudaGlBuffer( 3*Nx*Ny);
+            glGetIntegerv( GL_PIXEL_UNPACK_BUFFER_BINDING, &id);
+            bufferID = (GLuint)id;
+        }
+        mapColors( map, x, resource);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Nx, Ny, 0, GL_RGB, GL_FLOAT, NULL);
+        glLoadIdentity();
+        float x0 = -1, x1 = 1, y0 = -1, y1 = 1;
+        glBegin(GL_QUADS); 
+            glTexCoord2f(0.0f, 0.0f); glVertex2f( x0, y0);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f( x1, y0);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f( x1, y1);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f( x0, y1);
+        glEnd();
+        glfwSwapBuffers();
+    }
+  private:
+    Window( const Window&);
+    Window& operator=( const Window&);
+    GLuint bufferID;
+    cudaGraphicsResource* resource;  
+    unsigned Nx_, Ny_;
+};
+
 }
 
 #endif //_DG_CUDA_OPENGL_

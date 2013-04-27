@@ -2,7 +2,7 @@
 #include <cusp/blas.h>
 
 #include "blas.h"
-#include "dgvec.cuh" 
+#include "arrvec1d.cuh" 
 //#include "../gcc/timer.h" 
 #include "timer.cuh"
 
