@@ -9,11 +9,11 @@
 using namespace toefl;
 using namespace std;
 
-const unsigned rows = 2, cols = 100;
+const unsigned rows = 3, cols = 10;
 const double h = 1./cols;
 int main()
 {
-    GhostMatrix<double, TL_DFT> lhs( rows, cols), rhs( rows, cols);
+    GhostMatrix<double, TL_DFT> lhs( rows, cols, TL_DST10, TL_PERIODIC), rhs( rows, cols, TL_DST10, TL_PERIODIC);
     Matrix<std::complex<double>> clhs( rows, cols/2+1), crhs( rows, cols);
     Matrix<std::complex<double>> cjac( rows, cols/2+1);
     Matrix<std::complex<double>> cjac_exact( rows, cols/2+1);
@@ -27,13 +27,15 @@ int main()
 
     dft_dft.c2r( clhs, lhs);
     
-    for( int i=-1; i<(int)rows+1; i++)
+    //for( int i=-1; i<(int)rows+1; i++)
+    //    for( int j=-1; j<(int)cols+1; j++)
+    for( int i=0; i<(int)rows; i++)
         for( int j=-1; j<(int)cols+1; j++)
-            rhs.at(i,j) = (double)i*h; //rhs( y,x ) = y
+            rhs.at(i,j) = (double)(2*i+1)/6.;//(double)i*h; //rhs( y,x ) = y
     lhs.initGhostCells( );
-    //rhs.initGhostCells( TL_PERIODIC, TL_PERIODIC);
+    rhs.initGhostCells( ); //in the first case ghost cells are already initialized
 
-    cout<< "Test whether dx sin(2Pix) is calculated correctly by arakawa scheme\n";
+    cout<< "Test whether d/dx(sin(2Pi x) ) is calculated correctly by arakawa scheme\n";
 
     //cout << lhs << endl << rhs <<endl;
     //lhs.display(cout);
@@ -41,7 +43,7 @@ int main()
     //rhs.display(cout);
     //cout << endl;
     arakawa( lhs, rhs, jac);
-    //cout << jac <<endl;
+    cout << jac <<endl;
     dft_dft.r2c( jac, cjac);
     //cout << cjac <<endl;
     cout << setprecision(6) <<scientific;

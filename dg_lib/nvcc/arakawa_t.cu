@@ -12,11 +12,13 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
-const unsigned Nx = 40;
-const unsigned Ny = 40;
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
+const unsigned n = 1;
+const unsigned Nx = 10;
+const unsigned Ny = 3;
+//const double lx = 2.*M_PI;
+//const double ly = 2.*M_PI;
+const double lx = 1.;
+const double ly = 1.;
 const double hx = lx/(double)Nx;
 const double hy = ly/(double)Ny;
 
@@ -32,13 +34,15 @@ double left( double x, double y) { return sin(x/2)*sin(x/2)*exp(x)*sin(y/2.)*sin
 double right( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*sin(x/2)*log(x+1); }
 */
 
-
+/*
 double left( double x, double y) {return sin(x)*exp(x-M_PI)*sin(y);}
 double right( double x, double y) {return sin(x)*sin(y)*exp(y-M_PI);}
 double jacobian( double x, double y) 
 {
     return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
 }
+*/
+
 /*
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return cos(x)*sin(y);}
@@ -47,8 +51,10 @@ double jacobian( double x, double y)
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
 */
-
-double one ( double x, double y) {return 1;}
+//These are for comparing to FD arakawa results
+double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
+double right( double x, double y) {return y;}
+double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
 
 int main()
 {
@@ -61,9 +67,10 @@ int main()
     DArrVec eins = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
 
 
-    Arakawa<double, n, DVec, MemorySpace> arakawa( Nx, Ny, hx, hy, -1, -1);
+    Arakawa<double, n, DVec, MemorySpace> arakawa( Nx, Ny, hx, hy, -1, 0.);
     arakawa( lhs.data(), rhs.data(), jac.data());
     cudaThreadSynchronize();
+    cout<<jac<<endl;
 
 
     cout << scientific;
