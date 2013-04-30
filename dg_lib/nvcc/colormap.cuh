@@ -79,28 +79,35 @@ ColorMapRedBlueExt::ColorMapRedBlueExt( float scale): scale_(scale)
 
 // Maps scale to Red and -scale to Blue, > scale to gold and < -scale to black
 //on device direct evaluation is faster (probably map remains on host??)
-__host__ __device__ Color ColorMapRedBlueExt::operator()( float y)
+__host__ __device__ Color ColorMapRedBlueExt::operator()( float x)
 {
-    //Color c;
     float scalefact = 127./scale_;
-    //int k;
-    float x;
-    //k = (int)floor(scalefact*x) + 192; // +192 instead of +128 due to extended colormap
-    y = scalefact*y + 192; // +192 instead of +128 due to extended colormap
-    x = y<0 ? 0 : ( y>383 ? 383 : y ); //clip values
-    //c.r = M[k].r;
-    //c.g = M[k].g;
-    //c.b = M[k].b;
+    x = scalefact*x + 192; // +192 instead of +128 due to extended colormap
+    x = x<0 ? 0 : ( x>383 ? 383 : x ); //clip values
     Color c;
-    float scal = 1./64.;
-    if( x < 64)        { c.r = 0.; c.g = 0.; c.b = 0.5*scal*x;}
-    else if( x < 128 ) { x-= 64; c.r = 0.; c.g = 0.25*scal*x; c.b = 0.5 + (0.5*scal*x);}
-    else if( x < 192 ) { x-= 128; c.r = scal*x; c.g = 0.25 + 0.75*scal*x; c.b = 1.;}
-    else if( x < 256 ) { x-= 192; c.r = 1.0; c.g = 1.0 - scal*x; c.b = 1. - scal*x;}
-    else if( x < 320 ) { x-= 256; c.r = 1.0 - 0.5*scal*x; c.g = 0.; c.b = 0.;}
-    else if( x < 384 ) { x-= 320; c.r = 0.5 + 0.5*scal*x; c.g = scal*x; c.b = 0.;}
+    x/= 64.;
+    if( x < 1.)        { c.r = 0.; c.g = 0.; c.b = 0.5*x;}
+    else if( x < 2. ) { x-= 1.; c.r = 0.; c.g = 0.25*x; c.b = 0.5 + (0.5*x);}
+    else if( x < 3. ) { x-= 2.; c.r = x; c.g = 0.25 + 0.75*x; c.b = 1.;}
+    else if( x < 4. ) { x-= 3.; c.r = 1.0; c.g = 1.0 - x; c.b = 1. - x;}
+    else if( x < 5. ) { x-= 4.; c.r = 1.0 - 0.5*x; c.g = 0.; c.b = 0.;}
+    else if( x < 6. ) { x-= 5.; c.r = 0.5 + 0.5*x; c.g = x; c.b = 0.;}
     return c;
 }
+/*
+__host__ Color ColorMapRedBlueExt::operator()( float x)
+{
+    Color c;
+    float scalefact = 127./scale_;
+    int k;
+    k = (int)floor(scalefact*x) + 192; // +192 instead of +128 due to extended colormap
+    k = k<0 ? 0 : ( k>383 ? 383 : k ); //clip values
+    c.r = M[k].r;
+    c.g = M[k].g;
+    c.b = M[k].b;
+    return c;
+}
+*/
 
 
 ///@}

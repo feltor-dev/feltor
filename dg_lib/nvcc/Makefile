@@ -1,5 +1,5 @@
 
-INCLUDE += 
+INCLUDE = -I/home/matthias/include # Eigen library
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
 DEBUG = 
@@ -11,14 +11,6 @@ version: version.cu
 
 cusp_thrust: cusp_thrust.cu 
 	$(NVCC) $< $(NVCCFLAGS) -o $@
-	./$@
-
-toefl_t: toefl_t.cu toefl.cuh
-	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
-	./$@
-
-toefl_b: toefl_b.cu toefl.cuh
-	$(NVCC) -O3 -w $< $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 	./$@
 
 %_t: %_t.cu %.cuh
@@ -38,6 +30,7 @@ toefl_b: toefl_b.cu toefl.cuh
 	$(NVCC) -O3 -w  $< $(NVCCFLAGS) $(INCLUDE) -o $@ 
 	echo "Attention: No compiler warnings are issued!" 
 	./$@
+
 .PHONY: clean doc
 
 doc: 
