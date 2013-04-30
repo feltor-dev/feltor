@@ -3,9 +3,12 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include <thrust/remove.h>
+#include <thrust/scatter.h>
 
 #include "arrvec2d.cuh"
+#include "operator_matrix.cuh"
+#include "blas.h"
+#include "dlt.h"
 #include "cuda_texture.cuh"
 #include "functions.h"
 #include "functors.cuh"
@@ -13,35 +16,37 @@
 
 const unsigned n = 3;
 const unsigned Nx = 10, Ny = 20;
+
 typedef thrust::device_vector<double> DVec;
 typedef thrust::host_vector<double> HVec;
 typedef dg::ArrVec2d< double, n, DVec> DArrVec;
 typedef dg::ArrVec2d< double, n, HVec> HArrVec;
+
+typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
+typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
 int main()
 {
     //Create Window and set window title
     dg::Window w( 400, 400);
     glfwSetWindowTitle( "Hello world\n");
-    // generate a gaussian and the stencil vector
+    // generate a gaussian
     dg::Gaussian g( 0.5, 0.5, .1, .1, 1);
     DArrVec vector = dg::expand<dg::Gaussian, n> ( g, 0., 1., 0., 1., Nx, Ny);
-    HArrVec stencil( Ny, Nx, 0);
-    for( unsigned i=0; i<Ny; i++)
-        for( unsigned j=0; j<Nx; j++)
-            stencil( i,j, 0,0) = 1.; //correct way to produce stencil exactly!!
-    // show the stencil on terminal
-    std::cout << std::fixed << std::setprecision(2);
-    std::cout << stencil<<std::endl;
 
-    //allocate storage for stencil and visual
-    DVec d_stencil(stencil.data());
-    DVec visual( Nx*Ny);
+    //create equidistant backward transformation
+    dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
+    dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
+    HMatrix hbackward = dg::tensor( Nx*Ny, backward2d);
+    DMatrix backward = hbackward;
+    thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
 
-    //reduce the gaussian to the 00 values and show them on terminal
-    thrust::remove_copy_if( vector.data().begin(), vector.data().end(), d_stencil.begin(), visual.begin(), thrust::logical_not<double>() );
-    dg::ArrVec2d<double, 1, HVec> h_visual( visual, Nx);
-    std::cout << h_visual<<std::endl;
+    //allocate storage for visual
+    DVec visual( n*n*Nx*Ny);
+
+    //transform vector to an equidistant grid
+    dg::blas2::symv( backward, vector.data(), visual);
+    thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
 
     //create a colormap
     dg::ColorMapRedBlueExt colors( 1.);
@@ -51,7 +56,7 @@ int main()
     int running = GL_TRUE;
     while (running)
     {
-        w.draw( visual, Nx, Ny, colors);
+        w.draw( visual, n*Nx, n*Ny, colors);
         glfwWaitEvents();
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);

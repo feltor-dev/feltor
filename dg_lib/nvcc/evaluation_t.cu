@@ -20,11 +20,11 @@ double function( double x, double y)
         return exp(x)*exp(y);
 }
 
-const unsigned n = 3;
+const unsigned n = 2;
 const unsigned N = 10;
 
-const unsigned Nx = 32;
-const unsigned Ny = 8;
+const unsigned Nx = 5;
+const unsigned Ny = 4;
 
 const double lx = 2;
 const double ly = 2;
@@ -56,6 +56,8 @@ int main()
     cout<< "Square normalized 2D norm "<< norm2 <<"\n";
     double solution2 = (exp(4.)-exp(0))/2.*(exp(4.) -exp(0))/2.;
     cout << "Correct square norm of exp(x)exp(y) is "<<solution2<<endl;
+    dg::ArrVec2d<int, n, HVec> map( dg::makePermutationMap<n>(Nx, Ny), Nx);
+    cout << map <<endl;
     return 0;
 }
 

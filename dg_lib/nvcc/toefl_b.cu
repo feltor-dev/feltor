@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
-#include <thrust/remove.h>
+#include <thrust/scatter.h>
 #include <thrust/host_vector.h>
 
 #include "cuda_texture.cuh"
@@ -19,8 +19,8 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 20;
-const unsigned Ny = 10;
+const unsigned Nx = 40;
+const unsigned Ny = 20;
 const double eps = 1e-6;
 const double lx = 2.;
 const double ly = 1.;
@@ -35,6 +35,8 @@ typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
 typedef dg::ArrVec2d< double, n, HVec>  HArrVec;
 typedef dg::ArrVec2d< double, n, DVec>  DArrVec;
+typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
+typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
 using namespace std;
 
@@ -63,16 +65,19 @@ int main()
     Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, Ra, Pr, eps); 
     RK< k, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
 
+    //create equidistant backward transformation
+    dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
+    dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
+    HMatrix hbackward = dg::tensor( Nx*Ny, backward2d);
+    DMatrix backward = hbackward;
+
     //create visualisation vectors
     int running = GL_TRUE;
-    DVec visual( Nx*Ny);
-    HArrVec hstencil( Ny, Nx, 0);
-    for( unsigned i=0; i<Ny; i++)
-        for( unsigned j=0; j<Nx; j++)
-            hstencil( i,j, 0,0) = 1.; //correct way to produce stencil exactly!!
-    DVec stencil( hstencil.data()) ;
+    DVec visual( n*n*Nx*Ny);
+    thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
     DArrVec ground = expand< double(&)(double, double), n> ( groundState, 0, lx, 0, ly, Nx, Ny), temperature( ground);
     dg::ColorMapRedBlueExt colors( 1.);
+    //create timer
     Timer t;
     while (running)
     {
@@ -80,13 +85,14 @@ int main()
         t.tic();
         blas1::axpby( 1., y0[0], 0., temperature.data());
         blas1::axpby( 1., ground.data(), 1., temperature.data());
-        //reduce the field to the 00 values 
-        thrust::remove_copy_if( (temperature.data()).begin(), (temperature.data()).end(), (stencil).begin(), visual.begin(), thrust::logical_not<double>() );
+        //transform field to an equidistant grid
+        dg::blas2::symv( backward, temperature.data(), visual);
+        thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., thrust::maximum<double>() );
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
-        w.draw( visual, Nx, Ny, colors);
+        w.draw( visual, n*Nx, n*Ny, colors);
         t.toc();
         std::cout << "Visualisation time " <<t.diff()<<"\n";
         //step 
