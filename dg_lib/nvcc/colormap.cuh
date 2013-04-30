@@ -22,6 +22,7 @@ struct Color
 
 struct ColorMapRedBlueExt
 {
+    __host__ __device__
     ColorMapRedBlueExt( float scale = 1.);
     //maps [-scale, scale] to a color
     __host__ __device__
@@ -38,6 +39,7 @@ struct ColorMapRedBlueExt
     
     the extra colors are black beyond the blue and gold in the infrared
  */
+__host__ __device__
 ColorMapRedBlueExt::ColorMapRedBlueExt( float scale): scale_(scale)
 {
     float scal = 1.0/64.0;
@@ -74,17 +76,29 @@ ColorMapRedBlueExt::ColorMapRedBlueExt( float scale): scale_(scale)
     M[383].b = 5.0;
 }
 
+
 // Maps scale to Red and -scale to Blue, > scale to gold and < -scale to black
-__host__ __device__ Color ColorMapRedBlueExt::operator()( float x)
+//on device direct evaluation is faster (probably map remains on host??)
+__host__ __device__ Color ColorMapRedBlueExt::operator()( float y)
 {
-    Color c;
+    //Color c;
     float scalefact = 127./scale_;
-    int k;
-    k = (int)floor(scalefact*x) + 192; // +192 instead of +128 due to extended colormap
-    k = k<0 ? 0 : ( k>383 ? 383 : k ); //clip values
-    c.r = M[k].r;
-    c.g = M[k].g;
-    c.b = M[k].b;
+    //int k;
+    float x;
+    //k = (int)floor(scalefact*x) + 192; // +192 instead of +128 due to extended colormap
+    y = scalefact*y + 192; // +192 instead of +128 due to extended colormap
+    x = y<0 ? 0 : ( y>383 ? 383 : y ); //clip values
+    //c.r = M[k].r;
+    //c.g = M[k].g;
+    //c.b = M[k].b;
+    Color c;
+    float scal = 1./64.;
+    if( x < 64)        { c.r = 0.; c.g = 0.; c.b = 0.5*scal*x;}
+    else if( x < 128 ) { x-= 64; c.r = 0.; c.g = 0.25*scal*x; c.b = 0.5 + (0.5*scal*x);}
+    else if( x < 192 ) { x-= 128; c.r = scal*x; c.g = 0.25 + 0.75*scal*x; c.b = 1.;}
+    else if( x < 256 ) { x-= 192; c.r = 1.0; c.g = 1.0 - scal*x; c.b = 1. - scal*x;}
+    else if( x < 320 ) { x-= 256; c.r = 1.0 - 0.5*scal*x; c.g = 0.; c.b = 0.;}
+    else if( x < 384 ) { x-= 320; c.r = 0.5 + 0.5*scal*x; c.g = scal*x; c.b = 0.;}
     return c;
 }
 

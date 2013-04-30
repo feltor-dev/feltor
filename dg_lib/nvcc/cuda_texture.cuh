@@ -142,7 +142,9 @@ struct Window
     void draw( const thrust::device_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map)
     {
         if( Nx != Nx_ || Ny != Ny_) {
+            Nx_ = Nx; Ny_ = Ny;
             cudaGraphicsUnregisterResource( resource);
+            std::cout << "Allocate resources for drawing!\n";
             //free opengl buffer
             GLint id; 
             glGetIntegerv( GL_PIXEL_UNPACK_BUFFER_BINDING, &id);
@@ -153,6 +155,7 @@ struct Window
             glGetIntegerv( GL_PIXEL_UNPACK_BUFFER_BINDING, &id);
             bufferID = (GLuint)id;
         }
+
         mapColors( map, x, resource);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Nx, Ny, 0, GL_RGB, GL_FLOAT, NULL);
         glLoadIdentity();

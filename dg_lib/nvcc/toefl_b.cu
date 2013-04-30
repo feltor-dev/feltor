@@ -19,8 +19,8 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 40;
-const unsigned Ny = 20;
+const unsigned Nx = 100;
+const unsigned Ny = 50;
 const double eps = 1e-6;
 const double lx = 2.;
 const double ly = 1.;
@@ -29,7 +29,7 @@ const double Pr = 10;
 const double Ra = 5e6;
 
 const unsigned k = 2;
-const double dt = 1e-6;
+const double dt = 1e-7;
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
@@ -90,10 +90,13 @@ int main()
         thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., thrust::maximum<double>() );
-        std::cout << "Color scale " << colors.scale() <<"\n";
+        t.toc();
+        std::cout << "Preparation time "<<t.diff()<<"\n";
         //draw and swap buffers
+        t.tic();
         w.draw( visual, n*Nx, n*Ny, colors);
         t.toc();
+        std::cout << "Color scale " << colors.scale() <<"\n";
         std::cout << "Visualisation time " <<t.diff()<<"\n";
         //step 
         t.tic();

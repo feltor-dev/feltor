@@ -52,6 +52,8 @@ int main()
     dg::ColorMapRedBlueExt colors( 1.);
     //compute maximum value as scale
     colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., thrust::maximum<double>() );
+    
+    std::cout<< colors( 0).r << " "<<colors(0).g <<" "<<colors(0).b<< std::endl;
 
     int running = GL_TRUE;
     while (running)
