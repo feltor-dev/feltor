@@ -1,8 +1,11 @@
-
 INCLUDE = -I/home/matthias/include # Eigen library
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
-DEBUG = 
+
+CXX = g++
+CFLAGS = -Wall -fopenmp
+CINCLUDE = -I/usr/local/cuda/include/
+
 GLFLAGS=-lglfw -lrt -lGL -lGLEW #you might add some libs here, check your glfw installation
 
 version: version.cu 
@@ -11,6 +14,10 @@ version: version.cu
 
 cusp_thrust: cusp_thrust.cu 
 	$(NVCC) $< $(NVCCFLAGS) -o $@
+	./$@
+
+%_eigen_t: %_eigen_t.cpp %_eigen.h 
+	$(CXX) -DDG_DEBUG $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) -o $@
 	./$@
 
 %_t: %_t.cu %.cuh
