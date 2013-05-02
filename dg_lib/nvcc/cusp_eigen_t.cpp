@@ -19,10 +19,8 @@ using namespace std;
 int main()
 {
     HMatrix hmatrix = dg::create::laplace1d_per<double, n>( N, 1.); 
-    Eigen::SparseMatrix<double> ematrix = dg::convert( hmatrix);
+    dg::SimplicialCholesky solver( hmatrix);
     
-    cout << ematrix <<endl;
-
 
     return 0;
 }

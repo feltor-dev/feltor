@@ -6,7 +6,8 @@ CXX = g++
 CFLAGS = -Wall -fopenmp
 CINCLUDE = -I/usr/local/cuda/include/
 
-GLFLAGS=-lglfw -lrt -lGL -lGLEW #you might add some libs here, check your glfw installation
+#GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
+GLFLAGS   = -lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
 
 version: version.cu 
 	$(NVCC) $< $(NVCCFLAGS) -o $@
