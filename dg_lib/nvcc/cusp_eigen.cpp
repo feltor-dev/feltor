@@ -18,34 +18,40 @@ Eigen::SparseMatrix<double, Eigen::RowMajor, int> convert( const cusp::coo_matri
     return em;
 }
 
-typedef Eigen::SparseMatrix<double, Eigen::RowMajor, int> EMatrix;
-typedef Eigen::SimplicialLDLT<EMatrix> SimplicialCholeskyImpl;
 
 namespace dg
 {
-SimplicialCholesky::SimplicialCholesky(): pImpl( new SimplicialCholeskyImpl) {}
+
+struct Impl
+{
+    typedef Eigen::SparseMatrix<double, Eigen::RowMajor, int> EMatrix;
+    typedef Eigen::SimplicialLDLT<EMatrix> SimplicialCholeskyImpl;
+    SimplicialCholeskyImpl solver;
+};
+
+SimplicialCholesky::SimplicialCholesky(): pImpl( new dg::Impl::SimplicialCholeskyImpl) {}
 SimplicialCholesky::SimplicialCholesky(const HMatrix& matrix): 
-    pImpl( new SimplicialCholeskyImpl( convert(matrix))) {}
+    pImpl( new dg::Impl::SimplicialCholeskyImpl( convert(matrix))) {}
 bool SimplicialCholesky::compute( const HMatrix& matrix) 
 {
     pImpl->compute( convert( matrix));
-    if( pImpl->info() != Succeeded ) return false;
+    if( pImpl->info() != Eigen::Success ) return false;
     return true;
 }
 bool SimplicialCholesky::solve( double *x, const double* b, unsigned N) 
 {
     if( x == b)
     {
-        Eigen::Map< VectorXd> xmap( x, N);
+        Eigen::Map< Eigen::VectorXd> xmap( x, N);
         xmap = pImpl->solve( xmap);
     }
     else
     {
-        Eigen::Map< VectorXd> xmap( x, N);
-        Eigen::Map< const VectorXd> bmap( b, N);
+        Eigen::Map< Eigen::VectorXd> xmap( x, N);
+        Eigen::Map< const Eigen::VectorXd> bmap( b, N);
         xmap = pImpl->solve( xmap);
     }
-    if( pImpl->info() != Succeeded) return false;
+    if( pImpl->info() != Eigen::Success) return false;
     return true;
 }
 } //namespace dg

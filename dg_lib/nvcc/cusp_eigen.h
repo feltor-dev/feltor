@@ -15,11 +15,11 @@ struct SimplicialCholesky
     typedef cusp::coo_matrix<int, double, cusp::host_memory> HMatrix;
     SimplicialCholesky();
     SimplicialCholesky( const HMatrix& matrix);
-    void compute( const HMatrix& matrix);
+    bool compute( const HMatrix& matrix);
     bool solve( double* x, const double* b, unsigned N);
   private:
-    class SimplicialCholeskyImpl;
-    boost::shared_ptr<SimplicialCholeskyImpl> pImpl;
+    struct Impl;
+    boost::shared_ptr<Impl > pImpl;
 };
 
 }

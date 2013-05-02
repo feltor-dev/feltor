@@ -6,8 +6,9 @@ CXX = g++
 CFLAGS = -Wall -fopenmp
 CINCLUDE = -I/usr/local/cuda/include/
 
-#GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
-GLFLAGS   = -lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
+GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
+#GLFLAGS   = -lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
+LIBS = cusp_eigen.o
 
 version: version.cu 
 	$(NVCC) $< $(NVCCFLAGS) -o $@
@@ -21,21 +22,25 @@ cusp_thrust: cusp_thrust.cu
 	$(CXX) -DDG_DEBUG $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) -o $@
 	./$@
 
-%_t: %_t.cu %.cuh
-	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(GLFLAGS) $(INCLUDE) -o $@
+%.o: %.cpp
+	$(CXX) -O3 -c $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) 
 	./$@
 
-%_b: %_b.cu %.cuh
-	$(NVCC) -O3 -w  $< $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)-o $@ 
+%_t: %_t.cu %.cuh $(LIBS)
+	$(NVCC) -DDG_DEBUG $< -o $@ $(NVCCFLAGS) $(GLFLAGS) $(LIBS) $(INCLUDE) 
+	./$@
+
+%_b: %_b.cu %.cuh $(LIBS)
+	$(NVCC) -O3 -w  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 	./$@
 
-%2d_t: %2d_t.cu %.cuh
-	$(NVCC) -DDG_DEBUG $< $(NVCCFLAGS) $(INCLUDE) -o $@
+%2d_t: %2d_t.cu %.cuh $(LIBS)
+	$(NVCC) -DDG_DEBUG $< -o $@ $(NVCCFLAGS) $(LIBS) $(INCLUDE)
 	./$@
 
-%2d_b: %2d_b.cu %.cuh
-	$(NVCC) -O3 -w  $< $(NVCCFLAGS) $(INCLUDE) -o $@ 
+%2d_b: %2d_b.cu %.cuh $(LIBS)
+	$(NVCC) -O3 -w  $< -o $@ $(NVCCFLAGS) $(LIBS) $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
 	./$@
 
