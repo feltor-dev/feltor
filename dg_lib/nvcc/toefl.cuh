@@ -7,6 +7,7 @@
 #include "dlt.h"
 #include "vector_traits.h"
 
+#include "cusp_eigen.h"
 #include "arakawa.cuh"
 #include "laplace.cuh"
 #include "functions.h"
@@ -23,7 +24,7 @@ template< class T, size_t n, class container=thrust::device_vector<T>, class Mem
 struct Toefl
 {
     typedef std::vector<container> Vector;
-    Toefl( unsigned Nx, unsigned Ny, double hx, double hy, double R, double P, double eps = 1e-6);
+    Toefl( unsigned Nx, unsigned Ny, double hx, double hy, double R, double P, double eps);
 
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
@@ -35,6 +36,9 @@ struct Toefl
     container omega, phi, dxtheta, dxphi;
     Arakawa<T, n, container, MemorySpace> arakawa; 
     CG<Matrix, container, dg::T2D<T, n> > pcg;
+
+    SimplicialCholesky cholesky;
+    thrust::host_vector<double> x,b;
     
     double hx, hy;
     double Ra, Pr;
@@ -46,16 +50,17 @@ Toefl<T, n, container, MemorySpace>::Toefl( unsigned Nx, unsigned Ny, double hx,
         double R, double P, double eps): 
     omega( n*n*Nx*Ny, 0.), phi(omega), dxtheta(omega), dxphi(omega), 
     arakawa( Nx, Ny, hx, hy, -1, 0), 
-    pcg( omega, n*n*Nx*Ny),
+    pcg( omega, n*n*Nx*Ny), x( n*n*Nx*Ny), b(n*n*Nx*Ny),
     hx( hx), hy(hy), Ra (R), Pr(P), eps(eps)
 {
-    //typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-    laplace = dg::dgtensor<double, n>
+    typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
+    HMatrix A = dg::dgtensor<double, n>
                              ( dg::create::laplace1d_dir<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
                                dg::S1D<double, n>( hy),
                                dg::create::laplace1d_per<double, n>( Nx, hx)); 
-    //laplace = A;
+    laplace = A;
+    cholesky.compute( A);
     //create derivatives
     dx = dgtensor<T,n>( tensor<T,n>(Ny, delta), create::dx_symm<value_type,n>( Nx, hx, -1));
     //dy = dy_;
@@ -80,7 +85,11 @@ void Toefl<T, n, container, MemorySpace>::operator()( const std::vector<containe
     std::cout << view2 <<std::endl;
     */
     cudaThreadSynchronize();
-    std::cout << "Number of pcg iterations "<< pcg( laplace, phi, omega, T2D<double, n>(hx, hy), eps)<<std::endl;
+    //std::cout << "Number of pcg iterations "<< pcg( laplace, phi, omega, T2D<double, n>(hx, hy), eps)<<std::endl;
+    b = omega; //copy data to host
+    cholesky.solve( x.data(), b.data(), b.size() ); //solve on host
+    phi = x; //copy data back to device
+
     for( unsigned i=0; i<y.size(); i++)
         arakawa( y[i], phi, yp[i]);
 

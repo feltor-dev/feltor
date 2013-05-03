@@ -91,6 +91,7 @@ void mapColors( const dg::ColorMapRedBlueExt& map, const ThrustVector& x, cudaGr
     assert( x.size() == size/3/sizeof(float));
 #endif //DG_DEBUG
     thrust::transform( x.begin(), x.end(), thrust::device_pointer_cast( d_buffer), map);
+    cudaThreadSynchronize();
     //unmap the resource before OpenGL uses it
     cudaGraphicsUnmapResources( 1, &resource, 0);
 }

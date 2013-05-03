@@ -2,7 +2,7 @@
 #define _DG_CUSP_EIGEN_H_
 
 #include <cusp/coo_matrix.h>
-#include <boost/shared_ptr.hpp>
+//#include <boost/shared_ptr.hpp> //nvcc cannot parse boost
 
 //USE OF PIMPL IDIOM
 //The .h files actually may not include any Eigen library since 
@@ -10,16 +10,20 @@
 //cannot be parsed by nvcc
 namespace dg{
 
+struct Impl;
+
 struct SimplicialCholesky
 {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> HMatrix;
     SimplicialCholesky();
+    ~SimplicialCholesky();
     SimplicialCholesky( const HMatrix& matrix);
     bool compute( const HMatrix& matrix);
     bool solve( double* x, const double* b, unsigned N);
   private:
-    struct Impl;
-    boost::shared_ptr<Impl > pImpl;
+    SimplicialCholesky( const SimplicialCholesky&);
+    SimplicialCholesky& operator=( const SimplicialCholesky&);
+    Impl*  pImpl;
 };
 
 }

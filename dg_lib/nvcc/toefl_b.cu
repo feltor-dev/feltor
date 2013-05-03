@@ -19,10 +19,10 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 50;
-const unsigned Ny = 25;
-const double eps = 1e-6;
-const double lx = 2.;
+const unsigned Nx = 66;
+const unsigned Ny = 22;
+
+const double lx = 3.;
 const double ly = 1.;
 
 const double Pr = 10;
@@ -30,6 +30,10 @@ const double Ra = 1e6;
 
 const unsigned k = 2;
 const double dt = 1e-6;
+
+const double eps = 1e-3; //The condition for conjugate gradient
+
+const unsigned N = 10;// only every Nth computation is visualized
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
@@ -94,14 +98,17 @@ int main()
         w.draw( visual, n*Nx, n*Ny, colors);
         t.toc();
         std::cout << "Color scale " << colors.scale() <<"\n";
-        std::cout << "Visualisation time " <<t.diff()<<"\n";
+        std::cout << "Visualisation time        " <<t.diff()<<"s\n";
         //step 
         t.tic();
-        rk( test, y0, y1, dt);
-        for( unsigned i=0; i<2; i++)
-            thrust::swap( y0[i], y1[i]);
+        for( unsigned i=0; i<N; i++)
+        {
+            rk( test, y0, y1, dt);
+            for( unsigned i=0; i<2; i++)
+                thrust::swap( y0[i], y1[i]);
+        }
         t.toc();
-        std::cout << "Timer for one step "<<t.diff()<<"\n";
+        std::cout << "Time for "<<N<<" step(s)      "<<t.diff()<<"s\n";
         //glfwWaitEvents();
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);

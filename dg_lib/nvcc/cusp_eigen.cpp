@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "cusp_eigen.h"
+#include "../../lib/timer.h"
 
 Eigen::SparseMatrix<double, Eigen::RowMajor, int> convert( const cusp::coo_matrix<int, double, cusp::host_memory>& cm)
 {
@@ -24,18 +25,28 @@ namespace dg
 
 struct Impl
 {
-    typedef Eigen::SparseMatrix<double, Eigen::RowMajor, int> EMatrix;
-    typedef Eigen::SimplicialLDLT<EMatrix> SimplicialCholeskyImpl;
+    typedef typename Eigen::SparseMatrix<double> EMatrix;
+    typedef typename Eigen::SimplicialLDLT<EMatrix> SimplicialCholeskyImpl;
     SimplicialCholeskyImpl solver;
+    toefl::Timer t;
+    Impl(): solver(){}
+    Impl( const EMatrix& matrix): solver(matrix) {}
+
 };
 
-SimplicialCholesky::SimplicialCholesky(): pImpl( new dg::Impl::SimplicialCholeskyImpl) {}
+SimplicialCholesky::SimplicialCholesky(): pImpl( new dg::Impl) {}
 SimplicialCholesky::SimplicialCholesky(const HMatrix& matrix): 
-    pImpl( new dg::Impl::SimplicialCholeskyImpl( convert(matrix))) {}
+    pImpl( new dg::Impl( convert(matrix))) {}
+
+SimplicialCholesky::~SimplicialCholesky(){ delete pImpl;}
+
 bool SimplicialCholesky::compute( const HMatrix& matrix) 
 {
-    pImpl->compute( convert( matrix));
-    if( pImpl->info() != Eigen::Success ) return false;
+    pImpl->t.tic();
+    pImpl->solver.compute( convert( matrix));
+    if( pImpl->solver.info() != Eigen::Success ) return false;
+    pImpl->t.toc();
+    std::cout << "Decomposition took " <<pImpl->t.diff()<<"s\n";
     return true;
 }
 bool SimplicialCholesky::solve( double *x, const double* b, unsigned N) 
@@ -43,15 +54,16 @@ bool SimplicialCholesky::solve( double *x, const double* b, unsigned N)
     if( x == b)
     {
         Eigen::Map< Eigen::VectorXd> xmap( x, N);
-        xmap = pImpl->solve( xmap);
+        xmap = ( (pImpl->solver).solve( xmap));
+
     }
     else
     {
         Eigen::Map< Eigen::VectorXd> xmap( x, N);
         Eigen::Map< const Eigen::VectorXd> bmap( b, N);
-        xmap = pImpl->solve( xmap);
+        xmap = (pImpl->solver).solve( bmap);
     }
-    if( pImpl->info() != Eigen::Success) return false;
+    if( pImpl->solver.info() != Eigen::Success) return false;
     return true;
 }
 } //namespace dg
