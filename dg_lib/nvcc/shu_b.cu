@@ -24,10 +24,11 @@ const unsigned Ny = 25;
 const double lx = 1.;
 const double ly = 1.;
 
-const unsigned k = 2;
-const double D = 0.01;
+const unsigned k = 3;
+const double D = 0.0;
+const double U = 1.;
 const double T = 1.;
-const unsigned NT = (unsigned)(D*T*n*n*Nx*Nx/0.01/lx/lx);
+const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
@@ -59,7 +60,7 @@ int main()
     cout << "Timestep                    " << dt << endl;
     //cout << "# of timesteps              " << NT << endl;
     cout << "Diffusion                   " << D <<endl;
-    dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, 1);
+    dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, U);
     HArrVec omega = expand< dg::Lamb, n> ( lamb, 0, lx, 0, ly, Nx, Ny);
     DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
     //DArrVec sol = expand< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
@@ -75,7 +76,7 @@ int main()
     double enstrophy = blas2::dot( y0, S2D<double, n>(hx, hy), y0);
     double energy =    blas2::dot( y0, S2D<double, n>(hx, hy), test.potential()) ;
 
-    unsigned step = 0;
+    double time = 0;
     ////////////////////////////////glfw//////////////////////////////
     //create equidistant backward transformation
     dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
@@ -88,7 +89,7 @@ int main()
     HVec hvisual( n*n*Nx*Ny);
     thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
     dg::ColorMapRedBlueExt colors( 1.);
-    while (running)
+    while (running && time < T)
     {
         //transform field to an equidistant grid
         t.tic();
@@ -111,7 +112,8 @@ int main()
         thrust::swap(y0, y1);
         t.toc();
         cout << "Timer for one step: "<<t.diff()<<"s\n";
-        cout << "STEP"<<++step<<"\t"<<dt<<endl;
+        cout << "Simulation Time "<<time<<endl;
+        time += dt;
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
