@@ -55,16 +55,21 @@ void cudaGlfwInit( int width, int height)
     glEnable(GL_TEXTURE_2D);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 }
-//N should be 3*Nx*Ny
-cudaGraphicsResource* allocateCudaGlBuffer( unsigned N )
+
+GLuint allocateGlBuffer( unsigned N)
 {
-    cudaGraphicsResource* resource;
     GLuint bufferID;
     glGenBuffers( 1, &bufferID);
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, bufferID);
     // the buffer shall contain a texture 
     glBufferData( GL_PIXEL_UNPACK_BUFFER, N*sizeof(float), NULL, GL_DYNAMIC_DRAW);
-
+    return bufferID;
+}
+//N should be 3*Nx*Ny
+cudaGraphicsResource* allocateCudaGlBuffer( unsigned N )
+{
+    cudaGraphicsResource* resource;
+    GLuint bufferID = allocateGlBuffer( N);
     //register the resource i.e. tell CUDA and OpenGL that buffer is used by both
     cudaError_t error;
     error = cudaGraphicsGLRegisterBuffer( &resource, bufferID, cudaGraphicsRegisterFlagsWriteDiscard); 
@@ -73,13 +78,14 @@ cudaGraphicsResource* allocateCudaGlBuffer( unsigned N )
     return resource;
 }
 
+
 void freeCudaGlBuffer( cudaGraphicsResource* resource)
 {
     cudaGraphicsUnregisterResource( resource);
 }
 
-template< class ThrustVector>
-void mapColors( const dg::ColorMapRedBlueExt& map, const ThrustVector& x, cudaGraphicsResource* resource)
+template< class T>
+void mapColors( const dg::ColorMapRedBlueExt& map, const thrust::device_vector<T>& x, cudaGraphicsResource* resource)
 {
     dg::Color* d_buffer;
     size_t size;
@@ -175,6 +181,57 @@ struct Window
     GLuint bufferID;
     cudaGraphicsResource* resource;  
     unsigned Nx_, Ny_;
+};
+
+struct HostWindow
+{
+    HostWindow( int width, int height){
+        Nx_ = Ny_ = 0;
+        glfwSetWindowSizeCallback( WindowResize);
+        // create window and OpenGL context bound to it
+        if( !glfwInit()) { std::cerr << "ERROR: glfw couldn't initialize.\n";}
+        if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
+        { 
+            std::cerr << "ERROR: glfw couldn't open window!\n";
+        }
+        int major, minor, rev;
+        glfwGetVersion( &major, &minor, &rev);
+        std::cout << "Using GLFW version   "<<major<<"."<<minor<<"."<<rev<<"\n";
+        //enable textures
+        glEnable(GL_TEXTURE_2D);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
+    ~HostWindow() { glfwTerminate();}
+    template< class T>
+    void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map)
+    {
+        if( Nx != Nx_ || Ny != Ny_) {
+            Nx_ = Nx; Ny_ = Ny;
+            std::cout << "Allocate resources for drawing!\n";
+            resource.resize( Nx*Ny);
+        }
+#ifdef DG_DEBUG
+        assert( x.size() == resource.size());
+#endif //DG_DEBUG
+        //map colors
+        thrust::transform( x.begin(), x.end(), resource.begin(), map);
+        //load texture
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, Nx, Ny, 0, GL_RGB, GL_FLOAT, resource.data());
+        glLoadIdentity();
+        float x0 = -1, x1 = 1, y0 = -1, y1 = 1;
+        glBegin(GL_QUADS); 
+            glTexCoord2f(0.0f, 0.0f); glVertex2f( x0, y0);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f( x1, y0);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f( x1, y1);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f( x0, y1);
+        glEnd();
+        glfwSwapBuffers();
+    }
+  private:
+    HostWindow( const HostWindow&);
+    HostWindow& operator=( const HostWindow&);
+    unsigned Nx_, Ny_;
+    thrust::host_vector<Color> resource;
 };
 
 }

@@ -1,9 +1,22 @@
 #ifndef _DG_FUNCTORS_CUH_
 #define _DG_FUNCTORS_CUH_
 
+#include <cmath>
 
 namespace dg
 {
+ 
+template <class T>
+struct AbsMax
+{
+    __host__ __device__
+    T operator() (const T& x, const T& y)
+    {
+        T absx = x>0 ? x : -x;
+        T absy = y>0 ? y : -y;
+        return absx > absy ? absx : absy;
+    }
+};
 struct Gaussian
 {
     Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)
@@ -17,6 +30,28 @@ struct Gaussian
   private:
     double  x00, y00, sigma_x, sigma_y, amplitude;
 
+};
+
+struct Lamb
+{
+    Lamb(  double x0, double y0, double R, double U):r_(R), u_(U), x0_(x0), y0_(y0)
+    {
+        gamma_ = 3.83170597020751231561;
+        lambda_ = gamma_/R;
+        j_ = j0( gamma_);
+        //std::cout << r_ <<u_<<x0_<<y0_<<lambda_<<gamma_<<j_<<std::endl;
+    }
+    double operator() (double x, double y)
+    {
+        double radius = sqrt( (x-x0_)*(x-x0_) + (y-y0_)*(y-y0_));
+        double theta = atan( (y-y0_)/(x-x0_));
+
+        if( radius <= r_)
+            return 2.*lambda_*u_*j1( lambda_*radius)/j_*cos( theta) ;
+        return 0;
+    }
+  private:
+    double r_, u_, x0_, y0_, lambda_, gamma_, j_;
 };
 
 }

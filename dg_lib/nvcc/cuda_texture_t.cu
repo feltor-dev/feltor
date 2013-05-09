@@ -25,14 +25,21 @@ typedef dg::ArrVec2d< double, n, HVec> HArrVec;
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
+using namespace std;
 int main()
 {
     //Create Window and set window title
-    dg::Window w( 400, 400);
+    //dg::Window w( 400, 400);
+    dg::HostWindow w( 400, 400);
     glfwSetWindowTitle( "Hello world\n");
     // generate a gaussian
+    /*
     dg::Gaussian g( 0.5, 0.5, .1, .1, 1);
     DArrVec vector = dg::expand<dg::Gaussian, n> ( g, 0., 1., 0., 1., Nx, Ny);
+    */
+    dg::Lamb g( 0.5, 0.5, .1, 1);
+    DArrVec vector = dg::expand<dg::Lamb, n> ( g, 0., 1., 0., 1., Nx, Ny);
+    cout  << vector<<endl;
 
     //create equidistant backward transformation
     dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
@@ -43,6 +50,7 @@ int main()
 
     //allocate storage for visual
     DVec visual( n*n*Nx*Ny);
+    HVec hvisual( n*n*Nx*Ny);
 
     //transform vector to an equidistant grid
     dg::blas2::symv( backward, vector.data(), visual);
@@ -51,14 +59,16 @@ int main()
     //create a colormap
     dg::ColorMapRedBlueExt colors( 1.);
     //compute maximum value as scale
-    colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., thrust::maximum<double>() );
+    colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
+    std::cout << "Maximum: "<<colors.scale()<<std::endl;
     
-    std::cout<< colors( 0).r << " "<<colors(0).g <<" "<<colors(0).b<< std::endl;
+    std::cout<< "Colors for x = 0: "<<colors( 0).r << " "<<colors(0).g <<" "<<colors(0).b<< std::endl;
 
     int running = GL_TRUE;
     while (running)
     {
-        w.draw( visual, n*Nx, n*Ny, colors);
+        hvisual = visual;
+        w.draw( hvisual, n*Nx, n*Ny, colors);
         glfwWaitEvents();
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
