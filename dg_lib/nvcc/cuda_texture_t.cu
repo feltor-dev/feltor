@@ -37,10 +37,8 @@ int main()
     dg::Gaussian g( 0.5, 0.5, .1, .1, 1);
     DArrVec vector = dg::expand<dg::Gaussian, n> ( g, 0., 1., 0., 1., Nx, Ny);
     */
-    dg::Lamb g( 0.5, 0.5, .1, 1);
+    dg::Lamb g( 0.5, 0.5, .3, 1);
     DArrVec vector = dg::expand<dg::Lamb, n> ( g, 0., 1., 0., 1., Nx, Ny);
-    cout  << vector<<endl;
-
     //create equidistant backward transformation
     dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
     dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);

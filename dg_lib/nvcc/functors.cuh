@@ -44,7 +44,7 @@ struct Lamb
     double operator() (double x, double y)
     {
         double radius = sqrt( (x-x0_)*(x-x0_) + (y-y0_)*(y-y0_));
-        double theta = atan( (y-y0_)/(x-x0_));
+        double theta = atan2( (y-y0_),(x-x0_));
 
         if( radius <= r_)
             return 2.*lambda_*u_*j1( lambda_*radius)/j_*cos( theta) ;
