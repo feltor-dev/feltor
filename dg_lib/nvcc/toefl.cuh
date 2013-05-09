@@ -19,7 +19,7 @@
 namespace dg
 {
 
-    //Garcia equations with switched x <-> y  and phi -> -phi
+//Garcia equations with switched x <-> y  and phi -> -phi
 template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
 struct Toefl
 {

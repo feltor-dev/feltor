@@ -6,6 +6,7 @@
 #include "blas.h"
 #include "dlt.h"
 
+#include "cusp_eigen.h"
 #include "arakawa.cuh"
 #include "laplace.cuh"
 #include "functions.h"
@@ -26,13 +27,17 @@ struct Shu
     Shu( unsigned Nx, unsigned Ny, double hx, double hy, double D, double eps = 1e-6);
 
     Matrix& lap() { return laplace;}
+    const container& potential( ) {return phi;}
+
     void operator()( const Vector& y, Vector& yp);
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
     Matrix laplace;
-    container rho, phi;
+    container omega, phi;
     Arakawa<T, n, container, MemorySpace> arakawa; 
     CG<Matrix, container, dg::T2D<T, n> > pcg;
+    SimplicialCholesky cholesky;
+    thrust::host_vector<double> x,b;
     
     double hx, hy;
     double D;
@@ -42,41 +47,39 @@ struct Shu
 template< class T, size_t n, class container, class MemorySpace>
 Shu<T, n, container, MemorySpace>::Shu( unsigned Nx, unsigned Ny, double hx, double hy,
         double D, double eps): 
-    rho( n*n*Nx*Ny, 0.), phi(rho),
-    arakawa( Nx, Ny, hx, hy, 0, 0), 
-    pcg( rho, n*n*Nx*Ny),
+    omega( n*n*Nx*Ny, 0.), phi(omega),
+    arakawa( Nx, Ny, hx, hy, 0, -1), 
+    pcg( omega, n*n*Nx*Ny), x( n*n*Nx*Ny), b( n*n*Nx*Ny),
     hx( hx), hy(hy), D(D), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
     HMatrix A = dg::dgtensor<double, n>
-                             ( dg::create::laplace1d_dir<double, n>( Ny, hy), 
+                             ( dg::create::laplace1d_per<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
                                dg::S1D<double, n>( hy),
                                dg::create::laplace1d_dir<double, n>( Nx, hx)); 
     laplace = A;
+    cholesky.compute( A);
 }
 
 template< class T, size_t n, class container, class MemorySpace>
 void Shu<T, n, container, MemorySpace>::operator()( const Vector& y, Vector& yp)
 {
     dg::blas2::symv( laplace, y, yp);
-    //laplace is unnormalized -laplace
-    dg::blas2::symv( -D, dg::T2D<T,n>(hx, hy), yp, 0., yp); 
-
-    //rho = y;
+    dg::blas2::symv( -D, dg::T2D<T,n>(hx, hy), yp, 0., yp); //laplace is unnormalized -laplace
     cudaThreadSynchronize();
-    blas1::axpby( 1., y, 0, rho);
+    //compute S omega
+    blas2::symv( S2D<double, n>(hx, hy), y, omega);
     cudaThreadSynchronize();
-    //compute S rho
-    blas2::symv( S2D<double, n>(hx, hy), rho, rho);
+    //blas1::axpby( 0., phi, 0., phi);
+    //unsigned number = pcg( laplace, phi, omega, T2D<double, n>(hx, hy), eps);
+    //std::cout << "Number of pcg iterations "<< number<<"\n"; 
+    b = omega; //copy data to host
+    cholesky.solve( x.data(), b.data(), b.size()); //solve on host
+    phi = x; //copy data back to device
+    arakawa( y, phi, omega); //A(y,phi)-> omega
     cudaThreadSynchronize();
-    blas1::axpby( 0., phi, 0., phi);
-    unsigned number = pcg( laplace, phi, rho, T2D<double, n>(hx, hy), eps);
-    std::cout << "Number of pcg iterations "<< number<<"\n"; 
-    for( unsigned i=0; i<y.size(); i++)
-        arakawa( y, phi, rho); //A(y,phi)-> rho
-    cudaThreadSynchronize();
-    blas1::axpby( 1., rho, 1., yp);
+    blas1::axpby( 1., omega, 1., yp);
     cudaThreadSynchronize();
 
 }

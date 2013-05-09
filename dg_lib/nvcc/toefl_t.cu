@@ -72,6 +72,7 @@ int main()
     //create visualisation vectors
     int running = GL_TRUE;
     DVec visual( n*n*Nx*Ny);
+    HVec hvisual( n*n*Nx*Ny);
     thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
     DArrVec ground = expand< double(&)(double, double), n> ( groundState, 0, lx, 0, ly, Nx, Ny), temperature( ground);
     dg::ColorMapRedBlueExt colors( 1.);
@@ -84,10 +85,11 @@ int main()
         dg::blas2::symv( backward, temperature.data(), visual);
         thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
         //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., thrust::maximum<double>() );
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., thrust::AbsMax<double>() );
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
-        w.draw( visual, n*Nx, n*Ny, colors);
+        hvisual = visual;
+        w.draw( hvisual, n*Nx, n*Ny, colors);
         //step 
         rk( test, y0, y1, dt);
         for( unsigned i=0; i<2; i++)

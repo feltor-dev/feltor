@@ -50,6 +50,8 @@ struct Lamb
             return 2.*lambda_*u_*j1( lambda_*radius)/j_*cos( theta) ;
         return 0;
     }
+    double enstrophy( ) { return M_PI*u_*u_*gamma_*gamma_;}
+    double energy() { return 2.*M_PI*r_*r_*u_*u_;}
   private:
     double r_, u_, x0_, y0_, lambda_, gamma_, j_;
 };
