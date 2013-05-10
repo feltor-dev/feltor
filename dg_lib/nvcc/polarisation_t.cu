@@ -31,10 +31,12 @@ typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 typedef cusp::device_memory Memory;
 
 double initial( double x) {return sin(0);}
-double polarisation( double x) {return sin(x); }
+//double pol( double x) {return sin(x); }
+double pol( double x) {return 1.; }
 
-double rhs( double x) { return 1.-2.*cos(x)*cos(x);}
-double solution(double x){ return sin( x);}
+//double rhs( double x) { return 1.-2.*cos(x)*cos(x);}
+double rhs( double x) { return sin(x);}
+double sol(double x){ return sin( x);}
 
 using namespace std;
 
@@ -44,8 +46,8 @@ int main()
     //create functions A(chi) x = b
     HArrVec x = dg::expand<double (&)(double), n> ( initial, 0,lx, N);
     HArrVec b = dg::expand<double (&)(double), n> ( rhs, 0,lx, N);
-    HArrVec chi = dg::expand<double (&)(double), n> ( polarisation, 0,lx, N);
-    const HArrVec solution = dg::expand<double (&)(double, double), n> (solution, 0 ,lx, N);
+    HArrVec chi = dg::expand<double (&)(double), n> ( pol, 0,lx, N);
+    const HArrVec solution = dg::expand<double (&)(double), n> (sol, 0 ,lx, N);
     HArrVec error(solution);
 
     //copy data to device memory
@@ -53,9 +55,13 @@ int main()
     const DArrVec dsolution( solution.data());
     cusp::array1d_view<DVec::iterator> dchi_view( dchi.data().begin(), dchi.data().end());
 
+    cout << "Create Polarisation object!\n";
     dg::Polarisation<double, n, Memory> pol( N, h, 0);
 
-    DMatrix A = pol.create( sine_view ); 
+    cout << "Create Polarisation matrix!\n";
+
+    DMatrix A = pol.create( dchi_view ); 
+    cout << "Create conjugate gradient!\n";
     dg::CG<DMatrix, DVec, Preconditioner > pcg( dx.data(), n*N);
 
     cout << "# of polynomial coefficients: "<< n <<endl;
@@ -63,8 +69,7 @@ int main()
     //compute S b
     dg::blas2::symv( dg::S1D<double, n>(h), db.data(), db.data());
     cudaThreadSynchronize();
-    //std::cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(h), eps)<<endl;
-    std::cout << "Number of cg iterations "<< cg( A, dx.data(), db.data(), dg::Identity<double>(), eps)<<endl;
+    std::cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(h), eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
     dg::blas1::axpby( 1.,dx.data(),-1.,derror.data());

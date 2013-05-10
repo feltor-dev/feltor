@@ -12,7 +12,7 @@
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 const unsigned N = 100;  //more N means less iterations for same error
 
-const double lx = M_PI;
+const double lx = 2.*M_PI;
 const double h = lx/(double)N;
 const double eps = 1e-7; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
@@ -36,7 +36,7 @@ using namespace std;
 int main()
 {
     HArrVec x = dg::expand<double (&)(double), n> ( initial, 0,lx, N);
-    DMatrix A = dg::create::laplace1d_dir<n>( N, h); 
+    DMatrix A = dg::create::laplace1d_dir<double, n>( N, h); 
     dg::CG<DMatrix, DVec, Preconditioner > pcg( x.data(), n*N);
     dg::CG<DMatrix, DVec> cg( x.data(), n*N);
     HArrVec b = dg::expand<double (&)(double), n> ( sine, 0,lx, N);
@@ -52,8 +52,8 @@ int main()
     //compute S b
     dg::blas2::symv( dg::S1D<double, n>(h), db.data(), db.data());
     cudaThreadSynchronize();
-    //std::cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(h), eps)<<endl;
-    std::cout << "Number of cg iterations "<< cg( A, dx.data(), db.data(), dg::Identity<double>(), eps)<<endl;
+    std::cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(h), eps)<<endl;
+    //std::cout << "Number of cg iterations "<< cg( A, dx.data(), db.data(), dg::Identity<double>(), eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
     dg::blas1::axpby( 1.,dx.data(),-1.,derror.data());
