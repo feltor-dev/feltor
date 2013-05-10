@@ -46,11 +46,6 @@ Polarisation<T,n, Memory>::Polarisation( unsigned N, T h, int bc): I(n*N), J(I),
     Operator<T,n> weights(0.);
     for( unsigned i=0; i<n; i++)
         weights(i,i) = DLT<n>::weight[i]*h/2.; // normalisation because F is invariant
-    /*
-    Operator<T,n> weights(dg::pipj);
-    weights *= +1;
-    weights *= h/2.;
-    */
     middle = tensor<T,n>( N, weights*backward);
     jump = create::jump_ot<T,n>( N, bc); //without jump cg is unstable
 
@@ -62,16 +57,9 @@ cusp::coo_matrix<int, T, Memory> Polarisation<T,n, Memory>::create( const Vector
     Matrix laplace;
     cusp::multiply( middle, chi, xspace);
     cusp::coo_matrix_view<Array, Array, Vector,  int, T, Memory> chi_view( n*N, n*N, n*N, I, J, xspace);
-    //std::cout << "Hello world\n";
-    //std::cout << "rows "<<right.num_rows<<" cols "<<right.num_cols<<" values "<<right.num_entries<<std::endl;
-    //std::cout << "rows "<<left.num_rows<<" cols "<<left.num_cols<<" values "<<left.num_entries<<std::endl;
     cusp::multiply( chi_view, right, laplace);
-    //std::cout << "Hello world\n";
-    //std::cout << "rows "<<laplace.num_rows<<" cols "<<laplace.num_cols<<" values "<<laplace.num_entries<<std::endl;
     cusp::multiply( left, laplace, laplace);
     cusp::add( laplace, jump, laplace);
-    //std::cout << "Hello world\n";
-    //std::cout << "rows "<<laplace.num_rows<<" cols "<<laplace.num_cols<<" values "<<laplace.num_entries<<std::endl;
     return laplace;
 }
 

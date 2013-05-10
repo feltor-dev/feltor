@@ -13,8 +13,8 @@
 #include "preconditioner.cuh"
 #include "functions.h"
 
-const unsigned n = 2; //global relative error in L2 norm is O(h^P)
-const unsigned N = 3;  //more N means less iterations for same error
+const unsigned n = 3; //global relative error in L2 norm is O(h^P)
+const unsigned N = 100;  //more N means less iterations for same error
 
 const double lx = 2.*M_PI;
 const double h = lx/(double)N;
@@ -61,10 +61,7 @@ int main()
     dg::Polarisation<double, n, Memory> pol( N, h, 0);
     cout << "Create Polarisation matrix!\n";
     DMatrix A = pol.create( dchi_view ); 
-    cusp::print( A);
-    cout << "Correct Matrix\n";
-    DMatrix B = dg::create::laplace1d_dir<double, n>( N, h); 
-    cusp::print( B);
+    //DMatrix B = dg::create::laplace1d_dir<double, n>( N, h); 
     cout << "Create conjugate gradient!\n";
     dg::CG<DMatrix, DVec, Preconditioner > pcg( dx.data(), n*N);
 
