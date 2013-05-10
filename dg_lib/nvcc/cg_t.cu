@@ -57,12 +57,14 @@ int main()
     cout << "For a precision of "<< eps<<endl;
     //compute error
     dg::blas1::axpby( 1.,dx.data(),-1.,derror.data());
+    /*
     //and Ax
     DArrVec dbx(dx);
     dg::blas2::symv(  A, dx.data(), dbx.data());
     cudaThreadSynchronize();
 
     cout<< dx <<endl;
+    */
 
     double eps = dg::blas2::dot( dg::S1D<double, n>(h), derror.data());
     cout << "L2 Norm2 of Error is " << eps << endl;

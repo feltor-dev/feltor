@@ -4,6 +4,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
+#include <cusp/print.h>
+
 #include "polarisation.cuh"
 #include "evaluation.cuh"
 #include "cg.cuh"
@@ -11,8 +13,8 @@
 #include "preconditioner.cuh"
 #include "functions.h"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned N = 100;  //more N means less iterations for same error
+const unsigned n = 2; //global relative error in L2 norm is O(h^P)
+const unsigned N = 3;  //more N means less iterations for same error
 
 const double lx = 2.*M_PI;
 const double h = lx/(double)N;
@@ -35,8 +37,8 @@ double initial( double x) {return sin(0);}
 double pol( double x) {return 1.; }
 
 //double rhs( double x) { return 1.-2.*cos(x)*cos(x);}
-double rhs( double x) { return sin(x);}
-double sol(double x){ return sin( x);}
+double rhs( double x) { return sin( x);}
+double sol(double x)  { return sin( x);}
 
 using namespace std;
 
@@ -57,10 +59,12 @@ int main()
 
     cout << "Create Polarisation object!\n";
     dg::Polarisation<double, n, Memory> pol( N, h, 0);
-
     cout << "Create Polarisation matrix!\n";
-
     DMatrix A = pol.create( dchi_view ); 
+    cusp::print( A);
+    cout << "Correct Matrix\n";
+    DMatrix B = dg::create::laplace1d_dir<double, n>( N, h); 
+    cusp::print( B);
     cout << "Create conjugate gradient!\n";
     dg::CG<DMatrix, DVec, Preconditioner > pcg( dx.data(), n*N);
 
@@ -79,8 +83,6 @@ int main()
     double norm = dg::blas2::dot( dg::S1D<double, n>(h), dsolution.data());
     std::cout << "L2 Norm of relative error is "<<sqrt( eps/norm)<<std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
-
-
 
     return 0;
 }

@@ -177,7 +177,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, int bc = -1)
     Operator<T, n> rl(dg::rilj);
     Operator< T, n> a = l+r;
     Operator< T, n> b = -rl;
-    Operator< T, n> bp = b.transpose(); 
+    Operator< T, n> bp = -lr; 
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
