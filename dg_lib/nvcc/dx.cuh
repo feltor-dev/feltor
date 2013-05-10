@@ -91,7 +91,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, int bc = -
     return A;
 };
 
-//boundary values incorrect for dirichlet, and we need interior bc
 /**
 * @brief Create and assemble a cusp Matrix for the periodic 1d single derivative
 *
@@ -106,9 +105,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, int bc = -
 * @return Host Matrix in coordinate form 
 */
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm( unsigned N, T h, int bc = -1, int asym = +1)
+cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, int bc = -1)
 {
-    assert( asym == +1 || asym == -1);
     unsigned size;
     if( bc < 0) //periodic
         size = 2*n*n*N;
@@ -125,62 +123,35 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm( unsigned N, T h, int bc = 
     Operator<T, n> d( dg::pidxpj);
     Operator<T, n> t( dg::pipj_inv);
     t *= 2./h;
-    Operator< T, n> a = t*(d+l);
-    if( asym == +1)
-        a = t*(-l-d.transpose());
+    Operator<T, n>  a = t*(-l-d.transpose());
+    Operator< T, n> a_bound_left = t*(-d.transpose());
+    if( bc < 0) //periodic bc
+        a_bound_left = a;
     Operator< T, n> b = t*(rl);
     Operator< T, n> bp = t*(-lr); //pitfall: T*-m^T is NOT -(T*m)^T
-    //std::cout << a << "\n"<<b <<std::endl;
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, 0,0,k,l, a(k,l)); //1 x A
-        if( asym == +1)
-        {
-            for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
-        }
-        if( asym == -1)
-        {
-            if( bc <0 )
-            {
-                for( unsigned l=0; l<n; l++)
-                    detail::add_index<T, n>( A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
-            }
-        }
+            detail::add_index<T, n>( A, number, 0,0,k,l, a_bound_left(k,l)); //1 x A
+        for( unsigned l=0; l<n; l++)
+            detail::add_index<T, n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
     }
     for( unsigned i=1; i<N-1; i++)
         for( unsigned k=0; k<n; k++)
         {
-            if( asym == -1)
-            {
-                for( unsigned l=0; l<n; l++)
-                    detail::add_index<T, n>(A, number, i, i-1, k, l, bp(k,l));
-            }
             for( unsigned l=0; l<n; l++)
                 detail::add_index<T, n>(A, number, i, i, k, l, a(k,l));
-            if( asym == +1)
-            {
-                for( unsigned l=0; l<n; l++)
-                    detail::add_index<T, n>(A, number, i, i+1, k, l, b(k,l));
-            }
+            for( unsigned l=0; l<n; l++)
+                detail::add_index<T, n>(A, number, i, i+1, k, l, b(k,l));
         }
     for( unsigned k=0; k<n; k++)
     {
-        if( asym == +1)
+        if( bc < 0)
         {
-            if( bc < 0)
-            {
-                for( unsigned l=0; l<n; l++) 
-                    detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
-            }
-        }
-        if( asym == -1)
-        {
-            for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>( A, number, N-1,N-2,k,l, bp(k,l));
+            for( unsigned l=0; l<n; l++) 
+                detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
         }
         for( unsigned l=0; l<n; l++)
             detail::add_index<T, n>( A, number, N-1,N-1,k,l, a(k,l));
@@ -189,7 +160,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm( unsigned N, T h, int bc = 
 };
 
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> jump( unsigned N, int bc = -1)
+cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, int bc = -1)
 {
     unsigned size;
     if( bc < 0) //periodic

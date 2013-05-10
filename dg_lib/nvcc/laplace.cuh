@@ -145,6 +145,28 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T al
 
 } //namespace create
 
+//as far as i see in the source code cusp only supports coo - coo matrix
+//-matrix multiplication
+template< class T, size_t n>
+struct NonlinearLaplace
+{
+    typedef cusp::coo_matrix<int, T, cusp::device_memory> DMartrix;
+    NonlinearLaplace( unsigned N, T h, int bc);
+    DMatrix operator()( const thrust::device_vector<T>& );
+  private:
+    DMatrix left, right;
+
+};
+template <class T, size_t n>
+NonlinearLaplace<T,n>::NonlinearLaplace( unsigned N, T h, int bc):
+    //allocate left and right
+{
+    //assemble left and right
+}
+
+template< class T, size_t n>
+DMatrix NonlinearLaplace::operator()( const thrust::device_vector<T>& n)
+
 } //namespace dg
 
 #endif // _DG_LAPLACE_CUH
