@@ -203,8 +203,8 @@ unsigned CG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vecto
         cudaThreadSynchronize();
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
-        //std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
-        //std::cout << "Relative "<<sqrt( nrm2r_new)/nrmb << "\n";
+        std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
+        std::cout << "Relative "<<sqrt( nrm2r_new)/nrmb << "\n";
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*nrmb + eps) 
             return i;

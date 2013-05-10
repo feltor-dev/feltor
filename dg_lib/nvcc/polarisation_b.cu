@@ -5,6 +5,7 @@
 #include <thrust/device_vector.h>
 
 #include <cusp/print.h>
+#include "timer.cuh"
 
 #include "polarisation.cuh"
 #include "evaluation.cuh"
@@ -44,6 +45,7 @@ using namespace std;
 
 int main()
 {
+    dg::Timer t;
 
     //create functions A(chi) x = b
     HArrVec x = dg::expand<double (&)(double), n> ( initial, 0,lx, N);
@@ -60,8 +62,12 @@ int main()
     cout << "Create Polarisation object!\n";
     dg::Polarisation<double, n, Memory> pol( N, h, 0);
     cout << "Create Polarisation matrix!\n";
+    t.tic();
     DMatrix A = pol.create( dchi_view ); 
+    t.toc();
+    cout << "took "<<t.diff()<<"s\n";
     //DMatrix B = dg::create::laplace1d_dir<double, n>( N, h); 
+
     cout << "Create conjugate gradient!\n";
     dg::CG<DMatrix, DVec, Preconditioner > pcg( dx.data(), n*N);
 
@@ -70,8 +76,11 @@ int main()
     //compute S b
     dg::blas2::symv( dg::S1D<double, n>(h), db.data(), db.data());
     cudaThreadSynchronize();
+    t.tic();
     std::cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(h), eps)<<endl;
+    t.toc();
     cout << "For a precision of "<< eps<<endl;
+    cout << "took "<<t.diff()<<"s\n";
     //compute error
     dg::blas1::axpby( 1.,dx.data(),-1.,derror.data());
 
