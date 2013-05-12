@@ -7,6 +7,7 @@
 #include <cusp/transpose.h>
 
 #include "functions.h"
+#include "tensor.cuh"
 #include "operator.cuh"
 #include "operator_matrix.cuh"
 #include "creation.cuh"
@@ -67,7 +68,7 @@ struct Polarisation2d
 {
     typedef cusp::coo_matrix<int, T, Memory> Matrix;
     typedef cusp::array1d<T, Memory> Vector;
-    Polarisation2d( unsigned Nx, unsigned Ny, T hx, T hy int bcx, int bcy);
+    Polarisation2d( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
     Matrix create( const Vector& );
   private:
     typedef cusp::array1d<int, Memory> Array;
@@ -94,15 +95,17 @@ Polarisation2d<T,n, Memory>::Polarisation2d( unsigned Nx, unsigned Ny, T hx, T h
     cusp::multiply( middle, righty, righty);
     cusp::transpose( rightx, leftx); 
     cusp::transpose( righty, lefty); 
-    Operator<T,n> weights(0.);
+    Operator<T,n> weightsx(0.), weightsy(0.);
     for( unsigned i=0; i<n; i++)
-        weights(i,i) = DLT<n>::weight[i]*h/2.; // normalisation because F is invariant
-    Operator<T, n*n> weights2d = tensor( weights, weights);
-    middle = tensor<T,n>( Nx*Ny, weights2d*backward2d);
+        weightsx(i,i) = DLT<n>::weight[i]*hx/2.; // normalisation because F is invariant
+    for( unsigned i=0; i<n; i++)
+        weightsy(i,i) = DLT<n>::weight[i]*hy/2.; // normalisation because F is invariant
+    Operator<T, n*n> weights2d = tensor( weightsy, weightsx);
+    middle = tensor( Nx*Ny, weights2d*backward2d);
     jumpx = create::jump_ot<T,n>( Nx, bcx); //without jump cg is unstable
-    jumpx = dg::dgtensor( tensor<T,n>(Ny, delta), jumpx);
+    jumpx = dg::dgtensor<T,n>( tensor<T,n>(Ny, delta), jumpx);
     jumpy = create::jump_ot<T,n>( Ny, bcy); //without jump cg is unstable
-    jumpx = dg::dgtensor( jumpy, tensor<T,n>(Nx, delta));
+    jumpy = dg::dgtensor<T,n>( jumpy, tensor<T,n>(Nx, delta));
 
 }
 
