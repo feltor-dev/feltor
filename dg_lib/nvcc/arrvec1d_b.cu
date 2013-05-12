@@ -13,7 +13,7 @@ typedef double real;
 
 
 const unsigned P = 3;
-const unsigned N = 1e6;
+const unsigned N = 1e7; //GPU starts to pay off > 1e4 points
 
 typedef thrust::device_vector<double> DVec;
 typedef thrust::host_vector<double> HVec;
