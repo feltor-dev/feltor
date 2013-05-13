@@ -28,19 +28,17 @@ const unsigned k = 3;
 const double D = 0.0;
 const double U = 1.;
 const double T = 1.;
-const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
+const unsigned NT = (unsigned)(T*n*Nx/0.05/lx);
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
 typedef dg::ArrVec2d< double, n, HVec>  HArrVec;
 typedef dg::ArrVec2d< double, n, DVec>  DArrVec;
+
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
-
-double initial( double x, double y){return 2.*sin(x)*sin(y);}
-double solution( double x, double y) {return 2.*sin(x)*sin(y)*exp( -2.*T*D);}
-
+typedef cusp::device_memory Memory;
 
 using namespace std;
 
@@ -63,10 +61,11 @@ int main()
     dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, U);
     HArrVec omega = expand< dg::Lamb, n> ( lamb, 0, lx, 0, ly, Nx, Ny);
     DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
-    //DArrVec sol = expand< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
+    DVec sol = omega.data();
     DVec y0( omega.data()), y1( y0);
-    Shu<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, D);
-    RK< 3, Shu<double, n, DVec, cusp::device_memory> > rk( y0);
+    //make solver and stepper
+    Shu<double, n, DVec, Memory> test( Nx, Ny, hx, hy, D);
+    RK< 3, Shu<double, n, DVec, Memory> > rk( y0);
 
     t.tic();
     test( y0, y1);
@@ -93,10 +92,10 @@ int main()
     {
         //transform field to an equidistant grid
         t.tic();
-        cout << "Total vorticity is: "<<blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
-        cout << "Total enstrophy is: "<<blas2::dot( S2D<double, n>(hx, hy), y0)<<"\n";
+        cout << "Total vorticity           is: "<<blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
+        cout << "Relative enstrophy error  is: "<<(blas2::dot( S2D<double, n>(hx, hy), y0) - enstrophy)/enstrophy<<"\n";
         test( y0, y1); //get the potential ready
-        cout << "Total energy    is: "<<blas2::dot( test.potential(), S2D<double, n>(hx, hy), y0)<<"\n";
+        cout << "Relative energy error     is: "<<(blas2::dot( test.potential(), S2D<double, n>(hx, hy), y0) - energy)/energy<<"\n";
         t.toc();
         dg::blas2::symv( backward, y0, visual);
         thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
@@ -119,14 +118,18 @@ int main()
                     glfwGetWindowParam( GLFW_OPENED);
     }
     ////////////////////////////////////////////////////////////////////
-    /*
-    cout << "Total vorticity is: "<< blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
-    cout << "Total enstrophy  is "<<blas2::dot( y0, S2D<double, n>(hx, hy), y0)<<"\n";
-    blas1::axpby( 1., sol.data(), -1., y0);
-    cudaThreadSynchronize();
-    cout << "Distance to solution "<<sqrt( blas2::dot( S2D<double, n>(hx, hy), y0))<<endl; //don't forget sqrt when comuting errors
-    */
+    cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
+    cout << "Analytic formula energy    "<<lamb.energy()<<endl;
+    cout << "Total vorticity           is: "<<blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
+    cout << "Relative enstrophy error  is: "<<(blas2::dot( S2D<double, n>(hx, hy), y0) - enstrophy)/enstrophy<<"\n";
+    test( y0, y1); //get the potential ready
+    cout << "Relative energy error     is: "<<(blas2::dot( test.potential(), S2D<double, n>(hx, hy), y0) - energy)/energy<<"\n";
 
+    blas1::axpby( 1., y0, -1, sol);
+    cout << "Distance to solution: "<<sqrt(blas2::dot( S2D<double,n>(hx,hy), sol ))<<endl;
+
+    double x; 
+    cin >> x;
     return 0;
 
 }

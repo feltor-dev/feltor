@@ -48,7 +48,7 @@ template< class T, size_t n, class container, class MemorySpace>
 Shu<T, n, container, MemorySpace>::Shu( unsigned Nx, unsigned Ny, double hx, double hy,
         double D, double eps): 
     omega( n*n*Nx*Ny, 0.), phi(omega),
-    arakawa( Nx, Ny, hx, hy, 0, -1), 
+    arakawa( Nx, Ny, hx, hy, -1, -1), 
     pcg( omega, n*n*Nx*Ny), x( n*n*Nx*Ny), b( n*n*Nx*Ny),
     hx( hx), hy(hy), D(D), eps(eps)
 {
@@ -57,7 +57,7 @@ Shu<T, n, container, MemorySpace>::Shu( unsigned Nx, unsigned Ny, double hx, dou
                              ( dg::create::laplace1d_per<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
                                dg::S1D<double, n>( hy),
-                               dg::create::laplace1d_dir<double, n>( Nx, hx)); 
+                               dg::create::laplace1d_per<double, n>( Nx, hx)); 
     laplace = A;
     cholesky.compute( A);
 }
