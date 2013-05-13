@@ -56,6 +56,26 @@ struct Lamb
     double r_, u_, x0_, y0_, lambda_, gamma_, j_;
 };
 
+template< class T>
+struct EXP 
+{
+    __host__ __device__
+    T operator() (const T& x) 
+    { 
+        return exp(x);
+    }
+};
+template < class T>
+struct LN
+{
+    __host__ __device__
+    T operator() (const T& x) 
+    { 
+        return ln(x);
+    }
+
+};
+
 }
 
 #endif //_DG_FUNCTORS_CUH
