@@ -143,42 +143,74 @@ have to solve the system
     n_{i/z}\kappa(\Gamma_{1i/z}\phi) + \tau_{i/z}\kappa(n_{i/z}) \\
     %\frac{\partial n_z}{\partial t} + \{\Gamma_{1z}\phi, n_z\} &= n_z\kappa(\Gamma_{1z}\phi) +
     %\tau_z\kappa(n_z) \\
-    \vec \nabla\cdot\left[ (a_i \mu_i n_i + a_z \mu_z\ n_z)\vec \nabla \phi \right] &= 
-        n_e - \Gamma_{1i}n_i - a_z \Gamma_{1z} n_z
+    \vec \nabla\cdot\left[ (a_i \mu_i n_i + a_z \mu_z n_z)\vec \nabla \phi \right] &= 
+        n_e - a_i\Gamma_{1i}n_i - a_z \Gamma_{1z} n_z
+        \label{}
+    \end{align}
+    \label{}
+\end{subequations}
+\section{Logarithmic formulation}
+In order for the polarisation equation to have a well defined solution it is very important 
+that the polarisation $a_i\mu_i n_i + a_z\mu_zn_z$ be strictly positive in the whole 
+computational domain. To this end we reformulate our equations in terms of logarithmic
+densities instead of the densities itself. We call $g_e := ln(n_e)$, $g_{i/z} := ln(n_{i/z}$
+and set $d=0$. 
+\begin{subequations}
+    \begin{align}
+    \frac{\partial g_e}{\partial t} + \{\phi, g_e\} &= \kappa(\phi) - \kappa(g_e) \\
+    \frac{\partial g_{i/z}}{\partial t} + \{\Gamma_{1i/z}\phi, g_{i/z}\} &= 
+    \kappa(\Gamma_{1i/z}\phi) + \tau_{i/z}\kappa(g_{i/z}) \\
+    \vec \nabla\cdot\left[ (a_i \mu_i e^{g_i} + a_z \mu_z e^{g_z})\vec \nabla \phi \right] &= 
+        e^{g_e} - a_i\Gamma_{1i}e^{g_i} - a_z \Gamma_{1z} e^{g_z}
         \label{}
     \end{align}
     \label{}
 \end{subequations}
 
 \section{Boundary conditions}
-We follow [Garcia et al., Phys. Scr. T122 89, 2006] in the choice of 
-the boundary conditions. 
-In the $y$ coordinate all quantities are periodic. 
-In the $x$ coordinate we distinguish between the inner wall situated at $x=0$ and
-the outer wall situated at $x=L_x$.
-We impede all particle fluxes on the inner boundary by setting
+In the $y$-coordinate all quantities are periodic. 
+Densities take their background value $n_{z0}$ at the left and
+right boundary so that the normalized quantities $n_z(x=0,1) = 1$. 
+That means
 \begin{align}
-    \phi = 0, \ \ \frac{\partial n_z}{\partial x} = 0
-    \label{}
-\end{align} 
-and model the incoming particle flux as a source term $S\propto exp\left( -\frac{x^2}{2\sigma_x^2} \right)$, i.e. a half gaussian situated at the edge. 
-On the other side we choose
-\begin{align}
-    \phi = 0, \ \ n_z-1=0
+    g_z( x=0, 1) = 0
     \label{}
 \end{align}
-i.e. we stop the convective flux accross the boundaries but allow for a diffusive
-flux. (A diffusive term is still absent in our equations, note 
-that $\kappa = \kappa_y\partial_y$, i.e. curvature driven flux is in $y$ only)
-The SOL is modelled via a damping term in the density equations. (Q: What happens
-with the coupling term $d(\phi-n_e)$ in HW equations and what is 
-with the modified HW and zonal flows?
-A: In the SOL the parallel current is damped (almost) to zero (seen e.g. in GEMR 
-simulations) by the limiter, i.e. we set $d=0$ for $x>x_l$) 
-If the last closed flux surface is situated
-at $x_l$ the particle density is damped towards $n_0$ in the whole region
-next to the SOL. $\delta \propto [1+\tanh(\frac{x-x_l}{\sigma_l})]$. This
-models particle losses due to open field lines.
+For $\phi$ we also choose homogeneous Dirichlet conditions at the 
+left and right wall:
+\begin{align}
+    \phi(x=0,1) = 0
+    \label{}
+\end{align}
+
+%We follow [Garcia et al., Phys. Scr. T122 89, 2006] in the choice of 
+%the boundary conditions. 
+%In the $y$ coordinate all quantities are periodic. 
+%In the $x$ coordinate we distinguish between the inner wall situated at $x=0$ and
+%the outer wall situated at $x=L_x$.
+%We impede all particle fluxes on the inner boundary by setting
+%\begin{align}
+%    \phi = 0, \ \ \frac{\partial n_z}{\partial x} = 0
+%    \label{}
+%\end{align} 
+%and model the incoming particle flux as a source term $S\propto exp\left( -\frac{x^2}{2\sigma_x^2} \right)$, i.e. a half gaussian situated at the edge. 
+%On the other side we choose
+%\begin{align}
+%    \phi = 0, \ \ n_z-1=0
+%    \label{}
+%\end{align}
+%i.e. we stop the convective flux accross the boundaries but allow for a diffusive
+%flux. (A diffusive term is still absent in our equations, note 
+%that $\kappa = \kappa_y\partial_y$, i.e. curvature driven flux is in $y$ only)
+%The SOL is modelled via a damping term in the density equations. (Q: What happens
+%with the coupling term $d(\phi-n_e)$ in HW equations and what is 
+%with the modified HW and zonal flows?
+%A: In the SOL the parallel current is damped (almost) to zero (seen e.g. in GEMR 
+%simulations) by the limiter, i.e. we set $d=0$ for $x>x_l$) 
+%If the last closed flux surface is situated
+%at $x_l$ the particle density is damped towards $n_0$ in the whole region
+%next to the SOL. $\delta \propto [1+\tanh(\frac{x-x_l}{\sigma_l})]$. This
+%models particle losses due to open field lines.
 
 
 \end{document}

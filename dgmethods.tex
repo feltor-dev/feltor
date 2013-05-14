@@ -25,110 +25,69 @@
 \maketitle
 
 \begin{abstract}
-    In this report we review the discontinuous Galerkin methods used to discretize the global toefl equations. 
+In this report we review the discontinuous Galerkin methods used to discretize the toefl equations. 
+We first give a short introduction and then derive 
+a discretization for the first derivative of a 1D function. 
+This is then used to construct
+a new 'Arakawa-like' scheme used to discretize Poisson's bracket. 
+We present the numerically found orders and conservation properties.
+For the Laplacian we basically follow the existing literature and present 
+the method to solve Poisson's equation with periodic and dirichlet boundary
+conditions in 1D and 2D. 
+Combined with a Runge-Kutta method to discretize time we then analyze the 
+numerical conservation of vorticity, enstrophy and energy of the 
+so-called Lamb dipole. 
 \end{abstract}
 
 \section{Introduction}
-The name discontinuous Galerkin (DG) compasses a whole family of discretization
-methods for elliptic and the spatial derivatives of hyperbolic and parabolic
-differential equations. 
-The main idea of a Discontinuous Galerkin (DG) method is to approximate the solution 
+The name discontinuous Galerkin (DG) encompasses a whole family of 
+discretization methods for the spatial part of differential equations. 
+The main idea of a Discontinuous Galerkin method is to approximate the solution 
 of a differential equation by a polynomial in each grid-cell. 
 In classical finite element methods continuity is required across cell boundaries. 
 DG methods in contrast allow discontinuities across cell boundaries. 
 A major benefit of DG above other discretization methods is their high parallelizability,
 while retaining high order at the same time. This is because the resulting 
- stencils remain local.
+ stencils remain local. Moreover, in the same framework, higher/lower
+order methods can be constructed by simply increasing/decreasing the degree of 
+the polynomials used in each cell. 
 
-We will use the so called local discontinuous Galerkin method (LDG) in order 
-to discretize the Laplacians and Runge-Kutta DG methods (RKDG) for 
-the consistent discretization of convective derivatives. The latter methods
+We will use the so-called local discontinuous Galerkin method (LDG) in order 
+to discretize the Laplacian. Together with a specially constructed Runge-Kutta 
+scheme for time-discretization this will lead to the Runge-Kutta discontinuous galerkin methods (RKDG). 
+The latter methods
 have developped hand in hand with the flux-conservative and slope-limiter 
 concepts in finite volume methods, and thus are well - suited for 
 conservation equations and can be easily made shock-capturing. 
 This hopefully balances the disadvantage of multiple right-hand-side
 evaluations above multistep or multivalue algorithms.
-We will follow [Liu, Journal of Computational Physics, 2000] 
-in discretizing the convective part of our equations.
 Local discontinuous Galerkin methods were actually introduced by [ Cockburn and Shu, 1998] for the discretisation of parabolic equations, but
 it was later found that the method and its advantages could also be used for the solution of elliptic 
 equations (namely Poisson's equation). 
 [Arnold et al., J. NUMER. ANAL., 2002] highlighted the relation 
 of this method to interior penalty and other alternative methods. 
 [Cockburn et al., J.NUMER. ANAL. ,2001] proved a superconvergence result for the 
-local discontinuous Galerkin approach in cartesian grids, which makes the method seem 
-quite attractive. 
+local discontinuous Galerkin approach in cartesian grids, which makes the method seem quite attractive for our purposes.
+
 In a first approach we use an explicit (3rd order) Runge-Kutta method for 
 the time discretization, but we might want to try higher order methods as well.   
 An excellent review of the Runge-Kutta discontinuous Galerkin methods can be found in [Cockburn et al., Journal of scientific Comp., 2001]. 
 
-
 We expect the method to suffer from a CFL condition, (that is unfortunately more severe, the 
 higher the order of the method) but we expect that in increasing the order of 
 our base polynomials we might be able to use a coarser grid and thus increase the 
-time step as well. An alternative approach might be to fix the spatial grid,
-use a fixed stepsize and increase or decrease the order of the polynomials to 
-achieve lower or higher resolution. 
+time step as well. 
 
-%\section{The toefl equations}
-%For vanishing ion-temperature we have
-%\begin{subequations}
-%    \begin{align}
-%        (\partial_t + \vec v \cdot \nabla )n_e &= d(\phi - n_e) \\
-%        (\partial_t + \vec v \cdot \nabla )n_i &= 0\\
-%        \Delta \phi &= n_e - n_i
-%    \end{align}
-%    \label{eq:toefl}
-%\end{subequations}
-%The velocity is given by $\vec v = \nabla^{\perp}\phi$, with $\nabla^{\perp} = (-\partial_y, \partial_x)$.
-%We pose the usual free-slip boundary conditions on $\phi$ and Dirichlet boundary 
-%conditions on $n_e$ and $n_i$ in the $x-$direction. 
-%\begin{align}
-%    n_{e/i}(x=0) &= 0\\
-%    n_{e/i}(x=1) &= g_{e/i}\\
-%    \omega( x=0,1) &= 0
-%    \label{eq:boundary}
-%\end{align}
-%In the $y-$direction periodic boundary conditions are justified.
-%\section{ Spatial discretization}
-%We now begin to discretize equ. (\ref{eq:toefl}) in space. 
-%We choose a test-function $v$ and integrate over one element $K \in T_h(\Omega)$ 
-%of our tesselation with typical element size $h$. The space of test functions is
-%\begin{align}
-%    V_h := \{ v \in L^2(\Omega) \ :\  v|_K\in P(K)\ \ \forall K\in T_h\}
-%    \label{eq:test_space}
-%\end{align}
-%where $P(K)$ is the space of polynomials of degree at most $p$ on $K$. 
-%In an intuitive sense the functions of this space are double valued on the edges
-%$\partial K$. (Although the Lebesgue measure of $L^2(\Omega)$ doesn't permit 
-%to speak of a value of a function at a certain point (null set) $P(K)$ does).
-%Keep this point in mind when considering the following integrals. 
-%First consider the convective part and integrate by parts. 
-%\begin{subequations}
-%\begin{align}
-%    \int_K (\partial_t n) v dV + \int_K \vec v\cdot \nabla n v dV = \\
-%    \int_K (\partial_t n) v dV + \int_{\partial K} j^{\perp}_K v dA - \int_K n \{\phi, v\}dV 
-%\end{align}
-%\end{subequations}
-%Here $j^{\perp}_K = (\hat n_K \cdot \nabla^{\perp} \phi) n$ is the numerical flux out of cell $K$.  Note that the whole 
-%ingenuity of a discontinuous galerkin solver is hidden in the appropriate choice 
-%of the numerical fluxes. Recall that both $\phi$ and $n$ are discontinuous 
-%on the boundaries. Our numerical flux chooses a single(!) value on each edge. (In
-%fact single-valuedness is precisely the condition for a conservative scheme)
-%We will choose a consistent upwind flux
-%\begin{align}
-%    j^{\perp}_K = \begin{cases}
-%                    j_{K_i}\  \text{if}\  \hat n_K \cdot \vec v > 0  \\
-%                    j_{K_e}\  \text{if}\  \hat n_K \cdot \vec v < 0 
-%                    \end{cases}
-%    \label{eq:flux}
-%\end{align}
-%The subscripts $i$ and $e$ denote the interior vs. the exterior of cell $K$.
-%
-%The next step would be to discretize the equations in time, but befor we do that
-%we shed some light on the linear Poisson equation. 
-%
-%
+
+
+
+
+
+
+
+
+
+
 \section{ Discretization of Poisson's equation}
 We begin with a discretization scheme for the Laplacian in Poisson's equation.
 We choose our spatial grid as the product room of two one dimensional
@@ -147,6 +106,17 @@ equation (\ref{eq:product_discretization}) to get a formula for the 2D Poisson
 equation.
 Before we dive right into things it seems justified to take a closer look at the 
 properties of the Legendre polynomials and to define some useful quantities.
+
+
+
+
+
+
+
+
+
+
+
 \subsection{ The Legendre polynomials}
 Legendre polynomials can be recursively defined on $[-1,1]$ by setting
 $P_0(x) = 1$, $P_1(x) = x$ and
@@ -183,7 +153,7 @@ We also note that $\forall n$ and $x\in[-1,1]$
 \end{align}
 \label{eq:boundaries}
 \end{subequations}
-Analogous to discrete fourier transforms there also exist discrete formulations
+There also exist discrete formulations
 of the orthogonal and completeness relations for Legendre polynomials.
 For $j=0,\dots,P-1$ we write $x_j$ and $w_j$ as abscissas and weights of 
 Gauss-Legendre integration and note
@@ -204,18 +174,20 @@ We thus have for $f_j = f(x_j)$
     f_j = \sum_{k=0}^{P-1} p_k(x_j) c_k =: \sum_{j=0}^{P-1} B_{jk}c_k
 \end{align}
 \end{subequations}
-Note that $c_0 = \frac{1}{2}\sum_{j=0}^{P-1} w_j f_j \approx \int_{-1}^1 f(x)dx$.
-We then also have the useful formula for the approximation of the $L^2$ norm of f:
+The use of Legendre polynomials yields a natural approximation of the integrals of $f$
+via Gauss-Legendre integration:
 \begin{align}
-   \int_{-1}^1 |f|^2 dx \approx \sum_{j=0}^{P-1} w_jf_j^2 = \sum_{j=0}^{P-1}s_0 F_{0j}f_j^2 = \sum_{j=0}^{P-1} s_jc_j^2  
+   \int_{-1}^1 f(x) dx &\approx  \frac{1}{2}\sum_{j=0}^{P-1} w_j f_j = c_0 \\
+   \int_{-1}^1 |f|^2 dx &\approx \sum_{j=0}^{P-1} w_jf_j^2 = \sum_{j=0}^{P-1}s_0 F_{0j}f_j^2 = \sum_{j=0}^{P-1} s_jc_j^2  
     \label{}
 \end{align}
 In order to use Legendre polynomials in our grid cells we have to transform them 
 appropriately:
 \begin{align}
-    p^n_j(x) = p_j( 2/h_n(x-x_n))
+    p^n_j(x) = p_j( 2/h(x-x_n))
     \label{}
 \end{align}
+Note that in this work we only use equidistant grids so $h$ is a constant.
 We define some useful quantities for $i,j=0,1,\dots,P-1$
 \begin{subequations}
     \begin{align}
@@ -247,6 +219,214 @@ i.e. $D_{ij} = 1 - (-1)^{i+j}$ for $i\le (j-1)$. We thus have e.g. for $P=4$
     \label{eq:example_derivative}
 \end{align}
 We thus have that $S(h)$ and $T(h)$ are the only projection matrices that dependent on the gridsize $h$.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{ Discretization of derivatives}
+
+We now come to the discretization of the two-dimensional Poisson bracket (Jacobian)
+\begin{align}
+    J(f,g) \equiv \partial_x f \partial_y g - \partial_y f\partial_x g
+    \label{eq:jacobian}
+\end{align}
+As [Arakawa, J. Comp. Phys., 1997] showed, it is important to numerically conserve
+the following three quantities
+\begin{subequations}
+\begin{align}
+    \int_G J(f,g) dxdy = 0 \\
+    \int_G fJ(f,g) dxdy = 0\\
+    \int_G gJ(f,g) dxdy = 0
+    \label{eq:conservation}
+\end{align}
+\end{subequations}
+which for two-dimensional incompressible fluid flow correspond to the conservation of
+total vorticity, enstrophy and kinetic energy respectively.
+The main idea in [Arakawa, J. Comp. Phys., 1997] is
+to equally add three different discretisations of the Jacobian called $J^{++}$, 
+$J^{+x}$ and $J^{x+}$ to get a discretisaion which respects all of 
+eqns (\ref{eq:conservation}) by setting
+\begin{align}
+    J = \frac{1}{3}\left( J^{++}+J^{x+}+J^{+x} \right)   
+    \label{eq:construction}
+\end{align}
+The Jacobians were derived by first introducing a symmetric discretisation for the
+simple derivative, namely
+\begin{align}
+    (\partial_x f)_{ij} = \frac{f_{i+1,j}-f_{i-1,j}}{2h} + O(h^2)
+    \label{eq:derivative}
+\end{align}
+and 
+\begin{align}
+    (f\partial_x g)_{ij} = f_{ij}\frac{g_{i+1,j}-g_{i-1,j}}{2h}+O(h^2)
+    \label{}
+\end{align}
+The Jacobians were then defined as
+\begin{subequations}
+\begin{align}
+    J_{ij}^{++} &= (\partial_x f)_{ij} (\partial_y g)_{ij} - (\partial_y f)_{ij}(\partial_x g)_{ij} \\
+    J_{ij}^{+x} &= (\partial_x( f\partial_y g))_{ij} - (\partial_y( f\partial_x g))_{ij}\\
+    J_{ij}^{x+} &= (\partial_y( g\partial_x f))_{ij} - (\partial_y( g\partial_x f))_{ij}
+    \label{}
+\end{align}
+\label{}
+\end{subequations}
+Note that the difference between the three formulations lies in the 
+order of multiplications and derivatives. 
+For example the first term in $J^{+x}$ means that we
+first compute the numerical derivative of $g$ in $y$, 
+then multiply the result with 
+$f$ and then compute the numerical derivative of the result in $x$.
+Each of these Jacobians conserves one and only one of the quantities (\ref{eq:conservation}) but when they are brought together according to eqn( \ref{eq:construction})
+all quantities are conserved. 
+
+For the DG discretization of the Jacobian we now simply follow the route set by
+Arakawa. We first derive a discretization for the first derivative of a function
+and for the product of a function with a derivative. We then use eqn( \ref{eq:construction}) to derive our final discretization scheme. 
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{ The first derivative}
+We begin to derive the first derivative of a one-dimensional function.
+$ f = f^n_kp_{nk}(x)$
+We do so
+by expanding with Legendre polynomials and then integrating by parts. For 
+simplicity we use periodic boundaries. 
+\begin{align}
+    (\partial_x f)^n_i = t_{ij}\int\partial_x f(x) p_j(x) dx = t_{ij}\left( [\hat f p_j]_{x_{n-1/2}}^{x_{n+1/2}} - \int f \partial_x p_j dx \right)
+    \label{}
+\end{align}
+For the numerical flux $\hat f$ we choose the average on the cell boundary
+\begin{align}
+    \hat f(x_{n+1/2}) \equiv \frac{1}{2}(f^{n+1}_kp_k(-1) + f^n_k p_k(1))
+    \label{}
+\end{align}
+We thus arrive at
+\begin{align}
+    (\partial_x f)^n_i= t_{ij}\left(  \frac{1}{2}[(f^{n+1}_kp_k(-1)+ f^n_kp_k(1))p_j(1) 
+                - (f^n_kp_k(-1) + f^{n-1}_kp_k(1))p_j(-1)] - f^n_k d_{kj} \right)
+    \label{}
+\end{align}
+With the notation previously introduced this reduces to 
+\begin{align}
+    \partial_x = \frac{1}{2}T\circ \left[ \Eins^+\otimes RL + \Eins \otimes (D-D^T) - \Eins^-\otimes LR\right]
+    \label{}
+\end{align}
+where we used that $D+D^T = R-L$. We now have formulated a DG discretization of the first derivative in the form of a matrix vector product. 
+We note that in the case of $P = 1$ it reduces to the familiar classical finite
+differences formula eqn(\ref{eq:derivative}).
+
+We now numerically test the order of this derivation, by computing the derivative
+of $f(x) = sin(x)$. We compute the absolute error in the $L_2$ - norm 
+\begin{align}
+    \lVert f\rVert = \sqrt{ <f,f>} \equiv \left( \int |f|^2 dx \right)^{1/2}
+    \label{eq:norm}
+\end{align}
+We compute the order $p$ by computing the derivative twice with $N=10$ and $N=20$ grid
+points.
+\begin{align*}
+    n = 1 \rightarrow p = 2 \\
+    n = 2 \rightarrow p = 1 \\
+    n = 3 \rightarrow p = 3 \\
+    n = 4 \rightarrow p = 3 \\
+    n = 5 \rightarrow p = 5
+\end{align*}
+We conclude that the method is of order $n$ for $n$ odd, and $n-1$ for $n$ even. 
+
+
+
+
+
+
+
+
+\subsection{ Product of two functions }
+If $f$ and $g$ are two functions represented by a DG approximation $f = f_kp_k$ and
+$g = g_lp_l$ then 
+\begin{align}
+    (fg)_i = t_{ij}\int (fg)p_j dx = t_{ij} f_k g_l \int p_k p_l p_j dx =: t_{ij} M_{klj} f_k g_l
+    \label{}
+\end{align}
+Note that $M$ is symmetric in all of its indices. All we need now is an expression for
+$t_{ij}M_{klj}$: for this we use the Gaussian integration formula
+\begin{align}
+    \int p_k p_l p_j dx = \sum_i w_i p_k(x_i)p_l(x_i)p_j(x_i) = \sum_i w_i B_{ik}B_{il}B_{ij}
+    \label{}
+\end{align}
+Recall that $F_{ij} = t_j w_i B_{ij}$ and arrive at
+\begin{align}
+    (fg)_i = t_{ij} M_{klj} f_k g_l = \sum_m F_{jm} B_{mk}f_k B_{ml}g_l
+    \label{}
+\end{align}
+This result is not surprising. It simply states that we can compute the product
+of two DG-expanded functions by backtransforming them to $x$-space, then performing
+a pointwise multiplication and then transforming the result to $L$-space again.
+
+
+
+
+
+
+
+
+
+
+
+\subsection{ The DG Jacobian}
+We are now ready to construct a discretization for the Jacobian. 
+We note 
+\begin{subequations}
+    \begin{align}
+        J^{++}_{ij} &= ((\partial_x f)(\partial_y g))_{ij} - ((\partial_y f)(\partial_x g))_{ij} \\
+        J^{+x}_{ij} &= (\partial_x ( f\partial_y g))_{ij} - (\partial_y (f\partial_x g))_{ij} \\
+        J^{x+}_{ij} &= (\partial_y (g\partial_x f))_{ij} - (\partial_x( g\partial_y f))_{ij}
+        \label{}
+    \end{align}
+    \label{}
+\end{subequations}
+Again the difference between the three formulations is when the multiplication
+and when the derivation is performed. 
+The final form of the Jacobian is then given by eq. (\ref{eq:construction}):
+\begin{align}
+    J = \frac{1}{3}(J^{++} + J^{+x} + J^{x+})
+    \label{}
+\end{align}
+
+We test our scheme with $f(x,y) = sin(x)*cos(y)$ and 
+$g(x,y) = cos(x)*sin(y)$ which yields 
+$\{f,g\} = cos^2(x)*cos^2(y) - sin^2(x)*sin^2(y)$. 
+
+
+
+
+
+
+
+
+
+
+
 
 \subsection{Discretization of the 1d Poisson equation}
 We want to solve 
@@ -322,42 +502,60 @@ variable $\vec j_h$, hence the name ``local discontinuous galerkin method``.
 method from continuous Galerkin methods used to solve parabolic equations.)
 Before doing so we will introduce a useful notation technique, namely the
 tensor product for matrices.
-%\subsection{ Kronecker-Product}
-%Suppose we have a term of the form $m_{ij} = a_{ik}b_{jl}n_{kl}$ where 
-%$m$ and $n$ are equally shaped matrices and $a$ and $b$ are 
-%square matrices of appropriate sizes. We write this as
-%\begin{align}
-%    M = (A\otimes B) N
-%    \label{eq:kronecker_product}
-%\end{align}
-%i.e. $A$ operates on the first index of $N$ and $B$ operates on the 
-%second index. For example the discontinuous galerkin expansion of 
-%a function $\phi_h$ reads $\phi_h = \sum_{n,k} phi_{nk} p_{nk}(x)$ where
-%$n$ runs over all grid cells and $k$ over all polynomial degrees. 
-%Thus $\vec \phi_n$ is the vector of polynomial coefficients in cell $n$.
-%The operation $(\Eins\otimes \hat O) \phi$ then simply denotes that every 
-%coefficient vector is transformed by $\hat O $ in each cell. On the other
-%hand $(\hat U \otimes \Eins) \phi$ denotes that we linearly combine
-%(unchanged) vectors of different cells to get a new vector in cell $n$.
-%Actually the only operations we need in the first index is to get 
-%adjacent cells $n-1$ and $n+1$ so we define:
-%\begin{align}
-%    \Eins^{-}\phi_n := \phi_{n-1}\\
-%    \Eins^{+}\phi_n := \phi_{n+1}
-%    \label{eq:operator_one}
-%\end{align}
-%Some useful properties of the tensor product are
-%\begin{subequations}
-%    \begin{align}
-%        &\text{bilinearity }&A\otimes(\lambda B+ \mu C) &= \lambda (A\otimes B)+ \mu (A\otimes C) \\
-%        &&(\lambda A+ \mu B)\otimes A& = \lambda (A\otimes B)+ \mu (A\otimes C) \\
-%        &\text{associativity}& A\otimes (B\otimes C) &= (A\otimes B)\otimes C\\
-%        &\text{transposition}&(A\otimes B)^T &= A^T \otimes B^T \\
-%        &\text{inverse}&(A\otimes B)^{-1} &= A^{-1}\otimes B^{-1} \\
-%        &\text{product rule}& (A\otimes B)(C\otimes D) &= AC\otimes BD
-%        \label{eq:tensor_product_properties}
-%    \end{align}
-%\end{subequations}
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{ Kronecker-Product}
+Suppose we have a term of the form $m_{ij} = a_{ik}b_{jl}n_{kl}$ where 
+$m$ and $n$ are equally shaped matrices and $a$ and $b$ are 
+square matrices of appropriate sizes. We write this as
+\begin{align}
+    M = (A\otimes B) N
+    \label{eq:kronecker_product}
+\end{align}
+i.e. $A$ operates on the first index of $N$ and $B$ operates on the 
+second index. For example the discontinuous galerkin expansion of 
+a function $\phi_h$ reads $\phi_h = \sum_{n,k} phi^n_{k} p_{nk}(x)$ where
+$n$ runs over all grid cells and $k$ over all polynomial degrees. 
+Thus $\vec \phi_n$ is the vector of polynomial coefficients in cell $n$.
+The operation $(\Eins\otimes \hat O) \phi$ then simply denotes that every 
+coefficient vector is transformed by $\hat O $ in each cell. On the other
+hand $(\hat U \otimes \Eins) \phi$ denotes that we linearly combine
+(unchanged) vectors of different cells to get a new vector in cell $n$.
+Actually the only operations we need in the first index is to get 
+adjacent cells $n-1$ and $n+1$ so we define:
+\begin{align}
+    \Eins^{-}\phi_n := \phi_{n-1}\\
+    \Eins^{+}\phi_n := \phi_{n+1}
+    \label{eq:operator_one}
+\end{align}
+Some useful properties of the tensor product are
+\begin{subequations}
+    \begin{align}
+        &\text{bilinearity }&A\otimes(\lambda B+ \mu C) &= \lambda (A\otimes B)+ \mu (A\otimes C) \\
+        &&(\lambda A+ \mu B)\otimes A& = \lambda (A\otimes B)+ \mu (A\otimes C) \\
+        &\text{associativity}& A\otimes (B\otimes C) &= (A\otimes B)\otimes C\\
+        &\text{transposition}&(A\otimes B)^T &= A^T \otimes B^T \\
+        &\text{inverse}&(A\otimes B)^{-1} &= A^{-1}\otimes B^{-1} \\
+        &\text{product rule}& (A\otimes B)(C\otimes D) &= AC\otimes BD
+        \label{eq:tensor_product_properties}
+    \end{align}
+\end{subequations}
+
+
+
+
+
 \subsection{Matrix form of Poisson's equation}
 We now derive the discretization matrix of the 1D Poisson equation for periodic
 boundary conditions.
@@ -437,6 +635,14 @@ the information on the discretization of the Laplace operator and can be used
 both in the solution of Poissson's equation and in the solution of the 
 diffusion equation. This might not be true for other type of boundary conditions
 as we see in the next section.
+
+
+
+
+
+
+
+
 \subsection{Proper treatment of boundary conditions}
 In the case of Dirichlet or von Neumann boundary conditions we take $\Eins^+$ and
 $\Eins^-$ to be strictly upper/lower triangular. Equations (\ref{eq:projection_operator_notation}) read
@@ -521,6 +727,14 @@ and
     \end{pmatrix}\phi
     \label{}
 \end{align}
+
+
+
+
+
+
+
+
 \subsection{Numerical experiments}
 We numerically confirm that the solution to $Mx=\overline \rho$ is, in the 
 L2-norm, $O(h^P)$ away from the true solution to $\partial_x^2 \phi = \rho$.
@@ -542,6 +756,9 @@ Truncation error analysis shows that the scheme indeed has lower order or even i
 inconsistent for some $P$. This seems contradictory since we have an inconsistent
 discretization on the one hand and on the other hand numerically showed 
 convergence. We note that it is the solution $x$ of $Mx=\overline\rho$ that counts.  
+
+
+
 
 
 
@@ -590,8 +807,14 @@ which reflects the extremely local character of the method. Only coefficients fr
 adjacent cells are needed to update one cell. We also note that still only $A$ and 
 $B$ need to be stored to implement a matrix-vector multiplication with $M$.
 
-\section{ The nonlinear Poisson equation}
-In one dimension the nonlinear Poisson equation reads
+
+
+
+
+
+\section{ The nonlinear Polarisation equation}
+
+In one dimension the nonlinear Polarisation equation reads
 \begin{align}
     -\partial_x ( c(x) \partial_x \phi) = \rho
     \label{}
@@ -659,153 +882,6 @@ thus be more complicated.
 
 
 
-\section{ Discretization of derivatives}
-
-We now come to the discretization of the two-dimensional Poisson bracket (Jacobian)
-\begin{align}
-    J(f,g) \equiv \partial_x f \partial_y g - \partial_y f\partial_x g
-    \label{eq:jacobian}
-\end{align}
-As [Arakawa, J. Comp. Phys., 1997] showed, it is important to numerically conserve
-the following three quantities
-\begin{subequations}
-\begin{align}
-    \int_G J(f,g) dxdy = 0 \\
-    \int_G fJ(f,g) dxdy = 0\\
-    \int_G gJ(f,g) dxdy = 0
-    \label{eq:conservation}
-\end{align}
-\end{subequations}
-which for two-dimensional incompressible fluid flow correspond to the conservation of
-total vorticity,the square vorticity and kinetic energy respectively.
-The main idea in [Arakawa, J. Comp. Phys., 1997] is
-to equally add three different discretisations of the Jacobian called $J^{++}$, 
-$J^{+x}$ and $J^{x+}$ to get a discretisaion which respects all of 
-eqns (\ref{eq:conservation}) by setting
-\begin{align}
-    J = \frac{1}{3}\left( J^{++}+J^{x+}+J^{+x} \right)   
-    \label{eq:construction}
-\end{align}
-The Jacobians are derived by first introducing a symmetric discretisation for the
-simple derivative, namely
-\begin{align}
-    (\partial_x f)_{ij} = \frac{f_{i+1,j}-f_{i-1,j}}{2h} + O(h^2)
-    \label{eq:derivative}
-\end{align}
-and 
-\begin{align}
-    (f\partial_x g)_{ij} = f_{ij}\frac{g_{i+1,j}-g_{i-1,j}}{2h}+O(h^2)
-    \label{}
-\end{align}
-The Jacobians are then defined as
-\begin{subequations}
-\begin{align}
-    J_{ij}^{++} &= (\partial_x f)_{ij} (\partial_y g)_{ij} - (\partial_y f)_{ij}(\partial_x g)_{ij} \\
-    J_{ij}^{+x} &= (\partial_x( f\partial_y g))_{ij} - (\partial_y( f\partial_x g))_{ij}\\
-    J_{ij}^{x+} &= (\partial_y( g\partial_x f))_{ij} - (\partial_y( g\partial_x f))_{ij}
-    \label{}
-\end{align}
-\label{}
-\end{subequations}
-The difference between the three formulations lies in the order of multiplications
-and derivatives. For example the first term in $J^{+x}$ means that we
-first compute the numerical derivative of $g$ in $y$, then multiply the result with 
-$f$ and then compute the numerical derivative of the result in $x$.
-Each of these Jacobians conserves one and only one of the quantities (\ref{eq:conservation}) but when they are brought together according to eqn( \ref{eq:construction})
-all quantities are conserved. 
-
-For the DG discretization of the Jacobian we now simply follow the route set by
-Arakawa. We first derive a discretization for the first derivative of a function
-and for the product of a function with a derivative. We then use eqn( \ref{eq:construction}) to derive our final discretization scheme. 
-
-\subsection{ The first derivative}
-We begin to derive the first derivative of a one-dimensional function.
-$ f = f_kp_k(x)$
-We do so
-by expanding with Legendre polynomials and then integrating by parts. For 
-simplicity we use periodic boundaries. 
-\begin{align}
-    (\partial_x f)^n_i = t_{ij}\int\partial_x f p_j(x) dx = t_{ij}\left( [\hat fp_j]_{x_{n-1/2}}^{x_{n+1/2}} - \int f \partial_x p_j dx \right)
-    \label{}
-\end{align}
-For the numerical flux $\hat f$ we choose the average on the cell boundary
-\begin{align}
-    \hat f(x_{n+1/2}) \equiv \frac{1}{2}(f^{n+1}_kp_k(-1) + f^n_k p_k(1))
-    \label{}
-\end{align}
-We thus arrive at
-\begin{align}
-    (\partial_x f)^n_i= t_{ij}\left(  \frac{1}{2}[(f^{n+1}_kp_k(-1)+ f^n_kp_k(1))p_j(1) 
-                - (f^n_kp_k(-1) + f^{n-1}_kp_k(1))p_j(-1)] - f^n_k d_{kj} \right)
-    \label{}
-\end{align}
-With the notation previously introduced this reduces to 
-\begin{align}
-    \partial_x = \frac{1}{2}T\circ \left[ \Eins^+\otimes RL + \Eins \otimes (D-D^T) - \Eins^-\otimes LR\right]
-    \label{}
-\end{align}
-where we used that $D+D^T = R-L$. We now have formulated a DG discretization of the first derivative in the form of a matrix vector product. 
-We note that in the case of $P = 1$ it reduces to the familiar classical finite
-differences formula eqn(\ref{eq:derivative}).
-
-We now numerically test the order of this derivation, by computing the derivative
-of $f(x) = sin(x)$. We compute the absolute error in the $L_2$ - norm 
-\begin{align}
-    \lVert f\rVert = \sqrt{ <f,f>} \equiv \left( \int |f|^2 dx \right)^{1/2}
-    \label{eq:norm}
-\end{align}
-We compute the order $p$ by computing the derivative twice with $N=10$ and $N=20$ grid
-points.
-\begin{align*}
-    n = 1 \rightarrow p = 2 \\
-    n = 2 \rightarrow p = 1 \\
-    n = 3 \rightarrow p = 3 \\
-    n = 4 \rightarrow p = 3 \\
-    n = 5 \rightarrow p = 5
-\end{align*}
-We conclude that the method is of order $n$ for $n$ odd, and $n-1$ for $n$ even. 
-\subsection{ Product of two functions }
-If $f$ and $g$ are two functions represented by a DG approximation $f = f_kp_k$ and
-$g = g_lp_l$ then 
-\begin{align}
-    (fg)_i = t_{ij}\int (fg)p_j dx = t_{ij} f_k g_l \int p_k p_l p_j dx =: t_{ij} M_{klj} f_k g_l
-    \label{}
-\end{align}
-Note that $M$ is symmetric in all of its indices. All we need now is an expression for
-$t_{ij}M_{klj}$: for this we use the Gaussian integration formula
-\begin{align}
-    \int p_k p_l p_j dx = \sum_i w_i p_k(x_i)p_l(x_i)p_j(x_i) = \sum_i w_i B_{ik}B_{il}B_{ij}
-    \label{}
-\end{align}
-Recall that $F_{ij} = t_j w_i B_{ij}$ and arrive at
-\begin{align}
-    (fg)_i = t_{ij} M_{klj} f_k g_l = \sum_m F_{jm} B_{mk}f_k B_{ml}g_l
-    \label{}
-\end{align}
-This result is not surprising. It simply states that we can compute the product
-of two DG-expanded functions by backtransforming them to $x$-space, then performing
-a pointwise multiplication and then transforming the result to $L$-space again.
-\subsection{ The DG Jacobian}
-We are now ready to construct a discretization for the Jacobian. 
-We note 
-\begin{subequations}
-    \begin{align}
-        J^{++}_{ij} &= ((\partial_x f)(\partial_y g))_{ij} - ((\partial_y f)(\partial_x g))_{ij} \\
-        J^{+x}_{ij} &= (\partial_x ( f\partial_y g))_{ij} - (\partial_y (f\partial_x g))_{ij} \\
-        J^{x+}_{ij} &= (\partial_y (g\partial_x f))_{ij} - (\partial_x( g\partial_y f))_{ij}
-        \label{}
-    \end{align}
-    \label{}
-\end{subequations}
-Again the difference between the three formulations is when the multiplication
-and when the derivation is performed. 
-The final form of the Jacobian is then given by eq. (\ref{eq:construction}):
-\begin{align}
-    J = \frac{1}{3}(J^{++} + J^{+x} + J^{x+})
-    \label{}
-\end{align}
-
-We test our scheme
 
 
 

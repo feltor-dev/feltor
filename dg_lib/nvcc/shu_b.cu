@@ -24,7 +24,7 @@ const unsigned Ny = 25;
 const double lx = 1.;
 const double ly = 1.;
 
-const unsigned k = 3;
+const unsigned k = 2;
 const double D = 0.0;
 const double U = 1.;
 const double T = 1.;
