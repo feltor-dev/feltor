@@ -18,6 +18,7 @@ namespace dg
 template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
 struct Arakawa
 {
+    typedef T value_type;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
 
@@ -26,7 +27,6 @@ struct Arakawa
     const Matrix& backward2d() {return backward;}
 
   private:
-    typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
     Matrix bdx, bdy, dxf, dyf, forward, backward;
     container dxlhs, dylhs, dxrhs, dyrhs, blhs, brhs;
