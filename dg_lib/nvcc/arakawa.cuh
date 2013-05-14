@@ -28,7 +28,7 @@ struct Arakawa
 
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
-    Matrix bdx, bdy, dxf, dyf, forward, backward;
+    Matrix bdxf, bdyf, forward, backward;
     container dxlhs, dylhs, dxrhs, dyrhs, blhs, brhs;
 };
 
@@ -50,19 +50,24 @@ Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double
     backward = tensor( Nx*Ny, backward2d);
 
     //create derivatives
-    HMatrix dx = dgtensor<T,n>( tensor<T,n>( Ny, delta), create::dx_symm<value_type,n>( Nx, hx, bcx));
-    HMatrix dy = dgtensor<T,n>( create::dx_symm<value_type,n>( Ny, hy, bcy), tensor<T,n>(Nx, delta));
+    HMatrix dx = create::dx_symm<T,n>( Nx, hx, bcx);
+    HMatrix dy = create::dx_symm<T,n>( Ny, hy, bcy);
+    HMatrix fx = tensor( Nx, forward1d);
+    HMatrix fy = tensor( Ny, forward1d);
+    HMatrix bx = tensor( Nx, backward1d);
+    HMatrix by = tensor( Ny, backward1d);
+    HMatrix dxf( dx), dyf( dy), bdxf_(dx), bdyf_(dy);
 
-    HMatrix bdx_(dx), bdy_(dy);
-    cusp::multiply( backward, dx, bdx_);
-    cusp::multiply( backward, dy, bdy_);
-    HMatrix dxf_(dx), dyf_(dy);
-    cusp::multiply( dx, forward, dxf_);
-    cusp::multiply( dy, forward, dyf_);
-    bdx = bdx_;
-    bdy = bdy_;
-    dxf = dxf_; 
-    dyf = dyf_;
+    cusp::multiply( dx, fx, dxf);
+    cusp::multiply( bx, dxf, bdxf_);
+    cusp::multiply( dy, fy, dyf);
+    cusp::multiply( by, dyf, bdyf_);
+
+    HMatrix bdxf__ = dgtensor<T,n>( tensor<T,n>( Ny, delta), bdxf_ );
+    HMatrix bdyf__ = dgtensor<T,n>(  bdyf_, tensor<T,n>( Ny, delta));
+
+    bdxf = bdxf__;
+    bdyf = bdyf__;
 
     /*
     //test is really the same
@@ -84,15 +89,15 @@ Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double
 template< class T, size_t n, class container, class MemorySpace>
 void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, const container& rhs, container& result)
 {
-    //compute derivatives in x-space
-    blas2::symv( bdx, lhs, dxlhs);
-    blas2::symv( bdy, lhs, dylhs);
-    blas2::symv( bdx, rhs, dxrhs);
-    blas2::symv( bdy, rhs, dyrhs);
     //transform to x-space
     blas2::symv( backward, lhs, blhs);
     blas2::symv( backward, rhs, brhs);
     cudaThreadSynchronize();
+    //compute derivatives in x-space
+    blas2::symv( bdxf, blhs, dxlhs);
+    blas2::symv( bdyf, blhs, dylhs);
+    blas2::symv( bdxf, brhs, dxrhs);
+    blas2::symv( bdyf, brhs, dyrhs);
 
     // order is important now
     // +x (1) -> result und (2) -> blhs
@@ -122,14 +127,15 @@ void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, co
     //blas1::axpby( 0., result, -0., dylhs);
 
     cudaThreadSynchronize();
-    blas2::symv( forward, dxrhs, dyrhs);  //back ++                 -> dyrhs
-    blas2::symv( dyf, blhs, result);      //dy*back*(dxl*r - l*dxr) -> result
-    blas2::symv( dxf, dylhs, dxlhs);      //dx*back*(l*dyr - dyl*r) -> dxlhs
+    blas2::symv( bdyf, blhs, result);      //dy*(dxl*r - l*dxr) -> result
+    blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
     //now sum everything up
     cudaThreadSynchronize();
-    blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
+    blas1::axpby( 1., result, 1., dxlhs); //result + dxlhs -> result
     cudaThreadSynchronize();
-    blas1::axpby( 1., dyrhs, 1., result); //result + dyrhs -> result
+    blas1::axpby( 1., dxrhs, 1., dxlhs); //result + dyrhs -> result
+    //transform to l-space
+    blas2::symv( forward, dxlhs, result);
 }
 
 }//namespace dg

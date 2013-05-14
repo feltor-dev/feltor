@@ -70,7 +70,7 @@ int main()
     t.tic(); 
     arakawa( lhs.data(), rhs.data(), jac.data());
     t.toc();
-    cout << "Arakawa took "<<t.diff()<<"s\n\n";
+    cout << "\nArakawa took "<<t.diff()<<"s\n\n";
     cudaThreadSynchronize();
     //cout<<jac<<endl;
 
