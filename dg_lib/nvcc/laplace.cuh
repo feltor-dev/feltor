@@ -28,6 +28,7 @@ namespace create{
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T alpha = 1.)
 {
+    if( n ==1 ) alpha = 0; //makes laplacian of order 2
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
     //std::cout << A.row_indices.size(); 
     //std::cout << A.num_cols; //this works!!
@@ -90,6 +91,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T al
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T alpha = 1.)
 {
+    //if( n == 1) alpha = 0; //not that easily because dirichlet 
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N - 2*n*n);
     Operator<T, n> l( dg::lilj);
     Operator<T, n> r( dg::rirj);
@@ -100,10 +102,10 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T al
     Operator<T, n> t( dg::pipj_inv);
     t *= 2./h;
 
-    Operator<T, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
-    Operator<T, n> b = -((d+l)*t*rl+rl);
-    Operator<T, n> ap = d*t*d.transpose() + l + r;
-    Operator<T, n> bp = -(d*t*rl + rl);
+    Operator<T, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
+    Operator<T, n> b = -((d+l)*t*rl+alpha*rl);
+    Operator<T, n> ap = d*t*d.transpose() + alpha*(l + r);
+    Operator<T, n> bp = -(d*t*rl + alpha*rl);
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)

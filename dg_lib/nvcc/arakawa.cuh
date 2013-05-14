@@ -18,17 +18,22 @@ namespace dg
 template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
 struct Arakawa
 {
+    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
 
     void operator()( const container& lhs, const container& rhs, container& result);
+    const Matrix& forward2d() {return forward;}
+    const Matrix& backward2d() {return backward;}
+
   private:
     typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     Matrix bdx, bdy, dxf, dyf, forward, backward;
     container dxlhs, dylhs, dxrhs, dyrhs, blhs, brhs;
 };
 
+//idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
+//needs less memory!! and is faster
 template< class T, size_t n, class container, class MemorySpace>
 Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( n*n*Nx*Ny), brhs( blhs)
 {
