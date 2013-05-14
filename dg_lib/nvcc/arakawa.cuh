@@ -64,7 +64,7 @@ Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double
     cusp::multiply( by, dyf, bdyf_);
 
     HMatrix bdxf__ = dgtensor<T,n>( tensor<T,n>( Ny, delta), bdxf_ );
-    HMatrix bdyf__ = dgtensor<T,n>(  bdyf_, tensor<T,n>( Ny, delta));
+    HMatrix bdyf__ = dgtensor<T,n>(  bdyf_, tensor<T,n>( Nx, delta));
 
     bdxf = bdxf__;
     bdyf = bdyf__;
