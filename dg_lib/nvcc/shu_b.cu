@@ -19,15 +19,15 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 66;
-const unsigned Ny = 66;
-const double lx = 2.;
-const double ly = 2.;
+const unsigned Nx = 33;
+const unsigned Ny = 33;
+const double lx = 1.;
+const double ly = 1.;
 
 const unsigned k = 3;
 const double D = 0.0;
 const double U = 1; //the dipole doesn't move with this velocity because box is not infinite
-const double R = 0.1*lx;
+const double R = 0.2*lx;
 const double T = 0.1;
 const unsigned NT = (unsigned)(T*n*Nx/0.05/lx);
 const double eps = 1e-3; //CG method
@@ -69,7 +69,7 @@ int main()
     DVec y0( omega.data()), y1( y0);
     //make solver and stepper
     Shu<double, n, DVec, Memory> test( Nx, Ny, hx, hy, D, eps);
-    RK< 3, Shu<double, n, DVec, Memory> > rk( y0);
+    RK< k, Shu<double, n, DVec, Memory> > rk( y0);
 
     t.tic();
     test( y0, y1);

@@ -75,58 +75,32 @@ An excellent review of the Runge-Kutta discontinuous Galerkin methods can be fou
 
 We expect the method to suffer from a CFL condition, (that is unfortunately more severe, the 
 higher the order of the method) but we expect that in increasing the order of 
-our base polynomials we might be able to use a coarser grid and thus increase the 
-time step as well. 
+our base polynomials we might be able to use a coarser grid to achieve the same resolution 
+and thus increase the time step as well. 
 
 
 
 
+\section{ Discretization of derivatives}
+We begin to derive the first derivative of a one-dimensional function.
+For simplicity we choose an equidistant grid with $N$ cells $K_n$ and gridsize $h$.
+With this choice we are able to choose basis functions of $P(K_n)$, the space of 
+polynomials of degree at most $P-1$ on $K_n$, via orthogonal Legendre polynomials. 
 
-
-
-
-
-
-
-\section{ Discretization of Poisson's equation}
-We begin with a discretization scheme for the Laplacian in Poisson's equation.
-We choose our spatial grid as the product room of two one dimensional
-discretizations: $T_h := I_x \times I_y$ such that element $K_{ij} = I_i \times I_j$,
-is a rectangle. With this choice we are able to choose basis functions 
-of $P(K)$, the space of polynomials of degree at most $p$ on $K$, 
-via simple products of orthogonal Legendre polynomials: 
-$p_{ij}(x,y) := p_i(x) p_j(y)$. Poisson's equation thus can be written as
-\begin{align}
-    \Delta \phi = \partial_x^2 \phi + \partial_y^2 \phi = (\Eins_y \otimes \hat O_x + \hat O_y \otimes \Eins_x) \phi = \rho
-    \label{eq:product_discretization}
-\end{align}
-where $\hat O_{x/y}$ is the DG discretization of $\partial_{x/y}^2$. This means we 
-can concentrate on discretizing the 1D Poisson equation and then use
-equation (\ref{eq:product_discretization}) to get a formula for the 2D Poisson 
-equation.
 Before we dive right into things it seems justified to take a closer look at the 
 properties of the Legendre polynomials and to define some useful quantities.
 
 
-
-
-
-
-
-
-
-
-
 \subsection{ The Legendre polynomials}
 Legendre polynomials can be recursively defined on $[-1,1]$ by setting
-$P_0(x) = 1$, $P_1(x) = x$ and
+$p_0(x) = 1$, $p_1(x) = x$ and
 \begin{align}
-    (n+1)P_{n+1}(x) = (2n+1)xP_n(x) - nP_{n-1}(x)
+    (n+1)p_{n+1}(x) = (2n+1)xp_n(x) - np_{n-1}(x)
     \label{eq:recursion}
 \end{align}
-This results in a set of polynomials $P_k(x)$ of degree $k$ which are orthogonal
+This results in a set of polynomials $p_k(x)$ of degree $k$ which are orthogonal
 \begin{align}
-    \int_{-1}^{1} P_m(x)P_n(x) dx = \frac{2}{2n+1}\delta_{mn} 
+    \int_{-1}^{1} p_m(x)p_n(x) dx = \frac{2}{2n+1}\delta_{mn} 
     \label{eq:orthogonal}
 \end{align}
 and complete in $L^2([-1,1])$ with the standard $L^2$-norm. We thus have
@@ -138,13 +112,6 @@ and complete in $L^2([-1,1])$ with the standard $L^2$-norm. We thus have
     c_n = \frac{2n+1}{2}\int_{-1}^{1} f(x)p_n(x)dx
     \label{eq:coefficient}
 \end{align}
-%and will also write
-%\begin{align}
-%    \Eins = \sum_{n=0}^\infty \frac{2n+1}{2}|p_n><p_n|
-%    \label{eq:completeness}
-%\end{align}
-%Note that the recursion formula (\ref{eq:recursion}) allows the use of 
-%Clenshaw's algorithm to evaluate sums of the form (\ref{eq:expansion}).
 We also note that $\forall n$ and $x\in[-1,1]$
 \begin{subequations}
 \begin{align}
@@ -153,12 +120,11 @@ We also note that $\forall n$ and $x\in[-1,1]$
 \end{align}
 \label{eq:boundaries}
 \end{subequations}
-There also exist discrete formulations
-of the orthogonal and completeness relations for Legendre polynomials.
-For $j=0,\dots,P-1$ we write $x_j$ and $w_j$ as abscissas and weights of 
+In the finite dimensional case we write 
+$x_j$ and $w_j$, $j=0,\dots,P-1$, as abscissas and weights of 
 Gauss-Legendre integration and note
 \begin{align}
-    s_{kl} := \int_{-1}^1 p_k(x)p_l(x) dx = \sum_{j=0}^{P-1} w_jp_k (x_j)p_l(x_j) = \frac{2}{2k+1}\delta_{kl} =: s_k \delta_{kl}
+    S_{kl} := \int_{-1}^1 p_k(x)p_l(x) dx = \sum_{j=0}^{P-1} w_jp_k (x_j)p_l(x_j) = \frac{2}{2k+1}\delta_{kl} =: S_k \delta_{kl}
     \label{}
 \end{align}
 since Gauss-Legndre integration is exact for polynomials of degree at most $2P-1$.
@@ -174,30 +140,30 @@ We thus have for $f_j = f(x_j)$
     f_j = \sum_{k=0}^{P-1} p_k(x_j) c_k =: \sum_{j=0}^{P-1} B_{jk}c_k
 \end{align}
 \end{subequations}
-The use of Legendre polynomials yields a natural approximation of the integrals of $f$
-via Gauss-Legendre integration:
+Note that the use of Legendre polynomials yields a natural approximation of the integrals of $f$
+via Gauss-Legendre quadrature:
 \begin{align}
    \int_{-1}^1 f(x) dx &\approx  \frac{1}{2}\sum_{j=0}^{P-1} w_j f_j = c_0 \\
-   \int_{-1}^1 |f|^2 dx &\approx \sum_{j=0}^{P-1} w_jf_j^2 = \sum_{j=0}^{P-1}s_0 F_{0j}f_j^2 = \sum_{j=0}^{P-1} s_jc_j^2  
+   \int_{-1}^1 |f|^2 dx &\approx \sum_{j=0}^{P-1} w_jf_j^2 = \sum_{j=0}^{P-1}s_0 F_{0j}f_j^2 = \sum_{j=0}^{P-1} s_jc_j^2  \\
+   <f,g>:=\int_{-1}^1 fg dx &\approx \sum_{j,k=0}^{P-1}F_j S_{jk} G_k
     \label{}
 \end{align}
-In order to use Legendre polynomials in our grid cells we have to transform them 
-appropriately:
+In order to use Legendre polynomials in our grid cells $K_n$ centered at $x_n$
+we have to transform them appropriately:
 \begin{align}
-    p^n_j(x) = p_j( 2/h(x-x_n))
+    p^n_j(x) := p_j( \frac{2}{h}(x-x_n))
     \label{}
 \end{align}
-Note that in this work we only use equidistant grids so $h$ is a constant.
 We define some useful quantities for $i,j=0,1,\dots,P-1$
 \begin{subequations}
     \begin{align}
-        s_{ij} &:= \int_{-h/2}^{h/2} p_i(2/h x)p_j(2/h x) dx = \frac{h}{2i+1}\delta_{ij} =: s_i \delta_{ij}\\ 
-        t_{ij} &:= s^{-1}_{ij} = \frac{2i+1}{h}\delta_{ij} =: t_i \delta_{ij}\\
-        d_{ij} &:= \int_{-h/2}^{h/2} p_i(2/h x)\partial_xp_j(2/h x) dx\\
-        r_{ij} &:= p_i(1)p_j(1) = 1 = r_{ji}\\
-        l_{ij} &:= p_i(-1)p_j(-1) = (-1)^{i+j} = l_{ji}\\
-        rl_{ij}&:= p_i(1)p_j(-1) = (-1)^j\\
-        lr_{ij}&:= p_i(-1)p_j(1) = (-1)^i = rl^T_{ij}
+        S_{ij} &:= \int_{-h/2}^{h/2} p_i(\frac{2}{h} x)p_j(\frac{2}{h} x) dx = \frac{h}{2i+1}\delta_{ij} =: s_i \delta_{ij}\\ 
+        T_{ij} &:= s^{-1}_{ij} = \frac{2i+1}{h}\delta_{ij} =: t_i \delta_{ij}\\
+        D_{ij} &:= \int_{-h/2}^{h/2} p_i(\frac{2}{h} x)\partial_xp_j(\frac{2}{h} x) dx\\
+        R_{ij} &:= p_i(1)p_j(1) = 1 = R_{ji}\\
+        L_{ij} &:= p_i(-1)p_j(-1) = (-1)^{i+j} = L_{ji}\\
+        RL_{ij}&:= p_i(1)p_j(-1) = (-1)^j\\
+        LR_{ij}&:= p_i(-1)p_j(1) = (-1)^i = RL^T_{ij}
         \label{eq:legendre_operators}
     \end{align}
 \end{subequations}
@@ -218,7 +184,12 @@ i.e. $D_{ij} = 1 - (-1)^{i+j}$ for $i\le (j-1)$. We thus have e.g. for $P=4$
     \end{pmatrix}
     \label{eq:example_derivative}
 \end{align}
-We thus have that $S(h)$ and $T(h)$ are the only projection matrices that dependent on the gridsize $h$.
+We thus have that $S(h)$ and $T(h)$ are the only projection matrices that dependent on the gridsize $h$. The discontinuous Galerkin expansion of a function $f$ in the intervall $[a,b]$ can 
+then readily be given as
+\begin{align}
+    f(x) = \sum_{n=1}^N \sum_{k=0}^{P-1} f^n_k p_{nk}(x)
+\end{align}
+and the integration formulas are straightforwardly extended to the whole domain.
 
 
 
@@ -235,7 +206,63 @@ We thus have that $S(h)$ and $T(h)$ are the only projection matrices that depend
 
 
 
-\section{ Discretization of derivatives}
+
+\subsection{ Discretization of first derivatives}
+From here on we write
+$ f = f^n_kp_{nk}(x)$ and imply the summation over $k$ and $n$.
+We begin to expand $\partial_x f$
+with Legendre polynomials and then integrate by parts. For 
+simplicity we use periodic boundaries. 
+\begin{align}
+    (\partial_x f)^n_i = t_{ij}\int\partial_x f(x) p_j(x) dx = t_{ij}\left( [\hat f p_j]_{x_{n-1/2}}^{x_{n+1/2}} - \int f \partial_x p_j dx \right)
+    \label{}
+\end{align}
+Note that the expansion of $f$ is double valued on cell boundaries. 
+That means we have a freedom in choosing a so-called numerical flux $\hat f$.
+Here we choose the average on the cell boundary
+\begin{align}
+    \hat f(x_{n+1/2}) \equiv \frac{1}{2}(f^{n+1}_kp_k(-1) + f^n_k p_k(1))
+    \label{}
+\end{align}
+We thus arrive at
+\begin{align}
+    (\partial_x f)^n_i= t_{ij}\left(  \frac{1}{2}[(f^{n+1}_kp_k(-1)+ f^n_kp_k(1))p_j(1) 
+                - (f^n_kp_k(-1) + f^{n-1}_kp_k(1))p_j(-1)] - f^n_k d_{kj} \right)
+    \label{}
+\end{align}
+With the notation previously introduced this reduces to 
+\begin{align}
+    \partial_x = \frac{1}{2}T\circ \left[ \Eins^+\otimes RL + \Eins \otimes (D-D^T) - \Eins^-\otimes LR\right]
+    \label{}
+\end{align}
+where we used that $D+D^T = R-L$. We now have formulated a DG discretization of the first derivative in the form of a matrix vector product. 
+We note that in the case of $P = 1$ it reduces to the familiar classical finite
+differences formula eqn(\ref{eq:derivative}).
+
+We now numerically test the order of this derivation, by computing the derivative
+of $f(x) = sin(x)$. We compute the absolute error in the $L_2$ - norm 
+\begin{align}
+    \lVert f\rVert = \sqrt{ <f,f>} \equiv \left( \int |f|^2 dx \right)^{1/2}
+    \label{eq:norm}
+\end{align}
+We compute the order $p$ by computing the derivative twice with $N=10$ and $N=20$ grid
+points.
+\begin{align*}
+    n = 1 \rightarrow p = 2 \\
+    n = 2 \rightarrow p = 1 \\
+    n = 3 \rightarrow p = 3 \\
+    n = 4 \rightarrow p = 3 \\
+    n = 5 \rightarrow p = 5
+\end{align*}
+We conclude that the method is of order $n$ for $n$ odd, and $n-1$ for $n$ even. 
+
+
+
+
+
+
+
+\section{ Discretization of Poisson bracket}
 
 We now come to the discretization of the two-dimensional Poisson bracket (Jacobian)
 \begin{align}
@@ -295,65 +322,6 @@ all quantities are conserved.
 For the DG discretization of the Jacobian we now simply follow the route set by
 Arakawa. We first derive a discretization for the first derivative of a function
 and for the product of a function with a derivative. We then use eqn( \ref{eq:construction}) to derive our final discretization scheme. 
-
-
-
-
-
-
-
-
-
-
-
-
-\subsection{ The first derivative}
-We begin to derive the first derivative of a one-dimensional function.
-$ f = f^n_kp_{nk}(x)$
-We do so
-by expanding with Legendre polynomials and then integrating by parts. For 
-simplicity we use periodic boundaries. 
-\begin{align}
-    (\partial_x f)^n_i = t_{ij}\int\partial_x f(x) p_j(x) dx = t_{ij}\left( [\hat f p_j]_{x_{n-1/2}}^{x_{n+1/2}} - \int f \partial_x p_j dx \right)
-    \label{}
-\end{align}
-For the numerical flux $\hat f$ we choose the average on the cell boundary
-\begin{align}
-    \hat f(x_{n+1/2}) \equiv \frac{1}{2}(f^{n+1}_kp_k(-1) + f^n_k p_k(1))
-    \label{}
-\end{align}
-We thus arrive at
-\begin{align}
-    (\partial_x f)^n_i= t_{ij}\left(  \frac{1}{2}[(f^{n+1}_kp_k(-1)+ f^n_kp_k(1))p_j(1) 
-                - (f^n_kp_k(-1) + f^{n-1}_kp_k(1))p_j(-1)] - f^n_k d_{kj} \right)
-    \label{}
-\end{align}
-With the notation previously introduced this reduces to 
-\begin{align}
-    \partial_x = \frac{1}{2}T\circ \left[ \Eins^+\otimes RL + \Eins \otimes (D-D^T) - \Eins^-\otimes LR\right]
-    \label{}
-\end{align}
-where we used that $D+D^T = R-L$. We now have formulated a DG discretization of the first derivative in the form of a matrix vector product. 
-We note that in the case of $P = 1$ it reduces to the familiar classical finite
-differences formula eqn(\ref{eq:derivative}).
-
-We now numerically test the order of this derivation, by computing the derivative
-of $f(x) = sin(x)$. We compute the absolute error in the $L_2$ - norm 
-\begin{align}
-    \lVert f\rVert = \sqrt{ <f,f>} \equiv \left( \int |f|^2 dx \right)^{1/2}
-    \label{eq:norm}
-\end{align}
-We compute the order $p$ by computing the derivative twice with $N=10$ and $N=20$ grid
-points.
-\begin{align*}
-    n = 1 \rightarrow p = 2 \\
-    n = 2 \rightarrow p = 1 \\
-    n = 3 \rightarrow p = 3 \\
-    n = 4 \rightarrow p = 3 \\
-    n = 5 \rightarrow p = 5
-\end{align*}
-We conclude that the method is of order $n$ for $n$ odd, and $n-1$ for $n$ even. 
-
 
 
 
@@ -428,6 +396,22 @@ $\{f,g\} = cos^2(x)*cos^2(y) - sin^2(x)*sin^2(y)$.
 
 
 
+\section{ Discretization of Poisson's equation}
+We begin with a discretization scheme for the Laplacian in Poisson's equation.
+We choose our spatial grid as the product room of two one dimensional
+discretizations: $T_h := I_x \times I_y$ such that element $K_{ij} = I_i \times I_j$,
+is a rectangle. With this choice we are able to choose basis functions 
+of $P(K)$, the space of polynomials of degree at most $p$ on $K$, 
+via simple products of orthogonal Legendre polynomials: 
+$p_{ij}(x,y) := p_i(x) p_j(y)$. Poisson's equation thus can be written as
+\begin{align}
+    \Delta \phi = \partial_x^2 \phi + \partial_y^2 \phi = (\Eins_y \otimes \hat O_x + \hat O_y \otimes \Eins_x) \phi = \rho
+    \label{eq:product_discretization}
+\end{align}
+where $\hat O_{x/y}$ is the DG discretization of $\partial_{x/y}^2$. This means we 
+can concentrate on discretizing the 1D Poisson equation and then use
+equation (\ref{eq:product_discretization}) to get a formula for the 2D Poisson 
+equation.
 \subsection{Discretization of the 1d Poisson equation}
 We want to solve 
 \begin{align}
