@@ -28,7 +28,7 @@ const double ly = 1.;
 const Parameter p = {0.005, 0.999, 0.001, 1, 48};
 
 const unsigned k = 2;
-const double dt = 1e-6;
+const double dt = 1e-3;
 const double eps = 1e-2; //The condition for conjugate gradient
 
 const unsigned N = 10;// only every Nth computation is visualized
@@ -61,11 +61,11 @@ int main()
     dg::Gaussian g( lx/2., ly/2., .1, .1, 0.5);
     DArrVec theta = dg::expand<dg::Gaussian, n> ( g, 0.,lx, 0., ly, Nx, Ny);
     vector<DVec> y0(3, theta.data()), y1(y0);
-    y0[1] = DVec( n*n*Nx*Ny, 0.); //omega is zero
 
     //create RHS and RK
     Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, p, eps); 
     RK< k, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
+    test.update_exponent( y0, y0); //transform y0 to g0
 
     //create equidistant backward transformation
     dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
@@ -85,8 +85,10 @@ int main()
     {
         t.tic();
         //transform field to an equidistant grid
+        test.update_log( y0, y0); //transform g0 to y0
         dg::blas2::symv( backward, y0[0], visual);
         thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
+        test.update_exponent( y0, y0); //transform y0 to g0
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers

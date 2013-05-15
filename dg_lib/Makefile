@@ -7,7 +7,7 @@ NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
 GLFLAGS   = -lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
 
 toefl: toefl.cu toefl.cuh 
-	$(NVCC) -O3 -w  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
+	$(NVCC) -O3   $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean doc

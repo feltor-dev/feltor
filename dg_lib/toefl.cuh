@@ -50,6 +50,7 @@ struct Toefl
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
     container omega, phi, chi, dyge, dyphi;
+    cusp::array1d_view<typename container::iterator> chi_view;
     std::vector<container> expy;
 
     Matrix dy;
@@ -67,6 +68,7 @@ template< class T, size_t n, class container, class MemorySpace>
 Toefl<T, n, container, MemorySpace>::Toefl( unsigned Nx, unsigned Ny, double hx, double hy,
         Parameter p, double eps): 
     omega( n*n*Nx*Ny, 0.), phi(omega), chi(phi), dyge(omega), dyphi(omega), 
+    chi_view( chi.begin(), chi.end()),
     expy( 3, omega),
     arakawa( Nx, Ny, hx, hy, 0, -1), 
     pol(     Nx, Ny, hx, hy, 0, -1),
@@ -77,7 +79,8 @@ Toefl<T, n, container, MemorySpace>::Toefl( unsigned Nx, unsigned Ny, double hx,
     dy = dgtensor<T,n>( create::dx_symm<value_type,n>( Ny, hy, -1), tensor<T,n>(Nx, delta));
 
 }
-//compute 
+
+//how to set up a computation?
 template< class T, size_t n, class container, class MemorySpace>
 void Toefl<T, n, container, MemorySpace>::update_exponent( const std::vector<container>& y, std::vector<container>& target)
 {
@@ -113,8 +116,6 @@ const container& Toefl<T, n, container, MemorySpace>::polarisation( const std::v
     blas1::axpby( p.a_z*p.mu_z, expy[2], 1., chi);
     //compute S omega 
     blas2::symv( S2D<double, n>(hx, hy), omega, omega);
-    //blas1::axpby( 0., omega, 0, phi); //make 0 initial value for phi
-    cusp::array1d_view<typename container::iterator> chi_view( chi.begin(), chi.end());
     cudaThreadSynchronize();
     A = pol.create( chi_view ); 
     unsigned number = pcg( A, phi, omega, T2D<double, n>(hx, hy), eps);

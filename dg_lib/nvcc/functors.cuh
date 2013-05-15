@@ -71,7 +71,7 @@ struct LN
     __host__ __device__
     T operator() (const T& x) 
     { 
-        return ln(x);
+        return log(x);
     }
 
 };
