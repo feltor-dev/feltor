@@ -1,5 +1,5 @@
 INCLUDE = -I/home/matthias/include # Eigen library
-INCLUDE += -I/nvcc
+INCLUDE += -Invcc
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
 

@@ -19,19 +19,17 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 66;
-const unsigned Ny = 22;
+const unsigned Nx = 33;
+const unsigned Ny = 33;
 
-const double lx = 3.;
+const double lx = 1.;
 const double ly = 1.;
 
-const double Pr = 10;
-const double Ra = 1e6;
+const Parameter p = {0.005, 0.999, 0.001, 1, 48};
 
 const unsigned k = 2;
 const double dt = 1e-6;
-
-const double eps = 1e-3; //The condition for conjugate gradient
+const double eps = 1e-2; //The condition for conjugate gradient
 
 const unsigned N = 10;// only every Nth computation is visualized
 
@@ -48,7 +46,7 @@ double groundState( double x, double y) { return ly/2. - y;}
 
 int main()
 {
-    dg::HostWindow w(800, 400);
+    dg::HostWindow w(400, 400);
     glfwSetWindowTitle( "Behold the convection\n");
 
     const double hx = lx/ (double)Nx;
@@ -62,11 +60,11 @@ int main()
     //create initial vector
     dg::Gaussian g( lx/2., ly/2., .1, .1, 0.5);
     DArrVec theta = dg::expand<dg::Gaussian, n> ( g, 0.,lx, 0., ly, Nx, Ny);
-    vector<DVec> y0(2, theta.data()), y1(y0);
+    vector<DVec> y0(3, theta.data()), y1(y0);
     y0[1] = DVec( n*n*Nx*Ny, 0.); //omega is zero
 
     //create RHS and RK
-    Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, Ra, Pr, eps); 
+    Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, p, eps); 
     RK< k, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
 
     //create equidistant backward transformation
@@ -80,18 +78,14 @@ int main()
     DVec visual( n*n*Nx*Ny);
     HVec hvisual( n*n*Nx*Ny);
     thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
-    DArrVec ground = expand< double(&)(double, double), n> ( groundState, 0, lx, 0, ly, Nx, Ny), temperature( ground);
     dg::ColorMapRedBlueExt colors( 1.);
     //create timer
     Timer t;
     while (running)
     {
-        //compute the total temperature
         t.tic();
-        blas1::axpby( 1., y0[0], 0., temperature.data());
-        blas1::axpby( 1., ground.data(), 1., temperature.data());
         //transform field to an equidistant grid
-        dg::blas2::symv( backward, temperature.data(), visual);
+        dg::blas2::symv( backward, y0[0], visual);
         thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
@@ -106,7 +100,7 @@ int main()
         for( unsigned i=0; i<N; i++)
         {
             rk( test, y0, y1, dt);
-            for( unsigned i=0; i<2; i++)
+            for( unsigned i=0; i<3; i++)
                 thrust::swap( y0[i], y1[i]);
         }
         t.toc();

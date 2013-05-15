@@ -9,6 +9,7 @@
 
 #include "cusp_eigen.h"
 #include "arakawa.cuh"
+#include "polarisation.cuh"
 #include "laplace.cuh"
 #include "functions.h"
 #include "functors.cuh"
@@ -39,6 +40,9 @@ struct Toefl
     typedef std::vector<container> Vector;
     Toefl( unsigned Nx, unsigned Ny, double hx, double hy, Parameter p, double eps);
 
+    void update_exponent( const std::vector<container>& y, std::vector<container>& target);
+    void update_log( const std::vector<container>& y, std::vector<container>& target);
+    const container& polarisation( const std::vector<container>& y);
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
     typedef T value_type;
@@ -49,6 +53,7 @@ struct Toefl
     std::vector<container> expy;
 
     Matrix dy;
+    Matrix A;
     Arakawa<T, n, container, MemorySpace> arakawa; 
     Polarisation2d<T, n, MemorySpace> pol;
     CG<Matrix, container, dg::T2D<T, n> > pcg;
@@ -78,9 +83,9 @@ void Toefl<T, n, container, MemorySpace>::update_exponent( const std::vector<con
 {
     for( unsigned i=0; i<y.size(); i++)
     {
-        blas2::symv( arkawa.backward2d(), y[i], target[i]);
-        thrust::transform( target[i].begin(), target[i].end(), target[i].begin(), dg::EXP<T,n>());
-        blas2::symv( arkawa.forward2d(), target[i], target[i]);
+        blas2::symv( arakawa.backward2d(), y[i], target[i]);
+        thrust::transform( target[i].begin(), target[i].end(), target[i].begin(), dg::EXP<T>());
+        blas2::symv( arakawa.forward2d(), target[i], target[i]);
     }
 }
 template< class T, size_t n, class container, class MemorySpace>
@@ -88,9 +93,9 @@ void Toefl<T, n, container, MemorySpace>::update_log( const std::vector<containe
 {
     for( unsigned i=0; i<y.size(); i++)
     {
-        blas2::symv( arkawa.backward2d(), y[i], target[i]);
-        thrust::transform( target[i].begin(), target[i].end(), target[i].begin(), dg::LN<T,n>());
-        blas2::symv( arkawa.forward2d(), target[i], target[i]);
+        blas2::symv( arakawa.backward2d(), y[i], target[i]);
+        thrust::transform( target[i].begin(), target[i].end(), target[i].begin(), dg::LN<T>());
+        blas2::symv( arakawa.forward2d(), target[i], target[i]);
     }
 }
 
@@ -104,15 +109,15 @@ const container& Toefl<T, n, container, MemorySpace>::polarisation( const std::v
     blas1::axpby( -p.a_i, expy[1], 1., omega);
     blas1::axpby( -p.a_z, expy[2], 1., omega);
     //compute chi
-    blas1::axpby( p.a_i*p.mu_i*expy[1], 0., chi)
-    blas1::axpby( p.a_z*p.mu_z*expy[2], 1., chi)
+    blas1::axpby( p.a_i*p.mu_i, expy[1], 0., chi);
+    blas1::axpby( p.a_z*p.mu_z, expy[2], 1., chi);
     //compute S omega 
     blas2::symv( S2D<double, n>(hx, hy), omega, omega);
     //blas1::axpby( 0., omega, 0, phi); //make 0 initial value for phi
-    cusp::array1d_view<container::iterator> chi_view( chi.begin(), chi.end());
+    cusp::array1d_view<typename container::iterator> chi_view( chi.begin(), chi.end());
     cudaThreadSynchronize();
-    DMatrix A = pol.create( dchi_view ); 
-    unsigned number = pcg( laplace, phi, omega, T2D<double, n>(hx, hy), eps);
+    A = pol.create( chi_view ); 
+    unsigned number = pcg( A, phi, omega, T2D<double, n>(hx, hy), eps);
     std::cout << "Number of pcg iterations "<< number <<std::endl;
     return phi;
 
