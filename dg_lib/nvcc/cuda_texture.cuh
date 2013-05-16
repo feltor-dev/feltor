@@ -205,6 +205,7 @@ struct HostWindow
     template< class T>
     void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map)
     {
+        glClear(GL_COLOR_BUFFER_BIT);
         if( Nx != Nx_ || Ny != Ny_) {
             Nx_ = Nx; Ny_ = Ny;
             std::cout << "Allocate resources for drawing!\n";

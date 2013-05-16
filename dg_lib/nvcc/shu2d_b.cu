@@ -17,18 +17,14 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 4;
-const unsigned Nx = 25;
-const unsigned Ny = 25;
+const unsigned n = 3;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
-const unsigned k = 3;
-const double D = 0.0;
-const double U = 1; //the dipole doesn't move with this velocity because box is not infinite
+const unsigned k = 2;
+const double U = 1.; //the dipole doesn't move with this velocity because box is not infinite
 const double R = 0.2*lx;
-const double T = 0.1;
-const unsigned NT = (unsigned)(T*n*Nx/0.05/lx);
+const double T = 2.;
 const double eps = 1e-3; //CG method
 
 typedef thrust::device_vector< double>   DVec;
@@ -41,6 +37,10 @@ typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
 typedef cusp::device_memory Memory;
 
+double D = 0.0;
+unsigned Nx = 25;
+unsigned Ny = 25;
+
 double initial( double x, double y){ return 2.*sin(x)*sin(y);}
 double solution( double x, double y){ return 2.*sin(x)*sin(y)*exp(-2.*D*T);}
 using namespace std;
@@ -48,16 +48,26 @@ using namespace std;
 int main()
 {
     Timer t;
-    const double hx = lx/ (double)Nx;
-    const double hy = ly/ (double)Ny;
-    const double dt = T/(double)NT;
     ////////////////////////////////////////////////////////////
+    cout << "Type # of grid cells in one dimension!\n";
+    cin >> Nx;
+    Ny = Nx; 
+    cout << "Type diffusion constant!\n";
+    cin >> D;
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
-    cout << "Timestep                    " << dt << endl;
     cout << "Diffusion                   " << D <<endl;
-    DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
+    ////////////////////////////////////////////////////////////
 
+    const double hx = lx/ (double)Nx;
+    const double hy = ly/ (double)Ny;
+    const unsigned NT = (unsigned)(T*n*Nx/0.05/lx);
+    const double dt = T/(double)NT;
+    cout << "Timestep                    " << dt << endl;
+    cout << "# of steps                  " << NT <<endl;
+    ////////////////////////////////////////////////////////////
+
+    DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
     //dg::Lamb lamb( 0.5*lx, 0.5*ly, R, U);
     //HArrVec omega = expand< dg::Lamb, n> ( lamb, 0, lx, 0, ly, Nx, Ny);
     HArrVec omega = expand< double(&)(double, double), n> ( initial, 0, lx, 0, ly, Nx, Ny);

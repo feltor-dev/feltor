@@ -19,8 +19,8 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 33;
-const unsigned Ny = 33;
+const unsigned Nx = 100; 
+const unsigned Ny = 100; 
 const double lx = 1.;
 const double ly = 1.;
 
@@ -28,8 +28,8 @@ const unsigned k = 3;
 const double D = 0.0;
 const double U = 1; //the dipole doesn't move with this velocity because box is not infinite
 const double R = 0.2*lx;
-const double T = 0.1;
-const unsigned NT = (unsigned)(T*n*Nx/0.05/lx);
+const double T = 0.6;
+const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
 const double eps = 1e-3; //CG method
 
 typedef thrust::device_vector< double>   DVec;
@@ -60,10 +60,10 @@ int main()
     cout << "Timestep                    " << dt << endl;
     //cout << "# of timesteps              " << NT << endl;
     cout << "Diffusion                   " << D <<endl;
-    dg::Lamb lamb( 0.5*lx, 0.5*ly, R, U);
+    dg::Lamb lamb( 0.5*lx, 0.8*ly, R, U);
     HArrVec omega = expand< dg::Lamb, n> ( lamb, 0, lx, 0, ly, Nx, Ny);
     DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
-    dg::Lamb lamb2( 0.5*lx, 0.5*ly-0.9755*U*T, R, U);
+    dg::Lamb lamb2( 0.5*lx, 0.8*ly-0.9755*U*T, R, U);
     HArrVec solh = expand< dg::Lamb, n> ( lamb2, 0, lx, 0, ly, Nx, Ny);
     DVec sol = solh.data();
     DVec y0( omega.data()), y1( y0);
@@ -88,7 +88,7 @@ int main()
     DMatrix backward = hbackward;
     //create visualisation vectors
     int running = GL_TRUE;
-    DVec visual( n*n*Nx*Ny);
+    DVec visual( n*n*Nx*Ny), visual2( visual);
     HVec hvisual( n*n*Nx*Ny);
     thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
     dg::ColorMapRedBlueExt colors( 1.);
@@ -101,13 +101,16 @@ int main()
         //test( y0, y1); //get the potential ready
         //cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), S2D<double, n>(hx, hy), y0) - energy)/energy<<"\n";
         //t.toc();
-        dg::blas2::symv( backward, y0, visual);
-        thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
+        dg::blas2::symv( backward, y0, visual2);
+        cudaThreadSynchronize();
+        thrust::scatter( visual2.begin(), visual2.end(), map.begin(), visual.begin());
+        cudaThreadSynchronize();
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
         hvisual = visual;
+        cudaThreadSynchronize();
         w.draw( hvisual, n*Nx, n*Ny, colors);
         //step 
         t.tic();

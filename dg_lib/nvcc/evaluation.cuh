@@ -197,7 +197,7 @@ thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
 }
 
 
-//to be used in thrust::scatter and thrust::gather
+//to be used in thrust::scatter and thrust::gather (Attention: don't scater inplace -> Pb with n>1)
 //switches between a dg representation of coefficients and one linear in memory
 template< size_t n>
 thrust::host_vector<int> makePermutationMap( unsigned Nx, unsigned Ny )
@@ -207,7 +207,7 @@ thrust::host_vector<int> makePermutationMap( unsigned Nx, unsigned Ny )
         for( unsigned j=0; j<Nx; j++)
             for( unsigned k=0; k<n; k++)
                 for( unsigned l=0; l<n; l++)
-                    map[ i*Nx*n*n + j*n*n + k*n + l] = i*Nx*n*n + k*Nx*n + j*n + l;
+                    map[ i*Nx*n*n + j*n*n + k*n + l] =(int)( i*Nx*n*n + k*Nx*n + j*n + l);
     return map;
 }
 
