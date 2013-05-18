@@ -14,6 +14,7 @@
 #include "dlt.h"
 #include "arrvec1d.cuh"
 #include "evaluation.cuh"
+#include "creation.cuh"
 #include "operator.cuh"
 
 
@@ -60,7 +61,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> createDiagonal( unsigned N)
     int number = 0;
     for( unsigned i=0; i<N; i++)
         for( unsigned k=0; k<n; k++)
-            create::detail::add_index<n>(A, number, i, i, k, k, t1d(i*n+k));
+            create::detail::add_index<double, n>(A, number, i, i, k, k, t1d(i*n+k));
     return A;
 };
 

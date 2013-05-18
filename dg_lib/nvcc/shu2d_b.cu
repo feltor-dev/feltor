@@ -17,7 +17,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
+const unsigned n = 1;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -38,8 +38,8 @@ typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 typedef cusp::device_memory Memory;
 
 double D = 0.0;
-unsigned Nx = 25;
-unsigned Ny = 25;
+unsigned Nx = 16;
+unsigned Ny = 16;
 
 double initial( double x, double y){ return 2.*sin(x)*sin(y);}
 double solution( double x, double y){ return 2.*sin(x)*sin(y)*exp(-2.*D*T);}
@@ -61,8 +61,11 @@ int main()
 
     const double hx = lx/ (double)Nx;
     const double hy = ly/ (double)Ny;
-    const unsigned NT = (unsigned)(T*n*Nx/0.05/lx);
+    unsigned NT = (unsigned)(T*n*Nx/0.025/lx);
+    cout << "Type # of timesteps\n";
+    cin >> NT;
     const double dt = T/(double)NT;
+    cout << "Runge Kutta stages          " << k <<endl;
     cout << "Timestep                    " << dt << endl;
     cout << "# of steps                  " << NT <<endl;
     ////////////////////////////////////////////////////////////

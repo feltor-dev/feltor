@@ -10,6 +10,56 @@
 namespace dg
 {
 
+    //not tested in practical use
+template< class T, size_t n>
+thrust::host_vector<T> positions( T a, T b, unsigned num_int)
+{
+    assert( b > a && num_int > 0) ;
+    thrust::host_vector< T> v(n*num_int);
+    const double h = (b-a)/2./(double)num_int;
+    /* x = (b-a)/2N x' +a  maps the function to [0;2N]
+      then x' goes through 1,3,5,...,2N-1
+     */
+    double xp=1.;
+    for( unsigned i=0; i<num_int; i++)
+    {
+        for( unsigned j=0; j<n; j++)
+            v[i*n+j] = a + h*(xp + DLT<n>::abscissa[j]);
+        xp+=2.;
+    }
+    return v;
+}
+
+    //not tested in practical use
+template< class Function, class Vector>
+Vector evaluate( Function& f, Vector& grid)
+{
+    Vector v(grid);
+    thrust::transform( grid.begin(), grid.end(), v.begin(), f);
+    return v;
+}
+
+    //not tested in practical use
+template< class Vector>
+Vector evaluate( double(f)(double), Vector& grid)
+{
+    Vector v(grid);
+    thrust::transform( grid.begin(), grid.end(), v.begin(), f);
+    return v;
+}
+
+    //not tested in practical use
+template< class Function, class Vector>
+Vector evaluate( Function& f, Vector& gridx, Vector& gridy)
+{
+    Vector v(gridx.size()*gridy.size());
+    for( unsigned i=0; i<gridy.size(); i++)
+        for( unsigned j=0; j<gridx.size(); j++)
+            v[i*gridx.size() + j] = f( gridx[j], gridy[i]);
+    return v;
+}
+
+
 /**
  * @brief Evaluate a function on gaussian abscissas
  *

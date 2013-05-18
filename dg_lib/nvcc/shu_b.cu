@@ -19,8 +19,8 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 100; 
-const unsigned Ny = 100; 
+const unsigned Nx = 32; 
+const unsigned Ny = 32; 
 const double lx = 1.;
 const double ly = 1.;
 
@@ -28,9 +28,10 @@ const unsigned k = 3;
 const double D = 0.0;
 const double U = 1; //the dipole doesn't move with this velocity because box is not infinite
 const double R = 0.2*lx;
-const double T = 0.6;
-const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
+const double T = 1.;//0.6;
+const unsigned NT =  (unsigned)(T*n*Nx/0.05/lx);
 const double eps = 1e-3; //CG method
+const unsigned N = 3; //only output every Nth step 
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
@@ -92,6 +93,9 @@ int main()
     HVec hvisual( n*n*Nx*Ny);
     thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
     dg::ColorMapRedBlueExt colors( 1.);
+    cout << "Press any key to start!\n";
+    double x; 
+    cin >> x;
     while (running && time < T)
     {
         //transform field to an equidistant grid
@@ -114,12 +118,15 @@ int main()
         w.draw( hvisual, n*Nx, n*Ny, colors);
         //step 
         t.tic();
-        rk( test, y0, y1, dt);
-        thrust::swap(y0, y1);
+        for( unsigned i=0; i<N; i++)
+        {
+            rk( test, y0, y1, dt);
+            thrust::swap(y0, y1);
+        }
         t.toc();
-        //cout << "Timer for one step: "<<t.diff()<<"s\n";
-        cout << "Simulation Time "<<time<<endl;
-        time += dt;
+        //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
+        cout << "Simulation Time "<<time<< " \ttook "<<t.diff()/(double)N<<"\t per step"<<endl;
+        time += N*dt;
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
@@ -135,7 +142,7 @@ int main()
     blas1::axpby( 1., y0, -1, sol);
     cout << "Distance to solution: "<<sqrt(blas2::dot( S2D<double,n>(hx,hy), sol ))<<endl;
 
-    double x; 
+    cout << "Press any key to quit!\n";
     cin >> x;
     return 0;
 

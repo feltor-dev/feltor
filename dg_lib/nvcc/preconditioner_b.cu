@@ -60,7 +60,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> createDiagonal( unsigned N)
     int number = 0;
     for( unsigned i=0; i<N; i++)
         for( unsigned k=0; k<n; k++)
-            create::detail::add_index<n>(A, number, i, i, k, k, t1d(i*n+k));
+            create::detail::add_index<double, n>(A, number, i, i, k, k, t1d(i*n+k));
     return A;
 };
 
@@ -95,11 +95,17 @@ int main()
     t.toc();
     cout << "Foward cusp transform took    "<<t.diff()<<"s\n";
     t.tic();
-    blas2::symv( T1D<double, n>( 2.), dv_2.data(), dv_2.data());
+    T1D<double, n> t1d( 2.);
+    blas2::symv( t1d , dv_2.data(), dv_2.data());
     //blas2::symv( 1., T1D<double, n>( 2.), dv_2.data(), 0., dv_2.data());
     //slower than single symv( T, v, v) but faster than symv plus axpby
     t.toc();
     cout << "Foward dg transform took      "<<t.diff()<<"s\n";
+    W1D<double, n> w1d( 2.);
+    t.tic();
+    blas2::symv( w1d, dv_2.data(), dv_2.data());
+    t.toc();
+    cout << "Foward W  transform took      "<<t.diff()<<"s\n";
 
     //test for equality...
     /*
