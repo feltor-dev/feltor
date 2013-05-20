@@ -2,6 +2,7 @@
 #define _DG_PRECONDITIONER2D_
 
 #include "matrix_traits.h"
+#include "dlt.h"
 
 namespace dg{
 

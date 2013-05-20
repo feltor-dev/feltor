@@ -15,10 +15,11 @@
 namespace dg
 {
 
-template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
+template< class T, size_t n, class container=thrust::device_vector<T> >
 struct Arakawa
 {
     typedef T value_type;
+    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
 
@@ -34,8 +35,8 @@ struct Arakawa
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class T, size_t n, class container, class MemorySpace>
-Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( n*n*Nx*Ny), brhs( blhs)
+template< class T, size_t n, class container>
+Arakawa<T, n, container>::Arakawa( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( n*n*Nx*Ny), brhs( blhs)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
 
@@ -86,8 +87,8 @@ Arakawa<T, n, container, MemorySpace>::Arakawa( unsigned Nx, unsigned Ny, double
     */
 }
 
-template< class T, size_t n, class container, class MemorySpace>
-void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, const container& rhs, container& result)
+template< class T, size_t n, class container>
+void Arakawa<T, n, container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //transform to x-space
     blas2::symv( backward, lhs, blhs);
@@ -140,10 +141,11 @@ void Arakawa<T, n, container, MemorySpace>::operator()( const container& lhs, co
 
 
 //saves 20% time
-template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
+template< class T, size_t n, class container=thrust::device_vector<T> >
 struct ArakawaX
 {
     typedef T value_type;
+    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
 
@@ -159,8 +161,8 @@ struct ArakawaX
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class T, size_t n, class container, class MemorySpace>
-ArakawaX<T, n, container, MemorySpace>::ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class T, size_t n, class container>
+ArakawaX<T, n, container>::ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
 
@@ -189,8 +191,8 @@ ArakawaX<T, n, container, MemorySpace>::ArakawaX( unsigned Nx, unsigned Ny, doub
     bdyf = bdyf__;
 }
 
-template< class T, size_t n, class container, class MemorySpace>
-void ArakawaX<T, n, container, MemorySpace>::operator()( const container& lhs, const container& rhs, container& result)
+template< class T, size_t n, class container>
+void ArakawaX<T, n, container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //compute derivatives in x-space
     blas2::symv( bdxf, lhs, dxlhs);
