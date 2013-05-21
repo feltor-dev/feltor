@@ -24,6 +24,7 @@
 #include "operator_matrix.cuh"
 #include "tensor.cuh"
 #include "arakawa.cuh"
+#include "polarisation.cuh"
 
 
 namespace dg
@@ -84,8 +85,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
     Operator<T,n> weights_invx(0.), weights_invy(0.);
     for( unsigned i=0; i<n; i++)
     {
-        weights_invx[i] = 2./g.hx()/DLT<n>::weight[i];
-        weights_invy[i] = 2./g.hy()/DLT<n>::weight[i];
+        weights_invx(i,i) = 2./g.hx()/DLT<n>::weight[i];
+        weights_invy(i,i) = 2./g.hy()/DLT<n>::weight[i];
     }
     Operator<T,n> leftx( right.transpose() ), lefty( right.transpose());
     if( normalized) 
@@ -108,8 +109,19 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
     Matrix flxf = sandwich<T,n>( leftx, lx, right);
     Matrix flyf = sandwich<T,n>( lefty, ly, right);
 
-    Matrix ddyy = dgtensor<double, n>( flyf, tensor<double, n>( Nx, pipj));
-    Matrix ddxx = dgtensor<double, n>( tensor<double, n>( Ny, pipj), flxf);
+    Operator<T,n> normx(0.), normy(0.);
+    for( unsigned i=0; i<n; i++)
+    {
+        if( normalized) 
+        {
+            normx(i,i) = g.hx()/2.*DLT<n>::weight[i];
+            normy(i,i) = g.hy()/2.*DLT<n>::weight[i];
+        }
+        else
+            normx(i,i) = normy[i] = 1.;
+    }
+    Matrix ddyy = dgtensor<double, n>( flyf, tensor( g.Nx(), normx));
+    Matrix ddxx = dgtensor<double, n>( tensor(g.Ny(), normy), flxf);
     Matrix laplace( ddxx);
     cusp::add( ddxx, ddyy, laplace);
     return laplace;
