@@ -79,13 +79,18 @@ inline void doAxpby( typename Vector::value_type alpha,
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
+    assert( x.size() == z.size() );
 #endif //DG_DEBUG
     if( alpha == 0)
     {
-        if( beta == 1) 
-            return;
         thrust::transform( y.begin(), y.end(), z.begin(), 
                 detail::Axpby_Functor<typename Vector::value_type>( 0, beta));
+        return;
+    }
+    if( beta == 0)
+    {
+        thrust::transform( x.begin(), x.end(), z.begin(), 
+                detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
         return;
     }
     thrust::transform( x.begin(), x.end(), y.begin(), z.begin(), 
