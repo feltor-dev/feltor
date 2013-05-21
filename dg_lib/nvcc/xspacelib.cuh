@@ -48,25 +48,16 @@ HVec evaluate( double(f)(double, double), const Grid<double,n>& g)
 
 namespace create{
 
+
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, bc bcx)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     int bound = ( bcx == PER )? -1 : 0; 
-    //create forward dlt matrix
-    Operator<T, n> forward1d( DLT<n>::forward);
-    //create backward dlt matrix
-    Operator<T, n> backward1d( DLT<n>::backward);
-    //create derivatives
     Matrix dx = create::dx_symm<T,n>( g.Nx(), g.hx(), bound);
-    Matrix fx = tensor( g.Nx(), forward1d);
-    Matrix bx = tensor( g.Nx(), backward1d);
-    Matrix dxf( dx), bdxf_(dx);
+    Matrix bdxf = sandwich<T,n>( dx);
 
-    cusp::multiply( dx, fx, dxf);
-    cusp::multiply( bx, dxf, bdxf_);
-
-    return dgtensor<T,n>( tensor<T,n>( g.Ny(), delta), bdxf_ );
+    return dgtensor<T,n>( tensor<T,n>( g.Ny(), delta), bdxf );
 }
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g) { return dx( g, g.bcx());}
@@ -76,23 +67,60 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, bc bcy)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     int bound = ( bcy == PER )? -1 : 0; 
-    //create forward dlt matrix
-    Operator<T, n> forward1d( DLT<n>::forward);
-    //create backward dlt matrix
-    Operator<T, n> backward1d( DLT<n>::backward);
-    //create derivatives
     Matrix dy = create::dx_symm<T,n>( g.Ny(), g.hy(), bound);
-    Matrix fy = tensor( g.Ny(), forward1d);
-    Matrix by = tensor( g.Ny(), backward1d);
-    Matrix dyf( dy), bdyf_(dy);
-
-    cusp::multiply( dy, fy, dyf);
-    cusp::multiply( by, dyf, bdyf_);
+    Matrix bdyf_ = sandwich<T,n>( dy);
 
     return dgtensor<T,n>( bdyf_, tensor<T,n>( g.Nx(), delta));
 }
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g){ return dy( g, g.bcy());}
+
+template< class T, size_t n>
+cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc bcx, bc bcy, bool normalized = true)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Operator<T, n> forward1d( DLT<n>::forward);
+    Operator<T, n> right( forward1d);
+    Operator<T,n> weights_invx(0.), weights_invy(0.);
+    for( unsigned i=0; i<n; i++)
+    {
+        weights_invx[i] = 2./g.hx()/DLT<n>::weight[i];
+        weights_invy[i] = 2./g.hy()/DLT<n>::weight[i];
+    }
+    Operator<T,n> leftx( right.transpose() ), lefty( right.transpose());
+    if( normalized) 
+    {
+        leftx = weights_invx*leftx;
+        lefty = weights_invy*lefty;
+    }
+
+    Matrix ly;
+    if( bcy == PER) 
+        ly = create::laplace1d_per<double,  n>( g.Ny(), g.hy());
+    else if( bcy == DIR) 
+        ly = create::laplace1d_dir<double,  n>( g.Ny(), g.hy());
+    Matrix lx;
+    if( bcx == PER) 
+        lx = create::laplace1d_per<double,  n>( g.Nx(), g.hx());
+    else if( bcx == DIR) 
+        lx = create::laplace1d_dir<double,  n>( g.Nx(), g.hx());
+
+    Matrix flxf = sandwich<T,n>( leftx, lx, right);
+    Matrix flyf = sandwich<T,n>( lefty, ly, right);
+
+    Matrix ddyy = dgtensor<double, n>( flyf, tensor<double, n>( Nx, pipj));
+    Matrix ddxx = dgtensor<double, n>( tensor<double, n>( Ny, pipj), flxf);
+    Matrix laplace( ddxx);
+    cusp::add( ddxx, ddyy, laplace);
+    return laplace;
+}
+
+template< class T, size_t n>
+cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bool normalized = true)
+{
+    return laplacian( g, g.bcx(), b.bcy(), normalized);
+}
+
 } //namespace create
 
 }//namespace dg

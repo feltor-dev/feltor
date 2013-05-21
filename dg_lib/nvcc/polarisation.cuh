@@ -87,6 +87,8 @@ Polarisation2d<T,n, Memory>::Polarisation2d( unsigned Nx, unsigned Ny, T hx, T h
     rightx = dg::dgtensor<T,n>( tensor<T,n>(Ny, delta), rightx);
     righty = create::dx_asymm_mt<T,n>( Ny, hy, bcy); //create and transfer to device
     righty = dg::dgtensor<T,n>( righty, tensor<T,n>( Nx, delta) );
+
+    //create backward2d
     Operator<T, n> backward1d( DLT<n>::backward);
     Operator<T, n*n> backward2d = tensor( backward1d, backward1d);
     middle = tensor( Nx*Ny, backward2d);

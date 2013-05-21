@@ -77,6 +77,31 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,
 }
 
 
+//multiply 1d matrices by left and right 
+template< class T, size_t n>
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,  cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T,n>& right)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    unsigned N = m.num_rows()%n;
+    Matrix r = tensor( N, right);
+    Matrix l = tensor( N, left);
+    Matrix mr(m ), lmr(m);
+
+    cusp::multiply( m, r, mr);
+    cusp::multiply( l, mr, lmr);
+    return lmr;
+}
+//sandwich l space matrix to make x space matrix
+template< class T, size_t n>
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( cusp::coo_matrix<int, T, cusp::host_memory>& m)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Operator<T, n> forward1d( DLT<n>::forward);
+    Operator<T, n> backward1d( DLT<n>::backward);
+    return sandwich( backward1d, m, forward1d);
+}
+
+
 
 //}//namespace create
     

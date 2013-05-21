@@ -41,6 +41,7 @@ struct AddIndex2d{
 
 } //namespace detail
 
+//maybe one shouldn't take device_memory because it's limited
 /**
 * @brief Form the DG tensor Product between two DG matrices
 *
