@@ -7,6 +7,7 @@
 #include "dlt.h"
 #include "vector_traits.h"
 
+#include "grid.cuh"
 #include "functions.h"
 #include "tensor.cuh"
 #include "operator_matrix.cuh"
@@ -147,6 +148,8 @@ struct ArakawaX
     typedef T value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    ArakawaX( const Grid<T,n>& g);
+    ArakawaX( const Grid<T,n>& g, bc bcx, bc bcy);
     ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
 
     void operator()( const container& lhs, const container& rhs, container& result);
@@ -155,6 +158,7 @@ struct ArakawaX
 
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
+    void construct( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
     Matrix bdxf, bdyf;
     container dxlhs, dylhs, dxrhs, dyrhs, helper;
 };
@@ -162,7 +166,26 @@ struct ArakawaX
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
 template< class T, size_t n, class container>
+ArakawaX<T, n, container>::ArakawaX( const Grid<T,n>& g): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+{
+    int bx = (g.bcx() == PER)?-1:0;
+    int by = (g.bcy() == PER)?-1:0;
+    construct( g.Nx(), g.Ny(), g.hx(), g.hy(), bx, by);
+}
+template< class T, size_t n, class container>
+ArakawaX<T, n, container>::ArakawaX( const Grid<T,n>& g, bc bcx, bc bcy): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+{
+    int bx = (bcx == PER)?-1:0;
+    int by = (bcy == PER)?-1:0;
+    construct( g.Nx(), g.Ny(), g.hx(), g.hy(), bx, by);
+}
+template< class T, size_t n, class container>
 ArakawaX<T, n, container>::ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+{
+    construct( Nx, Ny, hx, hy, bcx, bcy);
+}
+template< class T, size_t n, class container>
+void ArakawaX<T, n, container>::construct( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
 

@@ -14,8 +14,9 @@ enum bc{
 template< class T, size_t n>
 struct Grid
 {
-    Grid( T x0, T x1, T y0, T y1, unsigned Nx, unsigned Ny): x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
-                                                             Nx_(Nx), Ny_(Ny)
+    Grid( T x0, T x1, T y0, T y1, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
+        Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy)
     {
         assert( x1 > x0 && y1 > y0);
         assert( Nx > 0  && Ny > 0);
@@ -32,12 +33,14 @@ struct Grid
     T hy() const {return hy_;}
     unsigned Nx() const {return Nx_;}
     unsigned Ny() const {return Ny_;}
+    bc bcx() const {return bcx_;}
+    bc bcy() const {return bcy_;}
   private:
     T x0_, x1_, y0_, y1_;
     T lx_, ly_;
     unsigned Nx_, Ny_;
     T hx_, hy_;
-    bc bcx, bcy;
+    bc bcx_, bcy_;
 };
 }// namespace dg
 #endif // _DG_GRID_CUH_
