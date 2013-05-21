@@ -194,12 +194,19 @@ void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx,
     Operator<T, n> forward1d( DLT<n>::forward);
 
     //create x and y derivative in xspace
+    std::cout << "ping1\n";
     rightx = create::dx_asymm_mt<T,n>( Nx, hx, bcx); 
+    std::cout << "ping2\n";
     rightx = sandwich<T,n>( backward1d, rightx, forward1d);
+    std::cout << "ping3\n";
     rightx = dg::dgtensor<T,n>( tensor<T,n>(Ny, delta), rightx);
+    std::cout << "ping4\n";
     righty = create::dx_asymm_mt<T,n>( Ny, hy, bcy); //create and transfer to device
+    std::cout << "ping5\n";
     righty = sandwich<T,n>( backward1d, righty, forward1d);
+    std::cout << "ping6\n";
     righty = dg::dgtensor<T,n>( righty, tensor<T,n>( Nx, delta) );
+    std::cout << "ping7\n";
 
     cusp::transpose( rightx, leftx); 
     cusp::transpose( righty, lefty); 
@@ -211,6 +218,7 @@ void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx,
                 middle[i*n*n+j*n+k] = DLT<n>::weight[k]*hx/2.*DLT<n>::weight[j]*hy/2.; 
             }
 
+    std::cout << "ping3\n";
     //create norm for jump matrices 
     Operator<T,n> weightsx(0.), weightsy(0.), winvx(0.), winvy(0.);
     for( unsigned i=0; i<n; i++)
@@ -226,6 +234,7 @@ void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx,
     jumpx = dg::dgtensor<T,n>( tensor<T,n>( Ny, weightsy), jumpx); //proper normalisation
 
     jumpy = create::jump_ot<T,n>( Ny, bcy); //without jump cg is unstable
+    std::cout << "ping4\n";
     jumpy = sandwich<T,n>( winvy*forward1d.transpose(), jumpy, forward1d);
     jumpy = dg::dgtensor<T,n>( jumpy, tensor<T,n>( Nx, weightsx));
 

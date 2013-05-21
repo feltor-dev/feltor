@@ -7,8 +7,8 @@
 
 namespace dg{
 
-    //TODO Throw messages instead of assertions because origin of message can 
-    // be better followed
+//TODO Throw messages instead of assertions because origin of message can 
+// be better followed
 /*! @brief BLAS Level 1 routines 
  *
  * @ingroup blas
@@ -42,7 +42,7 @@ inline typename Vector::value_type dot( const Vector& x, const Vector& y)
  * and daxpy is memory bound. (Is there no original daxpby routine because 
  * the name is too long??)
  * @param alpha Scalar  
- * @param x Vector x migtht equal y 
+ * @param x Vector x might equal y 
  * @param beta Scalar
  * @param y Vector y contains solution on output
  * @note In an implementation you may want to check for alpha == 0 and beta == 1
@@ -53,6 +53,24 @@ template< class Vector>
 inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, Vector& y)
 {
     return dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
+}
+
+/*! @brief Modified BLAS 1 routine axpy
+ *
+ * This routine computes \f[ z =  \alpha x + \beta y \f] 
+ * @param alpha Scalar  
+ * @param x Vector x might equal z 
+ * @param beta Scalar
+ * @param y Vector y might equal z
+ * @param z Vector z contains solution on output
+ * @note In an implementation you may want to check for alpha == 0 and beta == 1
+ * @note If DG_DEBUG is defined a range check shall be performed
+ * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
+ */
+template< class Vector>
+inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, Vector& z)
+{
+    return dg::blas1::detail::doAxpby( alpha, x, beta, y, z, typename dg::VectorTraits<Vector>::vector_category() );
 }
 
 /**

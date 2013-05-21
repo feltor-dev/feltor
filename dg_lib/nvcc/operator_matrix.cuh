@@ -2,6 +2,7 @@
 #define _DG_OPERATOR_MATRIX_
 
 #include <cusp/coo_matrix.h>
+#include <cusp/multiply.h>
 #include "operator.cuh"
 
 namespace dg
@@ -53,6 +54,7 @@ Operator<T, n*n> tensor( const Operator< T, n>& op1, const Operator<T, n>& op2)
 template< class T, size_t n>
 cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,n>& op)
 {
+    assert( N>0);
     //compute number of nonzeroes in op
     unsigned number =0;
     for( unsigned i=0; i<n; i++)
@@ -79,21 +81,27 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,
 
 //multiply 1d matrices by left and right 
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,  cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T,n>& right)
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T,n>& right)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    unsigned N = m.num_rows()%n;
+    unsigned N = m.num_rows%n;
+    std::cout << N << " poing1\n";
     Matrix r = tensor( N, right);
+    std::cout << "poing2\n";
     Matrix l = tensor( N, left);
+    std::cout << "poing3\n";
     Matrix mr(m ), lmr(m);
+    std::cout << "poing4\n";
 
     cusp::multiply( m, r, mr);
+    std::cout << "poing5\n";
     cusp::multiply( l, mr, lmr);
+    std::cout << "poing6\n";
     return lmr;
 }
 //sandwich l space matrix to make x space matrix
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> sandwich( cusp::coo_matrix<int, T, cusp::host_memory>& m)
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const cusp::coo_matrix<int, T, cusp::host_memory>& m)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Operator<T, n> forward1d( DLT<n>::forward);
