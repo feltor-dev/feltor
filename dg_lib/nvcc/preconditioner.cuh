@@ -3,6 +3,7 @@
 
 #include "matrix_categories.h"
 #include "matrix_traits.h"
+#include "dlt.h"
 
 namespace dg{
 
@@ -104,6 +105,62 @@ struct MatrixTraits< S1D< T, n> >
     typedef T value_type;
     typedef DiagonalPreconditionerTag matrix_category;
 };
+
+template< class T, size_t n>
+struct W1D
+{
+    typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
+    /**
+    * @brief Constructor
+    *
+    * @param h The grid size assumed to be constant.
+    */
+    __host__ W1D( value_type h){ 
+        for( unsigned i=0; i<n; i++)
+            w[i] = h/2.*DLT<n>::weight[i];
+    }
+    __host__ __device__ value_type operator()( int i) const 
+    {
+        return (T)w[i%n]; 
+    }
+  private:
+    double w[n];
+};
+template< class T, size_t n>
+struct MatrixTraits< W1D< T, n> > 
+{
+    typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
+};
+template< class T, size_t n>
+struct V1D
+{
+    typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
+    /**
+    * @brief Constructor
+    *
+    * @param h The grid size assumed to be constant.
+    */
+    __host__ V1D( value_type h){ 
+        for( unsigned i=0; i<n; i++)
+            x[i] = 2./h/DLT<n>::weight[i];
+    }
+    __host__ __device__ value_type operator()( int i) const 
+    {
+        return x[i%n]; 
+    }
+  private:
+    double x[n]; //the more u store, the slower it becomes on gpu
+};
+template< class T, size_t n>
+struct MatrixTraits< V1D< T, n> > 
+{
+    typedef T value_type;
+    typedef DiagonalPreconditionerTag matrix_category;
+};
+
 
 
 } //namespace dg

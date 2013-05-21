@@ -15,7 +15,7 @@
 #include "evaluation.cuh"
 
 const unsigned n = 3;
-const unsigned Nx = 10, Ny = 20;
+const unsigned Nx = 40, Ny = 40;
 
 typedef thrust::device_vector<double> DVec;
 typedef thrust::host_vector<double> HVec;
@@ -48,11 +48,13 @@ int main()
 
     //allocate storage for visual
     DVec visual( n*n*Nx*Ny);
+    DVec visual_t( n*n*Nx*Ny);
     HVec hvisual( n*n*Nx*Ny);
 
     //transform vector to an equidistant grid
-    dg::blas2::symv( backward, vector.data(), visual);
-    thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
+    dg::blas2::symv( backward, vector.data(), visual_t);
+    thrust::scatter( visual_t.begin(), visual_t.end(), map.begin(), visual.begin());//dont't scatter 
+    //in the same vector!!
 
     //create a colormap
     dg::ColorMapRedBlueExt colors( 1.);
@@ -68,6 +70,7 @@ int main()
         hvisual = visual;
         w.draw( hvisual, n*Nx, n*Ny, colors);
         glfwWaitEvents();
+        glfwSwapBuffers();
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
     }

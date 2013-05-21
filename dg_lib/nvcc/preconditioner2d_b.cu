@@ -46,8 +46,12 @@ int main()
     blas2::symv( S2D<double,n >(2., 2.), dw2d.data(), dw2d.data());
     t.toc();
     cout << "dg symv took   "<<t.diff()<<"s\n";
+    t.tic();
+    blas2::symv( W2D<double,n >(2., 2.), dw2d.data(), dw2d.data());
+    t.toc();
+    cout << "dg W symv took "<<t.diff()<<"s\n";
     Operator<double, n> s2d( pipj);
-    HMatrix hm = tensor<double, n>( tensor(Ny, s2d), tensor(Nx, s2d));
+    HMatrix hm = dgtensor<double, n>( tensor(Ny, s2d), tensor(Nx, s2d));
     DMatrix dm( hm);
 
     t.tic();

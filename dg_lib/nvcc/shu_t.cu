@@ -15,9 +15,9 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 2;
-const unsigned Nx = 10;
-const unsigned Ny = 10;
+const unsigned n = 3;
+const unsigned Nx = 40;
+const unsigned Ny = 40;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -71,7 +71,7 @@ int main()
     DMatrix backward = hbackward;
     //create visualisation vectors
     int running = GL_TRUE;
-    DVec visual( n*n*Nx*Ny);
+    DVec visual( n*n*Nx*Ny), visual2( visual);
     HVec hvisual( n*n*Nx*Ny);
     thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
     dg::ColorMapRedBlueExt colors( 1.);
@@ -80,10 +80,10 @@ int main()
         //transform field to an equidistant grid
         cout << "Total vorticity is: "<<blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
         cout << "Total enstrophy is: "<<blas2::dot( S2D<double, n>(hx, hy), y0)<<"\n";
-        dg::blas2::symv( backward, y0, visual);
-        thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
+        dg::blas2::symv( backward, y0, visual2);
+        thrust::scatter( visual2.begin(), visual2.end(), map.begin(), visual.begin());
         //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<float>() );
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
         hvisual = visual;

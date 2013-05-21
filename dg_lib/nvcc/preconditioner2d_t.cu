@@ -4,9 +4,8 @@
 #include <cusp/ell_matrix.h>
 
 #include "laplace.cuh"
-#include "laplace2d.cuh"
-#include "dgvec.cuh"
-#include "dgmat.cuh"
+#include "arrvec1d.cuh"
+#include "arrvec2d.cuh"
 #include "evaluation.cuh"
 #include "preconditioner.cuh"
 #include "blas.h"
@@ -41,6 +40,7 @@ int main()
     const double hy = ly/(double)Ny;
     T2D<double, n> t2d(hx, hy); 
     HArrMat hv2d = expand< double(&)(double, double), n>( function, 0, lx, 0, ly, Nx, Ny), hw2d( hv2d);
+    HArrMat hx2d = evaluate< double(&)(double, double), n>( function, 0, lx, 0, ly, Nx, Ny);
     HArrVec hv1d = expand< double(&)(double), n>( function, 0, lx, Nx), hw1d( hv1d);
     cout << "Before multiplication: \n";
     double norm2 = blas2::dot( S1D<double, n>( hx), hw1d.data());
@@ -48,6 +48,8 @@ int main()
     cout << "yields in 2D: "<< norm2*ly<<endl;
     double norm2_= blas2::dot( S2D<double, n>( hx, hy), hw2d.data());
     cout << "Norm2 2D is : "<<norm2_<<endl;
+    double norm2X= blas2::dot( W2D<double, n>( hx, hy), hx2d.data());
+    cout << "Norm2X2D is : "<<norm2X<<endl;
     cout << "Unpreconditioned\n";
     cout << hw1d<<endl;
     cout << hw2d<<endl;

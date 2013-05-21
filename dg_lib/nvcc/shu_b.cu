@@ -19,18 +19,19 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 66;
-const unsigned Ny = 66;
-const double lx = 2.;
-const double ly = 2.;
+const unsigned Nx = 32; 
+const unsigned Ny = 32; 
+const double lx = 1.;
+const double ly = 1.;
 
 const unsigned k = 3;
 const double D = 0.0;
 const double U = 1; //the dipole doesn't move with this velocity because box is not infinite
-const double R = 0.1*lx;
-const double T = 0.1;
-const unsigned NT = (unsigned)(T*n*Nx/0.05/lx);
+const double R = 0.2*lx;
+const double T = 1.;//0.6;
+const unsigned NT =  (unsigned)(T*n*Nx/0.05/lx);
 const double eps = 1e-3; //CG method
+const unsigned N = 3; //only output every Nth step 
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
@@ -60,16 +61,16 @@ int main()
     cout << "Timestep                    " << dt << endl;
     //cout << "# of timesteps              " << NT << endl;
     cout << "Diffusion                   " << D <<endl;
-    dg::Lamb lamb( 0.5*lx, 0.5*ly, R, U);
+    dg::Lamb lamb( 0.5*lx, 0.8*ly, R, U);
     HArrVec omega = expand< dg::Lamb, n> ( lamb, 0, lx, 0, ly, Nx, Ny);
     DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
-    dg::Lamb lamb2( 0.5*lx, 0.5*ly-0.9755*U*T, R, U);
+    dg::Lamb lamb2( 0.5*lx, 0.8*ly-0.9755*U*T, R, U);
     HArrVec solh = expand< dg::Lamb, n> ( lamb2, 0, lx, 0, ly, Nx, Ny);
     DVec sol = solh.data();
     DVec y0( omega.data()), y1( y0);
     //make solver and stepper
     Shu<double, n, DVec, Memory> test( Nx, Ny, hx, hy, D, eps);
-    RK< 3, Shu<double, n, DVec, Memory> > rk( y0);
+    RK< k, Shu<double, n, DVec, Memory> > rk( y0);
 
     t.tic();
     test( y0, y1);
@@ -88,10 +89,13 @@ int main()
     DMatrix backward = hbackward;
     //create visualisation vectors
     int running = GL_TRUE;
-    DVec visual( n*n*Nx*Ny);
+    DVec visual( n*n*Nx*Ny), visual2( visual);
     HVec hvisual( n*n*Nx*Ny);
     thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
     dg::ColorMapRedBlueExt colors( 1.);
+    cout << "Press any key to start!\n";
+    double x; 
+    cin >> x;
     while (running && time < T)
     {
         //transform field to an equidistant grid
@@ -101,22 +105,28 @@ int main()
         //test( y0, y1); //get the potential ready
         //cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), S2D<double, n>(hx, hy), y0) - energy)/energy<<"\n";
         //t.toc();
-        dg::blas2::symv( backward, y0, visual);
-        thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
+        dg::blas2::symv( backward, y0, visual2);
+        cudaThreadSynchronize();
+        thrust::scatter( visual2.begin(), visual2.end(), map.begin(), visual.begin());
+        cudaThreadSynchronize();
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
         hvisual = visual;
+        cudaThreadSynchronize();
         w.draw( hvisual, n*Nx, n*Ny, colors);
         //step 
         t.tic();
-        rk( test, y0, y1, dt);
-        thrust::swap(y0, y1);
+        for( unsigned i=0; i<N; i++)
+        {
+            rk( test, y0, y1, dt);
+            thrust::swap(y0, y1);
+        }
         t.toc();
-        //cout << "Timer for one step: "<<t.diff()<<"s\n";
-        cout << "Simulation Time "<<time<<endl;
-        time += dt;
+        //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
+        cout << "Simulation Time "<<time<< " \ttook "<<t.diff()/(double)N<<"\t per step"<<endl;
+        time += N*dt;
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
@@ -132,7 +142,7 @@ int main()
     blas1::axpby( 1., y0, -1, sol);
     cout << "Distance to solution: "<<sqrt(blas2::dot( S2D<double,n>(hx,hy), sol ))<<endl;
 
-    double x; 
+    cout << "Press any key to quit!\n";
     cin >> x;
     return 0;
 

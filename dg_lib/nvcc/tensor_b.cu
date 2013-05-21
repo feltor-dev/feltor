@@ -16,7 +16,7 @@
 #include "arrvec2d.cuh"
 #include "blas.h"
 
-const unsigned P = 3;
+const unsigned n = 3;
 const unsigned Nx = 1e2;
 const unsigned Ny = 1e2;
 
@@ -32,16 +32,16 @@ typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 int main()
 {
     Timer t;
-    cout << "# of Legendre coefficients P is: "<< P <<endl;
+    cout << "# of Legendre coefficients n is: "<< n <<endl;
     cout << "# of 2d cells is:                "<<Nx*Ny<<"\n";
 
-    ArrVec2d<double, P> hv( Nx, Ny, 0.);
+    ArrVec2d<double, n> hv( Nx, Ny, 0.);
     DVec dv = hv.data(), dw( dv);
     t.tic();
-    DMatrix laplace2d = dgtensor<double,P>(  create::laplace1d_per<double, P>(Ny, 2.),
-                                    S1D<double, P>( 2.),
-                                    S1D<double, P>( 2.),
-                                    create::laplace1d_per<double, P>(Nx, 2.) );
+    DMatrix laplace2d = dgtensor<double,n>(  create::laplace1d_per<double, n>(Ny, 2.),
+                                    S1D<double, n>( 2.),
+                                    S1D<double, n>( 2.),
+                                    create::laplace1d_per<double, n>(Nx, 2.) );
     t.toc();
     cout <<"\n";
     cout << "Laplace matrix creation took       "<<t.diff()<<"s\n";
@@ -51,11 +51,11 @@ int main()
     cout << "Multiplication with laplace2d took "<<t.diff()<<"s\n";
 
     t.tic();
-    DMatrix ddyy = dgtensor<double, P>( 
-                        create::laplace1d_per<double, P>(Ny, 2.),
-                        tensor<double, P>( Nx, pipj));
-    DMatrix ddxx = dgtensor<double, P>( tensor<double, P>( Ny, pipj),
-                                      create::laplace1d_per<double, P>(Nx, 2.));
+    DMatrix ddyy = dgtensor<double, n>( 
+                        create::laplace1d_per<double, n>(Ny, 2.),
+                        tensor<double, n>( Nx, pipj));
+    DMatrix ddxx = dgtensor<double, n>( tensor<double, n>( Ny, pipj),
+                                      create::laplace1d_per<double, n>(Nx, 2.));
     DMatrix laplace( ddxx);
     cusp::add( ddxx, ddyy, laplace);
     t.toc();
