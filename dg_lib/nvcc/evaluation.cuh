@@ -2,6 +2,7 @@
 #define _DG_EVALUATION_
 
 #include <cassert> 
+#include "grid.cuh"
 
 #include "arrvec1d.cuh"
 #include "arrvec2d.cuh"
@@ -10,6 +11,7 @@
 namespace dg
 {
 
+    /*
     //not tested in practical use
 template< class T, size_t n>
 thrust::host_vector<T> positions( T a, T b, unsigned num_int)
@@ -17,9 +19,9 @@ thrust::host_vector<T> positions( T a, T b, unsigned num_int)
     assert( b > a && num_int > 0) ;
     thrust::host_vector< T> v(n*num_int);
     const double h = (b-a)/2./(double)num_int;
-    /* x = (b-a)/2N x' +a  maps the function to [0;2N]
-      then x' goes through 1,3,5,...,2N-1
-     */
+    // x = (b-a)/2N x' +a  maps the function to [0;2N]
+    //  then x' goes through 1,3,5,...,2N-1
+     
     double xp=1.;
     for( unsigned i=0; i<num_int; i++)
     {
@@ -43,9 +45,7 @@ Vector evaluate( Function& f, Vector& grid)
 template< class Vector>
 Vector evaluate( double(f)(double), Vector& grid)
 {
-    Vector v(grid);
-    thrust::transform( grid.begin(), grid.end(), v.begin(), f);
-    return v;
+    return evaluate< double(&)(double, double), Vector>( f, grid);
 }
 
     //not tested in practical use
@@ -58,6 +58,7 @@ Vector evaluate( Function& f, Vector& gridx, Vector& gridy)
             v[i*gridx.size() + j] = f( gridx[j], gridy[i]);
     return v;
 }
+*/
 
 
 /**
