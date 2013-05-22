@@ -36,6 +36,8 @@ typedef thrust::device_vector<double> DVec;
 typedef thrust::host_vector<double> HVec;
 
 typedef cusp::coo_matrix<int, double, cusp::host_memory> CMatrix;
+typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
+typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
 template< class Function, size_t n>
 HVec evaluate( Function& f, const Grid<double,n>& g)
@@ -78,6 +80,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, bc bcy)
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g){ return dy( g, g.bcy());}
 
+//the behaviour of CG is completely the same in xspace as in lspace
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc bcx, bc bcy, bool normalized = true)
 {
@@ -114,17 +117,17 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
     Operator<T,n> normx(0.), normy(0.);
     for( unsigned i=0; i<n; i++)
     {
-        if( normalized) 
+        if( !normalized) 
         {
             normx(i,i) = g.hx()/2.*DLT<n>::weight[i];
             normy(i,i) = g.hy()/2.*DLT<n>::weight[i];
         }
         else
-            normx(i,i) = normy[i] = 1.;
+            normx(i,i) = normy(i,i) = 1.;
     }
     Matrix ddyy = dgtensor<double, n>( flyf, tensor( g.Nx(), normx));
     Matrix ddxx = dgtensor<double, n>( tensor(g.Ny(), normy), flxf);
-    Matrix laplace( ddxx);
+    Matrix laplace;
     cusp::add( ddxx, ddyy, laplace);
     return laplace;
 }
