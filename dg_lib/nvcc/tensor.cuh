@@ -42,6 +42,7 @@ struct AddIndex2d{
 } //namespace detail
 
 //maybe one shouldn't take device_memory because it's limited
+//and note that one cannot pass a device matrix
 /**
 * @brief Form the DG tensor Product between two DG matrices
 *

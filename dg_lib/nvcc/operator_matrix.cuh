@@ -80,30 +80,24 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,
 
 
 //multiply 1d matrices by left and right 
+//note, that passing a device matix won't work, because only a reference is taken
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T,n>& right)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    unsigned N = m.num_rows%n;
-    std::cout << N << " poing1\n";
+    unsigned N = m.num_rows/n;
     Matrix r = tensor( N, right);
-    std::cout << "poing2\n";
     Matrix l = tensor( N, left);
-    std::cout << "poing3\n";
     Matrix mr(m ), lmr(m);
-    std::cout << "poing4\n";
 
     cusp::multiply( m, r, mr);
-    std::cout << "poing5\n";
     cusp::multiply( l, mr, lmr);
-    std::cout << "poing6\n";
     return lmr;
 }
 //sandwich l space matrix to make x space matrix
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const cusp::coo_matrix<int, T, cusp::host_memory>& m)
 {
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Operator<T, n> forward1d( DLT<n>::forward);
     Operator<T, n> backward1d( DLT<n>::backward);
     return sandwich( backward1d, m, forward1d);

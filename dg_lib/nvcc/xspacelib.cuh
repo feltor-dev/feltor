@@ -26,6 +26,8 @@
 #include "arakawa.cuh"
 #include "polarisation.cuh"
 
+//integral functions
+#include "preconditioner.cuh"
 
 namespace dg
 {
@@ -134,6 +136,24 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bool
 }
 
 } //namespace create
+
+template< class Vector, size_t n>
+typename Vector::value_type dot( const Vector& x, const Vector& y, const Grid<typename Vector::value_type, n>& g)
+{
+    return blas2::dot( x, W2D<typename Vector::value_type, n>(g.hx(), g.hy()), y);
+}
+template< class Vector, size_t n>
+typename Vector::value_type nrml2( const Vector& x, const Grid<typename Vector::value_type, n>& g)
+{
+    return sqrt(blas2::dot( W2D<typename Vector::value_type, n>(g.hx(), g.hy()), x));
+}
+template< class Vector, size_t n>
+typename Vector::value_type integ( const Vector& x, const Grid<typename Vector::value_type, n>& g)
+{
+    Vector one(x.size(), 1.);
+    return dot( x, one, g);
+}
+
 
 }//namespace dg
 
