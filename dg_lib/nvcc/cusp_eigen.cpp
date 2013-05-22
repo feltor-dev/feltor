@@ -25,8 +25,8 @@ namespace dg
 
 struct Impl
 {
-    typedef typename Eigen::SparseMatrix<double> EMatrix;
-    typedef typename Eigen::SimplicialLDLT<EMatrix> SimplicialCholeskyImpl;
+    typedef Eigen::SparseMatrix<double> EMatrix;
+    typedef Eigen::SimplicialLDLT<EMatrix> SimplicialCholeskyImpl;
     SimplicialCholeskyImpl solver;
     toefl::Timer t;
     Impl(): solver(){}
