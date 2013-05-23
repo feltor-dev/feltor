@@ -94,6 +94,17 @@ ArrVec1d< double, n> evaluate( Function& f, double a, double b, unsigned num_int
     return v;
 }
 
+template< class Function, size_t n>
+thrust::host_vector<double> evaluate( Function& f, const Grid1d<double,n>& g)
+{
+    return (evaluate<Function, n>( f, g.x0(), g.x1(), g.Nx())).data();
+};
+template< size_t n>
+thrust::host_vector<double> evaluate( double (*f)(double), const Grid1d<double,n>& g)
+{
+    return (evaluate<double(&)(double), n>( *f, g.x0(), g.x1(), g.N())).data();
+};
+
 /**
  * @brief Evaluate a function on gaussian abscissas
  *
@@ -143,6 +154,18 @@ ArrVec2d< double, n> evaluate( BinaryOp& f, double x0, double x1, double y0, dou
     return v;
 }
 
+template< class BinaryOp, size_t n>
+thrust::host_vector<double> evaluate( BinaryOp& f, const Grid<double,n>& g)
+{
+    return (evaluate<BinaryOp, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
+};
+
+template< size_t n>
+thrust::host_vector<double> evaluate( double(f)(double, double), const Grid<double,n>& g)
+{
+    //return evaluate<double(&)(double, double), n>( f, g );
+    return (evaluate<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
+};
 /**
  * @brief Evaluate and dlt transform a function 
  *
@@ -176,6 +199,16 @@ ArrVec1d<double, n> expand( Function& f, double a, double b, unsigned num_int)
     }
     return v;
 }
+template< class Function, size_t n>
+thrust::host_vector<double> expand( Function& f, const Grid1d<double,n>& g)
+{
+    return (expand<Function, n>( f, g.x0(), g.x1(), g.Nx())).data();
+};
+template< size_t n>
+thrust::host_vector<double> expand( double(*f)(double), const Grid1d<double,n>& g)
+{
+    return (expand<double(&)(double), n>( *f, g.x0(), g.x1(), g.N())).data();
+};
 
 /**
  * @brief Evaluate and dlt transform a function
@@ -226,6 +259,18 @@ ArrVec2d< double, n> expand( BinaryOp& f, double x0, double x1, double y0, doubl
     return v;
 }
 
+template< class Function, size_t n>
+thrust::host_vector<double> expand( Function& f, const Grid<double,n>& g)
+{
+    return (expand<Function, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
+};
+
+template< size_t n>
+thrust::host_vector<double> expand( double(f)(double, double), const Grid<double,n>& g)
+{
+    return (expand<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
+};
+
 /**
  * @brief Evaluate the jumps on grid boundaries
  *
@@ -248,8 +293,44 @@ thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
 }
 
 
-//to be used in thrust::scatter and thrust::gather (Attention: don't scater inplace -> Pb with n>1)
-//switches between a dg representation of coefficients and one linear in memory
+//to be used in thrust::scatter and thrust::gather (Attention: don't scatter inplace -> Pb with n>1)
+//(the inverse is its transpose) 
+/**
+ * @brief Map for scatter operations on dg formatted vectors
+
+ The elements of the map contain the indices where this place goes to
+ i.e. w[m[i]] = v[i]
+ 
+ * @tparam n # of polynomial coefficients
+ * @param Nx # of points in x
+ * @param Ny # of points in y
+ *
+ * @return map of indices
+ */
+template< size_t n>
+thrust::host_vector<int> makeScatterMap( unsigned Nx, unsigned Ny )
+{
+    thrust::host_vector<int> map( n*n*Nx*Ny);
+    for( unsigned i=0; i<Ny; i++)
+        for( unsigned j=0; j<Nx; j++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned l=0; l<n; l++)
+                    map[ i*Nx*n*n + j*n*n + k*n + l] =(int)( i*Nx*n*n + k*Nx*n + j*n + l);
+    return map;
+}
+/**
+ * @brief Map for gather operations on dg formatted vectors
+
+ The elements of the map contain the indices that come at that place
+ i.e. w[i] = v[m[i]]
+ 
+ *
+ * @tparam n # of polynomial coefficients
+ * @param Nx # of points in x
+ * @param Ny # of points in y
+ *
+ * @return map of indices
+ */
 template< size_t n>
 thrust::host_vector<int> makePermutationMap( unsigned Nx, unsigned Ny )
 {
@@ -258,7 +339,7 @@ thrust::host_vector<int> makePermutationMap( unsigned Nx, unsigned Ny )
         for( unsigned j=0; j<Nx; j++)
             for( unsigned k=0; k<n; k++)
                 for( unsigned l=0; l<n; l++)
-                    map[ i*Nx*n*n + j*n*n + k*n + l] =(int)( i*Nx*n*n + k*Nx*n + j*n + l);
+                    map[ i*Nx*n*n + k*Nx*n + j*n + l] =(int)( i*Nx*n*n + j*n*n + k*n + l);
     return map;
 }
 

@@ -95,6 +95,24 @@ inline void symv( const Matrix& m,
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
+template< class Matrix, class Vector>
+inline void mv( const Matrix& m, 
+                  const Vector& x, 
+                  Vector& y)
+{
+    return dg::blas2::detail::doSymv( m, x, y, 
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
+}
+template< class Matrix, class Vector>
+inline void gemv( const Matrix& m, 
+                  const Vector& x, 
+                  Vector& y)
+{
+    return dg::blas2::detail::doSymv( m, x, y, 
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
+}
 
 } //namespace blas2
 } //namespace dg

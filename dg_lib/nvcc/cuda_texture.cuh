@@ -228,6 +228,9 @@ struct HostWindow
         glEnd();
         glfwSwapBuffers();
     }
+    void set_multiplot( unsigned i, unsigned j);
+    template< class T>
+    void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map, unsigned i, unsigned j);
   private:
     HostWindow( const HostWindow&);
     HostWindow& operator=( const HostWindow&);

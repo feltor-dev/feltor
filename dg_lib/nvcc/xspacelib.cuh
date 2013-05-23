@@ -32,24 +32,12 @@
 namespace dg
 {
 
-typedef thrust::device_vector<double> DVec;
-typedef thrust::host_vector<double> HVec;
+typedef thrust::device_vector<double> DVec; //!< Device Vector
+typedef thrust::host_vector<double> HVec; //!< Host Vector
 
-typedef cusp::coo_matrix<int, double, cusp::host_memory> CMatrix;
-typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
-typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
-
-template< class Function, size_t n>
-HVec evaluate( Function& f, const Grid<double,n>& g)
-{
-    return (evaluate<Function, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
-};
-template< size_t n>
-HVec evaluate( double(f)(double, double), const Grid<double,n>& g)
-{
-    //return evaluate<double(&)(double, double), n>( f, g );
-    return (evaluate<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
-};
+typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix; //!< default matrix
+typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix; //!< most efficient matrix format
+typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format
 
 namespace create{
 
@@ -138,8 +126,50 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bool
     return laplacian( g, g.bcx(), g.bcy(), normalized);
 }
 
+/**
+ * @brief make a matrix that transforms values to an equidistant grid ready for visualisation
+ *
+ * @tparam T value type
+ * @tparam n # of polynomial coefficients
+ * @param g The grid on which to operate 
+ * @param forward whether the vectors are given in XSPACE or not
+ *
+ * @return transformation matrix
+ */
+template < class T, size_t n>
+cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T,n>& g, bool forward = true)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    //create equidistant backward transformation
+    dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
+    dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
+
+    if( forward){
+        dg::Operator<double, n> forward( dg::DLT<n>::forward);
+        dg::Operator<double, n*n> forward2d = dg::tensor( forward, forward);
+        backward2d = backward2d*forward2d;
+    }
+
+    Matrix backward = dg::tensor( g.Nx()*g.Ny(), backward2d);
+
+    thrust::host_vector<int> map = dg::makePermutationMap<n>( g.Nx(), g.Ny());
+    Matrix permutation( map.size(), map.size(), map.size());
+    cusp::array1d<int, cusp::host_memory> rows( thrust::make_counting_iterator<int>(0), thrust::make_counting_iterator<int>(map.size()));
+    cusp::array1d<int, cusp::host_memory> cols( map.begin(), map.end());
+    cusp::array1d<T, cusp::host_memory> values(map.size(), 1.);
+    permutation.row_indices = rows;
+    permutation.column_indices = cols;
+    permutation.values = values;
+    Matrix scatter( permutation);
+
+    cusp::multiply( permutation, backward, scatter);
+    return scatter;
+
+}
 } //namespace create
 
+//should there be a utility for W2D?
+//are these really necessary?
 template< class Vector, size_t n>
 typename Vector::value_type dot( const Vector& x, const Vector& y, const Grid<typename Vector::value_type, n>& g)
 {
@@ -157,6 +187,7 @@ typename Vector::value_type integ( const Vector& x, const Grid<typename Vector::
     return dot( x, one, g);
 }
 
+//make utility for equidistant grid
 
 }//namespace dg
 
