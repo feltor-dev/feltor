@@ -15,12 +15,12 @@
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 
-const unsigned Nx = 55;  //more N means less iterations for same error
-const unsigned Ny = 55;  //more N means less iterations for same error
+const unsigned Nx = 200;  //more N means less iterations for same error
+const unsigned Ny = 200;  //more N means less iterations for same error
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
-const double eps = 1e-3; //# of pcg iterations increases very much if 
+const double eps = 1e-6; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 typedef thrust::device_vector< double>   DVec;
