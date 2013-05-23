@@ -9,12 +9,14 @@
 #include "arakawa.cuh"
 #include "blas.h"
 
+#include "timer.cuh"
+
 using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 50;
-const unsigned Ny = 50;
+const unsigned Nx = 100;
+const unsigned Ny = 100;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 //const double lx = 1.;
@@ -55,17 +57,20 @@ double jacobian( double x, double y)
 
 int main()
 {
+    Timer t;
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
-    cout <<fixed<< setprecision(2)<<endl;
     DArrVec lhs = expand< double(&)(double, double), n> ( left, 0, lx, 0, ly, Nx, Ny), jac(lhs);
     DArrVec rhs = expand< double(&)(double, double), n> ( right, 0, lx, 0, ly, Nx, Ny);
     const DArrVec sol = expand< double(&)(double, double), n> ( jacobian, 0, lx, 0, ly, Nx, Ny);
     DArrVec eins = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
 
 
-    Arakawa<double, n, DVec> arakawa( Nx, Ny, hx, hy, -1, -1);
+    Arakawa<double, n, DVec, MemorySpace> arakawa( Nx, Ny, hx, hy, -1, -1);
+    t.tic(); 
     arakawa( lhs.data(), rhs.data(), jac.data());
+    t.toc();
+    cout << "\nArakawa took "<<t.diff()<<"s\n\n";
     cudaThreadSynchronize();
     //cout<<jac<<endl;
 

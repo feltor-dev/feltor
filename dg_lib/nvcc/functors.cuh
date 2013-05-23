@@ -34,7 +34,7 @@ struct Gaussian
 
 struct Lamb
 {
-    Lamb(  double x0, double y0, double R, double U):r_(R), u_(U), x0_(x0), y0_(y0)
+    Lamb(  double x0, double y0, double R, double U):R_(R), U_(U), x0_(x0), y0_(y0)
     {
         gamma_ = 3.83170597020751231561;
         lambda_ = gamma_/R;
@@ -46,14 +46,34 @@ struct Lamb
         double radius = sqrt( (x-x0_)*(x-x0_) + (y-y0_)*(y-y0_));
         double theta = atan2( (y-y0_),(x-x0_));
 
-        if( radius <= r_)
-            return 2.*lambda_*u_*j1( lambda_*radius)/j_*cos( theta) ;
+        if( radius <= R_)
+            return 2.*lambda_*U_*j1( lambda_*radius)/j_*cos( theta) ;
         return 0;
     }
-    double enstrophy( ) { return M_PI*u_*u_*gamma_*gamma_;}
-    double energy() { return 2.*M_PI*r_*r_*u_*u_;}
+    double enstrophy( ) { return M_PI*U_*U_*gamma_*gamma_;}
+    double energy() { return 2.*M_PI*R_*R_*U_*U_;}
   private:
-    double r_, u_, x0_, y0_, lambda_, gamma_, j_;
+    double R_, U_, x0_, y0_, lambda_, gamma_, j_;
+};
+
+template< class T>
+struct EXP 
+{
+    __host__ __device__
+    T operator() (const T& x) 
+    { 
+        return exp(x);
+    }
+};
+template < class T>
+struct LN
+{
+    __host__ __device__
+    T operator() (const T& x) 
+    { 
+        return log(x);
+    }
+
 };
 
 }
