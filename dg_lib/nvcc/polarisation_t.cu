@@ -60,8 +60,10 @@ int main()
     cout << "Create Polarisation object!\n";
     dg::Polarisation<double, n, Memory> pol( N, h, 0);
     cout << "Create Polarisation matrix!\n";
-    DMatrix A = pol.create( dchi_view ); 
+    cusp::coo_matrix<int, double, cusp::device_memory> A_ = pol.create( dchi_view ); 
+    DMatrix A = A_;
     //DMatrix B = dg::create::laplace1d_dir<double, n>( N, h); 
+    cout << "A is sorted?"<<A_.is_sorted_by_row_and_column()<<endl;
     cout << "Create conjugate gradient!\n";
     dg::CG<DMatrix, DVec, Preconditioner > pcg( dx.data(), n*N);
 

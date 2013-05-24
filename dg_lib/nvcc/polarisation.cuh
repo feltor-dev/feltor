@@ -199,7 +199,6 @@ void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx,
     //create diagonal matrix entries
     for( unsigned i=0; i<n*n*Nx*Ny; i++)
         I[i] = J[i] = i;
-    std::cout << "ping0\n";
     Operator<T, n> backward1d( DLT<n>::backward);
     Operator<T, n> forward1d( DLT<n>::forward);
 
@@ -246,21 +245,15 @@ template< class T, size_t n, class container>
 cusp::coo_matrix<int, T, typename thrust::iterator_space<typename container::iterator>::type> Polarisation2dX<T,n, container>::create( const container& chi)
 {
     Matrix temp1, temp2, temp3;
-    std::cout << "ping0\n";
     blas1::pointwiseDot( middle, chi, xchi);
-    std::cout << "ping1\n";
+    //multiply also does not necessarily keep the sorting
     cusp::multiply( xchi_matrix_view, rightx, temp1); //D_x*R_x
-    std::cout << "ping2\n";
     cusp::multiply( xchi_matrix_view, righty, temp2); //D_y*R_y
-    std::cout << "ping3\n";
     cusp::multiply( leftx, temp1, temp3); //L_x*D_x*R_x
-    std::cout << "ping4\n";
     cusp::multiply( lefty, temp2, temp1); //L_y*D_y*R_y
-    std::cout << "ping5\n";
     cusp::add( temp1, temp3, temp2);  // D_yy + D_xx
-    std::cout << "ping6\n";
     cusp::add( temp2, jump, temp1); // Lap + Jump
-    temp1.sort_by_row_and_column();
+    temp1.sort_by_row_and_column(); //add does not sort
     return temp1;
 }
 

@@ -28,6 +28,7 @@ typedef thrust::device_vector< double>   DVec;
 //ell and hyb matrices are fastest for 1d transforms
 //typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
+typedef cusp::coo_matrix<int, double, cusp::device_memory> DCMatrix;
 
 int main()
 {
@@ -41,7 +42,7 @@ int main()
     DMatrix laplace2d = dgtensor<double,n>(  create::laplace1d_per<double, n>(Ny, 2.),
                                     S1D<double, n>( 2.),
                                     S1D<double, n>( 2.),
-                                    create::laplace1d_per<double, n>(Nx, 2.) );
+                                    create::laplace1d_dir<double, n>(Nx, 2.) );
     t.toc();
     cout <<"\n";
     cout << "Laplace matrix creation took       "<<t.diff()<<"s\n";
@@ -51,16 +52,18 @@ int main()
     cout << "Multiplication with laplace2d took "<<t.diff()<<"s\n";
 
     t.tic();
-    DMatrix ddyy = dgtensor<double, n>( 
+    DCMatrix ddyy = dgtensor<double, n>( 
                         create::laplace1d_per<double, n>(Ny, 2.),
                         tensor<double, n>( Nx, pipj));
-    DMatrix ddxx = dgtensor<double, n>( tensor<double, n>( Ny, pipj),
-                                      create::laplace1d_per<double, n>(Nx, 2.));
-    DMatrix laplace( ddxx);
-    cusp::add( ddxx, ddyy, laplace);
+    DCMatrix ddxx = dgtensor<double, n>( tensor<double, n>( Ny, pipj),
+                                      create::laplace1d_dir<double, n>(Nx, 2.));
+    DCMatrix laplace_;
+    cusp::add( ddxx, ddyy, laplace_);
+    DMatrix laplace = laplace_;
     t.toc();
     cout <<"\n";
     cout << "Laplace Product matrix creation took "<<t.diff()<<"s\n";
+    cout << "sorted "<<laplace_.is_sorted_by_row_and_column()<<"\n";
     t.tic();
     //blas2::symv( ddxx, dv, dw);
     //blas2::symv( ddyy, dw, dv);

@@ -37,13 +37,14 @@ struct Toefl
     //typedef typename VectorTraits< Vector>::value_type value_type;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
-    container omega, phi, chi;
+    container omega, phi, dyphi, chi;
     std::vector<container> expy, dxy, dyy, lapy;
 
     Matrix dx, dy;
     Matrix A; //contains unnormalized laplacian if local
-    Arakawa<T, n, container> arakawa; 
-    Polarisation2d<T, n, container> pol;
+    Matrix laplace; //contains normalized laplacian
+    ArakawaX<T, n, container> arakawa; 
+    Polarisation2dX<T, n, container> pol;
     CG<Matrix, container, dg::V2D<T, n> > pcg;
 
     double hx, hy;
@@ -54,7 +55,7 @@ struct Toefl
 
 template< class T, size_t n, class container>
 Toefl<T, n, container>::Toefl( const Grid<T,n>& g, bool global, double eps, double kappa, double nu): 
-    omega( n*n*g.Nx()*g.Ny(), 0.), phi(omega), chi(phi),
+    omega( n*n*g.Nx()*g.Ny(), 0.), phi(omega), dyphi( phi), chi(phi),
     expy( 2, omega), dxy( expy), dyy( dxy), lapy( dyy),
     arakawa( g, dg::DIR, dg::PER), 
     pol(     g, dg::DIR, dg::PER), 
@@ -64,6 +65,7 @@ Toefl<T, n, container>::Toefl( const Grid<T,n>& g, bool global, double eps, doub
     //create derivatives
     dx = create::dx( g, dg::DIR);
     dy = create::dy( g, dg::PER);
+    laplace = create::laplacian( g, dg::DIR, dg::PER);
     if( !global) 
         A = create::laplacian( g, dg::DIR, dg::PER, false);
 
@@ -108,7 +110,7 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
     for( unsigned i=0; i<y.size(); i++)
         arakawa( y[i], phi, yp[i]);
 
-    // curvature terms
+    //compute derivatives
     cudaThreadSynchronize();
     blas2::gemv( dy, phi, dyphi);
     for( unsigned i=0; i<y.size(); i++)
@@ -116,6 +118,7 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
         blas2::gemv( dx, y[i], dxy[i]);
         blas2::gemv( dy, y[i], dyy[i]);
     }
+    // curvature terms
     cudaThreadSynchronize();
     blas1::axpby( kappa, dyphi, 1., yp[0]);
     blas1::axpby( kappa, dyphi, 1., yp[1]);
@@ -129,13 +132,13 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
         {
             blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
             blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
-            //now sum all 3 terms up multiplied with nu
-            blas1::axpby( nu, dyy[i], nu, lapy[i]);
-            blas1::axpby( nu, dxy[i], 1,, lapy[i]);
+            //now sum all 3 terms up 
+            blas1::axpby( 1., dyy[i], 1., lapy[i]);
+            blas1::axpby( 1., dxy[i], 1., lapy[i]);
         }
-        else
-            blas1::axpby( nu, lapy[i], 0., lapy[i]); //rescale
+        blas1::axpby( nu, lapy[i], 1., yp[i]); //rescale
     }
+
 
 }
 

@@ -13,17 +13,17 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 33;
-const unsigned Ny = 33;
+const unsigned Nx = 66;
+const unsigned Ny = 66;
 
-const double lx = 1.;
-const double ly = 1.;
+const double lx = 64.;
+const double ly = 64.;
 
 //const Parameter p = {0.005, 0.999, 0.001, 1, 48};
 
 const unsigned k = 2;
-const double dt = 1e-3;
-const double eps = 1e-2; //The condition for conjugate gradient
+const double dt = 0.05;
+const double eps = 1e-4; //The condition for conjugate gradient
 
 const unsigned N = 10;// only every Nth computation is visualized
 
@@ -32,6 +32,7 @@ using namespace std;
 
 int main()
 {
+    //do a cin for gridpoints
     dg::HostWindow w(400, 400);
     glfwSetWindowTitle( "Behold the blob!\n");
 
@@ -42,12 +43,12 @@ int main()
 
     dg::Grid<double,n > grid( 0, lx, 0, ly, Nx, Ny);
     //create initial vector
-    dg::Gaussian g( lx/2., ly/2., .1, .1, 0.5);
+    dg::Gaussian g( 0.2*lx, 0.5*ly, .05*lx, .05*lx, 5);
     dg::DVec ne = dg::evaluate ( g, grid);
-    vector<DVec> y0(2, ne), y1(y0); // n_e = n_i 
+    std::vector<dg::DVec> y0(2, ne), y1(y0); // n_e = n_i 
 
     //create RHS and RK
-    dg::Toefl<double, n, dg::DVec> test( grid, false, eps, 0.005, 0.001); 
+    dg::Toefl<double, n, dg::DVec > test( grid, false, eps, 0.005, 0.001); 
     dg::RK< k, dg::Toefl<double, n, dg::DVec> > rk( y0);
 
     dg::HVec visual( n*n*Nx*Ny);
@@ -74,7 +75,7 @@ int main()
         for( unsigned i=0; i<N; i++)
         {
             rk( test, y0, y1, dt);
-            for( unsigned i=0; i<3; i++)
+            for( unsigned i=0; i<y0.size(); i++)
                 thrust::swap( y0[i], y1[i]);
         }
         t.toc();
