@@ -7,8 +7,10 @@
 #include <cusp/transpose.h>
 
 
+#include "blas.h"
 #include "grid.cuh"
 #include "functions.h"
+#include "preconditioner.cuh"
 #include "tensor.cuh"
 #include "operator.cuh"
 #include "operator_matrix.cuh"
@@ -128,7 +130,7 @@ cusp::coo_matrix<int, T, Memory> Polarisation2d<T,n, Memory>::create( const Vect
     unsigned size = chi.size();
     assert( chi.size() == I.size());
     cusp::multiply( middle, chi, xspace);
-    cusp::coo_matrix_view<Array, Array, Vector,  int, T, Memory> chi_view( size, size, size, I, J, xspace);
+    cusp::coo_matrix_view<Array, Array, Vector,  int, T, Memory> chi_view( size, size, size, I, J, xspace);//this actually copies the vectors ...
     cusp::multiply( chi_view, rightx, laplacex);
     cusp::multiply( chi_view, righty, laplacey);
     cusp::multiply( leftx, laplacex, laplacex);
@@ -150,19 +152,23 @@ struct Polarisation2dX
     Matrix create( const container& );
   private:
     typedef cusp::array1d<int, MemorySpace> Array;
+    typedef cusp::array1d<T, MemorySpace> VArray;
     void construct( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
-    Matrix leftx, lefty, rightx, righty, jumpx, jumpy;
-    cusp::array1d<int, MemorySpace> I, J;
+    Matrix leftx, lefty, rightx, righty, jump;
+    Array I, J;
+    typename Array::view I_view, J_view;
     container middle; //contain coeffs for chi multiplication
     container xchi;
+    typename VArray::view xchi_view;
     //cusp::array1d_view< typename container::iterator> xchi_view;
-    cusp::coo_matrix_view<Array, Array, container,  int, T, MemorySpace> xchi_view; //make view of thrust vector
+    cusp::coo_matrix_view<typename Array::view, typename Array::view, typename VArray::view,  int, T, MemorySpace> xchi_matrix_view; //make view of thrust vector
 };
 
 template <class T, size_t n, class container>
 Polarisation2dX<T,n, container>::Polarisation2dX( const Grid<T,n>& g):
-    I(n*n*g.Nx()*g.Ny()), J(I), middle( n*n*g.Nx()*g.Ny()), 
-    xchi(middle), xchi_view( xchi.size(), xchi.size(), xchi.size(), I, J, xchi)
+    I(n*n*g.Nx()*g.Ny()), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
+    middle( I.size()), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
+    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
     int bx = (g.bcx() == PER)?-1:0;
     int by = (g.bcy() == PER)?-1:0;
@@ -170,8 +176,9 @@ Polarisation2dX<T,n, container>::Polarisation2dX( const Grid<T,n>& g):
 }
 template <class T, size_t n, class container>
 Polarisation2dX<T,n, container>::Polarisation2dX( const Grid<T,n>& g, bc bcx, bc bcy):
-    I(n*n*g.Nx()*g.Ny()), J(I), middle( n*n*g.Nx()*g.Ny()), 
-    xchi(middle), xchi_view( xchi.size(), xchi.size(), xchi.size(), I, J, xchi)
+    I(n*n*g.Nx()*g.Ny()), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
+    middle( I.size()), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
+    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
     int bx = (bcx == PER)?-1:0;
     int by = (bcy == PER)?-1:0;
@@ -179,17 +186,20 @@ Polarisation2dX<T,n, container>::Polarisation2dX( const Grid<T,n>& g, bc bcx, bc
 }
 template <class T, size_t n, class container>
 Polarisation2dX<T,n, container>::Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy):
-    I(n*n*Nx*Ny), J(I), middle( n*n*Nx*Ny), 
-    xchi(middle), xchi_view( n*n*Nx*Ny, n*n*Nx*Ny, n*n*Nx*Ny, I, J, xchi)
+    I(n*n*Nx*Ny), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
+    middle( I.size()), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
+    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
     construct( Nx, Ny, hx, hy, bcx, bcy);
 }
 template <class T, size_t n, class container>
 void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy)
 {
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> HMatrix;
     //create diagonal matrix entries
     for( unsigned i=0; i<n*n*Nx*Ny; i++)
         I[i] = J[i] = i;
+    std::cout << "ping0\n";
     Operator<T, n> backward1d( DLT<n>::backward);
     Operator<T, n> forward1d( DLT<n>::forward);
 
@@ -205,47 +215,53 @@ void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx,
     cusp::transpose( rightx, leftx); 
     cusp::transpose( righty, lefty); 
     //create middle weight vector
-    for( unsigned i=0; i<Ny*Nx; i++)
-        for( unsigned j=0; j<n; j++)
-            for( unsigned k=0; k<n; k++)
-            {
-                middle[i*n*n+j*n+k] = DLT<n>::weight[k]*hx/2.*DLT<n>::weight[j]*hy/2.; 
-            }
+    dg::W2D<T,n> w2d( hx, hy);
+    for( unsigned i=0; i<n*n*Ny*Nx; i++)
+        middle[i] = w2d(i);
 
     //create norm for jump matrices 
-    Operator<T,n> weightsx(0.), weightsy(0.), winvx(0.), winvy(0.);
+    Operator<T,n> normx(0.), normy(0.), winvx(0.), winvy(0.);
     for( unsigned i=0; i<n; i++)
     {
-        weightsx(i,i) = DLT<n>::weight[i]*hx/2.; // normalisation because F is invariant
-        weightsy(i,i) = DLT<n>::weight[i]*hy/2.; // normalisation because F is invariant
-        winvx(i,i) = 1./weightsx(i,i); 
-        winvy(i,i) = 1./weightsy(i,i); 
+        normx(i,i) = DLT<n>::weight[i]*hx/2.; // normalisation because F is invariant
+        normy(i,i) = DLT<n>::weight[i]*hy/2.; // normalisation because F is invariant
+        //winvx(i,i) = 1./normx(i,i); 
+        //winvy(i,i) = 1./normy(i,i); 
     }
     //create jump
-    jumpx = create::jump_ot<T,n>( Nx, bcx); //jump without t!
-    jumpx = sandwich<T,n>( winvx*forward1d.transpose(), jumpx, forward1d);
-    jumpx = dg::dgtensor<T,n>( tensor<T,n>( Ny, weightsy), jumpx); //proper normalisation
+    HMatrix jumpx = create::jump_ot<T,n>( Nx, bcx); //jump without t!
+    jumpx = sandwich<T,n>( forward1d.transpose(), jumpx, forward1d);
+    jumpx = dg::dgtensor<T,n>( tensor<T,n>( Ny, normy), jumpx); //proper normalisation
 
-    jumpy = create::jump_ot<T,n>( Ny, bcy); //without jump cg is unstable
-    jumpy = sandwich<T,n>( winvy*forward1d.transpose(), jumpy, forward1d);
-    jumpy = dg::dgtensor<T,n>( jumpy, tensor<T,n>( Nx, weightsx));
-
+    HMatrix jumpy = create::jump_ot<T,n>( Ny, bcy); //without jump cg is unstable
+    jumpy = sandwich<T,n>( forward1d.transpose(), jumpy, forward1d);
+    jumpy = dg::dgtensor<T,n>( jumpy, tensor<T,n>( Nx, normx));
+    HMatrix jump_;
+    cusp::add( jumpx, jumpy, jump_); //does not respect sorting!!!
+    jump = jump_;
+    jump.sort_by_row_and_column();
 }
 
 template< class T, size_t n, class container>
 cusp::coo_matrix<int, T, typename thrust::iterator_space<typename container::iterator>::type> Polarisation2dX<T,n, container>::create( const container& chi)
 {
-    Matrix laplacex;
-    Matrix laplacey;
+    Matrix temp1, temp2, temp3;
+    std::cout << "ping0\n";
     blas1::pointwiseDot( middle, chi, xchi);
-    cusp::multiply( xchi_view, rightx, laplacex);
-    cusp::multiply( xchi_view, righty, laplacey);
-    cusp::multiply( leftx, laplacex, laplacex);
-    cusp::multiply( lefty, laplacey, laplacey);
-    cusp::add( laplacex, jumpx, laplacex);
-    cusp::add( laplacey, jumpy, laplacey);
-    cusp::add( laplacex, laplacey, laplacey);
-    return laplacey;
+    std::cout << "ping1\n";
+    cusp::multiply( xchi_matrix_view, rightx, temp1); //D_x*R_x
+    std::cout << "ping2\n";
+    cusp::multiply( xchi_matrix_view, righty, temp2); //D_y*R_y
+    std::cout << "ping3\n";
+    cusp::multiply( leftx, temp1, temp3); //L_x*D_x*R_x
+    std::cout << "ping4\n";
+    cusp::multiply( lefty, temp2, temp1); //L_y*D_y*R_y
+    std::cout << "ping5\n";
+    cusp::add( temp1, temp3, temp2);  // D_yy + D_xx
+    std::cout << "ping6\n";
+    cusp::add( temp2, jump, temp1); // Lap + Jump
+    temp1.sort_by_row_and_column();
+    return temp1;
 }
 
 } //namespace dg

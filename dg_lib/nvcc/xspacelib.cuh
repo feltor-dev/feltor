@@ -116,7 +116,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
     Matrix ddyy = dgtensor<double, n>( flyf, tensor( g.Nx(), normx));
     Matrix ddxx = dgtensor<double, n>( tensor(g.Ny(), normy), flxf);
     Matrix laplace;
-    cusp::add( ddxx, ddyy, laplace);
+    cusp::add( ddxx, ddyy, laplace); //cusp add does not sort output!!!!
+    laplace.sort_by_row_and_column();
+    //std::cout << "Is sorted? "<<laplace.is_sorted_by_row_and_column()<<"\n";
     return laplace;
 }
 

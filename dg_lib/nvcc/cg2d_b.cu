@@ -15,8 +15,8 @@
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 
-const unsigned Nx = 200;  //more N means less iterations for same error
-const unsigned Ny = 200;  //more N means less iterations for same error
+const unsigned Nx = 500;  //more N means less iterations for same error
+const unsigned Ny = 500;  //more N means less iterations for same error
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -60,8 +60,8 @@ int main()
     //create conjugate gradient and one eigen Cholesky
     dg::CG<DMatrix, DVec, Preconditioner > pcg( x.data(), n*n*Nx*Ny);
     dg::CG<HMatrix, HVec, Preconditioner > pcg_host( x.data(), n*n*Nx*Ny);
-    dg::SimplicialCholesky sol;
-    sol.compute( A);
+    //dg::SimplicialCholesky sol;
+    //sol.compute( A);
 
     cout<<"Expand right hand side\n";
     const HArrVec solution = dg::expand<double (&)(double, double), n> ( fct, 0,lx, 0,ly, Nx, Ny);
@@ -90,10 +90,10 @@ int main()
     t.toc();
     cout << "... for a precision of "<< eps<<endl;
     cout << "... on the host took   "<< t.diff()<<"s\n";
-    t.tic();
-    cout << "Success (1) "<< sol.solve( x.data().data(), b.data().data(), n*n*Nx*Ny)<<endl;
-    t.toc();
-    cout << "Cholesky took          "<< t.diff()<<"s\n";
+    //t.tic();
+    //cout << "Success (1) "<< sol.solve( x.data().data(), b.data().data(), n*n*Nx*Ny)<<endl;
+    //t.toc();
+    //cout << "Cholesky took          "<< t.diff()<<"s\n";
     //compute error
     DArrVec derror( dsolution);
     HArrVec  error(  solution);

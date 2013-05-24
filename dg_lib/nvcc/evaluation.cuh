@@ -11,54 +11,9 @@
 namespace dg
 {
 
-    /*
-    //not tested in practical use
-template< class T, size_t n>
-thrust::host_vector<T> positions( T a, T b, unsigned num_int)
-{
-    assert( b > a && num_int > 0) ;
-    thrust::host_vector< T> v(n*num_int);
-    const double h = (b-a)/2./(double)num_int;
-    // x = (b-a)/2N x' +a  maps the function to [0;2N]
-    //  then x' goes through 1,3,5,...,2N-1
-     
-    double xp=1.;
-    for( unsigned i=0; i<num_int; i++)
-    {
-        for( unsigned j=0; j<n; j++)
-            v[i*n+j] = a + h*(xp + DLT<n>::abscissa[j]);
-        xp+=2.;
-    }
-    return v;
-}
 
-    //not tested in practical use
-template< class Function, class Vector>
-Vector evaluate( Function& f, Vector& grid)
-{
-    Vector v(grid);
-    thrust::transform( grid.begin(), grid.end(), v.begin(), f);
-    return v;
-}
 
-    //not tested in practical use
-template< class Vector>
-Vector evaluate( double(f)(double), Vector& grid)
-{
-    return evaluate< double(&)(double, double), Vector>( f, grid);
-}
 
-    //not tested in practical use
-template< class Function, class Vector>
-Vector evaluate( Function& f, Vector& gridx, Vector& gridy)
-{
-    Vector v(gridx.size()*gridy.size());
-    for( unsigned i=0; i<gridy.size(); i++)
-        for( unsigned j=0; j<gridx.size(); j++)
-            v[i*gridx.size() + j] = f( gridx[j], gridy[i]);
-    return v;
-}
-*/
 
 
 /**
@@ -93,7 +48,6 @@ ArrVec1d< double, n> evaluate( Function& f, double a, double b, unsigned num_int
     }
     return v;
 }
-
 template< class Function, size_t n>
 thrust::host_vector<double> evaluate( Function& f, const Grid1d<double,n>& g)
 {
@@ -104,6 +58,10 @@ thrust::host_vector<double> evaluate( double (*f)(double), const Grid1d<double,n
 {
     return (evaluate<double(&)(double), n>( *f, g.x0(), g.x1(), g.N())).data();
 };
+
+
+
+
 
 /**
  * @brief Evaluate a function on gaussian abscissas
@@ -159,13 +117,15 @@ thrust::host_vector<double> evaluate( BinaryOp& f, const Grid<double,n>& g)
 {
     return (evaluate<BinaryOp, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
-
 template< size_t n>
 thrust::host_vector<double> evaluate( double(f)(double, double), const Grid<double,n>& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return (evaluate<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
+
+
+
 /**
  * @brief Evaluate and dlt transform a function 
  *
@@ -209,6 +169,10 @@ thrust::host_vector<double> expand( double(*f)(double), const Grid1d<double,n>& 
 {
     return (expand<double(&)(double), n>( *f, g.x0(), g.x1(), g.N())).data();
 };
+
+
+
+
 
 /**
  * @brief Evaluate and dlt transform a function
@@ -271,26 +235,8 @@ thrust::host_vector<double> expand( double(f)(double, double), const Grid<double
     return (expand<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
 
-/**
- * @brief Evaluate the jumps on grid boundaries
- *
- * @ingroup utilities
- * @tparam n number of legendre nodes per cell
- * @param v A DG Host Vector 
- *
- * @return Vector with the jump values
- */
-template< size_t n>
-thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
-{
-    //compute the interior jumps of a DG approximation
-    unsigned N = v.size();
-    thrust::host_vector<double> jump(N-1, 0.);
-    for( unsigned i=0; i<N-1; i++)
-        for( unsigned j=0; j<n; j++)
-            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
-    return jump;
-}
+
+
 
 
 //to be used in thrust::scatter and thrust::gather (Attention: don't scatter inplace -> Pb with n>1)
@@ -307,6 +253,11 @@ thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
  *
  * @return map of indices
  */
+
+
+
+
+
 template< size_t n>
 thrust::host_vector<int> makeScatterMap( unsigned Nx, unsigned Ny )
 {
@@ -343,6 +294,75 @@ thrust::host_vector<int> makePermutationMap( unsigned Nx, unsigned Ny )
     return map;
 }
 
+
+/**
+ * @brief Evaluate the jumps on grid boundaries
+ *
+ * @ingroup utilities
+ * @tparam n number of legendre nodes per cell
+ * @param v A DG Host Vector 
+ *
+ * @return Vector with the jump values
+ */
+template< size_t n>
+thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
+{
+    //compute the interior jumps of a DG approximation
+    unsigned N = v.size();
+    thrust::host_vector<double> jump(N-1, 0.);
+    for( unsigned i=0; i<N-1; i++)
+        for( unsigned j=0; j<n; j++)
+            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
+    return jump;
+}
+    /*
+    //not tested in practical use yet
+template< class T, size_t n>
+thrust::host_vector<T> positions( T a, T b, unsigned num_int)
+{
+    assert( b > a && num_int > 0) ;
+    thrust::host_vector< T> v(n*num_int);
+    const double h = (b-a)/2./(double)num_int;
+    // x = (b-a)/2N x' +a  maps the function to [0;2N]
+    //  then x' goes through 1,3,5,...,2N-1
+     
+    double xp=1.;
+    for( unsigned i=0; i<num_int; i++)
+    {
+        for( unsigned j=0; j<n; j++)
+            v[i*n+j] = a + h*(xp + DLT<n>::abscissa[j]);
+        xp+=2.;
+    }
+    return v;
+}
+
+    //not tested in practical use
+template< class Function, class Vector>
+Vector evaluate( Function& f, Vector& grid)
+{
+    Vector v(grid);
+    thrust::transform( grid.begin(), grid.end(), v.begin(), f);
+    return v;
+}
+
+    //not tested in practical use
+template< class Vector>
+Vector evaluate( double(f)(double), Vector& grid)
+{
+    return evaluate< double(&)(double, double), Vector>( f, grid);
+}
+
+    //not tested in practical use
+template< class Function, class Vector>
+Vector evaluate( Function& f, Vector& gridx, Vector& gridy)
+{
+    Vector v(gridx.size()*gridy.size());
+    for( unsigned i=0; i<gridy.size(); i++)
+        for( unsigned j=0; j<gridx.size(); j++)
+            v[i*gridx.size() + j] = f( gridx[j], gridy[i]);
+    return v;
+}
+*/
 }//namespace dg
 
 #endif //_DG_EVALUATION
