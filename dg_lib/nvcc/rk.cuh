@@ -114,7 +114,7 @@ struct RK
     */
     void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
   private:
-    std::vector<Vector> u_; //TODO std::array might more natural here
+    std::vector<Vector> u_; //TODO std::array is more natural here (but unfortunately not available)
 };
 
 //u0 and u1 may not be the same vector
@@ -124,7 +124,6 @@ template< size_t k, class Functor>
 void RK<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
 {
     assert( &u0 != &u1);
-    assert( k>1 && "Euler still has to be implemented!" );
     f(u0, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
     cudaThreadSynchronize();
@@ -150,6 +149,21 @@ void RK<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, doubl
         cudaThreadSynchronize();
     }
 }
+
+//Euler specialisation
+template < class Functor>
+struct RK<1, Functor>
+{
+    typedef typename Functor::Vector Vector;
+    RK(){}
+    RK( const Vector& copyable){}
+    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+    {
+        f( u0, u1);
+        blas1::axpby( 1., u0, dt, u1);
+    }
+};
+
 
 
 } //namespace dg

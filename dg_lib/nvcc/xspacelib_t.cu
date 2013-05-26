@@ -16,7 +16,6 @@ using namespace dg;
 
 int main()
 {
-    /*
     const dg::Grid<double, n> grid( 0, 2.*M_PI, 0, 2.*M_PI, 80, 80, dg::DIR, dg::PER);
     const double eps = 1e-9;
 
@@ -38,17 +37,18 @@ int main()
     cout << "Integral "<< integ(x, grid)<<endl;
     cout << "Bracket "<< dot(sol,sol, grid)<<endl;
     cout << "Rel error "<<(dot(sol,sol,grid)-M_PI*M_PI)/M_PI/M_PI<<endl;
-    */
 
 
+    /*
     cout << endl << endl;
     const dg::Grid<double,2> grid2( 0,1,0,1, 4,4);
     Matrix equi = create::backscatter( grid2);
     cusp::array1d<double, cusp::host_memory> arr( thrust::make_counting_iterator(0), thrust::make_counting_iterator( 64)), arr2( arr);
     thrust::host_vector<int> map = dg::makePermutationMap<2>( 4, 4);
-    thrust::scatter( visual_t.begin(), visual_t.end(), map.begin(), visual.begin());//dont't scatter 
+//    thrust::scatter( visual_t.begin(), visual_t.end(), map.begin(), visual.begin());//dont't scatter 
 
     blas2::mv( equi, arr, arr2);
     cusp::print( arr2);
+    */
     return 0;
 }

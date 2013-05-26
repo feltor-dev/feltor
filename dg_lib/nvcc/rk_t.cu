@@ -2,14 +2,15 @@
 
 #include <cusp/ell_matrix.h>
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 
 #include "rk.cuh"
-#include "blas.h"
 #include "arrvec1d.cuh"
 #include "evaluation.cuh"
 #include "laplace.cuh"
 #include "preconditioner.cuh"
 
+#include "blas.h"
 
 template <class T, size_t n, class container = thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
 struct RHS

@@ -37,7 +37,8 @@ struct Toefl
     //typedef typename VectorTraits< Vector>::value_type value_type;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
-    container omega, phi, dyphi, chi;
+    container phi, phi_old;
+    container omega, dyphi, chi;
     std::vector<container> expy, dxy, dyy, lapy;
 
     Matrix dx, dy;
@@ -55,7 +56,8 @@ struct Toefl
 
 template< class T, size_t n, class container>
 Toefl<T, n, container>::Toefl( const Grid<T,n>& g, bool global, double eps, double kappa, double nu): 
-    omega( n*n*g.Nx()*g.Ny(), 0.), phi(omega), dyphi( phi), chi(phi),
+    phi( n*n*g.Nx()*g.Ny(), 0.), phi_old(phi),
+    omega( phi), dyphi( phi), chi(phi),
     expy( 2, omega), dxy( expy), dyy( dxy), lapy( dyy),
     arakawa( g, dg::DIR, dg::PER), 
     pol(     g, dg::DIR, dg::PER), 
@@ -94,6 +96,9 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
     {
         A = pol.create( chi ); 
     }
+    //extrapolate phi
+    blas1::axpby( 2., phi, -1.,  phi_old);
+    thrust::swap( phi, phi_old);
     unsigned number = pcg( A, phi, omega, V2D<double, n>(hx, hy), eps);
     std::cout << "Number of pcg iterations "<< number <<std::endl;
     return phi;

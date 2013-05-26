@@ -13,16 +13,13 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 66;
-const unsigned Ny = 66;
 
 const double lx = 64.;
 const double ly = 64.;
 
 //const Parameter p = {0.005, 0.999, 0.001, 1, 48};
 
-const unsigned k = 2;
-const double dt = 0.05;
+const unsigned k = 1;
 const double eps = 1e-4; //The condition for conjugate gradient
 
 const unsigned N = 10;// only every Nth computation is visualized
@@ -33,6 +30,13 @@ using namespace std;
 int main()
 {
     //do a cin for gridpoints
+    unsigned Nx, Ny;
+    cout << "Type number of grid points in each direction! \n";
+    cin >> Nx; 
+    Ny = Nx;
+    double dt;
+    cout << "Type timestep \n";
+    cin >> dt;
     dg::HostWindow w(400, 400);
     glfwSetWindowTitle( "Behold the blob!\n");
 
@@ -62,13 +66,16 @@ int main()
         t.tic();
         //transform field to an equidistant grid
         dg::blas2::gemv( equi, y0[0], y1[0]);
+        t.toc();
+        std::cout << "Equilibration took        "<<t.diff()<<"s\n";
+        t.tic();
         visual = y1[0]; //transfer to host
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
         w.draw( visual, n*Nx, n*Ny, colors);
         t.toc();
-        std::cout << "Color scale " << colors.scale() <<"\n";
+        //std::cout << "Color scale " << colors.scale() <<"\n";
         std::cout << "Visualisation time        " <<t.diff()<<"s\n";
         //step 
         t.tic();

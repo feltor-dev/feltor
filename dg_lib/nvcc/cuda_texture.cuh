@@ -123,6 +123,14 @@ void GLFWCALL WindowResize( int w, int h)
 {
     // map coordinates to the whole window
     glViewport( 0, 0, (GLsizei) w, h);
+    std::cout << "Resize\n";
+    // map coordinates to the whole window
+    //double win_ratio = (double)w/(double)h;
+    //GLint ww = (win_ratio<field_ratio) ? w : h*field_ratio ;
+    //GLint hh = (win_ratio<field_ratio) ? w/field_ratio : h;
+    //glViewport( 0, 0, (GLsizei) ww, hh);
+    //width = w;
+    //height = h;
 }
 
 struct Window
@@ -187,13 +195,13 @@ struct HostWindow
 {
     HostWindow( int width, int height){
         Nx_ = Ny_ = 0;
-        glfwSetWindowSizeCallback( WindowResize);
         // create window and OpenGL context bound to it
         if( !glfwInit()) { std::cerr << "ERROR: glfw couldn't initialize.\n";}
         if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
         { 
             std::cerr << "ERROR: glfw couldn't open window!\n";
         }
+        glfwSetWindowSizeCallback( WindowResize);
         int major, minor, rev;
         glfwGetVersion( &major, &minor, &rev);
         std::cout << "Using GLFW version   "<<major<<"."<<minor<<"."<<rev<<"\n";

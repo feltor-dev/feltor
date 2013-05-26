@@ -82,17 +82,17 @@ struct MinMod
     __host__ __device__
     T operator() ( T a1, T a2, T a3)
     {
-        if( a1*a2 > 0) //a1 and a2 have same sign
-        {
-            if( a1*a3 > 0) // a1 and a3 have same sign
+        if( a1*a2 > 0) 
+            if( a1*a3 > 0)
             {
-                if( a1 > 0) //determine sign of a1
-                    return min( a1, a2, a3, +1);
-                else 
-                    return min( a1, a2, a3, -1);
+                if( a1 > 0)
+                    return min( a1, a2, a3, +1.);
+                else
+                    return min( a1, a2, a3, -1.);
             }
-        }
-        return 0;
+        return 0.;
+
+
     }
     private:
     __host__ __device__
@@ -106,45 +106,7 @@ struct MinMod
         return sign*temp;
 
     }
-}
-//modified minmod
-template < class T>
-struct MinModM
-{
-
-    MinModM( T M, T h):M_(M), h_(h){}
-    __host__ __device__
-    T operator() ( T a1, T a2, T a3)
-    {
-        if( fabs( a1) <= M_*h_*h_)
-            return a1;
-        if( a1*a2 > 0) //a1 and a2 have same sign
-        {
-            if( a1*a3 > 0) // a1 and a3 have same sign
-            {
-                if( a1 > 0) //determine sign of a1
-                    return min( a1, a2, a3, +1);
-                else 
-                    return min( a1, a2, a3, -1);
-            }
-        }
-        return 0;
-    }
-    private:
-    __host__ __device__
-    T min( T a1, T a2, T a3, T sign)
-    {
-        T temp = sign*a1;
-        if( sign*a2 < temp)
-            temp = sign*a2;
-        if( sign*a3 < temp)
-            temp = sign*a3;
-        return sign*temp;
-
-    }
-    T M_, h_;
-}
-
+};
 } //namespace dg
 
 #endif //_DG_FUNCTORS_CUH
