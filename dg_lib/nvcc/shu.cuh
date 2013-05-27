@@ -34,7 +34,7 @@ struct Shu
     //typedef typename VectorTraits< Vector>::value_type value_type;
     Matrix laplace;
     container omega, phi;
-    Arakawa<T, n, container, MemorySpace> arakawa; 
+    Arakawa<T, n, container> arakawa; 
     CG<Matrix, container, dg::T2D<T, n> > pcg;
     SimplicialCholesky cholesky;
     thrust::host_vector<double> x,b;

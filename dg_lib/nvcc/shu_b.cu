@@ -71,6 +71,7 @@ int main()
     //make solver and stepper
     Shu<double, n, DVec, Memory> test( Nx, Ny, hx, hy, D, eps);
     RK< k, Shu<double, n, DVec, Memory> > rk( y0);
+    AB< k, Shu<double, n, DVec, Memory> > ab( y0);
 
     t.tic();
     test( y0, y1);
@@ -96,6 +97,7 @@ int main()
     cout << "Press any key to start!\n";
     double x; 
     cin >> x;
+    ab.init( test, y0, dt);
     while (running && time < T)
     {
         //transform field to an equidistant grid

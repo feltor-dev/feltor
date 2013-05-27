@@ -17,6 +17,7 @@ struct AbsMax
         return absx > absy ? absx : absy;
     }
 };
+
 struct Gaussian
 {
     Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)

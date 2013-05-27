@@ -55,21 +55,21 @@ struct Toefl
 };
 
 template< class T, size_t n, class container>
-Toefl<T, n, container>::Toefl( const Grid<T,n>& g, bool global, double eps, double kappa, double nu): 
+Toefl<T, n, container>::Toefl( const Grid<T,n>& g, bool global, double eps, double kappa, double nu, bc bc_x, bc bc_y): 
     phi( n*n*g.Nx()*g.Ny(), 0.), phi_old(phi),
     omega( phi), dyphi( phi), chi(phi),
     expy( 2, omega), dxy( expy), dyy( dxy), lapy( dyy),
-    arakawa( g, dg::DIR, dg::PER), 
-    pol(     g, dg::DIR, dg::PER), 
+    arakawa( g, bc_x, bc_y), 
+    pol(     g, bc_x, bc_y), 
     pcg( omega, n*n*g.Nx()*g.Ny()), 
     hx( g.hx()), hy(g.hy()), global(global), eps(eps), kappa(kappa), nu(nu)
 {
     //create derivatives
-    dx = create::dx( g, dg::DIR);
-    dy = create::dy( g, dg::PER);
-    laplace = create::laplacian( g, dg::DIR, dg::PER);
+    dx = create::dx( g, bc_x);
+    dy = create::dy( g, bc_y);
+    laplace = create::laplacian( g, bc_x, bc_y);
     if( !global) 
-        A = create::laplacian( g, dg::DIR, dg::PER, false);
+        A = create::laplacian( g, bc_x, bc_y, false);
 
 }
 

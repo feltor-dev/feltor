@@ -124,7 +124,7 @@ void GLFWCALL WindowResize( int w, int h)
 {
     // map coordinates to the whole window
     glViewport( 0, 0, (GLsizei) w, h);
-    std::cout << "Resize\n";
+    //std::cout << "Resize\n";
     // map coordinates to the whole window
     //double win_ratio = (double)w/(double)h;
     //GLint ww = (win_ratio<field_ratio) ? w : h*field_ratio ;
