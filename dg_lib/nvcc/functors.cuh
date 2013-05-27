@@ -107,6 +107,17 @@ struct MinMod
 
     }
 };
+
+template <class T>
+struct PLUS
+{
+    PLUS( T value): x_(value){}
+    __host__ __device__
+        T operator()(const T& x){ return x + x_;}
+    private:
+    T x_;
+};
+
 } //namespace dg
 
 #endif //_DG_FUNCTORS_CUH

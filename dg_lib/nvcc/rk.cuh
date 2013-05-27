@@ -165,6 +165,78 @@ struct RK<1, Functor>
 };
 
 
+template< size_t k>
+struct ab_coeff
+{
+    static const double b[k];
+};
+template<>
+const double ab_coeff<2>::b[2] = {1.5, -0.5};
+template<>
+const double ab_coeff<3>::b[3] = {23./12., -16./12., 5./12.};
+
+template< size_t k, class Functor>
+struct AB
+{
+    typedef typename Functor::Vector Vector; 
+    AB( const Vector& copyable): u_(k, Vector(copyable)){ }
+   
+    /**
+     * @brief Init with initial value
+     *
+     * @param f The rhs functor
+     * @param u0 The initial value you later use 
+     * @param dt The timestep
+     */
+    void init( Functor& f, const Vector& u0, double dt);
+    /**
+     * @brief Advence one timestep
+     *
+     * @param f The rhs functor
+     * @param u0 The initial value 
+     * @param u1 The result
+     * @param dt The timestep
+     * @note The fist u0 must be the same you use in the init routine.
+     */
+    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
+  private:
+    std::vector<Vector> u_; //TODO std::array is more natural here (but unfortunately not available)
+};
+
+//compute two steps backwards with same order RK scheme 
+template< size_t k, class Functor>
+void AB<k, Functor>::init( Functor& f, const Vector& u0,  double dt)
+{
+    RK<k, Functor> rk( u0);
+    u_[0] = u0;
+    for( unsigned i=1; i<k; i++)
+        rk( f, u_[i-1], u_[i], -dt);
+    //compute rhs
+    Vector u1(u0);
+    for(unsigned i=1; i<k; i++)
+    {
+        u1 = u_[i];
+        f( u1, u_[i]); //may not be the same vector
+    }
+
+}
+
+//u0 and u1 can be the same
+template< size_t k, class Functor>
+void AB<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+{
+    //u_[0] can be deleted
+    f( u0, u_[0]);
+    blas1::axpby( dt*ab_coeff<k>::b[0], u_[0], 1., u0, u1);
+    for( unsigned i=1; i<k; i++)
+        blas1::axpby( dt*ab_coeff<k>::b[i], u_[i], 1., u1);
+    //permute u_[k-1]  to be the new u_[0]
+    for( unsigned i=k-1; i>0; i--)
+        thrust::swap( u_[i-1], u_[i]);
+}
+
+
+
 
 } //namespace dg
 

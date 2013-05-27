@@ -4,6 +4,7 @@
 #ifdef DG_DEBUG
 #include <cassert>
 #endif //DG_DEBUG
+#include <sstream>
 
 #include <GL/glew.h>
 #include <GL/glfw.h>
@@ -208,11 +209,15 @@ struct HostWindow
         //enable textures
         glEnable(GL_TEXTURE_2D);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        window_str << "Host Window\n";
     }
     ~HostWindow() { glfwTerminate();}
     template< class T>
     void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map)
     {
+        //gehört das hier rein??
+        glfwSetWindowTitle( (window_str.str()).c_str() );
+        window_str.str(""); //clear title string
         glClear(GL_COLOR_BUFFER_BIT);
         if( Nx != Nx_ || Ny != Ny_) {
             Nx_ = Nx; Ny_ = Ny;
@@ -239,11 +244,13 @@ struct HostWindow
     void set_multiplot( unsigned i, unsigned j);
     template< class T>
     void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map, unsigned i, unsigned j);
+    std::stringstream& title() { return window_str;}
   private:
     HostWindow( const HostWindow&);
     HostWindow& operator=( const HostWindow&);
     unsigned Nx_, Ny_;
     thrust::host_vector<Color> resource;
+    std::stringstream window_str;  //window name
 };
 
 }

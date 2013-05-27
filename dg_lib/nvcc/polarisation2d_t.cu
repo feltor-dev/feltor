@@ -6,28 +6,28 @@
 #include "xspacelib.cuh"
 #include "cg.cuh"
 
-const unsigned n = 2; //global relative error in L2 norm is O(h^P)
-const unsigned Nx = 3;  //more N means less iterations for same error
-const unsigned Ny = 3;  //more N means less iterations for same error
+const unsigned n = 3; //global relative error in L2 norm is O(h^P)
+const unsigned Nx = 200;  //more N means less iterations for same error
+const unsigned Ny = 200;  //more N means less iterations for same error
 
 const double lx = M_PI;
-const double ly = 2.*M_PI;
+const double ly = M_PI;
 const double eps = 1e-3; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
-double initial( double x, double y) {return sin(0);}
-//double pol( double x, double y) {return 1. + sin(x); } //must be strictly positive
-double pol( double x, double y) {return 1.; }
+double initial( double x, double y) {return 0.;}
+double pol( double x, double y) {return 1. + sin(x)*sin(y); } //must be strictly positive
+//double pol( double x, double y) {return 1.; }
 
-//double rhs( double x) { return sin(x) + 1.-2.*cos(x)*cos(x);}
-double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
+double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y);}
+//double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
 
 using namespace std;
 
 int main()
 {
-    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::PER);
+    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
     dg::V2D<double, n> v2d( grid.hx(), grid.hy());
     dg::W2D<double, n> w2d( grid.hx(), grid.hy());
     //create functions A(chi) x = b

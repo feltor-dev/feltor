@@ -56,31 +56,37 @@ using namespace dg;
 
 int main()
 {
-    const double h = lx/(double)N;
     const double dt =T/(double)NT;
     cout << "Test RK scheme on diffusion equation\n";
     cout << "Polynomial coefficients:  "<< n<<endl;
     cout << "RK order K:               "<< k <<endl;
     cout << "Number of gridpoints:     "<<N<<endl;
 
-    DArrVec y0 = expand< double(&)(double), n>( sine, 0., lx, N), y1(y0);
-    double norm_y0 = dg::blas2::dot( S1D<double, n>(h), y0.data());
+    Grid1d<double, n> grid( 0, lx, N);
+    S1D<double, n> s1d( grid.h());
+
+    DVec y0 = expand( sine, grid), y1(y0);
+    double norm_y0 = dg::blas2::dot( s1d, y0);
     cout << "Normalized y0 (is Pi) "<< norm_y0 << endl;
 
-    RHS<double,n, DVec, MemorySpace> rhs( N, h, nu);
-    RK< k, RHS<double, n, DVec, MemorySpace> > rk( y0.data());
+    RHS<double,n, DVec, MemorySpace> rhs( grid.N(), grid.h(), nu);
+    RK< k, RHS<double, n, DVec, MemorySpace> > rk( y0);
+    AB< k, RHS<double, n, DVec, MemorySpace> > ab( y0);
+
+    ab.init( rhs, y0, dt);
+    //thrust::swap(y0, y1);
     for( unsigned i=0; i<NT; i++)
     {
-        rk( rhs, y0.data(), y1.data(), dt);
-        y0 = y1;
+        ab( rhs, y0, y1, dt);
+        thrust::swap(y0, y1);
     }
-    norm_y0 = blas2::dot( S1D<double, n>(h), y0.data());
+    norm_y0 = blas2::dot( s1d, y0);
     cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << endl;
-    DArrVec solution = expand< double(&)(double), n>( sol, 0, lx, N), error( solution);
-    double norm_sol = blas2::dot( S1D<double, n>(h), solution.data());
-    blas1::axpby( -1., y0.data(), 1., error.data());
+    DVec solution = expand( sol, grid), error( solution);
+    double norm_sol = blas2::dot( s1d, solution);
+    blas1::axpby( -1., y0, 1., error);
     cout << "Normalized solution is "<<  norm_sol<< endl;
-    double norm_error = blas2::dot( S1D<double, n>(h), error.data());
+    double norm_error = blas2::dot( s1d, error);
     cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<< endl;
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
     //n = 2 -> p = 2

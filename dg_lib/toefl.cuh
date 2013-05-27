@@ -28,8 +28,8 @@ struct Toefl
 
     Toefl( const Grid<T,n>& g, bool global, double eps, double, double);
 
-    void update_exponent( const std::vector<container>& y, std::vector<container>& target);
-    void update_log( const std::vector<container>& y, std::vector<container>& target);
+    void exp( const std::vector<container>& y, std::vector<container>& target);
+    void log( const std::vector<container>& y, std::vector<container>& target);
     const container& polarisation( const std::vector<container>& y);
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
@@ -80,7 +80,7 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
     //compute omega
     if( global)
     {
-        update_exponent( y, expy);
+        exp( y, expy);
         blas1::axpby( -1., expy[0], 1., expy[1], omega); //omega = n_i - n_e
         //compute chi
         blas1::axpby( 1., expy[1], 0., chi);
@@ -100,7 +100,9 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
     blas1::axpby( 2., phi, -1.,  phi_old);
     thrust::swap( phi, phi_old);
     unsigned number = pcg( A, phi, omega, V2D<double, n>(hx, hy), eps);
+#ifdef DG_DEBUG
     std::cout << "Number of pcg iterations "<< number <<std::endl;
+#endif //DG_DEBUG
     return phi;
 }
 
@@ -148,13 +150,13 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
 }
 
 template< class T, size_t n, class container>
-void Toefl<T, n, container>::update_exponent( const std::vector<container>& y, std::vector<container>& target)
+void Toefl<T, n, container>::exp( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
         thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<T>());
 }
 template< class T, size_t n, class container>
-void Toefl<T, n, container>::update_log( const std::vector<container>& y, std::vector<container>& target)
+void Toefl<T, n, container>::log( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
         thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<T>());
