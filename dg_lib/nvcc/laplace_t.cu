@@ -7,19 +7,16 @@
 #include "arrvec1d.cuh"
 #include "blas.h"
 
+#include "typedefs.cuh"
+
 const unsigned n = 2;
 const unsigned N = 5; //minimum 3
 
 using namespace dg;
 using namespace std;
 
-typedef thrust::device_vector< double>   DVec;
-typedef thrust::host_vector< double>     HVec;
-typedef dg::ArrVec1d< double, n, HVec>  HArrVec;
-typedef dg::ArrVec1d< double, n, DVec>  DArrVec;
-
-typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
-typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
+typedef dg::ArrVec1d< double, n, dg::HVec>  HArrVec;
+typedef dg::ArrVec1d< double, n, dg::DVec>  DArrVec;
 
 int main()
 {
@@ -31,7 +28,7 @@ int main()
             hv( k, i) = i;
 
     HArrVec hw( N);
-    DVec dv( hv.data()), dw( hw.data());
+    dg::DVec dv( hv.data()), dw( hw.data());
     DMatrix laplace1d = create::laplace1d_per<double, n>(N, 2);
 
     cout << "The DG Laplacian: \n";

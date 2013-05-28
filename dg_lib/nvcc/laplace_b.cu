@@ -12,17 +12,13 @@
 #include "arrvec1d.cuh"
 #include "blas.h"
 
+#include "typedefs.cuh"
+
 const unsigned P = 3;
 const unsigned N = 1e6;
 
 using namespace dg;
 using namespace std;
-typedef thrust::device_vector< double>   DVec;
-typedef thrust::host_vector< double>     HVec;
-
-//ell and hyb matrices are fastest for 1d transforms
-typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
-typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
 int main()
 {
