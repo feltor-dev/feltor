@@ -138,7 +138,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, norm no = normed, space s = XSPACE)
 {
-    return laplacian( g, g.bcx(), g.bcy(), normalized, s);
+    return laplacian( g, g.bcx(), g.bcy(), no, s);
 }
 
 /**
