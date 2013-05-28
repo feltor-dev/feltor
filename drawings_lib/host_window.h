@@ -7,6 +7,8 @@
 #include <sstream>
 #include <GL/glfw.h>
 
+#include "colormap.h"
+
 namespace draw
 {
 void GLFWCALL WindowResize( int w, int h)
@@ -36,7 +38,7 @@ struct HostWindow
     ~HostWindow() { glfwTerminate();}
     //Vector has to be useable in std functions
     template< class Vector>
-    void draw( const Vector& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map)
+    void draw( const Vector& x, unsigned Nx, unsigned Ny, draw::ColorMapRedBlueExt& map)
     {
         //gehört das hier rein??
         glfwSetWindowTitle( (window_str.str()).c_str() );
@@ -66,7 +68,7 @@ struct HostWindow
     }
     void set_multiplot( unsigned i, unsigned j);
     template< class Vector>
-    void draw( const Vector& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map, unsigned i, unsigned j);
+    void draw( const Vector& x, unsigned Nx, unsigned Ny, draw::ColorMapRedBlueExt& map, unsigned i, unsigned j);
     std::stringstream& title() { return window_str;}
   private:
     HostWindow( const HostWindow&);

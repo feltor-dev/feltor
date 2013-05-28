@@ -1,4 +1,5 @@
 INCLUDE = -I/home/matthias/include # Eigen library
+INCLUDE += -I/../../drawings_lib # Drawings library
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
 
@@ -7,7 +8,7 @@ CFLAGS = -Wall -fopenmp
 CINCLUDE = -I/usr/local/cuda/include/
 
 #GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
-GLFLAGS   = -lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
+GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
 LIBS = cusp_eigen.o
 
 version: version.cu 
@@ -17,6 +18,9 @@ version: version.cu
 cusp_thrust: cusp_thrust.cu 
 	$(NVCC) $< $(NVCCFLAGS) -o $@
 	./$@
+
+host_window_t: host_window_t.cu
+	$(NVCC) $< $(NVCCFLAGS) -o $@ $(GLFLAGS) $(INCLUDE)
 
 %.o: %.cpp
 	$(CXX) -O3 -c $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) 
