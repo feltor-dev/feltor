@@ -18,11 +18,12 @@
 namespace dg
 {
 
-template< class T, size_t n, class container=thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
+template< class T, size_t n, class container=thrust::device_vector<T> >
 struct Shu 
 {
     typedef T value_type;
     typedef container Vector;
+    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     Shu( unsigned Nx, unsigned Ny, double hx, double hy, double D, double eps = 1e-6);
 
@@ -33,8 +34,8 @@ struct Shu
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
     Matrix laplace;
-    container omega, phi;
-    Arakawa<T, n, container, MemorySpace> arakawa; 
+    container omega, phi, phi_old;
+    Arakawa<T, n, container> arakawa; 
     CG<Matrix, container, dg::T2D<T, n> > pcg;
     SimplicialCholesky cholesky;
     thrust::host_vector<double> x,b;
@@ -44,10 +45,10 @@ struct Shu
     double eps; 
 };
 
-template< class T, size_t n, class container, class MemorySpace>
-Shu<T, n, container, MemorySpace>::Shu( unsigned Nx, unsigned Ny, double hx, double hy,
+template< class T, size_t n, class container>
+Shu<T, n, container>::Shu( unsigned Nx, unsigned Ny, double hx, double hy,
         double D, double eps): 
-    omega( n*n*Nx*Ny, 0.), phi(omega),
+    omega( n*n*Nx*Ny, 0.), phi(omega), phi_old(phi),
     arakawa( Nx, Ny, hx, hy, -1, -1), 
     pcg( omega, n*n*Nx*Ny), x( n*n*Nx*Ny), b( n*n*Nx*Ny),
     hx( hx), hy(hy), D(D), eps(eps)
@@ -62,8 +63,8 @@ Shu<T, n, container, MemorySpace>::Shu( unsigned Nx, unsigned Ny, double hx, dou
     cholesky.compute( A);
 }
 
-template< class T, size_t n, class container, class MemorySpace>
-void Shu<T, n, container, MemorySpace>::operator()( const Vector& y, Vector& yp)
+template< class T, size_t n, class container>
+void Shu<T, n, container>::operator()( const Vector& y, Vector& yp)
 {
     dg::blas2::symv( laplace, y, yp);
     dg::blas2::symv( -D, dg::T2D<T,n>(hx, hy), yp, 0., yp); //laplace is unnormalized -laplace
@@ -71,7 +72,8 @@ void Shu<T, n, container, MemorySpace>::operator()( const Vector& y, Vector& yp)
     //compute S omega
     blas2::symv( S2D<double, n>(hx, hy), y, omega);
     cudaThreadSynchronize();
-    //blas1::axpby( 0., phi, 0., phi);
+    //blas1::axpby( 2., phi, -1.,  phi_old);
+    //thrust::swap( phi, phi_old);
     //unsigned number = pcg( laplace, phi, omega, T2D<double, n>(hx, hy), eps);
     //std::cout << "Number of pcg iterations "<< number<<"\n"; 
     b = omega; //copy data to host

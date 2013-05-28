@@ -4,6 +4,7 @@
 #ifdef DG_DEBUG
 #include <cassert>
 #endif //DG_DEBUG
+#include <sstream>
 
 #include <GL/glew.h>
 #include <GL/glfw.h>
@@ -123,6 +124,14 @@ void GLFWCALL WindowResize( int w, int h)
 {
     // map coordinates to the whole window
     glViewport( 0, 0, (GLsizei) w, h);
+    //std::cout << "Resize\n";
+    // map coordinates to the whole window
+    //double win_ratio = (double)w/(double)h;
+    //GLint ww = (win_ratio<field_ratio) ? w : h*field_ratio ;
+    //GLint hh = (win_ratio<field_ratio) ? w/field_ratio : h;
+    //glViewport( 0, 0, (GLsizei) ww, hh);
+    //width = w;
+    //height = h;
 }
 
 struct Window
@@ -187,24 +196,28 @@ struct HostWindow
 {
     HostWindow( int width, int height){
         Nx_ = Ny_ = 0;
-        glfwSetWindowSizeCallback( WindowResize);
         // create window and OpenGL context bound to it
         if( !glfwInit()) { std::cerr << "ERROR: glfw couldn't initialize.\n";}
         if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
         { 
             std::cerr << "ERROR: glfw couldn't open window!\n";
         }
+        glfwSetWindowSizeCallback( WindowResize);
         int major, minor, rev;
         glfwGetVersion( &major, &minor, &rev);
         std::cout << "Using GLFW version   "<<major<<"."<<minor<<"."<<rev<<"\n";
         //enable textures
         glEnable(GL_TEXTURE_2D);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        window_str << "Host Window\n";
     }
     ~HostWindow() { glfwTerminate();}
     template< class T>
     void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map)
     {
+        //gehört das hier rein??
+        glfwSetWindowTitle( (window_str.str()).c_str() );
+        window_str.str(""); //clear title string
         glClear(GL_COLOR_BUFFER_BIT);
         if( Nx != Nx_ || Ny != Ny_) {
             Nx_ = Nx; Ny_ = Ny;
@@ -228,11 +241,16 @@ struct HostWindow
         glEnd();
         glfwSwapBuffers();
     }
+    void set_multiplot( unsigned i, unsigned j);
+    template< class T>
+    void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map, unsigned i, unsigned j);
+    std::stringstream& title() { return window_str;}
   private:
     HostWindow( const HostWindow&);
     HostWindow& operator=( const HostWindow&);
     unsigned Nx_, Ny_;
     thrust::host_vector<Color> resource;
+    std::stringstream window_str;  //window name
 };
 
 }

@@ -17,11 +17,11 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 1;
+const unsigned n = 3;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
-const unsigned k = 2;
+const unsigned k = 3;
 const double U = 1.; //the dipole doesn't move with this velocity because box is not infinite
 const double R = 0.2*lx;
 const double T = 2.;
@@ -35,7 +35,6 @@ typedef dg::ArrVec2d< double, n, DVec>  DArrVec;
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
-typedef cusp::device_memory Memory;
 
 double D = 0.0;
 unsigned Nx = 16;
@@ -82,8 +81,9 @@ int main()
     DVec sol = solh.data();
     DVec y0( omega.data()), y1( y0);
     //make solver and stepper
-    Shu<double, n, DVec, Memory> test( Nx, Ny, hx, hy, D, eps);
-    RK< k, Shu<double, n, DVec, Memory> > rk( y0);
+    Shu<double, n, DVec> test( Nx, Ny, hx, hy, D, eps);
+    RK< k, Shu<double, n, DVec> > rk( y0);
+    AB< k, Shu<double, n, DVec> > ab( y0);
 
     t.tic();
     test( y0, y1);
@@ -94,6 +94,7 @@ int main()
     double energy =    0.5*blas2::dot( y0, S2D<double, n>(hx, hy), test.potential()) ;
 
     double time = 0;
+    ab.init( test, y0, dt);
     while( time < T)
     {
         //step 

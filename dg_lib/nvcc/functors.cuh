@@ -17,6 +17,7 @@ struct AbsMax
         return absx > absy ? absx : absy;
     }
 };
+
 struct Gaussian
 {
     Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)
@@ -76,6 +77,48 @@ struct LN
 
 };
 
-}
+template < class T>
+struct MinMod
+{
+    __host__ __device__
+    T operator() ( T a1, T a2, T a3)
+    {
+        if( a1*a2 > 0) 
+            if( a1*a3 > 0)
+            {
+                if( a1 > 0)
+                    return min( a1, a2, a3, +1.);
+                else
+                    return min( a1, a2, a3, -1.);
+            }
+        return 0.;
+
+
+    }
+    private:
+    __host__ __device__
+    T min( T a1, T a2, T a3, T sign)
+    {
+        T temp = sign*a1;
+        if( sign*a2 < temp)
+            temp = sign*a2;
+        if( sign*a3 < temp)
+            temp = sign*a3;
+        return sign*temp;
+
+    }
+};
+
+template <class T>
+struct PLUS
+{
+    PLUS( T value): x_(value){}
+    __host__ __device__
+        T operator()(const T& x){ return x + x_;}
+    private:
+    T x_;
+};
+
+} //namespace dg
 
 #endif //_DG_FUNCTORS_CUH

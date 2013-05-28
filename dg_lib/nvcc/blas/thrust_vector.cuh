@@ -70,6 +70,34 @@ inline void doAxpby( typename Vector::value_type alpha,
 }
 
 template< class Vector>
+inline void doAxpby( typename Vector::value_type alpha, 
+              const Vector& x, 
+              typename Vector::value_type beta, 
+              const Vector& y, 
+              Vector& z, 
+              ThrustVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+    assert( x.size() == z.size() );
+#endif //DG_DEBUG
+    if( alpha == 0)
+    {
+        thrust::transform( y.begin(), y.end(), z.begin(), 
+                detail::Axpby_Functor<typename Vector::value_type>( 0, beta));
+        return;
+    }
+    if( beta == 0)
+    {
+        thrust::transform( x.begin(), x.end(), z.begin(), 
+                detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
+        return;
+    }
+    thrust::transform( x.begin(), x.end(), y.begin(), z.begin(), 
+            detail::Axpby_Functor< typename Vector::value_type>( alpha, beta) );
+}
+
+template< class Vector>
 inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
 {
 #ifdef DG_DEBUG

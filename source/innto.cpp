@@ -301,7 +301,7 @@ int main( int argc, char* argv[])
         overhead.toc();
     }
     glfwTerminate();
-    cout << "Average time for one step = "<<timer.diff()/(double)N<<"s\n";
+    cout << "Average time for one step =                 "<<timer.diff()/(double)N<<"s\n";
     cout << "Overhead for visualisation, etc. per step = "<<(overhead.diff()-timer.diff())/(double)N<<"s\n";
     }
     //////////////////////////////////////////////////////////////////

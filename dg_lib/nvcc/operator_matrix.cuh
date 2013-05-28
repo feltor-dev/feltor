@@ -2,6 +2,7 @@
 #define _DG_OPERATOR_MATRIX_
 
 #include <cusp/coo_matrix.h>
+#include <cusp/multiply.h>
 #include "operator.cuh"
 
 namespace dg
@@ -53,6 +54,7 @@ Operator<T, n*n> tensor( const Operator< T, n>& op1, const Operator<T, n>& op2)
 template< class T, size_t n>
 cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,n>& op)
 {
+    assert( N>0);
     //compute number of nonzeroes in op
     unsigned number =0;
     for( unsigned i=0; i<n; i++)
@@ -74,6 +76,31 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,
                     number++;
                 }
     return A;
+}
+
+
+//multiply 1d matrices by left and right 
+//note, that passing a device matix won't work, because only a reference is taken
+template< class T, size_t n>
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T,n>& right)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    unsigned N = m.num_rows/n;
+    Matrix r = tensor( N, right);
+    Matrix l = tensor( N, left);
+    Matrix mr(m ), lmr(m);
+
+    cusp::multiply( m, r, mr);
+    cusp::multiply( l, mr, lmr);
+    return lmr;
+}
+//sandwich l space matrix to make x space matrix
+template< class T, size_t n>
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const cusp::coo_matrix<int, T, cusp::host_memory>& m)
+{
+    Operator<T, n> forward1d( DLT<n>::forward);
+    Operator<T, n> backward1d( DLT<n>::backward);
+    return sandwich( backward1d, m, forward1d);
 }
 
 

@@ -187,7 +187,6 @@ class Karniadakis
             <<"The current inverse is\n" << c_inv<<std::endl;
     }
   private:
-
     const size_t rows, cols;
     std::array< Matrix< double, P_x>, n> v1, v2;
     std::array< Matrix< double, P_x>, n> n1, n2;

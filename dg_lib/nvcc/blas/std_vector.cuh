@@ -37,6 +37,22 @@ inline void doAxpby( typename Vector::value_type alpha,
         doAxpby( alpha, x[i], beta, y[i], ThrustVectorTag());
         
 }
+template< class Vector>
+inline void doAxpby( typename Vector::value_type alpha, 
+              const std::vector<Vector>& x, 
+              typename Vector::value_type beta, 
+              const std::vector<Vector>& y, 
+              std::vector<Vector>& z, 
+              StdVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x.empty());
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
+    for( unsigned i=0; i<x.size(); i++)
+        doAxpby( alpha, x[i], beta, y[i], z[i], ThrustVectorTag());
+        
+}
 
 template< class Vector>
 inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, StdVectorTag)
