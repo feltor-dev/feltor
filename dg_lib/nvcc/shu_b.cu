@@ -5,14 +5,14 @@
 
 #include "timer.cuh"
 
-#include "cuda_texture.cuh"
+#include "draw/host_window.h"
 #include "functors.cuh"
 
-#include "arrvec2d.cuh"
 #include "evaluation.cuh"
 #include "shu.cuh"
 #include "rk.cuh"
 
+#include "typedefs.cuh"
 
 
 using namespace std;
@@ -33,26 +33,18 @@ const unsigned NT =  (unsigned)(T*n*Nx/0.05/lx);
 const double eps = 1e-3; //CG method
 const unsigned N = 3; //only output every Nth step 
 
-typedef thrust::device_vector< double>   DVec;
-typedef thrust::host_vector< double>     HVec;
-typedef dg::ArrVec2d< double, n, HVec>  HArrVec;
-typedef dg::ArrVec2d< double, n, DVec>  DArrVec;
-
-typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
-typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
-
 
 using namespace std;
 
 int main()
 {
     Timer t;
-    const double hx = lx/ (double)Nx;
-    const double hy = ly/ (double)Ny;
+    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
+    S2D<double,n > s2d( grid.hx(), grid.hy());
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
-    HostWindow w( 600, 600);
+    draw::HostWindow w( 600, 600);
     glfwSetWindowTitle( "Navier Stokes");
     ////////////////////////////////////////////////////////////
     cout << "# of Legendre coefficients: " << n<<endl;
@@ -61,14 +53,14 @@ int main()
     //cout << "# of timesteps              " << NT << endl;
     cout << "Diffusion                   " << D <<endl;
     dg::Lamb lamb( 0.5*lx, 0.8*ly, R, U);
-    HArrVec omega = expand< dg::Lamb, n> ( lamb, 0, lx, 0, ly, Nx, Ny);
-    DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
+    HVec omega = expand ( lamb, grid);
+    DVec stencil = expand( one, grid);
     dg::Lamb lamb2( 0.5*lx, 0.8*ly-0.9755*U*T, R, U);
-    HArrVec solh = expand< dg::Lamb, n> ( lamb2, 0, lx, 0, ly, Nx, Ny);
-    DVec sol = solh.data();
-    DVec y0( omega.data()), y1( y0);
+    HVec solh = expand( lamb2, grid);
+    DVec sol = solh ;
+    DVec y0( omega ), y1( y0);
     //make solver and stepper
-    Shu<double, n, DVec> test( Nx, Ny, hx, hy, D, eps);
+    Shu<double, n, DVec> test( grid, D, eps);
     RK< k, Shu<double, n, DVec> > rk( y0);
     AB< k, Shu<double, n, DVec> > ab( y0);
 
@@ -76,43 +68,28 @@ int main()
     test( y0, y1);
     t.toc();
     cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
-    double vorticity = blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0);
-    double enstrophy = 0.5*blas2::dot( y0, S2D<double, n>(hx, hy), y0);
-    double energy =    0.5*blas2::dot( y0, S2D<double, n>(hx, hy), test.potential()) ;
+    double vorticity = blas2::dot( stencil , s2d, y0);
+    double enstrophy = 0.5*blas2::dot( y0, s2d, y0);
+    double energy =    0.5*blas2::dot( y0, s2d, test.potential()) ;
 
     double time = 0;
     ////////////////////////////////glfw//////////////////////////////
-    //create equidistant backward transformation
-    dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
-    dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
-    HMatrix hbackward = dg::tensor( Nx*Ny, backward2d);
-    DMatrix backward = hbackward;
     //create visualisation vectors
+    DVec visual( grid.size());
+    HVec hvisual( grid.size());
+    //transform vector to an equidistant grid
+    dg::DMatrix equidistant = dg::create::backscatter( grid, LSPACE );
     int running = GL_TRUE;
-    DVec visual( n*n*Nx*Ny), visual2( visual);
-    HVec hvisual( n*n*Nx*Ny);
-    thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
-    dg::ColorMapRedBlueExt colors( 1.);
+    draw::ColorMapRedBlueExt colors( 1.);
+    ab.init( test, y0, dt);
     cout << "Press any key to start!\n";
     double x; 
     cin >> x;
-    ab.init( test, y0, dt);
     while (running && time < T)
     {
-        //transform field to an equidistant grid
-        //t.tic();
-        //cout << "Total vorticity           is: "<<blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
-        //cout << "Relative enstrophy error  is: "<<(0.5*blas2::dot( S2D<double, n>(hx, hy), y0) - enstrophy)/enstrophy<<"\n";
-        //test( y0, y1); //get the potential ready
-        //cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), S2D<double, n>(hx, hy), y0) - energy)/energy<<"\n";
-        //t.toc();
-        dg::blas2::symv( backward, y0, visual2);
+        dg::blas2::symv( equidistant, y0, visual);
         cudaThreadSynchronize();
-        thrust::scatter( visual2.begin(), visual2.end(), map.begin(), visual.begin());
-        cudaThreadSynchronize();
-        //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
-        //std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
         hvisual = visual;
         cudaThreadSynchronize();
@@ -121,7 +98,7 @@ int main()
         t.tic();
         for( unsigned i=0; i<N; i++)
         {
-            rk( test, y0, y1, dt);
+            ab( test, y0, y1, dt);
             thrust::swap(y0, y1);
         }
         t.toc();
@@ -135,13 +112,13 @@ int main()
     ////////////////////////////////////////////////////////////////////
     cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
     cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity           is: "<<blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
-    cout << "Relative enstrophy error  is: "<<(0.5*blas2::dot( S2D<double, n>(hx, hy), y0) - enstrophy)/enstrophy<<"\n";
+    cout << "Total vorticity           is: "<<blas2::dot( stencil , s2d, y0) << "\n";
+    cout << "Relative enstrophy error  is: "<<(0.5*blas2::dot( s2d, y0) - enstrophy)/enstrophy<<"\n";
     test( y0, y1); //get the potential ready
-    cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), S2D<double, n>(hx, hy), y0) - energy)/energy<<"\n";
+    cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), s2d, y0) - energy)/energy<<"\n";
 
     blas1::axpby( 1., y0, -1, sol);
-    cout << "Distance to solution: "<<sqrt(blas2::dot( S2D<double,n>(hx,hy), sol ))<<endl;
+    cout << "Distance to solution: "<<sqrt(blas2::dot( s2d, sol ))<<endl;
 
     cout << "Press any key to quit!\n";
     cin >> x;

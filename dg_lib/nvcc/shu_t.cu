@@ -3,13 +3,15 @@
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
-#include "cuda_texture.cuh"
+#include "host_window.h"
+
 #include "functors.cuh"
 
 #include "arrvec2d.cuh"
 #include "evaluation.cuh"
 #include "shu.cuh"
 #include "rk.cuh"
+#include "typedefs.cuh"
 
 
 using namespace std;
@@ -26,28 +28,19 @@ const double D = 0.01;
 const double T = 1.;
 const unsigned NT = (unsigned)(D*T*n*n*Nx*Nx/0.01/lx/lx);
 
-typedef thrust::device_vector< double>   DVec;
-typedef thrust::host_vector< double>     HVec;
-typedef dg::ArrVec2d< double, n, HVec>  HArrVec;
-typedef dg::ArrVec2d< double, n, DVec>  DArrVec;
-typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
-typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
-
 
 double initial( double x, double y){return 2.*sin(x)*sin(y);}
 double solution( double x, double y) {return 2.*sin(x)*sin(y)*exp( -2.*T*D);}
 
 
-using namespace std;
-
 int main()
 {
-    const double hx = lx/ (double)Nx;
-    const double hy = ly/ (double)Ny;
+    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
+    S2D<double,n > s2d( grid.hx(), grid.hy());
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
-    HostWindow w( 600, 600);
+    draw::HostWindow w( 600, 600);
     glfwSetWindowTitle( "Navier Stokes");
     ////////////////////////////////////////////////////////////
     cout << "# of Legendre coefficients: " << n<<endl;
@@ -56,40 +49,36 @@ int main()
     //cout << "# of timesteps              " << NT << endl;
     cout << "Diffusion                   " << D <<endl;
     dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, 1);
-    HArrVec omega = expand< dg::Lamb, n> ( lamb, 0, lx, 0, ly, Nx, Ny);
-    DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
+    HVec omega = expand ( lamb, grid);
+    DVec stencil = expand( one, grid);
     //DArrVec sol = expand< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
-    DVec y0( omega.data()), y1( y0);
-    Shu<double, n, DVec> test( Nx, Ny, hx, hy, D);
-    RK< 3, Shu<double, n, DVec> > rk( y0);
+    DVec y0( omega), y1( y0);
+    Shu<double, n, DVec> test( grid, D);
+    AB< 3, Shu<double, n, DVec> > ab( y0);
 
     ////////////////////////////////glfw//////////////////////////////
-    //create equidistant backward transformation
-    dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
-    dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
-    HMatrix hbackward = dg::tensor( Nx*Ny, backward2d);
-    DMatrix backward = hbackward;
     //create visualisation vectors
+    DVec visual( grid.size());
+    HVec hvisual( grid.size());
+    //transform vector to an equidistant grid
+    dg::DMatrix equidistant = dg::create::backscatter( grid, LSPACE );
     int running = GL_TRUE;
-    DVec visual( n*n*Nx*Ny), visual2( visual);
-    HVec hvisual( n*n*Nx*Ny);
-    thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
-    dg::ColorMapRedBlueExt colors( 1.);
+    draw::ColorMapRedBlueExt colors( 1.);
+    ab.init( test, y0, dt);
     while (running)
     {
         //transform field to an equidistant grid
-        cout << "Total vorticity is: "<<blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
-        cout << "Total enstrophy is: "<<blas2::dot( S2D<double, n>(hx, hy), y0)<<"\n";
-        dg::blas2::symv( backward, y0, visual2);
-        thrust::scatter( visual2.begin(), visual2.end(), map.begin(), visual.begin());
+        cout << "Total vorticity is: "<<blas2::dot( stencil, s2d, y0) << "\n";
+        cout << "Total enstrophy is: "<<blas2::dot( s2d, y0)<<"\n";
         //compute the color scale
+        dg::blas2::mv( equidistant, y0, visual );
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<float>() );
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
         hvisual = visual;
         w.draw( hvisual, n*Nx, n*Ny, colors);
         //step 
-        rk( test, y0, y1, dt);
+        ab( test, y0, y1, dt);
         thrust::swap(y0, y1);
 
         glfwWaitEvents();
@@ -98,11 +87,11 @@ int main()
     }
     ////////////////////////////////////////////////////////////////////
     /*
-    cout << "Total vorticity is: "<< blas2::dot( stencil.data(), S2D<double, n>(hx, hy), y0) << "\n";
-    cout << "Total enstrophy  is "<<blas2::dot( y0, S2D<double, n>(hx, hy), y0)<<"\n";
+    cout << "Total vorticity is: "<< blas2::dot( stencil, s2d, y0) << "\n";
+    cout << "Total enstrophy  is "<<blas2::dot( y0, s2d, y0)<<"\n";
     blas1::axpby( 1., sol.data(), -1., y0);
     cudaThreadSynchronize();
-    cout << "Distance to solution "<<sqrt( blas2::dot( S2D<double, n>(hx, hy), y0))<<endl; //don't forget sqrt when comuting errors
+    cout << "Distance to solution "<<sqrt( blas2::dot( s2d, y0))<<endl; //don't forget sqrt when comuting errors
     */
 
     return 0;

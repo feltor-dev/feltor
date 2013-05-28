@@ -126,14 +126,14 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, norm
  * @return transformation matrix
  */
 template < class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T,n>& g, bool forward = true)
+cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T,n>& g, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     //create equidistant backward transformation
     dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
     dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
 
-    if( forward){
+    if( s == XSPACE){
         dg::Operator<double, n> forward( dg::DLT<n>::forward);
         dg::Operator<double, n*n> forward2d = dg::tensor( forward, forward);
         backward2d = backward2d*forward2d;

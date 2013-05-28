@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "../../drawings_lib/host_window.h"
+#include "draw/host_window.h"
 #include "xspacelib.cuh"
 
 

@@ -3,13 +3,13 @@
 
 #include <cusp/print.h>
 
-#include "xspacelib.cuh"
 #include "timer.cuh"
+#include "xspacelib.cuh"
 #include "cg.cuh"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned Nx = 66;  //more N means less iterations for same error
-const unsigned Ny = 66;  //more N means less iterations for same error
+const unsigned Nx = 100;  //more N means less iterations for same error
+const unsigned Ny = 100;  //more N means less iterations for same error
 
 const double lx = M_PI;
 const double ly = M_PI;
@@ -52,7 +52,7 @@ int main()
     t.tic();
     Matrix A = pol.create( chi ); 
     t.toc();
-    cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
+    cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
     //dg::Matrix Ap= dg::create::laplacian( grid, false); 
     //cout << "Polarisation matrix: "<< endl;
     //cusp::print( A);
@@ -62,7 +62,7 @@ int main()
     t.tic();
     dg::CG<Matrix, Vector, dg::V2D<double,n> > pcg( x, n*n*Nx*Ny);
     t.toc();
-    cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
+    cout << "Creation of conjugate gradient took: "<<t.diff()<<"s\n";
 
     cout << "# of polynomial coefficients: "<< n <<endl;
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;

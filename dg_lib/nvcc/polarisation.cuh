@@ -196,27 +196,28 @@ template <class T, size_t n, class container>
 void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> HMatrix;
-    //create diagonal matrix entries
-    for( unsigned i=0; i<n*n*Nx*Ny; i++)
-        I[i] = J[i] = i;
+
     Operator<T, n> backward1d( DLT<n>::backward);
     Operator<T, n> forward1d( DLT<n>::forward);
 
     //create x and y derivative in xspace
-    rightx = create::dx_asymm_mt<T,n>( Nx, hx, bcx); 
-    rightx = sandwich<T,n>( backward1d, rightx, forward1d);
-    rightx = dg::dgtensor<T,n>( tensor<T,n>(Ny, delta), rightx);
+    HMatrix rightx_ = create::dx_asymm_mt<T,n>( Nx, hx, bcx); 
+    rightx_ = sandwich<T,n>( backward1d, rightx_, forward1d);
+    rightx = dg::dgtensor<T,n>( tensor<T,n>(Ny, delta), rightx_);
 
-    righty = create::dx_asymm_mt<T,n>( Ny, hy, bcy); //create and transfer to device
-    righty = sandwich<T,n>( backward1d, righty, forward1d);
-    righty = dg::dgtensor<T,n>( righty, tensor<T,n>( Nx, delta) );
+    HMatrix righty_ = create::dx_asymm_mt<T,n>( Ny, hy, bcy); //create and transfer to device
+    righty_ = sandwich<T,n>( backward1d, righty_, forward1d);
+    righty = dg::dgtensor<T,n>( righty_, tensor<T,n>( Nx, delta) );
 
     cusp::transpose( rightx, leftx); 
     cusp::transpose( righty, lefty); 
+
+    //create diagonal matrix entries
+    thrust::sequence( I.begin(), I.end());
+    thrust::sequence( J.begin(), J.end());
     //create middle weight vector
     dg::W2D<T,n> w2d( hx, hy);
-    for( unsigned i=0; i<n*n*Ny*Nx; i++)
-        middle[i] = w2d(i);
+    thrust::transform( I.begin(), I.end(), middle.begin(), w2d);
 
     //create norm for jump matrices 
     Operator<T,n> normx(0.), normy(0.), winvx(0.), winvy(0.);

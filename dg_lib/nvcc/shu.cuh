@@ -8,11 +8,7 @@
 
 #include "cusp_eigen.h"
 #include "arakawa.cuh"
-#include "laplace.cuh"
-#include "functions.h"
-#include "tensor.cuh"
-#include "operator_matrix.cuh"
-#include "dx.cuh"
+#include "derivatives.cuh"
 #include "cg.cuh"
 
 namespace dg
@@ -25,11 +21,11 @@ struct Shu
     typedef container Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    Shu( unsigned Nx, unsigned Ny, double hx, double hy, double D, double eps = 1e-4);
+
+    Shu( const Grid<T,n>& grid, double D, double eps = 1e-4);
 
     Matrix& lap() { return laplace;}
     const container& potential( ) {return phi;}
-
     void operator()( const Vector& y, Vector& yp);
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
@@ -39,6 +35,8 @@ struct Shu
     CG<Matrix, container, dg::T2D<T, n> > pcg;
     SimplicialCholesky cholesky;
     thrust::host_vector<double> x,b;
+    T2D<T,n> t2d;
+    S2D<T,n> s2d;
     
     double hx, hy;
     double D;
@@ -46,19 +44,14 @@ struct Shu
 };
 
 template< class T, size_t n, class container>
-Shu<T, n, container>::Shu( unsigned Nx, unsigned Ny, double hx, double hy,
-        double D, double eps): 
-    omega( n*n*Nx*Ny, 0.), phi(omega), phi_old(phi),
-    arakawa( Nx, Ny, hx, hy, -1, -1), 
-    pcg( omega, n*n*Nx*Ny), x( n*n*Nx*Ny), b( n*n*Nx*Ny),
-    hx( hx), hy(hy), D(D), eps(eps)
+Shu<T, n, container>::Shu( const Grid<T, n>& g, double D, double eps): 
+    omega( n*n*g.Nx()*g.Ny(), 0.), phi(omega), phi_old(phi),
+    arakawa( g), 
+    pcg( omega, n*n*g.Nx()*g.Ny()), x( phi), b( x),
+    t2d( g.hx(), g.hy()), s2d( g.hx(), g.hy()), D(D), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-    HMatrix A = dg::dgtensor<double, n>
-                             ( dg::create::laplace1d_dir<double, n>( Ny, hy), 
-                               dg::S1D<double, n>( hx),
-                               dg::S1D<double, n>( hy),
-                               dg::create::laplace1d_per<double, n>( Nx, hx)); 
+    HMatrix A = dg::create::laplacian( g, not_normed, LSPACE);
     laplace = A;
     cholesky.compute( A);
 }
@@ -67,14 +60,14 @@ template< class T, size_t n, class container>
 void Shu<T, n, container>::operator()( const Vector& y, Vector& yp)
 {
     dg::blas2::symv( laplace, y, yp);
-    dg::blas2::symv( -D, dg::T2D<T,n>(hx, hy), yp, 0., yp); //laplace is unnormalized -laplace
+    dg::blas2::symv( -D, t2d, yp, 0., yp); //laplace is unnormalized -laplace
     cudaThreadSynchronize();
     //compute S omega
-    blas2::symv( S2D<double, n>(hx, hy), y, omega);
+    blas2::symv( s2d, y, omega);
     cudaThreadSynchronize();
     blas1::axpby( 2., phi, -1.,  phi_old);
     thrust::swap( phi, phi_old);
-    unsigned number = pcg( laplace, phi, omega, T2D<double, n>(hx, hy), eps);
+    unsigned number = pcg( laplace, phi, omega, t2d, eps);
     //std::cout << "Number of pcg iterations "<< number<<"\n"; 
     //b = omega; //copy data to host
     //cholesky.solve( x.data(), b.data(), b.size()); //solve on host
