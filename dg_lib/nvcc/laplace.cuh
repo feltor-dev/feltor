@@ -157,12 +157,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, norm
 }
 
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<double,n>& g, bool normalized = false)
+cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T,n>& g, norm no = not_normed)
 {
-    if( g.bc() == DIR)
-        return laplace1d_dir( g.N(), g.h(), normalized);
+    if( g.bcx() == DIR)
+        return laplace1d_dir<T,n>( g.N(), g.h(), no);
     else 
-        return laplace1d_per( g.N(), g.h(), normalized);
+        return laplace1d_per<T,n>( g.N(), g.h(), no);
 }
 
 
