@@ -5,9 +5,9 @@
 Default input file.
 
 ---------------------Algorithmic parameters-------------------
-1) nx (grid points in x)                =   150     (256.)
-2) ny (grid points in y)                =   150     (256.)
-3) dt (time step in units c_s/L_p)      =   0.01    (0.01)
+1) nx (grid points in x)                =   100     (256.)
+2) ny (grid points in y)                =   100     (256.)
+3) dt (time step in units c_s/L_p)      =   0.1    (0.01)
 ---------------------Boundary conditions----------------------
 4) lx (length of x in units of rho_s)   = 128    (64.)
 5) ly (length of y in units of rho_s)   = 128    (128.)
@@ -15,13 +15,13 @@ Default input file.
 7) bc_y (0 periodic, 1 Dirichlet )      =   1    (1.0)
 ---------------------Physical parameters----------------------
 8)  mhw:1, ohw:0 (modified/ordinary HW) =   0       (1)
-9)  local (0) or global (1)             =   0       (0)
+9)  local (0) or global (1)             =   1       (0)
 10)  ddd (dissip. coupling)              =   0.0     (0.5)
 11) nu  (viscosity)                     =   0.001   (0.001)
-12) mcv (magnetic curvature)            =   -0.0005 (-0.0005)
+12) mcv (magnetic curvature)            =   0.005 (0.0005)
 -------------------------Species------------------------------
 13) n00 (perturbation amplitude)        =  5.0     (1.0)
-14) dia (blob FWHM in units of rho_s)   =  10 
+14) dia (blob FWHM in units of rho_s)   =  30 
 15) tau_i (Ti/Te)                       =  0.0     (0.0)
 (Z of ions is always 1, g_i and a_i are computed from 
 quasineutrality condition)

@@ -25,13 +25,14 @@ int main()
     dg::HostWindow w(v[24], v[24]*v[5]/v[4]);
     /////////////////////////////////////////////////////////////////////////
     cout << "# of Legendre coefficients: " << n<<endl;
-    cout << "# of grid cells:            " << Nx*Ny<<endl;
-    cout << "Timestep                    " << dt << endl;
+    cout << "# of grid cells:            " << v[1]*v[2]<<endl;
+    cout << "Timestep                    " << v[3] << endl;
 
     dg::Grid<double,n > grid( 0, v[4], 0, v[5], (unsigned)v[1], (unsigned)v[2]);
     //create initial vector
-    dg::Gaussian g( 0.4*lx, 0.5*ly, v[14]/2.355, v[14]/2.355, v[13]); //gaussian width is in absolute values
+    dg::Gaussian g( 0.4*v[4], 0.5*v[5], v[14]/2.355, v[14]/2.355, v[13]); //gaussian width is in absolute values
     dg::DVec ne = dg::evaluate ( g, grid);
+    bool global = v[9];
     if( global)
         thrust::transform( ne.begin(), ne.end(), ne.begin(), dg::PLUS<double>(1));
     std::vector<dg::DVec> y0(2, ne), y1(y0); // n_e = n_i 
@@ -40,8 +41,7 @@ int main()
     dg::bc bc_x = dg::PER, bc_y = dg::PER;
     if( v[6]) bc_x = dg::DIR;
     if( v[7]) bc_y = dg::DIR;
-    bool global = v[9];
-    dg::Toefl<double, n, dg::DVec > test( grid, global, v[23], v[12], v[11]); 
+    dg::Toefl<double, n, dg::DVec > test( grid, global, v[23], v[12], v[11], bc_x, bc_y); 
     if( global)
         test.log( y0,y0); //transform to logarithmic values
     dg::RK< k, dg::Toefl<double, n, dg::DVec> > rk( y0);
@@ -78,7 +78,7 @@ int main()
         w.title() <<"Scale "<<colors.scale()<<"\t";
         w.title() << setprecision(2) << fixed;
         w.title() << " &&   time = "<<time;
-        w.draw( visual, n*Nx, n*Ny, colors);
+        w.draw( visual, n*v[1], n*v[2], colors);
         t.toc();
         //step 
         t.tic();

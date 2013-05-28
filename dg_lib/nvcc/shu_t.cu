@@ -60,8 +60,8 @@ int main()
     DArrVec stencil = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
     //DArrVec sol = expand< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
     DVec y0( omega.data()), y1( y0);
-    Shu<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, D);
-    RK< 3, Shu<double, n, DVec, cusp::device_memory> > rk( y0);
+    Shu<double, n, DVec> test( Nx, Ny, hx, hy, D);
+    RK< 3, Shu<double, n, DVec> > rk( y0);
 
     ////////////////////////////////glfw//////////////////////////////
     //create equidistant backward transformation

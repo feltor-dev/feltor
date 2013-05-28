@@ -26,7 +26,7 @@ struct Toefl
     typedef std::vector<container> Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
 
-    Toefl( const Grid<T,n>& g, bool global, double eps, double, double);
+    Toefl( const Grid<T,n>& g, bool global, double eps, double, double, bc, bc);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);

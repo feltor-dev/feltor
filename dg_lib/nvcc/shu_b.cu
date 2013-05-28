@@ -41,7 +41,6 @@ typedef dg::ArrVec2d< double, n, DVec>  DArrVec;
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 
-typedef cusp::device_memory Memory;
 
 using namespace std;
 
@@ -69,9 +68,9 @@ int main()
     DVec sol = solh.data();
     DVec y0( omega.data()), y1( y0);
     //make solver and stepper
-    Shu<double, n, DVec, Memory> test( Nx, Ny, hx, hy, D, eps);
-    RK< k, Shu<double, n, DVec, Memory> > rk( y0);
-    AB< k, Shu<double, n, DVec, Memory> > ab( y0);
+    Shu<double, n, DVec> test( Nx, Ny, hx, hy, D, eps);
+    RK< k, Shu<double, n, DVec> > rk( y0);
+    AB< k, Shu<double, n, DVec> > ab( y0);
 
     t.tic();
     test( y0, y1);
