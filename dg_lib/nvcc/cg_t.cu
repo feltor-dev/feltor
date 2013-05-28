@@ -9,7 +9,7 @@
 #include "laplace.cuh"
 #include "preconditioner.cuh"
 
-const unsigned n = 1; //global relative error in L2 norm is O(h^P)
+const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 const unsigned N = 200;  //more N means less iterations for same error
 
 const double lx = 2.*M_PI;
@@ -36,7 +36,7 @@ using namespace std;
 int main()
 {
     HArrVec x = dg::expand<double (&)(double), n> ( initial, 0,lx, N);
-    DMatrix A = dg::create::laplace1d_per<double, n>( N, h); 
+    DMatrix A = dg::create::laplace1d_dir<double, n>( N, h); 
     dg::CG<DMatrix, DVec, Preconditioner > pcg( x.data(), n*N);
     dg::CG<DMatrix, DVec> cg( x.data(), n*N);
     HArrVec b = dg::expand<double (&)(double), n> ( sine, 0,lx, N);

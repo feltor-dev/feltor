@@ -3,12 +3,16 @@
 
 #include <cusp/coo_matrix.h>
 
+#include "grid.cuh"
 #include "functions.h"
 #include "operator.cuh"
 #include "creation.cuh"
 
 namespace dg
 {
+enum norm{
+    normed,  
+    not_normed};
 
 namespace create{
 
@@ -26,7 +30,7 @@ namespace create{
 * @note The normalisation factor T is missing from this matrix
 */
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T alpha = 1.)
+cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, norm no = not_normed, T alpha = 1.)
 {
     if( n ==1 ) alpha = 0; //makes laplacian of order 2
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
@@ -41,6 +45,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T al
     t *= 2./h;
     Operator< T, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
     Operator< T, n> b = -((d+l)*t*rl+alpha*rl);
+    Operator< T, n> bT = b.transpose();
+    if( no == normed) { a = t*a; b = t*b; bT = t*bT; }
     //std::cout << a << "\n"<<b <<std::endl;
     //assemble the matrix
     int number = 0;
@@ -51,13 +57,13 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T al
         for( unsigned l=0; l<n; l++)
             detail::add_index<T,n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, 0,N-1,k,l, b(l,k)); //1- x B^T
+            detail::add_index<T,n>( A, number, 0,N-1,k,l, bT(k,l)); //1- x B^T
     }
     for( unsigned i=1; i<N-1; i++)
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T,n>(A, number, i, i-1, k, l, b(l,k));
+                detail::add_index<T,n>(A, number, i, i-1, k, l, bT(k,l));
             for( unsigned l=0; l<n; l++)
                 detail::add_index<T,n>(A, number, i, i, k, l, a(k,l));
             for( unsigned l=0; l<n; l++)
@@ -68,7 +74,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T al
         for( unsigned l=0; l<n; l++) 
             detail::add_index<T,n>( A, number, N-1,0,  k,l, b(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, N-1,N-2,k,l, b(l,k));
+            detail::add_index<T,n>( A, number, N-1,N-2,k,l, bT(k,l));
         for( unsigned l=0; l<n; l++)
             detail::add_index<T,n>( A, number, N-1,N-1,k,l, a(k,l));
     }
@@ -89,7 +95,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, T al
 * @note The normalisation factor T is missing from this matrix
 */
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T alpha = 1.)
+cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, norm no = not_normed)
 {
     //if( n == 1) alpha = 0; //not that easily because dirichlet 
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N - 2*n*n);
@@ -102,10 +108,16 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T al
     Operator<T, n> t( dg::pipj_inv);
     t *= 2./h;
 
-    Operator<T, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
-    Operator<T, n> b = -((d+l)*t*rl+alpha*rl);
-    Operator<T, n> ap = d*t*d.transpose() + alpha*(l + r);
-    Operator<T, n> bp = -(d*t*rl + alpha*rl);
+    Operator<T, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
+    Operator<T, n> b = -((d+l)*t*rl+rl);
+    Operator<T, n> bT= b.transpose();
+    Operator<T, n> ap = d*t*d.transpose() + (l + r);
+    Operator<T, n> bp = -(d*t*rl + rl);
+    Operator<T, n> bpT= bp.transpose();
+    if( no = normed) { 
+        a=t*a; b=t*b; bT=t*bT; 
+        ap=t*ap; bp=t*bp; bpT=t*bpT;
+    }
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
@@ -118,7 +130,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T al
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>(A, number, 1, 1-1, k, l, bp(l,k));
+            detail::add_index<T,n>(A, number, 1, 1-1, k, l, bpT(k,l));
         for( unsigned l=0; l<n; l++)
             detail::add_index<T,n>(A, number, 1, 1, k, l, a(k,l));
         for( unsigned l=0; l<n; l++)
@@ -128,7 +140,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T al
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T,n>(A, number, i, i-1, k, l, b(l,k));
+                detail::add_index<T,n>(A, number, i, i-1, k, l, bT(k,l));
             for( unsigned l=0; l<n; l++)
                 detail::add_index<T,n>(A, number, i, i, k, l, a(k,l));
             for( unsigned l=0; l<n; l++)
@@ -137,12 +149,22 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, T al
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, N-1,N-2,k,l, b(l,k));
+            detail::add_index<T,n>( A, number, N-1,N-2,k,l, bT(k,l));
         for( unsigned l=0; l<n; l++)
             detail::add_index<T,n>( A, number, N-1,N-1,k,l, a(k,l));
     }
     return A;
 }
+
+template< class T, size_t n>
+cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<double,n>& g, bool normalized = false)
+{
+    if( g.bc() == DIR)
+        return laplace1d_dir( g.N(), g.h(), normalized);
+    else 
+        return laplace1d_per( g.N(), g.h(), normalized);
+}
+
 
 
 } //namespace create

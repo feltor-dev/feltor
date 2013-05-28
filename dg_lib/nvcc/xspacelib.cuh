@@ -23,6 +23,7 @@
 #include "operator.cuh"
 #include "operator_matrix.cuh"
 #include "tensor.cuh"
+
 #include "arakawa.cuh"
 #include "polarisation.cuh"
 
@@ -39,80 +40,92 @@ typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix; //!< default ma
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix; //!< most efficient matrix format
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format
 
+enum space {XSPACE, LSPACE};
+
 namespace create{
 
 
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, bc bcx)
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, bc bcx, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     int bound = ( bcx == PER )? -1 : 0; 
     Matrix dx = create::dx_symm<T,n>( g.Nx(), g.hx(), bound);
-    Matrix bdxf = sandwich<T,n>( dx);
+    Matrix bdxf( dx);
+    if( s == XSPACE)
+        bdxf = sandwich<T,n>( dx);
 
     return dgtensor<T,n>( tensor<T,n>( g.Ny(), delta), bdxf );
 }
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g) { return dx( g, g.bcx());}
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, space s = XSPACE) { return dx( g, g.bcx(), s);}
 
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, bc bcy)
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, bc bcy, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     int bound = ( bcy == PER )? -1 : 0; 
     Matrix dy = create::dx_symm<T,n>( g.Ny(), g.hy(), bound);
-    Matrix bdyf_ = sandwich<T,n>( dy);
+    Matrix bdyf_(dy);
+    if( s == XSPACE)
+        bdyf_ = sandwich<T,n>( dy);
 
     return dgtensor<T,n>( bdyf_, tensor<T,n>( g.Nx(), delta));
 }
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g){ return dy( g, g.bcy());}
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, space s = XSPACE){ return dy( g, g.bcy(), s);}
 
 //the behaviour of CG is completely the same in xspace as in lspace
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc bcx, bc bcy, bool normalized = true)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    Operator<T, n> forward1d( DLT<n>::forward);
-    Operator<T, n> right( forward1d);
-    Operator<T,n> weights_invx(0.), weights_invy(0.);
-    for( unsigned i=0; i<n; i++)
-    {
-        weights_invx(i,i) = 2./g.hx()/DLT<n>::weight[i];
-        weights_invy(i,i) = 2./g.hy()/DLT<n>::weight[i];
-    }
-    Operator<T,n> leftx( right.transpose() ), lefty( right.transpose());
-    if( normalized) 
-    {
-        leftx = weights_invx*leftx;
-        lefty = weights_invy*lefty;
-    }
 
     Matrix ly;
     if( bcy == PER) 
-        ly = create::laplace1d_per<double,  n>( g.Ny(), g.hy());
+        ly = create::laplace1d_per<double,  n>( g.Ny(), g.hy(), no);
     else if( bcy == DIR) 
-        ly = create::laplace1d_dir<double,  n>( g.Ny(), g.hy());
+        ly = create::laplace1d_dir<double,  n>( g.Ny(), g.hy(), no);
     Matrix lx;
     if( bcx == PER) 
-        lx = create::laplace1d_per<double,  n>( g.Nx(), g.hx());
+        lx = create::laplace1d_per<double,  n>( g.Nx(), g.hx(), no);
     else if( bcx == DIR) 
-        lx = create::laplace1d_dir<double,  n>( g.Nx(), g.hx());
+        lx = create::laplace1d_dir<double,  n>( g.Nx(), g.hx(), no);
 
-    Matrix flxf = sandwich<T,n>( leftx, lx, right);
-    Matrix flyf = sandwich<T,n>( lefty, ly, right);
+    Matrix flxf(lx), flyf(ly);
+    //sandwich with correctly normalized matrices
+    if( s == XSPACE)
+    {
+        Operator<T, n> forward1d( DLT<n>::forward);
+        Operator<T, n> backward1d( DLT<n>::backward);
+        Operator<T,n> leftx( backward1d ), lefty( backward1d);
+        if( no == not_normed)
+            leftx = lefty = forward1d.transpose();
 
+        flxf = sandwich<T,n>( leftx, lx, forward1d);
+        flyf = sandwich<T,n>( lefty, ly, forward1d);
+    }
     Operator<T,n> normx(0.), normy(0.);
+    dg::W1D<T,n> w1dx( g.hx()), w1dy( g.hy());
+    dg::S1D<T,n> s1dx( g.hx()), s1dy( g.hy());
+    //generate norm
     for( unsigned i=0; i<n; i++)
     {
-        if( !normalized) 
+        if( no == not_normed) 
         {
-            normx(i,i) = g.hx()/2.*DLT<n>::weight[i];
-            normy(i,i) = g.hy()/2.*DLT<n>::weight[i];
+            if( s==XSPACE)
+            {
+                normx(i,i) = w1dx(i);
+                normy(i,i) = w1dy(i);
+            } else {
+                normx(i,i) = s1dx(i);
+                normy(i,i) = s1dy(i);
+            }
         }
         else
             normx(i,i) = normy(i,i) = 1.;
     }
+
     Matrix ddyy = dgtensor<double, n>( flyf, tensor( g.Nx(), normx));
     Matrix ddxx = dgtensor<double, n>( tensor(g.Ny(), normy), flxf);
     Matrix laplace;
@@ -123,9 +136,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
 }
 
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bool normalized = true)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, norm no = normed, space s = XSPACE)
 {
-    return laplacian( g, g.bcx(), g.bcy(), normalized);
+    return laplacian( g, g.bcx(), g.bcy(), normalized, s);
 }
 
 /**
@@ -171,6 +184,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T,n>& g, boo
 } //namespace create
 
 //should there be a utility for W2D?
+/*
 //are these really necessary?
 template< class Vector, size_t n>
 typename Vector::value_type dot( const Vector& x, const Vector& y, const Grid<typename Vector::value_type, n>& g)
@@ -188,8 +202,8 @@ typename Vector::value_type integ( const Vector& x, const Grid<typename Vector::
     Vector one(x.size(), 1.);
     return dot( x, one, g);
 }
+*/
 
-//make utility for equidistant grid
 
 }//namespace dg
 

@@ -25,7 +25,7 @@ struct Shu
     typedef container Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    Shu( unsigned Nx, unsigned Ny, double hx, double hy, double D, double eps = 1e-6);
+    Shu( unsigned Nx, unsigned Ny, double hx, double hy, double D, double eps = 1e-4);
 
     Matrix& lap() { return laplace;}
     const container& potential( ) {return phi;}
@@ -55,7 +55,7 @@ Shu<T, n, container>::Shu( unsigned Nx, unsigned Ny, double hx, double hy,
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
     HMatrix A = dg::dgtensor<double, n>
-                             ( dg::create::laplace1d_per<double, n>( Ny, hy), 
+                             ( dg::create::laplace1d_dir<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
                                dg::S1D<double, n>( hy),
                                dg::create::laplace1d_per<double, n>( Nx, hx)); 
@@ -72,13 +72,13 @@ void Shu<T, n, container>::operator()( const Vector& y, Vector& yp)
     //compute S omega
     blas2::symv( S2D<double, n>(hx, hy), y, omega);
     cudaThreadSynchronize();
-    //blas1::axpby( 2., phi, -1.,  phi_old);
-    //thrust::swap( phi, phi_old);
-    //unsigned number = pcg( laplace, phi, omega, T2D<double, n>(hx, hy), eps);
+    blas1::axpby( 2., phi, -1.,  phi_old);
+    thrust::swap( phi, phi_old);
+    unsigned number = pcg( laplace, phi, omega, T2D<double, n>(hx, hy), eps);
     //std::cout << "Number of pcg iterations "<< number<<"\n"; 
-    b = omega; //copy data to host
-    cholesky.solve( x.data(), b.data(), b.size()); //solve on host
-    phi = x; //copy data back to device
+    //b = omega; //copy data to host
+    //cholesky.solve( x.data(), b.data(), b.size()); //solve on host
+    //phi = x; //copy data back to device
     arakawa( y, phi, omega); //A(y,phi)-> omega
     cudaThreadSynchronize();
     blas1::axpby( 1., omega, 1., yp);

@@ -25,7 +25,7 @@ const unsigned k = 3;
 const double U = 1.; //the dipole doesn't move with this velocity because box is not infinite
 const double R = 0.2*lx;
 const double T = 2.;
-const double eps = 1e-3; //CG method
+const double eps = 1e-6; //CG method
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
@@ -98,7 +98,7 @@ int main()
     while( time < T)
     {
         //step 
-        rk( test, y0, y1, dt);
+        ab( test, y0, y1, dt);
         thrust::swap(y0, y1);
         time += dt;
     }

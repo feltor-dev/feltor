@@ -18,13 +18,14 @@ struct RHS
     typedef container Vector;
     RHS(unsigned N, T h, T D):h(h), D(D) 
     {
-        laplace = dg::create::laplace1d_dir<T,n>( N, h);
+        laplace = dg::create::laplace1d_dir<T,n>( N, h, true);
     }
     void operator()( const container& y, container& yp)
     {
         dg::blas2::symv( laplace, y, yp);
+        dg::blas1::axpby( -D, yp, 0., yp);
         //laplace is unnormalized -laplace
-        dg::blas2::symv( -D, dg::T1D<T,n>(h), yp, 0., yp); 
+        //dg::blas2::symv( -D, dg::T1D<T,n>(h), yp, 0., yp); 
     }
   private:
     double h, D;
