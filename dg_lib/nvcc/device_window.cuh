@@ -1,10 +1,5 @@
-#ifndef _DG_CUDA_OPENGL_
-#define _DG_CUDA_OPENGL_
-
-#ifdef DG_DEBUG
-#include <cassert>
-#endif //DG_DEBUG
-#include <sstream>
+#ifndef _DEVICE_WINDOW_CUH_
+#define _DEVICE_WINDOW_CUH_
 
 #include <GL/glew.h>
 #include <GL/glfw.h>
@@ -15,9 +10,8 @@
 
 #include "colormap.cuh"
 
-namespace dg
+namespace draw
 {
-
 void cudaGlfwInit( int width, int height)
 {
     //initialize glfw
@@ -66,6 +60,7 @@ GLuint allocateGlBuffer( unsigned N)
     glBufferData( GL_PIXEL_UNPACK_BUFFER, N*sizeof(float), NULL, GL_DYNAMIC_DRAW);
     return bufferID;
 }
+
 //N should be 3*Nx*Ny
 cudaGraphicsResource* allocateCudaGlBuffer( unsigned N )
 {
@@ -124,19 +119,11 @@ void GLFWCALL WindowResize( int w, int h)
 {
     // map coordinates to the whole window
     glViewport( 0, 0, (GLsizei) w, h);
-    //std::cout << "Resize\n";
-    // map coordinates to the whole window
-    //double win_ratio = (double)w/(double)h;
-    //GLint ww = (win_ratio<field_ratio) ? w : h*field_ratio ;
-    //GLint hh = (win_ratio<field_ratio) ? w/field_ratio : h;
-    //glViewport( 0, 0, (GLsizei) ww, hh);
-    //width = w;
-    //height = h;
 }
 
-struct Window
+struct DeviceWindow
 {
-    Window( int width, int height) { 
+    DeviceWindow( int width, int height) { 
         resource = NULL;
         Nx_ = Ny_ = 0;
         bufferID = 0;
@@ -145,7 +132,7 @@ struct Window
         glClear(GL_COLOR_BUFFER_BIT);
         glfwSetWindowSizeCallback( WindowResize);
     }
-    ~Window( ) {
+    ~DeviceWindow( ) {
         if( resource != NULL){
             cudaGraphicsUnregisterResource( resource); 
             //free the opengl buffer
@@ -192,67 +179,6 @@ struct Window
     unsigned Nx_, Ny_;
 };
 
-struct HostWindow
-{
-    HostWindow( int width, int height){
-        Nx_ = Ny_ = 0;
-        // create window and OpenGL context bound to it
-        if( !glfwInit()) { std::cerr << "ERROR: glfw couldn't initialize.\n";}
-        if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
-        { 
-            std::cerr << "ERROR: glfw couldn't open window!\n";
-        }
-        glfwSetWindowSizeCallback( WindowResize);
-        int major, minor, rev;
-        glfwGetVersion( &major, &minor, &rev);
-        std::cout << "Using GLFW version   "<<major<<"."<<minor<<"."<<rev<<"\n";
-        //enable textures
-        glEnable(GL_TEXTURE_2D);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        window_str << "Host Window\n";
-    }
-    ~HostWindow() { glfwTerminate();}
-    template< class T>
-    void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map)
-    {
-        //gehört das hier rein??
-        glfwSetWindowTitle( (window_str.str()).c_str() );
-        window_str.str(""); //clear title string
-        glClear(GL_COLOR_BUFFER_BIT);
-        if( Nx != Nx_ || Ny != Ny_) {
-            Nx_ = Nx; Ny_ = Ny;
-            std::cout << "Allocate resources for drawing!\n";
-            resource.resize( Nx*Ny);
-        }
-#ifdef DG_DEBUG
-        assert( x.size() == resource.size());
-#endif //DG_DEBUG
-        //map colors
-        thrust::transform( x.begin(), x.end(), resource.begin(), map);
-        //load texture
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, Nx, Ny, 0, GL_RGB, GL_FLOAT, resource.data());
-        glLoadIdentity();
-        float x0 = -1, x1 = 1, y0 = -1, y1 = 1;
-        glBegin(GL_QUADS); 
-            glTexCoord2f(0.0f, 0.0f); glVertex2f( x0, y0);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( x1, y0);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( x1, y1);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f( x0, y1);
-        glEnd();
-        glfwSwapBuffers();
-    }
-    void set_multiplot( unsigned i, unsigned j);
-    template< class T>
-    void draw( const thrust::host_vector<T>& x, unsigned Nx, unsigned Ny, dg::ColorMapRedBlueExt& map, unsigned i, unsigned j);
-    std::stringstream& title() { return window_str;}
-  private:
-    HostWindow( const HostWindow&);
-    HostWindow& operator=( const HostWindow&);
-    unsigned Nx_, Ny_;
-    thrust::host_vector<Color> resource;
-    std::stringstream window_str;  //window name
-};
+} //namespace draw
 
-}
-
-#endif //_DG_CUDA_OPENGL_
+#endif//_DEVICE_WINDOW_CUH_
