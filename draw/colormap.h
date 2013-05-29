@@ -22,10 +22,26 @@ struct Color
 
 struct ColorMapRedBlueExt
 {
+/*! @brief Create an extended redblue colormap with 384 floats
+    
+    the extra colors are black beyond the blue and gold in the infrared
+    @param scale The scale specifies which value corresponds to red
+     	(-scale corresponds to blue, 0 to white)
+ */
     ColorMapRedBlueExt( float scale = 1.);
     //maps [-scale, scale] to a color
     Color operator()( float x);
+    /**
+     * @brief Set the scale
+     *
+     * @return reference to the scale value
+     */
     float& scale( ) { return scale_;}
+    /**
+     * @brief The scale currently in use
+     *
+     * @return The scale currently in use
+     */
     float scale() const { return scale_;} 
   private:
     float scale_; 
@@ -33,10 +49,6 @@ struct ColorMapRedBlueExt
 };
 
 
-/*! @brief Create an extended redblue colormap with 384 floats
-    
-    the extra colors are black beyond the blue and gold in the infrared
- */
 ColorMapRedBlueExt::ColorMapRedBlueExt( float scale): scale_(scale)
 {
     float scal = 1.0/64.0;

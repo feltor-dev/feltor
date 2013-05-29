@@ -13,13 +13,33 @@
 //maybe in future Qt is an alternative
 namespace draw
 {
+
 void GLFWCALL WindowResize( int w, int h)
 {
     // map coordinates to the whole window
     glViewport( 0, 0, (GLsizei) w, h);
 }
+
+/**
+ * @brief A window for 2d scientific plots 
+ *
+ * The intention of this class is to provide an interface to make 
+ * the plot of a 2D vector during computations as simple as possible. 
+ * To use it simply use
+ * @code
+ * draw::HostWindow w( 400, 400);
+ * draw::ColorMapRedBlueExt map( 1.);
+ * w.draw( v, 100, 100, map);
+ * @endcode
+ */
 struct HostWindow
 {
+	/**
+	 * @brief Open window
+	 *
+	 * @param width in pixels
+	 * @param height in pixels
+	 */
     HostWindow( int width, int height){
         Nx_ = Ny_ = 0;
         // create window and OpenGL context bound to it
@@ -37,8 +57,20 @@ struct HostWindow
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         window_str << "Host Window\n";
     }
+    /**
+     * @brief Close window and OpenGL context
+     */
     ~HostWindow() { glfwTerminate();}
     //Vector has to be useable in std functions
+    /**
+     * @brief Draw a 2D field in the open window
+     *
+     * @tparam Vector The container class of your elements
+     * @param x Elements to be drawn
+     * @param Nx # of x points to be used ( the width)
+     * @param Ny # of y points to be used ( the height)
+     * @param map The colormap used to compute color from elements
+     */
     template< class Vector>
     void draw( const Vector& x, unsigned Nx, unsigned Ny, draw::ColorMapRedBlueExt& map)
     {

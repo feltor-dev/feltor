@@ -10,7 +10,12 @@ enum bc{
     DIR //!< homogeneous dirichlet boundaries
 };
 
-//add a size() function?
+/**
+* @brief 1D grid
+*
+* @tparam T value type
+* @tparam n # of polynomial coefficients
+*/
 template <class T, size_t n>
 struct Grid1d
 {
