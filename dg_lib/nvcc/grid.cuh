@@ -3,8 +3,19 @@
 
 #include <cassert>
 
+/*! @file Grid objects
+  */
+
+
 namespace dg{
 
+
+///@addtogroup grid
+///@{
+
+/**
+ * @brief Switch for boundary conditions
+ */
 enum bc{ 
     PER, //!< periodic boundaries
     DIR //!< homogeneous dirichlet boundaries
@@ -19,7 +30,15 @@ enum bc{
 template <class T, size_t n>
 struct Grid1d
 {
-    Grid1d( T x0, T x1, unsigned Nx, bc bcx = PER):
+    /**
+     * @brief 1D grid
+     * 
+     @param x0 left boundary
+     @param x1 right boundary
+     @param N # of cells
+     @param bcx boundary conditions
+     */
+    Grid1d( T x0, T x1, unsigned N, bc bcx = PER):
         x0_(x0), x1_(x1),
         Nx_(Nx), bcx_(bcx)
     {
@@ -34,6 +53,11 @@ struct Grid1d
     T h() const {return hx_;}
     unsigned N() const {return Nx_;}
     bc bcx() const {return bcx_;}
+    /**
+     * @brief The total number of points
+     *
+     * @return n*Nx
+     */
     unsigned size() const { return n*Nx_;}
   private:
     T x0_, x1_;
@@ -85,6 +109,11 @@ struct Grid
     unsigned Ny() const {return Ny_;}
     bc bcx() const {return bcx_;}
     bc bcy() const {return bcy_;}
+    /**
+     * @brief The total number of points
+     *
+     * @return n*n*Nx*Ny
+     */
     unsigned size() const { return n*n*Nx_*Ny_;}
   private:
     T x0_, x1_, y0_, y1_;
@@ -94,5 +123,6 @@ struct Grid
     bc bcx_, bcy_;
 };
 
+///@}
 }// namespace dg
 #endif // _DG_GRID_CUH_

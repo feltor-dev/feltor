@@ -9,18 +9,46 @@
 
 #include "derivatives.cuh"
 
+/*! @file objects for computation of Poisson bracket
+  */
+
 namespace dg
 {
 
+
+/**
+ * @brief L-space generalized version of Arakawa's scheme
+ *
+ * @tparam T value-type
+ * @tparam n # of polynomial coefficients
+ * @tparam container The vector class on which to operate on
+ */
 template< class T, size_t n, class container=thrust::device_vector<T> >
 struct Arakawa
 {
     typedef T value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
+    /**
+     * @brief Create Arakawa on a grid
+     *
+     * @param g The 2D grid
+     */
     Arakawa( const Grid<T,n>& g);
+    /**
+     * @brief Create Arakawa on a grid using different boundary conditions
+     *
+     * @param g The 2D grid
+     */
     Arakawa( const Grid<T,n>& g, bc bcx, bc bcy);
 
+    /**
+     * @brief Compute poisson's bracket
+     *
+     * @param lhs left hand side in l-space
+     * @param rhs rights hand side in l-space
+     * @param result Poisson's bracket in l-space
+     */
     void operator()( const container& lhs, const container& rhs, container& result);
     const Matrix& forward2d() {return forward;}
     const Matrix& backward2d() {return backward;}
@@ -82,28 +110,6 @@ Arakawa<T, n, container>::Arakawa( const Grid<T,n>& g): dxlhs( n*n*g.Nx()*g.Ny()
     Operator<value_type, n*n> backward2d = tensor( backward1d, backward1d);
     backward = tensor( g.Nx()*g.Ny(), backward2d);
 
-    /*
-    typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-    //create derivatives
-    HMatrix dx = create::dx_symm<T,n>( Nx, hx, bcx);
-    HMatrix dy = create::dx_symm<T,n>( Ny, hy, bcy);
-    HMatrix fx = tensor( Nx, forward1d);
-    HMatrix fy = tensor( Ny, forward1d);
-    HMatrix bx = tensor( Nx, backward1d);
-    HMatrix by = tensor( Ny, backward1d);
-    HMatrix dxf( dx), dyf( dy), bdxf_(dx), bdyf_(dy);
-
-    cusp::multiply( dx, fx, dxf);
-    cusp::multiply( bx, dxf, bdxf_);
-    cusp::multiply( dy, fy, dyf);
-    cusp::multiply( by, dyf, bdyf_);
-
-    HMatrix bdxf__ = dgtensor<T,n>( tensor<T,n>( Ny, delta), bdxf_ );
-    HMatrix bdyf__ = dgtensor<T,n>(  bdyf_, tensor<T,n>( Nx, delta));
-
-    bdxf = bdxf__;
-    bdyf = bdyf__;
-    */
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }

@@ -13,12 +13,34 @@
 #include "operator_matrix.cuh"
 #include "tensor.cuh"
 
+/*! @file Convenience function to create 2D derivatives
+  */
 namespace dg{
-enum space {XSPACE, LSPACE};
+
+///@addtogroup creation
+///@{
+/**
+ * @brief Switch between x-space and l-space
+ */
+enum space {
+    XSPACE, //!< indicates, that the given matrix operates on x-space values
+    LSPACE  //!< indicates, that the given matrix operates on l-space values
+};
 
 namespace create{
 
 
+/**
+ * @brief Create 2d derivative in x-direction
+ *
+ * @tparam T value-type
+ * @tparam n # of Legendre coefficients 
+ * @param g The grid on which to create dx
+ * @param bcx The boundary condition
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, bc bcx, space s = XSPACE)
 {
@@ -31,9 +53,30 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, bc bcx, spa
 
     return dgtensor<T,n>( tensor<T,n>( g.Ny(), delta), bdxf );
 }
+/**
+ * @brief Create 2d derivative in x-direction
+ *
+ * @tparam T value-type
+ * @tparam n # of Legendre coefficients 
+ * @param g The grid on which to create dx (boundary condition is taken from here)
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, space s = XSPACE) { return dx( g, g.bcx(), s);}
 
+/**
+ * @brief Create 2d derivative in x-direction
+ *
+ * @tparam T value-type
+ * @tparam n # of Legendre coefficients 
+ * @param g The grid on which to create dy
+ * @param bcx The boundary condition
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, bc bcy, space s = XSPACE)
 {
@@ -46,10 +89,34 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, bc bcy, spa
 
     return dgtensor<T,n>( bdyf_, tensor<T,n>( g.Nx(), delta));
 }
+/**
+ * @brief Create 2d derivative in y-direction
+ *
+ * @tparam T value-type
+ * @tparam n # of Legendre coefficients 
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, space s = XSPACE){ return dy( g, g.bcy(), s);}
 
 //the behaviour of CG is completely the same in xspace as in lspace
+/**
+ * @brief Create 2d laplacian
+ *
+ * @tparam T value-type
+ * @tparam n # of Legendre coefficients 
+ * @param g The grid on which to operate
+ * @param bcx Boundary condition in x
+ * @param bcy Boundary condition in y
+ * @param no use normed if you want to compute e.g. diffusive terms
+             use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE)
 {
@@ -109,53 +176,26 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
     return laplace;
 }
 
+/**
+ * @brief Create 2d laplacian
+ *
+ * @tparam T value-type
+ * @tparam n # of Legendre coefficients 
+ * @param g The grid on which to operate (boundary conditions are taken from here)
+ * @param no use normed if you want to compute e.g. diffusive terms
+             use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, norm no = normed, space s = XSPACE)
 {
     return laplacian( g, g.bcx(), g.bcy(), no, s);
 }
 
-/**
- * @brief make a matrix that transforms values to an equidistant grid ready for visualisation
- *
- * @tparam T value type
- * @tparam n # of polynomial coefficients
- * @param g The grid on which to operate 
- * @param forward whether the vectors are given in XSPACE or not
- *
- * @return transformation matrix
- */
-template < class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T,n>& g, space s = XSPACE)
-{
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    //create equidistant backward transformation
-    dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
-    dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
-
-    if( s == XSPACE){
-        dg::Operator<double, n> forward( dg::DLT<n>::forward);
-        dg::Operator<double, n*n> forward2d = dg::tensor( forward, forward);
-        backward2d = backward2d*forward2d;
-    }
-
-    Matrix backward = dg::tensor( g.Nx()*g.Ny(), backward2d);
-
-    thrust::host_vector<int> map = dg::makePermutationMap<n>( g.Nx(), g.Ny());
-    Matrix permutation( map.size(), map.size(), map.size());
-    cusp::array1d<int, cusp::host_memory> rows( thrust::make_counting_iterator<int>(0), thrust::make_counting_iterator<int>(map.size()));
-    cusp::array1d<int, cusp::host_memory> cols( map.begin(), map.end());
-    cusp::array1d<T, cusp::host_memory> values(map.size(), 1.);
-    permutation.row_indices = rows;
-    permutation.column_indices = cols;
-    permutation.values = values;
-    Matrix scatter( permutation);
-
-    cusp::multiply( permutation, backward, scatter);
-    return scatter;
-
-}
 } //namespace create
+///@}
 
 } //namespace dg
 #endif//_DG_DERIVATIVES_CUH_

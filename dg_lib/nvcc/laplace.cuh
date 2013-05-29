@@ -8,27 +8,35 @@
 #include "operator.cuh"
 #include "creation.cuh"
 
+/*! @file 1d laplacians
+  */
 namespace dg
 {
+/**
+ * @brief Switch for normalisation
+ */
 enum norm{
-    normed,  
-    not_normed};
+    normed,   //!< indicates that output is properly normalized
+    not_normed //!< indicates that a normalisation matrix is missing from output
+};
 
 namespace create{
 
 /**
-* @brief Create and assemble a cusp Matrix for the periodic negative 1d laplacian
-*
-* @ingroup utilities
-* Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* @tparam n Number of Legendre nodes per cell
-* @param N Vector size ( number of cells)
-* @param h cell size
-* @param alpha Optional parameter for penalization term
-*
-* @return Host Matrix in coordinate form 
-* @note The normalisation factor T is missing from this matrix
-*/
+ * @brief Create and assemble a cusp Matrix for the negative periodic 1d laplacian
+ *
+ * @ingroup create
+ * Use cusp internal conversion to create e.g. the fast ell_matrix format.
+ * @tparam T value-type
+ * @tparam n Number of Legendre nodes per cell
+ * @param N Vector size ( number of cells)
+ * @param h cell size
+ * @param no use normed if you want to compute e.g. diffusive terms
+             use not_normed if you want to solve symmetric matrix equations (T is missing)
+ * @param alpha Optional parameter for penalization term
+ *
+ * @return Host Matrix in coordinate form 
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, norm no = not_normed, T alpha = 1.)
 {
@@ -82,18 +90,19 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, norm
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the Dirichlet negative 1d laplacian
-*
-* @ingroup utilities
-* Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* @tparam n Number of Legendre nodes per cell
-* @param N Vector size ( number of cells)
-* @param h cell size
-* @param alpha Optional parameter for penalization term
-*
-* @return Host Matrix in coordinate form 
-* @note The normalisation factor T is missing from this matrix
-*/
+ * @brief Create and assemble a cusp Matrix for the Dirichlet negative 1d laplacian
+ *
+ * @ingroup create
+ * Use cusp internal conversion to create e.g. the fast ell_matrix format.
+ * @tparam T value-type
+ * @tparam n Number of Legendre nodes per cell
+ * @param N Vector size ( number of cells)
+ * @param h cell size
+ * @param no use normed if you want to compute e.g. diffusive terms
+             use not_normed if you want to solve symmetric matrix equations (T is missing)
+ *
+ * @return Host Matrix in coordinate form 
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, norm no = not_normed)
 {
@@ -156,6 +165,18 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, norm
     return A;
 }
 
+/**
+ * @brief Convenience function for the creation of a laplacian
+ *
+ * @ingroup create
+ * @tparam T value_type
+ * @tparam n Number of Legendre nodes per cell
+ * @param g The grid on which to create the laplacian (including boundary condition)
+ * @param no use normed if you want to compute e.g. diffusive terms
+            use not_normed if you want to solve symmetric matrix equations (T is missing)
+ *
+ * @return Host Matrix in coordinate form
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T,n>& g, norm no = not_normed)
 {

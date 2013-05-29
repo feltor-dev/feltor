@@ -6,9 +6,25 @@
 namespace dg
 {
  
+///@addtogroup functions
+///@{
+
+/**
+ * @brief Functor for the absolute maximum
+ *
+ * @tparam T value-type
+ */
 template <class T>
 struct AbsMax
 {
+    /**
+     * @brief Return the absolute maximum
+     *
+     * @param x left value
+     * @param y right value
+     *
+     * @return absolute maximum
+     */
     __host__ __device__
     T operator() (const T& x, const T& y)
     {
@@ -18,10 +34,33 @@ struct AbsMax
     }
 };
 
+/**
+ * @brief Functor returning a gaussian
+ */
 struct Gaussian
 {
+    /**
+     * @brief Functor returning a gaussian
+     *
+     * @param x0 x-center-coordinate
+     * @param y0 y-center-coordinate
+     * @param sigma_x x - variance
+     * @param sigma_y y - variance 
+     * @param amp Amplitude
+     */
     Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)
         : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp){}
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return gaussian
+     */
     double operator()(double x, double y)
     {
         return  amplitude*
@@ -33,8 +72,19 @@ struct Gaussian
 
 };
 
+/**
+ * @brief Functor returning a Lamb dipole
+ */
 struct Lamb
 {
+    /**
+     * @brief Functor returning a Lamb-dipole
+     *
+     * @param x0 x-center-coordinate
+     * @param y0 y-center-coordinate
+     * @param R radius of the dipole
+     * @param U  speed of the dipole
+     */
     Lamb(  double x0, double y0, double R, double U):R_(R), U_(U), x0_(x0), y0_(y0)
     {
         gamma_ = 3.83170597020751231561;
@@ -42,6 +92,14 @@ struct Lamb
         j_ = j0( gamma_);
         //std::cout << r_ <<u_<<x0_<<y0_<<lambda_<<gamma_<<j_<<std::endl;
     }
+    /**
+     * @brief Return the value of the dipole
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return Lamb
+     */
     double operator() (double x, double y)
     {
         double radius = sqrt( (x-x0_)*(x-x0_) + (y-y0_)*(y-y0_));
@@ -51,12 +109,30 @@ struct Lamb
             return 2.*lambda_*U_*j1( lambda_*radius)/j_*cos( theta) ;
         return 0;
     }
+    /**
+     * @brief The total enstrophy of the dipole
+     *
+     * Analytic formula. True for periodic and dirichlet boundary conditions.
+     * @return enstrophy
+     */
     double enstrophy( ) { return M_PI*U_*U_*gamma_*gamma_;}
+
+    /**
+     * @brief The total energy of the dipole
+     *
+     * Analytic formula. True for periodic and dirichlet boundary conditions.
+     * @return  energy
+     */
     double energy() { return 2.*M_PI*R_*R_*U_*U_;}
   private:
     double R_, U_, x0_, y0_, lambda_, gamma_, j_;
 };
 
+/**
+ * @brief Exponential
+ *
+ * @tparam T value-type
+ */
 template< class T>
 struct EXP 
 {
@@ -66,6 +142,11 @@ struct EXP
         return exp(x);
     }
 };
+/**
+ * @brief natural logarithm
+ *
+ * @tparam T value-type
+ */
 template < class T>
 struct LN
 {
@@ -77,6 +158,11 @@ struct LN
 
 };
 
+/**
+ * @brief Minmod function
+ *
+ * @tparam T value-type
+ */
 template < class T>
 struct MinMod
 {
@@ -109,16 +195,34 @@ struct MinMod
     }
 };
 
+/**
+ * @brief Add a constant value
+ *
+ * @tparam T value type
+ */
 template <class T>
 struct PLUS
 {
+    /**
+     * @brief Construct
+     *
+     * @param value to be added 
+     */
     PLUS( T value): x_(value){}
+    /**
+     * @brief Add a constant value
+     *
+     * @param x  the input
+     *
+     * @return  x + value
+     */
     __host__ __device__
         T operator()(const T& x){ return x + x_;}
     private:
     T x_;
 };
 
+///@}
 } //namespace dg
 
 #endif //_DG_FUNCTORS_CUH

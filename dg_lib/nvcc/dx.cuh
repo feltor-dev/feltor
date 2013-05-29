@@ -9,20 +9,22 @@
 #include "operator.cuh"
 #include "creation.cuh"
 
+/*!@file simple 1d derivatives
+  */
 namespace dg
 {
 namespace create
 {
 /**
-* @brief Create and assemble a cusp Matrix for the periodic 1d single derivative
+* @brief Create and assemble a cusp Matrix for the symmetric 1d single derivative
 *
-* @ingroup utilities
+* @ingroup create
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* The matrix is skew-symmetric
+* The matrix isn't symmetric due to the normalisation T.
 * @tparam n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
-* @param h cell size
-* @param bc boundary condition: <0 is periodic, else homogeneous dirichlet 
+* @param h cell size (used to compute normalisation)
+* @param bcx boundary condition 
 *
 * @return Host Matrix in coordinate form 
 */
@@ -93,15 +95,15 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, bc bcx = P
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the periodic 1d single derivative
+* @brief Create and assemble a cusp Matrix for the skew-symmetric 1d single derivative
 *
-* @ingroup utilities
+* @ingroup create
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* The matrix is skew-symmetric
+* The matrix isn't skew-symmetric due to normalisation T.
 * @tparam n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
-* @param h cell size
-* @param bc boundary condition: <0 is periodic, else homogeneous dirichlet 
+* @param h cell size ( used to compute normalisation)
+* @param bcx boundary condition
 *
 * @return Host Matrix in coordinate form 
 */
@@ -160,6 +162,18 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, bc bcx
     return A;
 };
 
+/**
+* @brief Create and assemble a cusp Matrix for the unnormalised jump in 1d.
+*
+* @ingroup create
+* Use cusp internal conversion to create e.g. the fast ell_matrix format.
+* The matrix is symmetric. Normalisation is missing
+* @tparam n Number of Legendre nodes per cell
+* @param N Vector size ( number of cells)
+* @param bcx boundary condition
+*
+* @return Host Matrix in coordinate form 
+*/
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, bc bcx = PER)
 {
