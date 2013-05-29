@@ -12,13 +12,14 @@
 
 #include "blas.h"
 
-template <class T, size_t n, class container = thrust::device_vector<T>, class MemorySpace = cusp::device_memory>
+template <class T, size_t n, class container = thrust::device_vector<T> >
 struct RHS
 {
     typedef container Vector;
+    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     RHS(unsigned N, T h, T D):h(h), D(D) 
     {
-        laplace = dg::create::laplace1d_dir<T,n>( N, h, true);
+        laplace = dg::create::laplace1d_dir<T,n>( N, h, dg::normed);
     }
     void operator()( const container& y, container& yp)
     {
@@ -49,7 +50,6 @@ double sol( double x) {return exp( -nu*T)*sine(x);}
 //typedef thrust::device_vector<double> DVec;
 typedef thrust::host_vector<double> DVec;
 typedef dg::ArrVec1d<double, n, DVec> DArrVec;
-typedef cusp::host_memory MemorySpace;
     
 
 using namespace std;
@@ -70,9 +70,9 @@ int main()
     double norm_y0 = dg::blas2::dot( s1d, y0);
     cout << "Normalized y0 (is Pi) "<< norm_y0 << endl;
 
-    RHS<double,n, DVec, MemorySpace> rhs( grid.N(), grid.h(), nu);
-    RK< k, RHS<double, n, DVec, MemorySpace> > rk( y0);
-    AB< k, RHS<double, n, DVec, MemorySpace> > ab( y0);
+    RHS<double,n, DVec> rhs( grid.N(), grid.h(), nu);
+    RK< k, DVec > rk( y0);
+    AB< k, DVec > ab( y0);
 
     ab.init( rhs, y0, dt);
     //thrust::swap(y0, y1);

@@ -173,8 +173,8 @@ struct ArakawaX
     //ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy); //deprecated
 
     void operator()( const container& lhs, const container& rhs, container& result);
-    const Matrix& dx2d() {return bdxf;}
-    const Matrix& dy2d() {return bdyf;}
+    const Matrix& dx() {return bdxf;}
+    const Matrix& dy() {return bdyf;}
 
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;

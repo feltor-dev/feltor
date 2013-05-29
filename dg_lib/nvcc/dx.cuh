@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cusp/coo_matrix.h>
 
+#include "grid.cuh"
 #include "functions.h"
 #include "operator.cuh"
 #include "creation.cuh"
@@ -26,10 +27,10 @@ namespace create
 * @return Host Matrix in coordinate form 
 */
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, int bc = -1)
+cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, bc bcx = PER)
 {
     unsigned size;
-    if( bc < 0) //periodic
+    if( bcx == PER) //periodic
         size = 3*n*n*N;
     else
         size = 3*n*n*N-2*n*n;
@@ -105,10 +106,10 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, int bc = -
 * @return Host Matrix in coordinate form 
 */
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, int bc = -1)
+cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, bc bcx = PER)
 {
     unsigned size;
-    if( bc < 0) //periodic
+    if( bc == PER) //periodic
         size = 2*n*n*N;
     else
         size = 2*n*n*N-n*n;
@@ -160,10 +161,10 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, int bc
 };
 
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, int bc = -1)
+cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, bc bcx = PER)
 {
     unsigned size;
-    if( bc < 0) //periodic
+    if( bc == PER) //periodic
         size = 3*n*n*N;
     else
         size = 3*n*n*N-2*n*n;

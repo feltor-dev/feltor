@@ -87,16 +87,9 @@ const double rk_coeff<4>::beta[4] = {
         the return value, i.e. y' = f(y) translates to f( y, y'). Moreover the 
         class must typedef the argument type to Vector. 
 */
-template< size_t k, class Functor>
+template< size_t k, class Vector>
 struct RK
 {
-    /**
-    * @brief The vector type
-    * 
-    * Must model Assignable and blas1::axpby( alpha, x, beta, y) 
-    * where x and y are of type Vector must be a valid expression.
-    */
-    typedef typename Functor::Vector Vector; 
     /**
     * @brief Reserve memory for the integration
     *
@@ -112,6 +105,7 @@ struct RK
     * @param u1 contains result on output. u0 and u1 may currently not be the same.
     * @param dt The timestep.
     */
+    template< class Functor>
     void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
   private:
     std::vector<Vector> u_; //TODO std::array is more natural here (but unfortunately not available)
@@ -120,8 +114,9 @@ struct RK
 //u0 and u1 may not be the same vector
 //TO DO: this might be cured by adding u0 first to u_[0] in the last step
 //f( y, yp) where y is const and yp contains the result
-template< size_t k, class Functor>
-void RK<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+template< size_t k, class Vector>
+template< class Functor>
+void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
 {
     assert( &u0 != &u1);
     f(u0, u_[0]);
@@ -151,12 +146,12 @@ void RK<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, doubl
 }
 
 //Euler specialisation
-template < class Functor>
-struct RK<1, Functor>
+template < class Vector>
+struct RK<1, Vector>
 {
-    typedef typename Functor::Vector Vector;
     RK(){}
     RK( const Vector& copyable){}
+    template < class Functor>
     void operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
     {
         f( u0, u1);
@@ -175,10 +170,9 @@ const double ab_coeff<2>::b[2] = {1.5, -0.5};
 template<>
 const double ab_coeff<3>::b[3] = {23./12., -16./12., 5./12.};
 
-template< size_t k, class Functor>
+template< size_t k, class Vector>
 struct AB
 {
-    typedef typename Functor::Vector Vector; 
     AB( const Vector& copyable): u_(k, Vector(copyable)){ }
    
     /**
@@ -188,6 +182,7 @@ struct AB
      * @param u0 The initial value you later use 
      * @param dt The timestep
      */
+    template< class Functor>
     void init( Functor& f, const Vector& u0, double dt);
     /**
      * @brief Advence one timestep
@@ -198,16 +193,18 @@ struct AB
      * @param dt The timestep
      * @note The fist u0 must be the same you use in the init routine.
      */
+    template< class Functor>
     void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
   private:
     std::vector<Vector> u_; //TODO std::array is more natural here (but unfortunately not available)
 };
 
 //compute two steps backwards with same order RK scheme 
-template< size_t k, class Functor>
-void AB<k, Functor>::init( Functor& f, const Vector& u0,  double dt)
+template< size_t k, class Vector>
+template< class Functor>
+void AB<k, Vector>::init( Functor& f, const Vector& u0,  double dt)
 {
-    RK<k, Functor> rk( u0);
+    RK<k, Vector> rk( u0);
     u_[0] = u0;
     for( unsigned i=1; i<k; i++)
         rk( f, u_[i-1], u_[i], -dt);
@@ -222,8 +219,9 @@ void AB<k, Functor>::init( Functor& f, const Vector& u0,  double dt)
 }
 
 //u0 and u1 can be the same
-template< size_t k, class Functor>
-void AB<k, Functor>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+template< size_t k, class Vector>
+template< class Functor>
+void AB<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
 {
     //u_[0] can be deleted
     f( u0, u_[0]);

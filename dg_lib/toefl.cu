@@ -2,7 +2,7 @@
 #include <iomanip>
 #include <vector>
 
-#include "cuda_texture.cuh"
+#include "draw/host_window.h"
 
 #include "toefl.cuh"
 #include "rk.cuh"
@@ -17,20 +17,60 @@ const unsigned n = 3;
 const unsigned k = 3;
 
 using namespace std;
+void display( const std::vector<double>& v, std::ostream& os = std::cout )
+{
+    os << "Physical parameters are: \n"
+        <<"    Coupling:        = "<<v[10]<<"\n"
+        <<"    Viscosity:       = "<<v[11]<<"\n"
+        <<"    Curvature_y:     = "<<v[12]<<"\n";
+        //<<"   Species/Parameter   g\ta\tmu\ttau\n"
+        //<<"    Electrons:         "<<g_e  <<"\t"<<"-1"<<"\t"<<"0"<<"\t"<<"1\n"
+        //<<"    Ions:              "<<g[0] <<"\t"<<a[0]<<"\t"<<mu[0]<<"\t"<<tau[0]<<"\n"
+        //<<"    Impurities:        "<<g[1] <<"\t"<<a[1]<<"\t"<<mu[1]<<"\t"<<tau[1]<<"\n";
+    char per[] = "PERIODIC", dir[] = "DIRICHLET";
+    os << "Boundary parameters are: \n"
+        <<"    lx = "<<v[4]<<"\n"
+        <<"    ly = "<<v[5]<<"\n"
+        <<"Boundary conditions in x are: \n"
+        <<"    "<<(v[6] ? dir:per)<<"\n"
+        <<"Boundary conditions in y are: \n"
+        <<"    "<<(v[7] ? dir:per)<<"\n";
+    os << "Algorithmic parameters are: \n"
+        <<"    Nx = "<<v[1]<<"\n"
+        <<"    Ny = "<<v[2]<<"\n"
+        <<"    dt = "<<v[3]<<"\n";
+    char enabled[] = "ENABLED", disabled[] = "DISABLED";
+    char local[] = "LOCAL" , global[] = "GLOBAL";
+
+    os << "Impurities are: \n"
+        <<"    "<<(v[16]?enabled:disabled)<<"\n"
+        //<<"Global solvers are: \n"
+        //<<"    "<<(global?enabled:disabled)<<"\n"
+        <<"Modified Hasegawa Wakatani: \n"
+        <<"    "<<(v[8]?enabled:disabled)<<"\n"
+        <<"Mode is:   \n"
+        <<"    "<<(v[9]?global:local)<<"\n";
+    os  << "Blob width is:     "<<v[14]<<"\n"
+        << "Blob amplitude is: "<<v[13]<<"\n"
+        << "Stopping for CG:   "<<v[23]<<"\n";
+
+
+}
 
 int main()
 {
     //do a cin for gridpoints
     std::vector<double> v = toefl::read_input( "input.txt");
-    dg::HostWindow w(v[24], v[24]*v[5]/v[4]);
+    draw::HostWindow w(v[24], v[24]*v[5]/v[4]);
     /////////////////////////////////////////////////////////////////////////
-    cout << "# of Legendre coefficients: " << n<<endl;
-    cout << "# of grid cells:            " << v[1]*v[2]<<endl;
-    cout << "Timestep                    " << v[3] << endl;
+    display( v, std::cout);
 
-    dg::Grid<double,n > grid( 0, v[4], 0, v[5], (unsigned)v[1], (unsigned)v[2]);
+    dg::bc bc_x = dg::PER, bc_y = dg::PER;
+    if( v[6]) bc_x = dg::DIR;
+    if( v[7]) bc_y = dg::DIR;
+    dg::Grid<double,n > grid( 0, v[4], 0, v[5], (unsigned)v[1], (unsigned)v[2], bc_x, bc_y);
     //create initial vector
-    dg::Gaussian g( 0.4*v[4], 0.5*v[5], v[14]/2.355, v[14]/2.355, v[13]); //gaussian width is in absolute values
+    dg::Gaussian g( 0.4*v[4], 0.5*v[5], v[14], v[14], v[13]); //gaussian width is in absolute values
     dg::DVec ne = dg::evaluate ( g, grid);
     bool global = v[9];
     if( global)
@@ -38,18 +78,15 @@ int main()
     std::vector<dg::DVec> y0(2, ne), y1(y0); // n_e = n_i 
 
     //create RHS and RK
-    dg::bc bc_x = dg::PER, bc_y = dg::PER;
-    if( v[6]) bc_x = dg::DIR;
-    if( v[7]) bc_y = dg::DIR;
     dg::Toefl<double, n, dg::DVec > test( grid, global, v[23], v[12], v[11], bc_x, bc_y); 
     if( global)
         test.log( y0,y0); //transform to logarithmic values
-    dg::RK< k, dg::Toefl<double, n, dg::DVec> > rk( y0);
-    dg::AB< k, dg::Toefl<double, n, dg::DVec> > ab( y0);
+    dg::RK< k, dg::DVec > rk( y0);
+    dg::AB< k, dg::DVec > ab( y0);
 
     dg::HVec visual( n*n*v[1]*v[2]);
     dg::DMatrix equi = dg::create::backscatter( grid);
-    dg::ColorMapRedBlueExt colors( 1.);
+    draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     Timer t;
     bool running = true;

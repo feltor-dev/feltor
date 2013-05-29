@@ -10,6 +10,7 @@
 
 #include "colormap.h"
 
+//maybe in future Qt is an alternative
 namespace draw
 {
 void GLFWCALL WindowResize( int w, int h)
