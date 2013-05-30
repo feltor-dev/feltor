@@ -41,7 +41,7 @@ int main()
     dg::Polarisation2dX<double, n, dg::HVec> pol( grid);
     cout << "Create Polarisation matrix!\n";
     dg::DMatrix A = pol.create( chi ); 
-    dg::Matrix Ap= dg::create::laplacian( grid, false); 
+    dg::Matrix Ap= dg::create::laplacian( grid, dg::not_normed); 
     //cout << "Polarisation matrix: "<< endl;
     //cusp::print( A);
     //cout << "Laplacian    matrix: "<< endl;

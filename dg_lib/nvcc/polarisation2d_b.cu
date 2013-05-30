@@ -53,7 +53,7 @@ int main()
     Matrix A = pol.create( chi ); 
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
-    //dg::Matrix Ap= dg::create::laplacian( grid, false); 
+    //dg::Matrix Ap= dg::create::laplacian( grid, dg::not_normed); 
     //cout << "Polarisation matrix: "<< endl;
     //cusp::print( A);
     //cout << "Laplacian    matrix: "<< endl;

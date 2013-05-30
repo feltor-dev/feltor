@@ -81,8 +81,8 @@ int main()
     dg::Toefl<double, n, dg::DVec > test( grid, global, v[23], v[12], v[11], bc_x, bc_y); 
     if( global)
         test.log( y0,y0); //transform to logarithmic values
-    dg::RK< k, dg::DVec > rk( y0);
-    dg::AB< k, dg::DVec > ab( y0);
+    dg::RK< k, std::vector<dg::DVec> > rk( y0);
+    dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
     dg::HVec visual( n*n*v[1]*v[2]);
     dg::DMatrix equi = dg::create::backscatter( grid);

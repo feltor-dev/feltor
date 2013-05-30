@@ -67,7 +67,7 @@ int main()
     std::vector<DVec> y0( 2, init), y1(y0);
     
     RHS<DVec> rhs( grid);
-    RK<3, RHS<DVec> >  rk( y0);
+    RK<3, std::vector<DVec> >  rk( y0);
     for( unsigned i=0; i<NT; i++)
     {
         rk( rhs, y0, y1, dt);
