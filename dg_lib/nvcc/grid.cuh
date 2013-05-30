@@ -42,10 +42,10 @@ struct Grid1d
      */
     Grid1d( T x0, T x1, unsigned N, bc bcx = PER):
         x0_(x0), x1_(x1),
-        Nx_(Nx), bcx_(bcx)
+        Nx_(N), bcx_(bcx)
     {
         assert( x1 > x0 );
-        assert( Nx > 0  );
+        assert( N > 0  );
         lx_ = (x1-x0);
         hx_ = lx_/(double)Nx_;
     }

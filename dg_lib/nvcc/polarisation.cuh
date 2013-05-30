@@ -192,7 +192,7 @@ struct Polarisation2dX
   private:
     typedef cusp::array1d<int, MemorySpace> Array;
     typedef cusp::array1d<T, MemorySpace> VArray;
-    void construct( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
+    void construct( unsigned Nx, unsigned Ny, T hx, T hy, bc bcx, bc bcy);
     Matrix leftx, lefty, rightx, righty, jump;
     Array I, J;
     typename Array::view I_view, J_view;

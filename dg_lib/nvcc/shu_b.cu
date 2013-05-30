@@ -12,6 +12,7 @@
 #include "shu.cuh"
 #include "rk.cuh"
 
+#include "xspacelib.cuh"
 #include "typedefs.cuh"
 
 
@@ -61,8 +62,8 @@ int main()
     DVec y0( omega ), y1( y0);
     //make solver and stepper
     Shu<double, n, DVec> test( grid, D, eps);
-    RK< k, Shu<double, n, DVec> > rk( y0);
-    AB< k, Shu<double, n, DVec> > ab( y0);
+    RK< k, DVec > rk( y0);
+    AB< k, DVec > ab( y0);
 
     t.tic();
     test( y0, y1);

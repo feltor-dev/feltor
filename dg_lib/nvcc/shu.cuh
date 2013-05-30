@@ -47,7 +47,7 @@ template< class T, size_t n, class container>
 Shu<T, n, container>::Shu( const Grid<T, n>& g, double D, double eps): 
     omega( n*n*g.Nx()*g.Ny(), 0.), phi(omega), phi_old(phi),
     arakawa( g), 
-    pcg( omega, n*n*g.Nx()*g.Ny()), x( phi), b( x),
+    pcg( omega, g.size()), x( phi), b( x),
     t2d( g.hx(), g.hy()), s2d( g.hx(), g.hy()), D(D), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;

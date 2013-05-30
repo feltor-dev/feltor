@@ -16,7 +16,7 @@
 #include "thrust_vector.cuh"
 #include "../vector_categories.h"
 #include "../matrix_categories.h"
-#include "../operator_tuple.cuh"
+//#include "../operator_tuple.cuh"
 
 namespace dg{
 namespace blas2{

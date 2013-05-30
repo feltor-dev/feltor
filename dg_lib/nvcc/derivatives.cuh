@@ -54,8 +54,7 @@ template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, bc bcx, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    int bound = ( bcx == PER )? -1 : 0; 
-    Matrix dx = create::dx_symm<T,n>( g.Nx(), g.hx(), bound);
+    Matrix dx = create::dx_symm<T,n>( g.Nx(), g.hx(), bcx);
     Matrix bdxf( dx);
     if( s == XSPACE)
         bdxf = sandwich<T,n>( dx);
@@ -90,8 +89,7 @@ template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, bc bcy, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    int bound = ( bcy == PER )? -1 : 0; 
-    Matrix dy = create::dx_symm<T,n>( g.Ny(), g.hy(), bound);
+    Matrix dy = create::dx_symm<T,n>( g.Ny(), g.hy(), bcy);
     Matrix bdyf_(dy);
     if( s == XSPACE)
         bdyf_ = sandwich<T,n>( dy);

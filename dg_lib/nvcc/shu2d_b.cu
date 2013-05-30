@@ -11,6 +11,7 @@
 #include "shu.cuh"
 #include "rk.cuh"
 
+#include "xspacelib.cuh"
 #include "typedefs.cuh"
 
 
@@ -25,7 +26,7 @@ const unsigned k = 3;
 const double U = 1.; //the dipole doesn't move with this velocity because box is not infinite
 const double R = 0.2*lx;
 const double T = 2.;
-const double eps = 1e-6; //CG method
+const double eps = 1e-7; //CG method
 
 
 double D = 0.0;
@@ -42,6 +43,7 @@ int main()
     Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
     S2D<double,n > s2d( grid.hx(), grid.hy());
     ////////////////////////////////////////////////////////////
+    cout << "Solve 2D incompressible NavierStokes with sin(x)sin(y) or Lamb dipole initial condition\n";
     cout << "Type # of grid cells in one dimension!\n";
     cin >> Nx;
     Ny = Nx; 
@@ -64,20 +66,21 @@ int main()
     ////////////////////////////////////////////////////////////
 
     DVec stencil = expand( one, grid);
-    //dg::Lamb lamb( 0.5*lx, 0.5*ly, R, U);
-    //HVec omega = expand( lamb, grid);
-    HVec omega = expand( initial, grid );
 
-    //dg::Lamb lamb2( 0.5*lx, 0.5*ly-0.9755*U*T, R, U);
-    //HVec solh = expand( lamb2, grid);
-    HVec solh = expand( solution, grid );
+    dg::Lamb lamb( 0.5*lx, 0.5*ly, R, U);
+    HVec omega = expand( lamb, grid);
+    //HVec omega = expand( initial, grid );
+
+    dg::Lamb lamb2( 0.5*lx, 0.5*ly-0.9755*U*T, R, U);
+    HVec solh = expand( lamb2, grid);
+    //HVec solh = expand( solution, grid );
 
     DVec sol = solh;
     DVec y0( omega), y1( y0);
     //make solver and stepper
     Shu<double, n, DVec> test( grid, D, eps);
-    RK< k, Shu<double, n, DVec> > rk( y0);
-    AB< k, Shu<double, n, DVec> > ab( y0);
+    RK< k, DVec > rk( y0);
+    AB< k, DVec > ab( y0);
 
     t.tic();
     test( y0, y1);
