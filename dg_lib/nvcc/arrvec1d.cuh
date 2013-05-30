@@ -11,7 +11,7 @@ namespace dg
 /**
  * @brief DG View on a Vector
  *
- * @ingroup containers
+ * @ingroup utilities
  * Data is not owned by this class.
  * @tparam T The value type 
  * @tparam n The number of polynomial coefficients per cell
@@ -100,7 +100,7 @@ class ArrVec1d_View
 /**
  * @brief DG View on a Vector it owns
  *
- * @ingroup containers
+ * @ingroup utilities
  * Data is owned by this class.
  * @tparam T The value type 
  * @tparam n The number of polynomial coefficients per cell

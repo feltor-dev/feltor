@@ -8,7 +8,7 @@ namespace dg
 /**
  * @brief DG View on a Vector
  *
- * @ingroup containers
+ * @ingroup utilities
  * Data is not owned by this class, nor does the class check for consistent 
  * container sizes, rows and columns.
  * @tparam T The value type 
@@ -119,7 +119,7 @@ class ArrVec2d_View
 /**
  * @brief DG View on a Vector it owns
  *
- * @ingroup containers
+ * @ingroup utilities
  * Data is owned by this class.
  * @tparam T The value type 
  * @tparam n The number of polynomial coefficients per cell
@@ -129,9 +129,9 @@ template< typename T, size_t n, class container = thrust::host_vector<T> >
 class ArrVec2d : public ArrVec2d_View<T, n, container>
 {
   public:
-        /**
-         * @brief The View type, i.e. parent class
-         */
+    /**
+     * @brief The View type, i.e. parent class
+     */
     typedef ArrVec2d_View<T, n, container> View;
     /**
      * @brief Construct an empty vector

@@ -9,6 +9,12 @@ namespace dg{
 
 //TODO Throw messages instead of assertions because origin of message can 
 // be better followed
+//
+// eigentlich dürften die blas routinen nicht im dg namensraum liegen, denn damit 
+// haben sie erst mal nichts zu tun. Wenn man nun als Außenstehender seine eigene 
+// Vektorklasse hat und die blas spezialisieren will? (Bis auf cudaThreadSynchronize natürlich
+// aber das kann man ja auch templaten, schließlich gibts auch noch openMP, MPI etc.)
+// IDEE: synchronize<Vector>();
 /*! @brief BLAS Level 1 routines 
  *
  * @ingroup blas1

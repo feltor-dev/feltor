@@ -10,7 +10,7 @@ namespace dg{
 /**
 * @brief Helper class mainly for the assembly of Matrices
 *
-* @ingroup containers
+* @ingroup lowlevel
 * In principle it's an enhanced quadratic static array
 * but it's not meant for performance critical code. 
 * @tparam T value type
@@ -204,6 +204,7 @@ class Operator
     T ptr[n*n];
 };
 
+///@cond
 template< class T, size_t n>
 struct MatrixTraits< Operator<T, n> >
 {
@@ -212,6 +213,7 @@ struct MatrixTraits< Operator<T, n> >
     typedef OperatorMatrixTag matrix_category;
 };
 
+///@endcond
 
 }
 

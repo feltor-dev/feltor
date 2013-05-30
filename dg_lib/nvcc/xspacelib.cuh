@@ -25,6 +25,12 @@
 
 #include "typedefs.cuh"
 
+/*! @file
+
+  * includes all relevant dg lib files for matrix creation and function evaluation
+  * and provides some utility functions
+  */
+
 namespace dg{
 ///@addtogroup utilities
 ///@{

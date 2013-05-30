@@ -15,7 +15,6 @@
 namespace dg
 {
 
-//namespace create{
 
 namespace detail{
 
@@ -44,14 +43,14 @@ struct AddIndex2d{
 //maybe one shouldn't take device_memory because it's limited
 //and note that one cannot pass a device matrix
 /**
-* @brief Form the DG tensor Product between two DG matrices
+* @brief Form the DG tensor product between two DG matrices
 *
-* @ingroup utilities
+* @ingroup lowlevel
 * Takes care of correct permutation of indices.
 * @tparam T value type
 * @tparam n number of Legendre coefficients per dimension
 * @param lhs The left hand side (1D )
-* @param rhs THe right hand side (1D ) 
+* @param rhs The right hand side (1D ) 
 *
 * @return A newly allocated cusp matrix containing the tensor product
 */
@@ -127,6 +126,7 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
 //use cusp::add and cusp::subtract to add and multiply matrices
 
 
+///@cond DEPRECATED
 //might become obsolete due to tensor and cusp::add functions
 /**
  * @brief Create 2D Tensor by summing 2 diagonal Tensor products
@@ -229,8 +229,9 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
     return A;
 }
 
+///@endcond
 
-//} //namespace create
+
 
 } //namespace dg
 

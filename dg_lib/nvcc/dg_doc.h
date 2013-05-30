@@ -8,11 +8,16 @@
  * @{
  *      @defgroup grid Grid objects
  *      @defgroup evaluation Function discretization
+ *      @defgroup functions Functions and Functors
  *      @defgroup creation Creation of discrete derivatives
+ *      @{
+ *          @defgroup lowlevel Helper functions
+ *          @defgroup highlevel Creation functions
+ *      @}
  *      @defgroup blas Basic Linear Algebra Subprograms
  *      @{
  *          @defgroup blas1 BLAS level 1 routines
- *          @defgroup blas2 BLAS level 1 routines
+ *          @defgroup blas2 BLAS level 2 routines
  *      @}
  *      @defgroup algorithms Numerical schemes
  *      @defgroup utilities Utilities

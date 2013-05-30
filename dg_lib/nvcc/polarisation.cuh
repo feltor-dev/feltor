@@ -149,7 +149,7 @@ cusp::coo_matrix<int, T, Memory> Polarisation2d<T,n, Memory>::create( const Vect
 ///@endcond
 //////////////////////////////////////////////////////////////////////////////////
 /**
- * @brief X-space version
+ * @brief X-space version of polarisation term
  *
  * @ingroup creation
  * The term discretized is \f[ \nabla ( \chi \nabla ) \f]

@@ -7,7 +7,7 @@ namespace dg
 /**
  * @brief Struct with useful values for discrete legendre transforms
  *
- * @ingroup utilities
+ * @ingroup lowlevel
  * @tparam n Number of Legendre nodes per cell
  */
 template<size_t n>

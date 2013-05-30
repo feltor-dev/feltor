@@ -8,11 +8,13 @@
 namespace dg
 {
 
+///@addtogroup lowlevel
+///@{
+
 
 /**
 * @brief Form the tensor product between two operators
 *
-* @ingroup utilities
 * Computes C_{ijkl} = op1_{ij}op2_{kl}
 * @tparam T The value type
 * @tparam n Size of the operators
@@ -41,7 +43,6 @@ Operator<T, n*n> tensor( const Operator< T, n>& op1, const Operator<T, n>& op2)
 /**
 * @brief Tensor product between Delta and an operator
 *
-* @ingroup utilities
 * Can be used to create tensors that operate on each dg-vector entry
 * The DG Tensor Product 1 x op
 * @tparam T value type
@@ -79,8 +80,18 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,
 }
 
 
-//multiply 1d matrices by left and right 
-//note, that passing a device matix won't work, because only a reference is taken
+/**
+ * @brief Multiply 1d matrices by diagonal block batrices from left and right
+ *
+ * computes (1xleft)m(1xright)
+ * @tparam T value type
+ * @tparam n The size of the operator
+ * @param left The left hand side
+ * @param m The matrix
+ * @param right The right hand side
+ *
+ * @return A newly allocated cusp matrix
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T,n>& right)
 {
@@ -95,6 +106,16 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,
     return lmr;
 }
 //sandwich l space matrix to make x space matrix
+/**
+ * @brief Transforms a 1d matrix in l-space to x-space
+ *
+ * computes (1xbackward)m(1xforward)
+ * @tparam T value type
+ * @tparam n The size of the operator
+ * @param m The matrix
+ *
+ * @return A newly allocated cusp matrix containing the x-space version of m
+ */
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const cusp::coo_matrix<int, T, cusp::host_memory>& m)
 {
@@ -104,6 +125,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const cusp::coo_matrix<int
 }
 
 
+///@}
 
 //}//namespace create
     
