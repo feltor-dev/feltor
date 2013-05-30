@@ -10,6 +10,10 @@
  *      @defgroup evaluation Function discretization
  *      @defgroup creation Creation of discrete derivatives
  *      @defgroup blas Basic Linear Algebra Subprograms
+ *      @{
+ *          @defgroup blas1 BLAS level 1 routines
+ *          @defgroup blas2 BLAS level 1 routines
+ *      @}
  *      @defgroup algorithms Numerical schemes
  *      @defgroup utilities Utilities
  * @}

@@ -9,7 +9,9 @@
 
 #include "derivatives.cuh"
 
-/*! @file objects for computation of Poisson bracket
+/*! @file 
+  
+  objects for computation of Poisson bracket
   */
 
 namespace dg
@@ -19,6 +21,7 @@ namespace dg
 /**
  * @brief L-space generalized version of Arakawa's scheme
  *
+ * @ingroup creation
  * @tparam T value-type
  * @tparam n # of polynomial coefficients
  * @tparam container The vector class on which to operate on
@@ -39,6 +42,8 @@ struct Arakawa
      * @brief Create Arakawa on a grid using different boundary conditions
      *
      * @param g The 2D grid
+     * @param bcx The boundary condition in x
+     * @param bcy The boundary condition in y
      */
     Arakawa( const Grid<T,n>& g, bc bcx, bc bcy);
 
@@ -168,18 +173,62 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
 
 
 //saves about 20% time
+/**
+ * @brief X-space generalized version of Arakawa's scheme
+ *
+ * @ingroup creation
+ * @tparam T value-type
+ * @tparam n # of polynomial coefficients
+ * @tparam container The vector class on which to operate on
+ */
 template< class T, size_t n, class container=thrust::device_vector<T> >
 struct ArakawaX
 {
     typedef T value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    /**
+     * @brief Create Arakawa on a grid
+     *
+     * @param g The 2D grid
+     */
     ArakawaX( const Grid<T,n>& g);
+    /**
+     * @brief Create Arakawa on a grid using different boundary conditions
+     *
+     * @param g The 2D grid
+     * @param bcx The boundary condition in x
+     * @param bcy The boundary condition in y
+     */
     ArakawaX( const Grid<T,n>& g, bc bcx, bc bcy);
     //ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy); //deprecated
 
+    /**
+     * @brief Compute poisson's bracket
+     *
+     * @param lhs left hand side in x-space
+     * @param rhs rights hand side in x-space
+     * @param result Poisson's bracket in x-space
+     */
     void operator()( const container& lhs, const container& rhs, container& result);
+
+    /**
+     * @brief Return internally used 2d - x - derivative in ell format in XSPACE
+     *
+     * The same as a call to 
+     * dg::create::dx( g, bcx, XSPACE)
+     * but the format is the fast ell_matrix format
+     * @return derivative
+     */
     const Matrix& dx() {return bdxf;}
+    /**
+     * @brief Return internally used 2d - y - derivative in ell format in XSPACE
+     *
+     * The same as a call to 
+     * dg::create::dy( g, bcy, XSPACE)
+     * but the format is the fast ell_matrix format
+     * @return derivative
+     */
     const Matrix& dy() {return bdyf;}
 
   private:

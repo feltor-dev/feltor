@@ -18,11 +18,17 @@
 #include "dx.cuh"
 #include "dlt.h"
 
+
+/*! @file 
+
+  Contains object for the polarisation matrix creation
+  */
 namespace dg
 {
 
 //as far as i see in the source code cusp only supports coo - coo matrix
 //-matrix multiplication
+///@cond DEV
 template< class T, size_t n, class Memory>
 struct Polarisation
 {
@@ -140,16 +146,48 @@ cusp::coo_matrix<int, T, Memory> Polarisation2d<T,n, Memory>::create( const Vect
     cusp::add( laplacex, laplacey, laplacey);
     return laplacey;
 }
+///@endcond
 //////////////////////////////////////////////////////////////////////////////////
+/**
+ * @brief X-space version
+ *
+ * @ingroup creation
+ * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
+ * @tparam T value-type
+ * @tparam n # of polynomial coefficients
+ * @tparam container The vector class on which to operate on
+ */
 template< class T, size_t n, class container>
 struct Polarisation2dX
 {
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::coo_matrix<int, T, MemorySpace> Matrix;
+    /**
+     * @brief Create Polarisation on a grid 
+     *
+     * @param g The 2D grid
+     */
     Polarisation2dX( const Grid<T,n>& grid);
+    /**
+     * @brief Create Arakawa on a grid using different boundary conditions
+     *
+     * @param g The 2D grid
+     * @param bcx The boundary condition in x
+     * @param bcy The boundary condition in y
+     */
     Polarisation2dX( const Grid<T,n>& grid, bc bcx, bc bcy);
-    Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
-    Matrix create( const container& );
+    //deprecated
+    //Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
+
+    /**
+     * @brief Create a matrix for the 2d polarisation term in XSPACE
+     *
+     * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
+     * @param chi The polarisation vector on the grid
+     *
+     * @return matrix containing discretisation of polarisation term using chi 
+     */
+    Matrix create( const container& chi );
   private:
     typedef cusp::array1d<int, MemorySpace> Array;
     typedef cusp::array1d<T, MemorySpace> VArray;
@@ -180,14 +218,15 @@ Polarisation2dX<T,n, container>::Polarisation2dX( const Grid<T,n>& g, bc bcx, bc
 {
     construct( g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy);
 }
-template <class T, size_t n, class container>
-Polarisation2dX<T,n, container>::Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, bc bcx, bc bcy):
-    I(n*n*Nx*Ny), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
-    middle( I.size()), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
-    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
-{
-    construct( Nx, Ny, hx, hy, bcx, bcy);
-}
+
+//template <class T, size_t n, class container>
+//Polarisation2dX<T,n, container>::Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, bc bcx, bc bcy):
+//    I(n*n*Nx*Ny), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
+//    middle( I.size()), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
+//    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
+//{
+//    construct( Nx, Ny, hx, hy, bcx, bcy);
+//}
 template <class T, size_t n, class container>
 void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx, T hy, bc bcx, bc bcy)
 {

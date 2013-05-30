@@ -11,7 +11,7 @@ namespace dg{
 // be better followed
 /*! @brief BLAS Level 1 routines 
  *
- * @ingroup blas
+ * @ingroup blas1
  * Only those routines that are actually called need to be implemented.
  * Don't forget to specialize in the dg namespace
  */
@@ -62,20 +62,21 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
  * @param x Vector x might equal z 
  * @param beta Scalar
  * @param y Vector y might equal z
- * @param z Vector z contains solution on output
+ * @param result Vector contains solution on output
  * @note In an implementation you may want to check for alpha == 0 and beta == 1
  * @note If DG_DEBUG is defined a range check shall be performed
- * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
+ * @attention If a thrust::device_vector is used then this routine is NON-BLOCKING!
  */
 template< class Vector>
-inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, Vector& z)
+inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, Vector& result)
 {
-    return dg::blas1::detail::doAxpby( alpha, x, beta, y, z, typename dg::VectorTraits<Vector>::vector_category() );
+    return dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<Vector>::vector_category() );
 }
 
 /**
-* @brief A 'new' BLAS 1 routine
+* @brief A 'new' BLAS 1 routine. 
 *
+* Multiplies two vectors element by element
 * @param x1 Vector x1  
 * @param x2 Vector x2 might equal x1
 * @param y  Vector y contains result on output ( might equal x1 or x2)

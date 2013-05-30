@@ -13,7 +13,9 @@
 #include "operator_matrix.cuh"
 #include "tensor.cuh"
 
-/*! @file Convenience function to create 2D derivatives
+/*! @file 
+  
+  Convenience functions to create 2D derivatives
   */
 namespace dg{
 
@@ -27,6 +29,9 @@ enum space {
     LSPACE  //!< indicates, that the given matrix operates on l-space values
 };
 
+/**
+ * @brief Contains functions used for matrix creation
+ */
 namespace create{
 
 
@@ -67,7 +72,7 @@ template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T, n>& g, space s = XSPACE) { return dx( g, g.bcx(), s);}
 
 /**
- * @brief Create 2d derivative in x-direction
+ * @brief Create 2d derivative in y-direction
  *
  * @tparam T value-type
  * @tparam n # of Legendre coefficients 

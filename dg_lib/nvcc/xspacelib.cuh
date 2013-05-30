@@ -119,6 +119,25 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T,n>& g, spa
     return scatter;
 
 }
+/**
+ * @brief Evaluate the jumps on grid boundaries
+ *
+ * @tparam n number of legendre nodes per cell
+ * @param v A DG Host Vector 
+ *
+ * @return Vector with the jump values
+ */
+template< size_t n>
+thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
+{
+    //compute the interior jumps of a DG approximation
+    unsigned N = v.size();
+    thrust::host_vector<double> jump(N-1, 0.);
+    for( unsigned i=0; i<N-1; i++)
+        for( unsigned j=0; j<n; j++)
+            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
+    return jump;
+}
 } //namespace create
 ///@}
 }//namespace dg
