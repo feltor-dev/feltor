@@ -10,17 +10,19 @@
 namespace dg{
 
 
-///@addtogroup grid
-///@{
 
 /**
- * @brief Switch for boundary conditions
+ * @brief Switch between boundary conditions
+ * 
+ * @ingroup creation
  */
 enum bc{ 
     PER, //!< periodic boundaries
     DIR //!< homogeneous dirichlet boundaries
 };
 
+///@addtogroup grid
+///@{
 /**
 * @brief 1D grid
 *

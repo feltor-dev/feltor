@@ -21,8 +21,10 @@ class Operator
 {
   public:
     typedef T value_type; //!< typically double or float 
+    ///@cond 
     typedef Array<T, n> array_type; //type that Operator operates on 
     typedef Array<T, n*n> matrix_type; //used in operator_tuple
+    ///@endcond
     /**
     * @brief Construct empty Operator
     */

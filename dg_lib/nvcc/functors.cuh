@@ -36,6 +36,9 @@ struct AbsMax
 
 /**
  * @brief Functor returning a gaussian
+ * \f[
+   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}} 
+   \f]
  */
 struct Gaussian
 {

@@ -11,11 +11,11 @@
   weight functions in a general blas1::dot product for Gauss-Legendre integration
   */
 
-///@addtogroup creation
-///@{
 
 namespace dg{
 
+///@addtogroup creation
+///@{
 /**
 * @brief The Identity matrix
 *

@@ -15,10 +15,11 @@ namespace dg
 {
 namespace create
 {
+///@addtogroup lowlevel
+///@{
 /**
 * @brief Create and assemble a cusp Matrix for the symmetric 1d single derivative
 *
-* @ingroup create
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * The matrix isn't symmetric due to the normalisation T.
 * @tparam n Number of Legendre nodes per cell
@@ -97,7 +98,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, bc bcx = P
 /**
 * @brief Create and assemble a cusp Matrix for the skew-symmetric 1d single derivative
 *
-* @ingroup create
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * The matrix isn't skew-symmetric due to normalisation T.
 * @tparam n Number of Legendre nodes per cell
@@ -231,6 +231,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, bc bcx = PER)
     }
     return A;
 };
+///@}
 } //namespace create
 } //namespace dg
 

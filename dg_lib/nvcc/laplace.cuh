@@ -10,10 +10,13 @@
 
 /*! @file 1d laplacians
   */
+
 namespace dg
 {
 /**
- * @brief Switch for normalisation
+ * @brief Switch between normalisations
+ *
+ * @ingroup creation
  */
 enum norm{
     normed,   //!< indicates that output is properly normalized
@@ -23,9 +26,9 @@ enum norm{
 namespace create{
 
 /**
- * @brief Create and assemble a cusp Matrix for the negative periodic 1d laplacian
+ * @brief Create and assemble a cusp Matrix for the negative periodic 1d laplacian in LSPACE
  *
- * @ingroup create
+ * @ingroup highlevel
  * Use cusp internal conversion to create e.g. the fast ell_matrix format.
  * @tparam T value-type
  * @tparam n Number of Legendre nodes per cell
@@ -90,9 +93,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, norm
 };
 
 /**
- * @brief Create and assemble a cusp Matrix for the Dirichlet negative 1d laplacian
+ * @brief Create and assemble a cusp Matrix for the Dirichlet negative 1d laplacian in LSPACE
  *
- * @ingroup create
+ * @ingroup highlevel
  * Use cusp internal conversion to create e.g. the fast ell_matrix format.
  * @tparam T value-type
  * @tparam n Number of Legendre nodes per cell
@@ -166,9 +169,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, norm
 }
 
 /**
- * @brief Convenience function for the creation of a laplacian
+ * @brief Convenience function for the creation of a 1d laplacian in LSPACE
  *
- * @ingroup create
+ * @ingroup highlevel
  * @tparam T value_type
  * @tparam n Number of Legendre nodes per cell
  * @param g The grid on which to create the laplacian (including boundary condition)

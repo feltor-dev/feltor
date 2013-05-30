@@ -28,11 +28,15 @@ enum space {
     XSPACE, //!< indicates, that the given matrix operates on x-space values
     LSPACE  //!< indicates, that the given matrix operates on l-space values
 };
+///@}
 
 /**
  * @brief Contains functions used for matrix creation
  */
 namespace create{
+
+///@addtogroup highlevel
+///@{
 
 
 /**
@@ -109,14 +113,15 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, space s = X
 
 //the behaviour of CG is completely the same in xspace as in lspace
 /**
- * @brief Create 2d laplacian
+ * @brief Create 2d negative laplacian
  *
+ * \f[ -\Delta = -(\partial_x^2 + \partial_y^2) \f]
  * @tparam T value-type
  * @tparam n # of Legendre coefficients 
  * @param g The grid on which to operate
  * @param bcx Boundary condition in x
  * @param bcy Boundary condition in y
- * @param no use normed if you want to compute e.g. diffusive terms
+ * @param no use normed if you want to compute e.g. diffusive terms,
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
  * @param s The space on which the matrix operates on
  *
@@ -182,12 +187,13 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
 }
 
 /**
- * @brief Create 2d laplacian
+ * @brief Create 2d negative laplacian
  *
+ * \f[ -\Delta = -(\partial_x^2 + \partial_y^2) \f]
  * @tparam T value-type
  * @tparam n # of Legendre coefficients 
  * @param g The grid on which to operate (boundary conditions are taken from here)
- * @param no use normed if you want to compute e.g. diffusive terms
+ * @param no use normed if you want to compute e.g. diffusive terms, 
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
  * @param s The space on which the matrix operates on
  *
@@ -198,9 +204,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, norm
 {
     return laplacian( g, g.bcx(), g.bcy(), no, s);
 }
+///@}
 
 } //namespace create
-///@}
 
 } //namespace dg
 #endif//_DG_DERIVATIVES_CUH_

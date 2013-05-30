@@ -80,7 +80,7 @@ const double rk_coeff<4>::beta[4] = {
 // Vector should probably be rvalue assignable
 
 /**
-* @brief Struct for RungeKutta integration
+* @brief Struct for Runge-Kutta explicit time-integration
 *
 * @ingroup algorithms
 * Uses only blas1::axpby routines to integrate one step.
@@ -180,7 +180,7 @@ const double ab_coeff<3>::b[3] = {23./12., -16./12., 5./12.};
 ///@endcond
 
 /**
-* @brief Struct for Adams-Bashforth explicit multistep integration
+* @brief Struct for Adams-Bashforth explicit multistep time-integration
 *
 * @ingroup algorithms
 * Uses only blas1::axpby routines to integrate one step
@@ -191,14 +191,23 @@ const double ab_coeff<3>::b[3] = {23./12., -16./12., 5./12.};
 template< size_t k, class Vector>
 struct AB
 {
+    /**
+    * @brief Reserve memory for the integration
+    *
+    * @param copyable Vector of size which is used in integration. 
+    * A Vector object must be copy-constructible from copyable.
+    */
     AB( const Vector& copyable): u_(k, Vector(copyable)){ }
    
     /**
      * @brief Init with initial value
      *
-     * @tparam Functor models BinaryFunction with no return type (subroutine)
+     * This routine initiates the first steps in the multistep method by integrating
+     * backwards with a runge-kutta method of same order. This routine has to be called
+     * before the first timestep is made and with the same initial value as the first timestep.
+     * @tparam Functor models BinaryFunction with no return type (subroutine).
         Its arguments both have to be of type Vector.
-        The first argument is the actual argument, The second contains
+        The first argument is the actual argument, the second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
      * @param f The rhs functor
      * @param u0 The initial value you later use 

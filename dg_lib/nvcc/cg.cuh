@@ -16,7 +16,9 @@ namespace dg{
  @tparam Matrix The matrix class: no requirements except for the 
             BLAS routines
  @tparam Vector The Vector class: needs to model Assignable 
- @tparam Preconditioner no requirements except for the blas routines
+ @tparam Preconditioner no requirements except for the blas routines. Thus far the dg library
+    provides only diagonal preconditioners, which should be enough if the result is extrapolated from
+    previous timesteps.
 
  The following 3 pseudo - BLAS routines need to be callable 
  \li double dot = blas1::dot( v1, v2); 

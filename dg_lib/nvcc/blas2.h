@@ -15,6 +15,8 @@ namespace dg{
  Only those routines that are actually called need to be implemented.
 */
 namespace blas2{
+///@addtogroup blas2
+///@{
 
 /*! @brief General dot produt
  *
@@ -96,6 +98,7 @@ inline void symv( const Matrix& m,
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
+///@cond
 template< class Matrix, class Vector>
 inline void mv( const Matrix& m, 
                   const Vector& x, 
@@ -105,6 +108,7 @@ inline void mv( const Matrix& m,
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
+///@endcond
 
 /**
  * @brief General Matrix-Vector product
@@ -123,6 +127,7 @@ inline void gemv( const Matrix& m,
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
+///@}
 
 } //namespace blas2
 } //namespace dg

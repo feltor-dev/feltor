@@ -169,7 +169,7 @@ struct Polarisation2dX
      */
     Polarisation2dX( const Grid<T,n>& grid);
     /**
-     * @brief Create Arakawa on a grid using different boundary conditions
+     * @brief Create polarisation term on a grid using different boundary conditions
      *
      * @param g The 2D grid
      * @param bcx The boundary condition in x
@@ -180,9 +180,10 @@ struct Polarisation2dX
     //Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
 
     /**
-     * @brief Create a matrix for the 2d polarisation term in XSPACE
+     * @brief Create a unnormalized matrix for the 2d polarisation term in XSPACE
      *
      * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
+     * The returned matrix is symmetric with W2D missing from it and ready to use in CG
      * @param chi The polarisation vector on the grid
      *
      * @return matrix containing discretisation of polarisation term using chi 

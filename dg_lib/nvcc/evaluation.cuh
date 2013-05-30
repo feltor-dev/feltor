@@ -66,11 +66,13 @@ thrust::host_vector<double> evaluate( Function& f, const Grid1d<double,n>& g)
 {
     return (evaluate<Function, n>( f, g.x0(), g.x1(), g.Nx())).data();
 };
+///@cond
 template< size_t n>
 thrust::host_vector<double> evaluate( double (*f)(double), const Grid1d<double,n>& g)
 {
     return (evaluate<double(&)(double), n>( *f, g.x0(), g.x1(), g.N())).data();
 };
+///@endcond
 
 
 
@@ -140,12 +142,14 @@ thrust::host_vector<double> evaluate( BinaryOp& f, const Grid<double,n>& g)
 {
     return (evaluate<BinaryOp, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
+///@cond
 template< size_t n>
 thrust::host_vector<double> evaluate( double(f)(double, double), const Grid<double,n>& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return (evaluate<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
+///@endcond
 
 
 
@@ -196,12 +200,14 @@ thrust::host_vector<double> expand( Function& f, const Grid1d<double,n>& g)
 {
     return (expand<Function, n>( f, g.x0(), g.x1(), g.Nx())).data();
 };
+///@cond
 template< size_t n>
 thrust::host_vector<double> expand( double(*f)(double), const Grid1d<double,n>& g)
 {
     return (expand<double(&)(double), n>( *f, g.x0(), g.x1(), g.N())).data();
 };
 
+///@endcond
 
 
 
@@ -271,12 +277,14 @@ thrust::host_vector<double> expand( Function& f, const Grid<double,n>& g)
     return (expand<Function, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
 
+///@cond
 template< size_t n>
 thrust::host_vector<double> expand( double(f)(double, double), const Grid<double,n>& g)
 {
     return (expand<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
 
+///@endcond
 
 
     /*

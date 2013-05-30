@@ -24,11 +24,14 @@ namespace dg{
 namespace blas1
 {
 
+///@addtogroup blas1
+///@{
+
 /*! @brief Euclidean dot product between two Vectors
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
  * @param x Left Vector
- * @param y Right Vector might equal Left Vector
+ * @param y Right Vector might equal y
  * @return Scalar product
  * @note This routine is always executed synchronously due to the 
         implicit memcpy of the result.
@@ -65,9 +68,9 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
  *
  * This routine computes \f[ z =  \alpha x + \beta y \f] 
  * @param alpha Scalar  
- * @param x Vector x might equal z 
+ * @param x Vector x might equal result
  * @param beta Scalar
- * @param y Vector y might equal z
+ * @param y Vector y might equal result
  * @param result Vector contains solution on output
  * @note In an implementation you may want to check for alpha == 0 and beta == 1
  * @note If DG_DEBUG is defined a range check shall be performed
@@ -82,7 +85,7 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
 /**
 * @brief A 'new' BLAS 1 routine. 
 *
-* Multiplies two vectors element by element
+* Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]
 * @param x1 Vector x1  
 * @param x2 Vector x2 might equal x1
 * @param y  Vector y contains result on output ( might equal x1 or x2)
@@ -93,6 +96,7 @@ inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 {
     return dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
 }
+///@}
 }//namespace blas1
 } //namespace dg
 

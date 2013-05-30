@@ -4,9 +4,9 @@
 #include "matrix_traits.h"
 #include "dlt.h"
 
+namespace dg{
 ///@addtogroup creation
 ///@{
-namespace dg{
 /**
 * @brief The diaonal mass-matrix S 
 *
@@ -170,6 +170,9 @@ struct V2D
     value_type hx_, hy_;
 };
 
+///@}
+
+///@cond
 template< class T, size_t n>
 struct MatrixTraits< S2D< T, n> > 
 {
@@ -195,8 +198,8 @@ struct MatrixTraits< V2D< T, n> >
     typedef T value_type;
     typedef DiagonalPreconditionerTag matrix_category;
 };
+///@endcond
 } //namespace dg
 
-///@endcond
 
 #endif //_DG_PRECONDITIONER2D_
