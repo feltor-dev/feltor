@@ -2,14 +2,13 @@
 #include <iomanip>
 
 #include <cusp/print.h>
+#include <cusp/hyb_matrix.h>
 
 #include "timer.cuh"
 #include "xspacelib.cuh"
 #include "cg.cuh"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned Nx = 100;  //more N means less iterations for same error
-const unsigned Ny = 100;  //more N means less iterations for same error
 
 const double lx = M_PI;
 const double ly = M_PI;
@@ -28,10 +27,15 @@ using namespace std;
 
 //replace DVec with HVec and DMatrix with HMAtrix to compute on host vs device
 typedef dg::DVec Vector;
-typedef dg::DMatrix Matrix;
+//typedef dg::DMatrix Matrix;
+typedef cusp::ell_matrix<int, double, cusp::device_memory> Matrix;
 int main()
 {
     dg::Timer t;
+    unsigned Nx, Ny; 
+    cout << "Type Nx and Ny! \n";
+    cin >> Nx; 
+    cin >> Ny; //more N means less iterations for same error
     dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
     dg::V2D<double, n> v2d( grid.hx(), grid.hy());
     dg::W2D<double, n> w2d( grid.hx(), grid.hy());
@@ -45,7 +49,7 @@ int main()
 
     cout << "Create Polarisation object!\n";
     t.tic();
-    dg::Polarisation2dX<double, n, Vector> pol( grid);
+    dg::Polarisation2dX<double, n, dg::HVec> pol( grid);
     t.toc();
     cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
     cout << "Create Polarisation matrix!\n";

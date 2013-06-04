@@ -13,7 +13,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
+const unsigned n = 1;
 const unsigned k = 3;
 
 using namespace std;
@@ -57,11 +57,25 @@ void display( const std::vector<double>& v, std::ostream& os = std::cout )
 
 }
 
-int main()
+int main( int argc, char* argv[])
 {
-    //do a cin for gridpoints
-    std::vector<double> v = toefl::read_input( "input.txt");
-    draw::HostWindow w(v[24], v[24]*v[5]/v[4]);
+    //Parameter initialisation
+    std::vector<double> v;
+    if( argc == 1)
+    {
+        v = toefl::read_input("input.txt");
+    }
+    else if( argc == 2)
+    {
+        v = toefl::read_input( argv[1]);
+    }
+    else
+    {
+        cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
+        return -1;
+    }
+    draw::HostWindow w(v[24], 2*v[24]*v[5]/v[4]);
+    w.set_multiplot( 2, 1);
     /////////////////////////////////////////////////////////////////////////
     display( v, std::cout);
 
@@ -94,8 +108,8 @@ int main()
     ab.init( test, y0, dt);
     while (running)
     {
-        t.tic();
         //transform field to an equidistant grid
+        /*
         if( global)
         {
             test.exp( y0, y1);
@@ -104,19 +118,40 @@ int main()
         }
         else
             dg::blas2::gemv( equi, y0[0], y1[1]);
-        t.toc();
-        //std::cout << "Equilibration took        "<<t.diff()<<"s\n";
-        t.tic();
         visual = y1[1]; //transfer to host
         //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
-        //draw and swap buffers
-        w.title() << scientific;
-        w.title() <<"Scale "<<colors.scale()<<"\t";
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw electrons
+        w.title() <<"ne/ "<<colors.scale()<<"\t";
+        w.draw( visual, n*v[1], n*v[2], colors, 0, 0);
+        */
+        //transform field to an equidistant grid
+        if( global)
+        {
+            test.exp( y0, y1);
+            thrust::transform( y1[1].begin(), y1[1].end(), y1[1].begin(), dg::PLUS<double>(-1));
+            dg::blas2::gemv( equi, y1[1], y1[0]);
+        }
+        else
+            dg::blas2::gemv( equi, y0[1], y1[0]);
+        visual = y1[0]; //transfer to host
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw ions
+        w.title() <<"ni/ "<<colors.scale()<<"\t";
+        w.draw( visual, n*v[1], n*v[2], colors, 0, 0);
+
+        //transform phi
+        dg::blas2::gemv( equi, test.polarisation(), y1[1]);
+        visual = y1[1]; //transfer to host
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw phi and swap buffers
+        w.title() <<"phi/ "<<colors.scale()<<"\t";
         w.title() << setprecision(2) << fixed;
         w.title() << " &&   time = "<<time;
-        w.draw( visual, n*v[1], n*v[2], colors);
-        t.toc();
+        w.draw( visual, n*v[1], n*v[2], colors, 1, 0);
+
         //step 
         t.tic();
         for( unsigned i=0; i<v[21]; i++)

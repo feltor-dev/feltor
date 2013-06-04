@@ -7,8 +7,8 @@
 #include "cg.cuh"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned Nx = 200;  //more N means less iterations for same error
-const unsigned Ny = 200;  //more N means less iterations for same error
+const unsigned Nx = 20;  //more N means less iterations for same error
+const unsigned Ny = 20;  //more N means less iterations for same error
 
 const double lx = M_PI;
 const double ly = M_PI;

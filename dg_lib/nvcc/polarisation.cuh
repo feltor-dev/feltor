@@ -2,6 +2,7 @@
 #define _DG_POLARISATION_CUH
 
 #include <cusp/coo_matrix.h>
+#include <cusp/csr_matrix.h>
 #include <cusp/multiply.h>
 #include <cusp/elementwise.h>
 #include <cusp/transpose.h>
@@ -161,7 +162,7 @@ template< class T, size_t n, class container>
 struct Polarisation2dX
 {
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::coo_matrix<int, T, MemorySpace> Matrix;
+    typedef cusp::csr_matrix<int, T, MemorySpace> Matrix;
     /**
      * @brief Create Polarisation on a grid 
      *
@@ -274,12 +275,12 @@ void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx,
     jumpy = dg::dgtensor<T,n>( jumpy, tensor<T,n>( Nx, normx));
     HMatrix jump_;
     cusp::add( jumpx, jumpy, jump_); //does not respect sorting!!!
+    jump_.sort_by_row_and_column();
     jump = jump_;
-    jump.sort_by_row_and_column();
 }
 
 template< class T, size_t n, class container>
-cusp::coo_matrix<int, T, typename thrust::iterator_space<typename container::iterator>::type> Polarisation2dX<T,n, container>::create( const container& chi)
+cusp::csr_matrix<int, T, typename thrust::iterator_space<typename container::iterator>::type> Polarisation2dX<T,n, container>::create( const container& chi)
 {
     Matrix temp1, temp2, temp3;
     blas1::pointwiseDot( middle, chi, xchi);
@@ -290,7 +291,7 @@ cusp::coo_matrix<int, T, typename thrust::iterator_space<typename container::ite
     cusp::multiply( lefty, temp2, temp1); //L_y*D_y*R_y
     cusp::add( temp1, temp3, temp2);  // D_yy + D_xx
     cusp::add( temp2, jump, temp1); // Lap + Jump
-    temp1.sort_by_row_and_column(); //add does not sort
+    //temp1.sort_by_row_and_column(); //add does not sort
     return temp1;
 }
 

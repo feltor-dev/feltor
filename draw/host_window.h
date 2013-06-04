@@ -42,6 +42,7 @@ struct HostWindow
 	 */
     HostWindow( int width, int height){
         Nx_ = Ny_ = 0;
+        I = J = 1;
         // create window and OpenGL context bound to it
         if( !glfwInit()) { std::cerr << "ERROR: glfw couldn't initialize.\n";}
         if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
@@ -72,12 +73,8 @@ struct HostWindow
      * @param map The colormap used to compute color from elements
      */
     template< class Vector>
-    void draw( const Vector& x, unsigned Nx, unsigned Ny, draw::ColorMapRedBlueExt& map)
+    void draw( const Vector& x, unsigned Nx, unsigned Ny, draw::ColorMapRedBlueExt& map, unsigned i = 0, unsigned j = 0)
     {
-        //gehört das hier rein??
-        glfwSetWindowTitle( (window_str.str()).c_str() );
-        window_str.str(""); //clear title string
-        glClear(GL_COLOR_BUFFER_BIT);
         if( Nx != Nx_ || Ny != Ny_) {
             Nx_ = Nx; Ny_ = Ny;
             std::cout << "Allocate resources for drawing!\n";
@@ -89,24 +86,36 @@ struct HostWindow
         //map colors
         std::transform( x.begin(), x.end(), resource.begin(), map);
         //load texture
+        float slit = 2./500.; //half distance between pictures in units of width
+        float x0 = -1. + (float)2*j/(float)J, x1 = x0 + 2./(float)J, 
+              y1 =  1. - (float)2*i/(float)I, y0 = y1 - 2./(float)I;
+        drawTexture( Nx, Ny, x0 + slit, x1 - slit, y0 + slit, y1 - slit);
+        if( (i == I - 1) && (j == J - 1) )
+        {
+            //gehört das hier rein??
+            glfwSetWindowTitle( (window_str.str()).c_str() );
+            window_str.str(""); //clear title string
+            glfwSwapBuffers();
+        }
+    }
+    void set_multiplot( unsigned i, unsigned j) { I = i; J = j;}
+    std::stringstream& title() { return window_str;}
+  private:
+    HostWindow( const HostWindow&);
+    HostWindow& operator=( const HostWindow&);
+    unsigned I, J;
+    void drawTexture( unsigned Nx, unsigned Ny, float x0, float x1, float y0, float y1)
+    {
+        // image comes from texarray on host
         glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, Nx, Ny, 0, GL_RGB, GL_FLOAT, resource.data());
         glLoadIdentity();
-        float x0 = -1, x1 = 1, y0 = -1, y1 = 1;
-        glBegin(GL_QUADS); 
+        glBegin(GL_QUADS);
             glTexCoord2f(0.0f, 0.0f); glVertex2f( x0, y0);
             glTexCoord2f(1.0f, 0.0f); glVertex2f( x1, y0);
             glTexCoord2f(1.0f, 1.0f); glVertex2f( x1, y1);
             glTexCoord2f(0.0f, 1.0f); glVertex2f( x0, y1);
         glEnd();
-        glfwSwapBuffers();
     }
-    void set_multiplot( unsigned i, unsigned j);
-    template< class Vector>
-    void draw( const Vector& x, unsigned Nx, unsigned Ny, draw::ColorMapRedBlueExt& map, unsigned i, unsigned j);
-    std::stringstream& title() { return window_str;}
-  private:
-    HostWindow( const HostWindow&);
-    HostWindow& operator=( const HostWindow&);
     unsigned Nx_, Ny_;
     std::vector<Color> resource;
     std::stringstream window_str;  //window name

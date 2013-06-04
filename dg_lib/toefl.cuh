@@ -31,6 +31,7 @@ struct Toefl
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
     const container& polarisation( const std::vector<container>& y);
+    const container& polarisation( ) const { return phi;}
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
     typedef T value_type;
