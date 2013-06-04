@@ -126,7 +126,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, norm
     Operator<T, n> ap = d*t*d.transpose() + (l + r);
     Operator<T, n> bp = -(d*t*rl + rl);
     Operator<T, n> bpT= bp.transpose();
-    if( no = normed) { 
+    if( no == normed) { 
         a=t*a; b=t*b; bT=t*bT; 
         ap=t*ap; bp=t*bp; bpT=t*bpT;
     }

@@ -172,7 +172,7 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
 }
 
 
-//saves about 20% time
+//saves about 20% time and needs less memory
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *

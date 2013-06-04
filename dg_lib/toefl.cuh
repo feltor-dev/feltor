@@ -25,6 +25,7 @@ struct Toefl
 {
     typedef std::vector<container> Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
     Toefl( const Grid<T,n>& g, bool global, double eps, double, double, bc, bc);
 
@@ -32,11 +33,11 @@ struct Toefl
     void log( const std::vector<container>& y, std::vector<container>& target);
     const container& polarisation( const std::vector<container>& y);
     const container& polarisation( ) const { return phi;}
+    const Matrix& laplacian( ) const { return laplace;}
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
     typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
     container phi, phi_old;
     container omega, dyphi, chi;
@@ -46,7 +47,7 @@ struct Toefl
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplace; //contains normalized laplacian
     ArakawaX<T, n, container> arakawa; 
-    Polarisation2dX<T, n, container> pol;
+    Polarisation2dX<T, n, thrust::host_vector<T> > pol;
     CG<Matrix, container, dg::V2D<T, n> > pcg;
 
     double hx, hy;

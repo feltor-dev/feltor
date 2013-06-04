@@ -64,7 +64,6 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,
                 number++;
     // allocate output matrix
     cusp::coo_matrix<int, T, cusp::host_memory> A(n*N, n*N, N*number);
-    unsigned num_triplets = N*number;
     number = 0;
     for( unsigned k=0; k<N; k++)
         for( unsigned i=0; i<n; i++)

@@ -16,8 +16,6 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 100;
-const unsigned Ny = 100;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 //const double lx = 1.;
@@ -53,6 +51,10 @@ double jacobian( double x, double y)
 int main()
 {
     Timer t;
+    unsigned Nx, Ny;
+    cout << "Type Nx and Ny! \n";
+    cin >> Nx; 
+    cin >> Ny; //more N means less iterations for same error
     Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
     S2D<double,n > s2d( grid.hx(), grid.hy());
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
@@ -63,7 +65,7 @@ int main()
     DVec eins = expand( one, grid );
 
 
-    Arakawa<double, n, DVec> arakawa( grid);
+    ArakawaX<double, n, DVec> arakawa( grid);
     t.tic(); 
     arakawa( lhs, rhs, jac);
     t.toc();

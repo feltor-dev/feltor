@@ -131,15 +131,17 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
 
     Matrix ly;
-    if( bcy == PER) 
+    if( bcy == PER) {
         ly = create::laplace1d_per<double,  n>( g.Ny(), g.hy(), no);
-    else if( bcy == DIR) 
+    } else if( bcy == DIR) {
         ly = create::laplace1d_dir<double,  n>( g.Ny(), g.hy(), no);
+    }
     Matrix lx;
-    if( bcx == PER) 
+    if( bcx == PER) {
         lx = create::laplace1d_per<double,  n>( g.Nx(), g.hx(), no);
-    else if( bcx == DIR) 
+    }else if( bcx == DIR) {
         lx = create::laplace1d_dir<double,  n>( g.Nx(), g.hx(), no);
+    }
 
     Matrix flxf(lx), flyf(ly);
     //sandwich with correctly normalized matrices

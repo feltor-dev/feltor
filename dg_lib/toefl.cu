@@ -13,7 +13,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 1;
+const unsigned n = 3;
 const unsigned k = 3;
 
 using namespace std;
@@ -98,6 +98,7 @@ int main( int argc, char* argv[])
     dg::RK< k, std::vector<dg::DVec> > rk( y0);
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
+    dg::DVec dvisual( grid.size());
     dg::HVec visual( n*n*v[1]*v[2]);
     dg::DMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
@@ -142,8 +143,9 @@ int main( int argc, char* argv[])
         w.draw( visual, n*v[1], n*v[2], colors, 0, 0);
 
         //transform phi
-        dg::blas2::gemv( equi, test.polarisation(), y1[1]);
-        visual = y1[1]; //transfer to host
+        dg::blas2::gemv( test.laplacian(), test.polarisation(), y1[1]);
+        dg::blas2::gemv( equi, y1[1], dvisual);
+        visual = dvisual; //transfer to host
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw phi and swap buffers

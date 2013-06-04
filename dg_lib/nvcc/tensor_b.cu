@@ -33,8 +33,7 @@ int main()
 {
     Timer t;
     cout << "Type Nx and Ny! \n";
-    unsigned Nx = 1e2;
-    unsigned Ny = 1e2;
+    unsigned Nx, Ny;
     cin >> Nx; 
     cin >> Ny; //more N means less iterations for same error
     cout << "# of Legendre coefficients n is: "<< n <<endl;

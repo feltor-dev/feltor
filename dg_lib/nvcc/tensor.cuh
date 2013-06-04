@@ -66,7 +66,7 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor(
     assert( lhs.num_rows%n == 0);
     assert( rhs.num_rows%n == 0);
     unsigned Nx = rhs.num_rows/n; 
-    unsigned Ny = lhs.num_rows/n; 
+    //unsigned Ny = lhs.num_rows/n; 
     //taken from the cusp examples:
     //dimensions of the matrix
     int num_rows     = lhs.num_rows*rhs.num_rows;

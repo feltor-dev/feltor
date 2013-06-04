@@ -7,23 +7,23 @@ v*cfl is 4 locally  i.e. dt is dx/4 (for n0 5)
 v*cfl is 5 globally i.e. dt is dx/5
 
 ---------------------Algorithmic parameters-------------------
-1) Nx (grid points in x)                =   600     (256.)
-2) Ny (grid points in y)                =   600     (256.)
-3) dt (time step in units c_s/L_p)      =   2.00   (0.01)
+1) Nx (grid points in x)                =   100   (256.)
+2) Ny (grid points in y)                =   50    (256.)
+3) dt (time step in units c_s/L_p)      =   0.010   (0.01)
 ---------------------Boundary conditions----------------------
-4) lx (length of x in units of rho_s)   = 200    (64.)
-5) ly (length of y in units of rho_s)   = 200    (128.)
-6) bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
-7) bc_y (0 periodic, 1 Dirichlet )      =   1    (1.0)
+4) lx (length of x in units of rho_s)   = 100    (64.)
+5) ly (length of y in units of rho_s)   = 050    (128.)
+6) bc_x (0 periodic, 1 Dirichlet )      =   0    (1.0)
+7) bc_y (0 periodic, 1 Dirichlet )      =   0    (1.0)
 ---------------------Physical parameters----------------------
 8)  mhw:1, ohw:0 (modified/ordinary HW) =   0       (1)
-9)  local (0) or global (1)             =   1       (0)
+9)  local (0) or global (1)             =   0       (0)
 10) ddd (dissip. coupling)              =   0.0     (0.5)
-11) nu  (viscosity)                     =   1e-4   (0.001)
+11) nu  (viscosity)                     =   1e-3   (0.001)
 12) mcv (magnetic curvature)            =   0.0005 (0.0005)
 -------------------------Species------------------------------
-13) n00 (perturbation amplitude)            =  0.5     (1.0)
-14) dia (blob variance in units of rho_s)   =  10 
+13) n00 (perturbation amplitude)            =  5     (1.0)
+14) dia (blob variance in units of rho_s)   =  5 
 15) tau_i (Ti/Te)                           =  0.0     (0.0)
 (Z of ions is always 1, g_i and a_i are computed from 
 quasineutrality condition)
@@ -33,7 +33,7 @@ quasineutrality condition)
 19) mu_z (mz/mi*Z)(mass)                =   48.0    (large)
 20) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
 ---------------------Miscellaneous----------------------------
-21) itstp (steps between output)            = 5      (5)
+21) itstp (steps between output)            = 50      (5)
 22) OMP_NUM_THREADS                         = 4      (4)
 23) eps (stopping criterion for CG method)  = 1e-4 ( 1e-3)
 24) window width (in pixel)                 = 600  ( 400)
