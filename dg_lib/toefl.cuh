@@ -8,24 +8,13 @@
 namespace dg
 {
 
-struct Parameter
-{
-    double kappa;
-    double a_i, a_z;
-    double mu_i, mu_z;
-
-    void check()
-    {
-        assert( fabs( a_i + a_z - 1.) > 1e-15 && "Background not neutral!");
-    }
-};
 
 template< class T, size_t n, class container=thrust::device_vector<T> >
 struct Toefl
 {
     typedef std::vector<container> Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
 
     Toefl( const Grid<T,n>& g, bool global, double eps, double, double, bc, bc);
 
@@ -36,7 +25,6 @@ struct Toefl
     const Matrix& laplacian( ) const { return laplace;}
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
-    typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
 
     container phi, phi_old;
@@ -145,7 +133,7 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
             blas1::axpby( 1., dyy[i], 1., lapy[i]);
             blas1::axpby( 1., dxy[i], 1., lapy[i]);
         }
-        blas1::axpby( nu, lapy[i], 1., yp[i]); //rescale
+        blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale
     }
 
 

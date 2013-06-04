@@ -17,17 +17,17 @@ struct RHS
 {
     typedef container Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    RHS( const dg::Grid<T,n>& g, T D):h(h), D(D) 
+    RHS( const dg::Grid<T,n>& g, T D):hx_(g.hx()), hy_(g.hy()), D_(D) 
     {
-        laplace = dg::create::laplacian( g, dg::normed, dg::LSPACE);
+        laplace = dg::create::laplacian( g, dg::not_normed, dg::LSPACE);
     }
     void operator()( const container& y, container& yp)
     {
         dg::blas2::symv( laplace, y, yp);
-        dg::blas1::axpby( -D, yp, 0., yp);
+        dg::blas2::symv( -D_, dg::T2D<T,n>(hx_, hy_), yp, 0., yp);
     }
   private:
-    double h, D;
+    double hx_, hy_, D_;
     cusp::ell_matrix<int, T, MemorySpace> laplace;
 };
 
