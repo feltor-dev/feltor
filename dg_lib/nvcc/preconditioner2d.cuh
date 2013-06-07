@@ -27,6 +27,12 @@ struct S2D
     __host__ __device__ 
     S2D( value_type hx, value_type hy): hx_(hx), hy_(hy){}
     /**
+    * @brief Construct on grid
+    *
+    * @param g The grid
+    */
+    __host__ __device__ S2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){}
+    /**
     * @brief 
     *
     * @return The grid size
@@ -66,6 +72,12 @@ struct T2D
     */
     __host__ __device__ 
     T2D( value_type hx, value_type hy):hx_(hx), hy_(hy){}
+    /**
+    * @brief Construct on grid
+    *
+    * @param g The grid
+    */
+    __host__ __device__ T2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){}
     /**
     * @brief 
     *
@@ -112,6 +124,15 @@ struct W2D
             w[i] = DLT<n>::weight[i];
     }
     /**
+    * @brief Construct on grid
+    *
+    * @param g The grid
+    */
+    __host__ W2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){
+        for( unsigned i=0; i<n; i++)
+            w[i] = DLT<n>::weight[i];
+    }
+    /**
     * @brief 
     *
     * @return The grid size
@@ -150,6 +171,15 @@ struct V2D
     */
     __host__  
     V2D( value_type hx, value_type hy): hx_(hx), hy_(hy){
+        for( unsigned i=0; i<n; i++)
+            x[i] = DLT<n>::weight[i];
+    }
+    /**
+    * @brief Construct on grid
+    *
+    * @param g The grid
+    */
+    __host__ V2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){
         for( unsigned i=0; i<n; i++)
             x[i] = DLT<n>::weight[i];
     }

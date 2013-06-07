@@ -4,6 +4,7 @@
 #include "blas/cusp_matrix.cuh"
 #include "blas/preconditioner.cuh"
 #include "blas/operator.cuh"
+#include "blas/selfmade.cuh"
 #include "vector_traits.h"
 #include "matrix_traits.h"
 

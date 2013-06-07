@@ -126,7 +126,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T, n>& g, space s = X
  * @return A host matrix in coordinate format
  */
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T, n>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
 
@@ -200,9 +200,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, bc b
  * @return A host matrix in coordinate format
  */
 template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacian( const Grid<T, n>& g, norm no = normed, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T, n>& g, norm no = normed, space s = XSPACE)
 {
-    return laplacian( g, g.bcx(), g.bcy(), no, s);
+    return laplacianM( g, g.bcx(), g.bcy(), no, s);
 }
 ///@}
 

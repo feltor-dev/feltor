@@ -20,7 +20,7 @@ namespace dg
  */
 enum norm{
     normed,   //!< indicates that output is properly normalized
-    not_normed //!< indicates that a normalisation matrix is missing from output
+    not_normed //!< indicates that normalisation weights (either T or V) are missing from output
 };
 
 namespace create{

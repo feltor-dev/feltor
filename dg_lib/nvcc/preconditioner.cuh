@@ -3,6 +3,7 @@
 
 #include "matrix_categories.h"
 #include "matrix_traits.h"
+#include "grid.cuh"
 #include "dlt.h"
 
 /*! @file 
@@ -47,7 +48,13 @@ struct S1D
     * @param h The grid size assumed to be constant.
     */
     __host__ __device__ S1D( value_type h):h_(h){}
-    __host__ __device__ const value_type& h() const {return h_;}
+    /**
+    * @brief Construct on grid
+    *
+    * @param g The grid
+    */
+    __host__ __device__ S1D( const Grid1d<T,n>& g):h_(g.h()){}
+    //__host__ __device__ const value_type& h() const {return h_;}
     __host__ __device__ value_type operator()( int i) const 
     {
         return h_/(value_type)(2*(i%n)+1);
@@ -73,6 +80,12 @@ struct T1D
     * @param h The grid size assumed to be constant.
     */
     __host__ __device__ T1D( value_type h):h_(h){}
+    /**
+    * @brief Construct on grid
+    *
+    * @param g The grid
+    */
+    __host__ __device__ T1D( const Grid1d<T,n>& g):h_(g.h()){}
     /**
     * @brief 
     *
@@ -111,6 +124,15 @@ struct W1D
         for( unsigned i=0; i<n; i++)
             w[i] = h/2.*DLT<n>::weight[i];
     }
+    /**
+    * @brief Construct on grid
+    *
+    * @param g The grid
+    */
+    __host__ __device__ W1D( const Grid1d<T,n>& g){
+        for( unsigned i=0; i<n; i++)
+            w[i] = g.h()/2.*DLT<n>::weight[i];
+    }
     __host__ __device__ value_type operator()( int i) const 
     {
         return (T)w[i%n]; 
@@ -139,6 +161,15 @@ struct V1D
     __host__ V1D( value_type h){ 
         for( unsigned i=0; i<n; i++)
             x[i] = 2./h/DLT<n>::weight[i];
+    }
+    /**
+    * @brief Construct on grid
+    *
+    * @param g The grid
+    */
+    __host__ __device__ V1D( const Grid1d<T,n>& g){
+        for( unsigned i=0; i<n; i++)
+            x[i] = 2./g.h()/DLT<n>::weight[i];
     }
     __host__ __device__ value_type operator()( int i) const 
     {

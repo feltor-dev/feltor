@@ -41,8 +41,7 @@ struct RHS
 {
     typedef std::vector<Vector_Type> Vector;
     RHS(const Grid<double, n>& grid): arakawa( grid), phi( expand( function, grid))
-    {
-    }
+    { }
     void operator()( const Vector& y, Vector& yp)
     {
         for( unsigned i=0; i<y.size(); i++)

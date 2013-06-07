@@ -12,6 +12,9 @@ toefl: toefl.cu toefl.cuh
 	$(NVCC) -O3   $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 
+toefl_b: toefl_b.cu toefl.cuh 
+	$(NVCC) -O3   $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
+	echo "Attention: No compiler warnings are issued!" 
 .PHONY: clean doc
 
 doc: 

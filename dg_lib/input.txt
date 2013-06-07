@@ -7,12 +7,12 @@ v*cfl is 4 locally  i.e. dt is dx/4 (for n0 5)
 v*cfl is 5 globally i.e. dt is dx/5
 
 ---------------------Algorithmic parameters-------------------
-1) Nx (grid points in x)                =   100   (256.)
-2) Ny (grid points in y)                =   050   (256.)
+1) Nx (grid points in x)                =   200   (256.)
+2) Ny (grid points in y)                =   100   (256.)
 3) dt (time step in units c_s/L_p)      =   0.200   (0.01)
 ---------------------Boundary conditions----------------------
-4) lx (length of x in units of rho_s)   = 100    (64.)
-5) ly (length of y in units of rho_s)   = 050    (128.)
+4) lx (length of x in units of rho_s)   = 200    (128.)
+5) ly (length of y in units of rho_s)   = 100    (64.)
 6) bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
 7) bc_y (0 periodic, 1 Dirichlet )      =   1    (1.0)
 ---------------------Physical parameters----------------------
@@ -27,14 +27,14 @@ v*cfl is 5 globally i.e. dt is dx/5
 15) tau_i (Ti/Te)                           =  0.0     (0.0)
 (Z of ions is always 1, g_i and a_i are computed from 
 quasineutrality condition)
-16) impurities yes(1) / no(0)           =   1       (0)
-17) nd0 (impurity amplitude)            =   0.1     (0.1)
-18) a_z (Z*nz/ne) (density)             =   0.001   (small)
-19) mu_z (mz/mi*Z)(mass)                =   48.0    (large)
+16) impurities yes(1) / no(0)           =   0       (0)
+17) nd0 (impurity amplitude)            =   0.0     (0.1)
+18) a_z (Z*nz/ne) (density)             =   0.0   (small)
+19) mu_z (mz/mi*Z)(mass)                =   0.0    (large)
 20) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
 ---------------------Miscellaneous----------------------------
-21) itstp (steps between output)            = 50      (5)
+21) itstp (steps between output)            = 2      (5)
 22) OMP_NUM_THREADS                         = 4      (4)
 23) eps (stopping criterion for CG method)  = 1e-4 ( 1e-3)
-24) window width (in pixel)                 = 600  ( 400)
+24) window width (in pixel)                 = 800  ( 400)
 @ ------------------------------------------------------------

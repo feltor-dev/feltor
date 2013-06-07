@@ -82,9 +82,9 @@ int main( int argc, char* argv[])
     dg::bc bc_x = dg::PER, bc_y = dg::PER;
     if( v[6]) bc_x = dg::DIR;
     if( v[7]) bc_y = dg::DIR;
-    dg::Grid<double,n > grid( 0, v[4], 0, v[5], (unsigned)v[1], (unsigned)v[2], bc_x, bc_y);
+    dg::Grid<double, n > grid( 0, v[4], 0, v[5], (unsigned)v[1], (unsigned)v[2], bc_x, bc_y);
     //create initial vector
-    dg::Gaussian g( 0.4*v[4], 0.5*v[5], v[14], v[14], v[13]); //gaussian width is in absolute values
+    dg::Gaussian g( 0.3*v[4], 0.5*v[5], v[14], v[14], v[13]); //gaussian width is in absolute values
     dg::DVec ne = dg::evaluate ( g, grid);
     bool global = v[9];
     if( global)
@@ -143,7 +143,7 @@ int main( int argc, char* argv[])
         w.draw( visual, n*v[1], n*v[2], colors, 0, 0);
 
         //transform phi
-        dg::blas2::gemv( test.laplacian(), test.polarisation(), y1[1]);
+        dg::blas2::gemv( test.laplacianM(), test.polarisation(), y1[1]);
         dg::blas2::gemv( equi, y1[1], dvisual);
         visual = dvisual; //transfer to host
         //compute the color scale

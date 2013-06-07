@@ -12,6 +12,8 @@ struct IdentityTag : public DiagonalPreconditionerTag {};
 
 struct OperatorMatrixTag {};
 
+struct SelfMadeMatrixTag {};
+
 }//namespace dg
 
 #endif //_DG_MATRIX_CATEGORIES_

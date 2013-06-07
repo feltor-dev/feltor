@@ -30,11 +30,11 @@ namespace dg{
  @note Conjugate gradients might become unstable for positive semidefinite
  matrices arising e.g. in the discretization of the periodic laplacian
 */
-template< class Matrix, class Vector, class Preconditioner = Identity<typename Matrix::value_type> >
+template< class Vector>
 class CG
 {
   public:
-    typedef typename Matrix::value_type value_type;
+    typedef typename Vector::value_type value_type;
       /**
        * @brief Reserve memory for the pcg method
        *
@@ -67,7 +67,13 @@ class CG
      *
      * @return Number of iterations used to achieve desired precision
      */
+    template< class Matrix, class Preconditioner >
     unsigned operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P , value_type eps = 1e-12);
+    template< class Matrix >
+    unsigned operator()( const Matrix& A, Vector& x, const Vector& b, value_type eps = 1e-12)
+    {
+        return this->operator()( A, x, b, Identity<value_type>(), eps);
+    }
   private:
     Vector r, p, ap; 
     unsigned max_iter;
@@ -89,8 +95,9 @@ class CG
     NOTE: the same comparison hold for A with the result that A contains 
     significantly more elements than z whence ddot(r,A,r) is far slower than ddot(r,z)
 */
-template< class Matrix, class Vector, class Preconditioner>
-unsigned CG< Matrix, Vector, Preconditioner>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, value_type eps)
+template< class Vector>
+template< class Matrix, class Preconditioner>
+unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, value_type eps)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG

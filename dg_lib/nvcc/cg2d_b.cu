@@ -16,8 +16,6 @@
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 
 //leo3 can do 350 x 350 but not 375 x 375
-const unsigned Nx = 200;  //more N means less iterations for same error
-const unsigned Ny = 200;  //more N means less iterations for same error
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -36,14 +34,18 @@ using namespace std;
 int main()
 {
     dg::Timer t;
-    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
-    dg::S2D<double,n > s2d( grid.hx(), grid.hy());
+    unsigned Nx, Ny; 
+    std::cout << "Type Nx and Ny\n";
+    std::cin >> Nx >> Ny;
+    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
+    dg::S2D<double,n > s2d( grid);
     cout<<"Expand initial condition\n";
     dg::HVec x = dg::expand( initial, grid);
 
     cout << "Create Laplacian\n";
     t.tic();
-    dg::DMatrix A = dg::create::laplacian( grid, dg::not_normed, dg::LSPACE); 
+    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE); 
+    dg::HMatrix A = dA;
     /*
     dg::dgtensor<double, n>( dg::create::laplace1d_dir<double, n>( Ny, hy), 
                                dg::S1D<double, n>( hx),
@@ -54,8 +56,8 @@ int main()
     cout<< "Creation took "<<t.diff()<<"s\n";
 
     //create conjugate gradient and one eigen Cholesky
-    dg::CG<dg::DMatrix, dg::DVec, Preconditioner > pcg( x, n*n*Nx*Ny);
-    dg::CG<dg::HMatrix, dg::HVec, Preconditioner > pcg_host( x, n*n*Nx*Ny);
+    dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny);
+    dg::CG< dg::HVec > pcg_host( x, n*n*Nx*Ny);
     //dg::SimplicialCholesky sol;
     //sol.compute( A);
 
@@ -77,7 +79,7 @@ int main()
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;
     
     t.tic();
-    cout << "Number of pcg iterations "<< pcg( A, dx, db, Preconditioner(grid.hx(), grid.hy()), eps)<<endl;
+    cout << "Number of pcg iterations "<< pcg( dA, dx, db, Preconditioner(grid), eps)<<endl;
     t.toc();
     cout << "... for a precision of "<< eps<<endl;
     cout << "... on the device took "<< t.diff()<<"s\n";

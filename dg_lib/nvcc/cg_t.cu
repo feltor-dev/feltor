@@ -32,8 +32,7 @@ int main()
     dg::HVec x = dg::expand( initial, g);
     dg::DMatrix A = dg::create::laplace1d( g); 
 
-    dg::CG<dg::DMatrix, dg::DVec, Preconditioner > pcg( x, n*N);
-    dg::CG<dg::DMatrix, dg::DVec> cg( x, n*N);
+    dg::CG< dg::DVec > cg( x, x.size());
     dg::HVec b = dg::expand ( sine, g);
     dg::HVec error(b);
     const dg::HVec solution(b);
@@ -47,8 +46,8 @@ int main()
     //compute S b
     dg::blas2::symv( dg::S1D<double, n>(g.h()), db, db);
     cudaThreadSynchronize();
-    std::cout << "Number of pcg iterations "<< pcg( A, dx, db, Preconditioner(g.h()), eps)<<endl;
-    //std::cout << "Number of cg iterations "<< cg( A, dx.data(), db.data(), dg::Identity<double>(), eps)<<endl;
+    std::cout << "Number of pcg iterations "<< cg( A, dx, db, Preconditioner(g.h()), eps)<<endl;
+    std::cout << "Number of cg iterations "<< cg( A, dx, db, eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
     dg::blas1::axpby( 1.,dx,-1.,derror);

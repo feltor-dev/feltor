@@ -3,6 +3,7 @@
 
 
 #include "xspacelib.cuh"
+#include "blueprint.h"
 #include "cg.cuh"
 
 namespace dg
@@ -16,50 +17,46 @@ struct Toefl
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
 
-    Toefl( const Grid<T,n>& g, bool global, double eps, double, double, bc, bc);
+    Toefl( const Blueprint<T,n>& bp);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
     const container& polarisation( const std::vector<container>& y);
     const container& polarisation( ) const { return phi;}
-    const Matrix& laplacian( ) const { return laplace;}
+    const Matrix& laplacianM( ) const { return laplaceM;}
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
-    //typedef typename VectorTraits< Vector>::value_type value_type;
-
     container phi, phi_old;
     container omega, dyphi, chi;
     std::vector<container> expy, dxy, dyy, lapy;
 
-    //Matrix dx, dy; //use arakawas matrices
     Matrix A; //contains unnormalized laplacian if local
-    Matrix laplace; //contains normalized laplacian
+    Matrix laplaceM; //contains normalized laplacian
+    Gamma< Matrix, W2D<T,n> > gamma1;
     ArakawaX<T, n, container> arakawa; 
-    Polarisation2dX<T, n, thrust::host_vector<T> > pol;
-    CG<Matrix, container, dg::V2D<T, n> > pcg;
+    Polarisation2dX<T, n, thrust::host_vector<T> > pol; //note the host vector
+    CG<container > pcg;
+    const Blueprint bp;
+    const W2D<T,n> w2d;
+    const V2D<T,n> v2d;
 
-    double hx, hy;
-    bool global;
-    double eps; 
-    double kappa, nu;
 };
 
 template< class T, size_t n, class container>
-Toefl<T, n, container>::Toefl( const Grid<T,n>& g, bool global, double eps, double kappa, double nu, bc bc_x, bc bc_y): 
-    phi( n*n*g.Nx()*g.Ny(), 0.), phi_old(phi),
-    omega( phi), dyphi( phi), chi(phi),
+Toefl<T, n, container>::Toefl( const Blueprint& bp): 
+    phi( bp.grid().size(), 0.), phi_old(phi), omega( phi), dyphi( phi), chi(phi),
     expy( 2, omega), dxy( expy), dyy( dxy), lapy( dyy),
-    arakawa( g, bc_x, bc_y), 
-    pol(     g, bc_x, bc_y), 
-    pcg( omega, n*n*g.Nx()*g.Ny()), 
-    hx( g.hx()), hy(g.hy()), global(global), eps(eps), kappa(kappa), nu(nu)
+    gamma1(  laplaceM, w2d, bp.physical().tau[0], bp.physical().a[0]);
+    arakawa( bp.grid()), 
+    pol(     bp.grid()), 
+    pcg( omega, omega.size()), 
+    bp( bp), w2d( bp.grid()), v2d( bp.grid())
 {
+    bp.consistencyCheck();
     //create derivatives
-    //dx = create::dx( g, bc_x);
-    //dy = create::dy( g, bc_y);
-    laplace = create::laplacian( g, bc_x, bc_y, normed);
-    if( !global) 
-        A = create::laplacian( g, bc_x, bc_y, not_normed);
+    laplaceM = create::laplacianM( g, normed);
+    if( !bp.isEnabled( toefl::TL_GLOBAL) 
+        A = create::laplacianM( g, not_normed);
 
 }
 
@@ -68,7 +65,7 @@ template< class T, size_t n, class container>
 const container& Toefl<T, n, container>::polarisation( const std::vector<container>& y)
 {
     //compute omega
-    if( global)
+    if( bp.isEnabled( toefl::TL_GLOBAL))
     {
         exp( y, expy);
         blas1::axpby( -1., expy[0], 1., expy[1], omega); //omega = n_i - n_e
@@ -80,16 +77,17 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
         blas1::axpby( -1, y[0], 1., y[1], omega);
     }
     //compute S omega 
-    blas2::symv( W2D<double, n>(hx, hy), omega, omega);
+    blas2::symv( w2d, omega, omega);
     cudaThreadSynchronize();
-    if( global)
+    if( bp.isEnabled( toefl::TL_GLOBAL))
     {
-        A = pol.create( chi ); 
+        cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transport to device
+        A = B; 
     }
     //extrapolate phi
     blas1::axpby( 2., phi, -1.,  phi_old);
     thrust::swap( phi, phi_old);
-    unsigned number = pcg( A, phi, omega, V2D<double, n>(hx, hy), eps);
+    unsigned number = pcg( A, phi, omega, v2d, eps);
 #ifdef DG_DEBUG
     std::cout << "Number of pcg iterations "<< number <<std::endl;
 #endif //DG_DEBUG
@@ -101,7 +99,7 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());
-    cudaThreadSynchronize();
+
     phi = polarisation( y);
 
     for( unsigned i=0; i<y.size(); i++)
@@ -119,21 +117,25 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
     cudaThreadSynchronize();
     blas1::axpby( kappa, dyphi, 1., yp[0]);
     blas1::axpby( kappa, dyphi, 1., yp[1]);
+    cudaThreadSynchronize();
     blas1::axpby( -kappa, dyy[0], 1., yp[0]);
 
     //add laplacians
     for( unsigned i=0; i<y.size(); i++)
     {
-        blas2::gemv( laplace, y[i], lapy[i]);
+        blas2::gemv( laplaceM, y[i], lapy[i]);
         if( global)
         {
             blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
             blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
+            cudaThreadSynchronize();
             //now sum all 3 terms up 
-            blas1::axpby( 1., dyy[i], 1., lapy[i]);
-            blas1::axpby( 1., dxy[i], 1., lapy[i]);
+            blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
+            cudaThreadSynchronize();
+            blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
         }
-        blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale
+        cudaThreadSynchronize();
+        blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
     }
 
 

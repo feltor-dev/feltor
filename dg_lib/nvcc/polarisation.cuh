@@ -19,6 +19,7 @@
 #include "dx.cuh"
 #include "dlt.h"
 
+//#include "cusp_eigen.h"
 
 /*! @file 
 
@@ -35,7 +36,7 @@ struct Polarisation
 {
     typedef cusp::coo_matrix<int, T, Memory> Matrix;
     typedef cusp::array1d<T, Memory> Vector;
-    Polarisation( unsigned N, T h, int bc);
+    Polarisation( unsigned N, T h, bc bcx);
     Matrix create( const Vector& );
   private:
     typedef cusp::array1d<int, Memory> Array;
@@ -46,11 +47,11 @@ struct Polarisation
 
 };
 template <class T, size_t n, class Memory>
-Polarisation<T,n, Memory>::Polarisation( unsigned N, T h, int bc): I(n*N), J(I), xspace( n*N), N(N)
+Polarisation<T,n, Memory>::Polarisation( unsigned N, T h, bc bcx): I(n*N), J(I), xspace( n*N), N(N)
 {
     for( unsigned i=0; i<n*N; i++)
         I[i] = J[i] = i;
-    right = create::dx_asymm_mt<T,n>( N, h, bc); //create and transfer to device
+    right = create::dx_asymm_mt<T,n>( N, h, bcx); //create and transfer to device
     Operator<T, n> backward( DLT<n>::backward);
     middle = tensor<T,n>( N, backward);
     cusp::multiply( middle, right, right);
@@ -59,7 +60,7 @@ Polarisation<T,n, Memory>::Polarisation( unsigned N, T h, int bc): I(n*N), J(I),
     for( unsigned i=0; i<n; i++)
         weights(i,i) = DLT<n>::weight[i]*h/2.; // normalisation because F is invariant
     middle = tensor<T,n>( N, weights*backward);
-    jump = create::jump_ot<T,n>( N, bc); //without jump cg is unstable
+    jump = create::jump_ot<T,n>( N, bcx); //without jump cg is unstable
 
 }
 
@@ -292,6 +293,14 @@ cusp::csr_matrix<int, T, typename thrust::iterator_space<typename container::ite
     cusp::add( temp1, temp3, temp2);  // D_yy + D_xx
     cusp::add( temp2, jump, temp1); // Lap + Jump
     //temp1.sort_by_row_and_column(); //add does not sort
+    cusp::coo_matrix<int, double, cusp::host_memory> temp_ = temp2;
+    /*
+    t.tic();
+    eigenpol.compute( xchi_matrix_view, temp_);
+    t.toc();
+    std::cout << "point8 "<<t.diff()<<"s\n";
+    */
+   
     return temp1;
 }
 

@@ -246,6 +246,7 @@ void Blueprint::consistencyCheck() const
         throw Message( "a_i + a_z != 1 (background not neutral)\n", ping);
     if( fabs( phys.g_e - phys.a[0]*phys.g[0]- phys.a[1]*phys.g[1]) > 1e-15)
         throw Message( "Background is not neutral! \n", ping);
+    //inconsistency when impurities are not set??
     //Some Warnings
     if( !imp && (phys.a[1] != 0 || phys.mu[1] != 0 || phys.tau[1] != 0)) 
         std::cerr << "TL_WARNING: Impurity disabled but z species not 0 (will be ignored)!\n";

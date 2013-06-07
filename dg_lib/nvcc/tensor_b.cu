@@ -80,6 +80,7 @@ int main()
     cout << "Multiplication with laplace_x took  "<<t.diff()<<"s\n";
     t.tic();
     blas2::symv( ddyy, dv, dw);
+    blas1::axpby( 1., dv, 1. ,dw);
     t.toc();
     cout << "Multiplication with laplace_y took  "<<t.diff()<<"s\n";
     

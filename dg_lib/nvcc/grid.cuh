@@ -117,6 +117,31 @@ struct Grid
      * @return n*n*Nx*Ny
      */
     unsigned size() const { return n*n*Nx_*Ny_;}
+    void display( std::ostream& os = std::cout) const
+    {
+        os << "Grid parameters are: \n"
+            <<"    n  = "<<n<<"\n"
+            <<"    Nx = "<<Nx_<<"\n"
+            <<"    Ny = "<<Ny_<<"\n"
+            <<"    hx = "<<hx_<<"\n"
+            <<"    hy = "<<hy_<<"\n"
+            <<"    lx = "<<lx_<<"\n"
+            <<"    ly = "<<ly_<<"\n"
+            <<"Boundary conditions in x are: \n";
+        switch(bcx_)
+        {
+            case(dg::PER): os << "    PERIODIC \n"; break;
+            case(dg::DIR): os << "    DIRICHLET\n"; break;
+            default: os << "    Not specified!!\n"; 
+        }
+        os <<"Boundary conditions in y are: \n";
+        switch(bcy_)
+        {
+            case(dg::PER): os << "    PERIODIC \n"; break;
+            case(dg::DIR): os << "    DIRICHLET\n"; break;
+            default: os << "    Not specified!!\n"; 
+        }
+    }
   private:
     T x0_, x1_, y0_, y1_;
     T lx_, ly_;
