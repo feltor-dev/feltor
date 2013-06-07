@@ -7,10 +7,36 @@
 namespace dg{
 
 
-template< class Matrix, typename Post>
+/**
+ * @brief Matrix class that represents the gyroaveraging operator Gamma
+ *
+ * Discretization of \f[ (1-\frac{1}{2}\tau\mu\Delta) \f]
+ * can be used in conjugate gradient
+ * @tparam Matrix The cusp-matrix class you want to use
+ * @tparam Prec The type of preconditioner you want to use
+ */
+template< class Matrix, typename Prec>
 struct Gamma
 {
-    Gamma( const Matrix& laplaceM, const Post& p, double tau, double mu):p_(p), laplaceM_(laplaceM), tau_(tau), mu_(mu){}
+    /**
+     * @brief Construct from existing matrices
+     *
+     * Since memory is small on gpus Gamma can be constructed using an existing laplace operator
+     * @param laplaceM negative normalised laplacian
+     * @param p preconditioner ( W2D or T2D); makes the matrix symmetric and is the same you later use in conjugate gradients
+     * @param tau temperature
+     * @param mu mass 
+     */
+    Gamma( const Matrix& laplaceM, const Prec& p, double tau, double mu):p_(p), laplaceM_(laplaceM), tau_(tau), mu_(mu){}
+    /**
+     * @brief apply operator
+     *
+     * same as blas2::symv( gamma, x, y);
+     * \f[ y = ( 1- \frac{1}{2}\tau\mu\Delta) x \f]
+     * @tparam Vector The vector class
+     * @param x lhs
+     * @param y rhs contains solution
+     */
     template <class Vector>
     void symv( const Vector& x, Vector& y) const
     {
@@ -19,18 +45,19 @@ struct Gamma
         blas2::symv( p_, y,  y);
     }
   private:
-    const Post& p_;
+    const Prec& p_;
     const Matrix& laplaceM_;
     double tau_, mu_;
 };
 
-
+///@cond
 template< class M, class T>
 struct MatrixTraits< Gamma<M, T> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
+///@endcond
 
 } //namespace dg
 #endif//_DG_GAMMA_
