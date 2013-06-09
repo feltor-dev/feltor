@@ -1,5 +1,5 @@
-#ifndef _DG_TOEFL_CUH
-#define _DG_TOEFL_CUH
+#ifndef _DG_TOEFLR_CUH
+#define _DG_TOEFLR_CUH
 
 
 #include "xspacelib.cuh"
@@ -11,13 +11,14 @@ namespace dg
 
 
 template< class T, size_t n, class container=thrust::device_vector<T> >
-struct Toefl
+struct ToeflR
 {
     typedef std::vector<container> Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
 
-    Toefl( const Grid<T,n>& g, const Physical& p, const Algorithmic& alg, bool global);
+    //toeflR is always global
+    ToeflR( const Grid<T,n>& g, const Physical& p, const Algorithmic& alg);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
@@ -27,9 +28,9 @@ struct Toefl
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
     container phi, phi_old;
+    container n, gamma_n, gamma_phi;
     container omega, dyphi, chi;
     std::vector<container> expy, dxy, dyy, lapy;
-    std::vector<container> gamma_phi, gamma_n;
 
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
@@ -39,8 +40,6 @@ struct Toefl
     CG<container > pcg;
     const Physical p;
     const Algorithmic alg;
-    bool global;
-
 
     const W2D<T,n> w2d;
     const V2D<T,n> v2d;
@@ -48,7 +47,7 @@ struct Toefl
 };
 
 template< class T, size_t n, class container>
-Toefl<T, n, container>::Toefl( const Grid<T,n>& grid, const Physical& p, const Algorithmic& alg, bool global): 
+ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, const Physical& p, const Algorithmic& alg): 
     phi( grid.size(), 0.), phi_old(phi), omega( phi), dyphi( phi), chi(phi),
     expy( p.s.size()+1, omega), dxy( expy), dyy( dxy), lapy( dyy),
     gamma_phi( p.s.size(), phi), gamma_n( gamma_phi),
@@ -58,17 +57,8 @@ Toefl<T, n, container>::Toefl( const Grid<T,n>& grid, const Physical& p, const A
     pcg( omega, omega.size()), 
     p( p), alg( alg), global( global), w2d( grid), v2d( grid)
 {
-    double neutral = -1; 
-    for( unsigned i=0; i<p.s.size(); i++)
-        neutral += p.s[i].a;
-    if( fabs( neutral) > 1e-15) 
-        throw toefl::Message( "Background not neutral!!", ping);
-
     //create derivatives
     laplaceM = create::laplacianM( g, normed);
-    if( !global) 
-        A = create::laplacianM( g, not_normed);
-
 }
 
 template< class T, size_t n, class container>
@@ -92,28 +82,18 @@ template< class T, size_t n, class container>
 const container& Toefl<T, n, container>::polarisation( const std::vector<container>& y)
 {
     //compute omega
-    if( global)
-    {
-        exp( y, expy);
-        blas2::symv( w2d, expy[1], expy[1]);
-        gamma1.set_species( p.s[0].tau, p.s[0].mu);
-        pcg( gamma
-        blas1::axpby( -1., expy[0], 1., expy[1], omega); //omega = n_i - n_e
-        //compute chi
-        blas1::axpby( 1., expy[1], 0., chi);
-    }
-    else
-    {
-        blas1::axpby( -1, y[0], 1., y[1], omega);
-    }
+    exp( y, expy);
+    blas2::symv( w2d, expy[1], expy[1]);
+    gamma1.set_species( p.s[0].tau, p.s[0].mu);
+    pcg( gamma
+    blas1::axpby( -1., expy[0], 1., expy[1], omega); //omega = n_i - n_e
+    //compute chi
+    blas1::axpby( 1., expy[1], 0., chi);
     //compute S omega 
     blas2::symv( w2d, omega, omega);
     cudaThreadSynchronize();
-    if( global)
-    {
-        cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transport to device
-        A = B; 
-    }
+    cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transport to device
+    A = B; 
     //extrapolate phi
     blas1::axpby( 2., phi, -1.,  phi_old);
     thrust::swap( phi, phi_old);
@@ -127,7 +107,7 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
 template< class T, size_t n, class container>
 void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
-    assert( y.size() == (p.s.size() + 1));
+    assert( y.size() == 2);
     assert( y.size() == yp.size());
 
     phi = polarisation( y);
@@ -149,8 +129,7 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
     blas1::axpby( kappa, dyphi, 1., yp[1]);
     cudaThreadSynchronize();
     blas1::axpby( -kappa, dyy[0], 1., yp[0]);
-    for( unsigned i=1; i<p.s.size()+1; i++)
-        blas1::axpby( -kappa*p.s[i].tau, dyy[i], 1., yp[i]);
+    blas1::axpby( -kappa*p.s[i].tau, dyy[i], 1., yp[i]);
 
     //add laplacians
     for( unsigned i=0; i<y.size(); i++)
@@ -188,4 +167,4 @@ void Toefl<T, n, container>::log( const std::vector<container>& y, std::vector<c
 
 }//namespace dg
 
-#endif //_DG_TOEFL_CUH
+#endif //_DG_TOEFLR_CUH
