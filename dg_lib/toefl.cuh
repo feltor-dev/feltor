@@ -17,7 +17,7 @@ struct Toefl
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
 
-    Toefl( const Blueprint<T,n>& bp);
+    Toefl( const Grid<T,n>& g, const Physical& p, const Algorithmic& alg, bool global);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
@@ -29,6 +29,7 @@ struct Toefl
     container phi, phi_old;
     container omega, dyphi, chi;
     std::vector<container> expy, dxy, dyy, lapy;
+    std::vector<container> gamma_phi, gamma_n;
 
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
@@ -36,36 +37,58 @@ struct Toefl
     ArakawaX<T, n, container> arakawa; 
     Polarisation2dX<T, n, thrust::host_vector<T> > pol; //note the host vector
     CG<container > pcg;
-    const Blueprint bp;
+    const Physical p;
+    const Algorithmic alg;
+    bool global;
+
+
     const W2D<T,n> w2d;
     const V2D<T,n> v2d;
 
 };
 
 template< class T, size_t n, class container>
-Toefl<T, n, container>::Toefl( const Blueprint& bp): 
-    phi( bp.grid().size(), 0.), phi_old(phi), omega( phi), dyphi( phi), chi(phi),
-    expy( 2, omega), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  laplaceM, w2d, bp.physical().tau[0], bp.physical().a[0]);
-    arakawa( bp.grid()), 
-    pol(     bp.grid()), 
+Toefl<T, n, container>::Toefl( const Grid<T,n>& grid, const Physical& p, const Algorithmic& alg, bool global): 
+    phi( grid.size(), 0.), phi_old(phi), omega( phi), dyphi( phi), chi(phi),
+    expy( p.s.size()+1, omega), dxy( expy), dyy( dxy), lapy( dyy),
+    gamma_phi( p.s.size(), phi), gamma_n( gamma_phi),
+    gamma1(  laplaceM, w2d, 0, 0);
+    arakawa( grid), 
+    pol(     grid), 
     pcg( omega, omega.size()), 
-    bp( bp), w2d( bp.grid()), v2d( bp.grid())
+    p( p), alg( alg), global( global), w2d( grid), v2d( grid)
 {
-    bp.consistencyCheck();
+    double neutral = -1; 
+    for( unsigned i=0; i<p.s.size(); i++)
+        neutral += p.s[i].a;
+    if( fabs( neutral) > 1e-15) 
+        throw toefl::Message( "Background not neutral!!", ping);
+
     //create derivatives
     laplaceM = create::laplacianM( g, normed);
-    if( !bp.isEnabled( toefl::TL_GLOBAL) 
+    if( !global) 
         A = create::laplacianM( g, not_normed);
 
 }
+
+template< class T, size_t n, class container>
+void Toefl<T, n, container>::average( const container& y, container& gamma_y, double tau, double mu)
+{
+    gamma1.set_species( tau, mu);
+    dg::blas2::symv( w2d, y, gamma_y);
+    unsigned number = cg( gamma1, gamma_y, y, v2d, eps);
+
+
+
+}
+
 
 //how to set up a computation?
 template< class T, size_t n, class container>
 const container& Toefl<T, n, container>::polarisation( const std::vector<container>& y)
 {
     //compute omega
-    if( bp.isEnabled( toefl::TL_GLOBAL))
+    if( global)
     {
         exp( y, expy);
         blas1::axpby( -1., expy[0], 1., expy[1], omega); //omega = n_i - n_e
@@ -79,7 +102,7 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
     //compute S omega 
     blas2::symv( w2d, omega, omega);
     cudaThreadSynchronize();
-    if( bp.isEnabled( toefl::TL_GLOBAL))
+    if( global)
     {
         cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transport to device
         A = B; 
@@ -97,7 +120,7 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
 template< class T, size_t n, class container>
 void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
-    assert( y.size() == 2);
+    assert( y.size() == (p.s.size() + 1));
     assert( y.size() == yp.size());
 
     phi = polarisation( y);
@@ -119,6 +142,8 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
     blas1::axpby( kappa, dyphi, 1., yp[1]);
     cudaThreadSynchronize();
     blas1::axpby( -kappa, dyy[0], 1., yp[0]);
+    for( unsigned i=1; i<p.s.size()+1; i++)
+        blas1::axpby( -kappa*p.s[i].tau, dyy[i], 1., yp[i]);
 
     //add laplacians
     for( unsigned i=0; i<y.size(); i++)

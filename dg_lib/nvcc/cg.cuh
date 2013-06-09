@@ -13,18 +13,13 @@ namespace dg{
 * @brief Functor class for the preconditioned conjugate gradient method
 *
  @ingroup algorithms
- @tparam Matrix The matrix class: no requirements except for the 
-            BLAS routines
  @tparam Vector The Vector class: needs to model Assignable 
- @tparam Preconditioner no requirements except for the blas routines. Thus far the dg library
-    provides only diagonal preconditioners, which should be enough if the result is extrapolated from
-    previous timesteps.
 
  The following 3 pseudo - BLAS routines need to be callable 
  \li double dot = blas1::dot( v1, v2); 
  \li blas1::axpby( alpha, x, beta, y);  
  \li blas2::symv( m, x, y);     
- \li double dot = blas::dot( P, v); 
+ \li double dot = blas2::dot( P, v); 
  \li blas2::symv( alpha, P, x, beta, y);
 
  @note Conjugate gradients might become unstable for positive semidefinite
@@ -57,6 +52,11 @@ class CG
     /**
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *
+     @tparam Matrix The matrix class: no requirements except for the 
+            BLAS routines
+     @tparam Preconditioner no requirements except for the blas routines. Thus far the dg library
+        provides only diagonal preconditioners, which should be enough if the result is extrapolated from
+        previous timesteps.
      * In every iteration the following BLAS functions are called: \n
        symv 1x, dot 1x, axpby 2x, Prec. dot 1x, Prec. symv 1x
      * @param A A symmetric positive definit matrix
@@ -69,6 +69,18 @@ class CG
      */
     template< class Matrix, class Preconditioner >
     unsigned operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P , value_type eps = 1e-12);
+    /**
+     * @brief Solve the system A*x = b using unpreconditioned conjugate gradient method
+     *
+     @tparam Matrix The matrix class: no requirements except for the 
+            BLAS routines
+     * @param A A symmetric positive definit matrix
+     * @param x Contains an initial value on input and the solution on output.
+     * @param b The right hand side vector. x and b may be the same vector.
+     * @param eps The relative error to be respected
+     *
+     * @return Number of iterations used to achieve desired precision
+     */
     template< class Matrix >
     unsigned operator()( const Matrix& A, Vector& x, const Vector& b, value_type eps = 1e-12)
     {

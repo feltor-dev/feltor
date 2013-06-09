@@ -2,6 +2,7 @@
 #define _DG_GAMMA_
 
 
+#include <cassert>
 #include "blas.h"
 
 namespace dg{
@@ -27,7 +28,9 @@ struct Gamma
      * @param tau temperature
      * @param mu mass 
      */
-    Gamma( const Matrix& laplaceM, const Prec& p, double tau, double mu):p_(p), laplaceM_(laplaceM), tau_(tau), mu_(mu){}
+    Gamma( const Matrix& laplaceM, const Prec& p, double tau, double mu):p_(p), laplaceM_(laplaceM), tau_(tau), mu_(mu){
+        assert( tau_ > 0 && mu_ > 0 );
+    }
     /**
      * @brief apply operator
      *
@@ -44,6 +47,9 @@ struct Gamma
         blas1::axpby( 1., x, 0.5*tau_*mu_, y);
         blas2::symv( p_, y,  y);
     }
+    void set_species( double tau, double mu){ 
+        assert( tau_ > 0 && mu > 0);
+        tau_ = tau, mu_ = mu;}
   private:
     const Prec& p_;
     const Matrix& laplaceM_;
