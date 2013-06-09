@@ -159,8 +159,9 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<v[21]; i++)
         {
             ab( test, y0, y1, dt);
-            for( unsigned i=0; i<y0.size(); i++)
-                thrust::swap( y0[i], y1[i]);
+            y0.swap( y1); //attention on -O3 ?
+            //for( unsigned i=0; i<y0.size(); i++)
+            //    thrust::swap( y0[i], y1[i]);
         }
         time += v[21]*dt;
         t.toc();

@@ -3,8 +3,8 @@
 
 
 #include "xspacelib.cuh"
-#include "blueprint.h"
 #include "cg.cuh"
+#include "nvcc/gamma.cuh"
 
 namespace dg
 {
@@ -18,18 +18,20 @@ struct ToeflR
     typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
 
     //toeflR is always global
-    ToeflR( const Grid<T,n>& g, double kappa, double nu, double eps_pol, double eps_gamma);
+    ToeflR( const Grid<T,n>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
-    const container& polarisation( const std::vector<container>& y);
-    const container& polarisation( ) const { return phi;}
+    const std::vector<container>& polarisation( const std::vector<container>& y);
+    const container& polarisation( ) const { return phi[0];}
     const Matrix& laplacianM( ) const { return laplaceM;}
+    const Gamma<Matrix, W2D<T,n> >&  gamma() const {return gamma1;}
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
-    container phi, phi_old;
-    container n, gamma_n, gamma_phi;
-    container omega, dyphi, chi;
+    container chi;
+    container gamma_n, gamma_old;
+    container omega;
+    std::vector<container> phi, phi_old, dyphi;
     std::vector<container> expy, dxy, dyy, lapy;
 
     Matrix A; //contains unnormalized laplacian if local
@@ -48,68 +50,58 @@ struct ToeflR
 
 template< class T, size_t n, class container>
 ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma ): 
-    phi( grid.size(), 0.), phi_old(phi), omega( phi), dyphi( phi), chi(phi),
-    expy( p.s.size()+1, omega), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  laplaceM, w2d, -0.5*tau);
+    chi( grid.size(), 0.), gamma_n( chi), gamma_old( chi), omega( chi), 
+    phi( 2, chi), phi_old( phi), dyphi( phi),
+    expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
+    gamma1(  laplaceM, w2d, -0.5*tau),
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 
-    p( p), alg( alg), w2d( grid), v2d( grid)
-    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu)
+    w2d( grid), v2d( grid),
+    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau)
 {
     //create derivatives
-    laplaceM = create::laplacianM( g, normed);
-}
-
-template< class T, size_t n, class container>
-template< class Matrix> 
-unsigned Toefl<T, n, container>::average( const Matrix& m, const container& rhs, container& old, container& sol, double eps)
-{
-    dg::blas2::symv( w2d, y, gamma_y);
-    unsigned number = cg( gamma1, gamma_y, y, v2d, eps);
-
-    //extrapolate phi
-    blas1::axpby( 2., sol, -1.,  old);
-    thrust::swap( sol, old);
-    unsigned number = pcg( m, sol , rhs, v2d, eps);
-
+    laplaceM = create::laplacianM( grid, normed);
 }
 
 
 //how to set up a computation?
 template< class T, size_t n, class container>
-const container& ToeflR<T, n, container>::polarisation( const std::vector<container>& y)
+const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::vector<container>& y)
 {
-    //compute omega
     exp( y, expy);
-    blas2::symv( w2d, expy[1], expy[1]);
-    //extrapolate gamma-n
-    blas1::axpby( 2., gamma_n, -1.,  gamma_old);
-    thrust::swap( gamma_n, gamma_old);
-    unsigned number;
-    number = pcg( gamma1, gamma_n, expy[1], v2d, eps_gamma);
-#ifdef DG_DEBUG
-    std::cout << "Number of pcg iterations "<< number <<std::endl;
-#endif //DG_DEBUG
-    blas1::axpby( -1., expy[0], 1., expy[1], omega); //omega = n_i - n_e
-    //compute chi
-    blas1::axpby( 1., expy[1], 0., chi);
-    //compute S omega 
-    blas2::symv( w2d, omega, omega);
-    cudaThreadSynchronize();
-    cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transport to device
-    A = B; 
-    //extrapolate phi
+    //extrapolate phi and gamma_n
     for( unsigned i=0; i<phi.size(); i++)
     {
         blas1::axpby( 2., phi[i], -1.,  phi_old[i]);
-        thrust::swap( phi[i], phi_old[i]);
     }
-    unsigned number = pcg( A, phi[0], omega, v2d, eps_pol);
+    blas1::axpby( 2., gamma_n, -1., gamma_old);
+    gamma_n.swap( gamma_old);
+    phi.swap( phi_old);
+
+    //compute chi and polarisation
+    blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
+    cudaThreadSynchronize();
+    cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
+    A = B; 
+    //compute omega
+    blas2::symv( w2d, expy[1], omega);
+    unsigned number = pcg( gamma1, gamma_n, omega, v2d, eps_gamma);
 #ifdef DG_DEBUG
-    std::cout << "Number of pcg iterations "<< number <<std::endl;
+    std::cout << "Number of pcg iterations0 "<< number <<std::endl;
+#endif //DG_DEBUG
+    blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
+    blas2::symv( w2d, omega, omega);
+    number = pcg( A, phi[0], omega, v2d, eps_pol);
+#ifdef DG_DEBUG
+    std::cout << "Number of pcg iterations1 "<< number <<std::endl;
 #endif //DG_DEBUG
     //compute Gamma phi[0]
+    blas2::symv( w2d, phi[0], omega);
+    number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
+#ifdef DG_DEBUG
+    std::cout << "Number of pcg iterations2 "<< number <<std::endl;
+#endif //DG_DEBUG
     return phi;
 }
 

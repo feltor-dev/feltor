@@ -22,7 +22,7 @@ struct Toefl
     void log( const std::vector<container>& y, std::vector<container>& target);
     const container& polarisation( const std::vector<container>& y);
     const container& polarisation( ) const { return phi;}
-    const Matrix& laplacian( ) const { return laplace;}
+    const Matrix& laplacianM( ) const { return laplace;}
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
@@ -88,7 +88,7 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
     }
     //extrapolate phi
     blas1::axpby( 2., phi, -1.,  phi_old);
-    thrust::swap( phi, phi_old);
+    phi.swap( phi_old);
     unsigned number = pcg( A, phi, omega, V2D<double, n>(hx, hy), eps);
 #ifdef DG_DEBUG
     std::cout << "Number of pcg iterations "<< number <<std::endl;
