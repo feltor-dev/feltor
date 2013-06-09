@@ -25,9 +25,10 @@ int main()
     dg::DVec rho = dg::evaluate( rhs, grid);
     dg::DVec sol = dg::evaluate( lhs, grid);
     dg::DVec x(rho.size(), 0.);
+    //dg::DVec x(rho);
 
     dg::DMatrix A = dg::create::laplacianM( grid, dg::normed, dg::XSPACE); 
-    dg::Gamma< dg::DMatrix, dg::W2D<double, n> > gamma1( A, w2d, tau, mu);
+    dg::Gamma< dg::DMatrix, dg::W2D<double, n> > gamma1( A, w2d, -0.5*tau*mu);
 
     dg::CG< dg::DVec > cg(x, x.size());
     dg::blas2::symv( w2d, rho, rho);

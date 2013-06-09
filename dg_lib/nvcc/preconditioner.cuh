@@ -53,7 +53,7 @@ struct S1D
     *
     * @param g The grid
     */
-    __host__ __device__ S1D( const Grid1d<T,n>& g):h_(g.h()){}
+    __host__ S1D( const Grid1d<T,n>& g):h_(g.h()){}
     //__host__ __device__ const value_type& h() const {return h_;}
     __host__ __device__ value_type operator()( int i) const 
     {
@@ -85,7 +85,7 @@ struct T1D
     *
     * @param g The grid
     */
-    __host__ __device__ T1D( const Grid1d<T,n>& g):h_(g.h()){}
+    __host__ T1D( const Grid1d<T,n>& g):h_(g.h()){}
     /**
     * @brief 
     *
@@ -129,7 +129,7 @@ struct W1D
     *
     * @param g The grid
     */
-    __host__ __device__ W1D( const Grid1d<T,n>& g){
+    __host__ W1D( const Grid1d<T,n>& g){
         for( unsigned i=0; i<n; i++)
             w[i] = g.h()/2.*DLT<n>::weight[i];
     }
@@ -167,7 +167,7 @@ struct V1D
     *
     * @param g The grid
     */
-    __host__ __device__ V1D( const Grid1d<T,n>& g){
+    __host__ V1D( const Grid1d<T,n>& g){
         for( unsigned i=0; i<n; i++)
             x[i] = 2./g.h()/DLT<n>::weight[i];
     }

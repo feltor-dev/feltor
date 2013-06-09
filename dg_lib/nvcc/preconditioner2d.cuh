@@ -2,6 +2,7 @@
 #define _DG_PRECONDITIONER2D_
 
 #include "matrix_traits.h"
+#include "grid.cuh"
 #include "dlt.h"
 
 namespace dg{
@@ -31,7 +32,7 @@ struct S2D
     *
     * @param g The grid
     */
-    __host__ __device__ S2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){}
+    __host__ S2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){}
     /**
     * @brief 
     *
@@ -77,7 +78,7 @@ struct T2D
     *
     * @param g The grid
     */
-    __host__ __device__ T2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){}
+    __host__ T2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){}
     /**
     * @brief 
     *

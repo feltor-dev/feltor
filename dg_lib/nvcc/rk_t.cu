@@ -19,7 +19,7 @@ struct RHS
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     RHS( const dg::Grid<T,n>& g, T D):hx_(g.hx()), hy_(g.hy()), D_(D) 
     {
-        laplace = dg::create::laplacian( g, dg::not_normed, dg::LSPACE);
+        laplace = dg::create::laplacianM( g, dg::not_normed, dg::LSPACE);
     }
     void operator()( const container& y, container& yp)
     {
@@ -68,7 +68,7 @@ int main()
     cout << "# of timesteps:           "<<NT<<endl;
 
     Grid<double, n> grid( 0, lx, 0, ly ,Nx, Ny, DIR, DIR);
-    S2D<double, n> s2d( grid.hx(), grid.hy());
+    S2D<double, n> s2d( grid);
 
     DVec y0 = expand( sine, grid), y1(y0);
 
@@ -81,7 +81,8 @@ int main()
     for( unsigned i=0; i<NT; i++)
     {
         ab( rhs, y0, y1, dt);
-        thrust::swap(y0, y1);
+        y0.swap( y1);
+        //thrust::swap(y0, y1);
     }
     double norm_y0 = blas2::dot( s2d, y0);
     cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << endl;

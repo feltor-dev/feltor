@@ -265,7 +265,7 @@ void AB<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
         blas1::axpby( dt*ab_coeff<k>::b[i], u_[i], 1., u1);
     //permute u_[k-1]  to be the new u_[0]
     for( unsigned i=k-1; i>0; i--)
-        thrust::swap( u_[i-1], u_[i]);
+        u_[i-1].swap( u_[i]);
 }
 
 ///@cond

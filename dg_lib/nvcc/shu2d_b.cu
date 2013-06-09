@@ -40,8 +40,8 @@ using namespace std;
 int main()
 {
     Timer t;
-    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
-    S2D<double,n > s2d( grid.hx(), grid.hy());
+    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
+    S2D<double,n > s2d( grid);
     ////////////////////////////////////////////////////////////
     cout << "Solve 2D incompressible NavierStokes with sin(x)sin(y) or Lamb dipole initial condition\n";
     cout << "Type # of grid cells in one dimension!\n";
@@ -67,13 +67,13 @@ int main()
 
     DVec stencil = expand( one, grid);
 
-    dg::Lamb lamb( 0.5*lx, 0.5*ly, R, U);
-    HVec omega = expand( lamb, grid);
-    //HVec omega = expand( initial, grid );
+    //dg::Lamb lamb( 0.5*lx, 0.5*ly, R, U);
+    //HVec omega = expand( lamb, grid);
+    HVec omega = expand( initial, grid );
 
-    dg::Lamb lamb2( 0.5*lx, 0.5*ly-0.9755*U*T, R, U);
-    HVec solh = expand( lamb2, grid);
-    //HVec solh = expand( solution, grid );
+    //dg::Lamb lamb2( 0.5*lx, 0.5*ly-0.9755*U*T, R, U);
+    //HVec solh = expand( lamb2, grid);
+    HVec solh = expand( solution, grid );
 
     DVec sol = solh;
     DVec y0( omega), y1( y0);
@@ -96,7 +96,8 @@ int main()
     {
         //step 
         ab( test, y0, y1, dt);
-        thrust::swap(y0, y1);
+        y0.swap( y1);
+        //thrust::swap( y0, y1);
         time += dt;
     }
     ////////////////////////////////////////////////////////////////////

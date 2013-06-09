@@ -32,7 +32,7 @@ struct Shu
     Matrix laplace;
     container omega, phi, phi_old;
     Arakawa<T, n, container> arakawa; 
-    CG<Matrix, container, dg::T2D<T, n> > pcg;
+    CG< container > pcg;
     SimplicialCholesky cholesky;
     thrust::host_vector<double> x,b;
     T2D<T,n> t2d;
@@ -51,7 +51,7 @@ Shu<T, n, container>::Shu( const Grid<T, n>& g, double D, double eps):
     t2d( g.hx(), g.hy()), s2d( g.hx(), g.hy()), D(D), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-    HMatrix A = dg::create::laplacian( g, not_normed, LSPACE);
+    HMatrix A = dg::create::laplacianM( g, not_normed, LSPACE);
     laplace = A;
     cholesky.compute( A);
 }
@@ -66,7 +66,7 @@ void Shu<T, n, container>::operator()( const Vector& y, Vector& yp)
     blas2::symv( s2d, y, omega);
     cudaThreadSynchronize();
     blas1::axpby( 2., phi, -1.,  phi_old);
-    thrust::swap( phi, phi_old);
+    phi.swap( phi_old);
     unsigned number = pcg( laplace, phi, omega, t2d, eps);
     //std::cout << "Number of pcg iterations "<< number<<"\n"; 
     //b = omega; //copy data to host

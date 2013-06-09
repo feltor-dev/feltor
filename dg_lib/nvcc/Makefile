@@ -30,7 +30,7 @@ host_window_t: host_window_t.cu
 	./$@
 
 %_b: %_b.cu %.cuh $(LIBS)
-	$(NVCC) -O3 -w  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS)
+	$(NVCC) -O2 -w  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 	./$@
 
@@ -39,7 +39,7 @@ host_window_t: host_window_t.cu
 	./$@
 
 %2d_b: %2d_b.cu %.cuh $(LIBS)
-	$(NVCC) -O3 -w  $< -o $@ $(NVCCFLAGS) $(LIBS) $(INCLUDE)
+	$(NVCC) -O2 -w  $< -o $@ $(NVCCFLAGS) $(LIBS) $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
 	./$@
 
