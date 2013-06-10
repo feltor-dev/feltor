@@ -26,6 +26,7 @@ struct ToeflR
     const container& polarisation( ) const { return phi[0];}
     const Matrix& laplacianM( ) const { return laplaceM;}
     const Gamma<Matrix, W2D<T,n> >&  gamma() const {return gamma1;}
+    void init(  std::vector<container>& y);
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
     container chi;
@@ -65,17 +66,28 @@ ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu,
 }
 
 
+template< class T, size_t n, class container>
+void ToeflR<T,n,container>::init( std::vector<container>& y)
+{
+    blas2::symv( w2d, y[1], omega);
+    unsigned number = pcg( gamma1, y[1], omega, v2d, eps_gamma);
+#ifdef DG_BENCHMARK
+    std::cout << "Number of pcg iterations0 "<< number <<std::endl;
+#endif //DG_DEBUG
+
+}
+
 //how to set up a computation?
 template< class T, size_t n, class container>
 const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::vector<container>& y)
 {
     exp( y, expy);
     //extrapolate phi and gamma_n
-    for( unsigned i=0; i<phi.size(); i++)
-    {
-        blas1::axpby( 2., phi[i], -1.,  phi_old[i]);
-    }
+    blas1::axpby( 2., phi[0], -1.,  phi_old[0]);
+    blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
     blas1::axpby( 2., gamma_n, -1., gamma_old);
+    //blas1::axpby( 1., phi[1], 0.,  phi_old[1]);
+    //blas1::axpby( 0., gamma_n, 0., gamma_old);
     gamma_n.swap( gamma_old);
     phi.swap( phi_old);
 
@@ -85,21 +97,24 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
     cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
     A = B; 
     //compute omega
-    blas2::symv( w2d, expy[1], omega);
+    thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
+    thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
+    blas2::symv( w2d, omega, omega); 
+    //Attention!! gamma1 wants Dirichlet BC
     unsigned number = pcg( gamma1, gamma_n, omega, v2d, eps_gamma);
-#ifdef DG_DEBUG
+#ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations0 "<< number <<std::endl;
 #endif //DG_DEBUG
     blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
     blas2::symv( w2d, omega, omega);
     number = pcg( A, phi[0], omega, v2d, eps_pol);
-#ifdef DG_DEBUG
+#ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations1 "<< number <<std::endl;
 #endif //DG_DEBUG
     //compute Gamma phi[0]
     blas2::symv( w2d, phi[0], omega);
     number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
-#ifdef DG_DEBUG
+#ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations2 "<< number <<std::endl;
 #endif //DG_DEBUG
     return phi;

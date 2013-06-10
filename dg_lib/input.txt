@@ -7,12 +7,12 @@ v*cfl is 4 locally  i.e. dt is dx/4 (for n0 5)
 v*cfl is 5 globally i.e. dt is dx/5
 
 ---------------------Algorithmic parameters-------------------
-1) Nx (grid points in x)                =   100   (256.)
-2) Ny (grid points in y)                =   050   (256.)
+1) Nx (grid points in x)                =   200   (256.)
+2) Ny (grid points in y)                =   100   (256.)
 3) dt (time step in units c_s/L_p)      =   0.200   (0.01)
 ---------------------Boundary conditions----------------------
-4) lx (length of x in units of rho_s)   = 100    (128.)
-5) ly (length of y in units of rho_s)   = 050    (64.)
+4) lx (length of x in units of rho_s)   = 200    (128.)
+5) ly (length of y in units of rho_s)   = 100    (64.)
 6) bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
 7) bc_y (0 periodic, 1 Dirichlet )      =   1    (1.0)
 ---------------------Physical parameters----------------------
@@ -37,4 +37,5 @@ quasineutrality condition)
 22) OMP_NUM_THREADS                         = 4      (4)
 23) eps (stopping criterion for CG method)  = 1e-4 ( 1e-3)
 24) window width (in pixel)                 = 800  ( 400)
+25) eps_gamma (stopping for Gamma CG)       = 1e-7  (1e-8)
 @ ------------------------------------------------------------
