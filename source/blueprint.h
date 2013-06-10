@@ -247,9 +247,9 @@ void Blueprint::consistencyCheck() const
     if( fabs( phys.g_e - phys.a[0]*phys.g[0]- phys.a[1]*phys.g[1]) > 1e-15)
         throw Message( "Background is not neutral! \n", ping);
     //inconsistency when impurities are not set??
-    //Some Warnings
     if( !imp && (phys.a[1] != 0 || phys.mu[1] != 0 || phys.tau[1] != 0)) 
-        std::cerr << "TL_WARNING: Impurity disabled but z species not 0 (will be ignored)!\n";
+        throw Message( "Impurity disabled but z species not 0!\n";
+    //Some Warnings
     if( global && (phys.g_e != 0||phys.g[0] != 0||phys.g[1] != 0))
         std::cerr << "TL_WARNING: Global solver ignores gradients\n";
         

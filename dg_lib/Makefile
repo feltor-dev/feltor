@@ -16,8 +16,8 @@ toeflR: toeflR.cu toeflR.cuh
 	$(NVCC) -O2  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 
-toefl_b: toefl_b.cu toefl.cuh 
-	$(NVCC) -O2   $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
+toefl_hpc: toefl_hpc.cu toefl.cuh 
+	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 .PHONY: clean doc
 
