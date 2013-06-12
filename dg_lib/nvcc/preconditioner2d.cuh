@@ -82,6 +82,7 @@ struct MatrixTraits< S2D< T, n> >
     typedef DiagonalPreconditionerTag matrix_category;
 };
 
+//W2D in x-space corresponds to S2D in l-space
 template<typename T,  size_t n>
 struct W2D
 {

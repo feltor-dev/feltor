@@ -1,4 +1,3 @@
-#INCLUDE = -I/home/matthias/include # Eigen library
 INCLUDE = -I/home/c744/c7441112/include -I$(UIBK_CUSP_INC)
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
@@ -18,6 +17,9 @@ version: version.cu
 cusp_thrust: cusp_thrust.cu 
 	$(NVCC) $< $(NVCCFLAGS) -o $@
 	./$@
+
+host_window_t: host_window_t.cu
+	$(NVCC) $< $(NVCCFLAGS) -o $@ $(GLFLAGS) $(INCLUDE)
 
 %.o: %.cpp
 	$(CXX) -O3 -c $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) 

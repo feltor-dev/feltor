@@ -1,8 +1,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include "draw/host_window.h"
 #include "xspacelib.cuh"
-#include "cuda_texture.cuh"
 
 
 const unsigned n = 3;
@@ -13,7 +13,7 @@ using namespace std;
 int main()
 {
     //Create Window and set window title
-    dg::HostWindow w( 400, 400);
+    draw::HostWindow w( 400, 400);
     glfwSetWindowTitle( "Hello world\n");
     //generate a grid 
     dg::Grid<double, n> grid( 0, 1., 0, 1., Nx, Ny);
@@ -29,7 +29,7 @@ int main()
     dg::blas2::mv( equidistant, vector, visual );
 
     //create a colormap
-    dg::ColorMapRedBlueExt colors( 1.);
+    draw::ColorMapRedBlueExt colors( 1.);
     //compute maximum value as scale
     colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
     std::cout << "Color scale: "<<colors.scale()<<std::endl;

@@ -8,6 +8,7 @@
 #include "evaluation.cuh"
 #include "arakawa.cuh"
 #include "blas.h"
+#include "typedefs.cuh"
 
 using namespace std;
 using namespace dg;
@@ -17,15 +18,7 @@ const unsigned Nx = 50;
 const unsigned Ny = 50;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
-//const double lx = 1.;
-//const double ly = 1.;
-const double hx = lx/(double)Nx;
-const double hy = ly/(double)Ny;
 
-typedef thrust::device_vector<double> DVec;
-//typedef thrust::host_vector<double> DVec;
-typedef ArrVec2d<double, n, DVec > DArrVec;
-typedef cusp::device_memory MemorySpace;
 
 //choose some mean function (attention on lx and ly)
 /*
@@ -55,28 +48,27 @@ double jacobian( double x, double y)
 
 int main()
 {
+    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
+    S2D<double,n > s2d( grid.hx(), grid.hy());
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;
-    DArrVec lhs = expand< double(&)(double, double), n> ( left, 0, lx, 0, ly, Nx, Ny), jac(lhs);
-    DArrVec rhs = expand< double(&)(double, double), n> ( right, 0, lx, 0, ly, Nx, Ny);
-    const DArrVec sol = expand< double(&)(double, double), n> ( jacobian, 0, lx, 0, ly, Nx, Ny);
-    DArrVec eins = expand< double(&)(double, double), n> ( one, 0, lx, 0, ly, Nx, Ny);
+    DVec lhs = expand( left, grid), jac(lhs);
+    DVec rhs = expand( right, grid);
+    const DVec sol = expand ( jacobian, grid);
+    DVec eins = expand( one, grid);
 
-
-    Arakawa<double, n, DVec> arakawa( Nx, Ny, hx, hy, -1, -1);
-    arakawa( lhs.data(), rhs.data(), jac.data());
+    Arakawa<double, n, DVec> arakawa( grid);
+    arakawa( lhs, rhs, jac);
     cudaThreadSynchronize();
-    //cout<<jac<<endl;
-
 
     cout << scientific;
-    cout << "Mean     Jacobian is "<<blas2::dot( eins.data(), S2D<double, n>(hx, hy), jac.data())<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs.data(), S2D<double, n>(hx, hy), jac.data())<<"\n";
-    cout << "Mean   n*Jacobian is "<<blas2::dot( lhs.data(), S2D<double, n>(hx, hy), jac.data())<<"\n";
-    blas1::axpby( 1., sol.data(), -1., jac.data());
+    cout << "Mean     Jacobian is "<<blas2::dot( eins, s2d, jac)<<"\n";
+    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs,  s2d, jac)<<"\n";
+    cout << "Mean   n*Jacobian is "<<blas2::dot( lhs,  s2d, jac)<<"\n";
+    blas1::axpby( 1., sol, -1., jac);
     cudaThreadSynchronize();
-    cout << "Distance to solution "<<sqrt(blas2::dot( S2D<double, n>(hx, hy), jac.data()))<<endl; //don't forget sqrt when comuting errors
+    cout << "Distance to solution "<<sqrt( blas2::dot( s2d, jac))<<endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |     
     //n = 2 -> p = 1    |

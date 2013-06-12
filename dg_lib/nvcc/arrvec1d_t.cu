@@ -6,6 +6,8 @@
 #include "blas1.h"
 #include "arrvec1d.cuh"
 
+//#include "xspacelib.cuh" //this will not make the compilation take longer
+
 const unsigned n = 3;
 const unsigned N = 5;
 

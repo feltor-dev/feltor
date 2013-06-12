@@ -10,6 +10,7 @@ enum bc{
     DIR //!< homogeneous dirichlet boundaries
 };
 
+//add a size() function?
 template <class T, size_t n>
 struct Grid1d
 {
@@ -28,6 +29,7 @@ struct Grid1d
     T h() const {return hx_;}
     unsigned N() const {return Nx_;}
     bc bcx() const {return bcx_;}
+    unsigned size() const { return n*Nx_;}
   private:
     T x0_, x1_;
     T lx_;
@@ -35,6 +37,7 @@ struct Grid1d
     T hx_;
     bc bcx_;
 };
+
 /**
  * @brief A 2D grid class 
  *
@@ -77,6 +80,7 @@ struct Grid
     unsigned Ny() const {return Ny_;}
     bc bcx() const {return bcx_;}
     bc bcy() const {return bcy_;}
+    unsigned size() const { return n*n*Nx_*Ny_;}
   private:
     T x0_, x1_, y0_, y1_;
     T lx_, ly_;

@@ -41,7 +41,7 @@ struct Toefl
     container omega, dyphi, chi;
     std::vector<container> expy, dxy, dyy, lapy;
 
-    Matrix dx, dy;
+    //Matrix dx, dy; //use arakawas matrices
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplace; //contains normalized laplacian
     ArakawaX<T, n, container> arakawa; 
@@ -65,11 +65,11 @@ Toefl<T, n, container>::Toefl( const Grid<T,n>& g, bool global, double eps, doub
     hx( g.hx()), hy(g.hy()), global(global), eps(eps), kappa(kappa), nu(nu)
 {
     //create derivatives
-    dx = create::dx( g, bc_x);
-    dy = create::dy( g, bc_y);
-    laplace = create::laplacian( g, bc_x, bc_y);
+    //dx = create::dx( g, bc_x);
+    //dy = create::dy( g, bc_y);
+    laplace = create::laplacian( g, bc_x, bc_y, normed);
     if( !global) 
-        A = create::laplacian( g, bc_x, bc_y, false);
+        A = create::laplacian( g, bc_x, bc_y, not_normed);
 
 }
 
@@ -119,11 +119,11 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
 
     //compute derivatives
     cudaThreadSynchronize();
-    blas2::gemv( dy, phi, dyphi);
+    blas2::gemv( arakawa.dy(), phi, dyphi);
     for( unsigned i=0; i<y.size(); i++)
     {
-        blas2::gemv( dx, y[i], dxy[i]);
-        blas2::gemv( dy, y[i], dyy[i]);
+        blas2::gemv( arakawa.dx(), y[i], dxy[i]);
+        blas2::gemv( arakawa.dy(), y[i], dyy[i]);
     }
     // curvature terms
     cudaThreadSynchronize();
