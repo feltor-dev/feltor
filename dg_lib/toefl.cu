@@ -5,6 +5,7 @@
 #include "draw/host_window.h"
 
 #include "toefl.cuh"
+#include "parameters.h"
 #include "rk.cuh"
 #include "../lib/read_input.h"
 
@@ -17,39 +18,6 @@ const unsigned n = 3;
 const unsigned k = 3;
 
 using namespace std;
-void display( const std::vector<double>& v, std::ostream& os = std::cout )
-{
-    os << "Physical parameters are: \n"
-        <<"    Viscosity:       = "<<v[13]<<"\n"
-        <<"    Curvature_y:     = "<<v[14]<<"\n"
-        <<"    Ion-temperature: = "<<v[15]<<"\n";
-    char local[] = "LOCAL" , global[] = "GLOBAL";
-    os  <<"Mode is:   \n"
-        <<"    "<<(v[12]?global:local)<<"\n";
-    char per[] = "PERIODIC", dir[] = "DIRICHLET";
-    os << "Boundary parameters are: \n"
-        <<"    lx = "<<v[8]<<"\n"
-        <<"    ly = "<<v[9]<<"\n"
-        <<"Boundary conditions in x are: \n"
-        <<"    "<<(v[10] ? dir:per)<<"\n"
-        <<"Boundary conditions in y are: \n"
-        <<"    "<<(v[11] ? dir:per)<<"\n";
-    os << "Algorithmic parameters are: \n"
-        <<"    n  = "<<v[1]<<"\n"
-        <<"    Nx = "<<v[2]<<"\n"
-        <<"    Ny = "<<v[3]<<"\n"
-        <<"    k  = "<<v[4]<<"\n"
-        <<"    dt = "<<v[5]<<"\n";
-    os  <<"Blob parameters are: \n"
-        << "    width is:     "<<v[17]<<"\n"
-        << "    amplitude is: "<<v[16]<<"\n"
-        << "    posX:         "<<v[18]<<"\n"
-        << "    posY:         "<<v[19]<<"\n";
-    os << "Stopping for CG:         "<<v[6]<<"\n"
-        <<"Stopping for Gamma CG:   "<<v[7]<<"\n";
-
-
-}
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
@@ -75,27 +43,21 @@ int main( int argc, char* argv[])
         return;
     }
     /////////////////////////////////////////////////////////////////////////
-    display( v, std::cout);
+    const Parameters p( v);
+    p.display( std::cout);
 
 
-    dg::bc bc_x = dg::PER, bc_y = dg::PER;
-    if( v[10]) bc_x = dg::DIR;
-    if( v[11]) bc_y = dg::DIR;
-    unsigned Nx = v[2], Ny = v[3];
-    double lx = v[8], ly = v[9];
-    dg::Grid<double, n > grid( 0, lx, 0, ly, Nx, Ny, bc_x, bc_y);
+    dg::Grid<double, n > grid( 0, p.lx, 0, p.ly, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create initial vector
-    double n0 = v[16], sigma = v[17], posX = v[18], posY = v[19];
-    dg::Gaussian g( posX*grid.lx(), posY*grid.ly(), sigma, sigma, n0); //gaussian width is in absolute values
+    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     dg::DVec ne = dg::evaluate ( g, grid);
-    bool global = v[12];
+    bool global = p.global;
     if( global)
         thrust::transform( ne.begin(), ne.end(), ne.begin(), dg::PLUS<double>(1));
     std::vector<dg::DVec> y0(2, ne), y1(y0); // n_e = n_i 
 
     //create RHS and RK
-    double eps_pol = v[6], nu = v[13], kappa = v[14];
-    dg::Toefl<double, n, dg::DVec > test( grid, global, eps_pol , kappa, nu, bc_x, bc_y); 
+    dg::Toefl<double, n, dg::DVec > test( grid, global, p.eps_pol , p.kappa, p.nu, p.bc_x, p.bc_y); 
     if( global)
         test.log( y0,y0); //transform to logarithmic values
     dg::RK< k, std::vector<dg::DVec> > rk( y0);
@@ -108,8 +70,8 @@ int main( int argc, char* argv[])
     //create timer
     Timer t;
     bool running = true;
-    double time = 0, dt = v[5];
-    unsigned itstp = v[20];
+    double time = 0, dt = p.dt;
+    unsigned itstp = p.itstp;
     ab.init( test, y0, dt);
     while (running)
     {
