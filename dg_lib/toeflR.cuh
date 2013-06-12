@@ -6,10 +6,21 @@
 #include "cg.cuh"
 #include "nvcc/gamma.cuh"
 
+#ifdef DG_BENCHMARK
+#include "timer.cuh"
+#endif
 namespace dg
 {
 
 
+    /**
+     * @brief Global toefl solver with FLR effects
+     *
+     jkjkkjkj
+     * @tparam T
+     * @tparam n
+     * @tparam container
+     */
 template< class T, size_t n, class container=thrust::device_vector<T> >
 struct ToeflR
 {
@@ -22,13 +33,12 @@ struct ToeflR
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
-    const std::vector<container>& polarisation( const std::vector<container>& y);
     const container& polarisation( ) const { return phi[0];}
     const Matrix& laplacianM( ) const { return laplaceM;}
     const Gamma<Matrix, W2D<T,n> >&  gamma() const {return gamma1;}
-    void init(  std::vector<container>& y);
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
+    const std::vector<container>& polarisation( const std::vector<container>& y);
     container chi;
     container gamma_n, gamma_old;
     container omega;
@@ -70,17 +80,6 @@ ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu,
 }
 
 
-template< class T, size_t n, class container>
-void ToeflR<T,n,container>::init( std::vector<container>& y)
-{
-    blas2::symv( w2d, y[1], omega);
-    unsigned number = pcg( gamma1, y[1], omega, v2d, eps_gamma);
-#ifdef DG_BENCHMARK
-    std::cout << "Number of pcg iterations0 "<< number <<std::endl;
-#endif //DG_DEBUG
-
-}
-
 //how to set up a computation?
 template< class T, size_t n, class container>
 const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::vector<container>& y)
@@ -94,6 +93,10 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
     gamma_n.swap( gamma_old);
     phi.swap( phi_old);
 
+#ifdef DG_BENCHMARK
+    Timer t; 
+    t.tic();
+#endif
     //compute chi and polarisation
     if( global) 
     {
@@ -111,11 +114,19 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
         blas1::axpby( 1., y[1], 0., omega); //n_i = omega
     }
     blas2::symv( w2d, omega, omega); 
+#ifdef DG_BENCHMARK
+    t.toc();
+    std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
+    t.tic();
+#endif 
     //Attention!! gamma1 wants Dirichlet BC
     unsigned number = pcg( gamma1, gamma_n, omega, v2d, eps_gamma);
 #ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations0 "<< number <<std::endl;
-#endif //DG_DEBUG
+    t.toc();
+    std::cout<< "took "<<t.diff()<<"s\n";
+    t.tic();
+#endif 
     if( global)
     {
         blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
@@ -132,12 +143,17 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
     number = pcg( A, phi[0], omega, v2d, eps_pol);
 #ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations1 "<< number <<std::endl;
+    t.toc();
+    std::cout<< "took "<<t.diff()<<"s\n";
+    t.tic();
 #endif //DG_DEBUG
     //compute Gamma phi[0]
     blas2::symv( w2d, phi[0], omega);
     number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
 #ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations2 "<< number <<std::endl;
+    t.toc();
+    std::cout<< "took "<<t.diff()<<"s\n";
 #endif //DG_DEBUG
     return phi;
 }
