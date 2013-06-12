@@ -1,6 +1,6 @@
 #ifndef _DG_PARAMETERS_
 #define _DG_PARAMETERS_
-
+#include "nvcc/grid.cuh"
 
 /**
  * @brief Provide a mapping between input file and named parameters

@@ -16,9 +16,14 @@ toeflR: toeflR.cu toeflR.cuh
 	$(NVCC) -O2  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) #-DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
-toefl_hpc: toefl_hpc.cu toefl.cuh 
+toefl_hpc: toefl_hpc.cu toeflR.cuh 
 	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
+
+toefl_video: toefl_video.cu 
+	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
+	echo "Attention: No compiler warnings are issued!" 
+
 .PHONY: clean doc
 
 doc: 

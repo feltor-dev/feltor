@@ -38,6 +38,11 @@ int main( int argc, char* argv[])
         input = toefl::read_file( argv[1]);
     }
     const Parameters p( v);
+    if( p.n != n || p.k != k)
+    {
+        cerr << "ERROR: n or k doesn't match: "<<k<<" vs. "<<p.k<<" and "<<n<<" vs. "<<p.n<<"\n";
+        return -1;
+    }
 
     //set up computations
     dg::Grid<double,n > grid( 0, p.lx, 0, p.ly, p.Nx, p.Ny, p.bc_x, p.bc_y);
@@ -66,7 +71,8 @@ int main( int argc, char* argv[])
     dims[1] = n*grid.Nx(); 
     file = H5Fcreate( argv[2], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     std::stringstream title; 
-    status = H5LTmake_dataset_string( file, argv[1], input.data());
+    hsize_t size = input.size();
+    status = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data()); //name should precede t so that reading is easier
     /////////////////////////////////////////////////////////////////////////
     double time = 0;
     ab.init( test, y0, p.dt);
