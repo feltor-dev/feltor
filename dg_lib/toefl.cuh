@@ -90,7 +90,7 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
     blas1::axpby( 2., phi, -1.,  phi_old);
     phi.swap( phi_old);
     unsigned number = pcg( A, phi, omega, V2D<double, n>(hx, hy), eps);
-#ifdef DG_DEBUG
+#ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations "<< number <<std::endl;
 #endif //DG_DEBUG
     return phi;

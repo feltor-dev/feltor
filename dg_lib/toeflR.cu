@@ -148,9 +148,9 @@ int main( int argc, char* argv[])
         w.title() << fixed; 
         w.title() << " &&   time = "<<time;
         w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
-#ifdef DG_BENCHMARK
+#ifdef DG_DEBUG
         glfwWaitEvents();
-#endif //DG_BENCHMARK
+#endif //DG_DEBUG
 
         //step 
         t.tic();
