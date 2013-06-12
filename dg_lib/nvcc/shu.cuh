@@ -38,7 +38,6 @@ struct Shu
     T2D<T,n> t2d;
     S2D<T,n> s2d;
     
-    double hx, hy;
     double D;
     double eps; 
 };
@@ -48,7 +47,7 @@ Shu<T, n, container>::Shu( const Grid<T, n>& g, double D, double eps):
     omega( n*n*g.Nx()*g.Ny(), 0.), phi(omega), phi_old(phi),
     arakawa( g), 
     pcg( omega, g.size()), x( phi), b( x),
-    t2d( g.hx(), g.hy()), s2d( g.hx(), g.hy()), D(D), eps(eps)
+    t2d( g), s2d( g), D(D), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
     HMatrix A = dg::create::laplacianM( g, not_normed, LSPACE);
