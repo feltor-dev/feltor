@@ -8,21 +8,23 @@
 #include "arrvec2d.cuh"
 #include "dlt.h"
 
+/*! @file function discretization routines
+  */
 namespace dg
 {
 
 
-
+///@addtogroup evaluation
+///@{
 
 
 
 /**
  * @brief Evaluate a function on gaussian abscissas
  *
- * @ingroup utilities
  * Evaluates f(x) on the intervall (a,b)
  * @tparam Function Model of Unary Function
- * @tparam n number of legendre nodes per cell
+ * @tparam n number of Legendre nodes per cell
  * @param f The function to evaluate
  * @param a Left border
  * @param b Right border
@@ -48,16 +50,29 @@ ArrVec1d< double, n> evaluate( Function& f, double a, double b, unsigned num_int
     }
     return v;
 }
+/**
+ * @brief Evaluate a function on gaussian abscissas
+ *
+ * Evaluates f(x) on the intervall (a,b)
+ * @tparam Function Model of Unary Function
+ * @tparam n number of Legendre nodes per cell
+ * @param f The function to evaluate
+ * @param g The grid on which to evaluate f
+ *
+ * @return  A DG Host Vector with values
+ */
 template< class Function, size_t n>
 thrust::host_vector<double> evaluate( Function& f, const Grid1d<double,n>& g)
 {
     return (evaluate<Function, n>( f, g.x0(), g.x1(), g.Nx())).data();
 };
+///@cond
 template< size_t n>
 thrust::host_vector<double> evaluate( double (*f)(double), const Grid1d<double,n>& g)
 {
     return (evaluate<double(&)(double), n>( *f, g.x0(), g.x1(), g.N())).data();
 };
+///@endcond
 
 
 
@@ -66,7 +81,6 @@ thrust::host_vector<double> evaluate( double (*f)(double), const Grid1d<double,n
 /**
  * @brief Evaluate a function on gaussian abscissas
  *
- * @ingroup utilities
  * Evaluates f(x) on the field (x0,y0), (x1,y1)
  * @tparam Function Model of Binary Function
  * @tparam n number of Legendre nodes per cell per dimension
@@ -112,24 +126,36 @@ ArrVec2d< double, n> evaluate( BinaryOp& f, double x0, double x1, double y0, dou
     return v;
 }
 
+/**
+ * @brief Evaluate a function on gaussian abscissas
+ *
+ * Evaluates f(x) on the given grid
+ * @tparam Function Model of Binary Function
+ * @tparam n number of Legendre nodes per cell per dimension
+ * @param f The function to evaluate: f = f(x,y)
+ * @param g The 2d grid on which to evaluate f
+ *
+ * @return  A DG Host Vector with values
+ */
 template< class BinaryOp, size_t n>
 thrust::host_vector<double> evaluate( BinaryOp& f, const Grid<double,n>& g)
 {
     return (evaluate<BinaryOp, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
+///@cond
 template< size_t n>
 thrust::host_vector<double> evaluate( double(f)(double, double), const Grid<double,n>& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return (evaluate<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
+///@endcond
 
 
 
 /**
  * @brief Evaluate and dlt transform a function 
  *
- * @ingroup utilities
  * Evaluates f(x) on the intervall (a,b)
  * @tparam Function Model of Unary Function
  * @param f The function to evaluate: f = f(x)
@@ -159,17 +185,29 @@ ArrVec1d<double, n> expand( Function& f, double a, double b, unsigned num_int)
     }
     return v;
 }
+/**
+ * @brief Evaluate and dlt transform a function 
+ *
+ * Evaluates f(x) on the given grid
+ * @tparam Function Model of Unary Function
+ * @param f The function to evaluate: f = f(x)
+ * @param g The grid on which to evaluate f
+ *
+ * @return  A DG Host Vector with dlt transformed values
+ */
 template< class Function, size_t n>
 thrust::host_vector<double> expand( Function& f, const Grid1d<double,n>& g)
 {
     return (expand<Function, n>( f, g.x0(), g.x1(), g.Nx())).data();
 };
+///@cond
 template< size_t n>
 thrust::host_vector<double> expand( double(*f)(double), const Grid1d<double,n>& g)
 {
     return (expand<double(&)(double), n>( *f, g.x0(), g.x1(), g.N())).data();
 };
 
+///@endcond
 
 
 
@@ -177,8 +215,7 @@ thrust::host_vector<double> expand( double(*f)(double), const Grid1d<double,n>& 
 /**
  * @brief Evaluate and dlt transform a function
  *
- * @ingroup utilities
- * Evaluates f(x) on the field (x0,y0), (x1,y1)
+ * Evaluates and dlt-transforms f(x) on the field (x0,y0), (x1,y1)
  * @tparam BinaryOp Model of Binary Function
  * @tparam n number of Legendre nodes per cell per dimension
  * @param f The function to evaluate: f = f(x,y)
@@ -223,98 +260,33 @@ ArrVec2d< double, n> expand( BinaryOp& f, double x0, double x1, double y0, doubl
     return v;
 }
 
+/**
+ * @brief Evaluate and dlt transform a function
+ *
+ * Evaluates and dlt-transforms f(x) on the given grid
+ * @tparam Function Model of Binary Function
+ * @tparam n number of Legendre nodes per cell per dimension
+ * @param f The function to evaluate: f = f(x,y)
+ * @param g The 2d grid on which to evaluate f
+ *
+ * @return  A DG Host Vector with values
+ */
 template< class Function, size_t n>
 thrust::host_vector<double> expand( Function& f, const Grid<double,n>& g)
 {
     return (expand<Function, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
 
+///@cond
 template< size_t n>
 thrust::host_vector<double> expand( double(f)(double, double), const Grid<double,n>& g)
 {
     return (expand<double(&)(double, double), n>( *f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
 
+///@endcond
 
 
-
-
-//to be used in thrust::scatter and thrust::gather (Attention: don't scatter inplace -> Pb with n>1)
-//(the inverse is its transpose) 
-/**
- * @brief Map for scatter operations on dg formatted vectors
-
- The elements of the map contain the indices where this place goes to
- i.e. w[m[i]] = v[i]
- 
- * @tparam n # of polynomial coefficients
- * @param Nx # of points in x
- * @param Ny # of points in y
- *
- * @return map of indices
- */
-
-
-
-
-
-template< size_t n>
-thrust::host_vector<int> makeScatterMap( unsigned Nx, unsigned Ny )
-{
-    thrust::host_vector<int> map( n*n*Nx*Ny);
-    for( unsigned i=0; i<Ny; i++)
-        for( unsigned j=0; j<Nx; j++)
-            for( unsigned k=0; k<n; k++)
-                for( unsigned l=0; l<n; l++)
-                    map[ i*Nx*n*n + j*n*n + k*n + l] =(int)( i*Nx*n*n + k*Nx*n + j*n + l);
-    return map;
-}
-/**
- * @brief Map for gather operations on dg formatted vectors
-
- The elements of the map contain the indices that come at that place
- i.e. w[i] = v[m[i]]
- 
- *
- * @tparam n # of polynomial coefficients
- * @param Nx # of points in x
- * @param Ny # of points in y
- *
- * @return map of indices
- */
-template< size_t n>
-thrust::host_vector<int> makePermutationMap( unsigned Nx, unsigned Ny )
-{
-    thrust::host_vector<int> map( n*n*Nx*Ny);
-    for( unsigned i=0; i<Ny; i++)
-        for( unsigned j=0; j<Nx; j++)
-            for( unsigned k=0; k<n; k++)
-                for( unsigned l=0; l<n; l++)
-                    map[ i*Nx*n*n + k*Nx*n + j*n + l] =(int)( i*Nx*n*n + j*n*n + k*n + l);
-    return map;
-}
-
-
-/**
- * @brief Evaluate the jumps on grid boundaries
- *
- * @ingroup utilities
- * @tparam n number of legendre nodes per cell
- * @param v A DG Host Vector 
- *
- * @return Vector with the jump values
- */
-template< size_t n>
-thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
-{
-    //compute the interior jumps of a DG approximation
-    unsigned N = v.size();
-    thrust::host_vector<double> jump(N-1, 0.);
-    for( unsigned i=0; i<N-1; i++)
-        for( unsigned j=0; j<n; j++)
-            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
-    return jump;
-}
     /*
     //not tested in practical use yet
 template< class T, size_t n>
@@ -363,6 +335,7 @@ Vector evaluate( Function& f, Vector& gridx, Vector& gridy)
     return v;
 }
 */
+///@}
 }//namespace dg
 
 #endif //_DG_EVALUATION

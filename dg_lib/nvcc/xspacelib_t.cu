@@ -25,7 +25,7 @@ int main()
     V2D<double,n> v2d(grid.hx(), grid.hy());
 
     Polarisation2dX<double, n, DVec> polarisation ( grid);
-    DMatrix laplace = create::laplacian( grid, false, XSPACE);
+    DMatrix laplace = create::laplacian( grid, not_normed, XSPACE);
 
     CG<DMatrix, DVec, V2D<double, n> > cg( x, x.size());
     cout << "Test of w2d: "<<blas2::dot( w2d, b)<<endl;
@@ -42,6 +42,8 @@ int main()
 
 
     /*
+    dg::ArrVec2d<int, n, HVec> map( dg::create::scatterMap<n>(Nx, Ny), Nx);
+    cout << map <<endl;
     cout << endl << endl;
     const dg::Grid<double,2> grid2( 0,1,0,1, 4,4);
     Matrix equi = create::backscatter( grid2);

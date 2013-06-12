@@ -6,6 +6,12 @@
 
 #include "blas1.h"
 
+
+/*! @file
+
+  Contrary to its name the file contains not only runge-kutta but also adams-bashforth
+  explicit time-integrators
+  */
 namespace dg{
 
 //namespace detail <--------- ??
@@ -74,18 +80,15 @@ const double rk_coeff<4>::beta[4] = {
 // Vector should probably be rvalue assignable
 
 /**
-* @brief Struct for RungeKutta integration
+* @brief Struct for Runge-Kutta explicit time-integration
 *
 * @ingroup algorithms
 * Uses only blas1::axpby routines to integrate one step.
 * The coefficients are chosen in a form that require a minimum of 
 * axpby function calls (check for alpha==0, beta==1) and else 
 * assumes that most of the work is done in the computation of the rhs.
-* @tparam k Order of the method
-* @tparam Functor models BinaryFunction with no return type (subroutine)
-        The first argument is the actual argument, The second contains
-        the return value, i.e. y' = f(y) translates to f( y, y'). Moreover the 
-        class must typedef the argument type to Vector. 
+* @tparam k Order of the method (1, 2, 3 or 4)
+* @tparam Vector The argument type used in the Functor class
 */
 template< size_t k, class Vector>
 struct RK
@@ -100,6 +103,10 @@ struct RK
     /**
     * @brief Advance u0 one timestep
     *
+    * @tparam Functor models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function
     * @param u0 initial value
     * @param u1 contains result on output. u0 and u1 may currently not be the same.
@@ -145,6 +152,7 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
     }
 }
 
+///@cond
 //Euler specialisation
 template < class Vector>
 struct RK<1, Vector>
@@ -169,15 +177,38 @@ template<>
 const double ab_coeff<2>::b[2] = {1.5, -0.5};
 template<>
 const double ab_coeff<3>::b[3] = {23./12., -16./12., 5./12.};
+///@endcond
 
+/**
+* @brief Struct for Adams-Bashforth explicit multistep time-integration
+*
+* @ingroup algorithms
+* Uses only blas1::axpby routines to integrate one step
+* and only one right-hand-side evaluation per step.
+* @tparam k Order of the method (1, 2, or 3)
+* @tparam Vector The Argument type used in the Functor class
+*/
 template< size_t k, class Vector>
 struct AB
 {
+    /**
+    * @brief Reserve memory for the integration
+    *
+    * @param copyable Vector of size which is used in integration. 
+    * A Vector object must be copy-constructible from copyable.
+    */
     AB( const Vector& copyable): u_(k, Vector(copyable)){ }
    
     /**
      * @brief Init with initial value
      *
+     * This routine initiates the first steps in the multistep method by integrating
+     * backwards with a runge-kutta method of same order. This routine has to be called
+     * before the first timestep is made and with the same initial value as the first timestep.
+     * @tparam Functor models BinaryFunction with no return type (subroutine).
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, the second contains
+        the return value, i.e. y' = f(y) translates to f( y, y').
      * @param f The rhs functor
      * @param u0 The initial value you later use 
      * @param dt The timestep
@@ -185,14 +216,18 @@ struct AB
     template< class Functor>
     void init( Functor& f, const Vector& u0, double dt);
     /**
-     * @brief Advence one timestep
-     *
-     * @param f The rhs functor
-     * @param u0 The initial value 
-     * @param u1 The result
-     * @param dt The timestep
-     * @note The fist u0 must be the same you use in the init routine.
-     */
+    * @brief Advance u0 one timestep
+    *
+    * @tparam Functor models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = f(y) translates to f( y, y').
+    * @param f right hand side function or functor
+    * @param u0 initial value
+    * @param u1 contains result on output. u0 and u1 may be the same ( if the Functor allows that)
+    * @param dt The timestep.
+    * @note The fist u0 must be the same you use in the init routine.
+    */
     template< class Functor>
     void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
   private:
@@ -230,9 +265,26 @@ void AB<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
         blas1::axpby( dt*ab_coeff<k>::b[i], u_[i], 1., u1);
     //permute u_[k-1]  to be the new u_[0]
     for( unsigned i=k-1; i>0; i--)
-        thrust::swap( u_[i-1], u_[i]);
+        u_[i-1].swap( u_[i]);
 }
 
+///@cond
+//Euler specialisation
+template < class Vector>
+struct AB<1, Vector>
+{
+    AB(){}
+    AB( const Vector& copyable){}
+    template < class Functor>
+    void init( Functor& f, const Vector& u0, double dt){}
+    template < class Functor>
+    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+    {
+        f( u0, u1);
+        blas1::axpby( 1., u0, dt, u1);
+    }
+};
+///@endcond
 
 
 

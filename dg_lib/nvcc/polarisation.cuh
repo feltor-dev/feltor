@@ -2,6 +2,7 @@
 #define _DG_POLARISATION_CUH
 
 #include <cusp/coo_matrix.h>
+#include <cusp/csr_matrix.h>
 #include <cusp/multiply.h>
 #include <cusp/elementwise.h>
 #include <cusp/transpose.h>
@@ -18,17 +19,24 @@
 #include "dx.cuh"
 #include "dlt.h"
 
+//#include "cusp_eigen.h"
+
+/*! @file 
+
+  Contains object for the polarisation matrix creation
+  */
 namespace dg
 {
 
 //as far as i see in the source code cusp only supports coo - coo matrix
 //-matrix multiplication
+///@cond DEV
 template< class T, size_t n, class Memory>
 struct Polarisation
 {
     typedef cusp::coo_matrix<int, T, Memory> Matrix;
     typedef cusp::array1d<T, Memory> Vector;
-    Polarisation( unsigned N, T h, int bc);
+    Polarisation( unsigned N, T h, bc bcx);
     Matrix create( const Vector& );
   private:
     typedef cusp::array1d<int, Memory> Array;
@@ -39,11 +47,11 @@ struct Polarisation
 
 };
 template <class T, size_t n, class Memory>
-Polarisation<T,n, Memory>::Polarisation( unsigned N, T h, int bc): I(n*N), J(I), xspace( n*N), N(N)
+Polarisation<T,n, Memory>::Polarisation( unsigned N, T h, bc bcx): I(n*N), J(I), xspace( n*N), N(N)
 {
     for( unsigned i=0; i<n*N; i++)
         I[i] = J[i] = i;
-    right = create::dx_asymm_mt<T,n>( N, h, bc); //create and transfer to device
+    right = create::dx_asymm_mt<T,n>( N, h, bcx); //create and transfer to device
     Operator<T, n> backward( DLT<n>::backward);
     middle = tensor<T,n>( N, backward);
     cusp::multiply( middle, right, right);
@@ -52,7 +60,7 @@ Polarisation<T,n, Memory>::Polarisation( unsigned N, T h, int bc): I(n*N), J(I),
     for( unsigned i=0; i<n; i++)
         weights(i,i) = DLT<n>::weight[i]*h/2.; // normalisation because F is invariant
     middle = tensor<T,n>( N, weights*backward);
-    jump = create::jump_ot<T,n>( N, bc); //without jump cg is unstable
+    jump = create::jump_ot<T,n>( N, bcx); //without jump cg is unstable
 
 }
 
@@ -140,20 +148,53 @@ cusp::coo_matrix<int, T, Memory> Polarisation2d<T,n, Memory>::create( const Vect
     cusp::add( laplacex, laplacey, laplacey);
     return laplacey;
 }
+///@endcond
 //////////////////////////////////////////////////////////////////////////////////
+/**
+ * @brief X-space version of polarisation term
+ *
+ * @ingroup creation
+ * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
+ * @tparam T value-type
+ * @tparam n # of polynomial coefficients
+ * @tparam container The vector class on which to operate on
+ */
 template< class T, size_t n, class container>
 struct Polarisation2dX
 {
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::coo_matrix<int, T, MemorySpace> Matrix;
+    typedef cusp::csr_matrix<int, T, MemorySpace> Matrix;
+    /**
+     * @brief Create Polarisation on a grid 
+     *
+     * @param g The 2D grid
+     */
     Polarisation2dX( const Grid<T,n>& grid);
+    /**
+     * @brief Create polarisation term on a grid using different boundary conditions
+     *
+     * @param g The 2D grid
+     * @param bcx The boundary condition in x
+     * @param bcy The boundary condition in y
+     */
     Polarisation2dX( const Grid<T,n>& grid, bc bcx, bc bcy);
-    Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
-    Matrix create( const container& );
+    //deprecated
+    //Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
+
+    /**
+     * @brief Create a unnormalized matrix for the 2d polarisation term in XSPACE
+     *
+     * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
+     * The returned matrix is symmetric with W2D missing from it and ready to use in CG
+     * @param chi The polarisation vector on the grid
+     *
+     * @return matrix containing discretisation of polarisation term using chi 
+     */
+    Matrix create( const container& chi );
   private:
     typedef cusp::array1d<int, MemorySpace> Array;
     typedef cusp::array1d<T, MemorySpace> VArray;
-    void construct( unsigned Nx, unsigned Ny, T hx, T hy, int bcx, int bcy);
+    void construct( unsigned Nx, unsigned Ny, T hx, T hy, bc bcx, bc bcy);
     Matrix leftx, lefty, rightx, righty, jump;
     Array I, J;
     typename Array::view I_view, J_view;
@@ -180,14 +221,15 @@ Polarisation2dX<T,n, container>::Polarisation2dX( const Grid<T,n>& g, bc bcx, bc
 {
     construct( g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy);
 }
-template <class T, size_t n, class container>
-Polarisation2dX<T,n, container>::Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, bc bcx, bc bcy):
-    I(n*n*Nx*Ny), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
-    middle( I.size()), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
-    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
-{
-    construct( Nx, Ny, hx, hy, bcx, bcy);
-}
+
+//template <class T, size_t n, class container>
+//Polarisation2dX<T,n, container>::Polarisation2dX( unsigned Nx, unsigned Ny, T hx, T hy, bc bcx, bc bcy):
+//    I(n*n*Nx*Ny), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
+//    middle( I.size()), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
+//    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
+//{
+//    construct( Nx, Ny, hx, hy, bcx, bcy);
+//}
 template <class T, size_t n, class container>
 void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx, T hy, bc bcx, bc bcy)
 {
@@ -234,12 +276,12 @@ void Polarisation2dX<T,n, container>::construct( unsigned Nx, unsigned Ny, T hx,
     jumpy = dg::dgtensor<T,n>( jumpy, tensor<T,n>( Nx, normx));
     HMatrix jump_;
     cusp::add( jumpx, jumpy, jump_); //does not respect sorting!!!
+    jump_.sort_by_row_and_column();
     jump = jump_;
-    jump.sort_by_row_and_column();
 }
 
 template< class T, size_t n, class container>
-cusp::coo_matrix<int, T, typename thrust::iterator_space<typename container::iterator>::type> Polarisation2dX<T,n, container>::create( const container& chi)
+cusp::csr_matrix<int, T, typename thrust::iterator_space<typename container::iterator>::type> Polarisation2dX<T,n, container>::create( const container& chi)
 {
     Matrix temp1, temp2, temp3;
     blas1::pointwiseDot( middle, chi, xchi);
@@ -250,7 +292,15 @@ cusp::coo_matrix<int, T, typename thrust::iterator_space<typename container::ite
     cusp::multiply( lefty, temp2, temp1); //L_y*D_y*R_y
     cusp::add( temp1, temp3, temp2);  // D_yy + D_xx
     cusp::add( temp2, jump, temp1); // Lap + Jump
-    temp1.sort_by_row_and_column(); //add does not sort
+    //temp1.sort_by_row_and_column(); //add does not sort
+    cusp::coo_matrix<int, double, cusp::host_memory> temp_ = temp2;
+    /*
+    t.tic();
+    eigenpol.compute( xchi_matrix_view, temp_);
+    t.toc();
+    std::cout << "point8 "<<t.diff()<<"s\n";
+    */
+   
     return temp1;
 }
 

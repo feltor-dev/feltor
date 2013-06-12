@@ -2,7 +2,7 @@
 #define _DG_TIMER_
 
 namespace dg{
-/*! @brief Very simple tool for performance measuring using CUDA-API 
+/*! @brief Very simple tool for performance measurements using CUDA-API 
  * @ingroup utilities
  */
 class Timer

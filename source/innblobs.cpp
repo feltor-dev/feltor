@@ -80,6 +80,7 @@ Blueprint read( char const * file)
     phys.mu[1] = para[17];
     phys.tau[1] = para[18];
 
+    //what if impurities are set off???
     phys.a[0] = 1. -phys.a[1];
     phys.g[0] = (phys.g_e - phys.a[1] * phys.g[1])/(1.-phys.a[1]);
     phys.mu[0] = 1.0;//single charged ions

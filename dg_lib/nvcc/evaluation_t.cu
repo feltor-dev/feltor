@@ -63,8 +63,6 @@ int main()
     cout << "Square normalized 2D norm "<< norm2 <<"\n";
     double solution2 = (exp(4.)-exp(0))/2.*(exp(4.) -exp(0))/2.;
     cout << "Correct square norm of exp(x)exp(y) is "<<solution2<<endl;
-    dg::ArrVec2d<int, n, HVec> map( dg::makeScatterMap<n>(Nx, Ny), Nx);
-    cout << map <<endl;
     return 0;
 }
 

@@ -41,8 +41,7 @@ struct RHS
 {
     typedef std::vector<Vector_Type> Vector;
     RHS(const Grid<double, n>& grid): arakawa( grid), phi( expand( function, grid))
-    {
-    }
+    { }
     void operator()( const Vector& y, Vector& yp)
     {
         for( unsigned i=0; i<y.size(); i++)
@@ -67,12 +66,14 @@ int main()
     std::vector<DVec> y0( 2, init), y1(y0);
     
     RHS<DVec> rhs( grid);
-    RK<3, RHS<DVec> >  rk( y0);
+    RK<k, std::vector<DVec> >  rk( y0);
     for( unsigned i=0; i<NT; i++)
     {
         rk( rhs, y0, y1, dt);
-        for( unsigned i=0; i<y0.size(); i++)
-            thrust::swap( y0[i], y1[i]); 
+        y0.swap( y1);
+        //for( unsigned i=0; i<y0.size(); i++)
+        //    thrust::swap( y0[i], y1[i]); 
+            
     }
 
     blas1::axpby( 1., solution, -1., y0[0]);

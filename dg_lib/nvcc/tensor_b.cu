@@ -3,6 +3,7 @@
 #include <cusp/print.h>
 #include <cusp/elementwise.h>
 #include <cusp/ell_matrix.h>
+#include <cusp/csr_matrix.h>
 #include <cusp/hyb_matrix.h>
 #include <cusp/dia_matrix.h>
 #include <cusp/csr_matrix.h>
@@ -17,8 +18,6 @@
 #include "blas.h"
 
 const unsigned n = 3;
-const unsigned Nx = 1e2;
-const unsigned Ny = 1e2;
 
 using namespace dg;
 using namespace std;
@@ -28,11 +27,15 @@ typedef thrust::device_vector< double>   DVec;
 //ell and hyb matrices are fastest for 1d transforms
 //typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
-typedef cusp::coo_matrix<int, double, cusp::device_memory> DCMatrix;
+typedef cusp::csr_matrix<int, double, cusp::host_memory> HCMatrix;
 
 int main()
 {
     Timer t;
+    cout << "Type Nx and Ny! \n";
+    unsigned Nx, Ny;
+    cin >> Nx; 
+    cin >> Ny; //more N means less iterations for same error
     cout << "# of Legendre coefficients n is: "<< n <<endl;
     cout << "# of 2d cells is:                "<<Nx*Ny<<"\n";
 
@@ -52,18 +55,19 @@ int main()
     cout << "Multiplication with laplace2d took "<<t.diff()<<"s\n";
 
     t.tic();
-    DCMatrix ddyy = dgtensor<double, n>( 
+    HCMatrix ddyy_ = dgtensor<double, n>( 
                         create::laplace1d_per<double, n>(Ny, 2.),
                         tensor<double, n>( Nx, pipj));
-    DCMatrix ddxx = dgtensor<double, n>( tensor<double, n>( Ny, pipj),
+    HCMatrix ddxx_ = dgtensor<double, n>( tensor<double, n>( Ny, pipj),
                                       create::laplace1d_dir<double, n>(Nx, 2.));
-    DCMatrix laplace_;
-    cusp::add( ddxx, ddyy, laplace_);
-    DMatrix laplace = laplace_;
+    HCMatrix laplace_;
+    cusp::add( ddxx_, ddyy_, laplace_);
+    DMatrix laplace( laplace_), ddxx( ddxx_), ddyy( ddyy_);
+    
     t.toc();
     cout <<"\n";
     cout << "Laplace Product matrix creation took "<<t.diff()<<"s\n";
-    cout << "sorted "<<laplace_.is_sorted_by_row_and_column()<<"\n";
+    //cout << "sorted "<<laplace_.is_sorted_by_row_and_column()<<"\n";
     t.tic();
     //blas2::symv( ddxx, dv, dw);
     //blas2::symv( ddyy, dw, dv);
@@ -76,6 +80,7 @@ int main()
     cout << "Multiplication with laplace_x took  "<<t.diff()<<"s\n";
     t.tic();
     blas2::symv( ddyy, dv, dw);
+    blas1::axpby( 1., dv, 1. ,dw);
     t.toc();
     cout << "Multiplication with laplace_y took  "<<t.diff()<<"s\n";
     

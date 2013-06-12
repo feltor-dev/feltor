@@ -3,10 +3,8 @@
 
 namespace dg{
 
-///@addtogroup utilities
+///@addtogroup functions
 ///@{
-//namespace create{
-//namespace detail{
 /**
 * @brief The delta function
 *
@@ -132,11 +130,36 @@ inline double lilj( unsigned i, unsigned j)
     return -1.;
 }
 
+/**
+ * @brief The constant 
+ *
+ * Useful for integration.
+ * @param x x-value
+ *
+ * @return 1
+ */
 inline double one( double x) {return 1;}
+/**
+ * @brief The constant 
+ *
+ * Useful for integration.
+ * @param x x-value
+ * @param y y-value
+ *
+ * @return 1
+ */
 inline double one( double x, double y) {return 1;}
+/**
+ * @brief The constant 
+ *
+ * Useful for integration.
+ * @param x x-value
+ * @param y x-value
+ * @param z x-value
+ *
+ * @return 1
+ */
 inline double one( double x, double y, double z) {return 1;}
-//} //namespace detail
-//} //namespace create
 } //namespace dg
 
 ///@}

@@ -12,6 +12,7 @@
 #include "shu.cuh"
 #include "rk.cuh"
 
+#include "xspacelib.cuh"
 #include "typedefs.cuh"
 
 
@@ -61,8 +62,8 @@ int main()
     DVec y0( omega ), y1( y0);
     //make solver and stepper
     Shu<double, n, DVec> test( grid, D, eps);
-    RK< k, Shu<double, n, DVec> > rk( y0);
-    AB< k, Shu<double, n, DVec> > ab( y0);
+    RK< k, DVec > rk( y0);
+    AB< k, DVec > ab( y0);
 
     t.tic();
     test( y0, y1);
@@ -82,9 +83,9 @@ int main()
     int running = GL_TRUE;
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, y0, dt);
-    cout << "Press any key to start!\n";
-    double x; 
-    cin >> x;
+    //cout << "Press any key to start!\n";
+    //double x; 
+    //cin >> x;
     while (running && time < T)
     {
         dg::blas2::symv( equidistant, y0, visual);
@@ -99,7 +100,8 @@ int main()
         for( unsigned i=0; i<N; i++)
         {
             ab( test, y0, y1, dt);
-            thrust::swap(y0, y1);
+            y0.swap( y1);
+            //thrust::swap(y0, y1);
         }
         t.toc();
         //cout << "Timer for one step: "<<t.diff()/N<<"s\n";

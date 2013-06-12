@@ -1,6 +1,6 @@
 INCLUDE = -I/home/c744/c7441112/include -I$(UIBK_CUSP_INC)
 NVCC = nvcc
-NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
+NVCCFLAGS = --compiler-options -Wall -arch=sm_20
 
 CXX = g++
 CFLAGS = -Wall -fopenmp
@@ -21,6 +21,10 @@ cusp_thrust: cusp_thrust.cu
 host_window_t: host_window_t.cu
 	$(NVCC) $< $(NVCCFLAGS) -o $@ $(GLFLAGS) $(INCLUDE)
 
+
+blas%_t: blas%_t.cu blas%.h
+	$(NVCC) $< $(NVCCFLAGS) -o $@ 
+
 %.o: %.cpp
 	$(CXX) -O3 -c $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) 
 
@@ -29,7 +33,7 @@ host_window_t: host_window_t.cu
 	./$@
 
 %_b: %_b.cu %.cuh $(LIBS)
-	$(NVCC) -O3 -w  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS)
+	$(NVCC) -O2 -w  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 
 %2d_t: %2d_t.cu %.cuh $(LIBS)
@@ -37,7 +41,7 @@ host_window_t: host_window_t.cu
 	./$@
 
 %2d_b: %2d_b.cu %.cuh $(LIBS)
-	$(NVCC) -O3 -w  $< -o $@ $(NVCCFLAGS) $(LIBS) $(INCLUDE)
+	$(NVCC) -O2 -w  $< -o $@ $(NVCCFLAGS) $(LIBS) $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean doc

@@ -8,9 +8,6 @@
 #define _DG_TEXTURE_
 
 namespace draw{
-/*! @addtogroup utilities
- * @{
- */
 
 /*! @brief POD that contains RGB values for 256 colors*/
 struct Color
@@ -20,12 +17,38 @@ struct Color
     float b; //!< B contains blue value for color 
 };
 
+/**
+ * @brief A Colormap from black - blue  over white to red and gold
+ */
 struct ColorMapRedBlueExt
 {
+/*! @brief Create an extended redblue colormap
+    
+    the extra colors are black beyond the blue and gold in the infrared
+    @param scale The scale specifies which value corresponds to red
+     	(-scale corresponds to blue, 0 to white)
+ */
     ColorMapRedBlueExt( float scale = 1.);
     //maps [-scale, scale] to a color
+    /**
+     * @brief map a value to a color
+     *
+     * @param x value
+     *
+     * @return corresponding color according to the colormap
+     */
     Color operator()( float x);
+    /**
+     * @brief Set the scale
+     *
+     * @return reference to the scale value
+     */
     float& scale( ) { return scale_;}
+    /**
+     * @brief The scale currently in use
+     *
+     * @return The scale currently in use
+     */
     float scale() const { return scale_;} 
   private:
     float scale_; 
@@ -33,10 +56,6 @@ struct ColorMapRedBlueExt
 };
 
 
-/*! @brief Create an extended redblue colormap with 384 floats
-    
-    the extra colors are black beyond the blue and gold in the infrared
- */
 ColorMapRedBlueExt::ColorMapRedBlueExt( float scale): scale_(scale)
 {
     float scal = 1.0/64.0;
@@ -107,7 +126,6 @@ Color ColorMapRedBlueExt::operator()( float x)
 }
 
 
-///@}
 
 } //namespace draw
 #endif // _DG_TEXTURE_

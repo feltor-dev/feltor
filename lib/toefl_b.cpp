@@ -12,7 +12,7 @@ typedef std::complex<double> Complex;
 const double R = 500000;
 const double P = 10;
 const double nx = 256;
-const double nz = 128; //number of inner points
+const double nz = 64; //number of inner points
 const double lz = 1.;
 const double h = 1./(double)(nz);
 const double lx = (double)nx*h;
@@ -62,7 +62,7 @@ int main()
     ////////////////////////////////glfw//////////////////////////////
     int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
-    if( !glfwOpenWindow( 600, 300,  0,0,0,  0,0,0, GLFW_WINDOW))
+    if( !glfwOpenWindow( 800, 200,  0,0,0,  0,0,0, GLFW_WINDOW))
     { 
         cerr << "ERROR: glfw couldn't open window!\n";
     }

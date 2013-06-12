@@ -1,38 +1,46 @@
 
-                * Input-File for "TOEFL" Code *
-                -------------------------------
+            * Input-File for "TOEFL" & "TOEFL-R" Code *
+            -------------------------------------------
 
-Default input file. (max velocity of a blob is of order 1)
+
+--------------------Space and Time discretization------------
+
+1)  n  (# of polynomial coefficients)    =   3     (3)
+2)  nx (grid points in x)                =   250   (256.)
+3)  ny (grid points in y)                =   250   (256.)
+
+4)  k  (order of time integration)       =   3       (3)
+5)  dt (time step in units c_s/L_p)      =   0.125    (0.01)
 
 ---------------------Algorithmic parameters-------------------
-1) Nx (grid points in x)                =   100     (256.)
-2) Ny (grid points in y)                =   50     (256.)
-3) dt (time step in units c_s/L_p)      =   0.5    (0.01)
+
+6)  eps_pol (stopping for polarisation) =   1e-4  (1e-4)
+7)  eps_gamma (stopping for Gamma CG)   =   1e-8  (1e-8)
+
 ---------------------Boundary conditions----------------------
-4) lx (length of x in units of rho_s)   = 256    (64.)
-5) ly (length of y in units of rho_s)   = 128    (128.)
-6) bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
-7) bc_y (0 periodic, 1 Dirichlet )      =   1    (1.0)
+
+8)  lx (length of x in units of rho_s)   =   200    (128.)
+9)  ly (length of y in units of rho_s)   =   200    (64.)
+10) bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
+11) bc_y (0 periodic, 1 Dirichlet )      =   1    (1.0)
+
 ---------------------Physical parameters----------------------
-8)  mhw:1, ohw:0 (modified/ordinary HW) =   0       (1)
-9)  local (0) or global (1)             =   1       (0)
-10) ddd (dissip. coupling)              =   0.0     (0.5)
-11) nu  (viscosity)                     =   1e-6   (0.001)
-12) mcv (magnetic curvature)            =   0.0005 (0.0005)
--------------------------Species------------------------------
-13) n00 (perturbation amplitude)            =  5.0     (1.0)
-14) dia (blob variance in units of rho_s)   =  10 
-15) tau_i (Ti/Te)                           =  0.0     (0.0)
-(Z of ions is always 1, g_i and a_i are computed from 
-quasineutrality condition)
-16) impurities yes(1) / no(0)           =   1       (0)
-17) nd0 (impurity amplitude)            =   0.1     (0.1)
-18) a_z (Z*nz/ne) (density)             =   0.001   (small)
-19) mu_z (mz/mi*Z)(mass)                =   48.0    (large)
-20) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
+
+12) local (0) or global (1)             =   1       (0)
+13) nu  (viscosity)                     =   1e-3   (0.001)
+14) mcv (magnetic curvature)            =   0.0005 (0.0005)
+15) tau (Ti/Te)                         =   3.0     (0.0)
+
+------------------Initial blob parameters---------------------
+
+16) n0 (perturbation amplitude)             =  5     (1.0)
+17) dia (blob variance in units of rho_s)   =  5     (10)
+18) x-position ( in units of lx)            =  0.25   (0.4)
+19) y-position ( in units of ly)            =  0.55   (0.5)
+
 ---------------------Miscellaneous----------------------------
-21) itstp (steps between output)            = 2      (5)
-22) OMP_NUM_THREADS                         = 4      (4)
-23) eps (stopping criterion for CG method)  = 1e-4 ( 1e-3)
-24) window width (in pixel)                 = 800  ( 400)
+
+20) itstp (steps between output)            = 8      (5)
+21) # of outputs (excluding first)          = 600
+
 @ ------------------------------------------------------------

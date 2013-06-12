@@ -60,7 +60,7 @@ int main()
     cusp::array1d_view<DVec::iterator> dchi_view( dchi.data().begin(), dchi.data().end());
 
     cout << "Create Polarisation object!\n";
-    dg::Polarisation<double, n, Memory> pol( N, h, 0);
+    dg::Polarisation<double, n, Memory> pol( N, h, dg::DIR);
     cout << "Create Polarisation matrix!\n";
     t.tic();
     DMatrix A = pol.create( dchi_view ); 

@@ -9,20 +9,23 @@
 #include "operator.cuh"
 #include "creation.cuh"
 
+/*!@file simple 1d derivatives
+  */
 namespace dg
 {
 namespace create
 {
+///@addtogroup lowlevel
+///@{
 /**
-* @brief Create and assemble a cusp Matrix for the periodic 1d single derivative
+* @brief Create and assemble a cusp Matrix for the symmetric 1d single derivative
 *
-* @ingroup utilities
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* The matrix is skew-symmetric
+* The matrix isn't symmetric due to the normalisation T.
 * @tparam n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
-* @param h cell size
-* @param bc boundary condition: <0 is periodic, else homogeneous dirichlet 
+* @param h cell size (used to compute normalisation)
+* @param bcx boundary condition 
 *
 * @return Host Matrix in coordinate form 
 */
@@ -48,7 +51,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, bc bcx = P
     Operator< T, n> a = 1./2.*t*(d-d.transpose());
     Operator< T, n> a_bound_right = t*(-1./2.*l-d.transpose());
     Operator< T, n> a_bound_left = t*(1./2.*r-d.transpose());
-    if( bc < 0 ) //periodic bc
+    if( bcx == PER ) //periodic bc
         a_bound_left = a_bound_right = a;
     Operator< T, n> b = t*(1./2.*rl);
     Operator< T, n> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
@@ -61,7 +64,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, bc bcx = P
             detail::add_index<T, n>( A, number, 0,0,k,l, a_bound_left(k,l)); //1 x A
         for( unsigned l=0; l<n; l++)
             detail::add_index<T, n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
-        if( bc <0 )
+        if( bcx == PER )
         {
             for( unsigned l=0; l<n; l++)
                 detail::add_index<T, n>( A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
@@ -79,7 +82,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, bc bcx = P
         }
     for( unsigned k=0; k<n; k++)
     {
-        if( bc < 0)
+        if( bcx == PER)
         {
             for( unsigned l=0; l<n; l++) 
                 detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
@@ -93,15 +96,14 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm( unsigned N, T h, bc bcx = P
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the periodic 1d single derivative
+* @brief Create and assemble a cusp Matrix for the skew-symmetric 1d single derivative
 *
-* @ingroup utilities
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* The matrix is skew-symmetric
+* The matrix isn't skew-symmetric due to normalisation T.
 * @tparam n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
-* @param h cell size
-* @param bc boundary condition: <0 is periodic, else homogeneous dirichlet 
+* @param h cell size ( used to compute normalisation)
+* @param bcx boundary condition
 *
 * @return Host Matrix in coordinate form 
 */
@@ -109,7 +111,7 @@ template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, bc bcx = PER)
 {
     unsigned size;
-    if( bc == PER) //periodic
+    if( bcx == PER) //periodic
         size = 2*n*n*N;
     else
         size = 2*n*n*N-n*n;
@@ -126,7 +128,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, bc bcx
     t *= 2./h;
     Operator<T, n>  a = t*(-l-d.transpose());
     Operator< T, n> a_bound_left = t*(-d.transpose());
-    if( bc < 0) //periodic bc
+    if( bcx == PER) //periodic bc
         a_bound_left = a;
     Operator< T, n> b = t*(rl);
     Operator< T, n> bp = t*(-lr); //pitfall: T*-m^T is NOT -(T*m)^T
@@ -149,7 +151,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, bc bcx
         }
     for( unsigned k=0; k<n; k++)
     {
-        if( bc < 0)
+        if( bcx == PER)
         {
             for( unsigned l=0; l<n; l++) 
                 detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
@@ -160,11 +162,23 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, bc bcx
     return A;
 };
 
+/**
+* @brief Create and assemble a cusp Matrix for the unnormalised jump in 1d.
+*
+* @ingroup create
+* Use cusp internal conversion to create e.g. the fast ell_matrix format.
+* The matrix is symmetric. Normalisation is missing
+* @tparam n Number of Legendre nodes per cell
+* @param N Vector size ( number of cells)
+* @param bcx boundary condition
+*
+* @return Host Matrix in coordinate form 
+*/
 template< class T, size_t n>
 cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, bc bcx = PER)
 {
     unsigned size;
-    if( bc == PER) //periodic
+    if( bcx == PER) //periodic
         size = 3*n*n*N;
     else
         size = 3*n*n*N-2*n*n;
@@ -187,7 +201,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, bc bcx = PER)
             detail::add_index<T, n>( A, number, 0,0,k,l, a(k,l)); //1 x A
         for( unsigned l=0; l<n; l++)
             detail::add_index<T, n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
-        if( bc <0 )
+        if( bcx == PER )
         {
             for( unsigned l=0; l<n; l++)
                 detail::add_index<T, n>( A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
@@ -205,7 +219,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, bc bcx = PER)
         }
     for( unsigned k=0; k<n; k++)
     {
-        if( bc < 0)
+        if( bcx == PER)
         {
             for( unsigned l=0; l<n; l++) 
                 detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
@@ -217,6 +231,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned N, bc bcx = PER)
     }
     return A;
 };
+///@}
 } //namespace create
 } //namespace dg
 

@@ -26,6 +26,26 @@ struct SimplicialCholesky
     Impl*  pImpl;
 };
 
-}
+
+/*
+ //not faster unfortunately
+struct PolImpl;
+
+struct EigenPol
+{
+    typedef cusp::coo_matrix<int, double, cusp::host_memory> HMatrix;
+    EigenPol();
+    ~EigenPol();
+    void construct( const HMatrix& dx, const HMatrix& dy, const HMatrix& jump);
+    void compute( const HMatrix& chi, HMatrix& pol);
+  private:
+    EigenPol( const EigenPol&);
+    EigenPol& operator=( const EigenPol&);
+    PolImpl*  pImpl;
+
+};
+*/
+
+} //namespace dg
 
 #endif // _DG_CUSP_EIGEN_H_

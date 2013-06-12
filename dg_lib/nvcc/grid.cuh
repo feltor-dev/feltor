@@ -3,23 +3,49 @@
 
 #include <cassert>
 
+/*! @file Grid objects
+  */
+
+
 namespace dg{
 
+
+
+/**
+ * @brief Switch between boundary conditions
+ * 
+ * @ingroup creation
+ */
 enum bc{ 
     PER, //!< periodic boundaries
     DIR //!< homogeneous dirichlet boundaries
 };
 
-//add a size() function?
+///@addtogroup grid
+///@{
+/**
+* @brief 1D grid
+*
+* @tparam T value type
+* @tparam n # of polynomial coefficients
+*/
 template <class T, size_t n>
 struct Grid1d
 {
-    Grid1d( T x0, T x1, unsigned Nx, bc bcx = PER):
+    /**
+     * @brief 1D grid
+     * 
+     @param x0 left boundary
+     @param x1 right boundary
+     @param N # of cells
+     @param bcx boundary conditions
+     */
+    Grid1d( T x0, T x1, unsigned N, bc bcx = PER):
         x0_(x0), x1_(x1),
-        Nx_(Nx), bcx_(bcx)
+        Nx_(N), bcx_(bcx)
     {
         assert( x1 > x0 );
-        assert( Nx > 0  );
+        assert( N > 0  );
         lx_ = (x1-x0);
         hx_ = lx_/(double)Nx_;
     }
@@ -29,6 +55,11 @@ struct Grid1d
     T h() const {return hx_;}
     unsigned N() const {return Nx_;}
     bc bcx() const {return bcx_;}
+    /**
+     * @brief The total number of points
+     *
+     * @return n*Nx
+     */
     unsigned size() const { return n*Nx_;}
   private:
     T x0_, x1_;
@@ -80,7 +111,37 @@ struct Grid
     unsigned Ny() const {return Ny_;}
     bc bcx() const {return bcx_;}
     bc bcy() const {return bcy_;}
+    /**
+     * @brief The total number of points
+     *
+     * @return n*n*Nx*Ny
+     */
     unsigned size() const { return n*n*Nx_*Ny_;}
+    void display( std::ostream& os = std::cout) const
+    {
+        os << "Grid parameters are: \n"
+            <<"    n  = "<<n<<"\n"
+            <<"    Nx = "<<Nx_<<"\n"
+            <<"    Ny = "<<Ny_<<"\n"
+            <<"    hx = "<<hx_<<"\n"
+            <<"    hy = "<<hy_<<"\n"
+            <<"    lx = "<<lx_<<"\n"
+            <<"    ly = "<<ly_<<"\n"
+            <<"Boundary conditions in x are: \n";
+        switch(bcx_)
+        {
+            case(dg::PER): os << "    PERIODIC \n"; break;
+            case(dg::DIR): os << "    DIRICHLET\n"; break;
+            default: os << "    Not specified!!\n"; 
+        }
+        os <<"Boundary conditions in y are: \n";
+        switch(bcy_)
+        {
+            case(dg::PER): os << "    PERIODIC \n"; break;
+            case(dg::DIR): os << "    DIRICHLET\n"; break;
+            default: os << "    Not specified!!\n"; 
+        }
+    }
   private:
     T x0_, x1_, y0_, y1_;
     T lx_, ly_;
@@ -89,5 +150,6 @@ struct Grid
     bc bcx_, bcy_;
 };
 
+///@}
 }// namespace dg
 #endif // _DG_GRID_CUH_

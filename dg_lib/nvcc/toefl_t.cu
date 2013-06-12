@@ -1,17 +1,17 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
-#include <thrust/scatter.h>
 #include <thrust/host_vector.h>
 
-#include "cuda_texture.cuh"
+#include "draw/host_window.h"
 
-#include "arrvec2d.cuh"
 #include "evaluation.cuh"
 #include "functions.h"
 #include "functors.cuh"
 #include "toefl.cuh"
 #include "rk.cuh"
+#include "xspacelib.cuh"
+#include "typedefs.cuh"
 
 
 using namespace std;
@@ -29,24 +29,15 @@ const double Ra = 5e5;
 const unsigned k = 2;
 const double dt = 1e-6;
 
-typedef thrust::device_vector< double>   DVec;
-typedef thrust::host_vector< double>     HVec;
-typedef dg::ArrVec2d< double, n, HVec>  HArrVec;
-typedef dg::ArrVec2d< double, n, DVec>  DArrVec;
-typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
-typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
-
 using namespace std;
 
 double groundState( double x, double y) { return ly/2. - y;}
 
 int main()
 {
-    dg::Window w(800, 400);
+    draw::HostWindow w(800, 400);
     glfwSetWindowTitle( "Behold the convection\n");
 
-    const double hx = lx/ (double)Nx;
-    const double hy = ly/ (double)Ny;
 
     /////////////////////////////////////////////////////////////////////////
     cout << "# of Legendre coefficients: " << n<<endl;
@@ -54,46 +45,41 @@ int main()
     cout << "Timestep                    " << dt << endl;
 
     //create initial vector
-    dg::Gaussian g( lx/2., ly/2., .1, .1, 1);
-    DArrVec theta = dg::expand<dg::Gaussian, n> ( g, 0.,lx, 0., ly, Nx, Ny);
-    vector<DVec> y0(2, theta.data()), y1(y0);
-    y0[1] = DVec( n*n*Nx*Ny, 0.); //omega is zero
+    const Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::DIR);
+    dg::Gaussian gaussian( lx/2., ly/2., .1, .1, 1);
+    dg::DVec theta = dg::evaluate ( gaussian, grid);
+    vector<dg::DVec> y0(2, theta), y1(y0);
+    y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and RK
-    Toefl<double, n, DVec, cusp::device_memory> test( Nx, Ny, hx, hy, Ra, Pr, 1e-6); 
-    RK< k, Toefl<double, n, DVec, cusp::device_memory> > rk( y0);
+    Toefl<double, n, dg::DVec> test( grid, Ra, Pr, 1e-6); 
+    AB< k, vector<dg::DVec> > ab( y0);
 
-    //create equidistant backward transformation
-    dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
-    dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
-    HMatrix hbackward = dg::tensor( Nx*Ny, backward2d);
-    DMatrix backward = hbackward;
 
     //create visualisation vectors
     int running = GL_TRUE;
-    DVec visual( n*n*Nx*Ny);
-    HVec hvisual( n*n*Nx*Ny);
-    thrust::device_vector<int> map = dg::makePermutationMap<n>( Nx, Ny);
-    DArrVec ground = expand< double(&)(double, double), n> ( groundState, 0, lx, 0, ly, Nx, Ny), temperature( ground);
-    dg::ColorMapRedBlueExt colors( 1.);
+    dg::DVec visual(  grid.size());
+    dg::HVec hvisual( grid.size());
+    dg::DVec ground = evaluate ( groundState, grid), temperature( ground);
+    dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
+    draw::ColorMapRedBlueExt colors( 1.);
+    ab.init( test, y0, dt);
     while (running)
     {
         //compute the total temperature
-        blas1::axpby( 1., y0[0], 0., temperature.data());
-        blas1::axpby( 1., ground.data(), 1., temperature.data());
+        blas1::axpby( 1., y0[0],  0., temperature);
+        blas1::axpby( 1., ground, 1., temperature);
         //transform field to an equidistant grid
-        dg::blas2::symv( backward, temperature.data(), visual);
-        thrust::scatter( visual.begin(), visual.end(), map.begin(), visual.begin());
+        dg::blas2::symv( equidistant, temperature, visual);
         //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., thrust::AbsMax<double>() );
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
         hvisual = visual;
-        w.draw( hvisual, n*Nx, n*Ny, colors);
+        w.draw( hvisual, n*grid.Nx(), n*grid.Ny(), colors);
         //step 
-        rk( test, y0, y1, dt);
-        for( unsigned i=0; i<2; i++)
-            thrust::swap( y0[i], y1[i]);
+        ab( test, y0, y1, dt);
+        y0.swap( y1);
         glfwWaitEvents();
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);

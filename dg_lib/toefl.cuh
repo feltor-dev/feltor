@@ -8,34 +8,24 @@
 namespace dg
 {
 
-struct Parameter
-{
-    double kappa;
-    double a_i, a_z;
-    double mu_i, mu_z;
-
-    void check()
-    {
-        assert( fabs( a_i + a_z - 1.) > 1e-15 && "Background not neutral!");
-    }
-};
 
 template< class T, size_t n, class container=thrust::device_vector<T> >
 struct Toefl
 {
     typedef std::vector<container> Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
 
     Toefl( const Grid<T,n>& g, bool global, double eps, double, double, bc, bc);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
     const container& polarisation( const std::vector<container>& y);
+    const container& polarisation( ) const { return phi;}
+    const Matrix& laplacianM( ) const { return laplace;}
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
-    typedef T value_type;
     //typedef typename VectorTraits< Vector>::value_type value_type;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
     container phi, phi_old;
     container omega, dyphi, chi;
@@ -45,8 +35,8 @@ struct Toefl
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplace; //contains normalized laplacian
     ArakawaX<T, n, container> arakawa; 
-    Polarisation2dX<T, n, container> pol;
-    CG<Matrix, container, dg::V2D<T, n> > pcg;
+    Polarisation2dX<T, n, thrust::host_vector<T> > pol;
+    CG<container > pcg;
 
     double hx, hy;
     bool global;
@@ -56,20 +46,20 @@ struct Toefl
 
 template< class T, size_t n, class container>
 Toefl<T, n, container>::Toefl( const Grid<T,n>& g, bool global, double eps, double kappa, double nu, bc bc_x, bc bc_y): 
-    phi( n*n*g.Nx()*g.Ny(), 0.), phi_old(phi),
+    phi( g.size(), 0.), phi_old(phi),
     omega( phi), dyphi( phi), chi(phi),
     expy( 2, omega), dxy( expy), dyy( dxy), lapy( dyy),
     arakawa( g, bc_x, bc_y), 
     pol(     g, bc_x, bc_y), 
-    pcg( omega, n*n*g.Nx()*g.Ny()), 
+    pcg( omega, g.size()), 
     hx( g.hx()), hy(g.hy()), global(global), eps(eps), kappa(kappa), nu(nu)
 {
     //create derivatives
     //dx = create::dx( g, bc_x);
     //dy = create::dy( g, bc_y);
-    laplace = create::laplacian( g, bc_x, bc_y, normed);
+    laplace = create::laplacianM( g, bc_x, bc_y, normed);
     if( !global) 
-        A = create::laplacian( g, bc_x, bc_y, not_normed);
+        A = create::laplacianM( g, bc_x, bc_y, not_normed);
 
 }
 
@@ -98,9 +88,9 @@ const container& Toefl<T, n, container>::polarisation( const std::vector<contain
     }
     //extrapolate phi
     blas1::axpby( 2., phi, -1.,  phi_old);
-    thrust::swap( phi, phi_old);
+    phi.swap( phi_old);
     unsigned number = pcg( A, phi, omega, V2D<double, n>(hx, hy), eps);
-#ifdef DG_DEBUG
+#ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations "<< number <<std::endl;
 #endif //DG_DEBUG
     return phi;
@@ -119,16 +109,17 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
 
     //compute derivatives
     cudaThreadSynchronize();
-    blas2::gemv( arakawa.dy(), phi, dyphi);
     for( unsigned i=0; i<y.size(); i++)
     {
         blas2::gemv( arakawa.dx(), y[i], dxy[i]);
         blas2::gemv( arakawa.dy(), y[i], dyy[i]);
     }
+    blas2::gemv( arakawa.dy(), phi, dyphi);
     // curvature terms
     cudaThreadSynchronize();
     blas1::axpby( kappa, dyphi, 1., yp[0]);
     blas1::axpby( kappa, dyphi, 1., yp[1]);
+    cudaThreadSynchronize();
     blas1::axpby( -kappa, dyy[0], 1., yp[0]);
 
     //add laplacians
@@ -140,10 +131,10 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
             blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
             blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
             //now sum all 3 terms up 
-            blas1::axpby( 1., dyy[i], 1., lapy[i]);
-            blas1::axpby( 1., dxy[i], 1., lapy[i]);
+            blas1::axpby( -1., dyy[i], 1., lapy[i]);
+            blas1::axpby( -1., dxy[i], 1., lapy[i]);
         }
-        blas1::axpby( nu, lapy[i], 1., yp[i]); //rescale
+        blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale
     }
 
 

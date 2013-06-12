@@ -15,7 +15,6 @@
 namespace dg
 {
 
-//namespace create{
 
 namespace detail{
 
@@ -41,22 +40,22 @@ struct AddIndex2d{
 
 } //namespace detail
 
-//maybe one shouldn't take device_memory because it's limited
-//and note that one cannot pass a device matrix
+//maybe one shouldn't take host_memory because it's limited
+//and note that one cannot pass a host matrix
 /**
-* @brief Form the DG tensor Product between two DG matrices
+* @brief Form the DG tensor product between two DG matrices
 *
-* @ingroup utilities
+* @ingroup lowlevel
 * Takes care of correct permutation of indices.
 * @tparam T value type
 * @tparam n number of Legendre coefficients per dimension
 * @param lhs The left hand side (1D )
-* @param rhs THe right hand side (1D ) 
+* @param rhs The right hand side (1D ) 
 *
 * @return A newly allocated cusp matrix containing the tensor product
 */
 template< class T, size_t n>
-cusp::coo_matrix< int, T, cusp::device_memory> dgtensor( 
+cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( 
         const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
         const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
 {    
@@ -67,7 +66,7 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
     assert( lhs.num_rows%n == 0);
     assert( rhs.num_rows%n == 0);
     unsigned Nx = rhs.num_rows/n; 
-    unsigned Ny = lhs.num_rows/n; 
+    //unsigned Ny = lhs.num_rows/n; 
     //taken from the cusp examples:
     //dimensions of the matrix
     int num_rows     = lhs.num_rows*rhs.num_rows;
@@ -89,9 +88,9 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
             addIndexCol( J, lhs.column_indices[i]/n, rhs.column_indices[j]/n, lhs.column_indices[i]%n, rhs.column_indices[j]%n);
             addIndexVal( V, lhs.values[i]*rhs.values[j]);
         }
-    cusp::array1d< int, cusp::device_memory> dI( I); // row indices
-    cusp::array1d< int, cusp::device_memory> dJ( J); // column indices
-    cusp::array1d< T,   cusp::device_memory> dV( V); // values
+    cusp::array1d< int, cusp::host_memory> dI( I); // row indices
+    cusp::array1d< int, cusp::host_memory> dJ( J); // column indices
+    cusp::array1d< T,   cusp::host_memory> dV( V); // values
 #ifdef DG_DEBUG
     //std::cout << "Values ready! Now sort...\n";
 #endif //DG_DEBUG
@@ -110,7 +109,7 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
                                             thrust::not_equal_to< thrust::tuple<int,int> >()) + 1;
 
     // allocate output matrix
-    cusp::coo_matrix<int, T, cusp::device_memory> A(num_rows, num_cols, num_entries);
+    cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
 #ifdef DG_DEBUG
     //std::cout << "Computation ready! Now sum values with same (i,j) index ...\n";
 #endif //DG_DEBUG
@@ -122,11 +121,12 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
                           A.values.begin(),
                           thrust::equal_to< thrust::tuple<int,int> >(),
                           thrust::plus<T>());
-   return A; //has to send data back to host
+    return A; 
 }
 //use cusp::add and cusp::subtract to add and multiply matrices
 
 
+///@cond DEPRECATED
 //might become obsolete due to tensor and cusp::add functions
 /**
  * @brief Create 2D Tensor by summing 2 diagonal Tensor products
@@ -144,7 +144,7 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
  * @return The assembled and sorted tensor matrix
  */
 template< class T, size_t n >
-cusp::coo_matrix< int, T, cusp::device_memory> dgtensor( 
+cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( 
         const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
         const dg::S1D<T, n>& D1, 
         const dg::S1D<T, n>& D2, 
@@ -188,10 +188,10 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
                 addIndexCol( J, lhs.column_indices[j]/n,i, lhs.column_indices[j]%n, k);
                 addIndexVal( V, lhs.values[j]*D1(i*n+k) );
             }
-    //std::cout << "Allocate "<<num_triplets<<" values on device\n";
-    cusp::array1d< int,     cusp::device_memory> dI( I); // row indices
-    cusp::array1d< int,     cusp::device_memory> dJ( J); // column indices
-    cusp::array1d< T,  cusp::device_memory> dV( V); // values
+    //std::cout << "Allocate "<<num_triplets<<" values on host\n";
+    cusp::array1d< int,     cusp::host_memory> dI( I); // row indices
+    cusp::array1d< int,     cusp::host_memory> dJ( J); // column indices
+    cusp::array1d< T,  cusp::host_memory> dV( V); // values
     //std::cout << "Done\n";
 #ifdef DG_DEBUG
     std::cout << "This function is obsolete!\n";
@@ -213,7 +213,7 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
 
     // allocate output matrix
     //std::cout << "Allocate output matrix\n";
-    cusp::coo_matrix<int, T, cusp::device_memory> A(num_rows, num_cols, num_entries);
+    cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
     //std::cout << "Done\n";
 #ifdef DG_DEBUG
     std::cout << "Computation ready! Now sum values with the same (i,j) index ...\n";
@@ -229,8 +229,9 @@ cusp::coo_matrix< int, T, cusp::device_memory> dgtensor(
     return A;
 }
 
+///@endcond
 
-//} //namespace create
+
 
 } //namespace dg
 

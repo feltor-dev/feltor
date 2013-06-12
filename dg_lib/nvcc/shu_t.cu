@@ -3,12 +3,13 @@
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
-#include "host_window.h"
+#include "draw/host_window.h"
 
 #include "functors.cuh"
 
 #include "arrvec2d.cuh"
 #include "evaluation.cuh"
+#include "xspacelib.cuh"
 #include "shu.cuh"
 #include "rk.cuh"
 #include "typedefs.cuh"
@@ -54,7 +55,7 @@ int main()
     //DArrVec sol = expand< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
     DVec y0( omega), y1( y0);
     Shu<double, n, DVec> test( grid, D);
-    AB< 3, Shu<double, n, DVec> > ab( y0);
+    AB< k, DVec > ab( y0);
 
     ////////////////////////////////glfw//////////////////////////////
     //create visualisation vectors
@@ -79,7 +80,8 @@ int main()
         w.draw( hvisual, n*Nx, n*Ny, colors);
         //step 
         ab( test, y0, y1, dt);
-        thrust::swap(y0, y1);
+        //thrust::swap(y0, y1);
+        y0.swap( y1);
 
         glfwWaitEvents();
         running = !glfwGetKey( GLFW_KEY_ESC) &&

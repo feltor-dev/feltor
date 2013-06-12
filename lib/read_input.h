@@ -4,9 +4,11 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <string>
 #include "../lib/message.h"
 
 namespace toefl{
+
 /*! @brief Extract paramters from a file 
  *
  * @ingroup utilities
@@ -48,6 +50,58 @@ std::vector<double> read_input(const char * filename)
     is.close();
     return para;
 }
+
+
+/**
+ * @brief Read a file into a std::string object
+ *
+ * @param filename The file to read
+ *
+ * @return file as a string
+ */
+std::string read_file( const char* filename)
+{
+    std::ifstream is( filename, std::ios::in | std::ios::binary);
+    if( is.fail()) //fail() returns true when either eof is reached or failbit or badbit is set
+    {
+        std::stringstream s;
+        s << "Error opening file '" << filename << "'";
+        throw Message( s.str().c_str() , ping);
+    }
+    std::string s; 
+    is.seekg( 0, std::ios::end); //go to end
+    s.resize( is.tellg());
+    is.seekg( 0, std::ios::beg); //go back to beginning
+    is.read( &s[0], s.size());
+    is.close();
+    return s;
+
+}
+
+std::vector<double> read_input( std::string& file)
+{
+    std::vector<double> para; 
+    para.push_back( -1.);
+    double read; 
+    std::stringstream is( file.data());
+    is.seekg(0, std::ios::beg);
+    while( is.good())
+    {
+        char s;
+        is.get( s);
+        if( s == '=') 
+        {
+            is >> read;
+            para.push_back(read); 
+            if( is.fail()) //check if read was successful
+                throw Message( "Error while reading parameter. Is there a character behind = ?\n", ping);
+        }
+        if( is.bad()) //check streams integrity
+            throw Message( "Error while reading file. File corrupted\n", ping);
+    }
+    return para;
+}
+
 } //namespace toefl
 
 #endif // _TL_READ_INPUT_
