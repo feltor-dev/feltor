@@ -10,7 +10,7 @@ namespace dg{
 /**
  * @brief Matrix class that represents a Helmholtz-type operator
  *
- * @addtogroup creation
+ * @ingroup creation
  * Discretization of \f[ (1+\alpha\Delta) \f]
  * can be used in conjugate gradient
  * @tparam Matrix The cusp-matrix class you want to use
