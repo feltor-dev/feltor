@@ -109,16 +109,17 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
 
     //compute derivatives
     cudaThreadSynchronize();
-    blas2::gemv( arakawa.dy(), phi, dyphi);
     for( unsigned i=0; i<y.size(); i++)
     {
         blas2::gemv( arakawa.dx(), y[i], dxy[i]);
         blas2::gemv( arakawa.dy(), y[i], dyy[i]);
     }
+    blas2::gemv( arakawa.dy(), phi, dyphi);
     // curvature terms
     cudaThreadSynchronize();
     blas1::axpby( kappa, dyphi, 1., yp[0]);
     blas1::axpby( kappa, dyphi, 1., yp[1]);
+    cudaThreadSynchronize();
     blas1::axpby( -kappa, dyy[0], 1., yp[0]);
 
     //add laplacians
@@ -130,8 +131,8 @@ void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::v
             blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
             blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
             //now sum all 3 terms up 
-            blas1::axpby( 1., dyy[i], 1., lapy[i]);
-            blas1::axpby( 1., dxy[i], 1., lapy[i]);
+            blas1::axpby( -1., dyy[i], 1., lapy[i]);
+            blas1::axpby( -1., dxy[i], 1., lapy[i]);
         }
         blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale
     }

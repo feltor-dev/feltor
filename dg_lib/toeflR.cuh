@@ -18,7 +18,7 @@ struct ToeflR
     typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
 
     //toeflR is always global
-    ToeflR( const Grid<T,n>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma);
+    ToeflR( const Grid<T,n>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
@@ -46,11 +46,12 @@ struct ToeflR
     const V2D<T,n> v2d;
     double eps_pol, eps_gamma; 
     double kappa, nu, tau;
+    bool global;
 
 };
 
 template< class T, size_t n, class container>
-ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma ): 
+ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global ): 
     chi( grid.size(), 0.), gamma_n( chi), gamma_old( chi), omega( chi), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
@@ -59,10 +60,13 @@ ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu,
     pol(     grid), 
     pcg( omega, omega.size()), 
     w2d( grid), v2d( grid),
-    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau)
+    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
 {
     //create derivatives
     laplaceM = create::laplacianM( grid, normed);
+    if( !global)
+        A = create::laplacianM( grid, not_normed);
+
 }
 
 
@@ -81,7 +85,6 @@ void ToeflR<T,n,container>::init( std::vector<container>& y)
 template< class T, size_t n, class container>
 const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::vector<container>& y)
 {
-    exp( y, expy);
     //extrapolate phi and gamma_n
     blas1::axpby( 2., phi[0], -1.,  phi_old[0]);
     blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
@@ -92,21 +95,40 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
     phi.swap( phi_old);
 
     //compute chi and polarisation
-    blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
-    cudaThreadSynchronize();
-    cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
-    A = B; 
-    //compute omega
-    thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
-    thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
+    if( global) 
+    {
+        exp( y, expy);
+        blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
+        cudaThreadSynchronize();
+        cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
+        A = B; 
+        //compute omega
+        thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
+        thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
+    }
+    else
+    {
+        blas1::axpby( 1., y[1], 0., omega); //n_i = omega
+    }
     blas2::symv( w2d, omega, omega); 
     //Attention!! gamma1 wants Dirichlet BC
     unsigned number = pcg( gamma1, gamma_n, omega, v2d, eps_gamma);
 #ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations0 "<< number <<std::endl;
 #endif //DG_DEBUG
-    blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
-    blas2::symv( w2d, omega, omega);
+    if( global)
+    {
+        blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
+        blas2::symv( w2d, omega, omega);
+    }
+    else
+    {
+        blas1::axpby( -1, y[0], 1., gamma_n, chi); 
+
+        gamma1.alpha() = -tau;
+        blas2::symv( gamma1, chi, omega); //apply \Gamma_0^-1 ( gamma_n - n_e)
+        gamma1.alpha() = -0.5*tau;
+    }
     number = pcg( A, phi[0], omega, v2d, eps_pol);
 #ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations1 "<< number <<std::endl;
@@ -151,17 +173,16 @@ void ToeflR<T, n, container>::operator()( const std::vector<container>& y, std::
     for( unsigned i=0; i<y.size(); i++)
     {
         blas2::gemv( laplaceM, y[i], lapy[i]);
-        blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
-        blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
-        cudaThreadSynchronize();
-        //now sum all 3 terms up 
-        blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
-        cudaThreadSynchronize();
-        blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
-        cudaThreadSynchronize();
+        if( global)
+        {
+            blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
+            blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
+            //now sum all 3 terms up 
+            blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
+            blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
+        }
         blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
     }
-
 
 }
 

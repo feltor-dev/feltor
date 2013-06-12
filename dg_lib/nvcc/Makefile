@@ -22,6 +22,10 @@ cusp_thrust: cusp_thrust.cu
 host_window_t: host_window_t.cu
 	$(NVCC) $< $(NVCCFLAGS) -o $@ $(GLFLAGS) $(INCLUDE)
 
+
+blas%_t: blas%_t.cu blas%.h
+	$(NVCC) $< $(NVCCFLAGS) -o $@ 
+
 %.o: %.cpp
 	$(CXX) -O3 -c $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) 
 

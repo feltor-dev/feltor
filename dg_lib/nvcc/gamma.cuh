@@ -10,6 +10,7 @@ namespace dg{
 /**
  * @brief Matrix class that represents a Helmholtz-type operator
  *
+ * @addtogroup creation
  * Discretization of \f[ (1+\alpha\Delta) \f]
  * can be used in conjugate gradient
  * @tparam Matrix The cusp-matrix class you want to use
@@ -40,7 +41,8 @@ struct Gamma
     template <class Vector>
     void symv( const Vector& x, Vector& y) const
     {
-        blas2::symv( laplaceM_, x, y);
+        if( alpha_ != 0);
+            blas2::symv( laplaceM_, x, y);
         blas1::axpby( 1., x, -alpha_, y);
         blas2::symv( p_, y,  y);
     }
