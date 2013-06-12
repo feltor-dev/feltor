@@ -67,6 +67,9 @@ struct HostWindow
     /**
      * @brief Draw a 2D field in the open window
      *
+     * If multiplot is set the field will be drawn in the current active 
+     * box. If all boxes are full the picture will be drawn on screen and 
+     * the top left box is active again. The title is reset.
      * @tparam Vector The container class of your elements
      * @param x Elements to be drawn
      * @param Nx # of x points to be used ( the width)
@@ -103,7 +106,20 @@ struct HostWindow
         else
             k++;
     }
+    /**
+     * @brief Set up multiple plots in one window
+     *
+     * After this call, successive calls to the draw function will draw 
+     * in the box from left to right and top to bottom.
+     * @param i # of rows
+     * @param j # of columns
+     */
     void set_multiplot( unsigned i, unsigned j) { I = i; J = j; k = 0;}
+    /**
+     * @brief The title stream
+     *
+     * @return The current window title
+     */
     std::stringstream& title() { return window_str;}
   private:
     HostWindow( const HostWindow&);
