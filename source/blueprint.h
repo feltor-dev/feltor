@@ -248,7 +248,7 @@ void Blueprint::consistencyCheck() const
         throw Message( "Background is not neutral! \n", ping);
     //inconsistency when impurities are not set??
     if( !imp && (phys.a[1] != 0 || phys.mu[1] != 0 || phys.tau[1] != 0)) 
-        throw Message( "Impurity disabled but z species not 0!\n";
+        throw Message( "Impurity disabled but z species not 0!\n", ping);
     //Some Warnings
     if( global && (phys.g_e != 0||phys.g[0] != 0||phys.g[1] != 0))
         std::cerr << "TL_WARNING: Global solver ignores gradients\n";

@@ -18,10 +18,11 @@ const double eps = 1e-3; //# of pcg iterations increases very much if
 double initial( double x, double y) {return 0.;}
 double pol( double x, double y) {return 1. + sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
-
-double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y);}
-//double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
+
+//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y);}
+double rhs( double x, double y) { return 4.*sol(x,y)*sol(x,y) + 2.*sol(x,y);}
+//double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
 
 using namespace std;
 
@@ -41,13 +42,13 @@ int main()
     dg::Polarisation2dX<double, n, dg::HVec> pol( grid);
     cout << "Create Polarisation matrix!\n";
     dg::DMatrix A = pol.create( chi ); 
-    dg::Matrix Ap= dg::create::laplacian( grid, dg::not_normed); 
+    dg::Matrix Ap= dg::create::laplacianM( grid, dg::not_normed); 
     //cout << "Polarisation matrix: "<< endl;
     //cusp::print( A);
     //cout << "Laplacian    matrix: "<< endl;
     //cusp::print( Ap);
     cout << "Create conjugate gradient!\n";
-    dg::CG<dg::DMatrix, dg::DVec, dg::V2D<double,n> > pcg( x, n*n*Nx*Ny);
+    dg::CG< dg::DVec> pcg( x, n*n*Nx*Ny);
 
     cout << "# of polynomial coefficients: "<< n <<endl;
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;

@@ -43,6 +43,7 @@ struct HostWindow
     HostWindow( int width, int height){
         Nx_ = Ny_ = 0;
         I = J = 1;
+        k = 0;
         // create window and OpenGL context bound to it
         if( !glfwInit()) { std::cerr << "ERROR: glfw couldn't initialize.\n";}
         if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
@@ -73,7 +74,7 @@ struct HostWindow
      * @param map The colormap used to compute color from elements
      */
     template< class Vector>
-    void draw( const Vector& x, unsigned Nx, unsigned Ny, draw::ColorMapRedBlueExt& map, unsigned i = 0, unsigned j = 0)
+    void draw( const Vector& x, unsigned Nx, unsigned Ny, draw::ColorMapRedBlueExt& map)
     {
         if( Nx != Nx_ || Ny != Ny_) {
             Nx_ = Nx; Ny_ = Ny;
@@ -83,6 +84,7 @@ struct HostWindow
 #ifdef DG_DEBUG
         assert( x.size() == resource.size());
 #endif //DG_DEBUG
+        unsigned i = k/J, j = k%J;
         //map colors
         std::transform( x.begin(), x.end(), resource.begin(), map);
         //load texture
@@ -90,20 +92,23 @@ struct HostWindow
         float x0 = -1. + (float)2*j/(float)J, x1 = x0 + 2./(float)J, 
               y1 =  1. - (float)2*i/(float)I, y0 = y1 - 2./(float)I;
         drawTexture( Nx, Ny, x0 + slit, x1 - slit, y0 + slit, y1 - slit);
-        if( (i == I - 1) && (j == J - 1) )
+        if( k == (I*J-1) )
         {
             //gehört das hier rein??
             glfwSetWindowTitle( (window_str.str()).c_str() );
             window_str.str(""); //clear title string
             glfwSwapBuffers();
+            k = 0;
         }
+        else
+            k++;
     }
-    void set_multiplot( unsigned i, unsigned j) { I = i; J = j;}
+    void set_multiplot( unsigned i, unsigned j) { I = i; J = j; k = 0;}
     std::stringstream& title() { return window_str;}
   private:
     HostWindow( const HostWindow&);
     HostWindow& operator=( const HostWindow&);
-    unsigned I, J;
+    unsigned I, J, k;
     void drawTexture( unsigned Nx, unsigned Ny, float x0, float x1, float y0, float y1)
     {
         // image comes from texarray on host

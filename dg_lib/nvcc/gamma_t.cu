@@ -9,10 +9,10 @@
 
 const unsigned n=3;
 const double eps = 1e-4;
-const double tau = 1; 
-const double mu = 1;
-double rhs( double x, double y){ return (1.+tau*mu)*sin(x)*sin(y);}
+const double alpha = -0.5; 
 double lhs( double x, double y){ return sin(x)*sin(y);}
+double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
+//double rhs( double x, double y){ return lhs(x,y);}
 int main()
 {
     
@@ -28,7 +28,7 @@ int main()
     //dg::DVec x(rho);
 
     dg::DMatrix A = dg::create::laplacianM( grid, dg::normed, dg::XSPACE); 
-    dg::Gamma< dg::DMatrix, dg::W2D<double, n> > gamma1( A, w2d, -0.5*tau*mu);
+    dg::Gamma< dg::DMatrix, dg::W2D<double, n> > gamma1( A, w2d, alpha);
 
     dg::CG< dg::DVec > cg(x, x.size());
     dg::blas2::symv( w2d, rho, rho);

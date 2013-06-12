@@ -276,6 +276,8 @@ struct AB<1, Vector>
     AB(){}
     AB( const Vector& copyable){}
     template < class Functor>
+    void init( Functor& f, const Vector& u0, double dt){}
+    template < class Functor>
     void operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
     {
         f( u0, u1);
