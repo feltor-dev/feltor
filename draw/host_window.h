@@ -7,6 +7,7 @@
 #include <vector>
 #include <sstream>
 #include <GL/glfw.h>
+//#include "../lib/timer.h"
 
 #include "colormap.h"
 
