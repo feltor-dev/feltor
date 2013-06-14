@@ -14,7 +14,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
+const unsigned n = 4;
 const unsigned k = 3;
 
 using namespace std;
@@ -37,17 +37,17 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    if( n != v[1] || k != v[4])
-    {
-        cerr << "wrong number of polynomial coefficients or order of timestepper\n";
-        return; 
-    }
     v2 = toefl::read_input( "window_params.txt");
     draw::HostWindow w(v2[3], v2[4]);
     w.set_multiplot( v2[1], v2[2]);
     /////////////////////////////////////////////////////////////////////////
     const Parameters p( v);
     p.display( std::cout);
+    if( p.n != n || p.k != k)
+    {
+        cerr << "ERROR: n or k doesn't match: "<<k<<" vs. "<<p.k<<" and "<<n<<" vs. "<<p.n<<"\n";
+        return -1;
+    }
 
     dg::Grid<double, n > grid( 0, p.lx, 0, p.ly, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
