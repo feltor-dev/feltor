@@ -5,5 +5,5 @@
 
 1) # of rows                  = 1
 2) # of cols                  = 2
-3) window width (in pixel)    = 800
-4) window height(in pixel)    = 400
+3) window width (in pixel)    = 1200
+4) window height(in pixel)    = 600

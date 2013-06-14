@@ -88,6 +88,8 @@ int main( int argc, char* argv[])
     blas1::axpby( 0., output, 0., output); //set output zero as it should be
     status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
     H5Gclose( grp);
+
+    title << std::setfill('0');
     ///////////////////////////////////Timeloop////////////////////////////////
     for( unsigned i=0; i<p.maxout; i++)
     {
@@ -99,8 +101,12 @@ int main( int argc, char* argv[])
         time += p.itstp*p.dt;
         if( p.global)
             test.exp( y0,y1); //transform to logarithmic values
-        title << "t="<<time;
+        
+        title << "t=";
+        title <<std::setw(6)<<std::right<<(unsigned)(floor(time))<<"."<<std::setw(6)<<std::left<<(unsigned)((time-floor(time))*1e6);
+        std::cout << title.str()<<"\n";
         grp = H5Gcreate( file, title.str().c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+
         title.str("");
         //output all three fields
         output = y1[0]; //electrons
