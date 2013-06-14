@@ -1,5 +1,9 @@
-INCLUDE = -I/home/matthias/include # Eigen library
+INCLUDE = -I/home/c744/c7441112/include -I$(UIBK_CUSP_INC)
+INCLUDE+= -I$(UIBK_HDF5_INC)
+INCLUDE+= -I$(UIBK_OPENMPI_INC)
 INCLUDE+= -I../# draw library
+
+LIB = -L$(UIBK_HDF5_LIB)
 
 INCLUDE += -Invcc
 NVCC = nvcc
@@ -17,7 +21,7 @@ toeflR: toeflR.cu toeflR.cuh
 	echo "Attention: No compiler warnings are issued!" 
 
 toefl_hpc: toefl_hpc.cu toeflR.cuh 
-	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
+	$(NVCC) -O2 $(LIB) -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 
 toefl_video: toefl_video.cu 
