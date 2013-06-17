@@ -136,9 +136,11 @@ ArrVec2d< double, n> evaluate( BinaryOp& f, double x0, double x1, double y0, dou
  * @param g The 2d grid on which to evaluate f
  *
  * @return  A DG Host Vector with values
+ * @note Copies the binary Operator. This function is meant for small function objects, that
+            may be constructed during function call.
  */
 template< class BinaryOp, size_t n>
-thrust::host_vector<double> evaluate( BinaryOp& f, const Grid<double,n>& g)
+thrust::host_vector<double> evaluate( BinaryOp f, const Grid<double,n>& g)
 {
     return (evaluate<BinaryOp, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
@@ -270,11 +272,12 @@ ArrVec2d< double, n> expand( BinaryOp& f, double x0, double x1, double y0, doubl
  * @param g The 2d grid on which to evaluate f
  *
  * @return  A DG Host Vector with values
+ * @note Copies the binary Operator. This function is meant for small function objects.
  */
-template< class Function, size_t n>
-thrust::host_vector<double> expand( Function& f, const Grid<double,n>& g)
+template< class BinaryOp, size_t n>
+thrust::host_vector<double> expand( BinaryOp f, const Grid<double,n>& g)
 {
-    return (expand<Function, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
+    return (expand<BinaryOp, n>( f, g.x0(), g.x1(), g.y0(), g.y1(), g.Nx(), g.Ny() )).data();
 };
 
 ///@cond
