@@ -104,7 +104,6 @@ int main( int argc, char* argv[])
         
         title << "t=";
         title <<std::setw(6)<<std::right<<(unsigned)(floor(time))<<"."<<std::setw(6)<<std::left<<(unsigned)((time-floor(time))*1e6);
-        std::cout << title.str()<<"\n";
         grp = H5Gcreate( file, title.str().c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
 
         title.str("");

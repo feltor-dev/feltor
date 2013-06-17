@@ -39,9 +39,10 @@ struct ToeflR
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
     const std::vector<container>& polarisation( const std::vector<container>& y);
-    container chi;
+    container chi, omega;
     container gamma_n, gamma_old;
-    container omega;
+    const container binv;
+
     std::vector<container> phi, phi_old, dyphi;
     std::vector<container> expy, dxy, dyy, lapy;
 
@@ -62,7 +63,8 @@ struct ToeflR
 
 template< class T, size_t n, class container>
 ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global ): 
-    chi( grid.size(), 0.), gamma_n( chi), gamma_old( chi), omega( chi), 
+    chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
+    binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
     gamma1(  laplaceM, w2d, -0.5*tau),
@@ -101,7 +103,9 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
     if( global) 
     {
         exp( y, expy);
-        blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
+        //blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
+        blas1::pointwiseDot( binv, expy[1], chi); //\chi = n_i
+        blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
         cudaThreadSynchronize();
         cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
         A = B; 
@@ -155,6 +159,18 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
     t.toc();
     std::cout<< "took "<<t.diff()<<"s\n";
 #endif //DG_DEBUG
+    //now add -0.5v_E^2
+
+    blas2::gemv( arakawa.dx(), phi[0], chi);
+    blas2::gemv( arakawa.dy(), phi[0], omega);
+    blas1::pointwiseDot( binv, chi, chi);
+    blas1::pointwiseDot( binv, omega, omega);
+    cudaThreadSynchronize();
+    blas1::pointwiseDot( chi, chi, chi);
+    blas1::pointwiseDot( omega, omega, omega);
+    blas1::axpby( 1., chi, 1.,  omega);
+    blas1::axpby( 1., phi[1], -0.5,  omega, phi[1]);
+
     return phi;
 }
 
@@ -167,7 +183,10 @@ void ToeflR<T, n, container>::operator()( const std::vector<container>& y, std::
     phi = polarisation( y);
 
     for( unsigned i=0; i<y.size(); i++)
+    {
         arakawa( y[i], phi[i], yp[i]);
+        blas1::pointwiseDot( binv, yp[i], yp[i]);
+    }
 
     //compute derivatives
     cudaThreadSynchronize();
