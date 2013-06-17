@@ -21,8 +21,8 @@
 
 8)  lx (length of x in units of rho_s)   =   200    (128.)
 9)  ly (length of y in units of rho_s)   =   200    (64.)
-10) bc_x (0 periodic, 1 Dirichlet )      =   0    (1.0)
-11) bc_y (0 periodic, 1 Dirichlet )      =   1    (1.0)
+10) bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
+11) bc_y (0 periodic, 1 Dirichlet )      =   0    (1.0)
 
 ---------------------Physical parameters----------------------
 

@@ -75,6 +75,34 @@ struct Gaussian
 
 };
 
+
+/**
+ * @brief Functor for a linear polynomial in x-direction
+ * 
+ * \f[ f(x,y) = a*x+b) \f]
+ */
+struct LinearX
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param a linear coefficient 
+     * @param b constant coefficient
+     */
+    LinearX( double a, double b):a_(a), b_(b){}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordianate
+     * @param y y - coordianate
+     
+     * @return result
+     */
+    double operator()( double x, double y){ return a_*x+b_;}
+  private:
+    double a_,b_;
+};
+
 /**
  * @brief Functor returning a Lamb dipole
  */
@@ -224,6 +252,9 @@ struct PLUS
     private:
     T x_;
 };
+
+
+
 
 ///@}
 } //namespace dg
