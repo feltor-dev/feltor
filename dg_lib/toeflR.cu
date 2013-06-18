@@ -116,16 +116,21 @@ int main( int argc, char* argv[])
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
-            ab( test, y0, y1, p.dt);
+            try{ ab( test, y0, y1, p.dt);}
+            catch( dg::Fail& fail) { 
+                cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                cerr << "Does Simulation respect CFL condition?\n";
+                running = false;
+                break;
+            }
             y0.swap( y1); //attention on -O3 ?
-            //for( unsigned i=0; i<y0.size(); i++)
-            //    thrust::swap( y0[i], y1[i]);
         }
         time += (double)p.itstp*p.dt;
         t.toc();
         //glfwWaitEvents();
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
+        running = running && 
+                  !glfwGetKey( GLFW_KEY_ESC) &&
+                  glfwGetWindowParam( GLFW_OPENED);
     }
     std::cout << "Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n";
     ////////////////////////////////////////////////////////////////////

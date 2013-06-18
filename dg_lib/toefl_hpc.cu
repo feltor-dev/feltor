@@ -17,7 +17,7 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
+const unsigned n = 4;
 const unsigned k = 3;
 
 using namespace std;
@@ -95,8 +95,14 @@ int main( int argc, char* argv[])
     {
         for( unsigned i=0; i<p.itstp; i++)
         {
-            ab( test, y0, y1, p.dt);
-            y0.swap( y1);
+            try{ ab( test, y0, y1, p.dt);}
+            catch( dg::Fail& fail) { 
+                cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                cerr << "Does Simulation respect CFL condition?\n";
+                H5Fclose( file);
+                return -1;
+            }
+            y0.swap( y1); //attention on -O3 ?
         }
         time += p.itstp*p.dt;
         if( p.global)
