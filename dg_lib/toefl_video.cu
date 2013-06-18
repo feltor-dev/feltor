@@ -9,8 +9,7 @@
 
 #include "parameters.h"
 
-#include "hdf5.h"
-#include "hdf5_hl.h"
+#include "file.h"
 
 const unsigned n = 4;
 
@@ -26,17 +25,20 @@ int main( int argc, char* argv[])
         std::cerr << "Usage: "<<argv[0]<<" [inputfile]\n";
         return;
     }
+
     hid_t file = H5Fopen( argv[1], H5F_ACC_RDONLY, H5P_DEFAULT);
-    H5G_info_t group_info;
-    H5Gget_info( file, &group_info);
-    hsize_t nlinks = group_info.nlinks;
+    hsize_t nlinks = file::getNumObjs( file);
+    //H5G_info_t group_info;
+    //H5Gget_info( file, &group_info);
+    //hsize_t nlinks = group_info.nlinks;
     //std::cout << "Number of groups "<< nlinks<<"\n";
-    std::string name; 
-    hsize_t length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, NULL, 10, H5P_DEFAULT);
+    
+    std::string name = file::getName( file, 0);
+    //hsize_t length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, NULL, 10, H5P_DEFAULT);
     //std::cout << "Length of name "<<length<<"\n";
-    name.resize( length+1);
-    H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &name[0], length+1, H5P_DEFAULT); //creation order
-    //std::cout << "Name of first link "<<name<<"\n";
+    //name.resize( length+1);
+    //H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &name[0], length+1, H5P_DEFAULT); //creation order
+    std::cout << "Name of first link "<<name<<"\n";
     std::string in;
     
     herr_t  status;
@@ -50,15 +52,6 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: n doesn't match: "<<n<<" vs. "<<p.n<<"\n";
         return -1;
     }
-
-    hid_t input_id      = H5Dopen( file, "inputfile" , H5P_DEFAULT);
-    hid_t input_space   = H5Dget_space( input_id);
-    hssize_t points; 
-    points = H5Sget_simple_extent_npoints( input_space );
-    H5Sclose( input_space);
-    H5Dclose( input_id);
-    std::cout << "Size of dataset "<<points<<"\n";
-
 
     dg::Grid<double, n> grid( 0, p.lx, 0, p.ly, p.Nx, p.Ny, p.bc_x, p.bc_y);
 
@@ -84,9 +77,10 @@ int main( int argc, char* argv[])
                       glfwGetWindowParam( GLFW_OPENED) );
         }
         hid_t group;
-        length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, NULL, 10, H5P_DEFAULT);
-        name.resize( length+1);
-        H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, &name[0], length+1, H5P_DEFAULT); 
+        name = file::getName( file, index);
+        //length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, NULL, 10, H5P_DEFAULT);
+        //name.resize( length+1);
+        //H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, &name[0], length+1, H5P_DEFAULT); 
         index += v[5];
         //std::cout << "Index "<<index<<" "<<name<<"\n";
         group = H5Gopen( file, name.data(), H5P_DEFAULT);
@@ -124,7 +118,7 @@ int main( int argc, char* argv[])
         //draw phi and swap buffers
         w.title() <<"phi / "<<colors.scale()<<"\t";
         w.title() << std::fixed; 
-        w.title() << " &&  time = "<<toefl::read_input( name)[1]; //read time as double from string
+        w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
         w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
 #ifdef DG_DEBUG
         glfwWaitEvents();

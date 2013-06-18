@@ -1,11 +1,8 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
-#include <sstream>
 
-#include "hdf5.h"
-#include "hdf5_hl.h"
-
+#include "file.h"
 
 #include "toeflR.cuh"
 #include "parameters.h"
@@ -66,11 +63,11 @@ int main( int argc, char* argv[])
     dg::HVec output( y1[0]); //intermediate transport location
     hid_t   file, grp;
     herr_t  status;
-    hsize_t dims[2];
-    dims[0] = n*grid.Ny(); 
-    dims[1] = n*grid.Nx(); 
+    hsize_t dims[] = { n*grid.Ny(), n*grid.Nx() };
+    //dims[0] = n*grid.Ny(); 
+    //dims[1] = n*grid.Nx(); 
     file = H5Fcreate( argv[2], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    std::stringstream title; 
+    //std::stringstream title; 
     hsize_t size = input.size();
     status = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data()); //name should precede t so that reading is easier
     /////////////////////////////////////////////////////////////////////////
@@ -89,7 +86,7 @@ int main( int argc, char* argv[])
     status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
     H5Gclose( grp);
 
-    title << std::setfill('0');
+    //title << std::setfill('0');
     ///////////////////////////////////Timeloop////////////////////////////////
     for( unsigned i=0; i<p.maxout; i++)
     {
@@ -108,11 +105,11 @@ int main( int argc, char* argv[])
         if( p.global)
             test.exp( y0,y1); //transform to logarithmic values
         
-        title << "t=";
-        title <<std::setw(6)<<std::right<<(unsigned)(floor(time))<<"."<<std::setw(6)<<std::left<<(unsigned)((time-floor(time))*1e6);
-        grp = H5Gcreate( file, title.str().c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        //title << "t=";
+        //title <<std::setw(6)<<std::right<<(unsigned)(floor(time))<<"."<<std::setw(6)<<std::left<<(unsigned)((time-floor(time))*1e6);
+        grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
 
-        title.str("");
+        //title.str("");
         //output all three fields
         output = y1[0]; //electrons
         status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
