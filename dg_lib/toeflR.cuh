@@ -1,6 +1,7 @@
 #ifndef _DG_TOEFLR_CUH
 #define _DG_TOEFLR_CUH
 
+#include <exception>
 
 #include "xspacelib.cuh"
 #include "cg.cuh"
@@ -9,18 +10,21 @@
 #ifdef DG_BENCHMARK
 #include "timer.cuh"
 #endif
+
+
+
 namespace dg
 {
+struct Fail : public std::exception
+{
 
+    Fail( double eps): eps( eps) {}
+    double epsilon() const { return eps;}
+    char const* what() const throw(){ return "Failed to converge";}
+  private:
+    double eps;
+};
 
-    /**
-     * @brief Global toefl solver with FLR effects
-     *
-     jkjkkjkj
-     * @tparam T
-     * @tparam n
-     * @tparam container
-     */
 template< class T, size_t n, class container=thrust::device_vector<T> >
 struct ToeflR
 {
@@ -125,6 +129,8 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
 #endif 
     //Attention!! gamma1 wants Dirichlet BC
     unsigned number = pcg( gamma1, gamma_n, omega, v2d, eps_gamma);
+    if( number == pcg.get_max())
+        throw Fail( eps_gamma);
 #ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations0 "<< number <<std::endl;
     t.toc();
@@ -145,6 +151,8 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
         gamma1.alpha() = -0.5*tau;
     }
     number = pcg( A, phi[0], omega, v2d, eps_pol);
+    if( number == pcg.get_max())
+        throw Fail( eps_pol);
 #ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations1 "<< number <<std::endl;
     t.toc();
@@ -154,6 +162,8 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
     //compute Gamma phi[0]
     blas2::symv( w2d, phi[0], omega);
     number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
+    if( number == pcg.get_max())
+        throw Fail( eps_gamma);
 #ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations2 "<< number <<std::endl;
     t.toc();
