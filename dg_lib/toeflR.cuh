@@ -38,11 +38,12 @@ struct ToeflR
     void exp( const std::vector<container>& y, std::vector<container>& target);
     void log( const std::vector<container>& y, std::vector<container>& target);
     const container& polarisation( ) const { return phi[0];}
+    const container& compute_psi( const container& potential);
     const Matrix& laplacianM( ) const { return laplaceM;}
     const Gamma<Matrix, W2D<T,n> >&  gamma() const {return gamma1;}
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
-    const std::vector<container>& polarisation( const std::vector<container>& y);
+    const container& polarisation( const std::vector<container>& y);
     container chi, omega;
     container gamma_n, gamma_old;
     const container binv;
@@ -85,19 +86,49 @@ ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu,
 
 }
 
+template< class T, size_t n, class container>
+const container& ToeflR<T, n, container>::compute_psi( const container& potential)
+{
+    //compute Gamma phi[0]
+    blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
+    phi[1].swap( phi_old[1]);
+
+    blas2::symv( w2d, potential, omega);
+    unsigned number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
+    if( number == pcg.get_max())
+        throw Fail( eps_gamma);
+#ifdef DG_BENCHMARK
+    std::cout << "Number of pcg iterations2 "<< number <<std::endl;
+    t.toc();
+    std::cout<< "took "<<t.diff()<<"s\n";
+#endif //DG_DEBUG
+    //now add -0.5v_E^2
+    if( global)
+    {
+        blas2::gemv( arakawa.dx(), phi[0], chi);
+        blas2::gemv( arakawa.dy(), phi[0], omega);
+        blas1::pointwiseDot( binv, chi, chi);
+        blas1::pointwiseDot( binv, omega, omega);
+        cudaThreadSynchronize();
+        blas1::pointwiseDot( chi, chi, chi);
+        blas1::pointwiseDot( omega, omega, omega);
+        blas1::axpby( 1., chi, 1.,  omega);
+        blas1::axpby( 1., phi[1], -0.5,  omega, phi[1]);
+    }
+    return phi[1];
+}
 
 //how to set up a computation?
 template< class T, size_t n, class container>
-const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::vector<container>& y)
+const container& ToeflR<T, n, container>::polarisation( const std::vector<container>& y)
 {
     //extrapolate phi and gamma_n
     blas1::axpby( 2., phi[0], -1.,  phi_old[0]);
-    blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
     blas1::axpby( 2., gamma_n, -1., gamma_old);
     //blas1::axpby( 1., phi[1], 0.,  phi_old[1]);
     //blas1::axpby( 0., gamma_n, 0., gamma_old);
     gamma_n.swap( gamma_old);
-    phi.swap( phi_old);
+    phi[0].swap( phi_old[0]);
 
 #ifdef DG_BENCHMARK
     Timer t; 
@@ -159,29 +190,8 @@ const std::vector<container>& ToeflR<T, n, container>::polarisation( const std::
     std::cout<< "took "<<t.diff()<<"s\n";
     t.tic();
 #endif //DG_DEBUG
-    //compute Gamma phi[0]
-    blas2::symv( w2d, phi[0], omega);
-    number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
-    if( number == pcg.get_max())
-        throw Fail( eps_gamma);
-#ifdef DG_BENCHMARK
-    std::cout << "Number of pcg iterations2 "<< number <<std::endl;
-    t.toc();
-    std::cout<< "took "<<t.diff()<<"s\n";
-#endif //DG_DEBUG
-    //now add -0.5v_E^2
 
-    blas2::gemv( arakawa.dx(), phi[0], chi);
-    blas2::gemv( arakawa.dy(), phi[0], omega);
-    blas1::pointwiseDot( binv, chi, chi);
-    blas1::pointwiseDot( binv, omega, omega);
-    cudaThreadSynchronize();
-    blas1::pointwiseDot( chi, chi, chi);
-    blas1::pointwiseDot( omega, omega, omega);
-    blas1::axpby( 1., chi, 1.,  omega);
-    blas1::axpby( 1., phi[1], -0.5,  omega, phi[1]);
-
-    return phi;
+    return phi[0];
 }
 
 template< class T, size_t n, class container>
@@ -190,7 +200,8 @@ void ToeflR<T, n, container>::operator()( const std::vector<container>& y, std::
     assert( y.size() == 2);
     assert( y.size() == yp.size());
 
-    phi = polarisation( y);
+    phi[0] = polarisation( y);
+    phi[1] = compute_psi( phi[0]);
 
     for( unsigned i=0; i<y.size(); i++)
     {

@@ -6,21 +6,21 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of polynomial coefficients)    =   4     (3)
-2)  nx (grid points in x)                =   250   (256.)
-3)  ny (grid points in y)                =   150   (256.)
+2)  nx (grid points in x)                =   192   (192)
+3)  ny (grid points in y)                =   192   (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   0.1    (0.01)
+5)  dt (time step in units c_s/L_p)      =   0.2    (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
 6)  eps_pol (stopping for polarisation) =   1e-4  (1e-4)
-7)  eps_gamma (stopping for Gamma CG)   =   1e-7  (1e-8)
+7)  eps_gamma (stopping for Gamma CG)   =   1e-8  (1e-8)
 
 ---------------------Boundary conditions----------------------
 
-8)  lx (length of x in units of rho_s)   =   500    (128.)
-9)  ly (length of y in units of rho_s)   =   300    (64.)
+8)  lx (length of x in units of rho_s)   =   192    (128.)
+9)  ly (length of y in units of rho_s)   =   192    (64.)
 10) bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
 11) bc_y (0 periodic, 1 Dirichlet )      =   0    (1.0)
 
@@ -29,18 +29,18 @@
 12) local (0) or global (1)             =   1       (0)
 13) nu  (viscosity)                     =   1e-3   (0.001)
 14) mcv (magnetic curvature)            =   0.0005 (0.0005)
-15) tau (Ti/Te)                         =   3.0     (0.0)
+15) tau (Ti/Te)                         =   1.0     (0.0)
 
 ------------------Initial blob parameters---------------------
 
-16) n0 (perturbation amplitude)             =  5     (1.0)
-17) dia (blob variance in units of rho_s)   =  10     (10)
+16) n0 (perturbation amplitude)             =  1     (1.0)
+17) dia (blob variance in units of rho_s)   =  5     (10)
 18) x-position ( in units of lx)            =  0.25   (0.4)
 19) y-position ( in units of ly)            =  0.55   (0.5)
 
 ---------------------Miscellaneous----------------------------
 
-20) itstp (steps between output)            = 5      (5)
+20) itstp (steps between output)            = 10      (5)
 21) # of outputs (excluding first)          = 750
 
 @ ------------------------------------------------------------

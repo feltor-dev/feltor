@@ -40,7 +40,7 @@ using namespace std;
 int main()
 {
     Timer t;
-    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
+    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::PER);
     S2D<double,n > s2d( grid.hx(), grid.hy());
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
