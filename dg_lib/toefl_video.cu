@@ -12,7 +12,7 @@
 #include "hdf5.h"
 #include "hdf5_hl.h"
 
-const unsigned n = 3;
+const unsigned n = 4;
 
 int main( int argc, char* argv[])
 {
@@ -30,13 +30,13 @@ int main( int argc, char* argv[])
     H5G_info_t group_info;
     H5Gget_info( file, &group_info);
     hsize_t nlinks = group_info.nlinks;
-    std::cout << "Number of groups "<< nlinks<<"\n";
+    //std::cout << "Number of groups "<< nlinks<<"\n";
     std::string name; 
     hsize_t length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, NULL, 10, H5P_DEFAULT);
-    std::cout << "Length of name "<<length<<"\n";
+    //std::cout << "Length of name "<<length<<"\n";
     name.resize( length+1);
     H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &name[0], length+1, H5P_DEFAULT); //creation order
-    std::cout << "Name of first link "<<name<<"\n";
+    //std::cout << "Name of first link "<<name<<"\n";
     std::string in;
     
     herr_t  status;
@@ -86,14 +86,15 @@ int main( int argc, char* argv[])
         hid_t group;
         length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, NULL, 10, H5P_DEFAULT);
         name.resize( length+1);
-        H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index++, &name[0], length+1, H5P_DEFAULT); 
-        std::cout << "Index "<<index<<" "<<name<<"\n";
+        H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, &name[0], length+1, H5P_DEFAULT); 
+        index += v[5];
+        //std::cout << "Index "<<index<<" "<<name<<"\n";
         group = H5Gopen( file, name.data(), H5P_DEFAULT);
-        std::cout << "Read electrons\n";
+        //std::cout << "Read electrons\n";
         status = H5LTread_dataset_double(group, "electrons", &input[0] );
         //transform field to an equidistant grid
         t.toc();
-        std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
+        //std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
         t.tic();
         if( p.global)
             thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
@@ -102,18 +103,18 @@ int main( int argc, char* argv[])
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         t.toc();
-        std::cout << "Computing colorscale took "<<t.diff()<<"s\n";
+        //std::cout << "Computing colorscale took "<<t.diff()<<"s\n";
         //draw ions
         w.title() << std::setprecision(2) << std::scientific;
         w.title() <<"ne / "<<colors.scale()<<"\t";
         t.tic();
         w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
         t.toc();
-        std::cout << "Drawing took              "<<t.diff()<<"s\n";
+        //std::cout << "Drawing took              "<<t.diff()<<"s\n";
 
         //transform phi
         t.tic();
-        std::cout << "Read potential\n";
+        //std::cout << "Read potential\n";
         status = H5LTread_dataset_double(group, "potential", &input[0] );
         dg::blas2::gemv( laplacianM, input, visual);
         input.swap( visual);
@@ -129,7 +130,7 @@ int main( int argc, char* argv[])
         glfwWaitEvents();
 #endif //DG_DEBUG
         t.toc();
-        std::cout <<"2nd half took          "<<t.diff()<<"s\n";
+        //std::cout <<"2nd half took          "<<t.diff()<<"s\n";
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);

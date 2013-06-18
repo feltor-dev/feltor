@@ -48,7 +48,7 @@ class CG
      *
      * @return the current maximum
      */
-    unsigned get_max() {return max_iter;}
+    unsigned get_max() const {return max_iter;}
     /**
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *

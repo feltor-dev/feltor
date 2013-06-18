@@ -7,3 +7,4 @@
 2) # of cols                  = 2
 3) window width (in pixel)    = 1200
 4) window height(in pixel)    = 600
+5) output frame               = 5 
