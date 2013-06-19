@@ -239,7 +239,7 @@ template< size_t k, class Vector>
 template< class Functor>
 void AB<k, Vector>::init( Functor& f, const Vector& u0,  double dt)
 {
-    RK<k, Vector> rk( u0);
+    RK<1, Vector> rk( u0);
     u_[0] = u0;
     for( unsigned i=1; i<k; i++)
         rk( f, u_[i-1], u_[i], -dt);

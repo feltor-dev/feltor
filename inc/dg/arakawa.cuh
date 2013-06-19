@@ -322,7 +322,7 @@ void ArakawaX<T, n, container>::operator()( const container& lhs, const containe
 
     //blas1::axpby( 1., dyrhs,  -1., dxrhs);
     ////for testing purposes (note that you need to set criss-cross)
-    //blas1::axpby( 0., dxlhs,  -0., blhs);
+    //blas1::axpby( 0., dxlhs,  -0., helper);
     //blas1::axpby( 0., result, -0., dylhs);
 
     cudaThreadSynchronize();

@@ -76,7 +76,16 @@ int main( int argc, char* argv[])
     Timer t;
     bool running = true;
     double time = 0;
+    //compute mass 0
+        test.exp( y0, y1);
+        dg::DVec one( grid.size(), 1.);
+        dg::W2D<double, n> w2d( grid);
+        const double mass0 = blas2::dot( one, w2d, y1[1]);
+        thrust::transform( y1[1].begin(), y1[1].end(), y1[1].begin(), dg::PLUS<double>(-1));
+        const double mass_blob0 = blas2::dot( one, w2d, y1[1]);
+        double E0 = 0, E1 = 0, diff = 0;
     ab.init( test, y0, p.dt);
+    std::cout << "Begin computation \n";
     while (running)
     {
         //transform field to an equidistant grid
@@ -98,7 +107,7 @@ int main( int argc, char* argv[])
         w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
 
         //transform phi
-        dg::blas2::gemv( test.laplacianM(), test.polarisation(), y1[1]);
+        dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
         dg::blas2::gemv( equi, y1[1], dvisual);
         visual = dvisual; //transfer to host
         //compute the color scale
@@ -127,6 +136,18 @@ int main( int argc, char* argv[])
         }
         time += (double)p.itstp*p.dt;
         t.toc();
+        test.exp( y0, y1);
+        std::cout << scientific << setprecision( 3);
+        std::cout << "m_tot/m_0: "<< (blas2::dot( one, w2d, y1[1])-mass0)/mass_blob0<<"\t";
+        E0 = E1;
+        E1 = test.energy( y0, test.potential()[0]);
+        diff = (E1 - E0)/p.dt/(double)p.itstp;
+
+
+        std::cout << "total energy: "<< diff<<"\t";//test.energy( y0, test.potential()[0])<<"\t";
+        double diss = test.energy_dot( y0, test.potential());
+        std::cout << "total energy dissipation: "<< diss<<"\n";
+        //std::cout << " Ratio "<< diff/diss <<"\n";
         //glfwWaitEvents();
         running = running && 
                   !glfwGetKey( GLFW_KEY_ESC) &&
