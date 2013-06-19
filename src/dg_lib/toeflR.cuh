@@ -32,18 +32,31 @@ struct ToeflR
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
 
-    //toeflR is always global
     ToeflR( const Grid<T,n>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
+
     void log( const std::vector<container>& y, std::vector<container>& target);
-    const container& polarisation( ) const { return phi[0];}
-    const container& compute_psi( const container& potential);
+
+    const std::vector<container>& potential( ) const { return phi;}
+
     const Matrix& laplacianM( ) const { return laplaceM;}
+
     const Gamma<Matrix, W2D<T,n> >&  gamma() const {return gamma1;}
+
+    const container& compute_psi( const container& potential);
+
+    const container& compute_vesqr( const container& potential);
+
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
+
+    double energy( const std::vector<container>& y, const container& potential);
+
+    double energy_dot( const std::vector<container>& y, const std::vector<container>& potential);
+
   private:
     const container& polarisation( const std::vector<container>& y);
+
     container chi, omega;
     container gamma_n, gamma_old;
     const container binv;
@@ -87,6 +100,22 @@ ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu,
 }
 
 template< class T, size_t n, class container>
+const container& ToeflR<T, n, container>::compute_vesqr( const container& potential)
+{
+    assert( global);
+    blas2::gemv( arakawa.dx(), potential, chi);
+    blas2::gemv( arakawa.dy(), potential, omega);
+    blas1::pointwiseDot( binv, chi, chi);
+    blas1::pointwiseDot( binv, omega, omega);
+    cudaThreadSynchronize();
+    blas1::pointwiseDot( chi, chi, chi);
+    blas1::pointwiseDot( omega, omega, omega);
+    cudaThreadSynchronize();
+    blas1::axpby( 1., chi, 1.,  omega);
+    cudaThreadSynchronize();
+    return omega;
+}
+template< class T, size_t n, class container>
 const container& ToeflR<T, n, container>::compute_psi( const container& potential)
 {
     //compute Gamma phi[0]
@@ -94,6 +123,10 @@ const container& ToeflR<T, n, container>::compute_psi( const container& potentia
     phi[1].swap( phi_old[1]);
 
     blas2::symv( w2d, potential, omega);
+#ifdef DG_BENCHMARK
+    Timer t;
+    t.tic();
+#endif //DG_DEBUG
     unsigned number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
     if( number == pcg.get_max())
         throw Fail( eps_gamma);
@@ -105,17 +138,44 @@ const container& ToeflR<T, n, container>::compute_psi( const container& potentia
     //now add -0.5v_E^2
     if( global)
     {
-        blas2::gemv( arakawa.dx(), phi[0], chi);
-        blas2::gemv( arakawa.dy(), phi[0], omega);
-        blas1::pointwiseDot( binv, chi, chi);
-        blas1::pointwiseDot( binv, omega, omega);
+        blas1::axpby( 1., phi[1], -0.5, compute_vesqr( potential), phi[1]);
         cudaThreadSynchronize();
-        blas1::pointwiseDot( chi, chi, chi);
-        blas1::pointwiseDot( omega, omega, omega);
-        blas1::axpby( 1., chi, 1.,  omega);
-        blas1::axpby( 1., phi[1], -0.5,  omega, phi[1]);
     }
     return phi[1];
+}
+
+template< class T, size_t n, class container>
+double ToeflR<T, n, container>::energy( const std::vector<container>& y, const container& potential)
+{
+    assert( global);
+    exp( y, expy); // y-> ln(n), expy -> n
+    double Ue = blas2::dot( y[0], w2d, expy[0]);
+    double Ui = tau*blas2::dot( y[1], w2d, expy[1]);
+    omega = compute_vesqr( potential);
+    double Uphi = 0.5*blas2::dot( expy[1], w2d, omega); 
+    //std::cout << "ue "<<Ue<<" ui "<<Ui<<" uphi "<<Uphi<<"\n";
+    return Ue + Ui + Uphi;
+}
+
+template< class T, size_t n, class container>
+double ToeflR<T, n, container>::energy_dot( const std::vector<container>& y, const std::vector<container>& potential)
+{
+    assert( global);
+    container one( y[0].size(), 1.);
+    exp( y, expy); // y-> ln(n), expy -> n
+    for( unsigned i=0; i<y.size(); i++)
+    {
+        thrust::transform( expy[i].begin(), expy[i].end(), expy[i].begin(), dg::PLUS<double>(-1));
+        blas2::gemv( laplaceM, expy[i], lapy[i]); //DOESNT WORK
+        //thrust::transform( lapy[i].begin(), lapy[i].end(), lapy[i].begin(), dg::PLUS<double>(+1));
+    }
+    cudaThreadSynchronize();
+    double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, y[0]); // minus 
+    double Gi = - tau*(blas2::dot( one, w2d, lapy[1]) + blas2::dot( lapy[1], w2d, y[1])); // minus 
+    double Gphi = -blas2::dot( potential[0], w2d, lapy[0]);
+    double Gpsi = -blas2::dot( potential[1], w2d, lapy[1]);
+    //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
+    return nu*( Ge + Gi - Gphi + Gpsi);
 }
 
 //how to set up a computation?
@@ -127,6 +187,7 @@ const container& ToeflR<T, n, container>::polarisation( const std::vector<contai
     blas1::axpby( 2., gamma_n, -1., gamma_old);
     //blas1::axpby( 1., phi[1], 0.,  phi_old[1]);
     //blas1::axpby( 0., gamma_n, 0., gamma_old);
+    cudaThreadSynchronize();
     gamma_n.swap( gamma_old);
     phi[0].swap( phi_old[0]);
 
@@ -140,6 +201,7 @@ const container& ToeflR<T, n, container>::polarisation( const std::vector<contai
         exp( y, expy);
         //blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
         blas1::pointwiseDot( binv, expy[1], chi); //\chi = n_i
+        cudaThreadSynchronize();
         blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
         cudaThreadSynchronize();
         cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
@@ -206,6 +268,7 @@ void ToeflR<T, n, container>::operator()( const std::vector<container>& y, std::
     for( unsigned i=0; i<y.size(); i++)
     {
         arakawa( y[i], phi[i], yp[i]);
+        cudaThreadSynchronize();
         blas1::pointwiseDot( binv, yp[i], yp[i]);
     }
 
@@ -234,11 +297,14 @@ void ToeflR<T, n, container>::operator()( const std::vector<container>& y, std::
             blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
             blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
             //now sum all 3 terms up 
+            cudaThreadSynchronize();
             blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
+            cudaThreadSynchronize();
             blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
         }
         blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
     }
+    cudaThreadSynchronize();
 
 }
 
