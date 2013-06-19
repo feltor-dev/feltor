@@ -30,4 +30,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f toefl
+	rm -f toefl toeflR toefl_video toefl_hpc
