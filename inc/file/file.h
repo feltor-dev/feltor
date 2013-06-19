@@ -5,9 +5,14 @@
 #include <iomanip>
 #include <sstream>
 
-#include "../lib/read_input.h"
+#include "read_input.h"
 #include "hdf5.h"
 #include "hdf5_hl.h"
+
+
+/**
+ * @file Utility functions for proper scientific h5 file format
+ */
 
 namespace file{
 
@@ -40,7 +45,7 @@ std::string setTime( double time)
  */
 double getTime( std::string& s)
 {
-    return toefl::read_input( s)[1]; 
+    return file::read_input( s)[1]; 
 }
 
 /**

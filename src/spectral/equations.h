@@ -3,8 +3,8 @@
 
 #include <array>
 #include <complex>
-#include "matrix.h"
-#include "quadmat.h"
+#include "toefl/matrix.h"
+#include "toefl/quadmat.h"
 #include "blueprint.h"
 
 namespace toefl{

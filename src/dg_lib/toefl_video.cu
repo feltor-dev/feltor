@@ -3,20 +3,20 @@
 #include <vector>
 
 #include "draw/host_window.h"
-#include "nvcc/xspacelib.cuh"
-#include "nvcc/timer.cuh"
-#include "lib/read_input.h"
+#include "dg/xspacelib.cuh"
+#include "dg/timer.cuh"
+#include "file/read_input.h"
+#include "file/file.h"
 
 #include "parameters.h"
 
-#include "file.h"
 
 const unsigned n = 4;
 
 int main( int argc, char* argv[])
 {
     dg::Timer t;
-    std::vector<double> v = toefl::read_input( "window_params.txt");
+    std::vector<double> v = file::read_input( "window_params.txt");
     draw::HostWindow w(v[3], v[4]);
     w.set_multiplot( v[1], v[2]);
 
@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     hsize_t dims[2]; 
     in.resize( 10000);
     status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
-    const Parameters p( toefl::read_input( in));
+    const Parameters p( file::read_input( in));
     p.display();
     if( p.n != n )
     {

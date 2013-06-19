@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <cmath>
-#include "../lib/ghostmatrix.h" // holds boundary conditions
-#include "../lib/message.h"
+#include "toefl/ghostmatrix.h" // holds boundary conditions
+#include "toefl/message.h"
 
 namespace toefl{
 /*! @addtogroup parameters

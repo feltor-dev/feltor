@@ -1,7 +1,7 @@
 #include "read_input.h"
 
 using namespace std;
-using namespace toefl;
+using namespace file;
 
 int main()
 {

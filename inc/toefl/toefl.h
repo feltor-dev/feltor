@@ -8,7 +8,7 @@
 #include "message.h"
 #include "exceptions.h"
 //input reading and visualization
-#include "read_input.h"
+//#include "read_input.h" //moved to file lib
 #include "texture.h"
 //benchmarking
 #include "timer.h"

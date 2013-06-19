@@ -2,14 +2,14 @@
 #include <iomanip>
 #include <vector>
 
-#include "file.h"
 
 #include "toeflR.cuh"
 #include "parameters.h"
-#include "rk.cuh"
-#include "../lib/read_input.h"
+#include "dg/rk.cuh"
+#include "file/file.h"
+#include "file/read_input.h"
 
-#include "timer.cuh"
+#include "dg/timer.cuh"
 
 using namespace std;
 using namespace dg;
@@ -31,8 +31,8 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        v = toefl::read_input( argv[1]);
-        input = toefl::read_file( argv[1]);
+        v = file::read_input( argv[1]);
+        input = file::read_file( argv[1]);
     }
     const Parameters p( v);
     if( p.n != n || p.k != k)

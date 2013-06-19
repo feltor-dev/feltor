@@ -84,7 +84,7 @@ int main()
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, y0, dt);
     //cout << "Press any key to start!\n";
-    //double x; 
+    double x; 
     //cin >> x;
     while (running && time < T)
     {

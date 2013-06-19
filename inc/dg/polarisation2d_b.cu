@@ -8,11 +8,12 @@
 #include "xspacelib.cuh"
 #include "cg.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
+const unsigned n = 4; //global relative error in L2 norm is O(h^P)
+//as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
 
 const double lx = M_PI;
 const double ly = M_PI;
-const double eps = 1e-3; //# of pcg iterations increases very much if 
+//const double eps = 1e-3; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double initial( double x, double y) {return 0.;}
@@ -33,9 +34,11 @@ int main()
 {
     dg::Timer t;
     unsigned Nx, Ny; 
-    cout << "Type Nx and Ny! \n";
+    double eps;
+    cout << "Type Nx and Ny and epsilon! \n";
     cin >> Nx; 
     cin >> Ny; //more N means less iterations for same error
+    cin >> eps;
     dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
     dg::V2D<double, n> v2d( grid.hx(), grid.hy());
     dg::W2D<double, n> w2d( grid.hx(), grid.hy());
@@ -65,7 +68,7 @@ int main()
     //cusp::print( Ap);
     cout << "Create conjugate gradient!\n";
     t.tic();
-    dg::CG<Matrix, Vector, dg::V2D<double,n> > pcg( x, n*n*Nx*Ny);
+    dg::CG<Vector > pcg( x, n*n*Nx*Ny);
     t.toc();
     cout << "Creation of conjugate gradient took: "<<t.diff()<<"s\n";
 
@@ -82,10 +85,10 @@ int main()
     //compute error
     dg::blas1::axpby( 1.,x,-1., error);
 
-    double eps = dg::blas2::dot( v2d, error);
-    cout << "L2 Norm2 of Error is " << eps << endl;
+    double err = dg::blas2::dot( v2d, error);
+    cout << "L2 Norm2 of Error is " << err << endl;
     double norm = dg::blas2::dot( v2d, solution);
-    std::cout << "L2 Norm of relative error is "<<sqrt( eps/norm)<<std::endl;
+    std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
 
     return 0;
 }
