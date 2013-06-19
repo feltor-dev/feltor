@@ -5,11 +5,11 @@
 #include "draw/host_window.h"
 
 #include "toeflR.cuh"
-#include "rk.cuh"
-#include "../lib/read_input.h"
+#include "dg/rk.cuh"
+#include "dg/timer.cuh"
+#include "file/read_input.h"
 #include "parameters.h"
 
-#include "timer.cuh"
 
 using namespace std;
 using namespace dg;
@@ -25,11 +25,11 @@ int main( int argc, char* argv[])
     std::vector<double> v, v2;
     if( argc == 1)
     {
-        v = toefl::read_input("input.txt");
+        v = file::read_input("input.txt");
     }
     else if( argc == 2)
     {
-        v = toefl::read_input( argv[1]);
+        v = file::read_input( argv[1]);
     }
     else
     {
@@ -37,7 +37,7 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    v2 = toefl::read_input( "window_params.txt");
+    v2 = file::read_input( "window_params.txt");
     draw::HostWindow w(v2[3], v2[4]);
     w.set_multiplot( v2[1], v2[2]);
     /////////////////////////////////////////////////////////////////////////

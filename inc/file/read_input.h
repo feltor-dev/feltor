@@ -5,9 +5,9 @@
 #include <sstream>
 #include <vector>
 #include <string>
-#include "../lib/message.h"
+#include "../toefl/message.h"
 
-namespace toefl{
+namespace file{
 
 /*! @brief Extract paramters from a file 
  *
@@ -32,7 +32,7 @@ std::vector<double> read_input(const char * filename)
     {
         std::stringstream s;
         s << "Error opening file '" << filename << "'";
-        throw Message( s.str().c_str() , ping);
+        throw toefl::Message( s.str().c_str() , ping);
     }
     while(is.good())
     {
@@ -42,10 +42,10 @@ std::vector<double> read_input(const char * filename)
             is >> read;
             para.push_back(read); 
             if( is.fail()) //check if read was successful
-                throw Message( "Error while reading parameter. Is there a character behind = ?\n", ping);
+                throw toefl::Message( "Error while reading parameter. Is there a character behind = ?\n", ping);
         }
         if( is.bad()) //check streams integrity
-            throw Message( "Error while reading file. File corrupted\n", ping);
+            throw toefl::Message( "Error while reading file. File corrupted\n", ping);
     }
     is.close();
     return para;
@@ -66,7 +66,7 @@ std::string read_file( const char* filename)
     {
         std::stringstream s;
         s << "Error opening file '" << filename << "'";
-        throw Message( s.str().c_str() , ping);
+        throw toefl::Message( s.str().c_str() , ping);
     }
     std::string s; 
     is.seekg( 0, std::ios::end); //go to end
@@ -94,10 +94,10 @@ std::vector<double> read_input( std::string& file)
             is >> read;
             para.push_back(read); 
             if( is.fail()) //check if read was successful
-                throw Message( "Error while reading parameter. Is there a character behind = ?\n", ping);
+                throw toefl::Message( "Error while reading parameter. Is there a character behind = ?\n", ping);
         }
         if( is.bad()) //check streams integrity
-            throw Message( "Error while reading file. File corrupted\n", ping);
+            throw toefl::Message( "Error while reading file. File corrupted\n", ping);
     }
     return para;
 }

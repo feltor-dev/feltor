@@ -3,12 +3,12 @@
 
 #include <exception>
 
-#include "xspacelib.cuh"
-#include "cg.cuh"
-#include "nvcc/gamma.cuh"
+#include "dg/xspacelib.cuh"
+#include "dg/cg.cuh"
+#include "dg/gamma.cuh"
 
 #ifdef DG_BENCHMARK
-#include "timer.cuh"
+#include "dg/timer.cuh"
 #endif
 
 

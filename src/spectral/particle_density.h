@@ -1,7 +1,7 @@
 #ifndef _TL_PARTICLE_DENSITY_
 #define _TL_PARTICLE_DENSITY_
 
-#include "toefl.h"
+#include "toefl/toefl.h"
 #include "equations.h"
 #include "blueprint.h"
 

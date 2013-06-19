@@ -1,24 +1,24 @@
-#ifndef _DFT_DFT_SOLVER_
-#define _DFT_DFT_SOLVER_
+#ifndef _DRT_DFT_SOLVER_
+#define _DRT_DFT_SOLVER_
 
 #include <complex>
 
-#include "toefl.h"
+#include "toefl/toefl.h"
 #include "blueprint.h"
 #include "equations.h"
 
 namespace toefl
 {
 
-/*! @brief Solver for periodic boundary conditions of the toefl equations.
+/*! @brief Solver for dirichlet type x-boundary conditions of the toefl equations.
  * @ingroup solvers
  */
 template< size_t n>
-class DFT_DFT_Solver
+class DRT_DFT_Solver
 {
   public:
-    typedef Matrix<double, TL_DFT> Matrix_Type;
-    /*! @brief Construct a solver for periodic boundary conditions
+    typedef Matrix<double, TL_DRT_DFT> Matrix_Type;
+    /*! @brief Construct a solver for dirichlet type boundary conditions
      *
      * The constructor allocates storage for the solver
      * and initializes all fourier coefficients as well as 
@@ -26,7 +26,7 @@ class DFT_DFT_Solver
      * @param blueprint Contains all the necessary parameters.
      * @throw Message If your parameters are inconsistent.
      */
-    DFT_DFT_Solver( const Blueprint& blueprint);
+    DRT_DFT_Solver( const Blueprint& blueprint);
     /*! @brief Prepare Solver for execution
      *
      * This function takes the fields and computes the missing 
@@ -38,7 +38,7 @@ class DFT_DFT_Solver
      * @param v Container with three non void matrices
      * @param t which Matrix is missing?
      */
-    void init( std::array< Matrix<double,TL_DFT>, n>& v, enum target t);
+    void init( std::array< Matrix<double,TL_DRT_DFT>, n>& v, enum target t);
     /*! @brief Perform a step by the 3 step Karniadakis scheme*/
     void step(){ step_<TL_ORDER3>();}
     /*! @brief Get the result
@@ -49,7 +49,7 @@ class DFT_DFT_Solver
         @attention The reference is only valid until the next call to 
             the step() function!
     */
-    const Matrix<double, TL_DFT>& getField( enum target t) const;
+    const Matrix<double, TL_DRT_DFT>& getField( enum target t) const;
     /*! @brief Get the result
 
         Use this function when you want to call step() without 
@@ -64,7 +64,7 @@ class DFT_DFT_Solver
             This means the densities are 4 timesteps "old" whereas 
             the potential is the one of the last timestep.
     */
-    void getField( Matrix<double, TL_DFT>& m, enum target t);
+    void getField( Matrix<double, TL_DRT_DFT>& m, enum target t);
     /*! @brief Get the parameters of the solver.
 
         @return The parameters in use. 
@@ -84,33 +84,33 @@ class DFT_DFT_Solver
     const size_t crows, ccols;
     const Blueprint blue;
     /////////////////fields//////////////////////////////////
-    //GhostMatrix<double, TL_DFT> ghostdens, ghostphi;
-    std::array< Matrix<double, TL_DFT>, n> dens, phi, nonlinear;
+    //GhostMatrix<double, TL_DRT_DFT> ghostdens, ghostphi;
+    std::array< Matrix<double, TL_DRT_DFT>, n> dens, phi, nonlinear;
     /////////////////Complex (void) Matrices for fourier transforms///////////
     std::array< Matrix< complex>, n> cdens, cphi;
     ///////////////////Solvers////////////////////////
     Arakawa arakawa;
-    Karniadakis<n, complex, TL_DFT> karniadakis;
-    DFT_DFT dft_dft;
+    Karniadakis<n, complex, TL_DRT_DFT> karniadakis;
+    DRT_DFT drt_dft;
     /////////////////////Coefficients//////////////////////
     Matrix< std::array< double, n> > phi_coeff;
     std::array< Matrix< double>, n-1> gamma_coeff;
 };
 
 template< size_t n>
-DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
+DRT_DFT_Solver<n>::DRT_DFT_Solver( const Blueprint& bp):
     rows( bp.algorithmic().ny ), cols( bp.algorithmic().nx ),
-    crows( rows), ccols( cols/2+1),
+    crows( cols), ccols( rows/2+1),
     blue( bp),
     //fields
-    dens( MatrixArray<double, TL_DFT,n>::construct( rows, cols)),
+    dens( MatrixArray<double, TL_DRT_DFT,n>::construct( rows, cols)),
     phi( dens), nonlinear( dens),
     cdens( MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)), 
     cphi(cdens), 
     //Solvers
     arakawa( bp.algorithmic().h),
     karniadakis(rows, cols, crows, ccols, bp.algorithmic().dt),
-    dft_dft( rows, cols, FFTW_MEASURE),
+    drt_dft( rows, cols, fftw_convert( bp.boundary().bc_x), FFTW_MEASURE),
     //Coefficients
     phi_coeff( crows, ccols),
     gamma_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols))
@@ -125,23 +125,28 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     init_coefficients( bp.boundary(), phys);
 }
 
+//aware of BC
 template< size_t n>
-void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical& phys)
+void DRT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical& phys)
 {
     Matrix< QuadMat< complex, n> > coeff( crows, ccols);
     double laplace;
-    int ik;
     const complex dymin( 0, 2.*M_PI/bound.ly);
-    const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(bound.lx*bound.lx),
-                 kymin2 = 2.*2.*M_PI*M_PI/(double)(bound.ly*bound.ly);
+    const double kxmin2 = M_PI*M_PI/(double)(bound.lx*bound.lx),
+                 kymin2 = 4.*M_PI*M_PI/(double)(bound.ly*bound.ly);
+    double add;
+    if( bound.bc_x == TL_DST00 || bound.bc_x == TL_DST10)
+        add = 1.0;
+    else
+        add = 0.5;
+
     Equations e( phys, blue.isEnabled( TL_MHW));
     Poisson p( phys);
-    // dft_dft is not transposing so i is the y index by default
+    // drt_dft is transposing so i is the x index 
     for( unsigned i = 0; i<crows; i++)
         for( unsigned j = 0; j<ccols; j++)
         {
-            ik = (i>rows/2) ? (i-rows) : i; //integer division rounded down
-            laplace = - kxmin2*(double)(j*j) - kymin2*(double)(ik*ik);
+            laplace = - kxmin2*(double)((i+add)*(i+add)) - kymin2*(double)(j*j);
             if( n == 2)
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
             else if( n == 3)
@@ -149,18 +154,15 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
                 gamma_coeff[1](i,j) = p.gamma1_z( laplace);
             }
-            if( rows%2 == 0 && i == rows/2) ik = 0;
-            e( coeff( i,j), laplace, (double)ik*dymin);
-            if( laplace == 0) continue;
+            e( coeff( i,j), laplace, (double)j*dymin);
             p( phi_coeff(i,j), laplace);  
         }
-        //for periodic bc the constant is undefined
-    for( unsigned k=0; k<n; k++)
-        phi_coeff(0,0)[k] = 0;
-    karniadakis.init_coeff( coeff, (double)(rows*cols));
+    double norm = fftw_normalisation( bound.bc_x, cols)*(double)rows;
+    karniadakis.init_coeff( coeff, norm);
 }
+//unaware of BC except FFT 
 template< size_t n>
-void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum target t)
+void DRT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DRT_DFT>,n>& v, enum target t)
 { 
     //fourier transform input into cdens
     for( unsigned k=0; k<n; k++)
@@ -169,13 +171,14 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
         if( v[k].isVoid())
             throw Message("You gave me a void Matrix!!", ping);
 #endif
-        dft_dft.r2c( v[k], cdens[k]);
+        drt_dft.r2c_T( v[k], cdens[k]);
     }
     //don't forget to normalize coefficients!!
+    double norm = fftw_normalisation( blue.boundary().bc_x, cols)*(double)rows;
     for( unsigned k=0; k<n; k++)
         for( unsigned i=0; i<crows; i++)
             for( unsigned j=0; j<ccols;j++)
-                cdens[k](i,j) /= (double)(rows*cols);
+                cdens[k](i,j) /= norm;
     switch( t) //which field must be computed?
     {
         case( TL_ELECTRONS): 
@@ -223,7 +226,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
         case( TL_POTENTIAL):
             //solve for cphi
             for( unsigned i=0; i<crows; i++)
-                for( unsigned j=0; j<ccols; j++)
+                for( unsigned j=0; j<ccols/2+1; j++)
                 {
                     cphi[0](i,j) = 0;
                     for( unsigned k=0; k<n && k!=2; k++) 
@@ -241,19 +244,15 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
     //backtransform to x-space
     for( unsigned k=0; k<n; k++)
     {
-        //set (0,0) mode 0 again
-        cdens[k](0,0) = 0;
-        cphi[k](0,0) = 0;
-
-        dft_dft.c2r( cdens[k], dens[k]);
-        dft_dft.c2r( cphi[k], phi[k]);
+        drt_dft.c_T2r( cdens[k], dens[k]);
+        drt_dft.c_T2r( cphi[k], phi[k]);
     }
     //now the density and the potential is given in x-space
     first_steps();
 }
 
 template< size_t n>
-void DFT_DFT_Solver<n>::getField( Matrix<double, TL_DFT>& m, enum target t)
+void DRT_DFT_Solver<n>::getField( Matrix<double, TL_DRT_DFT>& m, enum target t)
 {
 #ifdef TL_DEBUG
     if(m.isVoid()) 
@@ -269,9 +268,9 @@ void DFT_DFT_Solver<n>::getField( Matrix<double, TL_DFT>& m, enum target t)
     }
 }
 template< size_t n>
-const Matrix<double, TL_DFT>& DFT_DFT_Solver<n>::getField( enum target t) const
+const Matrix<double, TL_DRT_DFT>& DRT_DFT_Solver<n>::getField( enum target t) const
 {
-    Matrix<double, TL_DFT> const * m;
+    Matrix<double, TL_DRT_DFT> const * m;
     switch( t)
     {
         case( TL_ELECTRONS):    m = &dens[0]; break;
@@ -284,7 +283,7 @@ const Matrix<double, TL_DFT>& DFT_DFT_Solver<n>::getField( enum target t) const
 }
 
 template< size_t n>
-void DFT_DFT_Solver<n>::first_steps()
+void DRT_DFT_Solver<n>::first_steps()
 {
     karniadakis.template invert_coeff<TL_EULER>( );
     step_<TL_EULER>();
@@ -295,29 +294,29 @@ void DFT_DFT_Solver<n>::first_steps()
 }
 
 template< size_t n>
-void DFT_DFT_Solver<n>::compute_cphi()
+void DRT_DFT_Solver<n>::compute_cphi()
 {
     if( n==2)
     {
-#pragma omp for 
+#pragma omp for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j);
-#pragma omp for 
+#pragma omp for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
     }
     else if( n==3)
     {
-#pragma omp for 
+#pragma omp for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j) 
                              + phi_coeff(i,j)[2]*cdens[2](i,j);
-#pragma omp for 
+#pragma omp for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
             {
@@ -327,20 +326,21 @@ void DFT_DFT_Solver<n>::compute_cphi()
     }
 }
 
+//unaware of BC except FFT
 template< size_t n>
 template< enum stepper S>
-void DFT_DFT_Solver<n>::step_()
+void DRT_DFT_Solver<n>::step_()
 {
-    //TODO: Is false sharing an issue here?
+    //is false-sharing an issue here?
 #pragma omp parallel 
     {
-    GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
+    GhostMatrix<double, TL_DRT_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
     //1. Compute nonlinearity
-#pragma omp for 
+#pragma omp for
     for( unsigned k=0; k<n; k++)
     {
-        swap_fields( dens[k], ghostdens); //now dens[k] is void
-        swap_fields( phi[k], ghostphi); //now phi[k] is void
+        swap_fields( dens[k], ghostdens); //now dens[j] is void
+        swap_fields( phi[k], ghostphi); //now phi[j] is void
         ghostdens.initGhostCells( );
         ghostphi.initGhostCells(  );
         arakawa( ghostdens, ghostphi, nonlinear[k]);
@@ -351,23 +351,21 @@ void DFT_DFT_Solver<n>::step_()
     karniadakis.template step_i<S>( dens, nonlinear);
     //3. solve linear equation
     //3.1. transform v_hut
-#pragma omp for 
+#pragma omp for
     for( unsigned k=0; k<n; k++)
-        dft_dft.r2c( dens[k], cdens[k]);
+        drt_dft.r2c_T( dens[k], cdens[k]);
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
     compute_cphi();
     //3.3. backtransform
-#pragma omp for 
+#pragma omp for
     for( unsigned k=0; k<n; k++)
     {
-        dft_dft.c2r( cdens[k], dens[k]);
-        dft_dft.c2r( cphi[k],  phi[k]);
+        drt_dft.c_T2r( cdens[k], dens[k]);
+        drt_dft.c_T2r( cphi[k],  phi[k]);
     }
     }
 }
+}//namespace toefl
 
-
-} //namespace toefl
-
-#endif //_DFT_DFT_SOLVER_
+#endif //_DRT_DFT_SOLVER_

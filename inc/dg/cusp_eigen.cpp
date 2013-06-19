@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "cusp_eigen.h"
-#include "../../lib/timer.h"
+#include "toefl/timer.h"
 
 Eigen::SparseMatrix<double, Eigen::RowMajor, int> convert( const cusp::coo_matrix<int, double, cusp::host_memory>& cm)
 {
