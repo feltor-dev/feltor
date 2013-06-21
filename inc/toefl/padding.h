@@ -11,6 +11,8 @@ enum Padding{ TL_NONE, //!< Don't use any padding
               TL_DRT_DFT //!< Add two 2-rows%2 lines at end of matrix for inplace DFT in vertical direction
             };
 
+///@cond
+
 /*! @brief template traits class for the efficient implementation of
  * the access operators in the matrix class.
  *
@@ -35,7 +37,6 @@ struct TotalNumberOf
     static inline size_t elements( const size_t rows, const size_t cols){return rows*cols;}
 };
 
-///@cond
 template <>
 struct TotalNumberOf<TL_DFT>
 {

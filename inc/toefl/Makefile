@@ -26,5 +26,11 @@ texture_t: texture_t.cpp texture.h
 %_b: %_b.cpp %.h
 	$(CXX) -O3  $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
+
+.PHONY: doc clean
+
+doc:
+	doxygen Doxyfile
+
 clean:
 	rm -f *_t *_b toefl
