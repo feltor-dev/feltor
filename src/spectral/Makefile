@@ -3,7 +3,7 @@ CFLAGS = -Wall -std=c++0x -fopenmp
 LIBS = -lfftw3 -lm -lGL -lglfw -lrt -lX11 -lXxf86vm
 CXX = g++
 
-all: innto
+all: innto innblobs
 
 innto: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@

@@ -38,9 +38,9 @@ int main()
     dg::HVec x = dg::expand( initial, grid);
 
     cout << "Create Laplacian\n";
-    dg::DMatrix A = dg::create::laplacian( grid, dg::not_normed, dg::LSPACE); 
+    dg::DMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE); 
 
-    dg::CG<dg::DMatrix, dg::DVec, Preconditioner > pcg( x, n*n*Nx*Ny);
+    dg::CG<dg::DVec > pcg( x, n*n*Nx*Ny);
     //dg::CG<DMatrix, DVec> cg( x.data(), n*N);
     cout<<"Expand right hand side\n";
     dg::HVec b = dg::expand ( laplace_fct, grid);

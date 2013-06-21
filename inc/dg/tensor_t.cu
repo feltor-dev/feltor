@@ -54,13 +54,13 @@ int main()
     double norm2_= blas2::dot( S2D<double, n>( hx, hy), hw2d.data());
     cout << "Norm2 2D is : "<<norm2_<<endl;
 
-    HMatrix laplace1d = create::laplace1d_per<n>(Nx, hx);
+    HMatrix laplace1d = create::laplace1d_per<double, n>(Nx, hx);
     Operator<double, n> Sop( pipj);
     Operator<double, n> Id( delta);
     Sop *= hy/2.;
     HMatrix s1y = dg::tensor( Ny, Id);
     HMatrix s1x = dg::tensor( Nx, Id);
-    HMatrix ddxx = tensor<double, n>( s1y, laplace1d);
+    HMatrix ddxx = dgtensor<double, n>( s1y, laplace1d);
     cout << endl;
     cout << endl;
     cusp::print( s1x); 
@@ -68,10 +68,10 @@ int main()
     cusp::print( s1y);
     cout << endl;
     cusp::print( ddxx);
-    HMatrix laplace2d = tensor<n>(create::laplace1d_per<n>( Ny, hy), 
+    HMatrix laplace2d = dgtensor<double, n>(create::laplace1d_per<double, n>( Ny, hy), 
                                   s1dx, 
                                   s1dy,
-                                  create::laplace1d_per<n>( Nx, hx));
+                                  create::laplace1d_per<double, n>( Nx, hx));
     blas2::symv( laplace1d, hv1d.data(), hw1d.data() );
     blas2::symv( laplace2d, hv2d.data(), hw2d.data() );
 
