@@ -69,7 +69,7 @@ int main()
     //DMatrix B = dg::create::laplace1d_dir<double, n>( N, h); 
 
     cout << "Create conjugate gradient!\n";
-    dg::CG<DMatrix, DVec, Preconditioner > pcg( dx.data(), n*N);
+    dg::CG<DVec > pcg( dx.data(), n*N);
 
     cout << "# of polynomial coefficients: "<< n <<endl;
     cout << "# of intervals                "<< N <<endl;

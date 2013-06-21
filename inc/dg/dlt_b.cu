@@ -61,7 +61,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> createForward( unsigned N)
     for( unsigned i=0; i<N; i++)
         for( unsigned k=0; k<n; k++)
             for( unsigned l=0; l<n; l++)
-                create::detail::add_index<n>(A, number, i, i, k, l, forward(k,l));
+                create::detail::add_index<double, n>(A, number, i, i, k, l, forward(k,l));
     return A;
 };
 

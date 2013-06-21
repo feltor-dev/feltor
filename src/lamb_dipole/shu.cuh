@@ -3,13 +3,12 @@
 
 #include <cusp/ell_matrix.h>
 
-#include "blas.h"
-#include "dlt.h"
-
-#include "cusp_eigen.h"
-#include "arakawa.cuh"
-#include "derivatives.cuh"
-#include "cg.cuh"
+#include "dg/blas.h"
+#include "dg/dlt.h"
+//#include "dg/cusp_eigen.h"
+#include "dg/arakawa.cuh"
+#include "dg/derivatives.cuh"
+#include "dg/cg.cuh"
 
 namespace dg
 {
@@ -33,7 +32,7 @@ struct Shu
     container omega, phi, phi_old;
     Arakawa<T, n, container> arakawa; 
     CG< container > pcg;
-    SimplicialCholesky cholesky;
+    //SimplicialCholesky cholesky;
     thrust::host_vector<double> x,b;
     T2D<T,n> t2d;
     S2D<T,n> s2d;
@@ -52,7 +51,7 @@ Shu<T, n, container>::Shu( const Grid<T, n>& g, double D, double eps):
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
     HMatrix A = dg::create::laplacianM( g, not_normed, LSPACE);
     laplace = A;
-    cholesky.compute( A);
+    //cholesky.compute( A);
 }
 
 template< class T, size_t n, class container>

@@ -3,6 +3,7 @@
 
 #include <cusp/coo_matrix.h>
 #include <cusp/multiply.h>
+#include "dlt.h"
 #include "operator.cuh"
 
 namespace dg

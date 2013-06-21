@@ -58,14 +58,14 @@ int main()
     cusp::array1d_view<DVec::iterator> dchi_view( dchi.data().begin(), dchi.data().end());
 
     cout << "Create Polarisation object!\n";
-    dg::Polarisation<double, n, Memory> pol( N, h, 0);
+    dg::Polarisation<double, n, Memory> pol( N, h, dg::DIR);
     cout << "Create Polarisation matrix!\n";
     cusp::coo_matrix<int, double, cusp::device_memory> A_ = pol.create( dchi_view ); 
     DMatrix A = A_;
     //DMatrix B = dg::create::laplace1d_dir<double, n>( N, h); 
     cout << "A is sorted?"<<A_.is_sorted_by_row_and_column()<<endl;
     cout << "Create conjugate gradient!\n";
-    dg::CG<DMatrix, DVec, Preconditioner > pcg( dx.data(), n*N);
+    dg::CG< DVec > pcg( dx.data(), n*N);
 
     cout << "# of polynomial coefficients: "<< n <<endl;
     cout << "# of intervals                "<< N <<endl;

@@ -8,7 +8,7 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "parameters.h"
+#include "dg_lib/parameters.h"
 
 
 const unsigned n = 4;
@@ -66,16 +66,6 @@ int main( int argc, char* argv[])
     while (running && index < nlinks )
     {
         t.tic();
-        glfwPollEvents();
-        if( glfwGetKey( 'S')/*||((unsigned)t%100 == 0)*/) 
-        {
-            do
-            {
-                glfwWaitEvents();
-            } while( !glfwGetKey('R') && 
-                     !glfwGetKey( GLFW_KEY_ESC) && 
-                      glfwGetWindowParam( GLFW_OPENED) );
-        }
         hid_t group;
         name = file::getName( file, index);
         //length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, NULL, 10, H5P_DEFAULT);
@@ -115,16 +105,24 @@ int main( int argc, char* argv[])
         dg::blas2::gemv( equi, input, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        if(colors.scale() == 0) { colors.scale() = 1;}
         //draw phi and swap buffers
-        w.title() <<"phi / "<<colors.scale()<<"\t";
+        w.title() <<"omega / "<<colors.scale()<<"\t";
         w.title() << std::fixed; 
         w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
         w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
-#ifdef DG_DEBUG
-        glfwWaitEvents();
-#endif //DG_DEBUG
         t.toc();
         //std::cout <<"2nd half took          "<<t.diff()<<"s\n";
+        glfwPollEvents();
+        if( !glfwGetKey( 'N')/*||((unsigned)t%100 == 0)*/) 
+        {
+            do
+            {
+                glfwWaitEvents();
+            } while( !glfwGetKey('N') && 
+                     !glfwGetKey( GLFW_KEY_ESC) && 
+                      glfwGetWindowParam( GLFW_OPENED) );
+        }
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
