@@ -5,14 +5,14 @@
 
 #include "draw/host_window.h"
 
-#include "functors.cuh"
+#include "dg/functors.cuh"
+#include "dg/arrvec2d.cuh"
+#include "dg/evaluation.cuh"
+#include "dg/xspacelib.cuh"
+#include "dg/rk.cuh"
+#include "dg/typedefs.cuh"
 
-#include "arrvec2d.cuh"
-#include "evaluation.cuh"
-#include "xspacelib.cuh"
 #include "shu.cuh"
-#include "rk.cuh"
-#include "typedefs.cuh"
 
 
 using namespace std;

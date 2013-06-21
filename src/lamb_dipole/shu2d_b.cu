@@ -3,17 +3,14 @@
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
-#include "timer.cuh"
+#include "dg/timer.cuh"
+#include "dg/functors.cuh"
+#include "dg/evaluation.cuh"
+#include "dg/rk.cuh"
+#include "dg/xspacelib.cuh"
+#include "dg/typedefs.cuh"
 
-#include "functors.cuh"
-
-#include "evaluation.cuh"
 #include "shu.cuh"
-#include "rk.cuh"
-
-#include "xspacelib.cuh"
-#include "typedefs.cuh"
-
 
 using namespace std;
 using namespace dg;

@@ -3,6 +3,7 @@
 
 #include "operator.cuh"
 
+///@cond
 namespace dg
 {
 namespace create
@@ -39,5 +40,6 @@ void add_operator( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
 } //namespace create
 } //namespace dg 
 
+///@endcond
 
 #endif // _DG_CREATION_CUH

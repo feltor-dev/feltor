@@ -131,7 +131,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned N, T h, bc bcx
     if( bcx == PER) //periodic bc
         a_bound_left = a;
     Operator< T, n> b = t*(rl);
-    Operator< T, n> bp = t*(-lr); //pitfall: T*-m^T is NOT -(T*m)^T
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)

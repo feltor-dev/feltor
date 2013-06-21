@@ -25,9 +25,9 @@ int main()
     V2D<double,n> v2d(grid.hx(), grid.hy());
 
     Polarisation2dX<double, n, DVec> polarisation ( grid);
-    DMatrix laplace = create::laplacian( grid, not_normed, XSPACE);
+    DMatrix laplace = create::laplacianM( grid, not_normed, XSPACE);
 
-    CG<DMatrix, DVec, V2D<double, n> > cg( x, x.size());
+    CG<DVec > cg( x, x.size());
     cout << "Test of w2d: "<<blas2::dot( w2d, b)<<endl;
     blas2::symv( w2d, b, b);
     cout << "Test of v2d: "<<blas2::dot( v2d, b)<<endl;
