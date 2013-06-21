@@ -115,7 +115,7 @@ int main( int argc, char* argv[])
         status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
         output = y1[1]; //ions
         status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
-        output = test.polarisation();
+        output = test.potential()[0];
         status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
         H5Gclose( grp);
     }

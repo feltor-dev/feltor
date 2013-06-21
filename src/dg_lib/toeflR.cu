@@ -117,12 +117,11 @@ int main( int argc, char* argv[])
         w.title() << fixed; 
         w.title() << " &&   time = "<<time;
         w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
-#ifdef DG_DEBUG
-        glfwWaitEvents();
-#endif //DG_DEBUG
 
         //step 
+#ifdef DG_BENCHMARK
         t.tic();
+#endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
             try{ ab( test, y0, y1, p.dt);}
@@ -135,7 +134,10 @@ int main( int argc, char* argv[])
             y0.swap( y1); //attention on -O3 ?
         }
         time += (double)p.itstp*p.dt;
+#ifdef DG_BENCHMARK
         t.toc();
+        std::cout << "\n        Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
+#else//DG_BENCHMARK
         test.exp( y0, y1);
         std::cout << scientific << setprecision( 3);
         std::cout << "m_tot/m_0: "<< (blas2::dot( one, w2d, y1[1])-mass0)/mass_blob0<<"\t";
@@ -147,13 +149,13 @@ int main( int argc, char* argv[])
         std::cout << "total energy: "<< diff<<"\t";//test.energy( y0, test.potential()[0])<<"\t";
         double diss = test.energy_dot( y0, test.potential());
         std::cout << "total energy dissipation: "<< diss<<"\n";
+#endif//DG_BENCHMARK
         //std::cout << " Ratio "<< diff/diss <<"\n";
         //glfwWaitEvents();
         running = running && 
                   !glfwGetKey( GLFW_KEY_ESC) &&
                   glfwGetWindowParam( GLFW_OPENED);
     }
-    std::cout << "Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n";
     ////////////////////////////////////////////////////////////////////
 
     return 0;
