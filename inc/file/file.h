@@ -11,9 +11,13 @@
 
 
 /**
- * @file Utility functions for proper scientific h5 file format
+ * @file 
+ * Utility functions for proper scientific h5 file format
  */
 
+/**
+ * @brief Namespace containing all functions
+ */
 namespace file{
 
 /**

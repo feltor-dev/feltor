@@ -9,11 +9,11 @@
  *      @defgroup containers Containers
  *      @defgroup algorithms Numerical schemes
  *      @defgroup fftw FFTW wrappers
- *      @defgroup utilities 
- *      @defgroup exceptions
+ *      @defgroup utilities Utilities
+ *      @defgroup exceptions Exceptions
  * @}
- * 
- * @defgroup INNTO The TOEFL source code
+ */
+/* @defgroup INNTO The TOEFL source code
  * @{
  *      @defgroup parameters
  *      @defgroup equations
