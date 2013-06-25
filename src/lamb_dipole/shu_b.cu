@@ -86,7 +86,7 @@ int main()
         }
         t.toc();
         //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
-        cout << "Simulation Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step"<<endl;
+        w.title() << "Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step"<<endl;
         time += p.itstp*p.dt;
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&

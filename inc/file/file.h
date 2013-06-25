@@ -62,7 +62,6 @@ double getTime( std::string& s)
  */
 std::string getName( hid_t file, unsigned idx)
 {
-    hid_t group;
     hsize_t length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, idx, NULL, 10, H5P_DEFAULT);
     std::string name( length+1, 's');
     H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, idx, &name[0], length+1, H5P_DEFAULT); 

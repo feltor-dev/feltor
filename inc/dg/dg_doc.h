@@ -20,6 +20,8 @@
  *          of Legendre coefficients used; currently 1, 2, 3, 4 or 5) evaluated at
  *          the gaussian abscissas in the respective cell. In 2D we store all nxn 
  *          values per cell contiguously in memory. We choose x to be the contiguous direction.
+ *          The first elements of the resulting vector lie in the cell at (x0,y0) and the last
+ *          in (x1, y1).
  *          The expand functions are equivalent to a call to the respective evaluate
  *          function followed by a forward dlt transformation in each cell. (i.e. a multiplication 
  *          with DLT<n>::forward)

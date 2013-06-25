@@ -10,6 +10,7 @@
 namespace dg{
 
 
+    //future plans: grid object should be the one which computes node coordinates (as vec2d?)
 
 /**
  * @brief Switch between boundary conditions
