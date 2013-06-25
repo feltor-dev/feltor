@@ -63,6 +63,7 @@ int main( int argc, char* argv[])
     //create timer
     bool running = true;
     unsigned index = 1;
+    std::cout << "PRESS N FOR NEXT FRAME!\n";
     while (running && index < nlinks )
     {
         t.tic();
@@ -100,6 +101,7 @@ int main( int argc, char* argv[])
         t.tic();
         //std::cout << "Read potential\n";
         status = H5LTread_dataset_double(group, "potential", &input[0] );
+        //Vorticity is \curl \bm{u}_E \approx \frac{\Delta\phi}{B}
         dg::blas2::gemv( laplacianM, input, visual);
         input.swap( visual);
         dg::blas2::gemv( equi, input, visual);

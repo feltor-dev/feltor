@@ -26,11 +26,25 @@ void GLFWCALL WindowResize( int w, int h)
  *
  * The intention of this class is to provide an interface to make 
  * the plot of a 2D vector during computations as simple as possible. 
- * To use it simply use
+ * To use it simply use something like
  * @code
- * draw::HostWindow w( 400, 400);
- * draw::ColorMapRedBlueExt map( 1.);
- * w.draw( v, 100, 100, map);
+ * #include "draw/host_window.h"
+ *
+ * int main()
+ * {
+ *     draw::HostWindow w( 400, 400);
+       draw::ColorMapRedBlueExt map( 1.);
+       std::vector v( 100*100);
+ *     bool running = true;
+ *     while( running)
+ *     {
+ *         //compute useful values for v
+           w.title() << "Hello world";
+           w.draw( v, 100, 100, map);
+           running = !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED);
+ *     }
+ *     return 0;
+ * }
  * @endcode
  */
 struct HostWindow
@@ -68,8 +82,11 @@ struct HostWindow
     /**
      * @brief Draw a 2D field in the open window
      *
-     * If multiplot is set the field will be drawn in the current active 
-     * box. If all boxes are full the picture will be drawn on screen and 
+     * The first element of the given vector corresponds to the bottom left corner. (i.e. the 
+     * origin of a 2D coordinate system) Successive
+     * elements correspond to points from left to right and from bottom to top.
+     * @note If multiplot is set the field will be drawn in the current active 
+     * box. When all boxes are full the picture will be drawn on screen and 
      * the top left box is active again. The title is reset.
      * @tparam Vector The container class of your elements
      * @param x Elements to be drawn
@@ -82,7 +99,7 @@ struct HostWindow
     {
         if( Nx != Nx_ || Ny != Ny_) {
             Nx_ = Nx; Ny_ = Ny;
-            std::cout << "Allocate resources for drawing!\n";
+            //std::cout << "Allocate resources for drawing!\n";
             resource.resize( Nx*Ny);
         }
 #ifdef DG_DEBUG
@@ -111,14 +128,24 @@ struct HostWindow
      * @brief Set up multiple plots in one window
      *
      * After this call, successive calls to the draw function will draw 
-     * in the box from left to right and top to bottom.
-     * @param i # of rows
-     * @param j # of columns
+     * into rectangular boxes from left to right and top to bottom.
+     * @param i # of rows of boxes
+     * @param j # of columns of boxes
+     * @code 
+     * w.set_multiplot( 1,2); //set up two boxes next to each other
+     * w.draw( first, 100 ,100, map); //draw in left box
+     * w.draw( second, 100 ,100, map); //draw in right box
+     * @endcode
      */
     void set_multiplot( unsigned i, unsigned j) { I = i; J = j; k = 0;}
     /**
      * @brief The title stream
      *
+     * The title is cleared after every call to draw!
+     * @code
+        HostWindow w(400, 400);
+        w.title() << "Hello window!";
+     * @endcode
      * @return The current window title
      */
     std::stringstream& title() { return window_str;}

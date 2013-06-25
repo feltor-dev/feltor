@@ -56,7 +56,7 @@ int main()
 {
     double dt, NT;
     unsigned Nx, Ny;
-    cout << "Type Nx, Ny and timestep!\n";
+    cout << "Type Nx (20), Ny (20) and timestep (0.01)!\n";
     cin >> Nx >> Ny >> dt;
     NT = (unsigned)(T/dt);
 
@@ -91,7 +91,7 @@ int main()
     blas1::axpby( -1., y0, 1., error);
     cout << "Normalized solution is "<<  norm_sol<< endl;
     double norm_error = blas2::dot( s2d, error);
-    cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<< endl;
+    cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000141704)\n";
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
     //n = 2 -> p = 2
     //n = 3 -> p = 3

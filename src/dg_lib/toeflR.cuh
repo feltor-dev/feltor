@@ -238,9 +238,20 @@ const container& ToeflR<T, n, container>::polarisation( const std::vector<contai
     else
     {
         blas1::axpby( -1, y[0], 1., gamma_n, chi); 
+        //container dxchi(chi),dxxchi( chi),  dychi( chi), dyychi(chi);
+        //blas2::gemv( arakawa.dx(), chi, dxchi);
+        //blas2::gemv( arakawa.dx(), dxchi, dxxchi);
+        //blas2::gemv( arakawa.dy(), chi, dychi);
+        //blas2::gemv( arakawa.dy(), dychi, dyychi);
+        //cudaThreadSynchronize( ); //important?
+        //blas1::axpby( 1., chi, -tau, dxxchi, omega); 
+        //cudaThreadSynchronize( ); //important?
+        //blas1::axpby( 1., omega, -tau, dyychi, omega);
+        //blas2::symv( w2d, omega, omega);
 
         gamma1.alpha() = -tau;
         blas2::symv( gamma1, chi, omega); //apply \Gamma_0^-1 ( gamma_n - n_e)
+        cudaThreadSynchronize(); //important?
         gamma1.alpha() = -0.5*tau;
     }
     number = pcg( A, phi[0], omega, v2d, eps_pol);

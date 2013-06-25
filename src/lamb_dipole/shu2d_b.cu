@@ -32,8 +32,8 @@ unsigned Ny = 16;
 
 double initial( double x, double y){ return 2.*sin(x)*sin(y);}
 double solution( double x, double y){ return 2.*sin(x)*sin(y)*exp(-2.*D*T);}
-using namespace std;
 
+//code for either lamb dipole or analytic sine function without graphics
 int main()
 {
     Timer t;
@@ -76,7 +76,6 @@ int main()
     DVec y0( omega), y1( y0);
     //make solver and stepper
     Shu<double, n, DVec> test( grid, D, eps);
-    RK< k, DVec > rk( y0);
     AB< k, DVec > ab( y0);
 
     t.tic();

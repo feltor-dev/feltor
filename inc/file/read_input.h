@@ -11,7 +11,6 @@ namespace file{
 
 /*! @brief Extract paramters from a file 
  *
- * @ingroup utilities
  * A parameter is recognised by the character '=' directly(!) in front of it. 
  * All other characters are ignored!
  * @param filename 
@@ -19,7 +18,7 @@ namespace file{
  * @return 
  *   A vector containing all parameters read
  *   the zeroth element is -1, the first contains the first parameter
- *   so the size is # of parameters read + 1
+ *   so the size is '# of parameters read' + 1
  */
 std::vector<double> read_input(const char * filename)
 { 
@@ -78,7 +77,18 @@ std::string read_file( const char* filename)
 
 }
 
-std::vector<double> read_input( std::string& file)
+/*! @brief Extract paramters from a string
+ *
+ * A parameter is recognised by the character '=' directly(!) in front of it. 
+ * All other characters are ignored!
+ * @param file 
+ *   The string to be searched for parameters
+ * @return 
+ *   A vector containing all parameters read
+ *   the zeroth element is -1, the first contains the first parameter
+ *   so the size is '# of parameters read' + 1
+ */
+std::vector<double> read_input( const std::string& file)
 {
     std::vector<double> para; 
     para.push_back( -1.);
