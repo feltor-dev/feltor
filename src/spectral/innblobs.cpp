@@ -41,58 +41,20 @@ void GLFWCALL WindowResize( int w, int h)
 Blueprint read( char const * file)
 {
     std::cout << "Reading from "<<file<<"\n";
-    Blueprint bp;
-    Physical& phys = bp.physical();
-    Algorithmic& alg = bp.algorithmic();
-    Boundary& bound = bp.boundary();
-    vector<double> para;
+    std::vector<double> para;
     try{ para = file::read_input( file); }
     catch (Message& m) 
     {  
         m.display(); 
         throw m;
     }
-    alg.nx = para[1];
-    alg.ny = para[2];
-    alg.dt = para[3];
-
-    bound.ly = para[4];
-    switch( (unsigned)para[5])
-    {
-        case( 0): bound.bc_x = TL_PERIODIC; break;
-        case( 1): bound.bc_x = TL_DST10; break;
-        case( 2): bound.bc_x = TL_DST01; break;
-    }
-    if( para[6])
-        bp.enable( TL_MHW);
-
-    phys.d = para[7];
-    phys.nu = para[8];
-    phys.kappa = para[9];
-
+    Blueprint bp( para);
     amp = para[10];
-    phys.g_e = phys.g[0] = para[11];
-    phys.tau[0] = para[12];
-    if( para[13])
-        bp.enable( TL_IMPURITY);
     imp_amp = para[14];
-    phys.g[1] = para[15];
-    phys.a[1] = para[16];
-    phys.mu[1] = para[17];
-    phys.tau[1] = para[18];
-
-    //what if impurities are set off???
-    phys.a[0] = 1. -phys.a[1];
-    phys.g[0] = (phys.g_e - phys.a[1] * phys.g[1])/(1.-phys.a[1]);
-    phys.mu[0] = 1.0;//single charged ions
-
     N = para[19];
     omp_set_num_threads( para[20]);
     blob_width = para[21];
     std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
-
-    alg.h = bound.ly / (double)alg.ny;
-    bound.lx = (double)alg.nx * alg.h;
     return bp;
 }
 
@@ -177,9 +139,15 @@ int main( int argc, char* argv[])
         return -1;
     }
     const Blueprint bp = bp_mod;
+
     field_ratio = bp.boundary().lx/bp.boundary().ly;
     
     bp.display(cout);
+    if( bp.boundary().bc_x != TL_PERIODIC)
+    {
+        cerr << "Only periodic boundaries allowed!\n";
+        return -1;
+    }
     //construct solvers 
     Sol solver( bp);
 

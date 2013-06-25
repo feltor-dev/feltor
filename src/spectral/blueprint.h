@@ -153,6 +153,55 @@ class Blueprint
     {
         imp = global = mhw = false; 
     }
+
+    Blueprint( const std::vector<double>& para)
+    {
+        imp = global = mhw = false;
+        alg.nx = para[1];
+        alg.ny = para[2];
+        alg.dt = para[3];
+
+        bound.ly = para[4];
+        switch( (unsigned)para[5])
+        {
+            case( 0): bound.bc_x = TL_PERIODIC; break;
+            case( 1): bound.bc_x = TL_DST10; break;
+            case( 2): bound.bc_x = TL_DST01; break;
+        }
+        if( para[6])
+            mhw = true;
+
+        phys.d = para[7];
+        phys.nu = para[8];
+        phys.kappa = para[9];
+
+        phys.g_e = phys.g[0] = para[11];
+        phys.tau[0] = para[12];
+        if( para[13])
+        {
+            imp = true;
+            //imp_amp = para[14];
+            phys.g[1] = para[15];
+            phys.a[1] = para[16];
+            phys.mu[1] = para[17];
+            phys.tau[1] = para[18];
+        }
+        else 
+            phys.g[1] = phys.a[1] = phys.mu[1] = phys.tau[1] = 0;
+
+        phys.a[0] = 1. -phys.a[1];
+        phys.g[0] = (phys.g_e - phys.a[1] * phys.g[1])/(1.-phys.a[1]);
+        phys.mu[0] = 1.0;//single charged ions
+
+        //N = para[19];
+        //omp_set_num_threads( para[20]);
+        //blob_width = para[21];
+        //std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
+
+        alg.h = bound.ly / (double)alg.ny;
+        bound.lx = (double)alg.nx * alg.h;
+    }
+
     /*! @brief Get Physical 
      */
     const Physical& physical() const {return phys;}
