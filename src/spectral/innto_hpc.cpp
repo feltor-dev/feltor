@@ -106,13 +106,7 @@ int main( int argc, char* argv[])
     std::vector<double> output( alg.nx*alg.ny);
     for( unsigned i=0; i<max_out; i++)
     {
-        for( unsigned i=0; i<itstp; i++)
-            solver.step();
-        
-        time += itstp*alg.dt;
         grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-
-        //title.str("");
         //output all three fields
         copyMatrix( solver.getField( TL_ELECTRONS), output);
         status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
@@ -121,9 +115,22 @@ int main( int argc, char* argv[])
         copyMatrix( solver.getField( TL_POTENTIAL), output);
         status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
         H5Gclose( grp);
+        for( unsigned i=0; i<itstp; i++)
+            solver.step();
+        
+        time += itstp*alg.dt;
     }
-    H5Fclose( file);
+    grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+    //output all three fields
+    copyMatrix( solver.getField( TL_ELECTRONS), output);
+    status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
+    copyMatrix( solver.getField( TL_IONS), output);
+    status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
+    copyMatrix( solver.getField( TL_POTENTIAL), output);
+    status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
+    H5Gclose( grp);
     //////////////////////////////////////////////////////////////////
+    H5Fclose( file);
     fftw_cleanup();
     return 0;
 
