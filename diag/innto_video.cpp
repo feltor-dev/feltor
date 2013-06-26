@@ -66,11 +66,12 @@ int main( int argc, char* argv[])
     bool running = true;
     unsigned index = 1;
     std::cout << "PRESS N FOR NEXT FRAME!\n";
+    std::cout << "PRESS P FOR PREVIOUS FRAME!\n";
     while (running && index < nlinks )
     {
         hid_t group;
         name = file::getName( file, index);
-        index += v[5];
+        //index += v[5];
         group = H5Gopen( file, name.data(), H5P_DEFAULT);
 
         status = H5LTread_dataset_double(group, "electrons", &visual[0] );
@@ -92,16 +93,20 @@ int main( int argc, char* argv[])
         w.title() << std::fixed; 
         w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
         w.draw( visual, alg.nx, alg.ny, colors);
-        glfwPollEvents();
-        if( !glfwGetKey( 'N')/*||((unsigned)t%100 == 0)*/) 
+        bool waiting = true; 
+        do
         {
-            do
-            {
-                glfwWaitEvents();
-            } while( !glfwGetKey('N') && 
-                     !glfwGetKey( GLFW_KEY_ESC) && 
-                      glfwGetWindowParam( GLFW_OPENED) );
-        }
+            glfwPollEvents();
+            if( glfwGetKey( 'P')){
+                index -= v[5];
+                waiting = false;
+            }
+            else if( glfwGetKey( 'N') ){
+                index +=v[5];
+                waiting = false;
+            }
+            glfwWaitEvents();
+        }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);

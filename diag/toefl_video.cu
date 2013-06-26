@@ -64,6 +64,7 @@ int main( int argc, char* argv[])
     bool running = true;
     unsigned index = 1;
     std::cout << "PRESS N FOR NEXT FRAME!\n";
+    std::cout << "PRESS P FOR PREVIOUS FRAME!\n";
     while (running && index < nlinks )
     {
         t.tic();
@@ -115,16 +116,20 @@ int main( int argc, char* argv[])
         w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
         t.toc();
         //std::cout <<"2nd half took          "<<t.diff()<<"s\n";
-        glfwPollEvents();
-        if( !glfwGetKey( 'N')/*||((unsigned)t%100 == 0)*/) 
+        bool waiting = true;
+        do
         {
-            do
-            {
-                glfwWaitEvents();
-            } while( !glfwGetKey('N') && 
-                     !glfwGetKey( GLFW_KEY_ESC) && 
-                      glfwGetWindowParam( GLFW_OPENED) );
-        }
+            glfwPollEvents();
+            if( glfwGetKey( 'P')){
+                index -= v[5];
+                waiting = false;
+            }
+            else if( glfwGetKey( 'N') ){
+                index +=v[5];
+                waiting = false;
+            }
+            glfwWaitEvents();
+        }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);

@@ -9,8 +9,8 @@ Then enable a small curvature. Time step can be relatively
 large as well as the perturbation amplitude.
 
 ---------------------Algorithmic parameters-------------------
-1) nx (grid points in x)                =   768
-2) ny (grid points in y)                =   768
+1) nx (grid points in x)                =   1024
+2) ny (grid points in y)                =   1024 
 3) dt (time step in units c_s/L_p)      =   0.1    
 ---------------------Boundary conditions----------------------
 4) ly (length of y in units of rho_s)         =   192   
@@ -33,8 +33,8 @@ quasineutrality condition)
 17) mu_z (mz/mi*Z)(mass)                =   0.0  (48.0) 
 18) tau_z (Tz/Te*Z)                     =   0.0     
 ---------------------Miscellaneous----------------------------
-19) itstp (steps between output)        =   20      
+19) itstp (steps between output)        =   50      
 20) OMP_NUM_THREADS                     =   4      (4)
 21) blob_width ( sigma)                 =   5    (10)
-22) # of outputs ( excluding first)     =   750
+22) # of outputs ( excluding first)     =   300
 @ ------------------------------------------------------------
