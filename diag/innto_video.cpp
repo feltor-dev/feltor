@@ -28,8 +28,8 @@ void copyMatrix( const Mat& src, std::vector<double> & dst)
 
 double absmax( double a, double b)
 {
-    if( fabs(a) > fabs(b)) return a;
-    return b;
+    if( fabs(a) > fabs(b)) return fabs(a);
+    return fabs(b);
 }
 
 int main( int argc, char* argv[])
@@ -94,6 +94,7 @@ int main( int argc, char* argv[])
         w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
         w.draw( visual, alg.nx, alg.ny, colors);
         bool waiting = true; 
+        /*
         do
         {
             glfwPollEvents();
@@ -107,6 +108,7 @@ int main( int argc, char* argv[])
             }
             glfwWaitEvents();
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
+        */
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
