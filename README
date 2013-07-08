@@ -1,7 +1,7 @@
-Welcome to the TOEFL project!
+Welcome to the TOEFL project v1.3!
 
-REQUIREMENTS
- - To install the code you need to have fftw3, OpenGl and
+INNTO
+ - To install the spectral code INNTO you need to have fftw3, OpenGl and
     glfw (http://www.glfw.org/download.html) installed in standard locations. 
  - If you experience linker problems with glfw be sure you add the correct 
     libraries for your system in the Makefile in the GLFLAGS/LIBS variable.
@@ -9,6 +9,9 @@ REQUIREMENTS
     http://www.stack.nl/~dimitri/doxygen/
  - Since the code uses features of the new C++11 standard be 
     sure that your compiler supports them. (minimal gcc version is 4.4)
+TOEFL-R
+ - To install the discontinuous galerkin code TOEFL-R you need a working installation 
+    of CUDA, OpenGL and the cusp library. 
 
 DOCUMENTATION
 To create the documentation type
