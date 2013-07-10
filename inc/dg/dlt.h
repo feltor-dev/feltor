@@ -19,6 +19,7 @@ struct DLT
     const static double weight[n]; //!< Gaussian weights
     const static double abscissa[n]; //!< Gaussian abscissas
 };
+
 ///@cond
 //values taken from http://processingjs.nihongoresources.com/bezierinfo/legendre-gauss-values.php
 template<>
