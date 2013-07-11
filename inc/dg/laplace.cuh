@@ -5,7 +5,7 @@
 
 #include "grid.cuh"
 #include "functions.h"
-#include "operator.cuh"
+#include "operator_dynamic.h"
 #include "creation.cuh"
 
 /*! @file 1d laplacians
@@ -40,23 +40,23 @@ namespace create{
  *
  * @return Host Matrix in coordinate form 
  */
-template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, norm no = not_normed, T alpha = 1.)
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned n, unsigned N, T h, norm no = not_normed, T alpha = 1.)
 {
     if( n ==1 ) alpha = 0; //makes laplacian of order 2
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
     //std::cout << A.row_indices.size(); 
     //std::cout << A.num_cols; //this works!!
-    Operator<T, n> l( dg::lilj);
-    Operator<T, n> r( dg::rirj);
-    Operator<T, n> lr(dg::lirj);
-    Operator<T, n> rl(dg::rilj);
-    Operator<T, n> d( dg::pidxpj);
-    Operator<T, n> t( dg::pipj_inv);
+    Operator<T> l = create::lilj(n);
+    Operator<T> r = create::rirj(n);
+    Operator<T> lr = create::lirj(n);
+    Operator<T> rl = create::rilj(n);
+    Operator<T> d = create::pidxpj(n);
+    Operator<T> t = create::pipj_inv(n);
     t *= 2./h;
-    Operator< T, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
-    Operator< T, n> b = -((d+l)*t*rl+alpha*rl);
-    Operator< T, n> bT = b.transpose();
+    Operator< T> a = lr*t*rl+(d+l)*t*(d+l).transpose() + alpha*(l+r);
+    Operator< T> b = -((d+l)*t*rl+alpha*rl);
+    Operator< T> bT = b.transpose();
     if( no == normed) { a = t*a; b = t*b; bT = t*bT; }
     //std::cout << a << "\n"<<b <<std::endl;
     //assemble the matrix
@@ -106,26 +106,26 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned N, T h, norm
  *
  * @return Host Matrix in coordinate form 
  */
-template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, norm no = not_normed)
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned n, unsigned N, T h, norm no = not_normed)
 {
     //if( n == 1) alpha = 0; //not that easily because dirichlet 
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N - 2*n*n);
-    Operator<T, n> l( dg::lilj);
-    Operator<T, n> r( dg::rirj);
-    Operator<T, n> lr(dg::lirj);
-    Operator<T, n> rl(dg::rilj);
-    Operator<T, n> d( dg::pidxpj);
-    Operator<T, n> s( dg::pipj);
-    Operator<T, n> t( dg::pipj_inv);
+    Operator<T> l = create::lilj(n);
+    Operator<T> r = create::rirj(n);
+    Operator<T> lr = create::lirj(n);
+    Operator<T> rl = create::rilj(n);
+    Operator<T> d = create::pidxpj(n);
+    Operator<T> s = create::pipj(n);
+    Operator<T> t = create::pipj_inv(n);
     t *= 2./h;
 
-    Operator<T, n> a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
-    Operator<T, n> b = -((d+l)*t*rl+rl);
-    Operator<T, n> bT= b.transpose();
-    Operator<T, n> ap = d*t*d.transpose() + (l + r);
-    Operator<T, n> bp = -(d*t*rl + rl);
-    Operator<T, n> bpT= bp.transpose();
+    Operator<T> a = lr*t*rl+(d+l)*t*(d+l).transpose() + (l+r);
+    Operator<T> b = -((d+l)*t*rl+rl);
+    Operator<T> bT= b.transpose();
+    Operator<T> ap = d*t*d.transpose() + (l + r);
+    Operator<T> bp = -(d*t*rl + rl);
+    Operator<T> bpT= bp.transpose();
     if( no == normed) { 
         a=t*a; b=t*b; bT=t*bT; 
         ap=t*ap; bp=t*bp; bpT=t*bpT;
@@ -180,13 +180,14 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned N, T h, norm
  *
  * @return Host Matrix in coordinate form
  */
-template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T,n>& g, norm no = not_normed)
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T>& g, norm no = not_normed)
 {
+
     if( g.bcx() == DIR)
-        return laplace1d_dir<T,n>( g.N(), g.h(), no);
+        return laplace1d_dir<T>( g.n(), g.N(), g.h(), no);
     else 
-        return laplace1d_per<T,n>( g.N(), g.h(), no);
+        return laplace1d_per<T>( g.n(), g.N(), g.h(), no);
 }
 
 
