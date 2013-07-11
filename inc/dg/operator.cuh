@@ -68,7 +68,6 @@ class Operator
 
     /*! @brief access operator
      *
-     * Performs a range check if TL_DEBUG is defined
      * @param i row index
      * @param j column index
      * @return reference to value at that location
@@ -79,7 +78,6 @@ class Operator
     }
     /*! @brief const access operator
      *
-     * Performs a range check if TL_DEBUG is defined
      * @param i row index
      * @param j column index
      * @return const value at that location
@@ -96,7 +94,7 @@ class Operator
     */
     Operator transpose() const 
     {
-        double temp;
+        T temp;
         Operator o(*this);
         for( unsigned i=0; i<n; i++)
             for( unsigned j=0; j<i; j++)
