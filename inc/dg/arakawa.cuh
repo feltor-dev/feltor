@@ -125,7 +125,6 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
     //transform to x-space
     blas2::symv( backward, lhs, blhs);
     blas2::symv( backward, rhs, brhs);
-    cudaThreadSynchronize();
     //compute derivatives in x-space
     blas2::symv( bdxf, blhs, dxlhs);
     blas2::symv( bdyf, blhs, dylhs);
@@ -136,17 +135,14 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
     // +x (1) -> result und (2) -> blhs
     blas1::pointwiseDot( blhs, dyrhs, result);
     blas1::pointwiseDot( blhs, dxrhs, blhs);
-    cudaThreadSynchronize();
 
     // ++ (1) -> dyrhs and (2) -> dxrhs
     blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
     blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
-    cudaThreadSynchronize();
 
     // x+ (1) -> dxlhs and (2) -> dylhs
     blas1::pointwiseDot( dxlhs, brhs, dxlhs);
     blas1::pointwiseDot( dylhs, brhs, dylhs);
-    cudaThreadSynchronize();
 
     blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
     //everything which needs a dx 
@@ -159,13 +155,10 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
     //blas1::axpby( 0., dxlhs,  -0., blhs);
     //blas1::axpby( 0., result, -0., dylhs);
 
-    cudaThreadSynchronize();
     blas2::symv( bdyf, blhs, result);      //dy*(dxl*r - l*dxr) -> result
     blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
     //now sum everything up
-    cudaThreadSynchronize();
     blas1::axpby( 1., result, 1., dxlhs); //result + dxlhs -> result
-    cudaThreadSynchronize();
     blas1::axpby( 1., dxrhs, 1., dxlhs); //result + dyrhs -> result
     //transform to l-space
     blas2::symv( forward, dxlhs, result);
@@ -302,17 +295,14 @@ void ArakawaX<T, n, container>::operator()( const container& lhs, const containe
     // +x (1) -> result und (2) -> blhs
     blas1::pointwiseDot( lhs, dyrhs, result);
     blas1::pointwiseDot( lhs, dxrhs, helper);
-    cudaThreadSynchronize();
 
     // ++ (1) -> dyrhs and (2) -> dxrhs
     blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
     blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
-    cudaThreadSynchronize();
 
     // x+ (1) -> dxlhs and (2) -> dylhs
     blas1::pointwiseDot( dxlhs, rhs, dxlhs);
     blas1::pointwiseDot( dylhs, rhs, dylhs);
-    cudaThreadSynchronize();
 
     blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
     //everything which needs a dx 
@@ -325,13 +315,10 @@ void ArakawaX<T, n, container>::operator()( const container& lhs, const containe
     //blas1::axpby( 0., dxlhs,  -0., helper);
     //blas1::axpby( 0., result, -0., dylhs);
 
-    cudaThreadSynchronize();
     blas2::symv( bdyf, helper, result);      //dy*(dxl*r - l*dxr) -> result
     blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
     //now sum everything up
-    cudaThreadSynchronize();
     blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
-    cudaThreadSynchronize();
     blas1::axpby( 1., dxrhs, 1., result); //result + dyrhs -> result
 }
 
