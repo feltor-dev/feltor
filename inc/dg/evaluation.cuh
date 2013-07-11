@@ -146,14 +146,18 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d<double>& 
 template< class BinaryOp>
 thrust::host_vector<double> evaluate( BinaryOp f, const Grid<double>& g)
 {
-    Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
-    Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    unsigned n= g.n();
+    Grid1d<double> gx( g.x0(), g.x1(), n, g.Nx());
+    Grid1d<double> gy( g.y0(), g.y1(), n, g.Ny());
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
+
     thrust::host_vector<double> v( g.size());
-    for( unsigned i=0; i<gy.size(); i++)
-        for( unsigned j=0; j<gx.size(); j++)
-            v[ i*gx.size() + j] = f( absx[j], absy[i]);
+    for( unsigned i=0; i<gy.N(); i++)
+        for( unsigned j=0; j<gx.N(); j++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned l=0; l<n; l++)
+                    v[ i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k]);
     return v;
 };
 ///@cond

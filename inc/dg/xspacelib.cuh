@@ -48,14 +48,13 @@ namespace create{
  The elements of the map contain the indices where this place goes to
  i.e. w[m[i]] = v[i]
  
- * @tparam n # of polynomial coefficients
+ * @param n # of polynomial coefficients
  * @param Nx # of points in x
  * @param Ny # of points in y
  *
  * @return map of indices
  */
-template< size_t n>
-thrust::host_vector<int> scatterMap( unsigned Nx, unsigned Ny )
+thrust::host_vector<int> scatterMap(unsigned n, unsigned Nx, unsigned Ny )
 {
     thrust::host_vector<int> map( n*n*Nx*Ny);
     for( unsigned i=0; i<Ny; i++)
@@ -76,14 +75,13 @@ thrust::host_vector<int> scatterMap( unsigned Nx, unsigned Ny )
  The elements of the map contain the indices that come at that place
  i.e. w[i] = v[m[i]]
  *
- * @tparam n # of polynomial coefficients
+ * @param n # of polynomial coefficients
  * @param Nx # of points in x
  * @param Ny # of points in y
  *
  * @return map of indices
  */
-template< size_t n>
-thrust::host_vector<int> permutationMap( unsigned Nx, unsigned Ny )
+thrust::host_vector<int> permutationMap( unsigned n, unsigned Nx, unsigned Ny )
 {
     thrust::host_vector<int> map( n*n*Nx*Ny);
     for( unsigned i=0; i<Ny; i++)
@@ -99,23 +97,23 @@ thrust::host_vector<int> permutationMap( unsigned Nx, unsigned Ny )
  *
  * Useful if you want to visualize a dg-formatted vector.
  * @tparam T value type
- * @tparam n # of polynomial coefficients
  * @param g The grid on which to operate 
  * @param s your vectors are given in XSPACE or in LSPACE
  *
  * @return transformation matrix
  */
-template < class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T,n>& g, space s = XSPACE)
+template < class T>
+cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    unsigned n = g.n();
     //create equidistant backward transformation
-    dg::Operator<double, n> backwardeq( dg::DLT<n>::backwardEQ);
-    dg::Operator<double, n*n> backward2d = dg::tensor( backwardeq, backwardeq);
+    dg::Operator<double> backwardeq = create::backwardEQ( n);
+    dg::Operator<double> backward2d = dg::tensor( backwardeq, backwardeq);
 
     if( s == XSPACE){
-        dg::Operator<double, n> forward( dg::DLT<n>::forward);
-        dg::Operator<double, n*n> forward2d = dg::tensor( forward, forward);
+        dg::Operator<double> forward = create::forward(n);
+        dg::Operator<double> forward2d = dg::tensor( forward, forward);
         backward2d = backward2d*forward2d;
     }
 
