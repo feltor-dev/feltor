@@ -50,8 +50,8 @@ double jacobian( double x, double y)
 
 int main()
 {
-    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
-    W2D<double,n > w2d( grid.hx(), grid.hy());
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    DVec w2d = create::w2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;
@@ -62,7 +62,7 @@ int main()
     const DVec sol = evaluate ( jacobian, grid);
     DVec eins = evaluate( one, grid);
 
-    ArakawaX<double, n, DVec> arakawa( grid);
+    ArakawaX< DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     arakawa( lhs, rhs1, jac1);

@@ -50,14 +50,14 @@ struct AddIndex2d{
 * @ingroup lowlevel
 * Takes care of correct permutation of indices.
 * @tparam T value type
-* @tparam n number of Legendre coefficients per dimension
+* @param n # of Legendre coefficients per dimension
 * @param lhs The left hand side (1D )
 * @param rhs The right hand side (1D ) 
 *
 * @return A newly allocated cusp matrix containing the tensor product
 */
-template< class T, size_t n>
-cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( 
+template< class T>
+cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
         const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
         const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
 {    
