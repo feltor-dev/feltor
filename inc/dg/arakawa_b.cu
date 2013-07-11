@@ -70,7 +70,6 @@ int main()
     arakawa( lhs, rhs, jac);
     t.toc();
     cout << "\nArakawa took "<<t.diff()<<"s\n\n";
-    cudaThreadSynchronize();
     //cout<<jac<<endl;
 
 
@@ -79,7 +78,6 @@ int main()
     cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs, s2d, jac)<<"\n";
     cout << "Mean   n*Jacobian is "<<blas2::dot( lhs, s2d, jac)<<"\n";
     blas1::axpby( 1., sol, -1., jac);
-    cudaThreadSynchronize();
     cout << "Distance to solution "<<sqrt(blas2::dot( s2d, jac))<<endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |     

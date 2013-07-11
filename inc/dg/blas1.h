@@ -19,7 +19,8 @@ namespace dg{
  *
  * @ingroup blas1
  * Only those routines that are actually called need to be implemented.
- * Don't forget to specialize in the dg namespace
+ * Don't forget to specialize in the dg namespace.
+ * @note successive calls to blas routines are executed sequentially 
  */
 namespace blas1
 {
