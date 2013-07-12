@@ -64,30 +64,30 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned n, unsigned 
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, 0,0,k,l, a(k,l)); //1 x A
+            detail::add_index<T>(n, A, number, 0,0,k,l, a(k,l)); //1 x A
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
+            detail::add_index<T>(n, A, number, 0,1,k,l, b(k,l)); //1+ x B
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, 0,N-1,k,l, bT(k,l)); //1- x B^T
+            detail::add_index<T>(n, A, number, 0,N-1,k,l, bT(k,l)); //1- x B^T
     }
     for( unsigned i=1; i<N-1; i++)
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T,n>(A, number, i, i-1, k, l, bT(k,l));
+                detail::add_index<T>(n, A, number, i, i-1, k, l, bT(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T,n>(A, number, i, i, k, l, a(k,l));
+                detail::add_index<T>(n, A, number, i, i, k, l, a(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T,n>(A, number, i, i+1, k, l, b(k,l));
+                detail::add_index<T>(n, A, number, i, i+1, k, l, b(k,l));
         }
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++) 
-            detail::add_index<T,n>( A, number, N-1,0,  k,l, b(k,l));
+            detail::add_index<T>(n, A, number, N-1,0,  k,l, b(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, N-1,N-2,k,l, bT(k,l));
+            detail::add_index<T>(n, A, number, N-1,N-2,k,l, bT(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, N-1,N-1,k,l, a(k,l));
+            detail::add_index<T>(n, A, number, N-1,N-1,k,l, a(k,l));
     }
     return A;
 };
@@ -135,35 +135,35 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned n, unsigned 
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, 0,0,k,l, ap(k,l));
+            detail::add_index<T>(n, A, number, 0,0,k,l, ap(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, 0,1,k,l, bp(k,l));
+            detail::add_index<T>(n, A, number, 0,1,k,l, bp(k,l));
     }
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>(A, number, 1, 1-1, k, l, bpT(k,l));
+            detail::add_index<T>(n, A, number, 1, 1-1, k, l, bpT(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>(A, number, 1, 1, k, l, a(k,l));
+            detail::add_index<T>(n, A, number, 1, 1, k, l, a(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>(A, number, 1, 1+1, k, l, b(k,l));
+            detail::add_index<T>(n, A, number, 1, 1+1, k, l, b(k,l));
     }
     for( unsigned i=2; i<N-1; i++)
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T,n>(A, number, i, i-1, k, l, bT(k,l));
+                detail::add_index<T>(n, A, number, i, i-1, k, l, bT(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T,n>(A, number, i, i, k, l, a(k,l));
+                detail::add_index<T>(n, A, number, i, i, k, l, a(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T,n>(A, number, i, i+1, k, l, b(k,l));
+                detail::add_index<T>(n, A, number, i, i+1, k, l, b(k,l));
         }
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, N-1,N-2,k,l, bT(k,l));
+            detail::add_index<T>(n, A, number, N-1,N-2,k,l, bT(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T,n>( A, number, N-1,N-1,k,l, a(k,l));
+            detail::add_index<T>(n, A, number, N-1,N-1,k,l, a(k,l));
     }
     return A;
 }

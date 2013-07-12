@@ -29,8 +29,8 @@ int main ()
     cout << "# of cells          " << N <<"\n";
     const double hx = lx/(double)N;
     cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_asymm_mt<double, n>( N, hx, DIR);
-    ArrVec1d<double, n> hv = expand<double(&)(double), n>( function, 0., lx, N);
-    ArrVec1d<double, n> hw = hv;
+    ArrVec1d<double> hv = expand<double(&)(double)>( function, 0., lx,n, N);
+    ArrVec1d<double> hw = hv;
     const ArrVec1d<double, n> hu = expand<double(&)(double), n>( derivative, 0., lx, N);
 
     blas2::symv( hm, hv.data(), hw.data());

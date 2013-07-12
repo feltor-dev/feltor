@@ -53,7 +53,7 @@ int main()
     double norm = dg::blas2::dot( h_v, dg::T1D<double>(g1d), h_v);
     double normX = dg::blas2::dot( h_x, dg::create::w1d(g1d), h_x);
     //double norm2 = dg::blas2::dot( dg::S2D<double>(g2d), h_m);
-    double norm2 = dg::blas2::dot( dg::create::s2d(g2d), h_m);
+    double norm2 = dg::blas2::dot( dg::S2D<double>(g2d), h_m);
     double norm2X = dg::blas2::dot( dg::create::w2d(g2d), h_n);
 
     cout<< "Square normalized 1D norm "<< norm <<"\n";

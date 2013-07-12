@@ -13,15 +13,15 @@ int main()
 {
 
     cout << "Test of operator Matrix creation\n";
-    dg::Operator<double, 3> Op1( dg::pipj);
+    dg::Operator<double> Op1 = dg::create::pipj( 3);
 
-    dg::Operator<double, 3> Op2( dg::DLT<3>::forward);
+    dg::Operator<double> Op2 = dg::create::forward( 3);
     cout << "1st Operator is:\n" << Op1<<"\n";
     cout << "2nd Operator is:\n" << Op2<<"\n";
     cout << "Tensor Product is: \n" << dg::tensor( Op1, Op2);
-    cusp::coo_matrix<int, double, cusp::host_memory> test1 = dg::tensor<double, 3>( 2, dg::delta);
-    cusp::coo_matrix<int, double, cusp::host_memory> test2 = dg::tensor<double, 3>( 2, dg::DLT<3>::forward);
-    cusp::coo_matrix<int, double, cusp::host_memory> test3 = dg::tensor(2, dg::tensor( Op1, Op2));
+    cusp::coo_matrix<int, double, cusp::host_memory> test1 = dg::tensor( 2, dg::create::delta(3));
+    cusp::coo_matrix<int, double, cusp::host_memory> test2 = dg::tensor( 2, Op2);
+    cusp::coo_matrix<int, double, cusp::host_memory> test3 = dg::tensor( 2, dg::tensor( Op1, Op2));
     cusp::print(test1);
     cusp::print(test2);
     cusp::print(test3);

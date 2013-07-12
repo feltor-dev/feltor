@@ -34,7 +34,7 @@ void add_operator( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
 {
     for( unsigned k=0; k<op.size(); k++)
         for( unsigned l=0; l<op.size(); l++)
-            add_index( hm, number, i,j, k,l, op(k,l));
+            add_index( op.size(), hm, number, i,j, k,l, op(k,l));
 }
 
 } //namespace detail

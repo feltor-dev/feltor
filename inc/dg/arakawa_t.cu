@@ -51,18 +51,18 @@ double jacobian( double x, double y)
 int main()
 {
     Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    DVec w2d = create::w2d( grid);
+    DVec w2d = create::s2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;
-    DVec lhs = evaluate( left, grid), jac(lhs), jac1( lhs), jac2(lhs);
-    DVec rhs1 = evaluate( right, grid), rhs( rhs1);
-    DVec rhs2 = evaluate( right2, grid);
+    DVec lhs = expand( left, grid), jac(lhs), jac1( lhs), jac2(lhs);
+    DVec rhs1 = expand( right, grid), rhs( rhs1);
+    DVec rhs2 = expand( right2, grid);
     blas1::pointwiseDot( rhs1, rhs2, rhs);
-    const DVec sol = evaluate ( jacobian, grid);
-    DVec eins = evaluate( one, grid);
+    const DVec sol = expand ( jacobian, grid);
+    DVec eins = expand( one, grid);
 
-    ArakawaX< DVec> arakawa( grid);
+    Arakawa< DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     arakawa( lhs, rhs1, jac1);
@@ -70,7 +70,6 @@ int main()
     arakawa( lhs, rhs2, jac2);
     blas1::pointwiseDot( rhs1, jac2, jac2);
     blas1::axpby( 1., jac1, 1., jac2, jac2);
-    cudaThreadSynchronize();
 
     cout << scientific;
     cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
@@ -80,7 +79,6 @@ int main()
     cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs,  w2d, jac)<<"\n";
     cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs,  w2d, jac2)<<"\n";
     blas1::axpby( 1., sol, -1., jac);
-    cudaThreadSynchronize();
     cout << "Distance to solution "<<sqrt( blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |     
@@ -93,3 +91,4 @@ int main()
 
     return 0;
 }
+

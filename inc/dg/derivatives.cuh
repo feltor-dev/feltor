@@ -52,12 +52,12 @@ template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T>& g, bc bcx, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    Matrix dx = create::dx_symm<T>( g.Nx(), g.hx(), bcx);
+    Matrix dx = create::dx_symm<T>(g.n(), g.Nx(), g.hx(), bcx);
     Matrix bdxf( dx);
     if( s == XSPACE)
         bdxf = sandwich<T>( g.n(), dx);
 
-    return dgtensor<T>( g.n(), tensor<T>( g.n(), g.Ny(), delta(g.n()) ), bdxf );
+    return dgtensor<T>( g.n(), tensor<T>( g.Ny(), delta(g.n()) ), bdxf );
 }
 /**
  * @brief Create 2d derivative in x-direction
@@ -90,7 +90,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T>& g, bc bcy, space 
     if( s == XSPACE)
         bdyf_ = sandwich<T>(g.n(), dy);
 
-    return dgtensor<T>( g.n(), bdyf_, tensor<T>( g.Nx(), delta(n)));
+    return dgtensor<T>( g.n(), bdyf_, tensor<T>( g.Nx(), delta(g.n())));
 }
 /**
  * @brief Create 2d derivative in y-direction
@@ -120,7 +120,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T>& g, space s = XSPA
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T, n>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
 
@@ -141,8 +141,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T, n>& g, bc 
     //sandwich with correctly normalized matrices
     if( s == XSPACE)
     {
-        Operator<T> forward1d = create::forward( n);
-        Operator<T> backward1d = create::backward( n);
+        Operator<T> forward1d = create::forward( g.n());
+        Operator<T> backward1d = create::backward( g.n());
         Operator<T> leftx( backward1d ), lefty( backward1d);
         if( no == not_normed)
             leftx = lefty = forward1d.transpose();
@@ -167,8 +167,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T, n>& g, bc 
     else
         normx = normy = create::delta(g.n());
 
-    Matrix ddyy = dgtensor<double>( flyf, tensor( g.Nx(), normx));
-    Matrix ddxx = dgtensor<double>( tensor(g.Ny(), normy), flxf);
+    Matrix ddyy = dgtensor<double>( g.n(), flyf, tensor( g.Nx(), normx));
+    Matrix ddxx = dgtensor<double>( g.n(), tensor(g.Ny(), normy), flxf);
     Matrix laplace;
     cusp::add( ddxx, ddyy, laplace); //cusp add does not sort output!!!!
     laplace.sort_by_row_and_column();

@@ -30,12 +30,13 @@ Operator<T> tensor( const Operator<T>& op1, const Operator<T>& op2)
     assert( op1.size() == op2.size());
 #endif //DG_DEBUG
     unsigned n = op1.size();
-    Operator<T> op( n*n);
+    Operator<T> prod( n*n);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
             for( unsigned k=0; k<n; k++)
                 for( unsigned l=0; l<n; l++)
                     prod(i*n+k, j*n+l) = op1(i,j)*op2(k,l);
+    return prod;
 }
 
 

@@ -104,15 +104,15 @@ Arakawa< container>::Arakawa( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs(
     bdyf = dg::create::dy( g, bcy, XSPACE);
 }
 template< class container>
-Arakawa< container>::Arakawa( const Grid<T,n>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
+Arakawa< container>::Arakawa( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
-    Operator<value_type, n> forward1d( DLT<n>::forward);
-    Operator<value_type, n*n> forward2d = tensor( forward1d, forward1d);
+    Operator<value_type> forward1d = create::forward(g.n());
+    Operator<value_type> forward2d = tensor( forward1d, forward1d);
     forward = tensor( g.Nx()*g.Ny(), forward2d);
     //create backward dlt matrix
-    Operator<value_type, n> backward1d( DLT<n>::backward);
-    Operator<value_type, n*n> backward2d = tensor( backward1d, backward1d);
+    Operator<value_type> backward1d = create::backward(g.n());
+    Operator<value_type> backward2d = tensor( backward1d, backward1d);
     backward = tensor( g.Nx()*g.Ny(), backward2d);
 
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
@@ -240,7 +240,7 @@ ArakawaX<container>::ArakawaX( const Grid<value_type>& g): dxlhs( g.size()), dxr
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
 template< class container>
-ArakawaX<container>::ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+ArakawaX<container>::ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);

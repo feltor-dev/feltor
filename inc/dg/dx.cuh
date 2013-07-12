@@ -30,7 +30,7 @@ namespace create
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h, bc bcx = PER)
+cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h, bc bcx)
 {
     unsigned size;
     if( bcx == PER) //periodic
@@ -48,6 +48,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
     Operator<T> d = create::pidxpj(n);
     Operator<T> t = create::pipj_inv(n);
     t *= 2./h;
+
     Operator< T> a = 1./2.*t*(d-d.transpose());
     Operator< T> a_bound_right = t*(-1./2.*l-d.transpose());
     Operator< T> a_bound_left = t*(1./2.*r-d.transpose());
@@ -61,36 +62,36 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, 0,0,k,l, a_bound_left(k,l)); //1 x A
+            detail::add_index<T>( n, A, number, 0,0,k,l, a_bound_left(k,l)); //1 x A
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
+            detail::add_index<T>( n, A, number, 0,1,k,l, b(k,l)); //1+ x B
         if( bcx == PER )
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>( A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
+                detail::add_index<T>(n, A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
         }
     }
     for( unsigned i=1; i<N-1; i++)
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i-1, k, l, bp(k,l));
+                detail::add_index<T>(n, A, number, i, i-1, k, l, bp(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i, k, l, a(k,l));
+                detail::add_index<T>(n, A, number, i, i, k, l, a(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i+1, k, l, b(k,l));
+                detail::add_index<T>(n, A, number, i, i+1, k, l, b(k,l));
         }
     for( unsigned k=0; k<n; k++)
     {
         if( bcx == PER)
         {
             for( unsigned l=0; l<n; l++) 
-                detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
+                detail::add_index<T>(n, A, number, N-1,0,  k,l, b(k,l));
         }
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, N-1,N-2,k,l, bp(k,l));
+            detail::add_index<T>(n, A, number, N-1,N-2,k,l, bp(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, N-1,N-1,k,l, a_bound_right(k,l));
+            detail::add_index<T>(n, A, number, N-1,N-1,k,l, a_bound_right(k,l));
     }
     return A;
 };
@@ -108,7 +109,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N, T h, bc bcx = PER)
+cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N, T h, bc bcx )
 {
     unsigned size;
     if( bcx == PER) //periodic
@@ -136,27 +137,27 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N,
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, 0,0,k,l, a_bound_left(k,l)); //1 x A
+            detail::add_index<T>(n, A, number, 0,0,k,l, a_bound_left(k,l)); //1 x A
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
+            detail::add_index<T>(n, A, number, 0,1,k,l, b(k,l)); //1+ x B
     }
     for( unsigned i=1; i<N-1; i++)
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i, k, l, a(k,l));
+                detail::add_index<T>(n, A, number, i, i, k, l, a(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i+1, k, l, b(k,l));
+                detail::add_index<T>(n, A, number, i, i+1, k, l, b(k,l));
         }
     for( unsigned k=0; k<n; k++)
     {
         if( bcx == PER)
         {
             for( unsigned l=0; l<n; l++) 
-                detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
+                detail::add_index<T>(n, A, number, N-1,0,  k,l, b(k,l));
         }
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, N-1,N-1,k,l, a(k,l));
+            detail::add_index<T>(n, A, number, N-1,N-1,k,l, a(k,l));
     }
     return A;
 };
@@ -174,7 +175,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N,
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc bcx = PER)
+cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc bcx)
 {
     unsigned size;
     if( bcx == PER) //periodic
@@ -197,36 +198,36 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, 0,0,k,l, a(k,l)); //1 x A
+            detail::add_index<T>(n, A, number, 0,0,k,l, a(k,l)); //1 x A
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, 0,1,k,l, b(k,l)); //1+ x B
+            detail::add_index<T>(n, A, number, 0,1,k,l, b(k,l)); //1+ x B
         if( bcx == PER )
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>( A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
+                detail::add_index<T>(n, A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
         }
     }
     for( unsigned i=1; i<N-1; i++)
         for( unsigned k=0; k<n; k++)
         {
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i-1, k, l, bp(k,l));
+                detail::add_index<T>(n, A, number, i, i-1, k, l, bp(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i, k, l, a(k,l));
+                detail::add_index<T>(n, A, number, i, i, k, l, a(k,l));
             for( unsigned l=0; l<n; l++)
-                detail::add_index<T, n>(A, number, i, i+1, k, l, b(k,l));
+                detail::add_index<T>(n, A, number, i, i+1, k, l, b(k,l));
         }
     for( unsigned k=0; k<n; k++)
     {
         if( bcx == PER)
         {
             for( unsigned l=0; l<n; l++) 
-                detail::add_index<T, n>( A, number, N-1,0,  k,l, b(k,l));
+                detail::add_index<T>(n, A, number, N-1,0,  k,l, b(k,l));
         }
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, N-1,N-2,k,l, bp(k,l));
+            detail::add_index<T>( n, A, number, N-1,N-2,k,l, bp(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T, n>( A, number, N-1,N-1,k,l, a(k,l));
+            detail::add_index<T>( n, A, number, N-1,N-1,k,l, a(k,l));
     }
     return A;
 };
