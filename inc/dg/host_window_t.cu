@@ -16,14 +16,14 @@ int main()
     draw::HostWindow w( 400, 400);
     glfwSetWindowTitle( "Hello world\n");
     //generate a grid 
-    dg::Grid<double, n> grid( 0, 1., 0, 1., Nx, Ny);
+    dg::Grid<double> grid( 0, 1., 0, 1., n, Nx, Ny);
     // generate a vector on the grid to visualize 
     //dg::Gaussian g( 0.5, 0.5, .1, .1, 1);
     dg::Lamb g( 0.5*grid.lx(), 0.5*grid.ly(), .3, 1);
     dg::HVec vector = dg::evaluate(g, grid);
 
     //allocate storage for visual
-    dg::HVec visual( n*n*Nx*Ny);
+    dg::HVec visual( grid.size());
     //transform vector to an equidistant grid
     dg::Matrix equidistant = dg::create::backscatter( grid);
     dg::blas2::mv( equidistant, vector, visual );

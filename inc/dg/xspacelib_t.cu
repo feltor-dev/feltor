@@ -5,8 +5,6 @@
 #include "xspacelib.cuh"
 #include "cg.cuh"
 
-const unsigned n=3;
-
 
 double sine( double x, double y){ return 2.*sin(x)*sin(y);}
 double solution( double x, double y){ return sin(x)*sin(y);}
@@ -16,15 +14,15 @@ using namespace dg;
 
 int main()
 {
-    const dg::Grid<double, n> grid( 0, 2.*M_PI, 0, 2.*M_PI, 80, 80, dg::DIR, dg::PER);
+    const dg::Grid<double> grid( 0, 2.*M_PI, 0, 2.*M_PI, 3, 80, 80, dg::DIR, dg::PER);
     const double eps = 1e-6;
 
     DVec b = dg::evaluate( sine, grid), x( b.size(), 0);
     const DVec sol = evaluate( solution, grid);
-    W2D<double,n> w2d(grid.hx(), grid.hy());
-    V2D<double,n> v2d(grid.hx(), grid.hy());
+    DVec w2d = create::w2d( grid);
+    DVec v2d = create::v2d( grid);
 
-    Polarisation2dX<double, n, DVec> polarisation ( grid);
+    Polarisation2dX<DVec> polarisation ( grid);
     DMatrix laplace = create::laplacianM( grid, not_normed, XSPACE);
 
     CG<DVec > cg( x, x.size());

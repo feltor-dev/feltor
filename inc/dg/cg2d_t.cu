@@ -22,8 +22,8 @@ const double eps = 1e-9; //# of pcg iterations increases very much if
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 
-typedef dg::T2D<double, n> Preconditioner;
-typedef dg::S2D<double, n> Postconditioner;
+typedef dg::T2D<double> Preconditioner;
+typedef dg::S2D<double> Postconditioner;
 
 
 double fct(double x, double y){ return sin(y)*sin(x);}
@@ -32,8 +32,8 @@ double initial( double x, double y) {return sin(0);}
 using namespace std;
 int main()
 {
-    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
-    dg::S2D<double,n > s2d( grid.hx(), grid.hy());
+    dg::Grid<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::PER);
+    dg::S2D<double > s2d( grid);
     cout<<"Expand initial condition\n";
     dg::HVec x = dg::expand( initial, grid);
 
@@ -55,7 +55,7 @@ int main()
     //compute S b
     dg::blas2::symv( s2d, db, db);
     cudaThreadSynchronize();
-    cout << "Number of pcg iterations "<< pcg( A, dx, db, Preconditioner(grid.hx(), grid.hy()), eps)<<endl;
+    cout << "Number of pcg iterations "<< pcg( A, dx, db, Preconditioner(grid), eps)<<endl;
     cudaThreadSynchronize();
     //std::cout << "Number of cg iterations "<< cg( A, dx.data(), db.data(), dg::Identity<double>(), eps)<<endl;
     cout << "For a precision of "<< eps<<endl;

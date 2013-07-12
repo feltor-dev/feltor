@@ -15,7 +15,6 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -27,8 +26,6 @@ const double eps = 1e-7; //CG method
 
 
 double D = 0.0;
-unsigned Nx = 16;
-unsigned Ny = 16;
 
 double initial( double x, double y){ return 2.*sin(x)*sin(y);}
 double solution( double x, double y){ return 2.*sin(x)*sin(y)*exp(-2.*D*T);}
@@ -37,22 +34,20 @@ double solution( double x, double y){ return 2.*sin(x)*sin(y)*exp(-2.*D*T);}
 int main()
 {
     Timer t;
-    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
-    S2D<double,n > s2d( grid);
+    unsigned n, Nx, Ny;
     ////////////////////////////////////////////////////////////
     cout << "Solve 2D incompressible NavierStokes with sin(x)sin(y) or Lamb dipole initial condition\n";
-    cout << "Type # of grid cells in one dimension!\n";
-    cin >> Nx;
-    Ny = Nx; 
+    cout << "Type n, Nx and Ny\n";
+    cin >> n >> Nx >>Ny;
     cout << "Type diffusion constant!\n";
     cin >> D;
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
     cout << "Diffusion                   " << D <<endl;
     ////////////////////////////////////////////////////////////
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
+    S2D<double> s2d( grid);
 
-    const double hx = lx/ (double)Nx;
-    const double hy = ly/ (double)Ny;
     unsigned NT = (unsigned)(T*n*Nx/0.025/lx);
     cout << "Type # of timesteps\n";
     cin >> NT;
@@ -75,7 +70,7 @@ int main()
     DVec sol = solh;
     DVec y0( omega), y1( y0);
     //make solver and stepper
-    Shu<double, n, DVec> test( grid, D, eps);
+    Shu<DVec> test( grid, D, eps);
     AB< k, DVec > ab( y0);
 
     t.tic();

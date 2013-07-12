@@ -37,8 +37,8 @@ double jacobian( double x, double y)
 */
 
 double left( double x, double y) {return sin(x)*cos(y);}
-double right( double x, double y) {return cos(x);}
-double right2( double x, double y) {return sin(y);}
+double right( double x, double y) {return sin(y)*cos(x);} 
+//double right2( double x, double y) {return sin(y);}
 double jacobian( double x, double y) 
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
@@ -55,29 +55,24 @@ int main()
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;
-    DVec lhs = expand( left, grid), jac(lhs), jac1( lhs), jac2(lhs);
-    DVec rhs1 = expand( right, grid), rhs( rhs1);
-    DVec rhs2 = expand( right2, grid);
-    blas1::pointwiseDot( rhs1, rhs2, rhs);
+    DVec lhs = expand( left, grid), jac(lhs);
+    DVec rhs = expand( right, grid);
     const DVec sol = expand ( jacobian, grid);
     DVec eins = expand( one, grid);
 
     Arakawa< DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
-    arakawa( lhs, rhs1, jac1);
-    blas1::pointwiseDot( rhs2, jac1, jac1);
-    arakawa( lhs, rhs2, jac2);
-    blas1::pointwiseDot( rhs1, jac2, jac2);
-    blas1::axpby( 1., jac1, 1., jac2, jac2);
+    //arakawa( lhs, rhs1, jac1);
+    //blas1::pointwiseDot( rhs2, jac1, jac1);
+    //arakawa( lhs, rhs2, jac2);
+    //blas1::pointwiseDot( rhs1, jac2, jac2);
+    //blas1::axpby( 1., jac1, 1., jac2, jac2);
 
     cout << scientific;
     cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
-    cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac2)<<"\n";
     cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs,  w2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs,  w2d, jac2)<<"\n";
     cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs,  w2d, jac)<<"\n";
-    cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs,  w2d, jac2)<<"\n";
     blas1::axpby( 1., sol, -1., jac);
     cout << "Distance to solution "<<sqrt( blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc

@@ -21,7 +21,6 @@
 
 using namespace std;
 using namespace dg;
-const unsigned n = 3;
 const unsigned k = 3;
 
 int main()
@@ -29,10 +28,8 @@ int main()
     Timer t;
     const Parameters p( file::read_input( "input.txt"));
     p.display();
-    if( n!= p.n) { cerr << "Wrong n!"; return -1;}
-    if( k!= p.k) { cerr << "Wrong k!"; return -1;}
-    Grid<double, n> grid( 0, p.lx, 0, p.ly, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    S2D<double,n > s2d( grid);
+    Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    S2D<double> s2d( grid);
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
     draw::HostWindow w( 600, 600);
@@ -43,7 +40,7 @@ int main()
     DVec stencil = expand( one, grid);
     DVec y0( omega ), y1( y0);
     //make solver and stepper
-    Shu<double, n, DVec> test( grid, p.D, p.eps);
+    Shu<DVec> test( grid, p.D, p.eps);
     AB< k, DVec > ab( y0);
 
     t.tic();
@@ -70,12 +67,10 @@ int main()
     while (running && time < p.maxout*p.itstp*p.dt)
     {
         dg::blas2::symv( equidistant, y0, visual);
-        cudaThreadSynchronize();
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
         hvisual = visual;
-        cudaThreadSynchronize();
-        w.draw( hvisual, n*p.Nx, n*p.Ny, colors);
+        w.draw( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
         //step 
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
