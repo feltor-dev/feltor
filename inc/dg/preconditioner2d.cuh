@@ -42,8 +42,7 @@ struct S2D
     __host__ __device__ const value_type& hy() const {return hy_;}
     __host__ __device__ value_type operator() ( int idx) const 
     {
-        return  hx_/(value_type)(2*get_j( idx) + 1)
-               *hy_/(value_type)(2*get_i( idx) + 1);
+        return  hx_*hy_/(value_type)((2*get_j( idx) + 1)*(2*get_i( idx) + 1));
     }
   private:
     //if N = k*n*n+i*n+j, then
@@ -89,8 +88,7 @@ struct T2D
     __host__ __device__ const value_type& hy() const {return hy_;}
     __host__ __device__ value_type operator() ( int idx) const 
     {
-        return  (value_type)(2*get_j( idx) + 1)/hx_
-               *(value_type)(2*get_i( idx) + 1)/hy_;
+        return  (value_type)((2*get_j( idx) + 1)*(2*get_i( idx) + 1))/hy_/hx_;
     }
   private:
     //if N = k*n*n+i*n+j, then

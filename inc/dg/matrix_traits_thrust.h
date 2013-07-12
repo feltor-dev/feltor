@@ -62,6 +62,7 @@ thrust::host_vector<T> t2d( const Grid<T>& g)
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
+
 }
 
 
