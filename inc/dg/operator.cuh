@@ -4,6 +4,9 @@
 #include "array.cuh"
 #include "matrix_traits.h"
 #include "matrix_categories.h"
+#ifdef DG_DEBUG
+#include <cassert>
+#endif //DG_DEBUG
 
 namespace dg{
 
@@ -68,22 +71,30 @@ class Operator
 
     /*! @brief access operator
      *
+     * Performs a range check if DG_DEBUG is defined
      * @param i row index
      * @param j column index
      * @return reference to value at that location
      */
     __host__ __device__
     T& operator()(const size_t i, const size_t j){
+#ifdef DG_DEBUG
+        assert( i<n && j <n);
+#endif //DG_DEBUG
         return ptr[ i*n+j];
     }
     /*! @brief const access operator
      *
+     * Performs a range check if DG_DEBUG is defined
      * @param i row index
      * @param j column index
      * @return const value at that location
      */
     __host__ __device__
     const T& operator()(const size_t i, const size_t j) const {
+#ifdef DG_DEBUG
+        assert( i<n && j <n);
+#endif //DG_DEBUG
         return ptr[ i*n+j];
     }
 
