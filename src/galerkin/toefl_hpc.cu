@@ -14,7 +14,6 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 4;
 const unsigned k = 3;
 
 using namespace std;
@@ -35,21 +34,21 @@ int main( int argc, char* argv[])
         input = file::read_file( argv[1]);
     }
     const Parameters p( v);
-    if( p.n != n || p.k != k)
+    if( p.k != k)
     {
-        cerr << "ERROR: n or k doesn't match: "<<k<<" vs. "<<p.k<<" and "<<n<<" vs. "<<p.n<<"\n";
+        cerr << "ERROR: k doesn't match: "<<k<<" (code) vs. "<<p.k<<" (input)\n";
         return -1;
     }
 
     //set up computations
-    dg::Grid<double,n > grid( 0, p.lx, 0, p.ly, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR<double, n, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
+    dg::ToeflR<dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    blas2::symv( V2D<double, n> ( grid), y0[1], y0[1]);
+    blas2::symv( (dg::DVec)create::v2d( grid), y0[1], y0[1]);
     if( p.global)
     {
         thrust::transform( y0[0].begin(), y0[0].end(), y0[0].begin(), dg::PLUS<double>(+1));
@@ -63,7 +62,7 @@ int main( int argc, char* argv[])
     dg::HVec output( y1[0]); //intermediate transport location
     hid_t   file, grp;
     herr_t  status;
-    hsize_t dims[] = { n*grid.Ny(), n*grid.Nx() };
+    hsize_t dims[] = { grid.n()*grid.Ny(), grid.n()*grid.Nx() };
     //dims[0] = n*grid.Ny(); 
     //dims[1] = n*grid.Nx(); 
     file = H5Fcreate( argv[2], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
