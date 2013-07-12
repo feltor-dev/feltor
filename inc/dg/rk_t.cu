@@ -12,23 +12,24 @@
 
 #include "blas.h"
 
-template <class T, size_t n, class container = thrust::device_vector<T> >
+template < class container = thrust::device_vector<double> >
 struct RHS
 {
     typedef container Vector;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    RHS( const dg::Grid<T,n>& g, T D):hx_(g.hx()), hy_(g.hy()), D_(D) 
+    RHS( const dg::Grid<double>& g, double D):g_(g), D_(D) 
     {
-        laplace = dg::create::laplacianM( g, dg::not_normed, dg::LSPACE);
+        laplaceM = dg::create::laplacianM( g, dg::not_normed, dg::LSPACE);
     }
     void operator()( const container& y, container& yp)
     {
-        dg::blas2::symv( laplace, y, yp);
-        dg::blas2::symv( -D_, dg::T2D<T,n>(hx_, hy_), yp, 0., yp);
+        dg::blas2::symv( laplaceM, y, yp);
+        dg::blas2::symv( -D_, dg::T2D<double>(g_), yp, 0., yp);
     }
   private:
-    double hx_, hy_, D_;
-    cusp::ell_matrix<int, T, MemorySpace> laplace;
+    dg::Grid<double> g_;
+    double D_;
+    cusp::ell_matrix<int, double, MemorySpace> laplaceM;
 };
 
 const unsigned n = 3;
@@ -67,12 +68,12 @@ int main()
     cout << "Number of gridpoints:     "<<Nx*Ny<<endl;
     cout << "# of timesteps:           "<<NT<<endl;
 
-    Grid<double, n> grid( 0, lx, 0, ly ,Nx, Ny, DIR, DIR);
-    S2D<double, n> s2d( grid);
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, DIR, DIR);
+    S2D<double> s2d( grid);
 
     DVec y0 = expand( sine, grid), y1(y0);
 
-    RHS<double,n, DVec> rhs( grid, nu);
+    RHS<DVec> rhs( grid, nu);
     RK< k, DVec > rk( y0);
     AB< k, DVec > ab( y0);
 

@@ -83,7 +83,7 @@ class Operator
 
     Operator operator-() const
     {
-        Operator temp;
+        Operator temp(n_, 0.);
         for( unsigned i=0; i<n_*n_; i++)
             temp.data_[i] = -data_[i];
         return temp;
@@ -140,7 +140,7 @@ class Operator
 #ifdef DG_DEBUG
         assert( lhs.size() == rhs.size());
 #endif//DG_DEBUG
-        Operator temp;
+        Operator temp(n_, 0.);
         for( unsigned i=0; i< n_; i++)
             for( unsigned j=0; j<n_; j++)
             {

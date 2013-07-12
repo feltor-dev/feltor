@@ -17,10 +17,10 @@ namespace dg
  * @tparam n The number of polynomial coefficients per cell
  * @tparam container The underlying container data type
  */
-template< typename T, size_t n, class container = thrust::host_vector<T> >
+template< class container = thrust::host_vector<double> >
 class ArrVec1d_View
 {
-    public:
+  public:
         /**
          * @brief Data type of the underlying container
          */
@@ -28,7 +28,7 @@ class ArrVec1d_View
     /**
      * @brief Data type of the elements in the container
      */
-    typedef T value_type;
+    typedef typename container::value_type value_type;
 
     typedef ThrustVectorTag vector_category;
     /**
@@ -36,7 +36,7 @@ class ArrVec1d_View
      *
      * @param v This reference is stored by the object.
      */
-    ArrVec1d_View( container& v ):hv(v){ }
+    ArrVec1d_View(unsigned n, container& v ):n(n),hv(v){ }
     /**
      * @brief Access to a value
      *
@@ -45,7 +45,7 @@ class ArrVec1d_View
      *
      * @return Reference to value.
      */
-    T& operator()( unsigned i, unsigned k) {return hv[ i*n+k];}
+    value_type& operator()( unsigned i, unsigned k) {return hv[ i*n+k];}
     /**
      * @brief Const Access to a vlue
      *
@@ -54,7 +54,7 @@ class ArrVec1d_View
      *
      * @return Reference to value
      */
-    const T& operator()( unsigned i, unsigned k) const
+    const value_type& operator()( unsigned i, unsigned k) const
     { 
         return hv[i*n+k];
     }
@@ -92,7 +92,8 @@ class ArrVec1d_View
         }
         return os;
     }
-    private:
+  private:
+    unsigned n;
     container& hv;
 };
 
@@ -106,14 +107,14 @@ class ArrVec1d_View
  * @tparam n The number of polynomial coefficients per cell
  * @tparam container The underlying container data type
  */
-template< typename T, size_t n, class container = thrust::host_vector<T> >
-class ArrVec1d : public ArrVec1d_View<T, n, container>
+template< class container = thrust::host_vector<double> >
+class ArrVec1d : public ArrVec1d_View<container>
 {
     public:
         /**
          * @brief The View type, i.e. parent class
          */
-    typedef ArrVec1d_View<T, n, container> View;
+    typedef ArrVec1d_View<container> View;
     /**
      * @brief Construct an empty vector
      *
@@ -124,7 +125,7 @@ class ArrVec1d : public ArrVec1d_View<T, n, container>
      *
      * @param c A container must be copyconstructible from c. 
      */
-    ArrVec1d( const container& c): View(hv), hv(c) {}
+    ArrVec1d( unsigned n, const container& c): View(n, hv), hv(c) {}
 
     /**
       * @brief Construct a container by size and value
@@ -138,7 +139,7 @@ class ArrVec1d : public ArrVec1d_View<T, n, container>
     ArrVec1d( const ArrVec1d& src): View( hv), hv( src.hv){}
 
     template< class OtherContainer >
-    ArrVec1d( const ArrVec1d< T, n, OtherContainer >& src): View( hv), hv( src.data()) {}
+    ArrVec1d( const ArrVec1d< OtherContainer >& src): View( hv), hv( src.data()) {}
 
     ArrVec1d& operator=( const ArrVec1d& src)
     {
@@ -146,7 +147,7 @@ class ArrVec1d : public ArrVec1d_View<T, n, container>
         return *this;
     }
     template< class OtherContainer >
-    ArrVec1d& operator=(const ArrVec1d< T,n, OtherContainer>& src) 
+    ArrVec1d& operator=(const ArrVec1d< OtherContainer>& src) 
     {
         hv = src.data(); //this might trigger warnings from thrust 
         return *this;
