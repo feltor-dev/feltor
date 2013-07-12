@@ -25,14 +25,15 @@ struct Fail : public std::exception
     double eps;
 };
 
-template< class T, size_t n, class container=thrust::device_vector<T> >
+template< class container=thrust::device_vector<double> >
 struct ToeflR
 {
     typedef std::vector<container> Vector;
+    typedef typename container::value_type value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
+    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
-    ToeflR( const Grid<T,n>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global);
+    ToeflR( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global);
 
     void exp( const std::vector<container>& y, std::vector<container>& target);
 
@@ -42,7 +43,7 @@ struct ToeflR
 
     const Matrix& laplacianM( ) const { return laplaceM;}
 
-    const Gamma<Matrix, W2D<T,n> >&  gamma() const {return gamma1;}
+    const Gamma<Matrix, container >&  gamma() const {return gamma1;}
 
     const container& compute_psi( const container& potential);
 
@@ -66,21 +67,20 @@ struct ToeflR
 
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
-    Gamma< Matrix, W2D<T,n> > gamma1;
-    ArakawaX<T, n, container> arakawa; 
-    Polarisation2dX<T, n, thrust::host_vector<T> > pol; //note the host vector
+    Gamma< Matrix, container > gamma1;
+    ArakawaX< container> arakawa; 
+    Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
 
-    const W2D<T,n> w2d;
-    const V2D<T,n> v2d;
+    const container w2d, v2d;
     double eps_pol, eps_gamma; 
     double kappa, nu, tau;
     bool global;
 
 };
 
-template< class T, size_t n, class container>
-ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global ): 
+template< class container>
+ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
@@ -89,7 +89,7 @@ ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu,
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 
-    w2d( grid), v2d( grid),
+    w2d( create::w2d(grid)), v2d( create::v2d(grid)),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
 {
     //create derivatives
@@ -99,8 +99,8 @@ ToeflR<T, n, container>::ToeflR( const Grid<T,n>& grid, double kappa, double nu,
 
 }
 
-template< class T, size_t n, class container>
-const container& ToeflR<T, n, container>::compute_vesqr( const container& potential)
+template< class container>
+const container& ToeflR<container>::compute_vesqr( const container& potential)
 {
     assert( global);
     blas2::gemv( arakawa.dx(), potential, chi);
@@ -112,8 +112,8 @@ const container& ToeflR<T, n, container>::compute_vesqr( const container& potent
     blas1::axpby( 1., chi, 1.,  omega);
     return omega;
 }
-template< class T, size_t n, class container>
-const container& ToeflR<T, n, container>::compute_psi( const container& potential)
+template< class container>
+const container& ToeflR<container>::compute_psi( const container& potential)
 {
     //compute Gamma phi[0]
     blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
@@ -141,8 +141,8 @@ const container& ToeflR<T, n, container>::compute_psi( const container& potentia
     return phi[1];
 }
 
-template< class T, size_t n, class container>
-double ToeflR<T, n, container>::energy( const std::vector<container>& y, const container& potential)
+template< class container>
+double ToeflR< container>::energy( const std::vector<container>& y, const container& potential)
 {
     assert( global);
     exp( y, expy); // y-> ln(n), expy -> n
@@ -154,8 +154,8 @@ double ToeflR<T, n, container>::energy( const std::vector<container>& y, const c
     return Ue + Ui + Uphi;
 }
 
-template< class T, size_t n, class container>
-double ToeflR<T, n, container>::energy_dot( const std::vector<container>& y, const std::vector<container>& potential)
+template< class container>
+double ToeflR< container>::energy_dot( const std::vector<container>& y, const std::vector<container>& potential)
 {
     assert( global);
     container one( y[0].size(), 1.);
@@ -175,8 +175,8 @@ double ToeflR<T, n, container>::energy_dot( const std::vector<container>& y, con
 }
 
 //how to set up a computation?
-template< class T, size_t n, class container>
-const container& ToeflR<T, n, container>::polarisation( const std::vector<container>& y)
+template<class container>
+const container& ToeflR< container>::polarisation( const std::vector<container>& y)
 {
     //extrapolate phi and gamma_n
     blas1::axpby( 2., phi[0], -1.,  phi_old[0]);
@@ -257,8 +257,8 @@ const container& ToeflR<T, n, container>::polarisation( const std::vector<contai
     return phi[0];
 }
 
-template< class T, size_t n, class container>
-void ToeflR<T, n, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+template< class container>
+void ToeflR< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());
@@ -303,17 +303,17 @@ void ToeflR<T, n, container>::operator()( const std::vector<container>& y, std::
 
 }
 
-template< class T, size_t n, class container>
-void ToeflR<T, n, container>::exp( const std::vector<container>& y, std::vector<container>& target)
+template< class container>
+void ToeflR< container>::exp( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
-        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<T>());
+        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<value_type>());
 }
-template< class T, size_t n, class container>
-void ToeflR<T, n, container>::log( const std::vector<container>& y, std::vector<container>& target)
+template< class container>
+void ToeflR< container>::log( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
-        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<T>());
+        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
 }
 
 }//namespace dg
