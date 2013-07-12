@@ -119,7 +119,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space
 
     Matrix backward = dg::tensor( g.Nx()*g.Ny(), backward2d);
 
-    thrust::host_vector<int> map = dg::create::permutationMap<n>( g.Nx(), g.Ny());
+    thrust::host_vector<int> map = dg::create::permutationMap( g.n(), g.Nx(), g.Ny());
     Matrix permutation( map.size(), map.size(), map.size());
     cusp::array1d<int, cusp::host_memory> rows( thrust::make_counting_iterator<int>(0), thrust::make_counting_iterator<int>(map.size()));
     cusp::array1d<int, cusp::host_memory> cols( map.begin(), map.end());
@@ -134,25 +134,24 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space
 
 }
 
-/**
- * @brief Evaluate the jumps on grid boundaries
- *
- * @tparam n number of legendre nodes per cell
- * @param v A DG Host Vector 
- *
- * @return Vector with the jump values
- */
-template< size_t n>
-thrust::host_vector< double> evaluate_jump( const ArrVec1d<double, n>& v)
-{
-    //compute the interior jumps of a DG approximation
-    unsigned N = v.size();
-    thrust::host_vector<double> jump(N-1, 0.);
-    for( unsigned i=0; i<N-1; i++)
-        for( unsigned j=0; j<n; j++)
-            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
-    return jump;
-}
+///**
+// * @brief Evaluate the jumps on grid boundaries
+// *
+// * @tparam n number of legendre nodes per cell
+// * @param v A DG Host Vector 
+// *
+// * @return Vector with the jump values
+// */
+//thrust::host_vector< double> evaluate_jump( const ArrVec1d& v)
+//{
+//    //compute the interior jumps of a DG approximation
+//    unsigned N = v.size();
+//    thrust::host_vector<double> jump(N-1, 0.);
+//    for( unsigned i=0; i<N-1; i++)
+//        for( unsigned j=0; j<v.n(); j++)
+//            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
+//    return jump;
+//}
 
 ///@}
 

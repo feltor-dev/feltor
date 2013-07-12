@@ -70,6 +70,7 @@ class ArrVec1d_View
      * @return The stored reference
      */
     const container& data() const {return hv;}
+    const unsigned& n() const {return n;}
 
     /**
      * @brief Stream the underlying object

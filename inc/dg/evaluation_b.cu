@@ -21,8 +21,8 @@ const unsigned N = 1e6;
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
-typedef dg::ArrVec1d< double, n, HVec>  HArrVec;
-typedef dg::ArrVec1d< double, n, DVec>  DArrVec;
+typedef dg::ArrVec1d< HVec>  HArrVec;
+typedef dg::ArrVec1d< DVec>  DArrVec;
 
 
 using namespace std;
