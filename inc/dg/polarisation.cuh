@@ -293,8 +293,8 @@ cusp::csr_matrix<int, T, typename thrust::iterator_space<typename container::ite
     cusp::add( temp1, temp3, temp2);  // D_yy + D_xx
     cusp::add( temp2, jump, temp1); // Lap + Jump
     //temp1.sort_by_row_and_column(); //add does not sort
-    cusp::coo_matrix<int, double, cusp::host_memory> temp_ = temp2;
     /*
+    cusp::coo_matrix<int, double, cusp::host_memory> temp_ = temp2;
     t.tic();
     eigenpol.compute( xchi_matrix_view, temp_);
     t.toc();
