@@ -12,6 +12,9 @@
 #include "dft_dft_solver.h"
 //#include "drt_dft_solver.h"
 #include "blueprint.h"
+/*
+ * Same as innblobs but outputs results in hdf5 - file
+ */
 
 using namespace std;
 using namespace toefl;
