@@ -106,7 +106,6 @@ template < class T>
 cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    unsigned n = g.n();
     //create equidistant backward transformation
     dg::Operator<double> backwardeq( g.dlt().backwardEQ());
     dg::Operator<double> backward2d = dg::tensor( backwardeq, backwardeq);
