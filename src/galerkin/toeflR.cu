@@ -10,6 +10,11 @@
 #include "file/read_input.h"
 #include "parameters.h"
 
+/*
+   - reads parameters from input.txt or any other given file, 
+   - integrates the ToeflR - functor and 
+   - directly visualizes results on the screen using parameters in window_params.txt
+*/
 
 using namespace std;
 using namespace dg;
