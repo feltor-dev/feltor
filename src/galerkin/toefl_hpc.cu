@@ -11,6 +11,12 @@
 
 #include "dg/timer.cuh"
 
+
+/*
+   - reads parameters from input.txt or any other given file, 
+   - integrates the ToeflR - functor and 
+   - writes outputs to a given outputfile using hdf5.
+*/
 using namespace std;
 using namespace dg;
 
