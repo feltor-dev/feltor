@@ -4,7 +4,6 @@
 #include "matrix_categories.h"
 #include "matrix_traits.h"
 #include "grid.cuh"
-#include "dlt.h"
 
 /*! @file 
   

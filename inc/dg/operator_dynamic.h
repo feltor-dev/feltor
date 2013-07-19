@@ -2,8 +2,11 @@
 #define _DG_OPERATORS_DYN_
 
 #include <vector>
+#include <iterator>
 #include <stdexcept>
-#include "dlt.h"
+#ifdef DG_DEBUG
+#include <cassert>
+#endif
 
 namespace dg{
 
@@ -32,6 +35,23 @@ class Operator
     * @param value Every element is initialized to.
     */
     Operator( const unsigned n, const T& value): n_(n), data_(n_*n_, value) {}
+    template< class InputIterator>
+    Operator( InputIterator first, InputIterator last): data_(first, last)
+    {
+        unsigned n = std::distance( first, last);
+        n_ = (unsigned)sqrt( (double)n);
+#ifdef DG_DEBUG
+        assert( n_*n_ == n);
+#endif
+    }
+    Operator( const std::vector<T>& src): data_(src)
+    {
+        unsigned n = src.size();
+        n_ = (unsigned)sqrt( (double)n);
+#ifdef DG_DEBUG
+        assert( n_*n_ == n);
+#endif
+    }
 
     /*! @brief access operator
      *
@@ -253,6 +273,7 @@ Operator<double> lilj( unsigned n)
     return op;
 }
 
+/*
 Operator<double> weights( unsigned n)
 {
     Operator<double> w(n ,0.);
@@ -400,6 +421,7 @@ Operator<double> backwardEQ( unsigned n)
     return op;
 }
 
+*/
 
 }//namespace create
 

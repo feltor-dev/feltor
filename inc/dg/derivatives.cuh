@@ -4,7 +4,6 @@
 #include <cusp/elementwise.h>
 
 #include "grid.cuh"
-#include "dlt.h"
 #include "creation.cuh"
 #include "dx.cuh"
 #include "functions.h"
@@ -55,7 +54,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T>& g, bc bcx, space 
     Matrix dx = create::dx_symm<T>(g.n(), g.Nx(), g.hx(), bcx);
     Matrix bdxf( dx);
     if( s == XSPACE)
-        bdxf = sandwich<T>( g.n(), dx);
+        bdxf = sandwich<T>( g.dlt().backward(), dx, g.dlt().forward());
 
     return dgtensor<T>( g.n(), tensor<T>( g.Ny(), delta(g.n()) ), bdxf );
 }
@@ -88,7 +87,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T>& g, bc bcy, space 
     Matrix dy = create::dx_symm<T>( g.n(), g.Ny(), g.hy(), bcy);
     Matrix bdyf_(dy);
     if( s == XSPACE)
-        bdyf_ = sandwich<T>(g.n(), dy);
+        bdyf_ = sandwich<T>(g.dlt().backward(), dy, g.dlt().forward());
 
     return dgtensor<T>( g.n(), bdyf_, tensor<T>( g.Nx(), delta(g.n())));
 }
@@ -141,8 +140,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx
     //sandwich with correctly normalized matrices
     if( s == XSPACE)
     {
-        Operator<T> forward1d = create::forward( g.n());
-        Operator<T> backward1d = create::backward( g.n());
+        Operator<T> forward1d( g.dlt().forward( ));
+        Operator<T> backward1d( g.dlt().backward( ));
         Operator<T> leftx( backward1d ), lefty( backward1d);
         if( no == not_normed)
             leftx = lefty = forward1d.transpose();
@@ -157,7 +156,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx
     {
         if( s==XSPACE)
         {
-            normx = normy = create::weights( g.n());
+            for( unsigned i=0; i<g.n(); i++)
+                normx( i,i) = normy( i,i) = g.dlt().weights()[i];
         } else {
             normx = normy = create::pipj( g.n());
         }

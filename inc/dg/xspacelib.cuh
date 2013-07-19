@@ -11,7 +11,7 @@
 #include "grid.cuh"
 #include "arrvec2d.cuh"
 #include "functors.cuh"
-#include "dlt.h"
+#include "dlt.cuh"
 #include "evaluation.cuh"
 
 
@@ -108,11 +108,11 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     unsigned n = g.n();
     //create equidistant backward transformation
-    dg::Operator<double> backwardeq = create::backwardEQ( n);
+    dg::Operator<double> backwardeq( g.dlt().backwardEQ());
     dg::Operator<double> backward2d = dg::tensor( backwardeq, backwardeq);
 
     if( s == XSPACE){
-        dg::Operator<double> forward = create::forward(n);
+        dg::Operator<double> forward( g.dlt().forward());
         dg::Operator<double> forward2d = dg::tensor( forward, forward);
         backward2d = backward2d*forward2d;
     }

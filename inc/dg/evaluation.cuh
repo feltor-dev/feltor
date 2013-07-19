@@ -216,7 +216,7 @@ template< class Function>
 thrust::host_vector<double> expand( Function f, const Grid1d<double>& g)
 {
     thrust::host_vector<double> v = evaluate( f, g);
-    Operator<double> forward = create::forward(g.n());
+    Operator<double> forward( g.dlt().forward());
     double temp[g.n()];
     for( unsigned k=0; k<g.N(); k++)
     {
@@ -307,7 +307,7 @@ thrust::host_vector<double> expand( BinaryOp f, const Grid<double>& g)
 {
     thrust::host_vector<double> v = evaluate( f, g);
     unsigned n = g.n();
-    Operator<double> forward = create::forward( n);
+    Operator<double> forward( g.dlt().forward());
     double temp[n][n];
     //DLT each dg-Box 
     for( unsigned i=0; i<g.Ny(); i++)

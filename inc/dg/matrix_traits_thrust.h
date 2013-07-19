@@ -1,7 +1,6 @@
 #ifndef _DG_MATRIX_TRAITS_THRUST
 #define _DG_MATRIX_TRAITS_THRUST
 
-#include <stdexcept>
 #include "matrix_traits.h"
 #include "matrix_categories.h"
 #include "vector_categories.h"
@@ -10,7 +9,6 @@
 #include "thrust/host_vector.h"
 
 #include "grid.cuh"
-#include "dlt.h"
 namespace dg{
 
 template< class T>
@@ -69,36 +67,10 @@ thrust::host_vector<T> t2d( const Grid<T>& g)
 template <class T>
 thrust::host_vector<T> w1d( const Grid1d<T>& g)
 {
-    thrust::host_vector<T> weights( g.n());
-    switch(g.n())
-    {
-        case( 1): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<1>::weight[i];
-            break;
-        case( 2): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<2>::weight[i];
-            break;
-        case( 3): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<3>::weight[i];
-            break;
-        case( 4): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<4>::weight[i];
-            break;
-        case( 5): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<5>::weight[i];
-            break;
-        default:
-            throw std::out_of_range("not implemented yet");
-    }
     thrust::host_vector<T> v( g.size());
     for( unsigned i=0; i<g.N(); i++)
         for( unsigned j=0; j<g.n(); j++)
-            v[i*g.n() + j] = g.h()/2.*weights[j];
+            v[i*g.n() + j] = g.h()/2.*g.dlt().weights()[j];
     return v;
 }
 template <class T>
@@ -117,35 +89,9 @@ int get_j( unsigned n, int idx) { return idx%(n*n)%n;}
 template <class T>
 thrust::host_vector<T> w2d( const Grid<T>& g)
 {
-    thrust::host_vector<T> weights( g.n());
-    switch( g.n())
-    {
-        case( 1): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<1>::weight[i];
-            break;
-        case( 2): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<2>::weight[i];
-            break;
-        case( 3): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<3>::weight[i];
-            break;
-        case( 4): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<4>::weight[i];
-            break;
-        case( 5): 
-            for( unsigned i=0; i<g.n(); i++)
-                weights[i] = DLT<5>::weight[i];
-            break;
-        default:
-            throw std::out_of_range("not implemented yet");
-    }
     thrust::host_vector<T> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        v[i] = g.hx()*g.hy()/4.*weights[detail::get_i(g.n(), i)]*weights[detail::get_j(g.n(), i)];
+        v[i] = g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
     return v;
 }
 template <class T>
@@ -159,38 +105,12 @@ thrust::host_vector<T> v2d( const Grid<T>& g)
 template <class T>
 thrust::host_vector<T> abscissas( const Grid1d<T>& g)
 {
-    thrust::host_vector<T> abscissas( g.n());
-    switch( g.n())
-    {
-        case( 1): 
-            for( unsigned i=0; i<g.n(); i++)
-                abscissas[i] = DLT<1>::abscissa[i];
-            break;
-        case( 2): 
-            for( unsigned i=0; i<g.n(); i++)
-                abscissas[i] = DLT<2>::abscissa[i];
-            break;
-        case( 3): 
-            for( unsigned i=0; i<g.n(); i++)
-                abscissas[i] = DLT<3>::abscissa[i];
-            break;
-        case( 4): 
-            for( unsigned i=0; i<g.n(); i++)
-                abscissas[i] = DLT<4>::abscissa[i];
-            break;
-        case( 5): 
-            for( unsigned i=0; i<g.n(); i++)
-                abscissas[i] = DLT<5>::abscissa[i];
-            break;
-        default:
-            throw std::out_of_range("not implemented yet");
-    }
     thrust::host_vector<T> v(g.size()); 
     T xp=1.;
     for( unsigned i=0; i<g.N(); i++)
     {
         for( unsigned j=0; j<g.n(); j++)
-            v[i*g.n()+j] =  g.h()/2.*(xp + abscissas[j])+g.x0();
+            v[i*g.n()+j] =  g.h()/2.*(xp + g.dlt().abscissas()[j])+g.x0();
         xp+=2.;
     }
     return v;
