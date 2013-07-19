@@ -4,8 +4,6 @@
 #include <cusp/ell_matrix.h>
 
 #include "dg/blas.h"
-#include "dg/dlt.h"
-//#include "dg/cusp_eigen.h"
 #include "dg/arakawa.cuh"
 #include "dg/derivatives.cuh"
 #include "dg/cg.cuh"
