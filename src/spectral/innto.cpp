@@ -11,6 +11,11 @@
 #include "drt_dft_solver.h"
 #include "blueprint.h"
 
+/*
+ * Reads parameters from given input file
+ * Inititalizes the correct solver 
+ * visualizes results directly on the screen
+ */
 using namespace std;
 using namespace toefl;
     
