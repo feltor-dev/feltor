@@ -15,32 +15,38 @@
 using namespace std;
 using namespace dg;
 
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
+const double lx = 2.*M_PI*10.;
+const double ly = 2.*M_PI*10.;
 
 const unsigned k = 3;
 const double U = 1.; //the dipole doesn't move with this velocity because box is not infinite
 const double R = 0.2*lx;
 const double T = 2.;
-const double eps = 1e-7; //CG method
+//const double eps = 1e-7; //CG method
 
 
 double D = 0.0;
 
-double initial( double x, double y){ return 2.*sin(x)*sin(y);}
-double solution( double x, double y){ return 2.*sin(x)*sin(y)*exp(-2.*D*T);}
+const unsigned m = 5; //mode number
+const double kx = 2.*M_PI* m/lx; 
+const double ky = 2.*M_PI* m/ly; 
+double ksqr = (kx*kx+ky*ky) ;//4.*M_PI*M_PI*(1./lx/lx + 1./ly/ly);
+
+double initial( double x, double y){ return ksqr*sin(kx*x)*sin(ky*y);}
+double solution( double x, double y){ return ksqr*sin(kx*x)*sin(ky*y)*exp(-ksqr*D*T);}
 
 //code for either lamb dipole or analytic sine function without graphics
 int main()
 {
     Timer t;
     unsigned n, Nx, Ny;
+    double eps;
     ////////////////////////////////////////////////////////////
     cout << "Solve 2D incompressible NavierStokes with sin(x)sin(y) or Lamb dipole initial condition\n";
-    cout << "Type n, Nx and Ny\n";
-    cin >> n >> Nx >>Ny;
-    cout << "Type diffusion constant!\n";
-    cin >> D;
+    cout << "Type n, Nx and Ny and eps\n";
+    cin >> n >> Nx >>Ny>>eps;
+    //cout << "Type diffusion constant!\n";
+    //cin >> D;
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
     cout << "Diffusion                   " << D <<endl;
@@ -49,8 +55,8 @@ int main()
     S2D<double> s2d( grid);
 
     unsigned NT = (unsigned)(T*n*Nx/0.025/lx);
-    cout << "Type # of timesteps\n";
-    cin >> NT;
+    //cout << "Type # of timesteps\n";
+    //cin >> NT;
     const double dt = T/(double)NT;
     cout << "Runge Kutta stages          " << k <<endl;
     cout << "Timestep                    " << dt << endl;
@@ -73,16 +79,14 @@ int main()
     Shu<DVec> test( grid, D, eps);
     AB< k, DVec > ab( y0);
 
-    t.tic();
     test( y0, y1);
-    t.toc();
-    cout << "Time for first rhs evaluation: "<<t.diff()<<"s\n";
     double vorticity = blas2::dot( stencil, s2d, y0);
     double enstrophy = 0.5*blas2::dot( y0, s2d, y0);
     double energy =    0.5*blas2::dot( y0, s2d, test.potential()) ;
 
     double time = 0;
     ab.init( test, y0, dt);
+    t.tic();
     while( time < T)
     {
         //step 
@@ -91,6 +95,9 @@ int main()
         //thrust::swap( y0, y1);
         time += dt;
     }
+    t.toc();
+    cout << "Total simulation time:     "<<t.diff()<<"s\n";
+    cout << "Average Time for one step: "<<t.diff()/(double)NT<<"s\n";
     ////////////////////////////////////////////////////////////////////
     //cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
     //cout << "Analytic formula energy    "<<lamb.energy()<<endl;
@@ -100,7 +107,7 @@ int main()
     cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), s2d, y0) - energy)/energy<<"\n";
 
     blas1::axpby( 1., sol, -1., y0);
-    cout << "Distance to solution "<<sqrt( blas2::dot( s2d, y0)) << endl;
+    cout << "Relative distance to solution "<<sqrt( blas2::dot( s2d, y0))/sqrt( blas2::dot( s2d, sol)) << endl;
 
     //energy and enstrophy errrors are due to timestep only ( vorticity is exactly conserved)
     // k = 2 | p = 3
