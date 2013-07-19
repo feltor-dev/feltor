@@ -4,7 +4,7 @@
 #include <cusp/ell_matrix.h>
 
 #include "blas.h"
-#include "dlt.h"
+//#include "dlt.h"
 #include "vector_traits.h"
 
 #include "derivatives.cuh"
@@ -70,11 +70,11 @@ template< class container>
 Arakawa< container>::Arakawa( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
-    Operator<value_type> forward1d = create::forward(g.n());
+    Operator<value_type> forward1d( g.dlt().forward());
     Operator<value_type> forward2d = tensor( forward1d, forward1d);
     forward = tensor( g.Nx()*g.Ny(), forward2d);
     //create backward dlt matrix
-    Operator<value_type> backward1d = create::backward(g.n());
+    Operator<value_type> backward1d( g.dlt().backward());
     Operator<value_type> backward2d = tensor( backward1d, backward1d);
     backward = tensor( g.Nx()*g.Ny(), backward2d);
 
@@ -107,11 +107,11 @@ template< class container>
 Arakawa< container>::Arakawa( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
-    Operator<value_type> forward1d = create::forward(g.n());
+    Operator<value_type> forward1d( g.dlt().forward());
     Operator<value_type> forward2d = tensor( forward1d, forward1d);
     forward = tensor( g.Nx()*g.Ny(), forward2d);
     //create backward dlt matrix
-    Operator<value_type> backward1d = create::backward(g.n());
+    Operator<value_type> backward1d( g.dlt().backward());
     Operator<value_type> backward2d = tensor( backward1d, backward1d);
     backward = tensor( g.Nx()*g.Ny(), backward2d);
 

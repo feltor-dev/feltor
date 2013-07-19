@@ -3,7 +3,6 @@
 
 #include "matrix_traits.h"
 #include "grid.cuh"
-#include "dlt.h"
 
 namespace dg{
 ///@addtogroup creation
