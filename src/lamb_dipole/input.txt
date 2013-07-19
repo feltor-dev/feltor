@@ -1,0 +1,42 @@
+
+            * Input-File for "SHU" Code *
+            -------------------------------------------
+
+
+--------------------Space and Time discretization------------
+
+1)  n  (# of polynomial coefficients)    =   3     (3)
+2)  nx (grid points in x)                =   64   (192)
+3)  ny (grid points in y)                =   64   (192)
+
+4)  k  (order of time integration)       =   3       (3)
+5)  dt (time step in units c_s/L_p)      =   1e-4    (0.01)
+
+---------------------Algorithmic parameters-------------------
+
+6)  eps (stopping for conjugate gradient) =   1e-6  (1e-6)
+
+---------------------Boundary conditions----------------------
+
+7)  lx (length of x in units of rho_s)   =   1    (1.)
+8)  ly (length of y in units of rho_s)   =   1    (1.)
+9)  bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
+10) bc_y (0 periodic, 1 Dirichlet )      =   0    (1.0)
+
+---------------------Physical parameters----------------------
+
+11) nu  (viscosity)                     =   0   (0.001)
+
+-----------------Initial dipole parameters---------------------
+
+12) U (blob speed)                          =  1     (1.0)
+13) R (dipole radius in units of lx)        =  0.1     (10)
+14) x-position ( in units of lx)            =  0.5   (0.4)
+15) y-position ( in units of ly)            =  0.75   (0.5)
+
+---------------------Miscellaneous----------------------------
+
+16) itstp (steps between output)            = 10      (5)
+17) # of outputs (excluding first)          = 200
+
+@ ------------------------------------------------------------
