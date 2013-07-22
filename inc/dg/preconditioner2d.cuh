@@ -16,7 +16,7 @@ namespace dg{
 * @tparam T value type
 * @tparam n Number of Legendre nodes per cell.
 */
-template<typename T,  size_t n>
+template<typename T>
 struct S2D
 {
     typedef T value_type;
@@ -25,14 +25,14 @@ struct S2D
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ 
-    S2D( value_type hx, value_type hy): hx_(hx), hy_(hy){}
+    //__host__ __device__ 
+    //S2D( value_type hx, value_type hy): hx_(hx), hy_(hy){}
     /**
     * @brief Construct on grid
     *
     * @param g The grid
     */
-    __host__ S2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){}
+    __host__ S2D( const Grid<T>& g): n( g.n()), hx_(g.hx()), hy_( g.hy()){}
     /**
     * @brief 
     *
@@ -42,8 +42,7 @@ struct S2D
     __host__ __device__ const value_type& hy() const {return hy_;}
     __host__ __device__ value_type operator() ( int idx) const 
     {
-        return  hx_/(value_type)(2*get_j( idx) + 1)
-               *hy_/(value_type)(2*get_i( idx) + 1);
+        return  hx_*hy_/(value_type)((2*get_j( idx) + 1)*(2*get_i( idx) + 1));
     }
   private:
     //if N = k*n*n+i*n+j, then
@@ -51,6 +50,7 @@ struct S2D
     __host__ __device__ int get_i( int idx) const { return (idx%(n*n))/n;}
     //get j index from N again
     __host__ __device__ int get_j( int idx) const { return (idx%(n*n))%n;}
+    unsigned n;
     value_type hx_, hy_;
 };
 
@@ -62,7 +62,7 @@ struct S2D
 * @tparam T value type
 * @tparam n Number of Legendre nodes per cell.
 */
-template< typename T, size_t n>
+template< typename T>
 struct T2D 
 {
     typedef T value_type;
@@ -71,14 +71,14 @@ struct T2D
     *
     * @param h The grid size assumed to be constant.
     */
-    __host__ __device__ 
-    T2D( value_type hx, value_type hy):hx_(hx), hy_(hy){}
+    //__host__ __device__ 
+    //T2D( value_type hx, value_type hy):hx_(hx), hy_(hy){}
     /**
     * @brief Construct on grid
     *
     * @param g The grid
     */
-    __host__ T2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){}
+    __host__ T2D( const Grid<T>& g):n(g.n()), hx_(g.hx()), hy_( g.hy()){}
     /**
     * @brief 
     *
@@ -88,8 +88,7 @@ struct T2D
     __host__ __device__ const value_type& hy() const {return hy_;}
     __host__ __device__ value_type operator() ( int idx) const 
     {
-        return  (value_type)(2*get_j( idx) + 1)/hx_
-               *(value_type)(2*get_i( idx) + 1)/hy_;
+        return  (value_type)((2*get_j( idx) + 1)*(2*get_i( idx) + 1))/hy_/hx_;
     }
   private:
     //if N = k*n*n+i*n+j, then
@@ -97,6 +96,7 @@ struct T2D
     __host__ __device__ int get_i( int idx)const  { return (idx%(n*n))/n;}
     //get j index from N again
     __host__ __device__ int get_j( int idx)const  { return (idx%(n*n))%n;}
+    unsigned n; 
     value_type hx_, hy_;
 };
 
@@ -110,125 +110,125 @@ struct T2D
 * @tparam T value type
 * @tparam n Number of Legendre nodes per cell.
 */
-template<typename T,  size_t n>
-struct W2D
-{
-    typedef T value_type;
-    /**
-    * @brief Constructor
-    *
-    * @param h The grid size assumed to be constant.
-    */
-    __host__  
-    W2D( value_type hx, value_type hy): hx_(hx), hy_(hy){
-        for( unsigned i=0; i<n; i++)
-            w[i] = DLT<n>::weight[i];
-    }
-    /**
-    * @brief Construct on grid
-    *
-    * @param g The grid
-    */
-    __host__ W2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){
-        for( unsigned i=0; i<n; i++)
-            w[i] = DLT<n>::weight[i];
-    }
-    /**
-    * @brief 
-    *
-    * @return The grid size
-    */
-    __host__ __device__ const value_type& hx() const {return hx_;}
-    __host__ __device__ const value_type& hy() const {return hy_;}
-    __host__ __device__ value_type operator() ( int idx) const 
-    {
-        return  hx_/2.*(value_type)(w[get_j( idx)])
-               *hy_/2.*(value_type)(w[get_i( idx)]);
-    }
-  private:
-    //if N = k*n*n+i*n+j, then
-    //get i index from N again
-    __host__ __device__ int get_i( int idx) const { return (idx%(n*n))/n;}
-    //get j index from N again
-    __host__ __device__ int get_j( int idx) const { return (idx%(n*n))%n;}
-    double w[n];
-    value_type hx_, hy_;
-};
-/**
-* @brief The inverse of W 
-*
-* V is the inverse of W 
-* @tparam T value type
-* @tparam n Number of Legendre nodes per cell.
-*/
-template<typename T,  size_t n>
-struct V2D
-{
-    typedef T value_type;
-    /**
-    * @brief Constructor
-    *
-    * @param h The grid size assumed to be constant.
-    */
-    __host__  
-    V2D( value_type hx, value_type hy): hx_(hx), hy_(hy){
-        for( unsigned i=0; i<n; i++)
-            x[i] = DLT<n>::weight[i];
-    }
-    /**
-    * @brief Construct on grid
-    *
-    * @param g The grid
-    */
-    __host__ V2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){
-        for( unsigned i=0; i<n; i++)
-            x[i] = DLT<n>::weight[i];
-    }
-    __host__ __device__ const value_type& hx() const {return hx_;}
-    __host__ __device__ const value_type& hy() const {return hy_;}
-    __host__ __device__ value_type operator() ( int idx) const 
-    {
-        return  2./hx_/(value_type)(x[get_j( idx)])
-               *2./hy_/(value_type)(x[get_i( idx)]);
-    }
-  private:
-    //if N = k*n*n+i*n+j, then
-    //get i index from N again
-    __host__ __device__ int get_i( int idx) const { return (idx%(n*n))/n;}
-    //get j index from N again
-    __host__ __device__ int get_j( int idx) const { return (idx%(n*n))%n;}
-    double x[n];
-    value_type hx_, hy_;
-};
+//template<typename T,  size_t n>
+//struct W2D
+//{
+//    typedef T value_type;
+//    /**
+//    * @brief Constructor
+//    *
+//    * @param h The grid size assumed to be constant.
+//    */
+//    __host__  
+//    W2D( value_type hx, value_type hy): hx_(hx), hy_(hy){
+//        for( unsigned i=0; i<n; i++)
+//            w[i] = DLT<n>::weight[i];
+//    }
+//    /**
+//    * @brief Construct on grid
+//    *
+//    * @param g The grid
+//    */
+//    __host__ W2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){
+//        for( unsigned i=0; i<n; i++)
+//            w[i] = DLT<n>::weight[i];
+//    }
+//    /**
+//    * @brief 
+//    *
+//    * @return The grid size
+//    */
+//    __host__ __device__ const value_type& hx() const {return hx_;}
+//    __host__ __device__ const value_type& hy() const {return hy_;}
+//    __host__ __device__ value_type operator() ( int idx) const 
+//    {
+//        return  hx_/2.*(value_type)(w[get_j( idx)])
+//               *hy_/2.*(value_type)(w[get_i( idx)]);
+//    }
+//  private:
+//    //if N = k*n*n+i*n+j, then
+//    //get i index from N again
+//    __host__ __device__ int get_i( int idx) const { return (idx%(n*n))/n;}
+//    //get j index from N again
+//    __host__ __device__ int get_j( int idx) const { return (idx%(n*n))%n;}
+//    double w[n];
+//    value_type hx_, hy_;
+//};
+///**
+//* @brief The inverse of W 
+//*
+//* V is the inverse of W 
+//* @tparam T value type
+//* @tparam n Number of Legendre nodes per cell.
+//*/
+//template<typename T,  size_t n>
+//struct V2D
+//{
+//    typedef T value_type;
+//    /**
+//    * @brief Constructor
+//    *
+//    * @param h The grid size assumed to be constant.
+//    */
+//    __host__  
+//    V2D( value_type hx, value_type hy): hx_(hx), hy_(hy){
+//        for( unsigned i=0; i<n; i++)
+//            x[i] = DLT<n>::weight[i];
+//    }
+//    /**
+//    * @brief Construct on grid
+//    *
+//    * @param g The grid
+//    */
+//    __host__ V2D( const Grid<T,n>& g):hx_(g.hx()), hy_( g.hy()){
+//        for( unsigned i=0; i<n; i++)
+//            x[i] = DLT<n>::weight[i];
+//    }
+//    __host__ __device__ const value_type& hx() const {return hx_;}
+//    __host__ __device__ const value_type& hy() const {return hy_;}
+//    __host__ __device__ value_type operator() ( int idx) const 
+//    {
+//        return  2./hx_/(value_type)(x[get_j( idx)])
+//               *2./hy_/(value_type)(x[get_i( idx)]);
+//    }
+//  private:
+//    //if N = k*n*n+i*n+j, then
+//    //get i index from N again
+//    __host__ __device__ int get_i( int idx) const { return (idx%(n*n))/n;}
+//    //get j index from N again
+//    __host__ __device__ int get_j( int idx) const { return (idx%(n*n))%n;}
+//    double x[n];
+//    value_type hx_, hy_;
+//};
 
 ///@}
 
 ///@cond
-template< class T, size_t n>
-struct MatrixTraits< S2D< T, n> > 
+template< class T>
+struct MatrixTraits< S2D< T> > 
 {
     typedef T value_type;
     typedef DiagonalPreconditionerTag matrix_category;
 };
 
-template< class T, size_t n>
-struct MatrixTraits< T2D< T, n> > 
+template< class T>
+struct MatrixTraits< T2D< T> > 
 {
     typedef T value_type;
     typedef DiagonalPreconditionerTag matrix_category;
 };
-template< class T, size_t n>
-struct MatrixTraits< W2D< T, n> > 
-{
-    typedef T value_type;
-    typedef DiagonalPreconditionerTag matrix_category;
-};
-template< class T, size_t n>
-struct MatrixTraits< V2D< T, n> > 
-{
-    typedef T value_type;
-    typedef DiagonalPreconditionerTag matrix_category;
-};
+//template< class T, size_t n>
+//struct MatrixTraits< W2D< T, n> > 
+//{
+//    typedef T value_type;
+//    typedef DiagonalPreconditionerTag matrix_category;
+//};
+//template< class T, size_t n>
+//struct MatrixTraits< V2D< T, n> > 
+//{
+//    typedef T value_type;
+//    typedef DiagonalPreconditionerTag matrix_category;
+//};
 ///@endcond
 } //namespace dg
 

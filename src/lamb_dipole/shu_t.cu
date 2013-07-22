@@ -36,8 +36,8 @@ double solution( double x, double y) {return 2.*sin(x)*sin(y)*exp( -2.*T*D);}
 
 int main()
 {
-    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
-    S2D<double,n > s2d( grid.hx(), grid.hy());
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    S2D<double > s2d( grid);
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
@@ -54,7 +54,7 @@ int main()
     DVec stencil = expand( one, grid);
     //DArrVec sol = expand< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
     DVec y0( omega), y1( y0);
-    Shu<double, n, DVec> test( grid, D);
+    Shu<DVec> test( grid, D);
     AB< k, DVec > ab( y0);
 
     ////////////////////////////////glfw//////////////////////////////

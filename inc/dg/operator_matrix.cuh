@@ -4,7 +4,7 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/multiply.h>
 #include "dlt.h"
-#include "operator.cuh"
+#include "operator_dynamic.h"
 
 namespace dg
 {
@@ -18,16 +18,19 @@ namespace dg
 *
 * Computes C_{ijkl} = op1_{ij}op2_{kl}
 * @tparam T The value type
-* @tparam n Size of the operators
 * @param op1 The left hand side
 * @param op2 The right hand side
 *
 * @return The  tensor product
 */
-template< class T, size_t n>
-Operator<T, n*n> tensor( const Operator< T, n>& op1, const Operator<T, n>& op2)
+template< class T>
+Operator<T> tensor( const Operator<T>& op1, const Operator<T>& op2)
 {
-    Operator<T, n*n> prod;
+#ifdef DG_DEBUG
+    assert( op1.size() == op2.size());
+#endif //DG_DEBUG
+    unsigned n = op1.size();
+    Operator<T> prod( n*n);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
             for( unsigned k=0; k<n; k++)
@@ -47,16 +50,16 @@ Operator<T, n*n> tensor( const Operator< T, n>& op1, const Operator<T, n>& op2)
 * Can be used to create tensors that operate on each dg-vector entry
 * The DG Tensor Product 1 x op
 * @tparam T value type
-* @tparam n The size of the operator
 * @param N Size of the delta operator
 * @param op The Operator
 *
 * @return A newly allocated cusp matrix
 */
-template< class T, size_t n>
-cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,n>& op)
+template< class T>
+cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T>& op)
 {
     assert( N>0);
+    unsigned n = op.size();
     //compute number of nonzeroes in op
     unsigned number =0;
     for( unsigned i=0; i<n; i++)
@@ -85,17 +88,18 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T,
  *
  * computes (1xleft)m(1xright)
  * @tparam T value type
- * @tparam n The size of the operator
  * @param left The left hand side
  * @param m The matrix
  * @param right The right hand side
  *
  * @return A newly allocated cusp matrix
  */
-template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T,n>& right)
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T>& right)
 {
+    assert( left.size() == right.size());
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    unsigned n = left.size();
     unsigned N = m.num_rows/n;
     Matrix r = tensor( N, right);
     Matrix l = tensor( N, left);
@@ -111,16 +115,15 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T,n>& left,
  *
  * computes (1xbackward)m(1xforward)
  * @tparam T value type
- * @tparam n The size of the operator
  * @param m The matrix
  *
  * @return A newly allocated cusp matrix containing the x-space version of m
  */
-template< class T, size_t n>
-cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const cusp::coo_matrix<int, T, cusp::host_memory>& m)
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( unsigned n, const cusp::coo_matrix<int, T, cusp::host_memory>& m)
 {
-    Operator<T, n> forward1d( DLT<n>::forward);
-    Operator<T, n> backward1d( DLT<n>::backward);
+    Operator<T> forward1d = create::forward(n);
+    Operator<T> backward1d = create::backward(n);
     return sandwich( backward1d, m, forward1d);
 }
 

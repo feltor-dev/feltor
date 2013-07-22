@@ -12,6 +12,13 @@
 //#include "drt_dft_solver.h"
 #include "blueprint.h"
 
+/*
+ * Reads parameters from given input file (default blobs.in)
+ * Inititalizes dft_dft_solver (only periodic BC possible!)
+ * visualizes results directly on the screen
+ * (difference to innto.cpp lies in the initial condition (blob))
+ */
+
 using namespace std;
 using namespace toefl;
 

@@ -5,9 +5,9 @@
 
 --------------------Space and Time discretization------------
 
-1)  n  (# of polynomial coefficients)    =   4     (3)
-2)  nx (grid points in x)                =   128   (192)
-3)  ny (grid points in y)                =   128   (192)
+1)  n  (# of polynomial coefficients)    =   5     (3)
+2)  nx (grid points in x)                =   120   (192)
+3)  ny (grid points in y)                =   120   (192)
 
 4)  k  (order of time integration)       =   3       (3)
 5)  dt (time step in units c_s/L_p)      =   0.3    (0.01)
@@ -21,15 +21,15 @@
 
 8)  lx (length of x in units of rho_s)   =   192    (128.)
 9)  ly (length of y in units of rho_s)   =   192    (64.)
-10) bc_x (0 periodic, 1 Dirichlet )      =   1    (1.0)
-11) bc_y (0 periodic, 1 Dirichlet )      =   0    (1.0)
+10) bc_x (0 periodic, 1 Dirichlet )      =   1      (1.0)
+11) bc_y (0 periodic, 1 Dirichlet )      =   0      (1.0)
 
 ---------------------Physical parameters----------------------
 
 12) local (0) or global (1)             =   1       (0)
-13) nu  (viscosity)                     =   1e-3   (0.001)
-14) mcv (magnetic curvature)            =   0.0005 (0.0005)
-15) tau (Ti/Te)                         =   3.0     (0.0)
+13) nu  (viscosity)                     =   1e-3    (0.001)
+14) mcv (magnetic curvature)            =   0.0005  (0.0005)
+15) tau (Ti/Te)                         =   1.0     (0.0)
 
 ------------------Initial blob parameters---------------------
 

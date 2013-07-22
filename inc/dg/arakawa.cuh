@@ -26,18 +26,18 @@ namespace dg
  * @tparam n # of polynomial coefficients
  * @tparam container The vector class on which to operate on
  */
-template< class T, size_t n, class container=thrust::device_vector<T> >
+template< class container=thrust::device_vector<double> >
 struct Arakawa
 {
-    typedef T value_type;
+    typedef typename container::value_type value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
+    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     /**
      * @brief Create Arakawa on a grid
      *
      * @param g The 2D grid
      */
-    Arakawa( const Grid<T,n>& g);
+    Arakawa( const Grid<value_type>& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -45,7 +45,7 @@ struct Arakawa
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    Arakawa( const Grid<T,n>& g, bc bcx, bc bcy);
+    Arakawa( const Grid<value_type>& g, bc bcx, bc bcy);
 
     /**
      * @brief Compute poisson's bracket
@@ -66,16 +66,16 @@ struct Arakawa
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class T, size_t n, class container>
-Arakawa<T, n, container>::Arakawa( const Grid<T,n>& g, bc bcx, bc bcy): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
+template< class container>
+Arakawa< container>::Arakawa( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
-    Operator<value_type, n> forward1d( DLT<n>::forward);
-    Operator<value_type, n*n> forward2d = tensor( forward1d, forward1d);
+    Operator<value_type> forward1d = create::forward(g.n());
+    Operator<value_type> forward2d = tensor( forward1d, forward1d);
     forward = tensor( g.Nx()*g.Ny(), forward2d);
     //create backward dlt matrix
-    Operator<value_type, n> backward1d( DLT<n>::backward);
-    Operator<value_type, n*n> backward2d = tensor( backward1d, backward1d);
+    Operator<value_type> backward1d = create::backward(g.n());
+    Operator<value_type> backward2d = tensor( backward1d, backward1d);
     backward = tensor( g.Nx()*g.Ny(), backward2d);
 
     /*
@@ -103,24 +103,24 @@ Arakawa<T, n, container>::Arakawa( const Grid<T,n>& g, bc bcx, bc bcy): dxlhs( n
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);
 }
-template< class T, size_t n, class container>
-Arakawa<T, n, container>::Arakawa( const Grid<T,n>& g): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
+template< class container>
+Arakawa< container>::Arakawa( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
-    Operator<value_type, n> forward1d( DLT<n>::forward);
-    Operator<value_type, n*n> forward2d = tensor( forward1d, forward1d);
+    Operator<value_type> forward1d = create::forward(g.n());
+    Operator<value_type> forward2d = tensor( forward1d, forward1d);
     forward = tensor( g.Nx()*g.Ny(), forward2d);
     //create backward dlt matrix
-    Operator<value_type, n> backward1d( DLT<n>::backward);
-    Operator<value_type, n*n> backward2d = tensor( backward1d, backward1d);
+    Operator<value_type> backward1d = create::backward(g.n());
+    Operator<value_type> backward2d = tensor( backward1d, backward1d);
     backward = tensor( g.Nx()*g.Ny(), backward2d);
 
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
 
-template< class T, size_t n, class container>
-void Arakawa<T, n, container>::operator()( const container& lhs, const container& rhs, container& result)
+template< class container>
+void Arakawa< container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //transform to x-space
     blas2::symv( backward, lhs, blhs);
@@ -174,10 +174,10 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
  * @tparam n # of polynomial coefficients
  * @tparam container The vector class on which to operate on
  */
-template< class T, size_t n, class container=thrust::device_vector<T> >
+template< class container=thrust::device_vector<double> >
 struct ArakawaX
 {
-    typedef T value_type;
+    typedef typename container::value_type value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     /**
@@ -185,7 +185,7 @@ struct ArakawaX
      *
      * @param g The 2D grid
      */
-    ArakawaX( const Grid<T,n>& g);
+    ArakawaX( const Grid<value_type>& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -193,7 +193,7 @@ struct ArakawaX
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    ArakawaX( const Grid<T,n>& g, bc bcx, bc bcy);
+    ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy);
     //ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy); //deprecated
 
     /**
@@ -233,14 +233,14 @@ struct ArakawaX
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class T, size_t n, class container>
-ArakawaX<T, n, container>::ArakawaX( const Grid<T,n>& g): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class container>
+ArakawaX<container>::ArakawaX( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
-template< class T, size_t n, class container>
-ArakawaX<T, n, container>::ArakawaX( const Grid<T,n>& g, bc bcx, bc bcy): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class container>
+ArakawaX<container>::ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);
@@ -282,8 +282,8 @@ void ArakawaX<T, n, container>::construct( unsigned Nx, unsigned Ny, double hx, 
 }
 */
 
-template< class T, size_t n, class container>
-void ArakawaX<T, n, container>::operator()( const container& lhs, const container& rhs, container& result)
+template< class container>
+void ArakawaX< container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //compute derivatives in x-space
     blas2::symv( bdxf, lhs, dxlhs);

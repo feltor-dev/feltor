@@ -8,10 +8,9 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "dg_lib/parameters.h"
+#include "galerkin/parameters.h"
 
 
-const unsigned n = 4;
 
 int main( int argc, char* argv[])
 {
@@ -47,13 +46,7 @@ int main( int argc, char* argv[])
     status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
     const Parameters p( file::read_input( in));
     p.display();
-    if( p.n != n )
-    {
-        std::cerr << "ERROR: n doesn't match: "<<n<<" vs. "<<p.n<<"\n";
-        return -1;
-    }
-
-    dg::Grid<double, n> grid( 0, p.lx, 0, p.ly, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
 
 
     dg::HVec visual(  grid.size(), 0.), input( visual);
@@ -94,7 +87,7 @@ int main( int argc, char* argv[])
         w.title() << std::setprecision(2) << std::scientific;
         w.title() <<"ne / "<<colors.scale()<<"\t";
         t.tic();
-        w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
+        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout << "Drawing took              "<<t.diff()<<"s\n";
 
@@ -113,7 +106,7 @@ int main( int argc, char* argv[])
         w.title() <<"omega / "<<colors.scale()<<"\t";
         w.title() << std::fixed; 
         w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
-        w.draw( visual, n*grid.Nx(), n*grid.Ny(), colors);
+        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout <<"2nd half took          "<<t.diff()<<"s\n";
         bool waiting = true;
