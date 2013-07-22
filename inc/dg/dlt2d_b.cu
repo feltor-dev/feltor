@@ -12,7 +12,7 @@
 #include "tensor.cuh"
 #include "timer.cuh"
 #include "array.cuh"
-#include "dlt.h"
+#include "dlt.cuh"
 #include "arrvec2d.cuh"
 #include "evaluation.cuh"
 #include "preconditioner.cuh"
@@ -48,7 +48,7 @@ int main()
     HArrVec hv2( hv);
     DArrVec  dv( hv);
     DArrVec  dv2( hv2);
-    Operator<double> forward = create::forward( n);
+    Operator<double> forward( g.dlt().forward());
     Operator<double> forward2d = dg::tensor( forward, forward);
     //t.tic();
     //dg::blas2::symv(1., forward2d, dv.data(),0., dv.data());

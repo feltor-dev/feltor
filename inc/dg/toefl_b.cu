@@ -48,14 +48,14 @@ int main()
     cout << "Timestep                    " << dt << endl;
 
     //create initial vector
-    const Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::DIR);
+    const Grid<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR);
     dg::Gaussian gaussian( 1., ly/2., .1, .1, 1);
     dg::DVec theta = dg::evaluate ( gaussian, grid);
     vector<dg::DVec> y0(2, theta), y1(y0);
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
-    //create RHS and RK
-    Toefl<double, n, dg::DVec> test( grid, Ra, Pr, eps); 
+    //create RHS and AB
+    Toefl< dg::DVec> test( grid, Ra, Pr, eps); 
     AB< k, vector<dg::DVec> > ab( y0);
 
 

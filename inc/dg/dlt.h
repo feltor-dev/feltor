@@ -1,6 +1,8 @@
 #ifndef _DG_DLT_
 #define _DG_DLT_
 
+#error deprecated
+
 namespace dg
 {
 

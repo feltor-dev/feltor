@@ -8,7 +8,7 @@
 #include "blas.h"
 #include "laplace.cuh"
 #include "array.cuh"
-#include "dlt.h"
+#include "dlt.cuh"
 #include "arrvec2d.cuh"
 #include "evaluation.cuh"
 #include "operator_dynamic.h"
@@ -36,7 +36,7 @@ int main()
     //cout << "Evaluated\n";
     //cout <<hv<<endl;
 
-    Operator<double> forward = create::forward(n);
+    Operator<double> forward( grid.dlt().forward());
     Operator<double> forward2d = tensor( forward, forward);
     //dg::blas2::symv( 1., forward2d, dv,0., dv);
     //dg::blas2::symv( forward2d, dv2, dv2);

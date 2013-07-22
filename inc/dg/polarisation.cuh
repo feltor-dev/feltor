@@ -15,9 +15,10 @@
 #include "tensor.cuh"
 #include "operator_dynamic.h"
 #include "operator_matrix.cuh"
+#include "matrix_traits_thrust.h"
 #include "creation.cuh"
 #include "dx.cuh"
-#include "dlt.h"
+#include "dlt.cuh"
 
 //#include "cusp_eigen.h"
 
@@ -36,7 +37,7 @@ struct Polarisation
 {
     typedef cusp::coo_matrix<int, T, Memory> Matrix;
     typedef cusp::array1d<T, Memory> Vector;
-    Polarisation( unsigned n, unsigned N, T h, bc bcx);
+    Polarisation( const Grid1d<T>& g);
     Matrix create( const Vector& );
   private:
     typedef cusp::array1d<int, Memory> Array;
@@ -47,16 +48,21 @@ struct Polarisation
 
 };
 template <class T, class Memory>
-Polarisation<T, Memory>::Polarisation( unsigned n, unsigned N, T h, bc bcx): I(n*N), J(I), xspace( n*N), n(n), N(N)
+Polarisation<T, Memory>::Polarisation( const Grid1d<T>& g): I(g.size()), J(I), xspace( g.size()), n(g.n()), N(g.N())
 {
-    for( unsigned i=0; i<n*N; i++)
-        I[i] = J[i] = i;
+    T h = g.h();
+    bc bcx = g.bcx();
+    thrust::sequence( I.begin(), I.end());
+    thrust::sequence( J.begin(), J.end());
+
     right = create::dx_asymm_mt<T>( n, N, h, bcx); //create and transfer to device
-    Operator<T> backward = create::backward(n);
+    Operator<T> backward( g.dlt().backward());
     middle = tensor<T>( N, backward);
     cusp::multiply( middle, right, right);
     cusp::transpose( right, left); 
-    Operator<T> weights = create::weights(n);
+    Operator<T> weights(n,0);
+    for( unsigned i=0; i<g.n(); i++)
+        weights( i,i) = g.dlt().weights()[i];
     weights *= h/2.;
     middle = tensor( N, weights*backward);
     jump = create::jump_ot<T>( n, N, bcx); //without jump cg is unstable
@@ -192,7 +198,7 @@ struct Polarisation2dX
   private:
     typedef cusp::array1d<int, MemorySpace> Array;
     typedef cusp::array1d<value_type, MemorySpace> VArray;
-    void construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy);
+    void construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy, const DLT<value_type>& );
     Matrix leftx, lefty, rightx, righty, jump;
     Array I, J;
     typename Array::view I_view, J_view;
@@ -209,7 +215,7 @@ Polarisation2dX< container>::Polarisation2dX( const Grid<value_type>& g):
     middle( create::w2d(g) ), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
     xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
-    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), g.bcx(), g.bcy());
+    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), g.bcx(), g.bcy(), g.dlt());
 }
 template <class container>
 Polarisation2dX<container>::Polarisation2dX( const Grid<value_type>& g, bc bcx, bc bcy):
@@ -217,16 +223,16 @@ Polarisation2dX<container>::Polarisation2dX( const Grid<value_type>& g, bc bcx, 
     middle( create::w2d(g) ), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
     xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
-    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy);
+    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy, g.dlt());
 }
 
 template <class container>
-void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy)
+void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy, const DLT<value_type>& dlt)
 {
     typedef cusp::coo_matrix<int, value_type, cusp::host_memory> HMatrix;
 
-    Operator<value_type> backward1d = create::backward( n);
-    Operator<value_type> forward1d = create::forward( n);
+    Operator<value_type> backward1d( dlt.backward());
+    Operator<value_type> forward1d( dlt.forward());
 
     //create x and y derivative in xspace
     HMatrix rightx_ = create::dx_asymm_mt<value_type>( n, Nx, hx, bcx); 
@@ -246,7 +252,8 @@ void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny
 
     //create norm for jump matrices 
     Operator<value_type> normx(n, 0.), normy(n, 0.);
-    normx = normy = create::weights( n);
+    for( unsigned i=0; i<n; i++)
+        normx( i,i) = normy( i,i) = dlt.weights()[i];
     normx *= hx/2.;
     normy *= hy/2.; // normalisation because F is invariant
     //create jump
