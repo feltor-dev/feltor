@@ -3,7 +3,7 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/print.h>
 
-#include "dlt.h"
+#include "dlt.cuh"
 #include "functions.h"
 #include "operator_matrix.cuh"
 
@@ -13,9 +13,10 @@ int main()
 {
 
     cout << "Test of operator Matrix creation\n";
+    dg::DLT<double> dlt(3);
     dg::Operator<double> Op1 = dg::create::pipj( 3);
 
-    dg::Operator<double> Op2 = dg::create::forward( 3);
+    dg::Operator<double> Op2 = dlt.forward( );
     cout << "1st Operator is:\n" << Op1<<"\n";
     cout << "2nd Operator is:\n" << Op2<<"\n";
     cout << "Tensor Product is: \n" << dg::tensor( Op1, Op2);
@@ -25,5 +26,6 @@ int main()
     cusp::print(test1);
     cusp::print(test2);
     cusp::print(test3);
+    cout << "You should see the above tensor product in the sparse matrix!\n";
     return 0;
 }

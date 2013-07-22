@@ -11,8 +11,6 @@ namespace dg
  * @ingroup utilities
  * Data is not owned by this class, nor does the class check for consistent 
  * container sizes, rows and columns.
- * @tparam T The value type 
- * @tparam n The number of polynomial coefficients per cell
  * @tparam container The underlying container data type.
  * 
  * Valid expression:
@@ -35,6 +33,7 @@ class ArrVec2d_View
      *
      * The referenced object is interpreted as a DG Matrix
      * @param v This reference is stored by the object.
+     * @param n # of polynomial coefficients
      * @param columns Number of lines of the matrix
      */
     ArrVec2d_View( container& v, unsigned n, unsigned columns ) : hv(v), n_(n), cols_( columns) { }
@@ -123,8 +122,6 @@ class ArrVec2d_View
  *
  * @ingroup utilities
  * Data is owned by this class.
- * @tparam T The value type 
- * @tparam n The number of polynomial coefficients per cell
  * @tparam container The underlying container data type
  */
 template< class container = thrust::host_vector<double> >
@@ -145,6 +142,8 @@ class ArrVec2d : public ArrVec2d_View< container>
      *
      * Copy given object and interpret as a DG Matrix.
      * @param c A container must be copyconstructible from c. 
+     * @param n # of polynomial coefficients
+     * @param cols # of columns
      */
     ArrVec2d( const container& c, unsigned n, unsigned cols): View(hv, n, cols), hv(c) {
     }
@@ -152,6 +151,7 @@ class ArrVec2d : public ArrVec2d_View< container>
     /**
       * @brief Construct a container by size and value
       * 
+      * @param n # of polynomial coefficients
       * @param rows Number of lines 
       * @param cols Number of columns ( actual container is n*n*rows*cols long)
       * @param value Elements are initialized to this value

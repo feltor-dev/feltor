@@ -22,7 +22,8 @@ namespace create
 *
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * The matrix isn't symmetric due to the normalisation T.
-* @tparam n Number of Legendre nodes per cell
+* @tparam T value type
+* @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size (used to compute normalisation)
 * @param bcx boundary condition 
@@ -101,7 +102,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
 *
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * The matrix isn't skew-symmetric due to normalisation T.
-* @tparam n Number of Legendre nodes per cell
+* @tparam T value type
+* @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
@@ -168,7 +170,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N,
 * @ingroup create
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * The matrix is symmetric. Normalisation is missing
-* @tparam n Number of Legendre nodes per cell
+* @tparam T value type
+* @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param bcx boundary condition
 *

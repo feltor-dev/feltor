@@ -17,16 +17,13 @@ const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 const unsigned N = 100;  //more N means less iterations for same error
 
 const double lx = M_PI;
-const double h = lx/(double)N;
 const double eps = 1e-1; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
-typedef dg::ArrVec1d< double, n, HVec>  HArrVec;
-typedef dg::ArrVec1d< double, n, DVec>  DArrVec;
 
-typedef dg::T1D<double, n> Preconditioner;
+typedef dg::T1D<double> Preconditioner;
 
 typedef cusp::ell_matrix<int, double, cusp::host_memory> HMatrix;
 typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
@@ -46,40 +43,41 @@ int main()
 {
 
     //create functions A(chi) x = b
-    HArrVec x = dg::expand<double (&)(double), n> ( initial, 0,lx, N);
-    HArrVec b = dg::expand<double (&)(double), n> ( rhs, 0,lx, N);
-    HArrVec chi = dg::expand<double (&)(double), n> ( pol, 0,lx, N);
-    const HArrVec solution = dg::expand<double (&)(double), n> (sol, 0 ,lx, N);
-    HArrVec error(solution);
+    dg::Grid1d<double> g( 0, lx, n, N, dg::DIR);
+    HVec x = dg::expand ( initial, g);
+    HVec b = dg::expand ( rhs, g);
+    HVec chi = dg::expand( pol,g);
+    const HVec solution = dg::expand (sol, g);
+    HVec error(solution);
 
     //copy data to device memory
-    DArrVec dx( x.data()), db( b.data()), derror( error.data()), dchi( chi.data());
-    const DArrVec dsolution( solution.data());
-    cusp::array1d_view<DVec::iterator> dchi_view( dchi.data().begin(), dchi.data().end());
+    DVec dx( x), db( b), derror( error), dchi( chi);
+    const DVec dsolution( solution);
+    cusp::array1d_view<DVec::iterator> dchi_view( dchi.begin(), dchi.end());
 
     cout << "Create Polarisation object!\n";
-    dg::Polarisation<double, n, Memory> pol( N, h, dg::DIR);
+    dg::Polarisation<double, Memory> pol( g);
     cout << "Create Polarisation matrix!\n";
     cusp::coo_matrix<int, double, cusp::device_memory> A_ = pol.create( dchi_view ); 
     DMatrix A = A_;
     //DMatrix B = dg::create::laplace1d_dir<double, n>( N, h); 
     cout << "A is sorted?"<<A_.is_sorted_by_row_and_column()<<endl;
     cout << "Create conjugate gradient!\n";
-    dg::CG< DVec > pcg( dx.data(), n*N);
+    dg::CG< DVec > pcg( dx, n*N);
 
     cout << "# of polynomial coefficients: "<< n <<endl;
     cout << "# of intervals                "<< N <<endl;
     //compute S b
-    dg::blas2::symv( dg::S1D<double, n>(h), db.data(), db.data());
+    dg::blas2::symv( dg::S1D<double>(g), db, db);
     cudaThreadSynchronize();
-    std::cout << "Number of pcg iterations "<< pcg( A, dx.data(), db.data(), Preconditioner(h), eps)<<endl;
+    std::cout << "Number of pcg iterations "<< pcg( A, dx, db, Preconditioner(g), eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
-    dg::blas1::axpby( 1.,dx.data(),-1.,derror.data());
+    dg::blas1::axpby( 1.,dx,-1.,derror);
 
-    double eps = dg::blas2::dot( dg::S1D<double, n>(h), derror.data());
+    double eps = dg::blas2::dot( dg::S1D<double>(g), derror);
     cout << "L2 Norm2 of Error is " << eps << endl;
-    double norm = dg::blas2::dot( dg::S1D<double, n>(h), dsolution.data());
+    double norm = dg::blas2::dot( dg::S1D<double>(g), dsolution);
     std::cout << "L2 Norm of relative error is "<<sqrt( eps/norm)<<std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
 

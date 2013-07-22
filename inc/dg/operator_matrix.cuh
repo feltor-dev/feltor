@@ -3,8 +3,8 @@
 
 #include <cusp/coo_matrix.h>
 #include <cusp/multiply.h>
-#include "dlt.h"
 #include "operator_dynamic.h"
+#include "grid.cuh"
 
 namespace dg
 {
@@ -110,7 +110,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  
     return lmr;
 }
 //sandwich l space matrix to make x space matrix
-/**
+/*
  * @brief Transforms a 1d matrix in l-space to x-space
  *
  * computes (1xbackward)m(1xforward)
@@ -119,6 +119,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  
  *
  * @return A newly allocated cusp matrix containing the x-space version of m
  */
+/*
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> sandwich( unsigned n, const cusp::coo_matrix<int, T, cusp::host_memory>& m)
 {
@@ -126,6 +127,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( unsigned n, const cusp::co
     Operator<T> backward1d = create::backward(n);
     return sandwich( backward1d, m, forward1d);
 }
+*/
 
 
 ///@}

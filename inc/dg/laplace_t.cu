@@ -15,21 +15,21 @@ const unsigned N = 5; //minimum 3
 using namespace dg;
 using namespace std;
 
-typedef dg::ArrVec1d< double, n, dg::HVec>  HArrVec;
-typedef dg::ArrVec1d< double, n, dg::DVec>  DArrVec;
+typedef dg::ArrVec1d< dg::HVec>  HArrVec;
+typedef dg::ArrVec1d< dg::DVec>  DArrVec;
 
 int main()
 {
     cout<< "# of polynomial coeff per dim: "<<n<<"\n";
     cout<< "# of cells per dim: "<<N<<"\n";
-    HArrVec hv( N,  1);
+    HArrVec hv( n, N,  1);
     for( unsigned k=0; k<N; k++)
         for( unsigned i=0; i<n; i++)
             hv( k, i) = i;
 
-    HArrVec hw( N);
+    HArrVec hw( n, N);
     dg::DVec dv( hv.data()), dw( hw.data());
-    DMatrix laplace1d = create::laplace1d_per<double, n>(N, 2);
+    DMatrix laplace1d = create::laplace1d_per<double>(n, N, 2);
 
     cout << "The DG Laplacian: \n";
     cusp::print( laplace1d);
