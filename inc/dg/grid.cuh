@@ -79,7 +79,6 @@ struct Grid1d
  * @brief A 2D grid class 
  *
  * @tparam T scalar value type 
- * @tparam n number of polynomial coefficients
  */
 template< class T>
 struct Grid
@@ -91,6 +90,7 @@ struct Grid
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
      * @param y1 upper boundary in y 
+     * @param n  # of polynomial coefficients per dimension
      * @param Nx # of points in x 
      * @param Ny # of points in y
      * @param bcx boundary condition in x

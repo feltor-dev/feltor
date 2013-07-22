@@ -5,9 +5,9 @@
 
 --------------------Space and Time discretization------------
 
-1)  n  (# of polynomial coefficients)    =   16    (3)
-2)  nx (grid points in x)                =   32   (192)
-3)  ny (grid points in y)                =   32   (192)
+1)  n  (# of polynomial coefficients)    =   3    (3)
+2)  nx (grid points in x)                =   100   (192)
+3)  ny (grid points in y)                =   100   (192)
 
 4)  k  (order of time integration)       =   3       (3)
 5)  dt (time step in units c_s/L_p)      =   0.2    (0.01)

@@ -39,7 +39,7 @@ int main()
     const unsigned NT = (unsigned)(D*T*n*n*Nx*Nx/0.01/lx/lx);
     
     Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    S2D<double > s2d( grid);
+    DVec w2d( create::w2d( grid));
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
@@ -52,9 +52,9 @@ int main()
     //cout << "# of timesteps              " << NT << endl;
     cout << "Diffusion                   " << D <<endl;
     dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, 1);
-    HVec omega = expand ( lamb, grid);
-    DVec stencil = expand( one, grid);
-    //DArrVec sol = expand< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
+    HVec omega = evaluate ( lamb, grid);
+    DVec stencil = evaluate( one, grid);
+    //DArrVec sol = evaluate< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
     DVec y0( omega), y1( y0);
     Shu<DVec> test( grid, D, eps);
     AB< k, DVec > ab( y0);
@@ -71,8 +71,8 @@ int main()
     while (running)
     {
         //transform field to an equidistant grid
-        cout << "Total vorticity is: "<<blas2::dot( stencil, s2d, y0) << "\n";
-        cout << "Total enstrophy is: "<<blas2::dot( s2d, y0)<<"\n";
+        cout << "Total vorticity is: "<<blas2::dot( stencil, w2d, y0) << "\n";
+        cout << "Total enstrophy is: "<<blas2::dot( w2d, y0)<<"\n";
         //compute the color scale
         dg::blas2::mv( equidistant, y0, visual );
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<float>() );
@@ -91,11 +91,11 @@ int main()
     }
     ////////////////////////////////////////////////////////////////////
     /*
-    cout << "Total vorticity is: "<< blas2::dot( stencil, s2d, y0) << "\n";
-    cout << "Total enstrophy  is "<<blas2::dot( y0, s2d, y0)<<"\n";
+    cout << "Total vorticity is: "<< blas2::dot( stencil, w2d, y0) << "\n";
+    cout << "Total enstrophy  is "<<blas2::dot( y0, w2d, y0)<<"\n";
     blas1::axpby( 1., sol.data(), -1., y0);
     cudaThreadSynchronize();
-    cout << "Distance to solution "<<sqrt( blas2::dot( s2d, y0))<<endl; //don't forget sqrt when comuting errors
+    cout << "Distance to solution "<<sqrt( blas2::dot( w2d, y0))<<endl; //don't forget sqrt when comuting errors
     */
 
     return 0;

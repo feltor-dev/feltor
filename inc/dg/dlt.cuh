@@ -7,15 +7,57 @@
 
 namespace dg{
 
+/**
+ * @brief Struct holding coefficients for DLT related operations
+ *
+ * @tparam T value type
+ */
 template< class T>
 class DLT
 {
   public:
+      /**
+       * @brief Initialize coefficients
+       *
+       * The constructor reads the data corresponding to given n from the file dlt.dat. 
+       * @param n # of polynomial coefficients
+       */
     DLT( unsigned n);
+
+    /**
+     * @brief Return Gauss-Legendre weights
+     *
+     * @return weights
+     */
     const std::vector<T>& weights()const {return w_;}
+    /**
+     * @brief Return Gauss-Legendre nodes
+     *
+     * @return nodes
+     */
     const std::vector<T>& abscissas()const {return a_;}
+    /**
+     * @brief Return forward DLT trafo matrix
+     *
+     * accesss elements in C-fashion: F_{ij} = forward()[i*n+j]
+     * @return forward transformation
+     */
     const std::vector<T>& forward()const {return forw_;}
+    /**
+     * @brief Return backward DLT trafo matrix
+     *
+     * accesss elements in C-fashion: F_{ij} = backward()[i*n+j]
+     * @return backward transformation
+     */
     const std::vector<T>& backward()const {return back_;}
+    /**
+     * @brief Return equidistant backward DLT trafo matrix
+     *
+     * For vizualisation purposes it is useful to have the values of
+     * the DLT - expansion on an equidistant grid.
+     * accesss elements in C-fashion: F_{ij} = backwardEQ()[i*n+j]
+     * @return equidistant backward transformation
+     */
     const std::vector<T>& backwardEQ()const {return backEQ_;}
 
   private:

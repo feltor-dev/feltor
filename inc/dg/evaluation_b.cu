@@ -6,6 +6,7 @@
 
 //#include "../gcc/timer.h"
 #include "timer.cuh"
+#include "grid.cuh"
 #include "evaluation.cuh"
 #include "blas.h"
 
@@ -21,8 +22,6 @@ const unsigned N = 1e6;
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
-typedef dg::ArrVec1d< HVec>  HArrVec;
-typedef dg::ArrVec1d< DVec>  DArrVec;
 
 
 using namespace std;
@@ -30,35 +29,36 @@ int main()
 {
     cout << "Array size is:             "<< n<<endl;
     cout << "Number of intervals is:    "<< N <<endl;
+    dg::Grid1d<double> g( 0, 1, n, N);
     double h = 1./(double)N;
     dg::Timer t;
 
     t.tic();
-    HArrVec h_v = dg::expand< double(&) (double), n>( function, 0, 1, N);
+    HVec h_v = dg::expand( function, g);
     t.toc(); 
     cout << "Expansion on host took         "<< t.diff()<<"s\n";
 
     t.tic();
-    DArrVec d_v( h_v.data());
+    DVec d_v( h_v);
     t.toc(); 
     cout << "Copy of data host2device took  "<< t.diff()<<"s\n\n";
     t.tic();
-    dg::blas2::symv(  dg::S1D<double, n>(h), d_v.data(), d_v.data());
+    dg::blas2::symv(  dg::S1D<double>(g), d_v, d_v);
     t.toc(); 
     cout << "symv(S,v) took on device       "<< t.diff()<<"s\n";
     t.tic();
-    dg::blas2::symv(  dg::S1D<double, n>(h), h_v.data(), h_v.data());
+    dg::blas2::symv(  dg::S1D<double>(g), h_v, h_v);
     t.toc(); 
     cout << "symv(S,v) took on host         "<< t.diff()<<"s\n";
 
     double norm;
     t.tic();
-    norm = dg::blas2::dot( dg::T1D<double, n>(h), d_v.data());
+    norm = dg::blas2::dot( dg::T1D<double>(g), d_v);
     t.toc(); 
     cout << "ddot(v,T, v) took on device    "<< t.diff()<<"s\n";
 
     t.tic();
-    norm = dg::blas2::dot( dg::T1D<double, n>(h), h_v.data());
+    norm = dg::blas2::dot( dg::T1D<double>(g), h_v);
     t.toc(); 
     cout << "ddot(v,T,v) took on host       "<< t.diff()<<"s\n\n";
     cout<< "Square normalized norm "<< norm <<"\n";
