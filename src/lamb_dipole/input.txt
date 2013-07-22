@@ -5,16 +5,16 @@
 
 --------------------Space and Time discretization------------
 
-1)  n  (# of polynomial coefficients)    =   3     (3)
-2)  nx (grid points in x)                =   64   (192)
-3)  ny (grid points in y)                =   64   (192)
+1)  n  (# of polynomial coefficients)    =   5     (3)
+2)  nx (grid points in x)                =   20   (192)
+3)  ny (grid points in y)                =   20   (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   1e-4    (0.01)
+5)  dt (time step in units c_s/L_p)      =   1e-5    (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
-6)  eps (stopping for conjugate gradient) =   1e-6  (1e-6)
+6)  eps (stopping for conjugate gradient) =   1e-7  (1e-6)
 
 ---------------------Boundary conditions----------------------
 
