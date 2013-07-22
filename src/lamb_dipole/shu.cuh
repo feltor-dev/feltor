@@ -19,7 +19,7 @@ struct Shu
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
-    Shu( const Grid<value_type>& grid, double D, double eps = 1e-4);
+    Shu( const Grid<value_type>& grid, double D, double eps);
 
     Matrix& lap() { return laplace;}
     const container& potential( ) {return phi;}

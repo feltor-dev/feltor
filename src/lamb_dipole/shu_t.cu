@@ -18,16 +18,12 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
-const unsigned Nx = 40;
-const unsigned Ny = 40;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
 const unsigned k = 2;
 const double D = 0.01;
 const double T = 1.;
-const unsigned NT = (unsigned)(D*T*n*n*Nx*Nx/0.01/lx/lx);
 
 
 double initial( double x, double y){return 2.*sin(x)*sin(y);}
@@ -36,6 +32,12 @@ double solution( double x, double y) {return 2.*sin(x)*sin(y)*exp( -2.*T*D);}
 
 int main()
 {
+    unsigned n, Nx, Ny;
+    double eps;
+    cout << "Type n, Nx, Ny and eps!\n";
+    cin >> n >> Nx >> Ny>>eps;
+    const unsigned NT = (unsigned)(D*T*n*n*Nx*Nx/0.01/lx/lx);
+    
     Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     S2D<double > s2d( grid);
     const double dt = T/(double)NT;
@@ -54,7 +56,7 @@ int main()
     DVec stencil = expand( one, grid);
     //DArrVec sol = expand< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
     DVec y0( omega), y1( y0);
-    Shu<DVec> test( grid, D);
+    Shu<DVec> test( grid, D, eps);
     AB< k, DVec > ab( y0);
 
     ////////////////////////////////glfw//////////////////////////////

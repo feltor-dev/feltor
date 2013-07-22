@@ -57,6 +57,7 @@ int main()
     cout << "Create Polarisation matrix!\n";
     t.tic();
     cusp::csr_matrix<int, double, cusp::device_memory> B = pol.create(chi);
+    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
     Matrix A = B; 
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
@@ -88,6 +89,8 @@ int main()
     cout << "L2 Norm2 of Error is " << err << endl;
     double norm = dg::blas2::dot( v2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
+
+    std::cout << "# of points in matrix is: "<< A.num_entries<< "\n";
 
     return 0;
 }

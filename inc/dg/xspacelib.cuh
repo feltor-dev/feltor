@@ -101,6 +101,7 @@ thrust::host_vector<int> permutationMap( unsigned n, unsigned Nx, unsigned Ny )
  * @param s your vectors are given in XSPACE or in LSPACE
  *
  * @return transformation matrix
+ * @note this matrix has ~n^4 N^2 entries
  */
 template < class T>
 cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space s = XSPACE)
