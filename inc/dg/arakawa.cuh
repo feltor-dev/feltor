@@ -22,8 +22,6 @@ namespace dg
  * @brief L-space generalized version of Arakawa's scheme
  *
  * @ingroup creation
- * @tparam T value-type
- * @tparam n # of polynomial coefficients
  * @tparam container The vector class on which to operate on
  */
 template< class container=thrust::device_vector<double> >
@@ -170,8 +168,6 @@ void Arakawa< container>::operator()( const container& lhs, const container& rhs
  * @brief X-space generalized version of Arakawa's scheme
  *
  * @ingroup creation
- * @tparam T value-type
- * @tparam n # of polynomial coefficients
  * @tparam container The vector class on which to operate on
  */
 template< class container=thrust::device_vector<double> >

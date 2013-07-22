@@ -28,12 +28,11 @@ struct Shu
     //typedef typename VectorTraits< Vector>::value_type value_type;
     Matrix laplace;
     container omega, phi, phi_old;
-    Arakawa< container> arakawa; 
+    ArakawaX< container> arakawa; 
     CG< container > pcg;
     //SimplicialCholesky cholesky;
     thrust::host_vector<double> x,b;
-    T2D<value_type> t2d;
-    S2D<value_type> s2d;
+    container v2d, w2d;
     
     double D;
     double eps; 
@@ -44,10 +43,10 @@ Shu< container>::Shu( const Grid<value_type>& g, double D, double eps):
     omega( g.size(), 0.), phi(omega), phi_old(phi),
     arakawa( g), 
     pcg( omega, g.size()), x( phi), b( x),
-    t2d( g), s2d( g), D(D), eps(eps)
+    v2d( create::v2d( g)), w2d( create::w2d(g)), D(D), eps(eps)
 {
     typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-    HMatrix A = dg::create::laplacianM( g, not_normed, LSPACE);
+    HMatrix A = dg::create::laplacianM( g, not_normed, XSPACE);
     laplace = A;
     //cholesky.compute( A);
 }
@@ -56,12 +55,12 @@ template< class container>
 void Shu<container>::operator()( const Vector& y, Vector& yp)
 {
     dg::blas2::symv( laplace, y, yp);
-    dg::blas2::symv( -D, t2d, yp, 0., yp); //laplace is unnormalized -laplace
+    dg::blas2::symv( -D, v2d, yp, 0., yp); //laplace is unnormalized -laplace
     //compute S omega
-    blas2::symv( s2d, y, omega);
+    blas2::symv( w2d, y, omega);
     blas1::axpby( 2., phi, -1.,  phi_old);
     phi.swap( phi_old);
-    unsigned number = pcg( laplace, phi, omega, t2d, eps);
+    unsigned number = pcg( laplace, phi, omega, v2d, eps);
     //std::cout << "Number of pcg iterations "<< number<<"\n"; 
     //b = omega; //copy data to host
     //cholesky.solve( x.data(), b.data(), b.size()); //solve on host

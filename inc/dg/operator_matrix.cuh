@@ -110,7 +110,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  
     return lmr;
 }
 //sandwich l space matrix to make x space matrix
-/**
+/*
  * @brief Transforms a 1d matrix in l-space to x-space
  *
  * computes (1xbackward)m(1xforward)

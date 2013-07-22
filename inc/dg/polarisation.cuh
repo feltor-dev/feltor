@@ -15,6 +15,7 @@
 #include "tensor.cuh"
 #include "operator_dynamic.h"
 #include "operator_matrix.cuh"
+#include "matrix_traits_thrust.h"
 #include "creation.cuh"
 #include "dx.cuh"
 #include "dlt.cuh"

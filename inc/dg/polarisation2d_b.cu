@@ -90,8 +90,6 @@ int main()
     double norm = dg::blas2::dot( v2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
 
-    std::cout << "# of points in matrix is: "<< A.num_entries<< "\n";
-
     return 0;
 }
 
