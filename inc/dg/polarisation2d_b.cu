@@ -57,6 +57,7 @@ int main()
     cout << "Create Polarisation matrix!\n";
     t.tic();
     cusp::csr_matrix<int, double, cusp::device_memory> B = pol.create(chi);
+    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
     Matrix A = B; 
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";

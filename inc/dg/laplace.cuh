@@ -31,7 +31,7 @@ namespace create{
  * @ingroup highlevel
  * Use cusp internal conversion to create e.g. the fast ell_matrix format.
  * @tparam T value-type
- * @tparam n Number of Legendre nodes per cell
+ * @param n Number of Legendre nodes per cell
  * @param N Vector size ( number of cells)
  * @param h cell size
  * @param no use normed if you want to compute e.g. diffusive terms
@@ -98,7 +98,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned n, unsigned 
  * @ingroup highlevel
  * Use cusp internal conversion to create e.g. the fast ell_matrix format.
  * @tparam T value-type
- * @tparam n Number of Legendre nodes per cell
+ * @param n Number of Legendre nodes per cell
  * @param N Vector size ( number of cells)
  * @param h cell size
  * @param no use normed if you want to compute e.g. diffusive terms
@@ -173,7 +173,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned n, unsigned 
  *
  * @ingroup highlevel
  * @tparam T value_type
- * @tparam n Number of Legendre nodes per cell
  * @param g The grid on which to create the laplacian (including boundary condition)
  * @param no use normed if you want to compute e.g. diffusive terms
             use not_normed if you want to solve symmetric matrix equations (T is missing)

@@ -1,4 +1,5 @@
-INCLUDE = -I/home/c744/c7441112/include -I$(UIBK_CUSP_INC)
+#INCLUDE = -I/home/c744/c7441112/include 
+INCLUDE = -I$(UIBK_CUSP_INC)
 INCLUDE += -I../ # other libraries
 
 NVCC = nvcc
@@ -10,16 +11,16 @@ CINCLUDE = -I$(UIBK_CUDA_INC) -I$(UIBK_CUSP_INC)
 
 #GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
 GLFLAGS   = -lm #-lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
-LIBS = cusp_eigen.o
+#LIBS = cusp_eigen.o
 
 all: version cusp_thrust arakawa_t blas1_t \
 	cg2d_b cg2d_t cg_t \
-	dlt2d_b dlt2d_t dlt_b dlt_t dx_t \
+	dlt2d_b dlt2d_t dlt_t dx_t \
 	evaluation_b evaluation_t gamma_t host_window_t \
 	laplace_b laplace_t \
-	operator_matrix_t operator_t polarisation2d_b polarisation2d_t polarisation_b polarisation_t \
-	preconditioner2d_b preconditioner2d_t preconditioner_b preconditioner_t \
-	rk2d_t rk_t tensor_b tensor_t toefl_b toefl_t xspacelib_t
+	operator_matrix_t operator_dynamic_b operator_t polarisation2d_b polarisation2d_t polarisation_b polarisation_t \
+	preconditioner2d_b preconditioner2d_t \
+	rk2d_t rk_t tensor_b toefl_b toefl_t xspacelib_t
 
 
 

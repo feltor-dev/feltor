@@ -4,7 +4,7 @@
 #include <cusp/ell_matrix.h>
 
 #include "blas.h"
-#include "dlt.h"
+#include "dlt.cuh"
 
 #include "arakawa.cuh"
 #include "derivatives.cuh"
@@ -14,40 +14,39 @@ namespace dg
 {
 
 //Garcia equations with switched x <-> y  and phi -> -phi
-template< class T, size_t n, class container=thrust::device_vector<T> >
+template< class container=thrust::device_vector<double> >
 struct Toefl
 {
     typedef std::vector<container> Vector;
-    typedef T value_type;
+    typedef typename container::value_type value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    Toefl( const Grid<T,n>& ,  double R, double P, double eps);
+    Toefl( const Grid<value_type>& ,  double R, double P, double eps);
 
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
     Matrix laplaceM;
     container omega, phi, phi_old, dxtheta, dxphi;
-    ArakawaX<T, n, container> arakawaX; 
+    ArakawaX<container> arakawaX; 
     CG<container > pcg;
-    V2D<T,n> v2d;
-    W2D<T,n> w2d;
+    container w2d, v2d;
 
     double Ra, Pr;
     double eps; 
 };
 
-template< class T, size_t n, class container>
-Toefl<T, n, container>::Toefl( const Grid<T,n>& grid, double R, double P, double eps): 
+template< class container>
+Toefl<container>::Toefl( const Grid<value_type>& grid, double R, double P, double eps): 
     omega( grid.size(), 0.), phi(omega), phi_old( phi), dxtheta(omega), dxphi(omega), 
     arakawaX( grid), 
     pcg( omega, grid.size()),
-    v2d( grid), w2d( grid), Ra (R), Pr(P), eps(eps)
+    v2d( create::v2d(grid)), w2d( create::w2d(grid)), Ra (R), Pr(P), eps(eps)
 {
     laplaceM = dg::create::laplacianM( grid, not_normed, XSPACE);
 }
 
-template< class T, size_t n, class container>
-void Toefl<T, n, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+template< class container>
+void Toefl< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

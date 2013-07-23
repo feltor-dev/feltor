@@ -71,10 +71,11 @@ int main( int argc, char* argv[])
     }
 
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
+    //dg::TVB< std::vector<dg::DVec> > ab( y0);
 
     dg::DVec dvisual( grid.size(), 0.);
-    dg::HVec visual( grid.size(), 0.);
-    dg::DMatrix equi = dg::create::backscatter( grid);
+    dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
+    dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     Timer t;
@@ -96,13 +97,13 @@ int main( int argc, char* argv[])
         if( p.global)
         {
             test.exp( y0, y1);
-            thrust::transform( y1[0].begin(), y1[0].end(), y1[0].begin(), dg::PLUS<double>(-1));
-            dg::blas2::gemv( equi, y1[0], dvisual);
+            thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
         }
         else
-            dg::blas2::gemv( equi, y0[0], dvisual);
+            dvisual = y0[0];
 
-        visual = dvisual; //transfer to host
+        hvisual = dvisual;
+        dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw ions
@@ -112,8 +113,8 @@ int main( int argc, char* argv[])
 
         //transform phi
         dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
-        dg::blas2::gemv( equi, y1[1], dvisual);
-        visual = dvisual; //transfer to host
+        hvisual = y1[1];
+        dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw phi and swap buffers

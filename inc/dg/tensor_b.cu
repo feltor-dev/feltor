@@ -38,28 +38,18 @@ int main()
     cin >> Ny; //more N means less iterations for same error
     cout << "# of Legendre coefficients n is: "<< n <<endl;
     cout << "# of 2d cells is:                "<<Nx*Ny<<"\n";
+    Grid<double> g( 0, 1., 0, 1., n, Nx, Ny, dg::PER, dg::DIR);
+    Grid1d<double> gx( 0, 1., n, Nx);
+    Grid1d<double> gy( 0, 1., n, Ny);
 
-    ArrVec2d<double, n> hv( Nx, Ny, 0.);
-    DVec dv = hv.data(), dw( dv);
-    t.tic();
-    DMatrix laplace2d = dgtensor<double,n>(  create::laplace1d_per<double, n>(Ny, 2.),
-                                    S1D<double, n>( 2.),
-                                    S1D<double, n>( 2.),
-                                    create::laplace1d_dir<double, n>(Nx, 2.) );
-    t.toc();
-    cout <<"\n";
-    cout << "Laplace matrix creation took       "<<t.diff()<<"s\n";
-    t.tic();
-    blas2::symv( laplace2d, dv, dw);
-    t.toc();
-    cout << "Multiplication with laplace2d took "<<t.diff()<<"s\n";
+    DVec dv( g.size(), 0), dw( dv);
 
     t.tic();
-    HCMatrix ddyy_ = dgtensor<double, n>( 
-                        create::laplace1d_per<double, n>(Ny, 2.),
-                        tensor<double, n>( Nx, pipj));
-    HCMatrix ddxx_ = dgtensor<double, n>( tensor<double, n>( Ny, pipj),
-                                      create::laplace1d_dir<double, n>(Nx, 2.));
+    HCMatrix ddyy_ = dgtensor<double>(n, 
+                        create::laplace1d_per<double>(n, Ny, 2.),
+                        tensor( Nx, create::pipj(n)));
+    HCMatrix ddxx_ = dgtensor<double>( n, tensor( Ny, create::pipj(n)),
+                                      create::laplace1d_dir<double>(n, Nx, 2.));
     HCMatrix laplace_;
     cusp::add( ddxx_, ddyy_, laplace_);
     DMatrix laplace( laplace_), ddxx( ddxx_), ddyy( ddyy_);

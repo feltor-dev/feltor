@@ -11,7 +11,7 @@
 #include "grid.cuh"
 #include "arrvec2d.cuh"
 #include "functors.cuh"
-#include "dlt.h"
+#include "dlt.cuh"
 #include "evaluation.cuh"
 
 
@@ -101,18 +101,18 @@ thrust::host_vector<int> permutationMap( unsigned n, unsigned Nx, unsigned Ny )
  * @param s your vectors are given in XSPACE or in LSPACE
  *
  * @return transformation matrix
+ * @note this matrix has ~n^4 N^2 entries
  */
 template < class T>
 cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    unsigned n = g.n();
     //create equidistant backward transformation
-    dg::Operator<double> backwardeq = create::backwardEQ( n);
+    dg::Operator<double> backwardeq( g.dlt().backwardEQ());
     dg::Operator<double> backward2d = dg::tensor( backwardeq, backwardeq);
 
     if( s == XSPACE){
-        dg::Operator<double> forward = create::forward(n);
+        dg::Operator<double> forward( g.dlt().forward());
         dg::Operator<double> forward2d = dg::tensor( forward, forward);
         backward2d = backward2d*forward2d;
     }
@@ -134,24 +134,24 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space
 
 }
 
-///**
-// * @brief Evaluate the jumps on grid boundaries
-// *
-// * @tparam n number of legendre nodes per cell
-// * @param v A DG Host Vector 
-// *
-// * @return Vector with the jump values
-// */
-//thrust::host_vector< double> evaluate_jump( const ArrVec1d& v)
-//{
-//    //compute the interior jumps of a DG approximation
-//    unsigned N = v.size();
-//    thrust::host_vector<double> jump(N-1, 0.);
-//    for( unsigned i=0; i<N-1; i++)
-//        for( unsigned j=0; j<v.n(); j++)
-//            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
-//    return jump;
-//}
+ /*
+ * @brief Evaluate the jumps on grid boundaries
+ *
+ * @tparam n number of legendre nodes per cell
+ * @param v A DG Host Vector 
+ *
+ * @return Vector with the jump values
+thrust::host_vector< double> evaluate_jump( const ArrVec1d& v)
+{
+    //compute the interior jumps of a DG approximation
+    unsigned N = v.size();
+    thrust::host_vector<double> jump(N-1, 0.);
+    for( unsigned i=0; i<N-1; i++)
+        for( unsigned j=0; j<v.n(); j++)
+            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
+    return jump;
+}
+ */
 
 ///@}
 

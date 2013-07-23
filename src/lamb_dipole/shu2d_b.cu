@@ -15,8 +15,8 @@
 using namespace std;
 using namespace dg;
 
-const double lx = 2.*M_PI*10.;
-const double ly = 2.*M_PI*10.;
+const double lx = 100; //2.*M_PI*50.;
+const double ly = 100; //2.*M_PI*50.;
 
 const unsigned k = 3;
 const double U = 1.; //the dipole doesn't move with this velocity because box is not infinite
@@ -27,7 +27,7 @@ const double T = 2.;
 
 double D = 0.0;
 
-const unsigned m = 5; //mode number
+const unsigned m = 50; //mode number
 const double kx = 2.*M_PI* m/lx; 
 const double ky = 2.*M_PI* m/ly; 
 double ksqr = (kx*kx+ky*ky) ;//4.*M_PI*M_PI*(1./lx/lx + 1./ly/ly);
@@ -52,9 +52,9 @@ int main()
     cout << "Diffusion                   " << D <<endl;
     ////////////////////////////////////////////////////////////
     Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
-    S2D<double> s2d( grid);
+    DVec w2d( create::w2d(grid));
 
-    unsigned NT = (unsigned)(T*n*Nx/0.025/lx);
+    unsigned NT = (unsigned)(T*n*n*Nx/0.05/lx);
     //cout << "Type # of timesteps\n";
     //cin >> NT;
     const double dt = T/(double)NT;
@@ -63,15 +63,15 @@ int main()
     cout << "# of steps                  " << NT <<endl;
     ////////////////////////////////////////////////////////////
 
-    DVec stencil = expand( one, grid);
+    DVec stencil = evaluate( one, grid);
 
     //dg::Lamb lamb( 0.5*lx, 0.5*ly, R, U);
-    //HVec omega = expand( lamb, grid);
-    HVec omega = expand( initial, grid );
+    //HVec omega = evaluate( lamb, grid);
+    HVec omega = evaluate( initial, grid );
 
     //dg::Lamb lamb2( 0.5*lx, 0.5*ly-0.9755*U*T, R, U);
-    //HVec solh = expand( lamb2, grid);
-    HVec solh = expand( solution, grid );
+    //HVec solh = evaluate( lamb2, grid);
+    HVec solh = evaluate( solution, grid );
 
     DVec sol = solh;
     DVec y0( omega), y1( y0);
@@ -80,9 +80,9 @@ int main()
     AB< k, DVec > ab( y0);
 
     test( y0, y1);
-    double vorticity = blas2::dot( stencil, s2d, y0);
-    double enstrophy = 0.5*blas2::dot( y0, s2d, y0);
-    double energy =    0.5*blas2::dot( y0, s2d, test.potential()) ;
+    double vorticity = blas2::dot( stencil, w2d, y0);
+    double enstrophy = 0.5*blas2::dot( y0, w2d, y0);
+    double energy =    0.5*blas2::dot( y0, w2d, test.potential()) ;
 
     double time = 0;
     ab.init( test, y0, dt);
@@ -101,13 +101,14 @@ int main()
     ////////////////////////////////////////////////////////////////////
     //cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
     //cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity           is: "<<blas2::dot( stencil, s2d, y0) << "\n";
-    cout << "Relative enstrophy error  is: "<<(0.5*blas2::dot( s2d, y0) - enstrophy)/enstrophy<<"\n";
+    cout << "Total vorticity           is: "<<blas2::dot( stencil, w2d, y0) << "\n";
+    cout << "Relative enstrophy error  is: "<<(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
     test( y0, y1); //get the potential ready
-    cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), s2d, y0) - energy)/energy<<"\n";
+    cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), w2d, y0) - energy)/energy<<"\n";
 
     blas1::axpby( 1., sol, -1., y0);
-    cout << "Relative distance to solution "<<sqrt( blas2::dot( s2d, y0))/sqrt( blas2::dot( s2d, sol)) << endl;
+    cout << "Absolute distance to solution "<<sqrt( blas2::dot( w2d, y0))<< endl;
+    cout << "Relative distance to solution "<<sqrt( blas2::dot( w2d, y0))/sqrt( blas2::dot( w2d, sol)) << endl;
 
     //energy and enstrophy errrors are due to timestep only ( vorticity is exactly conserved)
     // k = 2 | p = 3

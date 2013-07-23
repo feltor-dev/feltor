@@ -29,15 +29,15 @@ int main()
     const Parameters p( file::read_input( "input.txt"));
     p.display();
     Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    S2D<double> s2d( grid);
+    DVec w2d( create::w2d(grid));
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
     draw::HostWindow w( 600, 600);
     ////////////////////////////////////////////////////////////
 
-    dg::Lamb lamb( p.posX, p.posY, p.R, p.U);
-    HVec omega = expand ( lamb, grid);
-    DVec stencil = expand( one, grid);
+    dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
+    HVec omega = evaluate ( lamb, grid);
+    DVec stencil = evaluate( one, grid);
     DVec y0( omega ), y1( y0);
     //make solver and stepper
     Shu<DVec> test( grid, p.D, p.eps);
@@ -47,9 +47,9 @@ int main()
     test( y0, y1);
     t.toc();
     cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
-    double vorticity = blas2::dot( stencil , s2d, y0);
-    double enstrophy = 0.5*blas2::dot( y0, s2d, y0);
-    double energy =    0.5*blas2::dot( y0, s2d, test.potential()) ;
+    double vorticity = blas2::dot( stencil , w2d, y0);
+    double enstrophy = 0.5*blas2::dot( y0, w2d, y0);
+    double energy =    0.5*blas2::dot( y0, w2d, test.potential()) ;
 
     double time = 0;
     ////////////////////////////////glfw//////////////////////////////
@@ -57,7 +57,7 @@ int main()
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
-    dg::DMatrix equidistant = dg::create::backscatter( grid, LSPACE );
+    dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
     int running = GL_TRUE;
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, y0, p.dt);
@@ -90,16 +90,16 @@ int main()
     ////////////////////////////////////////////////////////////////////
     cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
     cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity          is: "<<blas2::dot( stencil , s2d, y0) << "\n";
-    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( s2d, y0) - enstrophy)/enstrophy<<"\n";
+    cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, y0) << "\n";
+    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
     test( y0, y1); //get the potential ready
-    cout << "Relative energy error    is: "<<(0.5*blas2::dot( test.potential(), s2d, y0) - energy)/energy<<"\n";
+    cout << "Relative energy error    is: "<<(0.5*blas2::dot( test.potential(), w2d, y0) - energy)/energy<<"\n";
 
     //blas1::axpby( 1., y0, -1, sol);
-    //cout << "Distance to solution: "<<sqrt(blas2::dot( s2d, sol ))<<endl;
+    //cout << "Distance to solution: "<<sqrt(blas2::dot( w2d, sol ))<<endl;
 
-    cout << "Press any key to quit!\n";
-    cin >> x;
+    //cout << "Press any key to quit!\n";
+    //cin >> x;
     return 0;
 
 }
