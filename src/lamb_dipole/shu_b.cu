@@ -35,7 +35,7 @@ int main()
     draw::HostWindow w( 600, 600);
     ////////////////////////////////////////////////////////////
 
-    dg::Lamb lamb( p.posX, p.posY, p.R, p.U);
+    dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
     HVec omega = evaluate ( lamb, grid);
     DVec stencil = evaluate( one, grid);
     DVec y0( omega ), y1( y0);
@@ -98,8 +98,8 @@ int main()
     //blas1::axpby( 1., y0, -1, sol);
     //cout << "Distance to solution: "<<sqrt(blas2::dot( w2d, sol ))<<endl;
 
-    cout << "Press any key to quit!\n";
-    cin >> x;
+    //cout << "Press any key to quit!\n";
+    //cin >> x;
     return 0;
 
 }
