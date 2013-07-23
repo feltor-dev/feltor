@@ -71,6 +71,7 @@ int main( int argc, char* argv[])
     }
 
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
+    //dg::TVB< std::vector<dg::DVec> > ab( y0);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -99,7 +100,7 @@ int main( int argc, char* argv[])
             thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
         }
         else
-            hvisual = y0[0];
+            dvisual = y0[0];
 
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);

@@ -107,6 +107,7 @@ int main()
     cout << "Relative energy error     is: "<<(0.5*blas2::dot( test.potential(), w2d, y0) - energy)/energy<<"\n";
 
     blas1::axpby( 1., sol, -1., y0);
+    cout << "Absolute distance to solution "<<sqrt( blas2::dot( w2d, y0))<< endl;
     cout << "Relative distance to solution "<<sqrt( blas2::dot( w2d, y0))/sqrt( blas2::dot( w2d, sol)) << endl;
 
     //energy and enstrophy errrors are due to timestep only ( vorticity is exactly conserved)

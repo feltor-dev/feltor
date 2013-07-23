@@ -5,22 +5,22 @@
 
 --------------------Space and Time discretization------------
 
-1)  n  (# of polynomial coefficients)    =   3    (3)
-2)  nx (grid points in x)                =   100   (192)
-3)  ny (grid points in y)                =   100   (192)
+1)  n  (# of polynomial coefficients)    =   3   (3)
+2)  nx (grid points in x)                =   100 (192)
+3)  ny (grid points in y)                =   100 (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   0.2    (0.01)
+5)  dt (time step in units c_s/L_p)      =   3.0    (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stopping for polarisation) =   1e-06  (1e-6)
-7)  eps_gamma (stopping for Gamma CG)   =   1e-10  (1e-8)
+6)  eps_pol (stopping for polarisation) =   1e-4  (1e-6)
+7)  eps_gamma (stopping for Gamma CG)   =   1e-8  (1e-8)
 
 ---------------------Boundary conditions----------------------
 
-8)  lx (length of x in units of rho_s)   =   192    (128.)
-9)  ly (length of y in units of rho_s)   =   192    (64.)
+8)  lx (length of x in units of rho_s)   =   200    (128.)
+9)  ly (length of y in units of rho_s)   =   200    (64.)
 10) bc_x (0 periodic, 1 Dirichlet )      =   1      (1.0)
 11) bc_y (0 periodic, 1 Dirichlet )      =   0      (1.0)
 
