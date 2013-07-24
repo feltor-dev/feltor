@@ -88,9 +88,29 @@ struct ToeflR
      */
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
+    /**
+     * @brief Return the mass of the last field in operator()
+     *
+     * @return int exp(y[0]) dA
+     */
     double mass( ) {return mass_;}
+    /**
+     * @brief Return the last integrated mass diffusion of operator()
+     *
+     * @return int \nu \Delta (exp(y[0])-1)
+     */
     double mass_diffusion( ) {return diff_;}
+    /**
+     * @brief Return the energy of the last field in operator()
+     *
+     * @return integrated total energy in {ne, ni}
+     */
     double energy( ) {return energy_;}
+    /**
+     * @brief Return the integrated energy diffusion of the last field in operator()
+     *
+     * @return integrated total energy diffusion
+     */
     double energy_diffusion( ){ return ediff_;}
 
   private:
@@ -115,7 +135,7 @@ struct ToeflR
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
 
-    const container w2d, v2d;
+    const container w2d, v2d, one;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
     const bool global;
@@ -134,7 +154,7 @@ ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double n
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 
-    w2d( create::w2d(grid)), v2d( create::v2d(grid)),
+    w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
 {
     //create derivatives
@@ -270,10 +290,9 @@ void ToeflR< container>::operator()( const std::vector<container>& y, std::vecto
     phi[0] = polarisation( y);
     phi[1] = compute_psi( phi[0]);
 
-    //update energetics
+    //update energetics, 2% of total time
     if( global)
     {
-        container one( y[0].size(), 1.);
         mass_ = blas2::dot( one, w2d, expy[0] ); //take real ion density which is electron density!!
         double Ue = blas2::dot( y[0], w2d, expy[0]);
         double Ui = tau*blas2::dot( y[1], w2d, expy[1]);
