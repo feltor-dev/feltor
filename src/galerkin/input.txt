@@ -10,7 +10,7 @@
 3)  ny (grid points in y)                =   400 (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   3.16    (0.01)
+5)  dt (time step in units c_s/L_p)      =   0.46    (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
@@ -40,7 +40,7 @@
 
 ---------------------Miscellaneous----------------------------
 
-20) itstp (steps between output)            = 5      (5)
-21) # of outputs (excluding first)          = 500
+20) itstp (steps between output)            = 3      (5)
+21) # of outputs (excluding first)          = 3
 
 @ ------------------------------------------------------------

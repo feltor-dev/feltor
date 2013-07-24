@@ -61,41 +61,37 @@ int main( int argc, char* argv[])
         thrust::transform( y0[1].begin(), y0[1].end(), y0[1].begin(), dg::PLUS<double>(+1));
         test.log( y0, y0); //transform to logarithmic values
     }
-    //create timestepper
-    dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    /////////////////////////////////////////////////////////////////////////
-    //set up hdf5
+    /////////////////////////////set up hdf5/////////////////////////////////
     dg::HVec output( y1[0]); //intermediate transport location
     hid_t   file, grp;
     herr_t  status;
     hsize_t dims[] = { grid.n()*grid.Ny(), grid.n()*grid.Nx() };
-    //dims[0] = n*grid.Ny(); 
-    //dims[1] = n*grid.Nx(); 
     file = H5Fcreate( argv[2], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    //std::stringstream title; 
     hsize_t size = input.size();
     status = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data()); //name should precede t so that reading is easier
-    /////////////////////////////////////////////////////////////////////////
+    //////////////////first step to initialise timestepper///////////////////
     double time = 0;
+    dg::AB< k, std::vector<dg::DVec> > ab( y0);
     ab.init( test, y0, p.dt);
-    /////////////////////////////////////first output (with zero potential)
-    if( p.global)
-        test.exp( y0,y1); //transform to logarithmic values
-    grp = H5Gcreate( file, "t=0", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-    //output all three fields
-    output = y1[0];
-    status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
-    output = y1[1];
-    status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
-    blas1::axpby( 0., output, 0., output); //set output zero as it should be
-    status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
-    H5Gclose( grp);
-
-    //title << std::setfill('0');
+    ab( test, y0, y1, p.dt);
+    y0.swap( y1);
+    std::vector<double> mass, energy;
     ///////////////////////////////////Timeloop////////////////////////////////
-    for( unsigned i=0; i<p.maxout; i++)
+    for( unsigned i=0; i<p.maxout+1; i++)
     {
-        for( unsigned i=0; i<p.itstp; i++)
+        //output all three fields
+        if( p.global)
+            test.exp( y1,y1); //transform to logarithmic values
+        grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        output = y1[0]; //electrons
+        status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
+        output = y1[1]; //ions
+        status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
+        output = test.potential()[0];
+        status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
+        H5Gclose( grp);
+
+        for( unsigned j=0; j<p.itstp; j++)
         {
             try{ ab( test, y0, y1, p.dt);}
             catch( dg::Fail& fail) { 
@@ -105,25 +101,19 @@ int main( int argc, char* argv[])
                 return -1;
             }
             y0.swap( y1); //attention on -O3 ?
+            //store accuracy details
+            mass.push_back(test.mass()), mass.push_back( test.mass_diffusion());
+            energy.push_back( test.energy()), energy.push_back( test.energy_diffusion());
         }
         time += p.itstp*p.dt;
-        if( p.global)
-            test.exp( y0,y1); //transform to logarithmic values
+        std::cout << test.mass();
         
-        //title << "t=";
-        //title <<std::setw(6)<<std::right<<(unsigned)(floor(time))<<"."<<std::setw(6)<<std::left<<(unsigned)((time-floor(time))*1e6);
-        grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-
-        //title.str("");
-        //output all three fields
-        output = y1[0]; //electrons
-        status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
-        output = y1[1]; //ions
-        status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
-        output = test.potential()[0];
-        status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
-        H5Gclose( grp);
     }
+    grp = H5Gcreate( file, "xfiles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+    dims[0] = p.maxout*p.itstp + 1, dims[1] = 2;
+    status = H5LTmake_dataset_double( grp, "mass", 2,  dims, mass.data());
+    status = H5LTmake_dataset_double( grp, "energy", 2,  dims, energy.data());
+    H5Gclose( grp);
 
     //writing takes the same time as device-host transfers
     ////////////////////////////////////////////////////////////////////
