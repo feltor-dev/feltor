@@ -147,12 +147,12 @@ int main( int argc, char* argv[])
         std::cout << scientific << setprecision( 3);
         std::cout << "m_tot/m_0: "<< (blas2::dot( one, w2d, y1[1])-mass0)/mass_blob0<<"\t";
         E0 = E1;
-        E1 = test.energy( y0, test.potential()[0]);
+        E1 = test.energy( );
         diff = (E1 - E0)/p.dt/(double)p.itstp;
 
 
         std::cout << "total energy: "<< diff<<"\t";//test.energy( y0, test.potential()[0])<<"\t";
-        double diss = test.energy_dot( y0, test.potential());
+        double diss = test.energy_diffusion( );
         std::cout << "total energy dissipation: "<< diss<<"\n";
 #endif//DG_BENCHMARK
         //std::cout << " Ratio "<< diff/diss <<"\n";
