@@ -207,7 +207,7 @@ const container& ToeflR<container>::compute_psi( const container& potential)
 }
 
 
-//how to set up a computation?
+//computes and modifies expy!!
 template<class container>
 const container& ToeflR< container>::polarisation( const std::vector<container>& y)
 {
@@ -293,6 +293,7 @@ void ToeflR< container>::operator()( const std::vector<container>& y, std::vecto
     //update energetics, 2% of total time
     if( global)
     {
+        exp( y, expy);
         mass_ = blas2::dot( one, w2d, expy[0] ); //take real ion density which is electron density!!
         double Ue = blas2::dot( y[0], w2d, expy[0]);
         double Ui = tau*blas2::dot( y[1], w2d, expy[1]);
