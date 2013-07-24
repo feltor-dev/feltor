@@ -49,6 +49,12 @@ struct ToeflR
 
     const container& compute_vesqr( const container& potential);
 
+    /**
+     * @brief Compute the right-hand side of the toefl equations
+     *
+     * @param y input vector
+     * @param yp the rhs yp = f(y)
+     */
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
     double energy( const std::vector<container>& y, const container& potential);
@@ -60,11 +66,12 @@ struct ToeflR
 
     container chi, omega;
     container gamma_n, gamma_old;
-    const container binv;
+    const container binv; //magnetic field
 
     std::vector<container> phi, phi_old, dyphi;
     std::vector<container> expy, dxy, dyy, lapy;
 
+    //matrices and solvers
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
     Gamma< Matrix, container > gamma1;
@@ -73,9 +80,9 @@ struct ToeflR
     CG<container > pcg;
 
     const container w2d, v2d;
-    double eps_pol, eps_gamma; 
-    double kappa, nu, tau;
-    bool global;
+    const double eps_pol, eps_gamma; 
+    const double kappa, nu, tau;
+    const bool global;
 
 };
 
