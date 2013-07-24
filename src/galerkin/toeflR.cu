@@ -81,26 +81,22 @@ int main( int argc, char* argv[])
     Timer t;
     bool running = true;
     double time = 0;
-    //compute mass 0
-        test.exp( y0, y1);
-        dg::DVec one( grid.size(), 1.);
-        dg::DVec w2d = create::w2d( grid);
-        const double mass0 = blas2::dot( one, w2d, y1[1]);
-        thrust::transform( y1[1].begin(), y1[1].end(), y1[1].begin(), dg::PLUS<double>(-1));
-        const double mass_blob0 = blas2::dot( one, w2d, y1[1]);
-        double E0 = 0, E1 = 0, diff = 0;
     ab.init( test, y0, p.dt);
+    ab( test, y0, y1, p.dt);
+    y0.swap( y1);
+    const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
+    double E0 = test.energy(), E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     while (running)
     {
         //transform field to an equidistant grid
         if( p.global)
         {
-            test.exp( y0, y1);
+            test.exp( y1, y1);
             thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
         }
         else
-            dvisual = y0[0];
+            dvisual = y1[0];
 
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
@@ -143,17 +139,16 @@ int main( int argc, char* argv[])
         t.toc();
         std::cout << "\n        Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #else//DG_BENCHMARK
-        test.exp( y0, y1);
         std::cout << scientific << setprecision( 3);
-        std::cout << "m_tot/m_0: "<< (blas2::dot( one, w2d, y1[1])-mass0)/mass_blob0<<"\t";
+        std::cout << "m_tot/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
         E0 = E1;
-        E1 = test.energy( );
+        E1 = test.energy();
         diff = (E1 - E0)/p.dt/(double)p.itstp;
 
 
-        std::cout << "total energy: "<< diff<<"\t";//test.energy( y0, test.potential()[0])<<"\t";
+        std::cout << "energy dissipation: "<< diff<<"\t"
         double diss = test.energy_diffusion( );
-        std::cout << "total energy dissipation: "<< diss<<"\n";
+        std::cout << "vs: "<< diss<<"\n";
 #endif//DG_BENCHMARK
         //std::cout << " Ratio "<< diff/diss <<"\n";
         //glfwWaitEvents();
