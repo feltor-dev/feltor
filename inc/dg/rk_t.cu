@@ -75,8 +75,8 @@ int main()
 
     RHS<DVec> rhs( grid, nu);
     RK< k, DVec > rk( y0);
-    //AB< k, DVec > ab( y0);
-    TVB< DVec > ab( y0);
+    AB< k, DVec > ab( y0);
+    //TVB< DVec > ab( y0);
 
     ab.init( rhs, y0, dt);
     //thrust::swap(y0, y1);

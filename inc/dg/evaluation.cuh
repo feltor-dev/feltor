@@ -64,7 +64,8 @@ template< class BinaryOp>
 thrust::host_vector<double> evaluate( BinaryOp f, const Grid<double>& g)
 {
     unsigned n= g.n();
-    Grid1d<double> gx( g.x0(), g.x1(), n, g.Nx());
+    //TODO: opens dlt.dat twice...!!
+    Grid1d<double> gx( g.x0(), g.x1(), n, g.Nx()); 
     Grid1d<double> gy( g.y0(), g.y1(), n, g.Ny());
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
