@@ -27,28 +27,18 @@ int main( int argc, char* argv[])
 
     hid_t file = H5Fopen( argv[1], H5F_ACC_RDONLY, H5P_DEFAULT);
     hsize_t nlinks = file::getNumObjs( file);
-    //H5G_info_t group_info;
-    //H5Gget_info( file, &group_info);
-    //hsize_t nlinks = group_info.nlinks;
-    //std::cout << "Number of groups "<< nlinks<<"\n";
-    
     std::string name = file::getName( file, 0);
-    //hsize_t length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, NULL, 10, H5P_DEFAULT);
-    //std::cout << "Length of name "<<length<<"\n";
-    //name.resize( length+1);
-    //H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &name[0], length+1, H5P_DEFAULT); //creation order
-    std::cout << "Name of first link "<<name<<"\n";
     std::string in;
     
     herr_t  status;
     hsize_t dims[2]; 
     in.resize( 10000);
     status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
+
+
     const Parameters p( file::read_input( in));
     p.display();
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-
-
     dg::HVec visual(  grid.size(), 0.), input( visual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed, dg::XSPACE);
@@ -58,20 +48,29 @@ int main( int argc, char* argv[])
     unsigned index = 1;
     std::cout << "PRESS N FOR NEXT FRAME!\n";
     std::cout << "PRESS P FOR PREVIOUS FRAME!\n";
+    unsigned num_entries = (p.maxout+1)*p.itstp;
+    std::vector<double> mass( 2*num_entries+4, 0.), energy( mass), massAcc( num_entries), energyAcc( num_entries);
+    hid_t group;
+    //read xfiles
+    group = H5Gopen( file, "xfiles", H5P_DEFAULT);
+    H5LTread_dataset_double( group, "mass", &mass[2] );
+    H5LTread_dataset_double( group, "energy", &energy[2] );
+    H5Gclose( file);
+    for(unsigned i=0; i<num_entries; i++ )
+    {
+        massAcc[i] = (mass[2*(i+2)]-mass[2*i])/2./p.dt; //first column
+        energyAcc[i] = (energy[2*(i+2)]-energy[2*i])/2./p.dt;
+        //massAcc[i] = 2.*(massAcc[i]-mass[2*(i+1)+1])/(massAcc[i]+mass[2*(i+1)+1]); //2nd column
+        energyAcc[i] = 2.*(energyAcc[i]-energy[2*(i+1)+1])/(energyAcc[i]+energy[2*(i+1)+1]);
+    }
+
     while (running && index < nlinks )
     {
+        std::cout << "Mass loss: "<<massAcc[(index-1)*p.itstp]<<"\t energy accuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
         t.tic();
-        hid_t group;
         name = file::getName( file, index);
-        //length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, NULL, 10, H5P_DEFAULT);
-        //name.resize( length+1);
-        //H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, &name[0], length+1, H5P_DEFAULT); 
-        index += v[5];
-        //std::cout << "Index "<<index<<" "<<name<<"\n";
         group = H5Gopen( file, name.data(), H5P_DEFAULT);
-        //std::cout << "Read electrons\n";
-        status = H5LTread_dataset_double(group, "electrons", &input[0] );
-        //transform field to an equidistant grid
+        status = H5LTread_dataset_double( group, "electrons", &input[0] );
         t.toc();
         //std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
         t.tic();
@@ -93,7 +92,6 @@ int main( int argc, char* argv[])
 
         //transform phi
         t.tic();
-        //std::cout << "Read potential\n";
         status = H5LTread_dataset_double(group, "potential", &input[0] );
         //Vorticity is \curl \bm{u}_E \approx \frac{\Delta\phi}{B}
         dg::blas2::gemv( laplacianM, input, visual);
@@ -113,7 +111,7 @@ int main( int argc, char* argv[])
         do
         {
             glfwPollEvents();
-            if( glfwGetKey( 'P')){
+            if( glfwGetKey( 'B')||glfwGetKey( 'P') ){
                 index -= v[5];
                 waiting = false;
             }
@@ -121,7 +119,7 @@ int main( int argc, char* argv[])
                 index +=v[5];
                 waiting = false;
             }
-            glfwWaitEvents();
+            //glfwWaitEvents();
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&

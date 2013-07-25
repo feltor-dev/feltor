@@ -1,4 +1,4 @@
-
+2.2.**
             * Input-File for "TOEFL" & "TOEFL-R" Code *
             -------------------------------------------
 
@@ -6,16 +6,16 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of polynomial coefficients)    =   1   (3)
-2)  nx (grid points in x)                =   400 (192)
-3)  ny (grid points in y)                =   400 (192)
+2)  nx (grid points in x)                =   200 (192)
+3)  ny (grid points in y)                =   200 (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   0.46    (0.01)
+5)  dt (time step in units c_s/L_p)      =   1.5    (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stopping for polarisation) =   1e-6  (1e-6)
-7)  eps_gamma (stopping for Gamma CG)   =   1e-10  (1e-8)
+6)  eps_pol (stopping for polarisation) =   0.5e-4  (1e-6)
+7)  eps_gamma (stopping for Gamma CG)   =   0.5e-8  (1e-8)
 
 ---------------------Boundary conditions----------------------
 
@@ -40,7 +40,7 @@
 
 ---------------------Miscellaneous----------------------------
 
-20) itstp (steps between output)            = 3      (5)
-21) # of outputs (excluding first)          = 3
+20) itstp (steps between output)            = 10      (5)
+21) # of outputs (excluding first)          = 750 
 
 @ ------------------------------------------------------------
