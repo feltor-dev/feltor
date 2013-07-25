@@ -133,6 +133,12 @@ int main( int argc, char* argv[])
                 break;
             }
             y0.swap( y1); //attention on -O3 ?
+            std::cout << "m_tot-m_0/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
+            E0 = E1;
+            E1 = test.energy();
+            diff = (E1 - E0)/p.dt;
+            double diss = test.energy_diffusion( );
+            std::cout << "energy Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
@@ -140,16 +146,6 @@ int main( int argc, char* argv[])
         std::cout << "\n        Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #else//DG_BENCHMARK
         std::cout << scientific << setprecision( 3);
-        std::cout << "m_tot-m_0/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
-        E0 = E1;
-        E1 = test.energy();
-        diff = (E1 - E0)/p.dt/(double)p.itstp;
-
-
-        std::cout << "energy dissipation: "<< diff<<"\t";
-        double diss = test.energy_diffusion( );
-        std::cout << "vs: "<< diss<<"\n";
-        std::cout << "mass "<< test.mass()<<std::endl;
 #endif//DG_BENCHMARK
         //std::cout << " Ratio "<< diff/diss <<"\n";
         //glfwWaitEvents();
