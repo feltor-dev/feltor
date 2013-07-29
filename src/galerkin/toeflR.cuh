@@ -12,6 +12,9 @@
 #endif
 
 
+//TODO es wäre besser, wenn ToeflR auch einen Zeitschritt berechnen würde 
+// dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
+// (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
 
 namespace dg
 {
@@ -50,15 +53,15 @@ struct ToeflR
      * @brief Exponentiate pointwise every Vector in src 
      *
      * @param src source
-     * @param dst destination
+     * @param dst destination may equal source
      */
     void exp( const std::vector<container>& src, std::vector<container>& dst);
 
     /**
-     * @brief Take the pointwise natural logarithm pointwise of every Vector in src 
+     * @brief Take the natural logarithm pointwise of every Vector in src 
      *
      * @param src source
-     * @param dst destination
+     * @param dst destination may equal source
      */
     void log( const std::vector<container>& src, std::vector<container>& dst);
 
@@ -77,8 +80,12 @@ struct ToeflR
      */
     const Matrix& laplacianM( ) const { return laplaceM;}
 
+    /**
+     * @brief Return the Gamma operator used by this object
+     *
+     * @return Gamma operator
+     */
     const Gamma<Matrix, container >&  gamma() const {return gamma1;}
-
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -89,34 +96,38 @@ struct ToeflR
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
     /**
-     * @brief Return the mass of the last field in operator()
+     * @brief Return the mass of the last field in operator() in a global computation
      *
      * @return int exp(y[0]) dA
+     * @note undefined for a local computation
      */
     double mass( ) {return mass_;}
     /**
-     * @brief Return the last integrated mass diffusion of operator()
+     * @brief Return the last integrated mass diffusion of operator() in a global computation
      *
      * @return int \nu \Delta (exp(y[0])-1)
+     * @note undefined for a local computation
      */
     double mass_diffusion( ) {return diff_;}
     /**
-     * @brief Return the energy of the last field in operator()
+     * @brief Return the energy of the last field in operator() in a global computation
      *
      * @return integrated total energy in {ne, ni}
+     * @note undefined for a local computation
      */
     double energy( ) {return energy_;}
     /**
-     * @brief Return the integrated energy diffusion of the last field in operator()
+     * @brief Return the integrated energy diffusion of the last field in operator() in a global computation
      *
      * @return integrated total energy diffusion
+     * @note undefined for a local computation
      */
     double energy_diffusion( ){ return ediff_;}
 
   private:
-    //use chi and omega as helpers to compute square velocity
+    //use chi and omega as helpers to compute square velocity in omega
     const container& compute_vesqr( const container& potential);
-    //extrapolates and solves for phi[1], then adds square velocity
+    //extrapolates and solves for phi[1], then adds square velocity ( omega)
     const container& compute_psi( const container& potential);
     const container& polarisation( const std::vector<container>& y);
 
@@ -304,9 +315,8 @@ void ToeflR< container>::operator()( const std::vector<container>& y, std::vecto
         {
             thrust::transform( expy[i].begin(), expy[i].end(), expy[i].begin(), dg::PLUS<double>(-1));
             blas2::gemv( laplaceM, expy[i], lapy[i]); //Laplace wants Dir BC!!
-            //thrust::transform( lapy[i].begin(), lapy[i].end(), lapy[i].begin(), dg::PLUS<double>(+1));
         }
-        diff_ = nu*blas2::dot( one, w2d, lapy[0]);
+        diff_ = -nu*blas2::dot( one, w2d, lapy[0]);
         double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, y[0]); // minus 
         double Gi = - tau*(blas2::dot( one, w2d, lapy[1]) + blas2::dot( lapy[1], w2d, y[1])); // minus 
         double Gphi = -blas2::dot( phi[0], w2d, lapy[0]);
