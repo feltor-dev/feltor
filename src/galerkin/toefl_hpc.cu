@@ -17,12 +17,8 @@
    - integrates the ToeflR - functor and 
    - writes outputs to a given outputfile using hdf5.
 */
-using namespace std;
-using namespace dg;
 
-const unsigned k = 3;
-
-using namespace std;
+const unsigned k = 3;//!< a change in k needs a recompilation
 
 int main( int argc, char* argv[])
 {
@@ -31,7 +27,7 @@ int main( int argc, char* argv[])
     std::string input;
     if( argc != 3)
     {
-        cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else 
@@ -42,7 +38,7 @@ int main( int argc, char* argv[])
     const Parameters p( v);
     if( p.k != k)
     {
-        cerr << "ERROR: k doesn't match: "<<k<<" (code) vs. "<<p.k<<" (input)\n";
+        std::cerr << "ERROR: k doesn't match: "<<k<<" (code) vs. "<<p.k<<" (input)\n";
         return -1;
     }
 
@@ -53,8 +49,8 @@ int main( int argc, char* argv[])
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-    blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    blas2::symv( (dg::DVec)create::v2d( grid), y0[1], y0[1]);
+    dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+    dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
     if( p.global)
     {
         thrust::transform( y0[0].begin(), y0[0].end(), y0[0].begin(), dg::PLUS<double>(+1));
@@ -75,7 +71,7 @@ int main( int argc, char* argv[])
     ab.init( test, y0, p.dt);
     ab( test, y0, y1, p.dt);
     y0.swap( y1);
-    std::vector<double> mass, energy;
+    std::vector<double> mass, diffusion, energy, dissipation;
     ///////////////////////////////////Timeloop////////////////////////////////
     for( unsigned i=0; i<p.maxout+1; i++)
     {
@@ -93,27 +89,35 @@ int main( int argc, char* argv[])
 
         for( unsigned j=0; j<p.itstp; j++)
         {
+            //store accuracy details
+            if( p.global) 
+            {
+                mass.push_back( test.mass());
+                diffusion.push_back( test.mass_diffusion());
+                energy.push_back( test.energy()); 
+                dissipation.push_back( test.energy_diffusion());
+            }
             try{ ab( test, y0, y1, p.dt);}
             catch( dg::Fail& fail) { 
-                cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                cerr << "Does Simulation respect CFL condition?\n";
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
                 H5Fclose( file);
                 return -1;
             }
             y0.swap( y1); //attention on -O3 ?
-            //store accuracy details
-            mass.push_back(test.mass()), mass.push_back( test.mass_diffusion());
-            energy.push_back( test.energy()), energy.push_back( test.energy_diffusion());
         }
         time += p.itstp*p.dt;
-        std::cout << test.mass();
-        
     }
-    grp = H5Gcreate( file, "xfiles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-    dims[0] = p.maxout*p.itstp + 1, dims[1] = 2;
-    status = H5LTmake_dataset_double( grp, "mass", 2,  dims, mass.data());
-    status = H5LTmake_dataset_double( grp, "energy", 2,  dims, energy.data());
-    H5Gclose( grp);
+    if( p.global)
+    {
+        grp = H5Gcreate( file, "xfiles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        dims[0] = (p.maxout+1)*p.itstp;
+        status = H5LTmake_dataset_double( grp, "mass", 1,  dims, mass.data());
+        status = H5LTmake_dataset_double( grp, "diffusion", 1,  dims, diffusion.data());
+        status = H5LTmake_dataset_double( grp, "energy", 1,  dims, energy.data());
+        status = H5LTmake_dataset_double( grp, "dissipation", 1,  dims, dissipation.data());
+        H5Gclose( grp);
+    }
 
     //writing takes the same time as device-host transfers
     ////////////////////////////////////////////////////////////////////
