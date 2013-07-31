@@ -49,26 +49,30 @@ int main( int argc, char* argv[])
     std::cout << "PRESS N FOR NEXT FRAME!\n";
     std::cout << "PRESS P FOR PREVIOUS FRAME!\n";
     unsigned num_entries = (p.maxout+1)*p.itstp;
-    std::vector<double> mass( 2*num_entries+4, 0.), energy( mass), massAcc( num_entries), energyAcc( num_entries);
+    std::vector<double> mass( num_entries+2, 0.), energy( mass); 
+    std::vector<double> diffusion( num_entries), dissipation( num_entries), massAcc( num_entries), energyAcc( num_entries);
     hid_t group;
     //read xfiles
     group = H5Gopen( file, "xfiles", H5P_DEFAULT);
-    H5LTread_dataset_double( group, "mass", &mass[2] );
-    H5LTread_dataset_double( group, "energy", &energy[2] );
-    H5Gclose( file);
+    H5LTread_dataset_double( group, "mass", &mass[1] );
+    H5LTread_dataset_double( group, "energy", &energy[1] );
+    H5LTread_dataset_double( group, "diffusion", &diffusion[0] );
+    H5LTread_dataset_double( group, "dissipation", &dissipation[0] );
+    H5Gclose( group);
     for(unsigned i=0; i<num_entries; i++ )
     {
-        massAcc[i] = (mass[2*(i+2)]-mass[2*i])/2./p.dt; //first column
-        if( i < 10 || i > num_entries - 20)
-            std::cout << "i "<<i<<"\t"<<massAcc[i]<<"\t"<<mass[2*i+4]<<std::endl;
-        energyAcc[i] = (energy[2*(i+2)]-energy[2*i])/2./p.dt;
-        //massAcc[i] = 2.*(massAcc[i]-mass[2*(i+1)+1])/(massAcc[i]+mass[2*(i+1)+1]); //2nd column
-        energyAcc[i] = fabs(2.*(energyAcc[i]-energy[2*(i+1)+1])/(energyAcc[i]+energy[2*(i+1)+1]));
+        massAcc[i] = (mass[i+2]-mass[i])/2./p.dt; //first column
+        //if( i < 10 || i > num_entries - 20)
+        //    std::cout << "i "<<i<<"\t"<<massAcc[i]<<"\t"<<mass[i+1]<<std::endl;
+        energyAcc[i] = (energy[i+2]-energy[i])/2./p.dt;
+        energyAcc[i] = fabs(2.*(energyAcc[i]-dissipation[i])/(energyAcc[i]+dissipation[i]));
     }
 
     while (running && index < p.maxout + 2 )
     {
-        std::cout << "Mass loss: "<<massAcc[(index-1)*p.itstp]<<" vs "<< mass[2*(index-1)*p.itstp+3]<<"\t energy accuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
+        std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/mass[1]
+                  <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1]/energy[1]
+                  <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
         t.tic();
         name = file::getName( file, index);
         group = H5Gopen( file, name.data(), H5P_DEFAULT);
@@ -109,6 +113,7 @@ int main( int argc, char* argv[])
         w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout <<"2nd half took          "<<t.diff()<<"s\n";
+        H5Gclose( group);
         bool waiting = true;
         do
         {
