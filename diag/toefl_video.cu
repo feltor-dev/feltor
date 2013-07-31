@@ -71,7 +71,7 @@ int main( int argc, char* argv[])
     while (running && index < p.maxout + 2 )
     {
         std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/mass[1]
-                  <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1]/energy[1]
+                  <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1])/energy[1]
                   <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
         t.tic();
         name = file::getName( file, index);
