@@ -24,7 +24,7 @@ enum norm{
 };
 
 namespace create{
-
+///@cond
 /**
  * @brief Create and assemble a cusp Matrix for the negative periodic 1d laplacian in LSPACE
  *
@@ -191,6 +191,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T>& g, norm 
 
 
 
+///@endcond
 } //namespace create
 
 } //namespace dg
