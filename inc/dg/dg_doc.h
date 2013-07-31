@@ -33,7 +33,7 @@
  *
  *      @defgroup creation Discrete derivatives and diagonal weight matrices
  *      @{
- *          @defgroup lowlevel Helper functions
+ *          @defgroup lowlevel Helper functions and classes
  *              Low level helper routines.
  *          @defgroup highlevel Creation functions
  *              High level matrix creation functions

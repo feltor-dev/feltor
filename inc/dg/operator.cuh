@@ -10,6 +10,7 @@
 
 namespace dg{
 
+///@cond
 /**
 * @brief Helper class mainly for the assembly of Matrices
 *
@@ -215,7 +216,6 @@ class Operator
     T ptr[n*n];
 };
 
-///@cond
 template< class T, size_t n>
 struct MatrixTraits< Operator<T, n> >
 {
