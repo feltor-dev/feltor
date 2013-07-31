@@ -30,4 +30,4 @@ com: com.cu
 .PHONY: clean
 
 clean:
-	rm -f toefl_video innto_video
+	rm -f toefl_video innto_video show 
