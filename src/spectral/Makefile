@@ -27,4 +27,4 @@ innto_hpc: innto_hpc.cpp drt_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3  $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
 clean:
-	rm -f *_t *_b innto innblobs
+	rm -f *_t *_b innto innblobs innto_hpc
