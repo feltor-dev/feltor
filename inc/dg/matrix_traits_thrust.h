@@ -9,8 +9,10 @@
 #include "thrust/host_vector.h"
 
 #include "grid.cuh"
+
 namespace dg{
 
+///@cond
 template< class T>
 struct MatrixTraits<thrust::host_vector<T> > {
     typedef T value_type;
@@ -21,9 +23,22 @@ struct MatrixTraits<thrust::device_vector<T> > {
     typedef T value_type;
     typedef ThrustVectorTag matrix_category; 
 };
+///@endcond
 
 namespace create{
 
+///@addtogroup highlevel
+///@{
+
+///@cond
+/**
+* @brief create host_vector containing 1d L-space weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template< class T>
 thrust::host_vector<T> s1d( const Grid1d<T>& g)
 {
@@ -33,6 +48,14 @@ thrust::host_vector<T> s1d( const Grid1d<T>& g)
             v[i*g.n()+j] = g.hx() / (double)(2*j+1);
     return v;
 }
+/**
+* @brief create host_vector containing 1d L-space inverse weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template< class T>
 thrust::host_vector<T> t1d( const Grid1d<T>& g)
 {
@@ -41,6 +64,15 @@ thrust::host_vector<T> t1d( const Grid1d<T>& g)
         v[i] = 1./v[i];
     return v;
 }
+///@endcond
+/**
+* @brief create host_vector containing 2d L-space weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template< class T>
 thrust::host_vector<T> s2d( const Grid<T>& g)
 {
@@ -53,6 +85,14 @@ thrust::host_vector<T> s2d( const Grid<T>& g)
                     v[i*n*n*g.Nx()+j*n*n+k*n+l] = g.hx()*g.hy() / (double)((2*k+1)*(2*l+1));
     return v;
 }
+/**
+* @brief create host_vector containing 2d L-space inverse weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template< class T>
 thrust::host_vector<T> t2d( const Grid<T>& g)
 {
@@ -64,6 +104,15 @@ thrust::host_vector<T> t2d( const Grid<T>& g)
 }
 
 
+///@cond
+/**
+* @brief create host_vector containing 1d X-space weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template <class T>
 thrust::host_vector<T> w1d( const Grid1d<T>& g)
 {
@@ -73,6 +122,14 @@ thrust::host_vector<T> w1d( const Grid1d<T>& g)
             v[i*g.n() + j] = g.h()/2.*g.dlt().weights()[j];
     return v;
 }
+/**
+* @brief create host_vector containing 1d X-space inverse weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template <class T>
 thrust::host_vector<T> v1d( const Grid1d<T>& g)
 {
@@ -81,11 +138,22 @@ thrust::host_vector<T> v1d( const Grid1d<T>& g)
         v[i] = 1./v[i];
     return v;
 }
+
 namespace detail{
 
 int get_i( unsigned n, int idx) { return idx%(n*n)/n;}
 int get_j( unsigned n, int idx) { return idx%(n*n)%n;}
 }//namespace detail
+///@endcond
+
+/**
+* @brief create host_vector containing 2d X-space weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template <class T>
 thrust::host_vector<T> w2d( const Grid<T>& g)
 {
@@ -94,6 +162,14 @@ thrust::host_vector<T> w2d( const Grid<T>& g)
         v[i] = g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
     return v;
 }
+/**
+* @brief create host_vector containing 2d X-space inverse weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template <class T>
 thrust::host_vector<T> v2d( const Grid<T>& g)
 {
@@ -102,6 +178,15 @@ thrust::host_vector<T> v2d( const Grid<T>& g)
         v[i] = 1./v[i];
     return v;
 }
+///@cond
+/**
+* @brief create host_vector containing 1d X-space abscissas 
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
 template <class T>
 thrust::host_vector<T> abscissas( const Grid1d<T>& g)
 {
@@ -115,7 +200,9 @@ thrust::host_vector<T> abscissas( const Grid1d<T>& g)
     }
     return v;
 }
+///@endcond
 
+///@}
 }//namespace create
 
 }//namespace dg
