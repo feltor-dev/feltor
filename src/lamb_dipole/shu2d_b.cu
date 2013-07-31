@@ -15,8 +15,8 @@
 using namespace std;
 using namespace dg;
 
-const double lx = 100; //2.*M_PI*50.;
-const double ly = 100; //2.*M_PI*50.;
+const double lx = 200.; //2.*M_PI*50.;
+const double ly = 200.; //2.*M_PI*50.;
 
 const unsigned k = 3;
 const double U = 1.; //the dipole doesn't move with this velocity because box is not infinite
@@ -28,9 +28,9 @@ const double T = 2.;
 double D = 0.0;
 
 const unsigned m = 50; //mode number
-const double kx = 2.*M_PI* m/lx; 
-const double ky = 2.*M_PI* m/ly; 
-double ksqr = (kx*kx+ky*ky) ;//4.*M_PI*M_PI*(1./lx/lx + 1./ly/ly);
+const double kx = 2.*M_PI* (double)m/lx; 
+const double ky = 2.*M_PI* (double)m/ly; 
+const double ksqr = (kx*kx+ky*ky) ;//4.*M_PI*M_PI*(1./lx/lx + 1./ly/ly);
 
 double initial( double x, double y){ return ksqr*sin(kx*x)*sin(ky*y);}
 double solution( double x, double y){ return ksqr*sin(kx*x)*sin(ky*y)*exp(-ksqr*D*T);}
@@ -54,7 +54,7 @@ int main()
     Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
     DVec w2d( create::w2d(grid));
 
-    unsigned NT = (unsigned)(T*n*n*Nx/0.05/lx);
+    unsigned NT = (unsigned)(T*n*n*Nx/0.1/lx);
     //cout << "Type # of timesteps\n";
     //cin >> NT;
     const double dt = T/(double)NT;
@@ -94,6 +94,11 @@ int main()
         y0.swap( y1);
         //thrust::swap( y0, y1);
         time += dt;
+        if( fabs(blas2::dot( w2d, y0)) > 1e10) 
+        {
+            cerr << "Sim unstable at time "<<time<<"!\n\n\n";
+            break;
+        }
     }
     t.toc();
     cout << "Total simulation time:     "<<t.diff()<<"s\n";

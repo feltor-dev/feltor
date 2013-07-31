@@ -12,6 +12,9 @@
 #endif
 
 
+//TODO es wäre besser, wenn ToeflR auch einen Zeitschritt berechnen würde 
+// dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
+// (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
 
 namespace dg
 {
@@ -33,38 +36,109 @@ struct ToeflR
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
+    /**
+     * @brief Construct a ToeflR solver object
+     *
+     * @param g The grid on which to operate
+     * @param kappa The curvature
+     * @param nu The artificial viscosity
+     * @param tau The ion temperature
+     * @param eps_pol stopping criterion for polarisation equation
+     * @param eps_gamma stopping criterion for Gamma operator
+     * @param global local or global computation
+     */
     ToeflR( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global);
 
-    void exp( const std::vector<container>& y, std::vector<container>& target);
+    /**
+     * @brief Exponentiate pointwise every Vector in src 
+     *
+     * @param src source
+     * @param dst destination may equal source
+     */
+    void exp( const std::vector<container>& src, std::vector<container>& dst);
 
-    void log( const std::vector<container>& y, std::vector<container>& target);
+    /**
+     * @brief Take the natural logarithm pointwise of every Vector in src 
+     *
+     * @param src source
+     * @param dst destination may equal source
+     */
+    void log( const std::vector<container>& src, std::vector<container>& dst);
 
+    /**
+     * @brief Returns phi and psi that belong to the last y in operator()
+     *
+     * In a multistep scheme this belongs to the point HEAD-1
+     * @return phi[0] is the electron and phi[1] the generalized ion potential
+     */
     const std::vector<container>& potential( ) const { return phi;}
 
+    /**
+     * @brief Return the normalized negative laplacian used by this object
+     *
+     * @return cusp matrix
+     */
     const Matrix& laplacianM( ) const { return laplaceM;}
 
+    /**
+     * @brief Return the Gamma operator used by this object
+     *
+     * @return Gamma operator
+     */
     const Gamma<Matrix, container >&  gamma() const {return gamma1;}
 
-    const container& compute_psi( const container& potential);
-
-    const container& compute_vesqr( const container& potential);
-
+    /**
+     * @brief Compute the right-hand side of the toefl equations
+     *
+     * @param y input vector
+     * @param yp the rhs yp = f(y)
+     */
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
-    double energy( const std::vector<container>& y, const container& potential);
-
-    double energy_dot( const std::vector<container>& y, const std::vector<container>& potential);
+    /**
+     * @brief Return the mass of the last field in operator() in a global computation
+     *
+     * @return int exp(y[0]) dA
+     * @note undefined for a local computation
+     */
+    double mass( ) {return mass_;}
+    /**
+     * @brief Return the last integrated mass diffusion of operator() in a global computation
+     *
+     * @return int \nu \Delta (exp(y[0])-1)
+     * @note undefined for a local computation
+     */
+    double mass_diffusion( ) {return diff_;}
+    /**
+     * @brief Return the energy of the last field in operator() in a global computation
+     *
+     * @return integrated total energy in {ne, ni}
+     * @note undefined for a local computation
+     */
+    double energy( ) {return energy_;}
+    /**
+     * @brief Return the integrated energy diffusion of the last field in operator() in a global computation
+     *
+     * @return integrated total energy diffusion
+     * @note undefined for a local computation
+     */
+    double energy_diffusion( ){ return ediff_;}
 
   private:
+    //use chi and omega as helpers to compute square velocity in omega
+    const container& compute_vesqr( const container& potential);
+    //extrapolates and solves for phi[1], then adds square velocity ( omega)
+    const container& compute_psi( const container& potential);
     const container& polarisation( const std::vector<container>& y);
 
     container chi, omega;
     container gamma_n, gamma_old;
-    const container binv;
+    const container binv; //magnetic field
 
     std::vector<container> phi, phi_old, dyphi;
     std::vector<container> expy, dxy, dyy, lapy;
 
+    //matrices and solvers
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
     Gamma< Matrix, container > gamma1;
@@ -72,10 +146,12 @@ struct ToeflR
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
 
-    const container w2d, v2d;
-    double eps_pol, eps_gamma; 
-    double kappa, nu, tau;
-    bool global;
+    const container w2d, v2d, one;
+    const double eps_pol, eps_gamma; 
+    const double kappa, nu, tau;
+    const bool global;
+
+    double mass_, energy_, diff_, ediff_;
 
 };
 
@@ -89,7 +165,7 @@ ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double n
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 
-    w2d( create::w2d(grid)), v2d( create::v2d(grid)),
+    w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
 {
     //create derivatives
@@ -141,40 +217,8 @@ const container& ToeflR<container>::compute_psi( const container& potential)
     return phi[1];
 }
 
-template< class container>
-double ToeflR< container>::energy( const std::vector<container>& y, const container& potential)
-{
-    assert( global);
-    exp( y, expy); // y-> ln(n), expy -> n
-    double Ue = blas2::dot( y[0], w2d, expy[0]);
-    double Ui = tau*blas2::dot( y[1], w2d, expy[1]);
-    omega = compute_vesqr( potential);
-    double Uphi = 0.5*blas2::dot( expy[1], w2d, omega); 
-    //std::cout << "ue "<<Ue<<" ui "<<Ui<<" uphi "<<Uphi<<"\n";
-    return Ue + Ui + Uphi;
-}
 
-template< class container>
-double ToeflR< container>::energy_dot( const std::vector<container>& y, const std::vector<container>& potential)
-{
-    assert( global);
-    container one( y[0].size(), 1.);
-    exp( y, expy); // y-> ln(n), expy -> n
-    for( unsigned i=0; i<y.size(); i++)
-    {
-        thrust::transform( expy[i].begin(), expy[i].end(), expy[i].begin(), dg::PLUS<double>(-1));
-        blas2::gemv( laplaceM, expy[i], lapy[i]); //DOESNT WORK
-        //thrust::transform( lapy[i].begin(), lapy[i].end(), lapy[i].begin(), dg::PLUS<double>(+1));
-    }
-    double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, y[0]); // minus 
-    double Gi = - tau*(blas2::dot( one, w2d, lapy[1]) + blas2::dot( lapy[1], w2d, y[1])); // minus 
-    double Gphi = -blas2::dot( potential[0], w2d, lapy[0]);
-    double Gpsi = -blas2::dot( potential[1], w2d, lapy[1]);
-    //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
-    return nu*( Ge + Gi - Gphi + Gpsi);
-}
-
-//how to set up a computation?
+//computes and modifies expy!!
 template<class container>
 const container& ToeflR< container>::polarisation( const std::vector<container>& y)
 {
@@ -231,15 +275,6 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     else
     {
         blas1::axpby( -1, y[0], 1., gamma_n, chi); 
-        //container dxchi(chi),dxxchi( chi),  dychi( chi), dyychi(chi);
-        //blas2::gemv( arakawa.dx(), chi, dxchi);
-        //blas2::gemv( arakawa.dx(), dxchi, dxxchi);
-        //blas2::gemv( arakawa.dy(), chi, dychi);
-        //blas2::gemv( arakawa.dy(), dychi, dyychi);
-        //blas1::axpby( 1., chi, -tau, dxxchi, omega); 
-        //blas1::axpby( 1., omega, -tau, dyychi, omega);
-        //blas2::symv( w2d, omega, omega);
-
         gamma1.alpha() = -tau;
         blas2::symv( gamma1, chi, omega); //apply \Gamma_0^-1 ( gamma_n - n_e)
         gamma1.alpha() = -0.5*tau;
@@ -265,6 +300,30 @@ void ToeflR< container>::operator()( const std::vector<container>& y, std::vecto
 
     phi[0] = polarisation( y);
     phi[1] = compute_psi( phi[0]);
+
+    //update energetics, 2% of total time
+    if( global)
+    {
+        exp( y, expy);
+        mass_ = blas2::dot( one, w2d, expy[0] ); //take real ion density which is electron density!!
+        double Ue = blas2::dot( y[0], w2d, expy[0]);
+        double Ui = tau*blas2::dot( y[1], w2d, expy[1]);
+        double Uphi = 0.5*blas2::dot( expy[1], w2d, omega); 
+        energy_ = Ue + Ui + Uphi;
+
+        for( unsigned i=0; i<y.size(); i++)
+        {
+            thrust::transform( expy[i].begin(), expy[i].end(), expy[i].begin(), dg::PLUS<double>(-1));
+            blas2::gemv( laplaceM, expy[i], lapy[i]); //Laplace wants Dir BC!!
+        }
+        diff_ = -nu*blas2::dot( one, w2d, lapy[0]);
+        double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, y[0]); // minus 
+        double Gi = - tau*(blas2::dot( one, w2d, lapy[1]) + blas2::dot( lapy[1], w2d, y[1])); // minus 
+        double Gphi = -blas2::dot( phi[0], w2d, lapy[0]);
+        double Gpsi = -blas2::dot( phi[1], w2d, lapy[1]);
+        //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
+        ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
+    }
 
     for( unsigned i=0; i<y.size(); i++)
     {
@@ -299,7 +358,6 @@ void ToeflR< container>::operator()( const std::vector<container>& y, std::vecto
         }
         blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
     }
-    //cudaDeviceSynchronize();
 
 }
 

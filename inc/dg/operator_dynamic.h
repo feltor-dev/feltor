@@ -11,11 +11,11 @@
 namespace dg{
 
 /**
-* @brief Helper class main_ly for the assembly of Matrices
+* @brief Helper class mainly for the assembly of Matrices
 *
-* @in_group lowlevel
-* In_ prin_ciple it's an_ en_han_ced quadratic dyn_amic matrix
-* but it's n_ot mean_t for performan_ce critical code. 
+* @ingroup lowlevel
+* In principle it's an enhanced quadratic dynamic matrix
+* but it's not meant for performance critical code. 
 * @tparam T value type
 */
 template< class T>
@@ -214,6 +214,15 @@ class Operator
 
 namespace create
 {
+///@addtogroup lowlevel
+///@{
+/**
+ * @brief Create the unit matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
 Operator<double> delta( unsigned n)
 {
     Operator<double> op(n, 0);
@@ -221,6 +230,13 @@ Operator<double> delta( unsigned n)
         op( i,i) = 1.;
     return op;
 }
+/**
+ * @brief Create the S-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
 Operator<double> pipj( unsigned n)
 {
     Operator<double> op(n, 0);
@@ -228,6 +244,13 @@ Operator<double> pipj( unsigned n)
         op( i,i) = 2./(double)(2*i+1);
     return op;
 }
+/**
+ * @brief Create the T-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
 Operator<double> pipj_inv( unsigned n)
 {
     Operator<double> op(n, 0);
@@ -235,6 +258,13 @@ Operator<double> pipj_inv( unsigned n)
         op( i,i) = (double)(2*i+1)/2.;
     return op;
 }
+/**
+ * @brief Create the D-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
 Operator<double> pidxpj( unsigned n)
 {
     Operator<double> op(n, 0);
@@ -249,10 +279,24 @@ Operator<double> pidxpj( unsigned n)
         }
     return op;
 }
+/**
+ * @brief Create the R-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
 Operator<double> rirj( unsigned n)
 {
     return Operator<double>( n, 1.);
 }
+/**
+ * @brief Create the RL-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
 Operator<double> rilj( unsigned n)
 {
     Operator<double> op( n, -1.);
@@ -262,7 +306,21 @@ Operator<double> rilj( unsigned n)
                 op( i,j) = 1.;
     return op;
 }
+/**
+ * @brief Create the LR-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
 Operator<double> lirj( unsigned n) {return rilj( n).transpose();}
+/**
+ * @brief Create the L-matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return Operator
+ */
 Operator<double> lilj( unsigned n) 
 {
     Operator<double> op( n, -1.);
@@ -272,157 +330,7 @@ Operator<double> lilj( unsigned n)
                 op( i,j) = 1.;
     return op;
 }
-
-/*
-Operator<double> weights( unsigned n)
-{
-    Operator<double> w(n ,0.);
-    switch( n)
-    {
-        case( 1): 
-            for( unsigned i=0; i<n; i++)
-                w(i,i) = DLT<1>::weight[i];
-            break;
-        case( 2): 
-            for( unsigned i=0; i<n; i++)
-                w(i,i) = DLT<2>::weight[i];
-            break;
-        case( 3): 
-            for( unsigned i=0; i<n; i++)
-                w(i,i) = DLT<3>::weight[i];
-            break;
-        case( 4): 
-            for( unsigned i=0; i<n; i++)
-                w(i,i) = DLT<4>::weight[i];
-            break;
-        case( 5): 
-            for( unsigned i=0; i<n; i++)
-                w(i,i) = DLT<5>::weight[i];
-            break;
-        default:
-            throw std::out_of_range( "not implemented yet");
-    }
-    return w;
-}
-
-Operator<double> weights_inv( unsigned n)
-{
-    Operator<double> op = weights( n);
-    for( unsigned i=0; i<n; i++)
-        op(i,i) = 1./ op(i,i);
-    return op;
-}
-
-
-Operator<double> forward( unsigned n)
-{
-    Operator<double> op( n);
-    switch( n)
-    {
-        case( 1): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<1>::forward[i][j];
-                  break;
-        case(2): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<2>::forward[i][j];
-            break;
-        case(3): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<3>::forward[i][j];
-            break;
-        case(4): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<4>::forward[i][j];
-            break;
-        case(5): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<5>::forward[i][j];
-            break;
-        default:
-            throw std::out_of_range("not implemented yet");
-    }
-    return op;
-}
-
-Operator<double> backward( unsigned n)
-{
-    Operator<double> op( n);
-    switch( n)
-    {
-        case( 1): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<1>::backward[i][j];
-                  break;
-        case(2): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<2>::backward[i][j];
-            break;
-        case(3): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<3>::backward[i][j];
-            break;
-        case(4): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<4>::backward[i][j];
-            break;
-        case(5): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<5>::backward[i][j];
-            break;
-        default:
-            throw std::out_of_range("not implemented yet");
-    }
-    return op;
-}
-Operator<double> backwardEQ( unsigned n)
-{
-    Operator<double> op( n);
-    switch( n)
-    {
-        case( 1): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<1>::backwardEQ[i][j];
-                  break;
-        case(2): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<2>::backwardEQ[i][j];
-            break;
-        case(3): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<3>::backwardEQ[i][j];
-            break;
-        case(4): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<4>::backwardEQ[i][j];
-            break;
-        case(5): 
-            for( unsigned i=0; i<n; i++)
-                for( unsigned j=0; j<n; j++)
-                    op( i,j) = DLT<5>::backwardEQ[i][j];
-            break;
-        default:
-            throw std::out_of_range("not implemented yet");
-    }
-    return op;
-}
-
-*/
-
+///@}
 }//namespace create
 
 

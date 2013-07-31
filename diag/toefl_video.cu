@@ -27,28 +27,17 @@ int main( int argc, char* argv[])
 
     hid_t file = H5Fopen( argv[1], H5F_ACC_RDONLY, H5P_DEFAULT);
     hsize_t nlinks = file::getNumObjs( file);
-    //H5G_info_t group_info;
-    //H5Gget_info( file, &group_info);
-    //hsize_t nlinks = group_info.nlinks;
-    //std::cout << "Number of groups "<< nlinks<<"\n";
-    
     std::string name = file::getName( file, 0);
-    //hsize_t length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, NULL, 10, H5P_DEFAULT);
-    //std::cout << "Length of name "<<length<<"\n";
-    //name.resize( length+1);
-    //H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, 0, &name[0], length+1, H5P_DEFAULT); //creation order
-    std::cout << "Name of first link "<<name<<"\n";
     std::string in;
     
     herr_t  status;
     hsize_t dims[2]; 
     in.resize( 10000);
     status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
+
     const Parameters p( file::read_input( in));
     p.display();
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-
-
     dg::HVec visual(  grid.size(), 0.), input( visual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed, dg::XSPACE);
@@ -58,20 +47,35 @@ int main( int argc, char* argv[])
     unsigned index = 1;
     std::cout << "PRESS N FOR NEXT FRAME!\n";
     std::cout << "PRESS P FOR PREVIOUS FRAME!\n";
-    while (running && index < nlinks )
+    unsigned num_entries = (p.maxout+1)*p.itstp;
+    std::vector<double> mass( num_entries+2, 0.), energy( mass); 
+    std::vector<double> diffusion( num_entries), dissipation( num_entries), massAcc( num_entries), energyAcc( num_entries);
+    hid_t group;
+    //read xfiles
+    group = H5Gopen( file, "xfiles", H5P_DEFAULT);
+    H5LTread_dataset_double( group, "mass", &mass[1] );
+    H5LTread_dataset_double( group, "energy", &energy[1] );
+    H5LTread_dataset_double( group, "diffusion", &diffusion[0] );
+    H5LTread_dataset_double( group, "dissipation", &dissipation[0] );
+    H5Gclose( group);
+    for(unsigned i=0; i<num_entries; i++ )
     {
+        massAcc[i] = (mass[i+2]-mass[i])/2./p.dt; //first column
+        //if( i < 10 || i > num_entries - 20)
+        //    std::cout << "i "<<i<<"\t"<<massAcc[i]<<"\t"<<mass[i+1]<<std::endl;
+        energyAcc[i] = (energy[i+2]-energy[i])/2./p.dt;
+        energyAcc[i] = fabs(2.*(energyAcc[i]-dissipation[i])/(energyAcc[i]+dissipation[i]));
+    }
+
+    while (running && index < p.maxout + 2 )
+    {
+        std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/mass[1]
+                  <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1])/energy[1]
+                  <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
         t.tic();
-        hid_t group;
         name = file::getName( file, index);
-        //length = H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, NULL, 10, H5P_DEFAULT);
-        //name.resize( length+1);
-        //H5Lget_name_by_idx( file, ".", H5_INDEX_NAME, H5_ITER_INC, index, &name[0], length+1, H5P_DEFAULT); 
-        index += v[5];
-        //std::cout << "Index "<<index<<" "<<name<<"\n";
         group = H5Gopen( file, name.data(), H5P_DEFAULT);
-        //std::cout << "Read electrons\n";
-        status = H5LTread_dataset_double(group, "electrons", &input[0] );
-        //transform field to an equidistant grid
+        status = H5LTread_dataset_double( group, "electrons", &input[0] );
         t.toc();
         //std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
         t.tic();
@@ -93,7 +97,6 @@ int main( int argc, char* argv[])
 
         //transform phi
         t.tic();
-        //std::cout << "Read potential\n";
         status = H5LTread_dataset_double(group, "potential", &input[0] );
         //Vorticity is \curl \bm{u}_E \approx \frac{\Delta\phi}{B}
         dg::blas2::gemv( laplacianM, input, visual);
@@ -109,11 +112,12 @@ int main( int argc, char* argv[])
         w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout <<"2nd half took          "<<t.diff()<<"s\n";
+        H5Gclose( group);
         bool waiting = true;
         do
         {
             glfwPollEvents();
-            if( glfwGetKey( 'P')){
+            if( glfwGetKey( 'B')||glfwGetKey( 'P') ){
                 index -= v[5];
                 waiting = false;
             }
@@ -121,7 +125,7 @@ int main( int argc, char* argv[])
                 index +=v[5];
                 waiting = false;
             }
-            glfwWaitEvents();
+            //glfwWaitEvents();
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&

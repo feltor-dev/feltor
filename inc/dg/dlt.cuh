@@ -67,8 +67,11 @@ class DLT
 template<class T>
 DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
 {
-    //This should be made abstract with -D compiler option
-    std::ifstream stream( "../../inc/dg/dlt.dat");
+    //get filename
+    std::string file( __FILE__);
+    file.erase( file.end()-3, file.end());
+    file+="dat";
+    std::ifstream stream( file.c_str());
     if( stream.fail()) 
         throw "File 'dlt.dat' corrupted or nonexistent!";
     double x;
