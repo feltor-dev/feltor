@@ -15,7 +15,8 @@
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5.
+   - writes outputs to a given outputfile using hdf5. 
+        density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
 const unsigned k = 3;//!< a change in k needs a recompilation
