@@ -10,6 +10,7 @@
 
 namespace dg{
 
+///@cond
 /**
 * @brief Helper class mainly for the assembly of Matrices
 *
@@ -105,7 +106,7 @@ class Operator
     */
     Operator transpose() const 
     {
-        double temp;
+        T temp;
         Operator o(*this);
         for( unsigned i=0; i<n; i++)
             for( unsigned j=0; j<i; j++)
@@ -215,7 +216,6 @@ class Operator
     T ptr[n*n];
 };
 
-///@cond
 template< class T, size_t n>
 struct MatrixTraits< Operator<T, n> >
 {

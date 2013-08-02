@@ -28,9 +28,9 @@ using namespace std;
 
 int main()
 {
-    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
-    dg::V2D<double, n> v2d( grid.hx(), grid.hy());
-    dg::W2D<double, n> w2d( grid.hx(), grid.hy());
+    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
+    dg::DVec v2d = dg::create::v2d( grid);
+    dg::DVec w2d = dg::create::w2d( grid);
     //create functions A(chi) x = b
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);
@@ -39,7 +39,7 @@ int main()
     dg::DVec error( solution);
 
     cout << "Create Polarisation object!\n";
-    dg::Polarisation2dX<double, n, dg::HVec> pol( grid);
+    dg::Polarisation2dX<dg::HVec> pol( grid);
     cout << "Create Polarisation matrix!\n";
     dg::DMatrix A = pol.create( chi ); 
     dg::Matrix Ap= dg::create::laplacianM( grid, dg::not_normed); 

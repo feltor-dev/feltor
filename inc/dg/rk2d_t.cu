@@ -40,7 +40,7 @@ template< class Vector_Type>
 struct RHS
 {
     typedef std::vector<Vector_Type> Vector;
-    RHS(const Grid<double, n>& grid): arakawa( grid), phi( expand( function, grid))
+    RHS(const Grid<double>& grid): arakawa( grid), phi( expand( function, grid))
     { }
     void operator()( const Vector& y, Vector& yp)
     {
@@ -48,14 +48,14 @@ struct RHS
             arakawa( phi, y[i], yp[i]);
     }
   private:
-    Arakawa<double, n, Vector_Type> arakawa;
+    Arakawa<Vector_Type> arakawa;
     Vector_Type phi;
 };
 
 int main()
 {
-    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
-    dg::S2D<double,n > s2d( grid.hx(), grid.hy());
+    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    dg::S2D<double> s2d( grid);
     //Also test std::vector<DVec> functionality
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;

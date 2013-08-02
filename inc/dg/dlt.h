@@ -1,6 +1,8 @@
 #ifndef _DG_DLT_
 #define _DG_DLT_
 
+#error deprecated
+
 namespace dg
 {
 
@@ -19,6 +21,7 @@ struct DLT
     const static double weight[n]; //!< Gaussian weights
     const static double abscissa[n]; //!< Gaussian abscissas
 };
+
 ///@cond
 //values taken from http://processingjs.nihongoresources.com/bezierinfo/legendre-gauss-values.php
 template<>

@@ -25,8 +25,6 @@ using namespace std;
 
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
-typedef dg::ArrVec2d< double, n, HVec>  HArrMat;
-typedef dg::ArrVec2d< double, n, DVec>  DArrMat;
 
 typedef cusp::dia_matrix<int, double, cusp::host_memory>   HMatrix;
 typedef cusp::dia_matrix<int, double, cusp::device_memory> DMatrix;
@@ -38,24 +36,25 @@ int main()
 {
     cout<< "# of polynomial coeff per dim: "<<n<<"\n";
     cout<< "# of cells : "<<Nx*Ny<<"\n";
-    HArrMat hv2d = expand< double(&)(double, double), n>( function, 0, lx, 0, ly, Nx, Ny), hw2d( hv2d);
-    DArrMat dv2d( hv2d), dw2d( hw2d);
+    Grid<double> g( 0, lx, 0, ly, n, Nx, Ny);
+    HVec hv2d = expand( function, g), hw2d( hv2d);
+    DVec dv2d( hv2d), dw2d( hw2d);
     Timer t;
 
     t.tic();
-    blas2::symv( S2D<double,n >(2., 2.), dw2d.data(), dw2d.data());
+    blas2::symv( S2D<double>(g), dw2d, dw2d);
     t.toc();
     cout << "dg symv took   "<<t.diff()<<"s\n";
     t.tic();
-    blas2::symv( W2D<double,n >(2., 2.), dw2d.data(), dw2d.data());
+    blas2::symv( (DVec)dg::create::w2d(g), dw2d, dw2d);
     t.toc();
     cout << "dg W symv took "<<t.diff()<<"s\n";
-    Operator<double, n> s2d( pipj);
-    HMatrix hm = dgtensor<double, n>( tensor(Ny, s2d), tensor(Nx, s2d));
+    Operator<double> s2d( create::pipj(n));
+    HMatrix hm = dgtensor<double>(n,  tensor(Ny, s2d), tensor(Nx, s2d));
     DMatrix dm( hm);
 
     t.tic();
-    blas2::symv( dm , dv2d.data(), dv2d.data());
+    blas2::symv( dm , dv2d, dv2d);
     t.toc();
     cout << "cusp symv took "<<t.diff()<<"s\n";
 

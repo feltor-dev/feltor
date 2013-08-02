@@ -2,9 +2,7 @@
 #define _DG_PROJECTION_
 
 namespace dg{
-
-///@addtogroup functions
-///@{
+///@cond
 /**
 * @brief The delta function
 *
@@ -129,7 +127,10 @@ inline double lilj( unsigned i, unsigned j)
         return 1.;
     return -1.;
 }
+///@endcond
 
+///@addtogroup functions
+///@{
 /**
  * @brief The constant 
  *

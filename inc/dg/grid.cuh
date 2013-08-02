@@ -2,6 +2,7 @@
 #define _DG_GRID_CUH_
 
 #include <cassert>
+#include "dlt.cuh"
 
 /*! @file Grid objects
   */
@@ -28,9 +29,8 @@ enum bc{
 * @brief 1D grid
 *
 * @tparam T value type
-* @tparam n # of polynomial coefficients
 */
-template <class T, size_t n>
+template <class T>
 struct Grid1d
 {
     /**
@@ -38,15 +38,17 @@ struct Grid1d
      * 
      @param x0 left boundary
      @param x1 right boundary
+     @param n # of polynomial coefficients
      @param N # of cells
      @param bcx boundary conditions
      */
-    Grid1d( T x0, T x1, unsigned N, bc bcx = PER):
+    Grid1d( T x0, T x1, unsigned n, unsigned N, bc bcx = PER):
         x0_(x0), x1_(x1),
-        Nx_(N), bcx_(bcx)
+        n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
         assert( x1 > x0 );
         assert( N > 0  );
+        assert( n != 0 );
         lx_ = (x1-x0);
         hx_ = lx_/(double)Nx_;
     }
@@ -55,28 +57,30 @@ struct Grid1d
     T lx() const {return lx_;}
     T h() const {return hx_;}
     unsigned N() const {return Nx_;}
+    unsigned n() const {return n_;}
     bc bcx() const {return bcx_;}
     /**
      * @brief The total number of points
      *
      * @return n*Nx
      */
-    unsigned size() const { return n*Nx_;}
+    unsigned size() const { return n_*Nx_;}
+    const DLT<T>& dlt() const {return dlt_;}
   private:
     T x0_, x1_;
     T lx_;
-    unsigned Nx_;
+    unsigned n_, Nx_;
     T hx_;
     bc bcx_;
+    DLT<T> dlt_;
 };
 
 /**
  * @brief A 2D grid class 
  *
  * @tparam T scalar value type 
- * @tparam n number of polynomial coefficients
  */
-template< class T, size_t n>
+template< class T>
 struct Grid
 {
     /**
@@ -86,15 +90,17 @@ struct Grid
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
      * @param y1 upper boundary in y 
+     * @param n  # of polynomial coefficients per dimension
      * @param Nx # of points in x 
      * @param Ny # of points in y
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    Grid( T x0, T x1, T y0, T y1, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+    Grid( T x0, T x1, T y0, T y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
-        Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy)
+        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
+        assert( n != 0);
         assert( x1 > x0 && y1 > y0);
         assert( Nx > 0  && Ny > 0);
         lx_ = (x1-x0), ly_ = (y1-y0);
@@ -108,20 +114,22 @@ struct Grid
     T ly() const {return ly_;}
     T hx() const {return hx_;}
     T hy() const {return hy_;}
+    unsigned n() const {return n_;}
     unsigned Nx() const {return Nx_;}
     unsigned Ny() const {return Ny_;}
     bc bcx() const {return bcx_;}
     bc bcy() const {return bcy_;}
+    const DLT<T>& dlt() const{return dlt_;}
     /**
      * @brief The total number of points
      *
      * @return n*n*Nx*Ny
      */
-    unsigned size() const { return n*n*Nx_*Ny_;}
+    unsigned size() const { return n_*n_*Nx_*Ny_;}
     void display( std::ostream& os = std::cout) const
     {
         os << "Grid parameters are: \n"
-            <<"    n  = "<<n<<"\n"
+            <<"    n  = "<<n_<<"\n"
             <<"    Nx = "<<Nx_<<"\n"
             <<"    Ny = "<<Ny_<<"\n"
             <<"    hx = "<<hx_<<"\n"
@@ -146,9 +154,10 @@ struct Grid
   private:
     T x0_, x1_, y0_, y1_;
     T lx_, ly_;
-    unsigned Nx_, Ny_;
+    unsigned n_, Nx_, Ny_;
     T hx_, hy_;
     bc bcx_, bcy_;
+    DLT<T> dlt_;
 };
 
 ///@}

@@ -8,7 +8,7 @@
 #include "xspacelib.cuh"
 #include "cg.cuh"
 
-const unsigned n = 4; //global relative error in L2 norm is O(h^P)
+//global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
 
 const double lx = M_PI;
@@ -33,15 +33,14 @@ typedef cusp::ell_matrix<int, double, cusp::device_memory> Matrix;
 int main()
 {
     dg::Timer t;
-    unsigned Nx, Ny; 
+    unsigned n, Nx, Ny; 
     double eps;
-    cout << "Type Nx and Ny and epsilon! \n";
-    cin >> Nx; 
-    cin >> Ny; //more N means less iterations for same error
+    cout << "Type n, Nx and Ny and epsilon! \n";
+    cin >> n >> Nx >> Ny; //more N means less iterations for same error
     cin >> eps;
-    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
-    dg::V2D<double, n> v2d( grid.hx(), grid.hy());
-    dg::W2D<double, n> w2d( grid.hx(), grid.hy());
+    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
+    Vector v2d = dg::create::v2d( grid);
+    Vector w2d = dg::create::w2d( grid);
     //create functions A(chi) x = b
     Vector x =    dg::evaluate( initial, grid);
     Vector b =    dg::evaluate( rhs, grid);
@@ -52,12 +51,13 @@ int main()
 
     cout << "Create Polarisation object!\n";
     t.tic();
-    dg::Polarisation2dX<double, n, dg::HVec> pol( grid);
+    dg::Polarisation2dX<dg::HVec> pol( grid);
     t.toc();
     cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
     cout << "Create Polarisation matrix!\n";
     t.tic();
     cusp::csr_matrix<int, double, cusp::device_memory> B = pol.create(chi);
+    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
     Matrix A = B; 
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
