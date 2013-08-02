@@ -25,14 +25,14 @@ int main()
     Timer t;
     cout << "# of polynomial coefficients P is: "<< P <<endl;
     cout << "# of 1d intervals is:  "<<N<<"\n";
-    ArrVec1d<double, P> hv( N,  1);
+    ArrVec1d<HVec> hv( P, N,  1);
     for( unsigned k=0; k<N; k++)
         for( unsigned i=0; i<P; i++)
             hv( k, i) = i;
 
     DVec dv = hv.data(), dw( dv);
     t.tic();
-    DMatrix laplace1d = create::laplace1d_per<double, P>( N, 2.);
+    DMatrix laplace1d = create::laplace1d_per<double>( P, N, 2.);
     t.toc();
     cout << "Laplace1d matrix creation took     "<<t.diff()<<"s\n";
     t.tic();

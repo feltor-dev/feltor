@@ -13,7 +13,6 @@
 
 #include "typedefs.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 
 //leo3 can do 350 x 350 but not 375 x 375
 const double lx = 2.*M_PI;
@@ -22,8 +21,8 @@ const double ly = 2.*M_PI;
 const double eps = 1e-6; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
-typedef dg::T2D<double, n> Preconditioner;
-typedef dg::S2D<double, n> Postconditioner;
+typedef dg::T2D<double> Preconditioner;
+typedef dg::S2D<double> Postconditioner;
 
 double fct(double x, double y){ return sin(y)*sin(x);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
@@ -34,11 +33,11 @@ using namespace std;
 int main()
 {
     dg::Timer t;
-    unsigned Nx, Ny; 
-    std::cout << "Type Nx and Ny\n";
-    std::cin >> Nx >> Ny;
-    dg::Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::DIR, dg::DIR);
-    dg::S2D<double,n > s2d( grid);
+    unsigned n, Nx, Ny; 
+    std::cout << "Type n, Nx and Ny\n";
+    std::cin >> n >> Nx >> Ny;
+    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
+    dg::S2D<double> s2d( grid);
     cout<<"Expand initial condition\n";
     dg::HVec x = dg::expand( initial, grid);
 
@@ -46,12 +45,6 @@ int main()
     t.tic();
     dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE); 
     dg::HMatrix A = dA;
-    /*
-    dg::dgtensor<double, n>( dg::create::laplace1d_dir<double, n>( Ny, hy), 
-                               dg::S1D<double, n>( hx),
-                               dg::S1D<double, n>( hy),
-                               dg::create::laplace1d_per<double, n>( Nx, hx)); //dir does also work but is slow
-                               */
     t.toc();
     cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -84,7 +77,7 @@ int main()
     cout << "... for a precision of "<< eps<<endl;
     cout << "... on the device took "<< t.diff()<<"s\n";
     t.tic();
-    cout << "Number of pcg iterations "<< pcg_host( A, x, b, Preconditioner(grid.hx(), grid.hy()), eps)<<endl;
+    cout << "Number of pcg iterations "<< pcg_host( A, x, b, Preconditioner(grid), eps)<<endl;
     t.toc();
     cout << "... for a precision of "<< eps<<endl;
     cout << "... on the host took   "<< t.diff()<<"s\n";

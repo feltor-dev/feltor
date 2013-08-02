@@ -4,7 +4,7 @@
 #include <cusp/ell_matrix.h>
 
 #include "blas.h"
-#include "dlt.h"
+//#include "dlt.h"
 #include "vector_traits.h"
 
 #include "derivatives.cuh"
@@ -22,22 +22,20 @@ namespace dg
  * @brief L-space generalized version of Arakawa's scheme
  *
  * @ingroup creation
- * @tparam T value-type
- * @tparam n # of polynomial coefficients
  * @tparam container The vector class on which to operate on
  */
-template< class T, size_t n, class container=thrust::device_vector<T> >
+template< class container=thrust::device_vector<double> >
 struct Arakawa
 {
-    typedef T value_type;
+    typedef typename container::value_type value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, T, MemorySpace> Matrix;
+    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     /**
      * @brief Create Arakawa on a grid
      *
      * @param g The 2D grid
      */
-    Arakawa( const Grid<T,n>& g);
+    Arakawa( const Grid<value_type>& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -45,7 +43,7 @@ struct Arakawa
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    Arakawa( const Grid<T,n>& g, bc bcx, bc bcy);
+    Arakawa( const Grid<value_type>& g, bc bcx, bc bcy);
 
     /**
      * @brief Compute poisson's bracket
@@ -66,16 +64,16 @@ struct Arakawa
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class T, size_t n, class container>
-Arakawa<T, n, container>::Arakawa( const Grid<T,n>& g, bc bcx, bc bcy): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
+template< class container>
+Arakawa< container>::Arakawa( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
-    Operator<value_type, n> forward1d( DLT<n>::forward);
-    Operator<value_type, n*n> forward2d = tensor( forward1d, forward1d);
+    Operator<value_type> forward1d( g.dlt().forward());
+    Operator<value_type> forward2d = tensor( forward1d, forward1d);
     forward = tensor( g.Nx()*g.Ny(), forward2d);
     //create backward dlt matrix
-    Operator<value_type, n> backward1d( DLT<n>::backward);
-    Operator<value_type, n*n> backward2d = tensor( backward1d, backward1d);
+    Operator<value_type> backward1d( g.dlt().backward());
+    Operator<value_type> backward2d = tensor( backward1d, backward1d);
     backward = tensor( g.Nx()*g.Ny(), backward2d);
 
     /*
@@ -103,29 +101,28 @@ Arakawa<T, n, container>::Arakawa( const Grid<T,n>& g, bc bcx, bc bcy): dxlhs( n
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);
 }
-template< class T, size_t n, class container>
-Arakawa<T, n, container>::Arakawa( const Grid<T,n>& g): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
+template< class container>
+Arakawa< container>::Arakawa( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
-    Operator<value_type, n> forward1d( DLT<n>::forward);
-    Operator<value_type, n*n> forward2d = tensor( forward1d, forward1d);
+    Operator<value_type> forward1d( g.dlt().forward());
+    Operator<value_type> forward2d = tensor( forward1d, forward1d);
     forward = tensor( g.Nx()*g.Ny(), forward2d);
     //create backward dlt matrix
-    Operator<value_type, n> backward1d( DLT<n>::backward);
-    Operator<value_type, n*n> backward2d = tensor( backward1d, backward1d);
+    Operator<value_type> backward1d( g.dlt().backward());
+    Operator<value_type> backward2d = tensor( backward1d, backward1d);
     backward = tensor( g.Nx()*g.Ny(), backward2d);
 
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
 
-template< class T, size_t n, class container>
-void Arakawa<T, n, container>::operator()( const container& lhs, const container& rhs, container& result)
+template< class container>
+void Arakawa< container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //transform to x-space
     blas2::symv( backward, lhs, blhs);
     blas2::symv( backward, rhs, brhs);
-    cudaThreadSynchronize();
     //compute derivatives in x-space
     blas2::symv( bdxf, blhs, dxlhs);
     blas2::symv( bdyf, blhs, dylhs);
@@ -136,17 +133,14 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
     // +x (1) -> result und (2) -> blhs
     blas1::pointwiseDot( blhs, dyrhs, result);
     blas1::pointwiseDot( blhs, dxrhs, blhs);
-    cudaThreadSynchronize();
 
     // ++ (1) -> dyrhs and (2) -> dxrhs
     blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
     blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
-    cudaThreadSynchronize();
 
     // x+ (1) -> dxlhs and (2) -> dylhs
     blas1::pointwiseDot( dxlhs, brhs, dxlhs);
     blas1::pointwiseDot( dylhs, brhs, dylhs);
-    cudaThreadSynchronize();
 
     blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
     //everything which needs a dx 
@@ -159,13 +153,10 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
     //blas1::axpby( 0., dxlhs,  -0., blhs);
     //blas1::axpby( 0., result, -0., dylhs);
 
-    cudaThreadSynchronize();
     blas2::symv( bdyf, blhs, result);      //dy*(dxl*r - l*dxr) -> result
     blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
     //now sum everything up
-    cudaThreadSynchronize();
     blas1::axpby( 1., result, 1., dxlhs); //result + dxlhs -> result
-    cudaThreadSynchronize();
     blas1::axpby( 1., dxrhs, 1., dxlhs); //result + dyrhs -> result
     //transform to l-space
     blas2::symv( forward, dxlhs, result);
@@ -177,14 +168,12 @@ void Arakawa<T, n, container>::operator()( const container& lhs, const container
  * @brief X-space generalized version of Arakawa's scheme
  *
  * @ingroup creation
- * @tparam T value-type
- * @tparam n # of polynomial coefficients
  * @tparam container The vector class on which to operate on
  */
-template< class T, size_t n, class container=thrust::device_vector<T> >
+template< class container=thrust::device_vector<double> >
 struct ArakawaX
 {
-    typedef T value_type;
+    typedef typename container::value_type value_type;
     typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     /**
@@ -192,7 +181,7 @@ struct ArakawaX
      *
      * @param g The 2D grid
      */
-    ArakawaX( const Grid<T,n>& g);
+    ArakawaX( const Grid<value_type>& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -200,7 +189,7 @@ struct ArakawaX
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    ArakawaX( const Grid<T,n>& g, bc bcx, bc bcy);
+    ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy);
     //ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy); //deprecated
 
     /**
@@ -240,14 +229,14 @@ struct ArakawaX
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class T, size_t n, class container>
-ArakawaX<T, n, container>::ArakawaX( const Grid<T,n>& g): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class container>
+ArakawaX<container>::ArakawaX( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
-template< class T, size_t n, class container>
-ArakawaX<T, n, container>::ArakawaX( const Grid<T,n>& g, bc bcx, bc bcy): dxlhs( n*n*g.Nx()*g.Ny()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class container>
+ArakawaX<container>::ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);
@@ -289,8 +278,8 @@ void ArakawaX<T, n, container>::construct( unsigned Nx, unsigned Ny, double hx, 
 }
 */
 
-template< class T, size_t n, class container>
-void ArakawaX<T, n, container>::operator()( const container& lhs, const container& rhs, container& result)
+template< class container>
+void ArakawaX< container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //compute derivatives in x-space
     blas2::symv( bdxf, lhs, dxlhs);
@@ -302,17 +291,14 @@ void ArakawaX<T, n, container>::operator()( const container& lhs, const containe
     // +x (1) -> result und (2) -> blhs
     blas1::pointwiseDot( lhs, dyrhs, result);
     blas1::pointwiseDot( lhs, dxrhs, helper);
-    cudaThreadSynchronize();
 
     // ++ (1) -> dyrhs and (2) -> dxrhs
     blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
     blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
-    cudaThreadSynchronize();
 
     // x+ (1) -> dxlhs and (2) -> dylhs
     blas1::pointwiseDot( dxlhs, rhs, dxlhs);
     blas1::pointwiseDot( dylhs, rhs, dylhs);
-    cudaThreadSynchronize();
 
     blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
     //everything which needs a dx 
@@ -325,13 +311,10 @@ void ArakawaX<T, n, container>::operator()( const container& lhs, const containe
     //blas1::axpby( 0., dxlhs,  -0., helper);
     //blas1::axpby( 0., result, -0., dylhs);
 
-    cudaThreadSynchronize();
     blas2::symv( bdyf, helper, result);      //dy*(dxl*r - l*dxr) -> result
     blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
     //now sum everything up
-    cudaThreadSynchronize();
     blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
-    cudaThreadSynchronize();
     blas1::axpby( 1., dxrhs, 1., result); //result + dyrhs -> result
 }
 

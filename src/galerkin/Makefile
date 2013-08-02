@@ -13,7 +13,7 @@ all: toeflR toefl_hpc
 #	echo "Attention: No compiler warnings are issued!" 
 
 toeflR: toeflR.cu toeflR.cuh 
-	$(NVCC) -O2  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(NVCC) -O2  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) #-DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
 toefl_hpc: toefl_hpc.cu toeflR.cuh 

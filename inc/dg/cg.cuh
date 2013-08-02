@@ -123,21 +123,17 @@ unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, c
     }
     //r = b; blas2::symv( -1., A, x, 1.,r); //compute r_0 
     blas2::symv( A,x,r);
-    cudaThreadSynchronize();
     blas1::axpby( 1., b, -1., r);
-    cudaThreadSynchronize();
     blas2::symv( P, r, p );//<-- compute p_0
+    //note that dot does automatically synchronize
     value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
     value_type alpha, nrm2r_new;
-    cudaThreadSynchronize();
     for( unsigned i=1; i<max_iter; i++)
     {
         blas2::symv( A, p, ap);
-        cudaThreadSynchronize();
         alpha = nrm2r_old /blas1::dot( p, ap);
         blas1::axpby( alpha, p, 1.,x);
         blas1::axpby( -alpha, ap, 1., r);
-        cudaThreadSynchronize();
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
         std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
@@ -147,7 +143,6 @@ unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, c
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
         nrm2r_old=nrm2r_new;
-        cudaThreadSynchronize();
     }
     return max_iter;
 }

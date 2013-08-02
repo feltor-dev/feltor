@@ -4,7 +4,6 @@
 #include "matrix_categories.h"
 #include "matrix_traits.h"
 #include "grid.cuh"
-#include "dlt.h"
 
 /*! @file 
   
@@ -37,7 +36,7 @@ struct Identity
 * @tparam T value type
 * @tparam n Number of Legendre nodes per cell.
 */
-template< class T, size_t n>
+template< class T>
 struct S1D
 {
     typedef T value_type;
@@ -53,13 +52,14 @@ struct S1D
     *
     * @param g The grid
     */
-    __host__ S1D( const Grid1d<T,n>& g):h_(g.h()){}
+    __host__ S1D( const Grid1d<T>& g):n_(g.n()), h_(g.h()){}
     //__host__ __device__ const value_type& h() const {return h_;}
     __host__ __device__ value_type operator()( int i) const 
     {
-        return h_/(value_type)(2*(i%n)+1);
+        return h_/(value_type)(2*(i%n_)+1);
     }
   private:
+    unsigned n_;
     value_type h_;
 };
 /**
@@ -69,7 +69,7 @@ struct S1D
 * @tparam T value type
 * @tparam n Number of Legendre nodes per cell.
 */
-template< class T, size_t n>
+template< class T>
 struct T1D 
 {
     typedef T value_type;
@@ -85,7 +85,7 @@ struct T1D
     *
     * @param g The grid
     */
-    __host__ T1D( const Grid1d<T,n>& g):h_(g.h()){}
+    __host__ T1D( const Grid1d<T>& g):n(g.n()),h_(g.h()){}
     /**
     * @brief 
     *
@@ -97,87 +97,11 @@ struct T1D
         return (value_type)(2.*(i%n)+1.)/h_;
     }
   private:
+    unsigned n;
     value_type h_;
 };
 
 
-//W in x-space corresponds to S in l-space
-/**
-* @brief The diaonal weight-matrix W 
-*
-* Elements of W are the gaussian weights for Legendre functions.
-* Use in Scalar products for vectors in x-space.
-* @tparam T value type
-* @tparam n Number of Legendre nodes per cell.
-*/
-template< class T, size_t n>
-struct W1D
-{
-    typedef T value_type;
-    typedef DiagonalPreconditionerTag matrix_category;
-    /**
-    * @brief Constructor
-    *
-    * @param h The grid size assumed to be constant.
-    */
-    __host__ W1D( value_type h){ 
-        for( unsigned i=0; i<n; i++)
-            w[i] = h/2.*DLT<n>::weight[i];
-    }
-    /**
-    * @brief Construct on grid
-    *
-    * @param g The grid
-    */
-    __host__ W1D( const Grid1d<T,n>& g){
-        for( unsigned i=0; i<n; i++)
-            w[i] = g.h()/2.*DLT<n>::weight[i];
-    }
-    __host__ __device__ value_type operator()( int i) const 
-    {
-        return (T)w[i%n]; 
-    }
-  private:
-    double w[n];
-};
-
-/**
-* @brief The inverse of W 
-*
-* V is the inverse of W 
-* @tparam T value type
-* @tparam n Number of Legendre nodes per cell.
-*/
-template< class T, size_t n>
-struct V1D
-{
-    typedef T value_type;
-    typedef DiagonalPreconditionerTag matrix_category;
-    /**
-    * @brief Constructor
-    *
-    * @param h The grid size assumed to be constant.
-    */
-    __host__ V1D( value_type h){ 
-        for( unsigned i=0; i<n; i++)
-            x[i] = 2./h/DLT<n>::weight[i];
-    }
-    /**
-    * @brief Construct on grid
-    *
-    * @param g The grid
-    */
-    __host__ V1D( const Grid1d<T,n>& g){
-        for( unsigned i=0; i<n; i++)
-            x[i] = 2./g.h()/DLT<n>::weight[i];
-    }
-    __host__ __device__ value_type operator()( int i) const 
-    {
-        return x[i%n]; 
-    }
-  private:
-    double x[n]; //the more u store, the slower it becomes on gpu
-};
 
 ///@}
 ///@cond
@@ -187,33 +111,20 @@ struct MatrixTraits<Identity< T>  >
     typedef T value_type;
     typedef typename Identity<T>::matrix_category matrix_category;
 };
-template< class T, size_t n>
-struct MatrixTraits< S1D< T, n> > 
+template< class T>
+struct MatrixTraits< S1D< T > >
 {
     typedef T value_type;
     typedef DiagonalPreconditionerTag matrix_category;
 };
 
-template< class T, size_t n>
-struct MatrixTraits< T1D< T, n> > 
+template< class T>
+struct MatrixTraits< T1D< T > >
 {
     typedef T value_type;
     typedef DiagonalPreconditionerTag matrix_category;
 };
 
-template< class T, size_t n>
-struct MatrixTraits< W1D< T, n> > 
-{
-    typedef T value_type;
-    typedef DiagonalPreconditionerTag matrix_category;
-};
-
-template< class T, size_t n>
-struct MatrixTraits< V1D< T, n> > 
-{
-    typedef T value_type;
-    typedef DiagonalPreconditionerTag matrix_category;
-};
 ///@endcond
 
 

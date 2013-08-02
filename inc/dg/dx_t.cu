@@ -6,6 +6,7 @@
 #include "dx.cuh"
 #include "evaluation.cuh"
 #include "preconditioner.cuh"
+#include "typedefs.cuh"
 
 
 using namespace std;
@@ -27,16 +28,17 @@ int main ()
     cout << "Note the supraconvergence!\n";
     cout << "# of Legendre nodes " << n <<"\n";
     cout << "# of cells          " << N <<"\n";
+    Grid1d<double> g( 0, lx, n, N);
     const double hx = lx/(double)N;
-    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_asymm_mt<double, n>( N, hx, DIR);
-    ArrVec1d<double, n> hv = expand<double(&)(double), n>( function, 0., lx, N);
-    ArrVec1d<double, n> hw = hv;
-    const ArrVec1d<double, n> hu = expand<double(&)(double), n>( derivative, 0., lx, N);
+    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_asymm_mt<double>( n, N, hx, DIR);
+    HVec hv = expand( function, g);
+    HVec hw = hv;
+    const HVec hu = expand( derivative, g);
 
-    blas2::symv( hm, hv.data(), hw.data());
-    blas1::axpby( 1., hu.data(), -1., hw.data());
+    blas2::symv( hm, hv, hw);
+    blas1::axpby( 1., hu, -1., hw);
     
-    cout << "Distance to true solution: "<<sqrt(blas2::dot( S1D<double, n>(hx), hw.data()) )<<"\n";
+    cout << "Distance to true solution: "<<sqrt(blas2::dot( S1D<double>(g), hw) )<<"\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

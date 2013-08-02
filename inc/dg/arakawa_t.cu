@@ -14,8 +14,8 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 50;
-const unsigned Ny = 50;
+const unsigned Nx = 25;
+const unsigned Ny = 25;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -28,7 +28,8 @@ double right( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*si
 */
 /*
 double left( double x, double y) {return sin(x)*exp(x-M_PI)*sin(y);}
-double right( double x, double y) {return sin(x)*sin(y)*exp(y-M_PI);}
+double right( double x, double y) {return sin(x)*sin(y);}
+double right2( double x, double y) {return exp(y-M_PI);}
 double jacobian( double x, double y) 
 {
     return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
@@ -36,7 +37,8 @@ double jacobian( double x, double y)
 */
 
 double left( double x, double y) {return sin(x)*cos(y);}
-double right( double x, double y) {return cos(x)*sin(y);}
+double right( double x, double y) {return sin(y)*cos(x);} 
+//double right2( double x, double y) {return sin(y);}
 double jacobian( double x, double y) 
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
@@ -48,8 +50,8 @@ double jacobian( double x, double y)
 
 int main()
 {
-    Grid<double, n> grid( 0, lx, 0, ly, Nx, Ny, dg::PER, dg::PER);
-    S2D<double,n > s2d( grid.hx(), grid.hy());
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    DVec w2d = create::s2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;
@@ -58,17 +60,21 @@ int main()
     const DVec sol = expand ( jacobian, grid);
     DVec eins = expand( one, grid);
 
-    Arakawa<double, n, DVec> arakawa( grid);
+    Arakawa< DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
-    cudaThreadSynchronize();
+
+    //arakawa( lhs, rhs1, jac1);
+    //blas1::pointwiseDot( rhs2, jac1, jac1);
+    //arakawa( lhs, rhs2, jac2);
+    //blas1::pointwiseDot( rhs1, jac2, jac2);
+    //blas1::axpby( 1., jac1, 1., jac2, jac2);
 
     cout << scientific;
-    cout << "Mean     Jacobian is "<<blas2::dot( eins, s2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs,  s2d, jac)<<"\n";
-    cout << "Mean   n*Jacobian is "<<blas2::dot( lhs,  s2d, jac)<<"\n";
+    cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
+    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs,  w2d, jac)<<"\n";
+    cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs,  w2d, jac)<<"\n";
     blas1::axpby( 1., sol, -1., jac);
-    cudaThreadSynchronize();
-    cout << "Distance to solution "<<sqrt( blas2::dot( s2d, jac))<<endl; //don't forget sqrt when comuting errors
+    cout << "Distance to solution "<<sqrt( blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |     
     //n = 2 -> p = 1    |
@@ -80,3 +86,4 @@ int main()
 
     return 0;
 }
+

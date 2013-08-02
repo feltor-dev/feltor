@@ -21,7 +21,6 @@
 
 using namespace std;
 using namespace dg;
-const unsigned n = 3;
 const unsigned k = 3;
 
 int main()
@@ -29,30 +28,28 @@ int main()
     Timer t;
     const Parameters p( file::read_input( "input.txt"));
     p.display();
-    if( n!= p.n) { cerr << "Wrong n!"; return -1;}
-    if( k!= p.k) { cerr << "Wrong k!"; return -1;}
-    Grid<double, n> grid( 0, p.lx, 0, p.ly, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    S2D<double,n > s2d( grid);
+    Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    DVec w2d( create::w2d(grid));
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
     draw::HostWindow w( 600, 600);
     ////////////////////////////////////////////////////////////
 
-    dg::Lamb lamb( p.posX, p.posY, p.R, p.U);
-    HVec omega = expand ( lamb, grid);
-    DVec stencil = expand( one, grid);
+    dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
+    HVec omega = evaluate ( lamb, grid);
+    DVec stencil = evaluate( one, grid);
     DVec y0( omega ), y1( y0);
     //make solver and stepper
-    Shu<double, n, DVec> test( grid, p.D, p.eps);
+    Shu<DVec> test( grid, p.D, p.eps);
     AB< k, DVec > ab( y0);
 
     t.tic();
     test( y0, y1);
     t.toc();
     cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
-    double vorticity = blas2::dot( stencil , s2d, y0);
-    double enstrophy = 0.5*blas2::dot( y0, s2d, y0);
-    double energy =    0.5*blas2::dot( y0, s2d, test.potential()) ;
+    double vorticity = blas2::dot( stencil , w2d, y0);
+    double enstrophy = 0.5*blas2::dot( y0, w2d, y0);
+    double energy =    0.5*blas2::dot( y0, w2d, test.potential()) ;
 
     double time = 0;
     ////////////////////////////////glfw//////////////////////////////
@@ -60,7 +57,7 @@ int main()
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
-    dg::DMatrix equidistant = dg::create::backscatter( grid, LSPACE );
+    dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
     int running = GL_TRUE;
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, y0, p.dt);
@@ -70,12 +67,10 @@ int main()
     while (running && time < p.maxout*p.itstp*p.dt)
     {
         dg::blas2::symv( equidistant, y0, visual);
-        cudaThreadSynchronize();
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
         hvisual = visual;
-        cudaThreadSynchronize();
-        w.draw( hvisual, n*p.Nx, n*p.Ny, colors);
+        w.draw( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
         //step 
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
@@ -95,16 +90,16 @@ int main()
     ////////////////////////////////////////////////////////////////////
     cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
     cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity          is: "<<blas2::dot( stencil , s2d, y0) << "\n";
-    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( s2d, y0) - enstrophy)/enstrophy<<"\n";
+    cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, y0) << "\n";
+    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
     test( y0, y1); //get the potential ready
-    cout << "Relative energy error    is: "<<(0.5*blas2::dot( test.potential(), s2d, y0) - energy)/energy<<"\n";
+    cout << "Relative energy error    is: "<<(0.5*blas2::dot( test.potential(), w2d, y0) - energy)/energy<<"\n";
 
     //blas1::axpby( 1., y0, -1, sol);
-    //cout << "Distance to solution: "<<sqrt(blas2::dot( s2d, sol ))<<endl;
+    //cout << "Distance to solution: "<<sqrt(blas2::dot( w2d, sol ))<<endl;
 
-    cout << "Press any key to quit!\n";
-    cin >> x;
+    //cout << "Press any key to quit!\n";
+    //cin >> x;
     return 0;
 
 }
