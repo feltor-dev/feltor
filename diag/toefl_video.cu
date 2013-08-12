@@ -67,6 +67,7 @@ int main( int argc, char* argv[])
         energyAcc[i] = fabs(2.*(energyAcc[i]-dissipation[i])/(energyAcc[i]+dissipation[i]));
     }
 
+    std::cout << std::scientific << std::setprecision( 2);
     while (running && index < p.maxout + 2 )
     {
         std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/mass[1]

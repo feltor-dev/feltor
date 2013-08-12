@@ -41,6 +41,6 @@
 ---------------------Miscellaneous----------------------------
 
 20) itstp (steps between output)            = 5      (5)
-21) # of outputs (excluding first)          = 500 
+21) # of outputs (excluding first)          = 10 
 
 @ ------------------------------------------------------------

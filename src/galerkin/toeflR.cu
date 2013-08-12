@@ -82,6 +82,7 @@ int main( int argc, char* argv[])
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
+    std::cout << std::scientific << std::setprecision( 2);
     while (running)
     {
         //transform field to an equidistant grid
@@ -115,7 +116,6 @@ int main( int argc, char* argv[])
         w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //step 
-        std::cout << std::scientific << std::setprecision( 2);
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
