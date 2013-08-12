@@ -35,7 +35,6 @@ int main( int argc, char* argv[])
     in.resize( 10000);
     status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
 
-
     const Parameters p( file::read_input( in));
     p.display();
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);

@@ -15,7 +15,8 @@
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5.
+   - writes outputs to a given outputfile using hdf5. 
+        density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
 const unsigned k = 3;//!< a change in k needs a recompilation
@@ -73,6 +74,10 @@ int main( int argc, char* argv[])
     y0.swap( y1);
     std::vector<double> mass, diffusion, energy, dissipation;
     ///////////////////////////////////Timeloop////////////////////////////////
+    dg::Timer t;
+    t.tic();
+    try
+    {
     for( unsigned i=0; i<p.maxout+1; i++)
     {
         //output all three fields
@@ -97,21 +102,28 @@ int main( int argc, char* argv[])
                 energy.push_back( test.energy()); 
                 dissipation.push_back( test.energy_diffusion());
             }
-            try{ ab( test, y0, y1, p.dt);}
-            catch( dg::Fail& fail) { 
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                H5Fclose( file);
-                return -1;
-            }
+            ab( test, y0, y1, p.dt);
             y0.swap( y1); //attention on -O3 ?
         }
         time += p.itstp*p.dt;
     }
+    }
+    catch( dg::Fail& fail) { 
+        std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+        std::cerr << "Does Simulation respect CFL condition?\n";
+    }
+    t.toc(); 
+    unsigned hour = (unsigned)floor(t.diff()/3600);
+    unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
+    double second = t.diff() - hour*3600 - minute*60;
+    std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
+    std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
+    std::cout <<"which is         \t"<<t.diff()/mass.size()<<"s/step\n";
+
     if( p.global)
     {
         grp = H5Gcreate( file, "xfiles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-        dims[0] = (p.maxout+1)*p.itstp;
+        dims[0] = mass.size();//(p.maxout+1)*p.itstp;
         status = H5LTmake_dataset_double( grp, "mass", 1,  dims, mass.data());
         status = H5LTmake_dataset_double( grp, "diffusion", 1,  dims, diffusion.data());
         status = H5LTmake_dataset_double( grp, "energy", 1,  dims, energy.data());
@@ -126,3 +138,4 @@ int main( int argc, char* argv[])
     return 0;
 
 }
+
