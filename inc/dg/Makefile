@@ -2,6 +2,7 @@ INCLUDE = -I/home/matthias/include # Eigen library
 INCLUDE += -I../ # other libraries
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20
+NVCCFLAGS+= -Xcompiler -fopenmp -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 
 CXX = g++
 CFLAGS = -Wall -fopenmp
@@ -23,7 +24,7 @@ all: version cusp_thrust arakawa_t blas1_t \
 
 
 version: version.cu 
-	$(NVCC) $< $(NVCCFLAGS) -o $@
+	$(NVCC) $< $(INCLUDE) $(NVCCFLAGS) -o $@
 	./$@
 
 cusp_thrust: cusp_thrust.cu 
