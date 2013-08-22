@@ -25,7 +25,7 @@ int main()
     Timer t;
     cout << "# of polynomial coefficients P is: "<< P <<endl;
     cout << "# of 1d intervals is:  "<<N<<"\n";
-    ArrVec1d<HVec> hv( P, N,  1);
+    ArrVec1d<HVec> hv( P, N,  1), hw( hv);
     for( unsigned k=0; k<N; k++)
         for( unsigned i=0; i<P; i++)
             hv( k, i) = i;
@@ -34,12 +34,21 @@ int main()
     t.tic();
     DMatrix laplace1d = create::laplace1d_per<double>( P, N, 2.);
     t.toc();
-    cout << "Laplace1d matrix creation took     "<<t.diff()<<"s\n";
+    cout << "Laplace1d matrix creation took         "<<t.diff()<<"s\n";
+    t.tic();
+    CMatrix laplace1d_h = create::laplace1d_per<double>( P, N, 2.);
+    t.toc();
+    cout << "Laplace1d matrix creation took (host)  "<<t.diff()<<"s\n";
     t.tic();
     blas2::symv( laplace1d, dv, dw);
     cudaThreadSynchronize();
     t.toc();
-    cout << "Multiplication with laplace1d took "<<t.diff()<<"s\n";
+    cout << "Multiplication with laplace1d took (device)    "<<t.diff()<<"s\n";
+    t.tic();
+    blas2::symv( laplace1d_h, hv.data(), hw.data());
+    cudaThreadSynchronize();
+    t.toc();
+    cout << "Multiplication with laplace1d took (host)      "<<t.diff()<<"s\n";
     return 0;
 }
 
