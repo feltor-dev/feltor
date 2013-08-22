@@ -36,7 +36,7 @@ int main()
     t.toc();
     cout << "Laplace1d matrix creation took         "<<t.diff()<<"s\n";
     t.tic();
-    CMatrix laplace1d_h = create::laplace1d_per<double>( P, N, 2.);
+    HMatrix laplace1d_h = create::laplace1d_per<double>( P, N, 2.);
     t.toc();
     cout << "Laplace1d matrix creation took (host)  "<<t.diff()<<"s\n";
     t.tic();

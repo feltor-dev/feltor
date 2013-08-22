@@ -1,10 +1,10 @@
 #include <iostream>
 #include <iomanip>
 
+#include "timer.cuh"
 #include <cusp/print.h>
 #include <cusp/hyb_matrix.h>
 
-#include "timer.cuh"
 #include "xspacelib.cuh"
 #include "cg.cuh"
 
@@ -56,11 +56,15 @@ int main()
     cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
     cout << "Create Polarisation matrix!\n";
     t.tic();
-    cusp::csr_matrix<int, double, cusp::device_memory> B = pol.create(chi);
-    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
-    Matrix A = B; 
+    dg::HMatrix B_ = pol.create(chi);
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
+    t.tic();
+    cusp::csr_matrix<int, double, cusp::device_memory> B = B_;
+    Matrix A = B; 
+    t.toc();
+    cout << "Conversion to device matrix took: "<<t.diff()<<"s\n";
+    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
     //dg::Matrix Ap= dg::create::laplacian( grid, dg::not_normed); 
     //cout << "Polarisation matrix: "<< endl;
     //cusp::print( A);
