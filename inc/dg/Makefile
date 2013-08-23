@@ -3,6 +3,7 @@ INCLUDE += -I../ # other libraries
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20
 NVCCFLAGS+= -Xcompiler -fopenmp -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+NVCCFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 
 CXX = g++
 CFLAGS = -Wall -fopenmp
