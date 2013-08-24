@@ -1,5 +1,22 @@
-INCLUDE = -I../../inc/# include files
-INCLUDE+= -I/home/matthias/include# include files
+system=home # Use as Makefile parameter!
+
+INCLUDE = -I../../inc/  # other project includes
+LIBS = -lhdf5 -lhdf5_hl # hdf5 libraries
+
+ifeq ($(strip $(system)),home)
+INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
+endif
+
+ifeq ($(strip $(system)),leo3)
+INCLUDE += -I$(UIBK_CUSP_INC)
+INCLUDE += -I$(UIBK_HDF5_INC)
+INCLUDE += -I$(UIBK_OPENMPI_INC)
+
+LIBS 	+= -L$(UIBK_HDF5_LIB)
+endif
+
+ifeq ($(strip $(system)),vsc)
+endif
 
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
@@ -19,7 +36,7 @@ toeflR: toeflR.cu toeflR.cuh
 	echo "Attention: No compiler warnings are issued!" 
 
 toefl_hpc: toefl_hpc.cu toeflR.cuh 
-	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
+	$(NVCC) -O2 $(LIBS) $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean
