@@ -1,16 +1,25 @@
-#INCLUDE = -I/home/c744/c7441112/include 
-INCLUDE = -I$(UIBK_CUSP_INC)
-INCLUDE += -I../ # other libraries
+system=home
 
+INCLUDE = -I../ # other project libraries
+
+ifeq ($(strip $(system)),home)
+INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
+GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm #you might add some libs here, check your glfw installation
+endif
+
+ifeq ($(strip $(system)),leo3)
+INCLUDE+= -I$(UIBK_CUSP_INC)
+GLFLAGS   = -lm
+endif
+
+ifeq ($(strip $(system)),vsc)
+endif
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20
 
-CXX = g++
-CFLAGS = -Wall -fopenmp
-CINCLUDE = -I$(UIBK_CUDA_INC) -I$(UIBK_CUSP_INC)
-
-#GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
-GLFLAGS   = -lm #-lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
+#CXX = g++
+#CFLAGS = -Wall -fopenmp
+#CINCLUDE = -I/usr/local/cuda/include/
 #LIBS = cusp_eigen.o
 
 all: version cusp_thrust arakawa_t blas1_t \
@@ -25,11 +34,11 @@ all: version cusp_thrust arakawa_t blas1_t \
 
 
 version: version.cu 
-	$(NVCC) $< $(NVCCFLAGS) -o $@
+	$(NVCC) $< $(NVCCFLAGS) $(INCLUDE) -o $@
 	./$@
 
 cusp_thrust: cusp_thrust.cu 
-	$(NVCC) $< $(NVCCFLAGS) -o $@
+	$(NVCC) $< $(NVCCFLAGS) $(INCLUDE) -o $@
 	./$@
 
 host_window_t: host_window_t.cu
@@ -39,8 +48,8 @@ host_window_t: host_window_t.cu
 blas%_t: blas%_t.cu blas%.h
 	$(NVCC) $< $(NVCCFLAGS) -o $@ 
 
-%.o: %.cpp
-	$(CXX) -O3 -c $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) 
+#%.o: %.cpp
+#	$(CXX) -O3 -c $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) 
 
 %_t: %_t.cu %.cuh $(LIBS)
 	$(NVCC) -DDG_DEBUG $< $(LIBS) -o $@ $(NVCCFLAGS) $(GLFLAGS)  $(INCLUDE) 
