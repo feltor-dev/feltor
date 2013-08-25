@@ -59,7 +59,6 @@ int main()
     dg::HVec b = dg::expand ( laplace_fct, grid);
     //compute S b
     dg::blas2::symv( s2d, b, b);
-    cudaThreadSynchronize();
 
     //copy data to device memory
     t.tic();

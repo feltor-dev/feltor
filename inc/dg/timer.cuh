@@ -1,6 +1,14 @@
 #ifndef _DG_TIMER_
 #define _DG_TIMER_
 
+#if (THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP || THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CPP)
+#include "../toefl/timer.h"
+namespace dg
+{
+    typedef toefl::Timer Timer;
+}
+#else
+
 namespace dg{
 /*! @brief Very simple tool for performance measurements using CUDA-API 
  * @ingroup utilities
@@ -40,5 +48,6 @@ class Timer
 };
 
 }
+#endif
 
 #endif //_DG_TIMER_

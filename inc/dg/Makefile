@@ -1,10 +1,13 @@
 system=home
+device=gpu
 
 INCLUDE = -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
+
 INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
-GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm #you might add some libs here, check your glfw installation
+#you might check the libs here, cf your glfw installation
+GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
 endif
 
 ifeq ($(strip $(system)),leo3)
@@ -14,57 +17,53 @@ endif
 
 ifeq ($(strip $(system)),vsc)
 endif
-NVCC = nvcc
-NVCCFLAGS = --compiler-options -Wall -arch=sm_20
-NVCCFLAGS+= -Xcompiler -fopenmp -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-NVCCFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 
-#CXX = g++
-#CFLAGS = -Wall -fopenmp
-#CINCLUDE = -I/usr/local/cuda/include/
-#LIBS = cusp_eigen.o
+ifeq ($(strip $(device)),gpu)
+CC = nvcc
+CFLAGS = --compiler-options -Wall -arch=sm_20
+CFLAGS+= -Xcompiler -fopenmp 
+CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+else
+CC = g++
+CFLAGS = -Wall -fopenmp -x c++
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+endif
 
 all: version cusp_thrust arakawa_t blas1_t \
-	cg2d_b cg2d_t cg_t \
-	dlt2d_b dlt2d_t dlt_t dx_t \
-	evaluation_b evaluation_t gamma_t host_window_t \
-	laplace_b laplace_t \
-	operator_matrix_t operator_dynamic_b operator_t polarisation2d_b polarisation2d_t polarisation_b polarisation_t \
-	preconditioner2d_b preconditioner2d_t \
-	rk2d_t rk_t tensor_b toefl_b toefl_t xspacelib_t
-
+	 cg2d_b cg2d_t cg_t dlt2d_b dlt2d_t dlt_t dx_t \
+	 evaluation_b evaluation_t gamma_t host_window_t laplace_b laplace_t \
+	 operator_matrix_t operator_dynamic_b operator_t \
+	 polarisation2d_b polarisation2d_t polarisation_b polarisation_t \
+	 preconditioner2d_b preconditioner2d_t \
+	 rk2d_t rk_t tensor_b toefl_b toefl_t xspacelib_t
 
 
 version: version.cu 
-	$(NVCC) $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
 	./$@
 
 cusp_thrust: cusp_thrust.cu 
-	$(NVCC) $< $(NVCCFLAGS) $(INCLUDE) -o $@
+	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
 	./$@
 
 host_window_t: host_window_t.cu
-	$(NVCC) $< $(NVCCFLAGS) -o $@ $(GLFLAGS) $(INCLUDE)
-
+	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
 blas%_t: blas%_t.cu blas%.h
-	$(NVCC) $< $(NVCCFLAGS) -o $@ 
+	$(CC) $(CFLAGS) $< -o $@ 
 
-#%.o: %.cpp
-#	$(CXX) -O3 -c $< $(CFLAGS) $(CINCLUDE) $(INCLUDE) 
+%_t: %_t.cu %.cuh 
+	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) 
 
-%_t: %_t.cu %.cuh $(LIBS)
-	$(NVCC) -DDG_DEBUG $< $(LIBS) -o $@ $(NVCCFLAGS) $(GLFLAGS)  $(INCLUDE) 
+%2d_t: %2d_t.cu %.cuh 
+	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
-%_b: %_b.cu %.cuh $(LIBS)
-	$(NVCC) -O2 -w  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(LIBS) $(GLFLAGS)
+%_b: %_b.cu %.cuh 
+	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 
-%2d_t: %2d_t.cu %.cuh $(LIBS)
-	$(NVCC) -DDG_DEBUG $< -o $@ $(NVCCFLAGS) $(LIBS) $(INCLUDE)
-
-%2d_b: %2d_b.cu %.cuh $(LIBS)
-	$(NVCC) -O2 -w  $< -o $@ $(NVCCFLAGS) $(LIBS) $(INCLUDE)
+%2d_b: %2d_b.cu %.cuh
+	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean doc
