@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include <cusp/print.h>
+//#include <cusp/print.h>
 #include <cusp/ell_matrix.h>
 #include <cusp/hyb_matrix.h>
 #include <cusp/dia_matrix.h>
@@ -41,12 +41,10 @@ int main()
     cout << "Laplace1d matrix creation took (host)  "<<t.diff()<<"s\n";
     t.tic();
     blas2::symv( laplace1d, dv, dw);
-    cudaThreadSynchronize();
     t.toc();
     cout << "Multiplication with laplace1d took (device)    "<<t.diff()<<"s\n";
     t.tic();
     blas2::symv( laplace1d_h, hv.data(), hw.data());
-    cudaThreadSynchronize();
     t.toc();
     cout << "Multiplication with laplace1d took (host)      "<<t.diff()<<"s\n";
     return 0;

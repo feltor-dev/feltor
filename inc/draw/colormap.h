@@ -7,6 +7,8 @@
 #ifndef _DG_TEXTURE_
 #define _DG_TEXTURE_
 
+#include <cmath>
+
 namespace draw{
 
 /*! @brief POD that contains RGB values for 256 colors*/

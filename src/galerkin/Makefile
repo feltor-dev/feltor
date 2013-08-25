@@ -1,10 +1,13 @@
 system=home # Use as Makefile parameter!
+device=gpu
 
-INCLUDE = -I../../inc/  # other project includes
-LIBS = -lhdf5 -lhdf5_hl # hdf5 libraries
+INCLUDE = -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
-INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
+INCLUDE += -I/home/matthias/include # cusp and thrust libraries
+#you might check the libs here, cf your glfw installation
+GLFLAGS  = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
+LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
 ifeq ($(strip $(system)),leo3)
@@ -13,30 +16,33 @@ INCLUDE += -I$(UIBK_HDF5_INC)
 INCLUDE += -I$(UIBK_OPENMPI_INC)
 
 LIBS 	+= -L$(UIBK_HDF5_LIB)
+GLFLAGS  = -lm
 endif
 
 ifeq ($(strip $(system)),vsc)
 endif
 
-NVCC = nvcc
-NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
-NVCCFLAGS+= -Xcompiler -fopenmp -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-
-#GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
-GLFLAGS   = -lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
+ifeq ($(strip $(device)),gpu)
+CC = nvcc
+CFLAGS = --compiler-options -Wall -arch=sm_20 -w
+CFLAGS+= -Xcompiler -fopenmp 
+CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+OPT	   = -O2
+else
+CC = g++
+CFLAGS = -Wall -fopenmp -x c++
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+OPT	   = -O3
+endif
 
 all: toeflR toefl_hpc
 
-#toefl: toefl.cu toefl.cuh 
-#	$(NVCC) -O2   $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)# -DDG_BENCHMARK
-#	echo "Attention: No compiler warnings are issued!" 
-
 toeflR: toeflR.cu toeflR.cuh 
-	$(NVCC) -O2  $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
 toefl_hpc: toefl_hpc.cu toeflR.cuh 
-	$(NVCC) -O2 $(LIBS) $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean
