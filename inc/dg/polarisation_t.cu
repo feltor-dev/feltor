@@ -69,7 +69,6 @@ int main()
     cout << "# of intervals                "<< N <<endl;
     //compute S b
     dg::blas2::symv( dg::S1D<double>(g), db, db);
-    cudaThreadSynchronize();
     std::cout << "Number of pcg iterations "<< pcg( A, dx, db, Preconditioner(g), eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error

@@ -128,27 +128,22 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
     assert( &u0 != &u1);
     f(u0, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
-    //cudaThreadSynchronize();
     for( unsigned i=1; i<k-1; i++)
     {
         f( u_[i-1], u_[i]);
         blas1::axpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
-        //cudaThreadSynchronize();
         for( unsigned l=1; l<=i; l++)
         {
             blas1::axpby( rk_coeff<k>::alpha[i][l], u_[l-1],1., u_[i]); //Fall alpha = 0 muss axpby abfangen!!
-            //cudaThreadSynchronize();
         }
 
     }
     //Now add everything up to u1
     f( u_[k-2], u1);
     blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u1);
-    //cudaThreadSynchronize();
     for( unsigned l=1; l<=k-1; l++)
     {
         blas1::axpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);
-        //cudaThreadSynchronize();
     }
 }
 

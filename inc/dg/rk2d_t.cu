@@ -77,7 +77,6 @@ int main()
     }
 
     blas1::axpby( 1., solution, -1., y0[0]);
-    cudaThreadSynchronize();
     cout << scientific;
     cout << "Norm of error is "<<sqrt(blas2::dot( s2d, y0[0]))<<"\n"; //never forget the sqrt when computing errors
     //n = 1 -> p = 2 ( as it should be )
