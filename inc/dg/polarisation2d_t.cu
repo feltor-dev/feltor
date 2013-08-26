@@ -54,7 +54,6 @@ int main()
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;
     //compute W b
     dg::blas2::symv( w2d, b, b);
-    cudaThreadSynchronize();
     std::cout << "Number of pcg iterations "<< pcg( A, x, b, v2d, eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error

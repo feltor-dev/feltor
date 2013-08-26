@@ -1,10 +1,10 @@
 #include <iostream>
 #include <iomanip>
 
+#include "timer.cuh"
 #include <cusp/print.h>
 #include <cusp/hyb_matrix.h>
 
-#include "timer.cuh"
 #include "xspacelib.cuh"
 #include "cg.cuh"
 
@@ -27,9 +27,11 @@ double sol(double x, double y)  { return sin( x)*sin(y);}
 using namespace std;
 
 //replace DVec with HVec and DMatrix with HMAtrix to compute on host vs device
-typedef dg::DVec Vector;
+//typedef dg::DVec Vector;
 //typedef dg::DMatrix Matrix;
-typedef cusp::ell_matrix<int, double, cusp::device_memory> Matrix;
+//typedef cusp::ell_matrix<int, double, cusp::device_memory> Matrix;
+typedef dg::HVec Vector;
+typedef dg::HMatrix Matrix;
 int main()
 {
     dg::Timer t;
@@ -56,11 +58,15 @@ int main()
     cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
     cout << "Create Polarisation matrix!\n";
     t.tic();
-    cusp::csr_matrix<int, double, cusp::device_memory> B = pol.create(chi);
-    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
-    Matrix A = B; 
+    dg::HMatrix B_ = pol.create(chi);
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
+    t.tic();
+    cusp::csr_matrix<int, double, cusp::device_memory> B = B_;
+    Matrix A = B; 
+    t.toc();
+    cout << "Conversion to device matrix took: "<<t.diff()<<"s\n";
+    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
     //dg::Matrix Ap= dg::create::laplacian( grid, dg::not_normed); 
     //cout << "Polarisation matrix: "<< endl;
     //cusp::print( A);
@@ -76,7 +82,6 @@ int main()
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;
     //compute W b
     dg::blas2::symv( w2d, b, b);
-    cudaThreadSynchronize();
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg( A, x, b, v2d, eps)<<endl;
     t.toc();
