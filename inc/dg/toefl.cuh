@@ -52,12 +52,10 @@ void Toefl< container>::operator()( const std::vector<container>& y, std::vector
     assert( y.size() == yp.size());
     //omega 
     blas1::axpby( 1., y[1], 0., omega);
-    cudaThreadSynchronize();
     //compute S omega 
     blas2::symv( w2d, omega, omega);
     blas1::axpby( 2., phi, -1.,  phi_old);
     phi.swap( phi_old);
-    cudaThreadSynchronize();
     unsigned number = pcg( laplaceM, phi, omega, v2d, eps);
 #ifdef DG_BENHMARK
     std::cout << "Number of pcg iterations "<<  number << "\n";
@@ -67,17 +65,14 @@ void Toefl< container>::operator()( const std::vector<container>& y, std::vector
         arakawaX( y[i], phi, yp[i]);
 
     // dx terms
-    cudaThreadSynchronize();
     blas2::symv( arakawaX.dx(), phi, dxphi);
     blas2::symv( arakawaX.dx(), y[0], dxtheta);
-    cudaThreadSynchronize();
     blas1::axpby( 1, dxphi, 1., yp[0]);
     blas1::axpby( -Pr*Ra, dxtheta, 1., yp[1]);
 
     //laplace terms
     blas2::symv( laplaceM, y[0], dxphi);
     blas2::symv( -1., v2d, dxphi, 1., yp[0]); 
-    cudaThreadSynchronize();
     blas2::symv( laplaceM, y[1], dxphi);
     blas2::symv( -Pr, v2d, dxphi, 1., yp[1]); 
 
