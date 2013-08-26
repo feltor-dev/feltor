@@ -47,9 +47,7 @@ int main()
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;
     //compute S b
     dg::blas2::symv( s2d, b, b);
-    cudaThreadSynchronize();
     cout << "Number of pcg iterations "<< pcg( A, x, b, t2d, eps)<<endl;
-    cudaThreadSynchronize();
     //std::cout << "Number of cg iterations "<< pcg( A, x, b, dg::Identity<double>(), eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
@@ -59,7 +57,6 @@ int main()
     dg::HVec Ax(x), res( b);
     dg::blas2::symv(  A, x, Ax);
     dg::blas1::axpby( 1.,Ax,-1.,res);
-    cudaThreadSynchronize();
 
     double xnorm = dg::blas2::dot( s2d, x);
     cout << "L2 Norm2 of x0 is              " << xnorm << endl;
