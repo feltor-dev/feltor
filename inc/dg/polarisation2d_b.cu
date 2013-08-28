@@ -27,11 +27,11 @@ double sol(double x, double y)  { return sin( x)*sin(y);}
 using namespace std;
 
 //replace DVec with HVec and DMatrix with HMAtrix to compute on host vs device
-//typedef dg::DVec Vector;
-//typedef dg::DMatrix Matrix;
+typedef dg::DVec Vector;
+typedef dg::DMatrix Matrix;
 //typedef cusp::ell_matrix<int, double, cusp::device_memory> Matrix;
-typedef dg::HVec Vector;
-typedef dg::HMatrix Matrix;
+//typedef dg::HVec Vector;
+//typedef dg::HMatrix Matrix;
 int main()
 {
     dg::Timer t;
