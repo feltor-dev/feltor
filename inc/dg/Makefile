@@ -11,11 +11,13 @@ GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm
 endif
 
 ifeq ($(strip $(system)),leo3)
-INCLUDE+= -I$(UIBK_CUSP_INC)
+INCLUDE+= -I$(HOME)/include
 GLFLAGS   = -lm
 endif
 
 ifeq ($(strip $(system)),vsc)
+INCLUDE+= -I$(HOME)/include
+GLFLAGS   = -lm
 endif
 
 ifeq ($(strip $(device)),gpu)

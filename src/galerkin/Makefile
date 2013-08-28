@@ -1,26 +1,7 @@
 system=home # Use as Makefile parameter!
 device=gpu
 
-INCLUDE = -I../ # other project libraries
-
-ifeq ($(strip $(system)),home)
-INCLUDE += -I/home/matthias/include # cusp and thrust libraries
-#you might check the libs here, cf your glfw installation
-GLFLAGS  = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
-LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
-endif
-
-ifeq ($(strip $(system)),leo3)
-INCLUDE += -I$(UIBK_CUSP_INC)
-INCLUDE += -I$(UIBK_HDF5_INC)
-INCLUDE += -I$(UIBK_OPENMPI_INC)
-
-LIBS 	+= -L$(UIBK_HDF5_LIB)
-GLFLAGS  = -lm
-endif
-
-ifeq ($(strip $(system)),vsc)
-endif
+INCLUDE = -I../../inc/ # other project libraries
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -34,6 +15,29 @@ CFLAGS = -Wall -fopenmp -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 OPT	   = -O3
 endif
+
+ifeq ($(strip $(system)),home)
+INCLUDE += -I/home/matthias/include # cusp and thrust libraries
+#you might check the libs here, cf your glfw installation
+GLFLAGS  = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
+LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
+endif
+
+ifeq ($(strip $(system)),leo3)
+INCLUDE += -I$(HOME)/include
+INCLUDE += -I$(UIBK_HDF5_INC)
+INCLUDE += -I$(UIBK_OPENMPI_INC)
+
+LIBS 	+= -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl
+GLFLAGS  = -lm
+endif
+
+ifeq ($(strip $(system)),vsc)
+INCLUDE += -I$(HOME)/include
+
+GLFLAGS  = -lm
+endif
+
 
 all: toeflR toefl_hpc
 
