@@ -241,8 +241,10 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
         //blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
         blas1::pointwiseDot( binv, expy[1], chi); //\chi = n_i
         blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
-        A = B; 
+        //cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
+        //cusp::ell_matrix<int, double, cusp::host_memory> B = pol.create(chi); //first convert on host
+        //A = B;  
+        A = pol.create( chi);
         //compute omega
         thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
         thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
