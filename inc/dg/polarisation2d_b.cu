@@ -2,6 +2,7 @@
 #include <iomanip>
 
 #include "timer.cuh"
+#include <cusp/copy.h>
 #include <cusp/print.h>
 #include <cusp/hyb_matrix.h>
 
@@ -59,14 +60,20 @@ int main()
     cout << "Create Polarisation matrix!\n";
     t.tic();
     dg::HMatrix B_ = pol.create(chi);
+    //Matrix A = pol.create(chi);
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
     t.tic();
-    cusp::csr_matrix<int, double, cusp::device_memory> B = B_;
-    Matrix A = B; 
+    //TODO: Umwandlung Memory-technisch überprüfen!!!
+    //cusp::csr_matrix<int, double, cusp::device_memory> B = B_;
+    cusp::ell_matrix<int, double, cusp::host_memory> B = B_;
     t.toc();
-    cout << "Conversion to device matrix took: "<<t.diff()<<"s\n";
-    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
+    cout << "Conversion (1) to device matrix took: "<<t.diff()<<"s\n";
+    t.tic();
+    Matrix A = B;  
+    t.toc();
+    cout << "Conversion (2) to device matrix took: "<<t.diff()<<"s\n";
+    std::cout << "# of points in matrix is: "<< A.num_entries<< "\n";
     //dg::Matrix Ap= dg::create::laplacian( grid, dg::not_normed); 
     //cout << "Polarisation matrix: "<< endl;
     //cusp::print( A);
