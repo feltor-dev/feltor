@@ -44,7 +44,6 @@ LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
 GLFLAGS  = -lm
 endif
 
-
 all: toeflR toefl_hpc
 
 toeflR: toeflR.cu toeflR.cuh 

@@ -27,7 +27,7 @@
 ---------------------Physical parameters----------------------
 
 12) local (0) or global (1)             =   1       (0)
-13) nu  (viscosity)                     =   1e-3    (0.001)
+13) nu  (viscosity)                     =   1e-2    (0.001)
 14) mcv (magnetic curvature)            =   0.0005  (0.0005)
 15) tau (Ti/Te)                         =   5.0     (0.0)
 
@@ -40,7 +40,7 @@
 
 ---------------------Miscellaneous----------------------------
 
-20) itstp (steps between output)            = 5      (5)
-21) # of outputs (excluding first)          = 10 
+20) itstp (steps between output)            = 10      (5)
+21) # of outputs (excluding first)          = 400
 
 @ ------------------------------------------------------------
