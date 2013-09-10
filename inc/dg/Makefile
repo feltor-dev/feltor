@@ -1,4 +1,4 @@
-system=home
+system=vsc
 device=gpu
 
 INCLUDE = -I../ # other project libraries
@@ -11,16 +11,18 @@ GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm
 endif
 
 ifeq ($(strip $(system)),leo3)
-INCLUDE+= -I$(UIBK_CUSP_INC)
+INCLUDE+= -I$(HOME)/include
 GLFLAGS   = -lm
 endif
 
 ifeq ($(strip $(system)),vsc)
+INCLUDE+= -I$(HOME)/include
+GLFLAGS   = -lm
 endif
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20
+CFLAGS = --compiler-options -Wall -arch=sm_20 
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 else
