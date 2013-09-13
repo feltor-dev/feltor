@@ -65,7 +65,7 @@ blas%_t: blas%_t.cu blas%.h
 	echo "Attention: No compiler warnings are issued!" 
 
 %2d_b: %2d_b.cu %.cuh
-	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE)
+	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean doc
