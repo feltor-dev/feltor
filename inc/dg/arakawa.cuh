@@ -28,7 +28,7 @@ template< class container=thrust::device_vector<double> >
 struct Arakawa
 {
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     /**
      * @brief Create Arakawa on a grid
@@ -174,7 +174,7 @@ template< class container=thrust::device_vector<double> >
 struct ArakawaX
 {
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     /**
      * @brief Create Arakawa on a grid
