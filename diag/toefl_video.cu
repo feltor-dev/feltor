@@ -10,6 +10,30 @@
 
 #include "galerkin/parameters.h"
 
+template <class container>
+struct TotalVariation
+{
+    TotalVariation( const dg::Grid<double>& grid): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::w2d(grid)), arakawa(grid){}
+    double operator()( const container& field)
+    {
+        /*
+        dg::blas2::gemv( arakawa.dx(), field, dx);
+        dg::blas2::gemv( arakawa.dy(), field, dy);
+        dg::blas1::pointwiseDot( dx, dx, dx);
+        dg::blas1::pointwiseDot( dy, dy, dy);
+        dg::blas1::axpby( 1., dx, 1.,  dy);
+        thrust::transform( dy.begin(), dy.end(), dy.begin(), dg::SQRT<double>()); 
+        return dg::blas2::dot( one, w2d, dy);
+        */
+        thrust::transform( field.begin(), field.end(), dx.begin(), dg::ABS<double>());
+        return dg::blas2::dot( one, w2d, dx);
+
+    }
+  private:
+    container dx, dy, one, w2d;    
+    dg::ArakawaX<container> arakawa;
+
+};
 
 
 int main( int argc, char* argv[])
@@ -63,16 +87,26 @@ int main( int argc, char* argv[])
         massAcc[i] = (mass[i+2]-mass[i])/2./p.dt; //first column
         //if( i < 10 || i > num_entries - 20)
         //    std::cout << "i "<<i<<"\t"<<massAcc[i]<<"\t"<<mass[i+1]<<std::endl;
+        massAcc[i] = fabs(2.*(massAcc[i]-diffusion[i])/(massAcc[i]+diffusion[i]));
         energyAcc[i] = (energy[i+2]-energy[i])/2./p.dt;
         energyAcc[i] = fabs(2.*(energyAcc[i]-dissipation[i])/(energyAcc[i]+dissipation[i]));
+        //energyAcc[i] = fabs(energyAcc[i]-dissipation[i])/p.nu;
     }
 
     std::cout << std::scientific << std::setprecision( 2);
+    /*
+        bool waiting = true;
+        do
+        {
+            glfwPollEvents();
+            if( glfwGetKey( 'S')){
+                waiting = false;
+            }
+        }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
+        */
+    TotalVariation<dg::HVec> totalvariation(grid);
     while (running && index < p.maxout + 2 )
     {
-        std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/(mass[1]-grid.lx()*grid.ly()) //blob mass is mass[] - Area
-                  <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1])/energy[1]
-                  <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
         t.tic();
         name = file::getName( file, index);
         group = H5Gopen( file, name.data(), H5P_DEFAULT);
@@ -103,6 +137,12 @@ int main( int argc, char* argv[])
         dg::blas2::gemv( laplacianM, input, visual);
         input.swap( visual);
         dg::blas2::gemv( equi, input, visual);
+        //compute total variation
+        //std::cout << "TV "<<totalvariation( visual); 
+        std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/(mass[1]-grid.lx()*grid.ly()) //blob mass is mass[] - Area
+                  <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1])/energy[1]
+                  <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
+
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         if(colors.scale() == 0) { colors.scale() = 1;}

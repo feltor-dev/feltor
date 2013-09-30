@@ -1,5 +1,6 @@
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
+INCLUDE+= -I/home/matthias/include
 
 CXX = g++
 NVCC = nvcc
