@@ -19,7 +19,7 @@ struct Toefl
 {
     typedef std::vector<container> Vector;
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     Toefl( const Grid<value_type>& ,  double R, double P, double eps);
 

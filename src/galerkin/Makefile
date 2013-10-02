@@ -51,7 +51,7 @@ toeflR: toeflR.cu toeflR.cuh
 	echo "Attention: No compiler warnings are issued!" 
 
 toefl_hpc: toefl_hpc.cu toeflR.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean

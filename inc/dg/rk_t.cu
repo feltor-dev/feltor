@@ -16,7 +16,7 @@ template < class container = thrust::device_vector<double> >
 struct RHS
 {
     typedef container Vector;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     RHS( const dg::Grid<double>& g, double D):g_(g), D_(D) 
     {
         laplaceM = dg::create::laplacianM( g, dg::not_normed, dg::LSPACE);

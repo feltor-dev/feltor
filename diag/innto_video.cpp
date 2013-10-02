@@ -93,12 +93,11 @@ int main( int argc, char* argv[])
         w.title() << std::fixed; 
         w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
         w.draw( visual, alg.nx, alg.ny, colors);
-        bool waiting = true; 
-        /*
+        bool waiting = true;
         do
         {
             glfwPollEvents();
-            if( glfwGetKey( 'P')){
+            if( glfwGetKey( 'B')||glfwGetKey( 'P') ){
                 index -= v[5];
                 waiting = false;
             }
@@ -106,9 +105,8 @@ int main( int argc, char* argv[])
                 index +=v[5];
                 waiting = false;
             }
-            glfwWaitEvents();
+            //glfwWaitEvents();
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
-        */
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);

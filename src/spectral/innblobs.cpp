@@ -31,7 +31,7 @@ double amp, imp_amp; //
 double blob_width;
 const double slit = 1./500.; //half distance between pictures in units of width
 double field_ratio;
-unsigned width = 1400, height = 1080; //initial window width (height will be computed)
+unsigned width = 1000, height = 800; //initial window width (height will be computed)
 stringstream window_str;  //window name
 
 void GLFWCALL WindowResize( int w, int h)
@@ -165,7 +165,7 @@ int main( int argc, char* argv[])
         //init_gaussian( ne, 0.1,0.2, 10./128./field_ratio, 10./128., amp);
         //init_gaussian( ne, 0.1,0.4, 10./128./field_ratio, 10./128., -amp);
         //init_gaussian( ne, 0.5,0.5, 10./128./field_ratio, 10./128., amp);
-        init_gaussian( ne, 0.2,0.5, blob_width/bp.boundary().lx, blob_width/bp.boundary().ly, amp);
+        init_gaussian( ne, 0.25,0.7, blob_width/bp.boundary().lx, blob_width/bp.boundary().ly, amp);
         //init_gaussian( ne, 0.1,0.8, 10./128./field_ratio, 10./128., -amp);
         //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))

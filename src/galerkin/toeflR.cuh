@@ -33,7 +33,7 @@ struct ToeflR
 {
     typedef std::vector<container> Vector;
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     typedef dg::DMatrix Matrix; //fastest device Matrix
 
@@ -200,20 +200,19 @@ const container& ToeflR<container>::compute_psi( const container& potential)
 #ifdef DG_BENCHMARK
     Timer t;
     t.tic();
-#endif //DG_DEBUG
+#endif //DG_BENCHMARK
     unsigned number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
     if( number == pcg.get_max())
         throw Fail( eps_gamma);
 #ifdef DG_BENCHMARK
-    std::cout << "Number of pcg iterations2 "<< number <<std::endl;
+    std::cout << "# of pcg iterations for psi \t"<< number << "\t";
     t.toc();
-    std::cout<< "took "<<t.diff()<<"s\n";
-#endif //DG_DEBUG
+    std::cout<< "took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
     //now add -0.5v_E^2
     if( global)
     {
         blas1::axpby( 1., phi[1], -0.5, compute_vesqr( potential), phi[1]);
-        //cudaDeviceSynchronize();
     }
     return phi[1];
 }
@@ -265,9 +264,9 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     if( number == pcg.get_max())
         throw Fail( eps_gamma);
 #ifdef DG_BENCHMARK
-    std::cout << "Number of pcg iterations0 "<< number <<std::endl;
+    std::cout << "# of pcg iterations for n_i \t"<< number <<"\t";
     t.toc();
-    std::cout<< "took "<<t.diff()<<"s\n";
+    std::cout<< "took \t"<<t.diff()<<"s\n";
     t.tic();
 #endif 
     if( global)
@@ -286,9 +285,9 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     if( number == pcg.get_max())
         throw Fail( eps_pol);
 #ifdef DG_BENCHMARK
-    std::cout << "Number of pcg iterations1 "<< number <<std::endl;
+    std::cout << "# of pcg iterations for phi \t"<< number <<"\t";
     t.toc();
-    std::cout<< "took "<<t.diff()<<"s\n";
+    std::cout<< "took \t"<<t.diff()<<"s\n";
     t.tic();
 #endif //DG_DEBUG
 
