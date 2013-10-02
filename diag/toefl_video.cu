@@ -10,31 +10,6 @@
 
 #include "galerkin/parameters.h"
 
-template <class container>
-struct TotalVariation
-{
-    TotalVariation( const dg::Grid<double>& grid): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::w2d(grid)), arakawa(grid){}
-    double operator()( const container& field)
-    {
-        /*
-        dg::blas2::gemv( arakawa.dx(), field, dx);
-        dg::blas2::gemv( arakawa.dy(), field, dy);
-        dg::blas1::pointwiseDot( dx, dx, dx);
-        dg::blas1::pointwiseDot( dy, dy, dy);
-        dg::blas1::axpby( 1., dx, 1.,  dy);
-        thrust::transform( dy.begin(), dy.end(), dy.begin(), dg::SQRT<double>()); 
-        return dg::blas2::dot( one, w2d, dy);
-        */
-        thrust::transform( field.begin(), field.end(), dx.begin(), dg::ABS<double>());
-        return dg::blas2::dot( one, w2d, dx);
-
-    }
-  private:
-    container dx, dy, one, w2d;    
-    dg::ArakawaX<container> arakawa;
-
-};
-
 
 int main( int argc, char* argv[])
 {
@@ -71,7 +46,8 @@ int main( int argc, char* argv[])
     unsigned index = 1;
     std::cout << "PRESS N FOR NEXT FRAME!\n";
     std::cout << "PRESS P FOR PREVIOUS FRAME!\n";
-    unsigned num_entries = (p.maxout+1)*p.itstp;
+    unsigned num_entries = (p.maxout+1)*p.itstp;//actually too large
+    std::cout << num_entries<<"\n";
     std::vector<double> mass( num_entries+2, 0.), energy( mass); 
     std::vector<double> diffusion( num_entries), dissipation( num_entries), massAcc( num_entries), energyAcc( num_entries);
     hid_t group;
@@ -104,7 +80,6 @@ int main( int argc, char* argv[])
             }
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
         */
-    TotalVariation<dg::HVec> totalvariation(grid);
     while (running && index < p.maxout + 2 )
     {
         t.tic();
@@ -137,8 +112,7 @@ int main( int argc, char* argv[])
         dg::blas2::gemv( laplacianM, input, visual);
         input.swap( visual);
         dg::blas2::gemv( equi, input, visual);
-        //compute total variation
-        //std::cout << "TV "<<totalvariation( visual); 
+        dg::blas1::axpby( -1., visual, 0., visual);//minus laplacian
         std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/(mass[1]-grid.lx()*grid.ly()) //blob mass is mass[] - Area
                   <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1])/energy[1]
                   <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;

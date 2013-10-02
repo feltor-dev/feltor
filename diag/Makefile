@@ -16,6 +16,9 @@ toefl_video: toefl_video.cu
 	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 
+toefl_analytics: toefl_analytics.cu 
+	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
+
 innto_video: innto_video.cpp
 	$(CXX) -O3  $< -o $@ -std=c++0x $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl -lfftw3
 	echo "Attention: No compiler warnings are issued!" 
