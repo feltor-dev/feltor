@@ -25,9 +25,15 @@ CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-else
+endif
+ifeq ($(strip $(device)),omp)
 CC = g++
 CFLAGS = -Wall -fopenmp -x c++
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+endif
+ifeq ($(strip $(device)),mic)
+CC = icc
+CFLAGS = -openmp -mmic -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 endif
 
@@ -61,11 +67,11 @@ blas%_t: blas%_t.cu blas%.h
 	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu %.cuh 
-	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 
 %2d_b: %2d_b.cu %.cuh
-	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean doc
