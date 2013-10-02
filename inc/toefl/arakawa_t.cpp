@@ -11,6 +11,17 @@ using namespace std;
 
 const unsigned rows = 3, cols = 10;
 const double h = 1./cols;
+
+
+double sum( const Matrix<double, TL_DFT>& jac)
+{
+    double s = 0;
+    for( unsigned i=0; i<jac.rows(); i++)
+        for( unsigned j=0; j<jac.cols(); j++)
+            s+=jac(i,j);
+    return s;
+}
+
 int main()
 {
     GhostMatrix<double, TL_DFT> lhs( rows, cols, TL_DST10, TL_PERIODIC), rhs( rows, cols, TL_DST10, TL_PERIODIC);
@@ -44,6 +55,7 @@ int main()
     //cout << endl;
     arakawa( lhs, rhs, jac);
     cout << jac <<endl;
+    cout << "Sum of jac "<<sum( jac)<<endl;
     dft_dft.r2c( jac, cjac);
     //cout << cjac <<endl;
     cout << setprecision(6) <<scientific;

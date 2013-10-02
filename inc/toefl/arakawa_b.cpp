@@ -6,6 +6,15 @@
 
 using namespace std;
 using namespace toefl;
+template <class T>
+double sum( const T& jac)
+{
+    double s = 0;
+    for( unsigned i=0; i<jac.rows(); i++)
+        for( unsigned j=0; j<jac.cols(); j++)
+            s+=jac(i,j);
+    return s;
+}
 
 const double h = 1.;
 const double c = 1./(12.*h*h);
@@ -48,7 +57,7 @@ int main()
     Timer t;
     //cin >> rows >> cols;
     Matrix<double> lhs0( rows + 2, cols + 2), rhs0( rows + 2, cols + 2); //Matrix with ghostcells
-    GhostMatrix<double> lhs( rows, cols), rhs( rows, cols);
+    GhostMatrix<double> lhs( rows, cols, TL_PERIODIC, TL_DST10), rhs( rows, cols, TL_PERIODIC, TL_DST10);
     GhostMatrix<double> jac( rows, cols);
     Matrix<double> jac0( rows, cols);
     //double uuu[nxmax][nymax], vvv[nxmax][nymax], www[nxmax][nymax];
@@ -105,12 +114,16 @@ int main()
             rhs.at( i, -1)   = lhs.at(i, -1) = 1;
             rhs.at( i, cols) = lhs.at(i,cols)= 1;
         }
+        lhs.initGhostCells();
+        rhs.initGhostCells();
         arakawa( lhs, rhs, jac);
     }
     t.toc();
     cout << "Arakawa scheme took " <<t.diff() <<" seconds\n";
     if( jac!=jac0)
-        cerr << "An error occured!\n" << jac << "\n"<<jac0;
+        //cerr << "An error occured!\n" << jac << "\n"<<jac0;
+
+    cout << "Sum jac "<<sum(jac)<<"\n";
 
     //cout << "Completely with boundary function\n";
     //t.tic();

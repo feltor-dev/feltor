@@ -6,11 +6,11 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of polynomial coefficients)    =   4      (3)
-2)  nx (grid points in x)                =   100   (192)
-3)  ny (grid points in y)                =   100   (192)
+2)  nx (grid points in x)                =   50   (192)
+3)  ny (grid points in y)                =   50   (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   0.25    (0.01)
+5)  dt (time step in units c_s/L_p)      =   4    (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
@@ -33,8 +33,8 @@
 
 ------------------Initial blob parameters---------------------
 
-16) amp (perturbation amplitude)            =  4     (1.0)
-17) sigma (blob variance in units of rho_s) =  10     (10)
+16) amp (perturbation amplitude)            =  0.1     (1.0)
+17) sigma (blob variance in units of rho_s) =  5     (10)
 18) x-position ( in units of lx)            =  0.25   (0.4)
 19) y-position ( in units of ly)            =  0.5   (0.5)
 
