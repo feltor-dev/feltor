@@ -124,7 +124,7 @@ inline void gemv( const Matrix& m,
                   const Vector& x, 
                   Vector& y)
 {
-    return dg::blas2::detail::doSymv( m, x, y, 
+    return dg::blas2::detail::doGemv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
