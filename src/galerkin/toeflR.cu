@@ -83,6 +83,7 @@ int main( int argc, char* argv[])
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
+    unsigned step = 0;
     while (running)
     {
         //transform field to an equidistant grid
@@ -121,6 +122,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
+            step++;
             if( p.global)
             {
                 std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
@@ -144,7 +146,8 @@ int main( int argc, char* argv[])
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
-        std::cout << "\n        Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
+        std::cout << "\n\t Step "<<step;
+        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #endif//DG_BENCHMARK
         running = running && 
                   !glfwGetKey( GLFW_KEY_ESC) &&
