@@ -57,7 +57,7 @@ int main()
     Timer t;
     //cin >> rows >> cols;
     Matrix<double> lhs0( rows + 2, cols + 2), rhs0( rows + 2, cols + 2); //Matrix with ghostcells
-    GhostMatrix<double> lhs( rows, cols, TL_PERIODIC, TL_DST10), rhs( rows, cols, TL_PERIODIC, TL_DST10);
+    GhostMatrix<double> lhs( rows, cols, TL_PERIODIC, TL_DST00), rhs( rows, cols, TL_PERIODIC, TL_DST00);
     GhostMatrix<double> jac( rows, cols);
     Matrix<double> jac0( rows, cols);
     //double uuu[nxmax][nymax], vvv[nxmax][nymax], www[nxmax][nymax];

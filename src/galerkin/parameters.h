@@ -87,7 +87,7 @@ struct Parameters
         os << "Stopping for CG:         "<<eps_pol<<"\n"
             <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
-            <<"Number of outputs:       "<<maxout<<"\n";
+            <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
     }
 };
 
