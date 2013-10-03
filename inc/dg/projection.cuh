@@ -10,9 +10,9 @@ namespace create{
 namespace detail{
 double LegendreP( unsigned n, double x)
 {
-    if( n==0) return 1;
-    if( n==1) return x;
-    return ((2*n+1)*x*LegendreP( n-1, x) - n*LegendreP( n-2, x))/(double)(n+1);
+    if( n==0 ) return 1;
+    if( n==1 ) return x;
+    return ((double)(2*n-1)*x*LegendreP( n-1, x) - (double)(n-1)*LegendreP( n-2, x))/(double)(n);
 }
 }//namespace detail
 /**
@@ -53,7 +53,7 @@ std::vector<double> projection( unsigned n_old, unsigned n_new, unsigned N)
 }
 
 
-cusp::coo_matrix< int, double, cusp::host_memory> diagonal_matrix( unsigned N, std::vector<double>& v, unsigned v_rows, unsigned v_cols)
+cusp::coo_matrix< int, double, cusp::host_memory> diagonal_matrix( unsigned N, const std::vector<double>& v, unsigned v_rows, unsigned v_cols)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> A(N*v_rows, N*v_cols, N*v_rows*v_cols);
     unsigned number = 0;
@@ -67,6 +67,44 @@ cusp::coo_matrix< int, double, cusp::host_memory> diagonal_matrix( unsigned N, s
                 number++;
             }
     return A;
+}
+
+cusp::coo_matrix< int, double, cusp::host_memory> projection1d( const Grid1d<double>& g1, const Grid1d<double>& g2)
+{
+    assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
+    assert( g2.N() % g1.N() == 0);
+    unsigned Nf = g2.N()/g1.N();
+    std::vector<double> p = dg::create::projection( g1.n(), g2.n(), Nf);
+    return dg::create::diagonal_matrix( g1.N(), p, g2.n()*Nf, g1.n());
+}
+//2D Version
+std::vector<double> tensor( const std::vector<double>& v1, const std::vector<double>& v2, unsigned n_old, unsigned n_new, unsigned N1f, unsigned N2f)
+{
+    std::vector<double> prod( n_old*n_old*n_new*n_new*N1f*N2f);
+    for( unsigned i=0; i<n_new*N1f; i++)
+        for( unsigned j=0; j<n_old; j++)
+            for( unsigned k=0; k<n_new*N2f; k++)
+                for( unsigned l=0; l<n_old; l++)
+                    prod[ i*n_old*n_old*N2f+k*n_old*n_old+ j*n_old+l] = v1[i*n_old+j]*v2[k*n_old+l];
+    return prod;
+
+}
+cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<double>& g1, const Grid<double>& g2)
+{
+    assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
+    assert( g1.y0() == g2.y0()); assert( g1.y1() == g2.y1());
+    assert( g2.Nx() % g1.Nx() == 0);
+    assert( g2.Ny() % g1.Ny() == 0);
+    unsigned Nfx = g2.Nx()/g1.Nx();
+    unsigned Nfy = g2.Ny()/g1.Ny();
+    Grid1d<double> g1x( g1.x0(), g1.x1(), g1.n(), g1.Nx()); 
+    Grid1d<double> g1y( g1.y0(), g1.y1(), g1.n(), g1.Ny());
+    Grid1d<double> g2x( g2.x0(), g2.x1(), g2.n(), g2.Nx()); 
+    Grid1d<double> g2y( g2.y0(), g2.y1(), g2.n(), g2.Ny());
+    std::vector<double> px = dg::create::projection( g1.n(), g2.n(), Nfx);
+    std::vector<double> py = dg::create::projection( g1.n(), g2.n(), Nfy);
+    std::vector<double> p = tensor( py, px, g1.n(), g2.n(), Nfy, Nfx);
+    return dg::create::diagonal_matrix( g1.Nx()*g1.Ny(), p, g2.n()*g2.n()*Nfx*Nfy, g1.n()*g1.n() );
 }
 
 

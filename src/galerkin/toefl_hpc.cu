@@ -137,7 +137,7 @@ int main( int argc, char* argv[])
         ti.toc();
         step+=p.itstp;
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
-        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n";
+        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
     }
     }
