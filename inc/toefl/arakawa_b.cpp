@@ -15,13 +15,22 @@ double sum( const T& jac)
             s+=jac(i,j);
     return s;
 }
+template < class T1, class T2>
+double sum( const T1& f, const T2& jac)
+{
+    double s = 0;
+    for( unsigned i=0; i<jac.rows(); i++)
+        for( unsigned j=0; j<jac.cols(); j++)
+            s+=f(i,j)*jac(i,j);
+    return s;
+}
 
 const double h = 1.;
 const double c = 1./(12.*h*h);
 const double hysq = -c;
 const int nymax = 2049;
 const int nxmax = 513;
-    int rows = 500, cols = 2000;
+    int rows = 500, cols = 500;
     unsigned loop = 1;
     int nx1 = rows, ny1 = cols;
 void arakawa2(double (*uuu)[nymax], double (*vvv)[nymax], double (*www)[nymax])
@@ -57,7 +66,7 @@ int main()
     Timer t;
     //cin >> rows >> cols;
     Matrix<double> lhs0( rows + 2, cols + 2), rhs0( rows + 2, cols + 2); //Matrix with ghostcells
-    GhostMatrix<double> lhs( rows, cols, TL_PERIODIC, TL_DST00), rhs( rows, cols, TL_PERIODIC, TL_DST00);
+    GhostMatrix<double> lhs( rows, cols, TL_PERIODIC, TL_PERIODIC), rhs( rows, cols, TL_PERIODIC, TL_PERIODIC);
     GhostMatrix<double> jac( rows, cols);
     Matrix<double> jac0( rows, cols);
     //double uuu[nxmax][nymax], vvv[nxmax][nymax], www[nxmax][nymax];
@@ -67,15 +76,15 @@ int main()
     for( int i=0; i<rows; i++)
         for( int j=0; j<cols; j++)
         {
-            lhs( i, j) = i + 7*j;
-            rhs( i, j) = 2*i*i*i +3*j*j;
+            lhs( i, j) = rand()%100;
+            rhs( i, j) = rand()%100;
         }
 
     for( int i=0; i<rows; i++)
         for( int j=0; j<cols; j++)
         {
-            /*uuu[i+1][j+1] =*/ lhs0( i + 1, j + 1) = i + 7*j;
-            /*vvv[i+1][j+1] =*/ rhs0( i + 1, j + 1) = 2*i*i*i +3*j*j;
+            /*uuu[i+1][j+1] =*/ lhs0( i + 1, j + 1) = lhs(i,j);
+            /*vvv[i+1][j+1] =*/ rhs0( i + 1, j + 1) = rhs(i,j);
         }
 
     //Make Dirichlet BC
@@ -85,13 +94,23 @@ int main()
     {
         for( int j = -1; j < cols + 1; j++)
         {
-            /*uuu[0][j+1] = vvv[0][j+1] =*/ rhs0(-1+1, j+1)  = lhs0(-1+1, j+1) = 1;
-            /*uuu[rows+1][j+1] = vvv[rows+1][j+1] =*/ rhs0(rows+1,j+1) = lhs0(rows+1,j+1)= 1;
+            /*uuu[0][j+1] = vvv[0][j+1] =*/ //rhs0(-1+1, j+1)  = lhs0(-1+1, j+1) = 0;
+            /*uuu[rows+1][j+1] = vvv[rows+1][j+1] =*/ //rhs0(rows+1,j+1) = lhs0(rows+1,j+1)= 0;
+            rhs0(-1+1, j+1)  = rhs0(rows,j+1);
+            lhs0(-1+1, j+1)  = lhs0(rows,j+1);
+            rhs0(rows+1, j+1) = rhs0(1, j+1);
+            lhs0(rows+1, j+1) = lhs0(1, j+1) ;
         }
-        for( int i = 0; i < rows ; i++)
+        for( int i = -1; i < rows+1 ; i++)
         {
-            /*uuu[i+1][0] = vvv[i+1][0] =*/ rhs0( i+1, -1+1)   = lhs0(i+1, -1+1) = 1;
-            /*uuu[i+1][cols+1] = uuu[i+1][cols+1] =*/ rhs0( i+1, cols+1) = lhs0(i+1,cols+1)= 1;
+            /*uuu[i+1][0] = vvv[i+1][0] =*/ rhs0( i+1, -1+1)   = lhs0(i+1, -1+1) = 0;
+            /*uuu[i+1][cols+1] = uuu[i+1][cols+1] =*/ rhs0( i+1, cols+1) = lhs0(i+1,cols+1)= 0;
+            /*
+            rhs0(i+1, -1+1)  = rhs0(i+1, cols);
+            lhs0(i+1, -1+1)  = lhs0(i+1, cols);
+            rhs0(i+1, cols+1) = rhs0(i+1, 1);
+            lhs0(i+1, cols+1) = lhs0(i+1, 1);
+            */
         }
         for( size_t i = 1; i < (size_t)rows+1; i++)
             for( size_t j = 1; j < (size_t)cols +1; j++)
@@ -104,6 +123,7 @@ int main()
     t.tic();
     for( unsigned i = 0; i < loop; i++)
     {
+        /*
         for( int j = -1; j < cols + 1; j++)
         {
             rhs.at(-1, j)  = lhs.at(-1, j) = 1;
@@ -114,6 +134,7 @@ int main()
             rhs.at( i, -1)   = lhs.at(i, -1) = 1;
             rhs.at( i, cols) = lhs.at(i,cols)= 1;
         }
+        */
         lhs.initGhostCells();
         rhs.initGhostCells();
         arakawa( lhs, rhs, jac);
@@ -121,9 +142,12 @@ int main()
     t.toc();
     cout << "Arakawa scheme took " <<t.diff() <<" seconds\n";
     if( jac!=jac0)
-        //cerr << "An error occured!\n" << jac << "\n"<<jac0;
+        cerr << "An error occured!\n";// << jac << "\n"<<jac0;
 
     cout << "Sum jac "<<sum(jac)<<"\n";
+    cout << "Sum f*jac "<<sum(lhs, jac)<<"\n";
+    cout << "Sum g*jac "<<sum(rhs, jac)<<"\n";
+
 
     //cout << "Completely with boundary function\n";
     //t.tic();
