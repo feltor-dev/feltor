@@ -24,15 +24,19 @@ int main( int argc, char* argv[])
         return;
     }
 
-    hid_t file = H5Fopen( argv[1], H5F_ACC_RDONLY, H5P_DEFAULT);
-    hsize_t nlinks = file::getNumObjs( file);
-    std::string name = file::getName( file, 0);
     std::string in;
+    file::T5rdonly t5file( argv[1], in);
+    unsigned nlinks = t5file.get_size();
+    /*
+    //hid_t file = H5Fopen( argv[1], H5F_ACC_RDONLY, H5P_DEFAULT);
+    //hsize_t nlinks = file::getNumObjs( file);
+    //std::string name = file::getName( file, 0); 
     
-    herr_t  status;
-    hsize_t dims[2]; 
-    in.resize( 10000);
-    status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
+    //herr_t  status;
+    //hsize_t dims[2]; 
+    //in.resize( 10000);
+    //status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
+    */
 
     const Parameters p( file::read_input( in));
     p.display();
@@ -46,19 +50,31 @@ int main( int argc, char* argv[])
     unsigned index = 1;
     std::cout << "PRESS N FOR NEXT FRAME!\n";
     std::cout << "PRESS P FOR PREVIOUS FRAME!\n";
-    unsigned num_entries = (p.maxout+1)*p.itstp;//actually too large
-    std::cout << num_entries<<"\n";
-    std::vector<double> mass( num_entries+2, 0.), energy( mass); 
-    std::vector<double> diffusion( num_entries), dissipation( num_entries), massAcc( num_entries), energyAcc( num_entries);
-    hid_t group;
+    /*
+    //unsigned num_entries = (p.maxout+1)*p.itstp;//actually too large
+    //std::cout << num_entries<<"\n";
+    //std::vector<double> mass( num_entries+2, 0.), energy( mass); 
+    //std::vector<double> diffusion( num_entries), dissipation( num_entries), massAcc( num_entries), energyAcc( num_entries);
+    //hid_t group;
     //read xfiles
-    group = H5Gopen( file, "xfiles", H5P_DEFAULT);
-    H5LTread_dataset_double( group, "mass", &mass[1] );
-    H5LTread_dataset_double( group, "energy", &energy[1] );
-    H5LTread_dataset_double( group, "diffusion", &diffusion[0] );
-    H5LTread_dataset_double( group, "dissipation", &dissipation[0] );
-    H5Gclose( group);
-    for(unsigned i=0; i<num_entries; i++ )
+    */
+    std::vector<double> mass, energy, diffusion, dissipation, massAcc, energyAcc;
+    t5file.get_xfile( mass, "mass");
+    t5file.get_xfile( energy, "energy");
+    t5file.get_xfile( diffusion, "diffusion");
+    t5file.get_xfile( dissipation, "dissipation");
+    massAcc.resize(mass.size()), energyAcc.resize(mass.size());
+    mass.insert(mass.begin(), 0), mass.push_back(0);
+    energy.insert( energy.begin(), 0), energy.push_back(0);
+    /*
+    //group = H5Gopen( file, "xfiles", H5P_DEFAULT);
+    //H5LTread_dataset_double( group, "mass", &mass[1] );
+    //H5LTread_dataset_double( group, "energy", &energy[1] );
+    //H5LTread_dataset_double( group, "diffusion", &diffusion[0] );
+    //H5LTread_dataset_double( group, "dissipation", &dissipation[0] );
+    //H5Gclose( group);
+    */
+    for(unsigned i=0; i<massAcc.size(); i++ )
     {
         massAcc[i] = (mass[i+2]-mass[i])/2./p.dt; //first column
         //if( i < 10 || i > num_entries - 20)
@@ -80,12 +96,14 @@ int main( int argc, char* argv[])
             }
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
         */
+    std::cout<< "Hello world\n";
     while (running && index < p.maxout + 2 )
     {
         t.tic();
-        name = file::getName( file, index);
-        group = H5Gopen( file, name.data(), H5P_DEFAULT);
-        status = H5LTread_dataset_double( group, "electrons", &input[0] );
+        //name = file::getName( file, index);
+        //group = H5Gopen( file, name.data(), H5P_DEFAULT);
+        //status = H5LTread_dataset_double( group, "electrons", &input[0] );
+        t5file.get_field( input, "electrons", index);
         t.toc();
         //std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
         t.tic();
@@ -107,7 +125,8 @@ int main( int argc, char* argv[])
 
         //transform phi
         t.tic();
-        status = H5LTread_dataset_double(group, "potential", &input[0] );
+        //status = H5LTread_dataset_double(group, "potential", &input[0] );
+        t5file.get_field( input, "potential", index);
         //Vorticity is \curl \bm{u}_E \approx \frac{\Delta\phi}{B}
         dg::blas2::gemv( laplacianM, input, visual);
         input.swap( visual);
@@ -123,11 +142,12 @@ int main( int argc, char* argv[])
         //draw phi and swap buffers
         w.title() <<"omega / "<<colors.scale()<<"\t";
         w.title() << std::fixed; 
-        w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
+        //w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
+        w.title() << " && time = "<<t5file.get_time( index);
         w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout <<"2nd half took          "<<t.diff()<<"s\n";
-        H5Gclose( group);
+        //H5Gclose( group);
         bool waiting = true;
         do
         {
@@ -146,6 +166,6 @@ int main( int argc, char* argv[])
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);
     }
-    H5Fclose( file);
+    //H5Fclose( file);
     return 0;
 }
