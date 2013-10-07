@@ -1,6 +1,7 @@
 #include <vector>
 #include <cusp/coo_matrix.h>
 #include "grid.cuh"
+#include "xspacelib.cuh"
 #include "matrix_traits_thrust.h"
 
 namespace dg{
@@ -12,6 +13,7 @@ template<class T>
 struct HelperMatrix
 {
     HelperMatrix( unsigned m, unsigned n):rows_(m), cols_(n), data_(m*n){}
+    HelperMatrix( unsigned m, unsigned n, T value):rows_(m), cols_(n), data_(m*n, value){}
     /*! @brief access operator
      *
      * A range check is performed if DG_DEBUG is defined
@@ -155,6 +157,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection1d( const Grid1d<dou
 }
 cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<double>& g1, const Grid<double>& g2)
 {
+    //TODO: this might be simplified, works by testing
     assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
     assert( g1.y0() == g2.y0()); assert( g1.y1() == g2.y1());
     assert( g2.Nx() % g1.Nx() == 0);
@@ -166,10 +169,30 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<doubl
     Grid1d<double> g2x( g2.x0(), g2.x1(), g2.n(), g2.Nx()); 
     Grid1d<double> g2y( g2.y0(), g2.y1(), g2.n(), g2.Ny());
     
+    //perumte values to lie contiguously 
+    typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
+    //thrust::host_vector<int> map = dg::create::permutationMap( g1.n(), 1, 1);
+    //Matrix permF = dg::create::permutation( map);  
+    thrust::host_vector<int> map = dg::create::scatterMap( g2.n(), Nfx, Nfy);
+    Matrix permB = dg::create::permutation( map); //permute back
+
     detail::HelperMatrix<double> px( dg::create::detail::projection( g1.n(), g2.n(), Nfx));
     detail::HelperMatrix<double> py( dg::create::detail::projection( g1.n(), g2.n(), Nfy));
     detail::HelperMatrix<double> p = kronecker( py, px); 
-    return dg::create::detail::diagonal_matrix( g1.Nx()*g1.Ny(), p);
+    Matrix project = dg::create::detail::diagonal_matrix( 1, p);
+    Matrix C( project);
+    //cusp::multiply( project, permF, C);
+    cusp::multiply( permB, C, project);
+    //copy C to a HelperMatrix
+    detail::HelperMatrix<double> pp( project.num_rows, project.num_cols, 0.); 
+    for( unsigned i=0; i<project.num_entries; i++)
+        pp(project.row_indices[i], project.column_indices[i]) = project.values[i];
+    project = dg::create::detail::diagonal_matrix( g1.Nx()*g1.Ny(), pp);
+
+    //std::cout << project.num_rows <<" "<<project.num_cols<<std::endl;
+    return project;
+
+    
 }
 
 
