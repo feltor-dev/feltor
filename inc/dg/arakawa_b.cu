@@ -60,13 +60,13 @@ int main()
     DVec w2d = create::w2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
-    DVec lhs = expand ( left, grid), jac(lhs);
-    DVec rhs = expand ( right,grid);
-    const DVec sol = expand( jacobian, grid );
-    DVec eins = expand( one, grid );
+    DVec lhs = evaluate ( left, grid), jac(lhs);
+    DVec rhs = evaluate ( right,grid);
+    const DVec sol = evaluate( jacobian, grid );
+    DVec eins = evaluate( one, grid );
 
 
-    Arakawa<DVec> arakawa( grid);
+    ArakawaX<DVec> arakawa( grid);
     t.tic(); 
     arakawa( lhs, rhs, jac);
     t.toc();
@@ -75,9 +75,9 @@ int main()
 
 
     cout << scientific;
-    cout << "Mean     Jacobian is "<<blas2::dot( eins, s2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs, s2d, jac)<<"\n";
-    cout << "Mean   n*Jacobian is "<<blas2::dot( lhs, s2d, jac)<<"\n";
+    cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
+    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs, w2d, jac)<<"\n";
+    cout << "Mean   n*Jacobian is "<<blas2::dot( lhs, w2d, jac)<<"\n";
     blas1::axpby( 1., sol, -1., jac);
     cout << "Distance to solution "<<sqrt(blas2::dot( s2d, jac))<<endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc

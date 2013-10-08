@@ -81,7 +81,7 @@ thrust::host_vector<int> scatterMap(unsigned n, unsigned Nx, unsigned Ny )
  *
  * @return map of indices
  */
-thrust::host_vector<int> permutationMap( unsigned n, unsigned Nx, unsigned Ny )
+thrust::host_vector<int> gatherMap( unsigned n, unsigned Nx, unsigned Ny )
 {
     thrust::host_vector<int> map( n*n*Nx*Ny);
     for( unsigned i=0; i<Ny; i++)
@@ -92,6 +92,20 @@ thrust::host_vector<int> permutationMap( unsigned n, unsigned Nx, unsigned Ny )
     return map;
 }
 
+/**
+ * @brief Create a permutation matrix from a permutation map
+ *
+ * A permutation can be done in two ways. Either you name to every index in a vector
+ * an index where this place should go to ( scatter) or you name to every index the 
+ * index of the position that comes to this place (gather). A Scatter is the
+ * inverse of a Gather operation with the same index-map. 
+ * When transformed to a
+ * permutation matrix scatter is the inverse ( = transpose) of gather. (Permutation
+ * matrices are orthogonal and sparse)
+ * @param map index map
+ *
+ * @return Permutation matrix
+ */
 cusp::coo_matrix<int, double, cusp::host_memory> permutation( const thrust::host_vector<int>& map)
 {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
@@ -102,22 +116,16 @@ cusp::coo_matrix<int, double, cusp::host_memory> permutation( const thrust::host
     p.row_indices = rows;
     p.column_indices = cols;
     p.values = values;
+    p.sort_by_row_and_column(); //important!!
     return p;
 }
 
 cusp::coo_matrix<int, double, cusp::host_memory> permutationT( const thrust::host_vector<int>& map)
 {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    //Matrix p = permutation( map);
-    //p.row_indices.swap( p.column_indices);
-    //return p;
-    Matrix p( map.size(), map.size(), map.size());
-    cusp::array1d<int, cusp::host_memory> rows( thrust::make_counting_iterator<int>(0), thrust::make_counting_iterator<int>(map.size()));
-    cusp::array1d<int, cusp::host_memory> cols( map.begin(), map.end());
-    cusp::array1d<double, cusp::host_memory> values(map.size(), 1.);
-    p.row_indices = cols;
-    p.column_indices = rows;
-    p.values = values;
+    Matrix p = permutation( map);
+    p.row_indices.swap( p.column_indices);
+    p.sort_by_row_and_column(); //important!!
     return p;
 }
 
@@ -149,7 +157,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space
     Matrix backward = dg::tensor( g.Nx()*g.Ny(), backward2d);
 
     //you get a permutation matrix by setting the column indices to the permutation values and the values to 1
-    thrust::host_vector<int> map = dg::create::permutationMap( g.n(), g.Nx(), g.Ny());
+    thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
+    Matrix p = permutation( map);
+    /*
     Matrix permutation( map.size(), map.size(), map.size());
     cusp::array1d<int, cusp::host_memory> rows( thrust::make_counting_iterator<int>(0), thrust::make_counting_iterator<int>(map.size()));
     cusp::array1d<int, cusp::host_memory> cols( map.begin(), map.end());
@@ -157,9 +167,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space
     permutation.row_indices = rows;
     permutation.column_indices = cols;
     permutation.values = values;
+    */
     Matrix scatter( permutation);
-
-    cusp::multiply( permutation, backward, scatter);
+    cusp::multiply( p, backward, scatter);
     return scatter;
 
 }
