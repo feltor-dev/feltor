@@ -155,41 +155,45 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection1d( const Grid1d<dou
     detail::HelperMatrix<double> p = dg::create::detail::projection( g1.n(), g2.n(), Nf);
     return dg::create::detail::diagonal_matrix( g1.N(), p);
 }
+/**
+ * @brief Create a 2D projection matrix onto a finer grid
+ *
+ * Grid space must be equal. Nx and Ny of the second grid must be multiples of 
+ * Nx and Ny of the first grid.
+ * @param g1 Grid of the original vector
+ * @param g2 Grid of the target vector
+ *
+ * @return Projection matrix
+ */
 cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<double>& g1, const Grid<double>& g2)
 {
-    //TODO: this might be simplified, works by testing
+    //TODO: this might be simplified
     assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
     assert( g1.y0() == g2.y0()); assert( g1.y1() == g2.y1());
     assert( g2.Nx() % g1.Nx() == 0);
     assert( g2.Ny() % g1.Ny() == 0);
     unsigned Nfx = g2.Nx()/g1.Nx();
     unsigned Nfy = g2.Ny()/g1.Ny();
-    Grid1d<double> g1x( g1.x0(), g1.x1(), g1.n(), g1.Nx()); 
-    Grid1d<double> g1y( g1.y0(), g1.y1(), g1.n(), g1.Ny());
-    Grid1d<double> g2x( g2.x0(), g2.x1(), g2.n(), g2.Nx()); 
-    Grid1d<double> g2y( g2.y0(), g2.y1(), g2.n(), g2.Ny());
     
-    //perumte values to lie contiguously 
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    //thrust::host_vector<int> map = dg::create::permutationMap( g1.n(), 1, 1);
-    //Matrix permF = dg::create::permutation( map);  
     thrust::host_vector<int> map = dg::create::scatterMap( g2.n(), Nfx, Nfy);
     Matrix permB = dg::create::permutation( map); //permute back
 
     detail::HelperMatrix<double> px( dg::create::detail::projection( g1.n(), g2.n(), Nfx));
     detail::HelperMatrix<double> py( dg::create::detail::projection( g1.n(), g2.n(), Nfy));
     detail::HelperMatrix<double> p = kronecker( py, px); 
+    //copy p to cusp matrix
     Matrix project = dg::create::detail::diagonal_matrix( 1, p);
     Matrix C( project);
-    //cusp::multiply( project, permF, C);
+    //permutation
     cusp::multiply( permB, C, project);
-    //copy C to a HelperMatrix
+
+    //copy C to a HelperMatrix and create matrix for all cells
     detail::HelperMatrix<double> pp( project.num_rows, project.num_cols, 0.); 
     for( unsigned i=0; i<project.num_entries; i++)
         pp(project.row_indices[i], project.column_indices[i]) = project.values[i];
     project = dg::create::detail::diagonal_matrix( g1.Nx()*g1.Ny(), pp);
 
-    //std::cout << project.num_rows <<" "<<project.num_cols<<std::endl;
     return project;
 
     
@@ -197,4 +201,54 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<doubl
 
 
 }//namespace create
+
+unsigned gcd( unsigned a, unsigned b)
+{
+    unsigned r2 = std::max(a,b);
+    unsigned r1 = std::min(a,b);
+    while( r1!=0)
+    {
+        r2 = r2%r1;
+        std::swap( r1, r2);
+    }
+    return r2;
+}
+unsigned lcm( unsigned a, unsigned b)
+{
+    unsigned g = gcd( a,b);
+    return a*b/g;
+}
+
+template <typename container>
+struct DifferenceNorm
+{
+    typedef typename container::value_type value_type;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
+    typedef cusp::csr_matrix<int, double, MemorySpace> Matrix;
+    DifferenceNorm( const Grid<double>& g1, const Grid<double>& g2)
+    {
+        //find common grid
+        Grid<double> gC(    g1.x0(), g1.x1(), g1.y0(), g1.y1(), 
+                            std::min( g1.n(), g2.n()), 
+                            lcm( g1.Nx(), g2.Nx()), 
+                            lcm( g1.Ny(), g2.Ny()) );
+        p1 = dg::create::projection2d( g1, gC);
+        p2 = dg::create::projection2d( g2, gC);
+        w2d = dg::create::w2d( gC); v11 = w2d, v22 = w2d;
+    }
+    double operator()( const container& v1, const container& v2)
+    {
+        blas2::gemv( p1, v1, v11);
+        blas2::gemv( p2, v2, v22);
+        blas1::axpby( 1., v11, -1., v22, v11);
+        return sqrt(blas2::dot( w2d, v11));
+
+    }
+  private:
+    container w2d, v11, v22;
+    Matrix p1, p2;
+};
+
+
+
 }//namespace dg

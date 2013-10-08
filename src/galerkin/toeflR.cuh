@@ -35,7 +35,8 @@ struct ToeflR
     typedef typename container::value_type value_type;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix; //fastest device Matrix
+    typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
+    //typedef in ArakawaX ??
 
     /**
      * @brief Construct a ToeflR solver object
