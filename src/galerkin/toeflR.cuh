@@ -289,7 +289,6 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     std::cout << "# of pcg iterations for phi \t"<< number <<"\t";
     t.toc();
     std::cout<< "took \t"<<t.diff()<<"s\n";
-    t.tic();
 #endif //DG_DEBUG
 
     return phi[0];

@@ -36,10 +36,11 @@ namespace dg{
 namespace create{
 ///@addtogroup utilities
 ///@{
+//TODO make one scatterMap for n, m and then apply to projection
 //to be used in thrust::scatter and thrust::gather (Attention: don't scatter inplace -> Pb with n>1)
 //(the inverse is its transpose) 
 /**
- * @brief Map for scatter operations on dg formatted vectors
+ * @brief Index Map for scatter operation on dg formatted vectors
 
  In 2D the vector elements of an x-space dg vector in one cell  lie
  contiguously in memory. Sometimes you want elements in the x-direction 
@@ -47,26 +48,32 @@ namespace create{
  to permute elements in exactly that way.
  The elements of the map contain the indices where this place goes to
  i.e. w[m[i]] = v[i]
+ Scatter from not-contiguous to contiguous or Gather from contiguous to non-contiguous
  
- * @param n # of polynomial coefficients
+ * @param nx # of polynomial coefficients in x
+ * @param ny # of polynomial coefficients in y
  * @param Nx # of points in x
  * @param Ny # of points in y
  *
  * @return map of indices
  */
-thrust::host_vector<int> scatterMap(unsigned n, unsigned Nx, unsigned Ny )
+thrust::host_vector<int> scatterMap(unsigned nx, unsigned ny, unsigned Nx, unsigned Ny )
 {
-    thrust::host_vector<int> map( n*n*Nx*Ny);
+    thrust::host_vector<int> map( nx*ny*Nx*Ny);
     for( unsigned i=0; i<Ny; i++)
         for( unsigned j=0; j<Nx; j++)
-            for( unsigned k=0; k<n; k++)
-                for( unsigned l=0; l<n; l++)
-                    map[ i*Nx*n*n + j*n*n + k*n + l] =(int)( i*Nx*n*n + k*Nx*n + j*n + l);
+            for( unsigned k=0; k<ny; k++)
+                for( unsigned l=0; l<nx; l++)
+                    map[ i*Nx*nx*ny + j*nx*ny + k*nx + l] =(int)( i*Nx*nx*ny + k*Nx*nx + j*nx + l);
     return map;
+}
+thrust::host_vector<int> scatterMap( unsigned n, unsigned Nx, unsigned Ny)
+{
+    return scatterMap( n, n, Nx, Ny);
 }
 
 /**
- * @brief Map for gather operations on dg formatted vectors
+ * @brief Index map for gather operations on dg formatted vectors
 
  In 2D the vector elements of an x-space dg vector in one cell  lie
  contiguously in memory. Sometimes you want elements in the x-direction 
@@ -74,6 +81,7 @@ thrust::host_vector<int> scatterMap(unsigned n, unsigned Nx, unsigned Ny )
  to permute elements in exactly that way.
  The elements of the map contain the indices that come at that place
  i.e. w[i] = v[m[i]]
+ Gather from not-contiguous to contiguous or Scatter from contiguous to non-contiguous
  *
  * @param n # of polynomial coefficients
  * @param Nx # of points in x
@@ -106,7 +114,7 @@ thrust::host_vector<int> gatherMap( unsigned n, unsigned Nx, unsigned Ny )
  *
  * @return Permutation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> permutation( const thrust::host_vector<int>& map)
+cusp::coo_matrix<int, double, cusp::host_memory> gather( const thrust::host_vector<int>& map)
 {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
     Matrix p( map.size(), map.size(), map.size());
@@ -120,10 +128,10 @@ cusp::coo_matrix<int, double, cusp::host_memory> permutation( const thrust::host
     return p;
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> permutationT( const thrust::host_vector<int>& map)
+cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vector<int>& map)
 {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    Matrix p = permutation( map);
+    Matrix p = gather( map);
     p.row_indices.swap( p.column_indices);
     p.sort_by_row_and_column(); //important!!
     return p;
@@ -158,7 +166,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space
 
     //you get a permutation matrix by setting the column indices to the permutation values and the values to 1
     thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
-    Matrix p = permutation( map);
+    Matrix p = gather( map);
     /*
     Matrix permutation( map.size(), map.size(), map.size());
     cusp::array1d<int, cusp::host_memory> rows( thrust::make_counting_iterator<int>(0), thrust::make_counting_iterator<int>(map.size()));
@@ -168,7 +176,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space
     permutation.column_indices = cols;
     permutation.values = values;
     */
-    Matrix scatter( permutation);
+    Matrix scatter( p);
     cusp::multiply( p, backward, scatter);
     return scatter;
 

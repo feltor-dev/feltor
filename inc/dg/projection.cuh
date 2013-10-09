@@ -111,21 +111,22 @@ detail::HelperMatrix<double> projection( unsigned n_old, unsigned n_new, unsigne
     assert( N > 0);
     dg::Grid1d<double> g_( -1, 1, n_new, N);
     thrust::host_vector<double> x = dg::create::abscissas( g_);
-    unsigned rows = n_new*N, cols_i = n_new, cols = n_old;
-    detail::HelperMatrix<double> project( rows,cols_i); 
+    unsigned rows = n_new*N, cols_i = n_new;
+    detail::HelperMatrix<double> project( rows, cols_i); 
     for( unsigned k=0; k<rows; k++)
         for( unsigned j=0; j<cols_i; j++)
         {
             project( k, j) = detail::LegendreP( j, x[k]) ;
         }
-            
-    detail::HelperMatrix<double> total( rows,cols);
-    DLT<double> dlt = g_.dlt();
+    detail::HelperMatrix<double> total( rows, n_old, 0.);
+    dg::Grid1d<double> g2( -1, 1, n_old, 1);
+    DLT<double> dlt = g2.dlt();
     //multiply p_ki*f_ij
     for( unsigned k=0; k<rows; k++)
-        for( unsigned j=0; j<cols; j++)
+        for( unsigned j=0; j<n_old; j++)
             for( unsigned i=0; i<cols_i; i++)
-                total( k, j) += project( k, i)*dlt.forward()[i*cols+j];
+                total( k, j) += project( k, i)*dlt.forward()[i*n_old+j];
+
     return total;
 }
 
@@ -167,7 +168,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection1d( const Grid1d<dou
  */
 cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<double>& g1, const Grid<double>& g2)
 {
-    //TODO: this might be simplified
+    //TODO: projection in y direction needs permutation
     assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
     assert( g1.y0() == g2.y0()); assert( g1.y1() == g2.y1());
     assert( g2.Nx() % g1.Nx() == 0);
@@ -176,27 +177,30 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<doubl
     unsigned Nfy = g2.Ny()/g1.Ny();
     
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    thrust::host_vector<int> map = dg::create::scatterMap( g2.n(), Nfx, Nfy);
-    Matrix permB = dg::create::permutation( map); //permute back
+    thrust::host_vector<int> map1 = dg::create::scatterMap( g2.n()*Nfx, g2.n()*Nfy, g1.Nx(), g1.Ny()); //map to permute continuous in one cell to continuous in all cells
+    thrust::host_vector<int> map2 = dg::create::scatterMap( g2.n(), g2.Nx(), g2.Ny());//map to permute contiguous to new grid
+    Matrix perm1 = dg::create::scatter( map1); 
+    Matrix perm2 = dg::create::gather( map2); 
+    Matrix perm;
+    //permutation
+    cusp::multiply( perm2, perm1, perm);
 
     detail::HelperMatrix<double> px( dg::create::detail::projection( g1.n(), g2.n(), Nfx));
     detail::HelperMatrix<double> py( dg::create::detail::projection( g1.n(), g2.n(), Nfy));
     detail::HelperMatrix<double> p = kronecker( py, px); 
     //copy p to cusp matrix
-    Matrix project = dg::create::detail::diagonal_matrix( 1, p);
-    Matrix C( project);
-    //permutation
-    cusp::multiply( permB, C, project);
+    Matrix project = dg::create::detail::diagonal_matrix( g1.Nx()*g1.Ny(), p);
+    cusp::multiply( perm, project, perm1);
 
+    /*
     //copy C to a HelperMatrix and create matrix for all cells
     detail::HelperMatrix<double> pp( project.num_rows, project.num_cols, 0.); 
     for( unsigned i=0; i<project.num_entries; i++)
         pp(project.row_indices[i], project.column_indices[i]) = project.values[i];
     project = dg::create::detail::diagonal_matrix( g1.Nx()*g1.Ny(), pp);
+    */
 
-    return project;
-
-    
+    return perm1;
 }
 
 
@@ -235,16 +239,24 @@ struct DifferenceNorm
         p1 = dg::create::projection2d( g1, gC);
         p2 = dg::create::projection2d( g2, gC);
         w2d = dg::create::w2d( gC); v11 = w2d, v22 = w2d;
+        wg1 = dg::create::w2d( g1); 
+        wg2 = dg::create::w2d( g2); 
     }
     double operator()( const container& v1, const container& v2)
     {
+        double f2, g2, fg;
+        f2 = blas2::dot( wg1, v1);
+        g2 = blas2::dot( wg2, v2);
+
         blas2::gemv( p1, v1, v11);
         blas2::gemv( p2, v2, v22);
-        blas1::axpby( 1., v11, -1., v22, v11);
-        return sqrt(blas2::dot( w2d, v11));
+        fg = blas2::dot( v11, w2d, v22);
+        return sqrt( f2-2.*fg + g2);
+                 
 
     }
   private:
+    container wg1, wg2;
     container w2d, v11, v22;
     Matrix p1, p2;
 };
