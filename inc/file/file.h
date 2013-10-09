@@ -200,6 +200,7 @@ struct T5rdonly
     template <class T>
     void get_field( T& field, const char* name, unsigned idx)
     {
+        assert( idx > 0); //idx 0 is the inputfile
         std::string grpName = file::getName( file_, idx);//get group name
         hid_t group = H5Gopen( file_, grpName.data(), H5P_DEFAULT);
         hsize_t size[2]; //get dataset size
@@ -226,7 +227,7 @@ struct T5rdonly
      *
      * @return # of outputs
      */
-    unsigned get_size() { return file::getNumObjs( file_);}
+    unsigned get_size() { return file::getNumObjs( file_) -2;}
     /**
      * @brief Get a dataset of the xfiles
      *

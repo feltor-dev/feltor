@@ -18,6 +18,8 @@ toefl_video: toefl_video.cu
 
 toefl_analytics: toefl_analytics.cu 
 	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
+toefl_compare: toefl_compare.cu 
+	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
 
 innto_video: innto_video.cpp
 	$(CXX) -O3  $< -o $@ -std=c++0x $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl -lfftw3
