@@ -251,7 +251,7 @@ struct DifferenceNorm
         blas2::gemv( p1, v1, v11);
         blas2::gemv( p2, v2, v22);
         fg = blas2::dot( v11, w2d, v22);
-        return sqrt( f2-2.*fg + g2);
+        return sqrt( f2 - 2.*fg + g2);
     }
     double sum( const container& v1, const container& v2)
     {
@@ -262,7 +262,7 @@ struct DifferenceNorm
         blas2::gemv( p1, v1, v11);
         blas2::gemv( p2, v2, v22);
         fg = blas2::dot( v11, w2d, v22);
-        return sqrt( f2+2.*fg + g2);
+        return sqrt( f2 + 2.*fg + g2);
     }
   private:
     container wg1, wg2;
