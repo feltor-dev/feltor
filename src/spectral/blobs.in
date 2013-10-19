@@ -10,10 +10,10 @@ large as well as the perturbation amplitude.
 
 ---------------------Algorithmic parameters-------------------
 1) nx (grid points in x)                =   1024    
-2) ny (grid points in y)                =   1024 
-3) dt (time step in units c_s/L_p)      =   2.0   
+2) ny (grid points in y)                =   1024
+3) dt (time step in units c_s/L_p)      =   3.0   
 ---------------------Boundary conditions----------------------
-4) ly (length of y in units of rho_s)         =   200   
+4) ly (length of y in units of rho_s)         =   400   
 5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   0     
 ---------------------Physical parameters----------------------
 6) mhw:1, ohw:0 (modified/ordinary HW) =   0       
@@ -21,7 +21,7 @@ large as well as the perturbation amplitude.
 8) nu  (artif. hyper-viscosity)        =   1e-3
 9) mcv (magnetic curvature)            =   0.0005
 -------------------------Species------------------------------
-10) n00 (perturbation amplitude)        =   0.1 
+10) n00 (perturbation amplitude)        =   0.5 
 11) g_e (e density gradient)            =   0.0     
 12) tau_i (Ti/Te)                       =   0.0     
 (Z of ions is always 1, g_i and a_i are computed from 
@@ -35,7 +35,7 @@ quasineutrality condition)
 ---------------------Miscellaneous----------------------------
 19) itstp (steps between output)        =   4      
 20) OMP_NUM_THREADS                     =   4      (4)
-21) blob_width ( sigma)                 =   5    (10)
+21) blob_width ( sigma)                 =   10    (10)
 22) # of outputs ( excluding first)     =   500
 23) x-position ( in units of lx)        =   0.25
 24) y-position ( in units of ly)        =   0.5
