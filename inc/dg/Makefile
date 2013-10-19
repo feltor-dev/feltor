@@ -1,4 +1,4 @@
-system=home
+system=leo3
 device=gpu
 
 INCLUDE = -I../ # other project libraries
@@ -11,7 +11,7 @@ GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm
 endif
 
 ifeq ($(strip $(system)),leo3)
-INCLUDE+= -I$(UIBK_CUSP_INC)
+INCLUDE+= -I$(HOME)/include
 GLFLAGS   = -lm
 endif
 
