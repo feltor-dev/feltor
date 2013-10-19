@@ -16,7 +16,7 @@ struct Shu
 {
     typedef typename container::value_type value_type;
     typedef container Vector;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
     Shu( const Grid<value_type>& grid, double D, double eps);

@@ -1,7 +1,7 @@
 system=leo3 # Use as Makefile parameter!
 device=gpu
 
-INCLUDE = -I../../inc # other project libraries
+INCLUDE = -I../../inc/ # other project libraries
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -45,7 +45,7 @@ toeflR: toeflR.cu toeflR.cuh
 	echo "Attention: No compiler warnings are issued!" 
 
 toefl_hpc: toefl_hpc.cu toeflR.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean

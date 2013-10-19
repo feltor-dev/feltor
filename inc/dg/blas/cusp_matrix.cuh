@@ -31,6 +31,18 @@ inline void doSymv( const Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, T
     cusp::multiply( m, cx, cy);
 }
 
+template< class Matrix, class Vector>
+inline void doGemv( const Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, ThrustVectorTag  )
+{
+#ifdef DG_DEBUG
+    assert( m.num_rows == y.size() );
+    assert( m.num_cols == x.size() );
+#endif //DG_DEBUG
+    cusp::array1d_view< typename Vector::const_iterator> cx( x.cbegin(), x.cend());
+    cusp::array1d_view< typename Vector::iterator> cy( y.begin(), y.end());
+    cusp::multiply( m, cx, cy);
+}
+
 } //namespace detail
 } //namespace blas2
 } //namespace dg

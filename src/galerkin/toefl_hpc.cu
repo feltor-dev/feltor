@@ -37,13 +37,14 @@ int main( int argc, char* argv[])
         input = file::read_file( argv[1]);
     }
     const Parameters p( v);
+    p.display( std::cout);
     if( p.k != k)
     {
         std::cerr << "ERROR: k doesn't match: "<<k<<" (code) vs. "<<p.k<<" (input)\n";
         return -1;
     }
 
-    //set up computations
+    ////////////////////////////////set up computations///////////////////////////
     dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     dg::ToeflR<dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
@@ -58,54 +59,102 @@ int main( int argc, char* argv[])
         thrust::transform( y0[1].begin(), y0[1].end(), y0[1].begin(), dg::PLUS<double>(+1));
         test.log( y0, y0); //transform to logarithmic values
     }
-    /////////////////////////////set up hdf5/////////////////////////////////
-    dg::HVec output( y1[0]); //intermediate transport location
-    hid_t   file, grp;
-    herr_t  status;
-    hsize_t dims[] = { grid.n()*grid.Ny(), grid.n()*grid.Nx() };
-    file = H5Fcreate( argv[2], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    hsize_t size = input.size();
-    status = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data()); //name should precede t so that reading is easier
-    //////////////////first step to initialise timestepper///////////////////
+    //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
     ab.init( test, y0, p.dt);
     ab( test, y0, y1, p.dt);
-    y0.swap( y1);
-    std::vector<double> mass, diffusion, energy, dissipation;
-    ///////////////////////////////////Timeloop////////////////////////////////
+    y0.swap( y1); //y1 now contains value at zero time
+    /////////////////////////////set up hdf5/////////////////////////////////
+    file::T5trunc t5file( argv[2], input);
+    dg::HVec output[3] = { y1[0], y1[0], y1[0]}; //intermediate transport locations
+    /*
+    //hid_t   file, grp;
+    //herr_t  status;
+    //hsize_t dims[] = { grid.n()*grid.Ny(), grid.n()*grid.Nx() };
+    //file = H5Fcreate( argv[2], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    //hsize_t size = input.size();
+    //status = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data()); //name should precede t so that reading is easier
+    //std::vector<double> mass, diffusion, energy, dissipation;
+    ///////////////////////////////////First Output (t = 0)/////////////////////////
+    //output all three fields
+    //grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+    */
+    if( p.global)
+        test.exp( y1,y1); //transform to correct values
+    output[0] = y1[0], output[1] = y1[1], output[2] = test.potential()[0]; //electrons
+    t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
+    /*
+    //status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
+    //output = y1[1]; //ions
+    //status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
+    //output = test.potential()[0];
+    //status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
+    //H5Gclose( grp);
+    */
+    if( p.global) 
+    {
+        t5file.append( test.mass(), test.mass_diffusion(), test.energy(), test.energy_diffusion());
+        /*
+        //mass.push_back( test.mass());
+        //diffusion.push_back( test.mass_diffusion());
+        //energy.push_back( test.energy()); 
+        //dissipation.push_back( test.energy_diffusion());
+        */
+    }
+    ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
     try
     {
-    for( unsigned i=0; i<p.maxout+1; i++)
+#ifdef DG_BENCHMARK
+    unsigned step = 0;
+#endif //DG_BENCHMARK
+    for( unsigned i=0; i<p.maxout; i++)
     {
-        //output all three fields
-        if( p.global)
-            test.exp( y1,y1); //transform to logarithmic values
-        grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-        output = y1[0]; //electrons
-        status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
-        output = y1[1]; //ions
-        status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
-        output = test.potential()[0];
-        status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
-        H5Gclose( grp);
 
+#ifdef DG_BENCHMARK
+        dg::Timer ti;
+        ti.tic();
+#endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
+            ab( test, y0, y1, p.dt);
+            y0.swap( y1); //attention on -O3 ?
             //store accuracy details
             if( p.global) 
             {
-                mass.push_back( test.mass());
-                diffusion.push_back( test.mass_diffusion());
-                energy.push_back( test.energy()); 
-                dissipation.push_back( test.energy_diffusion());
+                t5file.append( test.mass(), test.mass_diffusion(), test.energy(), test.energy_diffusion());
+                /*
+                //mass.push_back( test.mass());
+                //diffusion.push_back( test.mass_diffusion());
+                //energy.push_back( test.energy()); 
+                //dissipation.push_back( test.energy_diffusion());
+                */
             }
-            ab( test, y0, y1, p.dt);
-            y0.swap( y1); //attention on -O3 ?
         }
         time += p.itstp*p.dt;
+        //output all three fields
+        if( p.global)
+            test.exp( y1,y1); //transform to correct values
+        output[0] = y1[0], output[1] = y1[1], output[2] = test.potential()[0]; //electrons
+        t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
+        /*
+        //grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        //output = y1[0]; //electrons
+        //status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
+        //output = y1[1]; //ions
+        //status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
+        //output = test.potential()[0];
+        //status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
+        //H5Gclose( grp);
+        */
+#ifdef DG_BENCHMARK
+        ti.toc();
+        step+=p.itstp;
+        std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
+        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+#endif//DG_BENCHMARK
     }
     }
     catch( dg::Fail& fail) { 
@@ -118,22 +167,25 @@ int main( int argc, char* argv[])
     double second = t.diff() - hour*3600 - minute*60;
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
-    std::cout <<"which is         \t"<<t.diff()/mass.size()<<"s/step\n";
+    std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+    /*
+    //std::cout << mass.size()<<"\n";
 
-    if( p.global)
-    {
-        grp = H5Gcreate( file, "xfiles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-        dims[0] = mass.size();//(p.maxout+1)*p.itstp;
-        status = H5LTmake_dataset_double( grp, "mass", 1,  dims, mass.data());
-        status = H5LTmake_dataset_double( grp, "diffusion", 1,  dims, diffusion.data());
-        status = H5LTmake_dataset_double( grp, "energy", 1,  dims, energy.data());
-        status = H5LTmake_dataset_double( grp, "dissipation", 1,  dims, dissipation.data());
-        H5Gclose( grp);
-    }
+    //if( p.global)
+    //{
+        //grp = H5Gcreate( file, "xfiles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        //dims[0] = mass.size();//(p.maxout+1)*p.itstp;
+        //status = H5LTmake_dataset_double( grp, "mass", 1,  dims, mass.data());
+        //status = H5LTmake_dataset_double( grp, "diffusion", 1,  dims, diffusion.data());
+        //status = H5LTmake_dataset_double( grp, "energy", 1,  dims, energy.data());
+        //status = H5LTmake_dataset_double( grp, "dissipation", 1,  dims, dissipation.data());
+        //H5Gclose( grp);
+    //}
 
     //writing takes the same time as device-host transfers
     ////////////////////////////////////////////////////////////////////
-    H5Fclose( file);
+    //H5Fclose( file);
+    */
 
     return 0;
 

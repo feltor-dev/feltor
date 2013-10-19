@@ -2,6 +2,7 @@
 #include <iomanip>
 
 #include "timer.cuh"
+#include <cusp/copy.h>
 #include <cusp/print.h>
 #include <cusp/hyb_matrix.h>
 
@@ -12,26 +13,27 @@
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
 
 const double lx = M_PI;
-const double ly = M_PI;
+const double ly = 2.*M_PI;
 //const double eps = 1e-3; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double initial( double x, double y) {return 0.;}
-double pol( double x, double y) {return 1. + sin(x)*sin(y); } //must be strictly positive
+double amp = 1;
+double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
 
-double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y);}
+double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
 
 using namespace std;
 
 //replace DVec with HVec and DMatrix with HMAtrix to compute on host vs device
-//typedef dg::DVec Vector;
-//typedef dg::DMatrix Matrix;
+typedef dg::DVec Vector;
+typedef dg::DMatrix Matrix;
 //typedef cusp::ell_matrix<int, double, cusp::device_memory> Matrix;
-typedef dg::HVec Vector;
-typedef dg::HMatrix Matrix;
+//typedef dg::HVec Vector;
+//typedef dg::HMatrix Matrix;
 int main()
 {
     dg::Timer t;
@@ -40,7 +42,7 @@ int main()
     cout << "Type n, Nx and Ny and epsilon! \n";
     cin >> n >> Nx >> Ny; //more N means less iterations for same error
     cin >> eps;
-    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
+    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::PER);
     Vector v2d = dg::create::v2d( grid);
     Vector w2d = dg::create::w2d( grid);
     //create functions A(chi) x = b
@@ -59,14 +61,20 @@ int main()
     cout << "Create Polarisation matrix!\n";
     t.tic();
     dg::HMatrix B_ = pol.create(chi);
+    //Matrix A = pol.create(chi);
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
     t.tic();
-    cusp::csr_matrix<int, double, cusp::device_memory> B = B_;
-    Matrix A = B; 
+    //TODO: Umwandlung Memory-technisch überprüfen!!!
+    //cusp::csr_matrix<int, double, cusp::device_memory> B = B_;
+    cusp::ell_matrix<int, double, cusp::host_memory> B = B_;
     t.toc();
-    cout << "Conversion to device matrix took: "<<t.diff()<<"s\n";
-    std::cout << "# of points in matrix is: "<< B.num_entries<< "\n";
+    cout << "Conversion (1) to device matrix took: "<<t.diff()<<"s\n";
+    t.tic();
+    Matrix A = B;  
+    t.toc();
+    cout << "Conversion (2) to device matrix took: "<<t.diff()<<"s\n";
+    std::cout << "# of points in matrix is: "<< A.num_entries<< "\n";
     //dg::Matrix Ap= dg::create::laplacian( grid, dg::not_normed); 
     //cout << "Polarisation matrix: "<< endl;
     //cusp::print( A);

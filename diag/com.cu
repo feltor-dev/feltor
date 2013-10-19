@@ -47,6 +47,8 @@ int main( int argc, char* argv[])
     dg::DVec one = dg::evaluate( dg::one, grid);
     dg::DVec w2d = dg::create::w2d( grid);
 
+    double mass, posX, posY, velX;
+    double posX_old = 0;
     for( unsigned i=1; i<=p.maxout+1; i++)
     {
         name = file::getName( file, i);
@@ -55,11 +57,18 @@ int main( int argc, char* argv[])
         input = input_h;
         if( p.global)
             thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
-        double mass = dg::blas2::dot( one, w2d, input);
+        mass = dg::blas2::dot( one, w2d, input);
         os << file::getTime( name)<<" ";
-        os << dg::blas2::dot( xvec, w2d, input)/mass - p.posX*p.lx << " ";
-        os << dg::blas2::dot( yvec, w2d, input)/mass - p.posY*p.ly << "\n";
+
+        posX = dg::blas2::dot( xvec, w2d, input)/mass - p.posX*p.lx;
+        posY = dg::blas2::dot( yvec, w2d, input)/mass - p.posY*p.ly;
+        velX = (posX - posX_old)/p.dt;
+        posX_old = posX;
+        os << posX << " " << posY << " "<<velX<<"\n";
     }
+    std::cout << "Format is:\n"
+        << " time posX posY velX\n";
+
     os.close();
     H5Fclose( file);
     return 0;
