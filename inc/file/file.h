@@ -36,7 +36,7 @@ std::string setTime( double time)
     title   <<std::setw(6) <<std::right
             <<(unsigned)(floor(time))
             <<"."
-            <<std::setw(6) <<std::left
+            <<std::setw(6) <<std::right
             <<(unsigned)((time-floor(time))*1e6);
     return title.str();
 }
