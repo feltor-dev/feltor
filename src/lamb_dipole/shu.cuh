@@ -22,6 +22,12 @@ struct Shu
     Shu( const Grid<value_type>& grid, double D, double eps);
 
     Matrix& lap() { return laplace;}
+    /**
+     * @brief Returns phi that belong to the last y in operator()
+     *
+     * In a multistep scheme this belongs to the point HEAD-1
+     * @return phi is the potential
+     */
     const container& potential( ) {return phi;}
     void operator()( const Vector& y, Vector& yp);
   private:

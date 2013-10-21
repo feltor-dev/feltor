@@ -97,7 +97,7 @@ int main( int argc, char* argv[])
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
         */
     std::cout<< "Hello world\n";
-    while (running && index < p.maxout + 2 )
+    while (running && index < nlinks + 1 )
     {
         t.tic();
         //name = file::getName( file, index);
