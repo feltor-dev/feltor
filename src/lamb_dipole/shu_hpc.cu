@@ -68,6 +68,7 @@ int main( int argc, char * argv[])
     dg::HVec output[3] = { y1, y1, shu.potential()}; //intermediate transport locations
     t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
     t5file.append( vorticity, enstrophy, energy, 0);
+    try{
     for( unsigned i=0; i<p.maxout; i++)
     {
 
@@ -90,6 +91,11 @@ int main( int argc, char * argv[])
         ti.toc();
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+    }
+    }
+    catch( dg::Fail& fail) { 
+        std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+        std::cerr << "Does Simulation respect CFL condition?\n";
     }
 
     return 0;
