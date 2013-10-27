@@ -1,6 +1,7 @@
 #ifndef _DG_SHU_CUH
 #define _DG_SHU_CUH
 
+#include <exception>
 #include <cusp/ell_matrix.h>
 
 #include "dg/blas.h"
@@ -10,6 +11,15 @@
 
 namespace dg
 {
+struct Fail : public std::exception
+{
+
+    Fail( double eps): eps( eps) {}
+    double epsilon() const { return eps;}
+    char const* what() const throw(){ return "Failed to converge";}
+  private:
+    double eps;
+};
 
 template< class container=thrust::device_vector<double> >
 struct Shu 
@@ -67,6 +77,8 @@ void Shu<container>::operator()( const Vector& y, Vector& yp)
     blas1::axpby( 2., phi, -1.,  phi_old);
     phi.swap( phi_old);
     unsigned number = pcg( laplace, phi, omega, v2d, eps);
+    if( number == pcg.get_max())
+        throw Fail( eps);
     //std::cout << "Number of pcg iterations "<< number<<"\n"; 
     //b = omega; //copy data to host
     //cholesky.solve( x.data(), b.data(), b.size()); //solve on host

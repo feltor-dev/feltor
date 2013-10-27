@@ -15,16 +15,17 @@ double Y( double x, double y) {return y;}
 
 int main( int argc, char* argv[])
 {
-    if( argc != 2)
+    if( argc != 3)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [inputfile]\n";
+        std::cerr << "Usage: "<<argv[0]<<" [input.h5] [output.dat]\n";
         return;
     }
     //open file for com - data
-    std::string outputfile( argv[1]);
-    outputfile.erase( outputfile.end()-2, outputfile.end());
-    outputfile+="com";
-    std::ofstream os( outputfile.c_str());
+    //std::string outputfile( argv[1]);
+    //outputfile.erase( outputfile.end()-2, outputfile.end());
+    //outputfile+="com";
+    //std::ofstream os( outputfile.c_str());
+    std::ofstream os( argv[2]);
 
     hid_t file = H5Fopen( argv[1], H5F_ACC_RDONLY, H5P_DEFAULT);
     hsize_t nlinks = file::getNumObjs( file);
@@ -47,8 +48,10 @@ int main( int argc, char* argv[])
     dg::DVec one = dg::evaluate( dg::one, grid);
     dg::DVec w2d = dg::create::w2d( grid);
 
-    double mass, posX, posY, velX;
-    double posX_old = 0;
+    double mass, posX, posY, velX, velY;
+    double posX_old = 0, posY_old;
+    double deltaT = p.dt*p.itstp;
+    os << "#Time posX posY velX velY\n";
     for( unsigned i=1; i<=p.maxout+1; i++)
     {
         name = file::getName( file, i);
@@ -62,14 +65,17 @@ int main( int argc, char* argv[])
 
         posX = dg::blas2::dot( xvec, w2d, input)/mass - p.posX*p.lx;
         posY = dg::blas2::dot( yvec, w2d, input)/mass - p.posY*p.ly;
-        velX = (posX - posX_old)/p.dt;
+        velX = (posX - posX_old)/deltaT;
+        velY = (posY - posY_old)/deltaT;
         posX_old = posX;
-        os << posX << " " << posY << " "<<velX<<"\n";
+        posY_old = posY;
+        os << posX << " " << posY << " "<<velX<<" "<<velY<<"\n";
     }
     std::cout << "Format is:\n"
-        << " time posX posY velX\n";
+        << " time posX posY velX velY\n";
 
     os.close();
     H5Fclose( file);
     return 0;
 }
+
