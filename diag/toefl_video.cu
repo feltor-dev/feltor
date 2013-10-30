@@ -9,6 +9,7 @@
 #include "file/file.h"
 
 #include "galerkin/parameters.h"
+//#include "lamb_dipole/parameters.h"
 
 
 int main( int argc, char* argv[])

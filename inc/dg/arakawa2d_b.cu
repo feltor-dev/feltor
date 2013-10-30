@@ -16,36 +16,38 @@
 using namespace std;
 using namespace dg;
 
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
+const double lx = M_PI;
+const double ly = M_PI;
+const double eps = 1e-1;
 
 
 //choose some mean function (attention on lx and ly)
-/*
 //THESE ARE NOT PERIODIC
+/*
 double left( double x, double y) { return sin(x/2)*sin(x/2)*exp(x)*sin(y/2.)*sin(y/2.)*log(y+1); }
 double right( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*sin(x/2)*log(x+1); }
-double left( double x, double y) {return sin(x)*exp(x-M_PI)*sin(y);}
-double right( double x, double y) {return sin(x)*sin(y)*exp(y-M_PI);}
-double jacobian( double x, double y) 
-{
-    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
-}
 */
-
+//double left( double x, double y) {return sin(x)*exp(x-M_PI)*sin(y);}
+//double right( double x, double y) {return sin(x)*sin(y)*exp(y-M_PI);}
+//double jacobian( double x, double y) 
+//{
+//    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
+//}
+//schlechte Funktion für Concservation benchmarks
 double left( double x, double y) {return sin(x)*cos(y);}
-double right( double x, double y) {return cos(x)*sin(y);}
+double right( double x, double y) {return exp(eps*(x+y));}
 double jacobian( double x, double y) 
 {
-    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
+    //return cos(x )*cos(y )*cos(x )*cos(y ) - sin(x)*sin(y)*sin(x)*sin(y); 
+    return cos(x )*cos(y )*exp(x+y) - sin(x)*sin(y)*exp(x+y); 
 }
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
-const unsigned nmax = 5;
-const unsigned Nmin = 4;
-const unsigned N = 20;
+const unsigned nmax = 4;
+const unsigned Nmin = 7;
+const unsigned N =4; 
 
 int main( int argc, char* argv[])
 {
@@ -57,14 +59,14 @@ int main( int argc, char* argv[])
     std::ofstream ost( argv[1]);
     ost << "# points jacobian lhs*jac rhs*jac error"<<std::endl;
     unsigned n, Nx, Ny;
-    for( unsigned i=1; i<=5; i++)
+    for( unsigned i=1; i<=nmax; i++)
     {
         cout << "P = "<< i <<endl;
         for( unsigned j=0; j<=N; j++)
         {
             n=i;
-            Nx = Ny = (unsigned)((double)Nmin*pow( 2., (double)j/4.));
-            Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+            Nx = Ny = (unsigned)((double)Nmin*pow( 2., (double)j));
+            Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
             DVec w2d = create::w2d( grid);
             DVec lhs = evaluate ( left, grid), jac(lhs);
             DVec rhs = evaluate ( right,grid);
