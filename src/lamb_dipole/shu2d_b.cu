@@ -36,13 +36,14 @@ const double kx = 1., ky = kx, ksqr = 2.;
 
 double initial( double x, double y){ return 2.*sin(kx*x)*sin(ky*y);}
 double solution( double x, double y){ return 2.*sin(kx*x)*sin(ky*y)*exp(-ksqr*D*T);}
+double solution_phi( double x, double y){ return sin(kx*x)*sin(ky*y)*exp(-ksqr*D*T);}
 
 //code for either lamb dipole or analytic sine function without graphics
 int main()
 {
     Timer t;
     ////////////////////////////////////////////////////////////
-    cout << "Solve 2D incompressible NavierStokes with sin(x)sin(y) or Lamb dipole initial condition\n";
+    //cout << "Solve 2D incompressible NavierStokes with sin(x)sin(y) or Lamb dipole initial condition\n";
     //cout << "Type n, N and eps\n";
     //cin >> n >> Nx >>eps;
     //Ny = Nx;
@@ -50,19 +51,24 @@ int main()
     //cin >> D;
     //cout << "# of Legendre coefficients: " << n<<endl;
     //cout << "# of grid cells:            " << Nx*Ny<<endl;
-    cout << "Diffusion                   " << D <<endl;
+    cout << "# grid NT dt eps_V eps_omega eps_E eps\n";
+    cout << "Diffusion " << D <<endl;
+
     ////////////////////////////////////////////////////////////
-    for( unsigned n=1; n<4; n++)
+    for( unsigned n=4; n<5; n++)
     {
-        for(unsigned i=0; i<3; i++)
+        cout << "P="<<n<<"\n";
+        for(unsigned i=0; i<4; i++)
         {
-            double eps = 1e-5/pow(10, n+1);
             unsigned Nx = 16*pow(2,i), Ny = Nx;
-            cout << "P="<<n<<", N="<<Nx<<":\n";
             Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
             DVec w2d( create::w2d(grid));
 
-            unsigned NT = 2*(unsigned)(T*pow(2,n)*Nx/0.05/lx);
+            double dx = lx/(double)Nx;
+            double eps = 1e-2/pow(10, n)*pow(dx,n);
+            unsigned NT = 4*(unsigned)(T*pow(2,n)/dx);
+            if( D!= 0)
+                NT = std::max((unsigned)(0.6*T*pow(4,n)/dx/dx), NT);
             const double dt = T/(double)NT;
             //cout << "Runge Kutta stages          " << k <<endl;
             //cout << "Timestep                    " << dt << endl;
@@ -71,7 +77,8 @@ int main()
 
             DVec stencil = evaluate( one, grid);
             DVec omega = evaluate( initial, grid );
-            DVec sol = evaluate( solution, grid );
+            const DVec sol = evaluate( solution, grid );
+            const DVec sol_phi = evaluate( solution_phi, grid );
 
             DVec y0( omega), y1( y0);
             //make solver and stepper
@@ -79,9 +86,9 @@ int main()
             AB< k, DVec > ab( y0);
 
             test( y0, y1);
-            double vorticity = blas2::dot( stencil, w2d, y0);
-            double enstrophy = 0.5*blas2::dot( y0, w2d, y0);
-            double energy =    0.5*blas2::dot( y0, w2d, test.potential()) ;
+            double vorticity = blas2::dot( stencil, w2d, sol);
+            double enstrophy = 0.5*blas2::dot( sol, w2d, sol);
+            double energy =    0.5*blas2::dot( sol, w2d, sol_phi) ;
 
             double time = 0;
             ab.init( test, y0, dt);
@@ -103,13 +110,17 @@ int main()
             //cout << "Total simulation time:     "<<t.diff()<<"s\n";
             //cout << "Average Time for one step: "<<t.diff()/(double)NT<<"s\n";
             ////////////////////////////////////////////////////////////////////
-            cout << "Erros: "<<blas2::dot( stencil, w2d, y0); 
-            cout << " "<<(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy;
+            cout << Nx;
+            cout << " "<<NT;
+            cout << " "<<dt;
+            cout << " "<<eps;
+            cout << " "<<fabs(blas2::dot( stencil, w2d, y0)); 
+            cout << " "<<fabs(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy;
             test( y0, y1); //get the potential ready
-            cout << " "<<(0.5*blas2::dot( test.potential(), w2d, y0) - energy)/energy<<"\n";
+            cout << " "<<fabs(0.5*blas2::dot( test.potential(), w2d, y0) - energy)/energy<<" ";
 
             blas1::axpby( 1., sol, -1., y0);
-            cout << "Absolute distance to solution "<<sqrt( blas2::dot( w2d, y0))<< endl;
+            cout << " "<<sqrt( blas2::dot( w2d, y0))<< endl;
             //cout << "Relative distance to solution "<<sqrt( blas2::dot( w2d, y0))/sqrt( blas2::dot( w2d, sol)) << endl;
 
         }
