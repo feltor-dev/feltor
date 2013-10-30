@@ -171,7 +171,11 @@ struct ab_coeff
 template<>
 const double ab_coeff<2>::b[2] = {1.5, -0.5};
 template<>
-const double ab_coeff<3>::b[3] = {23./12., -16./12., 5./12.};
+const double ab_coeff<3>::b[3] = {23./12., -4./3., 5./12.};
+template<>
+const double ab_coeff<4>::b[4] = {55./24., -59./24., 37./24., -3./8.};
+template<>
+const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360., 251/720};
 ///@endcond
 
 /**

@@ -26,7 +26,7 @@ typedef typename Sol::Matrix_Type Mat;
 unsigned itstp; //initialized by init function
 unsigned max_out;
 double amp, imp_amp; //
-double blob_width;
+double blob_width, posX, posY;
 
 
 Blueprint read( char const * file)
@@ -46,6 +46,8 @@ Blueprint read( char const * file)
     omp_set_num_threads( para[20]);
     blob_width = para[21];
     max_out = para[22];
+    posX = para[23];
+    posY = para[24];
     std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
     return bp;
 }
@@ -91,7 +93,7 @@ int main( int argc, char* argv[])
     Mat ne{ alg.ny, alg.nx, 0.}, phi{ ne};
     // place some gaussian blobs in the field
     try{
-        init_gaussian( ne, 0.25,0.55, blob_width/bp.boundary().lx, blob_width/bp.boundary().ly, amp);
+        init_gaussian( ne, posX, posY, blob_width/bp.boundary().lx, blob_width/bp.boundary().ly, amp);
         std::array< Mat, n> arr{{ ne, phi}};
         //now set the field to be computed
         solver.init( arr, TL_IONS);

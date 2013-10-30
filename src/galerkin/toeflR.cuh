@@ -35,7 +35,8 @@ struct ToeflR
     typedef typename container::value_type value_type;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix; //fastest device Matrix
+    typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
+    //typedef in ArakawaX ??
 
     /**
      * @brief Construct a ToeflR solver object
@@ -288,7 +289,6 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     std::cout << "# of pcg iterations for phi \t"<< number <<"\t";
     t.toc();
     std::cout<< "took \t"<<t.diff()<<"s\n";
-    t.tic();
 #endif //DG_DEBUG
 
     return phi[0];

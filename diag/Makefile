@@ -9,7 +9,7 @@ NVCCFLAGS = --compiler-options -Wall -arch=sm_20 -w
 #GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
 GLFLAGS   = -lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
 
-all: toefl_video innto_video show com
+all: toefl_video innto_video show com vmax
 
 
 toefl_video: toefl_video.cu 
@@ -17,6 +17,8 @@ toefl_video: toefl_video.cu
 	echo "Attention: No compiler warnings are issued!" 
 
 toefl_analytics: toefl_analytics.cu 
+	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
+toefl_compare: toefl_compare.cu 
 	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS)
 
 innto_video: innto_video.cpp
@@ -28,10 +30,11 @@ show: show.cpp
 
 com: com.cu
 	$(NVCC) -O2 -lhdf5 -lhdf5_hl $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 
+vmax: vmax.cu
+	$(NVCC) -O2 $< -o $@ $(NVCCFLAGS) $(INCLUDE) 
 
 .PHONY: clean
 
 clean:
-	rm -f toefl_video innto_video show 
+	rm -f toefl_video innto_video show com vmax
