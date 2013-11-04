@@ -68,9 +68,10 @@ int main()
 
     ArakawaX<DVec> arakawa( grid);
     t.tic(); 
-    arakawa( lhs, rhs, jac);
+    for( unsigned i=0; i<20; i++)
+        arakawa( lhs, rhs, jac);
     t.toc();
-    cout << "\nArakawa took "<<t.diff()<<"s\n\n";
+    cout << "\nArakawa took "<<t.diff()/0.02<<"ms\n\n";
     //cout<<jac<<endl;
 
 

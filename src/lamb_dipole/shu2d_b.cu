@@ -58,17 +58,17 @@ int main()
     for( unsigned n=4; n<5; n++)
     {
         cout << "P="<<n<<"\n";
-        for(unsigned i=0; i<4; i++)
+        for(unsigned i=3; i<4; i++)
         {
             unsigned Nx = 16*pow(2,i), Ny = Nx;
-            Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
+            Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
             DVec w2d( create::w2d(grid));
 
             double dx = lx/(double)Nx;
             double eps = 1e-2/pow(10, n)*pow(dx,n);
             unsigned NT = 4*(unsigned)(T*pow(2,n)/dx);
             if( D!= 0)
-                NT = std::max((unsigned)(0.6*T*pow(4,n)/dx/dx), NT);
+                NT = std::max((unsigned)(0.06*T*pow(4,n)/dx/dx), NT);
             const double dt = T/(double)NT;
             //cout << "Runge Kutta stages          " << k <<endl;
             //cout << "Timestep                    " << dt << endl;
@@ -92,21 +92,23 @@ int main()
 
             double time = 0;
             ab.init( test, y0, dt);
-            t.tic();
             while( time < T)
             {
                 //step 
+
+                t.tic();
                 ab( test, y0, y1, dt);
                 y0.swap( y1);
+                t.toc();
                 //thrust::swap( y0, y1);
                 time += dt;
+                std::cout << "Time "<<time<< " "<<t.diff()<<"\n";
                 if( fabs(blas2::dot( w2d, y0)) > 1e16) 
                 {
                     cerr << "Sim unstable at time "<<time<<"!\n\n\n";
                     break;
                 }
             }
-            t.toc();
             //cout << "Total simulation time:     "<<t.diff()<<"s\n";
             //cout << "Average Time for one step: "<<t.diff()/(double)NT<<"s\n";
             ////////////////////////////////////////////////////////////////////
