@@ -16,8 +16,8 @@
 using namespace std;
 using namespace dg;
 
-const double lx = M_PI;
-const double ly = M_PI;
+//const double lx = M_PI;
+//const double ly = M_PI;
 const double eps = 1e-1;
 
 
@@ -34,8 +34,12 @@ double right( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*si
 //    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
 //}
 //schlechte Funktion für Concservation benchmarks
-double left( double x, double y) {return sin(x)*cos(y);}
-double right( double x, double y) {return exp(eps*(x+y));}
+double left( double x, double y) {
+    return sin(0.5*M_PI*x*x)*sin(0.5*M_PI*y);
+}
+double right( double x, double y) {
+    return sin( M_PI*x*x*x)*sin(M_PI*y*y)/(2.+sin(M_PI*x)-0.5);
+}
 double jacobian( double x, double y) 
 {
     //return cos(x )*cos(y )*cos(x )*cos(y ) - sin(x)*sin(y)*sin(x)*sin(y); 
@@ -47,26 +51,26 @@ double jacobian( double x, double y)
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
 const unsigned nmax = 4;
 const unsigned Nmin = 7;
-const unsigned N =4; 
+const unsigned N =3; 
 
 int main( int argc, char* argv[])
 {
-    if( argc < 2)
-    {
-        cerr << "ERROR: Usage arakawa2d_b.cu [outfile.dat]\n";
-        return -1;
-    }
-    std::ofstream ost( argv[1]);
-    ost << "# points jacobian lhs*jac rhs*jac error"<<std::endl;
+    //if( argc < 2)
+    //{
+    //    cerr << "ERROR: Usage arakawa2d_b.cu [outfile.dat]\n";
+    //    return -1;
+    //}
+    //std::ofstream ost( argv[1]);
+    //ost << "# points jacobian lhs*jac rhs*jac error"<<std::endl;
     unsigned n, Nx, Ny;
-    for( unsigned i=1; i<=nmax; i++)
+    for( unsigned i=2; i<=nmax; i++)
     {
         cout << "P = "<< i <<endl;
         for( unsigned j=0; j<=N; j++)
         {
             n=i;
             Nx = Ny = (unsigned)((double)Nmin*pow( 2., (double)j));
-            Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
+            Grid<double> grid( -2., 2., -2., 2., n, Nx, Ny, dg::PER, dg::PER);
             DVec w2d = create::w2d( grid);
             DVec lhs = evaluate ( left, grid), jac(lhs);
             DVec rhs = evaluate ( right,grid);
@@ -75,16 +79,16 @@ int main( int argc, char* argv[])
             ArakawaX<DVec> arakawa( grid);
             arakawa( lhs, rhs, jac);
 
-            ost << Nx <<" ";
-            ost << fabs(blas2::dot( eins, w2d, jac))<<" ";
-            ost << fabs(blas2::dot( lhs, w2d, jac))<<" ";
-            ost << fabs(blas2::dot( rhs, w2d, jac))<<" ";
+            cout << Nx <<" ";
+            cout << fabs(blas2::dot( eins, w2d, jac))<<" ";
+            cout << fabs(blas2::dot( lhs, w2d, jac))<<" ";
+            cout << fabs(blas2::dot( rhs, w2d, jac))<<" ";
             blas1::axpby( 1., sol, -1., jac);
-            ost << sqrt(blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
+            cout << sqrt(blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
         }
-        ost << "\n\n"; //gnuplot next data set
+        cout << "\n\n"; //gnuplot next data set
     }
-    ost.close();
+    //ost.close();
 
     return 0;
 }

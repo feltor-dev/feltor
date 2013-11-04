@@ -2,6 +2,7 @@
 #define _DG_OPERATORS_DYN_
 
 #include <vector>
+#include <cmath>
 #include <iterator>
 #include <stdexcept>
 #ifdef DG_DEBUG
