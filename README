@@ -3,11 +3,11 @@ Welcome to the TOEFL project!
 For the CPU-Version you'll need to download thrust
 https://github.com/thrust/thrust
 and the latest cusp version (the master branch)
-https://cusplibrary/cusplibrary
+https://github.com/cusplibrary/cusplibrary
 
 If you want to compile for a GPU you need to install the latest version of CUDA
 and hdf5 for the file-IO.
 
 If you want to have a nice OpenGL window download the draw library
-https://mwiesenberger/draw
+https://github.com/mwiesenberger/draw
 which needs OpenGL and glfw (cf. README)
