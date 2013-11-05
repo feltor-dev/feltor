@@ -1,8 +1,8 @@
 Welcome to the TOEFL project v1.3 library section!
 
 Four libraries are currently implemented. The DG library provides utilities 
-for the implementation of a discontinuous Galerkin code, the DRAW library helps
-to realize a 2D visualisation from within source code, the FILE library supports
+for the implementation of a discontinuous Galerkin code, 
+the FILE library supports
 output with hdf5 and the TOEFL library is made for implementing 2D pseudospectral
 codes. 
 
@@ -12,10 +12,6 @@ codes.
         http://code.google.com/p/cusp-library/
         http://eigen.tuxfamily.org/index.php?title=Main_Page
 
-- the DRAW library relies on a working installation of OpenGL and glfw
-        http://www.glfw.org/download.html
-  (If you experience linker problems with glfw be sure you add the correct 
-   libraries for your system in the Makefile in the GLFLAGS/LIBS variable.)
 - the FILE library needs hdf5 in standard locations
         http://www.hdfgroup.org/HDF5/
         use -lhdf5 and -lhdf5_hl
