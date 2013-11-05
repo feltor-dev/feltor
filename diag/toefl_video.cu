@@ -8,8 +8,8 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
-//#include "lamb_dipole/parameters.h"
+//#include "galerkin/parameters.h"
+#include "lamb_dipole/parameters.h"
 
 
 int main( int argc, char* argv[])
@@ -108,8 +108,8 @@ int main( int argc, char* argv[])
         t.toc();
         //std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
         t.tic();
-        if( p.global)
-            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+        //if( p.global)
+        //    thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
         dg::blas2::gemv( equi, input, visual);
 
         //compute the color scale
