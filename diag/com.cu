@@ -12,6 +12,11 @@
 
 double X( double x, double y) {return x;}
 double Y( double x, double y) {return y;}
+template< class container>
+void log( const container& y, container& target)
+{
+    thrust::transform( y.begin(), y.end(), target.begin(), dg::LN<double>());
+}
 
 int main( int argc, char* argv[])
 {
@@ -27,55 +32,58 @@ int main( int argc, char* argv[])
     //std::ofstream os( outputfile.c_str());
     std::ofstream os( argv[2]);
 
-    hid_t file = H5Fopen( argv[1], H5F_ACC_RDONLY, H5P_DEFAULT);
-    hsize_t nlinks = file::getNumObjs( file);
-    std::string name = file::getName( file, 0);
     std::string in;
-    
-    herr_t  status;
-    hsize_t dims[2]; 
-    in.resize( 10000);
-    status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
-
-
+    file::T5rdonly t5file( argv[1], in);
+    const unsigned num_out = t5file.get_size();
     const Parameters p( file::read_input( in));
     p.display();
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+
     dg::HVec input_h( grid.size());
-    dg::DVec input( input_h);
+    dg::DVec input0( input_h), input1(input0), ln0( input0), ln1(input0);
+    std::vector<double> mass, energy;
+    t5file.get_xfile( mass, "mass");
+    t5file.get_xfile( energy, "energy");
+
     dg::DVec xvec = dg::evaluate( X, grid);
     dg::DVec yvec = dg::evaluate( Y, grid);
     dg::DVec one = dg::evaluate( dg::one, grid);
     dg::DVec w2d = dg::create::w2d( grid);
 
-    double mass, posX, posY, velX, velY;
+    double mass_, posX, posY, velX, velY;
     double posX_old = 0, posY_old;
     double deltaT = p.dt*p.itstp;
-    os << "#Time posX posY velX velY\n";
-    for( unsigned i=1; i<=p.maxout+1; i++)
+    os << "#Time posX posY velX velY mass Ue Ui Uphi Etot\n";
+    for( unsigned idx=1; idx<=num_out; idx++)
     {
-        name = file::getName( file, i);
-        hid_t group = H5Gopen( file, name.data(), H5P_DEFAULT);
-        status = H5LTread_dataset_double( group, "electrons", &input_h[0] );
-        input = input_h;
+        t5file.get_field( input_h, "electrons", idx);
+        input0 = input_h;
+        t5file.get_field( input_h, "electrons", idx);
+        input1 = input_h;
+        log( input0, ln0), log( input1, ln1);
+        double Ue = dg::blas2::dot( input0, w2d, ln0);
+        double Ui = p.tau*dg::blas2::dot( input1, w2d, ln1);
+        double Uphi = energy[(idx-1)*p.itstp] - Ue - Ui;
+        //mass_ = dg::blas2::dot( one, w2d, input0 ); 
+        //double mass_p=mass[(idx-1)*p.itstp];
+        //if( mass_ - mass_p> 1e-14) 
+        //std::cerr<< "Diff masses: "<<mass_ - mass_p<<"\n";
         if( p.global)
-            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
-        mass = dg::blas2::dot( one, w2d, input);
-        os << file::getTime( name)<<" ";
+            thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
+        mass_ = dg::blas2::dot( one, w2d, input0 ); 
+        os << t5file.get_time( idx)<<" ";
 
-        posX = dg::blas2::dot( xvec, w2d, input)/mass - p.posX*p.lx;
-        posY = dg::blas2::dot( yvec, w2d, input)/mass - p.posY*p.ly;
+        posX = dg::blas2::dot( xvec, w2d, input0)/mass_ - p.posX*p.lx;
+        posY = dg::blas2::dot( yvec, w2d, input0)/mass_ - p.posY*p.ly;
         velX = (posX - posX_old)/deltaT;
         velY = (posY - posY_old)/deltaT;
         posX_old = posX;
         posY_old = posY;
-        os << posX << " " << posY << " "<<velX<<" "<<velY<<"\n";
+        os << posX << " " << posY << " "<<velX<<" "<<velY;
+        os << " "<<mass[(idx-1)*p.itstp] << " "<<Ue<<" "<<Ui<<" "<<Uphi<<" "<<energy[(idx-1)*p.itstp];
+        os <<"\n";
     }
-    std::cout << "Format is:\n"
-        << " time posX posY velX velY\n";
-
     os.close();
-    H5Fclose( file);
     return 0;
 }
 

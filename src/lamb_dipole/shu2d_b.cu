@@ -25,7 +25,7 @@ const double T = 2.;
 ////const double eps = 1e-7; //CG method
 
 
-double D = 0.01;
+double D = 0.00;
 
 const unsigned m = 1; //mode number
 //const double kx = 2.*M_PI* (double)m/lx; 
@@ -55,12 +55,12 @@ int main()
     cout << "Diffusion " << D <<endl;
 
     ////////////////////////////////////////////////////////////
-    for( unsigned n=4; n<5; n++)
+    for( unsigned n=1; n<2; n++)
     {
         cout << "P="<<n<<"\n";
-        for(unsigned i=3; i<4; i++)
+        for(unsigned i=1; i<5; i++)
         {
-            unsigned Nx = 16*pow(2,i), Ny = Nx;
+            unsigned Nx = 15*pow(2,i), Ny = Nx;
             Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
             DVec w2d( create::w2d(grid));
 
@@ -102,7 +102,7 @@ int main()
                 t.toc();
                 //thrust::swap( y0, y1);
                 time += dt;
-                std::cout << "Time "<<time<< " "<<t.diff()<<"\n";
+                //std::cout << "Time "<<time<< " "<<t.diff()<<"\n";
                 if( fabs(blas2::dot( w2d, y0)) > 1e16) 
                 {
                     cerr << "Sim unstable at time "<<time<<"!\n\n\n";
