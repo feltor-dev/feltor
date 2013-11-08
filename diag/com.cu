@@ -41,9 +41,11 @@ int main( int argc, char* argv[])
 
     dg::HVec input_h( grid.size());
     dg::DVec input0( input_h), input1(input0), ln0( input0), ln1(input0);
-    std::vector<double> mass, energy;
+    std::vector<double> mass, energy, diffusion, dissipation;
     t5file.get_xfile( mass, "mass");
     t5file.get_xfile( energy, "energy");
+    t5file.get_xfile( diffusion, "diffusion");
+    t5file.get_xfile( dissipation, "dissipation");
 
     dg::DVec xvec = dg::evaluate( X, grid);
     dg::DVec yvec = dg::evaluate( Y, grid);
@@ -53,7 +55,8 @@ int main( int argc, char* argv[])
     double mass_, posX, posY, velX, velY;
     double posX_old = 0, posY_old;
     double deltaT = p.dt*p.itstp;
-    os << "#Time posX posY velX velY mass Ue Ui Uphi Etot\n";
+    os << "#Time(1) posX(2) posY(3) velX(4) velY(5) mass(6) diff(7) (m_tot-m_0)/m_0(8) "
+       << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) \n";
     for( unsigned idx=1; idx<=num_out; idx++)
     {
         t5file.get_field( input_h, "electrons", idx);
@@ -64,14 +67,9 @@ int main( int argc, char* argv[])
         double Ue = dg::blas2::dot( input0, w2d, ln0);
         double Ui = p.tau*dg::blas2::dot( input1, w2d, ln1);
         double Uphi = energy[(idx-1)*p.itstp] - Ue - Ui;
-        //mass_ = dg::blas2::dot( one, w2d, input0 ); 
-        //double mass_p=mass[(idx-1)*p.itstp];
-        //if( mass_ - mass_p> 1e-14) 
-        //std::cerr<< "Diff masses: "<<mass_ - mass_p<<"\n";
         if( p.global)
             thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
         mass_ = dg::blas2::dot( one, w2d, input0 ); 
-        os << t5file.get_time( idx)<<" ";
 
         posX = dg::blas2::dot( xvec, w2d, input0)/mass_ - p.posX*p.lx;
         posY = dg::blas2::dot( yvec, w2d, input0)/mass_ - p.posY*p.ly;
@@ -79,8 +77,14 @@ int main( int argc, char* argv[])
         velY = (posY - posY_old)/deltaT;
         posX_old = posX;
         posY_old = posY;
-        os << posX << " " << posY << " "<<velX<<" "<<velY;
-        os << " "<<mass[(idx-1)*p.itstp] << " "<<Ue<<" "<<Ui<<" "<<Uphi<<" "<<energy[(idx-1)*p.itstp];
+        //output
+        os << t5file.get_time( idx);//(1)
+        os << " "<<posX << " " << posY << " "<<velX<<" "<<velY;//(2-5)
+        os << " "<<mass[(idx-1)*p.itstp] << " "<<diffusion[(idx-1)*p.itstp];//(6,7)
+        os << " "<< (mass[(idx-1)*p.itstp]-mass[0])/(mass[0]-grid.lx()*grid.ly());//blob mass is mass[] - Area (8)
+        os << " "<<Ue<<" "<<Ui<<" "<<Uphi<<" "<<energy[(idx-1)*p.itstp]; //(9-12)
+        os << " "<<(energy[(idx-1)*p.itstp]-energy[0])/energy[0];//(13)
+        os << " "<<dissipation[(idx-1)*p.itstp]; //(14)
         os <<"\n";
     }
     os.close();
