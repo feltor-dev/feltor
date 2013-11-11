@@ -76,7 +76,7 @@ struct Parameters
             << "    posY:         "<<posY<<"\n";
         os << "Stopping for CG:         "<<eps<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
-            <<"Number of outputs:       "<<maxout<<"\n";
+            <<"Number of outputs:       "<<maxout<<std::endl;
     }
 };
 

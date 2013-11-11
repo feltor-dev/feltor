@@ -212,6 +212,7 @@ struct T5rdonly
     /**
      * @brief Get the time corresponding to an index
      *
+     * The first output has index 1 the last has index get_size()
      * @param idx The index
      *
      * @return The time of the group
@@ -233,6 +234,7 @@ struct T5rdonly
      *
      * @param dataset Container
      * @param name Name of the dataset
+     * @note dataset[(idx-1)*num_intersteps] corresponds to index idx; dataset contains (get_size()-1)*num_intersteps+1 elements
      */
     void get_xfile( std::vector<double>& dataset, const char* name)
     {

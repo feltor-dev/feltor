@@ -133,8 +133,8 @@ int main( int argc, char* argv[])
         input.swap( visual);
         dg::blas2::gemv( equi, input, visual);
         dg::blas1::axpby( -1., visual, 0., visual);//minus laplacian
-        std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/(mass[1]-grid.lx()*grid.ly()) //blob mass is mass[] - Area
-                  <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1])/energy[1]
+        std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp+1]-mass[1])/(mass[1]-grid.lx()*grid.ly()) //blob mass is mass[] - Area
+                  <<"\t(E_tot-E_0)/E_0: "<<(energy[1+(index-1)*p.itstp]-energy[1])/energy[1]
                   <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
 
         //compute the color scale
