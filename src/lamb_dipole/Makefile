@@ -1,5 +1,5 @@
 INCLUDE = -I../../inc/# include files
-INCLUDE += -I/home/matthias/include
+INCLUDE += -I/$(HOME)/include
 
 NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 

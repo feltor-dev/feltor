@@ -51,7 +51,7 @@ int main()
     //cin >> D;
     //cout << "# of Legendre coefficients: " << n<<endl;
     //cout << "# of grid cells:            " << Nx*Ny<<endl;
-    cout << "# grid NT dt eps_V eps_omega eps_E eps\n";
+    cout << "# grid NT dt eps eps_V eps_omega eps_E eps\n";
     cout << "Diffusion " << D <<endl;
 
     ////////////////////////////////////////////////////////////
@@ -65,7 +65,7 @@ int main()
             DVec w2d( create::w2d(grid));
 
             double dx = lx/(double)Nx;
-            double eps = 1e-2/pow(10, n)*pow(dx,n);
+            double eps = 1e-1/pow(10, n)*pow(dx,n);
             unsigned NT = 4*(unsigned)(T*pow(2,n)/dx);
             if( D!= 0)
                 NT = std::max((unsigned)(0.6*T*pow(4,n)/dx/dx), NT);
