@@ -20,6 +20,8 @@ int main( int argc, char** argv)
     herr_t  status;
     in.resize( 10000);
     status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
+    if( !status)
+        std::cerr <<"An error occured!\n";
 
     std::cout << "Inputfile for data in '"<<argv[1]<<"':\n";
     std::cout << in<<std::endl;

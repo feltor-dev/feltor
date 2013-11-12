@@ -271,7 +271,7 @@ void DFT_DFT_Solver<n>::getField( Matrix<double, TL_DFT>& m, enum target t)
 template< size_t n>
 const Matrix<double, TL_DFT>& DFT_DFT_Solver<n>::getField( enum target t) const
 {
-    Matrix<double, TL_DFT> const * m;
+    Matrix<double, TL_DFT> const * m = 0;
     switch( t)
     {
         case( TL_ELECTRONS):    m = &dens[0]; break;
