@@ -23,7 +23,7 @@ int main( int argc, char* argv[])
     if( argc != 3)
     {
         std::cerr << "Usage: "<<argv[0]<<" [input.h5] [output.dat]\n";
-        return;
+        return -1;
     }
     //open file for com - data
     //std::string outputfile( argv[1]);
@@ -53,7 +53,7 @@ int main( int argc, char* argv[])
     dg::DVec w2d = dg::create::w2d( grid);
 
     double mass_, posX, posY, velX, velY;
-    double posX_old = 0, posY_old;
+    double posX_old = 0, posY_old = 0;
     double deltaT = p.dt*p.itstp;
     os << "#Time(1) posX(2) posY(3) velX(4) velY(5) mass(6) diff(7) (m_tot-m_0)/m_0(8) "
        << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) \n";

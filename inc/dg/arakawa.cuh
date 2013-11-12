@@ -226,7 +226,7 @@ struct ArakawaX
     //typedef typename VectorTraits< Vector>::value_type value_type;
     //void construct( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
     Matrix bdxf, bdyf;
-    container dxlhs, dylhs, dxrhs, dyrhs, helper;
+    container dxlhs, dxrhs, dylhs, dyrhs, helper;
 };
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform

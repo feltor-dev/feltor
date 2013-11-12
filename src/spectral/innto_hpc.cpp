@@ -1,6 +1,5 @@
 #include <iostream>
 #include <iomanip>
-#include <GL/glfw.h>
 #include <sstream>
 #include <omp.h>
 
