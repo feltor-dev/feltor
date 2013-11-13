@@ -43,7 +43,9 @@ INCLUDE += -I$(HOME)/include
 GLFLAGS  = -lm
 endif
 
-all: toefl_video toefl_analytics toefl_compare innto_video show com vmax
+TARGETS =  toefl_video toefl_analytics toefl_compare innto_video show com vmax toefl_radial innto_radial
+
+all: $(TARGETS)
 
 
 toefl_video: toefl_video.cu 
@@ -54,9 +56,12 @@ toefl_analytics: toefl_analytics.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl   
 toefl_compare: toefl_compare.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl 
+toefl_radial: toefl_radial.cu 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl   
 innto_video: innto_video.cpp
 	$(CC) -O3  $< -o $@ -std=c++0x $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl -lfftw3 
-	echo "Attention: No compiler warnings are issued!" 
+innto_radial: innto_radial.cpp
+	$(CC) -O3  $< -o $@ -std=c++0x $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl -lfftw3 
 
 show: show.cpp
 	$(CXX) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) -lhdf5 -lhdf5_hl -Wall
@@ -69,4 +74,4 @@ vmax: vmax.cu
 .PHONY: clean
 
 clean:
-	rm -f toefl_video toefl_compare innto_video show com vmax toefl_analytics
+	rm -f $(TARGETS)
