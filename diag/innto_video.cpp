@@ -34,7 +34,7 @@ double absmax( double a, double b)
 
 int main( int argc, char* argv[])
 {
-    std::vector<double> v = file::read_input( "window_params.txt");
+    std::vector<double> v = file::read_input( "innto_window_params.txt");
     draw::HostWindow w(v[3], v[4]);
     w.set_multiplot( v[1], v[2]);
 
@@ -86,7 +86,8 @@ int main( int argc, char* argv[])
         copyMatrix( visual, mat);
         part.laplace(mat);
         copyMatrix( mat, visual);
-        colors.scale() =  (float)std::accumulate( visual.begin(), visual.end(), 0., absmax);
+        //colors.scale() =  (float)std::accumulate( visual.begin(), visual.end(), 0., absmax);
+        colors.scale() = 5e-2;
         if( colors.scale() == 0) { colors.scale() = 1;}
         //draw phi and swap buffers
         w.title() <<"omega / "<<colors.scale()<<"\t";
