@@ -41,6 +41,7 @@ int main( int argc, char* argv[])
 
     dg::HVec input_h( grid.size());
     dg::DVec input0( input_h), input1(input0), ln0( input0), ln1(input0);
+    dg::DVec visual( input0);
     std::vector<double> mass, energy, diffusion, dissipation;
     t5file.get_xfile( mass, "mass");
     t5file.get_xfile( energy, "energy");
@@ -51,12 +52,14 @@ int main( int argc, char* argv[])
     dg::DVec yvec = dg::evaluate( Y, grid);
     dg::DVec one = dg::evaluate( dg::one, grid);
     dg::DVec w2d = dg::create::w2d( grid);
+    dg::DMatrix equi = dg::create::backscatter( grid);
 
     double mass_, posX, posY, velX, velY;
+    double posX_max, posY_max;
     double posX_old = 0, posY_old = 0;
     double deltaT = p.dt*p.itstp;
     os << "#Time(1) posX(2) posY(3) velX(4) velY(5) mass(6) diff(7) (m_tot-m_0)/m_0(8) "
-       << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) \n";
+       << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) posX_max(15) posY_max(16) \n";
     for( unsigned idx=1; idx<=num_out; idx++)
     {
         t5file.get_field( input_h, "electrons", idx);
@@ -85,6 +88,15 @@ int main( int argc, char* argv[])
         os << " "<<Ue<<" "<<Ui<<" "<<Uphi<<" "<<energy[(idx-1)*p.itstp]; //(9-12)
         os << " "<<(energy[(idx-1)*p.itstp]-energy[0])/energy[0];//(13)
         os << " "<<dissipation[(idx-1)*p.itstp]; //(14)
+        //get the maximum amplitude position
+        dg::blas2::gemv( equi, input0, visual);
+        unsigned position = thrust::distance( visual.begin(), thrust::max_element( visual.begin(), visual.end()) );
+        unsigned Nx = p.Nx*p.n; 
+        const double hx = grid.hx()/(double)grid.n();
+        const double hy = grid.hy()/(double)grid.n();
+        posX_max = hx*(1./2. + (double)(position%Nx))-p.posX*p.lx;
+        posY_max = hy*(1./2. + (double)(position/Nx))-p.posY*p.ly;
+        os << " "<<posX_max<<" "<<posY_max;
         os <<"\n";
     }
     os.close();

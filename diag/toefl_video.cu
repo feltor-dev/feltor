@@ -138,8 +138,8 @@ int main( int argc, char* argv[])
                   <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
 
         //compute the color scale
-        //colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scale() = 5e-2;
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        colors.scale() = 10e-2;
         if(colors.scale() == 0) { colors.scale() = 1;}
         //draw phi and swap buffers
         w.title() <<"omega / "<<colors.scale()<<"\t";

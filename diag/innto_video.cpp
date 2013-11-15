@@ -86,8 +86,8 @@ int main( int argc, char* argv[])
         copyMatrix( visual, mat);
         part.laplace(mat);
         copyMatrix( mat, visual);
-        //colors.scale() =  (float)std::accumulate( visual.begin(), visual.end(), 0., absmax);
-        colors.scale() = 5e-2;
+        colors.scale() =  (float)std::accumulate( visual.begin(), visual.end(), 0., absmax);
+        colors.scale() = 2;
         if( colors.scale() == 0) { colors.scale() = 1;}
         //draw phi and swap buffers
         w.title() <<"omega / "<<colors.scale()<<"\t";
