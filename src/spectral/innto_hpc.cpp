@@ -1,6 +1,5 @@
 #include <iostream>
 #include <iomanip>
-#include <GL/glfw.h>
 #include <sstream>
 #include <omp.h>
 
@@ -88,7 +87,6 @@ int main( int argc, char* argv[])
     }catch( Message& m){m.display();}
     Sol solver (bp);
 
-
     const Algorithmic& alg = bp.algorithmic();
     Mat ne{ alg.ny, alg.nx, 0.}, phi{ ne};
     // place some gaussian blobs in the field
@@ -100,42 +98,27 @@ int main( int argc, char* argv[])
     }catch( Message& m){m.display();}
 
     /////////////////////////////////////////////////////////////////////////
-    hid_t   file, grp;
-    herr_t  status;
-    hsize_t dims[] = { alg.ny, alg.nx };
-    file = H5Fcreate( argv[2], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    //std::stringstream title; 
-    hsize_t size = input.size();
-    status = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data()); //name should precede t so that reading is easier
+    file::T5trunc t5file( argv[2], input);
     double time = 3.*alg.dt;
-    std::vector<double> output( alg.nx*alg.ny);
+    std::vector<double> out( alg.nx*alg.ny);
+    std::vector<double> output[3] = {out, out, out};
     for( unsigned i=0; i<max_out; i++)
     {
-        grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
         //output all three fields
-        copyMatrix( solver.getField( TL_ELECTRONS), output);
-        status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
-        copyMatrix( solver.getField( TL_IONS), output);
-        status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
-        copyMatrix( solver.getField( TL_POTENTIAL), output);
-        status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
-        H5Gclose( grp);
+        copyMatrix( solver.getField( TL_ELECTRONS), output[0]);
+        copyMatrix( solver.getField( TL_IONS), output[1]);
+        copyMatrix( solver.getField( TL_POTENTIAL), output[2]);
+        t5file.write( output[0], output[1], output[2], time, alg.nx, alg.ny);
         for( unsigned i=0; i<itstp; i++)
             solver.step();
         
         time += itstp*alg.dt;
     }
-    grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-    //output all three fields
-    copyMatrix( solver.getField( TL_ELECTRONS), output);
-    status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
-    copyMatrix( solver.getField( TL_IONS), output);
-    status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
-    copyMatrix( solver.getField( TL_POTENTIAL), output);
-    status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
-    H5Gclose( grp);
+    copyMatrix( solver.getField( TL_ELECTRONS), output[0]);
+    copyMatrix( solver.getField( TL_IONS), output[1]);
+    copyMatrix( solver.getField( TL_POTENTIAL), output[2]);
+    t5file.write( output[0], output[1], output[2], time, alg.nx, alg.ny);
     //////////////////////////////////////////////////////////////////
-    H5Fclose( file);
     fftw_cleanup();
     return 0;
 

@@ -9,6 +9,7 @@
 #include "file/file.h"
 
 #include "galerkin/parameters.h"
+//#include "lamb_dipole/parameters.h"
 
 
 int main( int argc, char* argv[])
@@ -21,7 +22,7 @@ int main( int argc, char* argv[])
     if( argc != 2)
     {
         std::cerr << "Usage: "<<argv[0]<<" [inputfile]\n";
-        return;
+        return -1;
     }
 
     std::string in;
@@ -97,7 +98,7 @@ int main( int argc, char* argv[])
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
         */
     std::cout<< "Hello world\n";
-    while (running && index < p.maxout + 2 )
+    while (running && index < nlinks + 1 )
     {
         t.tic();
         //name = file::getName( file, index);
@@ -132,12 +133,13 @@ int main( int argc, char* argv[])
         input.swap( visual);
         dg::blas2::gemv( equi, input, visual);
         dg::blas1::axpby( -1., visual, 0., visual);//minus laplacian
-        std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp]-mass[1])/(mass[1]-grid.lx()*grid.ly()) //blob mass is mass[] - Area
-                  <<"\t(E_tot-E_0)/E_0: "<<(energy[(index-1)*p.itstp]-energy[1])/energy[1]
+        std::cout <<"(m_tot-m_0)/m_0: "<<(mass[(index-1)*p.itstp+1]-mass[1])/(mass[1]-grid.lx()*grid.ly()) //blob mass is mass[] - Area
+                  <<"\t(E_tot-E_0)/E_0: "<<(energy[1+(index-1)*p.itstp]-energy[1])/energy[1]
                   <<"\tAccuracy: "<<energyAcc[(index-1)*p.itstp]<<std::endl;
 
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        colors.scale() = 10e-2;
         if(colors.scale() == 0) { colors.scale() = 1;}
         //draw phi and swap buffers
         w.title() <<"omega / "<<colors.scale()<<"\t";

@@ -223,6 +223,7 @@ unsigned lcm( unsigned a, unsigned b)
     return a/g*b;
 }
 
+//eventuell könnte man zwei Projektionsmatrizen malnehmen um eine kleinere zu erhalten
 template <typename container>
 struct DifferenceNorm
 {

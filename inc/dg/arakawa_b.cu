@@ -54,8 +54,8 @@ int main()
     cout << "Type n, Nx and Ny! \n";
     cin >> n;
     cin >> Nx; 
-    cin >> Ny; //more N means less iterations for same error
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
+    cin >> Ny; 
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::PER);
     S2D<double > s2d( grid);
     DVec w2d = create::w2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
@@ -68,9 +68,10 @@ int main()
 
     ArakawaX<DVec> arakawa( grid);
     t.tic(); 
-    arakawa( lhs, rhs, jac);
+    for( unsigned i=0; i<20; i++)
+        arakawa( lhs, rhs, jac);
     t.toc();
-    cout << "\nArakawa took "<<t.diff()<<"s\n\n";
+    cout << "\nArakawa took "<<t.diff()/0.02<<"ms\n\n";
     //cout<<jac<<endl;
 
 

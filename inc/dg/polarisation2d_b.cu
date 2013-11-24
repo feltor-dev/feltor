@@ -13,7 +13,7 @@
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
 
 const double lx = M_PI;
-const double ly = 2.*M_PI;
+const double ly = M_PI;
 //const double eps = 1e-3; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
@@ -42,7 +42,7 @@ int main()
     cout << "Type n, Nx and Ny and epsilon! \n";
     cin >> n >> Nx >> Ny; //more N means less iterations for same error
     cin >> eps;
-    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::PER);
+    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::DIR);
     Vector v2d = dg::create::v2d( grid);
     Vector w2d = dg::create::w2d( grid);
     //create functions A(chi) x = b
