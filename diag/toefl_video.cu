@@ -39,7 +39,7 @@ int main( int argc, char* argv[])
     //status = H5LTread_dataset_string( file, name.data(), &in[0]); //name should precede t so that reading is easier
     */
 
-    const Parameters p( file::read_input( in), 1);
+    const Parameters p( file::read_input( in), 0);
     p.display();
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual);
@@ -146,7 +146,7 @@ int main( int argc, char* argv[])
 
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //colors.scale() = 10e-2;
+        //colors.scale() = 5e-2;
         if(colors.scale() == 0) { colors.scale() = 1;}
         //draw phi and swap buffers
         w.title() <<"omega / "<<colors.scale()<<"\t";

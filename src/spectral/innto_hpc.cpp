@@ -26,6 +26,7 @@ unsigned itstp; //initialized by init function
 unsigned max_out;
 double amp, imp_amp; //
 double blob_width, posX, posY;
+unsigned reduction;
 
 
 Blueprint read( char const * file)
@@ -47,15 +48,20 @@ Blueprint read( char const * file)
     max_out = para[22];
     posX = para[23];
     posY = para[24];
+    reduction = para[25];
     std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
     return bp;
 }
 
-void copyMatrix( const Mat& src, std::vector<double> & dst)
+void copyAndReduceMatrix( const Mat& src, std::vector<double> & dst)
 {
-    for( unsigned i=0; i<src.rows(); i++)
-        for( unsigned j=0; j<src.cols(); j++)
-            dst[i*src.cols()+j] = src(i,j);
+    unsigned num = 0;
+    for( unsigned i=0; i<src.rows(); i+= reduction)
+        for( unsigned j=0; j<src.cols(); j+= reduction)
+        {
+            dst[num] = src(i,j);
+            num ++;
+        }
 }
     
 int main( int argc, char* argv[])
@@ -100,24 +106,24 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
     double time = 3.*alg.dt;
-    std::vector<double> out( alg.nx*alg.ny);
+    std::vector<double> out( alg.nx/reduction*alg.ny/reduction);
     std::vector<double> output[3] = {out, out, out};
     for( unsigned i=0; i<max_out; i++)
     {
         //output all three fields
-        copyMatrix( solver.getField( TL_ELECTRONS), output[0]);
-        copyMatrix( solver.getField( TL_IONS), output[1]);
-        copyMatrix( solver.getField( TL_POTENTIAL), output[2]);
-        t5file.write( output[0], output[1], output[2], time, alg.nx, alg.ny);
+        copyAndReduceMatrix( solver.getField( TL_ELECTRONS), output[0]);
+        copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
+        copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
+        t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
         for( unsigned i=0; i<itstp; i++)
             solver.step();
         
         time += itstp*alg.dt;
     }
-    copyMatrix( solver.getField( TL_ELECTRONS), output[0]);
-    copyMatrix( solver.getField( TL_IONS), output[1]);
-    copyMatrix( solver.getField( TL_POTENTIAL), output[2]);
-    t5file.write( output[0], output[1], output[2], time, alg.nx, alg.ny);
+    copyAndReduceMatrix( solver.getField( TL_ELECTRONS), output[0]);
+    copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
+    copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
+    t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
     //////////////////////////////////////////////////////////////////
     fftw_cleanup();
     return 0;

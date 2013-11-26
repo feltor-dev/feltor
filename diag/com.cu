@@ -88,12 +88,13 @@ int main( int argc, char* argv[])
         input0 = input_h;
         t5file.get_field( input_h, "ions", idx);
         input1 = input_h;
+        double Ue = 0, Ui = 0, Uphi = 0;
         if( p.global)
         {
             log( input0, ln0), log( input1, ln1);
-            double Ue = dg::blas2::dot( input0, w2d, ln0);
-            double Ui = p.tau*dg::blas2::dot( input1, w2d, ln1);
-            double Uphi = energy[(idx-1)*p.itstp] - Ue - Ui;
+            Ue = dg::blas2::dot( input0, w2d, ln0);
+            Ui = p.tau*dg::blas2::dot( input1, w2d, ln1);
+            Uphi = energy[(idx-1)*p.itstp] - Ue - Ui;
             thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
         }
         mass_ = dg::blas2::dot( one, w2d, input0 ); 

@@ -33,10 +33,11 @@ quasineutrality condition)
 17) mu_z (mz/mi*Z)(mass)                =   0.0  (48.0) 
 18) tau_z (Tz/Te*Z)                     =   0.0     
 ---------------------Miscellaneous----------------------------
-19) itstp (steps between output)        =   1
-20) OMP_NUM_THREADS                     =   4      (4)
+19) itstp (steps between output)        =   10
+20) OMP_NUM_THREADS                     =   2      (4)
 21) blob_width ( sigma)                 =   5    (10)
-22) # of outputs ( excluding first)     =   2
+22) # of outputs ( excluding first)     =   4
 23) x-position ( in units of lx)        =   0.25
 24) y-position ( in units of ly)        =   0.5
+25) reduction factor (divisor of Nx)    =   2
 @ ------------------------------------------------------------
