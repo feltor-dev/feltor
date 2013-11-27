@@ -23,7 +23,14 @@ int main( int argc, char* argv[])
     std::ofstream os( argv[2]);
     file::T5rdonly t5file( argv[1], in);
 
-    const Parameters p( file::read_input( in));
+    int layout = 0;
+    if( in.find( "TOEFL") != std::string::npos)
+        layout = 0;
+    else if( in.find( "INNTO") != std::string::npos)
+        layout = 1;
+    else 
+        std::cerr << "Unknown input file format: default to 0"<<std::endl;
+    const Parameters p( file::read_input( in), layout);
     p.display();
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual);

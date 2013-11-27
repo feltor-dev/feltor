@@ -7,6 +7,7 @@
 #include "dg/xspacelib.cuh"
 #include "file/read_input.h"
 #include "file/file.h"
+#include "dg/timer.cuh"
 
 #include "galerkin/parameters.h"
 
@@ -17,7 +18,6 @@ void log( const container& y, container& target)
 {
     thrust::transform( y.begin(), y.end(), target.begin(), dg::LN<double>());
 }
-
 template <class container>
 struct Vesqr
 {
@@ -53,14 +53,22 @@ int main( int argc, char* argv[])
     std::string in;
     file::T5rdonly t5file( argv[1], in);
     const unsigned num_out = t5file.get_size();
-    const Parameters p( file::read_input( in), 0);
-    //p.display();
+
+    int layout = 0;
+    if( in.find( "TOEFL") != std::string::npos)
+        layout = 0;
+    else if( in.find( "INNTO") != std::string::npos)
+        layout = 1;
+    else 
+        std::cerr << "Unknown input file format: default to 0"<<std::endl;
+    const Parameters p( file::read_input( in), layout);
+    p.display();
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
 
     dg::HVec input_h( grid.size());
     dg::HVec input0( input_h), input1(input0), ln0( input0), ln1(input0);
     dg::HVec visual( input0);
-    std::vector<double> mass, energy, diffusion, dissipation;
+    std::vector<double> mass(p.maxout*p.itstp+1,0), energy(mass), diffusion(mass), dissipation(mass);
     if( p.global)
     {
         t5file.get_xfile( mass, "mass");
@@ -82,15 +90,22 @@ int main( int argc, char* argv[])
     Vesqr<dg::HVec> vesqr( grid, p.kappa);
     os << "#Time(1) posX(2) posY(3) velX(4) velY(5) mass(6) diff(7) (m_tot-m_0)/m_0(8) "
        << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) posX_max(15) posY_max(16) \n";
+    //dg::Timer t;
     for( unsigned idx=1; idx<=num_out; idx++)
     {
-        t5file.get_field( input_h, "electrons", idx);
-        input0 = input_h;
-        t5file.get_field( input_h, "ions", idx);
-        input1 = input_h;
+        //t.tic();
+        //std::cout << idx<<std::endl;
+        t5file.get_field( input0, "electrons", idx);
+        //input0 = input_h;
+        t5file.get_field( input1, "ions", idx);
+        //input1 = input_h;
+        //t.toc();
+        //std::cout << "Reading took "<<t.diff()<<"s\n";
+        //t.tic();
         double Ue = 0, Ui = 0, Uphi = 0;
         if( p.global)
         {
+            //std::cout << "in global branch!\n";
             log( input0, ln0), log( input1, ln1);
             Ue = dg::blas2::dot( input0, w2d, ln0);
             Ui = p.tau*dg::blas2::dot( input1, w2d, ln1);
@@ -98,9 +113,13 @@ int main( int argc, char* argv[])
             thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
         }
         mass_ = dg::blas2::dot( one, w2d, input0 ); 
+        std::cout << mass_ <<" ";
+        std::cout << p.Nx <<" ";
+        std::cout << p.Ny <<" ";
 
         posX = dg::blas2::dot( xvec, w2d, input0)/mass_ - p.posX*p.lx;
         posY = dg::blas2::dot( yvec, w2d, input0)/mass_ - p.posY*p.ly;
+        std::cout << posX <<"\n ";
         velX = (posX - posX_old)/deltaT;
         velY = (posY - posY_old)/deltaT;
         posX_old = posX;
@@ -123,6 +142,8 @@ int main( int argc, char* argv[])
         posY_max = hy*(1./2. + (double)(position/Nx))-p.posY*p.ly;
         os << " "<<posX_max<<" "<<posY_max;
         os <<"\n";
+        //t.toc();
+        //std::cout << "The rest took "<<t.diff()<<"s\n";
     }
     os.close();
     return 0;

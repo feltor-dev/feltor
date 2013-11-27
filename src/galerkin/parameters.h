@@ -56,8 +56,8 @@ struct Parameters
         else if( layout == 1)
         {
             n = 1;
-            Nx = (unsigned)v[1];
-            Ny = (unsigned)v[2];
+            Nx = (unsigned)v[1]/v[25];
+            Ny = (unsigned)v[2]/v[25]; //reduction parameter v[25]!
             k = 3;
             dt = v[3];
             eps_pol = 1e-6;
