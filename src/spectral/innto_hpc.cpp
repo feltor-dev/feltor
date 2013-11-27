@@ -63,6 +63,22 @@ void copyAndReduceMatrix( const Mat& src, std::vector<double> & dst)
             num ++;
         }
 }
+double integral( const Mat& src, double h)
+{
+    double sum=0;
+    for( unsigned i=0; i<src.rows(); i++)
+        for( unsigned j=0; j<src.cols(); j++)
+            sum+=h*h*src(i,j);
+    return sum;
+}
+
+void xpa( std::vector<double>& x, double a)
+{
+    for( unsigned i =0; i<x.size(); i++)
+        x[i] += a;
+}
+
+
     
 int main( int argc, char* argv[])
 {
@@ -95,13 +111,15 @@ int main( int argc, char* argv[])
 
     const Algorithmic& alg = bp.algorithmic();
     Mat ne{ alg.ny, alg.nx, 0.}, phi{ ne};
+    const Boundary& bound = bp.boundary();
     // place some gaussian blobs in the field
     try{
-        init_gaussian( ne, posX, posY, blob_width/bp.boundary().lx, blob_width/bp.boundary().ly, amp);
+        init_gaussian( ne, posX, posY, blob_width/bound.lx, blob_width/bound.ly, amp);
         std::array< Mat, n> arr{{ ne, phi}};
         //now set the field to be computed
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
+    double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
 
     /////////////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
@@ -112,6 +130,7 @@ int main( int argc, char* argv[])
     {
         //output all three fields
         copyAndReduceMatrix( solver.getField( TL_ELECTRONS), output[0]);
+        xpa( output[0], meanMassE); //mean mass gets lost through the timestep
         copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
         copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
         t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
@@ -121,6 +140,7 @@ int main( int argc, char* argv[])
         time += itstp*alg.dt;
     }
     copyAndReduceMatrix( solver.getField( TL_ELECTRONS), output[0]);
+    xpa( output[0], meanMassE);
     copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
     copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
     t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
