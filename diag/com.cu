@@ -83,7 +83,13 @@ int main( int argc, char* argv[])
     dg::HVec w2d = dg::create::w2d( grid);
     dg::HMatrix equi = dg::create::backscatter( grid);
 
-    double mass_, posX, posY, velX, velY;
+    t5file.get_field( input0, "electrons", 1);
+    if( p.global)
+        thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
+    double mass_ = dg::blas2::dot( one, w2d, input0 ); 
+    const double posX_init = dg::blas2::dot( xvec, w2d, input0)/mass_;
+    const double posY_init = dg::blas2::dot( yvec, w2d, input0)/mass_;
+    double posX, posY, velX, velY;
     double posX_max, posY_max;
     double posX_old = 0, posY_old = 0;
     double deltaT = p.dt*p.itstp;
@@ -113,13 +119,9 @@ int main( int argc, char* argv[])
             thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
         }
         mass_ = dg::blas2::dot( one, w2d, input0 ); 
-        std::cout << mass_ <<" ";
-        std::cout << p.Nx <<" ";
-        std::cout << p.Ny <<" ";
+        posX = dg::blas2::dot( xvec, w2d, input0)/mass_ - posX_init;
+        posY = dg::blas2::dot( yvec, w2d, input0)/mass_ - posY_init;
 
-        posX = dg::blas2::dot( xvec, w2d, input0)/mass_ - p.posX*p.lx;
-        posY = dg::blas2::dot( yvec, w2d, input0)/mass_ - p.posY*p.ly;
-        std::cout << posX <<"\n ";
         velX = (posX - posX_old)/deltaT;
         velY = (posY - posY_old)/deltaT;
         posX_old = posX;
@@ -138,8 +140,8 @@ int main( int argc, char* argv[])
         unsigned Nx = p.Nx*p.n; 
         const double hx = grid.hx()/(double)grid.n();
         const double hy = grid.hy()/(double)grid.n();
-        posX_max = hx*(1./2. + (double)(position%Nx))-p.posX*p.lx;
-        posY_max = hy*(1./2. + (double)(position/Nx))-p.posY*p.ly;
+        posX_max = hx*(1./2. + (double)(position%Nx))-posX_init;
+        posY_max = hy*(1./2. + (double)(position/Nx))-posY_init;
         os << " "<<posX_max<<" "<<posY_max;
         os <<"\n";
         //t.toc();
