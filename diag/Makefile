@@ -1,7 +1,7 @@
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
 device = cpu
-system = home
+system = leo3
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -11,7 +11,7 @@ CFLAGS+= -Xcompiler -fopenmp
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 OPT	   = -O2
 else
-CC = g++
+CC = mpicxx
 CFLAGS = -Wall -fopenmp -x c++
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
@@ -27,7 +27,7 @@ LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
 ifeq ($(strip $(system)),leo3)
-CXX = g++
+CXX = mpicxx
 INCLUDE += -I$(HOME)/include
 INCLUDE += -I$(UIBK_HDF5_INC)
 INCLUDE += -I$(UIBK_OPENMPI_INC)
@@ -67,7 +67,7 @@ show: show.cpp
 	$(CXX) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) -lhdf5 -lhdf5_hl -Wall
 
 com: com.cu
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 figure17: figure17.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
