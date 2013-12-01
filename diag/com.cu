@@ -83,13 +83,28 @@ int main( int argc, char* argv[])
     dg::HVec w2d = dg::create::w2d( grid);
     dg::HMatrix equi = dg::create::backscatter( grid);
 
-    double mass_, posX, posY, velX, velY;
+    t5file.get_field( input0, "electrons", 1);
+    if( p.global)
+        thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
+    double mass_ = dg::blas2::dot( one, w2d, input0 ); 
+    const double posX_init = dg::blas2::dot( xvec, w2d, input0)/mass_;
+    const double posY_init = dg::blas2::dot( yvec, w2d, input0)/mass_;
+    double posX, posY, velX, velY, accX, accY;
     double posX_max, posY_max;
     double posX_old = 0, posY_old = 0;
     double deltaT = p.dt*p.itstp;
+    t5file.get_field( input0, "electrons", 2);
+        if( p.global)
+            thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
+        mass_ = dg::blas2::dot( one, w2d, input0 ); 
+        posX = dg::blas2::dot( xvec, w2d, input0)/mass_ - posX_init;
+        posY = dg::blas2::dot( yvec, w2d, input0)/mass_ - posY_init;
+        double velX_old = -posX/deltaT, velY_old = -posY/deltaT; 
+        //velX_old = NAN, velY_old = NAN;
+
     Vesqr<dg::HVec> vesqr( grid, p.kappa);
     os << "#Time(1) posX(2) posY(3) velX(4) velY(5) mass(6) diff(7) (m_tot-m_0)/m_0(8) "
-       << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) posX_max(15) posY_max(16) \n";
+       << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) posX_max(15) posY_max(16) accX(17) acc(18) \n";
     //dg::Timer t;
     for( unsigned idx=1; idx<=num_out; idx++)
     {
@@ -113,17 +128,15 @@ int main( int argc, char* argv[])
             thrust::transform( input0.begin(), input0.end(), input0.begin(), dg::PLUS<double>(-1));
         }
         mass_ = dg::blas2::dot( one, w2d, input0 ); 
-        std::cout << mass_ <<" ";
-        std::cout << p.Nx <<" ";
-        std::cout << p.Ny <<" ";
+        posX = dg::blas2::dot( xvec, w2d, input0)/mass_ - posX_init;
+        posY = dg::blas2::dot( yvec, w2d, input0)/mass_ - posY_init;
 
-        posX = dg::blas2::dot( xvec, w2d, input0)/mass_ - p.posX*p.lx;
-        posY = dg::blas2::dot( yvec, w2d, input0)/mass_ - p.posY*p.ly;
-        std::cout << posX <<"\n ";
         velX = (posX - posX_old)/deltaT;
         velY = (posY - posY_old)/deltaT;
-        posX_old = posX;
-        posY_old = posY;
+        accX = (velX - velX_old)/deltaT;
+        accY = (velY - velY_old)/deltaT;
+        posX_old = posX; posY_old = posY;
+        velX_old = velX; velY_old = velY;
         //output
         os << t5file.get_time( idx);//(1)
         os << " "<<posX << " " << posY << " "<<velX<<" "<<velY;//(2-5)
@@ -138,9 +151,10 @@ int main( int argc, char* argv[])
         unsigned Nx = p.Nx*p.n; 
         const double hx = grid.hx()/(double)grid.n();
         const double hy = grid.hy()/(double)grid.n();
-        posX_max = hx*(1./2. + (double)(position%Nx))-p.posX*p.lx;
-        posY_max = hy*(1./2. + (double)(position/Nx))-p.posY*p.ly;
+        posX_max = hx*(1./2. + (double)(position%Nx))-posX_init;
+        posY_max = hy*(1./2. + (double)(position/Nx))-posY_init;
         os << " "<<posX_max<<" "<<posY_max;
+        os << " "<<accX<<" "<<accY;
         os <<"\n";
         //t.toc();
         //std::cout << "The rest took "<<t.diff()<<"s\n";
