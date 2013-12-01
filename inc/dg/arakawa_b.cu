@@ -16,19 +16,19 @@ using namespace std;
 using namespace dg;
 
 const double lx = M_PI;
-const double ly = 2.*M_PI;
+const double ly = M_PI;
 //const double lx = 1.;
 //const double ly = 1.;
 
 
 //choose some mean function (attention on lx and ly)
-/*
 //THESE ARE NOT PERIODIC
-double left( double x, double y) { return sin(x/2)*sin(x/2)*exp(x)*sin(y/2.)*sin(y/2.)*log(y+1); }
-double right( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*sin(x/2)*log(x+1); }
-*/
+double left( double x, double y) { return sin(x)*cos(y);}
+double right( double x, double y){ return exp(0.1*(x+y)); }
+/*
 double left( double x, double y) {return sin(x)*exp(x-M_PI)*sin(y);}
 double right( double x, double y) {return sin(x)*sin(y)*exp(y-M_PI);}
+*/
 double jacobian( double x, double y) 
 {
     return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
@@ -55,7 +55,7 @@ int main()
     cin >> n;
     cin >> Nx; 
     cin >> Ny; 
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::PER);
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     S2D<double > s2d( grid);
     DVec w2d = create::w2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;

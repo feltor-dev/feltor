@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <sstream>
 #include <cmath>
+#include <cassert>
 
 #include "read_input.h"
 #include "hdf5.h"
@@ -104,7 +105,7 @@ struct T5trunc
     {
         hid_t file = H5Fcreate( name.data(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
         hsize_t size = input.size();
-        herr_t status = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data());
+        status_ = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data());
         H5Fclose( file);
     }
 
@@ -126,10 +127,9 @@ struct T5trunc
         hid_t file = H5Fopen( name_.data(), H5F_ACC_RDWR, H5P_DEFAULT);
         hid_t grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
         hsize_t dims[] = { nNy, nNx };
-        herr_t status;
-        status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, field1.data());
-        status = H5LTmake_dataset_double( grp, "ions", 2,  dims, field2.data());
-        status = H5LTmake_dataset_double( grp, "potential", 2,  dims, field3.data());
+        status_ = H5LTmake_dataset_double( grp, "electrons", 2,  dims, field1.data());
+        status_ = H5LTmake_dataset_double( grp, "ions", 2,  dims, field2.data());
+        status_ = H5LTmake_dataset_double( grp, "potential", 2,  dims, field3.data());
         H5Gclose( grp);
         H5Fclose( file);
     }
@@ -155,16 +155,16 @@ struct T5trunc
         hid_t file = H5Fopen( name_.data(), H5F_ACC_RDWR, H5P_DEFAULT);
         hid_t grp = H5Gcreate( file, "xfiles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
         hsize_t dims[] = { mass_.size() };
-        herr_t status;
-        status = H5LTmake_dataset_double( grp, "mass", 1,  dims, mass_.data());
-        status = H5LTmake_dataset_double( grp, "diffusion", 1,  dims, diffusion_.data());
-        status = H5LTmake_dataset_double( grp, "energy", 1,  dims, energy_.data());
-        status = H5LTmake_dataset_double( grp, "dissipation", 1,  dims, dissipation_.data());
+        status_ = H5LTmake_dataset_double( grp, "mass", 1,  dims, mass_.data());
+        status_ = H5LTmake_dataset_double( grp, "diffusion", 1,  dims, diffusion_.data());
+        status_ = H5LTmake_dataset_double( grp, "energy", 1,  dims, energy_.data());
+        status_ = H5LTmake_dataset_double( grp, "dissipation", 1,  dims, dissipation_.data());
         H5Gclose( grp);
         H5Fclose( file);
     }
 
   private:
+    herr_t status_;
     std::string name_;
     std::vector<double> mass_, diffusion_, energy_, dissipation_;
 };
@@ -185,9 +185,9 @@ struct T5rdonly
         file_ = H5Fopen( name.data(), H5F_ACC_RDONLY, H5P_DEFAULT);
         std::string namep = file::getName( file_, 0);
         hsize_t size;
-        herr_t status = H5LTget_dataset_info( file_, namep.data(), &size, NULL, NULL);
+        status_ = H5LTget_dataset_info( file_, namep.data(), &size, NULL, NULL);
         in.resize( size);
-        status = H5LTread_dataset_string( file_, namep.data(), &in[0]); 
+        status_ = H5LTread_dataset_string( file_, namep.data(), &in[0]); 
     }
 
     /**
@@ -204,9 +204,9 @@ struct T5rdonly
         std::string grpName = file::getName( file_, idx);//get group name
         hid_t group = H5Gopen( file_, grpName.data(), H5P_DEFAULT);
         hsize_t size[2]; //get dataset size
-        herr_t status = H5LTget_dataset_info( group, name, size, NULL, NULL);
+        status_ = H5LTget_dataset_info( group, name, size, NULL, NULL);
         field.resize( size[0]*size[1]);
-        status = H5LTread_dataset_double( group, name, &field[0] );
+        status_ = H5LTread_dataset_double( group, name, &field[0] );
         H5Gclose( group); //close group
     }
     /**
@@ -240,7 +240,7 @@ struct T5rdonly
     {
         hid_t group = H5Gopen( file_, "xfiles", H5P_DEFAULT);
         hsize_t size; //get size
-        herr_t status = H5LTget_dataset_info( group, name, &size, NULL, NULL);
+        status_ = H5LTget_dataset_info( group, name, &size, NULL, NULL);
         dataset.resize( size);
         H5LTread_dataset_double( group, name, &dataset[0] );
         H5Gclose( group);
@@ -250,6 +250,7 @@ struct T5rdonly
      */
     ~T5rdonly(){ H5Fclose( file_);}
   private:
+    herr_t status_;
     hid_t file_;
 };
 
