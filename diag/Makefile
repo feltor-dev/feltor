@@ -1,7 +1,7 @@
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
-device = cpu
-system = home
+device = gpu
+system = vsc
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -39,7 +39,13 @@ endif
 ifeq ($(strip $(system)),vsc)
 CXX = g++
 INCLUDE += -I$(HOME)/include
+INCLUDE += -I/opt/sw/hdf5/1.8.11/include
+INCLUDE += -I/opt/intel/impi/4.1.0/include64 
+CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
 
+LIBS     = -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
+LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
+LIBS 	+= -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
 GLFLAGS  = -lm
 endif
 
@@ -67,10 +73,10 @@ show: show.cpp
 	$(CXX) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) -lhdf5 -lhdf5_hl -Wall
 
 com: com.cu
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 figure17: figure17.cu
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 vmax: vmax.cu
 	$(CXX) -O2 $(CFLAGS) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) 
