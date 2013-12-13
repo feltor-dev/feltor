@@ -28,6 +28,7 @@ int main( int argc, char* argv[])
     std::string in;
     file::T5rdonly t5file( argv[1], in);
     unsigned nlinks = t5file.get_size();
+    //std::cout <<"NLINKS "<<nlinks<<"\n";
 
     int layout = 0;
     if( in.find( "TOEFL") != std::string::npos)
@@ -93,6 +94,7 @@ int main( int argc, char* argv[])
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         colors.scale() = p.n0;
+        if( v[6] > 0) colors.scale() = v[6];
         t.toc();
         //std::cout << "Computing colorscale took "<<t.diff()<<"s\n";
         //draw ions
@@ -120,8 +122,9 @@ int main( int argc, char* argv[])
 
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //colors.scale() = 5e-2;
         if(colors.scale() == 0) { colors.scale() = 1;}
+        if( v[7] > 0)
+            colors.scale() = v[7];
         //draw phi and swap buffers
         w.title() <<"omega / "<<colors.scale()<<"\t";
         w.title() << std::fixed; 
