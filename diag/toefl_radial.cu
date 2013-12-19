@@ -47,7 +47,7 @@ int main( int argc, char* argv[])
         double x = hx/2.;
         unsigned j=p.Ny*p.n/2;
         os << x <<" "<< visual[j*p.Nx*p.n] <<"\n";
-        for( unsigned i=0; i<p.Nx*p.n; i++)
+        for( unsigned i=1; i<p.Nx*p.n; i++)
         {
             x+=hx;
             os << x <<" "<<visual[j*p.Nx*p.n+i]<<"\n";
