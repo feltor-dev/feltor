@@ -1,6 +1,6 @@
 Welcome to the TOEFL project v1.3 library section!
 
-Four libraries are currently implemented. The DG library provides utilities 
+Three libraries are currently implemented. The DG library provides utilities 
 for the implementation of a discontinuous Galerkin code, 
 the FILE library supports
 output with hdf5 and the TOEFL library is made for implementing 2D pseudospectral
