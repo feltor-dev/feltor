@@ -10,12 +10,15 @@
 
 #include "galerkin/parameters.h"
 
+const double T = 20;
+//is sigma the radius or the diameter
+
 double X( double x, double y) {return x;}
 double Y( double x, double y) {return y;}
 
 struct Heaviside2d
 {
-    Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
+    Heaviside2d( double sigma):sigma2_(sigma*sigma/4.), x_(0), y_(0){}
     void set_origin( double x0, double y0){ x_=x0, y_=y0;}
     double operator()(double x, double y)
     {
@@ -42,7 +45,14 @@ int main( int argc, char* argv[])
     std::string in;
     file::T5rdonly t5file( argv[1], in);
     //const unsigned num_out = t5file.get_size();
-    const Parameters p( file::read_input( in), 0);
+    int layout = 0;
+    if( in.find( "TOEFL") != std::string::npos)
+        layout = 0;
+    else if( in.find( "INNTO") != std::string::npos)
+        layout = 1;
+    else 
+        std::cerr << "Unknown input file format: default to 0"<<std::endl;
+    const Parameters p( file::read_input( in), layout);
     //p.display();
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
 
@@ -68,7 +78,7 @@ int main( int argc, char* argv[])
     double normalize = dg::blas2::dot( heavy, w2d, input0);
     double gamma = sqrt( p.kappa*p.n0*(1+p.tau)/p.sigma);
 
-    unsigned idx = (unsigned)(10/gamma/p.dt/p.itstp) + 1;
+    unsigned idx = (unsigned)(T/gamma/p.dt/p.itstp) + 1;
     {
         t5file.get_field( input_h, "electrons", idx);
         input0 = input_h;

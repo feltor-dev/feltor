@@ -31,4 +31,4 @@ shu_time: shu_time.cu shu.cuh
 .PHONY: clean
 
 clean:
-	rm -f shu_t shu_b shu2d_b shu_hpc shu_dat
+	rm -f shu_t shu_b shu2d_b shu_hpc shu_dat shu_time

@@ -122,7 +122,7 @@ int main( int argc, char* argv[])
     // initialize theta here ...
     init_gaussian( theta, 0.2,0.5, 5./128./field_ratio, 5./128., amp);
     init_gaussian( theta, 0.7,0.3, 5./128./field_ratio, 5./128., amp);
-    init_gaussian( theta, 0.9,0.2, 5./128./field_ratio, 5./128., amp);
+    init_gaussian( theta, 0.9,0.2, 5./128./field_ratio, 5./128., -amp);
     //initialize solver
     try{
         std::array< Matrix_Type,2> arr{{ theta, vorticity}};
@@ -144,6 +144,7 @@ int main( int argc, char* argv[])
 
     glEnable( GL_TEXTURE_2D);
     glfwEnable( GLFW_STICKY_KEYS);
+    glfwDisable( GLFW_STICKY_MOUSE_BUTTONS);
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glClearColor(0.f, 0.f, 0.f, 0.f);
 
@@ -179,6 +180,31 @@ int main( int argc, char* argv[])
         glfwSetWindowTitle( (window_str.str()).c_str() );
         window_str.str("");
         glfwSwapBuffers();
+        if( glfwGetMouseButton( GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        {
+            int xpos, ypos;
+            glfwGetMousePos( &xpos, &ypos); //origin top left, yaxis down
+            int width, height;
+            glfwGetWindowSize( &width, &height); //origin top left, yaxis down
+            double x0 = (double)xpos/(double)width;
+            double y0 = (1.-(double)ypos/(double)height);
+            solver.setHeat(x0, y0, 5./128./field_ratio, 5./128., amp/10.);
+        }
+        else if ( glfwGetMouseButton( GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS )
+        {
+            int xpos, ypos;
+            glfwGetMousePos( &xpos, &ypos); //origin top left, yaxis down
+            int width, height;
+            glfwGetWindowSize( &width, &height); //origin top left, yaxis down
+            double x0 = (double)xpos/(double)width;
+            double y0 = (1.-(double)ypos/(double)height);
+            solver.setHeat(x0, y0, 5./128./field_ratio, 5./128., -amp/10.);
+        }
+        else
+        {
+            solver.setHeat(0,0,0,0,0);
+        }
+
         timer.tic();
         for(unsigned i=0; i<N; i++)
         {

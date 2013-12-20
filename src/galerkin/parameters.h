@@ -14,7 +14,7 @@ struct Parameters
     double lx, ly; 
     enum dg::bc bc_x, bc_y;
 
-    bool global;
+    int global;
     double nu, kappa, tau;
 
     double n0, sigma, posX, posY;
@@ -92,7 +92,7 @@ struct Parameters
             <<"    Ion-temperature: = "<<tau<<"\n";
         char local[] = "LOCAL" , glo[] = "GLOBAL";
         os  <<"Mode is:   \n"
-            <<"    "<<(global?glo:local)<<"\n";
+            <<"    "<<(global?glo:local)<<global<<"\n";
         char per[] = "PERIODIC", dir[] = "DIRICHLET";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
