@@ -7,7 +7,7 @@
 3)  nu (artif. hyper-viscosity) 	        =   0.000		(0.01)
 4)  amp (initial perturbation amplitude)    =   50000.		(1.0)
 5)  nz (grid points in z, best 2^n)	        =   64.		(257.)
-6)  nx (grid points in x, best 2^n)	 	    =   1024.		(512.)
+6)  nx (grid points in x, best 2^n)	 	    =   512.		(512.)
 7)  dt (time step)	                        =   4e-6		(0.00001)
 8)  itstp (steps between output)	        =   5 		    (50)
 9)  itmax (total steps)			            =   50000		(50000)

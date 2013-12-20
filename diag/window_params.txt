@@ -8,5 +8,5 @@
 3) window width (in pixel)    = 500 
 4) window height(in pixel)    = 1000 
 5) output frame               = 75
-6) colorscale 1               = 6
-7) colorscale 2               = 0.035
+6) colorscale 1               = -6
+7) colorscale 2               = -0.035
