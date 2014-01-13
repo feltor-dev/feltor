@@ -110,6 +110,12 @@ class Convection_Solver
         @note You cannot change parameters once constructed.
      */
     const Parameter& parameter() const { return param;}
+    void setHeat( double x0, double y0, double sigma_x, double sigma_y, double amp){
+        if( x0 >= 0 && x0 < param.lx && y0 >= 0 && y0 < param.lz)
+            x0_ = x0, y0_ = y0, sigma_x_ = sigma_x, sigma_y_ = sigma_y, amp_ = amp;
+        else
+            std::cerr << "x0 or y0 is not within the boundaries!\n";
+    }
   private:
     typedef std::complex<double> complex;
     //methods
@@ -121,6 +127,7 @@ class Convection_Solver
     //members
     const size_t rows, cols;
     const size_t crows, ccols;
+    double x0_, y0_, sigma_x_, sigma_y_, amp_;
     const Parameter param;
     /////////////////fields//////////////////////////////////
     //GhostMatrix<double, TL_DFT> ghostdens, ghostphi;
@@ -140,6 +147,7 @@ class Convection_Solver
 Convection_Solver::Convection_Solver( const Parameter& p):
     rows( p.nz ), cols( p.nx ),
     crows( rows), ccols( cols/2+1),
+    x0_(0), y0_(0), sigma_x_(0), sigma_y_(0), amp_(0),
     param( p),
     //fields
     dens( MatrixArray<double, TL_DFT, 2>::construct( rows, cols)), nonlinear( dens),
@@ -277,6 +285,10 @@ void Convection_Solver::step_()
         ghostdens.initGhostCells( );
         arakawa( phi, ghostdens, nonlinear[k]);
         swap_fields( dens[k], ghostdens); //now ghostdens is void
+    }
+    if( amp_ != 0)
+    {
+        init_gaussian( dens[0], x0_, y0_, sigma_x_, sigma_y_, amp_);
     }
     //2. perform karniadakis step
     karniadakis.step_i<S>( dens, nonlinear);

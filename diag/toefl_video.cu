@@ -12,6 +12,8 @@
 //#include "lamb_dipole/parameters.h"
 
 
+//can read TOEFL and INNTO h5-files and plot them on screen
+
 int main( int argc, char* argv[])
 {
     dg::Timer t;
