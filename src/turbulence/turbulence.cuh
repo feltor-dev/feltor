@@ -254,6 +254,8 @@ const container& Turbulence< container>::polarisation( const std::vector<contain
     return phi[0];
 }
 
+//y is the density without background gradient (such that the BC is zero)
+//background is -gx + 1 + gl_x
 template< class container>
 void Turbulence< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {

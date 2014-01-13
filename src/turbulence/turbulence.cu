@@ -92,6 +92,8 @@ int main( int argc, char* argv[])
 
         //transform phi
         dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
+        //dg::blas1::axpby(1, test.potential()[0], 0, y1[1]);
+
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale

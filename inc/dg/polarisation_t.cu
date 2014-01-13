@@ -13,11 +13,11 @@
 #include "preconditioner.cuh"
 #include "functions.h"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned N = 100;  //more N means less iterations for same error
+//const unsigned n = 3; //global relative error in L2 norm is O(h^P)
+//const unsigned N = 100;  //more N means less iterations for same error
 
 const double lx = M_PI;
-const double eps = 1e-1; //# of pcg iterations increases very much if 
+//const double eps = 1e-1; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 typedef thrust::device_vector< double>   DVec;
@@ -30,17 +30,25 @@ typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix;
 typedef cusp::device_memory Memory;
 
 double initial( double x) {return sin(0);}
-double pol( double x) {return 1. + sin(x); } //must be strictly positive
+//double pol( double x) {return 1. + sin(x); } //must be strictly positive
 //double pol( double x) {return 1.; }
+double grad = 1.000;
+double pol( double x) {return 1. + sin(x) + grad*x; } //must be strictly positive
 
-double rhs( double x) { return sin(x) + 1.-2.*cos(x)*cos(x);}
+//double rhs( double x) { return sin(x) + 1.-2.*cos(x)*cos(x);}
 //double rhs( double x) { return sin( x);}
+double rhs( double x) { return -(cos(x)+grad)*cos(x)+(1.+sin(x)+grad*x)*sin(x);}
+//solution to -\d_x ( \pol(x)*\d_x \phi) = \rhs
 double sol(double x)  { return sin( x);}
 
 using namespace std;
 
 int main()
 {
+    unsigned n, N;
+    double eps;
+    std::cout << "Write n N and eps!\n";
+    std::cin>> n >> N >> eps;
 
     //create functions A(chi) x = b
     dg::Grid1d<double> g( 0, lx, n, N, dg::DIR);
@@ -74,10 +82,10 @@ int main()
     //compute error
     dg::blas1::axpby( 1.,dx,-1.,derror);
 
-    double eps = dg::blas2::dot( dg::S1D<double>(g), derror);
-    cout << "L2 Norm2 of Error is " << eps << endl;
+    double epsl = dg::blas2::dot( dg::S1D<double>(g), derror);
+    cout << "L2 Norm2 of Error is " << epsl << endl;
     double norm = dg::blas2::dot( dg::S1D<double>(g), dsolution);
-    std::cout << "L2 Norm of relative error is "<<sqrt( eps/norm)<<std::endl;
+    std::cout << "L2 Norm of relative error is "<<sqrt( epsl/norm)<<std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
 
     return 0;
