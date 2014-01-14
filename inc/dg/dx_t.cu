@@ -12,20 +12,22 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
-const unsigned N = 40;
+unsigned n = 3;
+unsigned N = 40;
 const double lx = 2*M_PI;
 
-/*
 double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
-*/
+/*
 double function (double  x) {return x*(x-2*M_PI)*exp(x);}
 double derivative( double x) { return (2.*x-2*M_PI)*exp(x) + function(x);}
+*/
 
 int main ()
 {
     cout << "Note the supraconvergence!\n";
+    cout << "Type in n an Nx!\n";
+    cin >> n>> N;
     cout << "# of Legendre nodes " << n <<"\n";
     cout << "# of cells          " << N <<"\n";
     Grid1d<double> g( 0, lx, n, N);
