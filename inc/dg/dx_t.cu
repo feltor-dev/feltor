@@ -39,8 +39,8 @@ bc bcx = NEU_DIR;
 int main ()
 {
     cout << "Note the supraconvergence!\n";
-    cout << "Type in n and Nx!\n";
-    cin >> n >> N;
+    cout << "Type in n an Nx!\n";
+    cin >> n>> N;
     cout << "# of Legendre nodes " << n <<"\n";
     cout << "# of cells          " << N <<"\n";
     Grid1d<double> g( 0, lx, n, N);
