@@ -20,7 +20,10 @@ namespace dg{
  */
 enum bc{ 
     PER, //!< periodic boundaries
-    DIR //!< homogeneous dirichlet boundaries
+    DIR, //!< homogeneous dirichlet boundaries
+    DIR_NEU,
+    NEU_DIR,
+    NEU
 };
 
 ///@addtogroup grid

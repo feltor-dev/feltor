@@ -51,10 +51,22 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
     t *= 2./h;
 
     Operator< T> a = 1./2.*t*(d-d.transpose());
-    Operator< T> a_bound_right = t*(-1./2.*l-d.transpose());
-    Operator< T> a_bound_left = t*(1./2.*r-d.transpose());
+    //bcx = PER
+    Operator<T> a_bound_right(a), a_bound_left(a);
+    //left boundary
+    if( bcx == DIR || bcx == DIR_NEU )
+        a_bound_left += 0.5*t*l;
+    else if (bcx == NEU || bcx == NEU_DIR)
+        a_bound_left -= 0.5*t*l;
+    //right boundary
+    if( bcx == DIR || bcx == NEU_DIR)
+        a_bound_right -= 0.5*t*r;
+    else if( bcx == NEU || bcx == DIR_NEU)
+        a_bound_right += 0.5*t*r;
     if( bcx == PER ) //periodic bc
         a_bound_left = a_bound_right = a;
+    //Operator< T> a_bound_right = t*(-1./2.*l-d.transpose()); //=T[ 0.5(D-D^T)-0.5 R]
+    //Operator< T> a_bound_left = t*(1./2.*r-d.transpose());// = T[ 0.5(D-D^T) +0.5 L]
     Operator< T> b = t*(1./2.*rl);
     Operator< T> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
     //std::cout << a << "\n"<<b <<std::endl;
