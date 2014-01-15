@@ -24,8 +24,14 @@ typedef dg::T1D<double> Preconditioner;
 
 double sine(double x){ return sin( x);}
 double sol(double x){ return sin(x);}
-double initial( double x) {return sin(0);}
 dg::bc bcx = dg::DIR;
+//double sine(double x){ return 9./16.*sin( 3./4.*x);}
+//double sol(double x){ return sin(3./4.*x);}
+//dg::bc bcx = dg::DIR_NEU;
+//double sine(double x){ return 9./16.*cos( 3./4.*x);}
+//double sol(double x){ return cos(3./4.*x);}
+//dg::bc bcx = dg::NEU_DIR;
+double initial( double x) {return sin(0);}
 
 using namespace std;
 int main()

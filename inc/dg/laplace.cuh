@@ -25,8 +25,7 @@ namespace create{
  *
  * @ingroup highlevel
  * Use cusp internal conversion to create e.g. the fast ell_matrix format.
- * @tparam T value-type
- * @param n Number of Legendre nodes per cell
+ * @tparam T value-type * @param n Number of Legendre nodes per cell
  * @param N Vector size ( number of cells)
  * @param h cell size
  * @param no use normed if you want to compute e.g. diffusive terms
@@ -195,47 +194,13 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
     HMatrix T = dg::tensor( g.N(), dg::create::pipj_inv( g.n())); 
     cusp::blas::scal( T.values, 2./g.h());
     HMatrix J = dg::create::jump_ot<value_type>( g.n(), g.N(), g.bcx());
+    HMatrix right = create::dx_asymm_mt( g.n(), g.N(), g.h(), g.bcx());
+    HMatrix left, temp;
+    cusp::transpose( right, left);
+    cusp::multiply( left, S, temp);
+
     HMatrix laplace_oJ, laplace;
-    if( g.bcx() == PER)
-    {
-        HMatrix right = create::dx_asymm_mt( g.n(), g.N(), g.h(), PER, forward);
-        HMatrix left, temp;
-        cusp::transpose( right, left);
-        cusp::multiply( left, S, temp);
-        cusp::multiply( temp, right, laplace_oJ);
-    }
-    else 
-    {
-        HMatrix temp = create::dx_asymm_mt( g.n(), g.N(), g.h(), DIR, forward), Dxp, Dxm;
-        cusp::multiply( S, temp, Dxp); 
-        temp = create::dx_asymm_mt( g.n(), g.N(), g.h(), DIR, backward);
-        cusp::multiply( S, temp, Dxm); 
-        HMatrix DxpT, DxmT;
-        cusp::transpose( Dxp, DxpT);
-        cusp::transpose( Dxm, DxmT);
-        if( g.bcx() == DIR)
-        {
-            cusp::multiply( DxpT, T, temp);
-            cusp::multiply( temp, Dxp, laplace_oJ);
-        }
-        if( g.bcx() == NEU)
-        {
-            cusp::multiply( Dxm, T, temp);
-            cusp::multiply( temp, DxmT, laplace_oJ);
-        }
-        if( g.bcx() == NEU_DIR)
-        {
-            cusp::multiply( Dxm, T, temp);
-            cusp::multiply( temp, Dxp, laplace_oJ);
-            cusp::blas::scal( laplace_oJ.values, -1);
-        }
-        if( g.bcx() == DIR_NEU)
-        {
-            cusp::multiply( Dxp, T, temp);
-            cusp::multiply( temp, Dxm, laplace_oJ);
-            cusp::blas::scal( laplace_oJ.values, -1);
-        }
-    }
+    cusp::multiply( temp, right, laplace_oJ);
     cusp::add( laplace_oJ, J, laplace);
     laplace.sort_by_row_and_column();
     if( no == normed) 
