@@ -2,26 +2,21 @@
 #define _DG_LAPLACE_CUH
 
 #include <cusp/coo_matrix.h>
+#include <cusp/transpose.h>
+#include <cusp/elementwise.h>
 
 #include "grid.cuh"
 #include "functions.h"
 #include "operator_dynamic.h"
 #include "creation.cuh"
+#include "dx.cuh"
+#include "operator_matrix.cuh"
 
 /*! @file 1d laplacians
   */
 
 namespace dg
 {
-/**
- * @brief Switch between normalisations
- *
- * @ingroup creation
- */
-enum norm{
-    normed,   //!< indicates that output is properly normalized
-    not_normed //!< indicates that normalisation weights (either T or V) are missing from output
-};
 
 namespace create{
 ///@cond
@@ -179,6 +174,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned n, unsigned 
  *
  * @return Host Matrix in coordinate form
  */
+/*
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T>& g, norm no = not_normed)
 {
@@ -188,7 +184,82 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T>& g, norm 
     else 
         return laplace1d_per<T>( g.n(), g.N(), g.h(), no);
 }
+*/
 
+template< class value_type>
+cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<value_type>& g, norm no = not_normed)
+{
+    typedef cusp::coo_matrix<int, value_type, cusp::host_memory> HMatrix;
+    HMatrix S = dg::tensor( g.N(), dg::create::pipj( g.n())); 
+    HMatrix T = dg::tensor( g.N(), dg::create::pipj_inv( g.n())); 
+    HMatrix J = dg::create::jump_ot<value_type>( g.n(), g.N(), g.bcx());
+    HMatrix laplace_oJ, laplace;
+    if( g.bcx() == PER)
+    {
+        HMatrix right = create::dx_asymm_mt( g.n(), g.N(), g.h(), PER, forward);
+        HMatrix left, temp;
+        cusp::transpose( right, left);
+        cusp::multiply( left, S, temp);
+        cusp::multiply( temp, right, laplace_oJ);
+    }
+    else 
+    {
+        HMatrix temp = create::dx_asymm_mt( g.n(), g.N(), g.h(), DIR, forward), Dxp, Dxm;
+        cusp::multiply( S, temp, Dxp); 
+        temp = create::dx_asymm_mt( g.n(), g.N(), g.h(), DIR, backward);
+        cusp::multiply( S, temp, Dxm); 
+        HMatrix DxpT, DxmT;
+        cusp::transpose( Dxp, DxpT);
+        cusp::transpose( Dxm, DxmT);
+        if( g.bcx() == DIR)
+        {
+            cusp::multiply( DxpT, T, temp);
+            cusp::multiply( temp, Dxp, laplace_oJ);
+        }
+        if( g.bcx() == NEU)
+        {
+            cusp::multiply( Dxm, T, temp);
+            cusp::multiply( temp, DxmT, laplace_oJ);
+        }
+        if( g.bcx() == NEU_DIR)
+        {
+            cusp::multiply( Dxm, T, temp);
+            cusp::multiply( temp, Dxp, laplace_oJ);
+            cusp::blas::scal( laplace_oJ.values, -1);
+        }
+        if( g.bcx() == DIR_NEU)
+        {
+            cusp::multiply( Dxp, T, temp);
+            cusp::multiply( temp, Dxm, laplace_oJ);
+            cusp::blas::scal( laplace_oJ.values, -1);
+        }
+    }
+    cusp::add( laplace_oJ, J, laplace);
+    if( no == normed) 
+    {
+        cusp::multiply( T, laplace, laplace_oJ);
+        return laplace_oJ;
+    }
+    return laplace;
+}
+        
+
+
+
+
+        
+        
+
+
+/*
+   1. dx_asymm_mt( DIR, forward ) (dependent on bcx) 
+   2. transpose or dx_asymm_mt( DIR, backward);
+   3. create middle matrix S
+   4. multiply
+   5. add jump matrix multiplied with T
+
+   6. if not normed then multiply with S again.
+   */
 
 
 ///@endcond

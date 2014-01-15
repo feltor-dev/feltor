@@ -24,11 +24,12 @@ typedef dg::T1D<double> Preconditioner;
 
 double sine(double x){ return sin( x);}
 double initial( double x) {return sin(0);}
+dg::bc bcx = dg::DIR;
 
 using namespace std;
 int main()
 {
-    dg::Grid1d<double > g( 0, lx, n, N, dg::DIR);
+    dg::Grid1d<double > g( 0, lx, n, N, bcx);
     dg::HVec x = dg::expand( initial, g);
     dg::DMatrix A = dg::create::laplace1d( g); 
 

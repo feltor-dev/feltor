@@ -13,6 +13,19 @@
   */
 namespace dg
 {
+/**
+ * @brief Switch between normalisations
+ *
+ * @ingroup creation
+ */
+enum norm{
+    normed,   //!< indicates that output is properly normalized
+    not_normed //!< indicates that normalisation weights (either T or V) are missing from output
+};
+enum direction{
+    forward, 
+    backward
+};
 namespace create
 {
 ///@addtogroup lowlevel
@@ -110,7 +123,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the skew-symmetric 1d single derivative
+* @brief Create and assemble a cusp Matrix for the 1d single forward derivative
 *
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * The matrix isn't skew-symmetric due to normalisation T.
@@ -119,17 +132,20 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
+* @param forward forward differences if true, else backward differences
 *
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N, T h, bc bcx )
+cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N, T h, bc bcx, direction dir = forward )
 {
     unsigned size;
     if( bcx == PER) //periodic
         size = 2*n*n*N;
     else
         size = 2*n*n*N-n*n;
+    //assert( (bcx == DIR || bcx == NEU) && "only Dirichlet BC allowed"); 
+    assert( (bcx == DIR || bcx == NEU) ); 
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, size);
 
     //std::cout << A.row_indices.size(); 
@@ -142,9 +158,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N,
     Operator<T> t = create::pipj_inv(n);
     t *= 2./h;
     Operator<T>  a = t*(-l-d.transpose());
-    Operator< T> a_bound_left = t*(-d.transpose());
-    if( bcx == PER) //periodic bc
-        a_bound_left = a;
+    Operator< T> a_bound_left = a;
+    Operator< T> a_bound_right = a;
+    if( bcx == dg::DIR && dir == dg::forward) 
+        a_bound_left = t*(-d.transpose());
+    else if( bcx == dg::DIR && dir == dg::backward)
+        a_bound_right = t*(-d.transpose());
     Operator< T> b = t*(rl);
     //assemble the matrix
     int number = 0;
@@ -206,6 +225,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
     Operator<T> lr = create::lirj(n);
     Operator<T> rl = create::rilj(n);
     Operator< T> a = l+r;
+    Operator< T> a_bound_left = a;
+    if( bcx == NEU || bcx == NEU_DIR)
+        a_bound_left = r;
+    Operator< T> a_bound_right = a;
+    if( bcx == NEU || bcx == DIR_NEU)
+        a_bound_right = l;
     Operator< T> b = -rl;
     Operator< T> bp = -lr; 
     //assemble the matrix
@@ -213,7 +238,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
     for( unsigned k=0; k<n; k++)
     {
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T>(n, A, number, 0,0,k,l, a(k,l)); //1 x A
+            detail::add_index<T>(n, A, number, 0,0,k,l, a_bound_left(k,l)); //1 x A
         for( unsigned l=0; l<n; l++)
             detail::add_index<T>(n, A, number, 0,1,k,l, b(k,l)); //1+ x B
         if( bcx == PER )
@@ -242,7 +267,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
         for( unsigned l=0; l<n; l++)
             detail::add_index<T>( n, A, number, N-1,N-2,k,l, bp(k,l));
         for( unsigned l=0; l<n; l++)
-            detail::add_index<T>( n, A, number, N-1,N-1,k,l, a(k,l));
+            detail::add_index<T>( n, A, number, N-1,N-1,k,l, a_bound_right(k,l));
     }
     return A;
 };
