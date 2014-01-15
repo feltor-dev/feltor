@@ -29,9 +29,9 @@ int main()
 
     HArrVec hw( n, N);
     dg::DVec dv( hv.data()), dw( hw.data());
-    double h = 2;
-    DMatrix laplace1d = create::laplace1d_dir<double>(n, N, 2);
-    dg::Grid1d<double> g( 0, h*N, n, N, DIR);
+    double h = 1./N;
+    DMatrix laplace1d = create::laplace1d_per<double>(n, N, h);
+    dg::Grid1d<double> g( 0, h*N, n, N, PER);
     DMatrix laplace1dp = create::laplace1d<double>(g);
 
     cout << "The DG Laplacian: \n";

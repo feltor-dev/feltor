@@ -23,8 +23,9 @@ typedef dg::T1D<double> Preconditioner;
 
 
 double sine(double x){ return sin( x);}
+double sol(double x){ return sin(x);}
 double initial( double x) {return sin(0);}
-dg::bc bcx = dg::PER;
+dg::bc bcx = dg::DIR;
 
 using namespace std;
 int main()
@@ -38,7 +39,7 @@ int main()
     dg::CG< dg::DVec > cg( x, x.size());
     dg::HVec b = dg::expand ( sine, g);
     dg::HVec error(b);
-    const dg::HVec solution(b);
+    const dg::HVec solution = dg::expand( sol, g);
 
     //copy data to device memory
     dg::DVec dx( x), db( b), derror( error);
@@ -52,7 +53,7 @@ int main()
     std::cout << "Number of cg iterations "<< cg( A, dx, db, eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
-    dg::blas1::axpby( 1.,dx,-1.,derror);
+    dg::blas1::axpby( 1.,dx,-1., dsolution, derror);
     /*
     //and Ax
     DArrVec dbx(dx);

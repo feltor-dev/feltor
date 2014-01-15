@@ -225,10 +225,10 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
     Operator<T> lr = create::lirj(n);
     Operator<T> rl = create::rilj(n);
     Operator< T> a = l+r;
-    Operator< T> a_bound_left = a;
+    Operator< T> a_bound_left = a;//DIR and PER
     if( bcx == NEU || bcx == NEU_DIR)
         a_bound_left = r;
-    Operator< T> a_bound_right = a;
+    Operator< T> a_bound_right = a; //DIR and PER
     if( bcx == NEU || bcx == DIR_NEU)
         a_bound_right = l;
     Operator< T> b = -rl;

@@ -191,7 +191,9 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
 {
     typedef cusp::coo_matrix<int, value_type, cusp::host_memory> HMatrix;
     HMatrix S = dg::tensor( g.N(), dg::create::pipj( g.n())); 
+    cusp::blas::scal( S.values, g.h()/2.);
     HMatrix T = dg::tensor( g.N(), dg::create::pipj_inv( g.n())); 
+    cusp::blas::scal( T.values, 2./g.h());
     HMatrix J = dg::create::jump_ot<value_type>( g.n(), g.N(), g.bcx());
     HMatrix laplace_oJ, laplace;
     if( g.bcx() == PER)
