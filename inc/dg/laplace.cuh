@@ -37,6 +37,7 @@ namespace create{
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned n, unsigned N, T h, norm no = not_normed, T alpha = 1.)
 {
+//DEPRECATED
     if( n ==1 ) alpha = 0; //makes laplacian of order 2
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N);
     //std::cout << A.row_indices.size(); 
@@ -85,7 +86,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned n, unsigned 
     }
     return A;
 };
-
 /**
  * @brief Create and assemble a cusp Matrix for the Dirichlet negative 1d laplacian in LSPACE
  *
@@ -103,6 +103,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_per( unsigned n, unsigned 
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned n, unsigned N, T h, norm no = not_normed)
 {
+//DEPRECATED
     //if( n == 1) alpha = 0; //not that easily because dirichlet 
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, 3*n*n*N - 2*n*n);
     Operator<T> l = create::lilj(n);
@@ -162,17 +163,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d_dir( unsigned n, unsigned 
     return A;
 }
 
-/**
- * @brief Convenience function for the creation of a 1d laplacian in LSPACE
- *
- * @ingroup highlevel
- * @tparam T value_type
- * @param g The grid on which to create the laplacian (including boundary condition)
- * @param no use normed if you want to compute e.g. diffusive terms
-            use not_normed if you want to solve symmetric matrix equations (T is missing)
- *
- * @return Host Matrix in coordinate form
- */
 /*
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T>& g, norm no = not_normed)
@@ -185,6 +175,17 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T>& g, norm 
 }
 */
 
+/**
+ * @brief Function for the creation of a 1d laplacian in LSPACE
+ *
+ * @ingroup highlevel
+ * @tparam T value_type
+ * @param g The grid on which to create the laplacian (including boundary condition)
+ * @param no use normed if you want to compute e.g. diffusive terms
+            use not_normed if you want to solve symmetric matrix equations (T is missing)
+ *
+ * @return Host Matrix in coordinate form
+ */
 template< class value_type>
 cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<value_type>& g, norm no = not_normed)
 {
