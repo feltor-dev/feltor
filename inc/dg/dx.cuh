@@ -144,8 +144,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N,
         size = 2*n*n*N;
     else
         size = 2*n*n*N-n*n;
-    //assert( (bcx == DIR || bcx == NEU) && "only Dirichlet BC allowed"); 
-    assert( (bcx == DIR || bcx == NEU) ); 
+    //assert( (bcx == DIR || bcx == PER) && "only Dirichlet BC allowed"); 
+    assert( (bcx == DIR || bcx == PER) ); 
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, size);
 
     //std::cout << A.row_indices.size(); 

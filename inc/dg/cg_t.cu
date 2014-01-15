@@ -10,8 +10,8 @@
 #include "preconditioner.cuh"
 #include "typedefs.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned N = 200;  //more N means less iterations for same error
+unsigned n = 3; //global relative error in L2 norm is O(h^P)
+unsigned N = 200;  //more N means less iterations for same error
 
 const double lx = 2.*M_PI;
 
@@ -24,11 +24,13 @@ typedef dg::T1D<double> Preconditioner;
 
 double sine(double x){ return sin( x);}
 double initial( double x) {return sin(0);}
-dg::bc bcx = dg::DIR;
+dg::bc bcx = dg::PER;
 
 using namespace std;
 int main()
 {
+    cout << "Type n and N\n";
+    cin >> n >> N;
     dg::Grid1d<double > g( 0, lx, n, N, bcx);
     dg::HVec x = dg::expand( initial, g);
     dg::DMatrix A = dg::create::laplace1d( g); 

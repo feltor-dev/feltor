@@ -235,6 +235,7 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
         }
     }
     cusp::add( laplace_oJ, J, laplace);
+    laplace.sort_by_row_and_column();
     if( no == normed) 
     {
         cusp::multiply( T, laplace, laplace_oJ);
