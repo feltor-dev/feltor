@@ -1,7 +1,6 @@
-#ifndef _DG_TOEFLR_CUH
-#define _DG_TOEFLR_CUH
-
+#pragma once
 #include <exception>
+#include <cassert>
 
 #include "dg/xspacelib.cuh"
 #include "dg/cg.cuh"
@@ -28,6 +27,42 @@ struct Fail : public std::exception
     double eps;
 };
 
+struct SOL
+{
+
+    SOL( double xl, double xw, double sigmal, double sigmaw):
+        xl_(xl), xw_(xw), sigma_l(sigmal), sigma_w(sigmaw)
+    {
+        assert( xl < xw);
+        assert( sigma_l < sigma_w);
+    }
+    
+    double operator()( double x, double y)
+    {
+        if( x < xl_) 
+            return 0;
+        if( x < xw_)
+            return sigma_l;
+        else 
+            return sigma_w;
+    }
+
+  private:
+    double xw_, xl_, sigma_w, sigma_l;
+};
+template< class T>
+struct EXPX
+{
+    EXPX( double amp = 1., double lambda = 1.): amp_(amp), lambda_(lambda){}
+    __host__ __device__
+    T operator() (const T& x, double y) 
+    { 
+        return amp_*exp(lambda_*x);
+    }
+  private:
+    double amp_, lambda_;
+};
+
 template< class container=thrust::device_vector<double> >
 struct Esel
 {
@@ -50,7 +85,7 @@ struct Esel
      * @param xl begin of SOL
      * @param xw begin of Wall shadow
      */
-    Esel( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, const container& sol);
+    Esel( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, SOL sol);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -162,7 +197,7 @@ struct Esel
 };
 
 template< class container>
-Esel< container>::Esel( const Grid<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, const container& sol  ): 
+Esel< container>::Esel( const Grid<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, SOL sol  ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
@@ -173,10 +208,8 @@ Esel< container>::Esel( const Grid<value_type>& grid, double kappa, double nu, d
     pcg( omega, omega.size()), 
     w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau),
-    sol_(sol)
+    sol_( evaluate(sol, grid) )
 {
-    assert( xl_ > 0 && xl_ < xw_);
-    assert( xw_ < g.lx());
     //create derivatives
     laplaceM = create::laplacianM( grid, normed);
     //if( !global)
@@ -251,10 +284,6 @@ const container& Esel< container>::polarisation( const std::vector<container>& y
         thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
         thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
     }
-    else
-    {
-        blas1::axpby( 1., y[1], 0., omega); //n_i = omega
-    }
     blas2::symv( w2d, omega, omega); 
 #ifdef DG_BENCHMARK
     t.toc();
@@ -274,13 +303,6 @@ const container& Esel< container>::polarisation( const std::vector<container>& y
     {
         blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
         blas2::symv( w2d, omega, omega);
-    }
-    else
-    {
-        blas1::axpby( -1, y[0], 1., gamma_n, chi); 
-        gamma1.alpha() = -tau;
-        blas2::symv( gamma1, chi, omega); //apply \Gamma_0^-1 ( gamma_n - n_e)
-        gamma1.alpha() = -0.5*tau;
     }
     number = pcg( A, phi[0], omega, v2d, eps_pol);
     if( number == pcg.get_max())
@@ -357,7 +379,7 @@ void Esel< container>::operator()( const std::vector<container>& y, std::vector<
             blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
         }
         blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
-        blas1::axpby( 1., sol_, 1., yp[i]);
+        blas1::axpby( -1., sol_, 1., yp[i]);
     }
 
 }
@@ -384,4 +406,3 @@ void Esel<container>::divide( const container& zaehler, const container& nenner,
 
 }//namespace dg
 
-#endif //_DG_TOEFLR_CUH

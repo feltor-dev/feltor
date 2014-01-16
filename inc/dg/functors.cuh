@@ -167,11 +167,14 @@ struct Lamb
 template< class T>
 struct EXP 
 {
+    EXP( double amp = 1., double lambda = 1.): amp_(amp), lambda_(lambda){}
     __host__ __device__
     T operator() (const T& x) 
     { 
-        return exp(x);
+        return amp_*exp(lambda_*x);
     }
+  private:
+    double amp_, lambda_;
 };
 /**
  * @brief natural logarithm

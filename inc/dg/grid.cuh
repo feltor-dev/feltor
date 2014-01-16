@@ -19,11 +19,11 @@ namespace dg{
  * @ingroup creation
  */
 enum bc{ 
-    PER, //!< periodic boundaries
-    DIR, //!< homogeneous dirichlet boundaries
-    DIR_NEU,
-    NEU_DIR,
-    NEU
+    PER = 0, //!< periodic boundaries
+    DIR = 1, //!< homogeneous dirichlet boundaries
+    DIR_NEU = 2,
+    NEU_DIR = 3,
+    NEU = 4
 };
 
 ///@addtogroup grid

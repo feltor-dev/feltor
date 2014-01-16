@@ -39,9 +39,7 @@ struct Parameters
             eps_gamma = v[7];
             lx = v[8]; 
             ly = v[9];
-            bc_x = dg::PER, bc_y = dg::PER;
-            if( v[10]) bc_x = dg::DIR;
-            if( v[11]) bc_y = dg::DIR;
+            bc_x = map((int)v[10]), bc_y = map((int)v[11]);
             global = v[12];
             nu = v[13];
             kappa = v[14];
@@ -65,7 +63,7 @@ struct Parameters
             ly = v[4];
             lx = ly/(double)Ny*(double)Nx;
             bc_x = bc_y = dg::PER;
-            if( v[5]) bc_x = dg::DIR;
+            bc_x = map((int)v[5]);
             global = 0;
             nu = v[8];
             kappa = v[9];
@@ -93,7 +91,8 @@ struct Parameters
         char local[] = "LOCAL" , glo[] = "GLOBAL";
         os  <<"Mode is:   \n"
             <<"    "<<(global?glo:local)<<global<<"\n";
-        char per[] = "PERIODIC", dir[] = "DIRICHLET";
+        char per[] = "PERIODIC", dir[] = "DIRICHLET", neu[] = "NEUMANN";
+        char dir_neu[] = "DIR_NEU", neu_dir[] = "NEU_DIR";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n"
@@ -116,6 +115,18 @@ struct Parameters
             <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
+    }
+    private:
+    dg::bc map( int i)
+    {
+        switch( i)
+        {
+            case(0): return dg::PER;
+            case(1): return dg::DIR;
+            case(2): return dg::DIR_NEU;
+            case(3): return dg::NEU_DIR;
+            case(4): return dg::NEU;
+        }
     }
 };
 
