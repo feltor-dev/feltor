@@ -16,20 +16,22 @@ unsigned n = 3;
 unsigned N = 40;
 const double lx = 2*M_PI;
 
+/*
 double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
 bc bcx = PER;
-/*
 double function (double  x) {return x*(x-2*M_PI)*exp(x);}
 double derivative( double x) { return (2.*x-2*M_PI)*exp(x) + function(x);}
 bc bcx = DIR;
+*/
+/*
 double function( double x) { return cos(x);}
 double derivative( double x) { return -sin(x);}
 bc bcx = NEU;
+*/
 double function( double x) { return sin(3./4.*x);}
 double derivative( double x) { return 3./4.*cos(3./4.*x);}
 bc bcx = DIR_NEU;
-*/
 /*
 double function( double x) { return cos(3./4.*x);}
 double derivative( double x) { return -3./4.*sin(3./4.*x);}
@@ -45,7 +47,8 @@ int main ()
     cout << "# of cells          " << N <<"\n";
     Grid1d<double> g( 0, lx, n, N);
     const double hx = lx/(double)N;
-    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_symm<double>( n, N, hx, bcx);
+    //cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_symm<double>( n, N, hx, bcx);
+    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_asymm_mt<double>( n, N, hx, bcx);
     HVec hv = expand( function, g);
     HVec hw = hv;
     const HVec hu = expand( derivative, g);

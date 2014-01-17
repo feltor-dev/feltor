@@ -82,8 +82,7 @@ struct Esel
      * @param tau The ion temperature
      * @param eps_pol stopping criterion for polarisation equation
      * @param eps_gamma stopping criterion for Gamma operator
-     * @param xl begin of SOL
-     * @param xw begin of Wall shadow
+     * @param sol description of SOL
      */
     Esel( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, SOL sol);
 
@@ -213,7 +212,7 @@ Esel< container>::Esel( const Grid<value_type>& grid, double kappa, double nu, d
     //create derivatives
     laplaceM = create::laplacianM( grid, normed);
     //if( !global)
-        A = create::laplacianM( grid, not_normed);
+        //A = create::laplacianM( grid, not_normed);
 
 }
 
@@ -274,7 +273,6 @@ const container& Esel< container>::polarisation( const std::vector<container>& y
     t.tic();
 #endif
     //compute chi and polarisation
-    {
         exp( y, expy);
         //blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
         blas1::pointwiseDot( binv, expy[1], chi); //\chi = n_i
@@ -283,7 +281,6 @@ const container& Esel< container>::polarisation( const std::vector<container>& y
         //compute omega
         thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
         thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
-    }
     blas2::symv( w2d, omega, omega); 
 #ifdef DG_BENCHMARK
     t.toc();

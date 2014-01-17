@@ -72,12 +72,12 @@ Polarisation<T, Memory>::Polarisation( const Grid1d<T>& g): I(g.size()), J(I), x
 template< class T, class Memory>
 cusp::coo_matrix<int, T, Memory> Polarisation<T, Memory>::create( const Vector& chi)
 {
-    Matrix laplace;
+    Matrix laplace, temp;
     cusp::multiply( middle, chi, xspace);
     cusp::coo_matrix_view<Array, Array, Vector,  int, T, Memory> chi_view( n*N, n*N, n*N, I, J, xspace);
     cusp::multiply( chi_view, right, laplace);
-    cusp::multiply( left, laplace, laplace);
-    cusp::add( laplace, jump, laplace);
+    cusp::multiply( left, laplace, temp);
+    cusp::add( temp, jump, laplace);
     return laplace;
 }
 

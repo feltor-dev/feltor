@@ -50,17 +50,39 @@ int main( int argc, char* argv[])
 
     dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::SOL sol( v[22], v[23], v[24], v[25]);
+    std::cout << "The SOL parameters are: \n"
+              << "    x_l:     "<<v[22] <<"\n    x_w:     "<<v[23]<<"\n"
+              << "    sigma_l: "<<v[24] <<"\n    sigma_w: "<<v[25]<<"\n";
     //create RHS 
     dg::Esel< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, sol); 
     //create initial vector
     dg::EXPX<double> exp( 1., -1./v[26]); 
-    dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( exp, grid)), y1(y0); 
-    std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
-    dg::blas1::axpby( 1, y0p, 1, y0);
+    {
+        dg::Gaussian gaussian( p.posX/2.*grid.lx(), p.posY/2.*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
+        std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
+        dg::blas1::axpby( 1, y0p, 1, y0);
+    } 
+    {
+        dg::Gaussian gaussian( p.posX/2.*grid.lx(), p.posY/3.*grid.ly(), p.sigma, p.sigma, -p.n0); 
+        std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
+        dg::blas1::axpby( 1, y0p, 1, y0);
+    }
+    {
+        dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
+        std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
+        dg::blas1::axpby( 1, y0p, 1, y0);
+    }{
+        dg::Gaussian gaussian( p.posX/2.*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, -p.n0); 
+        std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
+        dg::blas1::axpby( 1, y0p, 1, y0);
+    }
 
-    //dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+   
+
+    dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+    assert( p.tau == 0);
     assert( p.global);
     assert( p.bc_x == dg::DIR_NEU);
 
@@ -90,21 +112,22 @@ int main( int argc, char* argv[])
         //transform field to an equidistant grid
         {
             //test.exp( y1, y1); //plot logarithmic values
-            thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(1));
+            thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(p.lx/v[26]/1.5));
         }
 
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        colors.scale() = 1.; 
         //draw ions
         w.title() << std::setprecision(2) << std::scientific;
         w.title() <<"ne / "<<colors.scale()<<"\t";
         w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //transform phi
-        //dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
-        dg::blas1::axpby( 1., test.potential()[0], 0, y1[1]);
+        dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
+        //dg::blas1::axpby( 1., test.potential()[0], 0, y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale

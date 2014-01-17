@@ -123,7 +123,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
 
-    Grid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny(), g.bcy());
+    Grid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     Matrix ly = create::laplace1d( gy, no);
     
     //if( bcy == PER) {
@@ -131,7 +131,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx
     //} else if( bcy == DIR) {
     //    ly = create::laplace1d_dir<double>( g.n(), g.Ny(), g.hy(), no);
     //}
-    Grid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx(), g.bcx());
+    Grid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
     Matrix lx = create:: laplace1d( gx, no);
     //if( bcx == PER) {
     //    lx = create::laplace1d_per<double>( g.n(), g.Nx(), g.hx(), no);

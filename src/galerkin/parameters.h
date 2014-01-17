@@ -1,5 +1,4 @@
-#ifndef _DG_PARAMETERS_
-#define _DG_PARAMETERS_
+#ifndef _DG_PARAMETERS_ #define _DG_PARAMETERS_
 #include "dg/grid.cuh"
 
 /**
@@ -95,11 +94,8 @@ struct Parameters
         char dir_neu[] = "DIR_NEU", neu_dir[] = "NEU_DIR";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
-            <<"    ly = "<<ly<<"\n"
-            <<"Boundary conditions in x are: \n"
-            <<"    "<<(bc_x == dg::DIR ? dir:per)<<"\n"
-            <<"Boundary conditions in y are: \n"
-            <<"    "<<(bc_y == dg::DIR ? dir:per)<<"\n";
+            <<"    ly = "<<ly<<"\n";
+        displayBC( os, bc_x, bc_y);
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
@@ -127,6 +123,38 @@ struct Parameters
             case(3): return dg::NEU_DIR;
             case(4): return dg::NEU;
         }
+    }
+    void displayBC( std::ostream& os, dg::bc bcx, dg::bc bcy) const
+    {
+        os << "Boundary conditions in x are: \n";
+        switch( bcx)
+        {
+            case(0): os << "    PERIODIC";
+                     break;
+            case(1): os << "    DIRICHLET";
+                     break;
+            case(2): os << "    DIR_NEU";
+                     break;
+            case(3): os << "    NEU_DIR";
+                     break;
+            case(4): os << "    NEUMANN";
+                     break;
+        }
+        os << "\nBoundary conditions in y are: \n";
+        switch( bcy)
+        {
+            case(0): os << "    PERIODIC";
+                     break;
+            case(1): os << "    DIRICHLET";
+                     break;
+            case(2): os << "    DIR_NEU";
+                     break;
+            case(3): os << "    NEU_DIR";
+                     break;
+            case(4): os << "    NEUMANN";
+                     break;
+        }
+        os <<"\n";
     }
 };
 
