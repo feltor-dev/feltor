@@ -9,8 +9,8 @@
 2)  nx (grid points in x)                =   100  (192)
 3)  ny (grid points in y)                =   100   (192)
 
-4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   0.3   (0.01)
+4)  k  (order of time integration)       =   3      (3)
+5)  dt (time step in units c_s/L_p)      =   0.03   (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
@@ -28,7 +28,7 @@
 
 12) local (0) or global (1)             =   1       (0)
 13) nu  (viscosity)                     =   5e-3    (0.001)
-14) mcv (magnetic curvature)            =   0.0000  (0.0005)
+14) mcv (magnetic curvature)            =   0.0005  (0.0005)
 15) tau (Ti/Te)                         =   0     (0.0)
 
 ------------------Initial blob parameters---------------------
@@ -42,7 +42,7 @@
 
 20) itstp (steps between output)            = 5      (5)
 21) # of outputs (excluding first)          = 10
-22) background gradient                     = 1000 (1)
-23) d (coupling in HW)                      = 0.010
+22) background gradient                     = 0 (1)
+23) d (coupling in HW)                      = 0.050
 
 @ ------------------------------------------------------------

@@ -270,9 +270,6 @@ void Turbulence< container>::operator()( const std::vector<container>& y, std::v
         arakawa( y[i], phi[i], yp[i]);
         blas1::pointwiseDot( binv, yp[i], yp[i]);
     }
-    //add HW coupling to n_e
-    blas1::axpby( d_, phi[0], 1, yp[0]);
-    blas1::axpby( -d_, y[0], 1, yp[0]);
 
     //compute derivatives
     for( unsigned i=0; i<y.size(); i++)
@@ -287,6 +284,10 @@ void Turbulence< container>::operator()( const std::vector<container>& y, std::v
     // curvature terms
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
+    //add HW coupling to n_e
+    blas1::pointwiseDot( phi[0], ypg[0], chi);
+    blas1::axpby( d_, chi, 1, yp[0]);
+    blas1::axpby( -d_, ypg[0], 1, yp[0]);
 
     //add laplacians
     for( unsigned i=0; i<y.size(); i++)
