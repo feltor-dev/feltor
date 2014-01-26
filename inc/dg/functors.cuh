@@ -102,6 +102,32 @@ struct LinearX
   private:
     double a_,b_;
 };
+/**
+ * @brief Functor for a linear polynomial in y-direction
+ * 
+ * \f[ f(x,y) = a*y+b) \f]
+ */
+struct LinearY
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param a linear coefficient 
+     * @param b constant coefficient
+     */
+    LinearY( double a, double b):a_(a), b_(b){}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordianate
+     * @param y y - coordianate
+     
+     * @return result
+     */
+    double operator()( double x, double y){ return a_*y+b_;}
+  private:
+    double a_,b_;
+};
 
 /**
  * @brief Functor returning a Lamb dipole

@@ -1,0 +1,25 @@
+
+             INPUT FILE FOR CONVECTION CODE
+
+-----------------------------------------------------------
+1) # of nodes            =  4 
+2) Nx                    = 200
+3) Ny                    =  64
+4) order of timestep     =   3
+5) timestep              =  0.001
+-----------------------------------------------------------
+6) accuracy laplace      =  1e-4
+7) lx                    =  200
+8) ly                    =   40
+-----------------------------------------------------------
+9) Rayleigh number       =  1e5
+10) Prandtl number       =   10
+11) Lewis number         =   1e-4
+12) transition speed     =   10
+13) latent heat R_l      =   1
+14) place of transition  =   0.5 (0<zeta<1)
+-----------------------------------------------------------
+15) steps between output    = 5
+15) # of outputs            = 10
+
+
