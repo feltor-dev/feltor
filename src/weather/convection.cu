@@ -16,7 +16,7 @@ struct InitDens
 
     double operator()( double x, double y)
     {
-        return tanh( (zeta_-y)/alpha_);
+        return 0.5*tanh( (zeta_-y)/alpha_)+0.5;
     }
   private:
     double alpha_, zeta_;
@@ -42,13 +42,14 @@ struct Parameters
         dt = v[5];
         eps_lap = v[6];
         lx = v[7];
-        ly = v[8];
-        R = v[9];
-        P = v[10];
-        L = v[11];
-        eps = v[12];
-        R_l = v[13];
-        zeta = v[14];
+        ly = 1;
+        R = v[8];
+        P = v[9];
+        L = v[10];
+        eps = v[11];
+        R_l = v[12];
+        zeta = v[13];
+        n0 = v[14];
         itstp = v[15];
         maxout = v[16];
     }
@@ -71,8 +72,9 @@ struct Parameters
            <<  "    eps = "<<eps<<"\n"
            <<  "    R_l = "<<R_l<<"\n"
            <<  "    zeta = "<<zeta<<"\n";
-        os <<  "Steps between output: "<<itstp<<"\n"
-           <<  "Number of outputs:    "<<maxout<<std::endl; //implicit flush!
+        os <<  "Perturbation amplitude: " <<n0<<"\n"
+           <<  "Steps between output:   "<<itstp<<"\n"
+           <<  "Number of outputs:      "<<maxout<<std::endl; //implicit flush!
     }
 };
 
@@ -95,6 +97,7 @@ int main(int argc, char* argv[])
     w.set_multiplot( v2[1], v2[2]);
 
     const Parameters p(v);
+    p.display( std::cout );
     if( p.k != k)
     {
         std::cerr << "ERROR: k doesn't match "<<k<<" vs. "<<p.k<<"\n";
@@ -107,11 +110,13 @@ int main(int argc, char* argv[])
     dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, dg::PER, dg::DIR);
     Convection< dg::DVec> convect( grid, params, p.eps_lap);
     //initial conditions
-    dg::Gaussian g1( 0.4*p.lx, 0.3*p.ly, 5, 5, p.n0);
-    dg::Gaussian g2( 0.7*p.lx, 0.35*p.ly, 5, 5,  p.n0);
+    dg::Gaussian g1( 0.2*p.lx, 0.5*p.ly, 0.05, 0.05, p.n0);
+    dg::Gaussian g2( 0.7*p.lx, 0.3*p.ly, 0.05, 0.05, p.n0);
+    dg::Gaussian g3( 0.9*p.lx, 0.2*p.ly, 0.05, 0.05, -p.n0);
     std::vector<dg::DVec> y0( 3);
     y0[0] = y0[1] = y0[2] = dg::evaluate( g1, grid);
     dg::blas1::axpby( 1., y0[0], 1., (dg::DVec)dg::evaluate( g2, grid), y0[0]);
+    dg::blas1::axpby( 1., y0[0], 1., (dg::DVec)dg::evaluate( g3, grid), y0[0]);
     y0[1] = dg::evaluate( InitDens(0.001, p.zeta), grid);
     dg::blas1::axpby( 1., y0[2], -1, y0[2]);
     //init timestepper
@@ -136,12 +141,29 @@ int main(int argc, char* argv[])
         colors.scale() = p.R/2.;
 
         w.title() << std::setprecision(2) << std::scientific;
-        w.title() <<"temp / "<<colors.scale()<<"\t";
+        w.title() <<"temp / "<<colors.scale()<<"\t" <<std::fixed<< "time = "<<time;
+        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+        hvisual = y0[1];
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scale() = 1.; 
+        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+        hvisual = convect.source();
+        dg::blas2::gemv( equi, hvisual, visual);
+        //colors.scale() = 1.; 
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        hvisual = y0[2];
+        dg::blas2::gemv( equi, hvisual, visual);
+        //colors.scale() = 1.; 
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //steps
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
+            time+=p.dt;
             try{ ab( convect, y0, y1, p.dt);}
             catch( Fail& fail){
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

@@ -5,6 +5,8 @@
 #include "dg/xspacelib.cuh"
 #include "dg/cg.cuh"
 
+#include "dg/timer.cuh"
+
 
 struct Source
 {
@@ -52,6 +54,7 @@ struct Convection
      */
     const container& potential( ) const { return phi;}
     const container& background() const { return background_;}
+    const container& source() const { return source_;}
     
   private:
     const container& compute_phi( const container& omega);
@@ -63,11 +66,12 @@ struct Convection
 
 
     container phi, phi_old, dxphi, dyphi;
-    container dxT, source;
+    container dxT, source_;
     container temp;
     const container background_;
-    const container w2d, v2d, one;
+    const container w2d, v2d;
     dg::CG<container > pcg;
+    //dg::ArakawaX<container> arakawaX; 
 
     value_type eps_, R_, R_l_, L_, P_;
     value_type eps_lap;
@@ -77,10 +81,11 @@ struct Convection
 template <class container>
 Convection<container>::Convection( const dg::Grid<value_type>& g, Params p, double eps_lap ): 
     phi( g.size()), phi_old(phi), dxphi( phi), dyphi( phi),
-    dxT( phi), source(phi), temp( phi),
+    dxT( phi), source_(phi), temp( phi),
     background_( dg::evaluate( dg::LinearY( -p.R, p.R*p.zeta), g)), 
-    w2d( dg::create::w2d(g)), v2d( dg::create::v2d(g)), one( g.size(), 1.),
+    w2d( dg::create::w2d(g)), v2d( dg::create::v2d(g)),
     pcg( temp, g.size()), 
+    //arakawaX( g), 
     eps_( p.eps), R_(p.R), R_l_( p.R_l), L_(p.L), P_(p.P), 
     eps_lap( eps_lap)
 {
@@ -98,9 +103,18 @@ const container& Convection<container>::compute_phi( const container& omega)
     dg::blas1::axpby( 2., phi, -1., phi_old);
     phi.swap( phi_old);
     dg::blas2::symv( w2d, omega, temp);
+#ifdef DG_BENCHMARK
+    dg::Timer t;
+    t.tic();
+#endif //DG_BENCHMARK
     unsigned number = pcg( laplaceM, phi, temp, v2d, eps_lap);
     if( number == pcg.get_max())
         throw Fail( eps_lap);
+#ifdef DG_BENCHMARK
+    std::cout << "# of pcg iterations for phi \t"<< number << "\t";
+    t.toc();
+    std::cout<< "took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
     return phi;
 }
 
@@ -111,6 +125,8 @@ void Convection<container>::operator()( const std::vector<container>& y, std::ve
     dg::blas2::gemv( dx_per, phi, dxphi);
     dg::blas2::gemv( dy_dir, phi, dyphi);
 
+    //arakawaX( y[0], phi, yp[0]);
+    //arakawaX( y[2], phi, yp[2]);
     //first terms in Arakawa bracket
     dg::blas2::gemv( dx_per, y[0], dxT);
     dg::blas1::pointwiseDot( dxT, dyphi, yp[0]);
@@ -120,18 +136,18 @@ void Convection<container>::operator()( const std::vector<container>& y, std::ve
     dg::blas1::pointwiseDot( temp, dyphi, yp[2]);
     //second terms in Arakawa bracket
     dg::blas2::gemv( dy_dir, y[0], temp);
-    dg::blas1::pointwiseDot( temp, dyphi, temp);
+    dg::blas1::pointwiseDot( temp, dxphi, temp);
     dg::blas1::axpby( -1, temp, 1, yp[0]);
     dg::blas2::gemv( dy_neu, y[1], temp);
-    dg::blas1::pointwiseDot( temp, dyphi, temp);
+    dg::blas1::pointwiseDot( temp, dxphi, temp);
     dg::blas1::axpby( -1, temp, 1, yp[1]);
     dg::blas2::gemv( dy_dir, y[2], temp);
-    dg::blas1::pointwiseDot( temp, dyphi, temp);
+    dg::blas1::pointwiseDot( temp, dxphi, temp);
     dg::blas1::axpby( -1, temp, 1, yp[2]);
 
     //linear terms
-    dg::blas1::axpby( -P_, dxT, 1, yp[2]);
     dg::blas1::axpby( R_, dxphi, 1, yp[0]);
+    dg::blas1::axpby( -P_,  dxT, 1, yp[2]);
     //diffusive terms
     dg::blas2::gemv( laplaceM_dir, y[0], temp);
     dg::blas1::axpby( -1., temp, 1.,yp[0]);
@@ -141,9 +157,9 @@ void Convection<container>::operator()( const std::vector<container>& y, std::ve
     dg::blas1::axpby( -P_, temp, 1.,yp[2]);
     //source term
     dg::blas1::axpby( 1., background_, 1., y[0], temp);
-    thrust::transform( temp.begin(), temp.end(), y[1].begin(), source.begin(), Source());
-    dg::blas1::axpby( -R_l_*eps_, source, 1., yp[0]);
-    dg::blas1::axpby( eps_, source, 1., yp[1]);
+    thrust::transform( temp.begin(), temp.end(), y[1].begin(), source_.begin(), Source());
+    dg::blas1::axpby( -R_l_*eps_*L_, source_, 1., yp[0]);
+    dg::blas1::axpby( eps_*L_, source_, 1., yp[1]);
     
 }
 

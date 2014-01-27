@@ -30,7 +30,7 @@ const unsigned k = 3;
 const double dt = 2e-7;
 const unsigned N = 10; //steps between output
 
-double eps = 1e-6;
+double eps = 1e-3;
 
 using namespace std;
 
