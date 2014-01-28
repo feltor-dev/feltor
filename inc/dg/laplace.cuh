@@ -17,11 +17,6 @@
 
 namespace dg
 {
-enum direction{
-    forward, 
-    backward, 
-    symmetric
-};
 
 namespace create{
 ///@cond
@@ -207,6 +202,10 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
         right = create::dx_minus_mt( g.n(), g.N(), g.h(), g.bcx());
     else
     {
+        if( g.bcx() == PER || g.bcx() == NEU_DIR)
+            return laplace1d( g, no, forward); //is already symmetric
+        if( g.bcx() == DIR_NEU)
+            return laplace1d( g, no, backward);//is already symmetric
         HMatrix laplus = laplace1d( g, no, forward); //recursive call
         HMatrix laminus = laplace1d( g, no, backward);
         HMatrix laplace;

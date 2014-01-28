@@ -164,7 +164,7 @@ Turbulence< container>::Turbulence( const Grid<value_type>& grid, double kappa, 
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), d_(d)
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed);
+    laplaceM = create::laplacianM( grid, normed, XSPACE, symmetric);
 }
 
 template< class container>

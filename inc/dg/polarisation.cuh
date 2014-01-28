@@ -33,15 +33,15 @@ namespace dg
 //-matrix multiplication
 ///@cond DEV
 template< class T, class Memory>
-struct Polarisation
-{
+struct Polarisation {
     typedef cusp::coo_matrix<int, T, Memory> Matrix;
     typedef cusp::array1d<T, Memory> Vector;
     Polarisation( const Grid1d<T>& g);
     Matrix create( const Vector& );
   private:
     typedef cusp::array1d<int, Memory> Array;
-    Matrix left, middle, right, jump;
+    Matrix leftP, middle, rightP, jump;
+    Matrix leftM, rightM;
     cusp::array1d<int, Memory> I, J;
     Vector xspace;
     unsigned n, N;
@@ -55,11 +55,11 @@ Polarisation<T, Memory>::Polarisation( const Grid1d<T>& g): I(g.size()), J(I), x
     thrust::sequence( I.begin(), I.end());
     thrust::sequence( J.begin(), J.end());
 
-    right = create::dx_plus_mt<T>( n, N, h, bcx); //create and transfer to device
+    rightP = create::dx_plus_mt<T>( n, N, h, bcx); //create and transfer to device
     Operator<T> backward( g.dlt().backward());
     middle = tensor<T>( N, backward);
-    cusp::multiply( middle, right, right);
-    cusp::transpose( right, left); 
+    cusp::multiply( middle, rightP, rightP);
+    cusp::transpose( rightP, leftP); 
     Operator<T> weights(n,0);
     for( unsigned i=0; i<g.n(); i++)
         weights( i,i) = g.dlt().weights()[i];

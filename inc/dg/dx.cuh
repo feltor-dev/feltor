@@ -22,6 +22,11 @@ enum norm{
     normed,   //!< indicates that output is properly normalized
     not_normed //!< indicates that normalisation weights (either T or V) are missing from output
 };
+enum direction{
+    forward, 
+    backward, 
+    symmetric //!< up-down symmetrie
+};
 namespace create
 {
 ///@addtogroup lowlevel
