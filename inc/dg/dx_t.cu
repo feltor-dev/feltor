@@ -48,7 +48,7 @@ int main ()
     Grid1d<double> g( 0, lx, n, N);
     const double hx = lx/(double)N;
     //cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_symm<double>( n, N, hx, bcx);
-    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_asymm_mt<double>( n, N, hx, bcx);
+    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_minus_mt<double>( n, N, hx, bcx);
     HVec hv = expand( function, g);
     HVec hw = hv;
     const HVec hu = expand( derivative, g);

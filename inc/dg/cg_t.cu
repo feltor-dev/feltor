@@ -40,7 +40,7 @@ int main()
     cin >> n >> N;
     dg::Grid1d<double > g( 0, lx, n, N, bcx);
     dg::HVec x = dg::expand( initial, g);
-    dg::DMatrix A = dg::create::laplace1d( g); 
+    dg::DMatrix A = dg::create::laplace1d( g, dg::not_normed, dg::symmetric); 
 
     dg::CG< dg::DVec > cg( x, x.size());
     dg::HVec b = dg::expand ( sine, g);

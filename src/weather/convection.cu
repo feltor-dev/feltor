@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
     //initial conditions
     dg::Gaussian g1( 0.2*p.lx, 0.5*p.ly, 0.05, 0.05, p.n0);
     dg::Gaussian g2( 0.7*p.lx, 0.3*p.ly, 0.05, 0.05, p.n0);
-    dg::Gaussian g3( 0.9*p.lx, 0.2*p.ly, 0.05, 0.05, -p.n0);
+    dg::Gaussian g3( 0.9*p.lx, 0.8*p.ly, 0.05, 0.05, -p.n0);
     std::vector<dg::DVec> y0( 3);
     y0[0] = y0[1] = y0[2] = dg::evaluate( g1, grid);
     dg::blas1::axpby( 1., y0[0], 1., (dg::DVec)dg::evaluate( g2, grid), y0[0]);
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
         dg::blas1::axpby( 1., y0[0], 1., convect.background(), dvisual);
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
-        colors.scale() = p.R/2.;
+        colors.scale() = fabs(p.R)/2.;
 
         w.title() << std::setprecision(2) << std::scientific;
         w.title() <<"temp / "<<colors.scale()<<"\t" <<std::fixed<< "time = "<<time;

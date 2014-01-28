@@ -92,9 +92,9 @@ Convection<container>::Convection( const dg::Grid<value_type>& g, Params p, doub
     dx_per = dg::create::dx( g, dg::PER, dg::XSPACE);
     dy_dir = dg::create::dy( g, dg::DIR, dg::XSPACE);
     dy_neu = dg::create::dy( g, dg::NEU, dg::XSPACE);
-    laplaceM = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::not_normed, dg::XSPACE);
-    laplaceM_dir = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::normed, dg::XSPACE);
-    laplaceM_neu = dg::create::laplacianM( g, dg::PER, dg::NEU, dg::normed, dg::XSPACE);
+    laplaceM = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::not_normed, dg::XSPACE, dg::symmetric);
+    laplaceM_dir = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::normed, dg::XSPACE, dg::symmetric);
+    laplaceM_neu = dg::create::laplacianM( g, dg::PER, dg::NEU, dg::normed, dg::XSPACE, dg::symmetric);
 }
 
 template<class container>

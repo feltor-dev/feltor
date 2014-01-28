@@ -55,7 +55,7 @@ Polarisation<T, Memory>::Polarisation( const Grid1d<T>& g): I(g.size()), J(I), x
     thrust::sequence( I.begin(), I.end());
     thrust::sequence( J.begin(), J.end());
 
-    right = create::dx_asymm_mt<T>( n, N, h, bcx); //create and transfer to device
+    right = create::dx_plus_mt<T>( n, N, h, bcx); //create and transfer to device
     Operator<T> backward( g.dlt().backward());
     middle = tensor<T>( N, backward);
     cusp::multiply( middle, right, right);
@@ -235,11 +235,11 @@ void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny
     Operator<value_type> forward1d( dlt.forward());
 
     //create x and y derivative in xspace
-    HMatrix rightx_ = create::dx_asymm_mt<value_type>( n, Nx, hx, bcx); 
+    HMatrix rightx_ = create::dx_plus_mt<value_type>( n, Nx, hx, bcx); 
     rightx_ = sandwich( backward1d, rightx_, forward1d);
     rightx = dg::dgtensor( n, tensor(Ny, create::delta(n)), rightx_);
 
-    HMatrix righty_ = create::dx_asymm_mt( n, Ny, hy, bcy); //create and transfer to device
+    HMatrix righty_ = create::dx_plus_mt( n, Ny, hy, bcy); //create and transfer to device
     righty_ = sandwich( backward1d, righty_, forward1d);
     righty = dg::dgtensor( n, righty_, tensor( Nx, create::delta(n)) );
 

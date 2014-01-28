@@ -90,8 +90,8 @@ struct Parameters
         char local[] = "LOCAL" , glo[] = "GLOBAL";
         os  <<"Mode is:   \n"
             <<"    "<<(global?glo:local)<<global<<"\n";
-        char per[] = "PERIODIC", dir[] = "DIRICHLET", neu[] = "NEUMANN";
-        char dir_neu[] = "DIR_NEU", neu_dir[] = "NEU_DIR";
+        //char per[] = "PERIODIC", dir[] = "DIRICHLET", neu[] = "NEUMANN";
+        //char dir_neu[] = "DIR_NEU", neu_dir[] = "NEU_DIR";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";
@@ -122,6 +122,7 @@ struct Parameters
             case(2): return dg::DIR_NEU;
             case(3): return dg::NEU_DIR;
             case(4): return dg::NEU;
+            default: return dg::PER;
         }
     }
     void displayBC( std::ostream& os, dg::bc bcx, dg::bc bcy) const

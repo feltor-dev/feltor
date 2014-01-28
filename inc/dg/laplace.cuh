@@ -17,6 +17,11 @@
 
 namespace dg
 {
+enum direction{
+    forward, 
+    backward, 
+    symmetric
+};
 
 namespace create{
 ///@cond
@@ -187,7 +192,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplace1d( const Grid1d<T>& g, norm 
  * @return Host Matrix in coordinate form
  */
 template< class value_type>
-cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<value_type>& g, norm no = not_normed)
+cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<value_type>& g, norm no = not_normed, direction dir = forward )
 {
     typedef cusp::coo_matrix<int, value_type, cusp::host_memory> HMatrix;
     HMatrix S = dg::tensor( g.N(), dg::create::pipj( g.n())); 
@@ -195,7 +200,22 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
     HMatrix T = dg::tensor( g.N(), dg::create::pipj_inv( g.n())); 
     cusp::blas::scal( T.values, 2./g.h());
     HMatrix J = dg::create::jump_ot<value_type>( g.n(), g.N(), g.bcx());
-    HMatrix right = create::dx_asymm_mt( g.n(), g.N(), g.h(), g.bcx());
+    HMatrix right;
+    if( dir == forward)
+        right = create::dx_plus_mt( g.n(), g.N(), g.h(), g.bcx());
+    else if ( dir == backward) 
+        right = create::dx_minus_mt( g.n(), g.N(), g.h(), g.bcx());
+    else
+    {
+        HMatrix laplus = laplace1d( g, no, forward); //recursive call
+        HMatrix laminus = laplace1d( g, no, backward);
+        HMatrix laplace;
+        cusp::add( laplus, laminus, laplace);
+        for( unsigned i=0; i<laplace.values.size(); i++)
+            laplace.values[i] *= 0.5;
+
+        return laplace;
+    }
     HMatrix left, temp;
     cusp::transpose( right, left);
     cusp::multiply( left, S, temp);
@@ -211,26 +231,6 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
     }
     return laplace;
 }
-        
-
-
-
-
-        
-        
-
-
-/*
-   1. dx_asymm_mt( DIR, forward ) (dependent on bcx) 
-   2. transpose or dx_asymm_mt( DIR, backward);
-   3. create middle matrix S
-   4. multiply
-   5. add jump matrix multiplied with T
-
-   6. if not normed then multiply with S again.
-   */
-
-
 ///@endcond
 } //namespace create
 

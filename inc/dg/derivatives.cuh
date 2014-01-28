@@ -119,12 +119,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T>& g, space s = XSPA
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE, direction dir = forward)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
 
     Grid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    Matrix ly = create::laplace1d( gy, no);
+    Matrix ly = create::laplace1d( gy, no, dir);
     
     //if( bcy == PER) {
     //    ly = create::laplace1d_per<double>( g.n(), g.Ny(), g.hy(), no);
@@ -132,7 +132,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx
     //    ly = create::laplace1d_dir<double>( g.n(), g.Ny(), g.hy(), no);
     //}
     Grid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
-    Matrix lx = create:: laplace1d( gx, no);
+    Matrix lx = create:: laplace1d( gx, no, dir);
     //if( bcx == PER) {
     //    lx = create::laplace1d_per<double>( g.n(), g.Nx(), g.hx(), no);
     //}else if( bcx == DIR) {
@@ -193,9 +193,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, norm no = normed, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, norm no = normed, space s = XSPACE, direction dir = forward)
 {
-    return laplacianM( g, g.bcx(), g.bcy(), no, s);
+    return laplacianM( g, g.bcx(), g.bcy(), no, s, dir);
 }
 ///@}
 

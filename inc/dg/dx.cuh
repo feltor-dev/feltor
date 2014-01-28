@@ -22,10 +22,6 @@ enum norm{
     normed,   //!< indicates that output is properly normalized
     not_normed //!< indicates that normalisation weights (either T or V) are missing from output
 };
-enum direction{
-    forward, 
-    backward
-};
 namespace create
 {
 ///@addtogroup lowlevel
@@ -126,7 +122,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
 * @brief Create and assemble a cusp Matrix for the 1d single forward derivative
 *
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* The matrix isn't skew-symmetric due to normalisation T.
 * Neumann BC means inner value for flux
 * @tparam T value type
 * @param n Number of Legendre nodes per cell
@@ -137,7 +132,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N, T h, bc bcx )
+cusp::coo_matrix<int, T, cusp::host_memory> dx_plus_mt( unsigned n, unsigned N, T h, bc bcx )
 {
     unsigned size;
     if( bcx == PER) //periodic
@@ -147,8 +142,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N,
     //assert( (bcx == DIR || bcx == PER) && "only Dirichlet BC allowed"); 
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, size);
 
-    //std::cout << A.row_indices.size(); 
-    //std::cout << A.num_cols; //this works!!
     Operator<T> l = create::lilj(n);
     Operator<T> r = create::rirj(n);
     Operator<T> lr = create::lirj(n);
@@ -189,6 +182,75 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_asymm_mt( unsigned n, unsigned N,
             for( unsigned l=0; l<n; l++) 
                 detail::add_index<T>(n, A, number, N-1,0,  k,l, b(k,l));
         }
+        for( unsigned l=0; l<n; l++)
+            detail::add_index<T>(n, A, number, N-1,N-1,k,l, a_bound_right(k,l));
+    }
+    return A;
+};
+/**
+* @brief Create and assemble a cusp Matrix for the 1d single backward derivative
+*
+* Use cusp internal conversion to create e.g. the fast ell_matrix format.
+* Neumann BC means inner value for flux
+* @tparam T value type
+* @param n Number of Legendre nodes per cell
+* @param N Vector size ( number of cells)
+* @param h cell size ( used to compute normalisation)
+* @param bcx boundary condition
+*
+* @return Host Matrix in coordinate form 
+*/
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> dx_minus_mt( unsigned n, unsigned N, T h, bc bcx )
+{
+    unsigned size;
+    if( bcx == PER) //periodic
+        size = 2*n*n*N;
+    else
+        size = 2*n*n*N-n*n;
+    //assert( (bcx == DIR || bcx == PER) && "only Dirichlet BC allowed"); 
+    cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, size);
+
+    Operator<T> l = create::lilj(n);
+    Operator<T> r = create::rirj(n);
+    Operator<T> lr = create::lirj(n);
+    Operator<T> rl = create::rilj(n);
+    Operator<T> d = create::pidxpj(n);
+    Operator<T> t = create::pipj_inv(n);
+    t *= 2./h;
+    Operator<T>  a = t*(l+d);
+    //if( dir == backward) a = -a.transpose();
+    Operator< T> a_bound_right = a; //PER, NEU and DIR_NEU
+    Operator< T> a_bound_left = a; //PER, DIR and DIR_NEU
+    if( bcx == dg::DIR || bcx == dg::NEU_DIR) 
+        a_bound_right = t*(-d.transpose());
+    if( bcx == dg::NEU || bcx == dg::NEU_DIR)
+        a_bound_left = t*d;
+    Operator< T> bp = -t*lr;
+    //assemble the matrix
+    int number = 0;
+    for( unsigned k=0; k<n; k++)
+    {
+        for( unsigned l=0; l<n; l++)
+            detail::add_index<T>( n, A, number, 0,0,k,l, a_bound_left(k,l)); //1 x A
+        if( bcx == PER )
+        {
+            for( unsigned l=0; l<n; l++)
+                detail::add_index<T>(n, A, number, 0,N-1,k,l, bp(k,l)); //- 1- x B^T
+        }
+    }
+    for( unsigned i=1; i<N-1; i++)
+        for( unsigned k=0; k<n; k++)
+        {
+            for( unsigned l=0; l<n; l++)
+                detail::add_index<T>(n, A, number, i, i-1, k, l, bp(k,l));
+            for( unsigned l=0; l<n; l++)
+                detail::add_index<T>(n, A, number, i, i, k, l, a(k,l));
+        }
+    for( unsigned k=0; k<n; k++)
+    {
+        for( unsigned l=0; l<n; l++)
+            detail::add_index<T>( n, A, number, N-1,N-2,k,l, bp(k,l));
         for( unsigned l=0; l<n; l++)
             detail::add_index<T>(n, A, number, N-1,N-1,k,l, a_bound_right(k,l));
     }
