@@ -207,11 +207,20 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
         if( g.bcx() == DIR_NEU)
             return laplace1d( g, no, backward);//is already symmetric
         HMatrix laplus = laplace1d( g, no, forward); //recursive call
+        std::cout << "Laplus \n";
+        cusp::print( laplus);
         HMatrix laminus = laplace1d( g, no, backward);
+        std::cout << "Laminus \n";
+        cusp::print( laminus);
+        //HMatrix laminus; 
+        dg::transverse( laplus, laminus, g.n() );
+        std::cout << "Laminus2 \n";
+        cusp::print( laminus);
         HMatrix laplace;
         cusp::add( laplus, laminus, laplace);
         for( unsigned i=0; i<laplace.values.size(); i++)
             laplace.values[i] *= 0.5;
+        //laplace.sort_by_row_and_column();
 
         return laplace;
     }

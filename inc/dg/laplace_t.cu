@@ -31,12 +31,12 @@ int main()
     dg::DVec dv( hv.data()), dw( hw.data());
     double h = 1./N;
     DMatrix laplace1d = create::laplace1d_per<double>(n, N, h);
-    dg::Grid1d<double> g( 0, h*N, n, N, PER);
-    DMatrix laplace1dp = create::laplace1d<double>(g);
+    dg::Grid1d<double> g( 0, 1., n, N, DIR);
+    DMatrix laplace1dp = create::laplace1d<double>(g, dg::not_normed, dg::symmetric);
 
     cout << "The DG Laplacian: \n";
-    cusp::print( laplace1d);
-    cusp::print( laplace1dp);
+    //cusp::print( laplace1d);
+    //cusp::print( laplace1dp);
     blas2::symv( laplace1d, dv, dw);
     cusp::array1d_view<DVec::iterator> dv_view( dv.begin(), dv.end());
     cusp::array1d_view<DVec::iterator> dw_view( dw.begin(), dw.end());

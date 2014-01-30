@@ -48,7 +48,7 @@ int main()
 
     cout << "Create Laplacian\n";
     t.tic();
-    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::backward); 
+    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::symmetric); 
     dg::HMatrix A = dA;
     t.toc();
     cout<< "Creation took "<<t.diff()<<"s\n";
