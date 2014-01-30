@@ -69,6 +69,9 @@ show: show.cpp
 com: com.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
 
+probe: probe.cu
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
+
 figure17: figure17.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
 
