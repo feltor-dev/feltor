@@ -90,12 +90,18 @@ int main( int argc, char* argv[])
         //std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
         t.tic();
         if( p.global)
-            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+        {
+            if( in.find( "SOL") != std::string::npos)
+                std::cout << "Hello SOL\n";
+            else
+                thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+        }
+
         dg::blas2::gemv( equi, input, visual);
 
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scale() = p.n0;
+        //colors.scale() = p.n0;
         if( v[6] > 0) colors.scale() = v[6];
         t.toc();
         //std::cout << "Computing colorscale took "<<t.diff()<<"s\n";

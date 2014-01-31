@@ -84,7 +84,6 @@ int main( int argc, char* argv[])
     assert( p.bc_x == dg::DIR_NEU);
 
     test.log( y0, y0); //transform to logarithmic values
-    test.log( y0, y0); //transform to logarithmic values
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
     dg::AB< k, std::vector<dg::DVec> > ab( y0);

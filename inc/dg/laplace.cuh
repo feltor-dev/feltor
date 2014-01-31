@@ -203,9 +203,9 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
     else
     {
         if( g.bcx() == PER || g.bcx() == NEU_DIR)
-            return laplace1d( g, no, forward); //is already symmetric
+            return laplace1d( g, no, forward); //per is symmetric, NEU_DIR cannot be
         if( g.bcx() == DIR_NEU)
-            return laplace1d( g, no, backward);//is already symmetric
+            return laplace1d( g, no, backward);//cannot be symmetric
         HMatrix laplus = laplace1d( g, no, forward); //recursive call
         HMatrix laminus = laplace1d( g, no, backward);
         HMatrix laplace;

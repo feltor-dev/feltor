@@ -1,4 +1,5 @@
-#ifndef _DG_PARAMETERS_ #define _DG_PARAMETERS_
+#ifndef _DG_PARAMETERS_ 
+#define _DG_PARAMETERS_
 #include "dg/grid.cuh"
 
 /**

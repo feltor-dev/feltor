@@ -48,7 +48,7 @@ struct SOL
     }
 
   private:
-    double xw_, xl_, sigma_w, sigma_l;
+    double xl_, xw_, sigma_l, sigma_w;
 };
 template< class T>
 struct EXPX
@@ -203,14 +203,14 @@ Esel< container>::Esel( const Grid<value_type>& grid, double kappa, double nu, d
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
     gamma1(  laplaceM, w2d, -0.5*tau),
     arakawa( grid), 
-    pol(     grid), 
+    pol(     grid, forward), 
     pcg( omega, omega.size()), 
     w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau),
     sol_( evaluate(sol, grid) )
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed);
+    laplaceM = create::laplacianM( grid, normed, XSPACE, forward);
     //if( !global)
         //A = create::laplacianM( grid, not_normed);
 
