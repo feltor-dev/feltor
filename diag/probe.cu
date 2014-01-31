@@ -14,17 +14,26 @@
 
 //read and evaluate TOEFL & INNTO h5 files
 //t2s10a020 50, 100, 150, 200, 250 posX und posY_max
-    double p1x = 22.1667, p1y = -5.16667 ; 
-    double p2x = 61.1667, p2y = -21.1667;
-    double p3x = 96.5, p3y = -28.833;
-    double p4x = 138.167, p4y = -38.8333;
-    double p5x = 176.167, p5y = -44.8333;
+//global
+    //double p1x = 22.1667, p1y = -5.16667 ; 
+    //double p2x = 61.1667, p2y = -21.1667;
+    //double p3x = 96.5, p3y = -28.833;
+    //double p4x = 138.167, p4y = -38.8333;
+    //double p5x = 176.167, p5y = -44.8333;
 
+//local
     //double p1x = 28.1667, p1y = -14. ;
     //double p2x = 72.3, p2y = -24.17;
     //double p3x = 114.893, p3y = -35.1075;
     //double p4x = 146.924, p4y = -35.4982;
     //double p5x = 196.924, p5y = -27.295;
+
+    //tau = 0 
+    double p1x = 25, p1y = 0. ;
+    double p2x = 50, p2y = 0.;
+    double p3x = 75, p3y = 0.;
+    double p4x = 100, p4y = 0.;
+    double p5x = 125, p5y = 0.;
 
 //x, y absolute positions
 //Annahme dass Punkte alle äquidistant sind
