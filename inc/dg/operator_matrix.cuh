@@ -130,39 +130,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( unsigned n, const cusp::co
 }
 */
 
-namespace detail 
-{
-
-template <class T1, class T2>
-struct Inverse
-{
-    Inverse( unsigned n):n(n){}
-    __host__ __device__
-        T1 operator()( T2 i, T2 j)
-        {
-            T2 d1, d2;
-            d1 = i%n%2 ? -1 : 1;
-            d2 = j%n%2 ? -1 : 1;
-            return (T1)(d1*d2);
-        }
-    private:
-    unsigned n;
-};
-
-template<class Matrix>
-void transverse_stencil( Matrix& m, unsigned n)
-{
-    typedef typename Matrix::value_type T;
-    thrust::host_vector<int> v( m.num_entries);
-    thrust::transform( m.row_indices.begin(), m.row_indices.end(), m.column_indices.begin(), v.begin(), Inverse<int, int>( n));
-    thrust::transform( v.begin(), v.end(), m.values.begin(), m.values.begin(), thrust::multiplies<T>());
-}
-
-}//namespace detail
-
 //use symmetry of matrix
 template<class Matrix>
-void transverse( const Matrix& in, Matrix& out, unsigned n)
+void transverse( const Matrix& in, Matrix& out)
 {
     //USE MATRIX SYMMETRY AND DO A THRUST::SORT_BY_KEY ON VALUES
     //WRITE PRECONDITIONS AND MAKE SURE LAPLACE FUNCTIONS SET ALL VALUES
@@ -183,7 +153,6 @@ void transverse( const Matrix& in, Matrix& out, unsigned n)
     thrust::host_vector<int> keys( in.num_entries);
     thrust::sequence( keys.begin(), keys.end());
     thrust::sort_by_key( keys.begin(), keys.end(), out.values.begin(), thrust::greater<value_type>());
-    detail::transverse_stencil( out, n);
 
 }
 

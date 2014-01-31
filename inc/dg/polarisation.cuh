@@ -21,6 +21,7 @@
 #include "dlt.cuh"
 
 //#include "cusp_eigen.h"
+//CAN'T BE TRANSVERSE SYMMETRIC?
 
 /*! @file 
 

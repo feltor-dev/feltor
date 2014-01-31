@@ -173,9 +173,9 @@ ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double n
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed);
+    laplaceM = create::laplacianM( grid, normed, dg::XSPACE, dg::symmetric); //doesn't hurt to be symmetric but doesn't solver pb
     //if( !global)
-        A = create::laplacianM( grid, not_normed);
+    A = create::laplacianM( grid, not_normed, dg::XSPACE, dg::symmetric);
 
 }
 
