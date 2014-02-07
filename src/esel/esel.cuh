@@ -30,8 +30,8 @@ struct Fail : public std::exception
 struct SOL
 {
 
-    SOL( double xl, double xw, double sigmal, double sigmaw):
-        xl_(xl), xw_(xw), sigma_l(sigmal), sigma_w(sigmaw)
+    SOL( double xl, double xw, double sigmal, double sigmaw, double dd):
+        xl_(xl), xw_(xw), sigma_l(sigmal), sigma_w(sigmaw), dd( dd)
     {
         assert( xl < xw);
         assert( sigma_l < sigma_w);
@@ -46,9 +46,10 @@ struct SOL
         else 
             return sigma_w;
     }
+    double get_dd( )const {return dd;}
 
   private:
-    double xl_, xw_, sigma_l, sigma_w;
+    double xl_, xw_, sigma_l, sigma_w, dd;
 };
 template< class T>
 struct EXPX
@@ -188,6 +189,7 @@ struct Esel
     const container w2d, v2d, one;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
+    const double dd;
 
     const container sol_;
 
@@ -207,6 +209,7 @@ Esel< container>::Esel( const Grid<value_type>& grid, double kappa, double nu, d
     pcg( omega, omega.size()), 
     w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau),
+    dd( sol.get_dd()),
     sol_( evaluate(sol, grid) )
 {
     //create derivatives
@@ -363,6 +366,9 @@ void Esel< container>::operator()( const std::vector<container>& y, std::vector<
     blas1::axpby( kappa, dyphi[1], 1., yp[1]);
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
+    //3d coupling term
+    blas1::axpby( -dd, y[0], 1, yp[0]);
+    blas1::axpby( dd, phi[0], 1, yp[0]);
 
     //add Diffusion
     for( unsigned i=0; i<y.size(); i++)

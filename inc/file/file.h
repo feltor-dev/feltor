@@ -134,6 +134,31 @@ struct T5trunc
         H5Fclose( file);
     }
     /**
+     * @brief Write one time - group
+     *
+     * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
+     * @param field1 The first dataset ("electrons")
+     * @param field2 The second dataset ("ions")
+     * @param field3 The third dataset ("potential")
+     * @param field4 The fourth dataset ("impurities")
+     * @param time The time makes the group name
+     * @param nNx dimension in x - direction (second index)
+     * @param nNy dimension in y - direction (first index)
+     */
+    template< class T>
+    void write( const T& field1, const T& field2, const T& field3, const T& field4, double time, unsigned nNx, unsigned nNy)
+    {
+        hid_t file = H5Fopen( name_.data(), H5F_ACC_RDWR, H5P_DEFAULT);
+        hid_t grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        hsize_t dims[] = { nNy, nNx };
+        status_ = H5LTmake_dataset_double( grp, "electrons", 2,  dims, field1.data());
+        status_ = H5LTmake_dataset_double( grp, "ions", 2,  dims, field2.data());
+        status_ = H5LTmake_dataset_double( grp, "potential", 2,  dims, field3.data());
+        status_ = H5LTmake_dataset_double( grp, "impurities", 2,  dims, field3.data());
+        H5Gclose( grp);
+        H5Fclose( file);
+    }
+    /**
      * @brief Append data to the xfiles
      *
      * @param mass Data
@@ -194,7 +219,7 @@ struct T5rdonly
      * @brief Read a field at a specified index
      *
      * @param field Container
-     * @param name Name of the field (electron, ions, potential)
+     * @param name Name of the field (electron, ions, potential or impurities)
      * @param idx Index
      */
     template <class T>
