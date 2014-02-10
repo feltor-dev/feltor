@@ -65,7 +65,8 @@ Parameter read( char const * file)
 
 void drawScene( const Solver& solver, target t)
 {
-    //glClear(GL_COLOR_BUFFER_BIT);
+    glLoadIdentity();
+    glClear(GL_COLOR_BUFFER_BIT);
     double max;
     const typename Solver::Matrix_Type * field;
 
@@ -134,6 +135,7 @@ int main( int argc, char* argv[])
 
     height = width/field_ratio;
     GLFWwindow* w = glfwCreateWindow( width, height, " ", 0 ,0);
+    glfwMakeContextCurrent( w);
     if( w == NULL)
     { 
         cerr << "ERROR: glfw couldn't open window!\n";
@@ -144,7 +146,7 @@ int main( int argc, char* argv[])
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glfwSetInputMode(w, GLFW_STICKY_KEYS, GL_TRUE);
     glfwSetInputMode(w, GLFW_STICKY_MOUSE_BUTTONS, GL_FALSE);
-    //glClearColor(0.f, 0.f, 0.f, 0.f);
+    glClearColor(0.f, 0.f, 0.f, 0.f);
 
     double t = 3*p.dt;
     Timer timer;

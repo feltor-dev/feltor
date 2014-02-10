@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <array>
-#include <GL/glfw.h>
+#include <GLFW/glfw3.h>
 #include "toefl.h"
 
 using namespace  std;
@@ -127,7 +127,7 @@ int main()
             glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  1.0);
             glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  1.0);
         glEnd();
-        glfwSwapBuffers(); //implicitely calss glfwPollEvents()
+        glfwSwapBuffers(); 
         //Now wait until a key is pressed
         glfwWaitEvents(); //=glfwPollEvents() when an Event comes: reacts e.g. on mouse mvt or keyboard input
         if( glfwGetKey('N'))
