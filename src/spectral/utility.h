@@ -1,7 +1,7 @@
 #ifndef _TL_UTILITY_
 #define _TL_UTILITY_
 
-#include <GL/glfw.h>
+#include <GLFW/glfw3.h>
 namespace toefl
 {
 

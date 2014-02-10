@@ -1,6 +1,5 @@
 #include <iostream>
 #include <iomanip>
-#include <GL/glfw.h>
 #include <sstream>
 #include <omp.h>
 #include <vector>
@@ -22,7 +21,7 @@ double field_ratio;
 unsigned width = 1400, height = 1080; //initial window width (height will be computed)
 stringstream window_str;  //window name
 
-void GLFWCALL WindowResize( int w, int h)
+void WindowResize( GLFWwindow* win, int w, int h)
 {
     // map coordinates to the whole window
     double win_ratio = (double)w/(double)h;
@@ -66,7 +65,7 @@ Parameter read( char const * file)
 
 void drawScene( const Solver& solver, target t)
 {
-    glClear(GL_COLOR_BUFFER_BIT);
+    //glClear(GL_COLOR_BUFFER_BIT);
     double max;
     const typename Solver::Matrix_Type * field;
 
@@ -90,7 +89,6 @@ void drawScene( const Solver& solver, target t)
           window_str <<"Potential/ "<<max<<"\t";
         break;
     }
-
         
 }
 
@@ -132,21 +130,21 @@ int main( int argc, char* argv[])
 
     ////////////////////////////////glfw//////////////////////////////
     {
-    int running = GL_TRUE;
     if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
 
     height = width/field_ratio;
-    if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
+    GLFWwindow* w = glfwCreateWindow( width, height, " ", 0 ,0);
+    if( w == NULL)
     { 
         cerr << "ERROR: glfw couldn't open window!\n";
     }
-    glfwSetWindowSizeCallback( WindowResize);
+    glfwSetWindowSizeCallback(w, WindowResize);
 
     glEnable( GL_TEXTURE_2D);
-    glfwEnable( GLFW_STICKY_KEYS);
-    glfwDisable( GLFW_STICKY_MOUSE_BUTTONS);
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glClearColor(0.f, 0.f, 0.f, 0.f);
+    glfwSetInputMode(w, GLFW_STICKY_KEYS, GL_TRUE);
+    glfwSetInputMode(w, GLFW_STICKY_MOUSE_BUTTONS, GL_FALSE);
+    //glClearColor(0.f, 0.f, 0.f, 0.f);
 
     double t = 3*p.dt;
     Timer timer;
@@ -155,49 +153,48 @@ int main( int argc, char* argv[])
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
     target targ = TEMPERATURE;
-    while( running)
+    while( !glfwWindowShouldClose(w))
     {
         overhead.tic();
         //ask if simulation shall be stopped
         glfwPollEvents();
-        if( glfwGetKey( 'S')/*||((unsigned)t%100 == 0)*/) 
+        if( glfwGetKey(w,  'S')/*||((unsigned)t%100 == 0)*/) 
         {
             do
             {
                 glfwWaitEvents();
-            } while( !glfwGetKey('R') && 
-                     !glfwGetKey( GLFW_KEY_ESC) && 
-                      glfwGetWindowParam( GLFW_OPENED) );
+            } while( !glfwGetKey(w, 'R') && 
+                     !glfwGetKey(w,  GLFW_KEY_ESCAPE));
         }
         
         //draw scene
-        if( glfwGetKey( '1')) targ = TEMPERATURE;
-        else if( glfwGetKey( '2')) targ = VORTICITY;
-        else if( glfwGetKey( '3')) targ = POTENTIAL;
+        if( glfwGetKey(w, '1')) targ = TEMPERATURE;
+        else if( glfwGetKey(w, '2')) targ = VORTICITY;
+        else if( glfwGetKey(w, '3')) targ = POTENTIAL;
         drawScene( solver, targ);
         window_str << setprecision(2) << fixed;
         window_str << " &&   time/1e-3 = "<<t*1000.;
-        glfwSetWindowTitle( (window_str.str()).c_str() );
+        glfwSetWindowTitle(w, (window_str.str()).c_str() );
         window_str.str("");
-        glfwSwapBuffers();
-        if( glfwGetMouseButton( GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        glfwSwapBuffers(w);
+        if( glfwGetMouseButton( w, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
         {
-            int xpos, ypos;
-            glfwGetMousePos( &xpos, &ypos); //origin top left, yaxis down
+            double xpos, ypos;
+            glfwGetCursorPos( w, &xpos, &ypos); //origin top left, yaxis down
             int width, height;
-            glfwGetWindowSize( &width, &height); //origin top left, yaxis down
-            double x0 = (double)xpos/(double)width;
-            double y0 = (1.-(double)ypos/(double)height);
+            glfwGetWindowSize( w, &width, &height); //origin top left, yaxis down
+            double x0 = xpos/(double)width;
+            double y0 = (1.-ypos/(double)height);
             solver.setHeat(x0, y0, 5./128./field_ratio, 5./128., amp/10.);
         }
-        else if ( glfwGetMouseButton( GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS )
+        else if ( glfwGetMouseButton( w, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS )
         {
-            int xpos, ypos;
-            glfwGetMousePos( &xpos, &ypos); //origin top left, yaxis down
+            double xpos, ypos;
+            glfwGetCursorPos(w, &xpos, &ypos); //origin top left, yaxis down
             int width, height;
-            glfwGetWindowSize( &width, &height); //origin top left, yaxis down
-            double x0 = (double)xpos/(double)width;
-            double y0 = (1.-(double)ypos/(double)height);
+            glfwGetWindowSize(w, &width, &height); //origin top left, yaxis down
+            double x0 = xpos/(double)width;
+            double y0 = (1.-ypos/(double)height);
             solver.setHeat(x0, y0, 5./128./field_ratio, 5./128., -amp/10.);
         }
         else
@@ -212,8 +209,8 @@ int main( int argc, char* argv[])
             t+= p.dt;
         }
         timer.toc();
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
+        if( glfwGetKey(w, GLFW_KEY_ESCAPE))
+            glfwSetWindowShouldClose(w, GL_TRUE);
         overhead.toc();
     }
     glfwTerminate();

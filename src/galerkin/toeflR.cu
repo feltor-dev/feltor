@@ -74,7 +74,6 @@ int main( int argc, char* argv[])
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
-    bool running = true;
     double time = 0;
     ab.init( test, y0, p.dt);
     ab( test, y0, y1, p.dt);
@@ -84,7 +83,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    while (running)
+    while ( !glfwWindowShouldClose( w.get_window() ))
     {
         //transform field to an equidistant grid
         if( p.global)
@@ -138,7 +137,7 @@ int main( int argc, char* argv[])
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
-                running = false;
+                glfwSetWindowShouldClose( w.get_window(), GL_TRUE);
                 break;
             }
             y0.swap( y1); //attention on -O3 ?
@@ -149,9 +148,6 @@ int main( int argc, char* argv[])
         std::cout << "\n\t Step "<<step;
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #endif//DG_BENCHMARK
-        running = running && 
-                  !glfwGetKey( GLFW_KEY_ESC) &&
-                  glfwGetWindowParam( GLFW_OPENED);
     }
     ////////////////////////////////////////////////////////////////////
 
