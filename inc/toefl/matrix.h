@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <array>
+#include <vector>
 #include "fftw3.h"
 #include "exceptions.h"
 #include "padding.h"
@@ -188,6 +189,16 @@ class Matrix
      *  This class manages the memory it allocates by itself.
      */
     T const * getPtr()const {return ptr;}
+
+
+    std::vector<T> copy() const
+    {
+        std::vector<T> vec( n*m);
+        for( unsigned i=0; i<n; i++)
+            for( unsigned j=0; j<m; j++)
+                vec[i*m+j] = ptr[i*TotalNumberOf<P>::columns(m) + j];
+        return vec;
+    }
 
     /*! @brief uses operator= to set memory to 0
      *
