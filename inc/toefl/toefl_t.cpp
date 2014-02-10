@@ -1,8 +1,8 @@
 #include <iostream>
 #include <iomanip>
 #include <array>
-#include <GLFW/glfw3.h>
 #include "toefl.h"
+#include "draw/host_window.h"
 
 using namespace  std;
 using namespace toefl;
@@ -62,19 +62,8 @@ void step();
 int main()
 {
     ////////////////////////////////glfw//////////////////////////////
-    int running = GL_TRUE;
-    if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
-    glfwOpenWindowHint(GLFW_FSAA_SAMPLES, 4); // 4x AA
-    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
-    glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-     
-
-    if( !glfwOpenWindow( 600, 300,  0,0,0,  0,0,0, GLFW_WINDOW))
-    { 
-        cerr << "ERROR: glfw couldn't open window!\n";
-    }
-    glfwSetWindowTitle( "Convection");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 600, 300, "Behold the convection!");
+    draw::RenderHostData render(1,1);
     //////////////////////////////////////////////////////////////////
     const Complex kxmin { 0, 2.*M_PI/lx}, kzmin{ 0, M_PI/lz};
     for( unsigned i=0; i<nz; i++)
@@ -105,40 +94,23 @@ int main()
     karniadakis.invert_coeff<TL_ORDER3>();
     step<TL_ORDER3>();
     //////////////////////////////////////////////////////////////////
-    Texture_RGBf tex( nz, nx);
-    glEnable(GL_TEXTURE_2D);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     cout << "PRESS N TO SEE THE NEXT TIME STEP\n";
-    while( running)
+    draw::ColorMapRedBlueExt colors( R);
+    std::vector<double> visual;
+    while( !glfwWindowShouldClose( w))
     {
-        //generate a texture
-        //gentexture_RGBf_temp( tex, field[0], R);
-        gentexture_RGBf( tex, field[0], R);
-        glLoadIdentity();
-        glClearColor(0.f, 0.f, 0.f, 0.f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        // image comes from texarray on host
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
-        glLoadIdentity();
-        //Draw a textured quad
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  1.0);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  1.0);
-        glEnd();
-        glfwSwapBuffers(); 
+        visual = field[0].copy();
+        render.renderQuad( visual, nz, nx, colors);
+        glfwSwapBuffers( w ); 
         //Now wait until a key is pressed
         glfwWaitEvents(); //=glfwPollEvents() when an Event comes: reacts e.g. on mouse mvt or keyboard input
-        if( glfwGetKey('N'))
+        if( glfwGetKey(w ,'N'))
         {
             step<TL_ORDER3>();
             cout << "Next Step\n";
         }
         static int i=0; 
         cout << "Event #"<<i++<<" occured!\n ";
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
     glfwTerminate();
     //////////////////////////////////////////////////////////////////
