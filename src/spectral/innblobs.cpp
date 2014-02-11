@@ -1,12 +1,11 @@
 #include <iostream>
 #include <iomanip>
-#include <GL/glfw.h>
 #include <sstream>
 #include <omp.h>
 
 #include "toefl/toefl.h"
 #include "file/read_input.h"
-#include "utility.h"
+#include "draw/host_window.h"
 #include "particle_density.h"
 #include "dft_dft_solver.h"
 //#include "drt_dft_solver.h"
@@ -33,8 +32,10 @@ const double slit = 1./500.; //half distance between pictures in units of width
 double field_ratio;
 unsigned width = 1000, height = 800; //initial window width (height will be computed)
 stringstream window_str;  //window name
+std::vector<double> visual;
+draw::ColorMapRedBlueExt map;
 
-void GLFWCALL WindowResize( int w, int h)
+void WindowResize( GLFWwindow* win, int w, int h)
 {
     // map coordinates to the whole window
     double win_ratio = (double)w/(double)h;
@@ -71,58 +72,60 @@ Blueprint read( char const * file)
 // The solver has to have the getField( target) function returing M
 // and the blueprint() function
 template<class Solver>
-void drawScene( const Solver& solver, target t)
+void drawScene( const Solver& solver, target t, draw::RenderHostData& rend)
 {
-    glClear(GL_COLOR_BUFFER_BIT);
     ParticleDensity particle( solver.getField( TL_IMPURITIES), solver.blueprint());
     double max;
     const typename Solver::Matrix_Type * field;
 
     if( t == TL_ALL)
     {
+        rend.set_multiplot(2,2);
         { //draw electrons
         field = &solver.getField( TL_ELECTRONS);
-        max = abs_max( *field);
-        drawTexture( *field, max, -1.0, -slit, slit*field_ratio, 1.0);
+        visual = field->copy(); 
+        map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
+        rend.renderQuad( visual, field->cols(), field->rows(), map);
         window_str << scientific;
-        window_str <<"ne / "<<max<<"\t";
-        //Draw a textured quad
-        //upper left
+        window_str <<"ne / "<<map.scale()<<"\t";
         }
 
         { //draw Ions
         typename Solver::Matrix_Type ions = solver.getField( TL_IONS);
         particle.linear( ions, solver.getField( TL_POTENTIAL), ions, 0 );
-        //upper right
-        drawTexture( ions, max, slit, 1.0, slit*field_ratio, 1.0);
-        window_str <<" ni / "<<max<<"\t";
+        visual = ions.copy();
+        rend.renderQuad( visual, field->cols(), field->rows(), map);
+        window_str <<" ni / "<<map.scale()<<"\t";
         }
 
         if( solver.blueprint().isEnabled( TL_IMPURITY))
         {
             typename Solver::Matrix_Type impurities = solver.getField( TL_IMPURITIES);
             particle.linear( impurities, solver.getField(TL_POTENTIAL), impurities, 0 );
-            max = abs_max( impurities);
-            //lower left
-            drawTexture( impurities, max, -1.0, -slit, -1.0, -slit*field_ratio);
+            visual = impurities.copy(); 
+            map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
+            rend.renderQuad( visual, field->cols(), field->rows(), map);
             window_str <<" nz / "<<max<<"\t";
         }
+        else
+            rend.renderEmptyQuad();
 
         { //draw potential
-        //field = &solver.getField( TL_POTENTIAL); 
         typename Solver::Matrix_Type phi = solver.getField( TL_POTENTIAL);
         particle.laplace( phi );
-        max = abs_max(phi);
-        //lower right
-        drawTexture( phi, max, slit, 1.0, -1.0, -slit*field_ratio);
+        visual = phi.copy(); 
+        map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
+        rend.renderQuad( visual, field->cols(), field->rows(), map);
         window_str <<" phi / "<<max<<"\t";
         }
     }
     else
     {
+        rend.set_multiplot(1,1);
         field = &solver.getField( t);
-        max = abs_max( *field);
-        drawTexture( *field, max, -1.0, 1.0, -1.0, 1.0);
+        visual = field->copy(); 
+        map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
+        rend.renderQuad( visual, field->cols(), field->rows(), map);
         window_str << scientific;
         window_str <<"Max "<<max<<"\t";
     }
@@ -182,20 +185,13 @@ int main( int argc, char* argv[])
 
     ////////////////////////////////glfw//////////////////////////////
     {
-    int running = GL_TRUE;
-    if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
 
     height = width/field_ratio;
-    if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
-    { 
-        cerr << "ERROR: glfw couldn't open window!\n";
-    }
-    glfwSetWindowSizeCallback( WindowResize);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( width, height, "");
+    draw::RenderHostData render( 2,2);
+    glfwSetWindowSizeCallback(w, WindowResize);
 
-    glEnable( GL_TEXTURE_2D);
-    glfwEnable( GLFW_STICKY_KEYS);
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glClearColor(0.f, 0.f, 0.f, 0.f);
+    glfwSetInputMode( w, GLFW_STICKY_KEYS, GL_TRUE);
 
     double t = 3*alg.dt;
     Timer timer;
@@ -204,33 +200,32 @@ int main( int argc, char* argv[])
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
     target targ = TL_ALL;
-    while( running)
+    while( !glfwWindowShouldClose(w))
     {
         overhead.tic();
         //ask if simulation shall be stopped
         glfwPollEvents();
-        if( glfwGetKey( 'S')/*||((unsigned)t%100 == 0)*/) 
+        if( glfwGetKey(w, 'S')/*||((unsigned)t%100 == 0)*/) 
         {
             do
             {
                 glfwWaitEvents();
-            } while( !glfwGetKey('R') && 
-                     !glfwGetKey( GLFW_KEY_ESC) && 
-                      glfwGetWindowParam( GLFW_OPENED) );
+            } while( !glfwGetKey(w, 'R') && 
+                     !glfwGetKey(w, GLFW_KEY_ESCAPE));
         }
         
         //draw scene
-        if( glfwGetKey( '1')) targ = TL_ELECTRONS;
-        else if( glfwGetKey( '2')) targ = TL_IONS;
-        else if( glfwGetKey( '3')) targ = TL_IMPURITIES;
-        else if( glfwGetKey( '4')) targ = TL_POTENTIAL;
-        else if( glfwGetKey( '0')) targ = TL_ALL;
-        drawScene(solver, targ);
+        if( glfwGetKey(w, '1')) targ = TL_ELECTRONS;
+        else if( glfwGetKey(w, '2')) targ = TL_IONS;
+        else if( glfwGetKey(w, '3')) targ = TL_IMPURITIES;
+        else if( glfwGetKey(w, '4')) targ = TL_POTENTIAL;
+        else if( glfwGetKey(w, '0')) targ = TL_ALL;
+        drawScene(solver, targ, render);
         window_str << setprecision(2) << fixed;
         window_str << " &&   time = "<<t;
-        glfwSetWindowTitle( (window_str.str()).c_str() );
+        glfwSetWindowTitle(w, (window_str.str()).c_str() );
         window_str.str("");
-        glfwSwapBuffers();
+        glfwSwapBuffers(w);
         timer.tic();
         for(unsigned i=0; i<N; i++)
         {
@@ -238,8 +233,6 @@ int main( int argc, char* argv[])
             t+= alg.dt;
         }
         timer.toc();
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
         overhead.toc();
     }
     glfwTerminate();

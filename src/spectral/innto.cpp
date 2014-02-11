@@ -1,12 +1,12 @@
 #include <iostream>
 #include <iomanip>
-#include <GL/glfw.h>
 #include <sstream>
 #include <omp.h>
 
 #include "toefl/toefl.h"
 #include "file/read_input.h"
-#include "utility.h"
+//#include "utility.h"
+#include "draw/host_window.h"
 #include "dft_dft_solver.h"
 #include "drt_dft_solver.h"
 #include "blueprint.h"
@@ -24,9 +24,11 @@ double amp, imp_amp; //
 const double slit = 2./500.; //half distance between pictures in units of width
 double field_ratio;
 unsigned width = 960, height = 1080; //initial window width & height
-stringstream window_str;  //window name
+std::stringstream window_str;  //window name
+std::vector<double> visual;
+draw::ColorMapRedBlueExt map;
 
-void GLFWCALL WindowResize( int w, int h)
+void WindowResize( GLFWwindow* win, int w, int h)
 {
     // map coordinates to the whole window
     double win_ratio = (double)w/(double)h;
@@ -62,44 +64,45 @@ Blueprint read( char const * file)
 // The solver has to have the getField( target) function returing M
 // and the blueprint() function
 template<class Solver>
-void drawScene( const Solver& solver)
+void drawScene( const Solver& solver, draw::RenderHostData& rend)
 {
-    glClear(GL_COLOR_BUFFER_BIT);
-    double max;
     const typename Solver::Matrix_Type * field;
     
     { //draw electrons
     field = &solver.getField( TL_ELECTRONS);
-    max = abs_max( *field);
-    drawTexture( *field, max, -1.0, -slit, slit*field_ratio, 1.0);
+    visual = field->copy(); 
+    map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
+    rend.renderQuad( visual, field->cols(), field->rows(), map);
     window_str << scientific;
-    window_str <<"ne / "<<max<<"\t";
-    //Draw a textured quad
-    //upper left
+    window_str <<"ne / "<<map.scale()<<"\t";
     }
 
     { //draw Ions
     field = &solver.getField( TL_IONS);
+    visual = field->copy();
     //upper right
-    drawTexture( *field, max, slit, 1.0, slit*field_ratio, 1.0);
-    window_str <<" ni / "<<max<<"\t";
+    rend.renderQuad( visual, field->cols(), field->rows(), map);
+    window_str <<" ni / "<<map.scale()<<"\t";
     }
 
     if( solver.blueprint().isEnabled( TL_IMPURITY))
     {
         field = &solver.getField( TL_IMPURITIES); 
-        max = abs_max(*field);
+        visual = field->copy();
+        map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
         //lower left
-        drawTexture( *field, max, -1.0, -slit, -1.0, -slit*field_ratio);
-        window_str <<" nz / "<<max<<"\t";
+        rend.renderQuad( visual, field->cols(), field->rows(), map);
+        window_str <<" nz / "<<map.scale()<<"\t";
     }
+    else
+        rend.renderEmptyQuad( );
 
     { //draw potential
     field = &solver.getField( TL_POTENTIAL); 
-    max = abs_max(*field);
-    //lower right
-    drawTexture( *field, max, slit, 1.0, -1.0, -slit*field_ratio);
-    window_str <<" phi / "<<max<<"\t";
+    visual = field->copy(); 
+    map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
+    rend.renderQuad( visual, field->cols(), field->rows(), map);
+    window_str <<" phi / "<<map.scale()<<"\t";
     }
         
 }
@@ -180,20 +183,13 @@ int main( int argc, char* argv[])
 
     ////////////////////////////////glfw//////////////////////////////
     {
-    int running = GL_TRUE;
-    if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
 
     height = width/field_ratio;
-    if( !glfwOpenWindow( width, height,  0,0,0,  0,0,0, GLFW_WINDOW))
-    { 
-        cerr << "ERROR: glfw couldn't open window!\n";
-    }
-    glfwSetWindowSizeCallback( WindowResize);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( width, height, "");
+    draw::RenderHostData render( 2,2);
 
-    glEnable( GL_TEXTURE_2D);
-    glfwEnable( GLFW_STICKY_KEYS);
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glClearColor(0.f, 0.f, 0.f, 0.f);
+    glfwSetWindowSizeCallback( w, WindowResize);
+    glfwSetInputMode(w, GLFW_STICKY_KEYS, GL_TRUE);
 
     double t = 3*alg.dt;
     Timer timer;
@@ -201,44 +197,43 @@ int main( int argc, char* argv[])
     cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
-    while( running)
+    while( !glfwWindowShouldClose(w))
     {
         overhead.tic();
         //ask if simulation shall be stopped
         glfwPollEvents();
-        if( glfwGetKey( 'S')) 
+        if( glfwGetKey( w, 'S')) 
         {
             do
             {
                 glfwWaitEvents();
-            } while( !glfwGetKey('R') && 
-                     !glfwGetKey( GLFW_KEY_ESC) && 
-                      glfwGetWindowParam( GLFW_OPENED) );
+            } while( !glfwGetKey(w,  'R') && 
+                     !glfwGetKey(w,  GLFW_KEY_ESCAPE));
         }
         
         //draw scene
         if( !bp.isEnabled( TL_IMPURITY))
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
-                drawScene( solver2);
+                drawScene( solver2, render);
             else
-                drawScene( drt_solver2);
+                drawScene( drt_solver2, render);
         }
         else
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
-                drawScene( solver3);
+                drawScene( solver3, render);
             else
-                drawScene( drt_solver3);
+                drawScene( drt_solver3, render);
         }
         window_str << setprecision(2) << fixed;
         window_str << " &&   time = "<<t;
-        glfwSetWindowTitle( (window_str.str()).c_str() );
+        glfwSetWindowTitle(w, (window_str.str()).c_str() );
         window_str.str("");
-        glfwSwapBuffers();
+        glfwSwapBuffers( w );
 #ifdef TL_DEBUG
         glfwWaitEvents();
-        if( glfwGetKey('N'))
+        if( glfwGetKey( w,'N'))
         {
 #endif
         timer.tic();
@@ -265,8 +260,6 @@ int main( int argc, char* argv[])
             cout << "Next "<<N<<" Steps\n";
         }
 #endif
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
         overhead.toc();
     }
     glfwTerminate();
