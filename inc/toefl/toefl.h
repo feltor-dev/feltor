@@ -9,7 +9,7 @@
 #include "exceptions.h"
 //input reading and visualization
 //#include "read_input.h" //moved to file lib
-#include "texture.h"
+//#include "texture.h" //moved to draw lib
 //benchmarking
 #include "timer.h"
 //Matrices 

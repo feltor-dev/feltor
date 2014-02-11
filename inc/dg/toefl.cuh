@@ -57,6 +57,7 @@ void Toefl< container>::operator()( const std::vector<container>& y, std::vector
     blas1::axpby( 2., phi, -1.,  phi_old);
     phi.swap( phi_old);
     unsigned number = pcg( laplaceM, phi, omega, v2d, eps);
+    number +=0; //avoid warning
 #ifdef DG_BENHMARK
     std::cout << "Number of pcg iterations "<<  number << "\n";
 #endif

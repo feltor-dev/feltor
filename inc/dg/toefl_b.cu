@@ -1,9 +1,13 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <sstream>
 #include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
 
-#include "draw/host_window.h"
+#include "timer.cuh"
+#include "draw/device_window.cuh"
+//#include "draw/host_window.h"
 
 #include "evaluation.cuh"
 #include "functions.h"
@@ -28,21 +32,63 @@ const double Ra = 5e5;
 
 const unsigned k = 3;
 const double dt = 2e-7;
-const unsigned N = 10; //steps between output
+const unsigned N = 5; //steps between output
 
 double eps = 1e-6;
 
-using namespace std;
 
 double groundState( double x, double y) { return ly/2. - y;}
+/**
+ * @brief Functor returning a gaussian
+ * \f[
+   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}} 
+   \f]
+ */
+struct Gaussian
+{
+    /**
+     * @brief Functor returning a gaussian
+     *
+     * @param x0 x-center-coordinate
+     * @param y0 y-center-coordinate
+     * @param sigma_x x - variance
+     * @param sigma_y y - variance 
+     * @param amp Amplitude
+     */
+    Gaussian( float x0, float y0, float sigma_x, float sigma_y, float amp)
+        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp){}
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return gaussian
+     */
+    float operator()(float x, float y)
+    {
+        return  amplitude*
+                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
+                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+    }
+  private:
+    float  x00, y00, sigma_x, sigma_y, amplitude;
+
+};
 
 int main()
 {
-    draw::HostWindow w(lx*200, 200);
-    glfwSetWindowTitle( "Behold the convection\n");
+    std::stringstream title;
+    title << " temperature / "<<1. <<" time 0";
+    GLFWwindow* w = draw::glfwInitAndCreateWindow(1000, 200, title.str().c_str());
+    title.str("");
+    draw::RenderDeviceData render(1,1);
 
 
-    /////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
     cout << "Timestep                    " << dt << endl;
@@ -58,30 +104,31 @@ int main()
     Toefl< dg::DVec> test( grid, Ra, Pr, eps); 
     AB< k, vector<dg::DVec> > ab( y0);
 
-
     //create visualisation vectors
-    int running = GL_TRUE;
     dg::DVec visual(  grid.size());
-    dg::HVec hvisual( grid.size());
     dg::DVec ground = evaluate ( groundState, grid), temperature( ground);
     dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
     draw::ColorMapRedBlueExt colors( 1.);
+    colors.scale() =  1.;
     ab.init( test, y0, dt);
     double time = 0;
-    while (running)
+    while (!glfwWindowShouldClose(w))
     {
         //compute the total temperature
         blas1::axpby( 1., y0[0],  0., temperature);
         blas1::axpby( 1., ground, 1., temperature);
         //transform field to an equidistant grid
         dg::blas2::symv( equidistant, temperature, visual);
+
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
-        w.title() << " temperature / "<<colors.scale() <<" time "<<time;
-        //std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
-        hvisual = visual;
-        w.draw( hvisual, n*grid.Nx(), n*grid.Ny(), colors);
+        render.renderQuad( visual, n*grid.Nx(), n*grid.Ny(), colors);
+        title << " temperature / "<<colors.scale() <<" time "<<time;
+        glfwSetWindowTitle( w, title.str().c_str());
+        title.str("");
+        glfwPollEvents();
+        glfwSwapBuffers( w);
         //step 
         for( unsigned i=0; i<N; i++)
         {
@@ -89,11 +136,11 @@ int main()
             y0.swap( y1);
             time += (double)N*dt;
         }
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
     ////////////////////////////////////////////////////////////////////
+    glfwTerminate();
 
     return 0;
 
 }
+
