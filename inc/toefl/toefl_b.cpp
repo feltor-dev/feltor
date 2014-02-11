@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
-#include <GL/glfw.h>
 #include "toefl.h"
+#include "draw/host_window.h"
 
 using namespace  std;
 using namespace toefl; 
@@ -60,13 +60,10 @@ void step();
 int main()
 {
     ////////////////////////////////glfw//////////////////////////////
-    int running = GL_TRUE;
-    if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
-    if( !glfwOpenWindow( 800, 200,  0,0,0,  0,0,0, GLFW_WINDOW))
-    { 
-        cerr << "ERROR: glfw couldn't open window!\n";
-    }
-    glfwSetWindowTitle( "Behold the convection!");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 800, 200, "Behold the convection!");
+    draw::RenderHostData render(1,1);
+    draw::ColorMapRedBlueExt colors( R);
+    std::vector<double> visual;
     //////////////////////////////////////////////////////////////////
     const Complex kxmin { 0, 2.*M_PI/lx}, kzmin{ 0, M_PI/lz};
     TurbulentBath bath(R);
@@ -94,42 +91,23 @@ int main()
     karniadakis.invert_coeff<TL_ORDER3>();
     step<TL_ORDER3>();
     //////////////////////////////////////////////////////////////////
-    Texture_RGBf tex( nz, nx);
-    glEnable(GL_TEXTURE_2D);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     double timer[10];
     Timer t;
     static int i=0;
     cout << "PRESS ESC OR CLOSE WINDOW TO TERMINATE PROGRAM!\n";
-    while( running)
+    while( !glfwWindowShouldClose( w))
     {
-        //generate a texture
-        gentexture_RGBf_temp( tex, field[0], R);
-        //gentexture_RGBf( tex, field[0], R);
-        glLoadIdentity();
-        glClearColor(0.f, 0.f, 0.f, 0.f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        // image comes from texarray on host
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.cols(), tex.rows(), 0, GL_RGB, GL_FLOAT, tex.getPtr());
-        glLoadIdentity();
-        //Draw a textured quad
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  1.0);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  1.0);
-        glEnd();
-        glfwSwapBuffers();
+        visual = field[0].copy();
+        render.renderQuad( visual, nx, nz, colors);
+        glfwPollEvents();
+        glfwSwapBuffers( w ); 
         //////////////call stepper///////////////////////////////////
-
         t.tic();
         for( unsigned j=0; j<N; j++)
             step<TL_ORDER3>();
         t.toc();
         timer[i++%10] = t.diff();
         //////////////////////////////////////////////////////////////
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
     double avg = 0;
     for( int i=0; i<10; i++)

@@ -100,7 +100,7 @@ int main()
     while( !glfwWindowShouldClose( w))
     {
         visual = field[0].copy();
-        render.renderQuad( visual, nz, nx, colors);
+        render.renderQuad( visual, nx, nz, colors);
         glfwSwapBuffers( w ); 
         //Now wait until a key is pressed
         glfwWaitEvents(); //=glfwPollEvents() when an Event comes: reacts e.g. on mouse mvt or keyboard input
