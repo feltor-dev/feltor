@@ -8,6 +8,7 @@ CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 -w
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+GLFLAGS= -lGLEW
 OPT	   = -O2
 else
 CC = g++
@@ -19,7 +20,7 @@ endif
 ifeq ($(strip $(system)),home)
 INCLUDE += -I/home/matthias/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
-GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr
+GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr 
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 

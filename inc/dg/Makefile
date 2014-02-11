@@ -7,7 +7,10 @@ ifeq ($(strip $(system)),home)
 
 INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
-GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
+GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
+ifeq ($(strip $(device)),gpu)
+GLFLAGS+= -lGLEW
+endif
 endif
 
 ifeq ($(strip $(system)),leo3)
@@ -24,7 +27,7 @@ ifeq ($(strip $(device)),gpu)
 CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20
 CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+#CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 else
 CC = g++
 CFLAGS = -Wall -fopenmp -x c++

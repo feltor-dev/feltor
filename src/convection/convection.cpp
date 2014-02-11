@@ -6,7 +6,8 @@
 
 #include "toefl/toefl.h"
 #include "file/read_input.h"
-#include "utility.h"
+#include "draw/host_window.h"
+//#include "utility.h"
 #include "convection_solver.h"
 
 using namespace std;
@@ -14,7 +15,10 @@ using namespace toefl;
 
 typedef Convection_Solver Solver;
 typedef typename Solver::Matrix_Type Matrix_Type;
-    
+
+std::vector<double> visual;
+draw::ColorMapRedBlueExt map;
+
 unsigned N; //steps between output
 double amp; //Perturbation amplitude
 double field_ratio; 
@@ -63,10 +67,8 @@ Parameter read( char const * file)
 
     
 
-void drawScene( const Solver& solver, target t)
+void drawScene( const Solver& solver, target t, draw::RenderHostData& rend)
 {
-    glLoadIdentity();
-    glClear(GL_COLOR_BUFFER_BIT);
     double max;
     const typename Solver::Matrix_Type * field;
 
@@ -76,17 +78,27 @@ void drawScene( const Solver& solver, target t)
     {
         case( TEMPERATURE):
             max = solver.parameter().R;
-            drawTemperature( *field, max, -1.0, 1.0, -1.0, 1.0);
+            visual.resize( field->rows()*field->cols());
+            for( unsigned i=0; i<field->rows(); i++)
+                for( unsigned j=0; j<field->cols(); j++)
+                    visual[i*field->cols()+j] = (*field)(i,j) + max*(0.5-(double)i/(double)(field->rows() + 1));
+
+            map.scale() = max/2.;
+            rend.renderQuad( visual, field->cols(), field->rows(), map);
             window_str <<"Temperature / "<<max<<"\t";
         break;
         case( VORTICITY):
-          max = abs_max( *field);
-          drawTexture( *field, max, -1.0, 1.0, -1.0, 1.0);
+          visual = field->copy();
+          max = *std::max_element(visual.begin(), visual.end());
+          map.scale() = max;
+          rend.renderQuad( visual, field->cols(), field->rows(), map);
           window_str <<"Vorticity/ "<<max<<"\t";
         break;
         case( POTENTIAL):
-          max = abs_max( *field);
-          drawTexture( *field, max, -1.0, 1.0, -1.0, 1.0);
+          visual = field->copy();
+          max = *std::max_element(visual.begin(), visual.end());
+          map.scale() = max;
+          rend.renderQuad( visual, field->cols(), field->rows(), map);
           window_str <<"Potential/ "<<max<<"\t";
         break;
     }
@@ -131,22 +143,11 @@ int main( int argc, char* argv[])
 
     ////////////////////////////////glfw//////////////////////////////
     {
-    if( !glfwInit()) { cerr << "ERROR: glfw couldn't initialize.\n";}
-
     height = width/field_ratio;
-    GLFWwindow* w = glfwCreateWindow( width, height, " ", 0 ,0);
-    glfwMakeContextCurrent( w);
-    if( w == NULL)
-    { 
-        cerr << "ERROR: glfw couldn't open window!\n";
-    }
-    glfwSetWindowSizeCallback(w, WindowResize);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( width, height, "");
+    draw::RenderHostData render( 1,1);
 
-    glEnable( GL_TEXTURE_2D);
-    glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glfwSetInputMode(w, GLFW_STICKY_KEYS, GL_TRUE);
-    glfwSetInputMode(w, GLFW_STICKY_MOUSE_BUTTONS, GL_FALSE);
-    glClearColor(0.f, 0.f, 0.f, 0.f);
+    glfwSetWindowSizeCallback( w, WindowResize);
 
     double t = 3*p.dt;
     Timer timer;
@@ -173,7 +174,7 @@ int main( int argc, char* argv[])
         if( glfwGetKey(w, '1')) targ = TEMPERATURE;
         else if( glfwGetKey(w, '2')) targ = VORTICITY;
         else if( glfwGetKey(w, '3')) targ = POTENTIAL;
-        drawScene( solver, targ);
+        drawScene( solver, targ, render);
         window_str << setprecision(2) << fixed;
         window_str << " &&   time/1e-3 = "<<t*1000.;
         glfwSetWindowTitle(w, (window_str.str()).c_str() );
@@ -211,8 +212,6 @@ int main( int argc, char* argv[])
             t+= p.dt;
         }
         timer.toc();
-        if( glfwGetKey(w, GLFW_KEY_ESCAPE))
-            glfwSetWindowShouldClose(w, GL_TRUE);
         overhead.toc();
     }
     glfwTerminate();
