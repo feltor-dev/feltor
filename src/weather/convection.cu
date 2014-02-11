@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <sstream>
 
 #include "draw/host_window.h"
 
@@ -93,8 +94,9 @@ int main(int argc, char* argv[])
         return -1;
     }
     try{ v2=file::read_input( "window_params.txt");}catch( toefl::Message& m){m.display();}
-    draw::HostWindow w( v2[3], v2[4]);
-    w.set_multiplot( v2[1], v2[2]);
+    GLFWwindow * w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
+    draw::RenderHostData render( v2[1], v2[2]);
+    std::stringstream title;
 
     const Parameters p(v);
     p.display( std::cout );
@@ -132,33 +134,36 @@ int main(int argc, char* argv[])
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
-    bool running = true;
-    while ( running) 
+    while (!glfwWindowShouldClose(w))
     {
         dg::blas1::axpby( 1., y0[0], 1., convect.background(), dvisual);
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scale() = fabs(p.R)/2.;
 
-        w.title() << std::setprecision(2) << std::scientific;
-        w.title() <<"temp / "<<colors.scale()<<"\t" <<std::fixed<< "time = "<<time;
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        title << std::setprecision(2) << std::scientific;
+        title <<"temp / "<<colors.scale()<<"\t" <<std::fixed<< "time = "<<time;
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         hvisual = y0[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scale() = 1.; 
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         hvisual = convect.source();
         dg::blas2::gemv( equi, hvisual, visual);
         //colors.scale() = 1.; 
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         hvisual = y0[2];
         dg::blas2::gemv( equi, hvisual, visual);
         //colors.scale() = 1.; 
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        glfwSetWindowTitle( w, title.str().c_str());
+        title.str("");
+        glfwPollEvents();
+        glfwSwapBuffers( w);
         //steps
         for( unsigned i=0; i<p.itstp; i++)
         {
@@ -168,15 +173,15 @@ int main(int argc, char* argv[])
             catch( Fail& fail){
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does simulation respect CFL condition?\n";
-                running = false;
+                glfwSetWindowShouldClose(w, GL_TRUE);
                 break;
             }
         }
         y0.swap( y1);
-        running = running &&
-            !glfwGetKey( GLFW_KEY_ESC) &&
-            glfwGetWindowParam( GLFW_OPENED);
     }
+    glfwTerminate();
+
+    return 0;
 
 
 

@@ -177,6 +177,7 @@ int main( int argc, char* argv[])
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #endif//DG_BENCHMARK
     }
+    glfwTerminate();
     ////////////////////////////////////////////////////////////////////
 
     return 0;

@@ -40,8 +40,8 @@ int main( int argc, char* argv[])
     }
 
     v2 = file::read_input( "window_params.txt");
-    draw::RenderHostData render(v2[1], v2[2]);
     GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
+    draw::RenderHostData render(v2[1], v2[2]);
     /////////////////////////////////////////////////////////////////////////
     const Parameters p( v);
     p.display( std::cout);
