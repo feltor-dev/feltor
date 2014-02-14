@@ -59,9 +59,9 @@ int main()
     //compute error
     dg::blas1::axpby( 1.,x,-1., error);
 
-    double eps = dg::blas2::dot( v2d, error);
+    double eps = dg::blas2::dot( w2d, error);
     cout << "L2 Norm2 of Error is " << eps << endl;
-    double norm = dg::blas2::dot( v2d, solution);
+    double norm = dg::blas2::dot( w2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( eps/norm)<<std::endl;
 
     return 0;
