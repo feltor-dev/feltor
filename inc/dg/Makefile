@@ -71,6 +71,9 @@ blas%_t: blas%_t.cu blas%.h
 	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 	echo "Attention: No compiler warnings are issued!" 
 
+dg_t: dg_t.cpp dg.h 
+	$(CC) $(CFLAGS) $< -o $@ $(INCLUDE) -lm
+
 .PHONY: clean doc
 
 doc: 
