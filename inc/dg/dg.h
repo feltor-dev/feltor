@@ -52,6 +52,7 @@ dg_workspace* dg_create_workspace( unsigned Nx, unsigned Ny, double hx, double h
 /**
  * @brief Assemble first order polarization matrix 
  *
+ * The term discretized is \f[ \nabla ( \chi \nabla ) \f] using a first order discretization
  * @param w A previously allocated workspace
  * @param chi Polarizability
  */
@@ -62,8 +63,11 @@ void dg_update_polarizability( dg_workspace* w,  const double* chi)
 }
 
 /**
- * @brief Solve A(chi)*x = b
+ * @brief Solve the matrix equation
  *
+ * What is solved is the equation \f[ \nabla(\chi\nabla)x = b \f]
+ * to first order,
+ * where the polarizability from the last call of dg_update_polarizability() is used.
  * @param w A previously allocated workspace
  * @param x contains the initial guess at the beginning, and the solution on exit
  * @param b the right hand side
