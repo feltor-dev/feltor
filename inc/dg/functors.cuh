@@ -188,6 +188,21 @@ struct LN
     }
 
 };
+/**
+ * @brief Square root 
+ *
+ * @tparam T value-type
+ */
+template < class T>
+struct SQRT
+{
+    __host__ __device__
+    T operator() (const T& x) 
+    { 
+        return sqrt(x);
+    }
+
+};
 
 /**
  * @brief Minmod function
@@ -253,6 +268,17 @@ struct PLUS
     T x_;
 };
 
+/**
+ * @brief absolute value
+ *
+ * @tparam T value type
+ */
+template <class T>
+struct ABS
+{
+    __host__ __device__
+        T operator()(const T& x){ return fabs(x);}
+};
 
 
 

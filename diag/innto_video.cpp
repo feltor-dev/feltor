@@ -1,3 +1,4 @@
+//DEPRECATED
 #include <iostream>
 #include <iomanip>
 #include <vector>
@@ -34,7 +35,7 @@ double absmax( double a, double b)
 
 int main( int argc, char* argv[])
 {
-    std::vector<double> v = file::read_input( "window_params.txt");
+    std::vector<double> v = file::read_input( "innto_window_params.txt");
     draw::HostWindow w(v[3], v[4]);
     w.set_multiplot( v[1], v[2]);
 
@@ -87,18 +88,18 @@ int main( int argc, char* argv[])
         part.laplace(mat);
         copyMatrix( mat, visual);
         colors.scale() =  (float)std::accumulate( visual.begin(), visual.end(), 0., absmax);
+        colors.scale() = 2;
         if( colors.scale() == 0) { colors.scale() = 1;}
         //draw phi and swap buffers
         w.title() <<"omega / "<<colors.scale()<<"\t";
         w.title() << std::fixed; 
         w.title() << " &&  time = "<<file::getTime( name); //read time as double from string
         w.draw( visual, alg.nx, alg.ny, colors);
-        bool waiting = true; 
-        /*
+        bool waiting = true;
         do
         {
             glfwPollEvents();
-            if( glfwGetKey( 'P')){
+            if( glfwGetKey( 'B')||glfwGetKey( 'P') ){
                 index -= v[5];
                 waiting = false;
             }
@@ -106,9 +107,8 @@ int main( int argc, char* argv[])
                 index +=v[5];
                 waiting = false;
             }
-            glfwWaitEvents();
+            //glfwWaitEvents();
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
-        */
 
         running = !glfwGetKey( GLFW_KEY_ESC) &&
                     glfwGetWindowParam( GLFW_OPENED);

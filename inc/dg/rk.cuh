@@ -128,27 +128,22 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
     assert( &u0 != &u1);
     f(u0, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
-    //cudaThreadSynchronize();
     for( unsigned i=1; i<k-1; i++)
     {
         f( u_[i-1], u_[i]);
         blas1::axpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
-        //cudaThreadSynchronize();
         for( unsigned l=1; l<=i; l++)
         {
             blas1::axpby( rk_coeff<k>::alpha[i][l], u_[l-1],1., u_[i]); //Fall alpha = 0 muss axpby abfangen!!
-            //cudaThreadSynchronize();
         }
 
     }
     //Now add everything up to u1
     f( u_[k-2], u1);
     blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u1);
-    //cudaThreadSynchronize();
     for( unsigned l=1; l<=k-1; l++)
     {
         blas1::axpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);
-        //cudaThreadSynchronize();
     }
 }
 
@@ -176,7 +171,11 @@ struct ab_coeff
 template<>
 const double ab_coeff<2>::b[2] = {1.5, -0.5};
 template<>
-const double ab_coeff<3>::b[3] = {23./12., -16./12., 5./12.};
+const double ab_coeff<3>::b[3] = {23./12., -4./3., 5./12.};
+template<>
+const double ab_coeff<4>::b[4] = {55./24., -59./24., 37./24., -3./8.};
+template<>
+const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360., 251/720};
 ///@endcond
 
 /**

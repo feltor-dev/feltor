@@ -1,6 +1,5 @@
 #include <iostream>
 #include <iomanip>
-#include <GL/glfw.h>
 #include <sstream>
 #include <omp.h>
 
@@ -26,7 +25,8 @@ typedef typename Sol::Matrix_Type Mat;
 unsigned itstp; //initialized by init function
 unsigned max_out;
 double amp, imp_amp; //
-double blob_width;
+double blob_width, posX, posY;
+unsigned reduction;
 
 
 Blueprint read( char const * file)
@@ -46,16 +46,39 @@ Blueprint read( char const * file)
     omp_set_num_threads( para[20]);
     blob_width = para[21];
     max_out = para[22];
+    posX = para[23];
+    posY = para[24];
+    reduction = para[25];
     std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
     return bp;
 }
 
-void copyMatrix( const Mat& src, std::vector<double> & dst)
+void copyAndReduceMatrix( const Mat& src, std::vector<double> & dst)
 {
+    unsigned num = 0;
+    for( unsigned i=0; i<src.rows(); i+= reduction)
+        for( unsigned j=0; j<src.cols(); j+= reduction)
+        {
+            dst[num] = src(i,j);
+            num ++;
+        }
+}
+double integral( const Mat& src, double h)
+{
+    double sum=0;
     for( unsigned i=0; i<src.rows(); i++)
         for( unsigned j=0; j<src.cols(); j++)
-            dst[i*src.cols()+j] = src(i,j);
+            sum+=h*h*src(i,j);
+    return sum;
 }
+
+void xpa( std::vector<double>& x, double a)
+{
+    for( unsigned i =0; i<x.size(); i++)
+        x[i] += a;
+}
+
+
     
 int main( int argc, char* argv[])
 {
@@ -86,54 +109,42 @@ int main( int argc, char* argv[])
     }catch( Message& m){m.display();}
     Sol solver (bp);
 
-
     const Algorithmic& alg = bp.algorithmic();
     Mat ne{ alg.ny, alg.nx, 0.}, phi{ ne};
+    const Boundary& bound = bp.boundary();
     // place some gaussian blobs in the field
     try{
-        init_gaussian( ne, 0.25,0.55, blob_width/bp.boundary().lx, blob_width/bp.boundary().ly, amp);
+        init_gaussian( ne, posX, posY, blob_width/bound.lx, blob_width/bound.ly, amp);
         std::array< Mat, n> arr{{ ne, phi}};
         //now set the field to be computed
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
+    double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
 
     /////////////////////////////////////////////////////////////////////////
-    hid_t   file, grp;
-    herr_t  status;
-    hsize_t dims[] = { alg.ny, alg.nx };
-    file = H5Fcreate( argv[2], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    //std::stringstream title; 
-    hsize_t size = input.size();
-    status = H5LTmake_dataset_char( file, "inputfile", 1, &size, input.data()); //name should precede t so that reading is easier
+    file::T5trunc t5file( argv[2], input);
     double time = 3.*alg.dt;
-    std::vector<double> output( alg.nx*alg.ny);
+    std::vector<double> out( alg.nx/reduction*alg.ny/reduction);
+    std::vector<double> output[3] = {out, out, out};
     for( unsigned i=0; i<max_out; i++)
     {
-        grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
         //output all three fields
-        copyMatrix( solver.getField( TL_ELECTRONS), output);
-        status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
-        copyMatrix( solver.getField( TL_IONS), output);
-        status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
-        copyMatrix( solver.getField( TL_POTENTIAL), output);
-        status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
-        H5Gclose( grp);
+        copyAndReduceMatrix( solver.getField( TL_ELECTRONS), output[0]);
+        xpa( output[0], meanMassE); //mean mass gets lost through the timestep
+        copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
+        copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
+        t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
         for( unsigned i=0; i<itstp; i++)
             solver.step();
         
         time += itstp*alg.dt;
     }
-    grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
-    //output all three fields
-    copyMatrix( solver.getField( TL_ELECTRONS), output);
-    status = H5LTmake_dataset_double( grp, "electrons", 2,  dims, output.data());
-    copyMatrix( solver.getField( TL_IONS), output);
-    status = H5LTmake_dataset_double( grp, "ions", 2,  dims, output.data());
-    copyMatrix( solver.getField( TL_POTENTIAL), output);
-    status = H5LTmake_dataset_double( grp, "potential", 2,  dims, output.data());
-    H5Gclose( grp);
+    copyAndReduceMatrix( solver.getField( TL_ELECTRONS), output[0]);
+    xpa( output[0], meanMassE);
+    copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
+    copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
+    t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
     //////////////////////////////////////////////////////////////////
-    H5Fclose( file);
     fftw_cleanup();
     return 0;
 

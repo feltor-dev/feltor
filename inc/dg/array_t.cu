@@ -44,7 +44,6 @@ int main()
     thrust::device_vector<dg::Array<double,3> > dn(100, n);
     thrust::device_vector<dg::Array<double,3> > dm(100, m);
     thrust::transform( dn.begin(), dn.end(), dm.begin(), dm.begin(), daxpby_functor( 3,7));
-    cudaThreadSynchronize();
     std::cout << "Test of device transform daxpby(3,n,7,m)\n" << dm[0]<<endl;
 
 

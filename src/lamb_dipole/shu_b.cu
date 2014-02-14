@@ -28,6 +28,11 @@ int main()
     Timer t;
     const Parameters p( file::read_input( "input.txt"));
     p.display();
+    if( p.k != k)
+    {
+        std::cerr << "Time stepper needs recompilation!\n";
+        return -1;
+    }
     Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     DVec w2d( create::w2d(grid));
     /////////////////////////////////////////////////////////////////

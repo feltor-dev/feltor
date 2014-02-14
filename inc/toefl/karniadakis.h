@@ -251,6 +251,7 @@ void Karniadakis< n,T,P>::invert_coeff( )
             }
             invert( c_inv(i,j), c_inv(i,j));
         }
+    //std::cout << c_inv(0,0)<<std::endl;
 
 }
 

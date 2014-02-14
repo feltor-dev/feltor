@@ -1,8 +1,10 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <sstream>
 
 #include "draw/host_window.h"
+//#include "draw/device_window.cuh"
 
 #include "toeflR.cuh"
 #include "dg/rk.cuh"
@@ -22,6 +24,7 @@ int main( int argc, char* argv[])
 {
     //Parameter initialisation
     std::vector<double> v, v2;
+    std::stringstream title;
     if( argc == 1)
     {
         v = file::read_input("input.txt");
@@ -37,8 +40,8 @@ int main( int argc, char* argv[])
     }
 
     v2 = file::read_input( "window_params.txt");
-    draw::HostWindow w(v2[3], v2[4]);
-    w.set_multiplot( v2[1], v2[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
+    draw::RenderHostData render(v2[1], v2[2]);
     /////////////////////////////////////////////////////////////////////////
     const Parameters p( v);
     p.display( std::cout);
@@ -74,7 +77,6 @@ int main( int argc, char* argv[])
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
-    bool running = true;
     double time = 0;
     ab.init( test, y0, p.dt);
     ab( test, y0, y1, p.dt);
@@ -83,7 +85,8 @@ int main( int argc, char* argv[])
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    while (running)
+    unsigned step = 0;
+    while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
         if( p.global)
@@ -99,9 +102,9 @@ int main( int argc, char* argv[])
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw ions
-        w.title() << std::setprecision(2) << std::scientific;
-        w.title() <<"ne / "<<colors.scale()<<"\t";
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        title << std::setprecision(2) << std::scientific;
+        title <<"ne / "<<colors.scale()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //transform phi
         dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
@@ -110,10 +113,14 @@ int main( int argc, char* argv[])
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw phi and swap buffers
-        w.title() <<"omega / "<<colors.scale()<<"\t";
-        w.title() << std::fixed; 
-        w.title() << " &&   time = "<<time;
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        title <<"omega / "<<colors.scale()<<"\t";
+        title << std::fixed; 
+        title << " &&   time = "<<time;
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        glfwSetWindowTitle(w,title.str().c_str());
+        title.str("");
+        glfwPollEvents();
+        glfwSwapBuffers( w);
 
         //step 
 #ifdef DG_BENCHMARK
@@ -121,6 +128,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
+            step++;
             if( p.global)
             {
                 std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
@@ -136,7 +144,7 @@ int main( int argc, char* argv[])
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
-                running = false;
+                glfwSetWindowShouldClose( w, GL_TRUE);
                 break;
             }
             y0.swap( y1); //attention on -O3 ?
@@ -144,12 +152,11 @@ int main( int argc, char* argv[])
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
-        std::cout << "\n        Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
+        std::cout << "\n\t Step "<<step;
+        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #endif//DG_BENCHMARK
-        running = running && 
-                  !glfwGetKey( GLFW_KEY_ESC) &&
-                  glfwGetWindowParam( GLFW_OPENED);
     }
+    glfwTerminate();
     ////////////////////////////////////////////////////////////////////
 
     return 0;

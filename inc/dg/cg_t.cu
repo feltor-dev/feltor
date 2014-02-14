@@ -45,7 +45,6 @@ int main()
     cout << "# of intervals                "<< N <<endl;
     //compute S b
     dg::blas2::symv( dg::S1D<double>(g), db, db);
-    cudaThreadSynchronize();
     std::cout << "Number of pcg iterations "<< cg( A, dx, db, Preconditioner(g), eps)<<endl;
     std::cout << "Number of cg iterations "<< cg( A, dx, db, eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
@@ -55,7 +54,6 @@ int main()
     //and Ax
     DArrVec dbx(dx);
     dg::blas2::symv(  A, dx.data(), dbx.data());
-    cudaThreadSynchronize();
 
     cout<< dx <<endl;
     */

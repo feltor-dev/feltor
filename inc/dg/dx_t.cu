@@ -12,25 +12,27 @@
 using namespace std;
 using namespace dg;
 
-const unsigned n = 3;
-const unsigned N = 40;
+unsigned n = 3;
+unsigned N = 40;
 const double lx = 2*M_PI;
 
-/*
 double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
-*/
+/*
 double function (double  x) {return x*(x-2*M_PI)*exp(x);}
 double derivative( double x) { return (2.*x-2*M_PI)*exp(x) + function(x);}
+*/
 
 int main ()
 {
     cout << "Note the supraconvergence!\n";
+    cout << "Type in n an Nx!\n";
+    cin >> n>> N;
     cout << "# of Legendre nodes " << n <<"\n";
     cout << "# of cells          " << N <<"\n";
     Grid1d<double> g( 0, lx, n, N);
     const double hx = lx/(double)N;
-    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_asymm_mt<double>( n, N, hx, DIR);
+    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_symm<double>( n, N, hx, DIR);
     HVec hv = expand( function, g);
     HVec hw = hv;
     const HVec hu = expand( derivative, g);

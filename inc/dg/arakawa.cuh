@@ -6,6 +6,7 @@
 #include "blas.h"
 //#include "dlt.h"
 #include "vector_traits.h"
+#include "typedefs.cuh"
 
 #include "derivatives.cuh"
 
@@ -28,7 +29,7 @@ template< class container=thrust::device_vector<double> >
 struct Arakawa
 {
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     /**
      * @brief Create Arakawa on a grid
@@ -174,8 +175,9 @@ template< class container=thrust::device_vector<double> >
 struct ArakawaX
 {
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
+    //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    typedef dg::DMatrix Matrix;
     /**
      * @brief Create Arakawa on a grid
      *
@@ -224,7 +226,7 @@ struct ArakawaX
     //typedef typename VectorTraits< Vector>::value_type value_type;
     //void construct( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
     Matrix bdxf, bdyf;
-    container dxlhs, dylhs, dxrhs, dyrhs, helper;
+    container dxlhs, dxrhs, dylhs, dyrhs, helper;
 };
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
@@ -306,10 +308,10 @@ void ArakawaX< container>::operator()( const container& lhs, const container& rh
     //everything which needs a dy
     blas1::axpby( 1./3., result, -1./3., dylhs); //l*dyr - dyl*r     -> dylhs
 
-    //blas1::axpby( 1., dyrhs,  -1., dxrhs);
+    //blas1::axpby( 0., dyrhs,  -0., dxrhs); //++
     ////for testing purposes (note that you need to set criss-cross)
-    //blas1::axpby( 0., dxlhs,  -0., helper);
-    //blas1::axpby( 0., result, -0., dylhs);
+    //blas1::axpby( 1., dxlhs,  -0., helper); //x+ - +x
+    //blas1::axpby( 0., result, -1., dylhs);  //+x - x+
 
     blas2::symv( bdyf, helper, result);      //dy*(dxl*r - l*dxr) -> result
     blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
