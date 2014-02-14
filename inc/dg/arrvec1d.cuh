@@ -136,10 +136,10 @@ class ArrVec1d : public ArrVec1d_View<container>
     ArrVec1d( unsigned n, unsigned size, double value=0) : View(n, hv), hv( n*size, value){}
 
     //we need explicit copy constructors because of the reference to hv
-    ArrVec1d( const ArrVec1d& src): View( hv), hv( src.hv){}
+    ArrVec1d( const ArrVec1d& src): View( src), hv( src.hv){}
 
     template< class OtherContainer >
-    ArrVec1d( const ArrVec1d< OtherContainer >& src): View( hv), hv( src.data()) {}
+    ArrVec1d( const ArrVec1d< OtherContainer >& src): View( src), hv( src.data()) {}
 
     ArrVec1d& operator=( const ArrVec1d& src)
     {

@@ -1,6 +1,7 @@
 #ifndef _DG_SHU_CUH
 #define _DG_SHU_CUH
 
+#include <exception>
 #include <cusp/ell_matrix.h>
 
 #include "dg/blas.h"
@@ -10,18 +11,33 @@
 
 namespace dg
 {
+struct Fail : public std::exception
+{
+
+    Fail( double eps): eps( eps) {}
+    double epsilon() const { return eps;}
+    char const* what() const throw(){ return "Failed to converge";}
+  private:
+    double eps;
+};
 
 template< class container=thrust::device_vector<double> >
 struct Shu 
 {
     typedef typename container::value_type value_type;
     typedef container Vector;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
     Shu( const Grid<value_type>& grid, double D, double eps);
 
     Matrix& lap() { return laplace;}
+    /**
+     * @brief Returns phi that belong to the last y in operator()
+     *
+     * In a multistep scheme this belongs to the point HEAD-1
+     * @return phi is the potential
+     */
     const container& potential( ) {return phi;}
     void operator()( const Vector& y, Vector& yp);
   private:
@@ -61,6 +77,8 @@ void Shu<container>::operator()( const Vector& y, Vector& yp)
     blas1::axpby( 2., phi, -1.,  phi_old);
     phi.swap( phi_old);
     unsigned number = pcg( laplace, phi, omega, v2d, eps);
+    if( number == pcg.get_max())
+        throw Fail( eps);
     //std::cout << "Number of pcg iterations "<< number<<"\n"; 
     //b = omega; //copy data to host
     //cholesky.solve( x.data(), b.data(), b.size()); //solve on host

@@ -57,7 +57,6 @@ int main()
     cout << "# of intervals                "<< N <<endl;
     //compute S b
     dg::blas2::symv( dg::S1D<double, n>(h), db.data(), db.data());
-    cudaThreadSynchronize();
     b.data() = db.data(); //copy to host for eigen solver
 
     //solve
@@ -73,7 +72,6 @@ int main()
     //and Ax
     //DArrVec dbx(dx);
     //dg::blas2::symv(  dA, dx.data(), dbx.data());
-    //cudaThreadSynchronize();
 
     //cout<< dx <<endl;
 

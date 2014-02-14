@@ -54,15 +54,14 @@ int main()
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;
     //compute W b
     dg::blas2::symv( w2d, b, b);
-    cudaThreadSynchronize();
     std::cout << "Number of pcg iterations "<< pcg( A, x, b, v2d, eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
     dg::blas1::axpby( 1.,x,-1., error);
 
-    double eps = dg::blas2::dot( v2d, error);
+    double eps = dg::blas2::dot( w2d, error);
     cout << "L2 Norm2 of Error is " << eps << endl;
-    double norm = dg::blas2::dot( v2d, solution);
+    double norm = dg::blas2::dot( w2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( eps/norm)<<std::endl;
 
     return 0;

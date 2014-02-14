@@ -116,6 +116,7 @@ class Equations
 };
 ///@}
 
+//changed equations to simple Laplacian!!!
 void Equations::operator()( QuadMat<complex,2>& c, const double laplace, const complex dy) const
 {
     double d = dd;
@@ -156,6 +157,11 @@ void Equations::operator()( QuadMat<complex,3>& c, const double laplace, const c
     c(0,0) = P*phi[0] - curv - d + nu*pow(laplace,1); c(0,1) = P*phi[1];                       c(0,2) = P*phi[2];
     c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv + nu*pow(laplace,1); c(1,2) = Q*phi[2];
     c(2,0) = R*phi[0];                      c(2,1) = R*phi[1];                       c(2,2) = R*phi[2] + tau_z*curv + nu*pow(laplace,1);
+    /*
+    c(0,0) = P*phi[0] - curv - d - nu*pow(laplace,2); c(0,1) = P*phi[1];                       c(0,2) = P*phi[2];
+    c(1,0) = Q*phi[0];                      c(1,1) = Q*phi[1] + tau_i*curv - nu*pow(laplace,2); c(1,2) = Q*phi[2];
+    c(2,0) = R*phi[0];                      c(2,1) = R*phi[1];                       c(2,2) = R*phi[2] + tau_z*curv - nu*pow(laplace,2);
+    */
 }
 
 void Poisson::operator()( std::array<double,2>& c, const double laplace) const
@@ -165,6 +171,7 @@ void Poisson::operator()( std::array<double,2>& c, const double laplace) const
         throw Message( "Laplace is zero in Poisson equation!", ping);
 #endif
     double rho = a_i*mu_i*laplace/(1.- tau_i*mu_i*laplace);
+    //double rho = a_i*mu_i*laplace;
     c[0] = 1./rho;
     c[1] = -a_i*gamma1_i(laplace)/rho;
 }
@@ -175,6 +182,7 @@ void Poisson::operator()( std::array<double, 3>& c, const double laplace) const
         throw Message( "Laplace is zero in Poisson equation!", ping);
 #endif
     double rho = (a_i*mu_i/(1.- tau_i*mu_i*laplace) + a_z*mu_z/(1.-tau_z*mu_z*laplace))*laplace;
+    //double rho = (a_i*mu_i + a_z*mu_z)*laplace;
     c[0] = 1./rho;
     c[1] = -a_i*gamma1_i(laplace)/rho;
     c[2] = -a_z*gamma1_z(laplace)/rho;

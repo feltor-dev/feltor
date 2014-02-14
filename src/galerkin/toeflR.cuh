@@ -33,8 +33,10 @@ struct ToeflR
 {
     typedef std::vector<container> Vector;
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
+    //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
+    typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
+    //typedef in ArakawaX ??
 
     /**
      * @brief Construct a ToeflR solver object
@@ -47,7 +49,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global);
+    ToeflR( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -64,6 +66,8 @@ struct ToeflR
      * @param dst destination may equal source
      */
     void log( const std::vector<container>& src, std::vector<container>& dst);
+
+    void divide( const container& zaehler, const container& nenner, container& result);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -149,14 +153,14 @@ struct ToeflR
     const container w2d, v2d, one;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
-    const bool global;
+    const int global;
 
     double mass_, energy_, diff_, ediff_;
 
 };
 
 template< class container>
-ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, bool global ): 
+ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
@@ -170,7 +174,7 @@ ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double n
 {
     //create derivatives
     laplaceM = create::laplacianM( grid, normed);
-    if( !global)
+    //if( !global)
         A = create::laplacianM( grid, not_normed);
 
 }
@@ -199,20 +203,19 @@ const container& ToeflR<container>::compute_psi( const container& potential)
 #ifdef DG_BENCHMARK
     Timer t;
     t.tic();
-#endif //DG_DEBUG
+#endif //DG_BENCHMARK
     unsigned number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
     if( number == pcg.get_max())
         throw Fail( eps_gamma);
 #ifdef DG_BENCHMARK
-    std::cout << "Number of pcg iterations2 "<< number <<std::endl;
+    std::cout << "# of pcg iterations for psi \t"<< number << "\t";
     t.toc();
-    std::cout<< "took "<<t.diff()<<"s\n";
-#endif //DG_DEBUG
+    std::cout<< "took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
     //now add -0.5v_E^2
     if( global)
     {
         blas1::axpby( 1., phi[1], -0.5, compute_vesqr( potential), phi[1]);
-        //cudaDeviceSynchronize();
     }
     return phi[1];
 }
@@ -241,8 +244,11 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
         //blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
         blas1::pointwiseDot( binv, expy[1], chi); //\chi = n_i
         blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
-        A = B; 
+        //cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
+        //cusp::ell_matrix<int, double, cusp::host_memory> B = pol.create(chi); //first convert on host
+        //A = B;  
+        if( global == 1)
+            A = pol.create( chi);
         //compute omega
         thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
         thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
@@ -262,14 +268,16 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     if( number == pcg.get_max())
         throw Fail( eps_gamma);
 #ifdef DG_BENCHMARK
-    std::cout << "Number of pcg iterations0 "<< number <<std::endl;
+    std::cout << "# of pcg iterations for n_i \t"<< number <<"\t";
     t.toc();
-    std::cout<< "took "<<t.diff()<<"s\n";
+    std::cout<< "took \t"<<t.diff()<<"s\n";
     t.tic();
 #endif 
     if( global)
     {
         blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
+        if( global == 2)
+            divide( omega, expy[1], omega);
         blas2::symv( w2d, omega, omega);
     }
     else
@@ -283,10 +291,9 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     if( number == pcg.get_max())
         throw Fail( eps_pol);
 #ifdef DG_BENCHMARK
-    std::cout << "Number of pcg iterations1 "<< number <<std::endl;
+    std::cout << "# of pcg iterations for phi \t"<< number <<"\t";
     t.toc();
-    std::cout<< "took "<<t.diff()<<"s\n";
-    t.tic();
+    std::cout<< "took \t"<<t.diff()<<"s\n";
 #endif //DG_DEBUG
 
     return phi[0];
@@ -372,6 +379,13 @@ void ToeflR< container>::log( const std::vector<container>& y, std::vector<conta
 {
     for( unsigned i=0; i<y.size(); i++)
         thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
+}
+
+template< class container>
+void ToeflR<container>::divide( const container& zaehler, const container& nenner, container& result)
+{
+    thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
+            thrust::divides< typename container::value_type>());
 }
 
 }//namespace dg

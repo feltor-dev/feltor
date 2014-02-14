@@ -168,7 +168,7 @@ template< class container>
 struct Polarisation2dX
 {
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_space<typename container::iterator>::type MemorySpace;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::csr_matrix<int, value_type, MemorySpace> Matrix;
     /**
      * @brief Create Polarisation on a grid 
@@ -271,7 +271,7 @@ void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny
 }
 
 template< class container>
-cusp::csr_matrix<int, typename container::value_type, typename thrust::iterator_space<typename container::iterator>::type> Polarisation2dX<container>::create( const container& chi)
+cusp::csr_matrix<int, typename container::value_type, typename thrust::iterator_system<typename container::iterator>::type> Polarisation2dX<container>::create( const container& chi)
 {
     Matrix temp1, temp2, temp3;
     blas1::pointwiseDot( middle, chi, xchi);

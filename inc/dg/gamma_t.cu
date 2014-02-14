@@ -18,7 +18,7 @@ int main()
     unsigned n, Nx, Ny; 
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n>> Nx >> Ny;
-    dg::Grid<double> grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::DIR);
+    dg::Grid<double> grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
     dg::DVec w2d = dg::create::w2d( grid);
     dg::DVec v2d = dg::create::v2d( grid);
     dg::DVec rho = dg::evaluate( rhs, grid);
