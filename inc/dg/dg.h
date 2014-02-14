@@ -21,7 +21,7 @@ struct dg_workspace
     cusp::csr_matrix<int, double, cusp::host_memory> matrix; //!< most efficient host matrix format
 };
 ///@endcond
-///@addtogroup utilities
+///@addtogroup polarization
 ///@{
 
 /**

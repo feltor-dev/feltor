@@ -56,12 +56,13 @@
  *      @{
  *          @defgroup polarization Utility functions for C-style bindings of polarization solver
  *
- *          To use these funcions use code like
+ To use these funcions use code like:
 @code
 #include "dg.h"
 
 int main()
 {
+    //allocate a workspace
     dg_workspace* w = dg_create_workspace( Nx, Ny, hx, hy, dg::DIR, dg::PER);
     //allocate chi, x and b
     double* chi = new double[Nx*Ny];
