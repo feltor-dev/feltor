@@ -27,7 +27,7 @@ ifeq ($(strip $(device)),gpu)
 CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20
 CFLAGS+= -Xcompiler -fopenmp 
-#CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 else
 CC = g++
 CFLAGS = -Wall -fopenmp -x c++
@@ -70,6 +70,10 @@ blas%_t: blas%_t.cu blas%.h
 %2d_b: %2d_b.cu %.cuh
 	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 	echo "Attention: No compiler warnings are issued!" 
+
+dg_t: dg_t.cpp dg.h 
+	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
+	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 
 .PHONY: clean doc
 
