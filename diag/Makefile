@@ -43,7 +43,7 @@ INCLUDE += -I$(HOME)/include
 GLFLAGS  = -lm
 endif
 
-TARGETS =  toefl_video toefl_analytics toefl_compare innto_video show com vmax toefl_radial innto_radial
+TARGETS =  toefl_video toefl_analytics toefl_compare show com vmax toefl_radial 
 
 all: $(TARGETS)
 
