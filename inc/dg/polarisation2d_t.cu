@@ -20,8 +20,8 @@ double pol( double x, double y) {return 1. + sin(x)*sin(y); } //must be strictly
 //double pol( double x, double y) {return 1.; }
 double sol(double x, double y)  { return sin( x)*sin(y);}
 
-//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y);}
-double rhs( double x, double y) { return 4.*sol(x,y)*sol(x,y) + 2.*sol(x,y);}
+double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y);}
+//double rhs( double x, double y) { return 4.*sol(x,y)*sol(x,y) + 2.*sol(x,y);}
 //double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
 
 using namespace std;
