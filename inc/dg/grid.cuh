@@ -21,9 +21,9 @@ namespace dg{
 enum bc{ 
     PER = 0, //!< periodic boundaries
     DIR = 1, //!< homogeneous dirichlet boundaries
-    DIR_NEU = 2,
-    NEU_DIR = 3,
-    NEU = 4
+    DIR_NEU = 2, //!< Dirichlet on left, Neumann on right boundary
+    NEU_DIR = 3, //!< Neumann on left, Dirichlet on right boundary
+    NEU = 4 //!< Neumann on both boundaries
 };
 
 ///@addtogroup grid
