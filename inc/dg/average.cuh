@@ -45,11 +45,11 @@ struct PoloidalAverage
         //std::cout << "Result of Averaging:\n";
         thrust::reduce_by_key( lines.begin(), lines.end(), res.begin(), dummy.begin(), helper1d.begin());
         blas1::axpby( 1./ly_, helper1d, 0, helper1d);
-        //for( unsigned i=0; i<helper1d.size(); i++)
-        //    std::cout<< helper1d[i]<<" ";
         //remove weights in x-direction
-        //std::cout << "INNER integral: "<<thrust::reduce( helper1d.begin(), helper1d.end())<<"\n";
         blas1::pointwiseDot( helper1d, v1d, helper1d);
+        //for( unsigned i=0; i<helper1d.size(); i++)
+            //std::cout<< helper1d[i]<<" ";
+        //std::cout << "INNER integral: "<<thrust::reduce( helper1d.begin(), helper1d.end())<<"\n";
         thrust::copy( helper1d.begin(), helper1d.end(), helper.begin());
         //copy to a full vector
         unsigned pos = helper1d.size();
