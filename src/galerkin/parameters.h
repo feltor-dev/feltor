@@ -17,6 +17,8 @@ struct Parameters
     int global;
     double nu, kappa, tau;
 
+    double a_z, mu_z, tau_z;
+
     double n0, sigma, posX, posY;
 
     unsigned itstp; 
@@ -28,6 +30,14 @@ struct Parameters
      * @param v Vector from read_input function
      */
     Parameters( const std::vector< double>& v, int layout = 0) {
+        layout_ = layout;
+        if( layout == 2) 
+        {
+            a_z = v[22];
+            mu_z = v[23];
+            tau_z = v[24];
+            layout = 0;
+        }
         if( layout == 0)
         {
             n  = (unsigned)v[1]; 
@@ -88,6 +98,12 @@ struct Parameters
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
             <<"    Ion-temperature: = "<<tau<<"\n";
+        if( layout_ == 2)
+        {
+            os <<"    a_z   = "<<a_z<<"\n"
+               <<"    mu_z  = "<<mu_z<<"\n"
+               <<"    tau_z = "<<tau_z<<"\n";
+        }
         char local[] = "LOCAL" , glo[] = "GLOBAL";
         os  <<"Mode is:   \n"
             <<"    "<<(global?glo:local)<<global<<"\n";
@@ -114,6 +130,7 @@ struct Parameters
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
     }
     private:
+    int layout_;
     dg::bc map( int i)
     {
         switch( i)

@@ -12,7 +12,7 @@
 #endif
 
 
-//TODO es wäre besser, wenn ToeflR auch einen Zeitschritt berechnen würde 
+//TODO es wäre besser, wenn ToeflI auch einen Zeitschritt berechnen würde 
 // dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
 // (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
 
@@ -29,7 +29,7 @@ struct Fail : public std::exception
 };
 
 template< class container=thrust::device_vector<double> >
-struct ToeflR
+struct ToeflI
 {
     typedef std::vector<container> Vector;
     typedef typename container::value_type value_type;
@@ -39,7 +39,7 @@ struct ToeflR
     //typedef in ArakawaX ??
 
     /**
-     * @brief Construct a ToeflR solver object
+     * @brief Construct a ToeflI solver object
      *
      * @param g The grid on which to operate
      * @param kappa The curvature
@@ -48,7 +48,7 @@ struct ToeflR
      * @param eps_pol stopping criterion for polarisation equation
      * @param eps_gamma stopping criterion for Gamma operator
      */
-    ToeflR( const Grid<value_type>& g, double kappa, double nu, double* tau, double* a, double* mu, double eps_pol, double eps_gamma);
+    ToeflI( const Grid<value_type>& g, double kappa, double nu, double* tau, double* a, double* mu, double eps_pol, double eps_gamma);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -160,7 +160,7 @@ struct ToeflR
 };
 
 template< class container>
-ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double nu, const double* tau, const double* a, const double* mu,  double eps_pol, double eps_gamma ): 
+ToeflI< container>::ToeflI( const Grid<value_type>& grid, double kappa, double nu, const double* tau, const double* a, const double* mu,  double eps_pol, double eps_gamma ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
@@ -184,7 +184,7 @@ ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double n
 }
 
 template< class container>
-const container& ToeflR<container>::compute_vesqr( const container& potential)
+const container& ToeflI<container>::compute_vesqr( const container& potential)
 {
     blas2::gemv( arakawa.dx(), potential, chi);
     blas2::gemv( arakawa.dy(), potential, omega);
@@ -198,7 +198,7 @@ const container& ToeflR<container>::compute_vesqr( const container& potential)
 
 //idx is impurity species one or two
 template< class container>
-const container& ToeflR<container>::compute_psi( const container& potential, int idx)
+const container& ToeflI<container>::compute_psi( const container& potential, int idx)
 {
     //compute Gamma phi[0]
     blas1::axpby( 2., phi[idx], -1.,  phi_old[idx]);
@@ -229,7 +229,7 @@ const container& ToeflR<container>::compute_psi( const container& potential, int
 
 //computes and modifies expy!!
 template<class container>
-const container& ToeflR< container>::polarisation( const std::vector<container>& y)
+const container& ToeflI< container>::polarisation( const std::vector<container>& y)
 {
     //extrapolate phi and gamma_n
     blas1::axpby( 2., phi[0], -1.,  phi_old[0]);
@@ -303,7 +303,7 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
 }
 
 template< class container>
-void ToeflR< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void ToeflI< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 3);
     assert( y.size() == yp.size());
@@ -365,20 +365,20 @@ void ToeflR< container>::operator()( const std::vector<container>& y, std::vecto
 }
 
 template< class container>
-void ToeflR< container>::exp( const std::vector<container>& y, std::vector<container>& target)
+void ToeflI< container>::exp( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
         thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<value_type>());
 }
 template< class container>
-void ToeflR< container>::log( const std::vector<container>& y, std::vector<container>& target)
+void ToeflI< container>::log( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
         thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
 }
 
 template< class container>
-void ToeflR<container>::divide( const container& zaehler, const container& nenner, container& result)
+void ToeflI<container>::divide( const container& zaehler, const container& nenner, container& result)
 {
     thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
             thrust::divides< typename container::value_type>());
