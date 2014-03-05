@@ -4,6 +4,7 @@
 #include <exception>
 
 #include "dg/xspacelib.cuh"
+#include "dg/average.cuh"
 #include "dg/cg.cuh"
 #include "dg/gamma.cuh"
 
@@ -141,6 +142,7 @@ struct Turbulence
     ArakawaX< container> arakawa; 
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
+    PoloidalAverage<container, thrust::device_vector<int> > average;
 
     const container w2d, v2d, one;
     const double eps_pol, eps_gamma; 
@@ -160,6 +162,7 @@ Turbulence< container>::Turbulence( const Grid<value_type>& grid, double kappa, 
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 
+    average( grid),
     w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), d_(d)
 {
@@ -285,9 +288,17 @@ void Turbulence< container>::operator()( const std::vector<container>& y, std::v
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
     //add HW coupling to n_e
-    blas1::pointwiseDot( phi[0], ypg[0], chi);
-    blas1::axpby( d_, chi, 1, yp[0]);
-    blas1::axpby( -d_, ypg[0], 1, yp[0]);
+    //blas1::pointwiseDot( phi[0], ypg[0], chi);
+    //blas1::axpby( d_, chi, 1, yp[0]);
+    //average( chi, omega);
+    //blas1::axpby( -d_, omega, 1., yp[0]);
+    blas1::axpby( d_, phi[0], 1, yp[0]);
+    average( phi[0], chi);
+    blas1::axpby( -d_, chi, 1., yp[0]);
+
+    blas1::axpby( -d_, y[0], 1, yp[0]);
+    average( y[0], chi);
+    blas1::axpby( d_, chi, 1., yp[0]);
 
     //add laplacians
     for( unsigned i=0; i<y.size(); i++)

@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "dg/xspacelib.cuh"
+#include "dg/average.cuh"
 #include "dg/cg.cuh"
 #include "dg/gamma.cuh"
 
@@ -185,6 +186,7 @@ struct Esel
     ArakawaX< container> arakawa; 
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
+    PoloidalAverage<container, thrust::device_vector<int> > average;
 
     const container w2d, v2d, one;
     const double eps_pol, eps_gamma; 
@@ -207,6 +209,7 @@ Esel< container>::Esel( const Grid<value_type>& grid, double kappa, double nu, d
     arakawa( grid), 
     pol(     grid, forward), 
     pcg( omega, omega.size()), 
+    average( grid),
     w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau),
     dd( sol.get_dd()),
@@ -367,10 +370,28 @@ void Esel< container>::operator()( const std::vector<container>& y, std::vector<
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
     //3d coupling term
-    blas1::axpby( -dd, y[0], 1, yp[0]);
-    blas1::axpby( dd, phi[0], 1, yp[0]);
+    average( phi[0], chi);
+    blas1::axpby( +1., phi[0], -1., chi, chi);
+    blas1::axpby( dd, chi, 1., yp[0]); //d(phi-avg(phi))
 
-    //add Diffusion
+    thrust::transform( y[0].begin(), y[0].end(), omega.begin(), dg::EXP<value_type>());
+    average( omega, chi);
+    //thrust::transform( chi.begin(), chi.end(), chi.begin(), dg::LN<value_type>());
+    blas1::axpby( +1., omega, -1., chi, chi); //(n)-(avg(n))
+    divide( chi, omega, chi); //\tilde n/n
+    blas1::axpby( -dd, chi, 1., yp[0]);
+    //blas1::pointwiseDot( chi, chi, chi);
+    //blas1::axpby( dd, chi, 1., yp[0]);
+    //blas1::pointwiseDot( chi, omega, chi);
+    //divide( expy[1], expy[0], chi);
+    //blas1::pointwiseDot( chi, phi[0], chi);
+
+
+    //blas1::axpby( dd, phi[0], 1, yp[0]);
+    //divide( chi, expy[0], chi);
+    //blas1::axpby( dd, chi, 1, yp[0]);
+
+    //add Diffusion and SOL
     for( unsigned i=0; i<y.size(); i++)
     {
         blas2::gemv( laplaceM, y[i], lapy[i]);

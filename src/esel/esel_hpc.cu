@@ -46,7 +46,7 @@ int main( int argc, char* argv[])
 
     ////////////////////////////////set up computations///////////////////////////
     dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::SOL sol( v[22], v[23], v[24], v[25]);
+    dg::SOL sol( v[22], v[23], v[24], v[25], v[27]);
     std::cout << "The SOL parameters are: \n"
               << "    x_l:     "<<v[22] <<"\n    x_w:     "<<v[23]<<"\n"
               << "    sigma_l: "<<v[24] <<"\n    sigma_w: "<<v[25]<<"\n";
@@ -147,4 +147,5 @@ int main( int argc, char* argv[])
     return 0;
 
 }
+
 

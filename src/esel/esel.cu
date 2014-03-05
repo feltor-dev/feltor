@@ -62,21 +62,21 @@ int main( int argc, char* argv[])
     dg::EXPX<double> exp( 1., -1./v[26]); 
     std::vector<dg::DVec> y0(2, dg::evaluate( exp, grid)), y1(y0); 
     {
-        dg::Gaussian gaussian( p.posX/2.*grid.lx(), p.posY/2.*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
+        dg::Gaussian gaussian( p.posX/4.*grid.lx(), p.posY/2.*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
         std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
         dg::blas1::axpby( 1, y0p, 1, y0);
     } 
     {
-        dg::Gaussian gaussian( p.posX/2.*grid.lx(), p.posY/3.*grid.ly(), p.sigma, p.sigma, -p.n0); 
+        dg::Gaussian gaussian( p.posX/4.*grid.lx(), p.posY/3.*grid.ly(), p.sigma, p.sigma, -p.n0); 
         std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
         dg::blas1::axpby( 1, y0p, 1, y0);
     }
     {
-        dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
+        dg::Gaussian gaussian( p.posX/2.*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
         std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
         dg::blas1::axpby( 1, y0p, 1, y0);
     }{
-        dg::Gaussian gaussian( p.posX/2.*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, -p.n0); 
+        dg::Gaussian gaussian( p.posX/5.*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, -p.n0); 
         std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
         dg::blas1::axpby( 1, y0p, 1, y0);
     }
@@ -113,8 +113,9 @@ int main( int argc, char* argv[])
     {
         //transform field to an equidistant grid
         {
-            //test.exp( y1, y1); //plot logarithmic values
-            thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(p.lx/v[26]/1.5));
+            test.exp( y1, y1); //plot logarithmic values
+            //thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(p.lx/v[26]/1.5));
+            dvisual=y1[0];
         }
 
         hvisual = dvisual;
@@ -140,6 +141,7 @@ int main( int argc, char* argv[])
         title << " &&   time = "<<time;
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         glfwSetWindowTitle( w, title.str().c_str());
+        title.str("");
         glfwPollEvents();
         glfwSwapBuffers( w);
 
