@@ -54,6 +54,9 @@ toefl_hpc: toefl_hpc.cu toeflR.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
 
+generator: generator.cpp
+	g++ generator.cpp -o generator -std=c++0x -Wall
+
 .PHONY: clean
 
 clean:
