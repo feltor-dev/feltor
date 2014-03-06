@@ -37,6 +37,7 @@ struct ToeflI
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
     //typedef in ArakawaX ??
+    typedef Gamma<Matrix, container> Operator;
 
     /**
      * @brief Construct a ToeflI solver object
@@ -88,7 +89,7 @@ struct ToeflI
      *
      * @return Gamma operator
      */
-    const Gamma<Matrix, container >&  gamma() const {return gamma1;}
+    Operator& gamma() {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -102,28 +103,24 @@ struct ToeflI
      * @brief Return the mass of the last field in operator() in a global computation
      *
      * @return int exp(y[0]) dA
-     * @note undefined for a local computation
      */
     double mass( ) {return mass_;}
     /**
      * @brief Return the last integrated mass diffusion of operator() in a global computation
      *
      * @return int \nu \Delta (exp(y[0])-1)
-     * @note undefined for a local computation
      */
     double mass_diffusion( ) {return diff_;}
     /**
      * @brief Return the energy of the last field in operator() in a global computation
      *
      * @return integrated total energy in {ne, ni}
-     * @note undefined for a local computation
      */
     double energy( ) {return energy_;}
     /**
      * @brief Return the integrated energy diffusion of the last field in operator() in a global computation
      *
      * @return integrated total energy diffusion
-     * @note undefined for a local computation
      */
     double energy_diffusion( ){ return ediff_;}
 

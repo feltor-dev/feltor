@@ -37,7 +37,7 @@ struct AbsMax
 /**
  * @brief Functor returning a gaussian
  * \f[
-   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}} 
+   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
    \f]
  */
 struct Gaussian
@@ -57,7 +57,7 @@ struct Gaussian
      * @brief Return the value of the gaussian
      *
      * \f[
-       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}} 
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
@@ -72,6 +72,78 @@ struct Gaussian
     }
   private:
     double  x00, y00, sigma_x, sigma_y, amplitude;
+
+};
+/**
+ * @brief Functor returning a gaussian in x-direction
+ * \f[
+   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2}) } 
+   \f]
+ */
+struct GaussianX
+{
+    /**
+     * @brief Functor returning a gaussian in x 
+     *
+     * @param x0 x-center-coordinate
+     * @param sigma_x x - variance
+     * @param amp Amplitude
+     */
+    GaussianX( double x0, double sigma_x, double amp)
+        :x00(x0), sigma_x(sigma_x), amplitude(amp){}
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2})} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()(double x, double y)
+    {
+        return  amplitude* exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x ));
+    }
+  private:
+    double  x00, sigma_x, amplitude;
+
+}; 
+/**
+ * @brief Functor returning a gaussian in y-direction
+ * \f[
+   f(x,y) = Ae^{-\frac{(y-y_0)^2}{2\sigma_y^2}} 
+   \f]
+ */
+struct GaussianY
+{
+    /**
+     * @brief Functor returning a gaussian
+     *
+     * @param y0 y-center-coordinate
+     * @param sigma_y y - variance 
+     * @param amp Amplitude
+     */
+    GaussianY( double y0, double sigma_y, double amp)
+        : y00(y0), sigma_y(sigma_y), amplitude(amp){}
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-\frac{(y-y_0)^2}{2\sigma_y^2}} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()(double x, double y)
+    {
+        return  amplitude*exp( -((y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+    }
+  private:
+    double  y00, sigma_y, amplitude;
 
 };
 
