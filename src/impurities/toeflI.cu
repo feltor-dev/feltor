@@ -6,11 +6,11 @@
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
 
-#include "toeflR.cuh"
+#include "toeflI.cuh"
 #include "dg/rk.cuh"
 #include "dg/timer.cuh"
 #include "file/read_input.h"
-#include "parameters.h"
+#include "../galerkin/parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -53,10 +53,7 @@ int main( int argc, char* argv[])
 
     dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    double tau[2] = {p.tau_i, p.tau_z};
-    double a[2] = {p.a_i, p.a_z};
-    double mu[2] = {p.mu_i, p.mu_z};
-    dg::ToeflI< dg::DVec > test( grid, p.kappa, p.nu, tau, a, mu, p.eps_pol, p.eps_gamma); 
+    dg::ToeflI< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.a_z, p.mu_z, p.tau_z, p.eps_pol, p.eps_gamma); 
 
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
@@ -65,6 +62,8 @@ int main( int argc, char* argv[])
 
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+    dg::blas1::axpby( 1./(1-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
+    
 
     thrust::transform( y0[0].begin(), y0[0].end(), y0[0].begin(), dg::PLUS<double>(+1));
     thrust::transform( y0[1].begin(), y0[1].end(), y0[1].begin(), dg::PLUS<double>(+1));
@@ -84,7 +83,7 @@ int main( int argc, char* argv[])
     ab( test, y0, y1, p.dt);
     y0.swap( y1); 
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    //double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
+    double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
@@ -101,6 +100,8 @@ int main( int argc, char* argv[])
             dg::blas2::gemv( equi, hvisual, visual);
             //compute the color scale
             colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+            if( colors.scale() == 0) 
+                colors.scale() = 1.;
             //draw ions
             title <<"n / "<<colors.scale()<<"\t";
             render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
@@ -129,12 +130,12 @@ int main( int argc, char* argv[])
         {
             step++;
                 std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
-                //E0 = E1;
-                //E1 = test.energy();
-                //diff = (E1 - E0)/p.dt;
-                //double diss = test.energy_diffusion( );
-                //std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-                //std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
+                E0 = E1;
+                E1 = test.energy();
+                diff = (E1 - E0)/p.dt;
+                double diss = test.energy_diffusion( );
+                std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+                std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             try{ ab( test, y0, y1, p.dt);}
             catch( dg::Fail& fail) { 
