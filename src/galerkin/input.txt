@@ -5,15 +5,17 @@
 
 --------------------Space and Time discretization------------
 
-3)  ny (grid points in y)                =   400   (192)
+1)  n  (# of polynomial coefficients)    =   4      (3)
+2)  nx (grid points in x)                =   100   (192)
+3)  ny (grid points in y)                =   100   (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   1.53189  (0.01)
+5)  dt (time step in units c_s/L_p)      =   0.01  (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stopping for polarisation) =   1e-6  (1e-6)
-7)  eps_gamma (stopping for Gamma CG)   =   1e-8  (1e-8)
+6)  eps_pol (stopping for polarisation) =   1e-2  (1e-6)
+7)  eps_gamma (stopping for Gamma CG)   =   1e-3  (1e-8)
 
 ---------------------Boundary conditions----------------------
 
@@ -24,14 +26,14 @@
 
 ---------------------Physical parameters----------------------
 
-12) local (0) or global (1) pseudo(2)   =   2       (0)
-13) nu  (viscosity)                     =   1e-2    (0.001)
+12) local (0) or global (1) pseudo(2)   =   1       (0)
+13) nu  (viscosity)                     =   1e-3    (0.001)
 14) mcv (magnetic curvature)            =   0.0005  (0.0005)
 15) tau (Ti/Te)                         =   0.0     (0.0)
 
 ------------------Initial blob parameters---------------------
 
-16) amp (perturbation amplitude)            =  0.1     (1.0)
+16) amp (perturbation amplitude)            =  1     (1.0)
 17) sigma (blob variance in units of rho_s) =  10     (10)
 18) x-position ( in units of lx)            =  0.25   (0.4)
 19) y-position ( in units of ly)            =  0.5   (0.5)

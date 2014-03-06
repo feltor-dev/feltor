@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <sstream>
 
 #include "draw/host_window.h"
 #include "dg/xspacelib.cuh"
@@ -17,9 +18,10 @@
 int main( int argc, char* argv[])
 {
     dg::Timer t;
+    std::stringstream title;
     std::vector<double> v = file::read_input( "window_params.txt");
-    draw::HostWindow w(v[3], v[4]);
-    w.set_multiplot( v[1], v[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3], v[4], "");
+    draw::RenderHostData render( v[1], v[2]);
 
     if( argc != 2)
     {
@@ -48,7 +50,6 @@ int main( int argc, char* argv[])
     dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed, dg::XSPACE);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
-    bool running = true;
     unsigned index = 1;
     std::cout << "PRESS N FOR NEXT FRAME!\n";
     std::cout << "PRESS P FOR PREVIOUS FRAME!\n";
@@ -82,7 +83,7 @@ int main( int argc, char* argv[])
             }
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
         */
-    while (running && index < nlinks + 1 )
+    while (!glfwWindowShouldClose(w) && index < nlinks + 1 )
     {
         t.tic();
         t5file.get_field( input, "electrons", index);
@@ -90,20 +91,26 @@ int main( int argc, char* argv[])
         //std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
         t.tic();
         if( p.global)
-            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+        {
+            if( in.find( "SOL") != std::string::npos)
+                std::cout << "Hello SOL\n";
+            else
+                thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+        }
+
         dg::blas2::gemv( equi, input, visual);
 
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scale() = p.n0;
+        //colors.scale() = p.n0;
         if( v[6] > 0) colors.scale() = v[6];
         t.toc();
         //std::cout << "Computing colorscale took "<<t.diff()<<"s\n";
         //draw ions
-        w.title() << std::setprecision(2) << std::scientific;
-        w.title() <<"ne / "<<colors.scale()<<"\t";
+        title << std::setprecision(2) << std::scientific;
+        title <<"ne / "<<colors.scale()<<"\t";
         t.tic();
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout << "Drawing took              "<<t.diff()<<"s\n";
 
@@ -128,29 +135,31 @@ int main( int argc, char* argv[])
         if( v[7] > 0)
             colors.scale() = v[7];
         //draw phi and swap buffers
-        w.title() <<"omega / "<<colors.scale()<<"\t";
-        w.title() << std::fixed; 
-        w.title() << " && time = "<<t5file.get_time( index);
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        title <<"omega / "<<colors.scale()<<"\t";
+        title << std::fixed; 
+        title << " && time = "<<t5file.get_time( index);
+        glfwSetWindowTitle( w, title.str().c_str());
+        title.str("");
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
+        glfwPollEvents();
+        glfwSwapBuffers( w);
         //std::cout <<"2nd half took          "<<t.diff()<<"s\n";
         bool waiting = true;
         do
         {
             glfwPollEvents();
-            if( glfwGetKey( 'B')||glfwGetKey( 'P') ){
+            if( glfwGetKey(w, 'B')||glfwGetKey(w, 'P') ){
                 index -= v[5];
                 waiting = false;
             }
-            else if( glfwGetKey( 'N') ){
+            else if( glfwGetKey(w, 'N') ){
                 index +=v[5];
                 waiting = false;
             }
             //glfwWaitEvents();
-        }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
-
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
+        }while( waiting && !glfwGetKey(w, GLFW_KEY_ESCAPE) );
     }
+    glfwTerminate();
     return 0;
 }

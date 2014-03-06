@@ -33,8 +33,8 @@ struct RHS
 };
 
 const unsigned n = 3;
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
+const double lx = 3./2.*M_PI;
+const double ly = 3./2.*M_PI;
 
 const unsigned k = 3;
 const double nu = 0.01;
@@ -68,7 +68,7 @@ int main()
     cout << "Number of gridpoints:     "<<Nx*Ny<<endl;
     cout << "# of timesteps:           "<<NT<<endl;
 
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, DIR, DIR);
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, DIR_NEU, DIR_NEU);
     S2D<double> s2d( grid);
 
     DVec y0 = expand( sine, grid), y1(y0);

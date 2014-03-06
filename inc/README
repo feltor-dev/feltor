@@ -7,10 +7,10 @@ output with hdf5 and the TOEFL library is made for implementing 2D pseudospectra
 codes. 
 
 1. Library dependencies
-- the DG library uses CUDA-5.0 ( and thrust which is included), cusp and to some minor extent Eigen:
+- the DG library uses CUDA-5.0,thrust-1.7 and the newest cusp version
         https://developer.nvidia.com/cuda-downloads
-        http://code.google.com/p/cusp-library/
-        http://eigen.tuxfamily.org/index.php?title=Main_Page
+        https://github.com/cusplibrary/cusplibrary
+        https://github.com/thrust/thrust
 
 - the FILE library needs hdf5 in standard locations
         http://www.hdfgroup.org/HDF5/
@@ -18,6 +18,8 @@ codes.
 - the TOEFL library needs fftw3 installed and relies on some features of the 
   new C++11 standard. (minimal gcc version is 4.4)
         http://www.fftw.org/
+- the DRAW library comes in handy for compiling some test codes that use OpenGL 
+        https://github.com/mwiesenberger/draw
 
 2. Library documentation
 Each library comes with a documentation that can be 

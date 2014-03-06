@@ -53,6 +53,36 @@
  *          Numerical time integration and a conjugate gradient method.
  *      @defgroup utilities Utilities
  *          Utilities that might come in handy at some place or the other.
+ *      @{
+ *          @defgroup polarization Utility functions for C-style bindings of polarization solver
+ *
+ To use these funcions use code like:
+@code
+#include "dg.h"
+
+int main()
+{
+    //allocate a workspace
+    dg_workspace* w = dg_create_workspace( Nx, Ny, hx, hy, dg::DIR, dg::PER);
+    //allocate chi, x and b
+    double* chi = new double[Nx*Ny];
+    double* x = new double[Nx*Ny];
+    double* b = new double[Nx*Ny];
+    ...//compute useful values for chi
+    //assemble polarization matrix
+    dg_update_polarizability( w, chi);
+    ...//compute useful values for b and an initial guess for x
+    //solve A(chi)*x = b to a precision of 1e-4
+    dg_solve( w, x, b, 1e-4);
+    //release resources
+    dg_free_workspace( w);
+    ...
+    
+    return 0;
+}
+@endcode
+ *
+ *      @}
  * @}
  * 
  */

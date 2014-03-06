@@ -11,6 +11,7 @@
 #include <array>
 #include <cmath>
 #include "matrix.h"
+//DEPRECATED: use draw library instead
 
 namespace toefl{
 /*! @addtogroup utilities

@@ -19,7 +19,7 @@ large as well as the perturbation amplitude.
 6) mhw:1, ohw:0 (modified/ordinary HW) =   0       
 7) ddd (dissip. coupling)              =   0.0
 8) nu  (artif. hyper-viscosity)        =   0.0025
-9) mcv (magnetic curvature)            =   -0.0005
+9) mcv (magnetic curvature)            =   0.0005
 -------------------------Species------------------------------
 10) n00 (perturbation amplitude)        =   2 
 11) g_e (e density gradient)            =   0.0     

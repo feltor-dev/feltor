@@ -15,7 +15,6 @@
 
 
 //leo3 can do 350 x 350 but not 375 x 375
-const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
 const double eps = 1e-6; //# of pcg iterations increases very much if 
@@ -24,8 +23,14 @@ const double eps = 1e-6; //# of pcg iterations increases very much if
 typedef dg::T2D<double> Preconditioner;
 typedef dg::S2D<double> Postconditioner;
 
+const double lx = 2.*M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
+dg::bc bcx = dg::DIR;
+//const double lx = 2./3.*M_PI;
+//double fct(double x, double y){ return sin(y)*sin(3.*x/4.);}
+//double laplace_fct( double x, double y) { return 25./16.*sin(y)*sin(3.*x/4.);}
+//dg::bc bcx = dg::DIR_NEU;
 double initial( double x, double y) {return sin(0);}
 
 using namespace std;
@@ -36,14 +41,14 @@ int main()
     unsigned n, Nx, Ny; 
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::DIR, dg::PER);
+    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
     dg::S2D<double> s2d( grid);
     cout<<"Expand initial condition\n";
     dg::HVec x = dg::expand( initial, grid);
 
     cout << "Create Laplacian\n";
     t.tic();
-    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE); 
+    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::symmetric); 
     dg::HMatrix A = dA;
     t.toc();
     cout<< "Creation took "<<t.diff()<<"s\n";

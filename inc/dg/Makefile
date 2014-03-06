@@ -7,7 +7,10 @@ ifeq ($(strip $(system)),home)
 
 INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
-GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
+GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
+ifeq ($(strip $(device)),gpu)
+GLFLAGS+= -lGLEW
+endif
 endif
 
 ifeq ($(strip $(system)),leo3)
@@ -73,6 +76,10 @@ blas%_t: blas%_t.cu blas%.h
 %2d_b: %2d_b.cu %.cuh
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
+
+dg_t: dg_t.cpp dg.h 
+	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
+	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 
 .PHONY: clean doc
 

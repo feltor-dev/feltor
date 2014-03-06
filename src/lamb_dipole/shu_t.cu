@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
@@ -43,8 +44,9 @@ int main()
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
-    draw::HostWindow w( 600, 600);
-    glfwSetWindowTitle( "Navier Stokes");
+    std::stringstream title;
+    GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "Navier Stokes");
+    draw::RenderHostData render( 1,1);
     ////////////////////////////////////////////////////////////
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
@@ -65,10 +67,9 @@ int main()
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
     dg::DMatrix equidistant = dg::create::backscatter( grid, LSPACE );
-    int running = GL_TRUE;
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, y0, dt);
-    while (running)
+    while (!glfwWindowShouldClose(w))
     {
         //transform field to an equidistant grid
         cout << "Total vorticity is: "<<blas2::dot( stencil, w2d, y0) << "\n";
@@ -79,16 +80,16 @@ int main()
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
         hvisual = visual;
-        w.draw( hvisual, n*Nx, n*Ny, colors);
+        render.renderQuad( hvisual, n*Nx, n*Ny, colors);
         //step 
         ab( test, y0, y1, dt);
         //thrust::swap(y0, y1);
         y0.swap( y1);
 
+        glfwSwapBuffers(w);
         glfwWaitEvents();
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
+    glfwTerminate();
     ////////////////////////////////////////////////////////////////////
     /*
     cout << "Total vorticity is: "<< blas2::dot( stencil, w2d, y0) << "\n";

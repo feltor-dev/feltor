@@ -5,7 +5,7 @@ NVCC = nvcc
 NVCCFLAGS = --compiler-options -Wall -arch=sm_20 
 
 #GLFLAGS=-lglfw -lrt -lGL -lGLEW -lpthread #you might add some libs here, check your glfw installation
-GLFLAGS   = -lglfw -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW 
+GLFLAGS   = -lglfw3 -lXxf86vm -lXext   -lX11 -lGLU   -lGL -lpthread -lm -lGLEW -lXi -lXrandr
 
 all: shu_t shu_b shu2d_b shu_hpc shu_dat
 

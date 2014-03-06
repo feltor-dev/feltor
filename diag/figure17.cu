@@ -10,7 +10,7 @@
 
 #include "galerkin/parameters.h"
 
-const double T = 20;
+const double T = 10;
 //is sigma the radius or the diameter
 
 double X( double x, double y) {return x;}
@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     heavi.set_origin( p.lx*p.posX, p.ly*p.posY);
     dg::HVec heavy = dg::evaluate( heavi, grid);
     double normalize = dg::blas2::dot( heavy, w2d, input0);
-    double gamma = sqrt( p.kappa*p.n0*(1+p.tau)/p.sigma);
+    double gamma = sqrt( p.kappa*p.n0/(1+p.n0)*(1+p.tau)/p.sigma);//global gamma!!
 
     unsigned idx = (unsigned)(T/gamma/p.dt/p.itstp) + 1;
     {
@@ -94,8 +94,9 @@ int main( int argc, char* argv[])
         posY_max = hy*(1./2. + (double)(position/Nx));
         //init Heaviside with this
         heavi.set_origin( posX_max, posY_max);
+
         dg::HVec heavy = dg::evaluate( heavi, grid);
-        std::cout << sqrt(p.tau)/p.sigma <<" ";
+        std::cout << p.tau<<" "<<p.sigma<<" "<<p.n0<<" ";
         std::cout << std::fixed<< t5file.get_time( idx)*gamma << " ";//(1)
         //std::cout << " "<<posX_max<<" "<<posY_max <<" ";
         std::cout <<std::scientific<< dg::blas2::dot( heavy, w2d, input0)/normalize << "\n";

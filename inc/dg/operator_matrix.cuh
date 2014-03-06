@@ -1,5 +1,6 @@
 #ifndef _DG_OPERATOR_MATRIX_
 #define _DG_OPERATOR_MATRIX_
+#include <algorithm>
 
 #include <cusp/coo_matrix.h>
 #include <cusp/multiply.h>
@@ -129,10 +130,35 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( unsigned n, const cusp::co
 }
 */
 
+//use symmetry of matrix
+template<class Matrix>
+void transverse( const Matrix& in, Matrix& out)
+{
+    //USE MATRIX SYMMETRY AND DO A THRUST::SORT_BY_KEY ON VALUES
+    //WRITE PRECONDITIONS AND MAKE SURE LAPLACE FUNCTIONS SET ALL VALUES
+    //EVTL NUR IN XSPACE DA MUSS MAN SICH NICHT UM VORZEICHENWECHSEL KÜMMERN
+    typedef typename Matrix::value_type value_type;
+    typedef int index_type;
+    //cusp::print( in);
+    out = in;
+    /*
+    thrust::sort( out.row_indices.begin(), out.row_indices.end(), thrust::greater<index_type>());
+    out.sort_by_row();
+    out.row_indices.swap( out.column_indices); //transpose
+    //Punktspiegelung
+    out.sort_by_row();
+    thrust::sort( out.row_indices.begin(), out.row_indices.end(), thrust::greater<index_type>());
+    out.sort_by_row_and_column();
+    */
+    thrust::host_vector<int> keys( in.num_entries);
+    thrust::sequence( keys.begin(), keys.end());
+    thrust::sort_by_key( keys.begin(), keys.end(), out.values.begin(), thrust::greater<value_type>());
+
+}
+
 
 ///@}
 
-//}//namespace create
     
 }//namespace dg
 

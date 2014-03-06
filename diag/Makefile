@@ -22,7 +22,7 @@ ifeq ($(strip $(system)),home)
 CXX = g++
 INCLUDE += -I/home/matthias/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
-GLFLAGS  = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
+GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
@@ -49,7 +49,7 @@ LIBS 	+= -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
 GLFLAGS  = -lm
 endif
 
-TARGETS =  toefl_video toefl_analytics toefl_compare innto_video show com vmax toefl_radial innto_radial
+TARGETS =  toefl_video toefl_analytics toefl_compare show com vmax toefl_radial 
 
 all: $(TARGETS)
 
@@ -74,6 +74,9 @@ show: show.cpp
 
 com: com.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+
+probe: probe.cu
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
 
 figure17: figure17.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)

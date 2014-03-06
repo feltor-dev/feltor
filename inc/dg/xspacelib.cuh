@@ -67,6 +67,7 @@ thrust::host_vector<int> scatterMap(unsigned nx, unsigned ny, unsigned Nx, unsig
                     map[ i*Nx*nx*ny + j*nx*ny + k*nx + l] =(int)( i*Nx*nx*ny + k*Nx*nx + j*nx + l);
     return map;
 }
+
 thrust::host_vector<int> scatterMap( unsigned n, unsigned Nx, unsigned Ny)
 {
     return scatterMap( n, n, Nx, Ny);
@@ -200,6 +201,54 @@ thrust::host_vector< double> evaluate_jump( const ArrVec1d& v)
     return jump;
 }
  */
+
+/**
+ * @brief Index map for scatter operation on dg - formatted vectors
+ *
+ * Use in thrust::scatter function on a dg-formatted vector. We obtain a vector 
+ where the y direction is contiguous in memory. 
+ * @param n # of polynomial coefficients
+ * @param Nx # of points in x
+ * @param Ny # of points in y
+ *
+ * @return map of indices
+ */
+thrust::host_vector<int> scatterMapInvertxy( unsigned n, unsigned Nx, unsigned Ny)
+{
+    unsigned Nx_ = n*Nx, Ny_ = n*Ny;
+    thrust::host_vector<int> reorder = scatterMap( n, Nx, Ny);
+    thrust::host_vector<int> map( n*n*Nx*Ny);
+    thrust::host_vector<int> map2( map);
+    for( unsigned i=0; i<map.size(); i++)
+    {
+        int row = i/Nx_;
+        int col = i%Nx_;
+
+        map[i] =  col*Ny_+row;
+    }
+    for( unsigned i=0; i<map.size(); i++)
+        map2[i] = map[reorder[i]];
+    return map2;
+}
+
+/**
+ * @brief write a matrix containing it's line number as elements
+ *
+ * Useful in a reduce_by_key computation
+ * @param rows # of rows of the matrix
+ * @param cols # of cols of the matrix
+ *
+ * @return a vector of size rows*cols containing line numbers
+ */
+thrust::host_vector<int> contiguousLineNumbers( unsigned rows, unsigned cols)
+{
+    thrust::host_vector<int> map( rows*cols);
+    for( unsigned i=0; i<map.size(); i++)
+    {
+        map[i] = i/cols;
+    }
+    return map;
+}
 
 ///@}
 

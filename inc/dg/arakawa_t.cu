@@ -14,10 +14,10 @@ using namespace std;
 using namespace dg;
 
 const unsigned n = 3;
-const unsigned Nx = 25;
-const unsigned Ny = 25;
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
+const unsigned Nx = 50;
+const unsigned Ny = 50;
+//const double lx = 2.*M_PI;
+//const double ly = 2.*M_PI;
 
 
 //choose some mean function (attention on lx and ly)
@@ -36,21 +36,36 @@ double jacobian( double x, double y)
 }
 */
 
+/*
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return sin(y)*cos(x);} 
+dg::bc bcx = dg::PER; 
+dg::bc bcy = dg::PER;
 //double right2( double x, double y) {return sin(y);}
 double jacobian( double x, double y) 
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
+*/
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
+const double lx = M_PI/2.;
+const double ly = M_PI/2.;
+double left( double x, double y) {return sin(x)*sin(y);}
+double right( double x, double y) {return sin(2*x)*sin(2*y);} 
+dg::bc bcx = dg::DIR_NEU; 
+dg::bc bcy = dg::DIR_NEU;
+//double right2( double x, double y) {return sin(y);}
+double jacobian( double x, double y) 
+{
+    return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
+}
 
 int main()
 {
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     DVec w2d = create::s2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
