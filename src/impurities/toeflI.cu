@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
         y0[0] = dg::evaluate( g, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1 
         dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
-        dg::blas1::axpby( 1./(1-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
+        dg::blas1::axpby( 1./(1.-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
         y0[2] = dg::evaluate( dg::one, grid);
         dg::blas1::axpby( 1., y0[2], 1., y0[0]);
         dg::blas1::axpby( 1., y0[2], 1., y0[1]);

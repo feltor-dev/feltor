@@ -174,7 +174,11 @@ ToeflI< container>::ToeflI( const Grid<value_type>& grid, double kappa, double n
     tau_[2] = tau_z;
     double a_i = 1-a_z, mu_i = 1.;
     a_[0] = 1., a_[1] = a_i, a_[2] = a_z;
-    mu_[0] = 0., mu_[1] = mu_i, mu_[2] = a_z;
+    mu_[0] = 0., mu_[1] = mu_i, mu_[2] = mu_z;
+    //std::cout << a_[0]<<" "<<a_[1]<<" "<<a_[2]<<"\n";
+    //std::cout << mu_[0]<<" "<<mu_[1]<<" "<<mu_[2]<<"\n";
+    //std::cout << tau_[0]<<" "<<tau_[1]<<" "<<tau_[2]<<"\n";
+    //std::cin >> tau_z;
     //create derivatives
     laplaceM = create::laplacianM( grid, normed, dg::XSPACE, dg::symmetric); //doesn't hurt to be symmetric but doesn't solve pb
     A = create::laplacianM( grid, not_normed, dg::XSPACE, dg::symmetric);
