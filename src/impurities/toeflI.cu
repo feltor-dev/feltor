@@ -57,16 +57,56 @@ int main( int argc, char* argv[])
 
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(3, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-    y0[2] = dg::evaluate( dg::one, grid);
+    std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) ), y1(y0);
+    //dg::blas1::axpby( 1., y0[0], 1., (dg::DVec)dg::evaluate( g, grid), y0[0]);//n_e = 1+ gaussian
+    typename dg::ToeflI<dg::DVec>::Operator& gamma = test.gamma();
+    if( v[25] == 1)
+    {
+        gamma.alpha() = -0.5*p.tau;
+        y0[0] = dg::evaluate( g, grid);
+        dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1 
+        dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+        dg::blas1::axpby( 1./(1.-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
+        y0[2] = dg::evaluate( dg::one, grid);
+        dg::blas1::axpby( 1., y0[2], 1., y0[0]);
+        dg::blas1::axpby( 1., y0[2], 1., y0[1]);
+    }
+    if( v[25] == 2) 
+    {
+        //init wall in y0[2]
+        dg::GaussianX wall( v[26]*grid.lx(), v[28], v[27]); //position, sigma, amplitude
+        dg::DVec wallv = dg::evaluate( wall, grid);
+        gamma.alpha() = -0.5*p.tau_z*p.mu_z;
+        dg::blas2::symv( gamma, wallv, y0[2]); 
+        dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[2], y0[2]);
+        dg::blas1::axpby( 1./p.a_z, y0[2], 0., y0[2]); //n_z ~1./a_z
 
-    dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
-    dg::blas1::axpby( 1./(1-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
-    
+        //init blob in y0[1]
+        gamma.alpha() = -0.5*p.tau;
+        y0[0] = dg::evaluate( g, grid);
+        dg::blas2::symv( gamma, y0[0], y0[1]); 
+        dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+        dg::blas1::axpby( 1./(1-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
 
-    thrust::transform( y0[0].begin(), y0[0].end(), y0[0].begin(), dg::PLUS<double>(+1));
-    thrust::transform( y0[1].begin(), y0[1].end(), y0[1].begin(), dg::PLUS<double>(+1));
+        //sum up
+        dg::blas1::axpby( 1., wallv, 1., y0[0]); //add wall to blob in n_e
+        dg::DVec one = dg::evaluate( dg::one, grid);
+        for( unsigned i=0; i<3; i++)
+            dg::blas1::axpby( 1., one, 1., y0[i]);
+        
+    }
+    if( v[25] == 3) 
+    {
+        gamma.alpha() = -0.5*p.tau_z*p.mu_z;
+        y0[0] = dg::evaluate( g, grid);
+        dg::blas2::symv( gamma, y0[0], y0[2]); 
+        dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[2], y0[2]);
+        dg::blas1::axpby( 1./p.a_z, y0[2], 0., y0[2]); //n_z ~1./a_z n_e
+        y0[1] = dg::evaluate( dg::one, grid);
+        dg::blas1::axpby( 1., y0[1], 1., y0[0]);
+        dg::blas1::axpby( 1., y0[1], 1., y0[2]);
+    }
+
     test.log( y0, y0); //transform to logarithmic values
 
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
