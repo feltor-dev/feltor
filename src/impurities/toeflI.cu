@@ -79,17 +79,24 @@ int main( int argc, char* argv[])
         gamma.alpha() = -0.5*p.tau_z*p.mu_z;
         dg::blas2::symv( gamma, wallv, y0[2]); 
         dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[2], y0[2]);
-        dg::blas1::axpby( 1./p.a_z, y0[2], 0., y0[2]); //n_z ~1./a_z
+        if( p.a_z != 0.)
+            dg::blas1::axpby( 1./p.a_z, y0[2], 0., y0[2]); //n_z ~1./a_z
 
         //init blob in y0[1]
         gamma.alpha() = -0.5*p.tau;
         y0[0] = dg::evaluate( g, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]); 
         dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+        if( p.a_z == 1)
+        {
+            std::cerr << "No blob with trace ions possible!\n";
+            return -1;
+        }
         dg::blas1::axpby( 1./(1-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
 
         //sum up
-        dg::blas1::axpby( 1., wallv, 1., y0[0]); //add wall to blob in n_e
+        if( p.a_z != 0)
+            dg::blas1::axpby( 1., wallv, 1., y0[0]); //add wall to blob in n_e
         dg::DVec one = dg::evaluate( dg::one, grid);
         for( unsigned i=0; i<3; i++)
             dg::blas1::axpby( 1., one, 1., y0[i]);
@@ -101,6 +108,11 @@ int main( int argc, char* argv[])
         y0[0] = dg::evaluate( g, grid);
         dg::blas2::symv( gamma, y0[0], y0[2]); 
         dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[2], y0[2]);
+        if( p.a_z == 0)
+        {
+            std::cerr << "No impurity blob with trace impurities possible!\n";
+            return -1;
+        }
         dg::blas1::axpby( 1./p.a_z, y0[2], 0., y0[2]); //n_z ~1./a_z n_e
         y0[1] = dg::evaluate( dg::one, grid);
         dg::blas1::axpby( 1., y0[1], 1., y0[0]);

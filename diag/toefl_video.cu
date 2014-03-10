@@ -35,10 +35,12 @@ int main( int argc, char* argv[])
     //std::cout <<"NLINKS "<<nlinks<<"\n";
 
     int layout = 0;
-    if( in.find( "TOEFL") != std::string::npos)
-        layout = 0;
+    if( in.find( "TOEFLI") != std::string::npos)
+        layout = 2;
     else if( in.find( "INNTO") != std::string::npos)
         layout = 1;
+    else if( in.find( "TOEFL") != std::string::npos)
+        layout = 0;
     else 
         std::cerr << "Unknown input file format: default to 0"<<std::endl;
     const Parameters p( file::read_input( in), layout);
@@ -113,6 +115,23 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout << "Drawing took              "<<t.diff()<<"s\n";
+        if( layout == 2 && v[1]*v[2]>2 )
+        {
+            //draw ions
+            t5file.get_field( input, "ions", index);
+            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+            dg::blas2::gemv( equi, input, visual);
+            colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+            title <<"ni / "<<colors.scale()<<"\t";
+            render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+            //draw impurities
+            t5file.get_field( input, "impurities", index);
+            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+            dg::blas2::gemv( equi, input, visual);
+            colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+            title <<"nz / "<<colors.scale()<<"\t";
+            render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
 
         //transform phi
         t.tic();
