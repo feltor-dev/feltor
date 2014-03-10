@@ -41,7 +41,7 @@
 ---------------------Miscellaneous----------------------------
 
 20) itstp (steps between output)            = 5      (5)
-21) # of outputs (excluding first)          = 300
+21) # of outputs (excluding first)          = 3
 
 @ -------------------Impurities-------------------------------
 (set a_z 0 to get passive "trace" impurities)
