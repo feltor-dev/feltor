@@ -1,7 +1,7 @@
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
 device = gpu
-system = vsc
+system = home
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -49,7 +49,7 @@ LIBS 	+= -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
 GLFLAGS  = -lm
 endif
 
-TARGETS =  toefl_video toefl_analytics toefl_compare show com vmax toefl_radial 
+TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial 
 
 all: $(TARGETS)
 
@@ -73,6 +73,9 @@ show: show.cpp
 	$(CXX) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) -lhdf5 -lhdf5_hl -Wall
 
 com: com.cu
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+
+imp: imp.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 probe: probe.cu

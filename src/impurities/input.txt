@@ -14,8 +14,8 @@
 
 ---------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stopping for polarisation) =   1e-2  (1e-6)
-7)  eps_gamma (stopping for Gamma CG)   =   1e-3  (1e-8)
+6)  eps_pol (stopping for polarisation) =   1e-4  (1e-6)
+7)  eps_gamma (stopping for Gamma CG)   =   1e-8  (1e-8)
 
 ---------------------Boundary conditions----------------------
 
@@ -41,11 +41,12 @@
 ---------------------Miscellaneous----------------------------
 
 20) itstp (steps between output)            = 5      (5)
-21) # of outputs (excluding first)          = 300
+21) # of outputs (excluding first)          = 3
 
 @ -------------------Impurities-------------------------------
+
 (set a_z 0 to get passive "trace" impurities)
-22) a_z (Z n_z0/n_e0 < 1, a_i <- 1-a_z) = 0.5 (0.1)
+22) a_z (Z n_z0/n_e0 < 1, a_i <- 1-a_z) = 0.0 (0.1)
 23) mu_z (m_z/Z m_i)                    = 1 (48)
 24) tau_z ( tau_z/Z tau_e)              = 0
 25) initialization mode                 = 2
