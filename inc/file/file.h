@@ -139,8 +139,8 @@ struct T5trunc
      * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
      * @param field1 The first dataset ("electrons")
      * @param field2 The second dataset ("ions")
-     * @param field3 The third dataset ("potential")
-     * @param field4 The fourth dataset ("impurities")
+     * @param field3 The third dataset ("impurities")
+     * @param field4 The fourth dataset ("potential")
      * @param time The time makes the group name
      * @param nNx dimension in x - direction (second index)
      * @param nNy dimension in y - direction (first index)
@@ -153,8 +153,8 @@ struct T5trunc
         hsize_t dims[] = { nNy, nNx };
         status_ = H5LTmake_dataset_double( grp, "electrons", 2,  dims, field1.data());
         status_ = H5LTmake_dataset_double( grp, "ions", 2,  dims, field2.data());
-        status_ = H5LTmake_dataset_double( grp, "potential", 2,  dims, field3.data());
         status_ = H5LTmake_dataset_double( grp, "impurities", 2,  dims, field3.data());
+        status_ = H5LTmake_dataset_double( grp, "potential", 2,  dims, field4.data());
         H5Gclose( grp);
         H5Fclose( file);
     }
@@ -253,7 +253,7 @@ struct T5rdonly
      *
      * @return # of outputs
      */
-    unsigned get_size() { return file::getNumObjs( file_) -2;}
+    unsigned get_size() { return file::getNumObjs( file_) -2;fourth}
     /**
      * @brief Get a dataset of the xfiles
      *
