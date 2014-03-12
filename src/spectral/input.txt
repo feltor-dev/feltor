@@ -11,12 +11,12 @@ zonal flows.
 2) ny (grid points in y)                =   256     (256.)
 3) dt (time step in units c_s/L_p)      =   0.01    (0.01)
 ---------------------Boundary conditions----------------------
-4) ly (length of y in units of rho_s)         =   64    (64.)
+4) ly (length of y in units of rho_s)         =   40    (64.)
 5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   0     (1.0)
 ---------------------Physical parameters----------------------
 6) mhw:1, ohw:0 (modified/ordinary HW) =   1       (1)
 7) ddd (dissip. coupling)              =   0.5     (0.5)
-8) nu  (artif. hyper-viscosity)        =   0.001   (0.001)
+8) nu  (artif. hyper-viscosity)        =   0.0001   (0.001)
 9) mcv (magnetic curvature)            =   0.0000 (-0.0005)
 -------------------------Species------------------------------
 10) n00 (perturbation amplitude)        =   1.0     (1.0)
@@ -31,7 +31,7 @@ quasineutrality condition)
 17) mu_z (mz/mi*Z)(mass)                =   48.0    (large)
 18) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
 ---------------------Miscellaneous----------------------------
-19) itstp (steps between output)        =   5      (5)
+19) itstp (steps between output)        =   20      (5)
 20) OMP_NUM_THREADS                     =   4      (4)
 21) blob_width ( sigma)                 =   5    (10)
 22) # of outputs ( excluding first)     =   3

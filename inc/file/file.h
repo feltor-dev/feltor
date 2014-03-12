@@ -253,7 +253,7 @@ struct T5rdonly
      *
      * @return # of outputs
      */
-    unsigned get_size() { return file::getNumObjs( file_) -2;fourth}
+    unsigned get_size() { return file::getNumObjs( file_) -2;}
     /**
      * @brief Get a dataset of the xfiles
      *
