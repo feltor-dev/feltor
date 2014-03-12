@@ -9,6 +9,9 @@ all: innto innblobs innto_hpc
 innto: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 
+innto_per: innto_per.cpp dft_dft_solver.h blueprint.h equations.h
+	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
+
 innblobs: innblobs.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 

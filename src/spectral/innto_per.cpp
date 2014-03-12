@@ -8,8 +8,8 @@
 //#include "utility.h"
 #include "draw/host_window.h"
 #include "dft_dft_solver.h"
-#include "drt_dft_solver.h"
 #include "blueprint.h"
+#include "particle_density.h"
 
 /*
  * Reads parameters from given input file
@@ -27,6 +27,8 @@ unsigned width = 960, height = 1080; //initial window width & height
 std::stringstream window_str;  //window name
 std::vector<double> visual;
 draw::ColorMapRedBlueExt map;
+typedef DFT_DFT_Solver<2> Sol;
+typedef typename Sol::Matrix_Type Mat;
 
 void WindowResize( GLFWwindow* win, int w, int h)
 {
@@ -66,6 +68,7 @@ Blueprint read( char const * file)
 template<class Solver>
 void drawScene( const Solver& solver, draw::RenderHostData& rend)
 {
+    ParticleDensity particle( solver.getField( TL_POTENTIAL), solver.blueprint());
     const typename Solver::Matrix_Type * field;
     
     { //draw electrons
@@ -98,8 +101,9 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
         rend.renderEmptyQuad( );
 
     { //draw potential
-    field = &solver.getField( TL_POTENTIAL); 
-    visual = field->copy(); 
+    typename Solver::Matrix_Type phi = solver.getField( TL_POTENTIAL);
+    particle.laplace( phi );
+    visual = phi.copy(); 
     map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
     rend.renderQuad( visual, field->cols(), field->rows(), map);
     window_str <<" phi / "<<map.scale()<<"\t";
@@ -132,8 +136,6 @@ int main( int argc, char* argv[])
     DFT_DFT_Solver<3> solver3( bp);
     if( bp.boundary().bc_x == TL_PERIODIC)
         bp_mod.boundary().bc_x = TL_DST10;
-    DRT_DFT_Solver<2> drt_solver2( bp_mod);
-    DRT_DFT_Solver<3> drt_solver3( bp_mod);
 
     const Algorithmic& alg = bp.algorithmic();
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
@@ -169,15 +171,11 @@ int main( int argc, char* argv[])
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
                 solver2.init( arr2, TL_IONS);
-            else
-                drt_solver2.init( arr2_, TL_IONS);
         }
         else
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
                 solver3.init( arr3, TL_IONS);
-            else
-                drt_solver3.init( arr3_, TL_IONS);
         }
     }catch( Message& m){m.display();}
 
@@ -216,15 +214,11 @@ int main( int argc, char* argv[])
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
                 drawScene( solver2, render);
-            else
-                drawScene( drt_solver2, render);
         }
         else
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
                 drawScene( solver3, render);
-            else
-                drawScene( drt_solver3, render);
         }
         window_str << setprecision(2) << fixed;
         window_str << " &&   time = "<<t;
@@ -243,15 +237,11 @@ int main( int argc, char* argv[])
             {
                 if( bp.boundary().bc_x == TL_PERIODIC)
                     solver2.step( );
-                else
-                    drt_solver2.step();
             }
             else
             {
                 if( bp.boundary().bc_x == TL_PERIODIC)
                     solver3.step( );
-                else
-                    drt_solver3.step( );
             }
             t+= alg.dt;
         }
