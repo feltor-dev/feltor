@@ -5,6 +5,7 @@
 #include <omp.h>
 
 #include "toefl/toefl.h"
+#include "toefl/timer.h"
 #include "file/read_input.h"
 #include "file/file.h"
 //#include "utility.h"
@@ -180,6 +181,7 @@ void xpa( std::vector<double>& x, double a)
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
+    
     Blueprint bp_mod;
     std::vector<double> v;
     std::string input;
@@ -235,6 +237,8 @@ int main( int argc, char* argv[])
     std::vector<double> average(8,0);
     std::vector<double> out( alg.nx*alg.ny);
     std::vector<double> output[n+1] = {out, out, out, out};
+    toefl::Timer t;
+    t.tic();
     for( unsigned i=0; i<max_out; i++)
     {
         output[0] = solver.getField( TL_ELECTRONS).copy();
@@ -284,11 +288,13 @@ int main( int argc, char* argv[])
             time += alg.dt;
         }
     }
+    Timer t2;
     output[0] = solver.getField( TL_ELECTRONS).copy();
     xpa( output[0], meanMassE);
     output[1] = solver.getField( TL_IONS).copy();
     output[2] = solver.getField( TL_IMPURITIES).copy();
     output[3] = solver.getField( TL_POTENTIAL).copy();
+    t2.tic();
     t5file.write( output[0], output[1], output[2], output[3], time, alg.nx, alg.ny);
             probe.createGroup( time);
             const Mat& electrons = solver.getField( TL_ELECTRONS);
@@ -313,9 +319,14 @@ int main( int argc, char* argv[])
             probe.write( probe_array, "vy", 8,8);
             probe.write( probe_fluct, "vy_fluc", 8,8);
             probe.closeGroup();
+            t2.toc();
+            std::cout << "Probe took "<<t2.diff()<< "s\n";
     //////////////////////////////////////////////////////////////////
     os.close();
     fftw_cleanup();
+    t.toc();
+    std::cout << "Total simulation time for "<<max_out*itstp<<" steps "<<t.diff()<<"s\n";
+    std::cout << "Which is "<<t.diff()/(double)(max_out*itstp)<<"s/step\n";
     return 0;
 
 }
