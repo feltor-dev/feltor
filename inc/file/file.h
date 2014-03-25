@@ -194,6 +194,58 @@ struct T5trunc
     std::vector<double> mass_, diffusion_, energy_, dissipation_;
 };
 
+
+
+/**
+ * @brief Create a HDF5 file with timegroups
+ */
+struct Probe
+{
+    /**
+     * @brief Create a new Probe file overwriting existing ones
+     *
+     * @param name The name of the H5 file
+     * @param input A literal copy of the input file
+     */
+    Probe( const std::string& name, const std::string& input ): name_( name)
+    {
+        file_ = H5Fcreate( name.data(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        hsize_t size = input.size();
+        status_ = H5LTmake_dataset_char( file_, "inputfile", 1, &size, input.data());
+    }
+
+    void createGroup( double time)
+    {
+        grp_ = H5Gcreate( file_, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+    }
+    void closeGroup(){ H5Gclose( grp_);}
+    //T must provide the data() function that returns data on the host
+    /**
+     * @brief Write a dataset in the currently open group
+     *
+     * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
+     * @param field The dataset ("name")
+     * @param name Name of the dataset
+     * @param nNx dimension in x - direction (second index)
+     * @param nNy dimension in y - direction (first index)
+     */
+    template< class T>
+    void write( const T& field1, const std::string& name, unsigned nNx, unsigned nNy)
+    {
+        hsize_t dims[] = { nNy, nNx };
+        status_ = H5LTmake_dataset_double( grp_, name.data(), 2,  dims, field1.data());
+    }
+    ~Probe( )
+    {
+        H5Fclose( file_);
+    }
+
+  private:
+    hid_t file_, grp_;
+    herr_t status_;
+    std::string name_;
+};
+
 /**
  * @brief Read only access to an existing T5 file
  */

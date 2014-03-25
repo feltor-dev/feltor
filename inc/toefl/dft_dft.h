@@ -63,6 +63,37 @@ class DFT_DFT
      */
     inline void c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT>& swap);
 
+    /**
+     * @brief Compute the scalar product in fourier space
+     *
+     * @param m1 left hand side
+     * @param m2 right hand side
+     * @note the normalisation missing is 1./rows/rows/cols/cols
+     *
+     * @return the scalar product 
+     */
+    double dot( const Matrix<complex, TL_NONE>& m1, const Matrix<complex, TL_NONE>& m2)
+    {
+#ifdef TL_DEBUG
+    if( m1.rows() != m2.rows() || m1.rows() != rows)
+        throw Message( "Matrix rows don't match!", ping);
+    if( m1.cols() != m2.cols() || m1.cols() != cols/2+1 )
+        throw Message( "Matrix columns don't match!", ping);
+#endif
+        complex sum=0;
+        for( unsigned i=0; i<rows; i++)
+        {
+            sum += m1(i,0)*conj( m2(i,0));
+            for( unsigned j=1; j<cols/2; j++)
+                sum += 2.*m1(i,j)*conj( m2(i,j));
+            if( cols%2)
+                sum += m1(i,cols/2)*conj(m2(i,cols/2));
+            else
+                sum += 2.*m1(i,cols/2)*conj( m2(i,cols/2));
+        }
+        return real( sum);
+    }
+
     /*! @brief This class shall not be copied 
      *
      * Mainly because fftw_plans are not copyable

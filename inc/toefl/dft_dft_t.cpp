@@ -12,7 +12,7 @@ using namespace toefl;
  * The r2c yields one coefficient for a mode
  * The c2c trafo afterwards yields two: at k and N-k for one mode.
  */
-unsigned rows = 7, cols = 10;
+unsigned rows = 7, cols = 9;
 complex<double> I = {0,1};
 
 /*! @brief Adds a gaussian to a given matrix
@@ -61,10 +61,23 @@ int main()
     //for( size_t i = 0; i < m1.rows(); i++)
     //    for ( size_t j=0; j < m1.cols(); j++)
     //        m1(i, j) = (double)j*dx; //f(x,y) = y;
-    cout << setprecision(2) << fixed;
-    cout <<"The original matrix\n"<<m1<<endl;
+    cout << setprecision(6) << fixed;
+    //cout <<"The original matrix\n"<<m1<<endl;
+    double scalar = 0;
+    for( unsigned i=0; i<rows; i++)
+        for( unsigned j=0; j<cols; j++)
+            scalar += m1(i,j)*m1(i,j);
+    scalar *= dx*dy;
+    cout << "Scalar product in real space: "<<scalar<<"\n";
     dft_dft.r2c( m1, m1_);
-    cout << "The transformed matrix\n"<<m1_<<endl;
+    //cout << "The transformed matrix\n"<<m1_<<endl;
+
+    cout << "Scalar product in comp space: "<<1./rows/cols/rows/cols*dft_dft.dot( m1_, m1_)<<"\n";
+
+
+
+
+    /*
     //multiply coefficients
     int ik;
     for( unsigned i=0; i<rows; i++)
@@ -86,6 +99,9 @@ int main()
         dft_dft.c2r( m1_der, m1);
     }catch( Message& m){m.display();}
     cout << "The y-deriv of the original\n"<<m1<<endl;
+    */
+
+   
 
 
 
