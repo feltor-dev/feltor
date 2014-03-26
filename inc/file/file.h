@@ -207,16 +207,18 @@ struct Probe
      * @param name The name of the H5 file
      * @param input A literal copy of the input file
      */
-    Probe( const std::string& name, const std::string& input ): name_( name)
+    Probe( const std::string& name, const std::string& input, std::vector<double>& times ): name_( name)
     {
         file_ = H5Fcreate( name.data(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
         hsize_t size = input.size();
         status_ = H5LTmake_dataset_char( file_, "inputfile", 1, &size, input.data());
+        size=times.size();
+        status_ = H5LTmake_dataset_double( file_, "time", 1,  &size, times.data());
     }
 
-    void createGroup( double time)
+    void createGroup( const char * name )
     {
-        grp_ = H5Gcreate( file_, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        grp_ = H5Gcreate( file_, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
     }
     void closeGroup(){ H5Gclose( grp_);}
     //T must provide the data() function that returns data on the host
@@ -230,10 +232,12 @@ struct Probe
      * @param nNy dimension in y - direction (first index)
      */
     template< class T>
-    void write( const T& field1, const std::string& name, unsigned nNx, unsigned nNy)
+    void write( const T& field1, unsigned i, unsigned j , unsigned N)
     {
-        hsize_t dims[] = { nNy, nNx };
-        status_ = H5LTmake_dataset_double( grp_, name.data(), 2,  dims, field1.data());
+        std::stringstream title; 
+        title <<std::setw(2) <<std::right<<i<<j;
+        hsize_t dims[] = { N };
+        status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, field1.data());
     }
     ~Probe( )
     {

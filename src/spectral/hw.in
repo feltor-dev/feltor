@@ -31,7 +31,7 @@ quasineutrality condition)
 19) itstp (steps between output)        =   10
 20) OMP_NUM_THREADS                     =   4      (4)
 21) blob_width ( sigma)                 =   5    (10)
-22) # of outputs ( excluding first)     =   400
+22) # of outputs ( excluding first)     =   40
 23) x-position ( in units of lx)        =   0.5
 24) y-position ( in units of ly)        =   0.5
 25) itstp2 (divisor of itstp)           =   5

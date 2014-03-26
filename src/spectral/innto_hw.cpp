@@ -13,9 +13,6 @@
 #include "dft_dft_solver.h"
 //#include "drt_dft_solver.h"
 #include "blueprint.h"
-/*
- * Same as innblobs but outputs results in hdf5 - file
- */
 
 using namespace std;
 using namespace toefl;
@@ -31,7 +28,7 @@ double amp, imp_amp; //
 double blob_width, posX, posY;
 unsigned energy_interval;
 
-void write_probe( const Mat& field, std::vector<double>& total, std::vector<double>& fluct)
+void write_probe( const Mat& field, std::vector<double>* total, std::vector<double>* fluct)
 {
     unsigned nx = field.cols();
     unsigned ny = field.rows();
@@ -49,12 +46,12 @@ void write_probe( const Mat& field, std::vector<double>& total, std::vector<doub
         for( unsigned l=0; l<8;l++)
         {
             unsigned posX = nx/16+nx*l/8;
-            total[k*8+l] = field( posY, posX );
-            fluct[k*8+l] = field( posY, posX ) - average[l];
+            total[k*8+l].push_back(field( posY, posX ));
+            fluct[k*8+l].push_back(field( posY, posX ) - average[l]);
         }
     }
 }
-void write_vx( const Mat& phi, std::vector<double>& v, double h)
+void write_vx( const Mat& phi, std::vector<double>* v, double h)
 {
     unsigned nx = phi.cols();
     unsigned ny = phi.rows();
@@ -64,11 +61,11 @@ void write_vx( const Mat& phi, std::vector<double>& v, double h)
         for( unsigned l=0; l<8;l++)
         {
             unsigned posX = nx/16+nx*l/8;
-            v[k*8+l] = -(phi( posY +1, posX ) - phi( posY-1, posX))/2./h;//-dy phi
+            v[k*8+l].push_back( -(phi( posY +1, posX ) - phi( posY-1, posX))/2./h);//-dy phi
         }
     }
 }
-void write_vy( const Mat& phi, std::vector<double>& vy, std::vector<double>& vy_fluc, double h)
+void write_vy( const Mat& phi, std::vector<double>* vy, std::vector<double>* vy_fluc, double h)
 {
     unsigned nx = phi.cols();
     unsigned ny = phi.rows();
@@ -86,8 +83,9 @@ void write_vy( const Mat& phi, std::vector<double>& vy, std::vector<double>& vy_
         for( unsigned l=0; l<8;l++)
         {
             unsigned posX = nx/16+nx*l/8;
-            vy[k*8+l]       = (phi( posY, posX+1 )-phi(posY, posX-1))/2./h;
-            vy_fluc[k*8+l]  = vy[k*8+l] - average[l];
+            double dxphi = (phi( posY, posX+1 )-phi(posY, posX-1))/2./h;
+            vy[k*8+l].push_back(   dxphi    );
+            vy_fluc[k*8+l].push_back(  dxphi - average[l]);
         }
     }
 }
@@ -230,7 +228,18 @@ int main( int argc, char* argv[])
 
     /////////////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
-    file::Probe probe( argv[3], input);
+    std::vector<double> times;
+    std::vector<double> probe_ne[64];
+    std::vector<double> probe_ne_fluc[64];
+    std::vector<double> probe_ni[64];
+    std::vector<double> probe_ni_fluc[64];
+    std::vector<double> probe_nz[64];
+    std::vector<double> probe_nz_fluc[64];
+    std::vector<double> probe_phi[64];
+    std::vector<double> probe_phi_fluc[64];
+    std::vector<double> probe_vy[64];
+    std::vector<double> probe_vy_fluc[64];
+    std::vector<double> probe_vx[64];
     std::ofstream  os( argv[4]);
     double time = 3.*alg.dt;
     std::vector<double> probe_array( 64), probe_fluct( 64);
@@ -249,29 +258,17 @@ int main( int argc, char* argv[])
         t5file.write( output[0], output[1], output[2],output[3], time, alg.nx, alg.ny);
         for( unsigned j=0; j<itstp; j++)
         {
-            probe.createGroup( time);
+            times.push_back(time);
             const Mat& electrons = solver.getField( TL_ELECTRONS);
-            write_probe( electrons, probe_array, probe_fluct);
-            probe.write( probe_array, "ne", 8,8);
-            probe.write( probe_fluct, "ne_fluc", 8,8);
+            write_probe( electrons, probe_ne, probe_ne_fluc);
             const Mat& ions = solver.getField( TL_IONS);
-            write_probe( ions, probe_array, probe_fluct);
-            probe.write( probe_array, "ni", 8,8);
-            probe.write( probe_fluct, "ni_fluc", 8,8);
+            write_probe( ions, probe_ni, probe_ni_fluc);
             const Mat& imp = solver.getField( TL_IMPURITIES);
-            write_probe( imp, probe_array, probe_fluct);
-            probe.write( probe_array, "nz", 8,8);
-            probe.write( probe_fluct, "nz_fluc", 8,8);
+            write_probe( imp, probe_nz, probe_nz_fluc);
             const Mat& potential = solver.getField( TL_POTENTIAL);
-            write_probe( potential, probe_array, probe_fluct);
-            probe.write( probe_array, "phi", 8,8);
-            probe.write( probe_fluct, "phi_fluc", 8,8);
-            write_vx( potential, probe_array, alg.h);
-            probe.write( probe_array, "vx", 8,8);
-            write_vy( potential, probe_array, probe_fluct, alg.h);
-            probe.write( probe_array, "vy", 8,8);
-            probe.write( probe_fluct, "vy_fluc", 8,8);
-            probe.closeGroup();
+            write_probe( potential, probe_phi, probe_phi_fluc);
+            write_vx( potential, probe_vx, alg.h);
+            write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
             if( !(j%energy_interval))
             {
                 os << time << " ";
@@ -282,7 +279,7 @@ int main( int argc, char* argv[])
                 dy( cne, cne, bound.ly,1./rows/cols);
 
                 os << dft_dft.dot( cphi, cne)/alg.nx/alg.nx/alg.ny/alg.ny<< " ";
-                os<< std::endl;
+                os << std::endl;
             }
             solver.step();
             time += alg.dt;
@@ -296,37 +293,91 @@ int main( int argc, char* argv[])
     output[3] = solver.getField( TL_POTENTIAL).copy();
     t2.tic();
     t5file.write( output[0], output[1], output[2], output[3], time, alg.nx, alg.ny);
-            probe.createGroup( time);
+            times.push_back(time);
             const Mat& electrons = solver.getField( TL_ELECTRONS);
-            write_probe( electrons, probe_array, probe_fluct);
-            probe.write( probe_array, "ne", 8,8);
-            probe.write( probe_fluct, "ne_fluc", 8,8);
+            write_probe( electrons, probe_ne, probe_ne_fluc);
             const Mat& ions = solver.getField( TL_IONS);
-            write_probe( ions, probe_array, probe_fluct);
-            probe.write( probe_array, "ni", 8,8);
-            probe.write( probe_fluct, "ni_fluc", 8,8);
+            write_probe( ions, probe_ni, probe_ni_fluc);
             const Mat& imp = solver.getField( TL_IMPURITIES);
-            write_probe( imp, probe_array, probe_fluct);
-            probe.write( probe_array, "nz", 8,8);
-            probe.write( probe_fluct, "nz_fluc", 8,8);
+            write_probe( imp, probe_nz, probe_nz_fluc);
             const Mat& potential = solver.getField( TL_POTENTIAL);
-            write_probe( potential, probe_array, probe_fluct);
-            probe.write( probe_array, "phi", 8,8);
-            probe.write( probe_fluct, "phi_fluc", 8,8);
-            write_vx( potential, probe_array, alg.h);
-            probe.write( probe_array, "vx", 8,8);
-            write_vy( potential, probe_array, probe_fluct, alg.h);
-            probe.write( probe_array, "vy", 8,8);
-            probe.write( probe_fluct, "vy_fluc", 8,8);
+            write_probe( potential, probe_phi, probe_phi_fluc);
+            write_vx( potential, probe_vx, alg.h);
+            write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
+
+            //write Probe file
+            file::Probe probe( argv[3], input, times);
+            probe.createGroup("ne");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_ne[i*8+j], i+1, j+1, max_out*itstp+1);
             probe.closeGroup();
-            t2.toc();
-            std::cout << "Probe took "<<t2.diff()<< "s\n";
+            probe.createGroup("ne_fluc");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_ne_fluc[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+
+            probe.createGroup("ni");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_ni[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+            probe.createGroup("ni_fluc");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_ni_fluc[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+
+            probe.createGroup("nz");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_ni[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+            probe.createGroup("nz_fluc");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_ni_fluc[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+
+            probe.createGroup("phi");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_phi[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+            probe.createGroup("phi_fluc");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_phi_fluc[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+
+            probe.createGroup("vx");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_vx[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+
+            probe.createGroup("vy");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_phi[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+            probe.createGroup("vy_fluc");
+            for( unsigned i=0; i<8; i++)
+                for( unsigned j=0; j<8; j++)
+                    probe.write( probe_phi_fluc[i*8+j], i+1, j+1, max_out*itstp+1);
+            probe.closeGroup();
+
+    t2.toc();
+    std::cout << "Probe took "<<t2.diff()<< "s\n";
     //////////////////////////////////////////////////////////////////
     os.close();
     fftw_cleanup();
     t.toc();
     std::cout << "Total simulation time for "<<max_out*itstp<<" steps "<<t.diff()<<"s\n";
     std::cout << "Which is "<<t.diff()/(double)(max_out*itstp)<<"s/step\n";
+    //for( unsigned i=0; i<probe_ne[16].size(); i++)
+    //    std::cout << probe_ne[16][i]<<"\n";
     return 0;
 
 }
