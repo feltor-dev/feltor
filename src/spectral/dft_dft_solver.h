@@ -65,13 +65,14 @@ class DFT_DFT_Solver
             the potential is the one of the last timestep.
     */
     void getField( Matrix<double, TL_DFT>& m, enum target t);
+    const std::array<Matrix<double, TL_DFT>, n>& getDensity( )const{return dens;}
+    const std::array<Matrix<double, TL_DFT>, n>& getPotential( )const{return phi;}
     /*! @brief Get the parameters of the solver.
 
         @return The parameters in use. 
         @note You cannot change parameters once constructed.
      */
     const Blueprint& blueprint() const { return blue;}
-    void energy( std::vector<double>& );
   private:
     typedef std::complex<double> complex;
     //methods
@@ -115,7 +116,7 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     dft_dft( rows, cols, FFTW_MEASURE),
     //Coefficients
     phi_coeff( crows, ccols),
-    gamma_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)),
+    gamma_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols))
 {
     bp.consistencyCheck();
     if( bp.isEnabled( TL_GLOBAL))
@@ -123,7 +124,7 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
         std::cerr << "WARNING: GLOBAL solver not implemented yet! \n\
              Switch to local solver...\n";
     }
-    init_coefficients( bp.boundary(), phys);
+    init_coefficients( bp.boundary(), bp.physical());
 }
 
 template< size_t n>
@@ -386,10 +387,11 @@ struct Energetics
         phi( dens),
         cdens( MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)), 
         cphi(cdens), 
-        phys( bp.physical()), bound( bp.boundary())
+        blue(bp), phys( bp.physical()), bound( bp.boundary()), alg( bp.algorithmic()),
         dft_dft( rows, cols, FFTW_MEASURE)
     {
         double laplace;
+        Poisson p( phys);
         int ik;
         const complex dymin( 0, 2.*M_PI/bound.ly);
         const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(bound.lx*bound.lx),
@@ -408,6 +410,9 @@ struct Energetics
                 }
             }
     }
+    std::vector<double> thermal_energies(const std::array<Matrix<double, TL_DFT>, n>& dens );
+    std::vector<double> exb_energies(const Matrix<double, TL_DFT>& phi );
+    std::vector<double> gradient_flux( const std::array<Matrix<double, TL_DFT>, n>& density , const std::array<Matrix<double, TL_DFT>, n>& potential);
   private:
     double dot( const Matrix_Type& m1, const Matrix_Type& m2);
     double dot( const std::vector<complex>& v1, const std::vector<complex>& v2)
@@ -417,7 +422,7 @@ struct Energetics
         for( unsigned j=1; j<cols/2; j++)
             sum += 2.*v1[j]*conj( v2[j]);
         if( cols%2)
-            sum += v1[cols/2]*conj(m2[cols/2]);
+            sum += v1[cols/2]*conj(v2[cols/2]);
         else
             sum += 2.*v1[cols/2]*conj( v2[cols/2]);
         return real( sum);
@@ -426,10 +431,12 @@ struct Energetics
     unsigned rows, cols;
     unsigned crows, ccols;
     std::array< Matrix< double>, n-1> gamma0_coeff;
-    std::array< Matrix<double, TL_DFT>, n > dens, phi,
+    std::array< Matrix<double, TL_DFT>, n > dens, phi;
     std::array< Matrix< complex>, n> cdens, cphi;
+    Blueprint blue;
     Physical phys;
     Boundary bound;
+    Algorithmic alg;
     DFT_DFT dft_dft;
     void dy( const Matrix<complex>& in, Matrix<complex >& m, double ly, double norm)
     {
@@ -452,8 +459,8 @@ struct Energetics
     }
     void extract_average_y( const Matrix<complex>& in, std::vector<complex>& out)
     {
-        out.resize(m.cols());
-        for( unsigned j=0; j<m.cols(); j++)
+        out.resize(in.cols());
+        for( unsigned j=0; j<in.cols(); j++)
             out[j] = in(0,j);
     }
     void dx( const Matrix<complex>& in, Matrix<complex >& m, double lx, double norm)
@@ -469,31 +476,31 @@ struct Energetics
             }
     }
 
-    void dx( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double lx)
+    void dx( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double h)
     {
         assert( &in != &out);
         unsigned cols = in.cols(); 
         for( unsigned i=0; i<in.rows(); i++)
         {
-            out(i,0) = (in(i,0+1) - in(i, cols-1))*cols/lx;
+            out(i,0) = (in(i,0+1) - in(i, cols-1))/2./h;
             for( unsigned j=1; j<in.cols()-1; j++)
-                out(i,j) = (in(i,j+1) - in(i, j-1))*cols/lx;
-            out(i,cols-1) = (in(i,0) - in(i, cols-2))*cols/lx;
+                out(i,j) = (in(i,j+1) - in(i, j-1))/2./h;
+            out(i,cols-1) = (in(i,0) - in(i, cols-2))/2./h;
         }
     }
-    void dy( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double ly)
+    void dy( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double h)
     {
         assert( &in != &out);
         unsigned rows = in.rows(); 
         for( unsigned j=0; j<in.cols(); j++)
-            out(0,j) = (in(1,j) - in(rows-1, j))*rows/ly;
+            out(0,j) = (in(1,j) - in(rows-1, j))/2./h;
         for( unsigned i=1; i<in.rows()-1; i++)
         {
             for( unsigned j=0; j<in.cols(); j++)
-                out(i,j) = (in(i+1,j) - in(i-1, j))*rows/ly;
+                out(i,j) = (in(i+1,j) - in(i-1, j))/2./h;
         }
         for( unsigned j=0; j<in.cols(); j++)
-            out(rows-1,j) = (in(0,j) - in(rows-2, j))*rows/ly;
+            out(rows-1,j) = (in(0,j) - in(rows-2, j))/2./h;
     }
     void dxx( const Matrix<complex>& in, Matrix<complex >& m, double lx, double norm)
     {
@@ -523,10 +530,10 @@ double Energetics<n>::dot( const Matrix_Type& m1, const Matrix_Type& m2)
 
 }
 template<size_t n>
-std::vector<double> Energetics<n>::thermal_energy(const std::array<Matrix<double, TL_DFT>, n>& dens )
+std::vector<double> Energetics<n>::thermal_energies(const std::array<Matrix<double, TL_DFT>, n>& dens )
 {
     std::vector<double> energies(n);
-    double norm = bound.lx*bound.ly/rows/cols;
+    double norm = alg.h*alg.h;
     energies[0] = 1./2.*norm*dot( dens[0], dens[0]);
     energies[1] = 1./2.*norm*phys.a[0]*phys.tau[0]*dot( dens[1], dens[1]);
     if( n==3)
@@ -535,29 +542,28 @@ std::vector<double> Energetics<n>::thermal_energy(const std::array<Matrix<double
 }
 
 template<size_t n>
-std::vector<double> Energetics<n>::exb_energy(const Matrix<double, TL_DFT>& phi )
+std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& potential )
 {
-    std::vector<double> energies(2*(n-1));
-    double norm = 1./(double)(rows*cols);
-    phi[0] = phi;
+    std::vector<double> energies;
+    double norm = alg.h*alg.h/(double)(rows*cols);
+    phi[0] = potential;
     dft_dft.r2c( phi[0], cphi[0]);
 #pragma omp parallel for 
     for( size_t i = 0; i < crows; i++)
         for( size_t j = 0; j < ccols; j++)
         {
-            cphi[1](i,j) = (gamma0_coeff[0](i,j))*cphi[0](i,j)*norm;
-            cphi[2](i,j) = (gamma0_coeff[1](i,j))*cphi[0](i,j)*norm;
+            cphi[1](i,j) = (gamma0_coeff[0](i,j))*cphi[0](i,j);
+            cphi[2](i,j) = (gamma0_coeff[1](i,j))*cphi[0](i,j);
         }
-    energies[0] = dft_dft.dot( cphi[0], cphi[1])*norm;
-    if( n == 3)
-        energies[1] = dft_dft.dot( cphi[0], cphi[2])*norm;
-    //proper normalization missing
-    std::vector<complex> mean_phi[n];
+    energies.push_back( dft_dft.dot( cphi[0], cphi[1])*norm);
+    if( n==3)
+        energies.push_back( dft_dft.dot( cphi[0], cphi[2])*norm);
+    std::vector<complex> sum_phi[n];
     for( unsigned i=0; i<n; i++)
-        extract_average_y( cphi[i], mean_phi[i]);
-    energies[2] = dot( mean_phi[0], mean_phi[1]);
+        extract_average_y( cphi[i], sum_phi[i]); 
+    energies.push_back( dot( sum_phi[0], sum_phi[1])*norm);
     if( n== 3)
-        energies[3] = dot( mean_phi[0], mean_phi[2]);
+        energies.push_back( dot( sum_phi[0], sum_phi[2])*norm);
 
     return energies;
 }
@@ -567,9 +573,9 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
 {
 #pragma omp parallel for
     for( unsigned i=0; i<n; i++)
-        dy( potential[i], dens[i], bound.ly);
+        dy( potential[i], dens[i], alg.h);
     std::vector<double> flux(n);
-    double norm = bound.lx*bound.ly/rows/cols;
+    double norm = alg.h*alg.h;
     flux[0] = phys.g_e*norm*dot( density[0], dens[0]);
     for( unsigned i=1; i<n; i++)
         flux[i] = phys.g[i]*phys.a[i]*phys.tau[i]*norm*dot( density[i], dens[i]);

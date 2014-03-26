@@ -179,6 +179,7 @@ int main( int argc, char* argv[])
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
     double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
+    Energetics<n> energetics(bp);
 
     /////////////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
@@ -225,19 +226,15 @@ int main( int argc, char* argv[])
             write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
             if( !(j%energy_interval))
             {
-                std::vector<double> energies(5);
-                solver.energy( energies);
-                os << time << " ";
-                ne = solver.getField( TL_ELECTRONS);
-                phi = solver.getField( TL_POTENTIAL);
-                dft_dft.r2c( ne, cne);
-                dft_dft.r2c( phi, cphi);
-                dy( cne, cne, bound.ly,1./rows/cols);
-
-                os << dft_dft.dot( cphi, cne)/alg.nx/alg.nx/alg.ny/alg.ny<< " ";
-                for( unsigned k=0; k<5;k++)
-                    os << energies[k] << " ";
+                os << time<<" ";
+                std::vector<double> thermal = energetics.thermal_energies( solver.getDensity());
+                std::vector<double> exb = energetics.exb_energies( solver.getField(TL_POTENTIAL));
+                for( unsigned k=0; k<thermal.size(); k++)
+                    os << thermal[k]<<" ";
+                for( unsigned k=0; k<exb.size(); k++)
+                    os << exb[k]<<" ";
                 os << std::endl;
+
             }
             solver.step();
             time += alg.dt;
