@@ -376,6 +376,8 @@ int main( int argc, char* argv[])
     t.toc();
     std::cout << "Total simulation time for "<<max_out*itstp<<" steps "<<t.diff()<<"s\n";
     std::cout << "Which is "<<t.diff()/(double)(max_out*itstp)<<"s/step\n";
+    std::cout << "Times size: "<<times.size()<<"\n";
+    std::cout << "Probes size: "<<probe_ne[0].size()<<"\n";
     //for( unsigned i=0; i<probe_ne[16].size(); i++)
     //    std::cout << probe_ne[16][i]<<"\n";
     return 0;
