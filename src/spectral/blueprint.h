@@ -289,7 +289,7 @@ void Blueprint::consistencyCheck() const
         throw Message( "nu < 0!\n", ping);
     if( phys.a[0] <= 0 || phys.mu[0] <= 0 || phys.tau[0] < 0) 
         throw Message( "Ion species badly set\n", ping);
-    if( imp && (phys.a[1] <= 0 || phys.mu[1] <= 0 || phys.tau[1] < 0)) 
+    if( imp && (phys.a[1] < 0 || phys.mu[1] <= 0 || phys.tau[1] < 0)) 
         throw Message( "Impuritiy species badly set\n", ping);
     if( fabs(phys.a[0] + phys.a[1] - 1) > 1e-15)
         throw Message( "a_i + a_z != 1 (background not neutral)\n", ping);

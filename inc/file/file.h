@@ -235,7 +235,7 @@ struct Probe
     void write( const T& field1, unsigned i, unsigned j , unsigned N)
     {
         std::stringstream title; 
-        title <<std::setw(2) <<std::right<<i<<j;
+        title <<std::setw(1) <<std::left<<i<<j;
         hsize_t dims[] = { N };
         status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, field1.data());
     }

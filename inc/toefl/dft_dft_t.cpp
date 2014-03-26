@@ -12,7 +12,7 @@ using namespace toefl;
  * The r2c yields one coefficient for a mode
  * The c2c trafo afterwards yields two: at k and N-k for one mode.
  */
-unsigned rows = 7, cols = 9;
+unsigned rows = 1000, cols = 1000;
 complex<double> I = {0,1};
 
 /*! @brief Adds a gaussian to a given matrix
@@ -53,7 +53,7 @@ void init_gaussian( M& m, const double x0, const double y0,
 }
 int main()
 {
-    Matrix<double, TL_DFT> m1{rows, cols};
+    Matrix<double, TL_DFT> m1{rows, cols,0.};
     Matrix<complex<double> >   m1_{ rows, cols/2 + 1}, m1_der{m1_};
     DFT_DFT dft_dft( rows,cols);
     double dx = 1./(double)cols, dy = 1./(double)rows;
@@ -67,8 +67,8 @@ int main()
     for( unsigned i=0; i<rows; i++)
         for( unsigned j=0; j<cols; j++)
             scalar += m1(i,j)*m1(i,j);
-    scalar *= dx*dy;
-    cout << "Scalar product in real space: "<<scalar<<"\n";
+    scalar *= (dx*dy);
+    cout << "Scalar product in real space: "<<scalar<<" should be "<<(0.354347*0.354347)<<"\n";
     dft_dft.r2c( m1, m1_);
     //cout << "The transformed matrix\n"<<m1_<<endl;
 

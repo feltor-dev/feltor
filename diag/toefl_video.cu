@@ -40,6 +40,11 @@ int main( int argc, char* argv[])
         layout = 2;
         std::cout << "Found Impurity file!\n";
     }
+    else if( in.find( "INNTO_HW") != std::string::npos)
+    {
+        layout = 3;
+        std::cout << "Found INNTO_HW file!\n";
+    }
     else if( in.find( "INNTO") != std::string::npos)
     {
         layout = 1;
@@ -124,7 +129,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout << "Drawing took              "<<t.diff()<<"s\n";
-        if( (layout == 2 || layout == 1) && v[1]*v[2]>2 )
+        if( (layout == 2 || layout == 3) && v[1]*v[2]>2 )
         {
             //draw ions
             t5file.get_field( input, "ions", index);

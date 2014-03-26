@@ -71,12 +71,14 @@ class DFT_DFT_Solver
         @note You cannot change parameters once constructed.
      */
     const Blueprint& blueprint() const { return blue;}
+    void energy( std::vector<double>& );
   private:
     typedef std::complex<double> complex;
     //methods
     void init_coefficients( const Boundary& bound, const Physical& phys);
     void compute_cphi();//multiply cphi
     void first_steps(); 
+    double dot( const Matrix_Type& m1, const Matrix_Type& m2);
     template< enum stepper S>
     void step_();
     //members
@@ -113,10 +115,9 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     dft_dft( rows, cols, FFTW_MEASURE),
     //Coefficients
     phi_coeff( crows, ccols),
-    gamma_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols))
+    gamma_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)),
 {
     bp.consistencyCheck();
-    Physical phys = bp.physical();
     if( bp.isEnabled( TL_GLOBAL))
     {
         std::cerr << "WARNING: GLOBAL solver not implemented yet! \n\
@@ -143,7 +144,9 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
             ik = (i>rows/2) ? (i-rows) : i; //integer division rounded down
             laplace = - kxmin2*(double)(j*j) - kymin2*(double)(ik*ik);
             if( n == 2)
+            {
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
+            }
             else if( n == 3)
             {
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
@@ -327,6 +330,8 @@ void DFT_DFT_Solver<n>::compute_cphi()
     }
 }
 
+
+
 template< size_t n>
 template< enum stepper S>
 void DFT_DFT_Solver<n>::step_()
@@ -365,6 +370,210 @@ void DFT_DFT_Solver<n>::step_()
         dft_dft.c2r( cphi[k],  phi[k]);
     }
     }
+}
+///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+template<size_t n>
+struct Energetics
+{
+    typedef Matrix<double, TL_DFT> Matrix_Type;
+    typedef std::complex<double> complex;
+    Energetics( const Blueprint& bp):
+        rows( bp.algorithmic().ny ), cols( bp.algorithmic().nx ),
+        crows( rows), ccols( cols/2+1),
+        gamma0_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)),
+        dens( MatrixArray<double, TL_DFT,n>::construct( rows, cols)),
+        phi( dens),
+        cdens( MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)), 
+        cphi(cdens), 
+        phys( bp.physical()), bound( bp.boundary())
+        dft_dft( rows, cols, FFTW_MEASURE)
+    {
+        double laplace;
+        int ik;
+        const complex dymin( 0, 2.*M_PI/bound.ly);
+        const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(bound.lx*bound.lx),
+                     kymin2 = 2.*2.*M_PI*M_PI/(double)(bound.ly*bound.ly);
+        for( unsigned i = 0; i<crows; i++)
+            for( unsigned j = 0; j<ccols; j++)
+            {
+                ik = (i>rows/2) ? (i-rows) : i; //integer division rounded down
+                laplace = - kxmin2*(double)(j*j) - kymin2*(double)(ik*ik);
+                if( n==2)
+                    gamma0_coeff[0](i,j) = phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
+                else if( n==3)
+                {
+                    gamma0_coeff[0](i,j) = phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
+                    gamma0_coeff[1](i,j) = phys.a[1]*phys.mu[1]*laplace*p.gamma0_z( laplace);
+                }
+            }
+    }
+  private:
+    double dot( const Matrix_Type& m1, const Matrix_Type& m2);
+    double dot( const std::vector<complex>& v1, const std::vector<complex>& v2)
+    {
+        complex sum=0;
+        sum += v1[0]*conj( v2[0]);
+        for( unsigned j=1; j<cols/2; j++)
+            sum += 2.*v1[j]*conj( v2[j]);
+        if( cols%2)
+            sum += v1[cols/2]*conj(m2[cols/2]);
+        else
+            sum += 2.*v1[cols/2]*conj( v2[cols/2]);
+        return real( sum);
+    }
+       
+    unsigned rows, cols;
+    unsigned crows, ccols;
+    std::array< Matrix< double>, n-1> gamma0_coeff;
+    std::array< Matrix<double, TL_DFT>, n > dens, phi,
+    std::array< Matrix< complex>, n> cdens, cphi;
+    Physical phys;
+    Boundary bound;
+    DFT_DFT dft_dft;
+    void dy( const Matrix<complex>& in, Matrix<complex >& m, double ly, double norm)
+    {
+        unsigned crows = m.rows(), ccols = m.cols();
+        const complex dymin( 0, 2.*M_PI/ly);
+
+        // dft_dft is not transposing so i is the y index by default
+        for( unsigned i=0; i<crows; i++)
+            for( unsigned j=0; j<ccols; j++)
+            {
+                unsigned ik = (i>crows/2) ? (i-crows) : i;
+                m(i,j) = (double)ik/norm*dymin*in(i,j);
+            }
+    }
+    void remove_average_y( const Matrix<complex>& in, Matrix<complex>& m)
+    {
+        m = in;
+        for( unsigned j=0; j<m.cols(); j++)
+            m(0,j) = 0;
+    }
+    void extract_average_y( const Matrix<complex>& in, std::vector<complex>& out)
+    {
+        out.resize(m.cols());
+        for( unsigned j=0; j<m.cols(); j++)
+            out[j] = in(0,j);
+    }
+    void dx( const Matrix<complex>& in, Matrix<complex >& m, double lx, double norm)
+    {
+        unsigned crows = m.rows(), ccols = m.cols();
+        const complex dxmin( 0, 2.*M_PI/lx);
+
+        // dft_dft is not transposing so i is the y index by default
+        for( unsigned i=0; i<crows; i++)
+            for( unsigned j=0; j<ccols; j++)
+            {
+                m(i,j) = (double)j/norm*dxmin*in(i,j);
+            }
+    }
+
+    void dx( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double lx)
+    {
+        assert( &in != &out);
+        unsigned cols = in.cols(); 
+        for( unsigned i=0; i<in.rows(); i++)
+        {
+            out(i,0) = (in(i,0+1) - in(i, cols-1))*cols/lx;
+            for( unsigned j=1; j<in.cols()-1; j++)
+                out(i,j) = (in(i,j+1) - in(i, j-1))*cols/lx;
+            out(i,cols-1) = (in(i,0) - in(i, cols-2))*cols/lx;
+        }
+    }
+    void dy( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double ly)
+    {
+        assert( &in != &out);
+        unsigned rows = in.rows(); 
+        for( unsigned j=0; j<in.cols(); j++)
+            out(0,j) = (in(1,j) - in(rows-1, j))*rows/ly;
+        for( unsigned i=1; i<in.rows()-1; i++)
+        {
+            for( unsigned j=0; j<in.cols(); j++)
+                out(i,j) = (in(i+1,j) - in(i-1, j))*rows/ly;
+        }
+        for( unsigned j=0; j<in.cols(); j++)
+            out(rows-1,j) = (in(0,j) - in(rows-2, j))*rows/ly;
+    }
+    void dxx( const Matrix<complex>& in, Matrix<complex >& m, double lx, double norm)
+    {
+        unsigned crows = m.rows(), ccols = m.cols();
+        const complex dxmin( 0, 2.*M_PI/lx);
+        const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(lx*lx);
+
+        // dft_dft is not transposing so i is the y index by default
+        for( unsigned i=0; i<crows; i++)
+            for( unsigned j=0; j<ccols; j++)
+            {
+                m(i,j) = -kxmin2*(double)(j*j)/norm*in(i,j);
+            }
+    }
+
+
+};
+template<size_t n>
+double Energetics<n>::dot( const Matrix_Type& m1, const Matrix_Type& m2)
+{
+    double sum = 0;
+#pragma omp parallel for reduction(+: sum)
+    for( unsigned i=0; i<m1.rows(); i++)
+        for( unsigned j=0; j<m1.cols(); j++)
+            sum+= m1(i,j)*m2(i,j);
+    return sum;
+
+}
+template<size_t n>
+std::vector<double> Energetics<n>::thermal_energy(const std::array<Matrix<double, TL_DFT>, n>& dens )
+{
+    std::vector<double> energies(n);
+    double norm = bound.lx*bound.ly/rows/cols;
+    energies[0] = 1./2.*norm*dot( dens[0], dens[0]);
+    energies[1] = 1./2.*norm*phys.a[0]*phys.tau[0]*dot( dens[1], dens[1]);
+    if( n==3)
+        energies[2] = 1./2.*norm*phys.a[1]*phys.tau[1]*dot( dens[2], dens[2]);
+    return energies;
+}
+
+template<size_t n>
+std::vector<double> Energetics<n>::exb_energy(const Matrix<double, TL_DFT>& phi )
+{
+    std::vector<double> energies(2*(n-1));
+    double norm = 1./(double)(rows*cols);
+    phi[0] = phi;
+    dft_dft.r2c( phi[0], cphi[0]);
+#pragma omp parallel for 
+    for( size_t i = 0; i < crows; i++)
+        for( size_t j = 0; j < ccols; j++)
+        {
+            cphi[1](i,j) = (gamma0_coeff[0](i,j))*cphi[0](i,j)*norm;
+            cphi[2](i,j) = (gamma0_coeff[1](i,j))*cphi[0](i,j)*norm;
+        }
+    energies[0] = dft_dft.dot( cphi[0], cphi[1])*norm;
+    if( n == 3)
+        energies[1] = dft_dft.dot( cphi[0], cphi[2])*norm;
+    //proper normalization missing
+    std::vector<complex> mean_phi[n];
+    for( unsigned i=0; i<n; i++)
+        extract_average_y( cphi[i], mean_phi[i]);
+    energies[2] = dot( mean_phi[0], mean_phi[1]);
+    if( n== 3)
+        energies[3] = dot( mean_phi[0], mean_phi[2]);
+
+    return energies;
+}
+
+template<size_t n>
+std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double, TL_DFT>, n>& density , const std::array<Matrix<double, TL_DFT>, n>& potential)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<n; i++)
+        dy( potential[i], dens[i], bound.ly);
+    std::vector<double> flux(n);
+    double norm = bound.lx*bound.ly/rows/cols;
+    flux[0] = phys.g_e*norm*dot( density[0], dens[0]);
+    for( unsigned i=1; i<n; i++)
+        flux[i] = phys.g[i]*phys.a[i]*phys.tau[i]*norm*dot( density[i], dens[i]);
+    return flux;
 }
 
 

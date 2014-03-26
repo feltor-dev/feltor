@@ -61,11 +61,20 @@ struct Parameters
             itstp = v[20];
             maxout = v[21];
         }
-        else if( layout == 1)
+        else if( layout == 1||layout == 3)
         {
             n = 1;
-            Nx = (unsigned)v[1]/v[25];
-            Ny = (unsigned)v[2]/v[25]; //reduction parameter v[25]!
+            if( layout == 1)
+            {
+                Nx = (unsigned)v[1]/v[25];
+                Ny = (unsigned)v[2]/v[25]; //reduction parameter v[25]!
+            }
+            else 
+            {
+                Nx = (unsigned)v[1];
+                Ny = (unsigned)v[2]; 
+            }
+                
             k = 3;
             dt = v[3];
             eps_pol = 1e-6;
