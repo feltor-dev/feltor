@@ -39,7 +39,7 @@ void init_gaussian( M& m, const double x0, const double y0,
                           const double amplitude)
 {
     const size_t rows = m.rows(), cols = m.cols();
-    const double hx = 1./(double)(cols), hy = 1./(double)(rows); 
+    const double hx = 2./(double)(cols), hy = 2./(double)(rows); 
     double x,y;
     for( unsigned i=0; i<rows; i++)
         for( unsigned j=0; j<cols; j++)
@@ -56,7 +56,7 @@ int main()
     Matrix<double, TL_DFT> m1{rows, cols,0.};
     Matrix<complex<double> >   m1_{ rows, cols/2 + 1}, m1_der{m1_};
     DFT_DFT dft_dft( rows,cols);
-    double dx = 1./(double)cols, dy = 1./(double)rows;
+    double dx = 2./(double)cols, dy = 2./(double)rows;
     init_gaussian( m1, 0.5,0.5, 0.2,0.2, 1);
     //for( size_t i = 0; i < m1.rows(); i++)
     //    for ( size_t j=0; j < m1.cols(); j++)
@@ -72,7 +72,7 @@ int main()
     dft_dft.r2c( m1, m1_);
     //cout << "The transformed matrix\n"<<m1_<<endl;
 
-    cout << "Scalar product in comp space: "<<1./rows/cols/rows/cols*dft_dft.dot( m1_, m1_)<<"\n";
+    cout << "Scalar product in comp space: "<<dx*dy/rows/cols*dft_dft.dot( m1_, m1_)<<"\n";
 
 
 

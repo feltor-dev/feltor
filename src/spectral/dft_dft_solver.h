@@ -304,30 +304,34 @@ void DFT_DFT_Solver<n>::compute_cphi()
     if( n==2)
     {
 #pragma omp for 
-        for( size_t i = 0; i < crows; i++)
+        for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j);
+        }
 #pragma omp for 
-        for( size_t i = 0; i < crows; i++)
+        for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
+        }
     }
     else if( n==3)
     {
 #pragma omp for 
-        for( size_t i = 0; i < crows; i++)
+        for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j) 
                              + phi_coeff(i,j)[2]*cdens[2](i,j);
+        }
 #pragma omp for 
-        for( size_t i = 0; i < crows; i++)
+        for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
             {
                 cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
                 cphi[2](i,j) = gamma_coeff[1](i,j)*cphi[0](i,j);
             }
+        }
     }
 }
 
@@ -340,11 +344,11 @@ void DFT_DFT_Solver<n>::step_()
     //TODO: Is false sharing an issue here?
 #pragma omp parallel 
     {
-    GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
     //1. Compute nonlinearity
 #pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
+        GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
         swap_fields( dens[k], ghostdens); //now dens[k] is void
         swap_fields( phi[k], ghostphi); //now phi[k] is void
         ghostdens.initGhostCells( );
@@ -358,8 +362,8 @@ void DFT_DFT_Solver<n>::step_()
     //3. solve linear equation
     //3.1. transform v_hut
 #pragma omp for 
-    for( unsigned k=0; k<n; k++)
-        dft_dft.r2c( dens[k], cdens[k]);
+    for( unsigned k=0; k<n; k++){
+        dft_dft.r2c( dens[k], cdens[k]);}
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
     compute_cphi();
@@ -370,7 +374,7 @@ void DFT_DFT_Solver<n>::step_()
         dft_dft.c2r( cdens[k], dens[k]);
         dft_dft.c2r( cphi[k],  phi[k]);
     }
-    }
+    }//omp parallel
 }
 ///////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
@@ -382,6 +386,7 @@ struct Energetics
     Energetics( const Blueprint& bp):
         rows( bp.algorithmic().ny ), cols( bp.algorithmic().nx ),
         crows( rows), ccols( cols/2+1),
+        diff_coeff( rows, cols),
         gamma0_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)),
         dens( MatrixArray<double, TL_DFT,n>::construct( rows, cols)),
         phi( dens),
@@ -401,18 +406,22 @@ struct Energetics
             {
                 ik = (i>rows/2) ? (i-rows) : i; //integer division rounded down
                 laplace = - kxmin2*(double)(j*j) - kymin2*(double)(ik*ik);
+                diff_coeff(i,j) = -phys.nu*pow(laplace,2);
                 if( n==2)
-                    gamma0_coeff[0](i,j) = phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
+                {
+                    gamma0_coeff[0](i,j) = -phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
+                }
                 else if( n==3)
                 {
-                    gamma0_coeff[0](i,j) = phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
-                    gamma0_coeff[1](i,j) = phys.a[1]*phys.mu[1]*laplace*p.gamma0_z( laplace);
+                    gamma0_coeff[0](i,j) = -phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
+                    gamma0_coeff[1](i,j) = -phys.a[1]*phys.mu[1]*laplace*p.gamma0_z( laplace);
                 }
             }
     }
     std::vector<double> thermal_energies(const std::array<Matrix<double, TL_DFT>, n>& dens );
     std::vector<double> exb_energies(const Matrix<double, TL_DFT>& phi );
     std::vector<double> gradient_flux( const std::array<Matrix<double, TL_DFT>, n>& density , const std::array<Matrix<double, TL_DFT>, n>& potential);
+    std::vector<double> diffusion( const std::array<Matrix<double, TL_DFT>, n>& density , const std::array<Matrix<double, TL_DFT>, n>& potential);
   private:
     double dot( const Matrix_Type& m1, const Matrix_Type& m2);
     double dot( const std::vector<complex>& v1, const std::vector<complex>& v2)
@@ -430,6 +439,7 @@ struct Energetics
        
     unsigned rows, cols;
     unsigned crows, ccols;
+    Matrix<double, TL_DFT> diff_coeff;
     std::array< Matrix< double>, n-1> gamma0_coeff;
     std::array< Matrix<double, TL_DFT>, n > dens, phi;
     std::array< Matrix< complex>, n> cdens, cphi;
@@ -547,14 +557,18 @@ std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& po
     std::vector<double> energies;
     double norm = alg.h*alg.h/(double)(rows*cols);
     phi[0] = potential;
+    //std::cout << "norm phi "<<alg.h*alg.h*dot( phi[0], phi[0]);
     dft_dft.r2c( phi[0], cphi[0]);
+    //std::cout << " norm phi "<<norm*dft_dft.dot( cphi[0], cphi[0])<<std::endl;
+    for( size_t k=0; k<n-1; k++)
+    {
 #pragma omp parallel for 
-    for( size_t i = 0; i < crows; i++)
-        for( size_t j = 0; j < ccols; j++)
-        {
-            cphi[1](i,j) = (gamma0_coeff[0](i,j))*cphi[0](i,j);
-            cphi[2](i,j) = (gamma0_coeff[1](i,j))*cphi[0](i,j);
-        }
+        for( size_t i = 0; i < crows; i++)
+            for( size_t j = 0; j < ccols; j++)
+            {
+                cphi[k+1](i,j) = (gamma0_coeff[k](i,j))*cphi[0](i,j);
+            }
+    }
     energies.push_back( dft_dft.dot( cphi[0], cphi[1])*norm);
     if( n==3)
         energies.push_back( dft_dft.dot( cphi[0], cphi[2])*norm);
@@ -562,7 +576,7 @@ std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& po
     for( unsigned i=0; i<n; i++)
         extract_average_y( cphi[i], sum_phi[i]); 
     energies.push_back( dot( sum_phi[0], sum_phi[1])*norm);
-    if( n== 3)
+    if( n == 3)
         energies.push_back( dot( sum_phi[0], sum_phi[2])*norm);
 
     return energies;
@@ -580,6 +594,23 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
     for( unsigned i=1; i<n; i++)
         flux[i] = phys.g[i]*phys.a[i]*phys.tau[i]*norm*dot( density[i], dens[i]);
     return flux;
+}
+
+template<size_t n>
+std::vector<double> Energetics<n>::diffusion( const std::array<Matrix<double, TL_DFT>, n>& density , const std::array<Matrix<double, TL_DFT>, n>& potential)
+{
+    dens = density;
+#pragma omp parallel for
+    for( unsigned i=0; i<n; i++)
+        dft_dft.r2c( dens[i], cdens[i]);
+#pragma omp parallel for 
+    for( unsigned k=0; k<n; k++)
+        for( size_t i = 0; i < crows; i++)
+            for( size_t j = 0; j < ccols; j++)
+                cdens[k](i,j) = (diff_coeff(i,j))*cdens[k](i,j)/(double)(rows*cols);
+    std::vector<double> diffusion;
+    return diffusion;
+
 }
 
 

@@ -178,8 +178,9 @@ int main( int argc, char* argv[])
         //now set the field to be computed
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
-    double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
-    Energetics<n> energetics(bp);
+    //double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
+    
+    //Energetics<n> energetics(bp);
 
     /////////////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
@@ -196,21 +197,23 @@ int main( int argc, char* argv[])
     std::vector<double> probe_vy_fluc[64];
     std::vector<double> probe_vx[64];
     std::ofstream  os( argv[4]);
+    os << "#Time Ue Ui Uj Ei Ej M(Ei) M(Ej)\n";
     double time = 3.*alg.dt;
     std::vector<double> probe_array( 64), probe_fluct( 64);
     std::vector<double> average(8,0);
     std::vector<double> out( alg.nx*alg.ny);
     std::vector<double> output[n+1] = {out, out, out, out};
-    toefl::Timer t;
+    toefl::Timer t, t2;
     t.tic();
     for( unsigned i=0; i<max_out; i++)
     {
         output[0] = solver.getField( TL_ELECTRONS).copy();
-        xpa( output[0], meanMassE);
+        //xpa( output[0], meanMassE);
         output[1] = solver.getField( TL_IONS).copy();
         output[2] = solver.getField( TL_IMPURITIES).copy();
         output[3] = solver.getField( TL_POTENTIAL).copy();
         t5file.write( output[0], output[1], output[2],output[3], time, alg.nx, alg.ny);
+        t2.tic();
         for( unsigned j=0; j<itstp; j++)
         {
             times.push_back(time);
@@ -224,6 +227,7 @@ int main( int argc, char* argv[])
             write_probe( potential, probe_phi, probe_phi_fluc);
             write_vx( potential, probe_vx, alg.h);
             write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
+            /*
             if( !(j%energy_interval))
             {
                 os << time<<" ";
@@ -236,13 +240,16 @@ int main( int argc, char* argv[])
                 os << std::endl;
 
             }
+            */
             solver.step();
             time += alg.dt;
         }
+        t2.toc();
+        std::cout << "\n\t Time "<<time <<" / "<<alg.dt*itstp*max_out;
+        std::cout << "\n\t Average time for one step: "<<t2.diff()/(double)itstp<<"s\n\n"<<std::flush;
     }
-    Timer t2;
     output[0] = solver.getField( TL_ELECTRONS).copy();
-    xpa( output[0], meanMassE);
+    //xpa( output[0], meanMassE);
     output[1] = solver.getField( TL_IONS).copy();
     output[2] = solver.getField( TL_IMPURITIES).copy();
     output[3] = solver.getField( TL_POTENTIAL).copy();
@@ -332,7 +339,7 @@ int main( int argc, char* argv[])
     os.close();
     fftw_cleanup();
     t.toc();
-    std::cout << "Total simulation time for "<<max_out*itstp<<" steps "<<t.diff()<<"s\n";
+    std::cout << "Total simulation time for "<<max_out*itstp<<" steps: "<<t.diff()<<"s\n";
     std::cout << "Which is "<<t.diff()/(double)(max_out*itstp)<<"s/step\n";
     //std::cout << "Times size: "<<times.size()<<"\n";
     //std::cout << "Probes size: "<<probe_ne[0].size()<<"\n";

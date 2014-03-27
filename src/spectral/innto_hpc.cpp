@@ -120,6 +120,7 @@ int main( int argc, char* argv[])
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
     double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
+    Energetics<n> energetics( bp);
 
     /////////////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
@@ -134,6 +135,11 @@ int main( int argc, char* argv[])
         copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
         copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
         t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
+        std::vector<double> exb = energetics.exb_energies( solver.getField(TL_POTENTIAL));
+        std::vector<double> thermal = energetics.thermal_energies( solver.getDensity());
+        //std::cout<< thermal[0] << " "<< thermal[1]<<" "<<exb[0]<<"\n";
+        t5file.append( meanMassE, 0, exb[0]+thermal[0]+thermal[1], 0);
+
         for( unsigned i=0; i<itstp; i++)
             solver.step();
         
