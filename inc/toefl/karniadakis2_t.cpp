@@ -51,10 +51,12 @@ int main()
     for( unsigned i=0; i<nz; i++)
         for( unsigned j=0; j<nx/2+1; j++)
             rayleigh_equations( coefficients(i,j), (double)j*kxmin, (double)(i+1)*kzmin);
+    try{
     karniadakis.init_coeff( coefficients, (double)(2*nx*(nz))); //swaps in coefficients
     //Initialize the complex fields ////////////////////////
     cfield[0].zero();
     cfield[1].zero();
+    }catch(Message& m){m.display();}
     Complex ctheta_0 = { 0, -0.5*theta_0};
     Complex comega_0 = {0.5*omega_0, 0};
     cfield[0](iz, ix) = ctheta_0;

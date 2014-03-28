@@ -20,19 +20,19 @@ struct MatrixArray
      *
      * @param rows Rows of each Matrix
      * @param cols Columns of each Matrix
-     * @param alloc Whether memory should be allocated or not
+     * @param value initial value of matrices
      * @return An Array of Matrices
      */
-    static std::array<Matrix<T, P>,n> construct( size_t rows, size_t cols, bool alloc = true);
+    static std::array<Matrix<T, P>,n> construct( size_t rows, size_t cols, T value = (T)0.0);
 };
 ///@cond
 template< class T, enum Padding P>
 struct MatrixArray<T,P,1>
 {
-    static std::array<Matrix<T,P>,1> construct( size_t rows, size_t cols, bool alloc = true)
+    static std::array<Matrix<T,P>,1> construct( size_t rows, size_t cols, T value = (T)0.0)
     {
         std::array<Matrix<T,P>,1> a{{
-            Matrix<T,P>( rows, cols, alloc)
+            Matrix<T,P>( rows, cols, value)
         }};
         return a;
     }
@@ -43,11 +43,11 @@ struct MatrixArray<T,P,1>
 template< class T, enum Padding P>
 struct MatrixArray<T,P, 2>
 {
-    static std::array<Matrix<T,P>,2> construct( size_t rows, size_t cols, bool alloc = true)
+    static std::array<Matrix<T,P>,2> construct( size_t rows, size_t cols, T value = (T)0.0)
     {
         std::array<Matrix<T,P>,2> a{{
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc)
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value)
         }};
         return a;
     }
@@ -56,12 +56,12 @@ struct MatrixArray<T,P, 2>
 template< class T, enum Padding P>
 struct MatrixArray<T,P,3>
 {
-    static std::array<Matrix<T,P>,3> construct( size_t rows, size_t cols, bool alloc = true)
+    static std::array<Matrix<T,P>,3> construct( size_t rows, size_t cols, T value = (T)0.0)
     {
         std::array<Matrix<T,P>,3> a{{ 
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc), 
-            Matrix<T,P>( rows, cols, alloc)
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value), 
+            Matrix<T,P>( rows, cols, value)
         }};
         return a;
     }
@@ -69,13 +69,13 @@ struct MatrixArray<T,P,3>
 template< class T, enum Padding P>
 struct MatrixArray<T,P,4>
 {
-    static std::array<Matrix<T,P>,4> construct( size_t rows, size_t cols, bool alloc = true)
+    static std::array<Matrix<T,P>,4> construct( size_t rows, size_t cols, T value = (T)0.0)
     {
         std::array<Matrix<T,P>,4> a{{ 
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc), 
-            Matrix<T,P>( rows, cols, alloc)
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value), 
+            Matrix<T,P>( rows, cols, value)
         }};
         return a;
     }
@@ -83,14 +83,14 @@ struct MatrixArray<T,P,4>
 template< class T, enum Padding P>
 struct MatrixArray<T,P,5>
 {
-    static std::array<Matrix<T,P>,5> construct( size_t rows, size_t cols, bool alloc = true)
+    static std::array<Matrix<T,P>,5> construct( size_t rows, size_t cols, T value = (T)0.0)
     {
         std::array<Matrix<T,P>,5> a{{ 
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc), 
-            Matrix<T,P>( rows, cols, alloc), 
-            Matrix<T,P>( rows, cols, alloc)
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value), 
+            Matrix<T,P>( rows, cols, value), 
+            Matrix<T,P>( rows, cols, value)
         }};
         return a;
     }
@@ -98,15 +98,15 @@ struct MatrixArray<T,P,5>
 template< class T, enum Padding P>
 struct MatrixArray<T,P,6>
 {
-    static std::array<Matrix<T,P>,6> construct( size_t rows, size_t cols, bool alloc = true)
+    static std::array<Matrix<T,P>,6> construct( size_t rows, size_t cols, T value = (T)0.0)
     {
         std::array<Matrix<T,P>,6> a{{ 
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc), 
-            Matrix<T,P>( rows, cols, alloc),
-            Matrix<T,P>( rows, cols, alloc), 
-            Matrix<T,P>( rows, cols, alloc)
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value), 
+            Matrix<T,P>( rows, cols, value),
+            Matrix<T,P>( rows, cols, value), 
+            Matrix<T,P>( rows, cols, value)
         }};
         return a;
     }

@@ -107,7 +107,7 @@ class GhostMatrix: public Matrix<T,P>
 ////////////////////////////////////////////DEFINITIONS////////////////////////////////////////////////
 template< typename T, enum Padding P>
 GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const enum bc bc_rows, const enum bc bc_cols , const bool alloc):
-                    Matrix<T,P>(rows, cols, alloc), bc_rows( bc_rows), bc_cols( bc_cols), ghostRows( 2, cols + 2), ghostCols( rows, 2) {}
+                    Matrix<T,P>(rows, cols, alloc), bc_rows( bc_rows), bc_cols( bc_cols), ghostRows( 2, cols + 2), ghostCols( rows, 2) { }
 
 template< typename T, enum Padding P>
 GhostMatrix<T,P>::GhostMatrix( const size_t rows, const size_t cols, const T& value, const enum bc bc_rows,  const enum bc bc_cols):  Matrix<T,P>(rows, cols, value),bc_rows(bc_rows), bc_cols(bc_cols), ghostRows( 2, cols + 2, value), ghostCols( rows, 2, value) { }

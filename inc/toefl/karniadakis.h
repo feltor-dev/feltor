@@ -26,11 +26,11 @@ struct Coefficients
 };
 ///@cond
 template<>
-const double Coefficients<TL_EULER>::gamma_0 = 1;
+const double Coefficients<TL_EULER>::gamma_0 = 1.;
 template<>
-const double Coefficients<TL_EULER>::alpha[3] = {1., 0,0};
+const double Coefficients<TL_EULER>::alpha[3] = {1., 0.,0.};
 template<>
-const double Coefficients<TL_EULER>::beta[3] = {1., 0,0};
+const double Coefficients<TL_EULER>::beta[3] = {1., 0.,0.};
 
 template<>
 const double Coefficients<TL_ORDER2>::gamma_0 = 1.5;
@@ -78,7 +78,7 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
     }
 #endif
     QuadMat<T, n> temp;
-#pragma omp for 
+//#pragma omp for 
     for( size_t i = 0; i<rows; i++)
         for( size_t j=0; j<cols; j++)
         {
@@ -209,7 +209,7 @@ Karniadakis<n,T,P>::Karniadakis(
         c_inv( crows, ccols, TL_VOID), c_origin(c_inv),
         prefactor(0.),
         dt( dt)
-{}
+{ }
 template< size_t n, typename T_k, enum Padding P>
 void Karniadakis<n,T_k,P>::init_coeff( Matrix<QuadMat<T_k, n> > & coeff_origin, const double normalisation)
 {
@@ -251,7 +251,7 @@ void Karniadakis< n,T,P>::invert_coeff( )
             }
             invert( c_inv(i,j), c_inv(i,j));
         }
-    //std::cout << c_inv(0,0)<<std::endl;
+    //std::cout << "C_inv "<<c_inv<<std::endl;
 
 }
 
@@ -259,7 +259,7 @@ template< size_t n, typename T, enum Padding P>
 template< enum stepper S>
 void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::array< Matrix<double, P>, n> & n0)
 {
-#pragma omp for 
+//#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
 #ifdef TL_DEBUG
@@ -271,6 +271,7 @@ void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::arr
             throw Message( "ERROR: One of the n0 has wrong size!\n", ping);
 #endif
         for( size_t i = 0; i < rows; i++)
+        {
             for( size_t j = 0; j < cols; j++)
             {
                 n2[k](i,j) =  Coefficients<S>::alpha[0]*v0[k](i,j) 
@@ -280,6 +281,7 @@ void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::arr
                               + Coefficients<S>::beta[1]*n1[k](i,j) 
                               + Coefficients<S>::beta[2]*n2[k](i,j));
             }
+        }
         swap_fields( n2[k], v2[k]); //we want to keep v2 not n2
 
         permute_fields( n0[k], n1[k], n2[k]);

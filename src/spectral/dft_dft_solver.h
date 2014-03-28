@@ -303,28 +303,31 @@ void DFT_DFT_Solver<n>::compute_cphi()
 {
     if( n==2)
     {
-#pragma omp for 
+//#pragma omp for 
         for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j);
         }
-#pragma omp for 
+//#pragma omp barrier
+//#pragma omp for 
         for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
         }
+//#pragma omp barrier
     }
     else if( n==3)
     {
-#pragma omp for 
+//#pragma omp for 
         for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j) 
                              + phi_coeff(i,j)[2]*cdens[2](i,j);
         }
-#pragma omp for 
+//#pragma omp barrier
+//#pragma omp for 
         for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
             {
@@ -332,6 +335,7 @@ void DFT_DFT_Solver<n>::compute_cphi()
                 cphi[2](i,j) = gamma_coeff[1](i,j)*cphi[0](i,j);
             }
         }
+//#pragma omp barrier
     }
 }
 
@@ -342,38 +346,78 @@ template< enum stepper S>
 void DFT_DFT_Solver<n>::step_()
 {
     //TODO: Is false sharing an issue here?
-#pragma omp parallel 
-    {
     //1. Compute nonlinearity
-#pragma omp for 
+//#pragma omp parallel 
+    {
+//#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
-        GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
+        GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, TL_PERIODIC, TL_VOID}; //ghostphi{ghostdens};
+        GhostMatrix<double, TL_DFT> ghostphi{ rows, cols, TL_PERIODIC, TL_PERIODIC, TL_VOID};
+        //std::cout << dens[k]<<std::endl;
         swap_fields( dens[k], ghostdens); //now dens[k] is void
         swap_fields( phi[k], ghostphi); //now phi[k] is void
+        //ghostdens.display( std::cout);
+        //std::cout << std::endl;
         ghostdens.initGhostCells( );
         ghostphi.initGhostCells(  );
+        std::cout << std::setprecision(2);
+        ghostdens.display( std::cout);
+        std::cout << std::endl;
+        //ghostphi.display( std::cout);
+        //std::cout << std::endl;
         arakawa( ghostdens, ghostphi, nonlinear[k]);
         swap_fields( dens[k], ghostdens); //now ghostdens is void
         swap_fields( phi[k], ghostphi); //now ghostphi is void
     }
     //2. perform karniadakis step
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << dens[0];
+        std::cout << phi[0];
+        std::cout << std::endl;
+        std::cout << nonlinear[0];
+        std::cout << std::endl;
+        //karniadakis.display();
+        try{
     karniadakis.template step_i<S>( dens, nonlinear);
+        }catch (toefl::Message& m){m.display();}
+        std::cout << dens[0];
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
+        //std::cout << dens[0];
+        //std::cout << std::endl;
     //3. solve linear equation
     //3.1. transform v_hut
-#pragma omp for 
+//#pragma omp for 
     for( unsigned k=0; k<n; k++){
         dft_dft.r2c( dens[k], cdens[k]);}
+        std::cout << cdens[0];
+        std::cout << std::endl;
+//#pragma omp barrier
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
+        std::cout << cdens[0];
+        std::cout << std::endl;
+//#pragma omp barrier
     compute_cphi();
+        std::cout << cphi[0];
+        std::cout << std::endl;
+//#pragma omp barrier
     //3.3. backtransform
-#pragma omp for 
+//#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
         dft_dft.c2r( cdens[k], dens[k]);
         dft_dft.c2r( cphi[k],  phi[k]);
     }
+        std::cout << dens[0];
+        std::cout << std::endl;
+    double x;
+    std::cin >> x;
+//#pragma omp barrier
     }//omp parallel
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -532,7 +576,7 @@ template<size_t n>
 double Energetics<n>::dot( const Matrix_Type& m1, const Matrix_Type& m2)
 {
     double sum = 0;
-#pragma omp parallel for reduction(+: sum)
+//#pragma omp parallel for reduction(+: sum)
     for( unsigned i=0; i<m1.rows(); i++)
         for( unsigned j=0; j<m1.cols(); j++)
             sum+= m1(i,j)*m2(i,j);
@@ -562,7 +606,7 @@ std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& po
     //std::cout << " norm phi "<<norm*dft_dft.dot( cphi[0], cphi[0])<<std::endl;
     for( size_t k=0; k<n-1; k++)
     {
-#pragma omp parallel for 
+//#pragma omp parallel for 
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
             {
@@ -585,7 +629,7 @@ std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& po
 template<size_t n>
 std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double, TL_DFT>, n>& density , const std::array<Matrix<double, TL_DFT>, n>& potential)
 {
-#pragma omp parallel for
+//#pragma omp parallel for
     for( unsigned i=0; i<n; i++)
         dy( potential[i], dens[i], alg.h);
     std::vector<double> flux(n);
@@ -600,10 +644,10 @@ template<size_t n>
 std::vector<double> Energetics<n>::diffusion( const std::array<Matrix<double, TL_DFT>, n>& density , const std::array<Matrix<double, TL_DFT>, n>& potential)
 {
     dens = density;
-#pragma omp parallel for
+//#pragma omp parallel for
     for( unsigned i=0; i<n; i++)
         dft_dft.r2c( dens[i], cdens[i]);
-#pragma omp parallel for 
+//#pragma omp parallel for 
     for( unsigned k=0; k<n; k++)
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)

@@ -105,13 +105,13 @@ Blueprint read( char const * file)
     amp = para[10];
     imp_amp = para[14];
     itstp = para[19];
-    omp_set_num_threads( para[20]);
+    //omp_set_num_threads( para[20]);
     blob_width = para[21];
     max_out = para[22];
     posX = para[23];
     posY = para[24];
     energy_interval = para[25];
-    std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
+    //std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
     return bp;
 }
 
@@ -180,7 +180,7 @@ int main( int argc, char* argv[])
     }catch( Message& m){m.display();}
     //double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
     
-    //Energetics<n> energetics(bp);
+    Energetics<n> energetics(bp);
 
     /////////////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
@@ -225,9 +225,10 @@ int main( int argc, char* argv[])
             write_probe( imp, probe_nz, probe_nz_fluc);
             const Mat& potential = solver.getField( TL_POTENTIAL);
             write_probe( potential, probe_phi, probe_phi_fluc);
+            /*
             write_vx( potential, probe_vx, alg.h);
             write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
-            /*
+            */
             if( !(j%energy_interval))
             {
                 os << time<<" ";
@@ -240,7 +241,6 @@ int main( int argc, char* argv[])
                 os << std::endl;
 
             }
-            */
             solver.step();
             time += alg.dt;
         }

@@ -334,11 +334,11 @@ void DRT_DFT_Solver<n>::step_()
     //is false-sharing an issue here?
 #pragma omp parallel 
     {
-    GhostMatrix<double, TL_DRT_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
     //1. Compute nonlinearity
 #pragma omp for
     for( unsigned k=0; k<n; k++)
     {
+        GhostMatrix<double, TL_DRT_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
         swap_fields( dens[k], ghostdens); //now dens[j] is void
         swap_fields( phi[k], ghostphi); //now phi[j] is void
         ghostdens.initGhostCells( );
