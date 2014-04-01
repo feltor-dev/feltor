@@ -23,7 +23,7 @@ innto_hpc: innto_hpc.cpp dft_dft_solver.h blueprint.h equations.h
 	$(CXX) -O2 $< $(CFLAGS) $(INCLUDE) $(LIBS) -lhdf5 -lhdf5_hl -o $@
 
 innto_hw: innto_hw.cpp dft_dft_solver.h blueprint.h equations.h
-	$(CXX) -O0 -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -lhdf5 -lhdf5_hl -o $@
+	$(CXX) -O2 $< $(CFLAGS) $(INCLUDE) $(LIBS) -lhdf5 -lhdf5_hl -o $@
 
 %_t: %_t.cpp %.h
 	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@

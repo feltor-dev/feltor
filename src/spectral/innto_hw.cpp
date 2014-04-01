@@ -178,7 +178,8 @@ int main( int argc, char* argv[])
         //now set the field to be computed
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
-    //double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
+    double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
+    std::cout << setprecision(16) <<meanMassE<<std::endl;
     
     Energetics<n> energetics(bp);
 
@@ -198,6 +199,7 @@ int main( int argc, char* argv[])
     std::vector<double> probe_vx[64];
     std::ofstream  os( argv[4]);
     os << "#Time Ue Ui Uj Ei Ej M(Ei) M(Ej)\n";
+    os << std::setprecision(16);
     double time = 3.*alg.dt;
     std::vector<double> probe_array( 64), probe_fluct( 64);
     std::vector<double> average(8,0);
@@ -225,10 +227,8 @@ int main( int argc, char* argv[])
             write_probe( imp, probe_nz, probe_nz_fluc);
             const Mat& potential = solver.getField( TL_POTENTIAL);
             write_probe( potential, probe_phi, probe_phi_fluc);
-            /*
             write_vx( potential, probe_vx, alg.h);
             write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
-            */
             if( !(j%energy_interval))
             {
                 os << time<<" ";

@@ -370,16 +370,19 @@ void Esel< container>::operator()( const std::vector<container>& y, std::vector<
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
     //3d coupling term
-    average( phi[0], chi);
-    blas1::axpby( +1., phi[0], -1., chi, chi);
-    blas1::axpby( dd, chi, 1., yp[0]); //d(phi-avg(phi))
+    //average( phi[0], chi);
+    blas1::axpby( dd, phi[0], -dd, y[0], chi);//d(phi-ln(n))
+    blas1::axpby( 1., one, +1., y[0], omega); //(1+ln(n))
+    blas1::pointwiseDot( chi, omega, chi);
+    blas1::axpby( 1., chi, 1., yp[0]);
+    //blas1::axpby( dd, chi, 1., yp[0]); //d(phi-avg(phi))
 
-    thrust::transform( y[0].begin(), y[0].end(), omega.begin(), dg::EXP<value_type>());
-    average( omega, chi);
+    //thrust::transform( y[0].begin(), y[0].end(), omega.begin(), dg::EXP<value_type>());
+    //average( omega, chi);
     //thrust::transform( chi.begin(), chi.end(), chi.begin(), dg::LN<value_type>());
-    blas1::axpby( +1., omega, -1., chi, chi); //(n)-(avg(n))
-    divide( chi, omega, chi); //\tilde n/n
-    blas1::axpby( -dd, chi, 1., yp[0]);
+    //blas1::axpby( +1., omega, -1., chi, chi); //(n)-(avg(n))
+    //divide( chi, omega, chi); //\tilde n/n
+    //blas1::axpby( -dd, chi, 1., yp[0]);
     //blas1::pointwiseDot( chi, chi, chi);
     //blas1::axpby( dd, chi, 1., yp[0]);
     //blas1::pointwiseDot( chi, omega, chi);

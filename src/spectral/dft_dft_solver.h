@@ -352,59 +352,28 @@ void DFT_DFT_Solver<n>::step_()
 //#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
-        GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, TL_PERIODIC, TL_VOID}; //ghostphi{ghostdens};
-        GhostMatrix<double, TL_DFT> ghostphi{ rows, cols, TL_PERIODIC, TL_PERIODIC, TL_VOID};
-        //std::cout << dens[k]<<std::endl;
+        GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, TL_PERIODIC}; //ghostphi{ghostdens};
+        GhostMatrix<double, TL_DFT> ghostphi{ rows, cols, TL_PERIODIC, TL_PERIODIC};
         swap_fields( dens[k], ghostdens); //now dens[k] is void
         swap_fields( phi[k], ghostphi); //now phi[k] is void
-        //ghostdens.display( std::cout);
-        //std::cout << std::endl;
         ghostdens.initGhostCells( );
         ghostphi.initGhostCells(  );
-        std::cout << std::setprecision(2);
-        ghostdens.display( std::cout);
-        std::cout << std::endl;
-        //ghostphi.display( std::cout);
-        //std::cout << std::endl;
         arakawa( ghostdens, ghostphi, nonlinear[k]);
         swap_fields( dens[k], ghostdens); //now ghostdens is void
         swap_fields( phi[k], ghostphi); //now ghostphi is void
     }
     //2. perform karniadakis step
-        std::cout << std::endl;
-        std::cout << std::endl;
-        std::cout << std::endl;
-        std::cout << dens[0];
-        std::cout << phi[0];
-        std::cout << std::endl;
-        std::cout << nonlinear[0];
-        std::cout << std::endl;
-        //karniadakis.display();
-        try{
     karniadakis.template step_i<S>( dens, nonlinear);
-        }catch (toefl::Message& m){m.display();}
-        std::cout << dens[0];
-        std::cout << std::endl;
-        std::cout << std::endl;
-        std::cout << std::endl;
-        //std::cout << dens[0];
-        //std::cout << std::endl;
     //3. solve linear equation
     //3.1. transform v_hut
 //#pragma omp for 
     for( unsigned k=0; k<n; k++){
         dft_dft.r2c( dens[k], cdens[k]);}
-        std::cout << cdens[0];
-        std::cout << std::endl;
 //#pragma omp barrier
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
-        std::cout << cdens[0];
-        std::cout << std::endl;
 //#pragma omp barrier
     compute_cphi();
-        std::cout << cphi[0];
-        std::cout << std::endl;
 //#pragma omp barrier
     //3.3. backtransform
 //#pragma omp for 
@@ -413,10 +382,6 @@ void DFT_DFT_Solver<n>::step_()
         dft_dft.c2r( cdens[k], dens[k]);
         dft_dft.c2r( cphi[k],  phi[k]);
     }
-        std::cout << dens[0];
-        std::cout << std::endl;
-    double x;
-    std::cin >> x;
 //#pragma omp barrier
     }//omp parallel
 }
@@ -470,6 +435,7 @@ struct Energetics
     double dot( const Matrix_Type& m1, const Matrix_Type& m2);
     double dot( const std::vector<complex>& v1, const std::vector<complex>& v2)
     {
+        assert( v1.size() == v2.size());
         complex sum=0;
         sum += v1[0]*conj( v2[0]);
         for( unsigned j=1; j<cols/2; j++)
@@ -479,6 +445,14 @@ struct Energetics
         else
             sum += 2.*v1[cols/2]*conj( v2[cols/2]);
         return real( sum);
+    }
+    double dot( const std::vector<double>& v1, const std::vector<double>& v2)
+    {
+        assert( v1.size() == v2.size());
+        double sum=0; 
+        for( unsigned i=0; i<v1.size(); i++)
+            sum += v1[i]*v2[i];
+        return sum;
     }
        
     unsigned rows, cols;
@@ -516,6 +490,15 @@ struct Energetics
         out.resize(in.cols());
         for( unsigned j=0; j<in.cols(); j++)
             out[j] = in(0,j);
+    }
+    void extract_average_y( const Matrix<double, TL_DFT>& in, std::vector<double>& out)
+    {
+        out.resize(in.cols());
+        for( unsigned j=0; j<in.cols(); j++)
+            out[j] = 0; 
+        for( unsigned i=0; i<in.rows(); i++)
+            for( unsigned j=0; j<in.cols(); j++)
+                out[j] += in(i,j);
     }
     void dx( const Matrix<complex>& in, Matrix<complex >& m, double lx, double norm)
     {
@@ -619,6 +602,14 @@ std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& po
     std::vector<complex> sum_phi[n];
     for( unsigned i=0; i<n; i++)
         extract_average_y( cphi[i], sum_phi[i]); 
+    //TEST
+    std::vector<double> test; 
+    extract_average_y( potential, test);
+    std::cout << " complex "<<dot( sum_phi[0], sum_phi[0])/(double)rows<<std::endl;
+    std::cout << " double  "<<dot( test, test)<<std::endl;
+
+
+
     energies.push_back( dot( sum_phi[0], sum_phi[1])*norm);
     if( n == 3)
         energies.push_back( dot( sum_phi[0], sum_phi[2])*norm);
