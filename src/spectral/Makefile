@@ -1,6 +1,6 @@
 INCLUDE += -I../../inc
 INCLUDE += -I../../../
-CFLAGS = -Wall -std=c++0x #-fopenmp
+CFLAGS = -Wall -std=c++0x -fopenmp
 LIBS = -lfftw3 -lm -lGL -lglfw3 -lrt -lX11 -lXxf86vm -lXi -lXrandr
 CXX = g++
 
@@ -20,9 +20,9 @@ innto_t: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
 	./$@
 
 innto_hpc: innto_hpc.cpp dft_dft_solver.h blueprint.h equations.h
-	$(CXX) -O2 $< $(CFLAGS) $(INCLUDE) $(LIBS) -lhdf5 -lhdf5_hl -o $@
+	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -lhdf5 -lhdf5_hl -o $@
 
-innto_hw: innto_hw.cpp dft_dft_solver.h blueprint.h equations.h
+innto_hw: innto_hw.cpp dft_dft_solver.h blueprint.h equations.h energetics.h
 	$(CXX) -O2 $< $(CFLAGS) $(INCLUDE) $(LIBS) -lhdf5 -lhdf5_hl -o $@
 
 %_t: %_t.cpp %.h

@@ -8,7 +8,7 @@
 2) ny (grid points in y)                =   256
 3) dt (time step in units c_s/L_p)      =   2e-2
 ---------------------Boundary conditions----------------------
-4) ly (length of y in units of rho_s)         = 128
+4) ly (length of y in units of rho_s)         = 128 
 5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   0     
 ---------------------Physical parameters----------------------
 6) mhw:1, ohw:0 (modified/ordinary HW) =   1       
@@ -31,7 +31,7 @@ quasineutrality condition)
 19) itstp (steps between output)        =   50
 20) OMP_NUM_THREADS                     =   4     (4)
 21) blob_width ( sigma)                 =   5    (10)
-22) # of outputs ( excluding first)     =   200
+22) # of outputs ( excluding first)     =   250
 23) x-position ( in units of lx)        =   0.1
 24) y-position ( in units of ly)        =   0.1
 25) itstp2 (divisor of itstp)           =   10 

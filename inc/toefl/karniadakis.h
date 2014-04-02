@@ -77,9 +77,10 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
             throw Message( "Cannot work with void Matrices!\n", ping);
     }
 #endif
-    QuadMat<T, n> temp;
-//#pragma omp for 
+#pragma omp parallel for 
     for( size_t i = 0; i<rows; i++)
+    {
+        QuadMat<T, n> temp;
         for( size_t j=0; j<cols; j++)
         {
             //Matrix-Vector multiplication
@@ -93,6 +94,7 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
                     out[k](i,j) += temp(k,q);
             }
         }
+    }
 }
 
 /*! @brief Multistep timestepper object 
@@ -259,7 +261,6 @@ template< size_t n, typename T, enum Padding P>
 template< enum stepper S>
 void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::array< Matrix<double, P>, n> & n0)
 {
-//#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
 #ifdef TL_DEBUG
@@ -270,6 +271,7 @@ void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::arr
         if( n0[k].rows() != rows || n0[k].cols() != cols)
             throw Message( "ERROR: One of the n0 has wrong size!\n", ping);
 #endif
+#pragma omp parallel for 
         for( size_t i = 0; i < rows; i++)
         {
             for( size_t j = 0; j < cols; j++)

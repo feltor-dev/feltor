@@ -11,6 +11,8 @@
 //#include "utility.h"
 #include "particle_density.h"
 #include "dft_dft_solver.h"
+
+#include "energetics.h"
 //#include "drt_dft_solver.h"
 #include "blueprint.h"
 
@@ -105,13 +107,13 @@ Blueprint read( char const * file)
     amp = para[10];
     imp_amp = para[14];
     itstp = para[19];
-    //omp_set_num_threads( para[20]);
+    omp_set_num_threads( para[20]);
     blob_width = para[21];
     max_out = para[22];
     posX = para[23];
     posY = para[24];
     energy_interval = para[25];
-    //std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
+    std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
     return bp;
 }
 
@@ -178,8 +180,8 @@ int main( int argc, char* argv[])
         //now set the field to be computed
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
-    double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
-    std::cout << setprecision(16) <<meanMassE<<std::endl;
+    //double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
+    //std::cout << setprecision(16) <<meanMassE<<std::endl;
     
     Energetics<n> energetics(bp);
 
@@ -198,8 +200,8 @@ int main( int argc, char* argv[])
     std::vector<double> probe_vy_fluc[64];
     std::vector<double> probe_vx[64];
     std::ofstream  os( argv[4]);
-    os << "#Time Ue Ui Uj Ei Ej M(Ei) M(Ej)\n";
-    os << std::setprecision(16);
+    os << "#Time(1) Ue(2) Ui(3) Uj(4) Ei(5) Ej(6) M(Ei)(7) M(Ej)(8) F_e(9) F_i(10) F_j(11) R_i(12) R_j(13) Diff(14) M(Diff)(15) A(16) J(17)\n";
+    //os << std::setprecision(16);
     double time = 3.*alg.dt;
     std::vector<double> probe_array( 64), probe_fluct( 64);
     std::vector<double> average(8,0);
@@ -234,10 +236,21 @@ int main( int argc, char* argv[])
                 os << time<<" ";
                 std::vector<double> thermal = energetics.thermal_energies( solver.getDensity());
                 std::vector<double> exb = energetics.exb_energies( solver.getField(TL_POTENTIAL));
+                std::vector<double> gradient_flux = energetics.gradient_flux( solver.getDensity(), solver.getPotential() );
+                std::vector<double> diffusion = energetics.diffusion( solver.getDensity(), solver.getPotential() );
+                double capital_a = energetics.capital_a( solver.getField( TL_ELECTRONS), solver.getField(TL_POTENTIAL));
+                double capital_jot = energetics.capital_jot( solver.getField( TL_ELECTRONS), solver.getField(TL_POTENTIAL));
+
                 for( unsigned k=0; k<thermal.size(); k++)
                     os << thermal[k]<<" ";
                 for( unsigned k=0; k<exb.size(); k++)
                     os << exb[k]<<" ";
+                for( unsigned k=0; k<gradient_flux.size(); k++)
+                    os << gradient_flux[k]<<" ";
+                for( unsigned k=0; k<diffusion.size(); k++)
+                    os << diffusion[k]<<" ";
+                os << capital_a<<" ";
+                os << capital_jot;
                 os << std::endl;
 
             }
@@ -267,6 +280,28 @@ int main( int argc, char* argv[])
     write_probe( potential, probe_phi, probe_phi_fluc);
     write_vx( potential, probe_vx, alg.h);
     write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
+    //
+    {
+    os << time<<" ";
+    std::vector<double> thermal = energetics.thermal_energies( solver.getDensity());
+    std::vector<double> exb = energetics.exb_energies( solver.getField(TL_POTENTIAL));
+    std::vector<double> gradient_flux = energetics.gradient_flux( solver.getDensity(), solver.getPotential() );
+    std::vector<double> diffusion = energetics.diffusion( solver.getDensity(), solver.getPotential() );
+    double capital_a = energetics.capital_a( solver.getField( TL_ELECTRONS), solver.getField(TL_POTENTIAL));
+    double capital_jot = energetics.capital_jot( solver.getField( TL_ELECTRONS), solver.getField(TL_POTENTIAL));
+
+    for( unsigned k=0; k<thermal.size(); k++)
+        os << thermal[k]<<" ";
+    for( unsigned k=0; k<exb.size(); k++)
+        os << exb[k]<<" ";
+    for( unsigned k=0; k<gradient_flux.size(); k++)
+        os << gradient_flux[k]<<" ";
+    for( unsigned k=0; k<diffusion.size(); k++)
+        os << diffusion[k]<<" ";
+    os << capital_a<<" ";
+    os << capital_jot;
+    os << std::endl;
+    }
 
     //write Probe file
     {
