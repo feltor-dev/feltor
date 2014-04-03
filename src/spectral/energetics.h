@@ -226,7 +226,7 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
 #pragma omp parallel for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
-                cphi_[k](i,j) = (gamma0_coeff[k-1](i,j))*cphi_[0](i,j)/(double)(rows*cols);
+                cphi_[k](i,j) = (-gamma0_coeff[k-1](i,j))*cphi_[0](i,j)/(double)(rows*cols);
         dft_dft.c2r( cphi_[k], phi_[k]); 
 #pragma omp parallel for
         for( unsigned i=0; i<rows;i++)

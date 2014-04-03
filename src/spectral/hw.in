@@ -34,5 +34,5 @@ quasineutrality condition)
 22) # of outputs ( excluding first)     =   250
 23) x-position ( in units of lx)        =   0.1
 24) y-position ( in units of ly)        =   0.1
-25) itstp2 (divisor of itstp)           =   10 
+25) itstp2 (divisor of itstp)           =   1 
 @ ------------------------------------------------------------
