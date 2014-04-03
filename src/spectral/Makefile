@@ -2,8 +2,6 @@ system = leo3
 INCLUDE = -I../../inc
 
 CFLAGS = -Wall -std=c++0x -fopenmp
-LIBS = -lfftw3 -lm -lGL -lglfw -lrt -lX11 -lXxf86vm
-CXX = g++
 
 ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(HOME)/include
@@ -18,9 +16,12 @@ CXX = mpicxx
 endif
 
 
-all: innto innblobs innto_hpc
+all: innto innblobs innto_hpc innto_hw
 
 innto: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
+	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
+
+innto_per: innto_per.cpp dft_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 
 innblobs: innblobs.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
@@ -33,6 +34,8 @@ innto_t: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
 innto_hpc: innto_hpc.cpp drt_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) -o $@ $(INCLUDE) $(LIBS) 
 
+innto_hw: innto_hw.cpp dft_dft_solver.h blueprint.h equations.h energetics.h
+	$(CXX) -O2 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 
 %_t: %_t.cpp %.h
 	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@

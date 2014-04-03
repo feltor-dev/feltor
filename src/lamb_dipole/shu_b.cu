@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
@@ -37,7 +38,9 @@ int main()
     DVec w2d( create::w2d(grid));
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
-    draw::HostWindow w( 600, 600);
+    std::stringstream title;
+    GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "");
+    draw::RenderHostData render( 1,1);
     ////////////////////////////////////////////////////////////
 
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
@@ -63,19 +66,23 @@ int main()
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
     dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
-    int running = GL_TRUE;
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, y0, p.dt);
     //cout << "Press any key to start!\n";
     double x; 
     //cin >> x;
-    while (running && time < p.maxout*p.itstp*p.dt)
+    while (!glfwWindowShouldClose(w) && time < p.maxout*p.itstp*p.dt)
     {
         dg::blas2::symv( equidistant, y0, visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
         hvisual = visual;
-        w.draw( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
+        render.renderQuad( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
+        title << "Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step"<<endl;
+        glfwSetWindowTitle(w, title.str().c_str());
+        title.str("");
+        glfwPollEvents();
+        glfwSwapBuffers(w);
         //step 
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
@@ -86,12 +93,10 @@ int main()
         }
         t.toc();
         //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
-        w.title() << "Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step"<<endl;
         time += p.itstp*p.dt;
 
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
+    glfwTerminate();
     ////////////////////////////////////////////////////////////////////
     cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
     cout << "Analytic formula energy    "<<lamb.energy()<<endl;

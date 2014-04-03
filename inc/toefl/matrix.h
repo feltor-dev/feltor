@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <array>
+#include <vector>
 #include "fftw3.h"
 #include "exceptions.h"
 #include "padding.h"
@@ -189,6 +190,16 @@ class Matrix
      */
     T const * getPtr()const {return ptr;}
 
+
+    std::vector<T> copy() const
+    {
+        std::vector<T> vec( n*m);
+        for( unsigned i=0; i<n; i++)
+            for( unsigned j=0; j<m; j++)
+                vec[i*m+j] = ptr[i*TotalNumberOf<P>::columns(m) + j];
+        return vec;
+    }
+
     /*! @brief uses operator= to set memory to 0
      *
      * takes less than 0.01s for 1e6 elements
@@ -245,9 +256,9 @@ class Matrix
     friend void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
     /*! @brief permute memory of matrices with the same type
      *
-     * @param first becomes second
-     * @param second becomes third
-     * @param third becomes first
+     * @param first contains third on output
+     * @param second contains first on output
+     * @param third contains second on output
      */
     friend void permute_fields<T, P>( Matrix& first, Matrix& second, Matrix& third);
     /*! @brief print a Matrix to the given outstream

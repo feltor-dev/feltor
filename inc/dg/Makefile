@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 system=leo3
+=======
+system=vsc
+>>>>>>> 08f521beb571a691e1102a0c2181c2f9767d111e
 device=gpu
 
 INCLUDE = -I../ # other project libraries
@@ -7,7 +11,10 @@ ifeq ($(strip $(system)),home)
 
 INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
-GLFLAGS   = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
+GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
+ifeq ($(strip $(device)),gpu)
+GLFLAGS+= -lGLEW
+endif
 endif
 
 ifeq ($(strip $(system)),leo3)
@@ -22,12 +29,18 @@ endif
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20
+CFLAGS = --compiler-options -Wall -arch=sm_20 
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-else
+endif
+ifeq ($(strip $(device)),omp)
 CC = g++
 CFLAGS = -Wall -fopenmp -x c++
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+endif
+ifeq ($(strip $(device)),mic)
+CC = icc
+CFLAGS = -openmp -mmic -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 endif
 
@@ -61,12 +74,16 @@ blas%_t: blas%_t.cu blas%.h
 	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu %.cuh 
-	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS)
 	echo "Attention: No compiler warnings are issued!" 
 
 %2d_b: %2d_b.cu %.cuh
-	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) -lm
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
+
+dg_t: dg_t.cpp dg.h 
+	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
+	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 
 .PHONY: clean doc
 

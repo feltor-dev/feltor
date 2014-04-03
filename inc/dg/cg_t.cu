@@ -10,8 +10,8 @@
 #include "preconditioner.cuh"
 #include "typedefs.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned N = 200;  //more N means less iterations for same error
+unsigned n = 3; //global relative error in L2 norm is O(h^P)
+unsigned N = 200;  //more N means less iterations for same error
 
 const double lx = 2.*M_PI;
 
@@ -23,19 +23,29 @@ typedef dg::T1D<double> Preconditioner;
 
 
 double sine(double x){ return sin( x);}
+double sol(double x){ return sin(x);}
+dg::bc bcx = dg::DIR;
+//double sine(double x){ return 9./16.*sin( 3./4.*x);}
+//double sol(double x){ return sin(3./4.*x);}
+//dg::bc bcx = dg::DIR_NEU;
+//double sine(double x){ return 9./16.*cos( 3./4.*x);}
+//double sol(double x){ return cos(3./4.*x);}
+//dg::bc bcx = dg::NEU_DIR;
 double initial( double x) {return sin(0);}
 
 using namespace std;
 int main()
 {
-    dg::Grid1d<double > g( 0, lx, n, N, dg::DIR);
+    cout << "Type n and N\n";
+    cin >> n >> N;
+    dg::Grid1d<double > g( 0, lx, n, N, bcx);
     dg::HVec x = dg::expand( initial, g);
-    dg::DMatrix A = dg::create::laplace1d( g); 
+    dg::DMatrix A = dg::create::laplace1d( g, dg::not_normed, dg::symmetric); 
 
     dg::CG< dg::DVec > cg( x, x.size());
     dg::HVec b = dg::expand ( sine, g);
     dg::HVec error(b);
-    const dg::HVec solution(b);
+    const dg::HVec solution = dg::expand( sol, g);
 
     //copy data to device memory
     dg::DVec dx( x), db( b), derror( error);
@@ -49,7 +59,7 @@ int main()
     std::cout << "Number of cg iterations "<< cg( A, dx, db, eps)<<endl;
     cout << "For a precision of "<< eps<<endl;
     //compute error
-    dg::blas1::axpby( 1.,dx,-1.,derror);
+    dg::blas1::axpby( 1.,dx,-1., dsolution, derror);
     /*
     //and Ax
     DArrVec dbx(dx);

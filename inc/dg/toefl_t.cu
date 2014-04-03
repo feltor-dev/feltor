@@ -4,6 +4,7 @@
 #include <thrust/host_vector.h>
 
 #include "draw/host_window.h"
+//#include "draw/device_window.cuh"
 
 #include "evaluation.cuh"
 #include "functions.h"
@@ -35,10 +36,8 @@ double groundState( double x, double y) { return ly/2. - y;}
 
 int main()
 {
-    draw::HostWindow w(800, 400);
-    glfwSetWindowTitle( "Behold the convection\n");
-
-
+    GLFWwindow* w = draw::glfwInitAndCreateWindow(800, 400, "Behold the convection");
+    draw::RenderHostData render(1,1);
     /////////////////////////////////////////////////////////////////////////
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
@@ -57,34 +56,32 @@ int main()
 
 
     //create visualisation vectors
-    int running = GL_TRUE;
-    dg::DVec visual(  grid.size());
+    dg::DVec dvisual(  grid.size());
     dg::HVec hvisual( grid.size());
     dg::DVec ground = evaluate ( groundState, grid), temperature( ground);
     dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, y0, dt);
-    while (running)
+    while (!glfwWindowShouldClose(w))
     {
         //compute the total temperature
         blas1::axpby( 1., y0[0],  0., temperature);
         blas1::axpby( 1., ground, 1., temperature);
         //transform field to an equidistant grid
-        dg::blas2::symv( equidistant, temperature, visual);
+        dg::blas2::symv( equidistant, temperature, dvisual);
         //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
-        std::cout << "Color scale " << colors.scale() <<"\n";
+        colors.scale() =  (float)thrust::reduce( dvisual.begin(), dvisual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
-        hvisual = visual;
-        w.draw( hvisual, n*grid.Nx(), n*grid.Ny(), colors);
+        hvisual = dvisual;
+        render.renderQuad( hvisual, n*grid.Nx(), n*grid.Ny(), colors);
+        glfwSwapBuffers(w);
+        glfwPollEvents();
         //step 
         ab( test, y0, y1, dt);
         y0.swap( y1);
-        glfwWaitEvents();
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
     ////////////////////////////////////////////////////////////////////
+    glfwTerminate();
 
     return 0;
 

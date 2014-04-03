@@ -21,6 +21,7 @@
 #include "dlt.cuh"
 
 //#include "cusp_eigen.h"
+//CAN'T BE TRANSVERSE SYMMETRIC?
 
 /*! @file 
 
@@ -55,7 +56,7 @@ Polarisation<T, Memory>::Polarisation( const Grid1d<T>& g): I(g.size()), J(I), x
     thrust::sequence( I.begin(), I.end());
     thrust::sequence( J.begin(), J.end());
 
-    right = create::dx_asymm_mt<T>( n, N, h, bcx); //create and transfer to device
+    right = create::dx_plus_mt<T>( n, N, h, bcx); //create and transfer to device
     Operator<T> backward( g.dlt().backward());
     middle = tensor<T>( N, backward);
     cusp::multiply( middle, right, right);
@@ -72,12 +73,12 @@ Polarisation<T, Memory>::Polarisation( const Grid1d<T>& g): I(g.size()), J(I), x
 template< class T, class Memory>
 cusp::coo_matrix<int, T, Memory> Polarisation<T, Memory>::create( const Vector& chi)
 {
-    Matrix laplace;
+    Matrix laplace, temp;
     cusp::multiply( middle, chi, xspace);
     cusp::coo_matrix_view<Array, Array, Vector,  int, T, Memory> chi_view( n*N, n*N, n*N, I, J, xspace);
     cusp::multiply( chi_view, right, laplace);
-    cusp::multiply( left, laplace, laplace);
-    cusp::add( laplace, jump, laplace);
+    cusp::multiply( left, laplace, temp);
+    cusp::add( temp, jump, laplace);
     return laplace;
 }
 
@@ -175,7 +176,7 @@ struct Polarisation2dX
      *
      * @param g The 2D grid
      */
-    Polarisation2dX( const Grid<value_type>& grid);
+    Polarisation2dX( const Grid<value_type>& grid, direction dir = forward);
     /**
      * @brief Create polarisation term on a grid using different boundary conditions
      *
@@ -183,7 +184,7 @@ struct Polarisation2dX
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    Polarisation2dX( const Grid<value_type>& grid, bc bcx, bc bcy);
+    Polarisation2dX( const Grid<value_type>& grid, bc bcx, bc bcy, direction dir = forward);
 
     /**
      * @brief Create a unnormalized matrix for the 2d polarisation term in XSPACE
@@ -198,7 +199,7 @@ struct Polarisation2dX
   private:
     typedef cusp::array1d<int, MemorySpace> Array;
     typedef cusp::array1d<value_type, MemorySpace> VArray;
-    void construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy, const DLT<value_type>& );
+    void construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy, const DLT<value_type>&, direction dir  );
     Matrix leftx, lefty, rightx, righty, jump;
     Array I, J;
     typename Array::view I_view, J_view;
@@ -210,24 +211,24 @@ struct Polarisation2dX
 };
 
 template <class container>
-Polarisation2dX< container>::Polarisation2dX( const Grid<value_type>& g):
+Polarisation2dX< container>::Polarisation2dX( const Grid<value_type>& g, direction dir):
     I(g.size()), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
     middle( create::w2d(g) ), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
     xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
-    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), g.bcx(), g.bcy(), g.dlt());
+    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), g.bcx(), g.bcy(), g.dlt(), dir);
 }
 template <class container>
-Polarisation2dX<container>::Polarisation2dX( const Grid<value_type>& g, bc bcx, bc bcy):
+Polarisation2dX<container>::Polarisation2dX( const Grid<value_type>& g, bc bcx, bc bcy, direction dir):
     I(g.size()), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
     middle( create::w2d(g) ), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
     xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
-    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy, g.dlt());
+    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy, g.dlt(), dir);
 }
 
 template <class container>
-void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy, const DLT<value_type>& dlt)
+void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy, const DLT<value_type>& dlt, direction dir)
 {
     typedef cusp::coo_matrix<int, value_type, cusp::host_memory> HMatrix;
 
@@ -235,11 +236,20 @@ void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny
     Operator<value_type> forward1d( dlt.forward());
 
     //create x and y derivative in xspace
-    HMatrix rightx_ = create::dx_asymm_mt<value_type>( n, Nx, hx, bcx); 
+    HMatrix rightx_, righty_;
+    if( dir == forward)
+        rightx_ = create::dx_plus_mt<value_type>( n, Nx, hx, bcx); 
+    else
+        rightx_ = create::dx_minus_mt<value_type>( n, Nx, hx, bcx); 
+
     rightx_ = sandwich( backward1d, rightx_, forward1d);
     rightx = dg::dgtensor( n, tensor(Ny, create::delta(n)), rightx_);
 
-    HMatrix righty_ = create::dx_asymm_mt( n, Ny, hy, bcy); //create and transfer to device
+    if( dir == forward) 
+        righty_ = create::dx_plus_mt( n, Ny, hy, bcy); //create and transfer to device
+    else 
+        righty_ = create::dx_minus_mt( n, Ny, hy, bcy); //create and transfer to device
+
     righty_ = sandwich( backward1d, righty_, forward1d);
     righty = dg::dgtensor( n, righty_, tensor( Nx, create::delta(n)) );
 

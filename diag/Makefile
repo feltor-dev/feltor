@@ -1,7 +1,12 @@
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
+<<<<<<< HEAD
 device = cpu
 system = leo3
+=======
+device = gpu
+system = home
+>>>>>>> 08f521beb571a691e1102a0c2181c2f9767d111e
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -22,7 +27,7 @@ ifeq ($(strip $(system)),home)
 CXX = g++
 INCLUDE += -I/home/matthias/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
-GLFLAGS  = -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm 
+GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
@@ -39,11 +44,17 @@ endif
 ifeq ($(strip $(system)),vsc)
 CXX = g++
 INCLUDE += -I$(HOME)/include
+INCLUDE += -I/opt/sw/hdf5/1.8.11/include
+INCLUDE += -I/opt/intel/impi/4.1.0/include64 
+CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
 
+LIBS     = -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
+LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
+LIBS 	+= -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
 GLFLAGS  = -lm
 endif
 
-TARGETS =  toefl_video toefl_analytics toefl_compare innto_video show com vmax toefl_radial innto_radial
+TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial 
 
 all: $(TARGETS)
 
@@ -68,9 +79,18 @@ show: show.cpp
 
 com: com.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+<<<<<<< HEAD
+=======
+
+imp: imp.cu
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+
+probe: probe.cu
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
+>>>>>>> 08f521beb571a691e1102a0c2181c2f9767d111e
 
 figure17: figure17.cu
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 vmax: vmax.cu
 	$(CXX) -O2 $(CFLAGS) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) 

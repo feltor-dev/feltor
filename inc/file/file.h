@@ -134,6 +134,31 @@ struct T5trunc
         H5Fclose( file);
     }
     /**
+     * @brief Write one time - group
+     *
+     * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
+     * @param field1 The first dataset ("electrons")
+     * @param field2 The second dataset ("ions")
+     * @param field3 The third dataset ("impurities")
+     * @param field4 The fourth dataset ("potential")
+     * @param time The time makes the group name
+     * @param nNx dimension in x - direction (second index)
+     * @param nNy dimension in y - direction (first index)
+     */
+    template< class T>
+    void write( const T& field1, const T& field2, const T& field3, const T& field4, double time, unsigned nNx, unsigned nNy)
+    {
+        hid_t file = H5Fopen( name_.data(), H5F_ACC_RDWR, H5P_DEFAULT);
+        hid_t grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        hsize_t dims[] = { nNy, nNx };
+        status_ = H5LTmake_dataset_double( grp, "electrons", 2,  dims, field1.data());
+        status_ = H5LTmake_dataset_double( grp, "ions", 2,  dims, field2.data());
+        status_ = H5LTmake_dataset_double( grp, "impurities", 2,  dims, field3.data());
+        status_ = H5LTmake_dataset_double( grp, "potential", 2,  dims, field4.data());
+        H5Gclose( grp);
+        H5Fclose( file);
+    }
+    /**
      * @brief Append data to the xfiles
      *
      * @param mass Data
@@ -169,6 +194,62 @@ struct T5trunc
     std::vector<double> mass_, diffusion_, energy_, dissipation_;
 };
 
+
+
+/**
+ * @brief Create a HDF5 file with timegroups
+ */
+struct Probe
+{
+    /**
+     * @brief Create a new Probe file overwriting existing ones
+     *
+     * @param name The name of the H5 file
+     * @param input A literal copy of the input file
+     */
+    Probe( const std::string& name, const std::string& input, std::vector<double>& times ): name_( name)
+    {
+        file_ = H5Fcreate( name.data(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        hsize_t size = input.size();
+        status_ = H5LTmake_dataset_char( file_, "inputfile", 1, &size, input.data());
+        size=times.size();
+        status_ = H5LTmake_dataset_double( file_, "time", 1,  &size, times.data());
+    }
+
+    void createGroup( const char * name )
+    {
+        grp_ = H5Gcreate( file_, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+    }
+    void closeGroup(){ H5Gclose( grp_);}
+    //T must provide the data() function that returns data on the host
+    /**
+     * @brief Write a dataset in the currently open group
+     *
+     * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
+     * @param field The dataset ("name")
+     * @param name Name of the dataset
+     * @param nNx dimension in x - direction (second index)
+     * @param nNy dimension in y - direction (first index)
+     */
+    template< class T>
+    void write( const T& field1, unsigned i, unsigned j , unsigned N)
+    {
+        std::stringstream title; 
+        title <<std::setw(1) <<std::left<<i<<j;
+        hsize_t dims[] = { N };
+        status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, field1.data());
+    }
+    ~Probe( )
+    {
+        H5Fclose( file_);
+    }
+
+  private:
+    hid_t file_, grp_;
+    herr_t status_;
+    std::string name_;
+};
+
 /**
  * @brief Read only access to an existing T5 file
  */
@@ -194,7 +275,7 @@ struct T5rdonly
      * @brief Read a field at a specified index
      *
      * @param field Container
-     * @param name Name of the field (electron, ions, potential)
+     * @param name Name of the field (electron, ions, potential or impurities)
      * @param idx Index
      */
     template <class T>

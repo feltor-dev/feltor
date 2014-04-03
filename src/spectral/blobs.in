@@ -9,9 +9,9 @@ Then enable a small curvature. Time step can be relatively
 large as well as the perturbation amplitude.
 
 ---------------------Algorithmic parameters-------------------
-1) nx (grid points in x)                =   4096
-2) ny (grid points in y)                =   4096
-3) dt (time step in units c_s/L_p)      =   0.2
+1) nx (grid points in x)                =   512
+2) ny (grid points in y)                =   512 
+3) dt (time step in units c_s/L_p)      =   1
 ---------------------Boundary conditions----------------------
 4) ly (length of y in units of rho_s)         =   400   
 5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   0     
@@ -23,7 +23,7 @@ large as well as the perturbation amplitude.
 -------------------------Species------------------------------
 10) n00 (perturbation amplitude)        =   2 
 11) g_e (e density gradient)            =   0.0     
-12) tau_i (Ti/Te)                       =   0.0     
+12) tau_i (Ti/Te)                       =   1.0     
 (Z of ions is always 1, g_i and a_i are computed from 
 quasineutrality condition)
 13) impurities yes(1) / no(0)           =   0
@@ -36,7 +36,7 @@ quasineutrality condition)
 19) itstp (steps between output)        =   10
 20) OMP_NUM_THREADS                     =   2      (4)
 21) blob_width ( sigma)                 =   10    (10)
-22) # of outputs ( excluding first)     =   4
+22) # of outputs ( excluding first)     =   100
 23) x-position ( in units of lx)        =   0.25
 24) y-position ( in units of ly)        =   0.5
 25) reduction factor (divisor of Nx)    =   2

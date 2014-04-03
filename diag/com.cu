@@ -11,6 +11,9 @@
 
 #include "galerkin/parameters.h"
 
+
+//read and evaluate TOEFL & INNTO h5 files
+
 double X( double x, double y) {return x;}
 double Y( double x, double y) {return y;}
 template< class container>
@@ -104,7 +107,7 @@ int main( int argc, char* argv[])
 
     Vesqr<dg::HVec> vesqr( grid, p.kappa);
     os << "#Time(1) posX(2) posY(3) velX(4) velY(5) mass(6) diff(7) (m_tot-m_0)/m_0(8) "
-       << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) posX_max(15) posY_max(16) accX(17) acc(18) \n";
+       << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) posX_max(15) posY_max(16) accX(17) acc(18) max_amp(19)\n";
     //dg::Timer t;
     for( unsigned idx=1; idx<=num_out; idx++)
     {
@@ -155,6 +158,7 @@ int main( int argc, char* argv[])
         posY_max = hy*(1./2. + (double)(position/Nx))-posY_init;
         os << " "<<posX_max<<" "<<posY_max;
         os << " "<<accX<<" "<<accY;
+        os << " "<<*thrust::max_element( visual.begin(), visual.end());
         os <<"\n";
         //t.toc();
         //std::cout << "The rest took "<<t.diff()<<"s\n";
