@@ -7,6 +7,86 @@
 #include "equations.h"
 
 namespace toefl{
+
+double dot( const Matrix<double, TL_DFT>& m1, const Matrix<double, TL_DFT>& m2)
+{
+    double sum = 0;
+#pragma omp parallel for reduction(+: sum)
+    for( unsigned i=0; i<m1.rows(); i++)
+        for( unsigned j=0; j<m1.cols(); j++)
+            sum+= m1(i,j)*m2(i,j);
+    return sum;
+
+}
+
+double dot( const std::vector<std::complex<double> >& v1, const std::vector<std::complex<double> >& v2)
+{
+    assert( v1.size() == v2.size());
+    unsigned cols = v1.size();
+    std::complex<double> sum=0;
+    sum += v1[0]*conj( v2[0]);
+    for( unsigned j=1; j<cols/2; j++)
+        sum += 2.*v1[j]*conj( v2[j]);
+    if( cols%2)
+        sum += v1[cols/2]*conj(v2[cols/2]);
+    else
+        sum += 2.*v1[cols/2]*conj( v2[cols/2]);
+    return real( sum);
+}
+
+double dot( const std::vector<double>& v1, const std::vector<double>& v2)
+{
+    assert( v1.size() == v2.size());
+    double sum=0; 
+    for( unsigned i=0; i<v1.size(); i++)
+        sum += v1[i]*v2[i];
+    return sum;
+}
+
+std::vector<std::complex<double> > extract_sum_y( const Matrix<std::complex<double> >& in)
+{
+    std::vector<std::complex<double> > out( in.cols());
+    for( unsigned j=0; j<in.cols(); j++)
+        out[j] = in(0,j);
+    return out;
+}
+
+std::vector<double> extract_sum_y( const Matrix<double, TL_DFT>& in)
+{
+    std::vector<double> out( in.cols(), 0);
+    for( unsigned i=0; i<in.rows(); i++)
+        for( unsigned j=0; j<in.cols(); j++)
+            out[j] += in(i,j);
+    return out;
+}
+
+//remove the real average in y-direction
+void remove_average_y( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& m)
+{
+    m = in;
+    std::vector<double> average = extract_sum_y( in);
+#pragma omp parallel for
+    for( unsigned i=0; i<in.rows(); i++)
+        for( unsigned j=0; j<in.cols(); j++)
+            m(i,j) -= average[j]/in.rows();
+}
+
+void dy( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double h)
+{
+    assert( &in != &out);
+    unsigned rows = in.rows(); 
+    for( unsigned j=0; j<in.cols(); j++)
+        out(0,j) = (in(1,j) - in(rows-1, j))/2./h;
+#pragma omp parallel for
+    for( unsigned i=1; i<in.rows()-1; i++)
+    {
+        for( unsigned j=0; j<in.cols(); j++)
+            out(i,j) = (in(i+1,j) - in(i-1, j))/2./h;
+    }
+    for( unsigned j=0; j<in.cols(); j++)
+        out(rows-1,j) = (in(0,j) - in(rows-2, j))/2./h;
+}
+
 template<size_t n>
 struct Energetics
 {
@@ -56,81 +136,6 @@ struct Energetics
     double capital_a( const Matrix<double, TL_DFT>& density , const Matrix<double, TL_DFT>& potential);
     
   private:
-    //move to utility header?
-    double dot( const Matrix_Type& m1, const Matrix_Type& m2)
-    {
-        double sum = 0;
-#pragma omp parallel for reduction(+: sum)
-        for( unsigned i=0; i<m1.rows(); i++)
-            for( unsigned j=0; j<m1.cols(); j++)
-                sum+= m1(i,j)*m2(i,j);
-        return sum;
-
-    }
-    double dot( const std::vector<complex>& v1, const std::vector<complex>& v2)
-    {
-        assert( v1.size() == v2.size());
-        complex sum=0;
-        sum += v1[0]*conj( v2[0]);
-        for( unsigned j=1; j<cols/2; j++)
-            sum += 2.*v1[j]*conj( v2[j]);
-        if( cols%2)
-            sum += v1[cols/2]*conj(v2[cols/2]);
-        else
-            sum += 2.*v1[cols/2]*conj( v2[cols/2]);
-        return real( sum);
-    }
-    double dot( const std::vector<double>& v1, const std::vector<double>& v2)
-    {
-        assert( v1.size() == v2.size());
-        double sum=0; 
-        for( unsigned i=0; i<v1.size(); i++)
-            sum += v1[i]*v2[i];
-        return sum;
-    }
-    //remove the real average in y-direction
-    void remove_average_y( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& m)
-    {
-        m = in;
-        std::vector<double> average;
-        extract_sum_y( in, average);
-#pragma omp parallel for
-        for( unsigned i=0; i<in.rows(); i++)
-            for( unsigned j=0; j<in.cols(); j++)
-                m(i,j) -= average[j]/rows;
-    }
-    void extract_sum_y( const Matrix<complex>& in, std::vector<complex>& out)
-    {
-        out.resize(in.cols());
-        for( unsigned j=0; j<in.cols(); j++)
-            out[j] = in(0,j);
-    }
-    void extract_sum_y( const Matrix<double, TL_DFT>& in, std::vector<double>& out)
-    {
-        out.resize(in.cols());
-        for( unsigned j=0; j<in.cols(); j++)
-            out[j] = 0; 
-        for( unsigned i=0; i<in.rows(); i++)
-            for( unsigned j=0; j<in.cols(); j++)
-                out[j] += in(i,j);
-    }
-    void dy( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double h)
-    {
-        assert( &in != &out);
-        unsigned rows = in.rows(); 
-        for( unsigned j=0; j<in.cols(); j++)
-            out(0,j) = (in(1,j) - in(rows-1, j))/2./h;
-#pragma omp parallel for
-        for( unsigned i=1; i<in.rows()-1; i++)
-        {
-            for( unsigned j=0; j<in.cols(); j++)
-                out(i,j) = (in(i+1,j) - in(i-1, j))/2./h;
-        }
-        for( unsigned j=0; j<in.cols(); j++)
-            out(rows-1,j) = (in(0,j) - in(rows-2, j))/2./h;
-    }
-
-       
     unsigned rows, cols;
     unsigned crows, ccols;
     Matrix<double, TL_DFT> diff_coeff;
@@ -173,11 +178,11 @@ std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& po
     }
     //averages
     double norm_avg = alg.h/(double)(rows*rows)/(double)cols; //h from integration 1/NyNy from average and 1/Nx from complex scalar product
-    std::vector<complex> sum_phi_[n];
+    std::vector<complex> sum_phi[n];
     for( unsigned i=0; i<n; i++)
-        extract_sum_y( cphi_[i], sum_phi_[i]); 
+        sum_phi[i] = extract_sum_y( cphi_[i]); 
     for( size_t k=1; k<n; k++)
-        energies.push_back( dot( sum_phi_[0], sum_phi_[k])*norm_avg);
+        energies.push_back( dot( sum_phi[0], sum_phi[k])*norm_avg);
 
     return energies;
 }
@@ -196,14 +201,13 @@ double Energetics<n>::capital_jot( const Matrix<double, TL_DFT>& density , const
 template<size_t n>
 double Energetics<n>::capital_a( const Matrix<double, TL_DFT>& density , const Matrix<double, TL_DFT>& potential)
 {
-    std::vector<double> avg_phi(cols), avg_dens(cols);
-    extract_sum_y( density, avg_dens);
-    extract_sum_y( potential, avg_phi);
-    double a = dot( avg_phi, avg_phi) - dot(avg_dens, avg_phi);
+    std::vector<double> sum_dens  = extract_sum_y( density);
+    std::vector<double> sum_phi = extract_sum_y( potential);
+    double a = dot( sum_phi, sum_phi) - dot(sum_dens, sum_phi);
     return -phys.d*a/(double)(rows*rows)*alg.h;
 }
 
-
+/////////////////////////////////////////////////////////////////////
 template<size_t n>
 std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double, TL_DFT>, n>& density , const std::array<Matrix<double, TL_DFT>, n>& potential)
 {
@@ -228,9 +232,8 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
             for( unsigned j=0; j<cols;j++)
                 dens_[k](i,j)*= phi_[k](i,j); //dy phi * (1-\Gamma_0)phi
 
-        std::vector<double> sum, sum_phi;
-        extract_sum_y( dens_[k], sum);
-        extract_sum_y( potential[k], sum_phi);
+        std::vector<double> sum = extract_sum_y( dens_[k]);
+        std::vector<double> sum_phi = extract_sum_y( potential[k]);
         //compute dx sum
         std::vector<double> vy(sum);
         vy[0] = (sum[1]-sum[cols-1])/2./alg.h;
@@ -266,9 +269,8 @@ std::vector<double> Energetics<n>::diffusion( const std::array<Matrix<double, TL
     //compute mean diffusion
     for(unsigned k=0; k<n; k++)
     {
-        std::vector<double> sum_phi(cols), sum_dens(cols);
-        extract_sum_y( dens_[k], sum_dens);
-        extract_sum_y( potential[k], sum_phi);
+        std::vector<double> sum_dens = extract_sum_y( dens_[k] );
+        std::vector<double> sum_phi  = extract_sum_y( potential[k] );
         diffusion_[1] += a_[k]*dot( sum_dens, sum_phi)*alg.h/(double)(rows*rows);
     }
     return diffusion_;
