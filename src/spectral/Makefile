@@ -41,5 +41,9 @@ innto_hpc: innto_hpc.cpp drt_dft_solver.h blueprint.h equations.h
 %_b: %_t.cpp %.h
 	$(CXX) -O3  $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@
+
+generator: generator.cpp
+	g++ generator.cpp -o generator -std=c++0x
+
 clean:
 	rm -f *_t *_b innto innblobs innto_hpc
