@@ -31,6 +31,7 @@ double dot( const std::vector<std::complex<double> >& v1, const std::vector<std:
         sum += v1[cols/2]*conj(v2[cols/2]);
     else
         sum += 2.*v1[cols/2]*conj( v2[cols/2]);
+    //if( imag(sum) > 1e-12) std::cerr<<sum << "WARNING: Imag not zero!\n";
     return real( sum);
 }
 
