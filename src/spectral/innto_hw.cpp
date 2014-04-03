@@ -22,7 +22,7 @@ typedef std::complex<double> Complex;
 
 const unsigned n = 3;
 typedef DFT_DFT_Solver<n> Sol;
-typedef typename Sol::Matrix_Type Mat;
+typedef Sol::Matrix_Type Mat;
     
 unsigned itstp; //initialized by init function
 unsigned max_out;
