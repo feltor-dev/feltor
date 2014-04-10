@@ -201,7 +201,7 @@ int main( int argc, char* argv[])
     std::vector<double> probe_vx[64];
     std::ofstream  os( argv[4]);
     os << "#Time(1) Ue(2) Ui(3) Uj(4) Ei(5) Ej(6) M(Ei)(7) M(Ej)(8) F_e(9) F_i(10) F_j(11) R_i(12) R_j(13) Diff(14) M(Diff)(15) A(16) J(17)\n";
-    //os << std::setprecision(16);
+    os << std::setprecision(16);
     double time = 3.*alg.dt;
     std::vector<double> probe_array( 64), probe_fluct( 64);
     std::vector<double> average(8,0);

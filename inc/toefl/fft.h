@@ -7,8 +7,9 @@
 #define _TL_FFT_
 
 #include <complex>
-#include "matrix.h"
-#include "ghostmatrix.h"
+//#include "matrix.h"
+//#include "ghostmatrix.h"
+#include "message.h"
 #include "fftw3.h"
 
 //NOTE: The 2d r2c fftw padding is not like described in the documentation! 
@@ -45,19 +46,7 @@ inline fftw_complex* fftw_cast( std::complex<double> * const ptr){ return reinte
  * @return its inverse kind according to fftw documentation
  */
 fftw_r2r_kind inverse_kind( fftw_r2r_kind kind);
-/*! @brief Convert toefl enum in fftw kind
- *
- * @param bc Boundary condition 
- * @return The corresponding fftw kind
- */
-fftw_r2r_kind fftw_convert( enum bc bc);
-/*! @brief Compute normalisation factor for given boundary type
- * 
- * Computes the normalisation according to fftw documentation.
- * @param bc Boundary condition
- * @param n Number of elements you transform
- */
-double fftw_normalisation( enum bc bc, unsigned n);
+
 /*! @brief plan many linewise real transformations
 
  * @param rows # of rows of the Matrix
@@ -167,35 +156,6 @@ fftw_plan plan_transpose( const size_t rows, const size_t cols, fftw_complex *in
                               in, out, FFTW_FORWARD, flags);
 }
 
-fftw_r2r_kind fftw_convert( enum bc bc)
-{
-    fftw_r2r_kind kind = FFTW_R2HC; //least likely used
-    switch( bc)
-    {
-        case( TL_PERIODIC): 
-            throw Message( "Cannot convert TL_PERIODIC to fftw_r2r_kind!", ping);
-            break;
-        case( TL_DST00) : kind = FFTW_RODFT00; break;
-        case( TL_DST10) : kind = FFTW_RODFT10; break;
-        case( TL_DST01) : kind = FFTW_RODFT01; break;
-        case( TL_DST11) : kind = FFTW_RODFT11; break;
-    }
-    return kind;
-}
-
-double fftw_normalisation( enum bc bc, unsigned n)
-{
-    double norm = 0;
-    switch( bc)
-    {
-        case( TL_PERIODIC): norm = (double)n;           break;
-        case( TL_DST00):    norm = (double)(2*(n+1));   break;
-        case( TL_DST10):    norm = (double)(2*n);       break;
-        case( TL_DST01):    norm = (double)(2*n);       break;
-        case( TL_DST11):    norm = (double)(2*n);       break;
-    }
-    return norm;
-}
 
 fftw_plan plan_drt_1d( const size_t rows, const size_t cols, double *in, double *out, const fftw_r2r_kind kind, const unsigned flags = FFTW_MEASURE)
 {

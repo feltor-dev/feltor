@@ -117,7 +117,7 @@ struct Energetics
             {
                 ik = (i>rows/2) ? (i-rows) : i; //integer division rounded down
                 laplace = - kxmin2*(double)(j*j) - kymin2*(double)(ik*ik);
-                diff_coeff(i,j) = -phys.nu*pow(laplace,2);
+                diff_coeff(i,j) = -phys.nu*pow(-laplace,2);
                 if( n==2)
                 {
                     gamma0_coeff[0](i,j) = -phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
