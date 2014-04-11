@@ -1,12 +1,20 @@
 #pragma once
 
 #include <complex>
+#include <cassert>
 
 #include "toefl/toefl.h"
 #include "blueprint.h"
 #include "equations.h"
 
 namespace toefl{
+
+void axpby(double alpha,  const Matrix<double, TL_DFT>& x, double beta, Matrix<double, TL_DFT>& y)
+{
+    for( unsigned i=0; i<x.rows(); i++)
+        for( unsigned j=0; j<x.cols(); j++)
+            y(i,j) = alpha*x(i,j)+beta*y(i,j);
+}
 
 double dot( const Matrix<double, TL_DFT>& m1, const Matrix<double, TL_DFT>& m2)
 {
@@ -97,7 +105,7 @@ struct Energetics
         rows( bp.algorithmic().ny ), cols( bp.algorithmic().nx ),
         crows( rows), ccols( cols/2+1),
         diff_coeff( rows, cols),
-        gamma0_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)),
+        a_mu_gamma0_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols)),
         dens_( MatrixArray<double, TL_DFT,n>::construct( rows, cols)),
         phi_( dens_),
         cdens_( MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)), 
@@ -120,12 +128,12 @@ struct Energetics
                 diff_coeff(i,j) = -phys.nu*pow(-laplace,2);
                 if( n==2)
                 {
-                    gamma0_coeff[0](i,j) = -phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
+                    a_mu_gamma0_coeff[0](i,j) = -phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
                 }
                 else if( n==3)
                 {
-                    gamma0_coeff[0](i,j) = -phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
-                    gamma0_coeff[1](i,j) = -phys.a[1]*phys.mu[1]*laplace*p.gamma0_z( laplace);
+                    a_mu_gamma0_coeff[0](i,j) = -phys.a[0]*phys.mu[0]*laplace*p.gamma0_i( laplace);
+                    a_mu_gamma0_coeff[1](i,j) = -phys.a[1]*phys.mu[1]*laplace*p.gamma0_z( laplace);
                 }
             }
     }
@@ -140,7 +148,7 @@ struct Energetics
     unsigned rows, cols;
     unsigned crows, ccols;
     Matrix<double, TL_DFT> diff_coeff;
-    std::array< Matrix< double>, n-1> gamma0_coeff;
+    std::array< Matrix< double>, n-1> a_mu_gamma0_coeff;
     std::array< Matrix<double, TL_DFT>, n > dens_, phi_;
     std::array< Matrix< complex>, n> cdens_, cphi_;
     Blueprint blue;
@@ -174,7 +182,7 @@ std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& po
 #pragma omp parallel for 
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
-                cphi_[k](i,j) = (gamma0_coeff[k-1](i,j))*cphi_[0](i,j);
+                cphi_[k](i,j) = (a_mu_gamma0_coeff[k-1](i,j))*cphi_[0](i,j);
         energies.push_back( dft_dft.dot( cphi_[0], cphi_[k])*norm);
     }
     //averages
@@ -196,8 +204,8 @@ double Energetics<n>::capital_jot( const Matrix<double, TL_DFT>& density , const
         for( unsigned j=0; j<cols; j++)
             dens_[0](i,j) = potential(i,j) - density(i,j);
     if( blue.isEnabled( TL_MHW) )
-        remove_average_y( dens_[0], dens_[0]);
-    return -phys.d*dot( dens_[0], dens_[0])*alg.h*alg.h;
+        remove_average_y( dens_[0], dens_[1]);
+    return -phys.d*dot( dens_[0], dens_[1])*alg.h*alg.h;
 }
 template<size_t n>
 double Energetics<n>::capital_a( const Matrix<double, TL_DFT>& density , const Matrix<double, TL_DFT>& potential)
@@ -226,12 +234,12 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
 #pragma omp parallel for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
-                cphi_[k](i,j) = (-gamma0_coeff[k-1](i,j))*cphi_[0](i,j)/(double)(rows*cols);
+                cphi_[k](i,j) = (-a_mu_gamma0_coeff[k-1](i,j))*cphi_[0](i,j)/(double)(rows*cols);
         dft_dft.c2r( cphi_[k], phi_[k]); 
 #pragma omp parallel for
         for( unsigned i=0; i<rows;i++)
             for( unsigned j=0; j<cols;j++)
-                dens_[k](i,j)*= phi_[k](i,j); //dy phi * (1-\Gamma_0)phi
+                dens_[k](i,j)*= phi_[k](i,j); //dy phi * a/tau*(1-\Gamma_0)phi
 
         std::vector<double> sum = extract_sum_y( dens_[k]);
         std::vector<double> sum_phi = extract_sum_y( potential[k]);
@@ -241,7 +249,7 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
         for( unsigned i=1; i<cols-1; i++)
             vy[i] = (sum[i+1]-sum[i-1])/2./alg.h;
         vy[cols-1] = (sum[0]-sum[cols-2])/2./alg.h;
-        flux.push_back( a_[k]*dot( sum, sum_phi)*alg.h/(double)(rows*rows));
+        flux.push_back( dot( sum, sum_phi)*alg.h/(double)(rows*rows));
     }
     return flux;
 }

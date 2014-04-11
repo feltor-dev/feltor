@@ -124,7 +124,7 @@ int main( int argc, char* argv[])
 
     /////////////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
-    double time = 3.*alg.dt;
+    double time = 0.0;
     std::vector<double> out( alg.nx/reduction*alg.ny/reduction);
     std::vector<double> output[3] = {out, out, out};
     for( unsigned i=0; i<max_out; i++)
@@ -140,10 +140,16 @@ int main( int argc, char* argv[])
         //std::cout<< thermal[0] << " "<< thermal[1]<<" "<<exb[0]<<"\n";
         //t5file.append( meanMassE, 0, exb[0]+thermal[0]+thermal[1], 0);
 
-        for( unsigned i=0; i<itstp; i++)
-            solver.step();
-        
-        time += itstp*alg.dt;
+        for( unsigned j=0; j<itstp; j++)
+        {
+            if( i==0 && j==0)
+                solver.first_step();
+            else if( i==0 && j==1)
+                solver.second_step();
+            else 
+                solver.step();
+            time += alg.dt;
+        }
     }
     copyAndReduceMatrix( solver.getField( TL_ELECTRONS), output[0]);
     xpa( output[0], meanMassE);

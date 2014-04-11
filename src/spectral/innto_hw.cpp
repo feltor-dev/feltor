@@ -180,8 +180,19 @@ int main( int argc, char* argv[])
         //now set the field to be computed
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
-    //double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
-    //std::cout << setprecision(16) <<meanMassE<<std::endl;
+    double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
+    std::cout << setprecision(6) <<meanMassE<<std::endl;
+    //Mat elec = solver.getField(TL_ELECTRONS);
+    //Mat ion = solver.getField(TL_IONS);
+    //for( unsigned i=0; i<elec.rows(); i++)
+    //    for( unsigned j=0; j<elec.cols(); j++)
+    //    {
+    //        phi(i,j) = elec(i,j)-ion(i,j);
+    //        if( fabs(phi(i,j))>  1e-13)
+    //            std::cout <<phi(i,j)<<" ";
+    //    }
+    //std::cout<< std::endl;
+
     
     Energetics<n> energetics(bp);
 
@@ -201,8 +212,8 @@ int main( int argc, char* argv[])
     std::vector<double> probe_vx[64];
     std::ofstream  os( argv[4]);
     os << "#Time(1) Ue(2) Ui(3) Uj(4) Ei(5) Ej(6) M(Ei)(7) M(Ej)(8) F_e(9) F_i(10) F_j(11) R_i(12) R_j(13) Diff(14) M(Diff)(15) A(16) J(17)\n";
-    os << std::setprecision(16);
-    double time = 3.*alg.dt;
+    os << std::setprecision(14);
+    double time = 0.0;
     std::vector<double> probe_array( 64), probe_fluct( 64);
     std::vector<double> average(8,0);
     std::vector<double> out( alg.nx*alg.ny);
@@ -254,7 +265,12 @@ int main( int argc, char* argv[])
                 os << std::endl;
 
             }
-            solver.step();
+            if( i==0 && j==0)
+                solver.first_step();
+            else if( i==0 && j==1)
+                solver.second_step();
+            else
+                solver.step();
             time += alg.dt;
         }
         t2.toc();

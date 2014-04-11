@@ -89,17 +89,18 @@ fftw_plan plan_transpose( const size_t rows, const size_t cols, double *in, doub
  * \note execute with fftw_execute( plan, ptr, ptr);
  */
 fftw_plan plan_transpose( const size_t rows, const size_t cols, fftw_complex *in, fftw_complex *out, const unsigned flags);
-/*! @brief plan many linewise r2c transformations
+/*! @brief plan many linewise inplace r2c transformations
 
  * @param real_rows # of rows of the real Matrix
  * @param real_cols # of columns of the real Matrix
- * @param in the input for the plan creation
- * @param out the output for the plan creation( has to padded for inplace transformation)
+ * @param in the input for the plan creation 
+ * @param out the output for the plan creation 
  * @param flags fftw flags
  * @return the plan
+ * @attention routine assumes that input is padded 
  */
 fftw_plan plan_dft_1d_r2c( const size_t real_rows, const size_t real_cols, double* in, fftw_complex* out, const unsigned flags);
-/*! @brief plan many linewise c2r transformations
+/*! @brief plan many linewise inplace c2r transformations
 
  * @param real_rows # of rows of the real Matrix
  * @param real_cols # of columns of the real Matrix
@@ -107,6 +108,7 @@ fftw_plan plan_dft_1d_r2c( const size_t real_rows, const size_t real_cols, doubl
  * @param out the output for the plan creation( has to padded for inplace transformation)
  * @param flags fftw flags
  * @return the plan
+ * @attention routine assumes that output is padded 
  */
 fftw_plan plan_dft_1d_c2r( const size_t real_rows, const size_t real_cols, fftw_complex* in, double* out, const unsigned flags);
 /*!@ingroup fftw
