@@ -37,6 +37,9 @@ innto_hpc: innto_hpc.cpp drt_dft_solver.h blueprint.h equations.h
 innto_hw: innto_hw.cpp dft_dft_solver.h blueprint.h equations.h energetics.h
 	$(CXX) -O2 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 
+energetics_t: energetics_t.cpp energetics.h
+	$(CXX) -O2 $< $(CFLAGS) $(INCLUDE) -lm -lfftw3 -o $@
+
 %_t: %_t.cpp %.h
 	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
 	./$@

@@ -7,6 +7,6 @@
 2) # of cols                  = 2
 3) window width (in pixel)    = 1000 
 4) window height(in pixel)    = 1000 
-5) output frame               = 10 
+5) output frame               = 1
 6) colorscale 1               = -6
 7) colorscale 2               = -0.05
