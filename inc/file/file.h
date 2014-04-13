@@ -207,37 +207,80 @@ struct Probe
      * @param name The name of the H5 file
      * @param input A literal copy of the input file
      */
-    Probe( const std::string& name, const std::string& input, std::vector<double>& times ): name_( name)
+    Probe( const std::string& name, const std::string& input, unsigned Nmax): name_( name), Nmax_(Nmax)
     {
         file_ = H5Fcreate( name.data(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
         hsize_t size = input.size();
         status_ = H5LTmake_dataset_char( file_, "inputfile", 1, &size, input.data());
-        size=times.size();
-        status_ = H5LTmake_dataset_double( file_, "time", 1,  &size, times.data());
+        std::vector<double> zeroes( Nmax_, 0.);
+        size=Nmax_;
+        status_ = H5LTmake_dataset_double( file_, "time", 1,  &size, zeroes.data());
     }
 
-    void createGroup( const char * name )
+    void openGroup( const char * name )
     {
-        grp_ = H5Gcreate( file_, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        grp_ = H5Gopen( file_, name, H5P_DEFAULT );
     }
     void closeGroup(){ H5Gclose( grp_);}
     //T must provide the data() function that returns data on the host
     /**
-     * @brief Write a dataset in the currently open group
+     * @brief Init a dataset in the currently open group
      *
      * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
      * @param field The dataset ("name")
-     * @param name Name of the dataset
-     * @param nNx dimension in x - direction (second index)
-     * @param nNy dimension in y - direction (first index)
+     * @param i Probe array line
+     * @param j Probe array column
+     * @param N dimension of field
      */
+    //template< class T>
+    void createSet( const char * name,  unsigned imax, unsigned jmax )
+    {
+        grp_ = H5Gcreate( file_, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        std::vector<double> zeroes( Nmax_, 0.);
+        for( unsigned i=1; i<=imax; i++)
+            for( unsigned j=1; j<=jmax; j++)
+            {
+                std::stringstream title; 
+                title <<std::setw(1) <<std::left<<i<<j;
+                hsize_t dims[] = { Nmax_ };
+                status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, zeroes.data());
+            }
+        H5Gclose( grp_);
+    }
     template< class T>
-    void write( const T& field1, unsigned i, unsigned j , unsigned N)
+    void writeSubset( const T& field1, unsigned i, unsigned j , unsigned N, unsigned offset)
     {
         std::stringstream title; 
         title <<std::setw(1) <<std::left<<i<<j;
+        hid_t dataset_ = H5Dopen2( grp_, title.str().data(), H5P_DEFAULT);
+        hid_t dataspace_ = H5Dget_space( dataset_);
         hsize_t dims[] = { N };
-        status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, field1.data());
+        hsize_t off[] = { offset };
+        hsize_t stride[] = { 1 };
+        hsize_t block[] = { 1 };
+        status_ = H5Sselect_hyperslab( dataspace_, H5S_SELECT_SET, off, stride, dims, block);
+        hid_t memspace = H5Screate_simple( 1, dims, NULL);
+        status_ = H5Dwrite( dataset_, H5T_NATIVE_DOUBLE, memspace, dataspace_, H5P_DEFAULT, field1.data());
+        H5Sclose(memspace);
+        H5Sclose(dataspace_);
+        H5Dclose(dataset_);
+        //status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, field1.data());
+    }
+    template< class T>
+    void writeTimeSubset( const T& field1, unsigned N, unsigned offset)
+    {
+        hid_t dataset_ = H5Dopen2( file_, "time", H5P_DEFAULT);
+        hid_t dataspace_ = H5Dget_space( dataset_);
+        hsize_t dims[] = { N };
+        hsize_t off[] = { offset };
+        hsize_t stride[] = { 1 };
+        hsize_t block[] = { 1 };
+        status_ = H5Sselect_hyperslab( dataspace_, H5S_SELECT_SET, off, stride, dims, block);
+        hid_t memspace = H5Screate_simple( 1, dims, NULL);
+        status_ = H5Dwrite( dataset_, H5T_NATIVE_DOUBLE, memspace, dataspace_, H5P_DEFAULT, field1.data());
+        H5Sclose(memspace);
+        H5Sclose(dataspace_);
+        H5Dclose(dataset_);
     }
     ~Probe( )
     {
@@ -245,9 +288,11 @@ struct Probe
     }
 
   private:
-    hid_t file_, grp_;
-    herr_t status_;
     std::string name_;
+    unsigned Nmax_;
+    hid_t file_, grp_;
+    hid_t prop_;
+    herr_t status_;
 };
 
 /**
