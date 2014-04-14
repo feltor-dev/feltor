@@ -235,19 +235,19 @@ int main( int argc, char* argv[])
         t2.tic();
         for( unsigned j=0; j<itstp; j++)
         {
-            times.push_back(time);
-            const Mat& electrons = solver.getField( TL_ELECTRONS);
-            write_probe( electrons, probe_ne, probe_ne_fluc);
-            const Mat& ions = solver.getField( TL_IONS);
-            write_probe( ions, probe_ni, probe_ni_fluc);
-            const Mat& imp = solver.getField( TL_IMPURITIES);
-            write_probe( imp, probe_nz, probe_nz_fluc);
-            const Mat& potential = solver.getField( TL_POTENTIAL);
-            write_probe( potential, probe_phi, probe_phi_fluc);
-            write_vx( potential, probe_vx, alg.h);
-            write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
             if( !(j%energy_interval))
             {
+                times.push_back(time);
+                const Mat& electrons = solver.getField( TL_ELECTRONS);
+                write_probe( electrons, probe_ne, probe_ne_fluc);
+                const Mat& ions = solver.getField( TL_IONS);
+                write_probe( ions, probe_ni, probe_ni_fluc);
+                const Mat& imp = solver.getField( TL_IMPURITIES);
+                write_probe( imp, probe_nz, probe_nz_fluc);
+                const Mat& potential = solver.getField( TL_POTENTIAL);
+                write_probe( potential, probe_phi, probe_phi_fluc);
+                write_vx( potential, probe_vx, alg.h);
+                write_vy( potential, probe_vy, probe_vy_fluc, alg.h);
                 os << time<<" ";
                 std::vector<double> thermal = energetics.thermal_energies( solver.getDensity());
                 std::vector<double> exb = energetics.exb_energies( solver.getField(TL_POTENTIAL));
