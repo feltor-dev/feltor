@@ -212,9 +212,9 @@ struct Probe
         file_ = H5Fcreate( name.data(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
         hsize_t size = input.size();
         status_ = H5LTmake_dataset_char( file_, "inputfile", 1, &size, input.data());
-        std::vector<double> zeroes( Nmax_, 0.);
-        size=Nmax_;
-        status_ = H5LTmake_dataset_double( file_, "time", 1,  &size, zeroes.data());
+        //std::vector<double> zeroes( Nmax_, 0.);
+        //size=Nmax_;
+        //status_ = H5LTmake_dataset_double( file_, "time", 1,  &size, zeroes.data());
     }
 
     void openGroup( const char * name )
@@ -222,17 +222,13 @@ struct Probe
         grp_ = H5Gopen( file_, name, H5P_DEFAULT );
     }
     void closeGroup(){ H5Gclose( grp_);}
-    //T must provide the data() function that returns data on the host
     /**
-     * @brief Init a dataset in the currently open group
+     * @brief Create 64 datasets in a new group
      *
-     * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
-     * @param field The dataset ("name")
+     * @param name group name
      * @param i Probe array line
      * @param j Probe array column
-     * @param N dimension of field
      */
-    //template< class T>
     void createSet( const char * name,  unsigned imax, unsigned jmax )
     {
         grp_ = H5Gcreate( file_, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
@@ -246,6 +242,12 @@ struct Probe
                 status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, zeroes.data());
             }
         H5Gclose( grp_);
+    }
+    void createDataSet( const char * name)
+    {
+        std::vector<double> zeroes( Nmax_, 0.);
+        hsize_t dims[] = { Nmax_ };
+        status_ = H5LTmake_dataset_double( file_, name, 1,  dims, zeroes.data());
     }
     template< class T>
     void writeSubset( const T& field1, unsigned i, unsigned j , unsigned N, unsigned offset)
@@ -267,9 +269,9 @@ struct Probe
         //status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, field1.data());
     }
     template< class T>
-    void writeTimeSubset( const T& field1, unsigned N, unsigned offset)
+    void writeSubset( const T& field1, const char* name,  unsigned N, unsigned offset)
     {
-        hid_t dataset_ = H5Dopen2( file_, "time", H5P_DEFAULT);
+        hid_t dataset_ = H5Dopen2( file_, name, H5P_DEFAULT);
         hid_t dataspace_ = H5Dget_space( dataset_);
         hsize_t dims[] = { N };
         hsize_t off[] = { offset };
