@@ -183,15 +183,15 @@ std::vector<double> Energetics<n>::exb_energies(const Matrix<double, TL_DFT>& po
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi_[k](i,j) = (a_mu_gamma0_coeff[k-1](i,j))*cphi_[0](i,j);
-        energies.push_back( dft_dft.dot( cphi_[0], cphi_[k])*norm);
+        energies.push_back( 0.5*dft_dft.dot( cphi_[0], cphi_[k])*norm);
     }
     //averages
-    double norm_avg = alg.h/(double)(rows*rows)/(double)cols; //h from integration 1/NyNy from average and 1/Nx from complex scalar product
+    double norm_avg = alg.h*alg.h/(double)(rows)/(double)cols; //h*h from integration 1/Ny from average and 1/Nx from complex scalar product
     std::vector<complex> sum_phi[n];
     for( unsigned i=0; i<n; i++)
         sum_phi[i] = extract_sum_y( cphi_[i]); 
     for( size_t k=1; k<n; k++)
-        energies.push_back( dot( sum_phi[0], sum_phi[k])*norm_avg);
+        energies.push_back( 0.5*dot( sum_phi[0], sum_phi[k])*norm_avg);
 
     return energies;
 }
@@ -213,7 +213,7 @@ double Energetics<n>::capital_a( const Matrix<double, TL_DFT>& density , const M
     std::vector<double> sum_dens  = extract_sum_y( density);
     std::vector<double> sum_phi = extract_sum_y( potential);
     double a = dot( sum_phi, sum_phi) - dot(sum_dens, sum_phi);
-    return -phys.d*a/(double)(rows*rows)*alg.h;
+    return -phys.d*a/(double)(rows)*alg.h*alg.h;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -226,7 +226,29 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
         dy( potential[i], dens_[i], alg.h); //dens_ = dy phi_
         flux.push_back( g_[i]*a_[i]*tau_[i]*dot( density[i], dens_[i])*alg.h*alg.h);
     }
+
 //zonal flow  R
+    double r=0;
+    for( unsigned k=0; k<n; k++)
+    {
+#pragma omp parallel for
+        for( unsigned i=0; i<rows;i++)
+            for( unsigned j=0; j<cols;j++)
+                dens_[k](i,j) *= density[k](i,j); //dy phi *density
+        std::vector<double> sum = extract_sum_y( dens_[k]);
+        //compute dx sum
+        std::vector<double> vy(sum);
+        vy[0] = (sum[1]-sum[cols-1])/2./alg.h;
+        for( unsigned i=1; i<cols-1; i++)
+            vy[i] = (sum[i+1]-sum[i-1])/2./alg.h;
+        vy[cols-1] = (sum[0]-sum[cols-2])/2./alg.h;
+        std::vector<double> sum_phi = extract_sum_y( potential[k]);
+        r+= a_[k]*dot( vy, sum_phi)*alg.h*alg.h/(double)(rows);
+    }
+    flux.push_back(r);
+    flux.push_back(0);
+
+/*
     phi_[0] = potential[0];
     dft_dft.r2c( phi_[0], cphi_[0]);
     for( size_t k=1; k<n; k++)
@@ -239,7 +261,7 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
 #pragma omp parallel for
         for( unsigned i=0; i<rows;i++)
             for( unsigned j=0; j<cols;j++)
-                dens_[k](i,j)*= phi_[k](i,j); //dy phi * a/tau*(1-\Gamma_0)phi
+                dens_[k](i,j) = dens_[0](i,j)*phi_[k](i,j); //dy phi * a/tau*(1-\Gamma_0)phi
 
         std::vector<double> sum = extract_sum_y( dens_[k]);
         std::vector<double> sum_phi = extract_sum_y( potential[k]);
@@ -249,8 +271,9 @@ std::vector<double> Energetics<n>::gradient_flux( const std::array<Matrix<double
         for( unsigned i=1; i<cols-1; i++)
             vy[i] = (sum[i+1]-sum[i-1])/2./alg.h;
         vy[cols-1] = (sum[0]-sum[cols-2])/2./alg.h;
-        flux.push_back( dot( sum, sum_phi)*alg.h/(double)(rows*rows));
+        flux.push_back( dot( vy, sum_phi)*alg.h*alg.h/(double)(rows));
     }
+    */
     return flux;
 }
 
@@ -280,7 +303,7 @@ std::vector<double> Energetics<n>::diffusion( const std::array<Matrix<double, TL
     {
         std::vector<double> sum_dens = extract_sum_y( dens_[k] );
         std::vector<double> sum_phi  = extract_sum_y( potential[k] );
-        diffusion_[1] += a_[k]*dot( sum_dens, sum_phi)*alg.h/(double)(rows*rows);
+        diffusion_[1] += a_[k]*dot( sum_dens, sum_phi)*alg.h*alg.h/(double)(rows);
     }
     return diffusion_;
 }
