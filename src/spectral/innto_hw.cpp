@@ -187,8 +187,8 @@ int main( int argc, char* argv[])
         //now set the field to be computed
         solver.init( arr, TL_IONS);
     }catch( Message& m){m.display();}
-    double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
-    std::cout << setprecision(6) <<meanMassE<<std::endl;
+    //double meanMassE = integral( ne, alg.h)/bound.lx/bound.ly;
+    //std::cout << setprecision(6) <<meanMassE<<std::endl;
     
     Energetics<n> energetics(bp);
     ////////////////////////////////////////////////////////////////////////
