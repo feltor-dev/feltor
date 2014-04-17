@@ -274,6 +274,12 @@ int main( int argc, char* argv[])
                 diff.push_back( diffusion[0]), mdiff.push_back( diffusion[1]);
                 capital_a.push_back( energetics.capital_a( solver.getField( TL_ELECTRONS), solver.getField(TL_POTENTIAL)));
                 capital_jot.push_back( energetics.capital_jot( solver.getField( TL_ELECTRONS), solver.getField(TL_POTENTIAL)));
+                if( fabs(ue.back() ) > 1e10)
+                {
+                    std::cerr << "Energy divergence!! Does simulation respect CFL condition?\n"; 
+                    return -1;
+                }
+
 
             }
             if( i==0 && j==0)
@@ -283,6 +289,7 @@ int main( int argc, char* argv[])
             else
                 solver.step();
             time += alg.dt;
+
         }
         //write Probe file
         probe.writeSubset( times,"time", itstp/itstp2, i*itstp/itstp2);
