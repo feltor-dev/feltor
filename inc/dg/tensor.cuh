@@ -42,8 +42,6 @@ struct AddIndex2d{
 } //namespace detail
 ///@endcond
 
-//maybe one shouldn't take host_memory because it's limited
-//and note that one cannot pass a host matrix
 /**
 * @brief Form the DG tensor product between two DG matrices
 *

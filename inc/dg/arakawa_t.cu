@@ -20,6 +20,7 @@ const unsigned Ny = 50;
 //const double ly = 2.*M_PI;
 
 
+
 //choose some mean function (attention on lx and ly)
 /*
 //THESE ARE NOT PERIODIC
@@ -63,19 +64,29 @@ double jacobian( double x, double y)
     return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
 
+const unsigned Nz = 10;
+const double lz = 1.;
+double left( double x, double y, double z) {return left(x,y)*z;}
+double right( double x, double y, double z) {return right(x,y)*z;} 
+//double right2( double x, double y) {return sin(y);}
+double jacobian( double x, double y, double z) 
+{
+    return jacobian(x,y)*z*z;
+}
+
 int main()
 {
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    DVec w2d = create::s2d( grid);
+    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    DVec w2d = create::w2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;
-    DVec lhs = expand( left, grid), jac(lhs);
-    DVec rhs = expand( right, grid);
-    const DVec sol = expand ( jacobian, grid);
-    DVec eins = expand( one, grid);
+    DVec lhs = evaluate( left, grid), jac(lhs);
+    DVec rhs = evaluate( right, grid);
+    const DVec sol = evaluate ( jacobian, grid);
+    DVec eins = evaluate( one, grid);
 
-    Arakawa< DVec> arakawa( grid);
+    ArakawaX< DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     //arakawa( lhs, rhs1, jac1);
@@ -98,6 +109,26 @@ int main()
     //n = 5 -> p = 5    |
     // quantities are all conserved to 1e-15 for periodic bc
     // for dirichlet bc these are not better conserved than normal jacobian
+    std::cout << "TESTING 3d derivatives!\n";
+    Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, bcy);
+    DVec w3d = create::w3d( g3d);
+    cout << "# of 2d cells                     " << Nx*Ny <<endl;
+    cout << "# of Legendre nodes per dimension "<< n <<endl;
+    cout <<fixed<< setprecision(2)<<endl;
+    DVec lhs3 = evaluate( left, g3d), jac3(lhs3);
+    DVec rhs3 = evaluate( right, g3d);
+    const DVec sol3 = evaluate( jacobian, g3d);
+    DVec eins3 = evaluate( one, g3d);
+
+    ArakawaX< DVec> arakawa3( g3d);
+    arakawa3( lhs3, rhs3, jac3);
+
+    cout << scientific;
+    cout << "Mean     Jacobian is "<<blas2::dot( eins3, w3d, jac3)<<"\n";
+    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs3,  w3d, jac3)<<"\n";
+    cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs3,  w3d, jac3)<<"\n";
+    blas1::axpby( 1., sol3, -1., jac3);
+    cout << "Distance to solution "<<sqrt( blas2::dot( w3d, jac3))<<endl; //don't forget sqrt when comuting errors
 
     return 0;
 }

@@ -36,7 +36,7 @@ struct Arakawa
      *
      * @param g The 2D grid
      */
-    Arakawa( const Grid<value_type>& g);
+    Arakawa( const Grid2d<value_type>& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -44,7 +44,7 @@ struct Arakawa
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    Arakawa( const Grid<value_type>& g, bc bcx, bc bcy);
+    Arakawa( const Grid2d<value_type>& g, bc bcx, bc bcy);
 
     /**
      * @brief Compute poisson's bracket
@@ -66,7 +66,7 @@ struct Arakawa
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
 template< class container>
-Arakawa< container>::Arakawa( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
+Arakawa< container>::Arakawa( const Grid2d<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
     Operator<value_type> forward1d( g.dlt().forward());
@@ -103,7 +103,7 @@ Arakawa< container>::Arakawa( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs(
     bdyf = dg::create::dy( g, bcy, XSPACE);
 }
 template< class container>
-Arakawa< container>::Arakawa( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
+Arakawa< container>::Arakawa( const Grid2d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
 {
     //create forward dlt matrix
     Operator<value_type> forward1d( g.dlt().forward());
@@ -183,7 +183,7 @@ struct ArakawaX
      *
      * @param g The 2D grid
      */
-    ArakawaX( const Grid<value_type>& g);
+    ArakawaX( const Grid2d<value_type>& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -191,7 +191,21 @@ struct ArakawaX
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy);
+    ArakawaX( const Grid2d<value_type>& g, bc bcx, bc bcy);
+    /**
+     * @brief Create Arakawa on a grid
+     *
+     * @param g The 3D grid
+     */
+    ArakawaX( const Grid3d<value_type>& g);
+    /**
+     * @brief Create Arakawa on a grid using different boundary conditions
+     *
+     * @param g The 3D grid
+     * @param bcx The boundary condition in x
+     * @param bcy The boundary condition in y
+     */
+    ArakawaX( const Grid3d<value_type>& g, bc bcx, bc bcy);
     //ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy); //deprecated
 
     /**
@@ -223,8 +237,6 @@ struct ArakawaX
     const Matrix& dy() {return bdyf;}
 
   private:
-    //typedef typename VectorTraits< Vector>::value_type value_type;
-    //void construct( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
     Matrix bdxf, bdyf;
     container dxlhs, dxrhs, dylhs, dyrhs, helper;
 };
@@ -232,53 +244,29 @@ struct ArakawaX
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
 template< class container>
-ArakawaX<container>::ArakawaX( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+ArakawaX<container>::ArakawaX( const Grid2d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
 template< class container>
-ArakawaX<container>::ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+ArakawaX<container>::ArakawaX( const Grid2d<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);
 }
-/*
-template< class T, size_t n, class container>
-ArakawaX<T, n, container>::ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class container>
+ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
-    construct( Nx, Ny, hx, hy, bcx, bcy);
+    bdxf = dg::create::dx( g, g.bcx(), XSPACE);
+    bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
-template< class T, size_t n, class container>
-void ArakawaX<T, n, container>::construct( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy)
+template< class container>
+ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
-    typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-
-    //create forward dlt matrix
-    Operator<value_type, n> forward1d( DLT<n>::forward);
-    //create backward dlt matrix
-    Operator<value_type, n> backward1d( DLT<n>::backward);
-    //create derivatives
-    HMatrix dx = create::dx_symm<T,n>( Nx, hx, bcx);
-    HMatrix dy = create::dx_symm<T,n>( Ny, hy, bcy);
-    HMatrix fx = tensor( Nx, forward1d);
-    HMatrix fy = tensor( Ny, forward1d);
-    HMatrix bx = tensor( Nx, backward1d);
-    HMatrix by = tensor( Ny, backward1d);
-    HMatrix dxf( dx), dyf( dy), bdxf_(dx), bdyf_(dy);
-
-    cusp::multiply( dx, fx, dxf);
-    cusp::multiply( bx, dxf, bdxf_);
-    cusp::multiply( dy, fy, dyf);
-    cusp::multiply( by, dyf, bdyf_);
-
-    HMatrix bdxf__ = dgtensor<T,n>( tensor<T,n>( Ny, delta), bdxf_ );
-    HMatrix bdyf__ = dgtensor<T,n>(  bdyf_, tensor<T,n>( Nx, delta));
-
-    bdxf = bdxf__;
-    bdyf = bdyf__;
+    bdxf = dg::create::dx( g, bcx, XSPACE);
+    bdyf = dg::create::dy( g, bcy, XSPACE);
 }
-*/
 
 template< class container>
 void ArakawaX< container>::operator()( const container& lhs, const container& rhs, container& result)

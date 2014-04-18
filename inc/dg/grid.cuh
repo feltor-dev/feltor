@@ -84,7 +84,7 @@ struct Grid1d
  * @tparam T scalar value type 
  */
 template< class T>
-struct Grid
+struct Grid2d
 {
     /**
      * @brief Construct a 2D grid
@@ -99,7 +99,7 @@ struct Grid
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    Grid( T x0, T x1, T y0, T y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+    Grid2d( T x0, T x1, T y0, T y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
         n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {

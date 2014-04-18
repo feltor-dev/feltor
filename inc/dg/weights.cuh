@@ -53,7 +53,7 @@ thrust::host_vector<T> t1d( const Grid1d<T>& g)
 * @return Host Vector
 */
 template< class T>
-thrust::host_vector<T> s2d( const Grid<T>& g)
+thrust::host_vector<T> s2d( const Grid2d<T>& g)
 {
     thrust::host_vector<T> v( g.size());
     unsigned n= g.n();
@@ -73,7 +73,7 @@ thrust::host_vector<T> s2d( const Grid<T>& g)
 * @return Host Vector
 */
 template< class T>
-thrust::host_vector<T> t2d( const Grid<T>& g)
+thrust::host_vector<T> t2d( const Grid2d<T>& g)
 {
     thrust::host_vector<T> v = s2d( g);
     for( unsigned i=0; i<g.size(); i++)
@@ -173,7 +173,7 @@ int get_j( unsigned n, int idx) { return idx%(n*n)%n;}
 * @return Host Vector
 */
 template <class T>
-thrust::host_vector<T> w2d( const Grid<T>& g)
+thrust::host_vector<T> w2d( const Grid2d<T>& g)
 {
     thrust::host_vector<T> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -189,7 +189,7 @@ thrust::host_vector<T> w2d( const Grid<T>& g)
 * @return Host Vector
 */
 template <class T>
-thrust::host_vector<T> v2d( const Grid<T>& g)
+thrust::host_vector<T> v2d( const Grid2d<T>& g)
 {
     thrust::host_vector<T> v = w2d( g);
     for( unsigned i=0; i<g.size(); i++)

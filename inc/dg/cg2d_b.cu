@@ -41,7 +41,7 @@ int main()
     unsigned n, Nx, Ny; 
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
     dg::S2D<double> s2d( grid);
     cout<<"Expand initial condition\n";
     dg::HVec x = dg::expand( initial, grid);

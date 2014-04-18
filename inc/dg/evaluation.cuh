@@ -58,7 +58,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d<double>& 
             may be constructed during function call.
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const Grid<double>& g)
+thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d<double>& g)
 {
     unsigned n= g.n();
     //TODO: opens dlt.dat twice...!!
@@ -76,7 +76,7 @@ thrust::host_vector<double> evaluate( BinaryOp f, const Grid<double>& g)
     return v;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double), const Grid<double>& g)
+thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d<double>& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return evaluate<double(double, double)>( f, g);
@@ -177,7 +177,7 @@ thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
  * @note Copies the binary Operator. This function is meant for small function objects.
  */
 template< class BinaryOp>
-thrust::host_vector<double> expand( BinaryOp f, const Grid<double>& g)
+thrust::host_vector<double> expand( BinaryOp f, const Grid2d<double>& g)
 {
     thrust::host_vector<double> v = evaluate( f, g);
     unsigned n = g.n();
@@ -211,7 +211,7 @@ thrust::host_vector<double> expand( BinaryOp f, const Grid<double>& g)
 };
 
 ///@cond
-thrust::host_vector<double> expand( double(f)(double, double), const Grid<double>& g)
+thrust::host_vector<double> expand( double(f)(double, double), const Grid2d<double>& g)
 {
     return expand<double(double, double)>( f, g);
 };

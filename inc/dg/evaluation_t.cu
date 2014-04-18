@@ -45,7 +45,7 @@ int main()
     Nx = N; Ny = 2*N; Nz = 10*N;
 
     dg::Grid1d<double> g1d( 0, lx, n, N);
-    dg::Grid<double> g2d( 0, lx,0, ly,n, Nx, Ny);
+    dg::Grid2d<double> g2d( 0, lx,0, ly,n, Nx, Ny);
     dg::Grid3d<double> g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz);
 
     //test evaluation and expand functions
