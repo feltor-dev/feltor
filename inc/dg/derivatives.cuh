@@ -154,7 +154,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
     }
     Operator<T> normx(g.n(), 0.), normy( g.n(), 0.);
 
-    //generate norm
+    //generate norm (w1d or s1d)
     if( no == not_normed) 
     {
         if( s==XSPACE)
@@ -285,7 +285,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g,
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
     Matrix laplace2d = create::laplacianM( g2d, bcx, bcy, no, s, dir);
 
-    return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), laplace2d);
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), laplace2d);
 
 }
 
