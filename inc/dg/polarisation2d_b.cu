@@ -48,7 +48,7 @@ int main()
     cout << "Type n, Nx and Ny and epsilon! \n";
     cin >> n >> Nx >> Ny; //more N means less iterations for same error
     cin >> eps;
-    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
     Vector v2d = dg::create::v2d( grid);
     Vector w2d = dg::create::w2d( grid);
     //create functions A(chi) x = b

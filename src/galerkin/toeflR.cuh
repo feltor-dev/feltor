@@ -49,7 +49,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
+    ToeflR( const Grid2d<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -160,7 +160,7 @@ struct ToeflR
 };
 
 template< class container>
-ToeflR< container>::ToeflR( const Grid<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
+ToeflR< container>::ToeflR( const Grid2d<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),

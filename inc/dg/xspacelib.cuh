@@ -150,7 +150,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vec
  * @note this matrix has ~n^4 N^2 entries
  */
 template < class T>
-cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid<T>& g, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     //create equidistant backward transformation
