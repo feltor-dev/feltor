@@ -373,15 +373,14 @@ int main( int argc, char* argv[])
     */
 
     //////////////////////////////////////////////////////////////////
-    //os.close();
     fftw_cleanup();
     t.toc();
-    std::cout << "Total simulation time for "<<max_out*itstp<<" steps: "<<t.diff()<<"s\n";
+    unsigned hour = (unsigned)floor(t.diff()/3600);
+    unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
+    double second = t.diff() - hour*3600 - minute*60;
+    std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
+    std::cout << "Total simulation time for "<<max_out*itstp<<" steps: "<<hour<<":"<<std::setw(2)<<minutes<<":"<<second<<"\n";
     std::cout << "Which is "<<t.diff()/(double)(max_out*itstp)<<"s/step\n";
-    //std::cout << "Times size: "<<times.size()<<"\n";
-    //std::cout << "Probes size: "<<probe_ne[0].size()<<"\n";
-    //for( unsigned i=0; i<probe_ne[16].size(); i++)
-    //    std::cout << probe_ne[16][i]<<"\n";
     return 0;
 
 }

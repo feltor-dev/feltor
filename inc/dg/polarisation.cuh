@@ -112,6 +112,20 @@ struct Polarisation2dX
      * @param bcy The boundary condition in y
      */
     Polarisation2dX( const Grid2d<value_type>& grid, bc bcx, bc bcy, direction dir = forward);
+    /**
+     * @brief Create Polarisation on a grid 
+     *
+     * @param g The 3D grid
+     */
+    Polarisation2dX( const Grid3d<value_type>& grid, direction dir = forward);
+    /**
+     * @brief Create polarisation term on a grid using different boundary conditions
+     *
+     * @param g The 3D grid
+     * @param bcx The boundary condition in x
+     * @param bcy The boundary condition in y
+     */
+    Polarisation2dX( const Grid3d<value_type>& grid, bc bcx, bc bcy, direction dir = forward);
 
     /**
      * @brief Create a unnormalized matrix for the 2d polarisation term in XSPACE
@@ -127,6 +141,7 @@ struct Polarisation2dX
     typedef cusp::array1d<int, MemorySpace> Array;
     typedef cusp::array1d<value_type, MemorySpace> VArray;
     void construct( unsigned n, unsigned Nx, unsigned Ny, value_type hx, value_type hy, bc bcx, bc bcy, const DLT<value_type>&, direction dir  );
+    void construct( unsigned Nz, value_type hz);
     Matrix leftx, lefty, rightx, righty, jump;
     Array I, J;
     typename Array::view I_view, J_view;
@@ -153,6 +168,24 @@ Polarisation2dX<container>::Polarisation2dX( const Grid2d<value_type>& g, bc bcx
     xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
     construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy, g.dlt(), dir);
+}
+template <class container>
+Polarisation2dX< container>::Polarisation2dX( const Grid3d<value_type>& g, direction dir):
+    I(g.size()+1), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
+    middle( create::w3d(g) ), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
+    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
+{
+    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), g.bcx(), g.bcy(), g.dlt(), dir);
+    construct( g.Nz(), g.hz());
+}
+template <class container>
+Polarisation2dX<container>::Polarisation2dX( const Grid3d<value_type>& g, bc bcx, bc bcy, direction dir):
+    I(g.size()+1), J(I), I_view( I.begin(), I.end()), J_view( J.begin(), J.end()), 
+    middle( create::w3d(g) ), xchi(middle), xchi_view( xchi.begin(), xchi.end()),
+    xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
+{
+    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy, g.dlt(), dir);
+    construct( g.Nz(), g.hz());
 }
 
 template <class container>
@@ -208,6 +241,22 @@ void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny
     jump = jump_;
 }
 
+template <class container>
+void Polarisation2dX<container>::construct( unsigned Nz, value_type hz)
+{
+    Matrix temp; 
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), rightx);
+    rightx = temp;
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), righty);
+    righty = temp;
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), leftx);
+    leftx = temp;
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), lefty);
+    lefty = temp;
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), jump);
+    jump = temp;
+}
+
 template< class container>
 typename Polarisation2dX<container>::Matrix Polarisation2dX<container>::create( const container& chi)
 {
@@ -221,14 +270,6 @@ typename Polarisation2dX<container>::Matrix Polarisation2dX<container>::create( 
     cusp::multiply( lefty, temp2, temp1); //L_y*D_y*R_y
     cusp::add( temp1, temp3, temp2);  // D_yy + D_xx
     cusp::add( temp2, jump, temp1); // Lap + Jump
-    //temp1.sort_by_row_and_column(); //add does not sort
-    /*
-    cusp::coo_matrix<int, double, cusp::host_memory> temp_ = temp2;
-    t.tic();
-    eigenpol.compute( xchi_matrix_view, temp_);
-    t.toc();
-    std::cout << "point8 "<<t.diff()<<"s\n";
-    */
    
     return temp1;
 }
