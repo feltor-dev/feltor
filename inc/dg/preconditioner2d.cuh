@@ -31,7 +31,7 @@ struct S2D
     *
     * @param g The grid
     */
-    __host__ S2D( const Grid<T>& g): n( g.n()), hx_(g.hx()), hy_( g.hy()){}
+    __host__ S2D( const Grid2d<T>& g): n( g.n()), hx_(g.hx()), hy_( g.hy()){}
     /**
     * @brief 
     *
@@ -77,7 +77,7 @@ struct T2D
     *
     * @param g The grid
     */
-    __host__ T2D( const Grid<T>& g):n(g.n()), hx_(g.hx()), hy_( g.hy()){}
+    __host__ T2D( const Grid2d<T>& g):n(g.n()), hx_(g.hx()), hy_( g.hy()){}
     /**
     * @brief 
     *

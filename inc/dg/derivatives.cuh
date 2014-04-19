@@ -48,7 +48,7 @@ namespace create{
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T>& g, bc bcx, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Matrix dx = create::dx_symm<T>(g.n(), g.Nx(), g.hx(), bcx);
@@ -68,7 +68,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T>& g, bc bcx, space 
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T>& g, space s = XSPACE) { return dx( g, g.bcx(), s);}
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, space s = XSPACE) { return dx( g, g.bcx(), s);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -81,7 +81,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid<T>& g, space s = XSPA
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T>& g, bc bcy, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, space s = XSPACE)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Matrix dy = create::dx_symm<T>( g.n(), g.Ny(), g.hy(), bcy);
@@ -101,7 +101,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T>& g, bc bcy, space 
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T>& g, space s = XSPACE){ return dy( g, g.bcy(), s);}
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, space s = XSPACE){ return dy( g, g.bcy(), s);}
 
 //the behaviour of CG is completely the same in xspace as in lspace
 /**
@@ -119,7 +119,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid<T>& g, space s = XSPA
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE, direction dir = forward)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE, direction dir = forward)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
 
@@ -154,7 +154,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx
     }
     Operator<T> normx(g.n(), 0.), normy( g.n(), 0.);
 
-    //generate norm
+    //generate norm (w1d or s1d)
     if( no == not_normed) 
     {
         if( s==XSPACE)
@@ -193,9 +193,119 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, bc bcx
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid<T>& g, norm no = normed, space s = XSPACE, direction dir = forward)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm no = normed, space s = XSPACE, direction dir = forward)
 {
     return laplacianM( g, g.bcx(), g.bcy(), no, s, dir);
+}
+
+/**
+ * @brief Create 3d derivative in x-direction
+ *
+ * @tparam T value-type
+ * @param g The grid on which to create dx
+ * @param bcx The boundary condition
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, space s = XSPACE)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
+    Matrix dx = create::dx( g2d, bcx, s);
+
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), dx );
+}
+
+///////////////////////////////////////////3D VERSIONS//////////////////////
+/**
+ * @brief Create 3d derivative in x-direction
+ *
+ * @tparam T value-type
+ * @param g The grid on which to create dx (boundary condition is taken from here)
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, space s = XSPACE) { return dx( g, g.bcx(), s);}
+
+/**
+ * @brief Create 3d derivative in y-direction
+ *
+ * @tparam T value-type
+ * @param g The grid on which to create dy
+ * @param bcx The boundary condition
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, space s = XSPACE)
+{
+
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
+    Matrix dy = create::dy( g2d, bcy, s);
+
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), dy);
+}
+/**
+ * @brief Create 3d derivative in y-direction
+ *
+ * @tparam T value-type
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, space s = XSPACE){ return dy( g, g.bcy(), s);}
+
+//the behaviour of CG is completely the same in xspace as in lspace
+/**
+ * @brief Create 3d negative laplacian_perp
+ *
+ * \f[ -\Delta = -(\partial_x^2 + \partial_y^2) \f]
+ * @tparam T value-type
+ * @param g The grid on which to operate
+ * @param bcx Boundary condition in x
+ * @param bcy Boundary condition in y
+ * @param no use normed if you want to compute e.g. diffusive terms,
+             use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE, direction dir = forward)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
+    Matrix laplace2d = create::laplacianM( g2d, bcx, bcy, no, s, dir);
+
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), laplace2d);
+
+}
+
+/**
+ * @brief Create 3d negative laplacian
+ *
+ * \f[ -\Delta = -(\partial_x^2 + \partial_y^2) \f]
+ * @tparam T value-type
+ * @tparam n # of Legendre coefficients 
+ * @param g The grid on which to operate (boundary conditions are taken from here)
+ * @param no use normed if you want to compute e.g. diffusive terms, 
+             use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
+ * @param s The space on which the matrix operates on
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, norm no = normed, space s = XSPACE, direction dir = forward)
+{
+    return laplacianM_perp( g, g.bcx(), g.bcy(), no, s, dir);
 }
 ///@}
 

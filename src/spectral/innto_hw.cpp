@@ -201,7 +201,7 @@ int main( int argc, char* argv[])
     std::vector<double> average(8,0);
     std::vector<double> out( alg.nx*alg.ny);
     std::vector<double> output[n+1] = {out, out, out, out};
-    toefl::Timer t, t2;
+    toefl::Timer t, t2, t3;
     t.tic();
     file::Probe probe( argv[3], input, max_out*itstp/itstp2);
           probe.createSet( "ne", 8, 8);
@@ -251,8 +251,10 @@ int main( int argc, char* argv[])
         t2.tic();
         for( unsigned j=0; j<itstp; j++)
         {
+            
             if( !(j%itstp2))
             {
+                t3.tic();
                 times.push_back(time);
                 const Mat& electrons = solver.getField( TL_ELECTRONS);
                 write_probe( electrons, probe_ne, probe_ne_fluc);
@@ -281,6 +283,7 @@ int main( int argc, char* argv[])
                 }
 
 
+                t3.toc();
             }
             if( i==0 && j==0)
                 solver.first_step();
@@ -323,7 +326,9 @@ int main( int argc, char* argv[])
 
         t2.toc();
         std::cout << "\n\t Time "<<time <<" / "<<alg.dt*itstp*max_out;
-        std::cout << "\n\t Average time for one step: "<<t2.diff()/(double)itstp<<"s\n\n"<<std::flush;
+        std::cout << "\n\t Average time for one step: "<<t2.diff()/(double)itstp<<"s"<<std::flush;
+        std::cout << "\n\t        Time for one probe: "<<t3.diff()<<"s"<<std::flush;
+        std::cout << "\n\t    Percent time for probe: "<<itstp/itstp2*t3.diff()/t2.diff()<<"s\n"<<std::flush;
     }
     output[0] = solver.getField( TL_ELECTRONS).copy();
     //xpa( output[0], meanMassE);
@@ -368,15 +373,14 @@ int main( int argc, char* argv[])
     */
 
     //////////////////////////////////////////////////////////////////
-    //os.close();
     fftw_cleanup();
     t.toc();
-    std::cout << "Total simulation time for "<<max_out*itstp<<" steps: "<<t.diff()<<"s\n";
+    unsigned hour = (unsigned)floor(t.diff()/3600);
+    unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
+    double second = t.diff() - hour*3600 - minute*60;
+    std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
+    std::cout << "Total simulation time for "<<max_out*itstp<<" steps: "<<hour<<":"<<std::setw(2)<<minutes<<":"<<second<<"\n";
     std::cout << "Which is "<<t.diff()/(double)(max_out*itstp)<<"s/step\n";
-    //std::cout << "Times size: "<<times.size()<<"\n";
-    //std::cout << "Probes size: "<<probe_ne[0].size()<<"\n";
-    //for( unsigned i=0; i<probe_ne[16].size(); i++)
-    //    std::cout << probe_ne[16][i]<<"\n";
     return 0;
 
 }
