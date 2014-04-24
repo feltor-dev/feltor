@@ -8,6 +8,7 @@
 #include "dg/functors.cuh"
 #include "dg/evaluation.cuh"
 #include "dg/rk.cuh"
+#include "dg/karniadakis.cuh"
 #include "dg/xspacelib.cuh"
 #include "dg/typedefs.cuh"
 
@@ -34,7 +35,7 @@ int main()
         std::cerr << "Time stepper needs recompilation!\n";
         return -1;
     }
-    Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     DVec w2d( create::w2d(grid));
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
@@ -49,7 +50,8 @@ int main()
     DVec y0( omega ), y1( y0);
     //make solver and stepper
     Shu<DVec> test( grid, p.D, p.eps);
-    AB< k, DVec > ab( y0);
+    Diffusion<DVec> diffusion( grid, p.D);
+    Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
 
     t.tic();
     test( y0, y1);
@@ -67,7 +69,7 @@ int main()
     //transform vector to an equidistant grid
     dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
     draw::ColorMapRedBlueExt colors( 1.);
-    ab.init( test, y0, p.dt);
+    ab.init( test, diffusion, y0, p.dt);
     //cout << "Press any key to start!\n";
     double x; 
     //cin >> x;
@@ -87,9 +89,7 @@ int main()
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
-            ab( test, y0, y1, p.dt);
-            y0.swap( y1);
-            //thrust::swap(y0, y1);
+            ab( test,diffusion, y0 );
         }
         t.toc();
         //cout << "Timer for one step: "<<t.diff()/N<<"s\n";

@@ -25,7 +25,7 @@
 
 ---------------------Physical parameters----------------------
 
-11) nu  (viscosity)                     =   0.000   (0.001)
+11) nu  (viscosity)                     =   0.001   (0.001)
 
 -----------------Initial dipole parameters---------------------
 

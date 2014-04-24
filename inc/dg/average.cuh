@@ -7,7 +7,7 @@ namespace dg{
 template< class container, class IndexContainer>
 struct PoloidalAverage
 {
-    PoloidalAverage( const Grid<double>& g):dummy( g.n()*g.Nx()), helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
+    PoloidalAverage( const Grid2d<double>& g):dummy( g.n()*g.Nx()), helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
     {
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
         reorder = create::scatterMap( g.n(), g.Nx(), g.Ny());

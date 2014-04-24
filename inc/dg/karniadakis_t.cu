@@ -1,10 +1,11 @@
 #include <iostream>
 
 #include <cusp/ell_matrix.h>
+#include <cusp/blas.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "rk.cuh"
+#include "karniadakis.cuh"
 #include "grid.cuh"
 #include "gamma.cuh"
 #include "evaluation.cuh"
@@ -22,16 +23,41 @@ struct RHS
     {
         laplaceM = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
     }
-    void operator()( const container& y, container& yp)
+    void operator()( const std::vector<container>& y, std::vector<container>& yp)
     {
-        dg::blas2::symv( laplaceM, y, yp);
-        dg::blas1::axpby( -D_, yp, 0., yp);
-        //dg::blas1::axpby( 0., y, 0., yp);
+        //dg::blas2::symv( laplaceM, y, yp);
+        //dg::blas1::axpby( -D_, yp, 0., yp);
+        dg::blas1::axpby( 0., y, 0., yp);
     }
   private:
     double D_;
     cusp::ell_matrix<int, double, MemorySpace> laplaceM;
 };
+
+template< class container>
+struct Diffusion
+{
+    Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
+        w2d(2, dg::create::w2d( g)), v2d(2, dg::create::v2d(g)) { 
+        LaplacianM = dg::create::laplacianM( g, dg::normed, dg::XSPACE); 
+        }
+
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    {
+        for(unsigned i=0; i<x.size(); i++)
+        {
+            dg::blas2::gemv( LaplacianM, x[i], y[i]);
+        }
+        dg::blas1::axpby( 0.,y, -nu_, y);
+    }
+    const std::vector<container>& weights(){return w2d;}
+    const std::vector<container>& precond(){return v2d;}
+  private:
+    double nu_;
+    const std::vector<container> w2d, v2d;
+    dg::DMatrix LaplacianM;
+};
+
 
 const unsigned n = 3;
 const double lx = 2.*M_PI;
@@ -51,15 +77,13 @@ using namespace dg;
 
 int main()
 {
-    double dt, NT;
+    double dt, NT, eps;
     unsigned Nx, Ny;
-    cout << "Type Nx (20), Ny (20) and timestep (0.01)!\n";
-    cin >> Nx >> Ny >> dt;
+    cout << "Type Nx (20), Ny (20) and timestep (0.1) and eps( 1e-8)!\n";
+    cin >> Nx >> Ny >> dt >> eps;
     NT = (unsigned)(T/dt);
 
-
-    cout << "Test RK scheme on diffusion equation\n";
-    cout << "Polynomial coefficients:  "<< n<<endl;
+    cout << "Test Karniadakis scheme on diffusion equation\n";
     cout << "RK order K:               "<< k <<endl;
     cout << "Number of gridpoints:     "<<Nx*Ny<<endl;
     cout << "# of timesteps:           "<<NT<<endl;
@@ -67,25 +91,23 @@ int main()
     Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, PER, PER);
     dg::DVec w2d = create::w2d( grid);
 
-    DVec y0 = evaluate( sine, grid), y1(y0);
+    std::vector<DVec> y0(2, evaluate( sine, grid)), y1(y0);
 
     RHS<DVec> rhs( grid, nu);
-    RK< k, DVec > rk( y0);
-    AB< k, DVec > ab( y0);
-
-    ab.init( rhs, y0, dt);
+    Diffusion<DVec> diffusion( grid, nu);
+    dg::Karniadakis< std::vector<DVec> > tvb( y0, y0[0].size(), eps);
+    tvb.init( rhs, diffusion, y0, dt);
 
     //thrust::swap(y0, y1);
     for( unsigned i=0; i<NT; i++)
     {
-        ab( rhs, y0, y1, dt);
-        y0.swap( y1);
+        tvb( rhs, diffusion, y0);
     }
-    double norm_y0 = blas2::dot( w2d, y0);
+    double norm_y0 = blas2::dot( w2d, y0[0]);
     cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << endl;
     DVec solution = evaluate( sol, grid), error( solution);
     double norm_sol = blas2::dot( w2d, solution);
-    blas1::axpby( -1., y0, 1., error);
+    blas1::axpby( -1., y0[0], 1., error);
     cout << "Normalized solution is "<<  norm_sol<< endl;
     double norm_error = blas2::dot( w2d, error);
     cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000141704)\n";

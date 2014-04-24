@@ -29,7 +29,7 @@ template< class Vector>
 class CG
 {
   public:
-    typedef typename Vector::value_type value_type;
+    typedef typename VectorTraits<Vector>::value_type value_type;
       /**
        * @brief Reserve memory for the pcg method
        *
@@ -137,7 +137,8 @@ unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, c
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
         std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
-        std::cout << "Relative "<<sqrt( nrm2r_new)/nrmb << "\n";
+        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*nrmb + eps) 
             return i;

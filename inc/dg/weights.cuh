@@ -1,6 +1,6 @@
 #pragma once
 
-#include "thrust/host_vector.h"
+#include <thrust/host_vector.h>
 #include "grid.cuh"
 
 namespace dg{

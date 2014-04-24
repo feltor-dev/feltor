@@ -11,6 +11,27 @@
 
 namespace dg
 {
+template< class container>
+struct Diffusion
+{
+    Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
+        w2d( dg::create::w2d( g)), v2d( dg::create::v2d(g)) { 
+        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed, dg::XSPACE); 
+        cusp::blas::scal( Laplacian_.values, -nu);
+        Laplacian = Laplacian_;
+        }
+    void operator()( const container& x, container& y)
+    {
+        dg::blas2::gemv( Laplacian, x, y);
+    }
+    const container& weights(){return w2d;}
+    const container& precond(){return v2d;}
+  private:
+    double nu_;
+    const container w2d, v2d;
+    dg::DMatrix Laplacian;
+};
+
 struct Fail : public std::exception
 {
 
@@ -29,7 +50,7 @@ struct Shu
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
-    Shu( const Grid<value_type>& grid, double D, double eps);
+    Shu( const Grid2d<value_type>& grid, double D, double eps);
 
     Matrix& lap() { return laplace;}
     /**
@@ -55,7 +76,7 @@ struct Shu
 };
 
 template< class container>
-Shu< container>::Shu( const Grid<value_type>& g, double D, double eps): 
+Shu< container>::Shu( const Grid2d<value_type>& g, double D, double eps): 
     omega( g.size(), 0.), phi(omega), phi_old(phi),
     arakawa( g), 
     pcg( omega, g.size()), x( phi), b( x),
@@ -70,8 +91,8 @@ Shu< container>::Shu( const Grid<value_type>& g, double D, double eps):
 template< class container>
 void Shu<container>::operator()( const Vector& y, Vector& yp)
 {
-    dg::blas2::symv( laplace, y, yp);
-    dg::blas2::symv( -D, v2d, yp, 0., yp); //laplace is unnormalized -laplace
+    //dg::blas2::symv( laplace, y, yp);
+    //dg::blas2::symv( -D, v2d, yp, 0., yp); //laplace is unnormalized -laplace
     //compute S omega
     blas2::symv( w2d, y, omega);
     blas1::axpby( 2., phi, -1.,  phi_old);
@@ -84,7 +105,7 @@ void Shu<container>::operator()( const Vector& y, Vector& yp)
     //cholesky.solve( x.data(), b.data(), b.size()); //solve on host
     //phi = x; //copy data back to device
     arakawa( y, phi, omega); //A(y,phi)-> omega
-    blas1::axpby( 1., omega, 1., yp);
+    blas1::axpby( 1., omega, 0., yp);
 
 }
 

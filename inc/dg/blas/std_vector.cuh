@@ -66,6 +66,18 @@ inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, StdVe
         doPointwiseDot( x1[i], x2[i], y[i], ThrustVectorTag() );
 }
 
+template< class Vector>
+inline typename VectorTraits<Vector>::value_type doDot( const std::vector<Vector>& x1, const std::vector<Vector>& x2, StdVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x1.empty());
+    assert( x1.size() == x2.size() );
+#endif //DG_DEBUG
+    typename VectorTraits<Vector>::value_type sum =0;
+    for( unsigned i=0; i<x1.size(); i++)
+        sum += dot( x1[i], x2[i] );
+    return sum;
+}
 
 
 } //namespace detail

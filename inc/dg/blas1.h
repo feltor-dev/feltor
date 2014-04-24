@@ -38,7 +38,7 @@ namespace blas1
  * @note If DG_DEBUG is defined a range check shall be performed
  */
 template< class Vector>
-inline typename Vector::value_type dot( const Vector& x, const Vector& y)
+inline typename VectorTraits<Vector>::value_type dot( const Vector& x, const Vector& y)
 {
     return dg::blas1::detail::doDot( x, y, typename dg::VectorTraits<Vector>::vector_category() );
 }

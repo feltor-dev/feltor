@@ -10,6 +10,8 @@ struct DiagonalPreconditionerTag {};
 
 struct IdentityTag : public DiagonalPreconditionerTag {};
 
+struct StdMatrixTag{};
+
 struct OperatorMatrixTag {};
 
 struct SelfMadeMatrixTag {};

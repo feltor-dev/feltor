@@ -7,6 +7,7 @@
 #include "dg/functors.cuh"
 #include "dg/evaluation.cuh"
 #include "dg/rk.cuh"
+#include "dg/karniadakis.cuh"
 #include "dg/xspacelib.cuh"
 #include "dg/typedefs.cuh"
 
@@ -25,7 +26,7 @@ const double T = 2.;
 ////const double eps = 1e-7; //CG method
 
 
-double D = 0.00;
+double D = 0.01;
 
 const unsigned m = 1; //mode number
 //const double kx = 2.*M_PI* (double)m/lx; 
@@ -55,20 +56,20 @@ int main()
     cout << "Diffusion " << D <<endl;
 
     ////////////////////////////////////////////////////////////
-    for( unsigned n=1; n<2; n++)
+    for( unsigned n=2; n<3; n++)
     {
         cout << "P="<<n<<"\n";
         for(unsigned i=1; i<5; i++)
         {
-            unsigned Nx = 15*pow(2,i), Ny = Nx;
-            Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+            unsigned Nx = 8*pow(2,i), Ny = Nx;
+            Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
             DVec w2d( create::w2d(grid));
 
             double dx = lx/(double)Nx;
             double eps = 1e-1/pow(10, n)*pow(dx,n);
             unsigned NT = 4*(unsigned)(T*pow(2,n)/dx);
-            if( D!= 0)
-                NT = std::max((unsigned)(0.06*T*pow(4,n)/dx/dx), NT);
+            //if( D!= 0)
+                //NT = std::max((unsigned)(0.06*T*pow(4,n)/dx/dx), NT);
             const double dt = T/(double)NT;
             //cout << "Runge Kutta stages          " << k <<endl;
             //cout << "Timestep                    " << dt << endl;
@@ -83,7 +84,8 @@ int main()
             DVec y0( omega), y1( y0);
             //make solver and stepper
             Shu<DVec> test( grid, D, eps);
-            AB< k, DVec > ab( y0);
+            Diffusion<DVec> diffusion( grid, D);
+            Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
 
             test( y0, y1);
             double vorticity = blas2::dot( stencil, w2d, sol);
@@ -91,13 +93,13 @@ int main()
             double energy =    0.5*blas2::dot( sol, w2d, sol_phi) ;
 
             double time = 0;
-            ab.init( test, y0, dt);
+            ab.init( test,diffusion, y0, dt);
             while( time < T)
             {
                 //step 
 
                 t.tic();
-                ab( test, y0, y1, dt);
+                ab( test, diffusion, y0);
                 y0.swap( y1);
                 t.toc();
                 //thrust::swap( y0, y1);

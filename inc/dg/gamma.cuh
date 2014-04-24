@@ -3,7 +3,13 @@
 
 
 #include <cassert>
+
 #include "blas.h"
+#include "cg.cuh"
+#include "grid.cuh"
+#include "typedefs.cuh"
+#include "weights.cuh"
+#include "derivatives.cuh"
 
 namespace dg{
 
@@ -62,6 +68,56 @@ struct MatrixTraits< Gamma<M, T> >
     typedef SelfMadeMatrixTag matrix_category;
 };
 ///@endcond
+
+template<class container>
+struct Helmholtz2d
+{
+    typedef typename container::value_type value_type;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
+    typedef dg::DMatrix Matrix;
+    //typedef typename Matrix::MemorySpace MemorySpace;
+    Helmholtz2d( const Grid2d<double>& g, double alpha, double eps): 
+        eps_(eps), g(g),
+        w2d( dg::create::w2d(g)),v2d( dg::create::v2d(g)), 
+        phi1( g.size(), 0), phi2(phi1), cg( w2d, w2d.size())
+    {
+        set_alpha( alpha);
+    }
+    unsigned operator()( const container& rho, container& phi)
+    {
+        assert( &rho != &phi);
+        blas1::axpby( 2., phi1, -1.,  phi2, phi);
+        dg::blas2::symv( w2d, rho, phi2);
+        unsigned number = cg( A_, phi, phi2, v2d, eps_);
+        phi1.swap( phi2);
+        blas1::axpby( 1., phi, 0, phi1);
+        return number;
+    }
+    void explicit_step( const container& rho, container& phi)
+    {
+        dg::blas2::symv( A_, rho, phi);
+        dg::blas2::symv( v2d, phi, phi);
+    }
+    void set_alpha( double alpha_new) 
+    {
+        cusp::coo_matrix<int, double, cusp::host_memory> A = create::laplacianM( g, not_normed), diff;
+        cusp::coo_matrix<int, double, cusp::host_memory> weights( g.size(), g.size(), g.size());
+        thrust::sequence(weights.row_indices.begin(), weights.row_indices.end()); 
+        thrust::sequence(weights.column_indices.begin(), weights.column_indices.end()); 
+        thrust::copy( w2d.begin(), w2d.end(), weights.values.begin());
+        cusp::blas::scal( A.values, -alpha_new);
+        cusp::add( weights, A, diff);
+        A_  = diff;
+    }
+  private:
+    double eps_;
+    const Grid2d<double> g;
+    const container w2d, v2d;
+    container phi1, phi2;
+    Matrix A_;
+    dg::CG< container > cg;
+};
+
 
 } //namespace dg
 #endif//_DG_GAMMA_

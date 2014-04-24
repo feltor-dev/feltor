@@ -19,6 +19,7 @@
 #include "derivatives.cuh"
 #include "arakawa.cuh"
 #include "polarisation.cuh"
+#include "weights.cuh"
 
 //integral functions
 #include "preconditioner.cuh"
@@ -147,7 +148,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vec
  * @param s your vectors are given in XSPACE or in LSPACE
  *
  * @return transformation matrix
- * @note this matrix has ~n^4 N^2 entries
+ * @note this matrix has ~n^4 N^2 entries and is not sorted
  */
 template < class T>
 cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g, space s = XSPACE)
