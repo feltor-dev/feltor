@@ -183,6 +183,24 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g, spa
     return scatter;
 
 }
+/**
+ * @brief make a matrix that transforms values to an equidistant grid ready for visualisation
+ *
+ * Useful if you want to visualize a dg-formatted vector.
+ * @tparam T value type
+ * @param g The 3d grid on which to operate 
+ * @param s your vectors are given in XSPACE or in LSPACE
+ *
+ * @return transformation matrix
+ * @note this matrix has ~n^4 N^2 entries and is not sorted
+ */
+template < class T>
+cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g, space s = XSPACE)
+{
+    Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
+    cusp::coo_matrix<int,T, cusp::host_memory> back2d = backscatter( g2d, s);
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), back2d);
+}
 
  /*
  * @brief Evaluate the jumps on grid boundaries

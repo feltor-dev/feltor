@@ -43,6 +43,15 @@ struct MatrixTraits< detail::Implicit<M> >
 };
 ///@endcond
 
+/**
+* @brief Struct for Karniadakis semi-implicit multistep time-integration
+*
+* @ingroup algorithms
+* Uses blas1::axpby routines to integrate one step
+* and only one right-hand-side evaluation per step. 
+* Uses a conjugate gradient method for the implicit operator  
+* @tparam Vector The Argument type used in the Functor class
+*/
 template<class Vector>
 struct Karniadakis
 {
@@ -50,6 +59,8 @@ struct Karniadakis
     * @brief Reserve memory for the integration
     *
     * @param copyable Vector of size which is used in integration. 
+    * @param max_iter parameter for cg
+    * @param eps  parameter for cg
     * A Vector object must be copy-constructible from copyable.
     */
     Karniadakis( const Vector& copyable, unsigned max_iter, double eps): u_(3, Vector(copyable)), f_(3, Vector(copyable)), pcg( copyable, max_iter), eps_(eps){
@@ -73,22 +84,26 @@ struct Karniadakis
         the return value, i.e. y' = f(y) translates to f( y, y').
      * @param f The rhs functor
      * @param u0 The initial value you later use 
-     * @param dt The timestep
+     * @param dt The timestep saved for later use
      */
     template< class Functor, class LinearOp>
     void init( Functor& f, LinearOp& diff, const Vector& u0, double dt);
     /**
-    * @brief Advance u0 one timestep
+    * @brief Advance u for one timestep
     *
     * @tparam Functor models BinaryFunction with no return type (subroutine)
         Its arguments both have to be of type Vector.
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
+    * @tparam LinearOp models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = L(y) translates to diff( y, y').
+        Furthermore the routines weights() and precond() must be callable
+        and return diagonal weights and the preconditioner for the conjugate gradient. 
     * @param f right hand side function or functor
-    * @param u0 initial value
-    * @param u1 contains result on output. u0 and u1 may be the same ( if the Functor allows that)
-    * @param dt The timestep.
-    * @note The fist u0 must be the same you use in the init routine.
+    * @param diff diffusion operator treated implicitely 
+    * @param u initial value on input, contains result on output
     */
     template< class Functor, class LinearOp>
     void operator()( Functor& f, LinearOp& diff, Vector& u);
