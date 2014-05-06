@@ -184,7 +184,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
  *
  * \f[ -\Delta = -(\partial_x^2 + \partial_y^2) \f]
  * @tparam T value-type
- * @tparam n # of Legendre coefficients 
  * @param g The grid on which to operate (boundary conditions are taken from here)
  * @param no use normed if you want to compute e.g. diffusive terms, 
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
@@ -297,7 +296,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, bc bcz, dire
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( g, g.bcz(), symmetric);}
-//the behaviour of CG is completely the same in xspace as in lspace
+
 /**
  * @brief Create 3d negative laplacian_perp
  *
@@ -324,11 +323,10 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g,
 }
 
 /**
- * @brief Create 3d negative laplacian
+ * @brief Create 3d negative perpendicular laplacian
  *
  * \f[ -\Delta = -(\partial_x^2 + \partial_y^2) \f]
  * @tparam T value-type
- * @tparam n # of Legendre coefficients 
  * @param g The grid on which to operate (boundary conditions are taken from here)
  * @param no use normed if you want to compute e.g. diffusive terms, 
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
@@ -340,6 +338,27 @@ template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, norm no = normed, space s = XSPACE, direction dir = forward)
 {
     return laplacianM_perp( g, g.bcx(), g.bcy(), no, s, dir);
+}
+
+/**
+ * @brief Create normed 3d negative parallel laplacian in XSPACE
+ *
+ * \f[ -\Delta = -\partial_z^2  \f]
+ * @tparam T value-type
+ * @param g The grid on which to operate 
+ * @param bcz boundary condition
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_parallel( const Grid3d<T>& g, bc bcz, direction dir = forward)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Grid1d<T> g1d( g.z0(), g.z1(), 1, g.Nz(), bcz);
+    Matrix lz = create::laplace1d( g1d, normed, dir);
+
+    return dgtensor<T>( 1, lz, tensor<T>( g.Nx()*g.Ny(), delta(g.n()*g.n())));
+
 }
 ///@}
 
