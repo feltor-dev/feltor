@@ -221,6 +221,7 @@ void Polarisation2dX<container>::construct( unsigned n, unsigned Nx, unsigned Ny
     thrust::sequence( I.begin(), I.end());
     thrust::sequence( J.begin(), J.end());
 
+    //create jump matrices
     //create norm for jump matrices 
     Operator<value_type> normx(n, 0.), normy(n, 0.);
     for( unsigned i=0; i<n; i++)
@@ -245,13 +246,13 @@ template <class container>
 void Polarisation2dX<container>::construct( unsigned Nz, value_type hz)
 {
     Matrix temp; 
-    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), rightx);
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, create::delta(1)), rightx);
     rightx = temp;
-    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), righty);
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, create::delta(1)), righty);
     righty = temp;
-    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), leftx);
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, create::delta(1)), leftx);
     leftx = temp;
-    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), lefty);
+    temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, create::delta(1)), lefty);
     lefty = temp;
     temp = dgtensor<value_type>( 1, tensor<value_type>( Nz, hz*create::delta(1)), jump);
     jump = temp;
