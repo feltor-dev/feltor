@@ -198,6 +198,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm
     return laplacianM( g, g.bcx(), g.bcy(), no, s, dir);
 }
 
+///////////////////////////////////////////3D VERSIONS//////////////////////
 /**
  * @brief Create 3d derivative in x-direction
  *
@@ -218,7 +219,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, spac
     return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), dx );
 }
 
-///////////////////////////////////////////3D VERSIONS//////////////////////
 /**
  * @brief Create 3d derivative in x-direction
  *
@@ -236,7 +236,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, space s = XS
  *
  * @tparam T value-type
  * @param g The grid on which to create dy
- * @param bcx The boundary condition
+ * @param bcy The boundary condition
  * @param s The space on which the matrix operates on
  *
  * @return A host matrix in coordinate format
@@ -263,6 +263,40 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, spac
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, space s = XSPACE){ return dy( g, g.bcy(), s);}
 
+/**
+ * @brief Create 3d derivative in z-direction
+ *
+ * @tparam T value-type
+ * @param g The grid on which to create dz
+ * @param bcz The boundary condition
+ * @param dir The direction of the stencil
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, bc bcz, direction dir)
+{
+    //dasselbe wie dy in 2D: 
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Matrix dz; 
+    if( dir == forward) 
+        dz = create::dx_plus_mt<T>(1, g.Nz(), g.hz(), bcz);
+    else if( dir == backward) 
+        dz = create::dx_minus_mt<T>(1, g.Nz(), g.hz(), bcz);
+    else
+        dz = create::dx_symm<T>(1, g.Nz(), g.hz(), bcz);
+    return dgtensor<T>( 1, dz,  tensor<T>( g.Nx()*g.Ny(), delta(g.n()*g.n()) ));
+}
+/**
+ * @brief Create 3d derivative in z-direction
+ *
+ * @tparam T value-type
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ *
+ * @return A host matrix in coordinate format
+ */
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( g, g.bcz(), symmetric);}
 //the behaviour of CG is completely the same in xspace as in lspace
 /**
  * @brief Create 3d negative laplacian_perp

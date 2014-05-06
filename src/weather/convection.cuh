@@ -7,6 +7,38 @@
 
 #include "dg/timer.cuh"
 
+template< class container>
+struct Diffusion
+{
+    Diffusion( const dg::Grid2d<double>& g, double L, double P): L_(L), P_(P),
+        w2d(3, dg::create::w2d( g)), v2d(3, dg::create::v2d(g)), temp( g.size()) { 
+            LaplacianM_dir = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::normed, dg::XSPACE, dg::symmetric);
+            LaplacianM_neu = dg::create::laplacianM( g, dg::PER, dg::NEU, dg::normed, dg::XSPACE, dg::symmetric);
+        }
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    {
+        dg::blas2::gemv( LaplacianM_dir, x[0], y[0]);
+        dg::blas1::axpby( -1., y[0], 0., y[0]);
+        dg::blas2::gemv( LaplacianM_neu, x[1], y[1]);
+        dg::blas1::axpby( -L_, y[1], 0., y[1]);
+        dg::blas2::gemv( LaplacianM_dir, x[2], y[2]);
+        dg::blas1::axpby( -P_, y[2], 0., y[2]);
+    //dg::blas2::gemv( laplaceM_dir, y[0], temp);
+    //dg::blas1::axpby( -1., temp, 1.,yp[0]);
+    //dg::blas2::gemv( laplaceM_neu, y[1], temp);
+    //dg::blas1::axpby( -L_, temp, 1.,yp[1]);
+    //dg::blas2::gemv( laplaceM_dir, y[2], temp);
+    //dg::blas1::axpby( -P_, temp, 1.,yp[2]);
+    }
+    const std::vector<container>& weights(){return w2d;}
+    const std::vector<container>& precond(){return v2d;}
+  private:
+    double L_, P_;
+    const std::vector<container> w2d, v2d;
+    container temp;
+    dg::DMatrix LaplacianM_dir;
+    dg::DMatrix LaplacianM_neu;
+};
 
 struct Source
 {
@@ -37,7 +69,7 @@ struct Convection
 {
     typedef typename container::value_type value_type;
     typedef dg::DMatrix Matrix; 
-    Convection( const dg::Grid<value_type>&, Params, double eps_lap);
+    Convection( const dg::Grid2d<value_type>&, Params, double eps_lap);
 
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
     /**
@@ -45,7 +77,7 @@ struct Convection
      *
      * @return cusp matrix
      */
-    const Matrix& laplacianM( ) const { return laplaceM_dir;}
+    const Matrix& laplacianM( ) const { return laplaceM;}
     /**
      * @brief Returns phi that belong to the last y in operator()
      *
@@ -61,8 +93,6 @@ struct Convection
 
     Matrix dx_per, dy_dir, dy_neu;
     Matrix laplaceM;
-    Matrix laplaceM_dir;
-    Matrix laplaceM_neu;
 
 
     container phi, phi_old, dxphi, dyphi;
@@ -79,7 +109,7 @@ struct Convection
 };
 
 template <class container>
-Convection<container>::Convection( const dg::Grid<value_type>& g, Params p, double eps_lap ): 
+Convection<container>::Convection( const dg::Grid2d<value_type>& g, Params p, double eps_lap ): 
     phi( g.size()), phi_old(phi), dxphi( phi), dyphi( phi),
     dxT( phi), source_(phi), temp( phi),
     background_( dg::evaluate( dg::LinearY( -p.R, p.R*p.zeta), g)), 
@@ -93,8 +123,6 @@ Convection<container>::Convection( const dg::Grid<value_type>& g, Params p, doub
     dy_dir = dg::create::dy( g, dg::DIR, dg::XSPACE);
     dy_neu = dg::create::dy( g, dg::NEU, dg::XSPACE);
     laplaceM = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::not_normed, dg::XSPACE, dg::symmetric);
-    laplaceM_dir = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::normed, dg::XSPACE, dg::symmetric);
-    laplaceM_neu = dg::create::laplacianM( g, dg::PER, dg::NEU, dg::normed, dg::XSPACE, dg::symmetric);
 }
 
 template<class container>
@@ -149,12 +177,12 @@ void Convection<container>::operator()( const std::vector<container>& y, std::ve
     dg::blas1::axpby( R_, dxphi, 1, yp[0]);
     dg::blas1::axpby( -P_,  dxT, 1, yp[2]);
     //diffusive terms
-    dg::blas2::gemv( laplaceM_dir, y[0], temp);
-    dg::blas1::axpby( -1., temp, 1.,yp[0]);
-    dg::blas2::gemv( laplaceM_neu, y[1], temp);
-    dg::blas1::axpby( -L_, temp, 1.,yp[1]);
-    dg::blas2::gemv( laplaceM_dir, y[2], temp);
-    dg::blas1::axpby( -P_, temp, 1.,yp[2]);
+    //dg::blas2::gemv( laplaceM_dir, y[0], temp);
+    //dg::blas1::axpby( -1., temp, 1.,yp[0]);
+    //dg::blas2::gemv( laplaceM_neu, y[1], temp);
+    //dg::blas1::axpby( -L_, temp, 1.,yp[1]);
+    //dg::blas2::gemv( laplaceM_dir, y[2], temp);
+    //dg::blas1::axpby( -P_, temp, 1.,yp[2]);
     //source term
     dg::blas1::axpby( 1., background_, 1., y[0], temp);
     thrust::transform( temp.begin(), temp.end(), y[1].begin(), source_.begin(), Source());
