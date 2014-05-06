@@ -70,6 +70,24 @@ struct Gaussian
                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     * @param y z - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()(double x, double y, double z)
+    {
+        return  amplitude*
+                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
+                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+    }
   private:
     double  x00, y00, sigma_x, sigma_y, amplitude;
 

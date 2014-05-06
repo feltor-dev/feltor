@@ -199,7 +199,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g, spa
 {
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
     cusp::coo_matrix<int,T, cusp::host_memory> back2d = backscatter( g2d, s);
-    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), back2d);
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), back2d);
 }
 
  /*

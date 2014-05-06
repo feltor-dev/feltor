@@ -155,7 +155,7 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
     blas2::symv( diff.weights(), u, u);
 #ifdef DG_BENCHMARK
     unsigned number = pcg( implicit, u_[0], u, diff.precond(), eps_);
-    std::cout << " # of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<"\n";
+    std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<"\n";
 #else
     pcg( implicit, u_[0], u, diff.precond(), eps_);
 #endif
