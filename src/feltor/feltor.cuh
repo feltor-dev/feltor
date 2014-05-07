@@ -17,7 +17,12 @@ namespace eule
 template<class container>
 struct Rolkar
 {
-    Rolkar( const dg::Grid3d<double>& g, double nu_x, double nu_z):nu_perp_(nu_x), nu_parallel_(nu_z), w3d( 3, dg::create::w3d(g)), v3d( 3, dg::create::v3d(g)), temp( g.size()){
+    Rolkar( const dg::Grid3d<double>& g, double nu_x, double nu_z, double a, double t, double lnn_inner):
+        nu_perp_(nu_x), nu_parallel_(nu_z), lnn_inner(lnn_inner),
+        w3d( 3, dg::create::w3d(g)), v3d( 3, dg::create::v3d(g)), 
+        temp( g.size()),
+        iris( dg::evaluate( Iris( a, t), g))
+    {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::XSPACE);
         LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
     }
@@ -31,9 +36,9 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_para, x[i], temp);
             dg::blas1::axpby( -nu_parallel_, temp, 1., y[i]);
         }
-        //divide( y[0], x[0], y[0]);
-        //divide( y[1], x[1], y[1]);
-        //divide( y[2], x[0], y[2]);
+        //cut contributions to boundary 
+        for( unsigned i=0; i<3; i++)
+            dg::blas1::pointwiseDot( iris, y[i], y[i]);
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
     const std::vector<container>& weights(){return w3d;}
@@ -45,9 +50,10 @@ struct Rolkar
         thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
                 thrust::divides< typename container::value_type>());
     }
-    double nu_perp_, nu_parallel_;
+    double nu_perp_, nu_parallel_, lnn_inner;
     const std::vector<container> w3d, v3d;
     container temp;
+    const container iris;
     dg::DMatrix LaplacianM_perp;
     dg::DMatrix LaplacianM_para;
 };
@@ -289,11 +295,11 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
     dg::blas1::axpby( -1./eps_hat/p.mu_e, chi, 1., yp[2]);
     //add resistivity
     dg::blas1::axpby( -p.c_hat/eps_hat/p.mu_e, y[2], 1., yp[2]);
-    //apply mask functions
+    //cut boundary contributions
     for( unsigned i=0; i<3; i++)
         dg::blas1::pointwiseDot( iris, yp[i], yp[i]);
-    dg::blas1::axpby( p.lnn_inner ,pupil, 1., yp[0]);
-    dg::blas1::axpby( p.lnn_inner ,pupil, 1., yp[1]);
+    //dg::blas1::axpby( p.lnn_inner, pupil, 1., yp[0]);
+    //dg::blas1::axpby( p.lnn_inner, pupil, 1., yp[1]);
 
 }
 

@@ -47,11 +47,11 @@ endif
 
 all: feltor feltor_hpc
 
-feltor: feltor.cu feltor.cuh 
+feltor: feltor.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
-feltor_hpc: feltor_hpc.cu feltor.cuh 
+feltor_hpc: feltor_hpc.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
 

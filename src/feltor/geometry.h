@@ -1,10 +1,12 @@
 #pragma once
+#include <cassert>
 
 namespace eule
 {
 struct Iris
 {
-    Iris( double a, double thickness): a_(a), t_(thickness) { }
+    Iris( double a, double thickness): a_(a), t_(thickness) {
+    assert( a > thickness);}
     double operator( )(double x, double y, double z)
     {
         double r = sqrt( x*x + y*y);

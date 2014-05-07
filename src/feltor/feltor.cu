@@ -19,6 +19,17 @@
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
+struct Init
+{
+    Init( double x, double y, double sigmax, double sigmay, double amp, double kz):k_(kz), gauss( x,y,sigmax, sigmay, amp){}
+    double operator()( double x, double y, double z)
+    {
+        return gauss(x,y)*sin(k_*z);
+    }
+    private:
+    double k_;
+    dg::Gaussian gauss;
+};
 
 int main( int argc, char* argv[])
 {
@@ -45,18 +56,18 @@ int main( int argc, char* argv[])
     const Parameters p( v);
     p.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[1]*v2[3], v2[4], "");
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
     dg::Grid3d<double > grid( -p.a, p.a,  -p.a, p.a, 0, 2.*M_PI*p.a/p.eps_a, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     //create RHS 
     eule::Feltor< dg::DVec > feltor( grid, p); 
-    eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel);
+    eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel, p.a, p.thickness, p.lnn_inner);
     //create initial vector
-    dg::Gaussian gauss( p.a - p.posX*p.thickness, 0., p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    Init init( p.a - p.posX*p.thickness, 0., p.sigma, p.sigma, p.amp, 2.*M_PI/grid.lz()); //gaussian width is in absolute values
     eule::Gradient grad( p.a, p.thickness, p.lnn_inner);
 
-    std::vector<dg::DVec> y0(3, dg::evaluate( gauss, grid)); // n_e' = gaussian
+    std::vector<dg::DVec> y0(3, dg::evaluate( init, grid)); // n_e' = gaussian
     std::vector<dg::DVec> y1(3, dg::evaluate( grad, grid)); 
     dg::blas1::axpby( 1., y1[0], 1., y0[0]);
     dg::blas1::axpby( 1., y1[1], 1., y0[1]);
@@ -95,6 +106,23 @@ int main( int argc, char* argv[])
         //draw ions
         title << std::setprecision(2) << std::scientific;
         title <<"ne / "<<colors.scale()<<"\t";
+        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
+
+        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1));
+        hvisual = dvisual;
+        //dg::HVec iris = dg::evaluate( eule::Iris( p.a, p.thickness), grid);
+        //dg::blas1::pointwiseDot( iris, hvisual, hvisual);
+        dg::blas2::gemv( equi, hvisual, visual);
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw ions
+        title << std::setprecision(2) << std::scientific;
+        title <<"ni / "<<colors.scale()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();

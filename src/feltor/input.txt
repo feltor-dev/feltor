@@ -6,11 +6,11 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   1      (3)
-2)  nx (grid points in x)                =   100   (192)
-3)  ny (grid points in y)                =   100   (192)
-4)  nz (grid points in z)                =   3 (16)
+2)  nx (grid points in x)                =   200   (192)
+3)  ny (grid points in y)                =   200   (192)
+4)  nz (grid points in z)                =   8 (16)
 
-5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   1e-1  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
@@ -20,24 +20,24 @@
 
 ------------------Boundary conditions----------------------
 
-9)  ring thickness  (in units of rho_s)      =   50    (128.)
-10) minor radius a ( in units of rho_s)      =   100    (64.)
-11) aspect ratio (eps_a - a/R_0 with R_0 tokamak radius)    =   0.3
-12) inner density ( ln N )                   =   1.0  
+9)  ring thickness  (in units of rho_s)      =   100    (128.)
+10) minor radius a ( in units of rho_s)      =   200    (64.)
+11) aspect ratio (eps_a ~ a/R_0 with R_0 tokamak radius)    =   20
+12) inner density ( ln N )                   =   2.0  
 
 ------------------Physical parameters----------------------
 
-13) mu_e (-m_e/m_i)                     = -0.001
+13) mu_e (-m_e/m_i)                     = -0.5e-3
 14) tau (Ti/Te)                         = 0.0     (0.0)
 15) curvature parameter                 = 0
-16) nu_perp                             = 1e-3
+16) nu_perp                             = 1e-4
 17) nu_parallel  (viscosity)            = 1e-3    (0.001)
-18) perp resistivity (epshat * c)       = 3.5
+18) perp resistivity (epshat * c)       = -1e-3
 
 ---------------Initial perturbation parameters---------------------
 
-19) amp (perturbation amplitude)            =  0.11     (1.0)
-20) sigma (blob variance in units of rho_s) =  10     (10)
+19) amp (perturbation amplitude)            =  1.     (1.0)
+20) sigma (blob variance in units of rho_s) =  5     (10)
 21) x-position ( in units of thickness)     =  0.5   (0.4)
 22) y-position ( in units of a)             =  0.0   (0.5)
 
