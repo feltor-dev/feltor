@@ -10,27 +10,27 @@
 3)  ny (grid points in y)                =   100   (192)
 4)  nz (grid points in z)                =   3 (16)
 
-5)  dt (time step in units c_s/rho_s)      =   1e-4  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stop for polarisation)    =   1e-2  (1e-6)
+6)  eps_pol (stop for polarisation)    =   1e-3  (1e-6)
 7)  eps_gamma (stop for Gamma CG)      =   1e-3  (1e-8)
-8)  eps_time ( stop for time inversion ) = 1e-4 
+8)  eps_time ( stop for time inversion ) = 1e-9 
 
 ------------------Boundary conditions----------------------
 
 9)  ring thickness  (in units of rho_s)      =   50    (128.)
 10) minor radius a ( in units of rho_s)      =   100    (64.)
 11) aspect ratio (eps_a - a/R_0 with R_0 tokamak radius)    =   0.3
-12) inner density ( ln N )               =0.0 
+12) inner density ( ln N )                   =   1.0  
 
 ------------------Physical parameters----------------------
 
 13) mu_e (-m_e/m_i)                     = -0.001
 14) tau (Ti/Te)                         = 0.0     (0.0)
 15) curvature parameter                 = 0
-16) nu_perp                             = 1e-4
+16) nu_perp                             = 1e-3
 17) nu_parallel  (viscosity)            = 1e-3    (0.001)
 18) perp resistivity (epshat * c)       = 3.5
 

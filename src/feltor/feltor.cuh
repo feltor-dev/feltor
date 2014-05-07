@@ -31,9 +31,9 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_para, x[i], temp);
             dg::blas1::axpby( -nu_parallel_, temp, 1., y[i]);
         }
-        divide( y[0], x[0], y[0]);
-        divide( y[1], x[1], y[1]);
-        divide( y[2], x[0], y[2]);
+        //divide( y[0], x[0], y[0]);
+        //divide( y[1], x[1], y[1]);
+        //divide( y[2], x[0], y[2]);
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
     const std::vector<container>& weights(){return w3d;}

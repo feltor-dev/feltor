@@ -18,6 +18,48 @@
 
 namespace dg
 {
+template<class container>
+struct Diffusion
+{
+    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):nu_(nu), global(global), w2d( 2, dg::create::w2d(g)), v2d( 2, dg::create::v2d(g)), temp( g.size()), expx(temp){
+        LaplacianM_perp = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
+    }
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    {
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            //if( global)
+            //{
+            //    thrust::transform( x[i].begin(), x[i].end(), expx.begin(), dg::EXP<typename container::value_type>());
+            //    dg::blas2::gemv( LaplacianM_perp, expx, temp);
+            //    //dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            //    dg::blas1::axpby( -nu_, temp, 0., y[i]);
+            //    divide( y[i], expx, y[i]);
+            //}
+            //else
+            {
+                dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+                dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+                dg::blas1::axpby( -nu_, y[i], 0., y[i]);
+            }
+        }
+    }
+    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
+    const std::vector<container>& weights(){return w2d;}
+    const std::vector<container>& precond(){return v2d;}
+
+  private:
+    void divide( const container& zaehler, const container& nenner, container& result)
+    {
+        thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
+                thrust::divides< typename container::value_type>());
+    }
+    double nu_;
+    bool global;
+    const std::vector<container> w2d, v2d;
+    container temp, expx;
+    dg::DMatrix LaplacianM_perp;
+};
 struct Fail : public std::exception
 {
 
@@ -363,7 +405,7 @@ void ToeflR< container>::operator()( const std::vector<container>& y, std::vecto
             blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
             blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
         }
-        blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
+        //blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
     }
 
 }
