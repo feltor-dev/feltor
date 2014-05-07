@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( feltor, rolkar, y0, p.dt);
+    //ab.init( feltor, rolkar, y0, p.dt);
     const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
@@ -117,8 +117,8 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
-        //double x;
-        //std::cin >> x;
+        double x;
+        std::cin >> x;
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
