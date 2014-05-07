@@ -13,7 +13,7 @@
 
 namespace eule
 {
-//diffusive terms
+//diffusive terms (add mu_hat?)
 template<class container>
 struct Rolkar
 {
@@ -273,10 +273,8 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
     arakawa( y[0], phi[0], yp[0]);
     arakawa( y[1], phi[1], yp[1]);
     arakawa( y[2], phi[0], yp[2]);
-    dg::blas1::axpby( eps_hat*p.mu_e, yp[2], 0., yp[2]);
 
     //compute parallel derivatives
-    dg::blas2::gemv( dz, phi[0], chi);
     dg::blas2::gemv( dz, y[0], dzy[0]);
     dg::blas2::gemv( dz, y[2], dzy[2]);
 
@@ -285,11 +283,12 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
     dg::blas1::axpby( -1., omega, 1., yp[0]);
 
     dg::blas1::pointwiseDot( y[2], dzy[2], omega);
-    dg::blas1::axpby( -eps_hat*p.mu_e, omega, 1., yp[0]);
-    dg::blas1::axpby( +1., dzy[0], 1., yp[2]);
-    dg::blas1::axpby( -1., chi, 1., yp[2]);
+    dg::blas1::axpby( -1., omega, 1., yp[2]);
+    dg::blas1::axpby( +1./eps_hat/p.mu_e, dzy[0], 1., yp[2]);
+    dg::blas2::gemv( dz, phi[0], chi);
+    dg::blas1::axpby( -1./eps_hat/p.mu_e, chi, 1., yp[2]);
     //add resistivity
-    dg::blas1::axpby( -p.c_hat, y[2], 1., yp[2]);
+    dg::blas1::axpby( -p.c_hat/eps_hat/p.mu_e, y[2], 1., yp[2]);
     //apply mask functions
     for( unsigned i=0; i<3; i++)
         dg::blas1::pointwiseDot( iris, yp[i], yp[i]);

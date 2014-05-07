@@ -10,7 +10,7 @@
 3)  ny (grid points in y)                =   100   (192)
 4)  nz (grid points in z)                =   3 (16)
 
-5)  dt (time step in units c_s/rho_s)      =   1e-2  (0.01)
+5)  dt (time step in units c_s/rho_s)      =   1e-4  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
