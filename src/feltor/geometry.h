@@ -7,8 +7,9 @@ struct Iris
     Iris( double a, double thickness): a_(a), t_(thickness) { }
     double operator( )(double x, double y, double z)
     {
-        if( x*x + y*y > a_*a_) return 0.;
-        if( x*x + y*y < (a_-t_)*(a_-t_)) return 0.; 
+        double r = sqrt( x*x + y*y);
+        if( r > a_) return 0.;
+        if( r < (a_-t_)) return 0.; 
         return 1.;
     }
   private:
@@ -20,7 +21,8 @@ struct Pupil
     Pupil( double a, double thickness): a_(a), t_(thickness) { }
     double operator( )(double x, double y, double z)
     {
-        if( x*x + y*y < (a_-t_)*(a_-t_)) return 1.; 
+        double r = sqrt( x*x + y*y);
+        if( r < (a_-t_)) return 1.; 
         return 0.;
     }
   private:

@@ -41,12 +41,12 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
-    draw::RenderHostData render(v2[1], v2[2]);
     /////////////////////////////////////////////////////////////////////////
     const Parameters p( v);
     p.display( std::cout);
+    v2 = file::read_input( "window_params.txt");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
+    draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
     dg::Grid3d<double > grid( -p.a, p.a,  -p.a, p.a, 0, 2.*M_PI*p.a/p.eps_a, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     //create RHS 
@@ -95,19 +95,42 @@ int main( int argc, char* argv[])
         //draw ions
         title << std::setprecision(2) << std::scientific;
         title <<"ne / "<<colors.scale()<<"\t";
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
 
         //transform phi
-        //dg::blas2::gemv( rolkar.laplacianM(), feltor.potential()[0], y1[1]);
+        dg::blas2::gemv( rolkar.laplacianM(), feltor.potential()[0], y1[1]);
+        hvisual = y1[1];
+        dg::blas2::gemv( equi, hvisual, visual);
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        title <<"phi / "<<colors.scale()<<"\t";
+        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
         hvisual = y0[2];
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw phi and swap buffers
-        title <<"U_e / "<<colors.scale()<<"\t";
+        title <<"Ue / "<<colors.scale()<<"\t";
+        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
+
+
         title << std::fixed; 
         title << " &&   time = "<<time;
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
         glfwPollEvents();
