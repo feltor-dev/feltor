@@ -42,36 +42,40 @@ int main()
     dg::Grid2d<double> grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
     const dg::DVec w2d = dg::create::w2d( grid);
     const dg::DVec v2d = dg::create::v2d( grid);
-    dg::DVec rho = dg::evaluate( rhs, grid);
+    const dg::DVec rho = dg::evaluate( rhs, grid);
     const dg::DVec sol = dg::evaluate( lhs, grid);
-    dg::DVec x(rho.size(), 0.);
-    //dg::DVec x(rho);
+    dg::DVec x(rho.size(), 0.), rho_(rho);
 
     dg::DMatrix A = dg::create::laplacianM( grid, dg::normed, dg::XSPACE); 
-    dg::Gamma< dg::DMatrix, dg::DVec > gamma1( A, w2d, alpha);
-    dg::Helmholtz2d <dg::DVec> diff( grid, alpha, eps);
+    dg::GammaInv< dg::DMatrix, dg::DVec > gamma1inv( A, w2d, v2d, alpha);
 
+    std::cout << "FIRST METHOD:\n";
     dg::CG< dg::DVec > cg(x, x.size());
-    dg::blas2::symv( w2d, rho, rho);
-    unsigned number = cg( gamma1, x, rho, v2d, eps);
-    dg::DVec x_(rho.size(), 0.);
-    rho = dg::evaluate( rhs, grid);
-    diff( rho, x_);
+    dg::blas2::symv( w2d, rho, rho_);
+    unsigned number = cg( gamma1inv, x, rho_, v2d, eps);
 
+    std::cout << "SECOND METHOD:\n";
+    dg::Helmholtz2d <dg::DVec> diff( w2d, grid.size(), eps);
+    dg::Maxwell< dg::DMatrix, dg::DVec > maxwell( A, dg::DVec(grid.size(), 1.),w2d, v2d, alpha);
+    dg::DVec x_(rho.size(), 0.);
+    diff( gamma1inv, x_, rho);
+
+    std::cout << "THIRD METHOD:\n";
     dg::DVec x__(rho.size(), 0.);
-    rho = dg::evaluate( rhs, grid);
     Diffusion<dg::DVec> diffusion( grid, 1.);
     dg::detail::Implicit<Diffusion<dg::DVec> > implicit( alpha, diffusion);
-    dg::blas2::symv( diffusion.weights(), rho, rho);
-    number = cg( implicit, x__, rho, diffusion.precond(), eps);
+    dg::blas2::symv( diffusion.weights(), rho, rho_);
+    number = cg( implicit, x__, rho_, diffusion.precond(), eps);
+
+    //Evaluation
     dg::blas1::axpby( 1., sol, -1., x);
     dg::blas1::axpby( 1., sol, -1., x_);
     dg::blas1::axpby( 1., sol, -1., x__);
 
     std::cout << "number of iterations:  "<<number<<std::endl;
-    std::cout << "error " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
-    std::cout << "error " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
-    std::cout << "error " << sqrt( dg::blas2::dot( w2d, x__))<<std::endl;
+    std::cout << "error1 " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
+    std::cout << "error2 " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
+    std::cout << "error3 " << sqrt( dg::blas2::dot( w2d, x__))<<std::endl;
 
 
 
