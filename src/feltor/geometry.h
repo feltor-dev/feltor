@@ -38,8 +38,8 @@ struct Gradient
     double operator( )(double x, double y, double z)
     {
         double r = sqrt( x*x + y*y);
-        if( r < (a_-t_)) return exp(lnN_inner); 
-        if( r < a_) return 1./t_*(r -a_ + t_ +exp(lnN_inner)*(a_ - r));
+        if( r < (a_-t_)) return exp(lnN_inner*log(10)); 
+        if( r < a_) return 1./t_*(r -a_ + t_ +exp(lnN_inner*log(10))*(a_ - r));
         return 1.;
     }
   private:

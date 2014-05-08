@@ -10,14 +10,15 @@ struct Parameters
     double dt; 
 
     double eps_pol, eps_gamma, eps_time;
-    double thickness, a, eps_a; 
+    double thickness, a, R_0; 
 
     double lnn_inner;
-    double nu_perp, nu_parallel, c_hat, mcv, tau_i;
+    double nu_perp, nu_parallel, c, mcv, tau_i;
 
     double mu_e;
 
     double amp, sigma, posX, posY;
+    double m_par;
 
     unsigned itstp; 
     unsigned maxout;
@@ -40,21 +41,22 @@ struct Parameters
             eps_time = v[8];
             thickness = v[9];
             a = v[10];
-            eps_a = v[11];
+            R_0 = v[11];
             lnn_inner = v[12];
             mu_e = v[13];
             tau_i = v[14];
             mcv = v[15];
             nu_perp = v[16];
             nu_parallel = v[17];
-            c_hat = v[18];
+            c = v[18];
             
             amp = v[19];
             sigma = v[20];
             posX = v[21];
             posY = v[22];
-            itstp = v[23];
-            maxout = v[24];
+            m_par = v[23];
+            itstp = v[24];
+            maxout = v[25];
         }
     }
     /**
@@ -68,13 +70,13 @@ struct Parameters
             <<"    mu_e             = "<<mu_e<<"\n"
             <<"    Ion-temperature: = "<<tau_i<<"\n"
             <<"    perp Viscosity:  = "<<nu_perp<<"\n"
-            <<"    perp Resistivity:= "<<c_hat<<"\n"
+            <<"    perp Resistivity:= "<<c<<"\n"
             <<"    par Viscosity:   = "<<nu_parallel<<"\n"
             <<"    magnetic curvature:  = "<<mcv<<"\n";
         os << "Boundary parameters are: \n"
             <<"    Ring thickness = "<<thickness<<"\n"
             <<"    minor Radius a = "<<a<<"\n"
-            <<"    aspect ratio   = "<<eps_a<<"\n"
+            <<"    major Radius R = "<<R_0<<"\n"
             <<"    inner density ln n = "<<lnn_inner<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"

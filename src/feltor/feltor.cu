@@ -56,17 +56,18 @@ int main( int argc, char* argv[])
     const Parameters p( v);
     p.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[1]*v2[3], v2[4], "");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4], "");
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
-    dg::Grid3d<double > grid( -p.a, p.a,  -p.a, p.a, 0, 2.*M_PI*p.a/p.eps_a, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
+    dg::Grid3d<double > grid( -p.a*(1+1e-1), p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 1., p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     //create RHS 
     eule::Feltor< dg::DVec > feltor( grid, p); 
-    eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel, p.a, p.thickness, p.lnn_inner);
+    eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel, p.a, p.thickness, p.mu_e*4.*M_PI*M_PI*p.R_0*p.R_0);
     //create initial vector
-    Init init( p.a - p.posX*p.thickness, 0., p.sigma, p.sigma, p.amp, 2.*M_PI/grid.lz()); //gaussian width is in absolute values
+    Init init( p.a - p.posX*p.thickness, 0., p.sigma, p.sigma, p.amp, 2.*M_PI*p.m_par); //gaussian width is in absolute values
     eule::Gradient grad( p.a, p.thickness, p.lnn_inner);
 
+    const dg::HVec gradient( dg::evaluate(grad, grid));
     std::vector<dg::DVec> y0(3, dg::evaluate( init, grid)); // n_e' = gaussian
     std::vector<dg::DVec> y1(3, dg::evaluate( grad, grid)); 
     dg::blas1::axpby( 1., y1[0], 1., y0[0]);
@@ -97,9 +98,10 @@ int main( int argc, char* argv[])
     {
         //transform field to an equidistant grid
         feltor.exp( y0, y1, 2);
-        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
+        //thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
 
-        hvisual = dvisual;
+        hvisual = y1[0];
+        dg::blas1::axpby( -1., gradient, 1., hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );

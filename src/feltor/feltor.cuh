@@ -17,8 +17,8 @@ namespace eule
 template<class container>
 struct Rolkar
 {
-    Rolkar( const dg::Grid3d<double>& g, double nu_x, double nu_z, double a, double t, double lnn_inner):
-        nu_perp_(nu_x), nu_parallel_(nu_z), lnn_inner(lnn_inner),
+    Rolkar( const dg::Grid3d<double>& g, double nu_x, double nu_z, double a, double t, double mu_hat):
+        nu_perp_(nu_x), nu_parallel_(nu_z), mu_hat_(mu_hat),
         w3d( 3, dg::create::w3d(g)), v3d( 3, dg::create::v3d(g)), 
         temp( g.size()),
         iris( dg::evaluate( Iris( a, t), g))
@@ -34,7 +34,7 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             dg::blas1::axpby( -nu_perp_, y[i], 0., y[i]);
             dg::blas2::gemv( LaplacianM_para, x[i], temp);
-            dg::blas1::axpby( -nu_parallel_, temp, 1., y[i]);
+            dg::blas1::axpby( -nu_parallel_/mu_hat_, temp, 1., y[i]);
         }
         //cut contributions to boundary 
         for( unsigned i=0; i<3; i++)
@@ -50,7 +50,7 @@ struct Rolkar
         thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
                 thrust::divides< typename container::value_type>());
     }
-    double nu_perp_, nu_parallel_, lnn_inner;
+    double nu_perp_, nu_parallel_, mu_hat_;
     const std::vector<container> w3d, v3d;
     container temp;
     const container iris;
@@ -121,7 +121,7 @@ struct Feltor
     const container& polarisation( const std::vector<container>& y);
 
     container chi, omega;
-    const container iris, pupil;
+    const container iris;
 
     std::vector<container> phi, phi_old;
     std::vector<container> expy, dzy;
@@ -143,7 +143,7 @@ struct Feltor
 template< class container>
 Feltor< container>::Feltor( const dg::Grid3d<value_type>& grid, Parameters p ): 
     chi( grid.size(), 0.), omega(chi),
-    iris( dg::evaluate( Iris( p.a, p.thickness), grid)), pupil( dg::evaluate( Pupil( p.a, p.thickness), grid)),
+    iris( dg::evaluate( Iris( p.a, p.thickness), grid)), 
     phi( 2, chi), phi_old( phi), expy( phi), 
     dzy( 3, chi),
     dz( dg::create::dz(grid)),
@@ -151,7 +151,7 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& grid, Parameters p ):
     pol(     grid), 
     pcg( omega, omega.size()), 
     w3d( dg::create::w3d(grid)), v3d( dg::create::v3d(grid)), one( grid.size(), 1.),
-    p(p), eps_hat( 4.*M_PI*M_PI*p.a*p.a/p.eps_a/p.eps_a)
+    p(p), eps_hat( 4.*M_PI*M_PI*p.R_0*p.R_0)
 {
     //dg::create derivatives
     //laplaceM = dg::create::laplacianM( grid, normed, dg::XSPACE, dg::symmetric); //doesn't hurt to be symmetric but doesn't solver pb
@@ -294,12 +294,10 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
     dg::blas2::gemv( dz, phi[0], chi);
     dg::blas1::axpby( -1./eps_hat/p.mu_e, chi, 1., yp[2]);
     //add resistivity
-    dg::blas1::axpby( -p.c_hat/eps_hat/p.mu_e, y[2], 1., yp[2]);
+    dg::blas1::axpby( p.c/p.mu_e, y[2], 1., yp[2]);
     //cut boundary contributions
     for( unsigned i=0; i<3; i++)
         dg::blas1::pointwiseDot( iris, yp[i], yp[i]);
-    //dg::blas1::axpby( p.lnn_inner, pupil, 1., yp[0]);
-    //dg::blas1::axpby( p.lnn_inner, pupil, 1., yp[1]);
 
 }
 
