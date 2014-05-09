@@ -8,7 +8,7 @@
 #include "dx.cuh"
 #include "functions.h"
 #include "laplace.cuh"
-#include "operator_matrix.cuh"
+#include "operator_tensor.cuh"
 #include "tensor.cuh"
 
 /*! @file 
