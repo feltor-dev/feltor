@@ -148,6 +148,64 @@ unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, c
     return max_iter;
 }
 
+/**
+ * @brief Function version of CG class
+ *
+ * @ingroup algorithms
+ * @tparam Matrix Matrix type
+ * @tparam Vector Vector type
+ * @tparam Preconditioner Preconditioner type
+ * @param A Matrix 
+ * @param x contains initial guess on input and solution on output
+ * @param b right hand side
+ * @param P Preconditioner
+ * @param eps relative error
+ * @param max_iter maximum iterations allowed
+ *
+ * @return number of iterations
+ */
+template< class Matrix, class Vector, class Preconditioner>
+unsigned cg( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typename VectorTraits<Vector>::value_type eps, unsigned max_iter)
+{
+    typedef typename VectorTraits<Vector>::value_type value_type;
+    value_type nrmb = sqrt( blas2::dot( P, b));
+#ifdef DG_DEBUG
+    std::cout << "Norm of b "<<nrmb <<"\n";
+    std::cout << "Residual errors: \n";
+#endif //DG_DEBUG
+    if( nrmb == 0)
+    {
+        blas1::axpby( 1., b, 0., x);
+        return 0;
+    }
+    Vector r(x.size()), p(x.size()), ap(x.size()); //1% time at 20 iterations
+    //r = b; blas2::symv( -1., A, x, 1.,r); //compute r_0 
+    blas2::symv( A,x,r);
+    blas1::axpby( 1., b, -1., r);
+    blas2::symv( P, r, p );//<-- compute p_0
+    //note that dot does automatically synchronize
+    value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
+    value_type alpha, nrm2r_new;
+    for( unsigned i=1; i<max_iter; i++)
+    {
+        blas2::symv( A, p, ap);
+        alpha = nrm2r_old /blas1::dot( p, ap);
+        blas1::axpby( alpha, p, 1.,x);
+        blas1::axpby( -alpha, ap, 1., r);
+        nrm2r_new = blas2::dot( P, r); 
+#ifdef DG_DEBUG
+        std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
+        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+#endif //DG_DEBUG
+        if( sqrt( nrm2r_new) < eps*nrmb + eps) 
+            return i;
+        blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
+        nrm2r_old=nrm2r_new;
+    }
+    return max_iter;
+}
+
 
 } //namespace dg
 

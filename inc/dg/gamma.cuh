@@ -1,6 +1,4 @@
-#ifndef _DG_GAMMA_
-#define _DG_GAMMA_
-
+#pragma once
 
 #include <cassert>
 
@@ -11,30 +9,34 @@
 #include "weights.cuh"
 #include "derivatives.cuh"
 
+#ifdef DG_BENCHMARK
+#include "dg/timer.cuh"
+#endif
+
 namespace dg{
 
 /**
  * @brief Matrix class that represents a Helmholtz-type operator
  *
- * @ingroup creation
+ * @ingroup utilities
  * Discretization of \f[ (1+\alpha\Delta) \f]
- * can be used in conjugate gradient
+ * can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
  * @tparam Prec The type of preconditioner you want to use
  */
 template< class Matrix,class Vector> 
-struct GammaInv
+struct Helmholtz
 {
     /**
      * @brief Construct from existing matrices
      *
-     * Since memory is small on gpus GammaInv can be constructed using an existing laplace operator
+     * Since memory is small on gpus Helmholtz can be constructed using an existing laplace operator
      * @param laplaceM negative normalised laplacian
-     * @param w2d weights ( W2D or T2D); makes the matrix symmetric and is the same you later use in conjugate gradients
-     * @param v2d preconditioner ( V2D or S2D); precondtioner you later use in conjugate gradients
+     * @param weights ( W2D or T2D); makes the matrix symmetric and is the same you later use in conjugate gradients
+     * @param precond ( V2D or S2D); precondtioner you later use in conjugate gradients
      * @param alpha prefactor of laplacian
      */
-    GammaInv( const Matrix& laplaceM, const Vector& w2d, const Vector& v2d, double alpha):p_(w2d), q_(v2d), laplaceM_(laplaceM), alpha_( alpha){ }
+    Helmholtz( const Matrix& laplaceM, const Vector& weights, const Vector& precond, double alpha):p_(weights), q_(precond), laplaceM_(laplaceM), alpha_( alpha){ }
     /**
      * @brief apply operator
      *
@@ -52,8 +54,8 @@ struct GammaInv
         blas1::axpby( 1., x, -alpha_, y);
         blas2::symv( p_, y,  y);
     }
-    const Vector& weights(){return p_;}
-    const Vector& precond(){return q_;}
+    const Vector& weights()const {return p_;}
+    const Vector& precond()const {return q_;}
     double& alpha( ){  return alpha_;}
     double alpha( ) const  {return alpha_;}
   private:
@@ -62,20 +64,12 @@ struct GammaInv
     double alpha_;
 };
 
-///@cond
-template< class M, class T>
-struct MatrixTraits< GammaInv<M, T> >
-{
-    typedef double value_type;
-    typedef SelfMadeMatrixTag matrix_category;
-};
-///@endcond
 /**
- * @brief Matrix class that represents a Helmholtz-type operator
+ * @brief Matrix class that represents a Helmholtz-type operator that appears in the parallel induction equation
  *
- * @ingroup creation
+ * @ingroup utilities 
  * Discretization of \f[ (\alpha\Delta + \chi) \f]
- * can be used in conjugate gradient
+ * can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
  * @tparam container The type of Vector you want to use
  */
@@ -112,8 +106,8 @@ struct Maxwell
         blas1::axpby( 1., temp, -alpha_, y);
         blas1::pointwiseDot( w2d, y, y);
     }
-    const Vector& weights(){return w2d;}
-    const Vector& precond(){return v2d;}
+    const Vector& weights()const {return w2d;}
+    const Vector& precond()const{return v2d;}
     /**
      * @brief Set chi
      *
@@ -127,9 +121,68 @@ struct Maxwell
     double alpha_;
 };
 
+
+/**
+ * @brief Package matrix to be used in the Invert class
+ *
+ * @ingroup utilities
+ * @tparam M Matrix class 
+ * @tparam V class for weights and Preconditioner
+ */
+template< class M, class V>
+struct ApplyWithWeights
+{
+    ApplyWithWeights( const M& m, const V& weights, const V& precond):m_(m), w_(weights), p_(precond){}
+    void symv( const V& x, V& y) const
+    {
+        blas2::symv( m_, x, y);
+        blas2::symv( p_, y, y);
+    }
+    const V& weights() const{return w_;}
+    const V& precond() const{return p_;}
+    private:
+    const M& m_;
+    const V& w_, p_;
+};
+/**
+ * @brief Package matrix to be used in the Invert class
+ *
+ * @ingroup utilities
+ * @tparam M Matrix class 
+ * @tparam V class for weights and Preconditioner
+ */
+template< class M, class V>
+struct ApplyWithoutWeights
+{
+    ApplyWithoutWeights( const M& m, const V& weights, const V& precond):m_(m), w_(weights), p_(precond){}
+    void symv( const V& x, V& y) const { blas2::symv( m_, x, y); }
+    const V& weights() const{return w_;}
+    const V& precond() const{return p_;}
+    private:
+    const M& m_;
+    const V& w_, p_;
+};
 ///@cond
 template< class M, class T>
 struct MatrixTraits< Maxwell<M, T> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template< class M, class T>
+struct MatrixTraits< Helmholtz<M, T> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template< class M, class T>
+struct MatrixTraits< ApplyWithWeights<M, T> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template< class M, class T>
+struct MatrixTraits< ApplyWithoutWeights<M, T> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
@@ -139,16 +192,26 @@ struct MatrixTraits< Maxwell<M, T> >
 /**
  * @brief Solve a symmetric linear inversion problem using a conjugate gradient method 
  *
+ * @ingroup algorithms
+ * Solves the Equation \f[ \hat O \phi = \rho \f]
+ * for any symmetric operator O. 
+ * It uses solutions from the last two calls to 
+ * extrapolate a solution for the current call.
  * @tparam container The Vector class to be used
  */
 template<class container>
-struct Helmholtz2d
+struct Invert
 {
-    Helmholtz2d(const container& copyable,unsigned max_iter, double eps): 
+    /**
+     * @brief Constructor
+     *
+     * @param copyable Needed to construct the two previous solutions
+     * @param max_iter maximum iteration in conjugate gradient
+     * @param eps relative error in conjugate gradient
+     */
+    Invert(const container& copyable,unsigned max_iter, double eps): 
         eps_(eps),
-        phi1( copyable.size(), 0.), phi2(phi1), cg( copyable, max_iter)
-    {
-    }
+        phi1( copyable.size(), 0.), phi2(phi1), cg( copyable, max_iter) { }
     /**
      * @brief Solve linear problem
      *
@@ -168,7 +231,16 @@ struct Helmholtz2d
         assert( &rho != &phi);
         blas1::axpby( 2., phi1, -1.,  phi2, phi);
         dg::blas2::symv( op.weights(), rho, phi2);
+#ifdef DG_BENCHMARK
+    Timer t;
+    t.tic();
+#endif //DG_BENCHMARK
         unsigned number = cg( op, phi, phi2, op.precond(), eps_);
+#ifdef DG_BENCHMARK
+    std::cout << "# of pcg iterations \t"<< number << "\t";
+    t.toc();
+    std::cout<< "took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
         phi1.swap( phi2);
         blas1::axpby( 1., phi, 0, phi1);
         return number;
@@ -178,21 +250,7 @@ struct Helmholtz2d
     container phi1, phi2;
     dg::CG< container > cg;
 };
-    /*
-    void set_alpha( double alpha_new) 
-    {
-        cusp::coo_matrix<int, double, cusp::host_memory> A = create::laplacianM( g, not_normed), diff;
-        cusp::coo_matrix<int, double, cusp::host_memory> weights( g.size(), g.size(), g.size());
-        thrust::sequence(weights.row_indices.begin(), weights.row_indices.end()); 
-        thrust::sequence(weights.column_indices.begin(), weights.column_indices.end()); 
-        thrust::copy( w2d.begin(), w2d.end(), weights.values.begin());
-        cusp::blas::scal( A.values, -alpha_new);
-        cusp::add( weights, A, diff);
-        A_  = diff;
-    }
-    */
 
 
 } //namespace dg
-#endif//_DG_GAMMA_
 
