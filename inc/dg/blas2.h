@@ -1,11 +1,9 @@
-#ifndef _DG_BLAS2_
-#define _DG_BLAS2_
+#pragma once 
 
 #include "blas/cusp_matrix.cuh"
-#include "blas/preconditioner.cuh"
-//#include "blas/operator.cuh"
-#include "blas/selfmade.cuh"
+#include "blas/thrust_matrix.cuh"
 #include "blas/std_matrix.cuh"
+#include "blas/selfmade.cuh"
 #include "vector_traits.h"
 #include "matrix_traits.h"
 
@@ -134,4 +132,3 @@ inline void gemv( const Matrix& m,
 } //namespace blas2
 } //namespace dg
 
-#endif //_DG_BLAS2_

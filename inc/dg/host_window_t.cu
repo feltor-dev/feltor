@@ -13,10 +13,10 @@ using namespace std;
 int main()
 {
     //Create Window and set window title
-    draw::HostWindow w( 400, 400);
-    glfwSetWindowTitle( "Hello world\n");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 400, 400, "Hello world!");
+    draw::RenderHostData render( 1, 1);
     //generate a grid 
-    dg::Grid<double> grid( 0, 1., 0, 1., n, Nx, Ny);
+    dg::Grid2d<double> grid( 0, 1., 0, 1., n, Nx, Ny);
     // generate a vector on the grid to visualize 
     //dg::Gaussian g( 0.5, 0.5, .1, .1, 1);
     dg::Lamb g( 0.5*grid.lx(), 0.5*grid.ly(), .3, 1);
@@ -35,14 +35,14 @@ int main()
     std::cout << "Color scale: "<<colors.scale()<<std::endl;
     std::cout<< "Colors for x = 0: "<<colors( 0).r << " "<<colors(0).g <<" "<<colors(0).b<< std::endl;
 
-    int running = GL_TRUE;
-    while (running)
+    while (!glfwWindowShouldClose( w ))
     {
-        w.draw( visual, n*Nx, n*Ny, colors);
+        render.renderQuad( visual, n*Nx, n*Ny, colors);
+        render.renderQuad( visual, n*Nx, n*Ny, colors);
+        glfwSwapBuffers(w);
         glfwWaitEvents();
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
+    glfwTerminate();
 
     return 0;
 }

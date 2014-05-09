@@ -10,8 +10,6 @@
 #include <thrust/inner_product.h>
 #include <thrust/iterator/zip_iterator.h>
 
-#include "preconditioner.cuh"
-
 namespace dg
 {
 

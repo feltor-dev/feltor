@@ -1,5 +1,4 @@
-#ifndef _DG_BLAS1_
-#define _DG_BLAS1_
+#pragma once
 
 #include "vector_traits.h"
 #include "blas/thrust_vector.cuh"
@@ -100,5 +99,3 @@ inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 }//namespace blas1
 } //namespace dg
 
-
-#endif //_DG_BLAS1_

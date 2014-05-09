@@ -1,5 +1,4 @@
-#ifndef _DG_POLARISATION_CUH
-#define _DG_POLARISATION_CUH
+#pragma once
 
 #include <cusp/coo_matrix.h>
 #include <cusp/csr_matrix.h>
@@ -11,7 +10,6 @@
 #include "blas.h"
 #include "grid.cuh"
 #include "functions.h"
-#include "preconditioner.cuh"
 #include "tensor.cuh"
 #include "operator_dynamic.h"
 #include "operator_matrix.cuh"
@@ -277,4 +275,3 @@ typename Polarisation2dX<container>::Matrix Polarisation2dX<container>::create( 
 
 } //namespace dg
 
-#endif // _DG_POLARISATION_CUH

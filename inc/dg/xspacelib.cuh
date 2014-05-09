@@ -9,7 +9,6 @@
 
 //functions for evaluation
 #include "grid.cuh"
-#include "arrvec2d.cuh"
 #include "functors.cuh"
 #include "dlt.cuh"
 #include "evaluation.cuh"
@@ -22,8 +21,6 @@
 #include "weights.cuh"
 
 //integral functions
-#include "preconditioner.cuh"
-
 #include "typedefs.cuh"
 
 /*! @file

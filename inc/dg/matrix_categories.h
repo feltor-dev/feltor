@@ -6,13 +6,9 @@ namespace dg{
 
 struct CuspMatrixTag {};
 
-struct DiagonalPreconditionerTag {};
-
-struct IdentityTag : public DiagonalPreconditionerTag {};
-
 struct StdMatrixTag{};
 
-struct OperatorMatrixTag {};
+struct ThrustMatrixTag{};
 
 struct SelfMadeMatrixTag {};
 

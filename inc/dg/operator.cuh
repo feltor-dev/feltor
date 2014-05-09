@@ -216,13 +216,6 @@ class Operator
     T ptr[n*n];
 };
 
-template< class T, size_t n>
-struct MatrixTraits< Operator<T, n> >
-{
-    typedef T value_type;
-    typedef typename Operator<T, n>::array_type operand_type;
-    typedef OperatorMatrixTag matrix_category;
-};
 
 ///@endcond
 

@@ -69,23 +69,6 @@ class CG
      */
     template< class Matrix, class Preconditioner >
     unsigned operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P , value_type eps = 1e-12);
-    /**
-     * @brief Solve the system A*x = b using unpreconditioned conjugate gradient method
-     *
-     @tparam Matrix The matrix class: no requirements except for the 
-            BLAS routines
-     * @param A A symmetric positive definit matrix
-     * @param x Contains an initial value on input and the solution on output.
-     * @param b The right hand side vector. x and b may be the same vector.
-     * @param eps The relative error to be respected
-     *
-     * @return Number of iterations used to achieve desired precision
-     */
-    template< class Matrix >
-    unsigned operator()( const Matrix& A, Vector& x, const Vector& b, value_type eps = 1e-12)
-    {
-        return this->operator()( A, x, b, Identity<value_type>(), eps);
-    }
   private:
     Vector r, p, ap; 
     unsigned max_iter;
