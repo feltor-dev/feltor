@@ -1,5 +1,5 @@
-#ifndef _DG_OPERATOR_MATRIX_
-#define _DG_OPERATOR_MATRIX_
+#pragma once 
+
 #include <algorithm>
 
 #include <cusp/coo_matrix.h>
@@ -41,10 +41,6 @@ Operator<T> tensor( const Operator<T>& op1, const Operator<T>& op2)
 }
 
 
-//namespace create
-//{
-
-//creates 1 x op where 1 is the NxN identity matrix
 /**
 * @brief Tensor product between Delta and an operator
 *
@@ -110,51 +106,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  
     cusp::multiply( l, mr, lmr);
     return lmr;
 }
-//sandwich l space matrix to make x space matrix
-/*
- * @brief Transforms a 1d matrix in l-space to x-space
- *
- * computes (1xbackward)m(1xforward)
- * @tparam T value type
- * @param m The matrix
- *
- * @return A newly allocated cusp matrix containing the x-space version of m
- */
-/*
-template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> sandwich( unsigned n, const cusp::coo_matrix<int, T, cusp::host_memory>& m)
-{
-    Operator<T> forward1d = create::forward(n);
-    Operator<T> backward1d = create::backward(n);
-    return sandwich( backward1d, m, forward1d);
-}
-*/
 
-//use symmetry of matrix
-template<class Matrix>
-void transverse( const Matrix& in, Matrix& out)
-{
-    //USE MATRIX SYMMETRY AND DO A THRUST::SORT_BY_KEY ON VALUES
-    //WRITE PRECONDITIONS AND MAKE SURE LAPLACE FUNCTIONS SET ALL VALUES
-    //EVTL NUR IN XSPACE DA MUSS MAN SICH NICHT UM VORZEICHENWECHSEL KÜMMERN
-    typedef typename Matrix::value_type value_type;
-    typedef int index_type;
-    //cusp::print( in);
-    out = in;
-    /*
-    thrust::sort( out.row_indices.begin(), out.row_indices.end(), thrust::greater<index_type>());
-    out.sort_by_row();
-    out.row_indices.swap( out.column_indices); //transpose
-    //Punktspiegelung
-    out.sort_by_row();
-    thrust::sort( out.row_indices.begin(), out.row_indices.end(), thrust::greater<index_type>());
-    out.sort_by_row_and_column();
-    */
-    thrust::host_vector<int> keys( in.num_entries);
-    thrust::sequence( keys.begin(), keys.end());
-    thrust::sort_by_key( keys.begin(), keys.end(), out.values.begin(), thrust::greater<value_type>());
-
-}
 
 
 ///@}
@@ -162,5 +114,4 @@ void transverse( const Matrix& in, Matrix& out)
     
 }//namespace dg
 
-#endif //_DG_OPERATOR_MATRIX_
 

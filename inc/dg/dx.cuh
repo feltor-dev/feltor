@@ -1,5 +1,4 @@
-#ifndef _DG_DX_CUH
-#define _DG_DX_CUH
+#pragma once
 
 #include <cassert>
 #include <cusp/coo_matrix.h>
@@ -9,7 +8,7 @@
 #include "operator_dynamic.h"
 #include "creation.cuh"
 
-/*!@file simple 1d derivatives
+/*! @file simple 1d derivatives
   */
 namespace dg
 {
@@ -342,4 +341,3 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
 } //namespace create
 } //namespace dg
 
-#endif //_DG_DX_CUH

@@ -1,12 +1,11 @@
 #ifndef _DG_MATRIX_TRAITS_THRUST
 #define _DG_MATRIX_TRAITS_THRUST
 
-#include "matrix_traits.h"
-#include "matrix_categories.h"
-#include "vector_categories.h"
 
 #include "thrust/device_vector.h"
 #include "thrust/host_vector.h"
+#include "matrix_traits.h"
+#include "matrix_categories.h"
 
 #include "weights.cuh"
 

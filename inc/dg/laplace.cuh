@@ -1,5 +1,4 @@
-#ifndef _DG_LAPLACE_CUH
-#define _DG_LAPLACE_CUH
+#pragma once
 
 #include <cusp/coo_matrix.h>
 #include <cusp/transpose.h>
@@ -10,7 +9,7 @@
 #include "operator_dynamic.h"
 #include "creation.cuh"
 #include "dx.cuh"
-#include "operator_matrix.cuh"
+#include "operator_tensor.cuh"
 
 /*! @file 1d laplacians
   */
@@ -243,5 +242,3 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
 } //namespace create
 
 } //namespace dg
-
-#endif // _DG_LAPLACE_CUH

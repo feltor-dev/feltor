@@ -32,7 +32,7 @@
 namespace dg{
 
 namespace create{
-///@addtogroup utilities
+///@addtogroup scatter
 ///@{
 //TODO make one scatterMap for n, m and then apply to projection
 //to be used in thrust::scatter and thrust::gather (Attention: don't scatter inplace -> Pb with n>1)

@@ -54,6 +54,8 @@
  *      @defgroup utilities Utilities
  *          Utilities that might come in handy at some place or the other.
  *      @{
+ *          @defgroup scatter Utility functions for reorder operations on DG-formatted vectors
+ *          @defgroup operators Utility classes for the use in the Invert class
  *          @defgroup polarization Utility functions for C-style bindings of polarization solver
  *
  To use these funcions use code like:

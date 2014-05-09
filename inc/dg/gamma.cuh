@@ -15,10 +15,11 @@
 
 namespace dg{
 
+///@addtogroup Operators
+///@{
 /**
  * @brief Matrix class that represents a Helmholtz-type operator
  *
- * @ingroup utilities
  * Discretization of \f[ (1+\alpha\Delta) \f]
  * can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
@@ -67,7 +68,6 @@ struct Helmholtz
 /**
  * @brief Matrix class that represents a Helmholtz-type operator that appears in the parallel induction equation
  *
- * @ingroup utilities 
  * Discretization of \f[ (\alpha\Delta + \chi) \f]
  * can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
@@ -124,7 +124,6 @@ struct Maxwell
 /**
  * @brief Package matrix to be used in the Invert class
  *
- * @ingroup utilities
  * @tparam M Matrix class 
  * @tparam V class for weights and Preconditioner
  */
@@ -146,7 +145,6 @@ struct ApplyWithWeights
 /**
  * @brief Package matrix to be used in the Invert class
  *
- * @ingroup utilities
  * @tparam M Matrix class 
  * @tparam V class for weights and Preconditioner
  */
@@ -161,6 +159,7 @@ struct ApplyWithoutWeights
     const M& m_;
     const V& w_, p_;
 };
+///@}
 ///@cond
 template< class M, class T>
 struct MatrixTraits< Maxwell<M, T> >

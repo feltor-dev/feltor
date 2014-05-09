@@ -12,7 +12,7 @@
 #include "timer.cuh"
 #include "laplace.cuh"
 #include "tensor.cuh"
-#include "operator_matrix.cuh"
+#include "operator_tensor.cuh"
 #include "arrvec1d.cuh"
 #include "arrvec2d.cuh"
 #include "blas.h"

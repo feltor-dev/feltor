@@ -125,6 +125,7 @@ thrust::host_vector<double> evaluate( double(f)(double, double, double), const G
 ///@endcond
 
 
+///@cond
 /**
  * @brief Evaluate and dlt transform a function 
  *
@@ -154,7 +155,6 @@ thrust::host_vector<double> expand( Function f, const Grid1d<double>& g)
     }
     return v;
 };
-///@cond
 thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
 {
     return expand<double(double)>( f, g);
@@ -165,6 +165,7 @@ thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
 
 
 
+///@cond
 /**
  * @brief Evaluate and dlt transform a function
  *
@@ -210,7 +211,6 @@ thrust::host_vector<double> expand( BinaryOp f, const Grid2d<double>& g)
     return v;
 };
 
-///@cond
 thrust::host_vector<double> expand( double(f)(double, double), const Grid2d<double>& g)
 {
     return expand<double(double, double)>( f, g);

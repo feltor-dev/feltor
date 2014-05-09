@@ -17,7 +17,7 @@
 #include "evaluation.cuh"
 #include "preconditioner.cuh"
 #include "operator_dynamic.h"
-#include "operator_matrix.cuh"
+#include "operator_tensor.cuh"
 #include "tensor.cuh"
 
 

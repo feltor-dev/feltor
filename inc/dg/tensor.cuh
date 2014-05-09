@@ -1,5 +1,4 @@
-#ifndef _DG_LAPLACE2D_CUH
-#define _DG_LAPLACE2D_CUH
+#pragma once
 
 #include <cassert>
 
@@ -128,5 +127,4 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
 
 } //namespace dg
 
-#endif // _DG_LAPLACE2D_CUH
 
