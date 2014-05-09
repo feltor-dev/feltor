@@ -81,12 +81,11 @@ struct Maxwell
      *
      * Since memory is small on gpus Maxwell can be constructed using an existing laplace operator
      * @param laplaceM negative normalised laplacian
-     * @param chi The first chi
      * @param w2d weights
      * @param v2d preconditioner
      * @param alpha The factor alpha
      */
-    Maxwell( const Matrix& laplaceM, const Vector& chi, const Vector& w2d, const Vector& v2d,  double alpha=1.): laplaceM_(laplaceM), chi_(chi), w2d(w2d), v2d(v2d),  alpha_(alpha){ }
+    Maxwell( const Matrix& laplaceM, const Vector& w2d, const Vector& v2d,  double alpha=1.): laplaceM_(laplaceM), chi_(w2d.size(),1.), w2d(w2d), v2d(v2d),  alpha_(alpha){ }
     /**
      * @brief apply operator
      *

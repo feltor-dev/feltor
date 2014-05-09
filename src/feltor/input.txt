@@ -6,9 +6,9 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   1      (3)
-2)  nx (grid points in x)                =   64   (192)
-3)  ny (grid points in y)                =   64   (192)
-4)  nz (grid points in z)                =   8 (16)
+2)  nx (grid points in x)                =   100   (192)
+3)  ny (grid points in y)                =   100   (192)
+4)  nz (grid points in z)                =   4 (16)
 
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
@@ -20,24 +20,24 @@
 
 ------------------Boundary conditions----------------------
 
-9)  ring thickness  (in units of rho_s)          =   70    (128.)
-10) minor radius a ( in units of rho_s)          =   100    (256)
-11) major radius R_0 (eps_a ~ a/R_0, L_p ~ 6R_0) =   300
-12) inner density ( log10 N )                    =   1.5  
+9)  ring thickness  (in units of rho_s)          =   20    (128.)
+10) minor radius a ( in units of rho_s)          =   32    (256)
+11) major radius R_0 (eps_a ~ a/R_0, L_p ~ 6R_0) =   100
+12) inner density ( log10 N )                    =   1.0  
 
 ------------------Physical parameters----------------------
 
 13) mu_e (-m_e/m_i)                     = -0.5e-4
 14) tau (Ti/Te)                         = 0.0    (0.0)
 15) curvature parameter                 = 0
-16) nu_perp                             = 1e-4
-17) nu_parallel  (viscosity)            = 1e-3   (0.001)
-18) perp resistivity (c)                = 3e-4   (3e-5)
+16) nu_perp                             = 1e-3
+17) nu_parallel  (viscosity)            = 1e-7   (0.001)
+18) perp resistivity (c)                = 3e-3   (3e-5)
 
 ---------------Initial perturbation parameters---------------------
 
-19) amp (perturbation amplitude)            =  15.0     (1.0)
-20) sigma (blob variance in units of rho_s) =  5     (10)
+19) amp (perturbation amplitude)            =  0.01     (1.0)
+20) sigma (blob variance in units of rho_s) =  3     (10)
 21) x-position ( in units of thickness)     =  0.5   (0.4)
 22) y-position ( in units of a)             =  0.0   (0.5)
 23) parallel mode number (sin(2*Pi*m*z))    =  1

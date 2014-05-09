@@ -34,7 +34,7 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             dg::blas1::axpby( -nu_perp_, y[i], 0., y[i]);
             dg::blas2::gemv( LaplacianM_para, x[i], temp);
-            dg::blas1::axpby( -nu_parallel_/mu_hat_, temp, 1., y[i]);
+            dg::blas1::axpby( -nu_parallel_, temp, 1., y[i]);
         }
         //cut contributions to boundary 
         for( unsigned i=0; i<3; i++)
