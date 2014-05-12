@@ -275,6 +275,95 @@ struct Lamb
     double R_, U_, x0_, y0_, lambda_, gamma_, j_;
 };
 
+struct Vortex
+{
+    /**
+     * @brief 
+     *
+     * @param state 
+     * @param R characteristic radius of dipole
+     * @param vel_ratio u_drift/u_dipole
+     * @param kz
+     */
+    Vortex( double x0, double y0, unsigned state, 
+          double R,  double u_dipole, double kz = 0):
+        x0_(x0), y0_(y0), s_(state),  R_(R), u_d( u_dipole), kz_(kz){
+        g_[0] = 3.83187; //groundstate with uuu=2
+        g_[1] = 3.83235; //groundstate with uuu=-1
+        g_[2] = 7.016;
+        c_[0] = 0.5;
+        c_[1] = -1;
+        c_[2] = -1;
+    }
+    double operator()( double x, double y)
+    {
+        double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
+        double theta = atan2( y-y0_, x-x0_);
+        //std::cout << cos(theta)<<std::endl;
+        double beta = sqrt(1-(c_[s_]));
+        double norm = 1.2965125;
+
+        if( r/R_<=1.)
+            return u_d*(
+                    r/R_*(1+beta*beta/g_[s_]/g_[s_]) 
+                    - beta*beta/g_[s_]/g_[s_]*j1(g_[s_]*r/R_)/j1(g_[s_])
+                    )*cos(theta)/norm;
+        return u_d*cos(theta)
+                  *beta*beta/g_[s_]/g_[s_]
+                  *bessk1(beta*r/R_)/bessk1(beta)/norm;
+    }
+    double operator()( double x, double y, double z)
+    {
+        return this->operator()(x,y)*cos(kz_*z);
+    }
+    private:
+    double bessk1(double x)
+    // Returns the modified Bessel function K1(x) for positive real x.
+    { 
+        double y,ans;
+        if (x <= 2.0) 
+        {
+            y=x*x/4.0; 
+            ans = (log(x/2.0)*bessi1(x))+(1.0/x)*(1.0+y*(0.15443144 +
+                       y*(-0.67278579+y*(-0.18156897+y*(-0.1919402e-1 +
+                       y*(-0.110404e-2+y*(-0.4686e-4))))))); 
+        } 
+        else 
+        { 
+            y=2.0/x; 
+            ans = (exp(-x)/sqrt(x))*(1.25331414+y*(0.23498619 +
+                      y*(-0.3655620e-1+y*(0.1504268e-1+y*(-0.780353e-2 +
+                      y*(0.325614e-2+y*(-0.68245e-3))))))); 
+        } 
+        return ans; 
+    }
+    double bessi1(double x) 
+    //Returns the modified Bessel function I1(x) for any real x. 
+    {   double ax,ans; 
+        double y; 
+        if ((ax=fabs(x)) < 3.75) 
+        {
+            y=x/3.75; 
+            y*=y; 
+            ans = ax*(0.5+y*(0.87890594+y*(0.51498869+y*(0.15084934 +
+                       y*(0.2658733e-1+y*(0.301532e-2+y*0.32411e-3)))))); 
+        } 
+        else 
+        { 
+            y=3.75/ax; 
+            ans = 0.2282967e-1+y*(-0.2895312e-1+y*(0.1787654e-1 -
+                      y*0.420059e-2)); ans=0.39894228+y*(-0.3988024e-1+
+                      y*(-0.362018e-2 +y*(0.163801e-2+y*(-0.1031555e-1+y*ans)))); 
+            ans *= (exp(ax)/sqrt(ax)); 
+        } 
+        return x < 0.0 ? -ans : ans; 
+    }
+    double x0_, y0_;
+    unsigned s_;
+    double R_, c_[3], u_d;
+    double g_[3];
+    double kz_;
+};
 /**
  * @brief Exponential
  *

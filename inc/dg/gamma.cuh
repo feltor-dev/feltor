@@ -38,7 +38,7 @@ struct Helmholtz
      * @note only references are stored so make sure the matrix and the vectors exist when using an object
      */
     Helmholtz( const Matrix& laplaceM, const Vector& weights, const Vector& precond, double alpha):p_(weights), q_(precond), laplaceM_(laplaceM), alpha_( alpha){
-        std::cout << "Hello Helmholtz\n";}
+        }
     /**
      * @brief apply operator
      *

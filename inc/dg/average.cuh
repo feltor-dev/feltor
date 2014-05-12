@@ -9,7 +9,6 @@ struct PoloidalAverage
 {
     PoloidalAverage( const Grid2d<double>& g):dummy( g.n()*g.Nx()), helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
     {
-        std::cout << "Hello Average\n";
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
         reorder = create::scatterMap( g.n(), g.Nx(), g.Ny());
         lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());

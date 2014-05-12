@@ -86,7 +86,7 @@ struct Esel
      * @param eps_gamma stopping criterion for Gamma operator
      * @param sol description of SOL
      */
-    Esel( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, SOL sol);
+    Esel( const Grid2d<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, SOL sol);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -126,7 +126,7 @@ struct Esel
      *
      * @return Gamma operator
      */
-    const Gamma<Matrix, container >&  gamma() const {return gamma1;}
+    const Helmholtz<Matrix, container >&  gamma() const {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -182,13 +182,13 @@ struct Esel
     //matrices and solvers
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
-    Gamma< Matrix, container > gamma1;
     ArakawaX< container> arakawa; 
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
 
     const container w2d, v2d, one;
+    Helmholtz< Matrix, container > gamma1;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
     const double dd;
@@ -200,17 +200,17 @@ struct Esel
 };
 
 template< class container>
-Esel< container>::Esel( const Grid<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, SOL sol  ): 
+Esel< container>::Esel( const Grid2d<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, SOL sol  ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  laplaceM, w2d, -0.5*tau),
     arakawa( grid), 
     pol(     grid, forward), 
     pcg( omega, omega.size()), 
     average( grid),
     w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
+    gamma1(  laplaceM, w2d, v2d, -0.5*tau),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau),
     dd( sol.get_dd()),
     sol_( evaluate(sol, grid) )

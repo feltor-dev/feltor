@@ -42,7 +42,7 @@ int main()
     dg::HVec x = dg::expand( initial, grid);
 
     cout << "Create Laplacian\n";
-    dg::HMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE); 
+    dg::HMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::symmetric); 
     dg::CG<dg::HVec > pcg( x, n*n*Nx*Ny);
     cout<<"Expand right hand side\n";
     dg::HVec b = dg::expand ( laplace_fct, grid);
@@ -73,37 +73,6 @@ int main()
     cout << "L2 Norm2 of Residuum is        " << normres << endl;
     cout << "L2 Norm of relative error is   " <<sqrt( eps/norm)<<endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
-    cout << "TEST 3D VERSION\n";
-    dg::Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER);
-    dg::HVec w3d = dg::create::w3d( g3d);
-    dg::HVec v3d = dg::create::v3d( g3d);
-    dg::HVec x3 = dg::evaluate( initial, g3d);
-
-    dg::HMatrix A3 = dg::create::laplacianM_perp( g3d, dg::not_normed, dg::XSPACE); 
-    dg::HVec b3 = dg::evaluate ( laplace_fct, g3d);
-    const dg::HVec solution3 = dg::evaluate ( fct, g3d);
-    dg::blas2::symv( w3d, b3, b3);
-    dg::CG<dg::HVec > pcg3( x3, g3d.size());
-    cout << "Number of pcg iterations "<< pcg3( A3, x3, b3, v3d, eps_)<<endl;
-    //std::cout << "Number of cg iterations "<< pcg( A, x, b, dg::Identity<double>(), eps)<<endl;
-    cout << "For a precision of "<< eps_<<endl;
-    //compute error
-    dg::HVec error3( solution3);
-    dg::blas1::axpby( 1.,x3,-1.,error3);
-
-    dg::HVec Ax3(x3), res3( b3);
-    dg::blas2::symv(  A3, x3, Ax3);
-    dg::blas1::axpby( 1.,Ax3,-1.,res3);
-
-    double xnorm3 = dg::blas2::dot( w3d, x3);
-    cout << "L2 Norm2 of x0 is              " << xnorm3 << endl;
-    double eps3 = dg::blas2::dot(w3d , error3);
-    cout << "L2 Norm2 of Error is           " << eps3 << endl;
-    double norm3 = dg::blas2::dot(w3d , solution3);
-    cout << "L2 Norm2 of Solution is        " << norm3 << endl;
-    double normres3 = dg::blas2::dot( w3d, res3);
-    cout << "L2 Norm2 of Residuum is        " << normres3 << endl;
-    cout << "L2 Norm of relative error is   " <<sqrt( eps3/norm3)<<endl;
 
     return 0;
 }
