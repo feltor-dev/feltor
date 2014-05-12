@@ -6,7 +6,7 @@
 #include "draw/host_window.h"
 
 #include "turbulence.cuh"
-#include "dg/karniadakis.cuh"
+#include "dg/rk.cuh"
 #include "dg/timer.cuh"
 #include "file/read_input.h"
 #include "parameters.h"
@@ -52,23 +52,16 @@ int main( int argc, char* argv[])
     }
 
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    grid.display();
     //create RHS 
-    std::cout << "ping0\n";
     dg::Turbulence< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.gradient, p.d); 
-    std::cout << "ping1"<<std::endl;
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
 
-    dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' 
+    //dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' 
     dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
 
-    std::cout << "ping"<<std::endl;
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, grid.size(), 1e-9);
-    std::cout << "ping"<<std::endl;
-    dg::Diffusion< dg::DVec> diff( grid, p.nu);
-    std::cout << "ping\n";
+    dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
     dg::DVec dvisual( grid.size(), 0.);
     const dg::DVec gradient =  dg::evaluate( dg::LinearX( -p.gradient, p.gradient*grid.lx()/2.), grid);
@@ -78,7 +71,9 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( test, diff, y0, p.dt);
+    ab.init( test, y0, p.dt);
+    ab( test, y0, y1, p.dt);
+    y0.swap( y1); 
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
@@ -120,7 +115,7 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
-            try{ ab( test, diff, y0);}
+            try{ ab( test, y0, y1, p.dt);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
