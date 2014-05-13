@@ -42,7 +42,7 @@ struct Helmholtz
      * @brief apply operator
      *
      * same as blas2::symv( gamma, x, y);
-     * \f[ y = ( 1 + \alpha\Delta) x \f]
+     * \f[ y = W( 1 + \alpha\Delta) x \f]
      * @tparam Vector The vector class
      * @param x lhs
      * @param y rhs contains solution
@@ -87,10 +87,10 @@ struct Maxwell
      */
     Maxwell( const Matrix& laplaceM, const Vector& w2d, const Vector& v2d,  double alpha=1.): laplaceM_(laplaceM), chi_(w2d.size(),1.), w2d(w2d), v2d(v2d),  alpha_(alpha){ }
     /**
-     * @brief apply operator
+     * @brief apply Maxwell operator
      *
      * same as blas2::symv( gamma, x, y);
-     * \f[ y = ( \chi + \alpha\Delta) x \f]
+     * \f[ y = W  ( \chi + \alpha\Delta) x \f]
      * @tparam Vector The vector class
      * @param x lhs
      * @param y rhs contains solution
@@ -213,7 +213,9 @@ struct Invert
     /**
      * @brief Solve linear problem
      *
-     * Solves the Equation \f[ \hat O \phi = \rho \f]
+     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
+     * conjugate gradient method. The initial guess comes from an extrapolation 
+     * of the last solutions
      * @tparam SymmetricOp Symmetric operator with the SelfMadeMatrixTag
         The functions weights() and precond() need to be callable and return
         weights and the preconditioner for the conjugate gradient method
@@ -226,16 +228,39 @@ struct Invert
     template< class SymmetricOp >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
     {
+        return this->operator()(op, phi, rho, op.weights(), op.precond());
+    }
+
+    /**
+     * @brief Solve linear problem
+     *
+     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
+     * conjugate gradient method. The initial guess comes from an extrapolation 
+     * of the last solutions.
+     * @tparam SymmetricOp Symmetric matrix or operator (with the selfmade tag)
+     * @tparam Weights class of the weights container
+     * @tparam Preconditioner class of the Preconditioner
+     * @param op selfmade symmetric Matrix operator class
+     * @param phi solution (write only)
+     * @param rho right-hand-side
+     * @param w The weights that the matrix misses
+     * @param p The preconditioner  
+     *
+     * @return number of iterations used 
+     */
+    template< class SymmetricOp, class Weights, class Preconditioner >
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const Weights& w, const Preconditioner& p )
+    {
         assert( &rho != &phi);
         blas1::axpby( 2., phi1, -1.,  phi2, phi);
-        dg::blas2::symv( op.weights(), rho, phi2);
+        dg::blas2::symv( w, rho, phi2);
 #ifdef DG_BENCHMARK
     Timer t;
     t.tic();
 #endif //DG_BENCHMARK
-        unsigned number = cg( op, phi, phi2, op.precond(), eps_);
+        unsigned number = cg( op, phi, phi2, p, eps_);
 #ifdef DG_BENCHMARK
-    std::cout << "# of pcg iterations \t"<< number << "\t";
+    std::cout << "# of cg iterations \t"<< number << "\t";
     t.toc();
     std::cout<< "took \t"<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK

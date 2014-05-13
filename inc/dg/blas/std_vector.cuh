@@ -14,6 +14,7 @@
 #include "../vector_categories.h"
 #include "../vector_traits.h"
 
+//assume that each element of a std::vector is a vector itself
 
 namespace dg
 {
@@ -34,9 +35,10 @@ inline void doAxpby( typename Vector::value_type alpha,
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        doAxpby( alpha, x[i], beta, y[i], ThrustVectorTag());
+        axpby( alpha, x[i], beta, y[i]);
         
 }
+
 template< class Vector>
 inline void doAxpby( typename Vector::value_type alpha, 
               const std::vector<Vector>& x, 
@@ -50,7 +52,21 @@ inline void doAxpby( typename Vector::value_type alpha,
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        doAxpby( alpha, x[i], beta, y[i], z[i], ThrustVectorTag());
+        axpby( alpha, x[i], beta, y[i], z[i]);
+        
+}
+
+template< class Vector>
+inline void doScal( std::vector<Vector>& x, 
+              typename Vector::value_type alpha, 
+              StdVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x.empty());
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
+    for( unsigned i=0; i<x.size(); i++)
+        scal( x[i], alpha);
         
 }
 
@@ -63,7 +79,19 @@ inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, StdVe
     assert( x1.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x1.size(); i++)
-        doPointwiseDot( x1[i], x2[i], y[i], ThrustVectorTag() );
+        pointwiseDot( x1[i], x2[i], y[i] );
+}
+
+template< class Vector>
+inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, StdVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x1.empty());
+    assert( x1.size() == x2.size() );
+    assert( x1.size() == y.size() );
+#endif //DG_DEBUG
+    for( unsigned i=0; i<x1.size(); i++)
+        pointwiseDivide( x1[i], x2[i], y[i] );
 }
 
 template< class Vector>

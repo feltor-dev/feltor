@@ -81,6 +81,19 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
     return dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<Vector>::vector_category() );
 }
 
+/*! @brief BLAS 1 routine scal
+ *
+ * This routine computes \f[ x <-  \alpha x \f] 
+ * @param alpha Scalar  
+ * @param x Vector x might equal result
+ * @note In an implementation you may want to check for alpha == 0
+ */
+template< class Vector>
+inline void axpby( Vector& x, typename VectorTraits<Vector>::value_type alpha)
+{
+    return dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
+}
+
 /**
 * @brief A 'new' BLAS 1 routine. 
 *
@@ -94,6 +107,20 @@ template< class Vector>
 inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 {
     return dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+}
+/**
+* @brief A 'new' BLAS 1 routine. 
+*
+* Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]
+* @param x1 Vector x1  
+* @param x2 Vector x2 might equal x1
+* @param y  Vector y contains result on output ( might equal x1 and/or x2)
+* @note If DG_DEBUG is defined a range check shall be performed 
+*/
+template< class Vector>
+inline void pointwiseDivide( const Vector& x1, const Vector& x2, Vector& y)
+{
+    return dg::blas1::detail::doPointwiseDivide( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
 }
 ///@}
 }//namespace blas1

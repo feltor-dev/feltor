@@ -23,6 +23,8 @@
 //integral functions
 #include "typedefs.cuh"
 
+#include "exceptions.h"
+
 /*! @file
 
   * includes all relevant dg lib files for matrix creation and function evaluation
