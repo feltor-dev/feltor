@@ -209,9 +209,13 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
         HMatrix laplus = laplace1d( g, no, forward); //recursive call
         HMatrix laminus = laplace1d( g, no, backward);
         HMatrix laplace;
-        cusp::add( laplus, laminus, laplace);
-        for( unsigned i=0; i<laplace.values.size(); i++)
-            laplace.values[i] *= 0.5;
+        
+        cusp::add( laplus, laminus, laplace);//only add values??
+        cusp::blas::scal( laplace.values, 0.5);
+        //TEST THE ASSUMPTION THAT LAPLUS AND LAMINUS HAVE VALUES AT THE SAME PLACES
+        //cusp::blas::axpby( laplus.values, laplace.values, laplace.values, 0.5, 0.5);
+        //for( unsigned i=0; i<laplace.values.size(); i++)
+            //laplace.values[i] *= 0.5;
 
         return laplace;
     }

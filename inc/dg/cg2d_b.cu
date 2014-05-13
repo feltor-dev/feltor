@@ -22,7 +22,7 @@ const double eps = 1e-6; //# of pcg iterations increases very much if
 const double lx = 2.*M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
-dg::bc bcx = dg::PER;
+dg::bc bcx = dg::DIR;
 //const double lx = 2./3.*M_PI;
 //double fct(double x, double y){ return sin(y)*sin(3.*x/4.);}
 //double laplace_fct( double x, double y) { return 25./16.*sin(y)*sin(3.*x/4.);}
@@ -44,7 +44,7 @@ int main()
     std::cout<<"Expand initial condition\n";
     dg::HVec x = dg::expand( initial, grid);
 
-    std::cout << "Create Laplacian\n";
+    std::cout << "Create symmetric Laplacian\n";
     t.tic();
     dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::symmetric); 
     dg::HMatrix A = dA;

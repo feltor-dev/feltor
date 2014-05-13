@@ -21,51 +21,6 @@
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
-struct Init
-{
-    /**
-     * @brief 
-     *
-     * @param state 
-     * @param R characteristic radius of dipole
-     * @param vel_ratio u_drift/u_dipole
-     * @param kz
-     */
-    Init( double x0, double y0, unsigned state, 
-          double R,  double u_dipole, double kz):
-        x0_(x0), y0_(y0), s_(state),  R_(R), u_d( u_dipole), kz_(kz){
-        g_[0] = 3.83187; //groundstate with uuu=2
-        g_[1] = 3.83235; //groundstate with uuu=-1
-        g_[2] = 7.016;
-        c_[0] = 0.5;
-        c_[1] = -1;
-        c_[2] = -1;
-    }
-    double operator()( double x, double y, double z)
-    {
-        double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
-        double theta = atan2( y-y0_, x-x0_);
-        //std::cout << cos(theta)<<std::endl;
-        double beta = sqrt(1-(c_[s_]));
-        double norm = 1.2965125;
-        
-
-        if( r/R_<=1.)
-            return u_d*(
-                    r/R_*(1+beta*beta/g_[s_]/g_[s_]) 
-                    - beta*beta/g_[s_]/g_[s_]*j1(g_[s_]*r/R_)/j1(g_[s_])
-                    )*cos(theta)/norm*sin(kz_*z);
-        return u_d*cos(theta)
-                  *beta*beta/g_[s_]/g_[s_]
-                  *bessk1(beta*r/R_)/bessk1(beta)/norm*sin(kz_*z);
-    }
-    private:
-    double x0_, y0_;
-    unsigned s_;
-    double R_, c_[3], u_d;
-    double g_[3];
-    double kz_;
-};
 
 int main( int argc, char* argv[])
 {
@@ -100,10 +55,10 @@ int main( int argc, char* argv[])
     eule::Feltor< dg::DVec > feltor( grid, p); 
     eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel, p.a, p.thickness, p.mu_e*4.*M_PI*M_PI*p.R_0*p.R_0);
     //create initial vector
-    Init init0( 0., p.a - p.posX*p.thickness, 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    Init init1( 0., -p.a + p.posX*p.thickness, 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    Init init2( p.a - p.posX*p.thickness, 0., 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    Init init3( -p.a + p.posX*p.thickness, 0., 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    Vortex init0( 0., p.a - p.posX*p.thickness, 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    Vortex init1( 0., -p.a + p.posX*p.thickness, 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    Vortex init2( p.a - p.posX*p.thickness, 0., 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    Vortex init3( -p.a + p.posX*p.thickness, 0., 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
     eule::Gradient grad( p.a, p.thickness, p.lnn_inner);
 
     const dg::HVec gradient( dg::evaluate(grad, grid));

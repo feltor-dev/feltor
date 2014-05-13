@@ -28,7 +28,7 @@ namespace dg{
 template< class Matrix,class Vector> 
 struct Helmholtz
 {
-    /**
+    /**\
      * @brief Construct from existing matrices
      *
      * Since memory is small on gpus Helmholtz can be constructed using an existing laplace operator
@@ -36,8 +36,10 @@ struct Helmholtz
      * @param weights ( W2D or T2D); makes the matrix symmetric and is the same you later use in conjugate gradients
      * @param precond ( V2D or S2D); precondtioner you later use in conjugate gradients
      * @param alpha prefactor of laplacian
+     * @note only references are stored so make sure the matrix and the vectors exist when using an object
      */
-    Helmholtz( const Matrix& laplaceM, const Vector& weights, const Vector& precond, double alpha):p_(weights), q_(precond), laplaceM_(laplaceM), alpha_( alpha){ }
+    Helmholtz( const Matrix& laplaceM, const Vector& weights, const Vector& precond, double alpha):p_(weights), q_(precond), laplaceM_(laplaceM), alpha_( alpha){
+        }
     /**
      * @brief apply operator
      *

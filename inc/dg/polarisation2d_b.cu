@@ -61,12 +61,18 @@ int main()
 
     cout << "Create Polarisation object!\n";
     t.tic();
-    dg::Polarisation2dX<dg::HVec> pol( grid);
+    dg::Polarisation2dX<dg::HVec> pol1( grid, dg::backward);
+    dg::Polarisation2dX<dg::HVec> pol2( grid, dg::forward);
     t.toc();
-    cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
+    cout << "Creation of 2 polarisation objects took: "<<t.diff()<<"s\n";
     cout << "Create Polarisation matrix!\n";
     t.tic();
-    dg::HMatrix B_ = pol.create(chi);
+    dg::HMatrix B1_ = pol1.create(chi);
+    dg::HMatrix B2_ = pol2.create(chi);
+    dg::HMatrix B_;
+    cusp::add( B1_, B2_, B_);
+    cusp::blas::scal( B_.values, 0.5);
+    //cusp::blas::axpby( B_.values, B2_.values, B_.values, 0.5, 0.5);
     //Matrix A = pol.create(chi);
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";

@@ -1,5 +1,4 @@
-#ifndef _DG_TOEFLR_CUH
-#define _DG_TOEFLR_CUH
+#pragma once
 
 #include <exception>
 
@@ -19,6 +18,49 @@
 
 namespace dg
 {
+
+struct Damping
+{
+    Damping( double x0):x_(x0){}
+    double operator()(double x, double y){
+        if( x > x_)
+            return 1.;
+        return 0;
+    }
+    private:
+    double x_;
+};
+template<class container>
+struct Diffusion
+{
+    Diffusion( const dg::Grid2d<double>& g, double nu):nu_(nu), w2d( 2, dg::create::w2d(g)), v2d( 2, dg::create::v2d(g)), temp( g.size()), damp( dg::evaluate( Damping( 0.9*g.x1()), g))
+    {
+        LaplacianM_perp = dg::create::laplacianM( g, dg::normed, dg::XSPACE, dg::symmetric);
+    }
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    {
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+            //hat \Delta y Dirichlet RB?
+            dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            dg::blas1::axpby( -nu_, temp, 0., y[i]);
+            //dg::blas1::pointwiseDot( damp, x[i], temp);
+            //dg::blas1::axpby( -1., temp, 1., y[i]);
+        }
+    }
+    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
+    const std::vector<container>& weights(){return w2d;}
+    const std::vector<container>& precond(){return v2d;}
+
+  private:
+    double nu_;
+    const std::vector<container> w2d, v2d;
+    container temp;
+    const container damp;
+    dg::DMatrix LaplacianM_perp;
+};
+
 struct Fail : public std::exception
 {
 
@@ -49,7 +91,7 @@ struct Turbulence
      * @param eps_pol stopping criterion for polarisation equation
      * @param eps_gamma stopping criterion for Gamma operator
      */
-    Turbulence( const Grid<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, double gradient, double d);
+    Turbulence( const Grid2d<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, double gradient, double d);
 
     const container& gradient(){ return gradient_;}
 
@@ -76,12 +118,13 @@ struct Turbulence
      */
     const Matrix& laplacianM( ) const { return laplaceM;}
 
+    const Matrix& polarisationM( ) const { return A;}
     /**
      * @brief Return the Gamma operator used by this object
      *
      * @return Gamma operator
      */
-    const Gamma<Matrix, container >&  gamma() const {return gamma1;}
+    const Helmholtz<Matrix, container >&  gamma() const {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -136,15 +179,15 @@ struct Turbulence
     std::vector<container> ypg, dyy, lapy;
 
     //matrices and solvers
-    Matrix A; //contains polarisation matrix
+    Matrix A, B; //contains polarisation matrix
     Matrix laplaceM; //contains normalized laplacian
-    Gamma< Matrix, container > gamma1;
     ArakawaX< container> arakawa; 
-    Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
+    Polarisation2dX< thrust::host_vector<value_type> > plus_pol, minus_pol; //note the host vector
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
 
     const container w2d, v2d, one;
+    Helmholtz< Matrix, container > gamma1;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau, d_;
 
@@ -153,17 +196,17 @@ struct Turbulence
 };
 
 template< class container>
-Turbulence< container>::Turbulence( const Grid<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, double gradient, double d): 
+Turbulence< container>::Turbulence( const Grid2d<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, double gradient, double d): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), gradient_( evaluate( LinearX( -gradient, 1+gradient*grid.lx()), grid)), grad_(gradient),
     phi( 2, chi), phi_old( phi), dyphi( phi),
     ypg( phi), dyy( phi), lapy( dyy),
-    gamma1(  laplaceM, w2d, -0.5*tau),
     arakawa( grid), 
-    pol(     grid), 
+    plus_pol(     grid, forward), minus_pol( grid,   backward),
     pcg( omega, omega.size()), 
     average( grid),
     w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
+    gamma1(  laplaceM, w2d, v2d, -0.5*tau),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), d_(d)
 {
     //create derivatives
@@ -238,10 +281,16 @@ const container& Turbulence< container>::polarisation( const std::vector<contain
     blas1::axpby(1., y[1], 1, gradient_, chi);//chi = n_i + gradient
     blas1::pointwiseDot( binv, chi, chi); 
     blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-    A = pol.create( chi);
+    dg::HMatrix C = plus_pol.create( chi);
+    dg::HMatrix D = minus_pol.create( chi);
+    dg::HMatrix E;
+    cusp::add( C, D, E);
+    cusp::blas::scal( E.values, 0.5);
+    //cusp::blas::axpby( C.values, D.values, C.values, 0.5, 0.5);
+    A = C;
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
+    std::cout<< "       Polarisation assembly took "<<t.diff()<<"s\n";
     t.tic();
 #endif 
     blas2::symv( w2d, omega, omega);
@@ -301,11 +350,11 @@ void Turbulence< container>::operator()( const std::vector<container>& y, std::v
     blas1::axpby( d_, chi, 1., yp[0]);
 
     //add laplacians
-    for( unsigned i=0; i<y.size(); i++)
-    {
-        blas2::gemv( laplaceM, y[i], lapy[i]);
-        blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
-    }
+    //for( unsigned i=0; i<y.size(); i++)
+    //{
+    //    blas2::gemv( laplaceM, y[i], lapy[i]);
+    //    blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
+    //}
 
 }
 
@@ -318,4 +367,3 @@ void Turbulence< container>::log( const std::vector<container>& y, std::vector<c
 
 }//namespace dg
 
-#endif //_DG_TOEFLR_CUH
