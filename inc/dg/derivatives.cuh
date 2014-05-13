@@ -75,7 +75,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, space s = XS
  *
  * @tparam T value-type
  * @param g The grid on which to create dy
- * @param bcx The boundary condition
+ * @param bcy The boundary condition
  * @param s The space on which the matrix operates on
  *
  * @return A host matrix in coordinate format
@@ -115,6 +115,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, space s = XS
  * @param no use normed if you want to compute e.g. diffusive terms,
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
  * @param s The space on which the matrix operates on
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -188,6 +189,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
  * @param no use normed if you want to compute e.g. diffusive terms, 
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
  * @param s The space on which the matrix operates on
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -308,6 +310,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( 
  * @param no use normed if you want to compute e.g. diffusive terms,
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
  * @param s The space on which the matrix operates on
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -331,6 +334,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g,
  * @param no use normed if you want to compute e.g. diffusive terms, 
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
  * @param s The space on which the matrix operates on
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -347,6 +351,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g,
  * @tparam T value-type
  * @param g The grid on which to operate 
  * @param bcz boundary condition
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */

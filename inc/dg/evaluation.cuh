@@ -7,7 +7,9 @@
 #include "weights.cuh"
 #include "operator_dynamic.h"
 
-/*! @file function discretization routines
+/*! @file 
+  
+  Function discretization routines
   */
 namespace dg
 {

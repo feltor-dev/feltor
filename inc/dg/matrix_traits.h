@@ -7,8 +7,8 @@ namespace dg{
 
 template< class Matrix>
 struct MatrixTraits {
-    typedef typename Matrix::value_type value_type;
-    typedef CuspMatrixTag matrix_category; //default is a CuspMatrix
+    typedef typename Matrix::value_type value_type;//!< default value type
+    typedef CuspMatrixTag matrix_category; //!< default is a CuspMatrix
 };
 
 template< class Matrix>

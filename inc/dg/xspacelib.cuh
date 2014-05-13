@@ -68,10 +68,12 @@ thrust::host_vector<int> scatterMap(unsigned nx, unsigned ny, unsigned Nx, unsig
     return map;
 }
 
+///@cond
 thrust::host_vector<int> scatterMap( unsigned n, unsigned Nx, unsigned Ny)
 {
     return scatterMap( n, n, Nx, Ny);
 }
+///@endcond
 
 /**
  * @brief Index map for gather operations on dg formatted vectors
@@ -129,6 +131,20 @@ cusp::coo_matrix<int, double, cusp::host_memory> gather( const thrust::host_vect
     return p;
 }
 
+/**
+ * @brief Create a permutation matrix from a permutation map
+ *
+ * A permutation can be done in two ways. Either you name to every index in a vector
+ * an index where this place should go to ( scatter) or you name to every index the 
+ * index of the position that comes to this place (gather). A Scatter is the
+ * inverse of a Gather operation with the same index-map. 
+ * When transformed to a
+ * permutation matrix scatter is the inverse ( = transpose) of gather. (Permutation
+ * matrices are orthogonal and sparse)
+ * @param map index map
+ *
+ * @return Permutation matrix
+ */
 cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vector<int>& map)
 {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;

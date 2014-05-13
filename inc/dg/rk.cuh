@@ -29,8 +29,8 @@ namespace dg{
 template< size_t k>
 struct rk_coeff
 {
-    static const double alpha[k][k]; 
-    static const double beta[k];
+    static const double alpha[k][k];  //!< alpha
+    static const double beta[k]; //!< beta
 };
 ///@cond
 /*

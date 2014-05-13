@@ -11,7 +11,9 @@
 #include "dx.cuh"
 #include "operator_tensor.cuh"
 
-/*! @file 1d laplacians
+/*! @file 
+  
+  1d laplacians
   */
 
 namespace dg

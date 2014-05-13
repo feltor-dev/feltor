@@ -4,6 +4,7 @@
 
 
 namespace dg{
+///@cond
 namespace detail{
 
 template< class LinearOp>
@@ -34,7 +35,6 @@ struct Implicit
 };
 
 }//namespace detail
-///@cond
 template< class M>
 struct MatrixTraits< detail::Implicit<M> >
 {
@@ -45,7 +45,11 @@ struct MatrixTraits< detail::Implicit<M> >
 
 /**
 * @brief Struct for Karniadakis semi-implicit multistep time-integration
-*
+* \f[
+    {\bar v}^n = \frac{1}{\gamma_0}\left(\sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  N( v^{n-q})\right) \f]
+    \f[
+    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat L\right)  v^{n+1} = {\bar v}^n  
+    \f]
 * @ingroup algorithms
 * Uses blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step. 
@@ -55,6 +59,7 @@ struct MatrixTraits< detail::Implicit<M> >
 template<class Vector>
 struct Karniadakis
 {
+
     /**
     * @brief Reserve memory for the integration
     *
@@ -73,21 +78,26 @@ struct Karniadakis
     }
    
     /**
-     * @brief Init with initial value
+     * @brief Initialize with initial value
      *
-     * This routine initiates the first steps in the multistep method by integrating
-     * backwards with a Euler steps. This routine has to be called
-     * before the first timestep is made and with the same initial value as the first timestep.
-     * @tparam Functor models BinaryFunction with no return type (subroutine).
+     * @tparam Functor models BinaryFunction with no return type (subroutine)
         Its arguments both have to be of type Vector.
-        The first argument is the actual argument, the second contains
+        The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
-     * @param f The rhs functor
+     * @tparam LinearOp models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = L(y) translates to diff( y, y').
+        Furthermore the routines weights() and precond() must be callable
+        and return diagonal weights and the preconditioner for the conjugate gradient. 
+     * @param f right hand side function or functor
+     * @param diff diffusion operator treated implicitely 
      * @param u0 The initial value you later use 
      * @param dt The timestep saved for later use
      */
     template< class Functor, class LinearOp>
     void init( Functor& f, LinearOp& diff, const Vector& u0, double dt);
+
     /**
     * @brief Advance u for one timestep
     *
@@ -116,6 +126,8 @@ struct Karniadakis
     double b[3];
 
 };
+
+///@cond
 template< class Vector>
 template< class Functor, class Diffusion>
 void Karniadakis<Vector>::init( Functor& f, Diffusion& diff,  const Vector& u0,  double dt)
@@ -163,5 +175,6 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
 
 
 }
+///@endcond
 
 } //namespace dg

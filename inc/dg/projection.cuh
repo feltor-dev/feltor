@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include <cusp/coo_matrix.h>
 #include "grid.cuh"
@@ -5,8 +6,8 @@
 #include "matrix_traits_thrust.h"
 
 namespace dg{
-
 namespace create{
+///@cond
 namespace detail{
 
 template<class T>
@@ -93,6 +94,7 @@ double LegendreP( unsigned n, double x)
     if( n==1 ) return x;
     return ((double)(2*n-1)*x*LegendreP( n-1, x) - (double)(n-1)*LegendreP( n-2, x))/(double)(n);
 }
+
 /**
  * @brief Create a projection matrix 
  *
@@ -147,7 +149,18 @@ cusp::coo_matrix< int, double, cusp::host_memory> diagonal_matrix( unsigned N, c
     return A;
 }
 }//namespace detail
+///@endcond
 
+/**
+ * @brief Create a 1D projection matrix onto a finer grid
+ *
+ * Grid space must be equal. Nx of the second grid must be a multiple of 
+ * Nx of the first grid.
+ * @param g1 Grid of the original vector
+ * @param g2 Grid of the target vector
+ *
+ * @return Projection matrix
+ */
 cusp::coo_matrix< int, double, cusp::host_memory> projection1d( const Grid1d<double>& g1, const Grid1d<double>& g2)
 {
     assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
@@ -166,7 +179,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection1d( const Grid1d<dou
  *
  * @return Projection matrix
  */
-cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<double>& g1, const Grid<double>& g2)
+cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid2d<double>& g1, const Grid2d<double>& g2)
 {
     //TODO: projection in y direction needs permutation
     assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
@@ -206,6 +219,14 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid<doubl
 
 }//namespace create
 
+/**
+ * @brief Greatest common divisor
+ *
+ * @param a First number
+ * @param b Second number
+ *
+ * @return greatest common divisor
+ */
 unsigned gcd( unsigned a, unsigned b)
 {
     unsigned r2 = std::max(a,b);
@@ -217,6 +238,14 @@ unsigned gcd( unsigned a, unsigned b)
     }
     return r2;
 }
+/**
+ * @brief Least common multiple
+ *
+ * @param a Fist number
+ * @param b Second number 
+ *
+ * @return Least common multiple
+ */
 unsigned lcm( unsigned a, unsigned b)
 {
     unsigned g = gcd( a,b);
@@ -230,10 +259,10 @@ struct DifferenceNorm
     typedef typename container::value_type value_type;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::csr_matrix<int, double, MemorySpace> Matrix;
-    DifferenceNorm( const Grid<double>& g1, const Grid<double>& g2)
+    DifferenceNorm( const Grid2d<double>& g1, const Grid2d<double>& g2)
     {
         //find common grid
-        Grid<double> gC(    g1.x0(), g1.x1(), g1.y0(), g1.y1(), 
+        Grid2d<double> gC(    g1.x0(), g1.x1(), g1.y0(), g1.y1(), 
                             std::min( g1.n(), g2.n()), 
                             lcm( g1.Nx(), g2.Nx()), 
                             lcm( g1.Ny(), g2.Ny()) );

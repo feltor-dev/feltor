@@ -50,8 +50,9 @@ struct Gaussian
      * @param sigma_x x - variance
      * @param sigma_y y - variance 
      * @param amp Amplitude
+     * @param kz wavenumber in z direction
      */
-    Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)
+    Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp, double kz = 1.)
         : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp){}
     /**
      * @brief Return the value of the gaussian
@@ -71,10 +72,10 @@ struct Gaussian
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
     /**
-     * @brief Return the value of the gaussian
+     * @brief Return the value of the gaussian modulated by 
      *
      * \f[
-       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       f(x,y,z) = A\cos(kz)e^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
@@ -84,12 +85,12 @@ struct Gaussian
      */
     double operator()(double x, double y, double z)
     {
-        return  amplitude*
+        return  amplitude*cos(k_*z)*
                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
   private:
-    double  x00, y00, sigma_x, sigma_y, amplitude;
+    double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
 
 };
 /**
@@ -283,7 +284,20 @@ struct Lamb
 template< class T>
 struct EXP 
 {
+    /**
+     * @brief Coefficients of A*exp(lambda*x)
+     *
+     * @param amp Amplitude
+     * @param lambda coefficient
+     */
     EXP( double amp = 1., double lambda = 1.): amp_(amp), lambda_(lambda){}
+    /**
+     * @brief return exponential
+     *
+     * @param x x
+     *
+     * @return A*exp(lambda*x)
+     */
     __host__ __device__
     T operator() (const T& x) 
     { 
@@ -300,6 +314,13 @@ struct EXP
 template < class T>
 struct LN
 {
+    /**
+     * @brief The natural logarithm
+     *
+     * @param x of x 
+     *
+     * @return  ln(x)
+     */
     __host__ __device__
     T operator() (const T& x) 
     { 
@@ -315,6 +336,13 @@ struct LN
 template < class T>
 struct SQRT
 {
+    /**
+     * @brief Square root
+     *
+     * @param x of x
+     *
+     * @return sqrt(x)
+     */
     __host__ __device__
     T operator() (const T& x) 
     { 
@@ -326,11 +354,21 @@ struct SQRT
 /**
  * @brief Minmod function
  *
+ * might be useful for flux limiter schemes
  * @tparam T value-type
  */
 template < class T>
 struct MinMod
 {
+    /**
+     * @brief Minmod of three numbers
+     *
+     * @param a1 a1
+     * @param a2 a2
+     * @param a3 a3
+     *
+     * @return minmod(a1, a2, a3)
+     */
     __host__ __device__
     T operator() ( T a1, T a2, T a3)
     {
@@ -395,6 +433,13 @@ struct PLUS
 template <class T>
 struct ABS
 {
+    /**
+     * @brief The absolute value
+     *
+     * @param x of x
+     *
+     * @return  abs(x)
+     */
     __host__ __device__
         T operator()(const T& x){ return fabs(x);}
 };

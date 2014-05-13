@@ -29,7 +29,7 @@ template< class Vector>
 class CG
 {
   public:
-    typedef typename VectorTraits<Vector>::value_type value_type;
+    typedef typename VectorTraits<Vector>::value_type value_type;//!< value type of the Vector class
       /**
        * @brief Reserve memory for the pcg method
        *

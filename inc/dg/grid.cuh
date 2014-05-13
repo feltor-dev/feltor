@@ -4,7 +4,9 @@
 #include <cassert>
 #include "dlt.cuh"
 
-/*! @file Grid objects
+/*! @file 
+  
+  Grid objects
   */
 
 
@@ -129,6 +131,11 @@ struct Grid2d
      * @return n*n*Nx*Ny
      */
     unsigned size() const { return n_*n_*Nx_*Ny_;}
+    /**
+     * @brief Display 
+     *
+     * @param os output stream
+     */
     void display( std::ostream& os = std::cout) const
     {
         os << "Grid parameters are: \n"
@@ -226,9 +233,14 @@ struct Grid3d
     /**
      * @brief The total number of points
      *
-     * @return n*n*Nx*Ny
+     * @return n*n*Nx*Ny*Nz
      */
     unsigned size() const { return n_*n_*Nx_*Ny_*Nz_;}
+    /**
+     * @brief Display 
+     *
+     * @param os output stream
+     */
     void display( std::ostream& os = std::cout) const
     {
         os << "Grid parameters are: \n"

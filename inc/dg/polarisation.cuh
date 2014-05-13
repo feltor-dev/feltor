@@ -85,35 +85,38 @@ cusp::coo_matrix<int, T, Memory> Polarisation<T, Memory>::create( const Vector& 
 /**
  * @brief X-space version of polarisation term
  *
- * @ingroup creation
+ * @ingroup highlevel
  * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
  * @tparam container The vector class on which to operate on
  */
 template< class container>
 struct Polarisation2dX
 {
-    typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    typedef cusp::csr_matrix<int, value_type, MemorySpace> Matrix;
+    typedef typename container::value_type value_type; //!< value type to be used
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace; //!< Memory Space
+    typedef cusp::csr_matrix<int, value_type, MemorySpace> Matrix;//!< CSR Matrix is the best for host computations
     //typedef cusp::coo_matrix<int, value_type, MemorySpace> Matrix;
     /**
      * @brief Create Polarisation on a grid 
      *
-     * @param g The 2D grid
+     * @param grid The 2D grid
+     * @param dir The direction of the first derivative
      */
     Polarisation2dX( const Grid2d<value_type>& grid, direction dir = forward);
     /**
      * @brief Create polarisation term on a grid using different boundary conditions
      *
-     * @param g The 2D grid
+     * @param grid The 2D grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
+     * @param dir The direction of the first derivative
      */
     Polarisation2dX( const Grid2d<value_type>& grid, bc bcx, bc bcy, direction dir = forward);
     /**
      * @brief Create Polarisation on a grid 
      *
-     * @param g The 3D grid
+     * @param grid The 3D grid
+     * @param dir The direction of the first derivative
      */
     Polarisation2dX( const Grid3d<value_type>& grid, direction dir = forward);
     /**
@@ -122,6 +125,14 @@ struct Polarisation2dX
      * @param g The 3D grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
+     */
+    /**
+     * @brief Create Polarisation on a grid 
+     *
+     * @param grid The 3D grid
+     * @param bcx X-boundary condition
+     * @param bcy Y-boundary condition
+     * @param dir The direction of the first derivative
      */
     Polarisation2dX( const Grid3d<value_type>& grid, bc bcx, bc bcy, direction dir = forward);
 

@@ -20,16 +20,16 @@ namespace dg
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *
- * @ingroup creation
+ * @ingroup arakawa
  * @tparam container The vector class on which to operate on
  */
 template< class container=thrust::device_vector<double> >
 struct ArakawaX
 {
-    typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
+    typedef typename container::value_type value_type; //!< value type of container
+    //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix;
+    typedef dg::DMatrix Matrix; //!< always use device matrix
     /**
      * @brief Create Arakawa on a grid
      *

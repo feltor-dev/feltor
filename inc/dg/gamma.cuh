@@ -15,7 +15,7 @@
 
 namespace dg{
 
-///@addtogroup Operators
+///@addtogroup operators
 ///@{
 /**
  * @brief Matrix class that represents a Helmholtz-type operator
@@ -243,7 +243,7 @@ struct Invert
      * @param op selfmade symmetric Matrix operator class
      * @param phi solution (write only)
      * @param rho right-hand-side
-     * @param w The weights that the matrix misses
+     * @param w The weights that made the operator symmetric
      * @param p The preconditioner  
      *
      * @return number of iterations used 
