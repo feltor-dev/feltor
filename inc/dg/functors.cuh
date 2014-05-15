@@ -53,7 +53,7 @@ struct Gaussian
      * @param kz wavenumber in z direction
      */
     Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp, double kz = 1.)
-        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp){}
+        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp), kz_(kz){}
     /**
      * @brief Return the value of the gaussian
      *
@@ -85,7 +85,7 @@ struct Gaussian
      */
     double operator()(double x, double y, double z)
     {
-        return  amplitude*cos(k_*z)*
+        return  amplitude*cos(kz_*z)*
                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }

@@ -10,7 +10,6 @@
 #include "gamma.cuh"
 #include "evaluation.cuh"
 #include "derivatives.cuh"
-#include "preconditioner.cuh"
 
 #include "blas.h"
 

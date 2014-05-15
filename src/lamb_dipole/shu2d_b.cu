@@ -83,26 +83,24 @@ int main()
 
             DVec y0( omega), y1( y0);
             //make solver and stepper
-            Shu<DVec> test( grid, D, eps);
+            Shu<DVec> shu( grid, eps);
             Diffusion<DVec> diffusion( grid, D);
             Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
 
-            test( y0, y1);
+            shu( y0, y1);
             double vorticity = blas2::dot( stencil, w2d, sol);
             double enstrophy = 0.5*blas2::dot( sol, w2d, sol);
             double energy =    0.5*blas2::dot( sol, w2d, sol_phi) ;
 
             double time = 0;
-            ab.init( test,diffusion, y0, dt);
+            ab.init( shu,diffusion, y0, dt);
             while( time < T)
             {
                 //step 
 
                 t.tic();
-                ab( test, diffusion, y0);
-                y0.swap( y1);
+                ab( shu, diffusion, y0);
                 t.toc();
-                //thrust::swap( y0, y1);
                 time += dt;
                 //std::cout << "Time "<<time<< " "<<t.diff()<<"\n";
                 if( fabs(blas2::dot( w2d, y0)) > 1e16) 
@@ -120,8 +118,8 @@ int main()
             cout << " "<<eps;
             cout << " "<<fabs(blas2::dot( stencil, w2d, y0)); 
             cout << " "<<fabs(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy;
-            test( y0, y1); //get the potential ready
-            cout << " "<<fabs(0.5*blas2::dot( test.potential(), w2d, y0) - energy)/energy<<" ";
+            shu( y0, y1); //get the potential ready
+            cout << " "<<fabs(0.5*blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<" ";
 
             blas1::axpby( 1., sol, -1., y0);
             cout << " "<<sqrt( blas2::dot( w2d, y0))<< endl;

@@ -10,7 +10,7 @@
 #include "derivatives.cuh"
 
 #ifdef DG_BENCHMARK
-#include "dg/timer.cuh"
+#include "timer.cuh"
 #endif
 
 namespace dg{
@@ -188,93 +188,6 @@ struct MatrixTraits< ApplyWithoutWeights<M, T> >
     typedef SelfMadeMatrixTag matrix_category;
 };
 ///@endcond
-
-/**
- * @brief Solve a symmetric linear inversion problem using a conjugate gradient method 
- *
- * @ingroup algorithms
- * Solves the Equation \f[ \hat O \phi = \rho \f]
- * for any symmetric operator O. 
- * It uses solutions from the last two calls to 
- * extrapolate a solution for the current call.
- * @tparam container The Vector class to be used
- */
-template<class container>
-struct Invert
-{
-    /**
-     * @brief Constructor
-     *
-     * @param copyable Needed to construct the two previous solutions
-     * @param max_iter maximum iteration in conjugate gradient
-     * @param eps relative error in conjugate gradient
-     */
-    Invert(const container& copyable,unsigned max_iter, double eps): 
-        eps_(eps),
-        phi1( copyable.size(), 0.), phi2(phi1), cg( copyable, max_iter) { }
-    /**
-     * @brief Solve linear problem
-     *
-     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
-     * conjugate gradient method. The initial guess comes from an extrapolation 
-     * of the last solutions
-     * @tparam SymmetricOp Symmetric operator with the SelfMadeMatrixTag
-        The functions weights() and precond() need to be callable and return
-        weights and the preconditioner for the conjugate gradient method
-     * @param op selfmade symmetric Matrix operator class
-     * @param phi solution (write only)
-     * @param rho right-hand-side
-     *
-     * @return number of iterations used 
-     */
-    template< class SymmetricOp >
-    unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
-    {
-        return this->operator()(op, phi, rho, op.weights(), op.precond());
-    }
-
-    /**
-     * @brief Solve linear problem
-     *
-     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
-     * conjugate gradient method. The initial guess comes from an extrapolation 
-     * of the last solutions.
-     * @tparam SymmetricOp Symmetric matrix or operator (with the selfmade tag)
-     * @tparam Weights class of the weights container
-     * @tparam Preconditioner class of the Preconditioner
-     * @param op selfmade symmetric Matrix operator class
-     * @param phi solution (write only)
-     * @param rho right-hand-side
-     * @param w The weights that made the operator symmetric
-     * @param p The preconditioner  
-     *
-     * @return number of iterations used 
-     */
-    template< class SymmetricOp, class Weights, class Preconditioner >
-    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const Weights& w, const Preconditioner& p )
-    {
-        assert( &rho != &phi);
-        blas1::axpby( 2., phi1, -1.,  phi2, phi);
-        dg::blas2::symv( w, rho, phi2);
-#ifdef DG_BENCHMARK
-    Timer t;
-    t.tic();
-#endif //DG_BENCHMARK
-        unsigned number = cg( op, phi, phi2, p, eps_);
-#ifdef DG_BENCHMARK
-    std::cout << "# of cg iterations \t"<< number << "\t";
-    t.toc();
-    std::cout<< "took \t"<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
-        phi1.swap( phi2);
-        blas1::axpby( 1., phi, 0, phi1);
-        return number;
-    }
-  private:
-    double eps_;
-    container phi1, phi2;
-    dg::CG< container > cg;
-};
 
 
 } //namespace dg

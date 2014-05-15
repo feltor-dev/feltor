@@ -63,7 +63,6 @@ inline void doScal( std::vector<Vector>& x,
 {
 #ifdef DG_DEBUG
     assert( !x.empty());
-    assert( x.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         scal( x[i], alpha);

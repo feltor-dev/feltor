@@ -30,7 +30,7 @@ namespace blas1
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
  * @param x Left Vector
- * @param y Right Vector might equal y
+ * @param y Right Vector may equal y
  * @return Scalar product
  * @note This routine is always executed synchronously due to the 
         implicit memcpy of the result.
@@ -50,7 +50,7 @@ inline typename VectorTraits<Vector>::value_type dot( const Vector& x, const Vec
  * and daxpy is memory bound. (Is there no original daxpby routine because 
  * the name is too long??)
  * @param alpha Scalar  
- * @param x Vector x might equal y 
+ * @param x Vector x may equal y 
  * @param beta Scalar
  * @param y Vector y contains solution on output
  * @note In an implementation you may want to check for alpha == 0 and beta == 1
@@ -67,9 +67,9 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
  *
  * This routine computes \f[ z =  \alpha x + \beta y \f] 
  * @param alpha Scalar  
- * @param x Vector x might equal result
+ * @param x Vector x may equal result
  * @param beta Scalar
- * @param y Vector y might equal result
+ * @param y Vector y may equal result
  * @param result Vector contains solution on output
  * @note In an implementation you may want to check for alpha == 0 and beta == 1
  * @note If DG_DEBUG is defined a range check shall be performed
@@ -83,13 +83,13 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
 
 /*! @brief BLAS 1 routine scal
  *
- * This routine computes \f[ x <-  \alpha x \f] 
+ * This routine computes \f[ x \leftarrow  \alpha x \f] 
  * @param alpha Scalar  
- * @param x Vector x might equal result
+ * @param x Vector x may equal result
  * @note In an implementation you may want to check for alpha == 0
  */
 template< class Vector>
-inline void axpby( Vector& x, typename VectorTraits<Vector>::value_type alpha)
+inline void scal( Vector& x, typename VectorTraits<Vector>::value_type alpha)
 {
     return dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
 }
@@ -99,8 +99,8 @@ inline void axpby( Vector& x, typename VectorTraits<Vector>::value_type alpha)
 *
 * Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]
 * @param x1 Vector x1  
-* @param x2 Vector x2 might equal x1
-* @param y  Vector y contains result on output ( might equal x1 or x2)
+* @param x2 Vector x2 may equal x1
+* @param y  Vector y contains result on output ( may equal x1 or x2)
 * @note If DG_DEBUG is defined a range check shall be performed 
 */
 template< class Vector>
@@ -113,8 +113,8 @@ inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 *
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]
 * @param x1 Vector x1  
-* @param x2 Vector x2 might equal x1
-* @param y  Vector y contains result on output ( might equal x1 and/or x2)
+* @param x2 Vector x2 may equal x1
+* @param y  Vector y contains result on output ( ma equal x1 and/or x2)
 * @note If DG_DEBUG is defined a range check shall be performed 
 */
 template< class Vector>

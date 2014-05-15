@@ -111,12 +111,26 @@ struct Karniadakis
         the return value, i.e. y' = L(y) translates to diff( y, y').
         Furthermore the routines weights() and precond() must be callable
         and return diagonal weights and the preconditioner for the conjugate gradient. 
-    * @param f right hand side function or functor
+    * @param f right hand side function or functor (is called for u)
     * @param diff diffusion operator treated implicitely 
     * @param u initial value on input, contains result on output
     */
     template< class Functor, class LinearOp>
     void operator()( Functor& f, LinearOp& diff, Vector& u);
+
+
+    /**
+     * @brief return the current head of the computation
+     *
+     * @return current head
+     */
+    const Vector& head()const{return u_[0];}
+    /**
+     * @brief return the last vector for which f was called
+     *
+     * @return current head^
+     */
+    const Vector& last()const{return u_[1];}
   private:
     std::vector<Vector> u_, f_; 
     CG< Vector> pcg;

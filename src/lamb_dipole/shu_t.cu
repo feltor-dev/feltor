@@ -7,7 +7,6 @@
 #include "draw/host_window.h"
 
 #include "dg/functors.cuh"
-#include "dg/arrvec2d.cuh"
 #include "dg/evaluation.cuh"
 #include "dg/xspacelib.cuh"
 #include "dg/rk.cuh"
@@ -58,11 +57,9 @@ int main()
     dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, 1);
     HVec omega = evaluate ( lamb, grid);
     DVec stencil = evaluate( one, grid);
-    //DArrVec sol = evaluate< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
-    DVec y0( omega), y1( y0);
-    Shu<DVec> test( grid, D, eps);
+    DVec y0( omega);
+    Shu<DVec> test( grid, eps);
     Diffusion<DVec> diffusion( grid, D);
-    //AB< k, DVec > ab( y0);
     Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
 
     ////////////////////////////////glfw//////////////////////////////
@@ -87,8 +84,6 @@ int main()
         render.renderQuad( hvisual, n*Nx, n*Ny, colors);
         //step 
         ab( test,diffusion, y0 );
-        //thrust::swap(y0, y1);
-        //y0.swap( y1);
 
         glfwSwapBuffers(w);
         glfwWaitEvents();

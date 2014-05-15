@@ -88,6 +88,25 @@ struct ArakawaX
      */
     const Matrix& dy() {return bdyf;}
 
+    /**
+     * @brief Compute the total variation integrand in 2D
+     *
+     * Computes the integrand of the following definition:
+     * \f[ TV(\phi) := \int |\nabla\phi| d\Omega \f]
+     * @param phi function 
+     * @param varphi may equal phi, contains result on output
+     */
+    void variation( const container& phi, container& varphi)
+    {
+        blas2::symv( bdxf, phi, dxlhs);
+        blas2::symv( bdyf, phi, dylhs);
+        blas1::pointwiseDot( dxlhs, dxlhs, dxlhs);
+        blas1::pointwiseDot( dylhs, dylhs, dylhs);
+        blas1::axpby( 1., dxlhs, 1., dylhs, varphi);
+        thrust::transform( varphi.begin(), varphi.end(), varphi.begin(), dg::SQRT<value_type>() );
+
+    }
+
   private:
     Matrix bdxf, bdyf;
     container dxlhs, dxrhs, dylhs, dyrhs, helper;

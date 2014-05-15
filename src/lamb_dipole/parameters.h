@@ -15,6 +15,7 @@ struct Parameters
     enum dg::bc bc_x, bc_y;
 
     double D;
+    int global;
 
     double U, R, posX, posY;
 
@@ -26,7 +27,7 @@ struct Parameters
      *
      * @param v Vector from read_input function
      */
-    Parameters( const std::vector< double>& v) {
+    Parameters( const std::vector< double>& v, int layout=0) {
         n  = (unsigned)v[1]; 
         Nx = (unsigned)v[2];
         Ny = (unsigned)v[3];
