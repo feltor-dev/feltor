@@ -21,6 +21,7 @@ const double eps = 1e-6; //# of pcg iterations increases very much if
 
 const double lx = 2.*M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
+double derivative( double x, double y){return cos(x)*sin(y);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
 dg::bc bcx = dg::DIR;
 //const double lx = 2./3.*M_PI;
@@ -37,16 +38,17 @@ int main()
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
-    dg::HVec s2d_h = dg::create::s2d( grid);
-    dg::DVec s2d_d( s2d_h);
-    dg::HVec t2d_h = dg::create::t2d( grid);
-    dg::DVec t2d_d( t2d_h);
+    const dg::HVec s2d_h = dg::create::s2d( grid);
+    const dg::DVec s2d_d( s2d_h);
+    const dg::HVec t2d_h = dg::create::t2d( grid);
+    const dg::DVec t2d_d( t2d_h);
     std::cout<<"Expand initial condition\n";
     dg::HVec x = dg::expand( initial, grid);
 
     std::cout << "Create symmetric Laplacian\n";
     t.tic();
     dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::symmetric); 
+    dg::DMatrix DX = dg::create::dx( grid, dg::LSPACE);
     dg::HMatrix A = dA;
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
@@ -56,6 +58,7 @@ int main()
 
     std::cout<<"Expand right hand side\n";
     const dg::HVec solution = dg::expand ( fct, grid);
+    const dg::DVec deriv = dg::expand( derivative, grid);
     dg::HVec b = dg::expand ( laplace_fct, grid);
     //compute S b
     dg::blas2::symv( s2d_h, b, b);
@@ -96,8 +99,13 @@ int main()
     dg::blas1::axpby( 1., x,-1., error);
 
     double normerr = dg::blas2::dot( s2d_d, derror);
+    dg::blas2::gemv( DX, dsolution, derror);
+    dg::blas1::axpby( 1., deriv, -1., derror);
     double norm = dg::blas2::dot( s2d_d, dsolution);
-    std::cout << "L2 Norm of relative error is   " <<sqrt( normerr/norm)<<std::endl;
+    std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
+    normerr = dg::blas2::dot( s2d_d, derror); 
+    norm = dg::blas2::dot( s2d_d, deriv);
+    std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
 
     return 0;
 }

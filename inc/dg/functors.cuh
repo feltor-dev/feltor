@@ -170,7 +170,7 @@ struct GaussianY
 /**
  * @brief Functor for a linear polynomial in x-direction
  * 
- * \f[ f(x,y) = a*x+b) \f]
+ * \f[ f(x,y) = a*x+b \f]
  */
 struct LinearX
 {
@@ -184,8 +184,8 @@ struct LinearX
     /**
      * @brief Return linear polynomial in x 
      *
-     * @param x x - coordianate
-     * @param y y - coordianate
+     * @param x x - coordinate
+     * @param y y - coordinate
      
      * @return result
      */

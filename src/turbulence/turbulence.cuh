@@ -35,21 +35,21 @@ struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu):nu_(nu), w2d( 2, dg::create::w2d(g)), v2d( 2, dg::create::v2d(g)), temp( g.size()), damp( dg::evaluate( Damping( 0.9*g.x1()), g))
     {
-        LaplacianM_perp = dg::create::laplacianM( g, dg::normed, dg::XSPACE, dg::symmetric);
+        laplaceM = dg::create::laplacianM( g, dg::normed, dg::XSPACE, dg::symmetric);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
         for( unsigned i=0; i<x.size(); i++)
         {
-            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+            dg::blas2::gemv( laplaceM, x[i], temp);
             //hat \Delta y Dirichlet RB?
-            dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            dg::blas2::gemv( laplaceM, temp, y[i]);
             dg::blas1::axpby( -nu_, temp, 0., y[i]);
             //dg::blas1::pointwiseDot( damp, x[i], temp);
             //dg::blas1::axpby( -1., temp, 1., y[i]);
         }
     }
-    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
+    const dg::DMatrix& laplacianM()const {return laplaceM;}
     const std::vector<container>& weights(){return w2d;}
     const std::vector<container>& precond(){return v2d;}
 
@@ -58,17 +58,7 @@ struct Diffusion
     const std::vector<container> w2d, v2d;
     container temp;
     const container damp;
-    dg::DMatrix LaplacianM_perp;
-};
-
-struct Fail : public std::exception
-{
-
-    Fail( double eps): eps( eps) {}
-    double epsilon() const { return eps;}
-    char const* what() const throw(){ return "Failed to converge";}
-  private:
-    double eps;
+    dg::DMatrix laplaceM;
 };
 
 template< class container=thrust::device_vector<double> >
@@ -125,6 +115,7 @@ struct Turbulence
      * @return Gamma operator
      */
     const Helmholtz<Matrix, container >&  gamma() const {return gamma1;}
+    ArakawaX<container>& arakawa() {return arakawa_;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -181,7 +172,7 @@ struct Turbulence
     //matrices and solvers
     Matrix A, B; //contains polarisation matrix
     Matrix laplaceM; //contains normalized laplacian
-    ArakawaX< container> arakawa; 
+    ArakawaX< container> arakawa_; 
     Polarisation2dX< thrust::host_vector<value_type> > plus_pol, minus_pol; //note the host vector
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
@@ -198,10 +189,12 @@ struct Turbulence
 template< class container>
 Turbulence< container>::Turbulence( const Grid2d<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, double gradient, double d): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
-    binv( evaluate( LinearX( kappa, 1.), grid)), gradient_( evaluate( LinearX( -gradient, 1+gradient*grid.lx()), grid)), grad_(gradient),
+    binv( evaluate( LinearX( kappa, 1.), grid)), 
+    gradient_( evaluate( LinearX( -gradient, 1+gradient*grid.lx()), grid)), 
+    grad_(gradient),
     phi( 2, chi), phi_old( phi), dyphi( phi),
     ypg( phi), dyy( phi), lapy( dyy),
-    arakawa( grid), 
+    arakawa_( grid), 
     plus_pol(     grid, forward), minus_pol( grid,   backward),
     pcg( omega, omega.size()), 
     average( grid),
@@ -210,14 +203,14 @@ Turbulence< container>::Turbulence( const Grid2d<value_type>& grid, double kappa
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), d_(d)
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed, XSPACE, symmetric);
+    laplaceM = create::laplacianM( grid, normed, XSPACE, forward);
 }
 
 template< class container>
 const container& Turbulence<container>::compute_vesqr( const container& potential)
 {
-    blas2::gemv( arakawa.dx(), potential, chi);
-    blas2::gemv( arakawa.dy(), potential, omega);
+    blas2::gemv( arakawa_.dx(), potential, chi);
+    blas2::gemv( arakawa_.dy(), potential, omega);
     blas1::pointwiseDot( binv, chi, chi);
     blas1::pointwiseDot( binv, omega, omega);
     blas1::pointwiseDot( chi, chi, chi);
@@ -319,15 +312,15 @@ void Turbulence< container>::operator()( const std::vector<container>& y, std::v
 
     for( unsigned i=0; i<y.size(); i++)
     {
-        arakawa( y[i], phi[i], yp[i]);
+        arakawa_( y[i], phi[i], yp[i]);
         blas1::pointwiseDot( binv, yp[i], yp[i]);
     }
 
     //compute derivatives
     for( unsigned i=0; i<y.size(); i++)
     {
-        blas2::gemv( arakawa.dy(), y[i], dyy[i]);
-        blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
+        blas2::gemv( arakawa_.dy(), y[i], dyy[i]);
+        blas2::gemv( arakawa_.dy(), phi[i], dyphi[i]);
         blas1::axpby( -grad_, dyphi[i], 1., yp[i]); //-g\partial_y \phi
         blas1::axpby( 1, y[i], 1, gradient_, ypg[i]);
         blas1::pointwiseDot( dyphi[i], ypg[i], dyphi[i]); //dyphi <- dyphi*n_e

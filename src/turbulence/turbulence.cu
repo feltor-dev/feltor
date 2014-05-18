@@ -39,7 +39,7 @@ int main( int argc, char* argv[])
     }
 
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow * w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
+    GLFWwindow * w = draw::glfwInitAndCreateWindow( v2[2]*v2[3], v2[1]*v2[4], "");
     draw::RenderHostData render( v2[1], v2[2]);
     std::stringstream title;
     /////////////////////////////////////////////////////////////////////////
@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
     dg::Diffusion< dg::DVec> diff( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
-    const dg::DVec gradient =  dg::evaluate( dg::LinearX( -p.gradient, p.gradient*grid.lx()/2.), grid);
+    const dg::DVec gradient =  dg::evaluate( dg::LinearX( -p.gradient, 1+p.gradient*grid.lx()), grid);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
@@ -107,15 +107,54 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
 
+        //transform field to an equidistant grid
+        test.arakawa().bracket( test.potential()[0], test.potential()[0], dvisual);
+        hvisual = dvisual;
+        dg::blas2::gemv( equi, hvisual, visual);
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw ions
+        title << std::setprecision(2) << std::scientific;
+        title <<"v_E^2 / "<<colors.scale()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+
+        //transform field to an equidistant grid
+        //test.arakawa().bracket( y0[1], test.potential()[0], dvisual);
+        dg::blas2::gemv( test.arakawa().dy(), test.potential()[0], dvisual);
+        hvisual = dvisual;
+        dg::blas2::gemv( equi, hvisual, visual);
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw ions
+        title << std::setprecision(2) << std::scientific;
+        title <<"dy phi / "<<colors.scale()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+
+        //transform field to an equidistant grid
+        dg::blas2::gemv( test.arakawa().dx(), test.potential()[0], dvisual);
+        //dg::blas1::axpby( 1., gradient, 1., y0[1]);
+        //dg::blas1::pointwiseDot( dvisual, y0[1], dvisual);
+        hvisual = dvisual;
+        dg::blas2::gemv( equi, hvisual, visual);
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw ions
+        title << std::setprecision(2) << std::scientific;
+        title <<"dx phi / "<<colors.scale()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+
         //transform phi
-        dg::blas2::gemv( test.laplacianM(), test.potential()[0], dvisual);
+        dg::blas2::gemv( test.polarisationM(), test.potential()[0], dvisual);
         //dg::blas1::axpby(1, test.potential()[0], 0, dvisual);
 
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        title <<"omega / "<<colors.scale()<<"\t";
+        title <<"div( Ngrad phi) / "<<colors.scale()<<"\t";
         title << std::fixed; 
         title << " &&   time = "<<time;
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);

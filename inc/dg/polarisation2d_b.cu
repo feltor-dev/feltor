@@ -15,9 +15,9 @@
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
 
-const double lx = M_PI/2.;
+const double lx = M_PI;
 const double ly = M_PI;
-dg::bc bcx = dg::DIR_NEU;
+dg::bc bcx = dg::DIR;
 //const double eps = 1e-3; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
@@ -31,6 +31,7 @@ double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-
 //double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
+double der(double x, double y)  { return cos( x)*sin(y);}
 
 using namespace std;
 
@@ -55,8 +56,6 @@ int main()
     Vector x =    dg::evaluate( initial, grid);
     Vector b =    dg::evaluate( rhs, grid);
     Vector chi =  dg::evaluate( pol, grid);
-    const Vector solution = dg::evaluate( sol, grid);
-    Vector error( solution);
 
 
     cout << "Create Polarisation object!\n";
@@ -73,7 +72,6 @@ int main()
     cusp::add( B1_, B2_, B_);
     cusp::blas::scal( B_.values, 0.5);
     //cusp::blas::axpby( B_.values, B2_.values, B_.values, 0.5, 0.5);
-    //Matrix A = pol.create(chi);
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
     t.tic();
@@ -84,6 +82,7 @@ int main()
     cout << "Conversion (1) to device matrix took: "<<t.diff()<<"s\n";
     t.tic();
     Matrix A = B;  
+    //Matrix A = pol2.create(chi);
     t.toc();
     cout << "Conversion (2) to device matrix took: "<<t.diff()<<"s\n";
     std::cout << "# of points in matrix is: "<< A.num_entries<< "\n";
@@ -108,12 +107,23 @@ int main()
     cout << "For a precision of "<< eps<<endl;
     cout << "Took "<<t.diff()<<"s\n";
     //compute error
+    const Vector solution = dg::evaluate( sol, grid);
+    const Vector derivati = dg::evaluate( der, grid);
+    Vector error( solution);
     dg::blas1::axpby( 1.,x,-1., error);
 
     double err = dg::blas2::dot( w2d, error);
     cout << "L2 Norm2 of Error is " << err << endl;
     double norm = dg::blas2::dot( w2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
+    Matrix DX = dg::create::dx( grid, dg::XSPACE);
+    dg::blas2::gemv( DX, x, error);
+    dg::blas1::axpby( 1.,derivati,-1., error);
+    err = dg::blas2::dot( w2d, error);
+    cout << "L2 Norm2 of Error is " << err << endl;
+    norm = dg::blas2::dot( w2d, derivati);
+    std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
+    //derivative converges with p-1, for p = 1 with 1/2
 
     return 0;
 }

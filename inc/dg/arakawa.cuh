@@ -95,6 +95,7 @@ struct ArakawaX
      * \f[ TV(\phi) := \int |\nabla\phi| d\Omega \f]
      * @param phi function 
      * @param varphi may equal phi, contains result on output
+     * @note calls thrust::transform to compute the square root
      */
     void variation( const container& phi, container& varphi)
     {
@@ -104,7 +105,25 @@ struct ArakawaX
         blas1::pointwiseDot( dylhs, dylhs, dylhs);
         blas1::axpby( 1., dxlhs, 1., dylhs, varphi);
         thrust::transform( varphi.begin(), varphi.end(), varphi.begin(), dg::SQRT<value_type>() );
+    }
+    /**
+     * @brief Compute the "symmetric bracket"
+     *
+     * Computes \f[ [f,g] := \partial_x f\partial_x g + \partial_y f\partial_y g \f]
 
+     * @param lhs The left hand side
+     * @param rhs The right hand side (may equal lhs)
+     * @param result The result (write only, may equal lhs or rhs)
+     */
+    void bracket( const container& lhs, const container& rhs, container& result)
+    {
+        blas2::symv( bdxf, lhs, dxlhs);
+        blas2::symv( bdyf, lhs, dylhs);
+        blas2::symv( bdxf, rhs, dxrhs);
+        blas2::symv( bdyf, rhs, dyrhs);
+        blas1::pointwiseDot( dxlhs, dxrhs, dxlhs);
+        blas1::pointwiseDot( dylhs, dyrhs, dylhs);
+        blas1::axpby( 1., dxlhs, 1., dylhs, result);
     }
 
   private:
