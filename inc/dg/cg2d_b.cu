@@ -19,7 +19,7 @@ const double ly = 2.*M_PI;
 const double eps = 1e-6; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
-const double lx = 2.*M_PI;
+const double lx = M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double derivative( double x, double y){return cos(x)*sin(y);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
@@ -47,7 +47,7 @@ int main()
 
     std::cout << "Create symmetric Laplacian\n";
     t.tic();
-    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::symmetric); 
+    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::forward); 
     dg::DMatrix DX = dg::create::dx( grid, dg::LSPACE);
     dg::HMatrix A = dA;
     t.toc();
@@ -99,13 +99,14 @@ int main()
     dg::blas1::axpby( 1., x,-1., error);
 
     double normerr = dg::blas2::dot( s2d_d, derror);
-    dg::blas2::gemv( DX, dsolution, derror);
-    dg::blas1::axpby( 1., deriv, -1., derror);
     double norm = dg::blas2::dot( s2d_d, dsolution);
     std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
+    dg::blas2::gemv( DX, dsolution, derror);
+    dg::blas1::axpby( 1., deriv, -1., derror);
     normerr = dg::blas2::dot( s2d_d, derror); 
     norm = dg::blas2::dot( s2d_d, deriv);
     std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
+    //both functiona and derivative converge with order P 
 
     return 0;
 }

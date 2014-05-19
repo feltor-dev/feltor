@@ -44,7 +44,8 @@ struct Diffusion
             dg::blas2::gemv( laplaceM, x[i], temp);
             //hat \Delta y Dirichlet RB?
             dg::blas2::gemv( laplaceM, temp, y[i]);
-            dg::blas1::axpby( -nu_, temp, 0., y[i]);
+            dg::blas1::scal(y[i], -nu_);
+            //dg::blas1::axpby( -nu_, temp, 0., y[i]);
             //dg::blas1::pointwiseDot( damp, x[i], temp);
             //dg::blas1::axpby( -1., temp, 1., y[i]);
         }
@@ -189,8 +190,8 @@ struct Turbulence
 template< class container>
 Turbulence< container>::Turbulence( const Grid2d<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, double gradient, double d): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
-    binv( evaluate( LinearX( kappa, 1.), grid)), 
-    gradient_( evaluate( LinearX( -gradient, 1+gradient*grid.lx()), grid)), 
+    binv( evaluate( LinearY( kappa, 1.), grid)), 
+    gradient_( evaluate( LinearY( -gradient, 1+gradient*grid.ly()), grid)), 
     grad_(gradient),
     phi( 2, chi), phi_old( phi), dyphi( phi),
     ypg( phi), dyy( phi), lapy( dyy),
@@ -280,7 +281,7 @@ const container& Turbulence< container>::polarisation( const std::vector<contain
     cusp::add( C, D, E);
     cusp::blas::scal( E.values, 0.5);
     //cusp::blas::axpby( C.values, D.values, C.values, 0.5, 0.5);
-    A = C;
+    A = E;
 #ifdef DG_BENCHMARK
     t.toc();
     std::cout<< "       Polarisation assembly took "<<t.diff()<<"s\n";
@@ -319,16 +320,16 @@ void Turbulence< container>::operator()( const std::vector<container>& y, std::v
     //compute derivatives
     for( unsigned i=0; i<y.size(); i++)
     {
-        blas2::gemv( arakawa_.dy(), y[i], dyy[i]);
-        blas2::gemv( arakawa_.dy(), phi[i], dyphi[i]);
-        blas1::axpby( -grad_, dyphi[i], 1., yp[i]); //-g\partial_y \phi
+        blas2::gemv( arakawa_.dx(), y[i], dyy[i]);
+        blas2::gemv( arakawa_.dx(), phi[i], dyphi[i]);
+        blas1::axpby( grad_, dyphi[i], 1., yp[i]); //-g\partial_y \phi
         blas1::axpby( 1, y[i], 1, gradient_, ypg[i]);
         blas1::pointwiseDot( dyphi[i], ypg[i], dyphi[i]); //dyphi <- dyphi*n_e
-        blas1::axpby( kappa, dyphi[i], 1., yp[i]);
+        blas1::axpby( -kappa, dyphi[i], 1., yp[i]);
     }
     // curvature terms
-    blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
-    blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
+    blas1::axpby( 1.*kappa, dyy[0], 1., yp[0]);
+    blas1::axpby( -tau*kappa, dyy[1], 1., yp[1]);
     //add HW coupling to n_e
     //blas1::pointwiseDot( phi[0], ypg[0], chi);
     //blas1::axpby( d_, chi, 1, yp[0]);
@@ -341,13 +342,6 @@ void Turbulence< container>::operator()( const std::vector<container>& y, std::v
     blas1::axpby( -d_, y[0], 1, yp[0]);
     average( y[0], chi);
     blas1::axpby( d_, chi, 1., yp[0]);
-
-    //add laplacians
-    //for( unsigned i=0; i<y.size(); i++)
-    //{
-    //    blas2::gemv( laplaceM, y[i], lapy[i]);
-    //    blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
-    //}
 
 }
 

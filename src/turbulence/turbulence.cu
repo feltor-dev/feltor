@@ -56,8 +56,12 @@ int main( int argc, char* argv[])
     //create RHS 
     dg::Turbulence< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.gradient, p.d); 
     //create initial vector
-    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+    dg::Gaussian gaussian( 0.25*p.posX*grid.lx(), 0.5*p.posY*grid.ly(), p.sigma, p.sigma, 100*p.n0); //gaussian width is in absolute values
+    dg::Vortex vortex( p.posX*grid.lx(), p.posY*grid.ly(), 0, p.sigma, p.n0);
+    dg::Vortex vortex2( p.posX*grid.lx(), 0.5*p.posY*grid.ly(), 0, p.sigma, p.n0);
+    std::vector<dg::DVec> y0(2, dg::evaluate( gaussian, grid)), y1(y0); // n_e' = gaussian
+    dg::DVec vor2 = dg::evaluate( vortex, grid);
+    dg::blas1::axpby( 1., vor2, 1., y0[0]);
 
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' 
     dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
@@ -66,7 +70,7 @@ int main( int argc, char* argv[])
     dg::Diffusion< dg::DVec> diff( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
-    const dg::DVec gradient =  dg::evaluate( dg::LinearX( -p.gradient, 1+p.gradient*grid.lx()), grid);
+    const dg::DVec gradient =  dg::evaluate( dg::LinearY( -p.gradient, p.gradient*grid.ly()/2.), grid);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
@@ -74,14 +78,15 @@ int main( int argc, char* argv[])
     dg::Timer t;
     double time = 0;
     ab.init( test, diff, y0, p.dt);
+    ab( test, diff, y0);
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
     while (!glfwWindowShouldClose(w))
     {
         //transform field to an equidistant grid
-        dvisual = y0[0];
-        //dg::blas1::axpby( 1., dvisual, 1., gradient, dvisual);
+        dvisual = ab.last()[0];
+        dg::blas1::axpby( 1., dvisual, 1., gradient, dvisual);
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -149,7 +154,6 @@ int main( int argc, char* argv[])
         //transform phi
         dg::blas2::gemv( test.polarisationM(), test.potential()[0], dvisual);
         //dg::blas1::axpby(1, test.potential()[0], 0, dvisual);
-
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
