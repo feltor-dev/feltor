@@ -379,7 +379,7 @@ int main( int argc, char* argv[])
     unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
     double second = t.diff() - hour*3600 - minute*60;
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
-    std::cout << "Total simulation time for "<<max_out*itstp<<" steps: "<<hour<<":"<<std::setw(2)<<minutes<<":"<<second<<"\n";
+    std::cout << "Total simulation time for "<<max_out*itstp<<" steps: "<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     std::cout << "Which is "<<t.diff()/(double)(max_out*itstp)<<"s/step\n";
     return 0;
 

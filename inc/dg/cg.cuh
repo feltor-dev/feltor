@@ -194,7 +194,10 @@ unsigned cg( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& 
 }
 
 /**
- * @brief Solve a symmetric linear inversion problem using a conjugate gradient method 
+ * @brief Smart conjugate gradient solver. 
+ 
+ * Solve a symmetric linear inversion problem using a conjugate gradient method and 
+ * the last two solutions.
  *
  * @ingroup algorithms
  * Solves the Equation \f[ \hat O \phi = \rho \f]

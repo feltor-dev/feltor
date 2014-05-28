@@ -18,15 +18,6 @@
 
 namespace dg
 {
-struct Fail : public std::exception
-{
-
-    Fail( double eps): eps( eps) {}
-    double epsilon() const { return eps;}
-    char const* what() const throw(){ return "Failed to converge";}
-  private:
-    double eps;
-};
 
 struct SOL
 {
@@ -371,10 +362,11 @@ void Esel< container>::operator()( const std::vector<container>& y, std::vector<
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
     //3d coupling term
     //average( phi[0], chi);
-    blas1::axpby( dd, phi[0], -dd, y[0], chi);//d(phi-ln(n))
-    blas1::axpby( 1., one, +1., y[0], omega); //(1+ln(n))
-    blas1::pointwiseDot( chi, omega, chi);
-    blas1::axpby( 1., chi, 1., yp[0]);
+    blas1::axpby( dd, phi[0], -dd, y[0], yp[0]);//d(phi-ln(n))
+    blas1::axpby( -dd, y[1], 1., yp[0]);
+    //blas1::axpby( 1., one, +1., y[0], omega); //(1+ln(n))
+    //blas1::pointwiseDot( chi, omega, chi);
+    //blas1::axpby( 1., chi, 1., yp[0]);
     //blas1::axpby( dd, chi, 1., yp[0]); //d(phi-avg(phi))
 
     //thrust::transform( y[0].begin(), y[0].end(), omega.begin(), dg::EXP<value_type>());

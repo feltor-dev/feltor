@@ -281,45 +281,44 @@ struct Vortex
     /**
      * @brief 
      *
-     * @param state 
+     * @param x0 X position
+     * @param y0 Y position
+     * @param state mode
      * @param R characteristic radius of dipole
-     * @param vel_ratio u_drift/u_dipole
+     * @param u_dipole u_drift/u_dipole
      * @param kz
      */
     Vortex( double x0, double y0, unsigned state, 
           double R,  double u_dipole, double kz = 0):
         x0_(x0), y0_(y0), s_(state),  R_(R), u_d( u_dipole), kz_(kz){
-        g_[0] = 3.83187; //groundstate with uuu=2
-        g_[1] = 3.83235; //groundstate with uuu=-1
+        g_[0] = 3.831896621; 
+        g_[1] = -3.832353624; 
         g_[2] = 7.016;
-        c_[0] = 0.5;
-        c_[1] = -1;
-        c_[2] = -1;
+        b_[0] = 0.03827327723;
+        b_[1] = 0.07071067810 ;
+        b_[2] = 0.07071067810 ;
     }
     double operator()( double x, double y)
     {
         double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
         double theta = atan2( y-y0_, x-x0_);
-        //std::cout << cos(theta)<<std::endl;
-        double beta = sqrt(1-(c_[s_]));
-        double norm = 1.2965125;
+        double beta = b_[s_];
+        double norm = 1.2965125; 
 
         if( r/R_<=1.)
-            return u_d*(
-                    r/R_*(1+beta*beta/g_[s_]/g_[s_]) 
-                    - beta*beta/g_[s_]/g_[s_]*j1(g_[s_]*r/R_)/j1(g_[s_])
+            return u_d*( 
+                      r *( 1 +beta*beta/g_[s_]/g_[s_] ) 
+                    - R_*  beta*beta/g_[s_]/g_[s_] *j1(g_[s_]*r/R_)/j1(g_[s_])
                     )*cos(theta)/norm;
-        return u_d*cos(theta)
-                  *beta*beta/g_[s_]/g_[s_]
-                  *bessk1(beta*r/R_)/bessk1(beta)/norm;
+        return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
     }
     double operator()( double x, double y, double z)
     {
         return this->operator()(x,y)*cos(kz_*z);
     }
     private:
-    double bessk1(double x)
     // Returns the modified Bessel function K1(x) for positive real x.
+    double bessk1(double x)
     { 
         double y,ans;
         if (x <= 2.0) 
@@ -338,9 +337,10 @@ struct Vortex
         } 
         return ans; 
     }
-    double bessi1(double x) 
     //Returns the modified Bessel function I1(x) for any real x. 
-    {   double ax,ans; 
+    double bessi1(double x) 
+    {   
+        double ax,ans; 
         double y; 
         if ((ax=fabs(x)) < 3.75) 
         {
@@ -361,7 +361,7 @@ struct Vortex
     }
     double x0_, y0_;
     unsigned s_;
-    double R_, c_[3], u_d;
+    double R_, b_[3], u_d;
     double g_[3];
     double kz_;
 };

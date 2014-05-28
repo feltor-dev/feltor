@@ -9,7 +9,6 @@
 #include "gamma.cuh"
 #include "evaluation.cuh"
 #include "derivatives.cuh"
-#include "preconditioner.cuh"
 
 #include "blas.h"
 
@@ -74,6 +73,12 @@ int main()
     AB< k, DVec > ab( y0);
 
     ab.init( rhs, y0, dt);
+    integrateRK4( rhs, y0, y1, T, 1e-10);
+    DVec solution = evaluate( sol, grid), error( solution);
+    double norm_sol = blas2::dot( w2d, solution);
+    blas1::axpby( -1., y1, 1., error);
+    double norm_error = blas2::dot( w2d, error);
+    cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" \n";
 
     //thrust::swap(y0, y1);
     for( unsigned i=0; i<NT; i++)
@@ -83,11 +88,9 @@ int main()
     }
     double norm_y0 = blas2::dot( w2d, y0);
     cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << endl;
-    DVec solution = evaluate( sol, grid), error( solution);
-    double norm_sol = blas2::dot( w2d, solution);
     blas1::axpby( -1., y0, 1., error);
     cout << "Normalized solution is "<<  norm_sol<< endl;
-    double norm_error = blas2::dot( w2d, error);
+    norm_error = blas2::dot( w2d, error);
     cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000141704)\n";
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
     //n = 2 -> p = 2

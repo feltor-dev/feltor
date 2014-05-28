@@ -4,12 +4,14 @@
 #include <sstream>
 
 #include "draw/host_window.h"
+//#include "draw/device_window.cuh"
 
-#include "esel.cuh"
+#include "toeflR.cuh"
 #include "dg/rk.cuh"
+#include "dg/karniadakis.cuh"
 #include "dg/timer.cuh"
 #include "file/read_input.h"
-#include "../galerkin/parameters.h"
+#include "parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -19,10 +21,16 @@
 
 const unsigned k = 3; //!< a change of k needs a recompilation!
 
+double aparallel( double x, double y)
+{
+    return 0.1/cosh(x)/cosh(x)*cos(y);
+}
+
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
     std::vector<double> v, v2;
+    std::stringstream title;
     if( argc == 1)
     {
         v = file::read_input("input.txt");
@@ -38,10 +46,8 @@ int main( int argc, char* argv[])
     }
 
     v2 = file::read_input( "window_params.txt");
-
-    GLFWwindow * w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
-    draw::RenderHostData render( v2[1], v2[2]);
-    std::stringstream title;
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
+    draw::RenderHostData render(v2[1], v2[2]);
     /////////////////////////////////////////////////////////////////////////
     const Parameters p( v);
     p.display( std::cout);
@@ -51,51 +57,22 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::SOL sol( v[22], v[23], v[24], v[25], v[27]);
-    std::cout << "The SOL parameters are: \n"
-              << "    x_l:     "<<v[22] <<"\n    x_w:     "<<v[23]<<"\n"
-              << "    sigma_l: "<<v[24] <<"\n    sigma_w: "<<v[25]<<"\n";
+    dg::Grid2d<double > grid( -p.lxhalf., p.lxhalf., -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::Esel< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, sol); 
+    dg::Asela< dg::DVec > asela( grid, p); 
+    dg::Diffusion<dg::DVec> diffusion( grid, p.nu, p.mu[1], p.mu[0] );
     //create initial vector
-    dg::EXPX<double> exp( 1., -1./v[26]); 
-    std::vector<dg::DVec> y0(2, dg::evaluate( exp, grid)), y1(y0); 
-    {
-        dg::Gaussian gaussian( p.posX/4.*grid.lx(), p.posY/2.*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
-        std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
-        //dg::blas1::axpby( 1, y0p[0], 1, y0[0]);
-        dg::blas1::axpby( 1, y0p[1], 1, y0[1]);
-    } 
-    /*
-    {
-        dg::Gaussian gaussian( p.posX/4.*grid.lx(), p.posY/3.*grid.ly(), p.sigma, p.sigma, -p.n0); 
-        std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
-        dg::blas1::axpby( 1, y0p, 1, y0);
-    }
-    {
-        dg::Gaussian gaussian( p.posX/2.*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
-        std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
-        dg::blas1::axpby( 1, y0p, 1, y0);
-    }{
-        dg::Gaussian gaussian( p.posX/5.*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, -p.n0); 
-        std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
-        dg::blas1::axpby( 1, y0p, 1, y0);
-    }
-    */
-
+    std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); // n_e' = gaussian
+    y0[2] = y0[3] = dg::evaluate( aparallel, grid);
+    dg::DVec temp( y0[2]);
+    dg::blas2::gemv( diffusion.laplacianM(), y0[2], temp); //u_e = \Delta A_parallel
+    dg::blas1::scal( y0[2], p.beta/p.mue); 
+    dg::blas1::scal( y0[3], p.beta/p.mui); //w_i = beta/mui 
+    dg::blas1::axpby( -1., temp, 1., y0[2]);//w_e = \Delta A + beta/mue A
    
+    asela.log( y0, y0, 2); //transform to logarithmic values
 
-    //dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    //dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
-    assert( p.tau == 0);
-    assert( p.global);
-    assert( p.bc_x == dg::DIR_NEU);
-
-    test.log( y0, y0); //transform to logarithmic values
-
-    dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    //dg::TVB< std::vector<dg::DVec> > ab( y0);
+    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -104,28 +81,30 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( test, y0, p.dt);
-    ab( test, y0, y1, p.dt);
-    y0.swap( y1); 
+    //ab.init( test, y0, p.dt);
+    ab.init( test, diffusion, y0, p.dt);
+    //ab( test, y0, y1, p.dt);
+    //y0.swap( y1); 
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    while (!glfwWindowShouldClose(w))
+    while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
+        if( p.global)
         {
-            //test.exp( y1, y1); //plot logarithmic values
-            thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(p.lx/v[26]/1.5));
-            dvisual=y1[0];
+            test.exp( y0, y1);
+            thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
         }
+        else
+            dvisual = y0[0];
 
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
-        //colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scale() = 1.; 
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw ions
         title << std::setprecision(2) << std::scientific;
         title <<"ne / "<<colors.scale()<<"\t";
@@ -133,7 +112,6 @@ int main( int argc, char* argv[])
 
         //transform phi
         dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
-        //dg::blas1::axpby( 1., test.potential()[0], 0, y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -143,7 +121,7 @@ int main( int argc, char* argv[])
         title << std::fixed; 
         title << " &&   time = "<<time;
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        glfwSetWindowTitle( w, title.str().c_str());
+        glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
         glfwPollEvents();
         glfwSwapBuffers( w);
@@ -166,14 +144,14 @@ int main( int argc, char* argv[])
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             }
-            try{ ab( test, y0, y1, p.dt);}
+            try{ ab( test, diffusion, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose(w, GL_TRUE);
+                glfwSetWindowShouldClose( w, GL_TRUE);
                 break;
             }
-            y0.swap( y1); //attention on -O3 ?
+            //y0.swap( y1); //attention on -O3 ?
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

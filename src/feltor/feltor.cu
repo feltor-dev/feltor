@@ -11,6 +11,7 @@
 #include "bessel.h"
 #include "dg/rk.cuh"
 #include "dg/timer.cuh"
+#include "dg/functors.cuh"
 #include "dg/karniadakis.cuh"
 #include "file/read_input.h"
 #include "parameters.h"
@@ -55,10 +56,10 @@ int main( int argc, char* argv[])
     eule::Feltor< dg::DVec > feltor( grid, p); 
     eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel, p.a, p.thickness, p.mu_e*4.*M_PI*M_PI*p.R_0*p.R_0);
     //create initial vector
-    Vortex init0( 0., p.a - p.posX*p.thickness, 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    Vortex init1( 0., -p.a + p.posX*p.thickness, 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    Vortex init2( p.a - p.posX*p.thickness, 0., 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    Vortex init3( -p.a + p.posX*p.thickness, 0., 2, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    dg::Vortex init0( 0., p.a - p.posX*p.thickness, 0, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    dg::Vortex init1( 0., -p.a + p.posX*p.thickness, 0, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    dg::Vortex init2( p.a - p.posX*p.thickness, 0., 0, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    dg::Vortex init3( -p.a + p.posX*p.thickness, 0., 0, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
     eule::Gradient grad( p.a, p.thickness, p.lnn_inner);
 
     const dg::HVec gradient( dg::evaluate(grad, grid));

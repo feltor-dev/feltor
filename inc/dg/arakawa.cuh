@@ -119,10 +119,18 @@ struct ArakawaX
     {
         blas2::symv( bdxf, lhs, dxlhs);
         blas2::symv( bdyf, lhs, dylhs);
-        blas2::symv( bdxf, rhs, dxrhs);
-        blas2::symv( bdyf, rhs, dyrhs);
-        blas1::pointwiseDot( dxlhs, dxrhs, dxlhs);
-        blas1::pointwiseDot( dylhs, dyrhs, dylhs);
+        if( &lhs != &rhs)
+        {
+            blas2::symv( bdxf, rhs, dxrhs);
+            blas2::symv( bdyf, rhs, dyrhs);
+            blas1::pointwiseDot( dxlhs, dxrhs, dxlhs);
+            blas1::pointwiseDot( dylhs, dyrhs, dylhs);
+        }
+        else
+        {
+            blas1::pointwiseDot( dxlhs, dxlhs, dxlhs);
+            blas1::pointwiseDot( dylhs, dylhs, dylhs);
+        }
         blas1::axpby( 1., dxlhs, 1., dylhs, result);
     }
 
