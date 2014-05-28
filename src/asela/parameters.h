@@ -1,6 +1,8 @@
 #pragma once
 #include "dg/grid.cuh"
 
+namespace eule
+{
 /**
  * @brief Provide a mapping between input file and named parameters
  */
@@ -9,21 +11,21 @@ struct Parameters
     unsigned n, Nx, Ny, Nz; 
     double dt; 
 
-    double eps_pol, eps_gamma, eps_time;
+    double eps_pol, eps_maxwell, eps_time;
     double lxhalf, lyhalf; 
 
-    double lnn_inner;
-    double nu_perp, nu_parallel, c, mcv, tau_i;
+    double nu;
 
     double mu[2];
     double tau[2];
     double beta;
+    double eps_hat;
 
-    double amp, sigma, posX, posY;
-    double m_par;
+    double amp;
 
     unsigned itstp; 
     unsigned maxout;
+    dg::bc bcx, bcy;
 
     /**
      * @brief constructor to make a const object
@@ -39,26 +41,22 @@ struct Parameters
             Nz = (unsigned)v[4];
             dt = v[5];
             eps_pol = v[6];
-            eps_gamma = v[7];
+            eps_maxwell = v[7];
             eps_time = v[8];
-            thickness = v[9];
-            a = v[10];
-            R_0 = v[11];
-            lnn_inner = v[12];
-            mu_e = v[13];
-            tau_i = v[14];
-            mcv = v[15];
-            nu_perp = v[16];
-            nu_parallel = v[17];
-            c = v[18];
+            lxhalf = v[9]*M_PI;
+            lyhalf = v[10]*M_PI;
+            bcx = map((int)v[11]), bcy = map((int)v[12]);
+            mu[0] = v[13];
+            mu[1] = 1.;
+            tau[0] = -1.;
+            tau[1] = v[14];
+            eps_hat = v[15];
+            beta = v[16];
+            nu  = v[17];
             
             amp = v[19];
-            sigma = v[20];
-            posX = v[21];
-            posY = v[22];
-            m_par = v[23];
-            itstp = v[24];
-            maxout = v[25];
+            itstp = v[20];
+            maxout = v[21];
         }
     }
     /**
@@ -69,30 +67,24 @@ struct Parameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
-            <<"    mu_e             = "<<mu_e<<"\n"
-            <<"    Ion-temperature: = "<<tau_i<<"\n"
-            <<"    perp Viscosity:  = "<<nu_perp<<"\n"
-            <<"    perp Resistivity:= "<<c<<"\n"
-            <<"    par Viscosity:   = "<<nu_parallel<<"\n"
-            <<"    magnetic curvature:  = "<<mcv<<"\n";
+            <<"    mu_e             = "<<mu[0]<<"\n"
+            <<"    Ion-temperature: = "<<tau[1]<<"\n"
+            <<"    Viscosity:       = "<<nu<<"\n";
         os << "Boundary parameters are: \n"
-            <<"    Ring thickness = "<<thickness<<"\n"
-            <<"    minor Radius a = "<<a<<"\n"
-            <<"    major Radius R = "<<R_0<<"\n"
-            <<"    inner density ln n = "<<lnn_inner<<"\n";
+            <<"    lx = "<<2.*lxhalf<<"\n"
+            <<"    ly = "<<2.*lyhalf<<"\n";
+        displayBC(os, bcx, bcy);
+
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
             <<"    Ny = "<<Ny<<"\n"
             <<"    Nz = "<<Nz<<"\n"
             <<"    dt = "<<dt<<"\n";
-        os  <<"Blob parameters are: \n"
-            << "    amplitude:    "<<amp<<"\n"
-            << "    width:        "<<sigma<<"\n"
-            << "    posX:         "<<posX<<"\n"
-            << "    posY:         "<<posY<<"\n";
+        os  <<"Perturbation parameters are: \n"
+            << "    amplitude:    "<<amp<<"\n";
         os << "Stopping for Polar CG:   "<<eps_pol<<"\n"
-            <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
+            <<"Stopping for Aparl CG:   "<<eps_maxwell<<"\n"
             <<"Stopping for Time  CG:   "<<eps_time<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
@@ -144,6 +136,7 @@ struct Parameters
         os <<"\n";
     }
 };
+} //namespace eule
 
 
     

@@ -218,7 +218,7 @@ struct Invert
      */
     Invert(const container& copyable, unsigned max_iter, double eps): 
         eps_(eps),
-        phi1( copyable.size(), 0.), phi2(phi1), cg( copyable, max_iter) { }
+        phi1( copyable), phi2(phi1), cg( copyable, max_iter) { }
     /**
      * @brief Solve linear problem
      *

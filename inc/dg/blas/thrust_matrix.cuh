@@ -50,6 +50,9 @@ inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, cons
 template< class Matrix, class Vector>
 inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::ThrustMatrixTag, dg::ThrustVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( m.size() == x.size());
+#endif //DG_DEBUG
     return thrust::inner_product( x.begin(), x.end(),
                                   m.begin(),
                                   0.0,

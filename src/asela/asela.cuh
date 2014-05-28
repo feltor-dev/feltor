@@ -1,5 +1,6 @@
 #pragma once
 
+#include "parameters.h"
 #include "dg/xspacelib.cuh"
 #include "dg/cg.cuh"
 #include "dg/gamma.cuh"
@@ -26,10 +27,10 @@ struct Diffusion
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
         }
-        dg::blas1::axpby( -nu_, y[0], 0., y[0]);
-        dg::blas1::axpby( -nu_, y[1], 0., y[1]);
-        dg::blas1::axpby( -nu_/mue_hat, y[2], 0., y[2]);
-        dg::blas1::axpby( -nu_/mui_hat, y[3], 0., y[3]);
+        dg::blas1::scal( y[0], -nu_);
+        dg::blas1::scal( y[1], -nu_);
+        dg::blas1::scal( y[2], -nu_/mue_hat);
+        dg::blas1::scal( y[3], -nu_/mui_hat);
 
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
@@ -46,12 +47,8 @@ struct Diffusion
 template< class container=thrust::device_vector<double> >
 struct Asela
 {
-    //typedef std::vector<container> Vector;
     typedef typename container::value_type value_type;
-    //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
-    //typedef in ArakawaX ??
 
     /**
      * @brief Construct a Asela solver object
@@ -59,7 +56,7 @@ struct Asela
      * @param g The grid on which to operate
      * @param p The parameters
      */
-    Asela( const Grid2d<value_type>& g, Parameters p);
+    Asela( const dg::Grid2d<value_type>& g, Parameters p);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -84,6 +81,7 @@ struct Asela
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
+    const container& aparallel( ) const { return apar;}
 
     /**
      * @brief Return the normalized negative laplacian used by this object
@@ -93,13 +91,6 @@ struct Asela
     const Matrix& laplacianM( ) const { return laplaceM;}
 
     /**
-     * @brief Return the Gamma operator used by this object
-     *
-     * @return Gamma operator
-     */
-    const Gamma<Matrix, container >&  gamma() const {return gamma1;}
-
-    /**
      * @brief Compute the right-hand side of the toefl equations
      *
      * @param y input vector
@@ -107,88 +98,57 @@ struct Asela
      */
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
-    /**
-     * @brief Return the mass of the last field in operator() in a global computation
-     *
-     * @return int exp(y[0]) dA
-     * @note undefined for a local computation
-     */
-    double mass( ) {return mass_;}
-    /**
-     * @brief Return the last integrated mass diffusion of operator() in a global computation
-     *
-     * @return int \nu \Delta (exp(y[0])-1)
-     * @note undefined for a local computation
-     */
-    double mass_diffusion( ) {return diff_;}
-    /**
-     * @brief Return the energy of the last field in operator() in a global computation
-     *
-     * @return integrated total energy in {ne, ni}
-     * @note undefined for a local computation
-     */
-    double energy( ) {return energy_;}
-    /**
-     * @brief Return the integrated energy diffusion of the last field in operator() in a global computation
-     *
-     * @return integrated total energy diffusion
-     * @note undefined for a local computation
-     */
-    double energy_diffusion( ){ return ediff_;}
-
   private:
     const container w2d, v2d, one;
-    container rho, omega;
+    container rho, omega, apar;
 
-    std::vector<container> phi;
+    std::vector<container> phi, arakAN, arakAU, u;
     std::vector<container> expy;
 
     //matrices and solvers
     Matrix A; //contains polarisation matrix
     Matrix laplaceM; //contains negative normalized laplacian
     dg::ArakawaX< container> arakawa; 
-    dg::Invert<Matrix, container> invert_A, invert_maxwell; 
+    dg::Invert<container> invert_A, invert_maxwell; 
     dg::Maxwell<Matrix, container> maxwell;
     dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
-
     Parameters p;
-    double mass_, energy_, diff_, ediff_;
 
 };
 
 template< class container>
-Asela< container>::Asela( const Grid2d<value_type>& grid, Parameters p ): 
-    w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
-    rho( grid.size(), 0.), omega(chi)
-    phi( 2, chi), expy( phi), 
+Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ): 
+    w2d( dg::create::w2d(grid)), v2d( dg::create::v2d(grid)), one( grid.size(), 1.),
+    rho( grid.size(), 0.), omega(rho), apar(rho),
+    phi( 2, rho), expy( phi), arakAN( phi), arakAU( phi), u(phi), 
+    laplaceM (dg::create::laplacianM( grid, dg::normed, dg::XSPACE, dg::symmetric)),
     arakawa( grid), 
     maxwell( laplaceM, w2d, v2d),
-    invert_A( chi, chi.size(), p.eps_pol),
-    invert_maxwell( chi, chi.size(), p.eps_maxwell),
+    invert_A( rho, rho.size(), p.eps_pol),
+    invert_maxwell( rho, rho.size(), p.eps_maxwell),
     pol(     grid), 
     p(p)
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed, dg::XSPACE, dg::symmetric); //doesn't hurt to be symmetric but doesn't solver pb
-    A = create::laplacianM( grid, not_normed, dg::XSPACE, dg::symmetric);
+    A = dg::create::laplacianM( grid, dg::not_normed, dg::XSPACE, dg::symmetric);
 
 }
 
 template< class container>
 void Asela< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
-    assert( y.size() == 2);
+    assert( y.size() == 4);
     assert( y.size() == yp.size());
 
     //solve polarisation equation
     exp( y, expy, 2);
-    A = pol.create( expy[1]);
+    //A = pol.create( expy[1]);
     dg::blas1::axpby( -1., expy[0], 1., expy[1], rho);
     invert_A( A, phi[0], rho, w2d, v2d);
     //compute phi[1]
     arakawa.bracket( phi[0], phi[0], phi[1]);
-    blas1::axpby( 1., phi[0], -0.5, phi[1]);
+    dg::blas1::axpby( 1., phi[0], -0.5, phi[1]);
 
     //solve induction equation
     dg::blas1::axpby( p.beta/p.mu[0], expy[0], 0., maxwell.chi());
@@ -200,16 +160,19 @@ void Asela< container>::operator()( const std::vector<container>& y, std::vector
     dg::blas1::axpby( 1., y[2], -p.beta/p.mu[0], apar, u[0]);
     dg::blas1::axpby( 1., y[3], -p.beta/p.mu[1], apar, u[1]);
 
-    for( unsigned i=0; i<y.size(); i++)
+    for( unsigned i=0; i<2; i++)
+    {
         arakawa( y[i], phi[i], yp[i]);
+        arakawa( y[2+i], phi[i], yp[2+i]);
+    }
     for( unsigned i=0; i<2; i++)
     {
         arakawa( apar, y[i], arakAN[i]);
         arakawa( apar, u[i], arakAU[i]);
-        dg::pointwiseDot( u[i], arakAN[i], rho);
-        dg::pointwiseDot( u[i], arakAU[i], omega);
-        dg::blas1::axpby( p.beta*eps_hat, rho, 1., yp[i]);
-        dg::blas1::axpby( p.beta*eps_hat, omega, 1., yp[2+i]);
+        dg::blas1::pointwiseDot( u[i], arakAN[i], rho);
+        dg::blas1::pointwiseDot( u[i], arakAU[i], omega);
+        dg::blas1::axpby( p.beta*p.eps_hat, rho, 1., yp[i]);
+        dg::blas1::axpby( p.beta*p.eps_hat, omega, 1., yp[2+i]);
         dg::blas1::axpby( p.beta, arakAU[i], 1., yp[i]);
         dg::blas1::axpby( p.beta/p.mu[i]*p.tau[i], arakAN[i], 1., yp[2+i]);
     }
