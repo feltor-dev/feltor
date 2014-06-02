@@ -3,8 +3,8 @@
             * Input-File for "TOEFL" & "TOEFL-R" Code *
             -------------------------------------------
 
-1) # of rows                  = 2
-2) # of cols                  = 3 
-3) box width (in pixel)       = 300
-4) box height(in pixel)       = 300
+1) # of rows                  = 1
+2) # of cols                  = 6 
+3) box width (in pixel)       = 150
+4) box height(in pixel)       = 600
 5) output frame               = 2

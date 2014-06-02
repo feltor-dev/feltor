@@ -6,32 +6,32 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   1      (3)
-2)  nx (grid points in x)                =   64   (192)
-3)  ny (grid points in y)                =   64   (192)
+2)  nx (grid points in x)                =   50   (192)
+3)  ny (grid points in y)                =   200   (192)
 4)  nz (grid points in z)                =   8 (16)
 
-5)  dt (time step in units c_s/rho_s)    =   1e-6  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   1e-1  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
 6)  eps_pol (stop for polarisation)      =   1e-4  (1e-6)
-7)  eps_maxwell (stop for Aparallel CG)  =   1e-3  (1e-8)
+7)  eps_maxwell (stop for Aparallel CG)  =   1e-4  (1e-8)
 8)  eps_time ( stop for time inversion ) =   1e-9 
 
 ------------------Boundary conditions----------------------
 
 9)  lx/2 (in terms of Pi)           =   1    (128.)
 10) ly/2 (in terms of Pi)           =   4    (256)
-11) bcx (0: Per, 1: Dir, ...)       =   0
+11) bcx (0: Per, 1: Dir, ...)       =   1
 12) bcy                             =   0  
 
 ------------------Physical parameters----------------------
 
-13) mu_e (-m_e/m_i)                 = -0.5e-4
-14) tau_i (Ti/Te)                   = 0.0    (0.0)
-15) eps_hat                         = 1000
-16) beta                            = 0.08   (0.001)
-17) nu                              = 1e-4
+13) dehat             = 0.2
+14) dihat             = 0.2    (0.0)
+15) rhoshat           = 0.2
+16) rhoihat           = 0.00   (0.001)
+17) nu                = 1e-4 
 18)      
 
 ---------------Initial perturbation parameters-------------

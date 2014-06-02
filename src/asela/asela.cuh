@@ -143,38 +143,37 @@ void Asela< container>::operator()( const std::vector<container>& y, std::vector
 
     //solve polarisation equation
     exp( y, expy, 2);
-    //A = pol.create( expy[1]);
-    dg::blas1::axpby( -1., expy[0], 1., expy[1], rho);
+    dg::blas1::axpby( p.dhat[1]*p.dhat[1], expy[1], 0., omega);
+    A = pol.create( omega);
+    dg::blas1::axpby( -p.dhat[0], expy[0], p.dhat[1], expy[1], rho);
     invert_A( A, phi[0], rho, w2d, v2d);
     //compute phi[1]
-    arakawa.bracket( phi[0], phi[0], phi[1]);
-    dg::blas1::axpby( 1., phi[0], -0.5, phi[1]);
+    arakawa.bracketS( phi[0], phi[0], phi[1]);
+    dg::blas1::axpby( 1., phi[0], -0.5*p.dhat[1], phi[1]);////////////////////
 
     //solve induction equation
-    dg::blas1::axpby( p.beta/p.mu[0], expy[0], 0., maxwell.chi());
-    dg::blas1::axpby( -p.beta/p.mu[1], expy[1], 1., maxwell.chi());
+    dg::blas1::axpby( -1./p.dhat[1], expy[0], 0., maxwell.chi());
+    dg::blas1::axpby( -1./p.dhat[1], expy[1], 1., maxwell.chi());
     dg::blas1::pointwiseDot( expy[0], y[2], rho);
     dg::blas1::pointwiseDot( expy[1], y[3], omega);
-    dg::blas1::axpby( -1.,omega , 1., rho);
+    dg::blas1::axpby( -1./p.dhat[1],omega , -1./p.dhat[1], rho);
     invert_maxwell( maxwell, apar, rho);
-    dg::blas1::axpby( 1., y[2], -p.beta/p.mu[0], apar, u[0]);
-    dg::blas1::axpby( 1., y[3], -p.beta/p.mu[1], apar, u[1]);
+    dg::blas1::axpby( -1./p.dhat[0]/p.dhat[0], y[2], 1./p.dhat[0]/p.dhat[0], apar, u[0]);
+    dg::blas1::axpby( 1./p.dhat[1]/p.dhat[1], y[3], -1./p.dhat[1]/p.dhat[1], apar, u[1]);
 
+    double sign[2]={-1.,1.};
     for( unsigned i=0; i<2; i++)
     {
         arakawa( y[i], phi[i], yp[i]);
         arakawa( y[2+i], phi[i], yp[2+i]);
-    }
-    for( unsigned i=0; i<2; i++)
-    {
         arakawa( apar, y[i], arakAN[i]);
         arakawa( apar, u[i], arakAU[i]);
         dg::blas1::pointwiseDot( u[i], arakAN[i], rho);
         dg::blas1::pointwiseDot( u[i], arakAU[i], omega);
-        dg::blas1::axpby( p.beta*p.eps_hat, rho, 1., yp[i]);
-        dg::blas1::axpby( p.beta*p.eps_hat, omega, 1., yp[2+i]);
-        dg::blas1::axpby( p.beta, arakAU[i], 1., yp[i]);
-        dg::blas1::axpby( p.beta/p.mu[i]*p.tau[i], arakAN[i], 1., yp[2+i]);
+        dg::blas1::axpby( p.dhat[i], rho, 1., yp[i]);
+        dg::blas1::axpby( sign[i]*p.dhat[i]*p.dhat[i]*p.dhat[i], omega, 1., yp[2+i]);
+        dg::blas1::axpby( p.dhat[i], arakAU[i], 1., yp[i]);
+        dg::blas1::axpby( sign[i]*p.rhohat[i]*p.rhohat[i]/p.dhat[i], arakAN[i], 1., yp[2+i]);
     }
 
 }

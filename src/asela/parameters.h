@@ -16,10 +16,9 @@ struct Parameters
 
     double nu;
 
-    double mu[2];
+    double dhat[2];
+    double rhohat[2];
     double tau[2];
-    double beta;
-    double eps_hat;
 
     double amp;
 
@@ -46,12 +45,10 @@ struct Parameters
             lxhalf = v[9]*M_PI;
             lyhalf = v[10]*M_PI;
             bcx = map((int)v[11]), bcy = map((int)v[12]);
-            mu[0] = v[13];
-            mu[1] = 1.;
-            tau[0] = -1.;
-            tau[1] = v[14];
-            eps_hat = v[15];
-            beta = v[16];
+            dhat[0] = v[13];
+            dhat[1] = v[14];
+            rhohat[0] = v[15];
+            rhohat[1] = v[16];
             nu  = v[17];
             
             amp = v[19];
@@ -67,8 +64,10 @@ struct Parameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
-            <<"    mu_e             = "<<mu[0]<<"\n"
-            <<"    Ion-temperature: = "<<tau[1]<<"\n"
+            <<"    rhos  = "<<rhohat[0]<<"\n"
+            <<"    rhoi  = "<<rhohat[1]<<"\n"
+            <<"    de: = "<<dhat[0]<<"\n"
+            <<"    di: = "<<dhat[1]<<"\n"
             <<"    Viscosity:       = "<<nu<<"\n";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<2.*lxhalf<<"\n"

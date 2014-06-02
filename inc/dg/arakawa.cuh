@@ -115,7 +115,7 @@ struct ArakawaX
      * @param rhs The right hand side (may equal lhs)
      * @param result The result (write only, may equal lhs or rhs)
      */
-    void bracket( const container& lhs, const container& rhs, container& result)
+    void bracketS( const container& lhs, const container& rhs, container& result)
     {
         blas2::symv( bdxf, lhs, dxlhs);
         blas2::symv( bdyf, lhs, dylhs);

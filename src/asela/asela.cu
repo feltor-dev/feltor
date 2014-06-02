@@ -23,7 +23,7 @@ const unsigned k = 3; //!< a change of k needs a recompilation!
 
 double aparallel( double x, double y)
 {
-    return 0.1/cosh(x)/cosh(x)*cos(y);
+    return 0.1/cosh(x)/cosh(x)*cos(1./8.*y);
 }
 
 int main( int argc, char* argv[])
@@ -55,15 +55,13 @@ int main( int argc, char* argv[])
     dg::Grid2d<double > grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bcx, p.bcy);
     //create RHS 
     eule::Asela< dg::DVec > asela( grid, p); 
-    eule::Diffusion<dg::DVec> diffusion( grid, p.nu, p.mu[0]/p.eps_hat, p.mu[1]/p.eps_hat );
+    eule::Diffusion<dg::DVec> diffusion( grid, p.nu, 1., 1. );
     //create initial vector
     std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); // n_e' = gaussian
     y0[2] = y0[3] = dg::evaluate( aparallel, grid);
     dg::DVec temp( y0[2]);
     dg::blas2::gemv( diffusion.laplacianM(), y0[2], temp); //u_e = \Delta A_parallel
-    dg::blas1::scal( y0[2], p.beta/p.mu[0]); 
-    dg::blas1::scal( y0[3], p.beta/p.mu[1]); //w_i = beta/mui 
-    dg::blas1::axpby( -1., temp, 1., y0[2]);//w_e = \Delta A + beta/mue A
+    dg::blas1::axpby( p.dhat[0]*p.dhat[0], temp, 1., y0[2]);//w_e = \Delta A + beta/mue A
    
     asela.log( y0, y0, 2); //transform to logarithmic values
 
