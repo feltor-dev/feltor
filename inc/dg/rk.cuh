@@ -147,24 +147,10 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
     }
 }
 
-///@cond
-//Euler specialisation
-template < class Vector>
-struct RK<1, Vector>
-{
-    RK(){}
-    RK( const Vector& copyable){}
-    template < class Functor>
-    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
-    {
-        f( u0, u1);
-        blas1::axpby( 1., u0, dt, u1);
-    }
-};
-
 /**
  * @brief Integrates the differential equation using RK4 and a rudimentary stepsize-control
  *
+ * @ingroup algorithms
  * Doubles the number of timesteps until the desired accuracy is reached
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
@@ -186,7 +172,6 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     {
         dt /= 2.;
         NT *= 2;
-        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
         y0 = begin;
         for( unsigned i=0; i < NT; i++)
         {
@@ -196,9 +181,28 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
         dg::blas1::axpby( 1., y0, -1., end); 
         error = sqrt( dg::blas1::dot( end, end));
         end = y0;
+#ifdef DG_DEBUG
+        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
+#endif //DG_DEBUG
     }
 
 }
+
+///@cond
+//Euler specialisation
+template < class Vector>
+struct RK<1, Vector>
+{
+    RK(){}
+    RK( const Vector& copyable){}
+    template < class Functor>
+    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+    {
+        f( u0, u1);
+        blas1::axpby( 1., u0, dt, u1);
+    }
+};
+
 
 
 template< size_t k>

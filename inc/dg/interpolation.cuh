@@ -2,7 +2,7 @@
 
 #include "grid.cuh"
 #include "creation.cuh"
-#include "operator_matrix.cuh"
+#include "operator_tensor.cuh"
 
 namespace dg{
 
@@ -37,7 +37,17 @@ std::vector<double> coefficients( double xn, unsigned n)
 }
 
 }//namespace detail
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( std::vector<double>& x, std::vector<double>& y, const Grid2d<double>& g)
+
+/**
+ * @brief Create interpolation matrix
+ *
+ * @param x X-coordinates of interpolation points
+ * @param y Y-coordinates of interpolation points
+ * @param g The Grid on which to operate
+ *
+ * @return interpolation matrix
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d<double>& g)
 {
     assert( x.size() == g.size());
     assert( y.size() == g.size());
@@ -50,12 +60,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( std::vector<doub
         assert( y[i] >= g.y0() && y[i] <= g.y1());
 
         //determine which cell (x,y) lies in 
-        unsigned n = (unsigned)floor(x[i]/g.hx());
-        unsigned m = (unsigned)floor(y[i]/g.hy());
+        unsigned n = (unsigned)floor((x[i]-g.x0())/g.hx());
+        unsigned m = (unsigned)floor((y[i]-g.y0())/g.hy());
 
         //determine normalized coordinates
-        double xn = 2.*x[i]/g.hx() - (double)(2*n+1); 
-        double yn = 2.*y[i]/g.hy() - (double)(2*m+1); 
+        double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*n+1); 
+        double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*m+1); 
 
         std::vector<double> px = detail::coefficients(xn, g.n()), py = detail::coefficients( yn, g.n());
         std::vector<double> pxy( g.n()*g.n());
@@ -67,7 +77,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( std::vector<doub
     }
     dg::Operator<double> forward( g.dlt().forward());
     dg::Operator<double> forward2d = dg::tensor( forward, forward);
-    Matrix ward = dg::tensor( g.Nx()*g.Ny(), forward2d), B;
+    cusp::coo_matrix<int, double, cusp::host_memory> ward = dg::tensor( g.Nx()*g.Ny(), forward2d), B;
     cusp::multiply( A, ward, B);
     B.sort_by_row_and_column();
     return B;

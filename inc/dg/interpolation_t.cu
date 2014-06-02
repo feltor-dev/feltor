@@ -13,7 +13,7 @@ const unsigned Ny = 2;
 int main()
 {
 
-    dg::Grid2d<double> g( 0, 10, 0, 5, n, Nx, Ny);
+    dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
     dg::Matrix A = dg::create::backscatter( g, dg::XSPACE);
     A.sort_by_row_and_column();
 
@@ -24,9 +24,9 @@ int main()
                 for( unsigned l=0; l<g.n(); l++)
         {
             x[i*g.Nx()*g.n()*g.n() + j*g.n()*g.n() + k*g.n() + l] = 
-                    j*g.hx() + g.hx()/(double)(2*g.n()) + l*g.hx()/(double)g.n();
+                    g.x0() + j*g.hx() + g.hx()/(double)(2*g.n()) + l*g.hx()/(double)g.n();
             y[i*g.Nx()*g.n()*g.n() + j*g.n()*g.n() + k*g.n() + l] = 
-                    i*g.hy() + g.hy()/(double)(2*g.n()) + k*g.hy()/(double)g.n();
+                    g.y0() + i*g.hy() + g.hy()/(double)(2*g.n()) + k*g.hy()/(double)g.n();
         }
     dg::Matrix B = dg::create::interpolation( x, y, g);
     std::cout << "Note that the first is scattered!\n";

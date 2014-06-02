@@ -1,6 +1,7 @@
 #ifndef _DG_CREATION_CUH
 #define _DG_CREATION_CUH
 
+#include <cusp/coo_matrix.h>
 #include "operator_dynamic.h"
 
 ///@cond
