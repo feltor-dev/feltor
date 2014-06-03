@@ -7,6 +7,7 @@
 //#include "dlt.h"
 #include "vector_traits.h"
 #include "typedefs.cuh"
+#include "functors.cuh"
 
 #include "derivatives.cuh"
 
