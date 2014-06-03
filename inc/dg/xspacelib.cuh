@@ -181,18 +181,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g, spa
 
     Matrix backward = dg::tensor( g.Nx()*g.Ny(), backward2d);
 
-    //you get a permutation matrix by setting the column indices to the permutation values and the values to 1
     thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
     Matrix p = gather( map);
-    /*
-    Matrix permutation( map.size(), map.size(), map.size());
-    cusp::array1d<int, cusp::host_memory> rows( thrust::make_counting_iterator<int>(0), thrust::make_counting_iterator<int>(map.size()));
-    cusp::array1d<int, cusp::host_memory> cols( map.begin(), map.end());
-    cusp::array1d<T, cusp::host_memory> values(map.size(), 1.);
-    permutation.row_indices = rows;
-    permutation.column_indices = cols;
-    permutation.values = values;
-    */
     Matrix scatter( p);
     cusp::multiply( p, backward, scatter);
     return scatter;

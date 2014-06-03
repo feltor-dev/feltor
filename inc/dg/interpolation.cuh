@@ -7,6 +7,7 @@
 namespace dg{
 
 namespace create{
+    ///@cond
 namespace detail{
 
 std::vector<double> coefficients( double xn, unsigned n)
@@ -37,10 +38,12 @@ std::vector<double> coefficients( double xn, unsigned n)
 }
 
 }//namespace detail
+///@endcond
 
 /**
  * @brief Create interpolation matrix
  *
+ * Transforms from a vector given in XSPACE to the points in XSPACE
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param g The Grid on which to operate

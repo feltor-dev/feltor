@@ -38,6 +38,7 @@
  *          @defgroup highlevel Matrix creation functions and classes
  *              High level matrix creation functions
  *          @defgroup arakawa Arakawas scheme
+ *          @defgroup dz Parallel derivative along a field line
  *      @}
  *      @defgroup blas Basic Linear Algebra Subprograms
  *
