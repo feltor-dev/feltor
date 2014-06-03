@@ -5,17 +5,26 @@ namespace eule
 {
 struct Iris
 {
-    Iris( double a, double thickness): a_(a), t_(thickness) {
+    /**
+     * @brief 
+     *
+     * @param a outer radius
+     * @param thickness ring thickness
+     * @param alpha thickness of damping zone
+     */
+    Iris( double a, double thickness, double alpha): a_(a), t_(thickness), alpha_(alpha) {
     assert( a > thickness);}
     double operator( )(double x, double y, double z)
     {
         double r = sqrt( x*x + y*y);
         if( r > a_) return 0.;
         if( r < (a_-t_)) return 0.; 
+        return 0.25*(tanh(  ( r-a_+t_+alpha_ )/alpha_ ) + 1)  + 0.25*(tanh(  ( a_-alpha_-r)/alpha_ ) + 1);
+
         return 1.;
     }
   private:
-    double a_, t_;
+    double a_, t_, alpha_;
 };
 
 struct Pupil

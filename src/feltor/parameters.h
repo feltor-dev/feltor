@@ -11,6 +11,7 @@ struct Parameters
 
     double eps_pol, eps_gamma, eps_time;
     double thickness, a, R_0; 
+    double damping;
 
     double lnn_inner;
     double nu_perp, nu_parallel, c, mcv, tau_i;
@@ -57,6 +58,7 @@ struct Parameters
             m_par = v[23];
             itstp = v[24];
             maxout = v[25];
+            damping = v[26];
         }
     }
     /**

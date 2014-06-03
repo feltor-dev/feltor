@@ -21,7 +21,7 @@ struct Rolkar
         nu_perp_(nu_x), nu_parallel_(nu_z), mu_hat_(mu_hat),
         w3d( 3, dg::create::w3d(g)), v3d( 3, dg::create::v3d(g)), 
         temp( g.size()),
-        iris( dg::evaluate( Iris( a, t), g))
+        iris( dg::evaluate( Iris( a, t, 0.05*t), g))
     {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::XSPACE);
         LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
@@ -143,7 +143,7 @@ struct Feltor
 template< class container>
 Feltor< container>::Feltor( const dg::Grid3d<value_type>& grid, Parameters p ): 
     chi( grid.size(), 0.), omega(chi),
-    iris( dg::evaluate( Iris( p.a, p.thickness), grid)), 
+    iris( dg::evaluate( Iris( p.a, p.thickness, 0.05*p.thickness), grid)), 
     phi( 2, chi), phi_old( phi), expy( phi), 
     dzy( 3, chi),
     dz( dg::create::dz(grid)),
