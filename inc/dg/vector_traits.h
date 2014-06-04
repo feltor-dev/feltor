@@ -17,6 +17,11 @@ struct VectorTraits<std::vector<Vector> >{
     typedef typename Vector::value_type value_type;
     typedef StdVectorTag vector_category;
 };
+//template< class Vector>
+//struct VectorTraits<std::vector<Vector*> >{
+//    typedef typename Vector::value_type value_type;
+//    typedef StdVectorPointerTag vector_category;
+//};
 
 }//namespace dg
 

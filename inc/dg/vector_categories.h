@@ -13,6 +13,7 @@ struct ThrustVectorTag {};
 
 
 struct StdVectorTag {};
+//struct StdVectorPointerTag {};
 
 //struct DeviceVectorTag : public ThrustVectorTag {};
 

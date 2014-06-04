@@ -7,6 +7,7 @@ namespace dg{
 struct CuspMatrixTag {};
 
 struct StdMatrixTag{};
+struct StdMatrixPointerTag{};
 
 struct ThrustMatrixTag{};
 

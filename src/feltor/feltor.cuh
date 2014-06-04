@@ -130,7 +130,7 @@ struct Feltor
     Matrix A, dz; 
     dg::ArakawaX< container> arakawa; 
     dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
-    dg::CG<container > pcg;
+    dg::Invert<container>  invert_pol;
 
     const container w3d, v3d, one;
     const Parameters p;
@@ -149,50 +149,24 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& grid, Parameters p ):
     dz( dg::create::dz(grid)),
     arakawa( grid), 
     pol(     grid), 
-    pcg( omega, omega.size()), 
+    invert_pol( omega, omega.size(), p.eps_pol), 
     w3d( dg::create::w3d(grid)), v3d( dg::create::v3d(grid)), one( grid.size(), 1.),
     p(p), eps_hat( 4.*M_PI*M_PI*p.R_0*p.R_0)
 {
-    //dg::create derivatives
-    //laplaceM = dg::create::laplacianM( grid, normed, dg::XSPACE, dg::symmetric); //doesn't hurt to be symmetric but doesn't solver pb
-    //if( !global)
     A = dg::create::laplacianM_perp( grid, dg::not_normed, dg::XSPACE, dg::symmetric);
-
 }
 
 template< class container>
 const container& Feltor<container>::compute_vesqr( const container& potential)
 {
-    dg::blas2::gemv( arakawa.dx(), potential, chi);
-    dg::blas2::gemv( arakawa.dy(), potential, omega);
-    //dg::blas1::pointwiseDot( binv, chi, chi);
-    //dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::pointwiseDot( chi, chi, chi);
-    dg::blas1::pointwiseDot( omega, omega, omega);
-    dg::blas1::axpby( 1., chi, 1.,  omega);
+    arakawa.bracketS( potential, potential, chi);
+    dg::blas1::pointwiseDot( binv, binv, omega);
+    dg::blas1::pointwiseDot( chi, omega, omega);
     return omega;
 }
 template< class container>
 const container& Feltor<container>::compute_psi( const container& potential)
 {
-//    dg::blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
-//    phi[1].swap( phi_old[1]);
-//
-//    dg::blas2::symv( w3d, potential, omega);
-//#ifdef DG_BENCHMARK
-//    dg::Timer t;
-//    t.tic();
-//#endif //DG_BENCHMARK
-//    unsigned number = pcg( gamma1, phi[1], omega, v3d, eps_gamma);
-//    if( number == pcg.get_max())
-//        throw Fail( eps_gamma);
-//#ifdef DG_BENCHMARK
-//    std::cout << "# of pcg iterations for psi \t"<< number << "\t";
-//    t.toc();
-//    std::cout<< "took \t"<<t.diff()<<"s\n";
-//#endif //DG_BENCHMARK
-//    //now add -0.5v_E^2
-    //dg::blas1::axpby( 1., phi[1], -0.5, compute_vesqr( potential), phi[1]);
     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
     return phi[1];
 }
@@ -202,14 +176,6 @@ const container& Feltor<container>::compute_psi( const container& potential)
 template<class container>
 const container& Feltor< container>::polarisation( const std::vector<container>& y)
 {
-    //extrapolate phi and gamma_n
-    dg::blas1::axpby( 2., phi[0], -1.,  phi_old[0]);
-    //dg::blas1::axpby( 2., gamma_n, -1., gamma_old);
-    //dg::blas1::axpby( 1., phi[1], 0.,  phi_old[1]);
-    //dg::blas1::axpby( 0., gamma_n, 0., gamma_old);
-    //gamma_n.swap( gamma_old);
-    phi[0].swap( phi_old[0]);
-
 #ifdef DG_BENCHMARK
     dg::Timer t; 
     t.tic();
@@ -217,50 +183,24 @@ const container& Feltor< container>::polarisation( const std::vector<container>&
     //compute chi and polarisation
     exp( y, expy, 2);
     dg::blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
-    //dg::blas1::pointwiseDot( binv, expy[1], chi); //\chi = n_i
-    //dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-    //cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
-    //cusp::ell_matrix<int, double, cusp::host_memory> B = pol.create(chi); //first convert on host
-    //A = B;  
     A = pol.create( chi);
-    //compute omega
     thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
     thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
-    //dg::blas2::symv( w3d, omega, omega); 
 #ifdef DG_BENCHMARK
     t.toc();
     std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
-    t.tic();
 #endif 
-//    //Attention!! gamma1 wants Dirichlet BC
-//    unsigned number = pcg( gamma1, gamma_n, omega, v3d, eps_gamma);
-//    if( number == pcg.get_max())
-//        throw Fail( eps_gamma);
-//#ifdef DG_BENCHMARK
-//    std::cout << "# of pcg iterations for n_i \t"<< number <<"\t";
-//    t.toc();
-//    std::cout<< "took \t"<<t.diff()<<"s\n";
-//    t.tic();
-//#endif 
-//    dg::blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
-    dg::blas1::axpby( -1., expy[0], 1., omega);
-    dg::blas2::symv( w3d, omega, omega);
-    unsigned number = pcg( A, phi[0], omega, v3d, p.eps_pol);
+    dg::blas1::axpby( -1., expy[0], 1., omega); //n_i-n_e
+    unsigned number = invert_pol( A, phi[0], omega, w3d, v3d);
     if( number == pcg.get_max())
         throw Fail( p.eps_pol);
-#ifdef DG_BENCHMARK
-    std::cout << "# of pcg iterations for phi \t"<< number <<"\t";
-    t.toc();
-    std::cout<< "took \t"<<t.diff()<<"s\n";
-#endif //DG_DEBUG
-
     return phi[0];
 }
 
 template< class container>
 void Feltor< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
-    assert( y.size() == 3);
+    assert( y.size() == 4);
     assert( y.size() == yp.size());
 
     phi[0] = polarisation( y);
@@ -276,29 +216,77 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
     double Upar = 0.5*p.mu_e*dg::blas2::dot( expy[1], w3d, omega); 
     energy_ = Ue + Ui + Uphi + Upar;
 
-    arakawa( y[0], phi[0], yp[0]);
-    arakawa( y[1], phi[1], yp[1]);
-    arakawa( y[2], phi[0], yp[2]);
+    for( unsigned i=0; i<2; i++)
+    {
 
-    //compute parallel derivatives
-    dg::blas2::gemv( dz, y[0], dzy[0]);
-    dg::blas2::gemv( dz, y[2], dzy[2]);
+        arakawa( y[i], phi[i], yp[i]);
+        arakawa( y[i+2], phi[i], yp[i+2]);
+        dg::blas1::pointwiseDot( yp[i], binv, yp[i]);
+        dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);
 
-    dg::blas1::axpby( -1., dzy[2], 1., yp[0]);
-    dg::blas1::pointwiseDot( y[2], dzy[0], omega);
-    dg::blas1::axpby( -1., omega, 1., yp[0]);
+        //compute parallel derivatives
+        dz(y[i], dzy[i]);
+        dz(phi[i], dzphi[i]);
+        dz(y[2+i], dzy[2+i]);
 
-    dg::blas1::pointwiseDot( y[2], dzy[2], omega);
-    dg::blas1::axpby( -1., omega, 1., yp[2]);
-    dg::blas1::axpby( +1./eps_hat/p.mu_e, dzy[0], 1., yp[2]);
-    dg::blas2::gemv( dz, phi[0], chi);
-    dg::blas1::axpby( -1./eps_hat/p.mu_e, chi, 1., yp[2]);
-    //add resistivity
-    dg::blas1::axpby( p.c/p.mu_e, y[2], 1., yp[2]);
+        //parallel advection terms
+        dg::blas1::pointwiseDot(y[2+i], dzy[i], omega);
+        dg::blas1::axpby( -1., omega, 1., yp[i]);
+        dg::blas1::axpby( -1., dzy[2+i], 1., yp[i]);
+        dg::blas1::pointwiseDot(y[2+i], gradlnb, omega);
+        dg::blas1::axpby( 1., omega, 1., yp[i]);
+        dg::blas1::pointwiseDot(y[2+i], dzy[2+i], omega);
+        dg::blas1::axpby( -1., omega, 1., yp[2+i]);
+
+        //parallel force terms
+        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]);
+        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);
+
+        //curvature terms
+        curve( y[i], curvy[i]);
+        curve( phi[i], curvphi[i]);
+        curve( y[2+i], curvy[2+i]);
+
+        dg::blas1::pointwiseDot( y[2+i], curvy[2+i], omega); //UK(U)
+        dg::blas1::pointwiseDot( y[2+i], omega, chi); //U^2K(U)
+        dg::blas1::axpby( -p.mu[i]*p.eps_hat, omega, 1., yp[i]); //-mu UK(U)
+        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]); //-0.5mu U^2K(U)
+
+        dg::blas1::pointwiseDot( y[2+i], curvy[i], omega);//UK(ln N)
+        dg::blas1::pointwiseDot( y[2+i], omega, chi); //U^2K(ln N)
+        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);//-tau UK(ln N)
+        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[i]); //-0.5mu U^2K(ln N)
+
+        dg::blas1::axbpy( -p.tau[i], curvy[i], 1., yp[i]); //-tau K(lnN)
+        dg::blas1::axbpy( -1., curvphi[i], 1., yp[i]); //-K(psi)
+
+        dg::blas1::pointwiseDot( y[2+i], curvphi[i], omega); //UK(psi)
+        dg::blas::axpby( -0.5, omega, 1., yp[2+i]); //-0.5 UK(psi)
+
+
+    }
+    //add parallel resistivity
+    dg::blas1::pointwiseDot( expy[0], y[2], omega);
+    dg::blas1::pointwiseDot( expy[1], y[3], chi);
+    dg::blas::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
+    dg::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
+    dg::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
+
+    dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
+    dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
+
     //cut boundary contributions
-    for( unsigned i=0; i<3; i++)
+    for( unsigned i=0; i<4; i++)
         dg::blas1::pointwiseDot( iris, yp[i], yp[i]);
-
+}
+template< class container>
+void Feltor< container>::curve( const container& y, container& target)
+{
+    dg::blas2::gemv( arkawa.dx(), y, target);
+    dg::blas2::gemv( arkawa.dy(), y, omega);
+    dg::blas1::pointwiseDot( KR, target, target);
+    dg::blas1::pointwiseDot( KZ, omega, omega);
+    dg::blas1::axpby( 1., omega, 1., target );
 }
 
 template< class container>

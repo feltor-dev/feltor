@@ -17,7 +17,7 @@ struct Implicit
         if( alpha_ != 0);
             f_( x,y);
         blas1::axpby( 1., x, alpha_, y);
-        blas1::pointwiseDot( f_.weights(), y,  y);
+        blas2::symv( f_.weights(), y,  y);
     }
     //compute without weights
     template<class container>

@@ -17,7 +17,11 @@ namespace eule
 template<class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu, double mue_hat, double mui_hat):nu_(nu), mue_hat(mue_hat), mui_hat(mui_hat), w2d( 4, dg::create::w2d(g)), v2d( 4, dg::create::v2d(g)), temp( g.size()){
+    Diffusion( const dg::Grid2d<double>& g, double nu, double mue_hat, double mui_hat):
+        nu_(nu), mue_hat(mue_hat), mui_hat(mui_hat), 
+        w2d_( dg::create::w2d(g)), v2d_( dg::create::v2d(g)), 
+        w2d( 4, &w2d_), v2d(4, &v2d_),
+        temp( g.size()){
         LaplacianM_perp = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
@@ -34,12 +38,13 @@ struct Diffusion
 
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    const std::vector<container>& weights(){return w2d;}
-    const std::vector<container>& precond(){return v2d;}
+    const std::vector<container*>& weights(){return w2d;}
+    const std::vector<container*>& precond(){return v2d;}
 
   private:
     double nu_, mue_hat, mui_hat;
-    const std::vector<container> w2d, v2d;
+    container w2d_, v2d_;
+    const std::vector<container*> w2d, v2d;
     container temp;
     dg::DMatrix LaplacianM_perp;
 };
