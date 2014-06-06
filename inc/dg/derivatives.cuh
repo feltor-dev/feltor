@@ -127,18 +127,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
     Grid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     Matrix ly = create::laplace1d( gy, no, dir);
     
-    //if( bcy == PER) {
-    //    ly = create::laplace1d_per<double>( g.n(), g.Ny(), g.hy(), no);
-    //} else if( bcy == DIR) {
-    //    ly = create::laplace1d_dir<double>( g.n(), g.Ny(), g.hy(), no);
-    //}
     Grid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
     Matrix lx = create:: laplace1d( gx, no, dir);
-    //if( bcx == PER) {
-    //    lx = create::laplace1d_per<double>( g.n(), g.Nx(), g.hx(), no);
-    //}else if( bcx == DIR) {
-    //    lx = create::laplace1d_dir<double>( g.n(), g.Nx(), g.hx(), no);
-    //}
 
     Matrix flxf(lx), flyf(ly);
     //sandwich with correctly normalized matrices

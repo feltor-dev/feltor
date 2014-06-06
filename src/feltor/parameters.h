@@ -10,13 +10,17 @@ struct Parameters
     double dt; 
 
     double eps_pol, eps_gamma, eps_time;
-    double thickness, a, R_0; 
+
+    double a, b, R_0, I_0; 
     double damping;
+    double eps_hat;
 
     double lnn_inner;
-    double nu_perp, nu_parallel, c, mcv, tau_i;
+    double nu_perp, nu_parallel, c;
+    double mcv;
 
-    double mu_e;
+    double mu[2];
+    double tau[2];
 
     double amp, sigma, posX, posY;
     double m_par;
@@ -40,13 +44,18 @@ struct Parameters
             eps_pol = v[6];
             eps_gamma = v[7];
             eps_time = v[8];
-            thickness = v[9];
+            b = v[9];
             a = v[10];
+            assert( a>b && "Source radius must be smaller than minor radius!" );
             R_0 = v[11];
+            eps_hat = 4.*M_PI*M_PI*R_0*R_0;
             lnn_inner = v[12];
-            mu_e = v[13];
-            tau_i = v[14];
+            mu[0] = v[13];
+            mu[1] = 1.;
+            tau[0] = -1.;
+            tau[1] = v[14];
             mcv = v[15];
+            I_0 = mcv;
             nu_perp = v[16];
             nu_parallel = v[17];
             c = v[18];
@@ -69,14 +78,16 @@ struct Parameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
-            <<"    mu_e             = "<<mu_e<<"\n"
-            <<"    Ion-temperature: = "<<tau_i<<"\n"
-            <<"    perp Viscosity:  = "<<nu_perp<<"\n"
-            <<"    perp Resistivity:= "<<c<<"\n"
-            <<"    par Viscosity:   = "<<nu_parallel<<"\n"
+            <<"    mu_e             = "<<mu[0]<<"\n"
+            <<"    mu_i             = "<<mu[1]<<"\n"
+            <<"Electron-temperature: = "<<tau[0]<<"\n"
+            <<"    Ion-temperature:  = "<<tau[1]<<"\n"
+            <<"    perp Viscosity:   = "<<nu_perp<<"\n"
+            <<"    perp Resistivity: = "<<c<<"\n"
+            <<"    par Viscosity:    = "<<nu_parallel<<"\n"
             <<"    magnetic curvature:  = "<<mcv<<"\n";
         os << "Boundary parameters are: \n"
-            <<"    Ring thickness = "<<thickness<<"\n"
+            <<"    Ring thickness = "<<a-b<<"\n"
             <<"    minor Radius a = "<<a<<"\n"
             <<"    major Radius R = "<<R_0<<"\n"
             <<"    inner density ln n = "<<lnn_inner<<"\n";

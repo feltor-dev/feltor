@@ -5,11 +5,9 @@
 #include <thrust/device_vector.h>
 
 #include "timer.cuh"
-#include "cusp_eigen.h"
 #include "evaluation.cuh"
 #include "cg.cuh"
 #include "derivatives.cuh"
-#include "preconditioner.cuh"
 
 #include "typedefs.cuh"
 
@@ -19,9 +17,6 @@ const double ly = 2.*M_PI;
 
 const double eps = 1e-6; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
-
-typedef dg::T2D<double> Preconditioner;
-typedef dg::S2D<double> Postconditioner;
 
 const double lx = 2.*M_PI;
 const double lz = 1.;
@@ -84,6 +79,24 @@ int main()
     double norm3 = dg::blas2::dot(w3d , solution3);
     //cout << "L2 Norm2 of Solution is        " << norm3 << endl;
     cout << "L2 Norm of relative error is   " <<sqrt( eps3/norm3)<<endl;
+    /////////////////STD_VECTOR MATRIX//////////////////////////
+    dg::Grid2d<double> g2d( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+    dg::DVec w2d = dg::create::w2d( g2d), v2d( dg::create::v2d(g2d));
+    dg::DMatrix A2  =dg::create::laplacianM( g2d, dg::not_normed, dg::XSPACE);
+    dg::DVec x2 = dg::evaluate( initial, g2d);
+    dg::DVec b2 = dg::evaluate( laplace_fct, g2d);
+    dg::blas2::symv( w2d, b2, b2);
+    std::vector<dg::DVec> v2_( g3d.Nz(), v2d);
+    std::vector<dg::DVec> b2_( g3d.Nz(), b2);
+    std::vector<dg::DVec> x2_( g3d.Nz(), x2);
+    std::vector<dg::DMatrix*> A2_( g3d.Nz(), &A2);
+    dg::CG<std::vector<dg::DVec> > pcg2( x2_, g2d.size());
+    t.tic();
+    cout << "Number of pcg iterations "<< pcg2( A2_, x2_, b2_, v2_, eps)<<endl;
+    t.toc();
+    cout << "... for a precision of "<< eps<<endl;
+    cout << "... on the device took "<< t.diff()<<"s\n";
+
 
     return 0;
 }

@@ -51,26 +51,28 @@ int main( int argc, char* argv[])
     GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4], "");
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
-    dg::Grid3d<double > grid( -p.a*(1+1e-1), p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 1., p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
+    dg::Grid3d<double > grid( p.R_0-p.a*(1+1e-1), p.R_0 + p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 1., p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     //create RHS 
     eule::Feltor< dg::DVec > feltor( grid, p); 
-    eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel, p.a, p.thickness, p.mu_e*4.*M_PI*M_PI*p.R_0*p.R_0);
+    double thickness = p.a - p.b;
+    eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel,p.R_0, p.a, p.b, p.mu[0]*p.eps_hat);
     //create initial vector
-    dg::Vortex init0( 0., p.a - p.posX*p.thickness, 0, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    dg::Vortex init1( 0., -p.a + p.posX*p.thickness, 0, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    dg::Vortex init2( p.a - p.posX*p.thickness, 0., 0, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    dg::Vortex init3( -p.a + p.posX*p.thickness, 0., 0, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    eule::Gradient grad( p.a, p.thickness, p.lnn_inner);
+    dg::Gaussian init0( p.R_0, p.a - p.posX*thickness, p.sigma, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    dg::Gaussian init1( p.R_0, -p.a + p.posX*thickness, p.sigma, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    dg::Gaussian init2( p.R_0 + p.a - p.posX*thickness, 0., p.sigma, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    dg::Gaussian init3( p.R_0-p.a + p.posX*thickness, 0., p.sigma, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    eule::Gradient grad(p.R_0, p.a, thickness, p.lnn_inner);
 
     const dg::HVec gradient( dg::evaluate(grad, grid));
-    std::vector<dg::DVec> y0(3, dg::evaluate( init0, grid)); // n_e' = gaussian
-    std::vector<dg::DVec> y1(3, dg::evaluate( grad, grid)); 
+    std::vector<dg::DVec> y0(4, dg::evaluate( init0, grid)); // n_e' = gaussian
+    std::vector<dg::DVec> y1(4, dg::evaluate( grad, grid)); 
     dg::blas1::axpby( 1., y1[0], 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
-    dg::blas1::axpby( 1., y1[1], 0., y0[1]);
+    dg::blas1::axpby( 1., y0[0], 0., y0[1]);
     dg::blas1::axpby( 0., y1[2], 0., y0[2]); //set U = 0
+    dg::blas1::axpby( 0., y1[3], 0., y0[3]); //set U = 0
 
     //dg::blas2::symv( feltor.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     //dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);

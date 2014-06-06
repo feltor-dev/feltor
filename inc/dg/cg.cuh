@@ -277,6 +277,19 @@ struct Invert
         blas1::axpby( 1., phi, 0, phi1);
         return number;
     }
+
+    /**
+     * @brief Set the maximum number of iterations 
+     *
+     * @param new_max New maximum number
+     */
+    void set_max( unsigned new_max) {cg.set_max( new_max);}
+    /**
+     * @brief Get the current maximum number of iterations
+     *
+     * @return the current maximum
+     */
+    unsigned get_max() const {return cg.get_max();}
   private:
     double eps_;
     container phi1, phi2;

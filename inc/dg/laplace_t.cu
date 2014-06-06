@@ -4,7 +4,6 @@
 #include <cusp/ell_matrix.h>
 
 #include "laplace.cuh"
-#include "arrvec1d.cuh"
 #include "blas.h"
 
 #include "typedefs.cuh"
@@ -15,8 +14,6 @@ const unsigned N = 5; //minimum 3
 using namespace dg;
 using namespace std;
 
-typedef dg::ArrVec1d< dg::HVec>  HArrVec;
-typedef dg::ArrVec1d< dg::DVec>  DArrVec;
 
 int main()
 {
@@ -27,7 +24,7 @@ int main()
         for( unsigned i=0; i<n; i++)
             hv( k, i) = i;
 
-    HArrVec hw( n, N);
+    dg::HVec hw( n, N);
     dg::DVec dv( hv.data()), dw( hw.data());
     double h = 1./N;
     DMatrix laplace1d = create::laplace1d_per<double>(n, N, h);

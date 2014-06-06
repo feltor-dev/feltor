@@ -8,16 +8,13 @@
 #include "cg.cuh"
 #include "tensor.cuh"
 #include "derivatives.cuh"
-#include "preconditioner.cuh"
 #include "typedefs.cuh"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 const unsigned Nx = 20;  //more N means less iterations for same error
 const unsigned Ny = 20;  //more N means less iterations for same error
-const unsigned Nz = 4;  //more N means less iterations for same error
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
-const double lz = 10.;
 
 const double eps_ = 1e-6; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus

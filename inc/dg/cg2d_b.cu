@@ -37,7 +37,7 @@ int main()
     unsigned n, Nx, Ny; 
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+    dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
     const dg::HVec s2d_h = dg::create::s2d( grid);
     const dg::DVec s2d_d( s2d_h);
     const dg::HVec t2d_h = dg::create::t2d( grid);
