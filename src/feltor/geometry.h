@@ -40,6 +40,28 @@ struct Pupil
     double R_0, a_, t_;
 
 };
+struct Damping
+{
+    /**
+     * @brief 
+     *
+     * @param a outer radius
+     * @param thickness ring thickness
+     * @param alpha thickness of damping zone
+     */
+    Damping( double R_0, double a, double b, double alpha): R_0(R_0), a_(a), b_(b), alpha_(alpha) {
+    assert( a > b);}
+    double operator( )(double x, double y, double z)
+    {
+        double r = sqrt( (x-R_0)*(x-R_0)+ y*y);
+        if( r > a_) return 0.;
+        if( r < b_) return 0.; 
+        return 1. - exp( -( r-a_)*(r-a_)/2./alpha_/alpha_)- exp( -(r-b_)*(r-b_)/2./alpha_/alpha_);
+    }
+  private:
+    double R_0, a_, b_, alpha_;
+};
+
 
 struct Gradient
 {

@@ -48,7 +48,7 @@ struct Parameters
             a = v[10];
             assert( a>b && "Source radius must be smaller than minor radius!" );
             R_0 = v[11];
-            eps_hat = 4.*M_PI*M_PI*R_0*R_0;
+            eps_hat = 1.;//4.*M_PI*M_PI*R_0*R_0;
             lnn_inner = v[12];
             mu[0] = v[13];
             mu[1] = 1.;

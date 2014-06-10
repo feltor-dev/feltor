@@ -93,6 +93,42 @@ struct Gaussian
     double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
 
 };
+struct Gaussian3d
+{
+    /**
+     * @brief Functor returning a gaussian
+     *
+     * @param x0 x-center-coordinate
+     * @param y0 y-center-coordinate
+     * @param sigma_x x - variance
+     * @param sigma_y y - variance 
+     * @param amp Amplitude
+     * @param kz wavenumber in z direction
+     */
+    Gaussian3d( double x0, double y0, double z0, double sigma_x, double sigma_y, double sigma_z, double amp)
+        : x00(x0), y00(y0), z00(z0), sigma_x(sigma_x), sigma_y(sigma_y), sigma_z(sigma_z), amplitude(amp){}
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()(double x, double y, double z)
+    {
+        return  amplitude*
+                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
+                          (z-z00)*(z-z00)/2./sigma_z/sigma_z +
+                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+    }
+  private:
+    double  x00, y00, z00, sigma_x, sigma_y, sigma_z, amplitude;
+
+};
 /**
  * @brief Functor returning a gaussian in x-direction
  * \f[

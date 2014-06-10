@@ -51,16 +51,16 @@ int main( int argc, char* argv[])
     GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4], "");
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
-    dg::Grid3d<double > grid( p.R_0-p.a*(1+1e-1), p.R_0 + p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 1., p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
+    dg::Grid3d<double > grid( p.R_0-p.a*(1+1e-1), p.R_0 + p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     //create RHS 
     eule::Feltor< dg::DVec > feltor( grid, p); 
     double thickness = p.a - p.b;
     eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel,p.R_0, p.a, p.b, p.mu[0]*p.eps_hat);
     //create initial vector
-    dg::Gaussian init0( p.R_0, p.a - p.posX*thickness, p.sigma, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    dg::Gaussian init1( p.R_0, -p.a + p.posX*thickness, p.sigma, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    dg::Gaussian init2( p.R_0 + p.a - p.posX*thickness, 0., p.sigma, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
-    dg::Gaussian init3( p.R_0-p.a + p.posX*thickness, 0., p.sigma, p.sigma, p.amp ,2.*M_PI*p.m_par); //gaussian width is in absolute values
+    dg::Gaussian3d init0( p.R_0, p.a - p.posX*thickness, 0, p.sigma, p.sigma, M_PI/8.,  p.amp ); //gaussian width is in absolute values
+    dg::Gaussian3d init1( p.R_0, -p.a + p.posX*thickness,0,  p.sigma, p.sigma, M_PI/8., p.amp ); //gaussian width is in absolute values
+    dg::Gaussian3d init2( p.R_0 + p.a - p.posX*thickness,  0., 0., p.sigma, p.sigma, M_PI/8., p.amp ); //gaussian width is in absolute values
+    dg::Gaussian3d init3( p.R_0-p.a + p.posX*thickness, 0., 0.,  p.sigma, p.sigma, M_PI/8., p.amp ); //gaussian width is in absolute values
     eule::Gradient grad(p.R_0, p.a, thickness, p.lnn_inner);
 
     const dg::HVec gradient( dg::evaluate(grad, grid));
@@ -146,11 +146,23 @@ int main( int argc, char* argv[])
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
+
+        //draw U_e
         hvisual = y0[2];
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw phi and swap buffers
+        title <<"Ue / "<<colors.scale()<<"\t";
+        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
+
+        //draw U_i
+        hvisual = y0[3];
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         title <<"Ue / "<<colors.scale()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
