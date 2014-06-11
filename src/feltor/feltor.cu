@@ -70,7 +70,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
-    dg::blas1::axpby( 1., y0[0], 0., y0[1]);
+    dg::blas1::axpby( 1., y0[0], 1., y0[1]);
     dg::blas1::axpby( 0., y1[2], 0., y0[2]); //set U = 0
     dg::blas1::axpby( 0., y1[3], 0., y0[3]); //set U = 0
 
@@ -101,12 +101,13 @@ int main( int argc, char* argv[])
         feltor.exp( y0, y1, 2);
         //thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
 
-        hvisual = y1[0];
-        dg::blas1::axpby( -1., gradient, 1., hvisual);
+        //plot electrons
+        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
+        hvisual = dvisual;
+        //dg::blas1::axpby( -1., gradient, 1., hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw ions
         title << std::setprecision(2) << std::scientific;
         title <<"ne / "<<colors.scale()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
@@ -116,6 +117,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
+        //draw ions
         thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1));
         hvisual = dvisual;
         //dg::HVec iris = dg::evaluate( eule::Iris( p.a, p.thickness), grid);
@@ -123,7 +125,6 @@ int main( int argc, char* argv[])
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw ions
         title << std::setprecision(2) << std::scientific;
         title <<"ni / "<<colors.scale()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
@@ -163,7 +164,7 @@ int main( int argc, char* argv[])
         hvisual = y0[3];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        title <<"Ue / "<<colors.scale()<<"\t";
+        title <<"Ui / "<<colors.scale()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();

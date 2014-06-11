@@ -23,7 +23,7 @@ struct Rolkar
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         w3d( 4, &w3d_), v3d( 4, &v3d_), 
         temp( g.size()),
-        iris_( dg::evaluate( Iris(R_0, a, b, 0.05*(b)), g))
+        iris_( dg::evaluate( Pupil(R_0, a, b), g))
     {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::XSPACE);
         //LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
@@ -127,7 +127,7 @@ struct Feltor
 
     container chi, omega;
     const container binv, curvR, curvZ, gradlnB;
-    const container iris;
+    const container iris, source;
 
     std::vector<container> phi, curvphi, dzphi, expy;
     std::vector<container> dzy, curvy; 
@@ -154,6 +154,7 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p ):
     curvZ( dg::evaluate( eule::CurvatureZ(p.R_0, p.I_0), g)),
     gradlnB( dg::evaluate( eule::GradLnB(p.R_0, p.I_0) , g)),
     iris( dg::evaluate( Damping( p.R_0, p.a, p.b, p.damping ), g)), 
+    source( dg::evaluate( dg::Gaussian( p.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
     A (dg::create::laplacianM_perp( g, dg::not_normed, dg::XSPACE, dg::symmetric)),
@@ -242,12 +243,12 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
         dz(y[2+i], dzy[2+i]);
 
         //parallel advection terms
-        dg::blas1::pointwiseDot(y[2+i], dzy[i], omega);
-        dg::blas1::axpby( -1., omega, 1., yp[i]);
-        dg::blas1::axpby( -1., dzy[2+i], 1., yp[i]);
-        dg::blas1::pointwiseDot(y[2+i], gradlnB, omega);
-        dg::blas1::axpby( 1., omega, 1., yp[i]);
-        dg::blas1::pointwiseDot(y[2+i], dzy[2+i], omega);
+        dg::blas1::pointwiseDot(y[2+i], dzy[i], omega); //Udz lnN 
+        dg::blas1::axpby( -1., omega, 1., yp[i]); //-Udz lnN
+        dg::blas1::axpby( -1., dzy[2+i], 1., yp[i]); //-dz U
+        dg::blas1::pointwiseDot(y[2+i], gradlnB, omega);  // U dz ln B
+        dg::blas1::axpby( 1., omega, 1., yp[i]); 
+        dg::blas1::pointwiseDot(y[2+i], dzy[2+i], omega); // U dz U
         dg::blas1::axpby( -1., omega, 1., yp[2+i]);
 
         //parallel force terms
@@ -293,8 +294,15 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
         dz(dzy[i], omega);
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);
     }
+    //add particle source
+    for( unsigned i=0; i<2; i++)
+    {
+        dg::blas1::pointwiseDivide( source, expy[i], omega);
+        dg::blas1::axpby( 1., omega, 1, yp[i]  );
+    }
 
-    //damp boundary terms exponentially 
+
+    //cut boundary terms 
     for( unsigned i=0; i<4; i++)
     {
         //dg::blas1::pointwiseDot( iris, y[i], omega); 

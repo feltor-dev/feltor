@@ -23,6 +23,7 @@ struct Parameters
     double tau[2];
 
     double amp, sigma, posX, posY;
+    double amp_source;
     double m_par;
 
     unsigned itstp; 
@@ -68,6 +69,7 @@ struct Parameters
             itstp = v[24];
             maxout = v[25];
             damping = v[26];
+            amp_source = v[27];
         }
     }
     /**

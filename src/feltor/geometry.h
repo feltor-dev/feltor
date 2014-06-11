@@ -29,15 +29,15 @@ struct Iris
 
 struct Pupil
 {
-    Pupil( double R_0,double a, double thickness): R_0(R_0), a_(a), t_(thickness) { }
+    Pupil( double R_0,double a, double b): R_0(R_0), a_(a), b_(b) { }
     double operator( )(double x, double y, double z)
     {
         double r = sqrt( (x-R_0)*(x-R_0) + y*y);
-        if( r < (a_-t_)) return 1.; 
-        return 0.;
+        if( r > a_) return 0.; 
+        return 1.;
     }
   private:
-    double R_0, a_, t_;
+    double R_0, a_, b_;
 
 };
 struct Damping
@@ -54,9 +54,11 @@ struct Damping
     double operator( )(double x, double y, double z)
     {
         double r = sqrt( (x-R_0)*(x-R_0)+ y*y);
+        //if( r > a_) return 0.;
+        //if( r < b_) return 0.; 
+        //return 1. - exp( -( r-a_)*(r-a_)/2./alpha_/alpha_)- exp( -(r-b_)*(r-b_)/2./alpha_/alpha_);
         if( r > a_) return 0.;
-        if( r < b_) return 0.; 
-        return 1. - exp( -( r-a_)*(r-a_)/2./alpha_/alpha_)- exp( -(r-b_)*(r-b_)/2./alpha_/alpha_);
+        return 1. - exp( -( r-a_)*(r-a_)/2./alpha_/alpha_);
     }
   private:
     double R_0, a_, b_, alpha_;
@@ -132,7 +134,7 @@ struct GradLnB
     double operator()( double R, double Z, double phi)
     {
         double r2 = (R-R_0)*(R-R_0)+Z*Z;
-        return -Z*sqrt(I_0*I_0+r2)/R/R ;
+        return -Z/sqrt(I_0*I_0+r2)/R ;
     }
     private:
     double R_0, I_0;
