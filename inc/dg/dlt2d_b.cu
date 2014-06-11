@@ -17,7 +17,7 @@
 #include "evaluation.cuh"
 #include "preconditioner.cuh"
 #include "operator_dynamic.h"
-#include "operator_matrix.cuh"
+#include "operator_tensor.cuh"
 #include "tensor.cuh"
 
 
@@ -43,7 +43,7 @@ int main()
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
     Timer t;
-    Grid<double> g( 0, 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny);
+    Grid2d<double> g( 0, 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny);
     HArrVec hv (evaluate( function, g ), n, Nx);
     HArrVec hv2( hv);
     DArrVec  dv( hv);

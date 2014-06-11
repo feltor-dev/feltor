@@ -7,10 +7,11 @@
 #include "draw/host_window.h"
 
 #include "dg/functors.cuh"
-#include "dg/arrvec2d.cuh"
 #include "dg/evaluation.cuh"
 #include "dg/xspacelib.cuh"
 #include "dg/rk.cuh"
+#include "dg/karniadakis.cuh"
+#include "dg/gamma.cuh"
 #include "dg/typedefs.cuh"
 
 #include "shu.cuh"
@@ -37,9 +38,9 @@ int main()
     double eps;
     cout << "Type n, Nx, Ny and eps!\n";
     cin >> n >> Nx >> Ny>>eps;
-    const unsigned NT = (unsigned)(D*T*n*n*Nx*Nx/0.01/lx/lx);
+    const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
     
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     DVec w2d( create::w2d( grid));
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
@@ -56,10 +57,10 @@ int main()
     dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, 1);
     HVec omega = evaluate ( lamb, grid);
     DVec stencil = evaluate( one, grid);
-    //DArrVec sol = evaluate< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
-    DVec y0( omega), y1( y0);
-    Shu<DVec> test( grid, D, eps);
-    AB< k, DVec > ab( y0);
+    DVec y0( omega);
+    Shu<DVec> test( grid, eps);
+    Diffusion<DVec> diffusion( grid, D);
+    Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
 
     ////////////////////////////////glfw//////////////////////////////
     //create visualisation vectors
@@ -68,7 +69,7 @@ int main()
     //transform vector to an equidistant grid
     dg::DMatrix equidistant = dg::create::backscatter( grid, LSPACE );
     draw::ColorMapRedBlueExt colors( 1.);
-    ab.init( test, y0, dt);
+    ab.init( test, diffusion, y0, dt);
     while (!glfwWindowShouldClose(w))
     {
         //transform field to an equidistant grid
@@ -82,9 +83,7 @@ int main()
         hvisual = visual;
         render.renderQuad( hvisual, n*Nx, n*Ny, colors);
         //step 
-        ab( test, y0, y1, dt);
-        //thrust::swap(y0, y1);
-        y0.swap( y1);
+        ab( test,diffusion, y0 );
 
         glfwSwapBuffers(w);
         glfwWaitEvents();

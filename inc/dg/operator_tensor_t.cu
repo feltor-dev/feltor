@@ -5,7 +5,7 @@
 
 #include "dlt.cuh"
 #include "functions.h"
-#include "operator_matrix.cuh"
+#include "operator_tensor.cuh"
 
 using namespace std;
 

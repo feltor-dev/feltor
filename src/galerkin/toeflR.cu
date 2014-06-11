@@ -8,6 +8,7 @@
 
 #include "toeflR.cuh"
 #include "dg/rk.cuh"
+#include "dg/karniadakis.cuh"
 #include "dg/timer.cuh"
 #include "file/read_input.h"
 #include "parameters.h"
@@ -51,9 +52,10 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     dg::ToeflR< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
+    dg::Diffusion<dg::DVec> diffusion( grid, p.nu, p.global);
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
@@ -68,8 +70,8 @@ int main( int argc, char* argv[])
         test.log( y0, y0); //transform to logarithmic values
     }
 
-    dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    //dg::TVB< std::vector<dg::DVec> > ab( y0);
+    //dg::AB< k, std::vector<dg::DVec> > ab( y0);
+    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -78,9 +80,10 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( test, y0, p.dt);
-    ab( test, y0, y1, p.dt);
-    y0.swap( y1); 
+    //ab.init( test, y0, p.dt);
+    ab.init( test, diffusion, y0, p.dt);
+    //ab( test, y0, y1, p.dt);
+    //y0.swap( y1); 
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
@@ -91,11 +94,11 @@ int main( int argc, char* argv[])
         //transform field to an equidistant grid
         if( p.global)
         {
-            test.exp( y1, y1);
+            test.exp( y0, y1);
             thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
         }
         else
-            dvisual = y1[0];
+            dvisual = y0[0];
 
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
@@ -140,14 +143,14 @@ int main( int argc, char* argv[])
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             }
-            try{ ab( test, y0, y1, p.dt);}
+            try{ ab( test, diffusion, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);
                 break;
             }
-            y0.swap( y1); //attention on -O3 ?
+            //y0.swap( y1); //attention on -O3 ?
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

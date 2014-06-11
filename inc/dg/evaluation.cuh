@@ -4,13 +4,12 @@
 #include <cassert> 
 #include "grid.cuh"
 #include "matrix_traits_thrust.h"
+#include "weights.cuh"
 #include "operator_dynamic.h"
 
-//#include "arrvec1d.cuh"
-//#include "arrvec2d.cuh"
-//#include "dlt.h"
-
-/*! @file function discretization routines
+/*! @file 
+  
+  Function discretization routines
   */
 namespace dg
 {
@@ -61,7 +60,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d<double>& 
             may be constructed during function call.
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const Grid<double>& g)
+thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d<double>& g)
 {
     unsigned n= g.n();
     //TODO: opens dlt.dat twice...!!
@@ -79,15 +78,56 @@ thrust::host_vector<double> evaluate( BinaryOp f, const Grid<double>& g)
     return v;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double), const Grid<double>& g)
+thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d<double>& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return evaluate<double(double, double)>( f, g);
 };
 ///@endcond
 
+/**
+ * @brief Evaluate a function on gaussian abscissas
+ *
+ * Evaluates f(x,y,z) on the given grid
+ * @tparam Function Model of Ternary Function
+ * @param f The function to evaluate: f = f(x,y,z)
+ * @param g The 3d grid on which to evaluate f
+ *
+ * @return  A DG Host Vector with values
+ * @note Copies the ternary Operator. This function is meant for small function objects, that
+            may be constructed during function call.
+ */
+template< class TernaryOp>
+thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d<double>& g)
+{
+    unsigned n= g.n();
+    //TODO: opens dlt.dat three times...!!
+    Grid1d<double> gx( g.x0(), g.x1(), n, g.Nx()); 
+    Grid1d<double> gy( g.y0(), g.y1(), n, g.Ny());
+    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
+    thrust::host_vector<double> absx = create::abscissas( gx);
+    thrust::host_vector<double> absy = create::abscissas( gy);
+    thrust::host_vector<double> absz = create::abscissas( gz);
+
+    thrust::host_vector<double> v( g.size());
+    for( unsigned s=0; s<gz.N(); s++)
+        for( unsigned i=0; i<gy.N(); i++)
+            for( unsigned j=0; j<gx.N(); j++)
+                for( unsigned k=0; k<n; k++)
+                    for( unsigned l=0; l<n; l++)
+                        v[ s*g.Nx()*g.Ny()*n*n + i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k], absz[s]);
+    return v;
+};
+///@cond
+thrust::host_vector<double> evaluate( double(f)(double, double, double), const Grid3d<double>& g)
+{
+    //return evaluate<double(&)(double, double), n>( f, g );
+    return evaluate<double(double, double, double)>( f, g);
+};
+///@endcond
 
 
+///@cond
 /**
  * @brief Evaluate and dlt transform a function 
  *
@@ -117,7 +157,6 @@ thrust::host_vector<double> expand( Function f, const Grid1d<double>& g)
     }
     return v;
 };
-///@cond
 thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
 {
     return expand<double(double)>( f, g);
@@ -128,6 +167,7 @@ thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
 
 
 
+///@cond
 /**
  * @brief Evaluate and dlt transform a function
  *
@@ -140,7 +180,7 @@ thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
  * @note Copies the binary Operator. This function is meant for small function objects.
  */
 template< class BinaryOp>
-thrust::host_vector<double> expand( BinaryOp f, const Grid<double>& g)
+thrust::host_vector<double> expand( BinaryOp f, const Grid2d<double>& g)
 {
     thrust::host_vector<double> v = evaluate( f, g);
     unsigned n = g.n();
@@ -173,8 +213,7 @@ thrust::host_vector<double> expand( BinaryOp f, const Grid<double>& g)
     return v;
 };
 
-///@cond
-thrust::host_vector<double> expand( double(f)(double, double), const Grid<double>& g)
+thrust::host_vector<double> expand( double(f)(double, double), const Grid2d<double>& g)
 {
     return expand<double(double, double)>( f, g);
 };

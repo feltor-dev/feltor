@@ -1,0 +1,143 @@
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <vector>
+
+#include "feltor.cuh"
+#include "parameters.h"
+#include "dg/rk.cuh"
+#include "dg/karniadakis.cuh"
+#include "file/file.h"
+#include "file/read_input.h"
+
+#include "parameters.h"
+#include "geometry.h"
+#include "dg/timer.cuh"
+
+
+/*
+   - reads parameters from input.txt or any other given file, 
+   - integrates the ToeflR - functor and 
+   - writes outputs to a given outputfile using hdf5. 
+        density fields are the real densities in XSPACE ( not logarithmic values)
+*/
+
+const unsigned k = 3;//!< a change in k needs a recompilation
+
+int main( int argc, char* argv[])
+{
+    //Parameter initialisation
+    std::vector<double> v;
+    std::string input;
+    if( argc != 3)
+    {
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        return -1;
+    }
+    else 
+    {
+        v = file::read_input( argv[1]);
+        input = file::read_file( argv[1]);
+    }
+    const Parameters p( v);
+    p.display( std::cout);
+
+    ////////////////////////////////set up computations///////////////////////////
+    dg::Grid3d<double > grid( p.R_0-p.a*(1+1e-1), p.R_0 + p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
+    //create RHS 
+    eule::Feltor< dg::DVec > feltor( grid, p); 
+    eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel,p.R_0, p.a, p.b, p.mu[0]*p.eps_hat);
+
+    //create initial vector
+    dg::Gaussian3d init0( p.R_0, p.posY*p.a,    0, p.sigma, p.sigma, M_PI/8., p.amp ); 
+    dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   0, p.sigma, p.sigma, M_PI/8., p.amp ); 
+    dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., 0.,p.sigma, p.sigma, M_PI/8., p.amp ); 
+    dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., 0.,p.sigma, p.sigma, M_PI/8., p.amp ); 
+    eule::Gradient grad(p.R_0, p.a, p.a-p.b, p.lnn_inner);
+
+    std::vector<dg::DVec> y0(4, dg::evaluate( init0, grid)); // n_e' = gaussian
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate( grad, grid), 1., y0[0]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
+
+    dg::blas1::axpby( 1., y0[0], 0., y0[1]);
+    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
+    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0
+
+    feltor.log( y0, y0, 2); //transform to logarithmic values
+    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    karniadakis.init( feltor, rolkar, y0, p.dt);
+    double time = 0;
+    unsigned step = 0;
+
+    /////////////////////////////set up hdf5/////////////////////////////////
+    file::T5trunc t5file( argv[2], input);
+    std::vector<std::string> names(5); 
+    names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
+    names[4] = "potential";
+    std::vector<unsigned> dims( 3);
+    dims[0] = grid.Nz(), dims[1] = grid.n()*grid.Ny(), dims[2] = grid.n()*grid.Nx();
+    std::vector<dg::HVec> output(5); 
+    ///////////////////////////////////first output/////////////////////////
+    feltor.exp( y0,y0,2); //transform to correct values
+    for( unsigned i=0; i<4; i++)
+        output[i] = y0[i];
+    output[4] = feltor.potential()[0];
+    t5file.write( output, names, dims, time );
+    t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
+    ///////////////////////////////////////Timeloop/////////////////////////////////
+    dg::Timer t;
+    t.tic();
+    try
+    {
+#ifdef DG_BENCHMARK
+    unsigned step = 0;
+#endif //DG_BENCHMARK
+    for( unsigned i=0; i<p.maxout; i++)
+    {
+
+#ifdef DG_BENCHMARK
+        dg::Timer ti;
+        ti.tic();
+#endif//DG_BENCHMARK
+        for( unsigned j=0; j<p.itstp; j++)
+        {
+            try{ karniadakis( feltor, rolkar, y0);}
+            catch( eule::Fail& fail) { 
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                break;
+            }
+            t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
+        }
+        time += p.itstp*p.dt;
+        feltor.exp( y0,y0,2); //transform to correct values
+        for( unsigned i=0; i<4; i++)
+            output[i] = y0[i];
+        output[4] = feltor.potential()[0];
+        t5file.write( output, names, dims, time );
+#ifdef DG_BENCHMARK
+        ti.toc();
+        step+=p.itstp;
+        std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
+        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+#endif//DG_BENCHMARK
+    }
+    }
+    catch( dg::Fail& fail) { 
+        std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+        std::cerr << "Does Simulation respect CFL condition?\n";
+    }
+    t.toc(); 
+    unsigned hour = (unsigned)floor(t.diff()/3600);
+    unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
+    double second = t.diff() - hour*3600 - minute*60;
+    std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
+    std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
+    std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+
+    return 0;
+
+}
+

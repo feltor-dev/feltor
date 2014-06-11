@@ -1,5 +1,4 @@
-#ifndef _DG_LAPLACE2D_CUH
-#define _DG_LAPLACE2D_CUH
+#pragma once
 
 #include <cassert>
 
@@ -9,8 +8,6 @@
 #include <thrust/reduce.h>
 #include <thrust/inner_product.h>
 #include <thrust/iterator/zip_iterator.h>
-
-#include "preconditioner.cuh"
 
 namespace dg
 {
@@ -42,8 +39,6 @@ struct AddIndex2d{
 } //namespace detail
 ///@endcond
 
-//maybe one shouldn't take host_memory because it's limited
-//and note that one cannot pass a host matrix
 /**
 * @brief Form the DG tensor product between two DG matrices
 *
@@ -132,5 +127,4 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
 
 } //namespace dg
 
-#endif // _DG_LAPLACE2D_CUH
 

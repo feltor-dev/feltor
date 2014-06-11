@@ -4,7 +4,6 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "preconditioner2d.cuh"
 #include "evaluation.cuh"
 #include "arakawa.cuh"
 #include "blas.h"
@@ -52,11 +51,9 @@ int main()
     Timer t;
     unsigned n, Nx, Ny;
     cout << "Type n, Nx and Ny! \n";
-    cin >> n;
-    cin >> Nx; 
-    cin >> Ny; 
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    S2D<double > s2d( grid);
+    cin >> n >> Nx >> Ny;
+    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    //S2D<double > s2d( grid);
     DVec w2d = create::w2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
@@ -64,6 +61,7 @@ int main()
     DVec rhs = evaluate ( right,grid);
     const DVec sol = evaluate( jacobian, grid );
     DVec eins = evaluate( one, grid );
+    cout<< setprecision(2);
 
 
     ArakawaX<DVec> arakawa( grid);
@@ -72,8 +70,6 @@ int main()
         arakawa( lhs, rhs, jac);
     t.toc();
     cout << "\nArakawa took "<<t.diff()/0.02<<"ms\n\n";
-    //cout<<jac<<endl;
-
 
     cout << scientific;
     cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
@@ -81,6 +77,7 @@ int main()
     cout << "Mean   n*Jacobian is "<<blas2::dot( lhs, w2d, jac)<<"\n";
     blas1::axpby( 1., sol, -1., jac);
     cout << "Distance to solution "<<sqrt(blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
+
     //periocid bc       |  dirichlet in x per in y
     //n = 1 -> p = 2    |        1.5
     //n = 2 -> p = 1    |        1

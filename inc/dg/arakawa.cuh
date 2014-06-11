@@ -7,6 +7,7 @@
 //#include "dlt.h"
 #include "vector_traits.h"
 #include "typedefs.cuh"
+#include "functors.cuh"
 
 #include "derivatives.cuh"
 
@@ -14,176 +15,28 @@
   
   objects for computation of Poisson bracket
   */
-
 namespace dg
 {
 
-
-/**
- * @brief L-space generalized version of Arakawa's scheme
- *
- * @ingroup creation
- * @tparam container The vector class on which to operate on
- */
-template< class container=thrust::device_vector<double> >
-struct Arakawa
-{
-    typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    /**
-     * @brief Create Arakawa on a grid
-     *
-     * @param g The 2D grid
-     */
-    Arakawa( const Grid<value_type>& g);
-    /**
-     * @brief Create Arakawa on a grid using different boundary conditions
-     *
-     * @param g The 2D grid
-     * @param bcx The boundary condition in x
-     * @param bcy The boundary condition in y
-     */
-    Arakawa( const Grid<value_type>& g, bc bcx, bc bcy);
-
-    /**
-     * @brief Compute poisson's bracket
-     *
-     * @param lhs left hand side in l-space
-     * @param rhs rights hand side in l-space
-     * @param result Poisson's bracket in l-space
-     */
-    void operator()( const container& lhs, const container& rhs, container& result);
-    const Matrix& forward2d() {return forward;}
-    const Matrix& backward2d() {return backward;}
-
-  private:
-    //typedef typename VectorTraits< Vector>::value_type value_type;
-    Matrix bdxf, bdyf, forward, backward;
-    container dxlhs, dylhs, dxrhs, dyrhs, blhs, brhs;
-};
-
-//idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
-//needs less memory!! and is faster
-template< class container>
-Arakawa< container>::Arakawa( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
-{
-    //create forward dlt matrix
-    Operator<value_type> forward1d( g.dlt().forward());
-    Operator<value_type> forward2d = tensor( forward1d, forward1d);
-    forward = tensor( g.Nx()*g.Ny(), forward2d);
-    //create backward dlt matrix
-    Operator<value_type> backward1d( g.dlt().backward());
-    Operator<value_type> backward2d = tensor( backward1d, backward1d);
-    backward = tensor( g.Nx()*g.Ny(), backward2d);
-
-    /*
-    typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-    //create derivatives
-    HMatrix dx = create::dx_symm<T,n>( Nx, hx, bcx);
-    HMatrix dy = create::dx_symm<T,n>( Ny, hy, bcy);
-    HMatrix fx = tensor( Nx, forward1d);
-    HMatrix fy = tensor( Ny, forward1d);
-    HMatrix bx = tensor( Nx, backward1d);
-    HMatrix by = tensor( Ny, backward1d);
-    HMatrix dxf( dx), dyf( dy), bdxf_(dx), bdyf_(dy);
-
-    cusp::multiply( dx, fx, dxf);
-    cusp::multiply( bx, dxf, bdxf_);
-    cusp::multiply( dy, fy, dyf);
-    cusp::multiply( by, dyf, bdyf_);
-
-    HMatrix bdxf__ = dgtensor<T,n>( tensor<T,n>( Ny, delta), bdxf_ );
-    HMatrix bdyf__ = dgtensor<T,n>(  bdyf_, tensor<T,n>( Nx, delta));
-
-    bdxf = bdxf__;
-    bdyf = bdyf__;
-    */
-    bdxf = dg::create::dx( g, bcx, XSPACE);
-    bdyf = dg::create::dy( g, bcy, XSPACE);
-}
-template< class container>
-Arakawa< container>::Arakawa( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), blhs( dxlhs), brhs( blhs)
-{
-    //create forward dlt matrix
-    Operator<value_type> forward1d( g.dlt().forward());
-    Operator<value_type> forward2d = tensor( forward1d, forward1d);
-    forward = tensor( g.Nx()*g.Ny(), forward2d);
-    //create backward dlt matrix
-    Operator<value_type> backward1d( g.dlt().backward());
-    Operator<value_type> backward2d = tensor( backward1d, backward1d);
-    backward = tensor( g.Nx()*g.Ny(), backward2d);
-
-    bdxf = dg::create::dx( g, g.bcx(), XSPACE);
-    bdyf = dg::create::dy( g, g.bcy(), XSPACE);
-}
-
-template< class container>
-void Arakawa< container>::operator()( const container& lhs, const container& rhs, container& result)
-{
-    //transform to x-space
-    blas2::symv( backward, lhs, blhs);
-    blas2::symv( backward, rhs, brhs);
-    //compute derivatives in x-space
-    blas2::symv( bdxf, blhs, dxlhs);
-    blas2::symv( bdyf, blhs, dylhs);
-    blas2::symv( bdxf, brhs, dxrhs);
-    blas2::symv( bdyf, brhs, dyrhs);
-
-    // order is important now
-    // +x (1) -> result und (2) -> blhs
-    blas1::pointwiseDot( blhs, dyrhs, result);
-    blas1::pointwiseDot( blhs, dxrhs, blhs);
-
-    // ++ (1) -> dyrhs and (2) -> dxrhs
-    blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
-    blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
-
-    // x+ (1) -> dxlhs and (2) -> dylhs
-    blas1::pointwiseDot( dxlhs, brhs, dxlhs);
-    blas1::pointwiseDot( dylhs, brhs, dylhs);
-
-    blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
-    //everything which needs a dx 
-    blas1::axpby( 1./3., dxlhs, -1./3., blhs);   //dxl*r - l*dxr     -> blhs 
-    //everything which needs a dy
-    blas1::axpby( 1./3., result, -1./3., dylhs); //l*dyr - dyl*r     -> dylhs
-
-    //blas1::axpby( 1., dyrhs,  -1., dxrhs);
-    ////for testing purposes (note that you need to set criss-cross)
-    //blas1::axpby( 0., dxlhs,  -0., blhs);
-    //blas1::axpby( 0., result, -0., dylhs);
-
-    blas2::symv( bdyf, blhs, result);      //dy*(dxl*r - l*dxr) -> result
-    blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
-    //now sum everything up
-    blas1::axpby( 1., result, 1., dxlhs); //result + dxlhs -> result
-    blas1::axpby( 1., dxrhs, 1., dxlhs); //result + dyrhs -> result
-    //transform to l-space
-    blas2::symv( forward, dxlhs, result);
-}
-
-
-//saves about 20% time and needs less memory
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *
- * @ingroup creation
+ * @ingroup arakawa
  * @tparam container The vector class on which to operate on
  */
 template< class container=thrust::device_vector<double> >
 struct ArakawaX
 {
-    typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
+    typedef typename container::value_type value_type; //!< value type of container
+    //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix;
+    typedef dg::DMatrix Matrix; //!< always use device matrix
     /**
      * @brief Create Arakawa on a grid
      *
      * @param g The 2D grid
      */
-    ArakawaX( const Grid<value_type>& g);
+    ArakawaX( const Grid2d<value_type>& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -191,7 +44,21 @@ struct ArakawaX
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy);
+    ArakawaX( const Grid2d<value_type>& g, bc bcx, bc bcy);
+    /**
+     * @brief Create Arakawa on a grid
+     *
+     * @param g The 3D grid
+     */
+    ArakawaX( const Grid3d<value_type>& g);
+    /**
+     * @brief Create Arakawa on a grid using different boundary conditions
+     *
+     * @param g The 3D grid
+     * @param bcx The boundary condition in x
+     * @param bcy The boundary condition in y
+     */
+    ArakawaX( const Grid3d<value_type>& g, bc bcx, bc bcy);
     //ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy); //deprecated
 
     /**
@@ -222,9 +89,53 @@ struct ArakawaX
      */
     const Matrix& dy() {return bdyf;}
 
+    /**
+     * @brief Compute the total variation integrand in 2D
+     *
+     * Computes the integrand of the following definition:
+     * \f[ TV(\phi) := \int |\nabla\phi| d\Omega \f]
+     * @param phi function 
+     * @param varphi may equal phi, contains result on output
+     * @note calls thrust::transform to compute the square root
+     */
+    void variation( const container& phi, container& varphi)
+    {
+        blas2::symv( bdxf, phi, dxlhs);
+        blas2::symv( bdyf, phi, dylhs);
+        blas1::pointwiseDot( dxlhs, dxlhs, dxlhs);
+        blas1::pointwiseDot( dylhs, dylhs, dylhs);
+        blas1::axpby( 1., dxlhs, 1., dylhs, varphi);
+        thrust::transform( varphi.begin(), varphi.end(), varphi.begin(), dg::SQRT<value_type>() );
+    }
+    /**
+     * @brief Compute the "symmetric bracket"
+     *
+     * Computes \f[ [f,g] := \partial_x f\partial_x g + \partial_y f\partial_y g \f]
+
+     * @param lhs The left hand side
+     * @param rhs The right hand side (may equal lhs)
+     * @param result The result (write only, may equal lhs or rhs)
+     */
+    void bracketS( const container& lhs, const container& rhs, container& result)
+    {
+        blas2::symv( bdxf, lhs, dxlhs);
+        blas2::symv( bdyf, lhs, dylhs);
+        if( &lhs != &rhs)
+        {
+            blas2::symv( bdxf, rhs, dxrhs);
+            blas2::symv( bdyf, rhs, dyrhs);
+            blas1::pointwiseDot( dxlhs, dxrhs, dxlhs);
+            blas1::pointwiseDot( dylhs, dyrhs, dylhs);
+        }
+        else
+        {
+            blas1::pointwiseDot( dxlhs, dxlhs, dxlhs);
+            blas1::pointwiseDot( dylhs, dylhs, dylhs);
+        }
+        blas1::axpby( 1., dxlhs, 1., dylhs, result);
+    }
+
   private:
-    //typedef typename VectorTraits< Vector>::value_type value_type;
-    //void construct( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy);
     Matrix bdxf, bdyf;
     container dxlhs, dxrhs, dylhs, dyrhs, helper;
 };
@@ -232,53 +143,29 @@ struct ArakawaX
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
 template< class container>
-ArakawaX<container>::ArakawaX( const Grid<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+ArakawaX<container>::ArakawaX( const Grid2d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
 template< class container>
-ArakawaX<container>::ArakawaX( const Grid<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+ArakawaX<container>::ArakawaX( const Grid2d<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);
 }
-/*
-template< class T, size_t n, class container>
-ArakawaX<T, n, container>::ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy): dxlhs( n*n*Nx*Ny), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class container>
+ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
-    construct( Nx, Ny, hx, hy, bcx, bcy);
+    bdxf = dg::create::dx( g, g.bcx(), XSPACE);
+    bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
-template< class T, size_t n, class container>
-void ArakawaX<T, n, container>::construct( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy)
+template< class container>
+ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
-    typedef cusp::coo_matrix<int, value_type, MemorySpace> HMatrix;
-
-    //create forward dlt matrix
-    Operator<value_type, n> forward1d( DLT<n>::forward);
-    //create backward dlt matrix
-    Operator<value_type, n> backward1d( DLT<n>::backward);
-    //create derivatives
-    HMatrix dx = create::dx_symm<T,n>( Nx, hx, bcx);
-    HMatrix dy = create::dx_symm<T,n>( Ny, hy, bcy);
-    HMatrix fx = tensor( Nx, forward1d);
-    HMatrix fy = tensor( Ny, forward1d);
-    HMatrix bx = tensor( Nx, backward1d);
-    HMatrix by = tensor( Ny, backward1d);
-    HMatrix dxf( dx), dyf( dy), bdxf_(dx), bdyf_(dy);
-
-    cusp::multiply( dx, fx, dxf);
-    cusp::multiply( bx, dxf, bdxf_);
-    cusp::multiply( dy, fy, dyf);
-    cusp::multiply( by, dyf, bdyf_);
-
-    HMatrix bdxf__ = dgtensor<T,n>( tensor<T,n>( Ny, delta), bdxf_ );
-    HMatrix bdyf__ = dgtensor<T,n>(  bdyf_, tensor<T,n>( Nx, delta));
-
-    bdxf = bdxf__;
-    bdyf = bdyf__;
+    bdxf = dg::create::dx( g, bcx, XSPACE);
+    bdyf = dg::create::dy( g, bcy, XSPACE);
 }
-*/
 
 template< class container>
 void ArakawaX< container>::operator()( const container& lhs, const container& rhs, container& result)

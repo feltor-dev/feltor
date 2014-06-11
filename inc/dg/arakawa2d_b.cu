@@ -5,7 +5,6 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "preconditioner2d.cuh"
 #include "evaluation.cuh"
 #include "arakawa.cuh"
 #include "blas.h"
@@ -70,7 +69,7 @@ int main( int argc, char* argv[])
         {
             n=i;
             Nx = Ny = (unsigned)((double)Nmin*pow( 2., (double)j));
-            Grid<double> grid( -2., 2., -2., 2., n, Nx, Ny, dg::PER, dg::PER);
+            Grid2d<double> grid( -2., 2., -2., 2., n, Nx, Ny, dg::PER, dg::PER);
             DVec w2d = create::w2d( grid);
             DVec lhs = evaluate ( left, grid), jac(lhs);
             DVec rhs = evaluate ( right,grid);

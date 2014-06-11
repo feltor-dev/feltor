@@ -19,6 +19,8 @@ int main()
     std::array<Matrix<double>,2> a {{Matrix<double>{ 3,4}, Matrix<double>{ 3,4}}};
     auto b =  MatrixArray<double, TL_NONE, 3>::construct(3,3) ;
     Container c(4,4);
+    for( unsigned n=0; n<3; n++)
+        std::cout << b[n]<<std::endl;
 
     return 0;
 }

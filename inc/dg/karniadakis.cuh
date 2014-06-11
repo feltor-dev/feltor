@@ -1,0 +1,194 @@
+#pragma once
+
+#include "cg.cuh"
+
+
+namespace dg{
+///@cond
+namespace detail{
+
+template< class LinearOp>
+struct Implicit
+{
+    Implicit( double alpha, LinearOp& f): f_(f), alpha_(alpha){}
+    template<class container>
+    void symv( const container& x, container& y) const
+    {
+        if( alpha_ != 0);
+            f_( x,y);
+        blas1::axpby( 1., x, alpha_, y);
+        blas2::symv( f_.weights(), y,  y);
+    }
+    //compute without weights
+    template<class container>
+    void operator()( const container& x, container& y) 
+    {
+        f_( x,y);
+        blas1::axpby( 1., x, alpha_, y, y);
+    }
+    double& alpha( ){  return alpha_;}
+    double alpha( ) const  {return alpha_;}
+  private:
+    LinearOp& f_;
+    double alpha_;
+
+};
+
+}//namespace detail
+template< class M>
+struct MatrixTraits< detail::Implicit<M> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+///@endcond
+
+/**
+* @brief Struct for Karniadakis semi-implicit multistep time-integration
+* \f[
+    {\bar v}^n = \frac{1}{\gamma_0}\left(\sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  N( v^{n-q})\right) \f]
+    \f[
+    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat L\right)  v^{n+1} = {\bar v}^n  
+    \f]
+* @ingroup algorithms
+* Uses blas1::axpby routines to integrate one step
+* and only one right-hand-side evaluation per step. 
+* Uses a conjugate gradient method for the implicit operator  
+* @tparam Vector The Argument type used in the Functor class
+*/
+template<class Vector>
+struct Karniadakis
+{
+
+    /**
+    * @brief Reserve memory for the integration
+    *
+    * @param copyable Vector of size which is used in integration. 
+    * @param max_iter parameter for cg
+    * @param eps  parameter for cg
+    * A Vector object must be copy-constructible from copyable.
+    */
+    Karniadakis( const Vector& copyable, unsigned max_iter, double eps): u_(3, Vector(copyable)), f_(3, Vector(copyable)), pcg( copyable, max_iter), eps_(eps){
+        //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
+        //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
+        //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
+        a[0] =  18./11.;    b[0] =  18./11.;
+        a[1] = -9./11.;     b[1] = -18./11.;
+        a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
+    }
+   
+    /**
+     * @brief Initialize with initial value
+     *
+     * @tparam Functor models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = f(y) translates to f( y, y').
+     * @tparam LinearOp models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = L(y) translates to diff( y, y').
+        Furthermore the routines weights() and precond() must be callable
+        and return diagonal weights and the preconditioner for the conjugate gradient. 
+     * @param f right hand side function or functor
+     * @param diff diffusion operator treated implicitely 
+     * @param u0 The initial value you later use 
+     * @param dt The timestep saved for later use
+     */
+    template< class Functor, class LinearOp>
+    void init( Functor& f, LinearOp& diff, const Vector& u0, double dt);
+
+    /**
+    * @brief Advance u for one timestep
+    *
+    * @tparam Functor models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = f(y) translates to f( y, y').
+    * @tparam LinearOp models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type Vector.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = L(y) translates to diff( y, y').
+        Furthermore the routines weights() and precond() must be callable
+        and return diagonal weights and the preconditioner for the conjugate gradient. 
+    * @param f right hand side function or functor (is called for u)
+    * @param diff diffusion operator treated implicitely 
+    * @param u initial value on input, contains result on output
+    */
+    template< class Functor, class LinearOp>
+    void operator()( Functor& f, LinearOp& diff, Vector& u);
+
+
+    /**
+     * @brief return the current head of the computation
+     *
+     * @return current head
+     */
+    const Vector& head()const{return u_[0];}
+    /**
+     * @brief return the last vector for which f was called
+     *
+     * @return current head^
+     */
+    const Vector& last()const{return u_[1];}
+  private:
+    std::vector<Vector> u_, f_; 
+    CG< Vector> pcg;
+    double eps_;
+    double dt_;
+    double a[3];
+    double b[3];
+
+};
+
+///@cond
+template< class Vector>
+template< class Functor, class Diffusion>
+void Karniadakis<Vector>::init( Functor& f, Diffusion& diff,  const Vector& u0,  double dt)
+{
+    dt_ = dt;
+    detail::Implicit<Diffusion> implicit( -dt, diff);
+    u_[0] = u0;
+    f( u_[0], f_[0]);
+    blas1::axpby( 1.,u_[0], -dt, f_[0], f_[1]);
+    implicit( f_[1], u_[1]);
+    f( u_[1], f_[1]);
+    blas1::axpby( 1.,u_[1], -dt, f_[1], f_[2]);
+    implicit( f_[2], u_[2]);
+    f( u_[2], f_[2]);
+}
+
+template<class Vector>
+template< class Functor, class Diffusion>
+void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
+{
+    //u_[0] can be deleted
+    detail::Implicit<Diffusion> implicit( -dt_/11.*6., diff);
+    f( u_[0], f_[0]);
+    blas1::axpby( a[0], u_[0], dt_*b[0], f_[0], u);
+    blas1::axpby( a[1], u_[1], 1., u);
+    blas1::axpby( a[2], u_[2], 1., u);
+    for( unsigned i=1; i<3; i++)
+        blas1::axpby( dt_*b[i], f_[i], 1., u);
+    //permute f_[2], u_[2]  to be the new f_[0], u_[0]
+    for( unsigned i=2; i>0; i--)
+    {
+        f_[i-1].swap( f_[i]);
+        u_[i-1].swap( u_[i]);
+    }
+    //compute implicit part
+    blas1::axpby( 2., u_[1], -1.,  u_[2], u_[0]); //extrapolate previous solutions
+    blas2::symv( diff.weights(), u, u);
+#ifdef DG_BENCHMARK
+    unsigned number = pcg( implicit, u_[0], u, diff.precond(), eps_);
+    std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<"\n";
+#else
+    pcg( implicit, u_[0], u, diff.precond(), eps_);
+#endif
+    u = u_[0];
+
+
+}
+///@endcond
+
+} //namespace dg

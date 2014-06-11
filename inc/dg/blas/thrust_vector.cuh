@@ -46,6 +46,14 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
 #endif //DG_DEBUG
     return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
 }
+template< class Vector>
+inline void doScal(  Vector& x, 
+              typename Vector::value_type alpha, 
+              ThrustVectorTag)
+{
+    thrust::transform( x.begin(), x.end(), x.begin(), 
+            detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
+}
 
 template< class Vector>
 inline void doAxpby( typename Vector::value_type alpha, 
@@ -105,7 +113,17 @@ inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, Thrus
     assert( x1.size() == y.size() );
 #endif //DG_DEBUG
     thrust::transform( x1.begin(), x1.end(), x2.begin(), y.begin(), 
-                        thrust::multiplies<typename Vector::value_type>());
+                        thrust::multiplies<typename VectorTraits<Vector>::value_type>());
+}
+template< class Vector>
+inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x1.size() == x2.size() );
+    assert( x1.size() == y.size() );
+#endif //DG_DEBUG
+    thrust::transform( x1.begin(), x1.end(), x2.begin(), y.begin(), 
+                        thrust::divides<typename VectorTraits<Vector>::value_type>());
 }
 
 

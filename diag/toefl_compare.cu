@@ -28,9 +28,32 @@ int main( int argc, char* argv[])
     file::T5rdonly t5file2( argv[2], in2);
     unsigned nlinks1 = t5file1.get_size();
     unsigned nlinks2 = t5file2.get_size();
+    int layout = 0;
+    if( in1.find( "TOEFLI") != std::string::npos)
+    {
+        layout = 2;
+        std::cout << "Found Impurity file!\n";
+    }
+    else if( in1.find( "INNTO_HW") != std::string::npos)
+    {
+        layout = 3;
+        std::cout << "Found INNTO_HW file!\n";
+    }
+    else if( in1.find( "INNTO") != std::string::npos)
+    {
+        layout = 1;
+        std::cout << "Found INNTO file!\n";
+    }
+    else if( in1.find( "TOEFL") != std::string::npos)
+    {
+        layout = 0;
+        std::cout << "Found TOEFL file!\n";
+    }
+    else 
+        std::cerr << "Unknown input file format: default to 0"<<std::endl;
 
-    const Parameters p1( file::read_input( in1));
-    const Parameters p2( file::read_input( in2));
+    const Parameters p1( file::read_input( in1), layout);
+    const Parameters p2( file::read_input( in2), layout);
     dg::Grid<double> grid1( 0, p1.lx, 0, p1.ly, p1.n, p1.Nx, p1.Ny, p1.bc_x, p1.bc_y);
     dg::Grid<double> grid2( 0, p2.lx, 0, p2.ly, p2.n, p2.Nx, p2.Ny, p2.bc_x, p2.bc_y);
     if( p1.lx != p2.lx || p1.ly != p2.ly)
@@ -73,7 +96,7 @@ int main( int argc, char* argv[])
         t5file2.get_field( field2, "potential", idx2);
 
         std::cout << "\t"<<2.*diff( field1, field2)/diff.sum( field1, field2)<<std::endl;
-        idx1 += 100*D1, idx2 += 100*D2;
+        idx1 += 10*D1, idx2 += 10*D2;
     }
 
     return 0;

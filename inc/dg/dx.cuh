@@ -1,5 +1,4 @@
-#ifndef _DG_DX_CUH
-#define _DG_DX_CUH
+#pragma once
 
 #include <cassert>
 #include <cusp/coo_matrix.h>
@@ -9,7 +8,9 @@
 #include "operator_dynamic.h"
 #include "creation.cuh"
 
-/*!@file simple 1d derivatives
+/*! @file 
+  
+  Simple 1d derivatives
   */
 namespace dg
 {
@@ -22,9 +23,12 @@ enum norm{
     normed,   //!< indicates that output is properly normalized
     not_normed //!< indicates that normalisation weights (either T or V) are missing from output
 };
+/**
+ * @brief Direction of a discrete derivative
+ */
 enum direction{
-    forward, 
-    backward, 
+    forward, //!< forward derivative
+    backward, //!< backward derivative
     symmetric //!< up-down symmetrie
 };
 namespace create
@@ -342,4 +346,3 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
 } //namespace create
 } //namespace dg
 
-#endif //_DG_DX_CUH

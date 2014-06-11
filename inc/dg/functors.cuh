@@ -50,9 +50,10 @@ struct Gaussian
      * @param sigma_x x - variance
      * @param sigma_y y - variance 
      * @param amp Amplitude
+     * @param kz wavenumber in z direction
      */
-    Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp)
-        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp){}
+    Gaussian( double x0, double y0, double sigma_x, double sigma_y, double amp, double kz = 1.)
+        : x00(x0), y00(y0), sigma_x(sigma_x), sigma_y(sigma_y), amplitude(amp), kz_(kz){}
     /**
      * @brief Return the value of the gaussian
      *
@@ -70,8 +71,62 @@ struct Gaussian
                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
+    /**
+     * @brief Return the value of the gaussian modulated by 
+     *
+     * \f[
+       f(x,y,z) = A\cos(kz)e^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     * @param y z - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()(double x, double y, double z)
+    {
+        return  amplitude*cos(kz_*z)*
+                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
+                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+    }
   private:
-    double  x00, y00, sigma_x, sigma_y, amplitude;
+    double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
+
+};
+struct Gaussian3d
+{
+    /**
+     * @brief Functor returning a gaussian
+     *
+     * @param x0 x-center-coordinate
+     * @param y0 y-center-coordinate
+     * @param sigma_x x - variance
+     * @param sigma_y y - variance 
+     * @param amp Amplitude
+     * @param kz wavenumber in z direction
+     */
+    Gaussian3d( double x0, double y0, double z0, double sigma_x, double sigma_y, double sigma_z, double amp)
+        : x00(x0), y00(y0), z00(z0), sigma_x(sigma_x), sigma_y(sigma_y), sigma_z(sigma_z), amplitude(amp){}
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()(double x, double y, double z)
+    {
+        return  amplitude*
+                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
+                          (z-z00)*(z-z00)/2./sigma_z/sigma_z +
+                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+    }
+  private:
+    double  x00, y00, z00, sigma_x, sigma_y, sigma_z, amplitude;
 
 };
 /**
@@ -151,7 +206,7 @@ struct GaussianY
 /**
  * @brief Functor for a linear polynomial in x-direction
  * 
- * \f[ f(x,y) = a*x+b) \f]
+ * \f[ f(x,y) = a*x+b \f]
  */
 struct LinearX
 {
@@ -165,8 +220,8 @@ struct LinearX
     /**
      * @brief Return linear polynomial in x 
      *
-     * @param x x - coordianate
-     * @param y y - coordianate
+     * @param x x - coordinate
+     * @param y y - coordinate
      
      * @return result
      */
@@ -257,6 +312,95 @@ struct Lamb
     double R_, U_, x0_, y0_, lambda_, gamma_, j_;
 };
 
+struct Vortex
+{
+    /**
+     * @brief 
+     *
+     * @param x0 X position
+     * @param y0 Y position
+     * @param state mode
+     * @param R characteristic radius of dipole
+     * @param u_dipole u_drift/u_dipole
+     * @param kz
+     */
+    Vortex( double x0, double y0, unsigned state, 
+          double R,  double u_dipole, double kz = 0):
+        x0_(x0), y0_(y0), s_(state),  R_(R), u_d( u_dipole), kz_(kz){
+        g_[0] = 3.831896621; 
+        g_[1] = -3.832353624; 
+        g_[2] = 7.016;
+        b_[0] = 0.03827327723;
+        b_[1] = 0.07071067810 ;
+        b_[2] = 0.07071067810 ;
+    }
+    double operator()( double x, double y)
+    {
+        double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
+        double theta = atan2( y-y0_, x-x0_);
+        double beta = b_[s_];
+        double norm = 1.2965125; 
+
+        if( r/R_<=1.)
+            return u_d*( 
+                      r *( 1 +beta*beta/g_[s_]/g_[s_] ) 
+                    - R_*  beta*beta/g_[s_]/g_[s_] *j1(g_[s_]*r/R_)/j1(g_[s_])
+                    )*cos(theta)/norm;
+        return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
+    }
+    double operator()( double x, double y, double z)
+    {
+        return this->operator()(x,y)*cos(kz_*z);
+    }
+    private:
+    // Returns the modified Bessel function K1(x) for positive real x.
+    double bessk1(double x)
+    { 
+        double y,ans;
+        if (x <= 2.0) 
+        {
+            y=x*x/4.0; 
+            ans = (log(x/2.0)*bessi1(x))+(1.0/x)*(1.0+y*(0.15443144 +
+                       y*(-0.67278579+y*(-0.18156897+y*(-0.1919402e-1 +
+                       y*(-0.110404e-2+y*(-0.4686e-4))))))); 
+        } 
+        else 
+        { 
+            y=2.0/x; 
+            ans = (exp(-x)/sqrt(x))*(1.25331414+y*(0.23498619 +
+                      y*(-0.3655620e-1+y*(0.1504268e-1+y*(-0.780353e-2 +
+                      y*(0.325614e-2+y*(-0.68245e-3))))))); 
+        } 
+        return ans; 
+    }
+    //Returns the modified Bessel function I1(x) for any real x. 
+    double bessi1(double x) 
+    {   
+        double ax,ans; 
+        double y; 
+        if ((ax=fabs(x)) < 3.75) 
+        {
+            y=x/3.75; 
+            y*=y; 
+            ans = ax*(0.5+y*(0.87890594+y*(0.51498869+y*(0.15084934 +
+                       y*(0.2658733e-1+y*(0.301532e-2+y*0.32411e-3)))))); 
+        } 
+        else 
+        { 
+            y=3.75/ax; 
+            ans = 0.2282967e-1+y*(-0.2895312e-1+y*(0.1787654e-1 -
+                      y*0.420059e-2)); ans=0.39894228+y*(-0.3988024e-1+
+                      y*(-0.362018e-2 +y*(0.163801e-2+y*(-0.1031555e-1+y*ans)))); 
+            ans *= (exp(ax)/sqrt(ax)); 
+        } 
+        return x < 0.0 ? -ans : ans; 
+    }
+    double x0_, y0_;
+    unsigned s_;
+    double R_, b_[3], u_d;
+    double g_[3];
+    double kz_;
+};
 /**
  * @brief Exponential
  *
@@ -265,7 +409,20 @@ struct Lamb
 template< class T>
 struct EXP 
 {
+    /**
+     * @brief Coefficients of A*exp(lambda*x)
+     *
+     * @param amp Amplitude
+     * @param lambda coefficient
+     */
     EXP( double amp = 1., double lambda = 1.): amp_(amp), lambda_(lambda){}
+    /**
+     * @brief return exponential
+     *
+     * @param x x
+     *
+     * @return A*exp(lambda*x)
+     */
     __host__ __device__
     T operator() (const T& x) 
     { 
@@ -282,6 +439,13 @@ struct EXP
 template < class T>
 struct LN
 {
+    /**
+     * @brief The natural logarithm
+     *
+     * @param x of x 
+     *
+     * @return  ln(x)
+     */
     __host__ __device__
     T operator() (const T& x) 
     { 
@@ -297,6 +461,13 @@ struct LN
 template < class T>
 struct SQRT
 {
+    /**
+     * @brief Square root
+     *
+     * @param x of x
+     *
+     * @return sqrt(x)
+     */
     __host__ __device__
     T operator() (const T& x) 
     { 
@@ -308,11 +479,21 @@ struct SQRT
 /**
  * @brief Minmod function
  *
+ * might be useful for flux limiter schemes
  * @tparam T value-type
  */
 template < class T>
 struct MinMod
 {
+    /**
+     * @brief Minmod of three numbers
+     *
+     * @param a1 a1
+     * @param a2 a2
+     * @param a3 a3
+     *
+     * @return minmod(a1, a2, a3)
+     */
     __host__ __device__
     T operator() ( T a1, T a2, T a3)
     {
@@ -377,6 +558,13 @@ struct PLUS
 template <class T>
 struct ABS
 {
+    /**
+     * @brief The absolute value
+     *
+     * @param x of x
+     *
+     * @return  abs(x)
+     */
     __host__ __device__
         T operator()(const T& x){ return fabs(x);}
 };

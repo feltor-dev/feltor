@@ -9,8 +9,8 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
-//#include "lamb_dipole/parameters.h"
+//#include "galerkin/parameters.h"
+#include "lamb_dipole/parameters.h"
 
 
 //can read TOEFL and INNTO h5-files and plot them on screen
@@ -36,17 +36,31 @@ int main( int argc, char* argv[])
 
     int layout = 0;
     if( in.find( "TOEFLI") != std::string::npos)
+    {
         layout = 2;
+        std::cout << "Found Impurity file!\n";
+    }
+    else if( in.find( "INNTO_HW") != std::string::npos)
+    {
+        layout = 3;
+        std::cout << "Found INNTO_HW file!\n";
+    }
     else if( in.find( "INNTO") != std::string::npos)
+    {
         layout = 1;
+        std::cout << "Found INNTO file!\n";
+    }
     else if( in.find( "TOEFL") != std::string::npos)
+    {
         layout = 0;
+        std::cout << "Found TOEFL file!\n";
+    }
     else 
         std::cerr << "Unknown input file format: default to 0"<<std::endl;
     const Parameters p( file::read_input( in), layout);
 
     p.display();
-    dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed, dg::XSPACE);
@@ -96,6 +110,8 @@ int main( int argc, char* argv[])
         {
             if( in.find( "SOL") != std::string::npos)
                 std::cout << "Hello SOL\n";
+            else if( in.find( "SHU") != std::string::npos)
+                std::cout << "Hello SHU\n";
             else
                 thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
         }
@@ -115,7 +131,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout << "Drawing took              "<<t.diff()<<"s\n";
-        if( layout == 2 && v[1]*v[2]>2 )
+        if( (layout == 2 || layout == 3) && v[1]*v[2]>2 )
         {
             //draw ions
             t5file.get_field( input, "ions", index);

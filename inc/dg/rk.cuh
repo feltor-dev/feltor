@@ -29,8 +29,8 @@ namespace dg{
 template< size_t k>
 struct rk_coeff
 {
-    static const double alpha[k][k]; 
-    static const double beta[k];
+    static const double alpha[k][k];  //!< alpha
+    static const double beta[k]; //!< beta
 };
 ///@cond
 /*
@@ -147,6 +147,47 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
     }
 }
 
+/**
+ * @brief Integrates the differential equation using RK4 and a rudimentary stepsize-control
+ *
+ * @ingroup algorithms
+ * Doubles the number of timesteps until the desired accuracy is reached
+ * @tparam RHS The right-hand side class
+ * @tparam Vector Vector-class (needs to be copyable)
+ * @param rhs The right-hand-side
+ * @param begin initial condition
+ * @param end (write-only) contains solution on output
+ * @param T_max final time
+ * @param eps_abs desired absolute accuracy
+ */
+template< class RHS, class Vector>
+void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    RK<4, Vector > rk( begin); 
+    Vector y0(end), y1(end);
+    double dt = T_max;
+    unsigned NT = 1;
+    double error = 1e10;
+    while( error > eps_abs)
+    {
+        dt /= 2.;
+        NT *= 2;
+        y0 = begin;
+        for( unsigned i=0; i < NT; i++)
+        {
+            rk( rhs, y0, y1, dt); 
+            y0.swap( y1); //y0 is one step further
+        }
+        dg::blas1::axpby( 1., y0, -1., end); 
+        error = sqrt( dg::blas1::dot( end, end));
+        end = y0;
+#ifdef DG_DEBUG
+        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
+#endif //DG_DEBUG
+    }
+
+}
+
 ///@cond
 //Euler specialisation
 template < class Vector>
@@ -161,6 +202,7 @@ struct RK<1, Vector>
         blas1::axpby( 1., u0, dt, u1);
     }
 };
+
 
 
 template< size_t k>
@@ -280,92 +322,6 @@ struct AB<1, Vector>
 };
 ///@endcond
 
-
-template<class Vector>
-struct TVB
-{
-    /**
-    * @brief Reserve memory for the integration
-    *
-    * @param copyable Vector of size which is used in integration. 
-    * A Vector object must be copy-constructible from copyable.
-    */
-    TVB( const Vector& copyable): u_(2, Vector(copyable)), f_(3, Vector(copyable)){
-        //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
-        //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
-        //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
-        a[0] =  18./11.;    b[0] =  18./11.;
-        a[1] = -9./11.;     b[1] = -18./11.;
-        a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
-    }
-   
-    /**
-     * @brief Init with initial value
-     *
-     * This routine initiates the first steps in the multistep method by integrating
-     * backwards with a Euler steps. This routine has to be called
-     * before the first timestep is made and with the same initial value as the first timestep.
-     * @tparam Functor models BinaryFunction with no return type (subroutine).
-        Its arguments both have to be of type Vector.
-        The first argument is the actual argument, the second contains
-        the return value, i.e. y' = f(y) translates to f( y, y').
-     * @param f The rhs functor
-     * @param u0 The initial value you later use 
-     * @param dt The timestep
-     */
-    template< class Functor>
-    void init( Functor& f, const Vector& u0, double dt);
-    /**
-    * @brief Advance u0 one timestep
-    *
-    * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector.
-        The first argument is the actual argument, The second contains
-        the return value, i.e. y' = f(y) translates to f( y, y').
-    * @param f right hand side function or functor
-    * @param u0 initial value
-    * @param u1 contains result on output. u0 and u1 may be the same ( if the Functor allows that)
-    * @param dt The timestep.
-    * @note The fist u0 must be the same you use in the init routine.
-    */
-    template< class Functor>
-    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
-  private:
-    std::vector<Vector> u_, f_; 
-    double a[3];
-    double b[3];
-
-};
-template< class Vector>
-template< class Functor>
-void TVB<Vector>::init( Functor& f, const Vector& u0,  double dt)
-{
-    f( u0, f_[0]);
-    blas1::axpby( 1.,u0, -dt, f_[0], u_[0]);
-    f( u_[0], f_[1]);
-    blas1::axpby( 1.,u_[0], -dt, f_[1], u_[1]);
-    f( u_[1], f_[2]);
-}
-
-template<class Vector>
-template< class Functor>
-void TVB<Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
-{
-    //u_[0] can be deleted
-    f( u0, f_[0]);
-    blas1::axpby( a[0], u0, dt*b[0], f_[0], u1);
-    blas1::axpby( a[1], u_[0], 1., u1);
-    blas1::axpby( a[2], u_[1], 1., u1);
-    for( unsigned i=1; i<3; i++)
-        blas1::axpby( dt*b[i], f_[i], 1., u1);
-    //permute f_[k-1]  to be the new f_[0]
-    for( unsigned i=2; i>0; i--)
-        f_[i-1].swap( f_[i]);
-    //throw away u_[1]
-    u_[1] = u_[0];
-    u_[0] = u0;
-
-}
 
 } //namespace dg
 

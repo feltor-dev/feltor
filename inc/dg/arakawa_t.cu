@@ -20,6 +20,7 @@ const unsigned Ny = 50;
 //const double ly = 2.*M_PI;
 
 
+
 //choose some mean function (attention on lx and ly)
 /*
 //THESE ARE NOT PERIODIC
@@ -65,17 +66,17 @@ double jacobian( double x, double y)
 
 int main()
 {
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    DVec w2d = create::s2d( grid);
+    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    DVec w2d = create::w2d( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;
-    DVec lhs = expand( left, grid), jac(lhs);
-    DVec rhs = expand( right, grid);
-    const DVec sol = expand ( jacobian, grid);
-    DVec eins = expand( one, grid);
+    DVec lhs = evaluate( left, grid), jac(lhs);
+    DVec rhs = evaluate( right, grid);
+    const DVec sol = evaluate ( jacobian, grid);
+    DVec eins = evaluate( one, grid);
 
-    Arakawa< DVec> arakawa( grid);
+    ArakawaX< DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     //arakawa( lhs, rhs1, jac1);
@@ -98,7 +99,6 @@ int main()
     //n = 5 -> p = 5    |
     // quantities are all conserved to 1e-15 for periodic bc
     // for dirichlet bc these are not better conserved than normal jacobian
-
     return 0;
 }
 

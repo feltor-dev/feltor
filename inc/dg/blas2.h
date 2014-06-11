@@ -1,9 +1,8 @@
-#ifndef _DG_BLAS2_
-#define _DG_BLAS2_
+#pragma once 
 
 #include "blas/cusp_matrix.cuh"
-#include "blas/preconditioner.cuh"
-//#include "blas/operator.cuh"
+#include "blas/thrust_matrix.cuh"
+#include "blas/std_matrix.cuh"
 #include "blas/selfmade.cuh"
 #include "vector_traits.h"
 #include "matrix_traits.h"
@@ -33,7 +32,7 @@ namespace blas2{
     implicit memcpy of the result.
  */
 template< class Matrix, class Vector>
-inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const Vector& y)
+inline typename MatrixTraits<Matrix>::value_type dot( const Vector& x, const Matrix& m, const Vector& y)
 {
     return dg::blas2::detail::doDot( x, m, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
@@ -50,7 +49,7 @@ inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const 
     implicit memcpy of the result.
  */
 template< class Matrix, class Vector>
-inline typename Matrix::value_type dot( const Matrix& m, const Vector& x)
+inline typename MatrixTraits<Matrix>::value_type dot( const Matrix& m, const Vector& x)
 {
     return dg::blas2::detail::doDot( m, x, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
@@ -133,4 +132,3 @@ inline void gemv( const Matrix& m,
 } //namespace blas2
 } //namespace dg
 
-#endif //_DG_BLAS2_

@@ -6,9 +6,9 @@
 
 #include "rk.cuh"
 #include "grid.cuh"
+#include "gamma.cuh"
 #include "evaluation.cuh"
 #include "derivatives.cuh"
-#include "preconditioner.cuh"
 
 #include "blas.h"
 
@@ -17,24 +17,24 @@ struct RHS
 {
     typedef container Vector;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    RHS( const dg::Grid<double>& g, double D):g_(g), D_(D) 
+    RHS( const dg::Grid2d<double>& g, double D): D_(D) 
     {
-        laplaceM = dg::create::laplacianM( g, dg::not_normed, dg::LSPACE);
+        laplaceM = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
     }
     void operator()( const container& y, container& yp)
     {
         dg::blas2::symv( laplaceM, y, yp);
-        dg::blas2::symv( -D_, dg::T2D<double>(g_), yp, 0., yp);
+        dg::blas1::axpby( -D_, yp, 0., yp);
+        //dg::blas1::axpby( 0., y, 0., yp);
     }
   private:
-    dg::Grid<double> g_;
     double D_;
     cusp::ell_matrix<int, double, MemorySpace> laplaceM;
 };
 
 const unsigned n = 3;
-const double lx = 3./2.*M_PI;
-const double ly = 3./2.*M_PI;
+const double lx = 2.*M_PI;
+const double ly = 2.*M_PI;
 
 const unsigned k = 3;
 const double nu = 0.01;
@@ -44,11 +44,6 @@ const double T = 1.0;
 double sine( double x, double y) {return sin(x)*sin(y);}
 double sol( double x, double y) {return exp( -2.*nu*T)*sine(x, y);}
 
-
-
-//typedef thrust::device_vector<double> DVec;
-typedef thrust::host_vector<double> DVec;
-    
 
 using namespace std;
 using namespace dg;
@@ -68,31 +63,34 @@ int main()
     cout << "Number of gridpoints:     "<<Nx*Ny<<endl;
     cout << "# of timesteps:           "<<NT<<endl;
 
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, DIR_NEU, DIR_NEU);
-    S2D<double> s2d( grid);
+    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, PER, PER);
+    dg::DVec w2d = create::w2d( grid);
 
-    DVec y0 = expand( sine, grid), y1(y0);
+    DVec y0 = evaluate( sine, grid), y1(y0);
 
     RHS<DVec> rhs( grid, nu);
     RK< k, DVec > rk( y0);
     AB< k, DVec > ab( y0);
-    //TVB< DVec > ab( y0);
 
     ab.init( rhs, y0, dt);
+    integrateRK4( rhs, y0, y1, T, 1e-10);
+    DVec solution = evaluate( sol, grid), error( solution);
+    double norm_sol = blas2::dot( w2d, solution);
+    blas1::axpby( -1., y1, 1., error);
+    double norm_error = blas2::dot( w2d, error);
+    cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" \n";
+
     //thrust::swap(y0, y1);
     for( unsigned i=0; i<NT; i++)
     {
         ab( rhs, y0, y1, dt);
         y0.swap( y1);
-        //thrust::swap(y0, y1);
     }
-    double norm_y0 = blas2::dot( s2d, y0);
+    double norm_y0 = blas2::dot( w2d, y0);
     cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << endl;
-    DVec solution = expand( sol, grid), error( solution);
-    double norm_sol = blas2::dot( s2d, solution);
     blas1::axpby( -1., y0, 1., error);
     cout << "Normalized solution is "<<  norm_sol<< endl;
-    double norm_error = blas2::dot( s2d, error);
+    norm_error = blas2::dot( w2d, error);
     cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000141704)\n";
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
     //n = 2 -> p = 2

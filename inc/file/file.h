@@ -159,6 +159,34 @@ struct T5trunc
         H5Fclose( file);
     }
     /**
+     * @brief Write one time - group
+     *
+     * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
+     * @param field1 The first dataset ("electrons")
+     * @param field2 The second dataset ("ions")
+     * @param field3 The third dataset ("impurities")
+     * @param field4 The fourth dataset ("potential")
+     * @param time The time makes the group name
+     * @param nNx dimension in x - direction (second index)
+     * @param nNy dimension in y - direction (first index)
+     */
+    template< class T>
+    void write( const std::vector<T>& fields, const std::vector<std::string>& names, std::vector<unsigned> dimensions, double time)
+    {
+        assert( fields.size() == names.size());
+        hid_t file = H5Fopen( name_.data(), H5F_ACC_RDWR, H5P_DEFAULT);
+        hid_t grp = H5Gcreate( file, file::setTime( time).data(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        hsize_t size = dimensions.size();
+        hsize_t dims[size]; 
+        for(unsigned i=0; i<size; i++)
+            dims[i] = dimensions[i];
+
+        for( unsigned i=0; i<fields.size(); i++)
+            status_ = H5LTmake_dataset_double( grp, names[i].data(), size, dims, fields[i].data());
+        H5Gclose( grp);
+        H5Fclose( file);
+    }
+    /**
      * @brief Append data to the xfiles
      *
      * @param mass Data
@@ -192,6 +220,109 @@ struct T5trunc
     herr_t status_;
     std::string name_;
     std::vector<double> mass_, diffusion_, energy_, dissipation_;
+};
+
+
+
+/**
+ * @brief Create a HDF5 file with timegroups
+ */
+struct Probe
+{
+    /**
+     * @brief Create a new Probe file overwriting existing ones
+     *
+     * @param name The name of the H5 file
+     * @param input A literal copy of the input file
+     */
+    Probe( const std::string& name, const std::string& input, unsigned Nmax): name_( name), Nmax_(Nmax)
+    {
+        file_ = H5Fcreate( name.data(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        hsize_t size = input.size();
+        status_ = H5LTmake_dataset_char( file_, "inputfile", 1, &size, input.data());
+        //std::vector<double> zeroes( Nmax_, 0.);
+        //size=Nmax_;
+        //status_ = H5LTmake_dataset_double( file_, "time", 1,  &size, zeroes.data());
+    }
+
+    void openGroup( const char * name )
+    {
+        grp_ = H5Gopen( file_, name, H5P_DEFAULT );
+    }
+    void closeGroup(){ H5Gclose( grp_);}
+    /**
+     * @brief Create 64 datasets in a new group
+     *
+     * @param name group name
+     * @param i Probe array line
+     * @param j Probe array column
+     */
+    void createSet( const char * name,  unsigned imax, unsigned jmax )
+    {
+        grp_ = H5Gcreate( file_, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT  );
+        std::vector<double> zeroes( Nmax_, 0.);
+        for( unsigned i=1; i<=imax; i++)
+            for( unsigned j=1; j<=jmax; j++)
+            {
+                std::stringstream title; 
+                title <<std::setw(1) <<std::left<<i<<j;
+                hsize_t dims[] = { Nmax_ };
+                status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, zeroes.data());
+            }
+        H5Gclose( grp_);
+    }
+    void createDataSet( const char * name)
+    {
+        std::vector<double> zeroes( Nmax_, 0.);
+        hsize_t dims[] = { Nmax_ };
+        status_ = H5LTmake_dataset_double( file_, name, 1,  dims, zeroes.data());
+    }
+    template< class T>
+    void writeSubset( const T& field1, unsigned i, unsigned j , unsigned N, unsigned offset)
+    {
+        std::stringstream title; 
+        title <<std::setw(1) <<std::left<<i<<j;
+        hid_t dataset_ = H5Dopen2( grp_, title.str().data(), H5P_DEFAULT);
+        hid_t dataspace_ = H5Dget_space( dataset_);
+        hsize_t dims[] = { N };
+        hsize_t off[] = { offset };
+        hsize_t stride[] = { 1 };
+        hsize_t block[] = { 1 };
+        status_ = H5Sselect_hyperslab( dataspace_, H5S_SELECT_SET, off, stride, dims, block);
+        hid_t memspace = H5Screate_simple( 1, dims, NULL);
+        status_ = H5Dwrite( dataset_, H5T_NATIVE_DOUBLE, memspace, dataspace_, H5P_DEFAULT, field1.data());
+        H5Sclose(memspace);
+        H5Sclose(dataspace_);
+        H5Dclose(dataset_);
+        //status_ = H5LTmake_dataset_double( grp_, title.str().data(), 1,  dims, field1.data());
+    }
+    template< class T>
+    void writeSubset( const T& field1, const char* name,  unsigned N, unsigned offset)
+    {
+        hid_t dataset_ = H5Dopen2( file_, name, H5P_DEFAULT);
+        hid_t dataspace_ = H5Dget_space( dataset_);
+        hsize_t dims[] = { N };
+        hsize_t off[] = { offset };
+        hsize_t stride[] = { 1 };
+        hsize_t block[] = { 1 };
+        status_ = H5Sselect_hyperslab( dataspace_, H5S_SELECT_SET, off, stride, dims, block);
+        hid_t memspace = H5Screate_simple( 1, dims, NULL);
+        status_ = H5Dwrite( dataset_, H5T_NATIVE_DOUBLE, memspace, dataspace_, H5P_DEFAULT, field1.data());
+        H5Sclose(memspace);
+        H5Sclose(dataspace_);
+        H5Dclose(dataset_);
+    }
+    ~Probe( )
+    {
+        H5Fclose( file_);
+    }
+
+  private:
+    std::string name_;
+    unsigned Nmax_;
+    hid_t file_, grp_;
+    hid_t prop_;
+    herr_t status_;
 };
 
 /**

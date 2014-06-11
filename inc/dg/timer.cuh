@@ -5,6 +5,9 @@
 #include "../toefl/timer.h"
 namespace dg
 {
+    /**
+     * @brief If we compute on the host we use the toefl timer
+     */
     typedef toefl::Timer Timer;
 }
 #else

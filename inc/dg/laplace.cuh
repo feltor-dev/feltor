@@ -1,5 +1,4 @@
-#ifndef _DG_LAPLACE_CUH
-#define _DG_LAPLACE_CUH
+#pragma once
 
 #include <cusp/coo_matrix.h>
 #include <cusp/transpose.h>
@@ -10,9 +9,11 @@
 #include "operator_dynamic.h"
 #include "creation.cuh"
 #include "dx.cuh"
-#include "operator_matrix.cuh"
+#include "operator_tensor.cuh"
 
-/*! @file 1d laplacians
+/*! @file 
+  
+  1d laplacians
   */
 
 namespace dg
@@ -194,13 +195,12 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
     cusp::blas::scal( S.values, g.h()/2.);
     HMatrix T = dg::tensor( g.N(), dg::create::pipj_inv( g.n())); 
     cusp::blas::scal( T.values, 2./g.h());
-    HMatrix J = dg::create::jump_ot<value_type>( g.n(), g.N(), g.bcx());
     HMatrix right;
     if( dir == forward)
         right = create::dx_plus_mt( g.n(), g.N(), g.h(), g.bcx());
     else if ( dir == backward) 
         right = create::dx_minus_mt( g.n(), g.N(), g.h(), g.bcx());
-    else
+    else //dir == symmetric
     {
         if( g.bcx() == PER || g.bcx() == NEU_DIR)
             return laplace1d( g, no, forward); //per is symmetric, NEU_DIR cannot be
@@ -209,9 +209,13 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
         HMatrix laplus = laplace1d( g, no, forward); //recursive call
         HMatrix laminus = laplace1d( g, no, backward);
         HMatrix laplace;
-        cusp::add( laplus, laminus, laplace);
-        for( unsigned i=0; i<laplace.values.size(); i++)
-            laplace.values[i] *= 0.5;
+        
+        cusp::add( laplus, laminus, laplace);//only add values??
+        cusp::blas::scal( laplace.values, 0.5);
+        //TEST THE ASSUMPTION THAT LAPLUS AND LAMINUS HAVE VALUES AT THE SAME PLACES
+        //cusp::blas::axpby( laplus.values, laplace.values, laplace.values, 0.5, 0.5);
+        //for( unsigned i=0; i<laplace.values.size(); i++)
+            //laplace.values[i] *= 0.5;
 
         return laplace;
     }
@@ -221,6 +225,16 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
 
     HMatrix laplace_oJ, laplace;
     cusp::multiply( temp, right, laplace_oJ);
+    if( g.n() == 1 && g.bcx() == dg::PER)
+    {
+        if( no == normed) 
+        {
+            cusp::multiply( T, laplace_oJ, laplace);
+            return laplace;
+        }
+        return laplace_oJ;
+    }
+    HMatrix J = dg::create::jump_ot<value_type>( g.n(), g.N(), g.bcx());
     cusp::add( laplace_oJ, J, laplace);
     laplace.sort_by_row_and_column();
     if( no == normed) 
@@ -234,5 +248,3 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<val
 } //namespace create
 
 } //namespace dg
-
-#endif // _DG_LAPLACE_CUH

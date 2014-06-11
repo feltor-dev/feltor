@@ -136,12 +136,13 @@ int main( int argc, char* argv[])
     DRT_DFT_Solver<3> drt_solver3( bp_mod);
 
     const Algorithmic& alg = bp.algorithmic();
+    const Boundary& bound = bp.boundary();
     Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
     // place some gaussian blobs in the field
     try{
         //init_gaussian( ne, 0.1,0.2, 10./128./field_ratio, 10./128., amp);
         //init_gaussian( ne, 0.1,0.4, 10./128./field_ratio, 10./128., -amp);
-        init_gaussian( ne, 0.8,0.4, 10./128./field_ratio, 10./128., amp);
+        init_gaussian( ne, 0.5,0.5, 5./bound.lx, 5./bound.ly, amp);
         //init_gaussian( ne, 0.1,0.8, 10./128./field_ratio, 10./128., -amp);
         //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
         if( bp.isEnabled( TL_IMPURITY))
@@ -191,12 +192,29 @@ int main( int argc, char* argv[])
     glfwSetWindowSizeCallback( w, WindowResize);
     glfwSetInputMode(w, GLFW_STICKY_KEYS, GL_TRUE);
 
-    double t = 3*alg.dt;
+    double t = 0.;
     Timer timer;
     Timer overhead;
     cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
+    if( !bp.isEnabled( TL_IMPURITY))
+    {
+        if( bp.boundary().bc_x == TL_PERIODIC)
+        {
+            solver2.first_step();
+            solver2.second_step();
+        }
+    }
+    else
+    {
+        if( bp.boundary().bc_x == TL_PERIODIC)
+        {
+            solver3.first_step();
+            solver3.second_step();
+        }
+    }
+    t+= 2*alg.dt;
     while( !glfwWindowShouldClose(w))
     {
         overhead.tic();
@@ -242,7 +260,7 @@ int main( int argc, char* argv[])
             if( !bp.isEnabled( TL_IMPURITY))
             {
                 if( bp.boundary().bc_x == TL_PERIODIC)
-                    solver2.step( );
+                    solver2.step();
                 else
                     drt_solver2.step();
             }

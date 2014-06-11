@@ -30,16 +30,26 @@ class DFT_DFT_Solver
     /*! @brief Prepare Solver for execution
      *
      * This function takes the fields and computes the missing 
-     * one according to the target parameter passed. After that
-     * it performs three initializing steps (one onestep-, 
-     * one twostep-method and the threestep-method used in the step function)
-     * in order to initialize the karniadakis scheme. The actual time is
-     * thus T_0 + 3*dt after initialisation. 
+     * one according to the target parameter passed. 
      * @param v Container with three non void matrices
      * @param t which Matrix is missing?
      */
     void init( std::array< Matrix<double,TL_DFT>, n>& v, enum target t);
-    /*! @brief Perform a step by the 3 step Karniadakis scheme*/
+    /**
+     * @brief Perform first initializing step
+     *
+     */
+    void first_step(); 
+    /**
+     * @brief Perform second initializing step
+     *
+     * After that the step function can be used
+     */
+    void second_step(); 
+    /*! @brief Perform a step by the 3 step Karniadakis scheme
+     *
+     * @attention At least one call of first_step() and second_step() is necessary
+     * */
     void step(){ step_<TL_ORDER3>();}
     /*! @brief Get the result
         
@@ -65,6 +75,8 @@ class DFT_DFT_Solver
             the potential is the one of the last timestep.
     */
     void getField( Matrix<double, TL_DFT>& m, enum target t);
+    const std::array<Matrix<double, TL_DFT>, n>& getDensity( )const{return dens;}
+    const std::array<Matrix<double, TL_DFT>, n>& getPotential( )const{return phi;}
     /*! @brief Get the parameters of the solver.
 
         @return The parameters in use. 
@@ -76,7 +88,7 @@ class DFT_DFT_Solver
     //methods
     void init_coefficients( const Boundary& bound, const Physical& phys);
     void compute_cphi();//multiply cphi
-    void first_steps(); 
+    double dot( const Matrix_Type& m1, const Matrix_Type& m2);
     template< enum stepper S>
     void step_();
     //members
@@ -116,13 +128,12 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     gamma_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols))
 {
     bp.consistencyCheck();
-    Physical phys = bp.physical();
     if( bp.isEnabled( TL_GLOBAL))
     {
         std::cerr << "WARNING: GLOBAL solver not implemented yet! \n\
              Switch to local solver...\n";
     }
-    init_coefficients( bp.boundary(), phys);
+    init_coefficients( bp.boundary(), bp.physical());
 }
 
 template< size_t n>
@@ -143,7 +154,9 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
             ik = (i>rows/2) ? (i-rows) : i; //integer division rounded down
             laplace = - kxmin2*(double)(j*j) - kymin2*(double)(ik*ik);
             if( n == 2)
+            {
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
+            }
             else if( n == 3)
             {
                 gamma_coeff[0](i,j) = p.gamma1_i( laplace);
@@ -249,7 +262,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
         dft_dft.c2r( cphi[k], phi[k]);
     }
     //now the density and the potential is given in x-space
-    first_steps();
+    //first_steps();
 }
 
 template< size_t n>
@@ -284,14 +297,18 @@ const Matrix<double, TL_DFT>& DFT_DFT_Solver<n>::getField( enum target t) const
 }
 
 template< size_t n>
-void DFT_DFT_Solver<n>::first_steps()
+void DFT_DFT_Solver<n>::first_step()
 {
     karniadakis.template invert_coeff<TL_EULER>( );
     step_<TL_EULER>();
+}
+
+template< size_t n>
+void DFT_DFT_Solver<n>::second_step()
+{
     karniadakis.template invert_coeff<TL_ORDER2>();
     step_<TL_ORDER2>();
     karniadakis.template invert_coeff<TL_ORDER3>();
-    step_<TL_ORDER3>();
 }
 
 template< size_t n>
@@ -299,46 +316,54 @@ void DFT_DFT_Solver<n>::compute_cphi()
 {
     if( n==2)
     {
-#pragma omp for 
-        for( size_t i = 0; i < crows; i++)
+#pragma omp parallel for 
+        for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j);
-#pragma omp for 
-        for( size_t i = 0; i < crows; i++)
+        }
+//#pragma omp barrier
+#pragma omp parallel for 
+        for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
+        }
+//#pragma omp barrier
     }
     else if( n==3)
     {
-#pragma omp for 
-        for( size_t i = 0; i < crows; i++)
+#pragma omp parallel for 
+        for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j) 
                              + phi_coeff(i,j)[2]*cdens[2](i,j);
-#pragma omp for 
-        for( size_t i = 0; i < crows; i++)
+        }
+//#pragma omp barrier
+#pragma omp parallel for 
+        for( size_t i = 0; i < crows; i++){
             for( size_t j = 0; j < ccols; j++)
             {
                 cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
                 cphi[2](i,j) = gamma_coeff[1](i,j)*cphi[0](i,j);
             }
+        }
+//#pragma omp barrier
     }
 }
+
+
 
 template< size_t n>
 template< enum stepper S>
 void DFT_DFT_Solver<n>::step_()
 {
-    //TODO: Is false sharing an issue here?
-#pragma omp parallel 
-    {
-    GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
     //1. Compute nonlinearity
-#pragma omp for 
+#pragma omp parallel for 
     for( unsigned k=0; k<n; k++)
     {
+        GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, TL_PERIODIC, TL_PERIODIC}; 
+        GhostMatrix<double, TL_DFT> ghostphi{ rows, cols, TL_PERIODIC, TL_PERIODIC};
         swap_fields( dens[k], ghostdens); //now dens[k] is void
         swap_fields( phi[k], ghostphi); //now phi[k] is void
         ghostdens.initGhostCells( );
@@ -351,19 +376,18 @@ void DFT_DFT_Solver<n>::step_()
     karniadakis.template step_i<S>( dens, nonlinear);
     //3. solve linear equation
     //3.1. transform v_hut
-#pragma omp for 
-    for( unsigned k=0; k<n; k++)
-        dft_dft.r2c( dens[k], cdens[k]);
+#pragma omp parallel for 
+    for( unsigned k=0; k<n; k++){
+        dft_dft.r2c( dens[k], cdens[k]);}
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
     compute_cphi();
     //3.3. backtransform
-#pragma omp for 
+#pragma omp parallel for 
     for( unsigned k=0; k<n; k++)
     {
         dft_dft.c2r( cdens[k], dens[k]);
         dft_dft.c2r( cphi[k],  phi[k]);
-    }
     }
 }
 

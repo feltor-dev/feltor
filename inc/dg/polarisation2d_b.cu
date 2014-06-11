@@ -23,14 +23,15 @@ dg::bc bcx = dg::DIR_NEU;
 
 double initial( double x, double y) {return 0.;}
 double amp = 1;
-double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
+//double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
-//double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
+double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
 
-double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
+//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
-//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
+double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
+double der(double x, double y)  { return cos( x)*sin(y);}
 
 using namespace std;
 
@@ -48,26 +49,29 @@ int main()
     cout << "Type n, Nx and Ny and epsilon! \n";
     cin >> n >> Nx >> Ny; //more N means less iterations for same error
     cin >> eps;
-    dg::Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
     Vector v2d = dg::create::v2d( grid);
     Vector w2d = dg::create::w2d( grid);
     //create functions A(chi) x = b
     Vector x =    dg::evaluate( initial, grid);
     Vector b =    dg::evaluate( rhs, grid);
     Vector chi =  dg::evaluate( pol, grid);
-    const Vector solution = dg::evaluate( sol, grid);
-    Vector error( solution);
 
 
     cout << "Create Polarisation object!\n";
     t.tic();
-    dg::Polarisation2dX<dg::HVec> pol( grid);
+    dg::Polarisation2dX<dg::HVec> pol1( grid, dg::backward);
+    dg::Polarisation2dX<dg::HVec> pol2( grid, dg::forward);
     t.toc();
-    cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
+    cout << "Creation of 2 polarisation objects took: "<<t.diff()<<"s\n";
     cout << "Create Polarisation matrix!\n";
     t.tic();
-    dg::HMatrix B_ = pol.create(chi);
-    //Matrix A = pol.create(chi);
+    dg::HMatrix B1_ = pol1.create(chi);
+    dg::HMatrix B2_ = pol2.create(chi);
+    dg::HMatrix B_;
+    cusp::add( B1_, B2_, B_);
+    cusp::blas::scal( B_.values, 0.5);
+    //cusp::blas::axpby( B_.values, B2_.values, B_.values, 0.5, 0.5);
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
     t.tic();
@@ -78,6 +82,7 @@ int main()
     cout << "Conversion (1) to device matrix took: "<<t.diff()<<"s\n";
     t.tic();
     Matrix A = B;  
+    //Matrix A = pol2.create(chi);
     t.toc();
     cout << "Conversion (2) to device matrix took: "<<t.diff()<<"s\n";
     std::cout << "# of points in matrix is: "<< A.num_entries<< "\n";
@@ -102,12 +107,23 @@ int main()
     cout << "For a precision of "<< eps<<endl;
     cout << "Took "<<t.diff()<<"s\n";
     //compute error
+    const Vector solution = dg::evaluate( sol, grid);
+    const Vector derivati = dg::evaluate( der, grid);
+    Vector error( solution);
     dg::blas1::axpby( 1.,x,-1., error);
 
     double err = dg::blas2::dot( w2d, error);
     cout << "L2 Norm2 of Error is " << err << endl;
     double norm = dg::blas2::dot( w2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
+    Matrix DX = dg::create::dx( grid, dg::XSPACE);
+    dg::blas2::gemv( DX, x, error);
+    dg::blas1::axpby( 1.,derivati,-1., error);
+    err = dg::blas2::dot( w2d, error);
+    cout << "L2 Norm2 of Error is " << err << endl;
+    norm = dg::blas2::dot( w2d, derivati);
+    std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
+    //derivative converges with p-1, for p = 1 with 1/2
 
     return 0;
 }
