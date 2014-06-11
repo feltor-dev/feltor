@@ -50,6 +50,8 @@ all: version cusp_thrust arakawa_t blas1_t \
 
 
 version: version.cu 
+	g++ --version
+	nvcc --version
 	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
 	./$@
 
