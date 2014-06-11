@@ -222,12 +222,14 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
     //update energetics, 2% of total time
     exp( y, expy, 2);
     mass_ = dg::blas2::dot( one, w3d, expy[0] ); //take real ion density which is electron density!!
-    double Ue = dg::blas2::dot( y[0], w3d, expy[0]);
+    double Ue = p.tau[0]*dg::blas2::dot( y[0], w3d, expy[0]);
     double Ui = p.tau[1]*dg::blas2::dot( y[1], w3d, expy[1]);
-    double Uphi = 0.5*dg::blas2::dot( expy[1], w3d, omega); 
+    double Uphi = 0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
     dg::blas1::pointwiseDot( y[2], y[2], omega);
-    double Upar = 0.5*p.mu[0]*dg::blas2::dot( expy[1], w3d, omega); 
-    energy_ = Ue + Ui + Uphi + Upar;
+    double Upare = -0.5*p.mu[0]*dg::blas2::dot( expy[0], w3d, omega); 
+    dg::blas1::pointwiseDot( y[3], y[3], omega);
+    double Upari =  0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
+    energy_ = Ue + Ui + Uphi + Upare + Upari;
 
     for( unsigned i=0; i<2; i++)
     {

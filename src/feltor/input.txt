@@ -10,7 +10,7 @@
 3)  ny (grid points in y)                =   100  (192)
 4)  nz (grid points in z)                =   5 (16)
 
-5)  dt (time step in units c_s/rho_s)    =   3e-2  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
@@ -38,14 +38,14 @@
 
 19) amp (perturbation amplitude)            =  0.5     (1.0)
 20) sigma (blob variance in units of rho_s) =  5     (10)
-21) x-position ( in units of thickness)     =  0.5   (0.4)
-22) y-position ( in units of a)             =  0.0   (0.5)
+21) x-position ( in units of a)             =  0.5   (0.4)
+22) y-position ( in units of a)             =  0.5   (0.5)
 23) parallel mode number (sin(2*Pi*m*z))    =  1
 
 ------------------Miscellaneous----------------------------
 
 24) itstp (steps between output)            = 5      (5)
-25) # of outputs (excluding first)          = 300
+25) # of outputs (excluding first)          = 200
 26) Damping zone thickness (in units of rho_s)  = 1
 27) particle source amplitude               = 1e-3
 

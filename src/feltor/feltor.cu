@@ -51,35 +51,32 @@ int main( int argc, char* argv[])
     GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4], "");
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
+    //////////////////////////////////////////////////////////////////////////
     dg::Grid3d<double > grid( p.R_0-p.a*(1+1e-1), p.R_0 + p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     //create RHS 
     eule::Feltor< dg::DVec > feltor( grid, p); 
-    double thickness = p.a - p.b;
     eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel,p.R_0, p.a, p.b, p.mu[0]*p.eps_hat);
-    //create initial vector
-    dg::Gaussian3d init0( p.R_0, p.a - p.posX*thickness, 0, p.sigma, p.sigma, M_PI/8.,  p.amp ); //gaussian width is in absolute values
-    dg::Gaussian3d init1( p.R_0, -p.a + p.posX*thickness,0,  p.sigma, p.sigma, M_PI/8., p.amp ); //gaussian width is in absolute values
-    dg::Gaussian3d init2( p.R_0 + p.a - p.posX*thickness,  0., 0., p.sigma, p.sigma, M_PI/8., p.amp ); //gaussian width is in absolute values
-    dg::Gaussian3d init3( p.R_0-p.a + p.posX*thickness, 0., 0.,  p.sigma, p.sigma, M_PI/8., p.amp ); //gaussian width is in absolute values
-    eule::Gradient grad(p.R_0, p.a, thickness, p.lnn_inner);
 
-    const dg::HVec gradient( dg::evaluate(grad, grid));
-    std::vector<dg::DVec> y0(4, dg::evaluate( init0, grid)); // n_e' = gaussian
-    std::vector<dg::DVec> y1(4, dg::evaluate( grad, grid)); 
-    dg::blas1::axpby( 1., y1[0], 1., y0[0]);
+    //create initial vector
+    dg::Gaussian3d init0( p.R_0, p.posY*p.a,    0, p.sigma, p.sigma, M_PI/8., p.amp ); 
+    dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   0, p.sigma, p.sigma, M_PI/8., p.amp ); 
+    dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., 0.,p.sigma, p.sigma, M_PI/8., p.amp ); 
+    dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., 0.,p.sigma, p.sigma, M_PI/8., p.amp ); 
+    eule::Gradient grad(p.R_0, p.a, p.a-p.b, p.lnn_inner);
+
+    //const dg::HVec gradient( dg::evaluate(grad, grid));
+    std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
-    dg::blas1::axpby( 1., y0[0], 1., y0[1]);
-    dg::blas1::axpby( 0., y1[2], 0., y0[2]); //set U = 0
-    dg::blas1::axpby( 0., y1[3], 0., y0[3]); //set U = 0
 
-    //dg::blas2::symv( feltor.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    //dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
+    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0
 
     feltor.log( y0, y0, 2); //transform to logarithmic values
-
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
+    ab.init( feltor, rolkar, y0, p.dt);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -88,13 +85,12 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
+    unsigned step = 0;
     
-    ab.init( feltor, rolkar, y0, p.dt);
     const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    unsigned step = 0;
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
