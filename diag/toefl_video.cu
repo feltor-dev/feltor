@@ -9,8 +9,8 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-//#include "galerkin/parameters.h"
-#include "lamb_dipole/parameters.h"
+#include "galerkin/parameters.h"
+//#include "lamb_dipole/parameters.h"
 
 
 //can read TOEFL and INNTO h5-files and plot them on screen
@@ -20,7 +20,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     std::stringstream title;
     std::vector<double> v = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3], v[4], "");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3]*v[2], v[4]*v[1], "");
     draw::RenderHostData render( v[1], v[2]);
 
     if( argc != 2)

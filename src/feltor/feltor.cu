@@ -102,7 +102,6 @@ int main( int argc, char* argv[])
         hvisual = dvisual;
         //dg::blas1::axpby( -1., gradient, 1., hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         title << std::setprecision(2) << std::scientific;
         title <<"ne / "<<colors.scale()<<"\t";
@@ -116,10 +115,7 @@ int main( int argc, char* argv[])
         //draw ions
         thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1));
         hvisual = dvisual;
-        //dg::HVec iris = dg::evaluate( eule::Iris( p.a, p.thickness), grid);
-        //dg::blas1::pointwiseDot( iris, hvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         title << std::setprecision(2) << std::scientific;
         title <<"ni / "<<colors.scale()<<"\t";
