@@ -23,7 +23,7 @@ struct Rolkar
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         w3d( 4, &w3d_), v3d( 4, &v3d_), 
         temp( g.size()),
-        iris_( dg::evaluate( Pupil(R_0, a, b), g))
+        iris_( dg::evaluate( Pupil(p.R_0, p.a, p.b), g))
     {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::XSPACE);
         //LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
@@ -34,17 +34,8 @@ struct Rolkar
         {
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            dg::blas1::axpby( -p.nu_perp_, y[i], 0., y[i]);
+            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]);
         }
-        //add parallel resistivity
-        dg::blas1::pointwiseDot( expy[0], y[2], omega);
-        dg::blas1::pointwiseDot( expy[1], y[3], chi);
-        dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
-        dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
-        dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
-
-        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
-        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
         //cut contributions to boundary 
         for( unsigned i=0; i<y.size(); i++)
             dg::blas1::pointwiseDot( iris_, y[i], y[i]);
@@ -135,7 +126,8 @@ struct Feltor
     Matrix A; 
     dg::DZ<eule::Field, container> dz;
     dg::ArakawaX< container> arakawa; 
-    dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
+    //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
+    dg::Polarisation2dX< container, dg::DMatrix > pol; //note the host vector
     dg::Invert<container>  invert_pol;
 
     const container w3d, v3d, one;
@@ -195,15 +187,17 @@ const container& Feltor< container>::polarisation( const std::vector<container>&
     dg::blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
-    A = pol.create( chi);
+    //A = pol.create( chi);
+    pol.set_chi( chi);
     thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
     thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
 #ifdef DG_BENCHMARK
     t.toc();
-    std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
+    //std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
 #endif 
     dg::blas1::axpby( -1., expy[0], 1., omega); //n_i-n_e
-    unsigned number = invert_pol( A, phi[0], omega, w3d, v3d);
+    //unsigned number = invert_pol( A, phi[0], omega, w3d, v3d);
+    unsigned number = invert_pol( pol, phi[0], omega, w3d, v3d);
     if( number == invert_pol.get_max())
         throw Fail( p.eps_pol);
     return phi[0];
@@ -301,6 +295,15 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
         dg::blas1::pointwiseDivide( source, expy[i], omega);
         dg::blas1::axpby( 1., omega, 1, yp[i]  );
     }
+        //add parallel resistivity
+        dg::blas1::pointwiseDot( expy[0], y[2], omega);
+        dg::blas1::pointwiseDot( expy[1], y[3], chi);
+        dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
+        dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
+        dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
+
+        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
+        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
 
 
     //cut boundary terms 

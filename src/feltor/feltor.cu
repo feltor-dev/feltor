@@ -55,7 +55,7 @@ int main( int argc, char* argv[])
     dg::Grid3d<double > grid( p.R_0-p.a*(1+1e-1), p.R_0 + p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     //create RHS 
     eule::Feltor< dg::DVec > feltor( grid, p); 
-    eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel,p.R_0, p.a, p.b, p.mu[0]*p.eps_hat);
+    eule::Rolkar< dg::DVec > rolkar( grid, p);
 
     //create initial vector
     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
