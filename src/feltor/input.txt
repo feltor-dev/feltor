@@ -5,23 +5,23 @@
 
 --------------------Space and Time discretization------------
 
-1)  n  (# of x,y-polynomials)            =   1      (3)
-2)  nx (grid points in x)                =   70  (192)
-3)  ny (grid points in y)                =   70  (192)
-4)  nz (grid points in z)                =   8 (16)
+1)  n  (# of x,y-polynomials)            =   3      (3)
+2)  nx (grid points in x)                =   50  (192)
+3)  ny (grid points in y)                =   50  (192)
+4)  nz (grid points in z)                =   5    (16)
 
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stop for polarisation)    =   1e-3  (1e-6)
+6)  eps_pol (stop for polarisation)    =   1e-6  (1e-6)
 7)  eps_gamma (stop for Gamma CG)      =   1e-3  (1e-8)
 8)  eps_time ( stop for time inversion ) = 1e-9 
 
 ------------------Boundary conditions----------------------
 
 9)  source radius  (in units of rho_s, !<a)      =   015    (128.)
-10) minor radius a ( in units of rho_s)          =   100    (256)
+10) minor radius a ( in units of rho_s)          =   080    (256)
 11) major radius R_0 (eps_a ~ a/R_0, L_p ~ 6R_0) =   1000
 12) inner density ( log10 N )                    =   0.5  
 
@@ -31,7 +31,7 @@
 14) tau (Ti/Te)                         = 0.0    (0.0)
 15) curvature parameter (I_0)           = 4000 
 16) nu_perp                             = 1e-4
-17) nu_parallel  (viscosity)            = 1e-1   (0.001)
+17) nu_parallel  (viscosity)            = 1e-3   (0.001)
 18) perp resistivity (c)                = 1e-3   (3e-5)
 
 ---------------Initial perturbation parameters---------------------
@@ -40,7 +40,7 @@
 20) sigma (blob variance in units of rho_s) =  5     (10)
 21) x-position ( in units of a)             =  0.5   (0.4)
 22) y-position ( in units of a)             =  0.5   (0.5)
-23) parallel mode number (sin(2*Pi*m*z))    =  1
+23) parallel mode number (sin(2*Pi*m*z))    =  4
 
 ------------------Miscellaneous----------------------------
 

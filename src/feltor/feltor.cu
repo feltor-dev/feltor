@@ -58,10 +58,10 @@ int main( int argc, char* argv[])
     eule::Rolkar< dg::DVec > rolkar( grid, p.nu_perp, p.nu_parallel,p.R_0, p.a, p.b, p.mu[0]*p.eps_hat);
 
     //create initial vector
-    dg::Gaussian3d init0( p.R_0, p.posY*p.a,    0, p.sigma, p.sigma, M_PI/8., p.amp ); 
-    dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   0, p.sigma, p.sigma, M_PI/8., p.amp ); 
-    dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., 0.,p.sigma, p.sigma, M_PI/8., p.amp ); 
-    dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., 0.,p.sigma, p.sigma, M_PI/8., p.amp ); 
+    dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
+    dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
+    dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
+    dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
     eule::Gradient grad(p.R_0, p.a, p.a-p.b, p.lnn_inner);
 
     //const dg::HVec gradient( dg::evaluate(grad, grid));

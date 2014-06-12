@@ -18,8 +18,8 @@ namespace eule
 template<class container>
 struct Rolkar
 {
-    Rolkar( const dg::Grid3d<double>& g, double nu_x, double nu_z, double R_0, double a, double b, double mu_hat):
-        nu_perp_(nu_x), nu_parallel_(nu_z), mu_hat_(mu_hat), 
+    Rolkar( const dg::Grid3d<double>& g, Parameters p):
+        p(p),
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         w3d( 4, &w3d_), v3d( 4, &v3d_), 
         temp( g.size()),
@@ -34,10 +34,17 @@ struct Rolkar
         {
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            dg::blas1::axpby( -nu_perp_, y[i], 0., y[i]);
-            //dg::blas2::gemv( LaplacianM_para, x[i], temp);
-            //dg::blas1::axpby( -nu_parallel_, temp, 1., y[i]);
+            dg::blas1::axpby( -p.nu_perp_, y[i], 0., y[i]);
         }
+        //add parallel resistivity
+        dg::blas1::pointwiseDot( expy[0], y[2], omega);
+        dg::blas1::pointwiseDot( expy[1], y[3], chi);
+        dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
+        dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
+        dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
+
+        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
+        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
         //cut contributions to boundary 
         for( unsigned i=0; i<y.size(); i++)
             dg::blas1::pointwiseDot( iris_, y[i], y[i]);
@@ -53,7 +60,7 @@ struct Rolkar
         thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
                 thrust::divides< typename container::value_type>());
     }
-    double nu_perp_, nu_parallel_, mu_hat_;
+    const Parameters p;
     const container w3d_, v3d_;
     const std::vector<const container*> w3d, v3d;
     container temp;
@@ -87,8 +94,6 @@ struct Feltor
 
     void log( const std::vector<container>& src, std::vector<container>& dst, unsigned);
 
-    void divide( const container& zaehler, const container& nenner, container& result);
-
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
      *
@@ -97,12 +102,6 @@ struct Feltor
      */
     const std::vector<container>& potential( ) const { return phi;}
 
-    /**
-     * @brief Return the normalized negative laplacian used by this object
-     *
-     * @return cusp matrix
-     */
-    //const Matrix& laplacianM( ) const { return laplaceM;}
 
     /**
      * @brief Return the Gamma operator used by this object
@@ -334,13 +333,6 @@ void Feltor< container>::log( const std::vector<container>& y, std::vector<conta
 {
     for( unsigned i=0; i<howmany; i++)
         thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
-}
-
-template< class container>
-void Feltor<container>::divide( const container& zaehler, const container& nenner, container& result)
-{
-    thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
-            thrust::divides< typename container::value_type>());
 }
 
 
