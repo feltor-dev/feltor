@@ -23,7 +23,7 @@ struct Rolkar
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         w3d( 4, &w3d_), v3d( 4, &v3d_), 
         temp( g.size()),
-        iris_( dg::evaluate( Pupil(p.R_0, p.a, p.b), g))
+        pupil_( dg::evaluate( Pupil(p.R_0, p.a, p.b), g))
     {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::XSPACE);
         //LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
@@ -36,14 +36,28 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]);
         }
+        //add parallel resistivity
+        std::vector<container>  expy(2);
+        expy[0].resize( x[0].size()), expy[1].resize( x[1].size());
+        container chi( x[0].size()), omega( x[0].size());
+        for( unsigned i=0; i<2; i++)
+            thrust::transform( x[i].begin(), x[i].end(), expy[i].begin(), dg::EXP<double>());
+        dg::blas1::pointwiseDot( expy[0], x[2], omega);
+        dg::blas1::pointwiseDot( expy[1], x[3], chi);
+        dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
+        dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
+        dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
+
+        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);
+        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., y[3]);
         //cut contributions to boundary 
         for( unsigned i=0; i<y.size(); i++)
-            dg::blas1::pointwiseDot( iris_, y[i], y[i]);
+            dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
     const std::vector<const container*>& weights(){return w3d;}
     const std::vector<const container*>& precond(){return v3d;}
-    const container& iris(){return iris_;}
+    const container& iris(){return pupil_;}
 
   private:
     void divide( const container& zaehler, const container& nenner, container& result)
@@ -55,7 +69,7 @@ struct Rolkar
     const container w3d_, v3d_;
     const std::vector<const container*> w3d, v3d;
     container temp;
-    const container iris_;
+    const container pupil_;
     dg::DMatrix LaplacianM_perp;
     //dg::DMatrix LaplacianM_para;
 };
@@ -117,7 +131,7 @@ struct Feltor
 
     container chi, omega;
     const container binv, curvR, curvZ, gradlnB;
-    const container iris, source;
+    const container iris, source, damping;
 
     std::vector<container> phi, curvphi, dzphi, expy;
     std::vector<container> dzy, curvy; 
@@ -125,10 +139,10 @@ struct Feltor
     //matrices and solvers
     Matrix A; 
     dg::DZ<eule::Field, container> dz;
-    dg::ArakawaX< container> arakawa; 
+    dg::ArakawaX< container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     dg::Polarisation2dX< container, dg::DMatrix > pol; //note the host vector
-    dg::Invert<container>  invert_pol;
+    dg::Invert<container>       invert_pol;
 
     const container w3d, v3d, one;
     const Parameters p;
@@ -144,8 +158,9 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p ):
     curvR( dg::evaluate( eule::CurvatureR(p.R_0, p.I_0), g)),
     curvZ( dg::evaluate( eule::CurvatureZ(p.R_0, p.I_0), g)),
     gradlnB( dg::evaluate( eule::GradLnB(p.R_0, p.I_0) , g)),
-    iris( dg::evaluate( Damping( p.R_0, p.a, p.b, p.damping ), g)), 
+    iris( dg::evaluate( eule::Pupil( p.R_0, p.a, p.b), g)),
     source( dg::evaluate( dg::Gaussian( p.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
+    damping( dg::evaluate( eule::Damping( p.R_0, p.a, p.b, p.damping_width, p.damping_strength ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
     A (dg::create::laplacianM_perp( g, dg::not_normed, dg::XSPACE, dg::symmetric)),
@@ -275,14 +290,14 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
 
     }
     //add parallel resistivity
-    dg::blas1::pointwiseDot( expy[0], y[2], omega);
-    dg::blas1::pointwiseDot( expy[1], y[3], chi);
-    dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
-    dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
-    dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
+    //dg::blas1::pointwiseDot( expy[0], y[2], omega);
+    //dg::blas1::pointwiseDot( expy[1], y[3], chi);
+    //dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
+    //dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
+    //dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
 
-    dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
-    dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
+    //dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
+    //dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
     //add parallel diffusion
     for( unsigned i=0; i<4; i++)
     {
@@ -295,22 +310,17 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
         dg::blas1::pointwiseDivide( source, expy[i], omega);
         dg::blas1::axpby( 1., omega, 1, yp[i]  );
     }
-        //add parallel resistivity
-        dg::blas1::pointwiseDot( expy[0], y[2], omega);
-        dg::blas1::pointwiseDot( expy[1], y[3], chi);
-        dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
-        dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
-        dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
-
-        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
-        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
-
-
     //cut boundary terms 
+    for( unsigned i=0; i<2; i++)
+    {
+        //dg::blas1::pointwiseDivide( damping, expy[i], omega); 
+        //dg::blas1::axpby( -1., omega, 1., yp[i]);
+        //dg::blas1::pointwiseDot( damping, y[i], omega); 
+        //dg::blas1::axpby( -1., omega, 1., yp[i]);
+    }
     for( unsigned i=0; i<4; i++)
     {
-        //dg::blas1::pointwiseDot( iris, y[i], omega); 
-        //dg::blas1::axpby( -10., omega, 1., yp[i]);
+        dg::blas1::pointwiseDot( damping, yp[i], yp[i]); 
         dg::blas1::pointwiseDot( iris, yp[i], yp[i]);
     }
 }

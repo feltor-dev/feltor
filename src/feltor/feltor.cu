@@ -52,7 +52,7 @@ int main( int argc, char* argv[])
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
     //////////////////////////////////////////////////////////////////////////
-    dg::Grid3d<double > grid( p.R_0-p.a*(1+1e-1), p.R_0 + p.a*(1+1e-1),  -p.a*(1+1e-1), p.a*(1+1e-1), 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
+    dg::Grid3d<double > grid( p.R_0-p.a*(1.05), p.R_0 + p.a*(1.05),  -p.a*(1.05), p.a*(1.05), 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     //create RHS 
     eule::Feltor< dg::DVec > feltor( grid, p); 
     eule::Rolkar< dg::DVec > rolkar( grid, p);
@@ -70,6 +70,10 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[1]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[1]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[1]);
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0

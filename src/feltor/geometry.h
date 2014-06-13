@@ -49,19 +49,20 @@ struct Damping
      * @param thickness ring thickness
      * @param alpha thickness of damping zone
      */
-    Damping( double R_0, double a, double b, double alpha): R_0(R_0), a_(a), b_(b), alpha_(alpha) {
+    Damping( double R_0, double a, double b, double alpha, double amp): R_0(R_0), a_(a), b_(b), alpha_(alpha), amp_(amp) {
     assert( a > b);}
     double operator( )(double x, double y, double z)
     {
         double r = sqrt( (x-R_0)*(x-R_0)+ y*y);
-        //if( r > a_) return 0.;
-        //if( r < b_) return 0.; 
-        //return 1. - exp( -( r-a_)*(r-a_)/2./alpha_/alpha_)- exp( -(r-b_)*(r-b_)/2./alpha_/alpha_);
         if( r > a_) return 0.;
+        if( r < (a_-3.*alpha_)) return 1.; 
         return 1. - exp( -( r-a_)*(r-a_)/2./alpha_/alpha_);
+        //if( r > a_) return amp_;
+        //if( r < (a_ - 3.*alpha_)) return 0.;
+        //return amp_*exp( -(r-a_)*(r-a_)/2./alpha_/alpha_);
     }
   private:
-    double R_0, a_, b_, alpha_;
+    double R_0, a_, b_, alpha_, amp_;
 };
 
 

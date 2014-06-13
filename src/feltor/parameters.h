@@ -12,7 +12,7 @@ struct Parameters
     double eps_pol, eps_gamma, eps_time;
 
     double a, b, R_0, I_0; 
-    double damping;
+    double damping_width, damping_strength;
     double eps_hat;
 
     double lnn_inner;
@@ -68,8 +68,9 @@ struct Parameters
             m_par = v[23];
             itstp = v[24];
             maxout = v[25];
-            damping = v[26];
-            amp_source = v[27];
+            damping_width    = v[26];
+            damping_strength = v[27];
+            amp_source = v[28];
         }
     }
     /**

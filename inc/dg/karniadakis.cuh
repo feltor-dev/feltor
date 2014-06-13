@@ -177,11 +177,16 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
         u_[i-1].swap( u_[i]);
     }
     //compute implicit part
-    blas1::axpby( 2., u_[1], -1.,  u_[2], u_[0]); //extrapolate previous solutions
+    double alpha[2] = {2., -1.};
+    //double alpha[2] = {1., 0.};
+    blas1::axpby( alpha[0], u_[1], -alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
     blas2::symv( diff.weights(), u, u);
 #ifdef DG_BENCHMARK
+    Timer t;
+    t.tic(); 
     unsigned number = pcg( implicit, u_[0], u, diff.precond(), eps_);
-    std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<"\n";
+    t.toc();
+    std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<t.diff()<<"s\n";
 #else
     pcg( implicit, u_[0], u, diff.precond(), eps_);
 #endif

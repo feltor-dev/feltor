@@ -218,7 +218,7 @@ struct Invert
      */
     Invert(const container& copyable, unsigned max_iter, double eps): 
         eps_(eps),
-        phi1( copyable), phi2(phi1), cg( copyable, max_iter) { }
+        phi0( copyable), phi1( copyable), phi2(phi1), cg( copyable, max_iter) { }
     /**
      * @brief Solve linear problem
      *
@@ -260,8 +260,13 @@ struct Invert
     template< class SymmetricOp, class Weights, class Preconditioner >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const Weights& w, const Preconditioner& p )
     {
+        //double alpha[3] = { 3., -3., 1.};
+        //double alpha[3] = { 2., -1., 0.};
+        double alpha[3] = { 1., 0., 0.};
         assert( &rho != &phi);
-        blas1::axpby( 2., phi1, -1.,  phi2, phi);
+        blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi);
+        blas1::axpby( alpha[2], phi2, 1., phi);
+        //blas1::axpby( 2., phi1, -1.,  phi2, phi);
         dg::blas2::symv( w, rho, phi2);
 #ifdef DG_BENCHMARK
     Timer t;
@@ -274,7 +279,9 @@ struct Invert
     std::cout<< "took \t"<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
         phi1.swap( phi2);
-        blas1::axpby( 1., phi, 0, phi1);
+        phi0.swap( phi1);
+        
+        blas1::axpby( 1., phi, 0, phi0);
         return number;
     }
 
@@ -292,7 +299,7 @@ struct Invert
     unsigned get_max() const {return cg.get_max();}
   private:
     double eps_;
-    container phi1, phi2;
+    container phi0, phi1, phi2;
     dg::CG< container > cg;
 };
 
