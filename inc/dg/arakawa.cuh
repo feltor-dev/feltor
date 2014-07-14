@@ -36,7 +36,8 @@ struct ArakawaX
      *
      * @param g The 2D grid
      */
-    ArakawaX( const Grid2d<value_type>& g);
+    template< class Grid>
+    ArakawaX( const Grid& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -44,13 +45,14 @@ struct ArakawaX
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    ArakawaX( const Grid2d<value_type>& g, bc bcx, bc bcy);
+    template< class Grid>
+    ArakawaX( const Grid& g, bc bcx, bc bcy);
     /**
      * @brief Create Arakawa on a grid
      *
      * @param g The 3D grid
      */
-    ArakawaX( const Grid3d<value_type>& g);
+    //ArakawaX( const Grid3d<value_type>& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -58,7 +60,7 @@ struct ArakawaX
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    ArakawaX( const Grid3d<value_type>& g, bc bcx, bc bcy);
+    //ArakawaX( const Grid3d<value_type>& g, bc bcx, bc bcy);
     //ArakawaX( unsigned Nx, unsigned Ny, double hx, double hy, int bcx, int bcy); //deprecated
 
     /**
@@ -143,29 +145,31 @@ struct ArakawaX
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
 template< class container>
-ArakawaX<container>::ArakawaX( const Grid2d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class Grid>
+ArakawaX<container>::ArakawaX( const Grid& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
 template< class container>
-ArakawaX<container>::ArakawaX( const Grid2d<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+template< class Grid>
+ArakawaX<container>::ArakawaX( const Grid& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);
 }
-template< class container>
-ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
-{
-    bdxf = dg::create::dx( g, g.bcx(), XSPACE);
-    bdyf = dg::create::dy( g, g.bcy(), XSPACE);
-}
-template< class container>
-ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
-{
-    bdxf = dg::create::dx( g, bcx, XSPACE);
-    bdyf = dg::create::dy( g, bcy, XSPACE);
-}
+//template< class container>
+//ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+//{
+//    bdxf = dg::create::dx( g, g.bcx(), XSPACE);
+//    bdyf = dg::create::dy( g, g.bcy(), XSPACE);
+//}
+//template< class container>
+//ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+//{
+//    bdxf = dg::create::dx( g, bcx, XSPACE);
+//    bdyf = dg::create::dy( g, bcy, XSPACE);
+//}
 
 template< class container>
 void ArakawaX< container>::operator()( const container& lhs, const container& rhs, container& result)
