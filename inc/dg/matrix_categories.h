@@ -13,6 +13,10 @@ struct ThrustMatrixTag{};
 
 struct SelfMadeMatrixTag {};
 
+struct MPIMatrixTag{};
+
+struct MPIPreconTag{};
+
 }//namespace dg
 
 #endif //_DG_MATRIX_CATEGORIES_

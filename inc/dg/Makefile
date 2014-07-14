@@ -73,7 +73,7 @@ blas%_t: blas%_t.cu blas%.h
 	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu %.cuh 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 
 %2d_b: %2d_b.cu %.cuh
