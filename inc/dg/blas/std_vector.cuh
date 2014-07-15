@@ -35,7 +35,7 @@ inline void doAxpby( typename Vector::value_type alpha,
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        axpby( alpha, x[i], beta, y[i]);
+        doAxpby( alpha, x[i], beta, y[i], typename VectorTraits<Vector>::vector_category());
         
 }
 
@@ -52,7 +52,7 @@ inline void doAxpby( typename Vector::value_type alpha,
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        axpby( alpha, x[i], beta, y[i], z[i]);
+        doAxpby( alpha, x[i], beta, y[i], z[i], typename VectorTraits<Vector>::vector_category());
         
 }
 
@@ -65,12 +65,12 @@ inline void doScal( std::vector<Vector>& x,
     assert( !x.empty());
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        scal( x[i], alpha);
+        doScal( x[i], alpha, typename VectorTraits<Vector>::vector_category());
         
 }
 
 template< class Vector>
-inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, StdVectorTag)
+inline void doPointwiseDot( const std::vector<Vector>& x1, const std::vector<Vector>& x2, std::vector<Vector>& y, StdVectorTag)
 {
 #ifdef DG_DEBUG
     assert( !x1.empty());
@@ -78,11 +78,11 @@ inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, StdVe
     assert( x1.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x1.size(); i++)
-        pointwiseDot( x1[i], x2[i], y[i] );
+        doPointwiseDot( x1[i], x2[i], y[i], typename VectorTraits<Vector>::vector_category() );
 }
 
 template< class Vector>
-inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, StdVectorTag)
+inline void doPointwiseDivide( const std::vector<Vector>& x1, const std::vector<Vector>& x2, std::vector<Vector>& y, StdVectorTag)
 {
 #ifdef DG_DEBUG
     assert( !x1.empty());
@@ -90,7 +90,7 @@ inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, St
     assert( x1.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x1.size(); i++)
-        pointwiseDivide( x1[i], x2[i], y[i] );
+        doPointwiseDivide( x1[i], x2[i], y[i], typename VectorTraits<Vector>::vector_category());
 }
 
 template< class Vector>
@@ -102,7 +102,7 @@ inline typename VectorTraits<Vector>::value_type doDot( const std::vector<Vector
 #endif //DG_DEBUG
     typename VectorTraits<Vector>::value_type sum =0;
     for( unsigned i=0; i<x1.size(); i++)
-        sum += dot( x1[i], x2[i] );
+        sum += doDot( x1[i], x2[i], typename VectorTraits<Vector>::vector_category());
     return sum;
 }
 

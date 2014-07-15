@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
             DVec rhs = evaluate ( right,grid);
             const DVec sol = evaluate( jacobian, grid );
             DVec eins = evaluate( one, grid );
-            ArakawaX<DVec> arakawa( grid);
+            ArakawaX<DMatrix, DVec> arakawa( grid);
             arakawa( lhs, rhs, jac);
 
             cout << Nx <<" ";

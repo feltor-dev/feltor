@@ -24,7 +24,9 @@ inline void doSymv(
     assert( m.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        symv( m[i], x[i], y[i]);
+        doSymv( m[i], x[i], y[i], 
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
         
 }
 template< class Matrix, class Vector>
@@ -40,7 +42,9 @@ inline void doSymv(
     assert( m.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        symv( *(m[i]), x[i], y[i]);
+        doSymv( *(m[i]), x[i], y[i],
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
         
 }
 
@@ -59,7 +63,9 @@ inline void doSymv(
     assert( m.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        symv( alpha, m[i], x[i], beta, y[i]);
+        doSymv( alpha, m[i], x[i], beta, y[i],
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
 }
 
 template< class Matrix, class Vector>
@@ -77,7 +83,9 @@ inline void doSymv(
     assert( m.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        symv( alpha, *(m[i]), x[i], beta, y[i]);
+        doSymv( alpha, *(m[i]), x[i], beta, y[i],
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
 }
 
 template< class Matrix, class Vector>
@@ -94,7 +102,9 @@ inline typename Vector::value_type  doDot(
 #endif //DG_DEBUG
     typename Vector::value_type sum = 0;
     for( unsigned i=0; i<x.size(); i++)
-        sum += dot( x[i], m[i], y[i]);
+        sum += doDot( x[i], m[i], y[i],
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
     return sum;
 }
 template< class Matrix, class Vector>
@@ -109,7 +119,9 @@ inline typename VectorTraits<Vector>::value_type  doDot(
 #endif //DG_DEBUG
     typename Vector::value_type sum = 0;
     for( unsigned i=0; i<y.size(); i++)
-        sum += dot( y[i], m[i], y[i]);
+        sum += doDot( y[i], m[i], y[i],
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
     return sum;
 }
 //POINTER TAGS
@@ -127,7 +139,9 @@ inline typename Vector::value_type  doDot(
 #endif //DG_DEBUG
     typename Vector::value_type sum = 0;
     for( unsigned i=0; i<x.size(); i++)
-        sum += dot( x[i], *m[i], y[i]);
+        sum += doDot( x[i], *m[i], y[i],
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
     return sum;
 }
 template< class Matrix, class Vector>
@@ -142,7 +156,9 @@ inline typename VectorTraits<Vector>::value_type  doDot(
 #endif //DG_DEBUG
     typename Vector::value_type sum = 0;
     for( unsigned i=0; i<y.size(); i++)
-        sum += dot( y[i], *m[i], y[i]);
+        sum += doDot( y[i], *m[i], y[i],
+                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
     return sum;
 }
 

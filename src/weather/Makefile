@@ -10,7 +10,7 @@ CFLAGS+= -Xcompiler -fopenmp
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 OPT	   = -O2
 else
-CC = g++
+CC = clang
 CFLAGS = -Wall -fopenmp -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 OPT	   = -O3
@@ -48,4 +48,4 @@ convection: convection.cu convection.cuh
 .PHONY: clean
 
 clean:
-	rm -f toeflR toefl_hpc
+	rm -f convection

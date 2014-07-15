@@ -94,7 +94,7 @@ int main()
     cout << "Timestep                    " << dt << endl;
 
     //create initial vector
-    const Grid<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR);
+    const Grid2d<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR);
     dg::Gaussian gaussian( 1., ly/2., .1, .1, 1);
     dg::DVec theta = dg::evaluate ( gaussian, grid);
     vector<dg::DVec> y0(2, theta), y1(y0);
