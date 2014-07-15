@@ -1,8 +1,9 @@
-#ifndef _DG_GRID_CUH_
-#define _DG_GRID_CUH_
+#ifndef _DG_GRID_
+#define _DG_GRID_
 
 #include <cassert>
 #include "dlt.cuh"
+#include "enums.h"
 
 /*! @file 
   
@@ -12,21 +13,6 @@
 
 namespace dg{
 
-
-    //future plans: grid object should be the one which computes node coordinates (as vec2d?)
-
-/**
- * @brief Switch between boundary conditions
- * 
- * @ingroup creation
- */
-enum bc{ 
-    PER = 0, //!< periodic boundaries
-    DIR = 1, //!< homogeneous dirichlet boundaries
-    DIR_NEU = 2, //!< Dirichlet on left, Neumann on right boundary
-    NEU_DIR = 3, //!< Neumann on left, Dirichlet on right boundary
-    NEU = 4 //!< Neumann on both boundaries
-};
 
 ///@addtogroup grid
 ///@{
@@ -124,6 +110,7 @@ struct Grid2d
     unsigned Ny() const {return Ny_;}
     bc bcx() const {return bcx_;}
     bc bcy() const {return bcy_;}
+    Grid2d<double> local_grid() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
     const DLT<T>& dlt() const{return dlt_;}
     /**
      * @brief The total number of points
@@ -169,6 +156,7 @@ struct Grid2d
     bc bcx_, bcy_;
     DLT<T> dlt_;
 };
+
 /**
  * @brief A 3D grid class 
  *
@@ -285,6 +273,7 @@ struct Grid3d
     DLT<T> dlt_;
 };
 
+
 ///@}
 }// namespace dg
-#endif // _DG_GRID_CUH_
+#endif // _DG_GRID_

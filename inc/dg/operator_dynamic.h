@@ -83,6 +83,8 @@ class Operator
     unsigned size() const { return n_;}
     void resize( unsigned m) { data_.resize( m*m);}
 
+    const std::vector<double>& data() const {return data_;}
+
     /**
     * @brief Transposition
     *

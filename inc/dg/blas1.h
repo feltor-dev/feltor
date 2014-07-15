@@ -3,6 +3,9 @@
 #include "vector_traits.h"
 #include "blas/thrust_vector.cuh"
 #include "blas/std_vector.cuh"
+#ifdef MPI_BACKEND
+#include "blas/mpi_vector.h"
+#endif
 
 namespace dg{
 

@@ -6,6 +6,9 @@
 #include "blas/selfmade.cuh"
 #include "vector_traits.h"
 #include "matrix_traits.h"
+#ifdef MPI_BACKEND
+#include "blas/mpi_matrix.h"
+#endif //MPI_BACKEND
 
 namespace dg{
 /*! @brief BLAS Level 2 routines 

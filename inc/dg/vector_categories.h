@@ -16,6 +16,9 @@ struct StdVectorTag {};
 //struct StdVectorPointerTag {};
 
 //struct DeviceVectorTag : public ThrustVectorTag {};
+//
+
+struct MPIVectorTag{};
 
 
 }//namespace dg

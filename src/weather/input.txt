@@ -6,7 +6,7 @@
 2) Nx                    = 100
 3) Ny                    =  30
 4) order of timestep     =   3
-5) timestep              =  2e-6 
+5) timestep              =  1e-6 
 -----------------------------------------------------------
 6) accuracy laplace      =  1e-2
 7) lx (ly is always 1)   =   3 

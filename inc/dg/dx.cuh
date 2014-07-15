@@ -7,6 +7,7 @@
 #include "functions.h"
 #include "operator_dynamic.h"
 #include "creation.cuh"
+#include "enums.h"
 
 /*! @file 
   
@@ -14,23 +15,6 @@
   */
 namespace dg
 {
-/**
- * @brief Switch between normalisations
- *
- * @ingroup creation
- */
-enum norm{
-    normed,   //!< indicates that output is properly normalized
-    not_normed //!< indicates that normalisation weights (either T or V) are missing from output
-};
-/**
- * @brief Direction of a discrete derivative
- */
-enum direction{
-    forward, //!< forward derivative
-    backward, //!< backward derivative
-    symmetric //!< up-down symmetrie
-};
 namespace create
 {
 ///@addtogroup lowlevel
