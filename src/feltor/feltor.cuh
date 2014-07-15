@@ -21,7 +21,7 @@ struct Rolkar
     Rolkar( const dg::Grid3d<double>& g, Parameters p):
         p(p),
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
-        w3d( 4, &w3d_), v3d( 4, &v3d_), 
+        //w3d( 4, &w3d_), v3d( 4, &v3d_), 
         temp( g.size()),
         pupil_( dg::evaluate( Pupil(p.R_0, p.a, p.b), g))
     {
@@ -55,8 +55,10 @@ struct Rolkar
             dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    const std::vector<const container*>& weights(){return w3d;}
-    const std::vector<const container*>& precond(){return v3d;}
+    //const std::vector<const container*>& weights(){return w3d;}
+    //const std::vector<const container*>& precond(){return v3d;}
+    const container& weights(){return w3d_;}
+    const container& precond(){return v3d_;}
     const container& iris(){return pupil_;}
 
   private:
@@ -139,7 +141,7 @@ struct Feltor
     //matrices and solvers
     Matrix A; 
     dg::DZ<eule::Field, container> dz;
-    dg::ArakawaX< container>    arakawa; 
+    dg::ArakawaX< dg::DMatrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     dg::Polarisation2dX< container, dg::DMatrix > pol; //note the host vector
     dg::Invert<container>       invert_pol;

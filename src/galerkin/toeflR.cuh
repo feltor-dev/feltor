@@ -21,7 +21,7 @@ namespace dg
 template<class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):nu_(nu), global(global), w2d( 2, dg::create::w2d(g)), v2d( 2, dg::create::v2d(g)), temp( g.size()), expx(temp){
+    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):nu_(nu), global(global), w2d( dg::create::w2d(g)), v2d( dg::create::v2d(g)), temp( g.size()), expx(temp){
         LaplacianM_perp = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
@@ -45,8 +45,8 @@ struct Diffusion
         }
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    const std::vector<container>& weights(){return w2d;}
-    const std::vector<container>& precond(){return v2d;}
+    const container& weights(){return w2d;}
+    const container& precond(){return v2d;}
 
   private:
     void divide( const container& zaehler, const container& nenner, container& result)
@@ -56,18 +56,9 @@ struct Diffusion
     }
     double nu_;
     bool global;
-    const std::vector<container> w2d, v2d;
+    const container w2d, v2d;
     container temp, expx;
     dg::DMatrix LaplacianM_perp;
-};
-struct Fail : public std::exception
-{
-
-    Fail( double eps): eps( eps) {}
-    double epsilon() const { return eps;}
-    char const* what() const throw(){ return "Failed to converge";}
-  private:
-    double eps;
 };
 
 template< class container=thrust::device_vector<double> >
@@ -131,7 +122,7 @@ struct ToeflR
      *
      * @return Gamma operator
      */
-    const Gamma<Matrix, container >&  gamma() const {return gamma1;}
+    const Helmholtz<Matrix, container >&  gamma() const {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -187,8 +178,8 @@ struct ToeflR
     //matrices and solvers
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
-    Gamma< Matrix, container > gamma1;
-    ArakawaX< container> arakawa; 
+    Helmholtz< Matrix, container > gamma1;
+    ArakawaX< Matrix, container> arakawa; 
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
 
@@ -207,7 +198,7 @@ ToeflR< container>::ToeflR( const Grid2d<value_type>& grid, double kappa, double
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  laplaceM, w2d, -0.5*tau),
+    gamma1(  laplaceM, w2d,v2d, -0.5*tau),
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 

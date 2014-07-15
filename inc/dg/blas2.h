@@ -1,11 +1,12 @@
 #pragma once 
 
-#include "blas/cusp_matrix.cuh"
-#include "blas/thrust_matrix.cuh"
-#include "blas/std_matrix.cuh"
-#include "blas/selfmade.cuh"
 #include "vector_traits.h"
 #include "matrix_traits.h"
+#include "matrix_traits_thrust.h"
+#include "blas/thrust_matrix.cuh"
+#include "blas/std_matrix.cuh"
+#include "blas/cusp_matrix.cuh"
+#include "blas/selfmade.cuh"
 #ifdef MPI_BACKEND
 #include "blas/mpi_matrix.h"
 #endif //MPI_BACKEND

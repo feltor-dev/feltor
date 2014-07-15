@@ -11,7 +11,7 @@ template< class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double L, double P): L_(L), P_(P),
-        w2d(3, dg::create::w2d( g)), v2d(3, dg::create::v2d(g)), temp( g.size()) { 
+        w2d(dg::create::w2d( g)), v2d(dg::create::v2d(g)), temp( g.size()) { 
             LaplacianM_dir = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::normed, dg::XSPACE, dg::symmetric);
             LaplacianM_neu = dg::create::laplacianM( g, dg::PER, dg::NEU, dg::normed, dg::XSPACE, dg::symmetric);
 
@@ -31,11 +31,11 @@ struct Diffusion
     //dg::blas2::gemv( laplaceM_dir, y[2], temp);
     //dg::blas1::axpby( -P_, temp, 1.,yp[2]);
     }
-    const std::vector<container>& weights(){return w2d;}
-    const std::vector<container>& precond(){return v2d;}
+    const container& weights(){return w2d;}
+    const container& precond(){return v2d;}
   private:
     double L_, P_;
-    const std::vector<container> w2d, v2d;
+    const container w2d, v2d;
     container temp;
     dg::DMatrix LaplacianM_dir;
     dg::DMatrix LaplacianM_neu;
