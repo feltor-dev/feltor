@@ -17,16 +17,6 @@
   */
 namespace dg{
 
-///@addtogroup creation
-///@{
-/**
- * @brief Switch between x-space and l-space
- */
-enum space {
-    XSPACE, //!< indicates, that the given matrix operates on x-space values
-    LSPACE  //!< indicates, that the given matrix operates on l-space values
-};
-///@}
 
 /**
  * @brief Contains functions used for matrix creation
@@ -48,15 +38,34 @@ namespace create{
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm no = normed, direction dir = symmetric)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    Matrix dx = create::dx_symm<T>(g.n(), g.Nx(), g.hx(), bcx);
+    Matrix dx;
+    if( dir == symmetric)
+        dx = create::dx_symm<T>(g.n(), g.Nx(), g.hx(), bcx);
+    else if (dir == forward)
+        dx = create::dx_plus_mt<T>(g.n(), g.Nx(), g.hx(), bcx);
+    else if (dir == backward)
+        dx = create::dx_minus_mt<T>(g.n(), g.Nx(), g.hx(), bcx);
     Matrix bdxf( dx);
-    if( s == XSPACE)
-        bdxf = sandwich<T>( g.dlt().backward(), dx, g.dlt().forward());
 
-    return dgtensor<T>( g.n(), tensor<T>( g.Ny(), delta(g.n()) ), bdxf );
+    //norm 1 x b*dx*f or w x w*b*dx*f
+    Operator<T> backward=g.dlt().backward();
+    Operator<T> normx(g.n(), 0.), normy(g.n(), 0.);
+    if( no == not_normed)
+    {
+        for( unsigned i=0; i<g.n(); i++)
+            normx( i,i) = normy( i,i) = g.dlt().weights()[i];
+        normx *= g.hx()/2.;
+        normy *= g.hy()/2.; // normalisation because F is invariant
+    }
+    else
+    {
+        normx = normy = create::delta(g.n());
+    }
+    bdxf = sandwich<T>( normx*backward, dx, g.dlt().forward());
+    return dgtensor<T>( g.n(), tensor<T>( g.Ny(), normy ), bdxf );
 }
 /**
  * @brief Create 2d derivative in x-direction
@@ -68,7 +77,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, spac
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, space s = XSPACE) { return dx( g, g.bcx(), s);}
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, norm no = normed, direction dir = symmetric) { return dx( g, g.bcx(), no, dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -81,15 +90,34 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, space s = XS
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, norm no = normed, direction dir = symmetric)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    Matrix dy = create::dx_symm<T>( g.n(), g.Ny(), g.hy(), bcy);
-    Matrix bdyf_(dy);
-    if( s == XSPACE)
-        bdyf_ = sandwich<T>(g.dlt().backward(), dy, g.dlt().forward());
+    Matrix dy;
+    if( dir == symmetric)
+        dy = create::dx_symm<T>(g.n(), g.Ny(), g.hy(), bcy);
+    else if (dir == forward)
+        dy = create::dx_plus_mt<T>(g.n(), g.Ny(), g.hy(), bcy);
+    else if (dir == backward)
+        dy = create::dx_minus_mt<T>(g.n(), g.Ny(), g.hy(), bcy);
+    Matrix bdyf(dy);
 
-    return dgtensor<T>( g.n(), bdyf_, tensor<T>( g.Nx(), delta(g.n())));
+    //norm b*dy*f x 1 or w*b*dy*f x 1
+    Operator<T> backward=g.dlt().backward();
+    Operator<T> normx(g.n(), 0.), normy(g.n(), 0.);
+    if( no == not_normed)
+    {
+        for( unsigned i=0; i<g.n(); i++)
+            normx( i,i) = normy( i,i) = g.dlt().weights()[i];
+        normx *= g.hx()/2.;
+        normy *= g.hy()/2.; // normalisation because F is invariant
+    }
+    else
+    {
+        normx = normy = create::delta(g.n());
+    }
+    bdyf = sandwich<T>( normy*backward, dy, g.dlt().forward());
+    return dgtensor<T>( g.n(), bdyf, tensor<T>( g.Nx(), normx ) );
 }
 /**
  * @brief Create 2d derivative in y-direction
@@ -101,7 +129,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, spac
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, space s = XSPACE){ return dy( g, g.bcy(), s);}
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, norm no = normed, direction dir = symmetric){ return dy( g, g.bcy(), no, dir);}
 
 //the behaviour of CG is completely the same in xspace as in lspace
 /**
@@ -120,7 +148,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, space s = XS
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE, direction dir = forward)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc bcx, bc bcy, norm no = normed, direction dir = forward)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
 
@@ -132,29 +160,21 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
 
     Matrix flxf(lx), flyf(ly);
     //sandwich with correctly normalized matrices
-    if( s == XSPACE)
-    {
-        Operator<T> forward1d( g.dlt().forward( ));
-        Operator<T> backward1d( g.dlt().backward( ));
-        Operator<T> leftx( backward1d ), lefty( backward1d);
-        if( no == not_normed)
-            leftx = lefty = forward1d.transpose();
+    Operator<T> forward1d( g.dlt().forward( ));
+    Operator<T> backward1d( g.dlt().backward( ));
+    Operator<T> leftx( backward1d ), lefty( backward1d);
+    if( no == not_normed)
+        leftx = lefty = forward1d.transpose();
 
-        flxf = sandwich<T>( leftx, lx, forward1d);
-        flyf = sandwich<T>( lefty, ly, forward1d);
-    }
+    flxf = sandwich<T>( leftx, lx, forward1d);
+    flyf = sandwich<T>( lefty, ly, forward1d);
     Operator<T> normx(g.n(), 0.), normy( g.n(), 0.);
 
     //generate norm (w1d or s1d)
     if( no == not_normed) 
     {
-        if( s==XSPACE)
-        {
-            for( unsigned i=0; i<g.n(); i++)
-                normx( i,i) = normy( i,i) = g.dlt().weights()[i];
-        } else {
-            normx = normy = create::pipj( g.n());
-        }
+        for( unsigned i=0; i<g.n(); i++)
+            normx( i,i) = normy( i,i) = g.dlt().weights()[i];
         normx *= g.hx()/2.;
         normy *= g.hy()/2.;
     }
@@ -184,12 +204,54 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm no = normed, space s = XSPACE, direction dir = forward)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm no = normed, direction dir = forward)
 {
-    return laplacianM( g, g.bcx(), g.bcy(), no, s, dir);
+    return laplacianM( g, g.bcx(), g.bcy(), no, dir);
+}
+
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid2d<T>& g, bc bcx, bc bcy)
+{
+    const unsigned& n = g.n();
+    Operator<T> normx(n, 0.), normy(n, 0.);
+    for( unsigned i=0; i<n; i++)
+        normx( i,i) = normy( i,i) = g.dlt().weights()[i];
+    normx *= g.hx()/2.;
+    normy *= g.hy()/2.; // normalisation because F is invariant
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> HMatrix;
+    HMatrix jumpx = create::jump_ot<T>( n, g.Nx(), bcx); //jump without t!
+    Operator<T> forward1d( g.dlt().forward( ));
+    jumpx = sandwich( forward1d.transpose(), jumpx, forward1d);
+    jumpx = dg::dgtensor( n, tensor( g.Ny(), normy), jumpx); //proper normalisation
+
+    HMatrix jumpy = create::jump_ot<T>( n, g.Ny(), bcy); //without jump cg is unstable
+    jumpy = sandwich( forward1d.transpose(), jumpy, forward1d);
+    jumpy = dg::dgtensor(n, jumpy, tensor( g.Nx(), normx));
+    HMatrix jump_;
+    cusp::add( jumpx, jumpy, jump_); //does not respect sorting!!!
+    jump_.sort_by_row_and_column();
+    return jump_;
+}
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid2d<T>& g)
+{
+    return jump( g, g.bcx(), g.bcy());
 }
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid3d<T>& g, bc bcx, bc bcy)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
+    Matrix jump_ = create::jump( g2d, bcx, bcy);
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), jump); //w*hz/2 = hz
+}
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid3d<T>& g)
+{
+    return jump( g, g.bcx(), g.bcy());
+}
 /**
  * @brief Create 3d derivative in x-direction
  *
@@ -201,13 +263,16 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, norm no = normed, direction dir = symmetric)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
-    Matrix dx = create::dx( g2d, bcx, s);
+    Matrix dx = create::dx( g2d, bcx, dir, no);
 
-    return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), dx );
+    if( no == normed)
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), dx );
+    else 
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)) , dx); //w*hz/2 = hz
 }
 
 /**
@@ -220,7 +285,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, spac
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, space s = XSPACE) { return dx( g, g.bcx(), s);}
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, norm no = normed, direction dir = symmetric) { return dx( g, g.bcx(), no, dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
@@ -233,14 +298,16 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, space s = XS
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, norm no = normed, direction dir = symmetric)
 {
-
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
-    Matrix dy = create::dy( g2d, bcy, s);
+    Matrix dy = create::dy( g2d, bcy, dir, no);
 
-    return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), dy);
+    if( no == normed)
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), dx );
+    else 
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)) , dx); //w*hz/2 = hz
 }
 /**
  * @brief Create 3d derivative in y-direction
@@ -252,7 +319,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, spac
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, space s = XSPACE){ return dy( g, g.bcy(), s);}
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, norm no = normed, direction dir = symmetric){ return dy( g, g.bcy(),no, dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
@@ -305,13 +372,15 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( 
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, bc bcx, bc bcy, norm no = normed, space s = XSPACE, direction dir = forward)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, bc bcx, bc bcy, norm no = normed, direction dir = forward)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
-    Matrix laplace2d = create::laplacianM( g2d, bcx, bcy, no, s, dir);
-
-    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), laplace2d);
+    Matrix laplace2d = create::laplacianM( g2d, bcx, bcy, no, dir);
+    if( no == normed)
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), laplace2d );
+    else 
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), laplace2d); //w*hz/2 = hz
 
 }
 
@@ -329,9 +398,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g,
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, norm no = normed, space s = XSPACE, direction dir = forward)
+cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, norm no = normed, direction dir = forward)
 {
-    return laplacianM_perp( g, g.bcx(), g.bcy(), no, s, dir);
+    return laplacianM_perp( g, g.bcx(), g.bcy(), no, dir);
 }
 
 /**

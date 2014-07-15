@@ -103,10 +103,11 @@ int main()
     Vector xd =    dg::evaluate( initial, grid);
     Vector bd =    dg::evaluate( rhs, grid);
     Vector chid =  dg::evaluate( pol, grid);
-    pol_device.set_chi( chid);
+    dg::Polarisation<Matrix, dg::DVec, dg::DVec> pol_device_p( grid, xd);
+    pol_device_p.set_chi( chid);
     dg::Invert< dg::DVec> invert( xd, n*n*Nx*Ny, eps);
     t.tic();
-    std::cout << "Number of pcg iterations "<< invert( pol_device, xd, bd, w2d, v2d)<<endl;
+    std::cout << "Number of pcg iterations "<< invert( pol_device_p, xd, bd)<<endl;
     t.toc();
     std::cout << "For a precision of "<< eps<<endl;
     std::cout << "Took "<<t.diff()<<"s\n";
@@ -124,7 +125,7 @@ int main()
     std::cout << "L2 Norm2 of Error is " << err << endl;
     double norm = dg::blas2::dot( w2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
-    Matrix DX = dg::create::dx( grid, dg::XSPACE);
+    Matrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);

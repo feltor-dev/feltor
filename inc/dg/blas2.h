@@ -92,9 +92,10 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
  * @param x A Vector different from y (except in the case where m is diagonal)
  * @param y contains solution on output
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
+ * @attention Due to the SelfMadeMatrixTag and MPI_Vectors, m and x cannot be declared const
  */
 template< class Matrix, class Vector>
-inline void symv( const Matrix& m, 
+inline void symv( Matrix& m, 
                   const Vector& x, 
                   Vector& y)
 {
@@ -104,7 +105,7 @@ inline void symv( const Matrix& m,
 }
 ///@cond
 template< class Matrix, class Vector>
-inline void mv( const Matrix& m, 
+inline void mv(   Matrix& m, 
                   const Vector& x, 
                   Vector& y)
 {
@@ -123,7 +124,7 @@ inline void mv( const Matrix& m,
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
 template< class Matrix, class Vector>
-inline void gemv( const Matrix& m, 
+inline void gemv( Matrix& m, 
                   const Vector& x, 
                   Vector& y)
 {

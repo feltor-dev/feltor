@@ -148,15 +148,15 @@ template< class Matrix, class container>
 template< class Grid>
 ArakawaX<Matrix, container>::ArakawaX( const Grid& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
-    bdxf = dg::create::dx( g, g.bcx(), XSPACE);
-    bdyf = dg::create::dy( g, g.bcy(), XSPACE);
+    bdxf = dg::create::dx( g, g.bcx());
+    bdyf = dg::create::dy( g, g.bcy());
 }
 template< class Matrix, class container>
 template< class Grid>
 ArakawaX<Matrix, container>::ArakawaX( const Grid& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
-    bdxf = dg::create::dx( g, bcx, XSPACE);
-    bdyf = dg::create::dy( g, bcy, XSPACE);
+    bdxf = dg::create::dx( g, bcx);
+    bdyf = dg::create::dy( g, bcy);
 }
 //template< class container>
 //ArakawaX<container>::ArakawaX( const Grid3d<value_type>& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)

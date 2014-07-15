@@ -14,8 +14,8 @@ namespace detail
 
 template< class Matrix, class Vector>
 inline void doSymv( 
-              const Matrix& m,
-              const std::vector<Vector>& x, 
+              Matrix& m,
+              std::vector<Vector>& x, 
               std::vector<Vector>& y, 
               ThrustMatrixTag,
               StdVectorTag)
@@ -32,8 +32,8 @@ inline void doSymv(
 }
 template< class Matrix, class Vector>
 inline void doSymv( 
-              const std::vector<Matrix*>& m,
-              const std::vector<Vector>& x, 
+              std::vector<Matrix*>& m,
+              std::vector<Vector>& x, 
               std::vector<Vector>& y, 
               StdMatrixPointerTag,
               StdVectorTag)

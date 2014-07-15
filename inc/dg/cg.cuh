@@ -72,7 +72,7 @@ class CG
      * @return Number of iterations used to achieve desired precision
      */
     template< class Matrix, class Preconditioner >
-    unsigned operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P , value_type eps = 1e-12);
+    unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P , value_type eps = 1e-12);
   private:
     Vector r, p, ap; 
     unsigned max_iter;
@@ -96,7 +96,7 @@ class CG
 */
 template< class Vector>
 template< class Matrix, class Preconditioner>
-unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, value_type eps)
+unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, value_type eps)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
@@ -152,7 +152,7 @@ unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, c
  * @return number of iterations
  */
 template< class Matrix, class Vector, class Preconditioner>
-unsigned cg( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typename VectorTraits<Vector>::value_type eps, unsigned max_iter)
+unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typename VectorTraits<Vector>::value_type eps, unsigned max_iter)
 {
     typedef typename VectorTraits<Vector>::value_type value_type;
     value_type nrmb = sqrt( blas2::dot( P, b));
@@ -258,7 +258,7 @@ struct Invert
      * @return number of iterations used 
      */
     template< class SymmetricOp, class Weights, class Preconditioner >
-    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const Weights& w, const Preconditioner& p )
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, Weights& w, Preconditioner& p )
     {
         //double alpha[3] = { 3., -3., 1.};
         //double alpha[3] = { 2., -1., 0.};

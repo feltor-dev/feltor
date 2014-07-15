@@ -228,6 +228,20 @@ thrust::host_vector<T> v3d( const Grid3d<T>& g)
         v[i] = 1./v[i];
     return v;
 }
+
+template <class T>
+thrust::host_vector<T> weights( const Grid1d<T>& g){return w1d(g);}
+template <class T>
+thrust::host_vector<T> precond( const Grid1d<T>& g){return v1d(g);}
+template <class T>
+thrust::host_vector<T> weights( const Grid2d<T>& g){return w2d(g);}
+template <class T>
+thrust::host_vector<T> precond( const Grid2d<T>& g){return v2d(g);}
+template <class T>
+thrust::host_vector<T> weights( const Grid3d<T>& g){return w3d(g);}
+template <class T>
+thrust::host_vector<T> precond( const Grid3d<T>& g){return v3d(g);}
+
 ///@cond
 /**
 * @brief create host_vector containing 1d X-space abscissas 

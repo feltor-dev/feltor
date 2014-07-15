@@ -106,7 +106,7 @@ inline void doSymv(
 }
 template< class Matrix, class Vector>
 inline void doSymv(  
-              const Matrix& m, 
+              Matrix& m, 
               const Vector& x,
               Vector& y, 
               ThrustMatrixTag,

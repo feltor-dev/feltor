@@ -32,11 +32,11 @@ namespace dg
 //-matrix multiplication
 ///@cond DEV
 template< class T, class Memory>
-struct Polarisation
+struct Polarisation1d
 {
     typedef cusp::coo_matrix<int, T, Memory> Matrix;
     typedef cusp::array1d<T, Memory> Vector;
-    Polarisation( const Grid1d<T>& g);
+    Polarisation1d( const Grid1d<T>& g);
     Matrix create( const Vector& );
   private:
     typedef cusp::array1d<int, Memory> Array;
@@ -47,7 +47,7 @@ struct Polarisation
 
 };
 template <class T, class Memory>
-Polarisation<T, Memory>::Polarisation( const Grid1d<T>& g): I(g.size()), J(I), xspace( g.size()), n(g.n()), N(g.N())
+Polarisation1d<T, Memory>::Polarisation1d( const Grid1d<T>& g): I(g.size()), J(I), xspace( g.size()), n(g.n()), N(g.N())
 {
     T h = g.h();
     bc bcx = g.bcx();
@@ -69,7 +69,7 @@ Polarisation<T, Memory>::Polarisation( const Grid1d<T>& g): I(g.size()), J(I), x
 }
 
 template< class T, class Memory>
-cusp::coo_matrix<int, T, Memory> Polarisation<T, Memory>::create( const Vector& chi)
+cusp::coo_matrix<int, T, Memory> Polarisation1d<T, Memory>::create( const Vector& chi)
 {
     Matrix laplace, temp;
     cusp::multiply( weights, chi, xspace);
@@ -137,7 +137,7 @@ struct Polarisation2dX
     Polarisation2dX( const Grid3d<value_type>& grid, bc bcx, bc bcy, direction dir = forward);
 
     /**
-     * @brief Create a unnormalized matrix for the 2d polarisation term in XSPACE
+     * @brief Create a unnormalized matrix for the polarisation term
      *
      * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
      * The returned matrix is symmetric with W2D missing from it and ready to use in CG
@@ -146,27 +146,6 @@ struct Polarisation2dX
      * @return matrix containing discretisation of polarisation term using chi 
      */
     Matrix create( const container& chi );
-    void set_chi( const container& chi)
-    {
-        dg::blas1::pointwiseDot( weights_, chi, xchi);
-    }
-    void symv( const container& x, container& y) const
-    {
-        container xx( xchi.size()), temp( xchi.size());
-        dg::blas2::gemv( rightx, x, temp); //R_x*x 
-        dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 
-        dg::blas2::gemv( leftx, temp, xx); //L_x*Chi*R_x*x
-
-        dg::blas2::gemv( righty, x, temp);
-        dg::blas1::pointwiseDot( xchi, temp, temp);
-        dg::blas2::gemv( lefty, temp, y);
-        
-        dg::blas2::gemv( jump, x, temp);
-        dg::blas1::axpby( 1., xx, 1., y, xx); //D_xx + D_yy
-        dg::blas1::axpby( 1., temp, 1., xx, y);
-    }
-    const container& weights()const {return weights_;}
-    const container& precond()const{return veights_;}
   private:
     typedef cusp::array1d<int, MemorySpace> Array;
     typedef cusp::array1d<value_type, MemorySpace> VArray;
@@ -190,7 +169,17 @@ Polarisation2dX< container, Matrix>::Polarisation2dX( const Grid2d<value_type>& 
     veights_( create::v2d(g) ), 
     xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
-    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), g.bcx(), g.bcy(), g.dlt(), dir);
+    //construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), g.bcx(), g.bcy(), g.dlt(), dir);
+    rightx=dg::create::dx( g, normed, backward);
+    righty=dg::create::dy( g, normed, backward);
+    //leftx =dg::create::dx( g, backward, not_normed);
+    //lefty =dg::create::dy( g, backward, not_normed);
+    cusp::transpose( rightx, leftx); 
+    cusp::transpose( righty, lefty); 
+    //create diagonal matrix entries for x_chi_view
+    thrust::sequence( I.begin(), I.end());
+    thrust::sequence( J.begin(), J.end());
+    jump  =dg::create::jump( g);
 }
 template <class container, class Matrix>
 Polarisation2dX<container, Matrix>::Polarisation2dX( const Grid2d<value_type>& g, bc bcx, bc bcy, direction dir):
@@ -199,7 +188,17 @@ Polarisation2dX<container, Matrix>::Polarisation2dX( const Grid2d<value_type>& g
     veights_( create::v2d(g) ),
     xchi_matrix_view( xchi.size(), xchi.size(), xchi.size(), I_view, J_view, xchi_view)
 {
-    construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy, g.dlt(), dir);
+    //construct( g.n(), g.Nx(), g.Ny(), g.hx(), g.hy(), bcx, bcy, g.dlt(), dir);
+    rightx=dg::create::dx( g, bcx, normed, backward);
+    righty=dg::create::dy( g, bcy, normed, backward);
+    //leftx =dg::create::dx( g,bcx,bcy backward, not_normed);
+    //lefty =dg::create::dy( g,bcx,bcy backward, not_normed);
+    cusp::transpose( rightx, leftx); 
+    cusp::transpose( righty, lefty); 
+    //create diagonal matrix entries for x_chi_view
+    thrust::sequence( I.begin(), I.end());
+    thrust::sequence( J.begin(), J.end());
+    jump  =dg::create::jump( g, bcx, bcy);
 }
 template <class container, class Matrix>
 Polarisation2dX< container, Matrix>::Polarisation2dX( const Grid3d<value_type>& g, direction dir):
@@ -308,10 +307,67 @@ Matrix Polarisation2dX<container, Matrix>::create( const container& chi)
    
     return temp1;
 }
+///////////////////////////////////////////////////////////////////////////
+template <class Matrix, class Vector, class Preconditioner>
+class Polarisation
+{
+    public:
+    template< class Grid>
+    Polarisation( const Grid& g, const Vector& copyable): 
+        xchi( copyable), xx(copyable), temp( copyable),
+        weights_(dg::create::weights(g)), precond_(dg::create::precond(g))
+    {
+        rightx=dg::create::dx( g,g.bcx(), normed, forward);
+        righty=dg::create::dy( g,g.bcy(), normed, forward);
+        leftx =dg::create::dx( g,g.bcx(), not_normed, backward);
+        lefty =dg::create::dy( g,g.bcy(), not_normed, backward);
+    cusp::transpose( rightx, leftx); 
+    cusp::transpose( righty, lefty); 
+        jump  =dg::create::jump( g, g.bcx(), g.bcy());
+    }
+    template< class Grid>
+    Polarisation( const Grid& g, bc bcx, bc bcy, const Vector& copyable): 
+        xchi( copyable), xx(copyable), temp( copyable),
+        weights_(dg::create::weights(g)), precond_(dg::create::precond(g))
+    {
+        rightx=dg::create::dx( g,bcx, normed, forward);
+        righty=dg::create::dy( g,bcy, normed, forward);
+        leftx =dg::create::dx( g,bcx, not_normed, backward);
+        lefty =dg::create::dy( g,bcy, not_normed, backward);
+        jump  =dg::create::jump( g, bcx, bcy);
+    }
+
+    void set_chi( const Vector& chi)
+    {
+        //xchi = chi;
+        dg::blas1::pointwiseDot( weights_, chi, xchi);
+    }
+    const Preconditioner& weights()const {return weights_;}
+    const Preconditioner& precond()const{return precond_;}
+
+    void symv( const Vector& x, Vector& y) 
+    {
+        dg::blas2::gemv( rightx, x, temp); //R_x*x 
+        dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 
+        dg::blas2::gemv( leftx, temp, xx); //L_x*Chi*R_x*x
+
+        dg::blas2::gemv( righty, x, temp);
+        dg::blas1::pointwiseDot( xchi, temp, temp);
+        dg::blas2::gemv( lefty, temp, y);
+        
+        dg::blas2::symv( jump, x, temp);
+        dg::blas1::axpby( 1., xx, 1., y, xx); //D_xx + D_yy
+        dg::blas1::axpby( 1., temp, 1., xx, y);
+    }
+    private:
+    Matrix leftx, lefty, rightx, righty, jump;
+    Preconditioner weights_, precond_; //contain coeffs for chi multiplication
+    Vector xchi, xx, temp;
+};
 
 ///@cond
-template< class T, class M>
-struct MatrixTraits< Polarisation2dX<T, M> >
+template< class M, class V, class P>
+struct MatrixTraits< Polarisation<M, V, P> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
