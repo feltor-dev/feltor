@@ -64,7 +64,7 @@ int main()
     cout<< setprecision(2);
 
 
-    ArakawaX<DVec> arakawa( grid);
+    ArakawaX<dg::DMatrix, DVec> arakawa( grid);
     t.tic(); 
     for( unsigned i=0; i<20; i++)
         arakawa( lhs, rhs, jac);

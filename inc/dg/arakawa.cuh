@@ -24,13 +24,13 @@ namespace dg
  * @ingroup arakawa
  * @tparam container The vector class on which to operate on
  */
-template< class container=thrust::device_vector<double> >
+template< class Matrix=dg::DMatrix, class container=thrust::device_vector<double> >
 struct ArakawaX
 {
     typedef typename container::value_type value_type; //!< value type of container
     //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix; //!< always use device matrix
+    //typedef dg::DMatrix Matrix; //!< always use device matrix
     /**
      * @brief Create Arakawa on a grid
      *
@@ -144,16 +144,16 @@ struct ArakawaX
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class container>
+template< class Matrix, class container>
 template< class Grid>
-ArakawaX<container>::ArakawaX( const Grid& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+ArakawaX<Matrix, container>::ArakawaX( const Grid& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, g.bcx(), XSPACE);
     bdyf = dg::create::dy( g, g.bcy(), XSPACE);
 }
-template< class container>
+template< class Matrix, class container>
 template< class Grid>
-ArakawaX<container>::ArakawaX( const Grid& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+ArakawaX<Matrix, container>::ArakawaX( const Grid& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
 {
     bdxf = dg::create::dx( g, bcx, XSPACE);
     bdyf = dg::create::dy( g, bcy, XSPACE);
@@ -171,8 +171,8 @@ ArakawaX<container>::ArakawaX( const Grid& g, bc bcx, bc bcy): dxlhs( g.size()),
 //    bdyf = dg::create::dy( g, bcy, XSPACE);
 //}
 
-template< class container>
-void ArakawaX< container>::operator()( const container& lhs, const container& rhs, container& result)
+template< class Matrix, class container>
+void ArakawaX< Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //compute derivatives in x-space
     blas2::symv( bdxf, lhs, dxlhs);

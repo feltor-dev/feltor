@@ -76,7 +76,7 @@ int main()
     const DVec sol = evaluate ( jacobian, grid);
     DVec eins = evaluate( one, grid);
 
-    ArakawaX< DVec> arakawa( grid);
+    ArakawaX<DMatrix, DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     //arakawa( lhs, rhs1, jac1);

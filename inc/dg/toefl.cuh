@@ -21,7 +21,7 @@ struct Toefl
     typedef typename container::value_type value_type;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    Toefl( const Grid<value_type>& ,  double R, double P, double eps);
+    Toefl( const Grid2d<value_type>& ,  double R, double P, double eps);
 
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
   private:
@@ -36,7 +36,7 @@ struct Toefl
 };
 
 template< class container>
-Toefl<container>::Toefl( const Grid<value_type>& grid, double R, double P, double eps): 
+Toefl<container>::Toefl( const Grid2d<value_type>& grid, double R, double P, double eps): 
     omega( grid.size(), 0.), phi(omega), phi_old( phi), dxtheta(omega), dxphi(omega), 
     arakawaX( grid), 
     pcg( omega, grid.size()),
