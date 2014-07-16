@@ -1,157 +1,95 @@
-#ifndef _DG_DLT_
-#define _DG_DLT_
+#ifndef _DLT_CUH_
+#define _DLT_CUH_
 
-#error deprecated
+#include <fstream>
+#include <stdexcept>
+#include <vector>
 
-namespace dg
-{
+namespace dg{
 
 /**
- * @brief Struct with useful values for discrete legendre transforms
+ * @brief Struct holding coefficients for DLT related operations
  *
- * @ingroup lowlevel
- * @tparam n Number of Legendre nodes per cell
+ * @tparam T value type
  */
-template<size_t n>
-struct DLT
+template< class T>
+class DLT
 {
-    const static double forward[n][n]; //!< Values for forward dlt 
-    const static double backward[n][n]; //!< Values for backward dlt
-    const static double backwardEQ[n][n]; //!< Values for equidistant backward dlt
-    const static double weight[n]; //!< Gaussian weights
-    const static double abscissa[n]; //!< Gaussian abscissas
+  public:
+      /**
+       * @brief Initialize coefficients
+       *
+       * The constructor reads the data corresponding to given n from the file dlt.dat. 
+       * @param n # of polynomial coefficients
+       */
+    DLT( unsigned n);
+
+    /**
+     * @brief Return Gauss-Legendre weights
+     *
+     * @return weights
+     */
+    const std::vector<T>& weights()const {return w_;}
+    /**
+     * @brief Return Gauss-Legendre nodes
+     *
+     * @return nodes
+     */
+    const std::vector<T>& abscissas()const {return a_;}
+    /**
+     * @brief Return forward DLT trafo matrix
+     *
+     * accesss elements in C-fashion: F_{ij} = forward()[i*n+j]
+     * @return forward transformation
+     */
+    const std::vector<T>& forward()const {return forw_;}
+    /**
+     * @brief Return backward DLT trafo matrix
+     *
+     * accesss elements in C-fashion: F_{ij} = backward()[i*n+j]
+     * @return backward transformation
+     */
+    const std::vector<T>& backward()const {return back_;}
+    /**
+     * @brief Return equidistant backward DLT trafo matrix
+     *
+     * For vizualisation purposes it is useful to have the values of
+     * the DLT - expansion on an equidistant grid.
+     * accesss elements in C-fashion: F_{ij} = backwardEQ()[i*n+j]
+     * @return equidistant backward transformation
+     */
+    const std::vector<T>& backwardEQ()const {return backEQ_;}
+
+  private:
+    std::vector<T> a_, w_, forw_, back_, backEQ_;
 };
 
-///@cond
-//values taken from http://processingjs.nihongoresources.com/bezierinfo/legendre-gauss-values.php
-template<>
-const double DLT<1>::weight[1] = 
-{2.};
-template <>
-const double DLT<1>::abscissa[1] = 
-{0.}; 
-template<>
-const double DLT<2>::weight[2] = 
-{ 1., 1.};
-template<>
-const double DLT<2>::abscissa[2] = 
-{ -0.5773502691896257, 0.5773502691896257 };
-template<>
-const double DLT<3>::weight[3] = 
-{ 0.5555555555555556, 0.8888888888888888, 0.5555555555555556};
-template<>
-const double DLT<3>::abscissa[3] = 
-{-0.7745966692414834, 0.0, 0.7745966692414834 };
-template<>
-const double DLT<4>::weight[4] = 
-{ 0.3478548451374538, 0.6521451548625461, 0.6521451548625461,0.3478548451374538} ;
-template<>
-const double DLT<4>::abscissa[4] = 
-{ -0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526};
-template<>
-const double DLT<5>::weight[5] = 
-{0.2369268850561891,    0.4786286704993665,0.5688888888888889,0.4786286704993665,0.2369268850561891};
-template<>
-const double DLT<5>::abscissa[5] = 
-{ -0.9061798459386640,-0.5384693101056831,0.0,0.5384693101056831,0.9061798459386640};
+template<class T>
+DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
+{
+    //get filename
+    std::string file( __FILE__);
+    file.erase( file.end()-1, file.end());
+    file+="dat";
+    std::ifstream stream( file.c_str());
+    if( stream.fail()) 
+        throw "File 'dlt.dat' corrupted or nonexistent!";
+    double x;
+    for( unsigned i=1; i<n; i++)
+    {
+        for( unsigned j=0; j<2*i+3*i*i ;j++)
+            stream >> x;
+    }
+    for( unsigned j=0; j<n; j++) stream >> a_[j];
+    for( unsigned j=0; j<n; j++) stream >> w_[j];
+    for( unsigned j=0; j<n*n; j++) stream >> back_[j];
+    for( unsigned j=0; j<n*n; j++) stream >> forw_[j];
+    for( unsigned j=0; j<n*n; j++) stream >> backEQ_[j];
+    if( !stream.good())
+        throw "Error reading file dlt.dat! Is n > 20?";
+    stream.close();
+}
 
-template<>
-const double DLT<1>::forward[1][1] = {
-    {1.}
-};
-template<>
-const double DLT<1>::backward[1][1] = {
-    {1.}
-};
-template<>
-const double DLT<1>::backwardEQ[1][1] = {
-    {1.}
-};
-template<>
-const double DLT<2>::forward[2][2] = {
-    { 0.5                , 0.5}, 
-    {-0.86602540378443865, 0.86602540378443865} 
-}; 
-
-template<>
-const double DLT<2>::backward[2][2] = {
-    {1., -0.57735026918962576},
-    {1.,  0.57735026918962576}
-}; 
-template<>
-const double DLT<2>::backwardEQ[2][2] = {
-    {1., -0.5},
-    {1.,  0.5}
-}; 
-
-template<>
-const double DLT<3>::forward[3][3] = {
-    { 0.27777777777777778, 0.44444444444444444, 0.27777777777777778},
-    {-0.64549722436790283, 0.0                , 0.64549722436790283},
-    { 0.55555555555555556,-1.1111111111111111 , 0.55555555555555556}
-}; 
-
-template<>
-const double DLT<3>::backward[3][3] = {
-    {1., -0.77459666924148338,  0.4},
-    {1.,  0.0                , -0.5},
-    {1.,  0.77459666924148338,  0.4}
-}; 
-template<>
-const double DLT<3>::backwardEQ[3][3] = {
-    {1., -0.66666666666666666,  0.16666666666666666},
-    {1.,  0.0                , -0.5},
-    {1.,  0.66666666666666666,  0.16666666666666666}
-}; 
-template<>
-const double DLT<4>::forward[4][4] = {
-    { 0.17392742256872693,  0.32607257743127307,  0.32607257743127307, 0.17392742256872693},
-    {-0.44932565746768106, -0.33257548547846420,  0.33257548547846420, 0.44932565746768106},
-    { 0.53250804201891148, -0.53250804201891152, -0.53250804201891152, 0.53250804201891148},
-    {-0.37102700340194724,  0.93977247037775300, -0.93977247037775300, 0.37102700340194724}
-}; 
-
-template<>
-const double DLT<4>::backward[4][4] = {
-    {1., -0.86113631159405256,  0.61233362071871377, -0.30474698495520613},
-    {1., -0.33998104358485625, -0.32661933500442811,  0.41172799967289956},
-    {1.,  0.33998104358485625, -0.32661933500442811, -0.41172799967289956},
-    {1.,  0.86113631159405256,  0.61233362071871377,  0.30474698495520613}
-}; 
-template<>
-const double DLT<4>::backwardEQ[4][4] = {
-    {1., -0.75,  0.34375, -0.0703125},
-    {1., -0.25, -0.40625,  0.3359375},
-    {1.,  0.25, -0.40625, -0.3359375},
-    {1.,  0.75,  0.34375,  0.0703125}
-}; 
-
-template<>
-const double DLT<5>::forward[5][5] = {
-    { 0.11846344252809454,  0.23931433524968324,  0.28444444444444444,  0.23931433524968324, 0.11846344252809454},
-    {-0.32204755229841748, -0.38659027500089127,  0.                 ,  0.38659027500089127, 0.32204755229841748 },
-    { 0.43342389699652310, -0.07786834144096753, -0.71111111111111111, -0.077868341440967530, 0.43342389699652310},
-    {-0.41547714135083261,  0.69919864488923337,  0.                 , -0.69919864488923337, 0.41547714135083261},
-    { 0.26199601592044537, -0.74199601592044533,  0.96000000000000000, -0.74199601592044533, 0.26199601592044537}
-};
-template<>
-const double DLT<5>::backward[5][5] = {
-    {1., -0.90617984593866400,  0.73174286977813123,  -0.50103117104466206,  0.24573545909491205},
-    {1., -0.53846931010568309, -0.065076203111464548,  0.41738210372666810, -0.34450089119367744},
-    {1.,  0.,                  -0.50000000000000000,   0.,                   0.37500000000000000},
-    {1.,  0.53846931010568309, -0.065076203111464548, -0.41738210372666810, -0.34450089119367744},
-    {1.,  0.90617984593866400,  0.73174286977813123,   0.50103117104466206,  0.24573545909491205} 
-};
-template<>
-const double DLT<5>::backwardEQ[5][5] = {
-    {1., -0.8,  0.46, -0.80, -0.233},
-    {1., -0.4, -0.26,  0.44, -0.113},
-    {1.,  0.0, -0.50,  0.00,  0.375},
-    {1.,  0.4, -0.26, -0.44, -0.113},
-    {1.,  0.8,  0.46,  0.80, -0.233} 
-};
-
-///@endcond
 
 } //namespace dg
-#endif //_DG_DLT_
+#endif//_DLT_CUH_

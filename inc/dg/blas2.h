@@ -2,14 +2,14 @@
 
 #include "vector_traits.h"
 #include "matrix_traits.h"
-#include "matrix_traits_thrust.h"
-#include "blas/thrust_matrix.cuh"
-#include "blas/std_matrix.cuh"
-#include "blas/cusp_matrix.cuh"
-#include "blas/selfmade.cuh"
-#ifdef MPI_BACKEND
-#include "blas/mpi_matrix.h"
-#endif //MPI_BACKEND
+//#include "cusp_thrust_backend/matrix_traits_thrust.h"
+//#include "cusp_thrust_backend/thrust_matrix.cuh"
+//#include "cusp_thrust_backend/cusp_matrix.cuh"
+//#ifdef MPI_BACKEND
+//#include "mpi_backend/mpi_matrix.h"
+//#endif //MPI_BACKEND
+#include "std_backend/std_matrix.cuh"
+#include "std_backend/selfmade.cuh"
 
 namespace dg{
 /*! @brief BLAS Level 2 routines 

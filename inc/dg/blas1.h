@@ -1,11 +1,11 @@
 #pragma once
 
 #include "vector_traits.h"
-#include "blas/thrust_vector.cuh"
-#include "blas/std_vector.cuh"
-#ifdef MPI_BACKEND
-#include "blas/mpi_vector.h"
-#endif
+//#include "cusp_thrust_backend/thrust_vector.cuh"
+//#ifdef MPI_BACKEND
+//#include "mpi_backend/mpi_vector.h"
+//#endif
+#include "std_backend/std_vector.cuh"
 
 namespace dg{
 
@@ -82,6 +82,20 @@ template< class Vector>
 inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, Vector& result)
 {
     return dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<Vector>::vector_category() );
+}
+/*! @brief "new" BLAS 1 routine transform
+ *
+ * This routine computes \f[ y_i = f(x_i) \f] 
+ * This is actually not a BLAS routine since f can be a nonlinear function.
+ * It is rather the first step towards a more general library conception.
+ * @param x Vector x may equal result
+ * @param op Operator to use on every element
+ * @note In an implementation you may want to check for alpha == 0
+ */
+template< class Vector, class UnaryOp>
+inline void transform( const Vector& x, Vector& y, UnaryOp op)
+{
+    return dg::blas1::detail::doTransform( x, y, op, typename dg::VectorTraits<Vector>::vector_category() );
 }
 
 /*! @brief BLAS 1 routine scal

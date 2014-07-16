@@ -5,16 +5,17 @@ namespace dg{
 
 struct AnyMatrixTag{};
 
-struct CuspMatrixTag: public AnyMatrixTag {};
-
 struct StdMatrixTag{};
-//struct StdMatrixPointerTag{};
 
-struct ThrustMatrixTag: public AnyMatrixTag {};
+//normal matrices
+struct CuspMatrixTag: public AnyMatrixTag {};
 
 struct SelfMadeMatrixTag: public AnyMatrixTag {};
 
 struct MPIMatrixTag: public AnyMatrixTag {};
+
+//preconditioners
+struct ThrustMatrixTag: public AnyMatrixTag {};
 
 struct MPIPreconTag: public AnyMatrixTag {};
 

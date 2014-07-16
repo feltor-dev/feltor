@@ -4,6 +4,9 @@
 namespace dg{
 
 struct AnyVectorTag{};
+
+struct StdVectorTag {};
+
 /**
  * @brief The Thrust Vector concept
  *
@@ -11,13 +14,6 @@ struct AnyVectorTag{};
  * return thrust compatible iterators and the value_type typedef
  */
 struct ThrustVectorTag: public AnyVectorTag {};
-
-
-struct StdVectorTag {};
-//struct StdVectorPointerTag {};
-
-//struct DeviceVectorTag : public ThrustVectorTag {};
-//
 
 struct MPIVectorTag: public AnyVectorTag{};
 
