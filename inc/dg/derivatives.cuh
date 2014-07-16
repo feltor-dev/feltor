@@ -100,8 +100,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, norm
         dy = create::dx_plus_mt<T>(g.n(), g.Ny(), g.hy(), bcy);
     else if (dir == backward)
         dy = create::dx_minus_mt<T>(g.n(), g.Ny(), g.hy(), bcy);
-    Matrix bdyf(dy);
 
+    Matrix bdyf(dy);
     //norm b*dy*f x 1 or w*b*dy*f x 1
     Operator<T> backward=g.dlt().backward();
     Operator<T> normx(g.n(), 0.), normy(g.n(), 0.);

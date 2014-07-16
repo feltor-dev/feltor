@@ -317,12 +317,12 @@ class Polarisation
         xchi( copyable), xx(copyable), temp( copyable),
         weights_(dg::create::weights(g)), precond_(dg::create::precond(g))
     {
-        rightx=dg::create::dx( g,g.bcx(), normed, forward);
-        righty=dg::create::dy( g,g.bcy(), normed, forward);
-        leftx =dg::create::dx( g,g.bcx(), not_normed, backward);
-        lefty =dg::create::dy( g,g.bcy(), not_normed, backward);
-    cusp::transpose( rightx, leftx); 
-    cusp::transpose( righty, lefty); 
+        rightx=dg::create::dx( g, g.bcx(), normed, forward);
+        righty=dg::create::dy( g, g.bcy(), normed, forward);
+        leftx =dg::create::dx( g, inverse( g.bcx()), not_normed, backward);
+        lefty =dg::create::dy( g, inverse( g.bcy()), not_normed, backward);
+    //cusp::transpose( rightx, leftx); 
+    //cusp::transpose( righty, lefty); 
         jump  =dg::create::jump( g, g.bcx(), g.bcy());
     }
     template< class Grid>
@@ -332,18 +332,19 @@ class Polarisation
     {
         rightx=dg::create::dx( g,bcx, normed, forward);
         righty=dg::create::dy( g,bcy, normed, forward);
-        leftx =dg::create::dx( g,bcx, not_normed, backward);
-        lefty =dg::create::dy( g,bcy, not_normed, backward);
+        
+        leftx =dg::create::dx( g, inverse(bcx), not_normed, backward);
+        lefty =dg::create::dy( g, inverse(bcy), not_normed, backward);
         jump  =dg::create::jump( g, bcx, bcy);
     }
 
     void set_chi( const Vector& chi)
     {
-        //xchi = chi;
-        dg::blas1::pointwiseDot( weights_, chi, xchi);
+        xchi = chi;
+        //dg::blas1::pointwiseDot( weights_, chi, xchi);
     }
     const Preconditioner& weights()const {return weights_;}
-    const Preconditioner& precond()const{return precond_;}
+    const Preconditioner& precond()const {return precond_;}
 
     void symv( const Vector& x, Vector& y) 
     {
@@ -356,10 +357,18 @@ class Polarisation
         dg::blas2::gemv( lefty, temp, y);
         
         dg::blas2::symv( jump, x, temp);
-        dg::blas1::axpby( 1., xx, 1., y, xx); //D_xx + D_yy
-        dg::blas1::axpby( 1., temp, 1., xx, y);
+        dg::blas1::axpby( -1., xx, -1., y, xx); //D_xx + D_yy
+        dg::blas1::axpby( +1., temp, 1., xx, y);
     }
     private:
+    bc inverse( bc bound)
+    {
+        if( bound == DIR) return NEU;
+        if( bound == NEU) return DIR;
+        if( bound == DIR_NEU) return NEU_DIR;
+        if( bound == NEU_DIR) return DIR_NEU;
+        return PER;
+    }
     Matrix leftx, lefty, rightx, righty, jump;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
     Vector xchi, xx, temp;

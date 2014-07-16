@@ -229,8 +229,9 @@ thrust::host_vector<T> v3d( const Grid3d<T>& g)
     return v;
 }
 
+//W<->S, V<->T
 template <class T>
-thrust::host_vector<T> weights( const Grid1d<T>& g){return w1d(g);}
+thrust::host_vector<T> weights( const Grid1d<T>& g){return w1d(g);} 
 template <class T>
 thrust::host_vector<T> precond( const Grid1d<T>& g){return v1d(g);}
 template <class T>
