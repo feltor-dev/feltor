@@ -38,17 +38,17 @@ int main()
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
-    const dg::HVec s2d_h = dg::create::s2d( grid);
+    const dg::HVec s2d_h = dg::create::weights( grid);
     const dg::DVec s2d_d( s2d_h);
-    const dg::HVec t2d_h = dg::create::t2d( grid);
+    const dg::HVec t2d_h = dg::create::precond( grid);
     const dg::DVec t2d_d( t2d_h);
     std::cout<<"Expand initial condition\n";
-    dg::HVec x = dg::expand( initial, grid);
+    dg::HVec x = dg::evaluate( initial, grid);
 
     std::cout << "Create symmetric Laplacian\n";
     t.tic();
-    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::forward); 
-    dg::DMatrix DX = dg::create::dx( grid, dg::LSPACE);
+    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
+    dg::DMatrix DX = dg::create::dx( grid);
     dg::HMatrix A = dA;
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
@@ -57,9 +57,9 @@ int main()
     dg::CG< dg::HVec > pcg_host( x, n*n*Nx*Ny);
 
     std::cout<<"Expand right hand side\n";
-    const dg::HVec solution = dg::expand ( fct, grid);
-    const dg::DVec deriv = dg::expand( derivative, grid);
-    dg::HVec b = dg::expand ( laplace_fct, grid);
+    const dg::HVec solution = dg::evaluate ( fct, grid);
+    const dg::DVec deriv = dg::evaluate( derivative, grid);
+    dg::HVec b = dg::evaluate ( laplace_fct, grid);
     //compute S b
     dg::blas2::symv( s2d_h, b, b);
 

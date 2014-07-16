@@ -5,32 +5,33 @@ namespace dg{
 namespace blas2{
 namespace detail{
 
-template< class Matrix, class Vector>
+template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(  
               Matrix& m, 
-              const Vector& x,
-              Vector& y, 
+              Vector1& x,
+              Vector2& y, 
               SelfMadeMatrixTag,
-              ThrustVectorTag)
+              AnyVectorTag,
+              AnyVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     m.symv( x,y);
 }
-template< class Matrix, class Vector>
-inline void doSymv(  
-              Matrix& m, 
-              const std::vector<Vector>& x,
-              std::vector<Vector>& y, 
-              SelfMadeMatrixTag,
-              StdVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-    m.symv( x,y);
-}
+//template< class Matrix, class Vector>
+//inline void doSymv(  
+//              Matrix& m, 
+//              const std::vector<Vector>& x,
+//              std::vector<Vector>& y, 
+//              SelfMadeMatrixTag,
+//              StdVectorTag)
+//{
+//#ifdef DG_DEBUG
+//    assert( x.size() == y.size() );
+//#endif //DG_DEBUG
+//    m.symv( x,y);
+//}
 
 } //namespace detail
 } //namespace blas2

@@ -16,16 +16,16 @@ struct MatrixTraits {
 //    typedef typename MatrixTraits<Matrix>::matrix_category; 
 //};
 
-template< class Matrix>
-struct MatrixTraits< std::vector<Matrix> >{
-    typedef typename Matrix::value_type value_type;
-    typedef StdMatrixTag matrix_category; 
-};
-template< class Matrix>
-struct MatrixTraits< std::vector<Matrix*> >{
-    typedef typename Matrix::value_type value_type;
-    typedef StdMatrixPointerTag matrix_category; 
-};
+//template< class Matrix>
+//struct MatrixTraits< std::vector<Matrix> >{
+//    typedef typename Matrix::value_type value_type;
+//    typedef StdMatrixTag matrix_category; 
+//};
+//template< class Matrix>
+//struct MatrixTraits< std::vector<Matrix*> >{
+//    typedef typename Matrix::value_type value_type;
+//    typedef StdMatrixPointerTag matrix_category; 
+//};
 
 
 }//namespace dg

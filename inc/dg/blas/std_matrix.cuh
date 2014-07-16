@@ -15,9 +15,10 @@ namespace detail
 template< class Matrix, class Vector>
 inline void doSymv( 
               Matrix& m,
-              std::vector<Vector>& x, 
+              const std::vector<Vector>& x, 
               std::vector<Vector>& y, 
-              ThrustMatrixTag,
+              AnyMatrixTag,
+              StdVectorTag,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -26,10 +27,12 @@ inline void doSymv(
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doSymv( m, x[i], y[i], 
-                       ThrustMatrixTag(),
+                       typename dg::MatrixTraits<Matrix>::matrix_category(),
+                       typename dg::VectorTraits<Vector>::vector_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
         
 }
+/*
 template< class Matrix, class Vector>
 inline void doSymv( 
               std::vector<Matrix*>& m,
@@ -48,6 +51,7 @@ inline void doSymv(
                        typename dg::VectorTraits<Vector>::vector_category() );
         
 }
+*/
 
 template< class Matrix, class Vector>
 inline void doSymv( 
@@ -56,7 +60,7 @@ inline void doSymv(
               const std::vector<Vector>& x, 
               typename MatrixTraits<Matrix>::value_type beta,
               std::vector<Vector>& y, 
-              ThrustMatrixTag,
+              AnyMatrixTag,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -65,9 +69,10 @@ inline void doSymv(
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doSymv( alpha, m, x[i], beta, y[i],
-                       ThrustMatrixTag(),
+                       typename dg::MatrixTraits<Matrix>::matrix_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
+/*
 
 template< class Matrix, class Vector>
 inline void doSymv( 
@@ -88,13 +93,14 @@ inline void doSymv(
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
+*/
 
 template< class Matrix, class Vector>
 inline typename Vector::value_type  doDot( 
               const std::vector<Vector>& x, 
               const Matrix& m,
               const std::vector<Vector>& y, 
-              ThrustMatrixTag,
+              AnyMatrixTag,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -104,7 +110,7 @@ inline typename Vector::value_type  doDot(
     typename Vector::value_type sum = 0;
     for( unsigned i=0; i<x.size(); i++)
         sum += doDot( x[i], m, y[i],
-                       ThrustMatrixTag(),
+                       typename dg::MatrixTraits<Matrix>::matrix_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
     return sum;
 }
@@ -112,7 +118,7 @@ template< class Matrix, class Vector>
 inline typename VectorTraits<Vector>::value_type  doDot( 
               const Matrix& m,
               const std::vector<Vector>& y, 
-              ThrustMatrixTag,
+              AnyMatrixTag,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -121,12 +127,13 @@ inline typename VectorTraits<Vector>::value_type  doDot(
     typename Vector::value_type sum = 0;
     for( unsigned i=0; i<y.size(); i++)
         sum += doDot( y[i], m, y[i],
-                       ThrustMatrixTag(),
+                       typename dg::MatrixTraits<Matrix>::matrix_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
     return sum;
 }
 
 //POINTER TAGS
+/*
 template< class Matrix, class Vector>
 inline typename Vector::value_type  doDot( 
               const std::vector<Vector>& x, 
@@ -163,6 +170,7 @@ inline typename VectorTraits<Vector>::value_type  doDot(
                        typename dg::VectorTraits<Vector>::vector_category() );
     return sum;
 }
+*/
 
 
 } //namespace detail

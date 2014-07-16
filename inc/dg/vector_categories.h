@@ -3,13 +3,14 @@
 
 namespace dg{
 
+struct AnyVectorTag{};
 /**
  * @brief The Thrust Vector concept
  *
  * A Thrust vector must have the two methods begin() and end() which
  * return thrust compatible iterators and the value_type typedef
  */
-struct ThrustVectorTag {};
+struct ThrustVectorTag: public AnyVectorTag {};
 
 
 struct StdVectorTag {};
@@ -18,7 +19,7 @@ struct StdVectorTag {};
 //struct DeviceVectorTag : public ThrustVectorTag {};
 //
 
-struct MPIVectorTag{};
+struct MPIVectorTag: public AnyVectorTag{};
 
 
 }//namespace dg

@@ -110,6 +110,7 @@ inline void doSymv(
               const Vector& x,
               Vector& y, 
               ThrustMatrixTag,
+              ThrustVectorTag,
               ThrustVectorTag)
 {
     dg::blas1::detail::doPointwiseDot( m,x,y, dg::ThrustVectorTag());

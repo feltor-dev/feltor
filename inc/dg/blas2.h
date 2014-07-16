@@ -94,14 +94,15 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  * @attention Due to the SelfMadeMatrixTag and MPI_Vectors, m and x cannot be declared const
  */
-template< class Matrix, class Vector>
+template< class Matrix, class Vector1, class Vector2>
 inline void symv( Matrix& m, 
-                  const Vector& x, 
-                  Vector& y)
+                  Vector1& x, 
+                  Vector2& y)
 {
     return dg::blas2::detail::doSymv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<Vector>::vector_category() );
+                       typename dg::VectorTraits<Vector1>::vector_category(),
+                       typename dg::VectorTraits<Vector2>::vector_category() );
 }
 ///@cond
 template< class Matrix, class Vector>
@@ -111,6 +112,7 @@ inline void mv(   Matrix& m,
 {
     return dg::blas2::detail::doSymv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<const Vector>::vector_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
 ///@endcond
@@ -123,14 +125,15 @@ inline void mv(   Matrix& m,
  * @param y contains the solution on output
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
-template< class Matrix, class Vector>
+template< class Matrix, class Vector1, class Vector2>
 inline void gemv( Matrix& m, 
-                  const Vector& x, 
-                  Vector& y)
+                  Vector1& x, 
+                  Vector2& y)
 {
     return dg::blas2::detail::doGemv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<Vector>::vector_category() );
+                       typename dg::VectorTraits<Vector1>::vector_category(),
+                       typename dg::VectorTraits<Vector2>::vector_category() );
 }
 ///@}
 

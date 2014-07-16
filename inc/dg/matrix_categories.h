@@ -3,19 +3,20 @@
 
 namespace dg{
 
+struct AnyMatrixTag{};
 
-struct CuspMatrixTag {};
+struct CuspMatrixTag: public AnyMatrixTag {};
 
 struct StdMatrixTag{};
-struct StdMatrixPointerTag{};
+//struct StdMatrixPointerTag{};
 
-struct ThrustMatrixTag{};
+struct ThrustMatrixTag: public AnyMatrixTag {};
 
-struct SelfMadeMatrixTag {};
+struct SelfMadeMatrixTag: public AnyMatrixTag {};
 
-struct MPIMatrixTag{};
+struct MPIMatrixTag: public AnyMatrixTag {};
 
-struct MPIPreconTag{};
+struct MPIPreconTag: public AnyMatrixTag {};
 
 }//namespace dg
 
