@@ -1,10 +1,10 @@
 #pragma once
 
 #include "vector_traits.h"
-//#include "cusp_thrust_backend/thrust_vector.cuh"
-//#ifdef MPI_BACKEND
-//#include "mpi_backend/mpi_vector.h"
-//#endif
+#include "backend/thrust_vector.cuh"
+#ifdef MPI_VERSION
+#include "backend/mpi_vector_blas.h"
+#endif
 #include "std_backend/std_vector.cuh"
 
 namespace dg{

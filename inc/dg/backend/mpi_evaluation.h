@@ -61,14 +61,14 @@ MPI_Vector evaluate( double (f)(double), const Grid1d<double>& g)
             may be constructed during function call.
  */
 template< class BinaryOp>
-MPI_Vector evaluate( BinaryOp f, const MPIGrid2d<double>& g)
+MPI_Vector evaluate( BinaryOp f, const MPI_Grid2d& g)
 {
-    MPI_Vector v;
-    v.Nx = g.Nx(), v.Ny = g.Ny(), v.stride = g.n()*g.n();
-    v.data = evaluate(f,g.local_grid());
+    MPI_Vector v( g.n()*g.n(), g.Nx(), g.Ny());
+    v.data() = evaluate(f,g.local());
+    return v;
 };
 ///@cond
-MPI_Vector evaluate( double(f)(double, double), const MPIGrid2d<double>& g)
+MPI_Vector evaluate( double(f)(double, double), const MPI_Grid2d& g)
 {
     return evaluate<double(double, double)>( f, g);
 };

@@ -2,12 +2,12 @@
 
 #include "vector_traits.h"
 #include "matrix_traits.h"
-//#include "cusp_thrust_backend/matrix_traits_thrust.h"
-//#include "cusp_thrust_backend/thrust_matrix.cuh"
-//#include "cusp_thrust_backend/cusp_matrix.cuh"
-//#ifdef MPI_BACKEND
-//#include "mpi_backend/mpi_matrix.h"
-//#endif //MPI_BACKEND
+#include "backend/matrix_traits_thrust.h"
+#include "backend/thrust_matrix.cuh"
+#include "backend/cusp_matrix.cuh"
+#ifdef MPI_VERSION
+#include "backend/mpi_matrix_blas.h"
+#endif //MPI_BACKEND
 #include "std_backend/std_matrix.cuh"
 #include "std_backend/selfmade.cuh"
 

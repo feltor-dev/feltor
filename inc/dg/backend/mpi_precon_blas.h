@@ -10,16 +10,16 @@ template< class Matrix, class Vector>
 inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-    assert( x.stride == m.data.size() );
+    assert( x.data().size() == y.data().size() );
+    assert( x.data().stride == m.data().size() );
 #endif //DG_DEBUG
     double temp=0, sum;
-    for( unsigned k=0; k<x.Nz; k++)
-        for( unsigned i=1; i<x.Ny-1; i++)
-            for( unsigned j=1; j<x.Nx-1; j++)
-                for( unsigned l=0; l<x.stride; l++)
-                    temp+=x.data[((k*x.Ny + i)*x.Nx + j)*x.stride + l]*m.data[l]*
-                          y.data[((k*x.Ny + i)*x.Nx + j)*x.stride + l];
+    for( unsigned k=0; k<x.Nz(); k++)
+        for( unsigned i=1; i<x.Ny()-1; i++)
+            for( unsigned j=1; j<x.Nx()-1; j++)
+                for( unsigned l=0; l<x.stride(); l++)
+                    temp+=x.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l]*m.data[l]*
+                          y.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l];
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     return sum;
@@ -41,7 +41,7 @@ inline void doSymv(
               MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.data.size() == y.data.size() );
+    assert( x.data().size() == y.data().size() );
 #endif //DG_DEBUG
     if( alpha == 0)
     {
@@ -51,37 +51,32 @@ inline void doSymv(
         return;
     }
     const unsigned& stride=m.data.size();
-    const unsigned& size = x.data.size();
+    const unsigned& size = x.data().size();
 #ifdef DG_DEBUG
     assert( stride >= 1);
-    assert( x.data.size() == y.data.size() );
+    assert( x.data().size() == y.data().size() );
     assert( size%stride ==0);
-    assert( x.stride == stride);
+    assert( x.stride() == stride);
 #endif //DG_DEBUG
     for( unsigned i=0; i<size; i++)
-        y[i] = alpha*m.data[i%stride]*x[i] + beta*y[i];
+        y.data()[i] = alpha*m.data[i%stride]*x.data()[i] + beta*y.data()[i];
 }
 
 template< class Matrix, class Vector>
-inline void doSymv( const Matrix& m, const Vector&x, Vector& y, MPIPreconTag, MPIVectorTag  )
+inline void doSymv( const Matrix& m, const Vector&x, Vector& y, MPIPreconTag, MPIVectorTag, MPIVectorTag  )
 {
     const unsigned& stride=m.data.size();
-    const unsigned& size = x.data.size();
+    const unsigned& size = x.data().size();
 #ifdef DG_DEBUG
     assert( stride >= 1);
-    assert( x.data.size() == y.data.size() );
+    assert( x.data().size() == y.data().size() );
     assert( size%stride ==0);
-    assert( x.stride == stride);
+    assert( x.stride() == stride);
 #endif //DG_DEBUG
     for( unsigned i=0; i<size; i++)
-        y[i] = m.data[i%stride]*x[i];
+        y.data()[i] = m.data[i%stride]*x.data()[i];
 }
 
-template< class Matrix, class Vector>
-inline void doGemv( const Matrix& m, const Vector&x, Vector& y, MPIPreconTag, MPIVectorTag  )
-{
-    doSymv( m,x,y,MPIPreconTag(), MPIVectorTag());
-}
 
 } //namespace detail
 } //namespace blas2

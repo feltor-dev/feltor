@@ -27,7 +27,7 @@ namespace create
 *
 * @return Preconditioner
 */
-MPI_Precon w1d( const Grid1d<T>& g)
+MPI_Precon weights( const Grid1d<T>& g)
 {
     Precond p;
     p.data.resize( g.n());
@@ -42,7 +42,7 @@ MPI_Precon w1d( const Grid1d<T>& g)
 *
 * @return Preconditioner
 */
-MPI_Precon v1d( const Grid1d<T>& g)
+MPI_Precon precond( const Grid1d<T>& g)
 {
     MPI_Precon p = w1d(g);
     for( unsigned i=0; i<g.n(); i++)
@@ -59,7 +59,7 @@ MPI_Precon v1d( const Grid1d<T>& g)
 *
 * @return Preconditioner
 */
-MPI_Precon w2d( const Grid2d<T>& g)
+MPI_Precon weights( const Grid2d<T>& g)
 {
     MPI_Precon p;
     p.data.resize( g.n()*g.n());
@@ -75,7 +75,7 @@ MPI_Precon w2d( const Grid2d<T>& g)
 *
 * @return Preconditioner
 */
-MPI_Precon v2d( const Grid2d<T>& g)
+MPI_Precon precond( const Grid2d<T>& g)
 {
     MPI_Precon v = w2d( g);
     for( unsigned i=0; i<v.data.size(); i++)
@@ -89,7 +89,7 @@ MPI_Precon v2d( const Grid2d<T>& g)
 *
 * @return Preconditioner
 */
-MPI_Precon w3d( const Grid3d<T>& g)
+MPI_Precon weights( const Grid3d<T>& g)
 {
     MPI_Precon p;
     p.data.resize( g.n()*g.n());
@@ -105,7 +105,7 @@ MPI_Precon w3d( const Grid3d<T>& g)
 *
 * @return Preconditioner
 */
-MPI_Precon v3d( const Grid3d<T>& g)
+MPI_Precon precond( const Grid3d<T>& g)
 {
     MPI_Precon p = w3d( g);
     for( unsigned i=0; i<p.data.size(); i++)

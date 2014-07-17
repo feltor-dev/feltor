@@ -2,7 +2,8 @@
 #define _DG_ARAKAWA_CUH
 
 #include "blas.h"
-#include "creation.h"
+#include "enums.h"
+//#include "creation.h"
 //#include "functors.h"
 
 /*! @file 

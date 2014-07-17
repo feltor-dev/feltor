@@ -24,9 +24,9 @@ namespace detail
 {
 
 template< class Vector>
-inline void doAxpby( typename Vector::value_type alpha, 
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
               const std::vector<Vector>& x, 
-              typename Vector::value_type beta, 
+              typename VectorTraits<Vector>::value_type beta, 
               std::vector<Vector>& y, 
               StdVectorTag)
 {
@@ -40,9 +40,9 @@ inline void doAxpby( typename Vector::value_type alpha,
 }
 
 template< class Vector>
-inline void doAxpby( typename Vector::value_type alpha, 
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
               const std::vector<Vector>& x, 
-              typename Vector::value_type beta, 
+              typename VectorTraits<Vector>::value_type beta, 
               const std::vector<Vector>& y, 
               std::vector<Vector>& z, 
               StdVectorTag)
@@ -58,7 +58,7 @@ inline void doAxpby( typename Vector::value_type alpha,
 
 template< class Vector>
 inline void doScal( std::vector<Vector>& x, 
-              typename Vector::value_type alpha, 
+              typename VectorTraits<Vector>::value_type alpha, 
               StdVectorTag)
 {
 #ifdef DG_DEBUG

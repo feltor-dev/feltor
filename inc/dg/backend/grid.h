@@ -2,10 +2,8 @@
 #define _DG_GRID_
 
 #include <cassert>
-#include <thrust/host_vector.h>
-#include <cusp/coo_matrix.h>
 #include "dlt.h"
-#include "enums.h"
+#include "../enums.h"
 
 /*! @file 
   
@@ -26,9 +24,6 @@ namespace dg{
 template <class T>
 struct Grid1d
 {
-    typedef thrust::host_vector<T> Vector;
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    typedef thrust::host_vector<T> Preconditioner;
     /**
      * @brief 1D grid
      * 
@@ -79,9 +74,6 @@ struct Grid1d
 template< class T>
 struct Grid2d
 {
-    typedef thrust::host_vector<T> Vector;
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    typedef thrust::host_vector<T> Preconditioner;
     /**
      * @brief Construct a 2D grid
      *
@@ -173,9 +165,6 @@ struct Grid2d
 template< class T>
 struct Grid3d
 {
-    typedef thrust::host_vector<T> Vector;
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
-    typedef thrust::host_vector<T> Preconditioner;
     /**
      * @brief Construct a 3D grid
      *
