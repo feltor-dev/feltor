@@ -1,18 +1,45 @@
 #ifndef _DG_TIMER_
 #define _DG_TIMER_
 
-#if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA)
-#include "../toefl/timer.h"
 namespace dg
 {
+#if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA)
+
+#ifdef MPI_VERSION
+#include <mpi.h>
+
+class Timer
+{
+  public:
+    /**
+    * @brief Start timer using cudaEventRecord
+    *
+    * @param stream the stream in which the Event is placed
+    */
+    void tic( ){  start = MPIWtime();}
+    /**
+    * @brief Stop timer using cudaEventRecord and Synchronize
+    *
+    * @param stream the stream in which the Event is placed
+    */
+    void toc( ){ stop = MPIWtime(); }
+    /*! \brief Return time elapsed between tic and toc
+     *
+     * \return Time in seconds between calls of tic and toc*/
+    double diff(){ return stop - start; }
+  private:
+    double start, stop;
+};
+#else
+
+#include "../toefl/timer.h"
     /**
      * @brief If we compute on the host we use the toefl timer
      */
     typedef toefl::Timer Timer;
-}
+#endif //MPI_VERSION
 #else
 
-namespace dg{
 /*! @brief Very simple tool for performance measurements using CUDA-API 
  * @ingroup utilities
  */
@@ -49,8 +76,8 @@ class Timer
   private:
     cudaEvent_t start, stop;
 };
-
-}
 #endif
+
+} //namespace dg
 
 #endif //_DG_TIMER_

@@ -140,7 +140,7 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
  *
  * @ingroup algorithms
  * @tparam Matrix Matrix type
- * @tparam Vector Vector type
+ * @tparam Vector Vector type (must be constructible from given size)
  * @tparam Preconditioner Preconditioner type
  * @param A Matrix 
  * @param x contains initial guess on input and solution on output

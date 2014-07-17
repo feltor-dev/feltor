@@ -1,4 +1,5 @@
 #pragma once
+#include "mpi_precon.h"
 
 namespace dg
 {
@@ -7,7 +8,7 @@ namespace blas2
 namespace detail
 {
 template< class Matrix, class Vector>
-inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, MPIPreconTag, MPIVectorTag)
+inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );
@@ -25,17 +26,17 @@ inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, cons
     return sum;
 }
 template< class Matrix, class Vector>
-inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::MPIPreconTag, dg::MPIVectorTag)
+inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::MPIPreconTag, dg::MPIVectorTag)
 {
     doDot( x, m,x, MPIPreconTag(), MPIVectorTag());
 }
 
 template< class Matrix, class Vector>
 inline void doSymv(  
-              typename Matrix::value_type alpha, 
+              typename MatrixTraits<Matrix>::value_type alpha, 
               const Matrix& m,
               const Vector& x, 
-              typename Matrix::value_type beta, 
+              typename MatrixTraits<Matrix>::value_type beta, 
               Vector& y, 
               MPIPreconTag,
               MPIVectorTag)

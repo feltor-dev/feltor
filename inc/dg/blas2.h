@@ -7,7 +7,8 @@
 #include "backend/cusp_matrix.cuh"
 #ifdef MPI_VERSION
 #include "backend/mpi_matrix_blas.h"
-#endif //MPI_BACKEND
+#include "backend/mpi_precon_blas.h"
+#endif //MPI_VERSION
 #include "std_backend/std_matrix.cuh"
 #include "std_backend/selfmade.cuh"
 
