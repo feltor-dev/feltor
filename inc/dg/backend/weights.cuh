@@ -24,7 +24,7 @@ thrust::host_vector<T> s1d( const Grid1d<T>& g)
     thrust::host_vector<T> v( g.size());
     for( unsigned i=0; i<g.N(); i++)
         for( unsigned j=0; j<g.n(); j++)
-            v[i*g.n()+j] = g.hx() / (double)(2*j+1);
+            v[i*g.n()+j] = g.h() / (double)(2*j+1);
     return v;
 }
 /**

@@ -3,8 +3,10 @@
 
 #include "blas.h"
 #include "enums.h"
-//#include "creation.h"
-//#include "functors.h"
+#include "backend/derivatives.cuh"
+#ifdef MPI_VERSION
+#include "backend/mpi_matrix.h"
+#endif
 
 /*! @file 
   
@@ -19,7 +21,7 @@ namespace dg
  * @ingroup arakawa
  * @tparam container The vector class on which to operate on
  */
-template< class Matrix=dg::DMatrix, class container=thrust::device_vector<double> >
+template< class Matrix, class container >
 struct ArakawaX
 {
     /**
@@ -46,7 +48,7 @@ struct ArakawaX
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
      */
-    void operator()( const container& lhs, const container& rhs, container& result);
+    void operator()( container& lhs, container& rhs, container& result);
 
     /**
      * @brief Return internally used 2d - x - derivative in ell format in XSPACE
@@ -74,7 +76,7 @@ struct ArakawaX
      * @param phi function 
      * @param varphi may equal phi, contains result on output
      */
-    void variation( const container& phi, container& varphi)
+    void variation( container& phi, container& varphi)
     {
         blas2::symv( bdxf, phi, dxlhs);
         blas2::symv( bdyf, phi, dylhs);
@@ -93,7 +95,7 @@ struct ArakawaX
      * @param rhs The right hand side (may equal lhs)
      * @param result The result (write only, may equal lhs or rhs)
      */
-    void bracketS( const container& lhs, const container& rhs, container& result)
+    void bracketS( container& lhs, container& rhs, container& result)
     {
         blas2::symv( bdxf, lhs, dxlhs);
         blas2::symv( bdyf, lhs, dylhs);
@@ -121,21 +123,22 @@ struct ArakawaX
 //needs less memory!! and is faster
 template< class Matrix, class container>
 template< class Grid>
-ArakawaX<Matrix, container>::ArakawaX( const Grid& g): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
-{
-    bdxf = dg::create::dx( g, g.bcx());
-    bdyf = dg::create::dy( g, g.bcy());
-}
+ArakawaX<Matrix, container>::ArakawaX( const Grid& g ): 
+    dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs), 
+    bdxf( dg::create::dx( g, g.bcx())),
+    bdyf( dg::create::dy( g, g.bcy()))
+{ }
 template< class Matrix, class container>
 template< class Grid>
-ArakawaX<Matrix, container>::ArakawaX( const Grid& g, bc bcx, bc bcy): dxlhs( g.size()), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs)
+ArakawaX<Matrix, container>::ArakawaX( const Grid& g, bc bcx, bc bcy): 
+    dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs),
+    bdxf(dg::create::dx( g, bcx)),
+    bdyf(dg::create::dy( g, bcy))
 {
-    bdxf = dg::create::dx( g, bcx);
-    bdyf = dg::create::dy( g, bcy);
 }
 
 template< class Matrix, class container>
-void ArakawaX< Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
+void ArakawaX< Matrix, container>::operator()( container& lhs, container& rhs, container& result)
 {
     //compute derivatives in x-space
     blas2::symv( bdxf, lhs, dxlhs);

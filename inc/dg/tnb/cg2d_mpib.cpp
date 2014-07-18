@@ -6,6 +6,7 @@
 #include "mpi_evaluation.h"
 
 #include "cg.h"
+#include "mpi_init.h"
 
 //leo3 can do 350 x 350 but not 375 x 375
 const double ly = 2.*M_PI;
@@ -20,47 +21,20 @@ double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
 dg::bc bcx = dg::DIR;
 double initial( double x, double y) {return sin(0);}
 
-namespace dg{
-typedef MPI_Vector MVec;
-typedef MPI_Matrix MMatrix;
-typedef MPI_Precon MPrecon;
-}
-
 
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
     int np[2];
-    int periods[2] = {0,1};
-    if( bcx == dg::PER) periods[0] = 1;
-    int rank, size;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if( rank == 0)
-    {
-        std::cout << "Type npx and npy\n";
-        std::cin >> np[0] >> np[1];
-        std::cout<< "You typed "<<np[0] <<" and "<<np[1]<<std::endl;
-        std::cout << "Size is "<<size<<std::endl;
-        assert( size == np[0]*np[1]);
-    }
-    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
-
-    MPI_Comm comm;
-    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     unsigned n, Nx, Ny; 
-    if( rank == 0)
-    {
-        std::cout << "Type n, Nx and Ny\n";
-        std::cin >> n >> Nx >> Ny;
-    }
-    MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    MPI_Comm comm;
+    mpi_init2d( bcx, dg::PER, np, n, Nx, Ny, comm);
 
     dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER, comm);
     const dg::MPrecon w2d = dg::create::weights( grid);
     const dg::MPrecon v2d = dg::create::precond( grid);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if( rank == 0)
         std::cout<<"Expand initial condition\n";
     dg::MVec x = dg::evaluate( initial, grid);

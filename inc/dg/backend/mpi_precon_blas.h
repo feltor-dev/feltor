@@ -12,16 +12,18 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const M
 {
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );
-    assert( x.data().stride == m.data().size() );
+    assert( x.stride() == m.data.size() );
 #endif //DG_DEBUG
-    double temp=0, sum;
+    typename MatrixTraits<Matrix>::value_type temp=0, sum=0;
     for( unsigned k=0; k<x.Nz(); k++)
         for( unsigned i=1; i<x.Ny()-1; i++)
             for( unsigned j=1; j<x.Nx()-1; j++)
                 for( unsigned l=0; l<x.stride(); l++)
                     temp+=x.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l]*m.data[l]*
                           y.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l];
+    std::cout <<" temp: "<< temp << "\n";
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    std::cout <<" sum: "<< sum << "\n";
 
     return sum;
 }

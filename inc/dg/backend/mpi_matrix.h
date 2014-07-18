@@ -127,32 +127,40 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
     bool updateX = false, updateY = false;
     for( unsigned k=0; k<state_.size(); k++)
+    {
         if( state_[k] < 0 )
             updateY = true;
         else
             updateX = true;
+    }
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );
-    assert( x.stride() == w.size()*w.size());
+    assert( x.stride() == w_.data()->size()*w_.data()->size());
 #endif //DG_DEBUG
-    unsigned rows = x.Ny(), cols = x.Nx(), n = w_.size();
+    unsigned rows = x.Ny(), cols = x.Nx(), n = w_.data()->size();
+    std::cout << "n "<<n<<"\n";
+    for( unsigned i=0; i<w_.size(); i++)
+    {
+        std::cout <<" states: "<<state_[i]<<"\n";
+        std::cout <<" offset: "<<offset_[i]<<"\n";
+    }
     if( updateX )
         update_boundaryX( x);
     if( updateY) 
         update_boundaryY( x);
-    for( unsigned i=1; i<rows-1; i++)
-        for( unsigned j=1; j<cols-1; j++)
-        {
-            for( unsigned k=0; k<x.stride(); k++)
-                y.data()[(i*cols+j)*x.stride() +k] = 0;
-            for( unsigned k=0; k<data_.size(); k++)
-            {
-                if( state_[k]>0)
-                    multiplyAdd( n, data_[k], w_[k], &x.data()[(i*cols+j+offset_[k])*n*n], &y.data()[(i*cols+j)*n*n]);
-                else
-                    multiplyAdd( data_[k], n, w_[k], &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
-            }
-        }
+    //for( unsigned i=1; i<rows-1; i++)
+    //    for( unsigned j=1; j<cols-1; j++)
+    //    {
+    //        for( unsigned k=0; k<x.stride(); k++)
+    //            y.data()[(i*cols+j)*x.stride() +k] = 0;
+    //        for( unsigned k=0; k<data_.size(); k++)
+    //        {
+    //            if( state_[k]>0)
+    //                multiplyAdd( n, data_[k], w_[k], &x.data()[(i*cols+j+offset_[k])*n*n], &y.data()[(i*cols+j)*n*n]);
+    //            else
+    //                multiplyAdd( data_[k], n, w_[k], &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
+    //        }
+    //    }
 
 }
 
@@ -195,17 +203,20 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
     {
         normx = normy = create::delta(g.n());
     }
-    std::vector<double> weights(3);
-    for( unsigned i=0; i<weights.size(); i++)
-        weights[i] = normy(i,i);
+    std::vector<double> weigh(g.n());
+    for( unsigned i=0; i<weigh.size(); i++)
+        weigh[i] = normy(i,i);
 
     Operator<double> a(n), b(n), bt(n);
     if( dir == dg::symmetric)
     {
+        for( unsigned i=0; i<weigh.size(); i++)
+            std::cout << weigh[i] << " \n";
+
         MPI_Matrix m(bcx, g.bcy(), g.communicator(),  3);
         m.offset()[0] = -1, m.offset()[1] = 0, m.offset()[2] = 1;
         m.state()[0] = +1, m.state()[1] = +1, m.state()[2] = +1;
-        m.weights()[0] = weights, m.weights()[1] = weights, m.weights()[2] = weights;
+        m.weights()[0] = weigh, m.weights()[1] = weigh, m.weights()[2] = weigh;
 
         bt = normx*backward*(-0.5*lr )*forward; 
         a  = normx*backward*(0.5*(d-d.transpose()) )*forward;
@@ -219,18 +230,19 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
     {
         MPI_Matrix m(bcx, g.bcy(), g.communicator(),  2);
         m.offset()[0] = 0, m.offset()[1] = 1;
-        m.state()[0] = +1, m.state()[1] = +1, m.state()[1] = +1;
-        m.weights()[0] = weights, m.weights()[1] = weights;
+        m.state()[0] = +1, m.state()[1] = +1;
+        m.weights()[0] = weigh, m.weights()[1] = weigh;
 
         a = normx*backward*(-d.transpose()-l)*forward; 
         b = normx*backward*(rl)*forward;
         m.data()[0] = a.data(), m.data()[1] = b.data();
         return m;
     }
+    //if dir == dg::backward
     MPI_Matrix m(bcx, g.bcy(), g.communicator(),  2);
     m.offset()[0] = -1, m.offset()[1] = 0;
     m.state()[0] = +1, m.state()[1] = +1;
-    m.weights()[0] = weights, m.weights()[1] = weights;
+    m.weights()[0] = weigh, m.weights()[1] = weigh;
     bt = normx*backward*(-lr)*forward; 
     a  = normx*backward*(d+l)*forward;
     m.data()[0] = bt.data(), m.data()[1] = a.data();
@@ -275,7 +287,7 @@ MPI_Matrix dxx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = s
     {
         normx = normy = create::delta(g.n());
     }
-    std::vector<double> weights(3);
+    std::vector<double> weights(normx.size());
     for( unsigned i=0; i<weights.size(); i++)
         weights[i] = normy(i,i);
 

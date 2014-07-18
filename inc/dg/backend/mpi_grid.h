@@ -22,17 +22,29 @@ struct MPI_Grid2d
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         if( rank == 0)
         {
-            assert( g.Nx()%dims[0] == 0);
-            assert( g.Ny()%dims[1] == 0);
+            if(Nx%dims[0]!=0)
+                std::cerr << "Nx "<<Nx<<" dims[0] "<<dims[0]<<std::endl;
+            assert( Nx%dims[0] == 0);
+            if(Ny%dims[0]!=0)
+                std::cerr << "Nx "<<Nx<<" dims[0] "<<dims[0]<<std::endl;
+            assert( Ny%dims[1] == 0);
         }
     }
     MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
     {
-        int dims[2], periods[2], coords[2];
+        int rank, dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        assert( g.Nx()%dims[0] == 0);
-        assert( g.Ny()%dims[1] == 0);
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if( rank == 0)
+        {
+            if(Nx%dims[0]!=0)
+                std::cerr << "Nx "<<Nx<<" dims[0] "<<dims[0]<<std::endl;
+            assert( Nx%dims[0] == 0);
+            if(Ny%dims[0]!=0)
+                std::cerr << "Ny "<<Ny<<" dims[1] "<<dims[1]<<std::endl;
+            assert( Ny%dims[1] == 0);
+        }
     }
 
     double x0() const {

@@ -22,7 +22,7 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     assert( x.Ny() == y.Ny());
     assert( x.Nz() == y.Nz());
 #endif //DG_DEBUG
-    double temp=0, sum;
+    typename VectorTraits<Vector>::value_type temp=0, sum=0;
     for( unsigned k=0; k<x.Nz(); k++)
         for( unsigned i=1; i<x.Ny()-1; i++)
             for( unsigned j=1; j<x.Nx()-1; j++)

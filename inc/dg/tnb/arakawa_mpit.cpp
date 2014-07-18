@@ -4,19 +4,11 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "evaluation.cuh"
+#include "mpi_evaluation.h"
 #include "arakawa.h"
 #include "blas.h"
-#include "typedefs.cuh"
+#include "mpi_init.h"
 
-using namespace std;
-using namespace dg;
-
-const unsigned n = 3;
-const unsigned Nx = 50;
-const unsigned Ny = 50;
-//const double lx = 2.*M_PI;
-//const double ly = 2.*M_PI;
 
 
 
@@ -64,41 +56,33 @@ double jacobian( double x, double y)
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
-    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    DVec w2d = create::w2d( grid);
-    cout << "# of 2d cells                     " << Nx*Ny <<endl;
-    cout << "# of Legendre nodes per dimension "<< n <<endl;
-    cout <<fixed<< setprecision(2)<<endl;
-    DVec lhs = evaluate( left, grid), jac(lhs);
-    DVec rhs = evaluate( right, grid);
-    const DVec sol = evaluate ( jacobian, grid);
-    DVec eins = evaluate( one, grid);
+    MPI_Init( &argc, &argv);
+    int np[2];
+    unsigned n, Nx, Ny; 
+    MPI_Comm comm;
+    mpi_init2d( bcx, bcy, np, n, Nx, Ny, comm);
+    dg::MPI_Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
 
-    ArakawaX<DMatrix, DVec> arakawa( grid);
+    dg::MPrecon w2d = dg::create::weights( grid);
+    std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
+    std::cout << "# of Legendre nodes per dimension "<< n <<std::endl;
+    std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
+    dg::MVec lhs = dg::evaluate( left, grid), jac(lhs);
+    dg::MVec rhs = dg::evaluate( right, grid);
+    const dg::MVec sol = dg::evaluate ( jacobian, grid);
+    dg::MVec eins = dg::evaluate( dg::one, grid);
+
+    dg::ArakawaX<dg::MMatrix, dg::MVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
-    //arakawa( lhs, rhs1, jac1);
-    //blas1::pointwiseDot( rhs2, jac1, jac1);
-    //arakawa( lhs, rhs2, jac2);
-    //blas1::pointwiseDot( rhs1, jac2, jac2);
-    //blas1::axpby( 1., jac1, 1., jac2, jac2);
-
-    cout << scientific;
-    cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs,  w2d, jac)<<"\n";
-    cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs,  w2d, jac)<<"\n";
-    blas1::axpby( 1., sol, -1., jac);
-    cout << "Distance to solution "<<sqrt( blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
-    //periocid bc       |  dirichlet bc
-    //n = 1 -> p = 2    |     
-    //n = 2 -> p = 1    |
-    //n = 3 -> p = 3    |        3
-    //n = 4 -> p = 3    | 
-    //n = 5 -> p = 5    |
-    // quantities are all conserved to 1e-15 for periodic bc
-    // for dirichlet bc these are not better conserved than normal jacobian
+    std::cout << std::scientific;
+    std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
+    std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
+    std::cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
+    dg::blas1::axpby( 1., sol, -1., jac);
+    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
     return 0;
 }
 
