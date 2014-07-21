@@ -23,10 +23,10 @@ struct MPI_Grid2d
         if( rank == 0)
         {
             if(Nx%dims[0]!=0)
-                std::cerr << "Nx "<<Nx<<" dims[0] "<<dims[0]<<std::endl;
+                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
             assert( Nx%dims[0] == 0);
-            if(Ny%dims[0]!=0)
-                std::cerr << "Nx "<<Nx<<" dims[0] "<<dims[0]<<std::endl;
+            if(Ny%dims[1]!=0)
+                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
             assert( Ny%dims[1] == 0);
         }
     }
@@ -39,10 +39,10 @@ struct MPI_Grid2d
         if( rank == 0)
         {
             if(Nx%dims[0]!=0)
-                std::cerr << "Nx "<<Nx<<" dims[0] "<<dims[0]<<std::endl;
+                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
             assert( Nx%dims[0] == 0);
-            if(Ny%dims[0]!=0)
-                std::cerr << "Ny "<<Ny<<" dims[1] "<<dims[1]<<std::endl;
+            if(Ny%dims[1]!=0)
+                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
             assert( Ny%dims[1] == 0);
         }
     }

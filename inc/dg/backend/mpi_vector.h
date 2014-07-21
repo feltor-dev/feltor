@@ -41,7 +41,7 @@ void MPI_Vector::x_row( MPI_Comm comm)
     int cols = Nx_*stride_;
     int rows = Ny_;
     int source, dest;
-    MPI_Cart_shift( comm, 1, +1, &source, &dest);
+    MPI_Cart_shift( comm, 1, -1, &source, &dest);
     //MPI_Sendrecv is good for sending in a "chain"
     MPI_Sendrecv(   &data_[cols], cols, MPI_DOUBLE,  //sender
                     dest, 7,  //destination
@@ -49,10 +49,10 @@ void MPI_Vector::x_row( MPI_Comm comm)
                     source, 7, //source
                     MPI_COMM_WORLD, &status);
 
-    MPI_Cart_shift( comm, 1, -1, &source, &dest);
-    MPI_Sendrecv(   data_.data(), cols, MPI_DOUBLE,  //sender
+    MPI_Cart_shift( comm, 1, +1, &source, &dest);
+    MPI_Sendrecv(   &data_[(rows-2)*cols], cols, MPI_DOUBLE,  //sender
                     dest, 1,  //destination
-                    &data_[(rows-2)*cols], cols, MPI_DOUBLE, //receiver
+                    &data_[0], cols, MPI_DOUBLE, //receiver
                     source, 1, //source
                     MPI_COMM_WORLD, &status);
 

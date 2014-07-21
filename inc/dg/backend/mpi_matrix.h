@@ -262,7 +262,7 @@ MPI_Matrix dx( const MPI_Grid2d& g, norm no = normed, direction dir = symmetric)
 }
 MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = symmetric)
 {
-    MPI_Grid2d swapped_g( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx(), g.bcy(), g.bcx(), g.communicator());
+    MPI_Grid2d swapped_g( g.global().y0(), g.global().y1(), g.global().x0(), g.global().x1(), g.global().n(), g.global().Ny(), g.global().Nx(), g.global().bcy(), g.global().bcx(), g.communicator());
     MPI_Matrix m = dx( swapped_g, bcy, no, dir );
     for( unsigned i=0; i<m.state().size(); i++)
         m.state()[i] = -1;
@@ -295,28 +295,28 @@ MPI_Matrix dxx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = s
     {
         normx = normy = create::delta(g.n());
     }
-    std::vector<double> weights(normx.size());
-    for( unsigned i=0; i<weights.size(); i++)
-        weights[i] = normy(i,i);
+    std::vector<double> weigh(normx.size());
+    for( unsigned i=0; i<weigh.size(); i++)
+        weigh[i] = normy(i,i);
 
     Operator<double> a(n), b(n), bt(n);
     Operator<double> t = create::pipj_inv(n);
     t *= 2./g.hx();
 
     a = (lr*t*rl + (d+l)*t*(d+l).transpose() + (l + r));
-    b = (-rl*t*(d+l) - rl);
+    b = -(d+l)*t*rl-rl;
     if( dir == dg::backward)
     {
         a = (rl*t*lr + (d+l).transpose()*t*(d+l) + (l + r));
-        b = (-(d+l)*t*rl - rl);
+        b = (-rl*t*(d+l) - rl);
     }
     bt = b.transpose();
     a = normx*backward*t*a*forward, bt = normx*backward*t*bt*forward, b = normx*backward*t*b*forward;
 
     MPI_Matrix m(bcx, g.bcy(), g.communicator(),  3);
     m.offset()[0] = -1, m.offset()[1] = 0, m.offset()[2] = 1;
-    m.state()[0] = +1, m.state()[1] = +1, m.state()[2] = +1;
-    m.weights()[0] = weights, m.weights()[1] = weights, m.weights()[2] = weights;
+    m.state()[0]  = +1, m.state()[1]  = +1, m.state()[2] = +1;
+    m.weights()[0] = weigh, m.weights()[1] = weigh, m.weights()[2] = weigh;
 
     m.data()[0] = bt.data(), m.data()[1] = a.data(), m.data()[2] = b.data();
     return m;
@@ -325,10 +325,11 @@ MPI_Matrix dxx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = s
 MPI_Matrix laplacianM( const MPI_Grid2d& g, bc bcx, bc bcy, norm no = normed, direction dir = symmetric)
 {
     MPI_Matrix lapx = dxx( g, bcx, no, dir );
-    MPI_Grid2d swapped_g( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx(), g.bcy(), g.bcx(), g.communicator());
+    MPI_Grid2d swapped_g( g.global().y0(), g.global().y1(), g.global().x0(), g.global().x1(), g.global().n(), g.global().Ny(), g.global().Nx(), g.global().bcy(), g.global().bcx(), g.communicator());
     MPI_Matrix lapy = dxx( swapped_g, bcy, no, dir );
     for( unsigned i=0; i<lapy.state().size(); i++)
         lapy.state()[i] = -1;
+    //append vectors
     lapx.bcy() = bcy;
     lapx.data().insert( lapx.data().end(), lapy.data().begin(), lapy.data().end());
     lapx.weights().insert( lapx.weights().end(), lapy.weights().begin(), lapy.weights().end());
@@ -336,10 +337,12 @@ MPI_Matrix laplacianM( const MPI_Grid2d& g, bc bcx, bc bcy, norm no = normed, di
     lapx.state().insert( lapx.state().end(), lapy.state().begin(), lapy.state().end());
     return lapx;
 }
+
 MPI_Matrix laplacianM( const MPI_Grid2d& g, norm no = normed, direction dir = symmetric)
 {
     return laplacianM( g, g.bcx(), g.bcy(), no, dir);
 }
+
 MPI_Matrix forward( const MPI_Grid2d& g)
 {
     unsigned n = g.n();
