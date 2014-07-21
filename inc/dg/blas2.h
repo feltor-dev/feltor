@@ -80,9 +80,10 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
                   typename MatrixTraits<Matrix>::value_type beta, 
                   Vector& y)
 {
-    return dg::blas2::detail::doSymv( alpha, m, x, beta, y, 
+    dg::blas2::detail::doSymv( alpha, m, x, beta, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 
 /*! @brief Symmetric Matrix Vector product
@@ -100,10 +101,11 @@ inline void symv( Matrix& m,
                   Vector1& x, 
                   Vector2& y)
 {
-    return dg::blas2::detail::doSymv( m, x, y, 
+    dg::blas2::detail::doSymv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector1>::vector_category(),
                        typename dg::VectorTraits<Vector2>::vector_category() );
+    return;
 }
 ///@cond
 template< class Matrix, class Vector>
@@ -111,10 +113,11 @@ inline void mv(   Matrix& m,
                   const Vector& x, 
                   Vector& y)
 {
-    return dg::blas2::detail::doSymv( m, x, y, 
+    dg::blas2::detail::doSymv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<const Vector>::vector_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 ///@endcond
 
@@ -131,10 +134,11 @@ inline void gemv( Matrix& m,
                   Vector1& x, 
                   Vector2& y)
 {
-    return dg::blas2::detail::doGemv( m, x, y, 
+    dg::blas2::detail::doGemv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector1>::vector_category(),
                        typename dg::VectorTraits<Vector2>::vector_category() );
+    return;
 }
 ///@}
 

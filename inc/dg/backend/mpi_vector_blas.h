@@ -30,6 +30,7 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
                     temp+=x.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l]*
                           y.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l];
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     return sum;
 }

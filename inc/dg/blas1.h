@@ -64,7 +64,8 @@ inline typename VectorTraits<Vector>::value_type dot( const Vector& x, const Vec
 template< class Vector>
 inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, Vector& y)
 {
-    return dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 
 /*! @brief Modified BLAS 1 routine axpy
@@ -82,7 +83,8 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
 template< class Vector>
 inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, Vector& result)
 {
-    return dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 /*! @brief "new" BLAS 1 routine transform
  *
@@ -96,7 +98,8 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
 template< class Vector, class UnaryOp>
 inline void transform( const Vector& x, Vector& y, UnaryOp op)
 {
-    return dg::blas1::detail::doTransform( x, y, op, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doTransform( x, y, op, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 
 /*! @brief BLAS 1 routine scal
@@ -109,7 +112,8 @@ inline void transform( const Vector& x, Vector& y, UnaryOp op)
 template< class Vector>
 inline void scal( Vector& x, typename VectorTraits<Vector>::value_type alpha)
 {
-    return dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 
 /**
@@ -124,7 +128,8 @@ inline void scal( Vector& x, typename VectorTraits<Vector>::value_type alpha)
 template< class Vector>
 inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 {
-    return dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 /**
 * @brief A 'new' BLAS 1 routine. 
@@ -138,7 +143,8 @@ inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 template< class Vector>
 inline void pointwiseDivide( const Vector& x1, const Vector& x2, Vector& y)
 {
-    return dg::blas1::detail::doPointwiseDivide( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doPointwiseDivide( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 ///@}
 }//namespace blas1

@@ -21,16 +21,15 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const M
                 for( unsigned l=0; l<x.stride(); l++)
                     temp+=x.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l]*m.data[l]*
                           y.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l];
-    std::cout <<" temp: "<< temp << "\n";
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    std::cout <<" sum: "<< sum << "\n";
+    MPI_Barrier(MPI_COMM_WORLD);
 
     return sum;
 }
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::MPIPreconTag, dg::MPIVectorTag)
 {
-    doDot( x, m,x, MPIPreconTag(), MPIVectorTag());
+    return doDot( x, m,x, MPIPreconTag(), MPIVectorTag());
 }
 
 template< class Matrix, class Vector>
