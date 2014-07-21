@@ -52,6 +52,7 @@ struct MPI_Matrix
 void MPI_Matrix::update_boundaryX( MPI_Vector& v)const
 {
     v.x_col(comm_);
+    if( bcx_ == PER) return;
     int low_sign, upp_sign;
     if( bcx_ == DIR)
         low_sign=upp_sign=-1;
@@ -81,6 +82,7 @@ void MPI_Matrix::update_boundaryX( MPI_Vector& v)const
 void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
 {
     v.x_row(comm_);
+    if( bcy_ == PER) return;
     int low_sign, upp_sign;
     if( bcy_ == DIR)
         low_sign=upp_sign=-1;
@@ -138,29 +140,33 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
     assert( x.stride() == w_.data()->size()*w_.data()->size());
 #endif //DG_DEBUG
     unsigned rows = x.Ny(), cols = x.Nx(), n = w_.data()->size();
-    std::cout << "n "<<n<<"\n";
-    for( unsigned i=0; i<w_.size(); i++)
-    {
-        std::cout <<" states: "<<state_[i]<<"\n";
-        std::cout <<" offset: "<<offset_[i]<<"\n";
-    }
+    //std::cout << "n "<<n<<"\n";
+    //for( unsigned i=0; i<w_.size(); i++)
+    //{
+    //    std::cout <<" states: "<<state_[i]<<"\n";
+    //    std::cout <<" offset: "<<offset_[i]<<"\n";
+    //}
+    //const char* string1 = updateX?"updateX":"NOT X";
+    //const char* string2 = updateY?"updateY":"NOT Y";
+    //std::cout << string1 <<std::endl;
+    //std::cout << string2 <<std::endl;
     if( updateX )
         update_boundaryX( x);
     if( updateY) 
         update_boundaryY( x);
-    //for( unsigned i=1; i<rows-1; i++)
-    //    for( unsigned j=1; j<cols-1; j++)
-    //    {
-    //        for( unsigned k=0; k<x.stride(); k++)
-    //            y.data()[(i*cols+j)*x.stride() +k] = 0;
-    //        for( unsigned k=0; k<data_.size(); k++)
-    //        {
-    //            if( state_[k]>0)
-    //                multiplyAdd( n, data_[k], w_[k], &x.data()[(i*cols+j+offset_[k])*n*n], &y.data()[(i*cols+j)*n*n]);
-    //            else
-    //                multiplyAdd( data_[k], n, w_[k], &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
-    //        }
-    //    }
+    for( unsigned i=1; i<rows-1; i++)
+        for( unsigned j=1; j<cols-1; j++)
+        {
+            for( unsigned k=0; k<x.stride(); k++)
+                y.data()[(i*cols+j)*x.stride() +k] = 0;
+            for( unsigned k=0; k<data_.size(); k++)
+            {
+                if( state_[k]>0)
+                    multiplyAdd( n, data_[k], w_[k], &x.data()[(i*cols+j+offset_[k])*n*n], &y.data()[(i*cols+j)*n*n]);
+                else
+                    multiplyAdd( data_[k], n, w_[k], &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
+            }
+        }
 
 }
 
@@ -191,6 +197,8 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
     Operator<double> forward = g.dlt().forward();
     Operator<double> backward= g.dlt().backward();
     Operator<double> normx(g.n(), 0.), normy(g.n(), 0.);
+    Operator<double> t = create::pipj_inv(n);
+    t *= 2./g.hx();
     //create norm and weights
     if( no == not_normed)
     {
@@ -210,17 +218,17 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
     Operator<double> a(n), b(n), bt(n);
     if( dir == dg::symmetric)
     {
-        for( unsigned i=0; i<weigh.size(); i++)
-            std::cout << weigh[i] << " \n";
+        //for( unsigned i=0; i<weigh.size(); i++)
+            //std::cout << weigh[i] << " \n";
 
         MPI_Matrix m(bcx, g.bcy(), g.communicator(),  3);
         m.offset()[0] = -1, m.offset()[1] = 0, m.offset()[2] = 1;
         m.state()[0] = +1, m.state()[1] = +1, m.state()[2] = +1;
         m.weights()[0] = weigh, m.weights()[1] = weigh, m.weights()[2] = weigh;
 
-        bt = normx*backward*(-0.5*lr )*forward; 
-        a  = normx*backward*(0.5*(d-d.transpose()) )*forward;
-        b  = normx*backward*(0.5*rl )*forward;
+        bt = normx*backward*t*(-0.5*lr )*forward; 
+        a  = normx*backward*t*( 0.5*(d-d.transpose()) )*forward;
+        b  = normx*backward*t*( 0.5*rl )*forward;
 
         m.data()[0] = bt.data(), m.data()[1] = a.data(), m.data()[2] = b.data();
         
@@ -233,8 +241,8 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
         m.state()[0] = +1, m.state()[1] = +1;
         m.weights()[0] = weigh, m.weights()[1] = weigh;
 
-        a = normx*backward*(-d.transpose()-l)*forward; 
-        b = normx*backward*(rl)*forward;
+        a = normx*backward*t*(-d.transpose()-l)*forward; 
+        b = normx*backward*t*(rl)*forward;
         m.data()[0] = a.data(), m.data()[1] = b.data();
         return m;
     }
@@ -243,8 +251,8 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
     m.offset()[0] = -1, m.offset()[1] = 0;
     m.state()[0] = +1, m.state()[1] = +1;
     m.weights()[0] = weigh, m.weights()[1] = weigh;
-    bt = normx*backward*(-lr)*forward; 
-    a  = normx*backward*(d+l)*forward;
+    bt = normx*backward*t*(-lr)*forward; 
+    a  = normx*backward*t*(d+l)*forward;
     m.data()[0] = bt.data(), m.data()[1] = a.data();
     return m;
 }
@@ -295,15 +303,15 @@ MPI_Matrix dxx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = s
     Operator<double> t = create::pipj_inv(n);
     t *= 2./g.hx();
 
-    a = lr*t*rl + (d+l)*t*(d+l).transpose() + (l + r);
-    b = -rl*t*(d+l) - rl;
+    a = (lr*t*rl + (d+l)*t*(d+l).transpose() + (l + r));
+    b = (-rl*t*(d+l) - rl);
     if( dir == dg::backward)
     {
-        a = rl*t*lr + (d+l).transpose()*t*(d+l) + (l + r);
-        b = -(d+l)*t*rl - rl;
+        a = (rl*t*lr + (d+l).transpose()*t*(d+l) + (l + r));
+        b = (-(d+l)*t*rl - rl);
     }
     bt = b.transpose();
-    a = normx*backward*a*forward, bt = normx*backward*bt*forward, b = normx*backward*b*forward;
+    a = normx*backward*t*a*forward, bt = normx*backward*t*bt*forward, b = normx*backward*t*b*forward;
 
     MPI_Matrix m(bcx, g.bcy(), g.communicator(),  3);
     m.offset()[0] = -1, m.offset()[1] = 0, m.offset()[2] = 1;
@@ -313,6 +321,7 @@ MPI_Matrix dxx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = s
     m.data()[0] = bt.data(), m.data()[1] = a.data(), m.data()[2] = b.data();
     return m;
 }
+
 MPI_Matrix laplacianM( const MPI_Grid2d& g, bc bcx, bc bcy, norm no = normed, direction dir = symmetric)
 {
     MPI_Matrix lapx = dxx( g, bcx, no, dir );
@@ -330,6 +339,40 @@ MPI_Matrix laplacianM( const MPI_Grid2d& g, bc bcx, bc bcy, norm no = normed, di
 MPI_Matrix laplacianM( const MPI_Grid2d& g, norm no = normed, direction dir = symmetric)
 {
     return laplacianM( g, g.bcx(), g.bcy(), no, dir);
+}
+MPI_Matrix forward( const MPI_Grid2d& g)
+{
+    unsigned n = g.n();
+    Operator<double> forward = g.dlt().forward();
+    std::vector<double> weigh(g.n());
+    for( unsigned i=0; i<weigh.size(); i++)
+        weigh[i] = 1.;
+
+    MPI_Matrix m(g.bcx(), g.bcy(), g.communicator(),  1);
+    m.offset()[0] = 0;
+    m.state()[0] = +1;
+    m.weights()[0] = weigh;
+
+    m.data()[0] = forward.data();
+        
+    return m;
+}
+MPI_Matrix backward( const MPI_Grid2d& g)
+{
+    unsigned n = g.n();
+    Operator<double> op = g.dlt().backward();
+    std::vector<double> weigh(g.n());
+    for( unsigned i=0; i<weigh.size(); i++)
+        weigh[i] = 1.;
+
+    MPI_Matrix m(g.bcx(), g.bcy(), g.communicator(),  1);
+    m.offset()[0] = 0;
+    m.state()[0] = +1;
+    m.weights()[0] = weigh;
+
+    m.data()[0] = op.data();
+        
+    return m;
 }
 
 } //namespace create

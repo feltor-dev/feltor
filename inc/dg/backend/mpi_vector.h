@@ -65,17 +65,17 @@ void MPI_Vector::x_col( MPI_Comm comm)
     int cols = Nx_;
     int rows = Ny_;
     //create buffer before sending single cells (1 is left side, 2 is right side)
-    thrust::host_vector<double> sendbuffer1( stride*rows);
-    thrust::host_vector<double> recvbuffer1( stride*rows);
-    thrust::host_vector<double> sendbuffer2( stride*rows);
-    thrust::host_vector<double> recvbuffer2( stride*rows);
+    thrust::host_vector<double> sendbuffer1( rows*stride);
+    thrust::host_vector<double> recvbuffer1( rows*stride);
+    thrust::host_vector<double> sendbuffer2( rows*stride);
+    thrust::host_vector<double> recvbuffer2( rows*stride);
     //copy into buffers
     for( int i=0; i<rows; i++)
     {
         for( int j=0; j<stride; j++)
         {
-            sendbuffer1[i] = data_[(i*cols + 1       )*stride+j];
-            sendbuffer2[i] = data_[(i*cols + cols - 2)*stride+j];
+            sendbuffer1[i*stride+j] = data_[(i*cols + 1       )*stride+j];
+            sendbuffer2[i*stride+j] = data_[(i*cols + cols - 2)*stride+j];
         }
     }
     int source, dest;
@@ -96,8 +96,8 @@ void MPI_Vector::x_col( MPI_Comm comm)
     {
         for( int j=0; j<stride; j++)
         {
-            data_[(i*cols           )*stride+j] = recvbuffer1[i];
-            data_[(i*cols + cols - 1)*stride+j] = recvbuffer2[i];
+            data_[(i*cols           )*stride+j] = recvbuffer1[i*stride+j];
+            data_[(i*cols + cols - 1)*stride+j] = recvbuffer2[i*stride+j];
         }
     }
 }
