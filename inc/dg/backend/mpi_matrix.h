@@ -36,8 +36,8 @@ struct MPI_Matrix
     const std::vector<int>& offset()const {return offset_;}
     const std::vector<int>& state() const {return state_;}
 
-    void multiplyAdd( unsigned n, const std::vector<double>& op, const std::vector<double>& w, const double* x, double* y) const;
-    void multiplyAdd( const std::vector<double>& op, unsigned n, const std::vector<double>& w, const double* x, double* y) const;
+    void multiplyAdd( unsigned n, const double* op, const double* w, const double* x, double* y) const;
+    void multiplyAdd( const double* op, unsigned n, const double* w, const double* x, double* y) const;
     void symv( MPI_Vector& x, MPI_Vector& y) const;
 
   private:
@@ -110,7 +110,22 @@ void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
     return;
 }
 
-void MPI_Matrix::multiplyAdd( unsigned n, const std::vector<double>& op, const std::vector<double>& w, const double* x, double* y) const
+//inline void MPI_Matrix::multiplyAdd( unsigned n, const std::vector<double>& op, const std::vector<double>& w, const double* x, double* y) const
+//{
+//    for( unsigned i=0; i<n; i++)
+//        for( unsigned j=0; j<n; j++)
+//            for( unsigned k=0; k<n; k++)
+//                y[i*n+j]+= w[i]*op[j*n+k]*x[i*n+k];
+//}
+//
+//inline void MPI_Matrix::multiplyAdd( const std::vector<double>& op, unsigned n, const std::vector<double>& w,const double* x, double* y) const
+//{
+//    for( unsigned i=0; i<n; i++)
+//        for( unsigned j=0; j<n; j++)
+//            for( unsigned k=0; k<n; k++)
+//                y[i*n+j]+= w[j]*op[i*n+k]*x[k*n+j];
+//}
+inline void MPI_Matrix::multiplyAdd( unsigned n, const double* op, const double* w, const double* x, double* y) const
 {
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
@@ -118,7 +133,7 @@ void MPI_Matrix::multiplyAdd( unsigned n, const std::vector<double>& op, const s
                 y[i*n+j]+= w[i]*op[j*n+k]*x[i*n+k];
 }
 
-void MPI_Matrix::multiplyAdd( const std::vector<double>& op, unsigned n, const std::vector<double>& w,const double* x, double* y) const
+inline void MPI_Matrix::multiplyAdd( const double* op, unsigned n, const double* w,const double* x, double* y) const
 {
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
@@ -127,6 +142,7 @@ void MPI_Matrix::multiplyAdd( const std::vector<double>& op, unsigned n, const s
 }
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
+    //dg::Timer t;
     bool updateX = false, updateY = false;
     for( unsigned k=0; k<state_.size(); k++)
     {
@@ -157,15 +173,18 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
     //MPI_Barrier(comm_);
     //if(rank==1) std::cout<<x<<std::endl;
     //MPI_Barrier(comm_);
+    //t.tic();
     if( updateX )
         update_boundaryX( x);
     if( updateY) 
         update_boundaryY( x);
-    //std::cout << "After boundary update\n";
+    //t.toc();
+    //std::cout << "boundary update took "<<t.diff()<<"s\n";
     //if(rank==0) std::cout<<x<<std::endl;
     //MPI_Barrier(comm_);
     //if(rank==1) std::cout<<x<<std::endl;
     //MPI_Barrier(comm_);
+    //t.tic();
     for( unsigned i=1; i<rows-1; i++)
         for( unsigned j=1; j<cols-1; j++)
         {
@@ -174,12 +193,29 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
             for( unsigned k=0; k<data_.size(); k++)
             {
                 if( state_[k]>0)
-                    multiplyAdd( n, data_[k], w_[k], &x.data()[(i*cols+j+offset_[k])*n*n], &y.data()[(i*cols+j)*n*n]);
+                    multiplyAdd( n, (data_[k]).data(), (w_[k]).data(), &x.data()[(i*cols+j+offset_[k])*n*n], &y.data()[(i*cols+j)*n*n]);
                 else
-                    multiplyAdd( data_[k], n, w_[k], &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
+                    multiplyAdd( (data_[k]).data(), n, (w_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
             }
         }
-    //if(rank==0) std::cout<<y<<std::endl;
+
+    //for( unsigned k=0; k<x.size(); k++)
+    //    y.data()[k] = 0;
+    //for( unsigned k=0; k<data_.size(); k++)
+    //{
+    //    if( state_[k]>0)
+    //        for( unsigned i=1; i<rows-1; i++)
+    //            for( unsigned j=1; j<cols-1; j++)
+    //                multiplyAdd( n, (data_[k]).data(), (w_[k]).data(), &x.data()[(i*cols+j+offset_[k])*n*n], &y.data()[(i*cols+j)*n*n]);
+    //    else
+    //        for( unsigned i=1; i<rows-1; i++)
+    //            for( unsigned j=1; j<cols-1; j++)
+    //                multiplyAdd( (data_[k]).data(), n, (w_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
+    //}
+    //t.toc();
+    //std::cout << "Multiplication  took "<<t.diff()<<"s\n";
+    ////if(rank==0) std::cout<<y<<std::endl;
+
 
 }
 

@@ -4,6 +4,7 @@
 #include <thrust/host_vector.h>
 #include "timer.cuh"
 #include "mpi_evaluation.h"
+#include "mpi_derivatives.h"
 
 #include "cg.h"
 #include "mpi_init.h"

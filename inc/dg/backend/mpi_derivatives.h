@@ -82,6 +82,7 @@ MPI_Matrix dx( const MPI_Grid2d& g, norm no = normed, direction dir = symmetric)
 }
 MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = symmetric)
 {
+    //problematisch wenn communicator blöd ist
     MPI_Grid2d swapped_g( g.global().y0(), g.global().y1(), g.global().x0(), g.global().x1(), g.global().n(), g.global().Ny(), g.global().Nx(), g.global().bcy(), g.global().bcx(), g.communicator());
     MPI_Matrix m = dx( swapped_g, bcy, no, dir );
     for( unsigned i=0; i<m.state().size(); i++)

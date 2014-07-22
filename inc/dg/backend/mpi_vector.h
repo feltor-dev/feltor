@@ -20,6 +20,7 @@ struct MPI_Vector
     unsigned Nx()const {return Nx_;}
     unsigned Ny()const {return Ny_;}
     unsigned Nz()const {return Nz_;}
+    unsigned size() const{return stride_*Nx_*Ny_*Nz_;}
     double operator[]( unsigned idx) const {return data_[idx];}
     void x_row( MPI_Comm comm);
     void x_col( MPI_Comm comm);

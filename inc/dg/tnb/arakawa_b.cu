@@ -63,11 +63,12 @@ int main()
 
 
     ArakawaX<dg::DMatrix, DVec> arakawa( grid);
+    unsigned multi=20;
     t.tic(); 
-    for( unsigned i=0; i<20; i++)
+    for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    cout << "\nArakawa took "<<t.diff()/0.02<<"ms\n\n";
+    cout << "\nArakawa took "<<t.diff()*1000/(double)multi<<"ms\n\n";
 
     cout << scientific;
     cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";

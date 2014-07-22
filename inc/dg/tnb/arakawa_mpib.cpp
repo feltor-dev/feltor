@@ -4,12 +4,13 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
+#include "timer.cuh"
+
 #include "mpi_evaluation.h"
 #include "arakawa.h"
 #include "blas.h"
 #include "mpi_init.h"
 
-#include "timer.cuh"
 
 
 const double lx = 2*M_PI;
@@ -57,14 +58,15 @@ int main(int argc, char* argv[])
     dg::MVec rhs = dg::evaluate ( right,grid);
     const dg::MVec sol = dg::evaluate( jacobian, grid );
     dg::MVec eins = dg::evaluate( dg::one, grid );
-    std::cout<< std::setprecision(2);
+    std::cout<< std::setprecision(3);
 
     dg::ArakawaX<dg::MMatrix, dg::MVec> arakawa( grid);
+    unsigned multi=20;
     t.tic(); 
-    for( unsigned i=0; i<20; i++)
+    for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    if(rank==0) std::cout << "\nArakawa took "<<t.diff()/0.02<<"ms\n\n";
+    if(rank==0) std::cout << "\nArakawa took "<<t.diff()*1000/(double)multi<<"ms\n\n";
 
     double result = dg::blas2::dot( eins, w2d, jac);
     std::cout << std::scientific;
@@ -78,5 +80,6 @@ int main(int argc, char* argv[])
     if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; 
 
 
+    MPI_Finalize();
     return 0;
 }
