@@ -36,9 +36,10 @@ double jacobian( double x, double y)
 }
 */
 
-/*
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return sin(y)*cos(x);} 
+const double lx = 2.*M_PI;
+const double ly = 2.*M_PI;
 dg::bc bcx = dg::PER; 
 dg::bc bcy = dg::PER;
 //double right2( double x, double y) {return sin(y);}
@@ -46,7 +47,7 @@ double jacobian( double x, double y)
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
-*/
+/*
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
@@ -62,7 +63,7 @@ double jacobian( double x, double y)
 {
     return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
-
+*/
 
 int main()
 {

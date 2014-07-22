@@ -28,9 +28,10 @@ double jacobian( double x, double y)
 }
 */
 
-/*
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return sin(y)*cos(x);} 
+const double lx = 2.*M_PI;
+const double ly = 2.*M_PI;
 dg::bc bcx = dg::PER; 
 dg::bc bcy = dg::PER;
 //double right2( double x, double y) {return sin(y);}
@@ -38,7 +39,7 @@ double jacobian( double x, double y)
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
-*/
+/*
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
@@ -54,20 +55,22 @@ double jacobian( double x, double y)
 {
     return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
+*/
 
 
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    int np[2];
+    int np[2], rank;
     unsigned n, Nx, Ny; 
     MPI_Comm comm;
     mpi_init2d( bcx, bcy, np, n, Nx, Ny, comm);
     dg::MPI_Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     dg::MPrecon w2d = dg::create::weights( grid);
-    std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
-    std::cout << "# of Legendre nodes per dimension "<< n <<std::endl;
+    if(rank==0) std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
+    if(rank==0) std::cout << "# of Legendre nodes per dimension "<< n <<std::endl;
     std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
     dg::MVec lhs = dg::evaluate( left, grid), jac(lhs);
     dg::MVec rhs = dg::evaluate( right, grid);
@@ -77,12 +80,16 @@ int main(int argc, char* argv[])
     dg::ArakawaX<dg::MMatrix, dg::MVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
+    double result = dg::blas2::dot( eins, w2d, jac);
     std::cout << std::scientific;
-    std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
-    std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
-    std::cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
+    if(rank==0) std::cout << "Mean     Jacobian is "<<result<<"\n";
+    result = dg::blas2::dot( rhs,  w2d, jac);
+    if(rank==0) std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
+    result = dg::blas2::dot( lhs,  w2d, jac);
+    if(rank==0) std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
-    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
+    result = sqrt( dg::blas2::dot( w2d, jac));
+    if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; //don't forget sqrt when comuting errors
     return 0;
 }
 

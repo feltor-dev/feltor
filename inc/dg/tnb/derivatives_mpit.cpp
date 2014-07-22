@@ -11,8 +11,8 @@ double function( double x, double y, double z) { return sin(3./4.*z);}
 double derivative( double x, double y, double z) { return 3./4.*cos(3./4.*z);}
 dg::bc bcz = dg::DIR_NEU;
 */
-double function( double x, double y) { return sin(x);}
-double derivative( double x, double y) { return cos(x);}
+double function( double x, double y) { return sin(y);}
+double derivative( double x, double y) { return cos(y);}
 
 dg::bc bcx = dg::PER, bcy = dg::DIR;
 
@@ -28,11 +28,13 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << Nx << " and Ny "<<Ny<<std::endl;
     dg::MPI_Grid2d g( 0, lx, 0, lx, n, Nx, Ny, bcx, bcy, comm);
 
-    dg::MMatrix forw( dg::create::forward( g));
-    dg::MMatrix back( dg::create::backward( g));
-    dg::MMatrix dx = dg::create::dx( g, bcx, dg::normed, dg::symmetric);
+    dg::MMatrix forw( dg::create::forward_transform( g));
+    dg::MMatrix back( dg::create::backward_transform( g));
+
+    dg::MMatrix dx = dg::create::dy( g, bcx, dg::normed, dg::symmetric);
     dg::MMatrix lzM = dg::create::laplacianM( g, bcx, bcy, dg::normed, dg::symmetric);
-    dg::MMatrix dxx = dg::create::dxx( g, bcx, dg::normed, dg::symmetric);
+    dg::MMatrix dxx = dg::create::dxx( g, bcy, dg::normed, dg::symmetric);
+
     dg::MVec func = dg::evaluate( function, g);
     dg::MVec result = func, result2(result);
     dg::MVec deriv = dg::evaluate( derivative, g);

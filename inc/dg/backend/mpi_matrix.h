@@ -100,13 +100,13 @@ void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
             for( unsigned k=0; k<n; k++)
                 for( unsigned l=0; l<n; l++)
                     v.data()[((rows-1)*cols+i)*n*n+k*n+l] = 
-                        low_sign*v.data()[((rows-2)*cols+i)*n*n+(n-k-1)*n+l];
+                        upp_sign*v.data()[((rows-2)*cols+i)*n*n+(n-k-1)*n+l];
     else if( coords[1] == 0)
         for( unsigned i=1; i<cols-1; i++)
             for( unsigned k=0; k<n; k++)
                 for( unsigned l=0; l<n; l++)
                     v.data()[i*n*n+k*n+l] = 
-                        upp_sign*v.data()[i*n*n+(n-k-1)*n+l];
+                        low_sign*v.data()[i*n*n+(n-k-1)*n+l];
     return;
 }
 
@@ -343,7 +343,7 @@ MPI_Matrix laplacianM( const MPI_Grid2d& g, norm no = normed, direction dir = sy
     return laplacianM( g, g.bcx(), g.bcy(), no, dir);
 }
 
-MPI_Matrix forward( const MPI_Grid2d& g)
+MPI_Matrix forward_transform( const MPI_Grid2d& g)
 {
     unsigned n = g.n();
     Operator<double> forward = g.dlt().forward();
@@ -360,7 +360,7 @@ MPI_Matrix forward( const MPI_Grid2d& g)
         
     return m;
 }
-MPI_Matrix backward( const MPI_Grid2d& g)
+MPI_Matrix backward_transform( const MPI_Grid2d& g)
 {
     unsigned n = g.n();
     Operator<double> op = g.dlt().backward();
