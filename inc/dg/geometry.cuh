@@ -5,7 +5,7 @@
 #include <cmath>
 #include <vector>
 //6 analytical quantities
-namespace solovev
+namespace dg
 {
 /**
  * @brief Constructs and display geometric parameters
@@ -667,7 +667,9 @@ struct Pupil
     GeomParameters gp_;
     Psip psip_;
 };
-
+/**
+ * @brief Damps the outer boundary in a zone with thickness alpha
+ */ 
 struct Damping
 {
     Damping( GeomParameters gp):
@@ -691,6 +693,9 @@ struct Damping
     GeomParameters gp_;
     Psip psip_;
 };
+/**
+ * @brief Computes the background gradient for the densities
+ */ 
 struct Gradient
 {
     Gradient( GeomParameters gp, double lnN_inner):
@@ -715,6 +720,9 @@ struct Gradient
     double lnN_inner_;
     Psip psip_;
 };
+/**
+ * @brief testfunction to test the parallel derivative
+ */ 
 struct TestFunction
 {
     TestFunction(Psip psip) : psip_(psip){}
@@ -725,7 +733,9 @@ struct TestFunction
     private:
     Psip psip_;
 };
-
+/**
+ * @brief analyitcal solution of the parallel derivative of the testfunction
+ */ 
 struct DeriTestFunction
 {
     DeriTestFunction(Psip psip,PsipR psipR, PsipZ psipZ, Ipol ipol, InvB invB) : psip_(psip), psipR_(psipR), psipZ_(psipZ),ipol_(ipol), invB_(invB) {}

@@ -6,6 +6,7 @@
 #include "dg/gamma.cuh"
 
 #include "parameters.h"
+// #include "geometry_circ.h"
 #include "geometry.h"
 
 #ifdef DG_BENCHMARK
@@ -18,12 +19,13 @@ namespace eule
 template<class container>
 struct Rolkar
 {
-    Rolkar( const dg::Grid3d<double>& g, Parameters p):
+    Rolkar( const dg::Grid3d<double>& g, Parameters p, solovev::GeomParameters gp):
         p(p),
+        gp(gp),
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         //w3d( 4, &w3d_), v3d( 4, &v3d_), 
         temp( g.size()),
-        pupil_( dg::evaluate( Pupil(p.R_0, p.a, p.b), g))
+        pupil_( dg::evaluate( solovev::Pupil( gp), g))
     {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::XSPACE);
         //LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
@@ -68,6 +70,7 @@ struct Rolkar
                 thrust::divides< typename container::value_type>());
     }
     const Parameters p;
+    const solovev::GeomParameters gp;
     const container w3d_, v3d_;
     const std::vector<const container*> w3d, v3d;
     container temp;
@@ -95,7 +98,7 @@ struct Feltor
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
-    Feltor( const dg::Grid3d<value_type>& g, Parameters p);
+    Feltor( const dg::Grid3d<value_type>& g, Parameters p,solovev::GeomParameters gp);
 
     void exp( const std::vector<container>& src, std::vector<container>& dst, unsigned);
 
@@ -140,7 +143,7 @@ struct Feltor
 
     //matrices and solvers
     Matrix A; 
-    dg::DZ<eule::Field, container> dz;
+    dg::DZ<container> dz;
     dg::ArakawaX< dg::DMatrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     dg::Polarisation2dX< container, dg::DMatrix > pol; //note the host vector
@@ -148,33 +151,55 @@ struct Feltor
 
     const container w3d, v3d, one;
     const Parameters p;
+    const solovev::GeomParameters gp;
 
     double mass_, energy_, diff_, ediff_;
 
 };
 
+// template< class container>
+// Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, GeomParam gp): 
+//     chi( g.size(), 0.), omega(chi),
+//     binv( dg::evaluate(Field(geop) , g) ),
+//     curvR( dg::evaluate( eule::CurvatureR(p.R_0, p.I_0), g)),
+//     curvZ( dg::evaluate( eule::CurvatureZ(p.R_0, p.I_0), g)),
+//     gradlnB( dg::evaluate( eule::GradLnB(p.R_0, p.I_0) , g)),
+//     iris( dg::evaluate( eule::Pupil( p.R_0, p.a, p.b), g)),
+//     source( dg::evaluate( dg::Gaussian( p.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
+//     damping( dg::evaluate( eule::Damping( p.R_0, p.a, p.b, p.damping_width, p.damping_strength ), g)), 
+//     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
+//     dzy( 4, chi), curvy(dzy),
+//     A (dg::create::laplacianM_perp( g, dg::not_normed, dg::XSPACE, dg::symmetric)),
+//     dz( eule::Field(p.R_0, p.I_0), g),
+//     arakawa( g), 
+//     pol(     g), 
+//     invert_pol( omega, omega.size(), p.eps_pol), 
+//     w3d( dg::create::w3d(g)), v3d( dg::create::v3d(g)), one( g.size(), 1.),
+//     p(p)
+// {
+// }
 template< class container>
-Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p ): 
+Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solovev::GeomParameters gp): 
     chi( g.size(), 0.), omega(chi),
-    binv( dg::evaluate( eule::Field(p.R_0, p.I_0), g)),
-    curvR( dg::evaluate( eule::CurvatureR(p.R_0, p.I_0), g)),
-    curvZ( dg::evaluate( eule::CurvatureZ(p.R_0, p.I_0), g)),
-    gradlnB( dg::evaluate( eule::GradLnB(p.R_0, p.I_0) , g)),
-    iris( dg::evaluate( eule::Pupil( p.R_0, p.a, p.b), g)),
+    binv( dg::evaluate(solovev::Field(gp) , g) ),
+    curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
+    curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
+    gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
+    iris( dg::evaluate( solovev::Pupil( gp), g)),
     source( dg::evaluate( dg::Gaussian( p.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
-    damping( dg::evaluate( eule::Damping( p.R_0, p.a, p.b, p.damping_width, p.damping_strength ), g)), 
+    damping( dg::evaluate( solovev::Damping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
     A (dg::create::laplacianM_perp( g, dg::not_normed, dg::XSPACE, dg::symmetric)),
-    dz( eule::Field(p.R_0, p.I_0), g),
+    dz(solovev::Field(gp), g),
     arakawa( g), 
     pol(     g), 
     invert_pol( omega, omega.size(), p.eps_pol), 
     w3d( dg::create::w3d(g)), v3d( dg::create::v3d(g)), one( g.size(), 1.),
-    p(p)
+    p(p),
+    gp(gp)
 {
 }
-
 template< class container>
 const container& Feltor<container>::compute_vesqr( const container& potential)
 {
