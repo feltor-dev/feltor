@@ -1,5 +1,5 @@
-#ifndef _DG_PROJECTION_
-#define _DG_PROJECTION_
+
+#pragma once
 
 namespace dg{
 ///@cond
@@ -165,4 +165,3 @@ inline double one( double x, double y, double z) {return 1;}
 
 ///@}
 
-#endif //_DG_PROJECTION_

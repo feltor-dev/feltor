@@ -54,7 +54,7 @@ LIBS 	+= -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
 GLFLAGS  = -lm
 endif
 
-TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial 
+TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial feltor_video 
 
 all: $(TARGETS)
 
@@ -73,6 +73,8 @@ innto_video: innto_video.cpp
 	$(CC) -O3  $< -o $@ -std=c++0x $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl -lfftw3 
 innto_radial: innto_radial.cpp
 	$(CC) -O3  $< -o $@ -std=c++0x $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl -lfftw3 
+feltor_video: feltor_video.cu 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl 
 
 show: show.cpp
 	$(CXX) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) -lhdf5 -lhdf5_hl -Wall

@@ -155,6 +155,12 @@ int main( int argc, char* argv[])
     field_ratio = bp.boundary().lx/bp.boundary().ly;
     
     bp.display(cout);
+    std::cout <<"Blob parameters are:\n"
+        <<"    amp = "<<amp<<"\n" 
+        <<"   sigma= "<<blob_width<<"\n"
+        <<"   posX = "<<posX<<"\n" 
+        <<"   posY = "<<posY<<"\n"; 
+
     if( bp.boundary().bc_x != TL_PERIODIC)
     {
         cerr << "Only periodic boundaries allowed!\n";

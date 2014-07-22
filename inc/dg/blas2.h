@@ -1,12 +1,15 @@
-#ifndef _DG_BLAS2_
-#define _DG_BLAS2_
+#pragma once 
 
-#include "blas/cusp_matrix.cuh"
-#include "blas/preconditioner.cuh"
-//#include "blas/operator.cuh"
-#include "blas/selfmade.cuh"
 #include "vector_traits.h"
 #include "matrix_traits.h"
+#include "matrix_traits_thrust.h"
+#include "blas/thrust_matrix.cuh"
+#include "blas/std_matrix.cuh"
+#include "blas/cusp_matrix.cuh"
+#include "blas/selfmade.cuh"
+#ifdef MPI_BACKEND
+#include "blas/mpi_matrix.h"
+#endif //MPI_BACKEND
 
 namespace dg{
 /*! @brief BLAS Level 2 routines 
@@ -33,7 +36,7 @@ namespace blas2{
     implicit memcpy of the result.
  */
 template< class Matrix, class Vector>
-inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const Vector& y)
+inline typename MatrixTraits<Matrix>::value_type dot( const Vector& x, const Matrix& m, const Vector& y)
 {
     return dg::blas2::detail::doDot( x, m, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
@@ -50,7 +53,7 @@ inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const 
     implicit memcpy of the result.
  */
 template< class Matrix, class Vector>
-inline typename Matrix::value_type dot( const Matrix& m, const Vector& x)
+inline typename MatrixTraits<Matrix>::value_type dot( const Matrix& m, const Vector& x)
 {
     return dg::blas2::detail::doDot( m, x, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
@@ -89,9 +92,10 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
  * @param x A Vector different from y (except in the case where m is diagonal)
  * @param y contains solution on output
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
+ * @attention Due to the SelfMadeMatrixTag and MPI_Vectors, m and x cannot be declared const
  */
 template< class Matrix, class Vector>
-inline void symv( const Matrix& m, 
+inline void symv( Matrix& m, 
                   const Vector& x, 
                   Vector& y)
 {
@@ -101,7 +105,7 @@ inline void symv( const Matrix& m,
 }
 ///@cond
 template< class Matrix, class Vector>
-inline void mv( const Matrix& m, 
+inline void mv(   Matrix& m, 
                   const Vector& x, 
                   Vector& y)
 {
@@ -120,7 +124,7 @@ inline void mv( const Matrix& m,
  * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
 template< class Matrix, class Vector>
-inline void gemv( const Matrix& m, 
+inline void gemv( Matrix& m, 
                   const Vector& x, 
                   Vector& y)
 {
@@ -133,4 +137,3 @@ inline void gemv( const Matrix& m,
 } //namespace blas2
 } //namespace dg
 
-#endif //_DG_BLAS2_

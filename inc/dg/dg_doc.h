@@ -27,16 +27,18 @@
  *          with DLT<n>::forward)
  *      @defgroup functions Functions and Functors
  *
- *          The functions are useful in the constructor of Operator objects. 
+ *          The functions are useful mainly in the constructor of Operator objects. 
  *          The functors are useful for either vector transformations or
  *          as init functions in the evaluate or expand routines.
  *
- *      @defgroup creation Discrete derivatives and diagonal weight matrices
+ *      @defgroup creation Discrete derivatives 
  *      @{
- *          @defgroup lowlevel Helper functions and classes
+ *          @defgroup lowlevel Lowlevel helper functions and classes
  *              Low level helper routines.
- *          @defgroup highlevel Creation functions
+ *          @defgroup highlevel Matrix creation functions and classes
  *              High level matrix creation functions
+ *          @defgroup arakawa Arakawas scheme
+ *          @defgroup dz Parallel derivative along a field line
  *      @}
  *      @defgroup blas Basic Linear Algebra Subprograms
  *
@@ -50,10 +52,13 @@
  *              This group contains Matrix-Vector operations.
  *      @}
  *      @defgroup algorithms Numerical schemes
- *          Numerical time integration and a conjugate gradient method.
+ *          Numerical time integration and a conjugate gradient method based
+ *          solely on the use of blas routines
  *      @defgroup utilities Utilities
  *          Utilities that might come in handy at some place or the other.
  *      @{
+ *          @defgroup scatter Utility functions for reorder operations on DG-formatted vectors
+ *          @defgroup operators Utility classes for the use in the Invert class
  *          @defgroup polarization Utility functions for C-style bindings of polarization solver
  *
  To use these funcions use code like:
@@ -93,9 +98,9 @@ int main()
  *
  * The DG library is built on top of the thrust and cusp libraries. 
  * Its intention is to provide easy to use
- * functions and objects needed for the integration of the 2D gyrofluid system with a
+ * functions and objects needed for the integration of the 2D and 3D gyrofluid system with a
  * discontinuous galerkin method.  
- * Since it is build on top of thrust, code can run on a CPU as well as a GPU by simply 
+ * Since it is build on top of thrust and cusp, code can run on a CPU as well as a GPU by simply 
  * switching between thrust's host_vector and device_vector. 
  * The DG library uses a design pattern also employed in the cusp library and other modern C++ codes. 
  * It might be referred to as container-free numerical algorithms. 

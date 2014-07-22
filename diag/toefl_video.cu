@@ -20,7 +20,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     std::stringstream title;
     std::vector<double> v = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3], v[4], "");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3]*v[2], v[4]*v[1], "");
     draw::RenderHostData render( v[1], v[2]);
 
     if( argc != 2)
@@ -60,7 +60,7 @@ int main( int argc, char* argv[])
     const Parameters p( file::read_input( in), layout);
 
     p.display();
-    dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed, dg::XSPACE);
@@ -110,6 +110,8 @@ int main( int argc, char* argv[])
         {
             if( in.find( "SOL") != std::string::npos)
                 std::cout << "Hello SOL\n";
+            else if( in.find( "SHU") != std::string::npos)
+                std::cout << "Hello SHU\n";
             else
                 thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
         }

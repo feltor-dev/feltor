@@ -10,14 +10,14 @@ CFLAGS+= -Xcompiler -fopenmp
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 OPT	   = -O2
 else
-CC = g++
+CC = clang
 CFLAGS = -Wall -fopenmp -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 OPT	   = -O3
 endif
 
 ifeq ($(strip $(system)),home)
-INCLUDE += -I/home/matthias/include # cusp and thrust libraries
+INCLUDE += -I/home/markus/Dokumente/phd/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
@@ -48,4 +48,4 @@ convection: convection.cu convection.cuh
 .PHONY: clean
 
 clean:
-	rm -f toeflR toefl_hpc
+	rm -f convection

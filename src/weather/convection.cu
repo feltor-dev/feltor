@@ -6,7 +6,7 @@
 #include "draw/host_window.h"
 
 #include "convection.cuh"
-#include "dg/rk.cuh"
+#include "dg/karniadakis.cuh"
 #include "dg/timer.cuh"
 
 #include "file/read_input.h"
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
     params.eps = p.eps, params.P = p.P;
     params.R = p.R, params.L = p.L, params.R_l = p.R_l, params.zeta = p.zeta;
 
-    dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, dg::PER, dg::DIR);
+    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, dg::PER, dg::DIR);
     Convection< dg::DVec> convect( grid, params, p.eps_lap);
     //initial conditions
     dg::Gaussian g1( 0.2*p.lx, 0.5*p.ly, 0.05, 0.05, p.n0);
@@ -122,11 +122,12 @@ int main(int argc, char* argv[])
     y0[1] = dg::evaluate( InitDens(0.001, p.zeta), grid);
     dg::blas1::axpby( 1., y0[2], -1, y0[2]);
     //init timestepper
-    dg::AB< k, std::vector<dg::DVec> > ab(y0);
-    ab.init( convect, y0, p.dt);
-    std::vector<dg::DVec> y1( y0);
-    ab( convect, y0, y1, p.dt);
-    y0.swap(y1);
+    dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
+    Diffusion<dg::DVec> diffusion( grid, p.L, p.P);
+    //dg::AB< k, std::vector<dg::DVec> > ab(y0);
+    ab.init( convect, diffusion, y0, p.dt);
+    //std::vector<dg::DVec> y1( y0);
+    ab( convect, diffusion, y0);
     unsigned step = 0;
     double time = 0;
     //visualization
@@ -169,7 +170,7 @@ int main(int argc, char* argv[])
         {
             step++;
             time+=p.dt;
-            try{ ab( convect, y0, y1, p.dt);}
+            try{ ab( convect, diffusion, y0) ;}
             catch( Fail& fail){
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does simulation respect CFL condition?\n";
@@ -177,7 +178,6 @@ int main(int argc, char* argv[])
                 break;
             }
         }
-        y0.swap( y1);
     }
     glfwTerminate();
 

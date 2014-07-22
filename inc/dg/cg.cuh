@@ -5,6 +5,10 @@
 
 #include "blas.h"
 
+#ifdef DG_BENCHMARK
+#include "timer.cuh"
+#endif
+
 namespace dg{
 
 //// TO DO: check for better stopping criteria using condition number estimates
@@ -29,7 +33,7 @@ template< class Vector>
 class CG
 {
   public:
-    typedef typename Vector::value_type value_type;
+    typedef typename VectorTraits<Vector>::value_type value_type;//!< value type of the Vector class
       /**
        * @brief Reserve memory for the pcg method
        *
@@ -68,24 +72,7 @@ class CG
      * @return Number of iterations used to achieve desired precision
      */
     template< class Matrix, class Preconditioner >
-    unsigned operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P , value_type eps = 1e-12);
-    /**
-     * @brief Solve the system A*x = b using unpreconditioned conjugate gradient method
-     *
-     @tparam Matrix The matrix class: no requirements except for the 
-            BLAS routines
-     * @param A A symmetric positive definit matrix
-     * @param x Contains an initial value on input and the solution on output.
-     * @param b The right hand side vector. x and b may be the same vector.
-     * @param eps The relative error to be respected
-     *
-     * @return Number of iterations used to achieve desired precision
-     */
-    template< class Matrix >
-    unsigned operator()( const Matrix& A, Vector& x, const Vector& b, value_type eps = 1e-12)
-    {
-        return this->operator()( A, x, b, Identity<value_type>(), eps);
-    }
+    unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P , value_type eps = 1e-12);
   private:
     Vector r, p, ap; 
     unsigned max_iter;
@@ -109,7 +96,7 @@ class CG
 */
 template< class Vector>
 template< class Matrix, class Preconditioner>
-unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, value_type eps)
+unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, value_type eps)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
@@ -137,7 +124,8 @@ unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, c
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
         std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
-        std::cout << "Relative "<<sqrt( nrm2r_new)/nrmb << "\n";
+        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*nrmb + eps) 
             return i;
@@ -147,6 +135,173 @@ unsigned CG< Vector>::operator()( const Matrix& A, Vector& x, const Vector& b, c
     return max_iter;
 }
 
+/**
+ * @brief Function version of CG class
+ *
+ * @ingroup algorithms
+ * @tparam Matrix Matrix type
+ * @tparam Vector Vector type
+ * @tparam Preconditioner Preconditioner type
+ * @param A Matrix 
+ * @param x contains initial guess on input and solution on output
+ * @param b right hand side
+ * @param P Preconditioner
+ * @param eps relative error
+ * @param max_iter maximum iterations allowed
+ *
+ * @return number of iterations
+ */
+template< class Matrix, class Vector, class Preconditioner>
+unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typename VectorTraits<Vector>::value_type eps, unsigned max_iter)
+{
+    typedef typename VectorTraits<Vector>::value_type value_type;
+    value_type nrmb = sqrt( blas2::dot( P, b));
+#ifdef DG_DEBUG
+    std::cout << "Norm of b "<<nrmb <<"\n";
+    std::cout << "Residual errors: \n";
+#endif //DG_DEBUG
+    if( nrmb == 0)
+    {
+        blas1::axpby( 1., b, 0., x);
+        return 0;
+    }
+    Vector r(x.size()), p(x.size()), ap(x.size()); //1% time at 20 iterations
+    //r = b; blas2::symv( -1., A, x, 1.,r); //compute r_0 
+    blas2::symv( A,x,r);
+    blas1::axpby( 1., b, -1., r);
+    blas2::symv( P, r, p );//<-- compute p_0
+    //note that dot does automatically synchronize
+    value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
+    value_type alpha, nrm2r_new;
+    for( unsigned i=1; i<max_iter; i++)
+    {
+        blas2::symv( A, p, ap);
+        alpha = nrm2r_old /blas1::dot( p, ap);
+        blas1::axpby( alpha, p, 1.,x);
+        blas1::axpby( -alpha, ap, 1., r);
+        nrm2r_new = blas2::dot( P, r); 
+#ifdef DG_DEBUG
+        std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
+        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+#endif //DG_DEBUG
+        if( sqrt( nrm2r_new) < eps*nrmb + eps) 
+            return i;
+        blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
+        nrm2r_old=nrm2r_new;
+    }
+    return max_iter;
+}
+
+/**
+ * @brief Smart conjugate gradient solver. 
+ 
+ * Solve a symmetric linear inversion problem using a conjugate gradient method and 
+ * the last two solutions.
+ *
+ * @ingroup algorithms
+ * Solves the Equation \f[ \hat O \phi = \rho \f]
+ * for any symmetric operator O. 
+ * It uses solutions from the last two calls to 
+ * extrapolate a solution for the current call.
+ * @tparam container The Vector class to be used
+ */
+template<class container>
+struct Invert
+{
+    /**
+     * @brief Constructor
+     *
+     * @param copyable Needed to construct the two previous solutions
+     * @param max_iter maximum iteration in conjugate gradient
+     * @param eps relative error in conjugate gradient
+     */
+    Invert(const container& copyable, unsigned max_iter, double eps): 
+        eps_(eps),
+        phi0( copyable), phi1( copyable), phi2(phi1), cg( copyable, max_iter) { }
+    /**
+     * @brief Solve linear problem
+     *
+     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
+     * conjugate gradient method. The initial guess comes from an extrapolation 
+     * of the last solutions
+     * @tparam SymmetricOp Symmetric operator with the SelfMadeMatrixTag
+        The functions weights() and precond() need to be callable and return
+        weights and the preconditioner for the conjugate gradient method
+     * @param op selfmade symmetric Matrix operator class
+     * @param phi solution (write only)
+     * @param rho right-hand-side
+     *
+     * @return number of iterations used 
+     */
+    template< class SymmetricOp >
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
+    {
+        return this->operator()(op, phi, rho, op.weights(), op.precond());
+    }
+
+    /**
+     * @brief Solve linear problem
+     *
+     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
+     * conjugate gradient method. The initial guess comes from an extrapolation 
+     * of the last solutions.
+     * @tparam SymmetricOp Symmetric matrix or operator (with the selfmade tag)
+     * @tparam Weights class of the weights container
+     * @tparam Preconditioner class of the Preconditioner
+     * @param op selfmade symmetric Matrix operator class
+     * @param phi solution (write only)
+     * @param rho right-hand-side
+     * @param w The weights that made the operator symmetric
+     * @param p The preconditioner  
+     *
+     * @return number of iterations used 
+     */
+    template< class SymmetricOp, class Weights, class Preconditioner >
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, Weights& w, Preconditioner& p )
+    {
+        //double alpha[3] = { 3., -3., 1.};
+        //double alpha[3] = { 2., -1., 0.};
+        double alpha[3] = { 1., 0., 0.};
+        assert( &rho != &phi);
+        blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi);
+        blas1::axpby( alpha[2], phi2, 1., phi);
+        //blas1::axpby( 2., phi1, -1.,  phi2, phi);
+        dg::blas2::symv( w, rho, phi2);
+#ifdef DG_BENCHMARK
+    Timer t;
+    t.tic();
+#endif //DG_BENCHMARK
+        unsigned number = cg( op, phi, phi2, p, eps_);
+#ifdef DG_BENCHMARK
+    std::cout << "# of cg iterations \t"<< number << "\t";
+    t.toc();
+    std::cout<< "took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
+        phi1.swap( phi2);
+        phi0.swap( phi1);
+        
+        blas1::axpby( 1., phi, 0, phi0);
+        return number;
+    }
+
+    /**
+     * @brief Set the maximum number of iterations 
+     *
+     * @param new_max New maximum number
+     */
+    void set_max( unsigned new_max) {cg.set_max( new_max);}
+    /**
+     * @brief Get the current maximum number of iterations
+     *
+     * @return the current maximum
+     */
+    unsigned get_max() const {return cg.get_max();}
+  private:
+    double eps_;
+    container phi0, phi1, phi2;
+    dg::CG< container > cg;
+};
 
 } //namespace dg
 

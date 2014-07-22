@@ -1,6 +1,7 @@
 #ifndef _DG_CREATION_CUH
 #define _DG_CREATION_CUH
 
+#include <cusp/coo_matrix.h>
 #include "operator_dynamic.h"
 
 ///@cond
@@ -35,6 +36,22 @@ void add_operator( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
     for( unsigned k=0; k<op.size(); k++)
         for( unsigned l=0; l<op.size(); l++)
             add_index( op.size(), hm, number, i,j, k,l, op(k,l));
+}
+
+//add line row_index to the matrix hm beginning from col_begin 
+template< class T>
+void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm, 
+                int& number, 
+                unsigned row_index, unsigned col_begin, 
+                std::vector<T>& vec )
+{
+    for( unsigned k=0; k<vec.size(); k++)
+    {
+        hm.row_indices[number] = row_index;
+        hm.column_indices[number] = col_begin+k;
+        hm.values[number] = vec[k];
+        number++;
+    }
 }
 
 } //namespace detail

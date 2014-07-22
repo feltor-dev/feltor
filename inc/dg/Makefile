@@ -1,15 +1,19 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 system=leo3
 =======
 system=vsc
 >>>>>>> 08f521beb571a691e1102a0c2181c2f9767d111e
+=======
+system=home
+>>>>>>> bb23f9e8e388a0ecf881acf1f2b97574f308eb68
 device=gpu
 
 INCLUDE = -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
 
-INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
+INCLUDE+= -I/home/matthias/include  # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
 ifeq ($(strip $(device)),gpu)
@@ -73,11 +77,18 @@ blas%_t: blas%_t.cu blas%.h
 %2d_t: %2d_t.cu %.cuh 
 	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
+%3d_t: %3d_t.cu %.cuh 
+	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
+
 %_b: %_b.cu %.cuh 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 
 %2d_b: %2d_b.cu %.cuh
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
+	echo "Attention: No compiler warnings are issued!" 
+
+%3d_b: %3d_b.cu %.cuh
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
 

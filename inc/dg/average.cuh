@@ -4,10 +4,22 @@
 
 namespace dg{
 
+/**
+ * @brief Class for y average computations
+ *
+ * The problem is the dg format of the vector
+ * @tparam container Vector class to be used
+ * @tparam IndexContainer Class for scatter maps
+ */
 template< class container, class IndexContainer>
 struct PoloidalAverage
 {
-    PoloidalAverage( const Grid<double>& g):dummy( g.n()*g.Nx()), helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
+    /**
+     * @brief Construct from grid object
+     *
+     * @param g 2d Grid
+     */
+    PoloidalAverage( const Grid2d<double>& g):dummy( g.n()*g.Nx()), helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
     {
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
         reorder = create::scatterMap( g.n(), g.Nx(), g.Ny());
@@ -17,6 +29,12 @@ struct PoloidalAverage
         v1d = create::v1d( g1x);
 
     }
+    /**
+     * @brief Compute the average in y-direction
+     *
+     * @param src Source vector 
+     * @param res contains the result on output (may not equal src)
+     */
     void operator() (const container& src, container& res)
     {
         assert( &src != &res);

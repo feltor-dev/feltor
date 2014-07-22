@@ -1,5 +1,4 @@
-#ifndef _DG_DX_CUH
-#define _DG_DX_CUH
+#pragma once
 
 #include <cassert>
 #include <cusp/coo_matrix.h>
@@ -8,25 +7,14 @@
 #include "functions.h"
 #include "operator_dynamic.h"
 #include "creation.cuh"
+#include "enums.h"
 
-/*!@file simple 1d derivatives
+/*! @file 
+  
+  Simple 1d derivatives
   */
 namespace dg
 {
-/**
- * @brief Switch between normalisations
- *
- * @ingroup creation
- */
-enum norm{
-    normed,   //!< indicates that output is properly normalized
-    not_normed //!< indicates that normalisation weights (either T or V) are missing from output
-};
-enum direction{
-    forward, 
-    backward, 
-    symmetric //!< up-down symmetrie
-};
 namespace create
 {
 ///@addtogroup lowlevel
@@ -342,4 +330,3 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
 } //namespace create
 } //namespace dg
 
-#endif //_DG_DX_CUH

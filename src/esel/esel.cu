@@ -51,7 +51,7 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::SOL sol( v[22], v[23], v[24], v[25], v[27]);
     std::cout << "The SOL parameters are: \n"
               << "    x_l:     "<<v[22] <<"\n    x_w:     "<<v[23]<<"\n"
@@ -64,8 +64,10 @@ int main( int argc, char* argv[])
     {
         dg::Gaussian gaussian( p.posX/4.*grid.lx(), p.posY/2.*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
         std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
-        dg::blas1::axpby( 1, y0p, 1, y0);
+        //dg::blas1::axpby( 1, y0p[0], 1, y0[0]);
+        dg::blas1::axpby( 1, y0p[1], 1, y0[1]);
     } 
+    /*
     {
         dg::Gaussian gaussian( p.posX/4.*grid.lx(), p.posY/3.*grid.ly(), p.sigma, p.sigma, -p.n0); 
         std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
@@ -80,11 +82,12 @@ int main( int argc, char* argv[])
         std::vector<dg::DVec> y0p(2, dg::evaluate( gaussian, grid)); 
         dg::blas1::axpby( 1, y0p, 1, y0);
     }
+    */
 
    
 
-    dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+    //dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+    //dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
     assert( p.tau == 0);
     assert( p.global);
     assert( p.bc_x == dg::DIR_NEU);
@@ -113,8 +116,8 @@ int main( int argc, char* argv[])
     {
         //transform field to an equidistant grid
         {
-            test.exp( y1, y1); //plot logarithmic values
-            //thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(p.lx/v[26]/1.5));
+            //test.exp( y1, y1); //plot logarithmic values
+            thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(p.lx/v[26]/1.5));
             dvisual=y1[0];
         }
 

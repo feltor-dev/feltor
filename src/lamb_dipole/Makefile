@@ -23,7 +23,7 @@ shu2d_b: shu2d_b.cu shu.cuh
 shu_hpc: shu_hpc.cu shu.cuh
 	$(NVCC) -O2 $< -o $@ $(NVCCFLAGS) -w $(INCLUDE) -lhdf5 -lhdf5_hl
 
-shu_dat: shu_dat.cu shu.cuh
+shu_dat: shu_dat.cu 
 	$(NVCC) -O2 $< -o $@ $(NVCCFLAGS) -w $(INCLUDE) -lhdf5 -lhdf5_hl
 
 shu_time: shu_time.cu shu.cuh

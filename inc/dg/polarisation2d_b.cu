@@ -23,14 +23,15 @@ dg::bc bcx = dg::DIR_NEU;
 
 double initial( double x, double y) {return 0.;}
 double amp = 1;
-double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
+//double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
-//double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
+double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
 
-double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
+//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
-//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
+double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
+double der(double x, double y)  { return cos( x)*sin(y);}
 
 using namespace std;
 
@@ -55,19 +56,23 @@ int main()
     Vector x =    dg::evaluate( initial, grid);
     Vector b =    dg::evaluate( rhs, grid);
     Vector chi =  dg::evaluate( pol, grid);
-    const Vector solution = dg::evaluate( sol, grid);
-    Vector error( solution);
 
 
-    cout << "Create Polarisation object!\n";
+    cout << "Create HOST Polarisation object!\n";
     t.tic();
-    dg::Polarisation2dX<dg::HVec> pol( grid);
+    dg::Polarisation2dX<dg::HVec> pol_host( grid, dg::backward);
     t.toc();
-    cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
-    cout << "Create Polarisation matrix!\n";
+    cout << "Creation of HOST polarisation object took: "<<t.diff()<<"s\n";
+    cout << "Create DEVICE Polarisation object!\n";
     t.tic();
-    dg::HMatrix B_ = pol.create(chi);
-    //Matrix A = pol.create(chi);
+    dg::Polarisation2dX<dg::DVec, dg::DMatrix> pol_device( grid, dg::backward);
+    t.toc();
+    cout << "Creation of DEVICE polarisation object took: "<<t.diff()<<"s\n";
+    cout << "Create Polarisation matrix!\n";
+    dg::Timer ti;
+    ti.tic();
+    t.tic();
+    dg::HMatrix B_ = pol_host.create(chi);
     t.toc();
     cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
     t.tic();
@@ -80,20 +85,13 @@ int main()
     Matrix A = B;  
     t.toc();
     cout << "Conversion (2) to device matrix took: "<<t.diff()<<"s\n";
-    std::cout << "# of points in matrix is: "<< A.num_entries<< "\n";
-    //dg::Matrix Ap= dg::create::laplacian( grid, dg::not_normed); 
-    //cout << "Polarisation matrix: "<< endl;
-    //cusp::print( A);
-    //cout << "Laplacian    matrix: "<< endl;
-    //cusp::print( Ap);
-    cout << "Create conjugate gradient!\n";
-    t.tic();
-    dg::CG<Vector > pcg( x, n*n*Nx*Ny);
-    t.toc();
-    cout << "Creation of conjugate gradient took: "<<t.diff()<<"s\n";
+    ti.toc();
+    std::cout <<"TOTAL TIME: "<<ti.diff()<<"s\n";
+
 
     cout << "# of polynomial coefficients: "<< n <<endl;
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;
+    dg::CG<Vector > pcg( x, n*n*Nx*Ny);
     //compute W b
     dg::blas2::symv( w2d, b, b);
     t.tic();
@@ -101,12 +99,44 @@ int main()
     t.toc();
     cout << "For a precision of "<< eps<<endl;
     cout << "Took "<<t.diff()<<"s\n";
+
+    Vector xd =    dg::evaluate( initial, grid);
+    Vector bd =    dg::evaluate( rhs, grid);
+    Vector chid =  dg::evaluate( pol, grid);
+    dg::Polarisation<Matrix, dg::DVec, dg::DVec> pol_device_p( grid, xd);
+    pol_device_p.set_chi( chid);
+    dg::Invert< dg::DVec> invert( xd, n*n*Nx*Ny, eps);
+    t.tic();
+    std::cout << "Number of pcg iterations "<< invert( pol_device_p, xd, bd)<<endl;
+    t.toc();
+    std::cout << "For a precision of "<< eps<<endl;
+    std::cout << "Took "<<t.diff()<<"s\n";
+
+
+
+
     //compute error
+    const Vector solution = dg::evaluate( sol, grid);
+    const Vector derivati = dg::evaluate( der, grid);
+    Vector error( solution);
     dg::blas1::axpby( 1.,x,-1., error);
 
     double err = dg::blas2::dot( w2d, error);
-    cout << "L2 Norm2 of Error is " << err << endl;
+    std::cout << "L2 Norm2 of Error is " << err << endl;
     double norm = dg::blas2::dot( w2d, solution);
+    std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
+    Matrix DX = dg::create::dx( grid);
+    dg::blas2::gemv( DX, x, error);
+    dg::blas1::axpby( 1.,derivati,-1., error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << "L2 Norm2 of Error in derivative is " << err << endl;
+    norm = dg::blas2::dot( w2d, derivati);
+    std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
+    //derivative converges with p-1, for p = 1 with 1/2
+    //compute error
+    dg::blas1::axpby( 1.,xd,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << "L2 Norm2 of Error is " << err << endl;
     std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
 
     return 0;

@@ -9,7 +9,6 @@
 
 //functions for evaluation
 #include "grid.cuh"
-#include "arrvec2d.cuh"
 #include "functors.cuh"
 #include "dlt.cuh"
 #include "evaluation.cuh"
@@ -19,11 +18,12 @@
 #include "derivatives.cuh"
 #include "arakawa.cuh"
 #include "polarisation.cuh"
+#include "weights.cuh"
 
 //integral functions
-#include "preconditioner.cuh"
-
 #include "typedefs.cuh"
+
+#include "exceptions.h"
 
 /*! @file
 
@@ -34,7 +34,7 @@
 namespace dg{
 
 namespace create{
-///@addtogroup utilities
+///@addtogroup scatter
 ///@{
 //TODO make one scatterMap for n, m and then apply to projection
 //to be used in thrust::scatter and thrust::gather (Attention: don't scatter inplace -> Pb with n>1)
@@ -68,10 +68,12 @@ thrust::host_vector<int> scatterMap(unsigned nx, unsigned ny, unsigned Nx, unsig
     return map;
 }
 
+///@cond
 thrust::host_vector<int> scatterMap( unsigned n, unsigned Nx, unsigned Ny)
 {
     return scatterMap( n, n, Nx, Ny);
 }
+///@endcond
 
 /**
  * @brief Index map for gather operations on dg formatted vectors
@@ -129,6 +131,20 @@ cusp::coo_matrix<int, double, cusp::host_memory> gather( const thrust::host_vect
     return p;
 }
 
+/**
+ * @brief Create a permutation matrix from a permutation map
+ *
+ * A permutation can be done in two ways. Either you name to every index in a vector
+ * an index where this place should go to ( scatter) or you name to every index the 
+ * index of the position that comes to this place (gather). A Scatter is the
+ * inverse of a Gather operation with the same index-map. 
+ * When transformed to a
+ * permutation matrix scatter is the inverse ( = transpose) of gather. (Permutation
+ * matrices are orthogonal and sparse)
+ * @param map index map
+ *
+ * @return Permutation matrix
+ */
 cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vector<int>& map)
 {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
@@ -147,7 +163,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vec
  * @param s your vectors are given in XSPACE or in LSPACE
  *
  * @return transformation matrix
- * @note this matrix has ~n^4 N^2 entries
+ * @note this matrix has ~n^4 N^2 entries and is not sorted
  */
 template < class T>
 cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g, space s = XSPACE)
@@ -165,22 +181,30 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g, spa
 
     Matrix backward = dg::tensor( g.Nx()*g.Ny(), backward2d);
 
-    //you get a permutation matrix by setting the column indices to the permutation values and the values to 1
     thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
     Matrix p = gather( map);
-    /*
-    Matrix permutation( map.size(), map.size(), map.size());
-    cusp::array1d<int, cusp::host_memory> rows( thrust::make_counting_iterator<int>(0), thrust::make_counting_iterator<int>(map.size()));
-    cusp::array1d<int, cusp::host_memory> cols( map.begin(), map.end());
-    cusp::array1d<T, cusp::host_memory> values(map.size(), 1.);
-    permutation.row_indices = rows;
-    permutation.column_indices = cols;
-    permutation.values = values;
-    */
     Matrix scatter( p);
     cusp::multiply( p, backward, scatter);
     return scatter;
 
+}
+/**
+ * @brief make a matrix that transforms values to an equidistant grid ready for visualisation
+ *
+ * Useful if you want to visualize a dg-formatted vector.
+ * @tparam T value type
+ * @param g The 3d grid on which to operate 
+ * @param s your vectors are given in XSPACE or in LSPACE
+ *
+ * @return transformation matrix
+ * @note this matrix has ~n^4 N^2 entries and is not sorted
+ */
+template < class T>
+cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g, space s = XSPACE)
+{
+    Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
+    cusp::coo_matrix<int,T, cusp::host_memory> back2d = backscatter( g2d, s);
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), back2d);
 }
 
  /*

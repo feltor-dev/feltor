@@ -19,7 +19,7 @@ namespace detail
 {
 
 template< class Matrix, class Vector>
-inline void doSymv( const Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, ThrustVectorTag  )
+inline void doSymv( Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, ThrustVectorTag  )
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
@@ -32,7 +32,7 @@ inline void doSymv( const Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, T
 }
 
 template< class Matrix, class Vector>
-inline void doGemv( const Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, ThrustVectorTag  )
+inline void doGemv( Matrix& m, const Vector&x, Vector& y, CuspMatrixTag, ThrustVectorTag  )
 {
 #ifdef DG_DEBUG
     assert( m.num_rows == y.size() );

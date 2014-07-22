@@ -18,14 +18,47 @@
 
 namespace dg
 {
-struct Fail : public std::exception
+template<class container>
+struct Diffusion
 {
+    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):nu_(nu), global(global), w2d( dg::create::w2d(g)), v2d( dg::create::v2d(g)), temp( g.size()), expx(temp){
+        LaplacianM_perp = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
+    }
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    {
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            //if( global)
+            //{
+            //    thrust::transform( x[i].begin(), x[i].end(), expx.begin(), dg::EXP<typename container::value_type>());
+            //    dg::blas2::gemv( LaplacianM_perp, expx, temp);
+            //    //dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            //    dg::blas1::axpby( -nu_, temp, 0., y[i]);
+            //    divide( y[i], expx, y[i]);
+            //}
+            //else
+            {
+                dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+                dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+                dg::blas1::axpby( -nu_, y[i], 0., y[i]);
+            }
+        }
+    }
+    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
+    const container& weights(){return w2d;}
+    const container& precond(){return v2d;}
 
-    Fail( double eps): eps( eps) {}
-    double epsilon() const { return eps;}
-    char const* what() const throw(){ return "Failed to converge";}
   private:
-    double eps;
+    void divide( const container& zaehler, const container& nenner, container& result)
+    {
+        thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
+                thrust::divides< typename container::value_type>());
+    }
+    double nu_;
+    bool global;
+    const container w2d, v2d;
+    container temp, expx;
+    dg::DMatrix LaplacianM_perp;
 };
 
 template< class container=thrust::device_vector<double> >
@@ -89,7 +122,7 @@ struct ToeflR
      *
      * @return Gamma operator
      */
-    const Gamma<Matrix, container >&  gamma() const {return gamma1;}
+    const Helmholtz<Matrix, container >&  gamma() const {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -145,8 +178,8 @@ struct ToeflR
     //matrices and solvers
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
-    Gamma< Matrix, container > gamma1;
-    ArakawaX< container> arakawa; 
+    Helmholtz< Matrix, container > gamma1;
+    ArakawaX< Matrix, container> arakawa; 
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
 
@@ -165,7 +198,7 @@ ToeflR< container>::ToeflR( const Grid2d<value_type>& grid, double kappa, double
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  laplaceM, w2d, -0.5*tau),
+    gamma1(  laplaceM, w2d,v2d, -0.5*tau),
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 
@@ -363,7 +396,7 @@ void ToeflR< container>::operator()( const std::vector<container>& y, std::vecto
             blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
             blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
         }
-        blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
+        //blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
     }
 
 }
