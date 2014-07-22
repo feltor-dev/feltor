@@ -18,11 +18,11 @@ const double ly = 2.*M_PI;
 const double eps = 1e-6; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
-const double lx = M_PI;
+const double lx = 2.*M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double derivative( double x, double y){return cos(x)*sin(y);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
-dg::bc bcx = dg::DIR;
+dg::bc bcx = dg::PER;
 //const double lx = 2./3.*M_PI;
 //double fct(double x, double y){ return sin(y)*sin(3.*x/4.);}
 //double laplace_fct( double x, double y) { return 25./16.*sin(y)*sin(3.*x/4.);}

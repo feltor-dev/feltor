@@ -16,13 +16,13 @@ class Timer
     *
     * @param stream the stream in which the Event is placed
     */
-    void tic( ){  start = MPIWtime();}
+    void tic( ){  start = MPI_Wtime();}
     /**
     * @brief Stop timer using cudaEventRecord and Synchronize
     *
     * @param stream the stream in which the Event is placed
     */
-    void toc( ){ stop = MPIWtime(); }
+    void toc( ){ stop = MPI_Wtime(); }
     /*! \brief Return time elapsed between tic and toc
      *
      * \return Time in seconds between calls of tic and toc*/

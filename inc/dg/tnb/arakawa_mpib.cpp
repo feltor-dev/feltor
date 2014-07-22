@@ -9,54 +9,38 @@
 #include "blas.h"
 #include "mpi_init.h"
 
+#include "timer.cuh"
 
+
+const double lx = 2*M_PI;
+const double ly = 2*M_PI;
+//const double lx = 1.;
+//const double ly = 1.;
 
 
 //choose some mean function (attention on lx and ly)
-/*
 //THESE ARE NOT PERIODIC
-double left( double x, double y) { return sin(x/2)*sin(x/2)*exp(x)*sin(y/2.)*sin(y/2.)*log(y+1); }
-double right( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*sin(x/2)*log(x+1); }
-*/
 /*
-double left( double x, double y) {return sin(x)*exp(x-M_PI)*sin(y);}
-double right( double x, double y) {return sin(x)*sin(y);}
-double right2( double x, double y) {return exp(y-M_PI);}
+double left( double x, double y) { return sin(x)*cos(y);}
+double right( double x, double y){ return exp(0.1*(x+y)); }
 double jacobian( double x, double y) 
 {
     return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
 }
 */
 
-/*
-double left( double x, double y) {return sin(x)*cos(y);}
-double right( double x, double y) {return sin(y)*cos(x);} 
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
-dg::bc bcx = dg::PER; 
+dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
-//double right2( double x, double y) {return sin(y);}
+double left( double x, double y) {return sin(x)*cos(y);}
+double right( double x, double y) {return cos(x)*sin(y);}
 double jacobian( double x, double y) 
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
-*/
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
-const double lx = M_PI/2.;
-const double ly = M_PI/2.;
-double left( double x, double y) {return sin(x)*sin(y);}
-double right( double x, double y) {return sin(2*x)*sin(2*y);} 
-dg::bc bcx = dg::DIR_NEU; 
-dg::bc bcy = dg::DIR_NEU;
-//double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y) 
-{
-    return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
-}
-
 
 int main(int argc, char* argv[])
 {
@@ -67,20 +51,20 @@ int main(int argc, char* argv[])
     mpi_init2d( bcx, bcy, np, n, Nx, Ny, comm);
     dg::MPI_Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-
+    dg::Timer t;
     dg::MPrecon w2d = dg::create::weights( grid);
-    std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
-    dg::MVec lhs = dg::evaluate( left, grid), jac(lhs);
-    dg::MVec rhs = dg::evaluate( right, grid);
-    const dg::MVec sol = dg::evaluate ( jacobian, grid);
-    dg::MVec eins = dg::evaluate( dg::one, grid);
+    dg::MVec lhs = dg::evaluate ( left, grid), jac(lhs);
+    dg::MVec rhs = dg::evaluate ( right,grid);
+    const dg::MVec sol = dg::evaluate( jacobian, grid );
+    dg::MVec eins = dg::evaluate( dg::one, grid );
+    std::cout<< std::setprecision(2);
 
     dg::ArakawaX<dg::MMatrix, dg::MVec> arakawa( grid);
-    arakawa( lhs, rhs, jac);
-    //if(rank==0) std::cout << lhs<<"\n";
-    //if(rank==0) std::cout << rhs<<"\n";
-    //if(rank==0) std::cout << jac<<"\n";
-
+    t.tic(); 
+    for( unsigned i=0; i<20; i++)
+        arakawa( lhs, rhs, jac);
+    t.toc();
+    if(rank==0) std::cout << "\nArakawa took "<<t.diff()/0.02<<"ms\n\n";
 
     double result = dg::blas2::dot( eins, w2d, jac);
     std::cout << std::scientific;
@@ -91,7 +75,8 @@ int main(int argc, char* argv[])
     if(rank==0) std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     result = sqrt( dg::blas2::dot( w2d, jac));
-    if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; //don't forget sqrt when comuting errors
+    if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; 
+
+
     return 0;
 }
-

@@ -23,6 +23,33 @@ struct MPI_Vector
     double operator[]( unsigned idx) const {return data_[idx];}
     void x_row( MPI_Comm comm);
     void x_col( MPI_Comm comm);
+    void display( std::ostream& os)
+    {
+        for( unsigned i=0; i<Nx_; i++)
+        {
+            for( unsigned j=0; j<Ny_; j++)
+            {
+                for( unsigned k=0; k<stride_; k++)
+                    os << data_[(i*Nx_ + j)*stride_+k] << " ";
+                os << " ";
+            }
+            os << "\n";
+        }
+    }
+    friend std::ostream& operator<<( std::ostream& os, const MPI_Vector& v)
+    {
+        std::cout << "Vector with "<<v.Ny_<<" rows and "<<v.Nx_<<" columns: \n";
+        for( unsigned i=0; i<v.Ny_; i++)
+        {
+            for( unsigned j=0; j<v.Nx_; j++)
+            {
+                for( unsigned k=0; k<v.stride_; k++)
+                    os << v.data_[(i*v.Nx_ + j)*v.stride_+k] << " ";
+                os << " ";
+            }
+            os << "\n";
+        }
+    }
   private:
     unsigned stride_, Nx_, Ny_, Nz_; //!< has to know interior 
     thrust::host_vector<double> data_; //!< thrust host vector as data type

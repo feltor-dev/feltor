@@ -104,4 +104,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f *_t *_b cusp_thrust version
+	rm -f *_t *_b *_mpit *_mpib cusp_thrust version

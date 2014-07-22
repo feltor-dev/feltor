@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include "mpi_evaluation.h"
 #include "blas.h"
 #include "mpi_matrix.h"
@@ -25,22 +26,17 @@ int main(int argc, char* argv[])
     mpi_init2d( bcx, bcy, np, n, Nx, Ny, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    if(rank==0)std::cout << Nx << " and Ny "<<Ny<<std::endl;
+    if(rank==0)std::cout <<"Nx " <<Nx << " and Ny "<<Ny<<std::endl;
     dg::MPI_Grid2d g( 0, lx, 0, lx, n, Nx, Ny, bcx, bcy, comm);
 
-    dg::MMatrix forw( dg::create::forward_transform( g));
-    dg::MMatrix back( dg::create::backward_transform( g));
 
     dg::MMatrix dx = dg::create::dy( g, bcx, dg::normed, dg::symmetric);
     dg::MMatrix lzM = dg::create::laplacianM( g, bcx, bcy, dg::normed, dg::symmetric);
-    dg::MMatrix dxx = dg::create::dxx( g, bcy, dg::normed, dg::symmetric);
 
     dg::MVec func = dg::evaluate( function, g);
     dg::MVec result = func, result2(result);
     dg::MVec deriv = dg::evaluate( derivative, g);
 
-    dg::blas2::symv( forw, func, result);
-    dg::blas2::symv( back, result, result2);
     dg::blas1::axpby( 1., func, -1., result2);
     double error = sqrt(dg::blas2::dot(result2, dg::create::weights(g), result2));
     if(rank==0) std::cout << "Distance to true solution: "<<error<<"\n";
@@ -53,7 +49,13 @@ int main(int argc, char* argv[])
     error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
     if(rank==0) std::cout << "Distance to true solution: "<<error<<"\n";
 
+    //std::cout << std::fixed<<std::setprecision(2);
     dg::blas2::symv( lzM, func, result);
+    //if(rank==0) std::cout<<result<<std::endl;
+    //MPI_Barrier(comm);
+    //if(rank==1) std::cout<<result<<std::endl;
+    //MPI_Barrier(comm);
+
     dg::blas1::axpby( 1., func, -1., result);
     error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
     if(rank==0) std::cout << "Distance to true solution: "<<error<<"\n";

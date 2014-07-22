@@ -6,6 +6,7 @@
 #include "backend/derivatives.cuh"
 #ifdef MPI_VERSION
 #include "backend/mpi_matrix.h"
+#include "backend/mpi_derivatives.h"
 #endif
 
 /*! @file 
@@ -115,8 +116,8 @@ struct ArakawaX
     }
 
   private:
-    Matrix bdxf, bdyf;
     container dxlhs, dxrhs, dylhs, dyrhs, helper;
+    Matrix bdxf, bdyf;
 };
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
