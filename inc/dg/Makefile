@@ -5,7 +5,7 @@ INCLUDE = -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
 
-INCLUDE+= -I/home/markus/Dokumente/phd/include  # cusp and thrust libraries
+INCLUDE+= -I/home/matthias/include  # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
 ifeq ($(strip $(device)),gpu)
