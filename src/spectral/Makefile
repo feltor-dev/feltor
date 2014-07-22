@@ -50,6 +50,9 @@ energetics_t: energetics_t.cpp energetics.h
 
 generator: generator.cpp
 	g++ generator.cpp -o generator -std=c++0x
+generator_hw: generator_hw.cpp
+	g++ generator_hw.cpp -o generator_hw -std=c++0x
+	./generator_hw
 
 clean:
 	rm -f *_t *_b innto innblobs innto_hpc
