@@ -10,7 +10,7 @@
 #include "blas.h"
 
 #include "functions.h"
-#include "grid.cuh"
+#include "grid.h"
 #include "tensor.cuh"
 #include "operator.h"
 #include "operator_tensor.cuh"

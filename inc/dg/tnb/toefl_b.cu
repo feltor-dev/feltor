@@ -11,9 +11,10 @@
 
 #include "evaluation.cuh"
 #include "functions.h"
-#include "functors.cuh"
+#include "functors.h"
 #include "toefl.cuh"
-#include "rk.cuh"
+#include "runge_kutta.h"
+#include "multistep.h"
 #include "xspacelib.cuh"
 #include "typedefs.cuh"
 

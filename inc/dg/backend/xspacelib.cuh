@@ -8,15 +8,15 @@
 #include <cusp/ell_matrix.h>
 
 //functions for evaluation
-#include "grid.cuh"
-#include "functors.cuh"
-#include "dlt.cuh"
+#include "grid.h"
+#include "functors.h"
+#include "dlt.h"
 #include "evaluation.cuh"
 
 
 //creational functions
 #include "derivatives.cuh"
-#include "arakawa.cuh"
+#include "arakawa.h"
 #include "polarisation.cuh"
 #include "weights.cuh"
 
