@@ -4,10 +4,10 @@
 #include <cusp/precond/ainv.h>
 #include "blas.h"
 
-#include "gamma.cuh"
+#include "helmholtz.h"
 #include "xspacelib.cuh"
 
-#include "cg.cuh"
+#include "cg.h"
 
 
 const double eps = 1e-4;
@@ -30,8 +30,8 @@ int main()
     dg::DVec x(rho.size(), 0.);
     //dg::DVec x(rho);
 
-    dg::DMatrix A = dg::create::laplacianM( grid, dg::normed, dg::XSPACE); 
-    dg::Gamma< dg::DMatrix, dg::DVec > gamma1( A, w2d, alpha);
+    dg::DMatrix A = dg::create::laplacianM( grid, dg::normed); 
+    dg::Helmholtz< dg::DMatrix, dg::DVec > gamma1( A, w2d, alpha);
 
     dg::CG< dg::DVec > cg(x, x.size());
     dg::blas2::symv( w2d, rho, rho);

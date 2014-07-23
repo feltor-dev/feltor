@@ -3,7 +3,7 @@
 #include <cusp/print.h>
 
 #include "xspacelib.cuh"
-#include "cg.cuh"
+#include "cg.h"
 
 
 double sine( double x, double y){ return 2.*sin(x)*sin(y);}

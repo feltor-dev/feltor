@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "thrust_vector.cuh"
-#include "../vector_categories.h"
-#include "../vector_traits.h"
+#include "vector_categories.h"
+#include "vector_traits.h"
 
 //assume that each element of a std::vector is a vector itself
 

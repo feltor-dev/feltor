@@ -47,8 +47,8 @@ int main()
 
     std::cout << "TEST 2D\n";
     n_old = 7, n_new = 3, N = 5, Nf = 1;
-    dg::Grid<double> g2 (0, M_PI, 0, M_PI, n_old, N, N);
-    dg::Grid<double> g2n (0, M_PI, 0, M_PI, n_new, N, N*Nf);
+    dg::Grid2d<double> g2 (0, M_PI, 0, M_PI, n_old, N, N);
+    dg::Grid2d<double> g2n (0, M_PI, 0, M_PI, n_new, N, N*Nf);
     cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection2d( g2, g2n);
     dg::HVec v2 = dg::evaluate( sine, g2);
     dg::HVec w2d = dg::create::w2d( g2);

@@ -2,7 +2,7 @@
 
 
 #include "std_vector.cuh"
-#include "../matrix_categories.h"
+#include "matrix_categories.h"
 namespace dg
 {
 namespace blas2

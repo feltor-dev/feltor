@@ -20,9 +20,6 @@
 
 #include "dlt.h"
 
-//#include "cusp_eigen.h"
-//CAN'T BE TRANSVERSE SYMMETRIC?
-
 /*! @file 
 
   Contains object for the polarisation matrix creation
@@ -30,59 +27,7 @@
 namespace dg
 {
 
-//as far as i see in the source code cusp only supports coo - coo matrix
-//-matrix multiplication
-///@cond DEV
-template< class T, class Memory>
-struct Polarisation1d
-{
-    typedef cusp::coo_matrix<int, T, Memory> Matrix;
-    typedef cusp::array1d<T, Memory> Vector;
-    Polarisation1d( const Grid1d<T>& g);
-    Matrix create( const Vector& );
-  private:
-    typedef cusp::array1d<int, Memory> Array;
-    Matrix left, weights, right, jump;
-    cusp::array1d<int, Memory> I, J;
-    Vector xspace;
-    unsigned n, N;
 
-};
-template <class T, class Memory>
-Polarisation1d<T, Memory>::Polarisation1d( const Grid1d<T>& g): I(g.size()), J(I), xspace( g.size()), n(g.n()), N(g.N())
-{
-    T h = g.h();
-    bc bcx = g.bcx();
-    thrust::sequence( I.begin(), I.end());
-    thrust::sequence( J.begin(), J.end());
-
-    right = create::dx_plus_mt<T>( n, N, h, bcx); //create and transfer to device
-    Operator<T> backward( g.dlt().backward());
-    weights = tensor<T>( N, backward);
-    cusp::multiply( weights, right, right);
-    cusp::transpose( right, left); 
-    Operator<T> weights(n,0);
-    for( unsigned i=0; i<g.n(); i++)
-        weights( i,i) = g.dlt().weights()[i];
-    weights *= h/2.;
-    weights = tensor( N, weights*backward);
-    jump = create::jump_ot<T>( n, N, bcx); //without jump cg is unstable
-
-}
-
-template< class T, class Memory>
-cusp::coo_matrix<int, T, Memory> Polarisation1d<T, Memory>::create( const Vector& chi)
-{
-    Matrix laplace, temp;
-    cusp::multiply( weights, chi, xspace);
-    cusp::coo_matrix_view<Array, Array, Vector,  int, T, Memory> chi_view( n*N, n*N, n*N, I, J, xspace);
-    cusp::multiply( chi_view, right, laplace);
-    cusp::multiply( left, laplace, temp);
-    cusp::add( temp, jump, laplace);
-    return laplace;
-}
-
-///@endcond
 //////////////////////////////////////////////////////////////////////////////////
 /**
  * @brief X-space version of polarisation term

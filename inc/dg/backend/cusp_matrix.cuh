@@ -8,7 +8,7 @@
 #include <cusp/multiply.h>
 #include <cusp/array1d.h>
 
-#include "../matrix_categories.h"
+#include "matrix_categories.h"
 
 
 namespace dg{

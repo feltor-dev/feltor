@@ -9,8 +9,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "../vector_categories.h"
-#include "../vector_traits.h"
+#include "vector_categories.h"
+#include "vector_traits.h"
 
 
 namespace dg

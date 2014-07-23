@@ -2,11 +2,11 @@
 
 #include "blas.h"
 
-#include "gamma.cuh"
+#include "helmholtz.h"
 #include "xspacelib.cuh"
-#include "karniadakis.cuh"
+#include "multistep.h"
 
-#include "cg.cuh"
+#include "cg.h"
 template< class container>
 struct Diffusion
 {

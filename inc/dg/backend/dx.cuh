@@ -7,7 +7,6 @@
 #include "functions.h"
 #include "operator.h"
 #include "creation.cuh"
-#include "enums.h"
 
 /*! @file 
   

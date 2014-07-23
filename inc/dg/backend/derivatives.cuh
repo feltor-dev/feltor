@@ -267,7 +267,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, norm
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
-    Matrix dx = create::dx( g2d, bcx, dir, no);
+    Matrix dx = create::dx( g2d, bcx, no, dir);
 
     if( no == normed)
         return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), dx );
@@ -302,12 +302,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, norm
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
-    Matrix dy = create::dy( g2d, bcy, dir, no);
+    Matrix dy = create::dy( g2d, bcy, no, dir);
 
     if( no == normed)
-        return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), dx );
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), dy );
     else 
-        return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)) , dx); //w*hz/2 = hz
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)) , dy); //w*hz/2 = hz
 }
 /**
  * @brief Create 3d derivative in y-direction

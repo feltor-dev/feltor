@@ -61,19 +61,20 @@ int main()
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout << "# of timesteps                    "<< NT <<endl;
-    cout <<fixed<< setprecision(2)<<endl;
+    //cout <<fixed<< setprecision(2)<<endl;
     dg::DVec init = evaluate ( initial, grid );
     const dg::DVec solution = evaluate ( result, grid);
     std::vector<dg::DVec> y0( 2, init), y1(y0);
 
+    RHS<dg::DVec> rhs( grid);
+
     integrateRK4( rhs, y0, y1, T, 1e-10);
-    DVec solution = evaluate( sol, grid), error( solution);
+    std::vector<DVec> error(2, solution);
     double norm_sol = blas2::dot( w2d, solution);
     blas1::axpby( -1., y1, 1., error);
     double norm_error = blas2::dot( w2d, error);
     cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" \n";
     
-    RHS<dg::DVec> rhs( grid);
     RK<k, std::vector<dg::DVec> >  rk( y0);
     for( unsigned i=0; i<NT; i++)
     {

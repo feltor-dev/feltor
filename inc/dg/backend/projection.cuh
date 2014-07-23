@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <cusp/coo_matrix.h>
-#include "grid.cuh"
+#include "grid.h"
 #include "xspacelib.cuh"
 #include "matrix_traits_thrust.h"
 

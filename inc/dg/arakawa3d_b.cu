@@ -6,7 +6,7 @@
 
 #include "timer.cuh"
 #include "evaluation.cuh"
-#include "arakawa.cuh"
+#include "arakawa.h"
 #include "blas.h"
 #include "typedefs.cuh"
 

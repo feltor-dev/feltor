@@ -1,7 +1,7 @@
 #pragma once 
 
-#include "vector_traits.h"
-#include "matrix_traits.h"
+#include "backend/vector_traits.h"
+#include "backend/matrix_traits.h"
 #include "backend/matrix_traits_thrust.h"
 #include "backend/thrust_matrix.cuh"
 #include "backend/cusp_matrix.cuh"
@@ -9,8 +9,8 @@
 #include "backend/mpi_matrix_blas.h"
 #include "backend/mpi_precon_blas.h"
 #endif //MPI_VERSION
-#include "std_backend/selfmade.cuh"
-#include "std_backend/std_matrix.cuh"
+#include "backend/selfmade.cuh"
+#include "backend/std_matrix.cuh"
 
 namespace dg{
 /*! @brief BLAS Level 2 routines 
