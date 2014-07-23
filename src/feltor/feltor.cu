@@ -64,10 +64,10 @@ int main( int argc, char* argv[])
 
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    double Rmin=gp.R_0-(1.05)*gp.a;
-    double Zmin=-(1.05)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(1.05)*gp.a; 
-    double Zmax=(1.05)*gp.a*gp.elongation;
+    double Rmin=gp.R_0-(1.15)*gp.a;
+    double Zmin=-(1.15)*gp.a*gp.elongation;
+    double Rmax=gp.R_0+(1.15)*gp.a; 
+    double Zmax=(1.15)*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
      
@@ -75,9 +75,11 @@ int main( int argc, char* argv[])
     eule::Feltor< dg::DVec > feltor( grid, p,gp); 
     eule::Rolkar< dg::DVec > rolkar( grid, p,gp);
 
-    //create initial vector
+    
     //with bath
-      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+     //with zonal flow field
+      solovev::ZonalFlow init0(gp,8);
     //with gaussians
 //     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
 //     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 

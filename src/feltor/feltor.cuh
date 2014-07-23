@@ -317,14 +317,14 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
 
     }
     //add parallel resistivity
-    //dg::blas1::pointwiseDot( expy[0], y[2], omega);
-    //dg::blas1::pointwiseDot( expy[1], y[3], chi);
-    //dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
-    //dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
-    //dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
+    dg::blas1::pointwiseDot( expy[0], y[2], omega);
+    dg::blas1::pointwiseDot( expy[1], y[3], chi);
+    dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
+    dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
+    dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
 
-    //dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
-    //dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
+    dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
+    dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
     //add parallel diffusion
     for( unsigned i=0; i<4; i++)
     {
