@@ -21,7 +21,7 @@ inline void doSymv(
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
-    assert( m.size() == y.size() );
+    //assert( m.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doSymv( m, x[i], y[i], 
@@ -51,23 +51,23 @@ inline void doSymv(
 }
 */
 
-template< class Matrix, class Vector>
+template< class Precon, class Vector>
 inline void doSymv( 
-              typename MatrixTraits<Matrix>::value_type alpha,
-              const Matrix& m,
+              typename MatrixTraits<Precon>::value_type alpha,
+              const Precon& m,
               const std::vector<Vector>& x, 
-              typename MatrixTraits<Matrix>::value_type beta,
+              typename MatrixTraits<Precon>::value_type beta,
               std::vector<Vector>& y, 
               AnyMatrixTag,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
-    assert( m.size() == y.size() );
+    //assert( m.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doSymv( alpha, m, x[i], beta, y[i],
-                       typename dg::MatrixTraits<Matrix>::matrix_category(),
+                       typename dg::MatrixTraits<Precon>::matrix_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
 }
 /*
@@ -103,7 +103,6 @@ inline typename Vector::value_type  doDot(
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
-    assert( m.size() == y.size() );
 #endif //DG_DEBUG
     typename Vector::value_type sum = 0;
     for( unsigned i=0; i<x.size(); i++)
@@ -119,9 +118,6 @@ inline typename VectorTraits<Vector>::value_type  doDot(
               AnyMatrixTag,
               StdVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( m.size() == y.size() );
-#endif //DG_DEBUG
     typename Vector::value_type sum = 0;
     for( unsigned i=0; i<y.size(); i++)
         sum += doDot( y[i], m, y[i],

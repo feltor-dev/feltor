@@ -9,8 +9,8 @@
 #include "backend/mpi_matrix_blas.h"
 #include "backend/mpi_precon_blas.h"
 #endif //MPI_VERSION
-#include "std_backend/std_matrix.cuh"
 #include "std_backend/selfmade.cuh"
+#include "std_backend/std_matrix.cuh"
 
 namespace dg{
 /*! @brief BLAS Level 2 routines 

@@ -5,7 +5,7 @@ namespace dg{
 
 struct AnyVectorTag{};
 
-struct StdVectorTag {};
+struct StdVectorTag:public AnyVectorTag {};
 
 /**
  * @brief The Thrust Vector concept
