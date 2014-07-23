@@ -38,7 +38,7 @@ struct AB
     * @param copyable Vector of size which is used in integration. 
     * A Vector object must be copy-constructible from copyable.
     */
-    AB( const Vector& copyable): u_(k, Vector(copyable)){ }
+    AB( const Vector& copyable): f_(k, Vector(copyable)), u_(copyable){ }
    
     /**
      * @brief Init with initial value
@@ -64,15 +64,16 @@ struct AB
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function or functor
-    * @param u0 initial value
-    * @param u1 contains result on output. u0 and u1 may be the same ( if the Functor allows that)
+    * @param u initial value, contains result on output
     * @param dt The timestep.
     * @note The fist u0 must be the same you use in the init routine.
     */
     template< class Functor>
-    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
+    void operator()( Functor& f, Vector& u);
   private:
-    std::vector<Vector> u_; //TODO std::array is more natural here (but unfortunately not available)
+    double dt_;
+    std::vector<Vector> f_; //TODO std::array is more natural here (but unfortunately not available)
+    Vector u_;
 };
 
 //compute two steps backwards with same order RK scheme 
@@ -80,28 +81,30 @@ template< size_t k, class Vector>
 template< class Functor>
 void AB<k, Vector>::init( Functor& f, const Vector& u0,  double dt)
 {
-    Vector u1(u0);
-    f( u0, u_[0]);
+    dt_ = dt;
+    Vector u1(u0), u2(u0);
+    blas1::axpby( 1., u0, 0, u_);
+    f( u1, f_[0]);
     for( unsigned i=1; i<k; i++)
     {
-        blas1::axpby( 1., u1, -dt, u_[i-1], u1);
-        f( u1, u_[i]);
+        blas1::axpby( 1., u2, -dt, f_[i-1], u1);
+        blas1::axpby( 1., u1, 0, u2); //f may destroy u1
+        f( u1, f_[i]);
     }
 }
 
-//u0 and u1 can be the same
 template< size_t k, class Vector>
 template< class Functor>
-void AB<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+void AB<k, Vector>::operator()( Functor& f, Vector& u)
 {
-    //u_[0] can be deleted
-    f( u0, u_[0]);
-    blas1::axpby( dt*ab_coeff<k>::b[0], u_[0], 1., u0, u1);
-    for( unsigned i=1; i<k; i++)
-        blas1::axpby( dt*ab_coeff<k>::b[i], u_[i], 1., u1);
-    //permute u_[k-1]  to be the new u_[0]
+    blas1::axpby( 1., u_, 0, u);
+    f( u, f_[0]);
+    for( unsigned i=0; i<k; i++)
+        blas1::axpby( dt_*ab_coeff<k>::b[i], f_[i], 1., u_);
+    //permute f_[k-1]  to be the new f_[0]
     for( unsigned i=k-1; i>0; i--)
-        u_[i-1].swap( u_[i]);
+        f_[i-1].swap( f_[i]);
+    blas1::axpby( 1., u_, 0, u);
 }
 
 ///@cond
@@ -110,37 +113,42 @@ template < class Vector>
 struct AB<1, Vector>
 {
     AB(){}
-    AB( const Vector& copyable){}
+    AB( const Vector& copyable):temp_(2, copyable){}
     template < class Functor>
-    void init( Functor& f, const Vector& u0, double dt){}
+    void init( Functor& f, const Vector& u0, double dt){ dt_=dt;}
     template < class Functor>
-    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+    void operator()( Functor& f, Vector& u)
     {
-        f( u0, u1);
-        blas1::axpby( 1., u0, dt, u1);
+        blas1::axpby( 1., u, 0, temp_[0]);
+        f( u, temp_[1]);
+        blas1::axpby( 1., temp_[0], dt_, temp_[1], u);
     }
+    private:
+    double dt_;
+    std::vector<Vector> temp_;
 };
 ///@endcond
 ///@cond
 namespace detail{
 
-template< class LinearOp>
+template< class LinearOp, class container>
 struct Implicit
 {
-    Implicit( double alpha, LinearOp& f): f_(f), alpha_(alpha){}
-    template<class container>
-    void symv( const container& x, container& y) const
+    Implicit( double alpha, LinearOp& f, container& reference): f_(f), alpha_(alpha), temp_(reference){}
+    void symv( const container& x, container& y) 
     {
+        blas1::axpby( 1., x, 0, temp_);//f_ might destroy x
         if( alpha_ != 0);
-            f_( x,y);
-        blas1::axpby( 1., x, alpha_, y);
+            f_( temp_,y);
+        blas1::axpby( 1., x, alpha_, y, y);
         blas2::symv( f_.weights(), y,  y);
     }
     //compute without weights
-    template<class container>
     void operator()( const container& x, container& y) 
     {
-        f_( x,y);
+        blas1::axpby( 1., x, 0, temp_);
+        if( alpha_ != 0);
+            f_( temp_,y);
         blas1::axpby( 1., x, alpha_, y, y);
     }
     double& alpha( ){  return alpha_;}
@@ -148,12 +156,13 @@ struct Implicit
   private:
     LinearOp& f_;
     double alpha_;
+    container& temp_;
 
 };
 
 }//namespace detail
-template< class M>
-struct MatrixTraits< detail::Implicit<M> >
+template< class M, class V>
+struct MatrixTraits< detail::Implicit<M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
@@ -264,29 +273,33 @@ template< class Functor, class Diffusion>
 void Karniadakis<Vector>::init( Functor& f, Diffusion& diff,  const Vector& u0,  double dt)
 {
     dt_ = dt;
-    detail::Implicit<Diffusion> implicit( -dt, diff);
-    u_[0] = u0;
-    f( u_[0], f_[0]);
-    blas1::axpby( 1.,u_[0], -dt, f_[0], f_[1]);
-    implicit( f_[1], u_[1]);
-    f( u_[1], f_[1]);
+    Vector temp_(u0);
+    detail::Implicit<Diffusion, Vector> implicit( -dt, diff, temp_);
+    blas1::axpby( 1., u0, 0, temp_); //copy u0
+    f( temp_, f_[0]);
+    blas1::axpby( 1., u0, 0, u_[0]); 
+    blas1::axpby( 1., u_[0], -dt, f_[0], f_[1]); //Euler step
+    implicit( f_[1], u_[1]); //explicit Euler step backwards, might destroy f_[1]
+    blas1::axpby( 1., u_[1], 0, temp_); 
+    f( temp_, f_[1]);
     blas1::axpby( 1.,u_[1], -dt, f_[1], f_[2]);
     implicit( f_[2], u_[2]);
-    f( u_[2], f_[2]);
+    blas1::axpby( 1., u_[2], 0, temp_); 
+    f( temp_, f_[2]);
 }
 
 template<class Vector>
 template< class Functor, class Diffusion>
 void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
 {
-    //u_[0] can be deleted
-    detail::Implicit<Diffusion> implicit( -dt_/11.*6., diff);
-    f( u_[0], f_[0]);
-    blas1::axpby( a[0], u_[0], dt_*b[0], f_[0], u);
-    blas1::axpby( a[1], u_[1], 1., u);
-    blas1::axpby( a[2], u_[2], 1., u);
-    for( unsigned i=1; i<3; i++)
-        blas1::axpby( dt_*b[i], f_[i], 1., u);
+
+    blas1::axpby( 1., u_[0], 0, u); //save u_[0]
+    f( u, f_[0]);
+    blas1::axpby( dt_*b[1], f_[1], dt_*b[2], f_[2], f_[2]);
+    blas1::axpby( dt_*b[0], f_[0],       1., f_[2], f_[2]);
+    blas1::axpby( a[1], u_[1], a[2], u_[2], u_[2]);
+    blas1::axpby( a[0], u_[0],   1., u_[2], u_[2]);
+    blas1::axpby( 1., u_[2], 1., f_[2], u);
     //permute f_[2], u_[2]  to be the new f_[0], u_[0]
     for( unsigned i=2; i>0; i--)
     {
@@ -298,6 +311,7 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
     //double alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], -alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
     blas2::symv( diff.weights(), u, u);
+    detail::Implicit<Diffusion, Vector> implicit( -dt_/11.*6., diff, f_[0]);
 #ifdef DG_BENCHMARK
     Timer t;
     t.tic(); 
@@ -307,7 +321,7 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
 #else
     pcg( implicit, u_[0], u, diff.precond(), eps_);
 #endif
-    u = u_[0];
+    blas1::axpby( 1., u_[0], 0, u); //save u_[0]
 
 
 }

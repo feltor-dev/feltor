@@ -7,7 +7,7 @@
 #include <cusp/hyb_matrix.h>
 
 #include "xspacelib.cuh"
-#include "cg.cuh"
+#include "cg.h"
 
 
 //NOTE: IF DEVICE=CPU THEN THE POLARISATION ASSEMBLY IS NOT PARALLEL AS IT IS NOW 

@@ -5,13 +5,11 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "karniadakis.cuh"
-#include "grid.cuh"
-#include "gamma.cuh"
+#include "multistep.h"
+#include "grid.h"
 #include "evaluation.cuh"
 #include "derivatives.cuh"
-
-#include "blas.h"
+#include "typedefs.cuh"
 
 template < class container = thrust::device_vector<double> >
 struct RHS

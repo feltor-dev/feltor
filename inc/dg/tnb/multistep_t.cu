@@ -4,31 +4,50 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "rk.cuh"
-#include "grid.cuh"
-#include "gamma.cuh"
+#include "multistep.h"
+#include "grid.h"
+#include "helmholtz.h"
 #include "evaluation.cuh"
 #include "derivatives.cuh"
+#include "typedefs.cuh"
 
 #include "blas.h"
 
+template < class container = thrust::device_vector<double> >
+struct Identity
+{
+    Identity( const dg::Grid2d<double>& g): weights_(dg::create::weights(g)), precond_(dg::create::precond(g)){}
+    void operator()( container& y, container& yp) const
+    {
+        dg::blas1::axpby( 0, y, 0, yp);
+        dg::blas1::axpby( 0., y, 0., y); //destroy y
+    }
+    const container& weights(){return weights_;}
+    const container& precond(){return precond_;}
+    private:
+    container weights_, precond_;
+
+};
 template < class container = thrust::device_vector<double> >
 struct RHS
 {
     typedef container Vector;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    RHS( const dg::Grid2d<double>& g, double D): D_(D) 
+    RHS( const dg::Grid2d<double>& g, double D): D_(D), weights_(dg::create::weights(g)), precond_(dg::create::precond(g))
     {
-        laplaceM = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
+        laplaceM = dg::create::laplacianM( g, dg::normed);
     }
-    void operator()( const container& y, container& yp)
+    void operator()( container& y, container& yp)
     {
         dg::blas2::symv( laplaceM, y, yp);
         dg::blas1::axpby( -D_, yp, 0., yp);
-        //dg::blas1::axpby( 0., y, 0., yp);
+        dg::blas1::axpby( 0., y, 0., y); //destroy y
     }
+    const container& weights(){return weights_;}
+    const container& precond(){return precond_;}
   private:
     double D_;
+    container weights_, precond_;
     cusp::ell_matrix<int, double, MemorySpace> laplaceM;
 };
 
@@ -66,31 +85,27 @@ int main()
     Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, PER, PER);
     dg::DVec w2d = create::w2d( grid);
 
-    DVec y0 = evaluate( sine, grid), y1(y0);
+    dg::DVec y0 = evaluate( sine, grid), y1(y0);
 
-    RHS<DVec> rhs( grid, nu);
-    RK< k, DVec > rk( y0);
-    AB< k, DVec > ab( y0);
+    RHS<dg::DVec> rhs( grid, nu);
+    dg::AB< k, dg::DVec > ab( y0);
+    dg::Karniadakis< dg::DVec > karn( y0, y0.size(), 1e-6);
 
     ab.init( rhs, y0, dt);
-    integrateRK4( rhs, y0, y1, T, 1e-10);
-    DVec solution = evaluate( sol, grid), error( solution);
-    double norm_sol = blas2::dot( w2d, solution);
-    blas1::axpby( -1., y1, 1., error);
-    double norm_error = blas2::dot( w2d, error);
-    cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" \n";
-
-    //thrust::swap(y0, y1);
+    Identity<dg::DVec> id(grid);
+    karn.init( id, rhs, y0, dt);
     for( unsigned i=0; i<NT; i++)
     {
-        ab( rhs, y0, y1, dt);
-        y0.swap( y1);
+        //ab( rhs, y0);
+        karn( id, rhs, y0);
     }
+    DVec solution = evaluate( sol, grid), error( solution);
+    double norm_sol = blas2::dot( w2d, solution);
     double norm_y0 = blas2::dot( w2d, y0);
     cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << endl;
-    blas1::axpby( -1., y0, 1., error);
+    dg::blas1::axpby( -1., y0, 1., error);
     cout << "Normalized solution is "<<  norm_sol<< endl;
-    norm_error = blas2::dot( w2d, error);
+    double norm_error = blas2::dot( w2d, error);
     cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000141704)\n";
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
     //n = 2 -> p = 2

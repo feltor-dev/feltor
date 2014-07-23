@@ -71,28 +71,28 @@ toefl_b: toefl_b.cu toefl.cuh
 blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ 
 
-%_t: %_t.cu ../%.cuh 
+%_t: %_t.cu %.cuh 
 	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) 
 
-%2d_t: %2d_t.cu ../%.cuh 
+%2d_t: %2d_t.cu %.cuh 
 	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
-%3d_t: %3d_t.cu ../%.cuh 
+%3d_t: %3d_t.cu %.cuh 
 	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
-%_b: %_b.cu ../%.h 
+%_b: %_b.cu %.cuh 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 
-%2d_b: %2d_b.cu ../%.h
+%2d_b: %2d_b.cu %.cuh
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
 
-%3d_b: %3d_b.cu ../%.h
+%3d_b: %3d_b.cu %.cuh
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
 	echo "Attention: No compiler warnings are issued!" 
 
-dg_t: dg_t.cpp ../dg.h 
+dg_t: dg_t.cpp dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
 	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 

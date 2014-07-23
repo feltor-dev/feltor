@@ -3,7 +3,7 @@
 #define THRUST_HOST_SYSTEM THRUST_HOST_SYSTEM_OMP
 #define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_CPP
 #include "polarisation.cuh"
-#include "cg.cuh"
+#include "cg.h"
 
 
 ///@cond DOC
