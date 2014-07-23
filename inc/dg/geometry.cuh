@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <fstream>
-#include <cmath>
 #include <vector>
 //6 analytical quantities
 namespace dg
@@ -385,6 +384,24 @@ struct InvB
   PsipR psipR_;
   PsipZ psipZ_;  
 };
+struct LnB
+{
+  LnB(  double R_0, Ipol ipol, PsipR psipR, PsipZ psipZ ):  R_0_(R_0), ipol_(ipol), psipR_(psipR), psipZ_(psipZ)  { }
+  double operator()(double R, double Z)
+  {    
+    return log((R_0_*sqrt(ipol_(R,Z)*ipol_(R,Z) + psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)))/R) ;
+  }
+  double operator()(double R, double Z, double phi)
+  {    
+    return log((R_0_*sqrt(ipol_(R,Z,phi)*ipol_(R,Z,phi) + psipR_(R,Z,phi)*psipR_(R,Z,phi) +psipZ_(R,Z,phi)*psipZ_(R,Z,phi)))/R) ;
+  }
+  void display() { }
+  private:
+  double R_0_;
+  Ipol ipol_;
+  PsipR psipR_;
+  PsipZ psipZ_;  
+};
 /**
  * @brief d B / d R
  */ 
@@ -538,11 +555,11 @@ struct GradLnB
     }     
     double operator()( double R, double Z)
     {
-       return invB_(R,Z)/R/R*(bR_(R,Z) *psipZ_(R,Z) - bZ_(R,Z)* psipR_(R,Z)) ;
+       return invB_(R,Z)*invB_(R,Z)/R*(bR_(R,Z) *psipZ_(R,Z) - bZ_(R,Z)* psipR_(R,Z)) ;
     }
     double operator()( double R, double Z, double phi)
     {
-       return invB_(R,Z,phi)/R/R*(bR_(R,Z,phi) *psipZ_(R,Z,phi) - bZ_(R,Z,phi)* psipR_(R,Z,phi)) ;
+       return invB_(R,Z,phi)* invB_(R,Z,phi)/R*(bR_(R,Z,phi) *psipZ_(R,Z,phi) - bZ_(R,Z,phi)* psipR_(R,Z,phi)) ;
     }
     private:
 //     InvB invB_; 
@@ -586,7 +603,7 @@ struct Field
 //             yp[1][i] = -y[0][i]*psipR_(y[0][i],y[1][i],y[2][i])/ipol_(y[0][i],y[1][i],y[2][i]) ;             //dZ/dphi = -R/I Psip_Z
 //             yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i],y[2][i])/ipol_(y[0][i],y[1][i],y[2][i]);       //ds/dphi =  R^2 B/I
             yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);       //ds/dphi =  R^2 B/I
-            yp[0][i] =  y[0][i]*psipZ_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);              //dR/dphi =  R/I Psip_Z
+            yp[0][i] = y[0][i]*psipZ_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);              //dR/dphi =  R/I Psip_Z
             yp[1][i] = -y[0][i]*psipR_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]) ;             //dZ/dphi = -R/I Psip_Z
         }
     }
@@ -693,6 +710,7 @@ struct Damping
     GeomParameters gp_;
     Psip psip_;
 };
+
 /**
  * @brief Computes the background gradient for the densities
  */ 
@@ -720,6 +738,33 @@ struct Gradient
     double lnN_inner_;
     Psip psip_;
 };
+/**
+ * @brief returns zonal flow field
+ */ 
+struct ZonalFlow
+{
+    ZonalFlow(GeomParameters gp, double k_psi):
+        gp_(gp),
+        k_psi_(k_psi),
+        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+    }
+    double operator() (double R, double Z) 
+    {
+      if (psip_(R,Z)<0.) return (1.+cos(2.*M_PI*psip_(R,Z)*k_psi_));
+      return 1.;
+      
+    }
+    double operator() (double R, double Z,double phi) 
+    {
+        if (psip_(R,Z,phi)<0.) return (1.+cos(2.*M_PI*psip_(R,Z,phi)*k_psi_));
+        return 1.;
+    }
+    private:
+    GeomParameters gp_;
+    double k_psi_;
+    Psip psip_;
+};
+
 /**
  * @brief testfunction to test the parallel derivative
  */ 
