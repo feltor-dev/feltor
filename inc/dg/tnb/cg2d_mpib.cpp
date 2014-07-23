@@ -79,5 +79,6 @@ int main( int argc, char* argv[])
     norm = dg::blas2::dot( w2d, deriv);
     if( rank == 0) std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
 
+    MPI_Finalize();
     return 0;
 }

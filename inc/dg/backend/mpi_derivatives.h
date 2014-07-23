@@ -51,6 +51,7 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
         b  = normx*backward*t*( 0.5*rl )*forward;
 
         m.data()[0] = bt.data(), m.data()[1] = a.data(), m.data()[2] = b.data();
+        //m.cusp_matrix() = dg::create::dx( g.local(), no, dir);
         
         return m;
     }
@@ -64,6 +65,7 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
         a = normx*backward*t*(-d.transpose()-l)*forward; 
         b = normx*backward*t*(rl)*forward;
         m.data()[0] = a.data(), m.data()[1] = b.data();
+        //m.cusp_matrix() = dg::create::dx( g.local(), no, dir);
         return m;
     }
     //if dir == dg::backward
@@ -74,6 +76,7 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
     bt = normx*backward*t*(-lr)*forward; 
     a  = normx*backward*t*(d+l)*forward;
     m.data()[0] = bt.data(), m.data()[1] = a.data();
+    //m.cusp_matrix() = dg::create::dx( g.local(), no, dir);
     return m;
 }
 MPI_Matrix dx( const MPI_Grid2d& g, norm no = normed, direction dir = symmetric)
@@ -87,6 +90,7 @@ MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = sy
     MPI_Matrix m = dx( swapped_g, bcy, no, dir );
     for( unsigned i=0; i<m.state().size(); i++)
         m.state()[i] = -1;
+    //m.cusp_matrix() = dg::create::dy( g.local(), no, dir);
     return m;
 }
 MPI_Matrix dy( const MPI_Grid2d& g, norm no = normed, direction dir = symmetric)

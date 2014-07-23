@@ -92,6 +92,7 @@ int main(int argc, char* argv[])
     dg::blas1::axpby( 1., sol, -1., jac);
     result = sqrt( dg::blas2::dot( w2d, jac));
     if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; //don't forget sqrt when comuting errors
+    MPI_Finalize();
     return 0;
 }
 

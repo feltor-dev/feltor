@@ -1,5 +1,8 @@
 #pragma once
+
 #include <vector>
+
+//#include "derivatives.cuh"
 #include "mpi_grid.h"
 #include "mpi_config.h"
 #include "mpi_vector.h"
@@ -18,11 +21,8 @@ struct MPI_Matrix
     bc& bcy(){return bcy_;}
     const bc& bcx()const{return bcx_;}
     const bc& bcy()const{return bcy_;}
-    
 
     MPI_Comm communicator()const{return comm_;}
-
-
 
     void update_boundaryX( MPI_Vector& v) const;
     void update_boundaryY( MPI_Vector& v) const;
@@ -39,8 +39,9 @@ struct MPI_Matrix
     void multiplyAdd( unsigned n, const double* op, const double* w, const double* x, double* y) const;
     void multiplyAdd( const double* op, unsigned n, const double* w, const double* x, double* y) const;
     void symv( MPI_Vector& x, MPI_Vector& y) const;
-
+    //cusp::csr_matrix<int, double, cusp::host_memory>& cusp_matrix(){ return cmatrix_;}
   private:
+    //cusp::csr_matrix<int, double, cusp::host_memory> cmatrix_; //!< CSR host Matrix
     std::vector<std::vector<double> > data_;
     std::vector<std::vector<double> > w_;
     std::vector<int> offset_;
@@ -127,18 +128,31 @@ void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
 //}
 inline void MPI_Matrix::multiplyAdd( unsigned n, const double* op, const double* w, const double* x, double* y) const
 {
+    unsigned l, m;
     for( unsigned i=0; i<n; i++)
+    {
+        l=i*n;
         for( unsigned j=0; j<n; j++)
+        {
+            m = j*n;
             for( unsigned k=0; k<n; k++)
-                y[i*n+j]+= w[i]*op[j*n+k]*x[i*n+k];
+                y[l+j]+= w[i]*op[m+k]*x[l+k];
+        }
+    }
 }
 
 inline void MPI_Matrix::multiplyAdd( const double* op, unsigned n, const double* w,const double* x, double* y) const
 {
+    unsigned l;
     for( unsigned i=0; i<n; i++)
+    {
+        l=i*n;
         for( unsigned j=0; j<n; j++)
+        {
             for( unsigned k=0; k<n; k++)
-                y[i*n+j]+= w[j]*op[i*n+k]*x[k*n+j];
+                y[l+j]+= w[j]*op[l+k]*x[k*n+j];
+        }
+    }
 }
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
@@ -185,6 +199,7 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
     //if(rank==1) std::cout<<x<<std::endl;
     //MPI_Barrier(comm_);
     //t.tic();
+    /*
     for( unsigned i=1; i<rows-1; i++)
         for( unsigned j=1; j<cols-1; j++)
         {
@@ -198,23 +213,33 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
                     multiplyAdd( (data_[k]).data(), n, (w_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
             }
         }
+        */
+    //dg::blas2::detail::doSymv( cmatrix_, x.data(), y.data(), CuspMatrixTag(), ThrustVectorTag(), ThrustVectorTag());
+    
 
-    //for( unsigned k=0; k<x.size(); k++)
-    //    y.data()[k] = 0;
-    //for( unsigned k=0; k<data_.size(); k++)
-    //{
-    //    if( state_[k]>0)
-    //        for( unsigned i=1; i<rows-1; i++)
-    //            for( unsigned j=1; j<cols-1; j++)
-    //                multiplyAdd( n, (data_[k]).data(), (w_[k]).data(), &x.data()[(i*cols+j+offset_[k])*n*n], &y.data()[(i*cols+j)*n*n]);
-    //    else
-    //        for( unsigned i=1; i<rows-1; i++)
-    //            for( unsigned j=1; j<cols-1; j++)
-    //                multiplyAdd( (data_[k]).data(), n, (w_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
-    //}
+    unsigned num, stride=n*n;
+    for( unsigned k=0; k<x.size(); k++)
+        y.data()[k] = 0; //x.data()[k]*w_[0][k%3];
+    for( unsigned k=0; k<data_.size(); k++)
+    {
+        if( state_[k]>0)
+            for( unsigned i=1; i<rows-1; i++)
+            {
+                num = i*cols;
+                for( unsigned j=1; j<cols-1; j++)
+                    multiplyAdd( n, (data_[k]).data(), (w_[k]).data(), &x.data()[(num+j+offset_[k])*stride], &y.data()[(num+j)*stride]);
+            }
+        else
+            for( unsigned i=1; i<rows-1; i++)
+            {
+                num = i*cols;
+                for( unsigned j=1; j<cols-1; j++)
+                    multiplyAdd( (data_[k]).data(), n, (w_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*stride], &y.data()[(num+j)*stride]);
+            }
+    }
     //t.toc();
     //std::cout << "Multiplication  took "<<t.diff()<<"s\n";
-    ////if(rank==0) std::cout<<y<<std::endl;
+    //if(rank==0) std::cout<<y<<std::endl;
 
 
 }
