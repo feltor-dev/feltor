@@ -468,6 +468,7 @@ struct BathRZ{
      * @param amp Amplitude
      */  
   BathRZ( unsigned Rm, unsigned Zm, unsigned Nz, double R_min, double Z_min, double gamma, double eddysize, double amp) : Rm_(Rm), Zm_(Zm), Nz_(Nz),R_min_(R_min), Z_min_(Z_min), gamma_(gamma), eddysize_(eddysize) , amp_(amp) {
+    std::cout << "Constructing initial bath" << "\n";
     Rm2=(double)Rm_*(double)Rm_;
     Zm2=(double)Zm_*(double)Zm_;
     RZm= sqrt(Rm2+Zm2);
@@ -532,7 +533,7 @@ struct BathRZ{
         f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]); 
       }      
     }
-    return amp_*norm*f;
+    return amp_*norm*abs(f);
     
   }
     /**
@@ -560,10 +561,10 @@ struct BathRZ{
                 f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]); 
             }      
         }
-    return amp_*norm*f;
+    return 1.+amp_*norm*abs(f);
     }
     else {
-    return 0.;
+    return 1.;
     }
   }
   private:

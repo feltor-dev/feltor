@@ -1,3 +1,5 @@
+#define DG_DEBUG
+
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -22,6 +24,7 @@
 #include "functions.h"
 #include "interpolation.cuh"
 #include "draw/host_window.h"
+
 
 int main()
 {
@@ -54,17 +57,7 @@ int main()
     std::cout  << Rmin<<"rho_s " << Rmax <<"rho_s " << Zmin <<"rho_s " <<Zmax <<"rho_s " <<"\n";
     std::cout << "Type n, Nx, Ny, Nz\n";
     std::cin >> n>> Nx>>Ny>>Nz;
-    for (unsigned k=1;k<4;k++)
-    {
-    std::stringstream ss1,ss2;
-    ss1 << "dzerr1n" <<k*n<<"Nz"<<Nz<<".txt";
-    ss2 << "dzerr2n" <<k*n<<"Nz"<<Nz<<".txt";
-    std::string dzerr1fn = ss1.str();
-    std::string dzerr2fn = ss2.str();
-//     std::cout << dzerr1fn;
-    std::ofstream dzerrfile1((char *) dzerr1fn.c_str());
-    std::ofstream dzerrfile2((char *) dzerr2fn.c_str());
-    dg::Field field(gp);
+        dg::Field field(gp);
     dg::Psip psip(gp.R_0,gp.A,gp.c);
     dg::PsipR psipR(gp.R_0,gp.A,gp.c);
     dg::PsipRR psipRR(gp.R_0,gp.A,gp.c);  
@@ -79,10 +72,25 @@ int main()
     dg::CurvatureR curvatureR(gp);
     dg::CurvatureZ curvatureZ(gp);
     dg::GradLnB gradLnB(gp);
-    for (unsigned i=0;i<5;i++)
+  
+    for (unsigned k=1;k<3;k++) //n iterator
     {
-        std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<< Nz <<"\n";
-        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, Nz);
+    for (unsigned i=0;i<6;i++) //Nxy iterator
+    {
+
+
+    std::stringstream ss1,ss2;
+    ss1 << "dzerr1n" <<k*n<<"Nxy"<<pow(2,i)* Nx<<".txt";
+    ss2 << "dzerr2n" <<k*n<<"Nxy"<<pow(2,i)* Nx<<".txt";
+    std::string dzerr1fn = ss1.str();
+    std::string dzerr2fn = ss2.str();
+//     std::cout << dzerr1fn;
+    std::ofstream dzerrfile1((char *) dzerr1fn.c_str());
+    std::ofstream dzerrfile2((char *) dzerr2fn.c_str());
+    for (unsigned zz=0;zz<5;zz++) //Nz iterator
+    {
+        std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
+        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz);
         const dg::DVec w3d = dg::create::w3d( g3d);
 
 
@@ -142,11 +150,14 @@ int main()
         std::cout << "Norm diff "<<sqrt( normdiff2)<<"\n"; //=sqrt(gradlnB - dz(ln(B)))
         double reldiff2 =sqrt( dg::blas2::dot( diff2, w3d, diff2)/normsol2 );
         std::cout << "Relative Difference Is "<<reldiff2 <<"\n";
-        dzerrfile1 << reldiff  << std::endl;
-        dzerrfile2 << reldiff2 << std::endl;
-    }
+        dzerrfile1 << pow(2,zz)*Nz <<" " << reldiff << std::endl;
+        dzerrfile2 << pow(2,zz)*Nz <<" " << reldiff2 << std::endl;
+         }
     dzerrfile1.close();
     dzerrfile2.close();
+   
+    }
+
     }
 
     return 0;
