@@ -241,6 +241,7 @@ struct Karniadakis
         the return value, i.e. y' = L(y) translates to diff( y, y').
         Furthermore the routines weights() and precond() must be callable
         and return diagonal weights and the preconditioner for the conjugate gradient. 
+        The Operator itself need not be symmetric. Symmetrization is done by the class itself.
     * @param f right hand side function or functor (is called for u)
     * @param diff diffusion operator treated implicitely 
     * @param u (write-only), contains next step of time-integration on output

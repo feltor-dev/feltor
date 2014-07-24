@@ -244,8 +244,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, bc bcx, 
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
-    Matrix jump_ = create::jump( g2d, bcx, bcy);
-    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), jump); //w*hz/2 = hz
+    Matrix jump_ = create::jump2d( g2d, bcx, bcy);
+    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), jump_); //w*hz/2 = hz
 }
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g)

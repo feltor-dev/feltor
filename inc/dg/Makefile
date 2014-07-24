@@ -47,8 +47,7 @@ all: version cusp_thrust arakawa_t blas1_t \
 	 evaluation_b evaluation_t helmholtz_t backscatter_ laplace_b laplace_t \
 	 operator_matrix_t operator_dynamic_b operator_t \
 	 polarisation2d_b polarisation2d_t polarisation_b polarisation_t \
-	 preconditioner2d_b preconditioner2d_t \
-	 rk2d_t rk_t tensor_b toefl_b toefl_t xspacelib_t
+	 runge_kutta2d_t tensor_b toefl_b toefl_t xspacelib_t
 
 
 version: version.cu 
@@ -61,6 +60,9 @@ cusp_thrust: cusp_thrust.cu
 
 backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+
+geometry_t: geometry_t.cu geometry.cuh
+	$(CC)  -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
 
 toefl_t: toefl_t.cu toefl.cuh

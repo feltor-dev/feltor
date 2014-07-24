@@ -9,21 +9,18 @@
 
 //functions for evaluation
 #include "grid.h"
-#include "functors.h"
 #include "dlt.h"
 #include "evaluation.cuh"
 
 
 //creational functions
 #include "derivatives.cuh"
-#include "arakawa.h"
 #include "polarisation.cuh"
 #include "weights.cuh"
 
 //integral functions
 #include "typedefs.cuh"
 
-#include "exceptions.h"
 
 /*! @file
 

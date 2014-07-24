@@ -1,12 +1,14 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
-#include "xspacelib.cuh"
-#include "geometry.cuh"
 #include <fstream>
 #include <sstream>
-#include "file/read_input.h"
 #include <cmath>
+
+#include "xspacelib.cuh"
+#include "geometry.cuh"
+#include "functors.h"
+#include "file/read_input.h"
 
 #include "draw/host_window.h"
 int main()

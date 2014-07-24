@@ -228,6 +228,7 @@ struct Invert
      * @tparam SymmetricOp Symmetric operator with the SelfMadeMatrixTag
         The functions weights() and precond() need to be callable and return
         weights and the preconditioner for the conjugate gradient method
+        The Operator is assumed to be symmetric!
      * @param op selfmade symmetric Matrix operator class
      * @param phi solution (write only)
      * @param rho right-hand-side

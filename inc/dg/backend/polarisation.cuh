@@ -7,7 +7,7 @@
 #include <cusp/transpose.h>
 
 
-#include "blas.h"
+#include "../blas.h"
 
 #include "functions.h"
 #include "grid.h"
@@ -126,7 +126,7 @@ Polarisation2dX< container, Matrix>::Polarisation2dX( const Grid2d<value_type>& 
     //create diagonal matrix entries for x_chi_view
     thrust::sequence( I.begin(), I.end());
     thrust::sequence( J.begin(), J.end());
-    jump  =dg::create::jump( g);
+    jump  =dg::create::jump2d( g);
 }
 template <class container, class Matrix>
 Polarisation2dX<container, Matrix>::Polarisation2dX( const Grid2d<value_type>& g, bc bcx, bc bcy, direction dir):
@@ -145,7 +145,7 @@ Polarisation2dX<container, Matrix>::Polarisation2dX( const Grid2d<value_type>& g
     //create diagonal matrix entries for x_chi_view
     thrust::sequence( I.begin(), I.end());
     thrust::sequence( J.begin(), J.end());
-    jump  =dg::create::jump( g, bcx, bcy);
+    jump  =dg::create::jump2d( g, bcx, bcy);
 }
 template <class container, class Matrix>
 Polarisation2dX< container, Matrix>::Polarisation2dX( const Grid3d<value_type>& g, direction dir):
