@@ -743,28 +743,29 @@ struct Gradient
  */ 
 struct ZonalFlow
 {
-    ZonalFlow(GeomParameters gp, double k_psi):
+    ZonalFlow(GeomParameters gp, double k_psi, double amp):
         gp_(gp),
         k_psi_(k_psi),
+        amp_(amp),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
     }
     double operator() (double R, double Z) 
     {
-      if (psip_(R,Z)<0.) return (1.+cos(2.*M_PI*psip_(R,Z)*k_psi_));
+      if (psip_(R,Z)<0.) return (1.+amp_*abs(cos(2.*M_PI*psip_(R,Z)*k_psi_)));
       return 1.;
       
     }
     double operator() (double R, double Z,double phi) 
     {
-        if (psip_(R,Z,phi)<0.) return (1.+cos(2.*M_PI*psip_(R,Z,phi)*k_psi_));
+        if (psip_(R,Z,phi)<0.) return (1.+amp_*abs(cos(2.*M_PI*psip_(R,Z,phi)*k_psi_)));
         return 1.;
     }
     private:
     GeomParameters gp_;
     double k_psi_;
+    double amp_;
     Psip psip_;
 };
-
 /**
  * @brief testfunction to test the parallel derivative
  */ 
