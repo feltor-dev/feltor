@@ -59,7 +59,15 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     int number = 0;
     for( unsigned i=0; i<g.size(); i++)
     {
-        assert( x[i] >= g.x0() && x[i] <= g.x1());
+        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
+            std::cerr << "xi = " << x[i] <<std::endl;
+        }
+        
+        assert(x[i] >= g.x0() && x[i] <= g.x1());
+        
+        if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
+            std::cerr << "yi = " << y[i] <<std::endl;
+        }
         assert( y[i] >= g.y0() && y[i] <= g.y1());
 
         //determine which cell (x,y) lies in 

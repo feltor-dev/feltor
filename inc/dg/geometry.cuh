@@ -2,10 +2,9 @@
 
 #include <iostream>
 #include <fstream>
-#include <cmath>
 #include <vector>
 //6 analytical quantities
-namespace solovev
+namespace dg
 {
 /**
  * @brief Constructs and display geometric parameters
