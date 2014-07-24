@@ -79,33 +79,36 @@ int main( int argc, char* argv[])
     //with bath
 //       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
      //with zonal flow field
-      solovev::ZonalFlow init0(gp,8);
+      solovev::ZonalFlow init0(gp,18.,p.amp);
     //with gaussians
 //     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
 //     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
 //     dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
 //     dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-//     eule::Gradient grad(p.R_0, p.a, p.a-p.b, p.lnn_inner);
-    solovev::Gradient grad(gp, p.lnn_inner);
-  
-    //const dg::HVec gradient( dg::evaluate(grad, grid));
+    
+    solovev::Gradient grad(gp, p.lnn_inner); //background gradient
+
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[1]);
+
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 0., y0[0]);
+/*    
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
+    */
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 0., y0[1]);
+/*    
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[1]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[1]);*/
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0
 
-    feltor.log( y0, y0, 2); //transform to logarithmic values
+    feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
     
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]);
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]);
+    dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]); //is pupil on bath
+    dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]); //is pupil on bath
     
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
     ab.init( feltor, rolkar, y0, p.dt);
@@ -113,7 +116,6 @@ int main( int argc, char* argv[])
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
-//     draw::ColorMapRedBlueExt colors( 1.);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
 
     //create timer
@@ -128,19 +130,15 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
-        feltor.exp( y0, y1, 2);
-        //thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
+        feltor.exp( y0, y1, 2); //calculate real densities from logdensities
 
         //plot electrons
-        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
+        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1.));//ne-1
         hvisual = dvisual;
-        //dg::blas1::axpby( -1., gradient, 1., hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
-//         title <<"ne / "<<colors.scale()<<"\t";
         title <<"ne / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
@@ -150,14 +148,12 @@ int main( int argc, char* argv[])
         }
 
         //draw ions
-        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1));
+        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1.));//ne-1
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
-//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
-//         title <<"ni / "<<colors.scale()<<"\t";
         title <<"ni / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
@@ -170,11 +166,8 @@ int main( int argc, char* argv[])
         dg::blas2::gemv( rolkar.laplacianM(), feltor.potential()[0], y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-//         title <<"phi / "<<colors.scale()<<"\t";
         title <<"phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
@@ -186,10 +179,8 @@ int main( int argc, char* argv[])
         //draw U_e
         hvisual = y0[2];
         dg::blas2::gemv( equi, hvisual, visual);
-//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-//         title <<"Ue / "<<colors.scale()<<"\t";
         title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
@@ -201,10 +192,8 @@ int main( int argc, char* argv[])
         //draw U_i
         hvisual = y0[3];
         dg::blas2::gemv( equi, hvisual, visual);
-//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-//         title <<"Ui / "<<colors.scale()<<"\t";
         title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
