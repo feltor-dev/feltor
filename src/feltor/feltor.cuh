@@ -257,12 +257,12 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
     //update energetics, 2% of total time
     exp( y, expy, 2);
     mass_ = dg::blas2::dot( one, w3d, expy[0] ); //take real ion density which is electron density!!
-    double Ue = p.tau[0]*dg::blas2::dot( y[0], w3d, expy[0]);
-    double Ui = p.tau[1]*dg::blas2::dot( y[1], w3d, expy[1]);
+    double Ue = p.tau[0]*dg::blas2::dot( y[0], w3d, expy[0]); // tau_e n_e ln(n_e)
+    double Ui = p.tau[1]*dg::blas2::dot( y[1], w3d, expy[1]);// tau_i n_i ln(n_i)
     double Uphi = 0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
-    dg::blas1::pointwiseDot( y[2], y[2], omega);
+    dg::blas1::pointwiseDot( y[2], y[2], omega); //U_e^2
     double Upare = -0.5*p.mu[0]*dg::blas2::dot( expy[0], w3d, omega); 
-    dg::blas1::pointwiseDot( y[3], y[3], omega);
+    dg::blas1::pointwiseDot( y[3], y[3], omega); //U_i^2
     double Upari =  0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
     energy_ = Ue + Ui + Uphi + Upare + Upari;
 
@@ -317,14 +317,14 @@ void Feltor< container>::operator()( const std::vector<container>& y, std::vecto
 
     }
     //add parallel resistivity
-    dg::blas1::pointwiseDot( expy[0], y[2], omega);
-    dg::blas1::pointwiseDot( expy[1], y[3], chi);
-    dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
-    dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
-    dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
-
-    dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
-    dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
+//     dg::blas1::pointwiseDot( expy[0], y[2], omega);
+//     dg::blas1::pointwiseDot( expy[1], y[3], chi);
+//     dg::blas1::axpby( -1., omega, 1., chi); //-N_eU_e + N_iU_i
+//     dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
+//     dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i
+// 
+//     dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);
+//     dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, chi, 1., yp[3]);
     //add parallel diffusion
     for( unsigned i=0; i<4; i++)
     {
