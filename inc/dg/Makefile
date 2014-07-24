@@ -63,6 +63,8 @@ backscatter_t: backscatter_t.cu xspacelib.cuh
 
 geometry_t: geometry_t.cu geometry.cuh
 	$(CC)  -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+dz_geom_t: dz_geom_t.cu geometry.cuh
+	$(CC)  -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
 
 toefl_t: toefl_t.cu toefl.cuh

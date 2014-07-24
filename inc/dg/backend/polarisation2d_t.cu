@@ -4,7 +4,7 @@
 #include <cusp/print.h>
 
 #include "xspacelib.cuh"
-#include "cg.cuh"
+#include "../cg.h"
 
 unsigned n = 3; //global relative error in L2 norm is O(h^P)
 unsigned Nx = 20;  //more N means less iterations for same error

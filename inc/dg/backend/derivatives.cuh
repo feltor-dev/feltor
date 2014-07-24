@@ -33,7 +33,9 @@ namespace create{
  * @tparam T value-type
  * @param g The grid on which to create dx
  * @param bcx The boundary condition
- * @param s The space on which the matrix operates on
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -72,7 +74,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm
  *
  * @tparam T value-type
  * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param s The space on which the matrix operates on
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -85,7 +89,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, norm no = no
  * @tparam T value-type
  * @param g The grid on which to create dy
  * @param bcy The boundary condition
- * @param s The space on which the matrix operates on
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -124,7 +130,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, norm
  *
  * @tparam T value-type
  * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param s The space on which the matrix operates on
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -142,7 +150,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, norm no = no
  * @param bcy Boundary condition in y
  * @param no use normed if you want to compute e.g. diffusive terms,
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
- * @param s The space on which the matrix operates on
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
@@ -198,7 +205,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
  * @param g The grid on which to operate (boundary conditions are taken from here)
  * @param no use normed if you want to compute e.g. diffusive terms, 
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
- * @param s The space on which the matrix operates on
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
@@ -235,7 +241,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, bc bcx, 
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g)
 {
-    return jump( g, g.bcx(), g.bcy());
+    return jump2d( g, g.bcx(), g.bcy());
 }
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
@@ -258,7 +264,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g)
  * @tparam T value-type
  * @param g The grid on which to create dx
  * @param bcx The boundary condition
- * @param s The space on which the matrix operates on
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -280,7 +288,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, norm
  *
  * @tparam T value-type
  * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param s The space on which the matrix operates on
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -293,7 +303,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, norm no = no
  * @tparam T value-type
  * @param g The grid on which to create dy
  * @param bcy The boundary condition
- * @param s The space on which the matrix operates on
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -314,7 +326,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, norm
  *
  * @tparam T value-type
  * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param s The space on which the matrix operates on
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
@@ -366,7 +380,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( 
  * @param bcy Boundary condition in y
  * @param no use normed if you want to compute e.g. diffusive terms,
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
- * @param s The space on which the matrix operates on
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
@@ -392,7 +405,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g,
  * @param g The grid on which to operate (boundary conditions are taken from here)
  * @param no use normed if you want to compute e.g. diffusive terms, 
              use not_normed if you want to solve symmetric matrix equations (T resp. V is missing)
- * @param s The space on which the matrix operates on
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format

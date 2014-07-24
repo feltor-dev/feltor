@@ -4,9 +4,9 @@
 
 #include "evaluation.cuh"
 #include "dz.cuh"
-#include "rk.cuh"
 #include "functions.h"
-#include "functors.cuh"
+#include "../blas2.h"
+#include "../functors.h"
 #include "interpolation.cuh"
 
 

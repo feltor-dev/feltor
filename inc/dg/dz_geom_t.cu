@@ -18,7 +18,7 @@
 #include <cusp/print.h>
 
 #include "dz.cuh"
-#include "rk.cuh"
+#include "runge_kutta.h"
 #include "functions.h"
 #include "interpolation.cuh"
 #include "draw/host_window.h"

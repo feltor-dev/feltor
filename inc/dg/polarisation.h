@@ -2,7 +2,12 @@
 
 #include "blas.h"
 #include "enums.h"
-//#include "creation.h"
+#include "backend/evaluation.cuh"
+#include "backend/derivatives.cuh"
+#ifdef MPI_VERSION
+#include "backend/mpi_derivatives.h"
+#include "backend/mpi_evaluation.h"
+#endif
 
 
 //#include "cusp_eigen.h"

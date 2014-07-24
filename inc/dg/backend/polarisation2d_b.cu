@@ -100,21 +100,6 @@ int main()
     cout << "For a precision of "<< eps<<endl;
     cout << "Took "<<t.diff()<<"s\n";
 
-    Vector xd =    dg::evaluate( initial, grid);
-    Vector bd =    dg::evaluate( rhs, grid);
-    Vector chid =  dg::evaluate( pol, grid);
-    dg::Polarisation<Matrix, dg::DVec, dg::DVec> pol_device_p( grid, xd);
-    pol_device_p.set_chi( chid);
-    dg::Invert< dg::DVec> invert( xd, n*n*Nx*Ny, eps);
-    t.tic();
-    std::cout << "Number of pcg iterations "<< invert( pol_device_p, xd, bd)<<endl;
-    t.toc();
-    std::cout << "For a precision of "<< eps<<endl;
-    std::cout << "Took "<<t.diff()<<"s\n";
-
-
-
-
     //compute error
     const Vector solution = dg::evaluate( sol, grid);
     const Vector derivati = dg::evaluate( der, grid);
@@ -133,12 +118,6 @@ int main()
     norm = dg::blas2::dot( w2d, derivati);
     std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
-    //compute error
-    dg::blas1::axpby( 1.,xd,-1., solution, error);
-    err = dg::blas2::dot( w2d, error);
-    std::cout << "L2 Norm2 of Error is " << err << endl;
-    std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
-
     return 0;
 }
 
