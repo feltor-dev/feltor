@@ -1,5 +1,6 @@
 #pragma once
 
+#include "helmholtz.h"
 #include "blas.h"
 #include "arakawa.h"
 #include "cg.h"

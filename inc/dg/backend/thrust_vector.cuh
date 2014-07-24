@@ -55,11 +55,11 @@ inline void doScal(  Vector& x,
             detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
 }
 template< class Vector, class UnaryOp>
-inline void doTransform(  Vector& x, 
+inline void doTransform(  const Vector& x, Vector& y,
                           UnaryOp op,
                           ThrustVectorTag)
 {
-    thrust::transform( x.begin(), x.end(), x.begin(), op);
+    thrust::transform( x.begin(), x.end(), y.begin(), op);
 }
 
 template< class Vector>

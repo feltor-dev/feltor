@@ -2,11 +2,12 @@
 
 #include <cassert>
 
+#include "backend/matrix_traits.h"
 #include "blas.h"
 #include "cg.h"
 
 #ifdef DG_BENCHMARK
-#include "cusp_thrust_backend/timer.cuh"
+#include "backend/timer.cuh"
 #endif
 
 namespace dg{
@@ -93,7 +94,7 @@ struct Maxwell
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM
      */
-    void symv( Vector& x, Vector& y) const
+    void symv( Vector& x, Vector& y) 
     {
         blas1::pointwiseDot( chi_, x, temp_);
         if( alpha_ != 0);
@@ -159,14 +160,26 @@ struct Maxwell
 //};
 ///@}
 ///@cond
-template< class M, class T>
-struct MatrixTraits< Maxwell<M, T> >
+template< class M, class V, class P >
+struct MatrixTraits< Maxwell<M, V, P> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template< class M, class T>
-struct MatrixTraits< Helmholtz<M, T> >
+template< class M, class V, class P>
+struct MatrixTraits< Helmholtz<M, V, P> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template< class M, class V, class P >
+struct MatrixTraits< const Maxwell<M, V, P> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template< class M, class V, class P>
+struct MatrixTraits< const Helmholtz<M, V, P> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;

@@ -1,7 +1,7 @@
 #ifndef _DG_MATRIX_TRAITS_
 #define _DG_MATRIX_TRAITS_
 
-#include <vector>
+//#include <vector>
 #include "matrix_categories.h"
 namespace dg{
 

@@ -16,6 +16,7 @@
 #include "operator_tensor.cuh"
 #include "matrix_traits_thrust.h"
 #include "creation.cuh"
+#include "derivatives.cuh"
 #include "dx.cuh"
 
 #include "dlt.h"
