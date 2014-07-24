@@ -3,8 +3,13 @@
 #include "cg.h"
 
 
+/*! @file
+
+  This file contains multistep explicit& implicit time-integrators
+  */
 namespace dg{
 
+///@cond
 template< size_t k>
 struct ab_coeff
 {
@@ -24,9 +29,11 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 * @brief Struct for Adams-Bashforth explicit multistep time-integration
 *
 * @ingroup algorithms
+*
+* Computes \f[ u_{n+1} = u_n + dt\sum_{j=0}^k b_j f(u_{n-j}) \f]
 * Uses only blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step.
-* @tparam k Order of the method (1, 2, or 3)
+* @tparam k Order of the method (Currently one of 1, 2, 3, 4 or 5)
 * @tparam Vector The Argument type used in the Functor class
 */
 template< size_t k, class Vector>
@@ -44,14 +51,14 @@ struct AB
      * @brief Init with initial value
      *
      * This routine initiates the first steps in the multistep method by integrating
-     * backwards with a runge-kutta method of same order. This routine has to be called
+     * backwards with a Euler method. This routine has to be called
      * before the first timestep is made and with the same initial value as the first timestep.
      * @tparam Functor models BinaryFunction with no return type (subroutine).
         Its arguments both have to be of type Vector.
         The first argument is the actual argument, the second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
      * @param f The rhs functor
-     * @param u0 The initial value you later use 
+     * @param u0 The initial value of the integration
      * @param dt The timestep
      */
     template< class Functor>
@@ -64,9 +71,7 @@ struct AB
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function or functor
-    * @param u initial value, contains result on output
-    * @param dt The timestep.
-    * @note The fist u0 must be the same you use in the init routine.
+    * @param u (write-only) contains next step of the integration on output
     */
     template< class Functor>
     void operator()( Functor& f, Vector& u);
@@ -76,7 +81,6 @@ struct AB
     Vector u_;
 };
 
-//compute two steps backwards with same order RK scheme 
 template< size_t k, class Vector>
 template< class Functor>
 void AB<k, Vector>::init( Functor& f, const Vector& u0,  double dt)
@@ -239,7 +243,7 @@ struct Karniadakis
         and return diagonal weights and the preconditioner for the conjugate gradient. 
     * @param f right hand side function or functor (is called for u)
     * @param diff diffusion operator treated implicitely 
-    * @param u initial value on input, contains result on output
+    * @param u (write-only), contains next step of time-integration on output
     */
     template< class Functor, class LinearOp>
     void operator()( Functor& f, LinearOp& diff, Vector& u);

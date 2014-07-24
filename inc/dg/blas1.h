@@ -37,7 +37,8 @@ namespace blas1
  * @param y Right Vector may equal y
  * @return Scalar product
  * @note This routine is always executed synchronously due to the 
-        implicit memcpy of the result.
+        implicit memcpy of the result. With mpi the result is broadcasted to all
+        processes
  * @note If DG_DEBUG is defined a range check shall be performed
  */
 template< class Vector>
@@ -57,9 +58,8 @@ inline typename VectorTraits<Vector>::value_type dot( const Vector& x, const Vec
  * @param x Vector x may equal y 
  * @param beta Scalar
  * @param y Vector y contains solution on output
- * @note In an implementation you may want to check for alpha == 0 and beta == 1
+ * @note Checks for alpha == 0 and beta == 1
  * @note If DG_DEBUG is defined a range check shall be performed
- * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
 template< class Vector>
 inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, Vector& y)
@@ -76,7 +76,7 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
  * @param beta Scalar
  * @param y Vector y may equal result
  * @param result Vector contains solution on output
- * @note In an implementation you may want to check for alpha == 0 and beta == 1
+ * @note Checks for alpha == 0 and beta == 1
  * @note If DG_DEBUG is defined a range check shall be performed
  * @attention If a thrust::device_vector is used then this routine is NON-BLOCKING!
  */
@@ -106,8 +106,7 @@ inline void transform( const Vector& x, Vector& y, UnaryOp op)
  *
  * This routine computes \f[ x \leftarrow  \alpha x \f] 
  * @param alpha Scalar  
- * @param x Vector x may equal result
- * @note In an implementation you may want to check for alpha == 0
+ * @param x Vector x 
  */
 template< class Vector>
 inline void scal( Vector& x, typename VectorTraits<Vector>::value_type alpha)

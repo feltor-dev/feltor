@@ -5,7 +5,6 @@
 #include "enums.h"
 #include "backend/derivatives.cuh"
 #ifdef MPI_VERSION
-#include "backend/mpi_matrix.h"
 #include "backend/mpi_derivatives.h"
 #endif
 
@@ -20,7 +19,8 @@ namespace dg
  * @brief X-space generalized version of Arakawa's scheme
  *
  * @ingroup arakawa
- * @tparam container The vector class on which to operate on
+ * @tparam Matrix The Matrix class to use
+ * @tparam container The vector class on which to operate on. The blas2 function symv( m, x, y) must be callable and may not change x. 
  */
 template< class Matrix, class container >
 struct ArakawaX
@@ -28,14 +28,18 @@ struct ArakawaX
     /**
      * @brief Create Arakawa on a grid
      *
-     * @param g The 2D grid
+     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
+     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
+     * @param g The grid
      */
     template< class Grid>
     ArakawaX( const Grid& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
-     * @param g The 2D grid
+     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
+     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
+     * @param g The grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
@@ -45,6 +49,7 @@ struct ArakawaX
     /**
      * @brief Compute poisson's bracket
      *
+     * Computes \f[ [f,g] := \partial_x f\partial_x g - \partial_y f\partial_y g \f]
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
@@ -52,20 +57,16 @@ struct ArakawaX
     void operator()( container& lhs, container& rhs, container& result);
 
     /**
-     * @brief Return internally used 2d - x - derivative in ell format in XSPACE
+     * @brief Return internally used 2d - x - derivative 
      *
-     * The same as a call to 
-     * dg::create::dx( g, bcx, XSPACE)
-     * but the format is the fast ell_matrix format
+     * The same as a call to dg::create::dx( g, bcx)
      * @return derivative
      */
     const Matrix& dx() {return bdxf;}
     /**
      * @brief Return internally used 2d - y - derivative in ell format in XSPACE
      *
-     * The same as a call to 
-     * dg::create::dy( g, bcy, XSPACE)
-     * but the format is the fast ell_matrix format
+     * The same as a call to dg::create::dy( g, bcy)
      * @return derivative
      */
     const Matrix& dy() {return bdyf;}

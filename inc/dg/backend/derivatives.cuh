@@ -210,7 +210,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm
 }
 
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid2d<T>& g, bc bcx, bc bcy)
+cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, bc bcx, bc bcy)
 {
     const unsigned& n = g.n();
     Operator<T> normx(n, 0.), normy(n, 0.);
@@ -233,14 +233,14 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid2d<T>& g, bc bcx, bc
     return jump_;
 }
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid2d<T>& g)
+cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g)
 {
     return jump( g, g.bcx(), g.bcy());
 }
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid3d<T>& g, bc bcx, bc bcy)
+cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, bc bcx, bc bcy)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
@@ -248,7 +248,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid3d<T>& g, bc bcx, bc
     return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), jump); //w*hz/2 = hz
 }
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump( const Grid3d<T>& g)
+cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g)
 {
     return jump( g, g.bcx(), g.bcy());
 }

@@ -15,45 +15,92 @@
 namespace dg
 {
 
+/**
+ * @brief X-space version of polarisation term
+ *
+ * @ingroup highlevel
+ *
+ * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
+ * @tparam Matrix The Matrix class to use
+ * @tparam Vector The Vector class to use
+ * @tparam Preconditioner The Preconditioner class to use
+ * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
+ * and thus in a conjugate gradient solver. 
+ *
+ */
 template <class Matrix, class Vector, class Preconditioner>
 class Polarisation
 {
     public:
+    /**
+     * @brief Construct from Grid
+     *
+     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, a call to dg::create::weights(g) and dg::create::precond(g)
+     * must return instances of the Preconditioner class and calls to dg::create::dx( g, not_normed, backward) and jump2d( g, bcx, bcy) are made.
+     * @param g The Grid, boundary conditions are taken from here
+     */
     template< class Grid>
-    Polarisation( const Grid& g, const Vector& copyable): 
-        xchi( copyable), xx(copyable), temp( copyable),
-        weights_(dg::create::weights(g)), precond_(dg::create::precond(g))
+    Polarisation( const Grid& g): 
+        xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx),
+        weights_(dg::create::weights(g)), precond_(dg::create::precond(g))a, 
+        rightx( dg::create::dx( g, g.bcx(), normed, forward)),
+        righty( dg::create::dy( g, g.bcy(), normed, forward)),
+        leftx ( dg::create::dx( g, inverse( g.bcx()), not_normed, backward)),
+        lefty ( dg::create::dy( g, inverse( g.bcy()), not_normed, backward)),
+        jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()) ) 
     {
-        rightx=dg::create::dx( g, g.bcx(), normed, forward);
-        righty=dg::create::dy( g, g.bcy(), normed, forward);
-        leftx =dg::create::dx( g, inverse( g.bcx()), not_normed, backward);
-        lefty =dg::create::dy( g, inverse( g.bcy()), not_normed, backward);
-    //cusp::transpose( rightx, leftx); 
-    //cusp::transpose( righty, lefty); 
-        jump  =dg::create::jump2d( g, g.bcx(), g.bcy());
     }
+    /**
+     * @brief Construct from grid and boundary conditions
+     *
+     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, a call to dg::create::weights(g) and dg::create::precond(g)
+     * must return instances of the Preconditioner class and calls to dg::create::dx( g, not_normed, backward) and jump2d( g, bcx, bcy) are made.
+     * @param g The Grid
+     * @param bcx boundary condition in x
+     * @param bcy boundary contition in y
+     */
     template< class Grid>
-    Polarisation( const Grid& g, bc bcx, bc bcy, const Vector& copyable): 
-        xchi( copyable), xx(copyable), temp( copyable),
+    Polarisation( const Grid& g, bc bcx, bc bcy): 
+        xchi( dg::evaluate(one, g)), xx(xchi), temp( xx),
         weights_(dg::create::weights(g)), precond_(dg::create::precond(g))
+        rightx(dg::create::dx( g,bcx, normed, forward)),
+        righty(dg::create::dy( g,bcy, normed, forward)),
+        leftx (dg::create::dx( g, inverse(bcx), not_normed, backward)),
+        lefty (dg::create::dy( g, inverse(bcy), not_normed, backward)),
+        jump  (dg::create::jump2d( g, bcx, bcy);
     {
-        rightx=dg::create::dx( g,bcx, normed, forward);
-        righty=dg::create::dy( g,bcy, normed, forward);
-        
-        leftx =dg::create::dx( g, inverse(bcx), not_normed, backward);
-        lefty =dg::create::dy( g, inverse(bcy), not_normed, backward);
-        jump  =dg::create::jump( g, bcx, bcy);
     }
 
+    /**
+     * @brief Change Chi
+     *
+     * @param chi The new chi
+     */
     void set_chi( const Vector& chi)
     {
         xchi = chi;
         //dg::blas1::pointwiseDot( weights_, chi, xchi);
     }
+    /**
+     * @brief Returns the weights to use in conjugate gradient
+     *
+     * @return weights
+     */
     const Preconditioner& weights()const {return weights_;}
+    /**
+     * @brief Returns the preconditioner to use in conjugate gradient
+     *
+     * @return inverse weights
+     */
     const Preconditioner& precond()const {return precond_;}
 
-    void symv( const Vector& x, Vector& y) 
+    /**
+     * @brief Computes the polarisation term
+     *
+     * @param x left-hand-side
+     * @param y result
+     */
+    void symv( Vector& x, Vector& y) 
     {
         dg::blas2::gemv( rightx, x, temp); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 

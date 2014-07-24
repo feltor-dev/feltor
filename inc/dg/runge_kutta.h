@@ -9,8 +9,7 @@
 
 /*! @file
 
-  Contrary to its name the file contains not only runge-kutta but also adams-bashforth
-  explicit time-integrators
+  This file contains runge-kutta explicit time-integrators
   */
 namespace dg{
 
@@ -83,6 +82,7 @@ const double rk_coeff<4>::beta[4] = {
 * @brief Struct for Runge-Kutta explicit time-integration
 *
 * @ingroup algorithms
+*
 * Uses only blas1::axpby routines to integrate one step.
 * The coefficients are chosen in a form that require a minimum of 
 * axpby function calls (check for alpha==0, beta==1) and else 
@@ -202,6 +202,7 @@ struct RK<1, Vector>
         blas1::axpby( 1., u0, dt, u1);
     }
 };
+///@endcond
 
 
 

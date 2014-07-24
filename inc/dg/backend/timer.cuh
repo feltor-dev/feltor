@@ -32,7 +32,7 @@ class Timer
 };
 #else
 
-#include "../toefl/timer.h"
+#include "../../toefl/timer.h"
     /**
      * @brief If we compute on the host we use the toefl timer
      */
