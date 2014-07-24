@@ -6,20 +6,19 @@
 #include <fstream>
 #include <sstream>
 #include "file/read_input.h"
-#include <cmath>
 
 #include "draw/host_window.h"
 int main()
 {
-    unsigned Nx,Ny,n;
+//     unsigned Nx=100, Ny=100,polcoeff=3;
 //     double Nxh = Nx/2.,Nyh=Ny/2.;
 //     double a, elongation,triangularity;
     double Rmin,Zmin,Rmax,Zmax;
 //     double A,R_0,psipmin,psipmax;
 //     std::vector<double> c(13);
-        std::cout << "Type n, Nx, Ny\n";
-    std::cin >> n>> Nx>>Ny;
-    
+     std::cout << "Type n, Nx, Ny\n";
+    unsigned n, Nx, Ny;
+    std::cin >> n>> Nx>>Ny;   
     std::vector<double> v;
     try{ v = file::read_input( "geometry_params.txt"); }
     catch (toefl::Message& m) {  
@@ -34,14 +33,7 @@ int main()
     std::cout << "Total number of parameters read is: "<<v.size()-1 <<"\n";
     std::stringstream title;
     //write parameters from file into variables
-//     A=v[1];
-//     for (unsigned i=2;i<14;i++) c[i-2]=v[i];
-//     R_0 = v[14];
-//     psipmin= v[15];
-//     psipmax= v[16];
-//     a=R_0*v[17];
-//     elongation=v[18];
-//     triangularity=v[19];
+
     const dg::GeomParameters gp(v);
     gp.display( std::cout);
     Rmin=gp.R_0-1.1*gp.a;
@@ -68,8 +60,8 @@ int main()
     dg::Iris iris(gp);
     dg::Pupil pupil(gp);
     dg::Damping damping(gp);
-    dg::Gradient grad(gp,0.05);
-    dg::ZonalFlow zonalflow(gp,7);
+    dg::ZonalFlow zonalflow(gp,20.,0.5);
+    dg::Gradient gradient(gp,0.05);
 //     //make dggrid
     dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
     
@@ -82,8 +74,10 @@ int main()
     dg::HVec hvisual7 = dg::evaluate( iris, grid);
     dg::HVec hvisual8 = dg::evaluate( pupil, grid);
     dg::HVec hvisual9 = dg::evaluate( damping, grid);
-    dg::HVec hvisual10 = dg::evaluate( grad, grid);
-    dg::HVec hvisual11 = dg::evaluate( zonalflow, grid);
+    dg::HVec hvisual10 = dg::evaluate( zonalflow, grid);
+    dg::HVec hvisual11 = dg::evaluate( gradient, grid);
+    dg::HVec hvisual12 = dg::evaluate( field, grid);
+
     //allocate mem for visual
     dg::HVec visual1( grid.size());
     dg::HVec visual2( grid.size());
@@ -92,10 +86,11 @@ int main()
     dg::HVec visual5( grid.size());
     dg::HVec visual6( grid.size());
     dg::HVec visual7( grid.size());
-    dg::HVec visual8( grid.size());
+    dg::HVec visual8 (grid.size());
     dg::HVec visual9( grid.size());
     dg::HVec visual10( grid.size());
     dg::HVec visual11( grid.size());
+    dg::HVec visual12( grid.size());
     //make equidistant grid from dggrid
     dg::HMatrix equigrid = dg::create::backscatter(grid);
     //evaluate on valzues from devicevector on equidistant visual hvisual vector
@@ -110,9 +105,11 @@ int main()
     dg::blas2::gemv( equigrid, hvisual9, visual9);
     dg::blas2::gemv( equigrid, hvisual10, visual10);
     dg::blas2::gemv( equigrid, hvisual11, visual11);
+    dg::blas2::gemv( equigrid, hvisual12, visual12);
+
 
     //Create Window and set window title
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( 1800, 600, "");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 1500, 900, "");
     draw::RenderHostData render( 2, 6);
   
     //create a colormap
@@ -137,15 +134,13 @@ int main()
         title <<"1/B / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual3, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
-        colors.scalemax() = (float)thrust::reduce( visual4.begin(), visual4.end(),  -1.0, thrust::maximum<double>()  );
+        colors.scalemax() = (float)thrust::reduce( visual4.begin(), visual4.end(),-100., thrust::maximum<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual4.begin(), visual4.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"K^R / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual4, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
-        colors.scalemax() = (float)thrust::reduce( visual5.begin(), visual5.end(), -1.0, thrust::maximum<double>()   );
+        colors.scalemax() = (float)thrust::reduce( visual5.begin(), visual5.end(),-100., thrust::maximum<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual5.begin(), visual5.end(), colors.scalemax() ,thrust::minimum<double>() );
-//                 colors.scalemax() = -0.0058;
-//         colors.scalemin() = -0.009;
         title <<"K^Z / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual5, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
@@ -153,17 +148,17 @@ int main()
         colors.scalemin() =  (float)thrust::reduce( visual6.begin(), visual6.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"gradLnB / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual6, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        
+ 
         colors.scalemax() = (float)thrust::reduce( visual7.begin(), visual7.end(), 0., dg::AbsMax<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual7.begin(), visual7.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"iris / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual7, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        
+
         colors.scalemax() = (float)thrust::reduce( visual8.begin(), visual8.end(), 0., dg::AbsMax<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual8.begin(), visual8.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"pupil / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual8, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        
+
         colors.scalemax() = (float)thrust::reduce( visual9.begin(), visual9.end(), 0., dg::AbsMax<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual9.begin(), visual9.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"damping / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
@@ -171,18 +166,18 @@ int main()
         
         colors.scalemax() = (float)thrust::reduce( visual10.begin(), visual10.end(), 0., dg::AbsMax<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual10.begin(), visual10.end(), colors.scalemax() ,thrust::minimum<double>() );
-        title <<"gradient / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"zonal / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual10, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         colors.scalemax() = (float)thrust::reduce( visual11.begin(), visual11.end(), 0., dg::AbsMax<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual11.begin(), visual11.end(), colors.scalemax() ,thrust::minimum<double>() );
-        title <<"gradient / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
-        render.renderQuad( visual11, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        colors.scalemax() = (float)thrust::reduce( visual11.begin(), visual11.end(), 0., dg::AbsMax<double>()  );
-        colors.scalemin() =  (float)thrust::reduce( visual11.begin(), visual11.end(), colors.scalemax() ,thrust::minimum<double>() );
-        title <<"gradient / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"grad / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual11, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
+        colors.scalemax() = (float)thrust::reduce( visual12.begin(), visual12.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual12.begin(), visual12.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"invbf / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        render.renderQuad( visual12, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         title << std::fixed; 
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
