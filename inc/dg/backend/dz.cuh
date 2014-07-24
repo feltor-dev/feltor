@@ -1,10 +1,9 @@
 #pragma once
 
-#include "grid.cuh"
+#include "grid.h"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
-#include "blas.h"
-#include "rk.cuh"
+#include "../runge_kutta.h"
 
 namespace dg{
 

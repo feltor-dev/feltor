@@ -6,7 +6,7 @@
 #include "blas.h"
 
 #ifdef DG_BENCHMARK
-#include "cusp_thrust_backend/timer.cuh"
+#include "backend/timer.cuh"
 #endif
 
 namespace dg{

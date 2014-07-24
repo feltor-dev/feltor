@@ -9,10 +9,9 @@
 
 #include "feltor.cuh"
 #include "bessel.h"
-#include "dg/rk.cuh"
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
-#include "dg/karniadakis.cuh"
+#include "dg/algorithms.h"
+#include "dg/backend/timer.cuh"
+#include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
 #include "parameters.h"
 
@@ -239,7 +238,7 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             try{ ab( feltor, rolkar, y0);}
-            catch( eule::Fail& fail) { 
+            catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);

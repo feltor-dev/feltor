@@ -42,14 +42,13 @@ class Polarisation
     template< class Grid>
     Polarisation( const Grid& g): 
         xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx),
-        weights_(dg::create::weights(g)), precond_(dg::create::precond(g))a, 
+        weights_(dg::create::weights(g)), precond_(dg::create::precond(g)), 
         rightx( dg::create::dx( g, g.bcx(), normed, forward)),
         righty( dg::create::dy( g, g.bcy(), normed, forward)),
         leftx ( dg::create::dx( g, inverse( g.bcx()), not_normed, backward)),
         lefty ( dg::create::dy( g, inverse( g.bcy()), not_normed, backward)),
         jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()) ) 
-    {
-    }
+    { }
     /**
      * @brief Construct from grid and boundary conditions
      *
@@ -62,14 +61,13 @@ class Polarisation
     template< class Grid>
     Polarisation( const Grid& g, bc bcx, bc bcy): 
         xchi( dg::evaluate(one, g)), xx(xchi), temp( xx),
-        weights_(dg::create::weights(g)), precond_(dg::create::precond(g))
+        weights_(dg::create::weights(g)), precond_(dg::create::precond(g)),
         rightx(dg::create::dx( g,bcx, normed, forward)),
         righty(dg::create::dy( g,bcy, normed, forward)),
         leftx (dg::create::dx( g, inverse(bcx), not_normed, backward)),
         lefty (dg::create::dy( g, inverse(bcy), not_normed, backward)),
-        jump  (dg::create::jump2d( g, bcx, bcy);
-    {
-    }
+        jump  (dg::create::jump2d( g, bcx, bcy))
+    { }
 
     /**
      * @brief Change Chi
