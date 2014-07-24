@@ -9,7 +9,6 @@
 
 #include "feltor.cuh"
 #include "bessel.h"
-#include "dg/algorithms.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"

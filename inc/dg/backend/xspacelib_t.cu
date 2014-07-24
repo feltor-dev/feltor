@@ -2,6 +2,7 @@
 
 #include <cusp/print.h>
 
+#include "file/read_input.h"
 #include "xspacelib.cuh"
 #include "cg.h"
 

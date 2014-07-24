@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dg/algorithms.h"
+#include "dg/algorithm.h"
 #include "dg/backend/dz.cuh"
 
 #include "parameters.h"

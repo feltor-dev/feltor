@@ -62,15 +62,15 @@ backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
 geometry_t: geometry_t.cu geometry.cuh
-	$(CC)  -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+	$(CC) -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 dz_geom_t: dz_geom_t.cu geometry.cuh
-	$(CC)  -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
 
 toefl_t: toefl_t.cu toefl.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 toefl_b: toefl_b.cu toefl.cuh
-	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
 blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ 
