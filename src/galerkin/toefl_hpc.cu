@@ -3,13 +3,15 @@
 #include <vector>
 
 
-#include "toeflR.cuh"
-#include "parameters.h"
-#include "dg/rk.cuh"
 #include "file/file.h"
 #include "file/read_input.h"
 
-#include "dg/timer.cuh"
+#include "toeflR.cuh"
+#include "dg/algorithm.h"
+#include "dg/backend/xspacelib.cuh"
+#include "parameters.h"
+
+#include "dg/backend/timer.cuh"
 
 
 /*
@@ -45,14 +47,17 @@ int main( int argc, char* argv[])
     }
 
     ////////////////////////////////set up computations///////////////////////////
-    dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     dg::ToeflR<dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+    {
+        dg::DVec v2d = dg::create::v2d(grid);
+        dg::blas2::symv( v2d, y0[1], y0[1]);
+    }
     if( p.global)
     {
         thrust::transform( y0[0].begin(), y0[0].end(), y0[0].begin(), dg::PLUS<double>(+1));
@@ -63,7 +68,7 @@ int main( int argc, char* argv[])
     double time = 0;
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
     ab.init( test, y0, p.dt);
-    ab( test, y0, y1, p.dt);
+    ab( test, y0);
     y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up hdf5/////////////////////////////////
     file::T5trunc t5file( argv[2], input);
@@ -119,7 +124,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            ab( test, y0, y1, p.dt);
+            ab( test, y0);
             y0.swap( y1); //attention on -O3 ?
             //store accuracy details
             if( p.global) 

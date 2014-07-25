@@ -6,15 +6,14 @@
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "file/read_input.h"
 
 #include "feltor.cuh"
 #include "bessel.h"
-#include "dg/rk.cuh"
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
-#include "dg/karniadakis.cuh"
-#include "file/read_input.h"
 #include "parameters.h"
+#include "geometry.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -79,7 +78,7 @@ int main( int argc, char* argv[])
     //with bath
 //       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
      //with zonal flow field
-      solovev::ZonalFlow init0(gp,4.,p.amp);
+      solovev::ZonalFlow init0(gp,8.,p.amp);
     //with gaussians
 //     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
 //     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
@@ -228,7 +227,7 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             try{ ab( feltor, rolkar, y0);}
-            catch( eule::Fail& fail) { 
+            catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);

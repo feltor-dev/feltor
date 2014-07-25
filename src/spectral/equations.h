@@ -185,7 +185,7 @@ void Poisson::operator()( std::array<double,2>& c, const double laplace) const
 {
 #ifdef TL_DEBUG
     if( laplace == 0)
-        throw Message( "Laplace is zero in Poisson equation!", ping);
+        throw Message( "Laplace is zero in Poisson equation!", _ping_);
 #endif
     double rho = a_i*mu_i*laplace/(1.- tau_i*mu_i*laplace);
     //double rho = a_i*mu_i*laplace;
@@ -196,7 +196,7 @@ void Poisson::operator()( std::array<double, 3>& c, const double laplace) const
 {
 #ifdef TL_DEBUG
     if( laplace == 0)
-        throw Message( "Laplace is zero in Poisson equation!", ping);
+        throw Message( "Laplace is zero in Poisson equation!", _ping_);
 #endif
     double rho = (a_i*mu_i/(1.- tau_i*mu_i*laplace) + a_z*mu_z/(1.-tau_z*mu_z*laplace))*laplace;
     //double rho = (a_i*mu_i + a_z*mu_z)*laplace;

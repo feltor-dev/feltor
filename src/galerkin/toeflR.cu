@@ -7,9 +7,8 @@
 //#include "draw/device_window.cuh"
 
 #include "toeflR.cuh"
-#include "dg/rk.cuh"
-#include "dg/karniadakis.cuh"
-#include "dg/timer.cuh"
+#include "dg/algorithm.h"
+#include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
 #include "parameters.h"
 
@@ -61,7 +60,10 @@ int main( int argc, char* argv[])
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
 
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+    {
+        dg::DVec v2d = dg::create::v2d(grid);
+        dg::blas2::symv( v2d, y0[1], y0[1]);
+    }
 
     if( p.global)
     {

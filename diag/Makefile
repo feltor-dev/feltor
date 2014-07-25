@@ -20,7 +20,7 @@ endif
 
 ifeq ($(strip $(system)),home)
 CXX = g++
-INCLUDE += -I/home/matthias/include # cusp and thrust libraries
+INCLUDE += -I/home/markus/Dokumente/Phd/Include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries

@@ -11,9 +11,10 @@
 
 #include "evaluation.cuh"
 #include "functions.h"
-#include "functors.cuh"
+#include "functors.h"
 #include "toefl.cuh"
-#include "rk.cuh"
+#include "runge_kutta.h"
+#include "multistep.h"
 #include "xspacelib.cuh"
 #include "typedefs.cuh"
 
@@ -97,7 +98,7 @@ int main()
     const Grid2d<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR);
     dg::Gaussian gaussian( 1., ly/2., .1, .1, 1);
     dg::DVec theta = dg::evaluate ( gaussian, grid);
-    vector<dg::DVec> y0(2, theta), y1(y0);
+    vector<dg::DVec> y0(2, theta);
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and AB
@@ -124,7 +125,7 @@ int main()
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
         render.renderQuad( visual, n*grid.Nx(), n*grid.Ny(), colors);
-        title << " temperature / "<<colors.scale() <<" time "<<time;
+        title << " temperature / "<<colors.scale() <<" time "<<std::setw(3)<<time;
         glfwSetWindowTitle( w, title.str().c_str());
         title.str("");
         glfwPollEvents();
@@ -132,8 +133,7 @@ int main()
         //step 
         for( unsigned i=0; i<N; i++)
         {
-            ab( test, y0, y1, dt);
-            y0.swap( y1);
+            ab( test, y0);
             time += (double)N*dt;
         }
     }

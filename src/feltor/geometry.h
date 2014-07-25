@@ -342,18 +342,20 @@ struct PsipRZ
   std::vector<double> c_;
 };
 /**
- * @brief I
+ * @brief \f[I= \sqrt{-A hat{\psi}_p / \hat{R}_0 +1}^{1/2}\f] 
  */ 
 struct Ipol
 {
   Ipol(  double R_0, double A, Psip psip ):  R_0_(R_0), A_(A), psip_(psip) { }
   double operator()(double R, double Z)
   {    
-    return sqrt(2.*A_* psip_(R,Z) /R_0_ + 1.);
+      //sign before A changed to -
+    return sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
   }
   double operator()(double R, double Z, double phi)
   {    
-    return sqrt(2.*A_*psip_(R,Z,phi)/R_0_ + 1.);
+      //sign before A changed to -
+    return sqrt(-2.*A_*psip_(R,Z,phi)/R_0_ + 1.);
   }
   void display()
   {
@@ -413,13 +415,15 @@ struct BR
   { 
     double Rn;
     Rn = R/R_0_;
-    return -( Rn*Rn/invB_(R,Z)/invB_(R,Z)- Rn *A_*psipR_(R,Z) - R *(psipZ_(R,Z)*psipRZ_(R,Z)+psipR_(R,Z)*psipRR_(R,Z)))/(R*Rn*Rn/invB_(R,Z));
+    //sign before A changed to +
+    return -( Rn*Rn/invB_(R,Z)/invB_(R,Z)+ Rn *A_*psipR_(R,Z) - R  *(psipZ_(R,Z)*psipRZ_(R,Z)+psipR_(R,Z)*psipRR_(R,Z)))/(R*Rn*Rn/invB_(R,Z));
   }
   double operator()(double R, double Z, double phi)
   { 
     double Rn;
     Rn = R/R_0_;
-    return -( Rn*Rn/invB_(R,Z,phi)/invB_(R,Z,phi)- Rn *A_*psipR_(R,Z,phi) - R *(psipZ_(R,Z,phi)*psipRZ_(R,Z,phi)+psipR_(R,Z,phi)*psipRR_(R,Z,phi)))/(R*Rn*Rn/invB_(R,Z,phi));
+    //sign before A changed to +
+    return -( Rn*Rn/invB_(R,Z,phi)/invB_(R,Z,phi)+ Rn *A_*psipR_(R,Z,phi) - R *(psipZ_(R,Z,phi)*psipRZ_(R,Z,phi)+psipR_(R,Z,phi)*psipRR_(R,Z,phi)))/(R*Rn*Rn/invB_(R,Z,phi));
   }
   void display() { }
   private:
@@ -441,13 +445,15 @@ struct BZ
   { 
     double Rn;
     Rn = R/R_0_;
-    return (A_/R_0_*psipZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z)+psipZ_(R,Z)*psipZZ_(R,Z))/(Rn*Rn/invB_(R,Z));
+    //sign before A changed to -
+    return (-A_/R_0_*psipZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z)+psipZ_(R,Z)*psipZZ_(R,Z))/(Rn*Rn/invB_(R,Z));
   }
   double operator()(double R, double Z, double phi)
   { 
+      //sign before A changed to -
     double Rn;
     Rn = R/R_0_;
-    return (A_/R_0_*psipZ_(R,Z,phi) + psipR_(R,Z,phi)*psipRZ_(R,Z,phi)+psipZ_(R,Z,phi)*psipZZ_(R,Z,phi))/(Rn*Rn/invB_(R,Z,phi));
+    return (-A_/R_0_*psipZ_(R,Z,phi) + psipR_(R,Z,phi)*psipRZ_(R,Z,phi)+psipZ_(R,Z,phi)*psipZZ_(R,Z,phi))/(Rn*Rn/invB_(R,Z,phi));
   }
   void display() { }
   private:

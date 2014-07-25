@@ -265,7 +265,7 @@ fftw_r2r_kind inverse_kind( fftw_r2r_kind kind)
         case( FFTW_REDFT11): return FFTW_REDFT11;
         case( FFTW_R2HC): return FFTW_HC2R;
         case( FFTW_HC2R): return FFTW_R2HC;
-        default: throw Message( "fftw r2r kind unknown!", ping);
+        default: throw Message( "fftw r2r kind unknown!", _ping_);
         return kind;
     }
 }

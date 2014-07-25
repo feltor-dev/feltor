@@ -5,7 +5,7 @@
 #include <thrust/host_vector.h>
 
 #include "evaluation.cuh"
-#include "arakawa.cuh"
+#include "arakawa.h"
 #include "blas.h"
 #include "typedefs.cuh"
 
@@ -14,33 +14,31 @@
 using namespace std;
 using namespace dg;
 
-const double lx = M_PI;
-const double ly = M_PI;
+const double lx = 2*M_PI;
+const double ly = 2*M_PI;
 //const double lx = 1.;
 //const double ly = 1.;
 
 
 //choose some mean function (attention on lx and ly)
 //THESE ARE NOT PERIODIC
+/*
 double left( double x, double y) { return sin(x)*cos(y);}
 double right( double x, double y){ return exp(0.1*(x+y)); }
-/*
-double left( double x, double y) {return sin(x)*exp(x-M_PI)*sin(y);}
-double right( double x, double y) {return sin(x)*sin(y)*exp(y-M_PI);}
-*/
 double jacobian( double x, double y) 
 {
     return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
 }
+*/
 
-/*
+dg::bc bcx = dg::PER;
+dg::bc bcy = dg::PER;
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return cos(x)*sin(y);}
 double jacobian( double x, double y) 
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
-*/
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
@@ -65,11 +63,12 @@ int main()
 
 
     ArakawaX<dg::DMatrix, DVec> arakawa( grid);
+    unsigned multi=20;
     t.tic(); 
-    for( unsigned i=0; i<20; i++)
+    for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    cout << "\nArakawa took "<<t.diff()/0.02<<"ms\n\n";
+    cout << "\nArakawa took "<<t.diff()*1000/(double)multi<<"ms\n\n";
 
     cout << scientific;
     cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";

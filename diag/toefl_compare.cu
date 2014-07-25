@@ -3,10 +3,10 @@
 #include <vector>
 
 #include "draw/host_window.h"
-#include "dg/xspacelib.cuh"
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
-#include "dg/projection.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/functors.h"
+#include "dg/backend/projection.cuh"
 #include "file/read_input.h"
 #include "file/file.h"
 
@@ -54,8 +54,8 @@ int main( int argc, char* argv[])
 
     const Parameters p1( file::read_input( in1), layout);
     const Parameters p2( file::read_input( in2), layout);
-    dg::Grid<double> grid1( 0, p1.lx, 0, p1.ly, p1.n, p1.Nx, p1.Ny, p1.bc_x, p1.bc_y);
-    dg::Grid<double> grid2( 0, p2.lx, 0, p2.ly, p2.n, p2.Nx, p2.Ny, p2.bc_x, p2.bc_y);
+    dg::Grid2d<double> grid1( 0, p1.lx, 0, p1.ly, p1.n, p1.Nx, p1.Ny, p1.bc_x, p1.bc_y);
+    dg::Grid2d<double> grid2( 0, p2.lx, 0, p2.ly, p2.n, p2.Nx, p2.Ny, p2.bc_x, p2.bc_y);
     if( p1.lx != p2.lx || p1.ly != p2.ly)
     {
         std::cerr << " Domain not equal!\n";

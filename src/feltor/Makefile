@@ -19,6 +19,7 @@ endif
 
 ifeq ($(strip $(system)),home)
 INCLUDE += -I/home/markus/Dokumente/Phd/Include # cusp and thrust libraries
+
 #you might check the libs here, cf your glfw installation
 GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr 
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
@@ -51,14 +52,22 @@ feltor: feltor.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
-feltor_hpc: feltor_hpc.cu feltor.cuh geometry_circ.h
+feltor_hpc: feltor_hpc.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
-
-generator: generator.cpp
+	
+dz_geom_t: dz_geom_t.cu geometry.h 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	echo "Attention: No compiler warnings are issued!" 
+	
+geometry_t: geometry_t.cu geometry.h 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	echo "Attention: No compiler warnings are issued!" 
+	
+generator: generator.cpp 
 	g++ generator.cpp -o generator -std=c++0x -Wall
 
 .PHONY: clean
 
 clean:
-	rm -f feltor feltor_hpc
+	rm -f feltor feltor_hpc geometry_t dz_geom_t

@@ -4,11 +4,9 @@
 #include <cusp/ell_matrix.h>
 
 #include "blas.h"
-#include "dlt.cuh"
 
-#include "arakawa.cuh"
-#include "derivatives.cuh"
-#include "cg.cuh"
+#include "arakawa.h"
+#include "cg.h"
 
 namespace dg
 {
@@ -23,11 +21,11 @@ struct Toefl
     typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     Toefl( const Grid2d<value_type>& ,  double R, double P, double eps);
 
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( std::vector<container>& y, std::vector<container>& yp);
   private:
     Matrix laplaceM;
     container omega, phi, phi_old, dxtheta, dxphi;
-    ArakawaX<container> arakawaX; 
+    ArakawaX<Matrix, container> arakawaX; 
     CG<container > pcg;
     container w2d, v2d;
 
@@ -42,11 +40,11 @@ Toefl<container>::Toefl( const Grid2d<value_type>& grid, double R, double P, dou
     pcg( omega, grid.size()),
     v2d( create::v2d(grid)), w2d( create::w2d(grid)), Ra (R), Pr(P), eps(eps)
 {
-    laplaceM = dg::create::laplacianM( grid, not_normed, XSPACE);
+    laplaceM = dg::create::laplacianM( grid, not_normed);
 }
 
 template< class container>
-void Toefl< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Toefl< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

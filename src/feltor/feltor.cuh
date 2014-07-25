@@ -1,16 +1,14 @@
 #pragma once
 
-#include "dg/xspacelib.cuh"
-#include "dg/cg.cuh"
-#include "dg/dz.cuh"
-#include "dg/gamma.cuh"
+#include "dg/algorithm.h"
+#include "dg/backend/dz.cuh"
 
 #include "parameters.h"
 // #include "geometry_circ.h"
 #include "geometry.h"
 
 #ifdef DG_BENCHMARK
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh"
 #endif //DG_BENCHMARK
 
 namespace eule
@@ -23,11 +21,10 @@ struct Rolkar
         p(p),
         gp(gp),
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
-        //w3d( 4, &w3d_), v3d( 4, &v3d_), 
         temp( g.size()),
         pupil_( dg::evaluate( solovev::Pupil( gp), g))
     {
-        LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::XSPACE);
+        LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::symmetric);
         //LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
@@ -57,8 +54,6 @@ struct Rolkar
             dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    //const std::vector<const container*>& weights(){return w3d;}
-    //const std::vector<const container*>& precond(){return v3d;}
     const container& weights(){return w3d_;}
     const container& precond(){return v3d_;}
     const container& iris(){return pupil_;}
@@ -66,27 +61,15 @@ struct Rolkar
   private:
     void divide( const container& zaehler, const container& nenner, container& result)
     {
-        thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
-                thrust::divides< typename container::value_type>());
+        dg::blas1::pointwiseDivide( zaehler, nenner, result);
     }
     const Parameters p;
     const solovev::GeomParameters gp;
     const container w3d_, v3d_;
-    const std::vector<const container*> w3d, v3d;
     container temp;
     const container pupil_;
     dg::DMatrix LaplacianM_perp;
     //dg::DMatrix LaplacianM_para;
-};
-
-struct Fail : public std::exception
-{
-
-    Fail( double eps): eps( eps) {}
-    double epsilon() const { return eps;}
-    char const* what() const throw(){ return "Failed to converge";}
-  private:
-    double eps;
 };
 
 template< class container=thrust::device_vector<double> >
@@ -119,7 +102,7 @@ struct Feltor
      * @return Gamma operator
      */
 
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -129,9 +112,9 @@ struct Feltor
   private:
     void curve( const container& y, container& target);
     //use chi and omega as helpers to compute square velocity in omega
-    const container& compute_vesqr( const container& potential);
+    const container& compute_vesqr( container& potential);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
-    const container& compute_psi( const container& potential);
+    const container& compute_psi( container& potential);
     const container& polarisation( const std::vector<container>& y);
 
     container chi, omega;
@@ -146,7 +129,7 @@ struct Feltor
     dg::DZ<container> dz;
     dg::ArakawaX< dg::DMatrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
-    dg::Polarisation2dX< container, dg::DMatrix > pol; //note the host vector
+    dg::Polarisation< dg::DMatrix, container, container > pol; //note the host vector
     dg::Invert<container>       invert_pol;
 
     const container w3d, v3d, one;
@@ -190,7 +173,7 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solov
     damping( dg::evaluate( solovev::Damping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
-    A (dg::create::laplacianM_perp( g, dg::not_normed, dg::XSPACE, dg::symmetric)),
+    A (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
     dz(solovev::Field(gp), g),
     arakawa( g), 
     pol(     g), 
@@ -201,7 +184,7 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solov
 {
 }
 template< class container>
-const container& Feltor<container>::compute_vesqr( const container& potential)
+const container& Feltor<container>::compute_vesqr( container& potential)
 {
     arakawa.bracketS( potential, potential, chi);
     dg::blas1::pointwiseDot( binv, binv, omega);
@@ -209,7 +192,7 @@ const container& Feltor<container>::compute_vesqr( const container& potential)
     return omega;
 }
 template< class container>
-const container& Feltor<container>::compute_psi( const container& potential)
+const container& Feltor<container>::compute_psi( container& potential)
 {
     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
     return phi[1];
@@ -241,12 +224,12 @@ const container& Feltor< container>::polarisation( const std::vector<container>&
     //unsigned number = invert_pol( A, phi[0], omega, w3d, v3d);
     unsigned number = invert_pol( pol, phi[0], omega, w3d, v3d);
     if( number == invert_pol.get_max())
-        throw Fail( p.eps_pol);
+        throw dg::Fail( p.eps_pol);
     return phi[0];
 }
 
 template< class container>
-void Feltor< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Feltor< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 4);
     assert( y.size() == yp.size());

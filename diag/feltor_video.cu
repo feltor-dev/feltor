@@ -4,8 +4,9 @@
 #include <sstream>
 
 #include "draw/host_window.h"
-#include "dg/xspacelib.cuh"
-#include "dg/timer.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/file.h"
 
@@ -49,7 +50,7 @@ int main( int argc, char* argv[])
     dg::Grid3d<double> grid( p.R_0-p.a*1.1, p.R_0+p.a*1.1, -p.a*1.1, p.a*1.1, 0., 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     dg::HVec visual(  grid.size(), 0.), input( visual);
     dg::HMatrix equi = dg::create::backscatter( grid);
-    dg::HMatrix laplacianM = dg::create::laplacianM_perp( grid, dg::normed, dg::XSPACE);
+    dg::HMatrix laplacianM = dg::create::laplacianM_perp( grid, dg::normed);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     unsigned index = 1;

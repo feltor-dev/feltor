@@ -1,5 +1,5 @@
 #pragma once
-#include "dg/grid.cuh"
+#include "dg/enums.h"
 
 /**
  * @brief Provide a mapping between input file and named parameters
