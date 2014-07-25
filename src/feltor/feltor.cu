@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
     //with bath
 //       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
      //with zonal flow field
-      solovev::ZonalFlow init0(gp,18.,p.amp);
+      solovev::ZonalFlow init0(gp,4.,p.amp);
     //with gaussians
 //     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
 //     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
@@ -90,13 +90,13 @@ int main( int argc, char* argv[])
 
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 0., y0[0]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[0]);
 /*    
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
     */
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 0., y0[1]);
+    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[1]);
 /*    
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[1]);
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);

@@ -22,7 +22,7 @@
 
 9)  source radius  (in units of rho_s, !<a)      =   10    (128.)
 10) minor radius a ( in units of rho_s)          =   25    (256)
-11) major radius R_0 (eps_a ~ a/R_0, L_p ~ 6R_0) =   1500
+11) major radius R_0 (eps_a ~ a/R_0, L_p ~ 6R_0) =   150
 12) inner density ( log10 N )                    =   2.
 
 ------------------Physical parameters----------------------
@@ -48,6 +48,6 @@
 25) # of outputs (excluding first)          = 2000
 26) Damping zone thickness (in units of rho_s)  = 2 
 27) Damping zone strength                   = 1e-3
-28) particle source amplitude               = 1e-2
+28) particle source amplitude               = 0.
 
 @ ------------------------------------------------------------

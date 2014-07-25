@@ -460,7 +460,7 @@ struct BZ
   InvB invB_; 
 };
 /**
- * @brief K^R
+ * @brief K^R= -1/B^2 (d B / d Z )
  */ 
 struct CurvatureR
 {
@@ -498,7 +498,7 @@ struct CurvatureR
     BZ bZ_;    
 };
 /**
- * @brief K^Z
+ * @brief K^Z = 1/B^2 (d B / d R )
  */ 
 struct CurvatureZ
 {
@@ -522,8 +522,6 @@ struct CurvatureZ
         return invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi); //factor 2 stays under discussion
     }
     private:    
-//     InvB invB_; 
-//     BR bR_;
     GeomParameters gp_;
     Psip   psip_;    
     PsipR  psipR_;
@@ -563,11 +561,6 @@ struct GradLnB
        return invB_(R,Z,phi)* invB_(R,Z,phi)/R*(bR_(R,Z,phi) *psipZ_(R,Z,phi) - bZ_(R,Z,phi)* psipR_(R,Z,phi)) ;
     }
     private:
-//     InvB invB_; 
-//     PsipR psipR_;
-//     PsipZ psipZ_;
-//     BR bR_;
-//     BZ bZ_;   
     GeomParameters gp_;
     Psip   psip_;    
     PsipR  psipR_;
@@ -600,11 +593,8 @@ struct Field
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {
-//             yp[0][i] =  y[0][i]*psipZ_(y[0][i],y[1][i],y[2][i])/ipol_(y[0][i],y[1][i],y[2][i]);              //dR/dphi =  R/I Psip_Z
-//             yp[1][i] = -y[0][i]*psipR_(y[0][i],y[1][i],y[2][i])/ipol_(y[0][i],y[1][i],y[2][i]) ;             //dZ/dphi = -R/I Psip_Z
-//             yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i],y[2][i])/ipol_(y[0][i],y[1][i],y[2][i]);       //ds/dphi =  R^2 B/I
             yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);       //ds/dphi =  R^2 B/I
-            yp[0][i] = y[0][i]*psipZ_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);              //dR/dphi =  R/I Psip_Z
+            yp[0][i] =  y[0][i]*psipZ_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);              //dR/dphi =  R/I Psip_Z
             yp[1][i] = -y[0][i]*psipR_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]) ;             //dZ/dphi = -R/I Psip_Z
         }
     }
@@ -629,12 +619,7 @@ struct Field
     PsipRZ psipRZ_;
     Ipol   ipol_;
     InvB   invB_;
-        
-//     Ipol ipol_; 
-//     PsipR psipR_;
-//     PsipZ psipZ_;
-//     InvB invB_;
-    
+   
 };
 
 /**
@@ -744,25 +729,27 @@ struct Gradient
  */ 
 struct ZonalFlow
 {
-    ZonalFlow(GeomParameters gp, double k_psi):
+    ZonalFlow(GeomParameters gp, double k_psi, double amp):
         gp_(gp),
         k_psi_(k_psi),
+        amp_(amp),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
     }
     double operator() (double R, double Z) 
     {
-      if (psip_(R,Z)<0.) return (1.+cos(2.*M_PI*psip_(R,Z)*k_psi_));
+      if (psip_(R,Z)<0.) return (1.+amp_*abs(cos(2.*M_PI*psip_(R,Z)*k_psi_)));
       return 1.;
       
     }
     double operator() (double R, double Z,double phi) 
     {
-        if (psip_(R,Z,phi)<0.) return (1.+cos(2.*M_PI*psip_(R,Z,phi)*k_psi_));
+        if (psip_(R,Z,phi)<0.) return (1.+amp_*abs(cos(2.*M_PI*psip_(R,Z,phi)*k_psi_)));
         return 1.;
     }
     private:
     GeomParameters gp_;
     double k_psi_;
+    double amp_;
     Psip psip_;
 };
 
