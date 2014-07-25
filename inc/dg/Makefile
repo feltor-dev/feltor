@@ -5,7 +5,7 @@ INCLUDE = -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
 
-INCLUDE+= -I/home/markus/Dokumente/phd/include  # cusp and thrust libraries
+INCLUDE+= -I/home/markus/Dokumente/Phd/Include  # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
 ifeq ($(strip $(device)),gpu)
@@ -88,7 +88,18 @@ dg_t: dg_t.cpp dg.h
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
 	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 
+bath_t: bathRZ_t.cu 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	echo "Attention: No compiler warnings are issued!" 
+	
+geometry_t: geometry_t.cu 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	echo "Attention: No compiler warnings are issued!" 
 .PHONY: clean doc
+
+dz_geom_t: dz_geom_t.cu 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	echo "Attention: No compiler warnings are issued!" 
 
 doc: 
 	doxygen Doxyfile
