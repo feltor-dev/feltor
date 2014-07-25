@@ -10,7 +10,7 @@
 3)  ny (grid points in y)                =   200 (192)
 4)  nz (grid points in z)                =   8  (16)
 
-5)  dt (time step in units c_s/rho_s)    =   1e-1  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
@@ -22,7 +22,7 @@
 
 9)  source radius  (in units of rho_s, !<a)      =   10    (128.)
 10) minor radius a ( in units of rho_s)          =   25    (256)
-11) major radius R_0 (eps_a ~ a/R_0, L_p ~ 6R_0) =   1500
+11) major radius R_0 (eps_a ~ a/R_0, L_p ~ 6R_0) =   150
 12) inner density ( log10 N )                    =   2.
 
 ------------------Physical parameters----------------------

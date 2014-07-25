@@ -47,6 +47,11 @@ endif
 
 all: feltor feltor_hpc
 
+geometry_t: geometry_t.cu geometry.cuh
+	$(CC) -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+dz_geom_t: dz_geom_t.cu geometry.cuh
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+
 feltor: feltor.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
@@ -61,4 +66,4 @@ generator: generator.cpp
 .PHONY: clean
 
 clean:
-	rm -f feltor feltor_hpc
+	rm -f feltor feltor_hpc geometry_t dz_geom_t

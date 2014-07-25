@@ -5,12 +5,13 @@
 #include <sstream>
 #include <cmath>
 
-#include "xspacelib.cuh"
-#include "geometry.cuh"
-#include "functors.h"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/functors.h"
 #include "file/read_input.h"
-
 #include "draw/host_window.h"
+
+#include "geometry.cuh"
+
 int main()
 {
 //     unsigned Nx=100, Ny=100,polcoeff=3;

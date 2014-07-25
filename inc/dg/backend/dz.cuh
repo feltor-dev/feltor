@@ -37,9 +37,10 @@ struct DZ
      *
      * @param field The field to integrate
      * @param grid The grid on which to operate
+     * @param eps Desired accuracy of runge kutta
      */
     template <class Field>
-    DZ(Field field, const dg::Grid3d<double>& grid): g_(grid) 
+    DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4): g_(grid) 
     {
         std::cout<<"Constructing the parallel derivative" << "\n";
         dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
@@ -50,9 +51,9 @@ struct DZ
         y[1] = dg::evaluate( detail::oneZ, g2d);
         y[2] = dg::evaluate( detail::zero, g2d);
         std::cout<<"Integrate with RK4" << "\n";
-        dg::integrateRK4( field, y, yp,  g_.hz(), 1e-4);
+        dg::integrateRK4( field, y, yp,  g_.hz(), eps);
         cut( y, yp, g2d);
-        dg::integrateRK4( field, y, ym, -g_.hz(), 1e-4);
+        dg::integrateRK4( field, y, ym, -g_.hz(), eps);
         cut( y, ym, g2d);
         plus  = dg::create::interpolation( yp[0], yp[1], g2d);
         minus = dg::create::interpolation( ym[0], ym[1], g2d);

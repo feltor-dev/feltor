@@ -563,8 +563,8 @@ struct BathRZ{
         }
     return 1.+amp_*norm*abs(f);
     }
-    else {
-    return 1.;
+        else {
+        return 1.;
     }
   }
   private:

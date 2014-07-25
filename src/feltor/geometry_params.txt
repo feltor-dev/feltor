@@ -15,13 +15,12 @@
 11) c10                      =  0.0 
 12) c11                      =  0.0 
 13) c12                      =  0.0 
-14) R0 (in units of rhos)    =  150.     (150)
-15) psip_min                 = -1.
-16) psip_max                 =  0.1 (0.0)
+14)  R0 (in units of rhos)   =  150.     (150)
+15)  psip_min                = -1.
+16)  psip_max                =  0.0 (0.0)
 17) inv aspect ratio (a/R0)  =  0.16666666666666666666666667
 18) elongation               =  1.7
 19) triangularity            =  0.33
 20) alpha (Damping thickness)=  0.05
-
 
 

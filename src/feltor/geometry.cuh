@@ -17,20 +17,17 @@ struct GeomParameters
      *
      * @param v Vector from read_input function
      */   
-    GeomParameters( const std::vector< double>& v):layout_(0) {
-        if( layout_ == 0)
-        {
-            A=v[1];
-            c.resize(13);
-            for (unsigned i=0;i<12;i++) c[i]=v[i+2];
-            R_0 = v[14];
-            psipmin= v[15];
-            psipmax= v[16];
-            a=R_0*v[17];
-            elongation=v[18];
-            triangularity=v[19];
-            alpha=v[20];
-        }
+    GeomParameters( const std::vector< double>& v){
+        A=v[1];
+        c.resize(13);
+        for (unsigned i=0;i<12;i++) c[i]=v[i+2];
+        R_0 = v[14];
+        psipmin= v[15];
+        psipmax= v[16];
+        a=R_0*v[17];
+        elongation=v[18];
+        triangularity=v[19];
+        alpha=v[20];
     }
     /**
      * @brief Display parameters
@@ -59,10 +56,8 @@ struct GeomParameters
             <<"epsilon_a     = "<<a/R_0<<"\n"
             <<"elongation    = "<<elongation<<"\n"
             <<"triangularity = "<<triangularity<<"\n"
-            <<"alpha         = "<<alpha<<"\n";             
+            <<"alpha         = "<<alpha<<std::endl;             
     }
-    private:
-    int layout_;
 };
 /**
  * @brief Psip

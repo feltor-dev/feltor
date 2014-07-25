@@ -6,13 +6,14 @@
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
-
-#include "feltor.cuh"
-#include "bessel.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
+
+#include "feltor.cuh"
+#include "bessel.h"
 #include "parameters.h"
+#include "geometry.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
