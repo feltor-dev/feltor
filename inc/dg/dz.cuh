@@ -51,9 +51,9 @@ struct DZ
         y[1] = dg::evaluate( detail::oneZ, g2d);
         y[2] = dg::evaluate( detail::zero, g2d);
         std::cout<<"Integrate with RK4" << "\n";
-        dg::integrateRK4( field, y, yp,  g_.hz(), 1e-4);
+        dg::integrateRK4( field, y, yp,  g_.hz(), 1e-6);
         cut( y, yp, g2d);
-        dg::integrateRK4( field, y, ym, -g_.hz(), 1e-4);
+        dg::integrateRK4( field, y, ym, -g_.hz(), 1e-6);
         cut( y, ym, g2d);
         plus  = dg::create::interpolation( yp[0], yp[1], g2d);
         minus = dg::create::interpolation( ym[0], ym[1], g2d);

@@ -5,20 +5,15 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
-#include "timer.cuh"
 #include <string>
-
-
+#include <cusp/print.h>
 // #include "typedefs.cuh"
+
+
+#include "timer.cuh"
 #include "xspacelib.cuh"
 #include "geometry.cuh"
-
-#include <fstream>
-#include <sstream>
 #include "file/read_input.h"
-
-#include <cusp/print.h>
-
 #include "dz.cuh"
 #include "rk.cuh"
 #include "functions.h"

@@ -1,0 +1,24 @@
+
+          * Input-File for axisymmetric solovev equilibrium*
+          ------------------------------------
+
+1)  A                        =  0.0     
+2)  c1                       =  0.0423831 
+3)  c2                       = -0.108658
+4)  c3                       =  0.0647152
+5)  c4                       = -0.0574207  
+6)  c5                       = 0.00640945
+7)  c6                       = -0.00137364
+8)  c7                       = -0.0000427367
+9)  c8                       =  0.0 
+10) c9                       =  0.0 
+11) c10                      =  0.0 
+12) c11                      =  0.0 
+13) c12                      =  0.0 
+14) R0 (in units of rhos)    =  1500.     (150)
+15) psip_min                 = -0.075
+16) psip_max                 =  0.0 (0.0)
+17) inv aspect ratio (a/R0)  =  0.016666666666666666666666667
+18) elongation               =  1.0
+19) triangularity            =  0.0
+20) alpha (Damping thickness)=  0.05

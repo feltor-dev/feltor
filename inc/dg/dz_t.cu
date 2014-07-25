@@ -57,9 +57,6 @@ int main()
     dg::blas1::axpby( 1., solution, -1., derivative);
     double norm = dg::blas2::dot( w3d, solution);
     std::cout << "Norm Solution "<<sqrt( norm)<<"\n";
-    std::cout << "Relative Difference Is "<< sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm )<<"\n";
-
-
-    
+    std::cout << "Relative Difference Is "<< sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm )<<"\n";    
     return 0;
 }
