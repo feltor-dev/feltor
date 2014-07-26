@@ -161,6 +161,8 @@ namespace detail{
 
 int get_i( unsigned n, int idx) { return idx%(n*n)/n;}
 int get_j( unsigned n, int idx) { return idx%(n*n)%n;}
+int get_i( unsigned n, unsigned Nx, int idx) { return (idx/(n*Nx))%n;}
+int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
 }//namespace detail
 ///@endcond
 
@@ -177,7 +179,8 @@ thrust::host_vector<T> w2d( const Grid2d<T>& g)
 {
     thrust::host_vector<T> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        v[i] = g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
+        //v[i] = g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
+        v[i] = g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(),g.Nx(), i)]*g.dlt().weights()[detail::get_j(g.n(),g.Nx(), i)];
     return v;
 }
 /**

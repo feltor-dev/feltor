@@ -75,7 +75,8 @@ thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d<double>& g)
         for( unsigned j=0; j<gx.N(); j++)
             for( unsigned k=0; k<n; k++)
                 for( unsigned l=0; l<n; l++)
-                    v[ i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k]);
+                    //v[ i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k]);
+                    v[ (i*n+k)*g.Nx()*n + j*n + l] = f( absx[j*n+l], absy[i*n+k]);
     return v;
 };
 ///@cond
