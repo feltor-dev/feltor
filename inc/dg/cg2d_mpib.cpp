@@ -19,7 +19,7 @@ const double lx = 2.*M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double derivative( double x, double y){return cos(x)*sin(y);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
-dg::bc bcx = dg::DIR;
+dg::bc bcx = dg::PER;
 double initial( double x, double y) {return sin(0);}
 
 

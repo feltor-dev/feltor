@@ -71,7 +71,7 @@ inline void doSymv(
 template< class Matrix, class Vector>
 inline void doSymv( const Matrix& m, const Vector&x, Vector& y, MPIPreconTag, MPIVectorTag, MPIVectorTag  )
 {
-    doSymv( 1., m, x, 0, y);
+    doSymv( 1., m, x, 0, y, MPIPreconTag(), MPIVectorTag());
 }
 
 

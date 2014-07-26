@@ -299,29 +299,41 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
     dg::MPI_Vector temp(y);
     for( unsigned m=0; m<dataX_.size(); m++)
     {
+    if( !dataX_[m].empty())
     for( unsigned i=1; i<rows-1; i++)
         for( unsigned k=0; k<n; k++)
             for( unsigned j=1; j<cols-1; j++)
                 for( unsigned l=0; l<n; l++)
                 {
                     temp.data()[((i*n+k)*cols + j)*n +l] = 0;
-                    for( unsigned q=0; q<n; q++)
+                        for( unsigned q=0; q<n; q++)
                         {
                             temp.data()[((i*n+k)*cols + j)*n +l] += 
                             dataX_[m][l*n+q]
                             *x.data()[((i*n+k)*cols + j)*n + q + offset_[m]];
                         }
                 }
+    if( !dataY_[m].empty())
     for( unsigned i=1; i<rows-1; i++)
         for( unsigned k=0; k<n; k++)
             for( unsigned j=1; j<cols-1; j++)
                 for( unsigned l=0; l<n; l++)
-                    for( unsigned p=0; p<n; p++)
+                        for( unsigned p=0; p<n; p++)
                         {
                             y.data()[((i*n+k)*cols + j)*n +l] += 
                              dataY_[m][k*n+p]
                             *temp.data()[((i*n+p)*cols + j)*n + l];
                         }
+    else
+    for( unsigned i=1; i<rows-1; i++)
+        for( unsigned k=0; k<n; k++)
+            for( unsigned j=1; j<cols-1; j++)
+                for( unsigned l=0; l<n; l++)
+                    {
+                        y.data()[((i*n+k)*cols + j)*n +l] += 
+                            temp.data()[((i*n+k)*cols + j)*n + l];
+                    }
+
                         //for( unsigned p=0; p<n; p++)
     }
 

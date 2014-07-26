@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 
 
     dg::MMatrix dx = dg::create::dy( g, bcx, dg::normed, dg::symmetric);
-    //dg::MMatrix lzM = dg::create::laplacianM( g, bcx, bcy, dg::normed, dg::symmetric);
+    dg::MMatrix lzM = dg::create::laplacianM( g, bcx, bcy, dg::normed, dg::symmetric);
 
     dg::MVec func = dg::evaluate( function, g);
     dg::MVec result = func, result2(result);
@@ -57,9 +57,9 @@ int main(int argc, char* argv[])
     //if(rank==1) std::cout<<result<<std::endl;
     //MPI_Barrier(comm);
 
-    //dg::blas1::axpby( 1., func, -1., result);
-    //error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
-    //if(rank==0) std::cout << "Distance to true solution: "<<error<<"\n";
+    dg::blas1::axpby( 1., func, -1., result);
+    error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
+    if(rank==0) std::cout << "Distance to true solution: "<<error<<"\n";
     MPI_Finalize();
     return 0;
 }
