@@ -63,7 +63,7 @@ MPI_Vector evaluate( double (f)(double), const Grid1d<double>& g)
 template< class BinaryOp>
 MPI_Vector evaluate( BinaryOp f, const MPI_Grid2d& g)
 {
-    MPI_Vector v( g.n()*g.n(), g.Nx(), g.Ny());
+    MPI_Vector v( g.n(), g.Nx(), g.Ny());
     v.data() = evaluate(f,g.local());
     return v;
 };

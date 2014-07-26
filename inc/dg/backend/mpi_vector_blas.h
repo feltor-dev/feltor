@@ -17,18 +17,18 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
 {
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );
-    assert( x.stride() == y.stride());
+    assert( x.n() == y.n());
     assert( x.Nx() == y.Nx());
     assert( x.Ny() == y.Ny());
     assert( x.Nz() == y.Nz());
 #endif //DG_DEBUG
     typename VectorTraits<Vector>::value_type temp=0, sum=0;
+    const unsigned n = x.n();
     for( unsigned k=0; k<x.Nz(); k++)
-        for( unsigned i=1; i<x.Ny()-1; i++)
-            for( unsigned j=1; j<x.Nx()-1; j++)
-                for( unsigned l=0; l<x.stride(); l++)
-                    temp+=x.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l]*
-                          y.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l];
+        for( unsigned i=n; i<(x.Ny()-1)*n; i++)
+            for( unsigned j=n; j<(x.Nx()-1)*n; j++)
+                    temp+=x.data()[(k*x.Ny()*n + i)*x.Nx()*n + j ]*
+                          y.data()[(k*x.Ny()*n + i)*x.Nx()*n + j ];
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -51,7 +51,7 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
               MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.data().size() == y.data().size() );
+    assert( x.size() == y.size() );
 #endif //DG_DEBUG
     if( alpha == 0)
     {

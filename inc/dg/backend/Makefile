@@ -3,11 +3,11 @@ device=gpu
 
 INCLUDE = -I../../ # other project libraries
 INCLUDE+= -I../
-INCLUDE+= -I../backend # header files
+INCLUDE+= -I./backend # header files
 
 ifeq ($(strip $(system)),home)
 
-INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
+INCLUDE+= -I/home/matthias/include  # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
 ifeq ($(strip $(device)),gpu)
@@ -47,8 +47,7 @@ all: version cusp_thrust arakawa_t blas1_t \
 	 evaluation_b evaluation_t helmholtz_t backscatter_ laplace_b laplace_t \
 	 operator_matrix_t operator_dynamic_b operator_t \
 	 polarisation2d_b polarisation2d_t polarisation_b polarisation_t \
-	 preconditioner2d_b preconditioner2d_t \
-	 rk2d_t rk_t tensor_b toefl_b toefl_t xspacelib_t
+	 runge_kutta2d_t tensor_b toefl_b toefl_t xspacelib_t
 
 
 version: version.cu 
@@ -62,39 +61,40 @@ cusp_thrust: cusp_thrust.cu
 backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
-
 toefl_t: toefl_t.cu toefl.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 toefl_b: toefl_b.cu toefl.cuh
-	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
 blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ 
 
-%_t: %_t.cu %.cuh 
-	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) 
-
-%2d_t: %2d_t.cu %.cuh 
+%_t: %_t.cu
 	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
-%3d_t: %3d_t.cu %.cuh 
-	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
+#%2d_t: %2d_t.cu ../%.cuh 
+#	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
+#
+#%3d_t: %3d_t.cu ../%.cuh 
+#	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
-%_b: %_b.cu %.cuh 
+%_b: %_b.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 
-%2d_b: %2d_b.cu %.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
-	echo "Attention: No compiler warnings are issued!" 
+#%2d_b: %2d_b.cu ../%.h
+#	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
+#	echo "Attention: No compiler warnings are issued!" 
+#
+#%3d_b: %3d_b.cu ../%.h
+#	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
+#	echo "Attention: No compiler warnings are issued!" 
 
-%3d_b: %3d_b.cu %.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
-	echo "Attention: No compiler warnings are issued!" 
-
-dg_t: dg_t.cpp dg.h 
+dg_t: dg_t.cpp ../dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
 	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
+
+include ../mpi.mk
 
 .PHONY: clean doc
 
@@ -102,4 +102,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f *_t *_b cusp_thrust version
+	rm -f *_t *_b *_mpit *_mpib cusp_thrust version

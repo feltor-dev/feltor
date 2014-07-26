@@ -15,7 +15,7 @@ namespace dg
 struct MPI_Matrix
 {
     MPI_Matrix( bc bcx, bc bcy, MPI_Comm comm, unsigned number ): 
-        data_(number), w_(number), offset_(number), state_(number),
+        dataY_(number), dataX_(number), offset_(number), 
         bcx_( bcx), bcy_( bcy), comm_(comm){}
     bc& bcx(){return bcx_;}
     bc& bcy(){return bcy_;}
@@ -27,14 +27,12 @@ struct MPI_Matrix
     void update_boundaryX( MPI_Vector& v) const;
     void update_boundaryY( MPI_Vector& v) const;
 
-    std::vector<std::vector<double> >& data()    {return data_;}
-    std::vector<std::vector<double> >& weights() {return w_;}
+    std::vector<std::vector<double> >& dataY()    {return dataY_;}
+    std::vector<std::vector<double> >& dataX()    {return dataX_;}
     std::vector<int>&                  offset()  {return offset_;}
-    std::vector<int>&                  state()   {return state_;}
-    const std::vector<std::vector<double> >& data()const {return data_;}
-    const std::vector<std::vector<double> >& weights() const{return w_;}
+    const std::vector<std::vector<double> >& dataY()const {return dataY_;}
+    const std::vector<std::vector<double> >& dataX()const {return dataX_;}
     const std::vector<int>& offset()const {return offset_;}
-    const std::vector<int>& state() const {return state_;}
 
     void multiplyAdd( unsigned n, const double* op, const double* w, const double* x, double* y) const;
     void multiplyAdd( const double* op, unsigned n, const double* w, const double* x, double* y) const;
@@ -43,10 +41,9 @@ struct MPI_Matrix
     //cusp::csr_matrix<int, double, cusp::host_memory>& cusp_matrix(){ return cmatrix_;}
   private:
     //cusp::csr_matrix<int, double, cusp::host_memory> cmatrix_; //!< CSR host Matrix
-    std::vector<std::vector<double> > data_;
-    std::vector<std::vector<double> > w_;
+    std::vector<std::vector<double> > dataY_;
+    std::vector<std::vector<double> > dataX_;
     std::vector<int> offset_;
-    std::vector<int> state_;
     bc bcx_, bcy_;
     MPI_Comm comm_;
 };
@@ -66,7 +63,7 @@ void MPI_Matrix::update_boundaryX( MPI_Vector& v)const
         low_sign=+1, upp_sign=-1;
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( comm_, 2, dims, periods, coords);
-    unsigned rows = v.Ny(), cols =v.Nx(), n = sqrt( v.stride());
+    unsigned rows = v.Ny(), cols =v.Nx(), n =  v.n();
     if( coords[0] == dims[0]-1)
         for( unsigned i=1; i<rows-1; i++)
             for( unsigned k=0; k<n; k++)
@@ -96,7 +93,7 @@ void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
         low_sign=+1, upp_sign=-1;
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( comm_, 2, dims, periods, coords);
-    unsigned rows = v.Ny(), cols =v.Nx(), n = sqrt( v.stride());
+    unsigned rows = v.Ny(), cols =v.Nx(), n = v.n();
     if( coords[1] == dims[1]-1)
         for( unsigned i=1; i<cols-1; i++)
             for( unsigned k=0; k<n; k++)
@@ -168,6 +165,7 @@ inline void MPI_Matrix::multiplyAdd( unsigned n, const std::vector<double>& op1,
         }
     }
 }
+/*
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
     //dg::Timer t;
@@ -229,7 +227,6 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
     //dg::blas2::detail::doSymv( cmatrix_, x.data(), y.data(), CuspMatrixTag(), ThrustVectorTag(), ThrustVectorTag());
     
 
-    /*
     unsigned num, stride=n*n;
     for( unsigned k=0; k<x.size(); k++)
         y.data()[k] = 0; //x.data()[k]*w_[0][k%3];
@@ -252,11 +249,50 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
                     multiplyAdd(n, (data_[k]).data(), (data_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*stride], &y.data()[(num+j)*stride]);
             }
     }
-    */
     //t.toc();
     //std::cout << "Multiplication  took "<<t.diff()<<"s\n";
     //if(rank==0) std::cout<<y<<std::endl;
 
+
+}
+*/
+void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
+{
+    //bool updateX = false, updateY = false;
+    //for( unsigned k=0; k<state_.size(); k++)
+    //{
+    //    if( state_[k] < 0 )
+    //        updateY = true;
+    //    else
+    //        updateX = true;
+    //}
+    //if( updateX )
+        update_boundaryX( x);
+    //if( updateY) 
+        update_boundaryY( x);
+#ifdef DG_DEBUG
+    assert( x.data().size() == y.data().size() );
+#endif //DG_DEBUG
+    //std::cout << "ping0\n";
+    unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
+    for( unsigned i=1; i<rows-1; i++)
+        for( unsigned k=0; k<n; k++)
+            for( unsigned j=1; j<cols-1; j++)
+                for( unsigned l=0; l<n; l++)
+                {
+                    y.data()[((i*n+k)*cols + j)*n +l] = 0;
+                    for( unsigned m=0; m<dataY_.size(); m++)
+                        for( unsigned p=0; p<n; p++)
+                            for( unsigned q=0; q<n; q++)
+                            {
+                                y.data()[((i*n+k)*cols + j)*n +l] += 
+                                 dataY_[m][k*n+p]
+                                *dataX_[m][l*n+q]
+                                *x.data()[((i*n+p)*cols + j)*n + q + offset_[m]];
+                            }
+                }
+
+    //std::cout << "ping1\n";
 
 }
 
