@@ -38,6 +38,7 @@ struct MPI_Matrix
 
     void multiplyAdd( unsigned n, const double* op, const double* w, const double* x, double* y) const;
     void multiplyAdd( const double* op, unsigned n, const double* w, const double* x, double* y) const;
+    void multiplyAdd(unsigned n, const std::vector<double>& op1, const std::vector<double>& op2, const double* x, double* y) const;
     void symv( MPI_Vector& x, MPI_Vector& y) const;
     //cusp::csr_matrix<int, double, cusp::host_memory>& cusp_matrix(){ return cmatrix_;}
   private:
@@ -154,6 +155,19 @@ inline void MPI_Matrix::multiplyAdd( const double* op, unsigned n, const double*
         }
     }
 }
+inline void MPI_Matrix::multiplyAdd( unsigned n, const std::vector<double>& op1, const std::vector<double>& op2, const double* x, double* y) const
+{
+    //unsigned l, m;
+    for( unsigned i=0; i<n; i++)
+    {
+        for( unsigned j=0; j<n; j++)
+        {
+            for( unsigned k=0; k<n; k++)
+                for( unsigned l=0; l<n; l++)
+                    y[i*n+j]+= op1[i*n+k]*op2[j*n+l]*x[k*n+l];
+        }
+    }
+}
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
     //dg::Timer t;
@@ -199,7 +213,6 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
     //if(rank==1) std::cout<<x<<std::endl;
     //MPI_Barrier(comm_);
     //t.tic();
-    /*
     for( unsigned i=1; i<rows-1; i++)
         for( unsigned j=1; j<cols-1; j++)
         {
@@ -213,10 +226,10 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
                     multiplyAdd( (data_[k]).data(), n, (w_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*n*n], &y.data()[(i*cols+j)*n*n]);
             }
         }
-        */
     //dg::blas2::detail::doSymv( cmatrix_, x.data(), y.data(), CuspMatrixTag(), ThrustVectorTag(), ThrustVectorTag());
     
 
+    /*
     unsigned num, stride=n*n;
     for( unsigned k=0; k<x.size(); k++)
         y.data()[k] = 0; //x.data()[k]*w_[0][k%3];
@@ -227,16 +240,19 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
             {
                 num = i*cols;
                 for( unsigned j=1; j<cols-1; j++)
-                    multiplyAdd( n, (data_[k]).data(), (w_[k]).data(), &x.data()[(num+j+offset_[k])*stride], &y.data()[(num+j)*stride]);
+                    //multiplyAdd( n, (data_[k]).data(), (w_[k]).data(), &x.data()[(num+j+offset_[k])*stride], &y.data()[(num+j)*stride]);
+                    multiplyAdd(n, (data_[k]).data(), (data_[k]).data(), &x.data()[(num+j+offset_[k])*stride], &y.data()[(num+j)*stride]);
             }
         else
             for( unsigned i=1; i<rows-1; i++)
             {
                 num = i*cols;
                 for( unsigned j=1; j<cols-1; j++)
-                    multiplyAdd( (data_[k]).data(), n, (w_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*stride], &y.data()[(num+j)*stride]);
+                    //multiplyAdd( (data_[k]).data(), n, (w_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*stride], &y.data()[(num+j)*stride]);
+                    multiplyAdd(n, (data_[k]).data(), (data_[k]).data(), &x.data()[((i+offset_[k])*cols+j)*stride], &y.data()[(num+j)*stride]);
             }
     }
+    */
     //t.toc();
     //std::cout << "Multiplication  took "<<t.diff()<<"s\n";
     //if(rank==0) std::cout<<y<<std::endl;
