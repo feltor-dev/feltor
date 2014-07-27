@@ -1,4 +1,5 @@
 #pragma once
+#include "mpi_vector_blas.h"
 #include "mpi_precon.h"
 
 namespace dg

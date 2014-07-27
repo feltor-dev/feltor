@@ -56,7 +56,7 @@ MPI_Vector evaluate( double (f)(double), const Grid1d<double>& g)
  * @param f The function to evaluate: f = f(x,y)
  * @param g The 2d grid on which to evaluate f
  *
- * @return  A MPI Host Vector with values
+ * @return  A MPI Vector with values
  * @note Copies the binary Operator. This function is meant for small function objects, that
             may be constructed during function call.
  */

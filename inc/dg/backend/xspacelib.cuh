@@ -157,24 +157,21 @@ cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vec
  * Useful if you want to visualize a dg-formatted vector.
  * @tparam T value type
  * @param g The grid on which to operate 
- * @param s your vectors are given in XSPACE or in LSPACE
  *
  * @return transformation matrix
  * @note this matrix has ~n^4 N^2 entries and is not sorted
  */
 template < class T>
-cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     //create equidistant backward transformation
     dg::Operator<double> backwardeq( g.dlt().backwardEQ());
     dg::Operator<double> backward2d = dg::tensor( backwardeq, backwardeq);
 
-    if( s == XSPACE){
-        dg::Operator<double> forward( g.dlt().forward());
-        dg::Operator<double> forward2d = dg::tensor( forward, forward);
-        backward2d = backward2d*forward2d;
-    }
+    dg::Operator<double> forward( g.dlt().forward());
+    dg::Operator<double> forward2d = dg::tensor( forward, forward);
+    backward2d = backward2d*forward2d;
 
     Matrix backward = dg::tensor( g.Nx()*g.Ny(), backward2d);
 
@@ -191,37 +188,18 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g, spa
  * Useful if you want to visualize a dg-formatted vector.
  * @tparam T value type
  * @param g The 3d grid on which to operate 
- * @param s your vectors are given in XSPACE or in LSPACE
  *
  * @return transformation matrix
  * @note this matrix has ~n^4 N^2 entries and is not sorted
  */
 template < class T>
-cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g, space s = XSPACE)
+cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g)
 {
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
     cusp::coo_matrix<int,T, cusp::host_memory> back2d = backscatter( g2d, s);
     return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), back2d);
 }
 
- /*
- * @brief Evaluate the jumps on grid boundaries
- *
- * @tparam n number of legendre nodes per cell
- * @param v A DG Host Vector 
- *
- * @return Vector with the jump values
-thrust::host_vector< double> evaluate_jump( const ArrVec1d& v)
-{
-    //compute the interior jumps of a DG approximation
-    unsigned N = v.size();
-    thrust::host_vector<double> jump(N-1, 0.);
-    for( unsigned i=0; i<N-1; i++)
-        for( unsigned j=0; j<v.n(); j++)
-            jump[i] += v(i,j) - v(i+1,j)*( (j%2==0)?(1):(-1));
-    return jump;
-}
- */
 
 /**
  * @brief Index map for scatter operation on dg - formatted vectors
