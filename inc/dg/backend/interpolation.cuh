@@ -10,6 +10,14 @@ namespace create{
     ///@cond
 namespace detail{
 
+/**
+ * @brief Evaluate n Legendre poloynomial on given abscissa
+ *
+ * @param xn normalized x-value on which to evaluate the polynomials: -1<=xn<=1
+ * @param n  maximum order of the polynomial
+ *
+ * @return array of coefficients beginning with p_0(x_n) until p_{n-1}(x_n)
+ */
 std::vector<double> coefficients( double xn, unsigned n)
 {
     assert( xn <= 1. && xn >= -1.);
@@ -62,7 +70,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
             std::cerr << "xi = " << x[i] <<std::endl;
         }
-        
         assert(x[i] >= g.x0() && x[i] <= g.x1());
         
         if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
@@ -78,7 +85,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*n+1); 
         double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*m+1); 
 
-        std::vector<double> px = detail::coefficients(xn, g.n()), py = detail::coefficients( yn, g.n());
+        std::vector<double> px = detail::coefficients( xn, g.n()), 
+                            py = detail::coefficients( yn, g.n());
         std::vector<double> pxy( g.n()*g.n());
         for(unsigned k=0; k<py.size(); k++)
             for( unsigned l=0; l<px.size(); l++)

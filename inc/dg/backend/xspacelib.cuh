@@ -179,7 +179,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g)
     Matrix p = gather( map);
     Matrix scatter( p);
     cusp::multiply( p, backward, scatter);
-    return scatter;
+    //return scatter;
+    return backward2d;
 
 }
 /**
