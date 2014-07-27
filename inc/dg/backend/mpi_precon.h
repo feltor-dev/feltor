@@ -7,6 +7,7 @@ namespace dg
  
 struct MPI_Precon
 {
+    double norm;
     std::vector<double> data;
 };
 
@@ -32,7 +33,6 @@ namespace create
 * @param g The grid 
 *
 * @return Preconditioner
-*/
 MPI_Precon weights( const Grid1d<double>& g)
 {
     MPI_Precon p;
@@ -41,13 +41,13 @@ MPI_Precon weights( const Grid1d<double>& g)
         p.data[i] = g.h()/2.*g.dlt().weights()[i];
     return p;
 }
+*/
 /**
 * @brief create Preconditioner containing 1d X-space inverse weight coefficients
 *
 * @param g The grid 
 *
 * @return Preconditioner
-*/
 MPI_Precon precond( const Grid1d<double>& g)
 {
     MPI_Precon p = weights(g);
@@ -55,6 +55,7 @@ MPI_Precon precond( const Grid1d<double>& g)
         p.data[i] = 1./p.data[i];
     return p;
 }
+*/
 
 ///@endcond
 
@@ -68,10 +69,8 @@ MPI_Precon precond( const Grid1d<double>& g)
 MPI_Precon weights( const MPI_Grid2d& g)
 {
     MPI_Precon p;
-    p.data.resize( g.n()*g.n());
-    for( unsigned i=0; i<g.n(); i++)
-        for( unsigned j=0; j<g.n(); j++)
-            p.data[i*g.n()+j] = g.hx()*g.hy()/4.*g.dlt().weights()[i]*g.dlt().weights()[j];
+    p.data = g.dlt().weights();
+    p.norm = g.hx()*g.hy()/4.;
     return p;
 }
 /**
@@ -84,6 +83,7 @@ MPI_Precon weights( const MPI_Grid2d& g)
 MPI_Precon precond( const MPI_Grid2d& g)
 {
     MPI_Precon v = weights( g);
+    v.norm = 1./v.norm;
     for( unsigned i=0; i<v.data.size(); i++)
         v.data[i] = 1./v.data[i];
     return v;
@@ -94,7 +94,6 @@ MPI_Precon precond( const MPI_Grid2d& g)
 * @param g The grid 
 *
 * @return Preconditioner
-*/
 MPI_Precon weights( const Grid3d<double>& g)
 {
     MPI_Precon p;
@@ -104,13 +103,13 @@ MPI_Precon weights( const Grid3d<double>& g)
             p.data[i*g.n()+j] = g.hz()*g.hx()*g.hy()/4.*g.dlt().weights()[i]*g.dlt().weights()[j];
     return p;
 }
+*/
 /**
 * @brief create Preconditioner containing 3d inverse X-space weight coefficients
 *
 * @param g The grid 
 *
 * @return Preconditioner
-*/
 MPI_Precon precond( const Grid3d<double>& g)
 {
     MPI_Precon p = weights( g);
@@ -118,6 +117,7 @@ MPI_Precon precond( const Grid3d<double>& g)
         p.data[i] = 1./p.data[i];
     return p;
 }
+*/
 
 }//namespace create
 }//namespace dg
