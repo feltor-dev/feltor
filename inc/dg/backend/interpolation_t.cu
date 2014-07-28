@@ -14,7 +14,7 @@ int main()
 {
 
     dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
-    dg::Matrix A = dg::create::backscatter( g, dg::XSPACE);
+    dg::Matrix A = dg::create::backscatter( g);
     A.sort_by_row_and_column();
 
     std::vector<double> x( g.size()), y(x);
@@ -30,9 +30,9 @@ int main()
     bool passed = true;
     for( unsigned i=0; i<A.values.size(); i++)
     {
-        if( A.values[i] != B.values[i])
+        if( (A.values[i] - B.values[i]) > 1e-14)
         {
-            std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.values[i]<<"\n";
+            std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.row_indices[i]<<" "<<B.column_indices[i]<<" "<<B.values[i]<<"\n";
             passed = false;
         }
     }

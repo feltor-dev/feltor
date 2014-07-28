@@ -167,20 +167,20 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g)
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     //create equidistant backward transformation
     dg::Operator<double> backwardeq( g.dlt().backwardEQ());
-    dg::Operator<double> backward2d = dg::tensor( backwardeq, backwardeq);
-
     dg::Operator<double> forward( g.dlt().forward());
-    dg::Operator<double> forward2d = dg::tensor( forward, forward);
-    backward2d = backward2d*forward2d;
+    dg::Operator<double> backward1d = backwardeq*forward;
 
-    Matrix backward = dg::tensor( g.Nx()*g.Ny(), backward2d);
+    Matrix transformX = dg::tensor( g.Nx(), backward1d);
+    Matrix transformY = dg::tensor( g.Ny(), backward1d);
+    Matrix backward = dg::dgtensor( g.n(), transformY, transformX);
 
     thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
     Matrix p = gather( map);
     Matrix scatter( p);
     cusp::multiply( p, backward, scatter);
+    //choose vector layout
     //return scatter;
-    return backward2d;
+    return backward; 
 
 }
 /**
@@ -197,7 +197,7 @@ template < class T>
 cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g)
 {
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
-    cusp::coo_matrix<int,T, cusp::host_memory> back2d = backscatter( g2d, s);
+    cusp::coo_matrix<int,T, cusp::host_memory> back2d = backscatter( g2d);
     return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), back2d);
 }
 

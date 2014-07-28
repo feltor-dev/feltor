@@ -117,4 +117,138 @@ struct MPI_Grid2d
 
 };
 
+/**
+ * @brief 3D MPI Grid class 
+ *
+ * Represents the local grid coordinates and the process topology
+ */
+struct MPI_Grid3d
+{
+    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
+        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz), comm( comm)
+    {
+        int rank, dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if( rank == 0)
+        {
+            if(!(Nx%dims[0]==0))
+                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
+            assert( Nx%dims[0] == 0);
+            if( !(Ny%dims[1]==0))
+                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
+            assert( Ny%dims[1] == 0);
+            if( !(Nz%dims[2]==0))
+                std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
+            assert( Nz%dims[2] == 0);
+        }
+    }
+    MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+        g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy, bcz), comm( comm)
+    {
+        int rank, dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if( rank == 0)
+        {
+            if(!(Nx%dims[0]==0))
+                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
+            assert( Nx%dims[0] == 0);
+            if( !(Ny%dims[1]==0))
+                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
+            assert( Ny%dims[1] == 0);
+            if( !(Nz%dims[2]==0))
+                std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
+            assert( Nz%dims[2] == 0);
+        }
+    }
+
+    double x0() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.x0() - g.hx() + g.lx()/(double)dims[0]*(double)coords[0]; 
+    }
+    double x1() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.x0() + g.hx() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
+    }
+    double y0() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.y0() - g.hy() + g.ly()/(double)dims[1]*(double)coords[1]; 
+    }
+    double y1() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.y0() + g.hy() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
+    }
+    double z0() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.z0() - g.hz() + g.lz()/(double)dims[2]*(double)coords[2]; 
+    }
+    double z1() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.z0() + g.hz() + g.lz()/(double)dims[2]*(double)(coords[2]+1); 
+    }
+    double lx() const {return x1()-x0();}
+    double ly() const {return y1()-y0();}
+    double lz() const {return z1()-z0();}
+    double hx() const {return g.hx();}
+    double hy() const {return g.hy();}
+    double hz() const {return g.hz();}
+    unsigned n() const {return g.n();}
+    unsigned Nx() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.Nx()/dims[0]+2;
+    }
+    unsigned Ny() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.Ny()/dims[1]+2;
+    }
+    unsigned Nz() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return g.Nz()/dims[2]+2;
+    }
+    bc bcx() const {return g.bcx();}
+    bc bcy() const {return g.bcy();}
+    bc bcz() const {return g.bcz();}
+    MPI_Comm communicator() const{return comm;}
+    const DLT<double>& dlt() const{return g.dlt();}
+    /**
+     * @brief The total number of points
+     *
+     * @return n*n*Nx*Ny
+     */
+    unsigned size() const { return n()*n()*Nx()*Ny()*Nz();}
+    /**
+     * @brief Display 
+     *
+     * @param os output stream
+     */
+    void display( std::ostream& os = std::cout) const
+    {
+        os << "GLOBAL GRID \n";
+        g.display();
+        os << "LOCAL GRID \n";
+
+        Grid3d<double> grid = local();
+        grid.display();
+
+    }
+    Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
+    Grid2d<double> global() const {return g;}
+
+
+    private:
+    Grid2d<double> g; //global grid
+    MPI_Comm comm; //just an integer...
+
+};
+
 }//namespace dg

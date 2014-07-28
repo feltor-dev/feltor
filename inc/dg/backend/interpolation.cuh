@@ -85,18 +85,29 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*n+1); 
         double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*m+1); 
 
+        //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n()), 
                             py = detail::coefficients( yn, g.n());
         std::vector<double> pxy( g.n()*g.n());
         for(unsigned k=0; k<py.size(); k++)
             for( unsigned l=0; l<px.size(); l++)
                 pxy[k*px.size()+l]= py[k]*px[l];
-        unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n()*g.n();
-        detail::add_line( A, number, i,  col_begin, pxy);
+
+        //...these are the matrix coefficients with which to multiply 
+        //unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n()*g.n();
+        //detail::add_line( A, number, i,  col_begin, pxy);
+        unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n();
+        detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxy);
+        //choose layout from comments
     }
+    typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
+    
     dg::Operator<double> forward( g.dlt().forward());
-    dg::Operator<double> forward2d = dg::tensor( forward, forward);
-    cusp::coo_matrix<int, double, cusp::host_memory> ward = dg::tensor( g.Nx()*g.Ny(), forward2d), B;
+    Matrix transformX = dg::tensor( g.Nx(), forward);
+    Matrix transformY = dg::tensor( g.Ny(), forward);
+    Matrix ward = dg::dgtensor( g.n(), transformY, transformX);
+
+    Matrix B;
     cusp::multiply( A, ward, B);
     B.sort_by_row_and_column();
     return B;
