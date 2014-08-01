@@ -5,8 +5,8 @@
 #include <cmath>
 // #define DG_DEBUG
 
-// #include "draw/host_window.h"
-//#include "draw/device_window.cuh"
+
+
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
@@ -126,13 +126,13 @@ int main( int argc, char* argv[])
     names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
     names[4] = "potential";
     for( unsigned i=0; i<names.size(); i++)
-        if( status = nc_def_var( ncid, names[i], NC_DOUBLE, names.size(), dim_ids, &dataIDs[i]) ){
+        if( status = nc_def_var( ncid, names[i].data(), NC_DOUBLE, names.size(), dim_ids, &dataIDs[i]) ){
             std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
-    if( status = nc_enddef(ncid);){std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    if( status = nc_enddef(ncid)){std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
 
     ///////////////////////////////////first output/////////////////////////
-    int count[4] = {1., g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
-    int start[4] = {0, 0, 0, 0};
+    size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    size_t start[4] = {0, 0, 0, 0};
     feltor.exp( y0,y0,2); //transform to correct values
     dg::HVec output;
     for( unsigned i=0; i<4; i++)
@@ -169,7 +169,7 @@ int main( int argc, char* argv[])
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 break;
             }
-            t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
+            //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
         }
         time += p.itstp*p.dt;
         feltor.exp( y0,y0,2); //transform to correct values
