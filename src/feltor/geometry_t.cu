@@ -64,9 +64,16 @@ int main()
     solovev::Iris iris(gp);
     solovev::Pupil pupil(gp);
     solovev::Damping damping(gp);
-    solovev::ZonalFlow zonalflow(gp,8.,0.5);
-    solovev::Gradient gradient(gp,0.05);
+    solovev::ZonalFlow zonalflow(gp,0.5);
+    solovev::Gradient gradient(gp);
+    solovev::Nprofile prof(gp);
+    solovev::TanhDamping damp2(gp);
+    solovev::TanhDampingProf dampcut(gp);
+    solovev::TanhSource source(gp,40.);
+    
 //     //make dggrid
+    std::cout << "kR "<<curvatureR(Rmin,Zmin) <<"\n";
+
     dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
     
     dg::HVec hvisual1 = dg::evaluate( psip, grid);
@@ -81,6 +88,10 @@ int main()
     dg::HVec hvisual10 = dg::evaluate( zonalflow, grid);
     dg::HVec hvisual11 = dg::evaluate( gradient, grid);
     dg::HVec hvisual12 = dg::evaluate( field, grid);
+    dg::HVec hvisual13 = dg::evaluate( prof, grid);
+    dg::HVec hvisual14 = dg::evaluate( damp2, grid);
+    dg::HVec hvisual15 = dg::evaluate( dampcut, grid);
+    dg::HVec hvisual16 = dg::evaluate( source, grid);
 
     //allocate mem for visual
     dg::HVec visual1( grid.size());
@@ -95,6 +106,10 @@ int main()
     dg::HVec visual10( grid.size());
     dg::HVec visual11( grid.size());
     dg::HVec visual12( grid.size());
+    dg::HVec visual13( grid.size());
+    dg::HVec visual14( grid.size());
+    dg::HVec visual15( grid.size());
+    dg::HVec visual16( grid.size());
     //make equidistant grid from dggrid
     dg::HMatrix equigrid = dg::create::backscatter(grid);
     //evaluate on valzues from devicevector on equidistant visual hvisual vector
@@ -110,11 +125,15 @@ int main()
     dg::blas2::gemv( equigrid, hvisual10, visual10);
     dg::blas2::gemv( equigrid, hvisual11, visual11);
     dg::blas2::gemv( equigrid, hvisual12, visual12);
+    dg::blas2::gemv( equigrid, hvisual13, visual13);
+    dg::blas2::gemv( equigrid, hvisual14, visual14);
+    dg::blas2::gemv( equigrid, hvisual15, visual15);
+    dg::blas2::gemv( equigrid, hvisual16, visual16);
 
 
     //Create Window and set window title
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( 1800, 600, "");
-    draw::RenderHostData render( 2, 6);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 1200, 1200, "");
+    draw::RenderHostData render( 4, 4);
   
     //create a colormap
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
@@ -182,6 +201,26 @@ int main()
         colors.scalemin() =  (float)thrust::reduce( visual12.begin(), visual12.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"invbf / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual12, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
+        colors.scalemax() = (float)thrust::reduce( visual13.begin(), visual13.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual13.begin(), visual13.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"nprof / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        render.renderQuad( visual13, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
+        colors.scalemax() = (float)thrust::reduce( visual14.begin(), visual14.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual14.begin(), visual14.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"damp2 / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        render.renderQuad( visual14, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
+        colors.scalemax() = (float)thrust::reduce( visual15.begin(), visual15.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual15.begin(), visual15.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"dcut / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        render.renderQuad( visual15, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
+        colors.scalemax() = (float)thrust::reduce( visual16.begin(), visual16.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual16.begin(), visual16.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"source / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        render.renderQuad( visual16, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         title << std::fixed; 
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
