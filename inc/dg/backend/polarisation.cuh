@@ -8,6 +8,7 @@
 
 
 #include "../blas.h"
+#include "../enums.h"
 
 #include "functions.h"
 #include "grid.h"
