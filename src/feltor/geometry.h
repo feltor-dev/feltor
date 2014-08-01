@@ -12,7 +12,7 @@ namespace solovev
  */    
 struct GeomParameters
 {
-    double A,R_0,psipmin,psipmax,a, elongation,triangularity,alpha,lnN_inner,k_psi,rk4eps;
+    double A,R_0,psipmin,psipmax,a, elongation,triangularity,alpha,lnN_inner,k_psi,rk4eps, boxscale,nprofileamp,psipmaxcut;
     std::vector<double> c; 
      /**
      * @brief constructor to make a const object
@@ -35,6 +35,9 @@ struct GeomParameters
             lnN_inner=v[21];
             k_psi=v[22];
             rk4eps=v[23];
+            boxscale=v[24];
+            nprofileamp=v[25];
+            psipmaxcut = v[26];
         }
     }
     /**
@@ -67,7 +70,10 @@ struct GeomParameters
             <<"alpha         = "<<alpha<<"\n"
             <<"lnN_inner     = "<<lnN_inner<<"\n"
             <<"zonal modes   = "<<k_psi<<"\n" 
-            <<"rk4 epsilon   = "<<rk4eps<<"\n"; 
+            <<"rk4 epsilon   = "<<rk4eps<<"\n"
+            <<"boxscale      = "<<boxscale<<"\n"
+            <<"nprofileamp   = "<<nprofileamp<<"\n"
+            <<"psipmaxcut    = "<<psipmaxcut<<"\n"; 
     }
     private:
     int layout_;
@@ -601,14 +607,14 @@ struct CurvatureR
     double operator()( double R, double Z)
     {
 //         return -invB_(R,Z)*invB_(R,Z)*bZ_(R,Z); //factor 2 stays under discussion
-        return -ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bZ_(R,Z)*gp_.R_0/R/gp_.R_0; //factor 2 stays under discussion
+        return -ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bZ_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
 
     }
     
     double operator()( double R, double Z, double phi)
     {
 //         return -invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi); //factor 2 stays under discussion
-        return -ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi)*gp_.R_0/R/gp_.R_0; //factor 2 stays under discussion
+        return -ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
     }
     private:    
 //     InvB invB_; 
@@ -645,12 +651,12 @@ struct CurvatureZ
     double operator()( double R, double Z)
     {
 //         return invB_(R,Z)*invB_(R,Z)*bR_(R,Z); //factor 2 stays under discussion
-        return  ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bR_(R,Z)*gp_.R_0/R/gp_.R_0; //factor 2 stays under discussion
+        return  ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bR_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
     }
     double operator()( double R, double Z, double phi)
     {
 //         return invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi); //factor 2 stays under discussion
-        return ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi)*gp_.R_0/R/gp_.R_0; //factor 2 stays under discussion
+        return ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
 
     }
     private:    
@@ -689,11 +695,11 @@ struct GradLnB
  */ 
     double operator()( double R, double Z)
     {
-       return invB_(R,Z)*invB_(R,Z)*(bR_(R,Z) *psipZ_(R,Z) - bZ_(R,Z)* psipR_(R,Z))/R ;
+       return gp_.R_0*invB_(R,Z)*invB_(R,Z)*(bR_(R,Z) *psipZ_(R,Z) - bZ_(R,Z)* psipR_(R,Z))/R ;
     }
     double operator()( double R, double Z, double phi)
     {
-       return invB_(R,Z,phi)* invB_(R,Z,phi)*(bR_(R,Z,phi) *psipZ_(R,Z,phi) - bZ_(R,Z,phi)* psipR_(R,Z,phi))/R ;
+       return gp_.R_0*invB_(R,Z,phi)* invB_(R,Z,phi)*(bR_(R,Z,phi) *psipZ_(R,Z,phi) - bZ_(R,Z,phi)* psipR_(R,Z,phi))/R ;
     }
     private:
     GeomParameters gp_;
@@ -733,7 +739,7 @@ struct Field
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {
-            yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);       //ds/dphi =  R^2 B/I
+            yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i])/gp_.R_0;       //ds/dphi =  R^2 B/I/R_0_hat
             yp[0][i] =  y[0][i]*psipZ_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);              //dR/dphi =  R/I Psip_Z
             yp[1][i] = -y[0][i]*psipR_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]) ;             //dZ/dphi = -R/I Psip_R
         }
@@ -847,9 +853,9 @@ struct Damping
 /**
  * @brief Damps lnN quantitie with tanh
  */ 
-struct TanhDamping
+struct TanhDampingProf
 {
-        TanhDamping( GeomParameters gp):
+        TanhDampingProf( GeomParameters gp):
         gp_(gp),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
         }
@@ -866,6 +872,48 @@ struct TanhDamping
     Psip psip_;
 };
 
+struct TanhDamping
+{
+        TanhDamping( GeomParameters gp):
+        gp_(gp),
+        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        }
+    double operator( )(double R, double Z)
+    {
+        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+    }
+    private:
+    GeomParameters gp_;
+    Psip psip_;
+};
+
+/**
+ * @brief source for quantities N ... dtlnN = ...+ source/N
+ */
+struct TanhSource
+{
+        TanhSource( GeomParameters gp, double amp):
+        gp_(gp),
+        amp_(amp),
+        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        }
+    double operator( )(double R, double Z)
+    {
+        return amp_*0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        return amp_*0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+    }
+    private:
+    GeomParameters gp_;
+    double amp_;
+    Psip psip_;
+};
 /**
  * @brief Computes the background gradient for the logarithmic densities on n>=1
  */ 
@@ -893,24 +941,22 @@ struct Gradient
 };
 struct Nprofile
 {
-     Nprofile( GeomParameters gp, double amp):
+     Nprofile( GeomParameters gp):
         gp_(gp),
-        amp_(amp),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
         }
    double operator( )(double R, double Z)
     {
-        if (psip_(R,Z)<0.) return (1.+(gp_.A-1.)*psip_(R,Z)*amp_);
+        if (psip_(R,Z)<0.) return (1.+(gp_.A-1.)*psip_(R,Z)*gp_.nprofileamp);
         return 1.;
     }
     double operator( )(double R, double Z, double phi)
     {
-        if (psip_(R,Z,phi)<0.) return (1.+(gp_.A-1.)*psip_(R,Z,phi)*amp_);
+        if (psip_(R,Z,phi)<0.) return (1.+(gp_.A-1.)*psip_(R,Z,phi)*gp_.nprofileamp);
         return 1.;
     }
     private:
-    GeomParameters gp_;
-    double amp_;
+    GeomParameters gp_;    
     Psip psip_;
 };   
 
@@ -942,7 +988,7 @@ struct ZonalFlow
 };
 
 /**
- * @brief testfunction to test the parallel derivative
+ * @brief testfunction to test the parallel derivative \f[ f = \psi_p(R,Z) \sin{(\varphi)}\f]
  */ 
 struct TestFunction
 {
@@ -956,15 +1002,17 @@ struct TestFunction
 };
 /**
  * @brief analyitcal solution of the parallel derivative of the testfunction
+ *  \f[ \nabla_\parallel f = \psi_p(R,Z) b^\varhi \cos{(\varphi)}\f]
  */ 
 struct DeriTestFunction
 {
-    DeriTestFunction(Psip psip,PsipR psipR, PsipZ psipZ, Ipol ipol, InvB invB) : psip_(psip), psipR_(psipR), psipZ_(psipZ),ipol_(ipol), invB_(invB) {}
+    DeriTestFunction(GeomParameters gp, Psip psip,PsipR psipR, PsipZ psipZ, Ipol ipol, InvB invB) :gp_(gp), psip_(psip), psipR_(psipR), psipZ_(psipZ),ipol_(ipol), invB_(invB) {}
     double operator()( double R, double Z, double phi)
     {
-        return ( psip_(R,Z,phi)*ipol_(R,Z,phi)*cos(phi)/R)*invB_(R,Z,phi)/R;
+        return  gp_.R_0*psip_(R,Z,phi)*ipol_(R,Z,phi)*cos(phi)*invB_(R,Z,phi)/R/R;
     }
     private:
+    GeomParameters gp_;
     Psip psip_;
     PsipR psipR_;
     PsipZ psipZ_;
