@@ -1,5 +1,5 @@
 #pragma once
-#include "dg/grid.cuh"
+#include "dg/backend/grid.h"
 
 namespace eule
 {

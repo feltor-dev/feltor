@@ -250,6 +250,7 @@ thrust::host_vector<T> precond( const Grid3d<T>& g){return v3d(g);}
 /**
 * @brief create host_vector containing 1d X-space abscissas 
 *
+* same as evaluation of f(x) = x on the grid
 * @tparam T value type
 * @param g The grid 
 *

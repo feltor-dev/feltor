@@ -1,12 +1,13 @@
 #pragma once
 
 #include "parameters.h"
-#include "dg/xspacelib.cuh"
-#include "dg/cg.cuh"
-#include "dg/gamma.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/polarisation.cuh"
+#include "dg/cg.h"
+#include "dg/algorithm.h"
 
 #ifdef DG_BENCHMARK
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh"
 #endif
 
 
@@ -20,9 +21,8 @@ struct Diffusion
     Diffusion( const dg::Grid2d<double>& g, double nu, double mue_hat, double mui_hat):
         nu_(nu), mue_hat(mue_hat), mui_hat(mui_hat), 
         w2d_( dg::create::w2d(g)), v2d_( dg::create::v2d(g)), 
-        w2d( 4, &w2d_), v2d(4, &v2d_),
         temp( g.size()){
-        LaplacianM_perp = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
+        LaplacianM_perp = dg::create::laplacianM( g, dg::normed);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -38,13 +38,12 @@ struct Diffusion
 
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    const std::vector<container*>& weights(){return w2d;}
-    const std::vector<container*>& precond(){return v2d;}
+    const container& weights(){return w2d_;}
+    const container& precond(){return v2d_;}
 
   private:
     double nu_, mue_hat, mui_hat;
     container w2d_, v2d_;
-    const std::vector<container*> w2d, v2d;
     container temp;
     dg::DMatrix LaplacianM_perp;
 };
@@ -101,7 +100,7 @@ struct Asela
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( std::vector<container>& y, std::vector<container>& yp);
 
   private:
     const container w2d, v2d, one;
@@ -113,9 +112,9 @@ struct Asela
     //matrices and solvers
     Matrix A; //contains polarisation matrix
     Matrix laplaceM; //contains negative normalized laplacian
-    dg::ArakawaX< container> arakawa; 
+    dg::ArakawaX<Matrix, container> arakawa; 
     dg::Invert<container> invert_A, invert_maxwell; 
-    dg::Maxwell<Matrix, container> maxwell;
+    dg::Maxwell<Matrix, container, container> maxwell;
     dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
     Parameters p;
@@ -127,7 +126,7 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     w2d( dg::create::w2d(grid)), v2d( dg::create::v2d(grid)), one( grid.size(), 1.),
     rho( grid.size(), 0.), omega(rho), apar(rho),
     phi( 2, rho), expy( phi), arakAN( phi), arakAU( phi), u(phi), 
-    laplaceM (dg::create::laplacianM( grid, dg::normed, dg::XSPACE, dg::symmetric)),
+    laplaceM (dg::create::laplacianM( grid, dg::normed, dg::symmetric)),
     arakawa( grid), 
     maxwell( laplaceM, w2d, v2d),
     invert_A( rho, rho.size(), p.eps_pol),
@@ -136,12 +135,12 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     p(p)
 {
     //create derivatives
-    A = dg::create::laplacianM( grid, dg::not_normed, dg::XSPACE, dg::symmetric);
+    A = dg::create::laplacianM( grid, dg::not_normed, dg::symmetric);
 
 }
 
 template< class container>
-void Asela< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Asela< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 4);
     assert( y.size() == yp.size());

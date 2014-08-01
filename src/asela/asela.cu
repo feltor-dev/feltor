@@ -7,9 +7,9 @@
 //#include "draw/device_window.cuh"
 
 #include "asela.cuh"
-#include "dg/rk.cuh"
-#include "dg/karniadakis.cuh"
-#include "dg/timer.cuh"
+#include "dg/runge_kutta.h"
+#include "dg/multistep.h"
+#include "dg/backend/timer.cuh"
 #include "file/read_input.h"
 #include "parameters.h"
 

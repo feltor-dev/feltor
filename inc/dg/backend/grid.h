@@ -94,7 +94,21 @@ struct Grid2d
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
         assert( Nx > 0  && Ny > 0);
-        lx_ = (x1-x0), ly_ = (y1-y0);
+        lx_ = (x1_-x0_), ly_ = (y1_-y0_);
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
+    }
+    /**
+     * @brief Construct a 2d grid as the product of two 1d grids
+     *
+     * @param gx Grid in x - direction
+     * @param gy Grid in y - direction
+     */
+    Grid2d( const Grid1d<T>& gx, const Grid1d<T>& gy): 
+        x0_(gx.x0()), x1_(gx.x1()), y0_(gy.x0()), y1_(gy.x1()), 
+        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n())
+    {
+        assert( gx.n() == gy.n() );
+        lx_ = (x1_-x0_), ly_ = (y1_-y0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
     }
     T x0() const {return x0_;}
@@ -192,6 +206,25 @@ struct Grid3d
         assert( Nx > 0  && Ny > 0); assert( Nz > 0);
 
         lx_ = (x1-x0), ly_ = (y1-y0), lz_ = (z1-z0);
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
+    }
+    /**
+     * @brief Construct a 3d grid as the product of three 1d grids
+     *
+     * @param gx Grid in x - direction
+     * @param gy Grid in y - direction
+     * @param gz Grid in z - direction
+     */
+    Grid3d( const Grid1d<T>& gx, const Grid1d<T>& gy, const Grid1d<T>& gz): 
+        x0_(gx.x0()), x1_(gx.x1()),  
+        y0_(gy.x0()), y1_(gy.x1()),
+        z0_(gz.x0()), z1_(gz.x1()),
+        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), Nz_(gz.N()),
+        bcx_(gx.bcx()), bcy_( gy.bcx()), bcz_(gz.bcx()), 
+        dlt_(gx.n())
+    {
+        assert( gx.n() == gy.n() );
+        lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
     }
     T x0() const {return x0_;}
