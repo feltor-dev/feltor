@@ -11,6 +11,7 @@
 #include "dg/backend/timer.cuh"
 #endif //DG_BENCHMARK
 
+#define APAR
 namespace eule
 {
 //diffusive terms (add mu_hat?)
@@ -23,7 +24,8 @@ struct Rolkar
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         temp( g.size()),
 //         pupil_( dg::evaluate( solovev::Pupil( gp), g))
-        pupil_( dg::evaluate( solovev::TanhDampingProf(gp ), g))
+        lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
+        pupil_( dg::evaluate( solovev::TanhDamping(gp ), g))
     {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::symmetric);
 //         LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
@@ -35,6 +37,10 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); // - nu_perp lapl_RZ (lapl_RZ (lnN,U)) //factor MISSING!?!
+            
+            dg::blas1::pointwiseDot( lapiris_, temp, temp); //N_i U_i
+            dg::blas1::axpby( -0.1, temp, 1., y[i]); // - nu_perp lapl_RZ (lapl_RZ (lnN,U)) //factor MISSING!?!
+
 //             dg::blas2::gemv( LaplacianM_para, x[i], temp);
 //             dg::blas1::axpby(  -p.nu_parallel, temp, 1., y[i]);
         }
@@ -70,7 +76,7 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container w3d_, v3d_;
     container temp;
-    const container pupil_;
+    const container lapiris_,pupil_;
     dg::DMatrix LaplacianM_perp;
 //     dg::DMatrix LaplacianM_para;
 };
@@ -97,7 +103,9 @@ struct Feltor
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
-
+    #if def APAR
+        const container& aparallel( ) const { return apar;}
+    #endif
 
     /**
      * @brief Return the Gamma operator used by this object
@@ -121,18 +129,26 @@ struct Feltor
     const container& polarisation( const std::vector<container>& y);
 
     container chi, omega;
+#if def APAR
+    container apar;
+#endif
     const container binv, curvR, curvZ, gradlnB;
     const container iris, source, damping;
 
     std::vector<container> phi, curvphi, dzphi, expy;
     std::vector<container> dzy, curvy; 
-
+#if def APAR
+    std::vector<container> arakAN,arakAN,arakAphi;
+#endif
     //matrices and solvers
     Matrix A; 
     dg::DZ<container> dz;
     dg::ArakawaX< dg::DMatrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     dg::Polarisation< dg::DMatrix, container, container > pol; //note the host vector
+#if def APAR
+    dg::Maxwell<Matrix,container,container> maxwell;
+#endif
     dg::Invert<container>       invert_pol;
 
     const container w3d, v3d, one;
