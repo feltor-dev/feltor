@@ -12,7 +12,7 @@ namespace solovev
  */    
 struct GeomParameters
 {
-    double A,R_0,psipmin,psipmax,a, elongation,triangularity,alpha,lnN_inner,k_psi,rk4eps, boxscale,nprofileamp,psipmaxcut;
+    double A,R_0,psipmin,psipmax,a, elongation,triangularity,alpha,lnN_inner,k_psi,rk4eps, boxscale,nprofileamp,psipmaxcut,psipmaxlap;
     std::vector<double> c; 
      /**
      * @brief constructor to make a const object
@@ -38,6 +38,7 @@ struct GeomParameters
             boxscale=v[24];
             nprofileamp=v[25];
             psipmaxcut = v[26];
+            psipmaxlap = v[27];
         }
     }
     /**
@@ -73,7 +74,8 @@ struct GeomParameters
             <<"rk4 epsilon   = "<<rk4eps<<"\n"
             <<"boxscale      = "<<boxscale<<"\n"
             <<"nprofileamp   = "<<nprofileamp<<"\n"
-            <<"psipmaxcut    = "<<psipmaxcut<<"\n"; 
+            <<"psipmaxcut    = "<<psipmaxcut<<"\n"
+            <<"psipmaxlap    = "<<psipmaxlap<<"\n"; 
     }
     private:
     int layout_;
@@ -812,12 +814,12 @@ struct Pupil
         }
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmax) return 0.;
+        if( psip_(R,Z) > gp_.psipmaxcut) return 0.;
         return 1.;
     }
     double operator( )(double R, double Z, double phi)
     {
-        if( psip_(R,Z,phi) > gp_.psipmax) return 0.;
+        if( psip_(R,Z,phi) > gp_.psipmaxcut) return 0.;
         return 1.;
     }
     private:
@@ -885,6 +887,24 @@ struct TanhDamping
     double operator( )(double R, double Z, double phi)
     {
         return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+    }
+    private:
+    GeomParameters gp_;
+    Psip psip_;
+};
+struct TanhDampingInv
+{
+        TanhDampingInv( GeomParameters gp):
+        gp_(gp),
+        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        }
+    double operator( )(double R, double Z)
+    {
+        return 1.-0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxlap + 3.*gp_.alpha)/gp_.alpha) );
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        return 1.-0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxlap + 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
     GeomParameters gp_;
