@@ -22,7 +22,9 @@ struct AddIndex2d{
     void operator() ( cusp::array1d< int, cusp::host_memory>& Idx, 
                       unsigned i, unsigned j, unsigned k, unsigned l)
     {
-        Idx[ number] = M*n*m*i + n*m*j + m*k + l;
+        //choose vector layout
+        //Idx[ number] = M*n*m*i + n*m*j + m*k + l;
+        Idx[ number] = M*m*(i*n+k) + m*j + l;
         number ++;
     }
     template<class T>

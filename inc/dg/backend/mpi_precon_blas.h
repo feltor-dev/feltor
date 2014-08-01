@@ -1,4 +1,5 @@
 #pragma once
+#include "mpi_vector_blas.h"
 #include "mpi_precon.h"
 
 namespace dg
@@ -7,20 +8,25 @@ namespace blas2
 {
 namespace detail
 {
-template< class Matrix, class Vector>
-inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, MPIPreconTag, MPIVectorTag)
+template< class Precon, class Vector>
+inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );
-    assert( x.stride() == m.data.size() );
+    assert( x.n() == P.data.size() );
 #endif //DG_DEBUG
-    typename MatrixTraits<Matrix>::value_type temp=0, sum=0;
-    for( unsigned k=0; k<x.Nz(); k++)
-        for( unsigned i=1; i<x.Ny()-1; i++)
-            for( unsigned j=1; j<x.Nx()-1; j++)
-                for( unsigned l=0; l<x.stride(); l++)
-                    temp+=x.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l]*m.data[l]*
-                          y.data()[((k*x.Ny() + i)*x.Nx() + j)*x.stride() + l];
+    typename MatrixTraits<Precon>::value_type temp=0, sum=0;
+    const unsigned n = x.n();
+    for( unsigned m=0; m<x.Nz(); m++)
+        for( unsigned i=1; i<(x.Ny()-1); i++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned j=1; j<(x.Nx()-1); j++)
+                    for( unsigned l=0; l<n; l++)
+                    {
+                        temp+=P.norm*P.data[k]*P.data[l]*
+                          x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ]*
+                          y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
+                    }
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -32,12 +38,12 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const V
     return doDot( x, m,x, MPIPreconTag(), MPIVectorTag());
 }
 
-template< class Matrix, class Vector>
+template< class Precon, class Vector>
 inline void doSymv(  
-              typename MatrixTraits<Matrix>::value_type alpha, 
-              const Matrix& m,
+              typename MatrixTraits<Precon>::value_type alpha, 
+              const Precon& P,
               const Vector& x, 
-              typename MatrixTraits<Matrix>::value_type beta, 
+              typename MatrixTraits<Precon>::value_type beta, 
               Vector& y, 
               MPIPreconTag,
               MPIVectorTag)
@@ -52,31 +58,33 @@ inline void doSymv(
         dg::blas1::detail::doAxpby( 0., x, beta, y, dg::MPIVectorTag());
         return;
     }
-    const unsigned& stride=m.data.size();
     const unsigned& size = x.data().size();
 #ifdef DG_DEBUG
-    assert( stride >= 1);
+    assert( x.n() >= 1);
     assert( x.data().size() == y.data().size() );
-    assert( size%stride ==0);
-    assert( x.stride() == stride);
+    assert( size%x.n() ==0);
+    assert( x.n() == P.data.size());
 #endif //DG_DEBUG
-    for( unsigned i=0; i<size; i++)
-        y.data()[i] = alpha*m.data[i%stride]*x.data()[i] + beta*y.data()[i];
+    const unsigned n = x.n();
+    for( unsigned m=0; m<x.Nz(); m++)
+        for( unsigned i=1; i<(x.Ny()-1); i++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned j=1; j<(x.Nx()-1); j++)
+                    for( unsigned l=0; l<n; l++)
+                    {
+                          y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] = 
+                              alpha*
+                              P.norm*P.data[k]*P.data[l]*
+                              x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] + 
+                              beta*
+                              y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
+                    }
 }
 
 template< class Matrix, class Vector>
 inline void doSymv( const Matrix& m, const Vector&x, Vector& y, MPIPreconTag, MPIVectorTag, MPIVectorTag  )
 {
-    const unsigned& stride=m.data.size();
-    const unsigned& size = x.data().size();
-#ifdef DG_DEBUG
-    assert( stride >= 1);
-    assert( x.data().size() == y.data().size() );
-    assert( size%stride ==0);
-    assert( x.stride() == stride);
-#endif //DG_DEBUG
-    for( unsigned i=0; i<size; i++)
-        y.data()[i] = m.data[i%stride]*x.data()[i];
+    doSymv( 1., m, x, 0, y, MPIPreconTag(), MPIVectorTag());
 }
 
 

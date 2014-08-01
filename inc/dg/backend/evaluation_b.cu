@@ -4,9 +4,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-//#include "../gcc/timer.h"
 #include "timer.cuh"
-#include "grid.cuh"
+#include "grid.h"
 #include "evaluation.cuh"
 #include "blas.h"
 

@@ -70,12 +70,14 @@ thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d<double>& g)
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
 
+    //choose layout in the comments
     thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<gy.N(); i++)
-        for( unsigned j=0; j<gx.N(); j++)
-            for( unsigned k=0; k<n; k++)
+        for( unsigned k=0; k<n; k++)
+            for( unsigned j=0; j<gx.N(); j++)
                 for( unsigned l=0; l<n; l++)
-                    v[ i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k]);
+                    //v[ i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k]);
+                    v[ ((i*n+k)*g.Nx() + j)*n + l] = f( absx[j*n+l], absy[i*n+k]);
     return v;
 };
 ///@cond
@@ -113,10 +115,11 @@ thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d<double>& g)
     thrust::host_vector<double> v( g.size());
     for( unsigned s=0; s<gz.N(); s++)
         for( unsigned i=0; i<gy.N(); i++)
-            for( unsigned j=0; j<gx.N(); j++)
-                for( unsigned k=0; k<n; k++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned j=0; j<gx.N(); j++)
                     for( unsigned l=0; l<n; l++)
-                        v[ s*g.Nx()*g.Ny()*n*n + i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k], absz[s]);
+                        //v[ s*g.Nx()*g.Ny()*n*n + i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k], absz[s]);
+                        v[ (((s*gy.N()+i)*n+k)*g.Nx() + j)*n + l] = f( absx[j*n+l], absy[i*n+k], absz[s]);
     return v;
 };
 ///@cond
@@ -138,10 +141,12 @@ thrust::host_vector<double> evaluate( double(f)(double, double, double), const G
  * @param g The grid on which to evaluate f
  *
  * @return  A DG Host Vector with dlt transformed values
+ * @deprecated
  */
 template< class Function>
 thrust::host_vector<double> expand( Function f, const Grid1d<double>& g)
 {
+ //deprecated
     thrust::host_vector<double> v = evaluate( f, g);
     Operator<double> forward( g.dlt().forward());
     double temp[g.n()];
@@ -179,10 +184,12 @@ thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
  *
  * @return  A DG Host Vector with values
  * @note Copies the binary Operator. This function is meant for small function objects.
+ * @deprecated
  */
 template< class BinaryOp>
 thrust::host_vector<double> expand( BinaryOp f, const Grid2d<double>& g)
 {
+ //deprecated
     thrust::host_vector<double> v = evaluate( f, g);
     unsigned n = g.n();
     Operator<double> forward( g.dlt().forward());
@@ -216,6 +223,7 @@ thrust::host_vector<double> expand( BinaryOp f, const Grid2d<double>& g)
 
 thrust::host_vector<double> expand( double(f)(double, double), const Grid2d<double>& g)
 {
+ //deprecated
     return expand<double(double, double)>( f, g);
 };
 

@@ -53,7 +53,9 @@ struct AbsMin
      *
      * @return absolute minimum
      */
+#ifdef __CUDACC__
     __host__ __device__
+#endif
     T operator() (const T& x, const T& y)
     {
         T absx = x<0 ? -x : x;

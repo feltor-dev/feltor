@@ -26,7 +26,7 @@ namespace blas2{
 /*! @brief General dot produt
  *
  * This routine computes the scalar product defined by the symmetric positive definite 
- * matrix M \f[ x^T M y = \sum_{i=0}^{N-1} x_i M_{ij} y_j \f]
+ * matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
  * ( Note that if M is not diagonal it is generally more efficient to 
  * precalculate \f[ My\f] and then call the BLAS1::dot routine!
  * @param x Left Vector
@@ -46,7 +46,8 @@ inline typename MatrixTraits<Matrix>::value_type dot( const Vector& x, const Mat
 
 /*! @brief General dot produt
  *
- * This routine is equivalent to the call dot( x, m, x)
+ * This routine is equivalent to the call dot( x, m, x):
+ * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
  * @param m The diagonal Matrix
  * @param x Right Vector
  * @return Generalized scalar product

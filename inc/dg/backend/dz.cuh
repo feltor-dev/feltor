@@ -40,7 +40,7 @@ struct DZ
      * @param eps Desired accuracy of runge kutta
      */
     template <class Field>
-    DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4): g_(grid) 
+    DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-3): g_(grid) 
     {
         std::cout<<"Constructing the parallel derivative" << "\n";
         dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
