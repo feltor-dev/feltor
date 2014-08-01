@@ -1,19 +1,22 @@
 #include <iostream>
 #include <iomanip>
-#include <string>
 #include <vector>
+#include <sstream>
+#include <cmath>
+// #define DG_DEBUG
+
+// #include "draw/host_window.h"
+//#include "draw/device_window.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "file/read_input.h"
+#include "file/file.h"
+
 
 #include "feltor.cuh"
+#include "bessel.h"
 #include "parameters.h"
-#include "dg/rk.cuh"
-#include "dg/karniadakis.cuh"
-#include "file/file.h"
-#include "file/read_input.h"
-
-#include "parameters.h"
-#include "geometry_circ.h"
-#include "dg/timer.cuh"
-
+#include "geometry.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -51,12 +54,12 @@ int main( int argc, char* argv[])
 //             std::cout << std::endl;
         return -1;}
 
-    const solovev::GeomParameters gp(v3);
+     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    double Rmin=gp.R_0-(1.05)*gp.a;
-    double Zmin=-(1.05)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(1.05)*gp.a; 
-    double Zmax=(1.05)*gp.a*gp.elongation;
+    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
+    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
+    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
+    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
      
@@ -64,24 +67,31 @@ int main( int argc, char* argv[])
     eule::Feltor< dg::DVec > feltor( grid, p,gp); 
     eule::Rolkar< dg::DVec > rolkar( grid, p,gp);
 
-    //create initial vector
+    
     //with bath
       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+     //with zonal flow field
+//       solovev::ZonalFlow init0(gp,p.amp);
     //with gaussians
 //     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
 //     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
 //     dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
 //     dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-//     eule::Gradient grad(p.R_0, p.a, p.a-p.b, p.lnn_inner);
-    solovev::Gradient grad(gp, p.lnn_inner);
-  
-    //const dg::HVec gradient( dg::evaluate(grad, grid));
+    
+//     solovev::Gradient grad(gp); //background gradient
+    solovev::Nprofile grad(gp); //initial profile
+
+
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
+
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[0]);
+    
 //     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
 //     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
 //     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
+   
     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[1]);
+   
 //     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[1]);
 //     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);
 //     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[1]);
@@ -89,10 +99,11 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0
 
-    feltor.log( y0, y0, 2); //transform to logarithmic values
+    feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
     
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]);
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]);
+    dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]); //is pupil on bath
+    dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]); //is pupil on bath
+    
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
     double time = 0;
@@ -131,7 +142,7 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{ karniadakis( feltor, rolkar, y0);}
-            catch( eule::Fail& fail) { 
+            catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 break;
