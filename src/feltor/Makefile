@@ -69,5 +69,8 @@ generator: generator.cpp
 
 .PHONY: clean
 
+doc: 
+	doxygen Doxyfile
+	
 clean:
 	rm -f feltor feltor_hpc geometry_t dz_geom_t
