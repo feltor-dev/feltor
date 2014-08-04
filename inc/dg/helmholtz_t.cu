@@ -3,7 +3,7 @@
 #include "blas.h"
 
 #include "helmholtz.h"
-#include "xspacelib.cuh"
+#include "backend/xspacelib.cuh"
 #include "multistep.h"
 
 #include "cg.h"
@@ -12,7 +12,7 @@ struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu):
         w2d( dg::create::w2d( g)), v2d( dg::create::v2d(g)) { 
-        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed, dg::XSPACE); 
+        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed); 
         cusp::blas::scal( Laplacian_.values, -nu);
         Laplacian = Laplacian_;
         }
@@ -46,8 +46,8 @@ int main()
     const dg::DVec sol = dg::evaluate( lhs, grid);
     dg::DVec x(rho.size(), 0.), rho_(rho);
 
-    dg::DMatrix A = dg::create::laplacianM( grid, dg::normed, dg::XSPACE); 
-    dg::GammaInv< dg::DMatrix, dg::DVec > gamma1inv( A, w2d, v2d, alpha);
+    dg::DMatrix A = dg::create::laplacianM( grid, dg::normed); 
+    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > gamma1inv( A, w2d, v2d, alpha);
 
     std::cout << "FIRST METHOD:\n";
     dg::CG< dg::DVec > cg(x, x.size());
@@ -55,15 +55,16 @@ int main()
     unsigned number = cg( gamma1inv, x, rho_, v2d, eps);
 
     std::cout << "SECOND METHOD:\n";
-    dg::Helmholtz2d <dg::DVec> diff( w2d, grid.size(), eps);
-    dg::Maxwell< dg::DMatrix, dg::DVec > maxwell( A, dg::DVec(grid.size(), 1.),w2d, v2d, alpha);
     dg::DVec x_(rho.size(), 0.);
-    diff( gamma1inv, x_, rho);
+    dg::Invert<dg::DVec> invert( x_, grid.size(), eps);
+    dg::Maxwell< dg::DMatrix, dg::DVec, dg::DVec > maxwell( A, w2d, v2d, alpha);
+    invert( maxwell, x_, rho);
 
     std::cout << "THIRD METHOD:\n";
     dg::DVec x__(rho.size(), 0.);
     Diffusion<dg::DVec> diffusion( grid, 1.);
-    dg::detail::Implicit<Diffusion<dg::DVec> > implicit( alpha, diffusion);
+    dg::DVec temp (w2d);
+    dg::detail::Implicit<Diffusion<dg::DVec>, dg::DVec > implicit( alpha, diffusion,temp);
     dg::blas2::symv( diffusion.weights(), rho, rho_);
     number = cg( implicit, x__, rho_, diffusion.precond(), eps);
 
@@ -73,6 +74,7 @@ int main()
     dg::blas1::axpby( 1., sol, -1., x__);
 
     std::cout << "number of iterations:  "<<number<<std::endl;
+    std::cout << "ALL METHODS SHOULD DO THE SAME!\n";
     std::cout << "error1 " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
     std::cout << "error2 " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
     std::cout << "error3 " << sqrt( dg::blas2::dot( w2d, x__))<<std::endl;

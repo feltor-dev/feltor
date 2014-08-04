@@ -49,6 +49,7 @@ int main( int argc, char* argv[])
     try{ v3 = file::read_input( "geometry_params.txt"); }
     catch (toefl::Message& m) {  m.display(); 
     geom = file::read_file( "geometry_params.txt");
+    std::cout << geom << std::endl;
         for( unsigned i = 0; i<v.size(); i++)
 //             std::cout << v3[i] << " ";
 //             std::cout << std::endl;
@@ -126,7 +127,7 @@ int main( int argc, char* argv[])
     names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
     names[4] = "potential";
     for( unsigned i=0; i<names.size(); i++)
-        if( status = nc_def_var( ncid, names[i].data(), NC_DOUBLE, names.size(), dim_ids, &dataIDs[i]) ){
+        if( status = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]) ){
             std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
     if( status = nc_enddef(ncid)){std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
 
@@ -172,11 +173,12 @@ int main( int argc, char* argv[])
             //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
         }
         time += p.itstp*p.dt;
+        start[0] = i;
         feltor.exp( y0,y0,2); //transform to correct values
-        for( unsigned i=0; i<4; i++)
+        for( unsigned j=0; j<4; j++)
         {
-            output = y0[i];//transfer to host
-            if( status = nc_put_vara_double( ncid, dataIDs[i], start, count, output.data() ) ){
+            output = y0[j];//transfer to host
+            if( status = nc_put_vara_double( ncid, dataIDs[j], start, count, output.data() ) ){
                 std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
         }
         output = feltor.potential()[0];

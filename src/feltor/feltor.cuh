@@ -79,6 +79,7 @@ struct Rolkar
     const container lapiris_,pupil_;
     dg::DMatrix LaplacianM_perp;
 //     dg::DMatrix LaplacianM_para;
+    const container& apar_;
 };
 
 template< class container=thrust::device_vector<double> >
@@ -119,6 +120,7 @@ struct Feltor
     double mass_diffusion( ) {return diff_;}
     double energy( ) {return energy_;}
     double energy_diffusion( ){ return ediff_;}
+    const container& aparallel( ){return apar;}
 
   private:
     void curve( const container& y, container& target);

@@ -45,7 +45,7 @@
 ------------------Miscellaneous----------------------------
 
 24) itstp (steps between output)            = 10      (5)
-25) # of outputs (excluding first)          = 10000
+25) # of outputs (excluding first)          = 10
 26) Damping zone thickness (in units of rho_s)  = 20 
 27) Damping zone strength                   = 1e-3
 28) particle source amplitude               = 0
