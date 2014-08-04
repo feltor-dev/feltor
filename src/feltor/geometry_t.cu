@@ -69,7 +69,7 @@ int main()
     solovev::Nprofile prof(gp);
     solovev::TanhDamping damp2(gp);
     solovev::TanhDampingProf dampcut(gp);
-    solovev::TanhSource source(gp,40.);
+    solovev::TanhDampingInv source(gp);
     
 //     //make dggrid
     std::cout << "kR "<<curvatureR(Rmin,Zmin) <<"\n";

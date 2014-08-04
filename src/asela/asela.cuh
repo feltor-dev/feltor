@@ -1,18 +1,12 @@
 #pragma once
 
-#include "dg/algorithm.h"
 
 #include "parameters.h"
-<<<<<<< HEAD
-// #include "dg/backend/xspacelib.cuh"
-// #include "dg/cg.h"
-// #include "dg/gamma.h"
-=======
+
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/polarisation.cuh"
 #include "dg/cg.h"
 #include "dg/algorithm.h"
->>>>>>> f0b14d086863de39df86c2aeaf7ac6f0efff77db
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -30,11 +24,8 @@ struct Diffusion
         nu_(nu), mue_hat(mue_hat), mui_hat(mui_hat), 
         w2d_( dg::create::w2d(g)), v2d_( dg::create::v2d(g)), 
         temp( g.size()){
-<<<<<<< HEAD
-        LaplacianM_perp = dg::create::laplacianM( g, dg::normed,  dg::symmetric);
-=======
+
         LaplacianM_perp = dg::create::laplacianM( g, dg::normed);
->>>>>>> f0b14d086863de39df86c2aeaf7ac6f0efff77db
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -124,15 +115,10 @@ struct Asela
     //matrices and solvers
     Matrix A; //contains polarisation matrix
     Matrix laplaceM; //contains negative normalized laplacian
-<<<<<<< HEAD
-    dg::ArakawaX< dg::DMatrix, container>    arakawa; 
-    dg::Invert<container> invert_A, invert_maxwell; 
-    dg::Maxwell<dg::DMatrix, container, container> maxwell;
-=======
+
     dg::ArakawaX<Matrix, container> arakawa; 
     dg::Invert<container> invert_A, invert_maxwell; 
     dg::Maxwell<Matrix, container, container> maxwell;
->>>>>>> f0b14d086863de39df86c2aeaf7ac6f0efff77db
     dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
     Parameters p;
@@ -144,11 +130,8 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     w2d( dg::create::w2d(grid)), v2d( dg::create::v2d(grid)), one( grid.size(), 1.),
     rho( grid.size(), 0.), omega(rho), apar(rho),
     phi( 2, rho), expy( phi), arakAN( phi), arakAU( phi), u(phi), 
-<<<<<<< HEAD
-    laplaceM (dg::create::laplacianM( grid, dg::normed,  dg::symmetric)),
-=======
+
     laplaceM (dg::create::laplacianM( grid, dg::normed, dg::symmetric)),
->>>>>>> f0b14d086863de39df86c2aeaf7ac6f0efff77db
     arakawa( grid), 
     maxwell( laplaceM, w2d, v2d),
     invert_A( rho, rho.size(), p.eps_pol),
@@ -157,11 +140,8 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     p(p)
 {
     //create derivatives
-<<<<<<< HEAD
-    A = dg::create::laplacianM( grid, dg::not_normed,  dg::symmetric);
-=======
+
     A = dg::create::laplacianM( grid, dg::not_normed, dg::symmetric);
->>>>>>> f0b14d086863de39df86c2aeaf7ac6f0efff77db
 
 }
 

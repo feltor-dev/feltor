@@ -11,7 +11,7 @@ struct Parameters
 
     double eps_pol, eps_gamma, eps_time;
 
-    double a, b, R_0, I_0; 
+    double a, b, R_0; 
     double damping_width, damping_strength;
     double eps_hat;
 
@@ -21,7 +21,8 @@ struct Parameters
 
     double mu[2];
     double tau[2];
-
+    double beta;
+    
     double amp, sigma, posX, posY;
     double amp_source;
     double m_par;
@@ -55,8 +56,8 @@ struct Parameters
             mu[1] = 1.;
             tau[0] = -1.;
             tau[1] = v[14];
-            mcv = v[15];
-            I_0 = mcv;
+            beta = v[15];
+//             I_0 = mcv;
             nu_perp = v[16];
             nu_parallel = v[17];
             c = v[18];
@@ -83,6 +84,7 @@ struct Parameters
         os << "Physical parameters are: \n"
             <<"    mu_e             = "<<mu[0]<<"\n"
             <<"    mu_i             = "<<mu[1]<<"\n"
+            <<"    beta             = "<<beta<<"\n"
             <<"Electron-temperature: = "<<tau[0]<<"\n"
             <<"    Ion-temperature:  = "<<tau[1]<<"\n"
             <<"    perp Viscosity:   = "<<nu_perp<<"\n"

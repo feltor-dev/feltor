@@ -7,15 +7,10 @@
 //#include "draw/device_window.cuh"
 
 #include "asela.cuh"
-<<<<<<< HEAD
-// #include "dg/runge_kutta.cuh"
-// #include "dg/karniadakis.cuh"
-// #include "dg/backend/timer.cuh"
-=======
+
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
 #include "dg/backend/timer.cuh"
->>>>>>> f0b14d086863de39df86c2aeaf7ac6f0efff77db
 #include "file/read_input.h"
 #include "parameters.h"
 

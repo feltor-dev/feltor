@@ -24,7 +24,7 @@ struct Rolkar
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         temp( g.size()),
 //         pupil_( dg::evaluate( solovev::Pupil( gp), g))
-        lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
+//         lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
         pupil_( dg::evaluate( solovev::TanhDamping(gp ), g))
     {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::symmetric);
@@ -38,8 +38,9 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); // - nu_perp lapl_RZ (lapl_RZ (lnN,U)) //factor MISSING!?!
             
-            dg::blas1::pointwiseDot( lapiris_, temp, temp); //N_i U_i
-            dg::blas1::axpby( -0.1, temp, 1., y[i]); // - nu_perp lapl_RZ (lapl_RZ (lnN,U)) //factor MISSING!?!
+            //additional heavy damping zone
+//             dg::blas1::pointwiseDot( lapiris_, temp, temp); //N_i U_i
+//             dg::blas1::axpby( -0.1, temp, 1., y[i]); // - nu_perp lapl_RZ (lapl_RZ (lnN,U)) //factor MISSING!?!
 
 //             dg::blas2::gemv( LaplacianM_para, x[i], temp);
 //             dg::blas1::axpby(  -p.nu_parallel, temp, 1., y[i]);
@@ -76,7 +77,9 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container w3d_, v3d_;
     container temp;
-    const container lapiris_,pupil_;
+//     const container lapiris_;
+    const container pupil_;
+    
     dg::DMatrix LaplacianM_perp;
 //     dg::DMatrix LaplacianM_para;
 };
@@ -127,7 +130,10 @@ struct Feltor
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     const container& compute_psi( container& potential);
     const container& polarisation( const std::vector<container>& y);
-
+#if def APAR
+    const container& compute_apar;
+    const container& induct(const std::vector<container>& y);
+#endif
     container chi, omega;
 #if def APAR
     container apar;
@@ -138,7 +144,7 @@ struct Feltor
     std::vector<container> phi, curvphi, dzphi, expy;
     std::vector<container> dzy, curvy; 
 #if def APAR
-    std::vector<container> arakAN,arakAN,arakAphi;
+    std::vector<container> arakAN,arakAU,arakAphi;
 #endif
     //matrices and solvers
     Matrix A; 
@@ -148,6 +154,7 @@ struct Feltor
     dg::Polarisation< dg::DMatrix, container, container > pol; //note the host vector
 #if def APAR
     dg::Maxwell<Matrix,container,container> maxwell;
+    dg::Invert<container> invert_maxwell;
 #endif
     dg::Invert<container>       invert_pol;
 
@@ -162,6 +169,9 @@ struct Feltor
 template< class container>
 Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solovev::GeomParameters gp): 
     chi( g.size(), 0.), omega(chi),
+#if def APAR
+    rho( grid.size(), 0.),    
+#endif
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
@@ -172,6 +182,9 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solov
      source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
     damping( dg::evaluate( solovev::TanhDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
+#if def APAR
+    arakAN( phi), arakAU( phi), u(phi),   
+#endif
     dzy( 4, chi), curvy(dzy),
     A (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
     dz(solovev::Field(gp), g, gp.rk4eps),
@@ -179,6 +192,10 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solov
     pol(     g), 
     invert_pol( omega, omega.size(), p.eps_pol), 
     w3d( dg::create::w3d(g)), v3d( dg::create::v3d(g)), one( g.size(), 1.),
+#if def APAR
+    maxwell(A,w3d,v3d),
+    invert_maxwell(omega, omega.size(), p.eps_pol), //chaneg here to eps_maxwell in input file
+#endif
     p(p),
     gp(gp)
 {
@@ -228,15 +245,38 @@ const container& Feltor< container>::polarisation( const std::vector<container>&
     return phi[0];
 }
 
+#if def APAR
+template<class container>
+const container& Feltor< container>::induct(const std::vector<container>& y)
+{
+    dg::blas1::axpby( p.beta/p.mu[0], expy[0], 0., maxwell.chi()); //chi = beta/mu_e N_e
+    dg::blas1::axpby(- p.beta/p.mu[1], expy[1], 1., maxwell.chi()); //chi =beta/mu_e N_e-beta/mu_i N_i
+    dg::blas1::pointwiseDot( expy[0], y[2], rho);                 //rho = n_e w_e
+    dg::blas1::pointwiseDot( expy[1], y[3], omega);               //omega = n_i w_i
+    dg::blas1::axpby( -1.,omega , 1., rho);  //rho = -n_i w_i + n_e w_e
+    //maxwell = (lap_per - beta*(N_i/hatmu_i - n_e/hatmu_e)) A_parallel 
+    //rho=n_e w_e -N_i w_i
+    invert_maxwell( maxwell, apar, rho); //inverts for apar
+    return apar;
+}
+#endif
 template< class container>
 void Feltor< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 4);
     assert( y.size() == yp.size());
-
+    //compute phi via polarisation
     phi[0] = polarisation( y);
     phi[1] = compute_psi( phi[0]);
 
+    //compute A_parallel via induction and compute U_e and U_i from it
+#if def APAR
+    apar = induct(y);
+    //calculate U from Apar and w
+    dg::blas1::axpby( 1., y[2], - p.beta/p.mu[0], apar, u[0]); // U_e = w_e -beta/mu_e A_parallel
+    dg::blas1::axpby( 1., y[3], - p.beta/p.mu[1], apar, u[1]); // U_i = w_i -beta/mu_i A_parallel
+
+#endif
     //update energetics, 2% of total time
     exp( y, expy, 2);
     mass_ = dg::blas2::dot( one, w3d, expy[0] ); //take real ion density which is electron density!!
@@ -253,7 +293,11 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     {
 
         arakawa( y[i], phi[i], yp[i]);                      
-        arakawa( y[i+2], phi[i], yp[i+2]);                  
+        arakawa( y[i+2], phi[i], yp[i+2]);  
+#if def APAR
+        arakawa( apar, y[i], arakAN[i]); // [A_parallel,N]_RZ
+        arakawa( apar, u[i], arakAU[i]); // [A_parallel,U]_RZ
+#endif
         dg::blas1::pointwiseDot( yp[i], binv, yp[i]);                        // dtlnN =1/B [phi,lnN]_RZ
         dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);                    // dtU =1/B [phi,U]_RZ
     
@@ -336,7 +380,7 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     for( unsigned i=0; i<4; i++) //damping and pupil
     {
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]); 
-//         dg::blas1::pointwiseDot( iris, yp[i], yp[i]);
+        dg::blas1::pointwiseDot( iris, yp[i], yp[i]);
     }
 }
 
