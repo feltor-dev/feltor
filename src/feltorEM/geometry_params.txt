@@ -28,10 +28,10 @@
 21) inner density ( log10 N )=  2.5
 22) k_psi (zonal modes)      =  8
 23) RK4 epsilon              =  1e-5
-24) boxscale (1<bs<R0/a)     =  1.2
-25) Profile amplitude        =  0.1
-26) psip_max_cut             =  0.05
-27) psip_max_lap             =  0.05
+24) boxscale (1<bs<R0/a)     =  1.4
+25) Profile amplitude        =  2.0
+26) psip_max_cut             =  0.0
+27) psip_max_lap             =  0.0
 
 
 

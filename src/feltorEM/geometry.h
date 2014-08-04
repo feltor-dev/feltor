@@ -829,9 +829,9 @@ struct Pupil
 /**
  * @brief Damps the outer boundary in a zone with thickness alpha
  */ 
-struct Damping
+struct GaussianDamping
 {
-    Damping( GeomParameters gp):
+    GaussianDamping( GeomParameters gp):
         gp_(gp),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
         }
@@ -873,7 +873,7 @@ struct TanhDampingProf
     GeomParameters gp_;
     Psip psip_;
 };
-
+/*damps from psi_max on outwards*/
 struct TanhDamping
 {
         TanhDamping( GeomParameters gp):
@@ -882,16 +882,17 @@ struct TanhDamping
         }
     double operator( )(double R, double Z)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
     }
     double operator( )(double R, double Z, double phi)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
     GeomParameters gp_;
     Psip psip_;
 };
+/*increases from psi_maxlap on*/
 struct TanhDampingInv
 {
         TanhDampingInv( GeomParameters gp):
@@ -900,11 +901,11 @@ struct TanhDampingInv
         }
     double operator( )(double R, double Z)
     {
-        return 1.-0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxlap + 3.*gp_.alpha)/gp_.alpha) );
+        return 1.-0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxlap - 3.*gp_.alpha)/gp_.alpha) );
     }
     double operator( )(double R, double Z, double phi)
     {
-        return 1.-0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxlap + 3.*gp_.alpha)/gp_.alpha) );
+        return 1.-0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxlap - 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
     GeomParameters gp_;

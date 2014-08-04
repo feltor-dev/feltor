@@ -9,7 +9,7 @@ struct Parameters
     unsigned n, Nx, Ny, Nz; 
     double dt; 
 
-    double eps_pol, eps_gamma, eps_time;
+    double eps_pol, eps_maxwell, eps_gamma, eps_time;
 
     double a, b, R_0; 
     double damping_width, damping_strength;
@@ -17,7 +17,6 @@ struct Parameters
 
     double lnn_inner;
     double nu_perp, nu_parallel, c;
-    double mcv;
 
     double mu[2];
     double tau[2];
@@ -44,34 +43,34 @@ struct Parameters
             Nz = (unsigned)v[4];
             dt = v[5];
             eps_pol = v[6];
-            eps_gamma = v[7];
-            eps_time = v[8];
-            b = v[9];
-            a = v[10];
+            eps_maxwell = v[7];
+            eps_gamma = v[8];
+            eps_time = v[9];
+            b = v[10];
+            a = v[11];
             assert( a>b && "Source radius must be smaller than minor radius!" );
-            R_0 = v[11];
+            R_0 = v[12];
             eps_hat = 1.;//4.*M_PI*M_PI*R_0*R_0;
-            lnn_inner = v[12];
-            mu[0] = v[13];
+            lnn_inner = v[13];
+            mu[0] = v[14];
             mu[1] = 1.;
             tau[0] = -1.;
-            tau[1] = v[14];
-            beta = v[15];
-//             I_0 = mcv;
-            nu_perp = v[16];
-            nu_parallel = v[17];
-            c = v[18];
+            tau[1] = v[15];
+            beta = v[16];
+            nu_perp = v[17];
+            nu_parallel = v[18];
+            c = v[19];
             
-            amp = v[19];
-            sigma = v[20];
-            posX = v[21];
-            posY = v[22];
-            m_par = v[23];
-            itstp = v[24];
-            maxout = v[25];
-            damping_width    = v[26];
-            damping_strength = v[27];
-            amp_source = v[28];
+            amp = v[20];
+            sigma = v[21];
+            posX = v[22];
+            posY = v[23];
+            m_par = v[24];
+            itstp = v[25];
+            maxout = v[26];
+            damping_width    = v[27];
+            damping_strength = v[28];
+            amp_source = v[29];
         }
     }
     /**
@@ -89,8 +88,7 @@ struct Parameters
             <<"    Ion-temperature:  = "<<tau[1]<<"\n"
             <<"    perp Viscosity:   = "<<nu_perp<<"\n"
             <<"    perp Resistivity: = "<<c<<"\n"
-            <<"    par Viscosity:    = "<<nu_parallel<<"\n"
-            <<"    magnetic curvature:  = "<<mcv<<"\n";
+            <<"    par Viscosity:    = "<<nu_parallel<<"\n";
         os << "Boundary parameters are: \n"
             <<"    Ring thickness = "<<a-b<<"\n"
             <<"    minor Radius a = "<<a<<"\n"

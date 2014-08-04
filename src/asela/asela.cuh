@@ -127,10 +127,12 @@ struct Asela
 
 template< class container>
 Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ): 
-    w2d( dg::create::w2d(grid)), v2d( dg::create::v2d(grid)), one( grid.size(), 1.),
-    rho( grid.size(), 0.), omega(rho), apar(rho),
+    w2d( dg::create::w2d(grid)),
+    v2d( dg::create::v2d(grid)),
+    one( grid.size(), 1.),
+    rho( grid.size(), 0.),
+    omega(rho), apar(rho),
     phi( 2, rho), expy( phi), arakAN( phi), arakAU( phi), u(phi), 
-
     laplaceM (dg::create::laplacianM( grid, dg::normed, dg::symmetric)),
     arakawa( grid), 
     maxwell( laplaceM, w2d, v2d),
@@ -140,8 +142,8 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     p(p)
 {
     //create derivatives
-
-    A = dg::create::laplacianM( grid, dg::not_normed, dg::symmetric);
+ //???
+//     A = dg::create::laplacianM( grid, dg::not_normed, dg::symmetric);
 
 }
 

@@ -45,27 +45,7 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_para, x[i], temp);
             dg::blas1::axpby(  p.nu_parallel, temp, 1., y[i]); //-nu_lap_varphi (lnN,U) //
         }
-        //add parallel resistivity
-//         std::vector<container>  expy(2);
-//         expy[0].resize( x[0].size()), expy[1].resize( x[1].size());
-//         container chi( x[0].size()), omega( x[0].size());
-//         for( unsigned i=0; i<2; i++)
-//             thrust::transform( x[i].begin(), x[i].end(), expy[i].begin(), dg::EXP<double>());
-        //old
-//         dg::blas1::pointwiseDot( expy[0], x[2], omega); //N_e U_e 
-//         dg::blas1::pointwiseDot( expy[1], x[3], chi); //N_i U_i
-//         dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i
-//         //compute now J with the help of A_par
-//         dg::blas2::gemv( LaplacianM_perp, apar, chi); //J_par = - lap_RZ A_par
-//         dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
-//         //for 1/N_i
-// //         dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
-// 
-//         dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);  // dtU_e =- C/hat(mu)_e J_par/N_e
-//         dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat,chi, 1., y[3]);    // dtU_e =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i
-
-//         dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat,omega, 1., y[3]);    // dtU_e =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i
-        
+       
         //cut contributions to boundary now with damping on all 4 quantities
         for( unsigned i=0; i<y.size(); i++)
             dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
@@ -354,8 +334,6 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     dg::blas1::pointwiseDot( expy[0], u[0], omega); //N_e U_e 
     dg::blas1::pointwiseDot( expy[1], u[1], chi); //N_i U_i
     dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
-//         //compute now J with the help of A_par
-//         dg::blas2::gemv( LaplacianM_perp, apar, chi); //J_par = - lap_RZ A_par
     dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
 //         //for 1/N_i
 // //         dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
