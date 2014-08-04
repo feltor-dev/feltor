@@ -2,10 +2,14 @@
 
 #include <cusp/precond/diagonal.h>
 #include <cusp/precond/ainv.h>
+#include <cusp/krylov/cg.h>
+#include <cusp/monitor.h>
+
 #include "blas.h"
 
+#include "backend/timer.cuh"
 #include "helmholtz.h"
-#include "xspacelib.cuh"
+#include "backend/xspacelib.cuh"
 
 #include "cg.h"
 
@@ -31,14 +35,19 @@ int main()
     //dg::DVec x(rho);
 
     dg::DMatrix A = dg::create::laplacianM( grid, dg::normed); 
-    dg::Helmholtz< dg::DMatrix, dg::DVec > gamma1( A, w2d, alpha);
+    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > gamma1( A, w2d, v2d, alpha);
 
     dg::CG< dg::DVec > cg(x, x.size());
     dg::blas2::symv( w2d, rho, rho);
+    dg::Timer t;
+    t.tic();
     unsigned number = cg( gamma1, x, rho, v2d, eps);
+    t.toc();
     dg::blas1::axpby( 1., sol, -1., x);
+    std::cout << "DG   performance:\n";
     std::cout << "number of iterations:  "<<number<<std::endl;
     std::cout << "error " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
+    std::cout << "took  " << t.diff()<<"s"<<std::endl;
 
 //cusp matrix solver
     dg::Matrix Temp = dg::create::laplacianM( grid, dg::not_normed), diff;
@@ -53,14 +62,19 @@ int main()
 
     cusp::array1d< double, cusp::device_memory> x_( x.size(), 0.);
     cusp::array1d< double, cusp::device_memory> b_( rho.begin(), rho.end());
-    cusp::verbose_monitor<double> monitor( b_, x.size(), eps, eps);
-    cusp::identity_operator<double, cusp::device_memory> M( diff_.num_rows, diff_.num_rows);
-    //cusp::precond::diagonal<double, cusp::device_memory> M( diff_);
+    //cusp::verbose_monitor<double> monitor( b_, x.size(), eps, eps);
+    cusp::default_monitor<double> monitor( b_, x.size(), eps, eps);
+    //cusp::identity_operator<double, cusp::device_memory> M( diff_.num_rows, diff_.num_rows);
+    cusp::precond::diagonal<double, cusp::device_memory> M( diff_);
     //cusp::precond::bridson_ainv<double, cusp::device_memory> M( diff_, 0.1, 10, true, 1);
+    t.tic();
     cusp::krylov::cg( diff_, x_, b_, monitor, M);
+    t.toc();
     dg::DVec xx_(x_.begin(), x_.end());
     dg::blas1::axpby( 1., sol, -1., xx_);
+    std::cout << "CUSP performance:\n";
     std::cout << "error " << sqrt( dg::blas2::dot( w2d, xx_))<<std::endl;
+    std::cout << "took  " << t.diff()<<"s"<<std::endl;
 
 
 

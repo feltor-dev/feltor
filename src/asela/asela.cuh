@@ -26,6 +26,7 @@ struct Diffusion
         temp( g.size()){
 
         LaplacianM_perp = dg::create::laplacianM( g, dg::normed);
+
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -119,6 +120,7 @@ struct Asela
     dg::ArakawaX<Matrix, container> arakawa; 
     dg::Invert<container> invert_A, invert_maxwell; 
     dg::Maxwell<Matrix, container, container> maxwell;
+
     dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
     Parameters p;
@@ -141,9 +143,7 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     pol(     grid), 
     p(p)
 {
-    //create derivatives
- //???
-//     A = dg::create::laplacianM( grid, dg::not_normed, dg::symmetric);
+
 
 }
 

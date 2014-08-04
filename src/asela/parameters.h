@@ -1,6 +1,10 @@
 #pragma once
 #include "dg/backend/grid.h"
+<<<<<<< HEAD
 
+=======
+#include "dg/enums.h"
+>>>>>>> 69b95fe1d05493e5e4cb97e206edbf72f11aab09
 
 namespace eule
 {

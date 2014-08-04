@@ -80,11 +80,11 @@ struct Maxwell
      *
      * Since memory is small on gpus Maxwell can be constructed using an existing laplace operator
      * @param laplaceM negative normalised laplacian
-     * @param w2d weights
-     * @param v2d preconditioner
+     * @param weights weights
+     * @param precon preconditioner
      * @param alpha The factor alpha
      */
-    Maxwell( const Matrix& laplaceM, const Precon& w2d, const Precon& v2d,  double alpha=1.): laplaceM_(laplaceM), chi_(w2d.size(),1.), temp_(chi_), w2d(w2d), v2d(v2d),  alpha_(alpha){ }
+    Maxwell( const Matrix& laplaceM, const Precon& weights, const Precon& precon,  double alpha=1.): laplaceM_(laplaceM), chi_(weights.size(),1.), temp_(chi_), w2d(weights), v2d(precon),  alpha_(alpha){ }
     /**
      * @brief apply Maxwell operator
      *
@@ -103,7 +103,7 @@ struct Maxwell
         blas1::pointwiseDot( w2d, y, y);
     }
     const Precon& weights()const {return w2d;}
-    const Precon& precond()const{return v2d;}
+    const Precon& precond()const {return v2d;}
     double& alpha( ){  return alpha_;}
     double alpha( ) const  {return alpha_;}
     /**
@@ -120,44 +120,6 @@ struct Maxwell
 };
 
 
-///**
-// * @brief Package matrix to be used in the Invert class
-// *
-// * @tparam M Matrix class 
-// * @tparam V class for weights and Preconditioner
-// */
-//template< class M, class V>
-//struct ApplyWithWeights
-//{
-//    ApplyWithWeights( const M& m, const V& weights, const V& precond):m_(m), w_(weights), p_(precond){}
-//    void symv( const V& x, V& y) const
-//    {
-//        blas2::symv( m_, x, y);
-//        blas2::symv( p_, y, y);
-//    }
-//    const V& weights() const{return w_;}
-//    const V& precond() const{return p_;}
-//    private:
-//    const M& m_;
-//    const V& w_, p_;
-//};
-///**
-// * @brief Package matrix to be used in the Invert class
-// *
-// * @tparam M Matrix class 
-// * @tparam V class for weights and Preconditioner
-// */
-//template< class M, class V>
-//struct ApplyWithoutWeights
-//{
-//    ApplyWithoutWeights( const M& m, const V& weights, const V& precond):m_(m), w_(weights), p_(precond){}
-//    void symv( const V& x, V& y) const { blas2::symv( m_, x, y); }
-//    const V& weights() const{return w_;}
-//    const V& precond() const{return p_;}
-//    private:
-//    const M& m_;
-//    const V& w_, p_;
-//};
 ///@}
 ///@cond
 template< class M, class V, class P >
@@ -184,18 +146,6 @@ struct MatrixTraits< const Helmholtz<M, V, P> >
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-//template< class M, class T>
-//struct MatrixTraits< ApplyWithWeights<M, T> >
-//{
-//    typedef double value_type;
-//    typedef SelfMadeMatrixTag matrix_category;
-//};
-//template< class M, class T>
-//struct MatrixTraits< ApplyWithoutWeights<M, T> >
-//{
-//    typedef double value_type;
-//    typedef SelfMadeMatrixTag matrix_category;
-//};
 ///@endcond
 
 

@@ -270,14 +270,14 @@ struct Invert
         //blas1::axpby( 2., phi1, -1.,  phi2, phi);
         dg::blas2::symv( w, rho, phi2);
 #ifdef DG_BENCHMARK
-    Timer t;
-    t.tic();
+        Timer t;
+        t.tic();
 #endif //DG_BENCHMARK
         unsigned number = cg( op, phi, phi2, p, eps_);
 #ifdef DG_BENCHMARK
-    std::cout << "# of cg iterations \t"<< number << "\t";
-    t.toc();
-    std::cout<< "took \t"<<t.diff()<<"s\n";
+        std::cout << "# of cg iterations \t"<< number << "\t";
+        t.toc();
+        std::cout<< "took \t"<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
         phi1.swap( phi2);
         phi0.swap( phi1);
