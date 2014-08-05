@@ -132,7 +132,7 @@ struct Feltor
 
     //matrices and solvers
     Matrix A; 
-    dg::DZ<container> dz;
+    dg::DZ<dg::DMatrix, container> dz;
     dg::ArakawaX< dg::DMatrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     dg::Polarisation< dg::DMatrix, container, container > pol; //note the host vector
