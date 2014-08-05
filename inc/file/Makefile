@@ -1,6 +1,6 @@
 CXX=g++
 
-INCLUDE =-I/home/matthias/include
+INCLUDE =-I/home/markus/Dokumente/Phd/Include
 INCLUDE+=-I../
 
 
