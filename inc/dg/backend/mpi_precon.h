@@ -63,7 +63,7 @@ MPI_Precon precond( const MPI_Grid2d& g)
 *
 * @return Preconditioner
 */
-MPI_Precon weights( const Grid3d<double>& g)
+MPI_Precon weights( const MPI_Grid3d& g)
 {
     MPI_Precon p;
     p.data = g.dlt().weights();
@@ -77,7 +77,7 @@ MPI_Precon weights( const Grid3d<double>& g)
 *
 * @return Preconditioner
 */
-MPI_Precon precond( const Grid3d<double>& g)
+MPI_Precon precond( const MPI_Grid3d& g)
 {
     MPI_Precon v = weights( g);
     v.norm = 1./v.norm;

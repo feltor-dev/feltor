@@ -11,7 +11,8 @@ namespace dg
 /**
  * @brief 2D MPI Grid class 
  *
- * Represents the local grid coordinates and the process topology
+ * Represents the local grid coordinates and the process topology. The 
+ * grids of different processes overlap in the x- and y- coordinate. 
  */
 struct MPI_Grid2d
 {
@@ -121,7 +122,9 @@ struct MPI_Grid2d
 /**
  * @brief 3D MPI Grid class 
  *
- * Represents the local grid coordinates and the process topology
+ * Represents the local grid coordinates and the process topology. Note
+ * that the grids of different processes overlap in the x- and y- coordinate but 
+ * not in the z-coordinate.
  */
 struct MPI_Grid3d
 {
@@ -187,12 +190,12 @@ struct MPI_Grid3d
     double z0() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.z0() - g.hz() + g.lz()/(double)dims[2]*(double)coords[2]; 
+        return g.z0() + g.lz()/(double)dims[2]*(double)coords[2]; 
     }
     double z1() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.z0() + g.hz() + g.lz()/(double)dims[2]*(double)(coords[2]+1); 
+        return g.z0() + g.lz()/(double)dims[2]*(double)(coords[2]+1); 
     }
     double lx() const {return x1()-x0();}
     double ly() const {return y1()-y0();}
@@ -214,7 +217,7 @@ struct MPI_Grid3d
     unsigned Nz() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.Nz()/dims[2]+2;
+        return g.Nz()/dims[2];
     }
     bc bcx() const {return g.bcx();}
     bc bcy() const {return g.bcy();}
@@ -253,16 +256,21 @@ struct MPI_Grid3d
      *
      * @return pid of a process, or -1 if non of the grids matches
      */
-    int pidOf( double x, double y, double z);
+    int pidOf( double x, double y, double z) const;
     private:
     Grid3d<double> g; //global grid
     MPI_Comm comm; //just an integer...
 };
 
-int MPI_Grid3d::pidOf( double x, double y, double z)
+int MPI_Grid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
+    std::cout << x << " "<< y<<" "<<z<<" "<<g.hx()<<" "<<g.hy()<<" "<<g.hz()<<"\n";
+    if( x < g.x0() && x > g.x0() - g.hx()) x += g.hx();
+    if( x > g.x1() && x < g.x1() + g.hx()) x -= g.hx();
+    if( y < g.y0() && y > g.y0() - g.hy()) y += g.hy();
+    if( y > g.y1() && y < g.y1() + g.hy()) y -= g.hy();
     coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
     coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
     coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );

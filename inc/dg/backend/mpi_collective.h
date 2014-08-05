@@ -106,6 +106,7 @@ void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::hos
  */
 struct Collective
 {
+    Collective( ){}
     /**
      * @brief Construct from a given map 
      *

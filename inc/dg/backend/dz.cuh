@@ -7,13 +7,11 @@
 
 namespace dg{
 
-    ///@cond
+///@cond
 namespace detail{
 double oneR( double R, double Z){return R;}
 double oneZ( double R, double Z){return Z;}
 double zero( double R, double Z){return 0;}
-
-
 } //namespace detail
 ///@endcond
 
@@ -25,13 +23,11 @@ double zero( double R, double Z){return 0;}
  dg::HVec has to be used because of the cutting routine
  * @tparam container The container-class to operate on (does not need to be dg::HVec)
  */
-template< class container=thrust::device_vector<double> >
+template< class Matrix = dg::DMatrix, class container=thrust::device_vector<double> >
 struct DZ 
 {
     typedef typename container::value_type value_type;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix;
     /**
      * @brief Construct from a field and a grid
      *
@@ -124,7 +120,7 @@ struct DZ
     Matrix plus, minus; //interpolation matrices
     container hz, tempP, tempM;
     dg::Grid3d<double> g_;
-
 };
+
 }//namespace dg
 

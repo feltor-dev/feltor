@@ -172,7 +172,6 @@ thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
 
 
 
-
 ///@cond
 /**
  * @brief Evaluate and dlt transform a function

@@ -2,6 +2,7 @@
 
 #include "grid.h"
 #include "creation.cuh"
+#include "tensor.cuh"
 #include "operator_tensor.cuh"
 
 namespace dg{
@@ -135,16 +136,16 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     for( unsigned i=0; i<g.size(); i++)
     {
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << "xi = " << x[i] <<std::endl;
+            std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
         }
         assert(x[i] >= g.x0() && x[i] <= g.x1());
         
         if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
-            std::cerr << "yi = " << y[i] <<std::endl;
+            std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
         }
         assert( y[i] >= g.y0() && y[i] <= g.y1());
         if (!(z[i] >= g.z0() && z[i] <= g.z1())) {
-            std::cerr << "zi = " << z[i] <<std::endl;
+            std::cerr << g.z0()<<"< zi = " << z[i] <<" < "<<g.z1()<<std::endl;
         }
         assert( z[i] >= g.z0() && z[i] <= g.z1());
 
