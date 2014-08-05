@@ -1,7 +1,7 @@
 CXX=g++
 
 INCLUDE =-I/home/matthias/include
-INCLUDE+=-I../dg/
+INCLUDE+=-I../
 
 
 read_input_t: read_input_t.cpp read_input.h 

@@ -143,8 +143,8 @@ struct MPI_Grid3d
             assert( Nz%dims[2] == 0);
         }
     }
-    MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy, bcz), comm( comm)
+    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
@@ -242,13 +242,34 @@ struct MPI_Grid3d
 
     }
     Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
-    Grid2d<double> global() const {return g;}
-
-
+    Grid3d<double> global() const {return g;}
+    /**
+     * @brief Returns the pid of the process that holds the grid surrounding a given pint
+     *
+     * @param x X-coord
+     * @param y Y-coord
+     * @param z Z-coord
+     *
+     * @return pid of a process, or -1 if non of the grids matches
+     */
+    int pidOf( double x, double y, double z);
     private:
-    Grid2d<double> g; //global grid
+    Grid3d<double> g; //global grid
     MPI_Comm comm; //just an integer...
-
 };
+
+int pidOf( double x, double y, double z)
+{
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( comm, 3, dims, periods, coords);
+    unsigned coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
+    unsigned coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
+    unsigned coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );
+    int rank;
+    if( MPI_Cart_rank( comm, coords, &rank) == MPI_SUCCESS ) 
+        return rank;
+    else
+        return -1;
+}
 
 }//namespace dg
