@@ -205,7 +205,19 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
-
+        //draw a parallel
+        hvisual =feltor.aparallel();
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        title <<"A / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
+        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
+        
         title << std::fixed; 
         title << " &&   time = "<<time;
         glfwSetWindowTitle(w,title.str().c_str());

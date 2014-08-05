@@ -10,7 +10,7 @@
 3)  ny (grid points in y)                =   100 (192)
 4)  nz (grid points in z)                =   8 (16)
 
-5)  dt (time step in units c_s/rho_s)    =   1e-4  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   5e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
@@ -30,7 +30,7 @@
 
 14) mu_e (-m_e/m_i)                     = -0.5e-4
 15) tau (Ti/Te)                         = 0.0    (0.0)
-16) beta_e0                             = 1e-6  (1e-4)
+16) beta_e0                             = 1e-4  (1e-4)
 17) nu_perp                             = 1e-3
 18) nu_parallel  (viscosity)            = 1e-2   (0.001)
 19) para resistivity (c)                = 1e-4   (3e-5)
@@ -46,7 +46,7 @@
 ------------------Miscellaneous----------------------------
 
 25) itstp (steps between output)            = 10      (5)
-26) # of outputs (excluding first)          = 10000
+26) # of outputs (excluding first)          = 100000
 27) Damping zone thickness (in units of rho_s)  = 20 
 28) Damping zone strength                   = 1e-3
 29) particle source amplitude               = 0.0
