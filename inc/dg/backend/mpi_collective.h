@@ -78,6 +78,8 @@ struct Pattern
     void transpose(){ sendTo_.swap( recvFrom_);}
     thrust::host_vector<double> scatter( const thrust::host_vector<double>& values);
     void gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values);
+    unsigned recv_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
+    unsigned send_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
     private:
     unsigned sum;
     thrust::host_vector<int> sendTo_,   accS_;
@@ -164,6 +166,8 @@ struct Collective
         p_.gather( gatherFrom, values_);
         thrust::scatter( values_.begin(), values_.end(), idx_.begin(), values.begin());
     }
+    unsigned recv_size() const {return p_.recv_size();}
+    unsigned send_size() const {return p_.send_size();}
     private:
     thrust::host_vector<int> idx_;
     Pattern p_;

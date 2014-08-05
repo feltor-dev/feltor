@@ -245,6 +245,13 @@ struct MPI_Grid3d
         grid.display();
 
     }
+    /**
+     * @brief Return a grid local for the calling process
+     *
+     * The local grid returns the same values for Nx(), Ny(), ... as the grid
+     * class itself
+     * @return Grid object
+     */
     Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
     Grid3d<double> global() const {return g;}
     /**
@@ -266,7 +273,7 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    std::cout << x << " "<< y<<" "<<z<<" "<<g.hx()<<" "<<g.hy()<<" "<<g.hz()<<"\n";
+    //std::cout << x << " "<< y<<" "<<z<<" "<<g.hx()<<" "<<g.hy()<<" "<<g.hz()<<"\n";
     if( x < g.x0() && x > g.x0() - g.hx()) x += g.hx();
     if( x > g.x1() && x < g.x1() + g.hx()) x -= g.hx();
     if( y < g.y0() && y > g.y0() - g.hy()) y += g.hy();

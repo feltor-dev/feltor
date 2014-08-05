@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     mpi_init2d( dg::PER, dg::PER, np, n, Nx, Ny, comm2d);
     mpi_init3d( dg::PER, dg::PER, dg::PER, np, n, Nx, Ny, Nz, comm3d);
     dg::MPI_Grid2d g2d( 0, lx, 0, lx, n, Nx, Ny, dg::PER, dg::PER, comm2d);
-    dg::MPI_Grid3d g3d( 0, lx, 0, lx, 0, lz, n, Nx, Ny, 10, dg::PER, dg::PER, dg::PER, comm3d);
+    dg::MPI_Grid3d g3d( 0, lx, 0, lx, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     //test evaluation and expand functions

@@ -127,13 +127,13 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const Grid3d<double>& g)
 {
-    assert( x.size() == g.size());
-    assert( y.size() == g.size());
-    assert( z.size() == g.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> A( g.size(), g.size(), g.size()*g.n()*g.n());
+    assert( x.size() == y.size());
+    assert( y.size() == z.size());
+    //assert( z.size() == g.size());
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
 
     int number = 0;
-    for( unsigned i=0; i<g.size(); i++)
+    for( unsigned i=0; i<x.size(); i++)
     {
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
             std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
