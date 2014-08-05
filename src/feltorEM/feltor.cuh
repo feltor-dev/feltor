@@ -93,8 +93,10 @@ struct Feltor
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
-    //for rolkar 
-//     const container& aparallel( ) const { return apar;}
+    //new quantities
+    const container& aparallel( ) const { return apar;}
+    const std::vector<container>& uparallel( ) const { return u;}
+
 
 
     /**
