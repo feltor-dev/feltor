@@ -265,8 +265,10 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     double Upare = -0.5*p.mu[0]*dg::blas2::dot( expy[0], w3d, omega); 
     dg::blas1::pointwiseDot(u[1], u[1], omega); //U_i^2
     double Upari =  0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
-    energy_ = Ue + Ui + Uphi + Upare + Upari;
-    //add Apar term : U_apar = p.beta * |nabla_perp A_par|^2
+    arakawa.variation(apar,omega); // (dx A_parallel)^2 + (dy A_parallel)^2
+    double Uapar = p.beta*sqrt(dg::blas2::dot( omega, w3d, omega));
+    energy_ = Ue + Ui + Uphi + Upare + Upari + Uapar;
+    
     
     curve( apar, curvapar); //K(A_parallel)
     dg::blas1::axpby(  1.,  gradlnB,p.beta,  curvapar);  // gradlnB + beta K(A_parallel)
