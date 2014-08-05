@@ -54,14 +54,14 @@ MPI_Vector evaluate( double(f)(double, double), const MPI_Grid2d& g)
             may be constructed during function call.
  */
 template< class TernaryOp>
-MPI_Vector evaluate( TernaryOp f, const MPIGrid3d<double>& g)
+MPI_Vector evaluate( TernaryOp f, const MPI_Grid3d& g)
 {
     MPI_Vector v( g.n(), g.Nx(), g.Ny(), g.Nz());
     v.data() = evaluate(f, g.local());
     return v;
 };
 ///@cond
-MPI_Vector evaluate( double(f)(double, double, double), const MPIGrid3d<double>& g)
+MPI_Vector evaluate( double(f)(double, double, double), const MPI_Grid3d& g)
 {
     return evaluate<double(double, double, double)>( f, g);
 };

@@ -34,6 +34,7 @@ struct Helmholtz
      * @param precond ( V2D or V3D); precondtioner you later use in conjugate gradients
      * @param alpha prefactor of laplacian
      * @note only references are stored so make sure the matrix and the vectors are already allocated when using an object otherwise an out of memory error might occur on gpus
+     * @attention The class takes care of the negative sign of laplacianM, so the alpha given is the alpha in the above formula
      */
     Helmholtz( const Matrix& laplaceM, const Prec& weights, const Prec& precond, double alpha):p_(weights), q_(precond), laplaceM_(laplaceM), alpha_( alpha){
         }
@@ -41,8 +42,7 @@ struct Helmholtz
      * @brief apply operator
      *
      * Computes
-     * \f[ y = W( 1 + \alpha\Delta) x \f]
-     * to make the matrix symmetric
+     * \f[ y = W( 1 + \alpha\Delta) x \f] * to make the matrix symmetric
      * @param x lhs
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
@@ -83,6 +83,7 @@ struct Maxwell
      * @param weights weights
      * @param precon preconditioner
      * @param alpha The factor alpha
+     * @attention The class takes care of the negative sign of laplacianM, so the alpha given is the alpha in the above formula
      */
     Maxwell( const Matrix& laplaceM, const Precon& weights, const Precon& precon,  double alpha=1.): laplaceM_(laplaceM), chi_(weights.size(),1.), temp_(chi_), w2d(weights), v2d(precon),  alpha_(alpha){ }
     /**

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include "../enums.h"
 #include "mpi_config.h"
 #include "grid.h"
@@ -258,13 +259,13 @@ struct MPI_Grid3d
     MPI_Comm comm; //just an integer...
 };
 
-int pidOf( double x, double y, double z)
+int MPI_Grid3d::pidOf( double x, double y, double z)
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    unsigned coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
-    unsigned coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
-    unsigned coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );
+    coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
+    coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
+    coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );
     int rank;
     if( MPI_Cart_rank( comm, coords, &rank) == MPI_SUCCESS ) 
         return rank;

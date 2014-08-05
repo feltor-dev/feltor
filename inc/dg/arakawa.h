@@ -79,6 +79,7 @@ struct ArakawaX
      * Computes \f[ (\nabla\phi)^2 \f]
      * @param phi function 
      * @param varphi may equal phi, contains result on output
+     * @note same as a call to bracketS( phi, phi, varphi)
      */
     void variation( container& phi, container& varphi)
     {
