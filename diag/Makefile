@@ -1,12 +1,7 @@
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
-<<<<<<< HEAD
 device = cpu
 system = leo3
-=======
-device = gpu
-system = home
->>>>>>> 08f521beb571a691e1102a0c2181c2f9767d111e
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -81,15 +76,12 @@ show: show.cpp
 
 com: com.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
-<<<<<<< HEAD
-=======
 
 imp: imp.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 probe: probe.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
->>>>>>> 08f521beb571a691e1102a0c2181c2f9767d111e
 
 figure17: figure17.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
