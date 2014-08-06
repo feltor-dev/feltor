@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/backend/dz.cuh"
+//#include "dg/backend/dz.cuh"
 
 #include "parameters.h"
 // #include "geometry_circ.h"
@@ -11,17 +11,16 @@
 #include "dg/backend/timer.cuh"
 #endif //DG_BENCHMARK
 
-// #define APAR
 namespace eule
 {
 //diffusive terms (add mu_hat?)
-template<class container>
+template<class Matrix, class container, class Preconditioner>
 struct Rolkar
 {
     Rolkar( const dg::Grid3d<double>& g, Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
-        w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
+        w3d_( dg::create::weights(g)), v3d_(dg::create::precond(g)),
         temp( g.size()),
 //         pupil_( dg::evaluate( solovev::Pupil( gp), g)),
 //                 pupil_( dg::evaluate( solovev::GaussianDamping( gp), g)),
@@ -53,7 +52,7 @@ struct Rolkar
         expy[0].resize( x[0].size()), expy[1].resize( x[1].size());
         container chi( x[0].size()), omega( x[0].size());
         for( unsigned i=0; i<2; i++)
-            thrust::transform( x[i].begin(), x[i].end(), expy[i].begin(), dg::EXP<double>());
+            dg::blas1::transform( x[i], expy[i], dg::EXP<double>());
         dg::blas1::pointwiseDot( expy[0], x[2], omega); //N_e U_e 
         dg::blas1::pointwiseDot( expy[1], x[3], chi); //N_i U_i
         dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i
@@ -66,9 +65,9 @@ struct Rolkar
         for( unsigned i=0; i<y.size(); i++)
             dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
     }
-    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    const container& weights(){return w3d_;}
-    const container& precond(){return v3d_;}
+    const Matrix& laplacianM()const {return LaplacianM_perp;}
+    const Preconditioner& weights(){return w3d_;}
+    const Preconditioner& precond(){return v3d_;}
     const container& iris(){return pupil_;}
 
   private:
@@ -78,24 +77,24 @@ struct Rolkar
     }
     const Parameters p;
     const solovev::GeomParameters gp;
-    const container w3d_, v3d_;
+    const Preconditioner w3d_, v3d_;
     container temp;
     const container pupil_;
     const container lapiris_;
     
-    dg::DMatrix LaplacianM_perp;
-    dg::DMatrix LaplacianM_para;
+    Matrix LaplacianM_perp;
+    Matrix LaplacianM_para;
 
 };
 
-template< class container=thrust::device_vector<double> >
+template< class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
 struct Feltor
 {
-    typedef std::vector<container> Vector;
+    //typedef std::vector<container> Vector;
     typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
+    //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
+    //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     Feltor( const dg::Grid3d<value_type>& g, Parameters p,solovev::GeomParameters gp);
 
@@ -135,17 +134,17 @@ struct Feltor
     container chi, omega;
 
     const container binv, curvR, curvZ, gradlnB;
-    const container iris, source, damping;
-    const container w3d, v3d, one;
+    const container iris, source, damping, one;
+    const Preconditioner w3d, v3d;
     std::vector<container> phi, curvphi, dzphi, expy;
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
     Matrix A; 
     dg::DZ<Matrix, container> dz;
-    dg::ArakawaX< dg::DMatrix, container>    arakawa; 
+    dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
-    dg::Polarisation< dg::DMatrix, container, container > pol; //note the host vector
+    dg::Polarisation< Matrix, container, Preconditioner > pol; //note the host vector
     dg::Invert<container> invert_pol;
 
     const Parameters p;
@@ -155,8 +154,8 @@ struct Feltor
 
 };
 
-template< class container>
-Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solovev::GeomParameters gp): 
+template<class Matrix, class container, class P>
+Feltor<Matrix, container, P>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solovev::GeomParameters gp): 
     chi( g.size(), 0.), omega(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
@@ -174,23 +173,23 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solov
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
     pol(     g), 
-    invert_pol( omega, omega.size(), p.eps_pol), 
-    w3d( dg::create::w3d(g)), v3d( dg::create::v3d(g)), one( g.size(), 1.),
+    invert_pol( omega, omega.size(), p.eps_pol), one( g.size(), 1.),
+    w3d( dg::create::weights(g)), v3d( dg::create::precond(g)), 
     p(p),
     gp(gp)
 {
 
 }
-template< class container>
-const container& Feltor<container>::compute_vesqr( container& potential)
+template< class Matrix, class container, class P>
+const container& Feltor<Matrix,container, P>::compute_vesqr( container& potential)
 {
     arakawa.bracketS( potential, potential, chi);
     dg::blas1::pointwiseDot( binv, binv, omega);
     dg::blas1::pointwiseDot( chi, omega, omega);
     return omega;
 }
-template< class container>
-const container& Feltor<container>::compute_psi( container& potential)
+template< class Matrix, class container, class P>
+const container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 {
     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
     return phi[1];
@@ -198,8 +197,8 @@ const container& Feltor<container>::compute_psi( container& potential)
 
 
 //computes and modifies expy!!
-template<class container>
-const container& Feltor< container>::polarisation( const std::vector<container>& y)
+template<class Matrix, class container, class P>
+const container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
 #ifdef DG_BENCHMARK
     dg::Timer t; 
@@ -212,8 +211,8 @@ const container& Feltor< container>::polarisation( const std::vector<container>&
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
     //A = pol.create( chi);
     pol.set_chi( chi);
-    thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
-    thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
+    dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
+    dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
 #ifdef DG_BENCHMARK
     t.toc();
     //std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
@@ -225,8 +224,8 @@ const container& Feltor< container>::polarisation( const std::vector<container>&
     return phi[0];
 }
 
-template< class container>
-void Feltor< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 4);
     assert( y.size() == yp.size());
@@ -316,8 +315,8 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     }
 }
 
-template< class container>
-void Feltor< container>::curve( const container& src, container& target)
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::curve( const container& src, container& target)
 {
     dg::blas2::gemv( arakawa.dx(), src, target); //d_R src
     dg::blas2::gemv( arakawa.dy(), src, omega);  //d_Z src
@@ -326,17 +325,17 @@ void Feltor< container>::curve( const container& src, container& target)
     dg::blas1::axpby( 1., omega, 1., target ); // (C^R d_R + C^Z d_Z) src
 }
 
-template< class container>
-void Feltor< container>::exp( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::exp( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
 {
     for( unsigned i=0; i<howmany; i++)
-        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<value_type>());
+        dg::blas1::transform( y[i], target[i], dg::EXP<value_type>());
 }
-template< class container>
-void Feltor< container>::log( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
+template< class M, class container, class P>
+void Feltor<M, container, P>::log( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
 {
     for( unsigned i=0; i<howmany; i++)
-        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
+        dg::blas1::transform( y[i], target[i], dg::LN<value_type>());
 }
 
 

@@ -60,6 +60,7 @@ struct AB
      * @param f The rhs functor
      * @param u0 The initial value of the integration
      * @param dt The timestep
+     * @note The class allows Functor to change its first (input) argument, i.e. the first argument need not be const
      */
     template< class Functor>
     void init( Functor& f, const Vector& u0, double dt);
@@ -72,6 +73,7 @@ struct AB
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function or functor
     * @param u (write-only) contains next step of the integration on output
+     * @note The class allows Functor to change its first (input) argument, i.e. the first argument need not be const
     */
     template< class Functor>
     void operator()( Functor& f, Vector& u);
@@ -215,7 +217,7 @@ struct Karniadakis
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
      * @tparam LinearOp models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector.
+        Its arguments both have to be of type Vector. 
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = L(y) translates to diff( y, y').
         Furthermore the routines weights() and precond() must be callable
@@ -224,6 +226,7 @@ struct Karniadakis
      * @param diff diffusion operator treated implicitely 
      * @param u0 The initial value you later use 
      * @param dt The timestep saved for later use
+     * @note Both Functor and LinearOp may change their first (input) argument, i.e. the first argument need not be const
      */
     template< class Functor, class LinearOp>
     void init( Functor& f, LinearOp& diff, const Vector& u0, double dt);

@@ -72,8 +72,8 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
      
     //create RHS 
-    eule::Feltor< dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
-    eule::Rolkar< dg::DVec > rolkar( grid, p,gp);
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     
     //with bath
