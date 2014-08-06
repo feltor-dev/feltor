@@ -363,6 +363,8 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
 //         dg::blas1::axpby( -1., omega, 1., yp[i]);
 //         dg::blas1::pointwiseDot( damping, y[i], omega); 
 //         dg::blas1::axpby( -1., omega, 1., yp[i]);
+                dg::blas1::pointwiseDot( iris, u[i], u[i]); 
+
     }
     for( unsigned i=0; i<4; i++) //damping and pupil on N and w
     {

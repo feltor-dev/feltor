@@ -5,12 +5,12 @@
 #include <cmath>
 // #define DG_DEBUG
 
-// #include "draw/host_window.h"
-//#include "draw/device_window.cuh"
+
+
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
-#include "file/file.h"
+#include "file/nc_utilities.h"
 
 
 #include "feltor.cuh"
@@ -31,7 +31,7 @@ int main( int argc, char* argv[])
 {
     //Parameter initialisation
     std::vector<double> v,v3;
-    std::string input;
+    std::string input, geom;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -47,8 +47,9 @@ int main( int argc, char* argv[])
 
     ////////////////////////////////set up computations///////////////////////////
     try{ v3 = file::read_input( "geometry_params.txt"); }
-    catch (toefl::Message& m) {  
-        m.display(); 
+    catch (toefl::Message& m) {  m.display(); 
+    geom = file::read_file( "geometry_params.txt");
+    std::cout << geom << std::endl;
         for( unsigned i = 0; i<v.size(); i++)
 //             std::cout << v3[i] << " ";
 //             std::cout << std::endl;
@@ -69,9 +70,9 @@ int main( int argc, char* argv[])
 
     
     //with bath
-      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
      //with zonal flow field
-//       solovev::ZonalFlow init0(gp,p.amp);
+      solovev::ZonalFlow init0(gp,p.amp);
     //with gaussians
 //     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
 //     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
@@ -110,24 +111,57 @@ int main( int argc, char* argv[])
     unsigned step = 0;
 
     /////////////////////////////set up hdf5/////////////////////////////////
-    file::T5trunc t5file( argv[2], input);
-    std::vector<std::string> names(5); 
+    //file::T5trunc t5file( argv[2], input);
+    int status, ncid;
+    if( status = nc_create( argv[2], NC_CLOBBER, &ncid)) {std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    if( status = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data()) ) {
+        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    if( status = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data()) ) {
+        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    int dim_ids[4], tvarID;
+    if( status = file::define_dimensions( ncid, dim_ids, &tvarID, grid) ){
+        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+
+    std::vector<std::string> names(6);
+    int dataIDs[names.size()];
     names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
-    names[4] = "potential";
-    std::vector<unsigned> dims( 3);
-    dims[0] = grid.Nz(), dims[1] = grid.n()*grid.Ny(), dims[2] = grid.n()*grid.Nx();
-    std::vector<dg::HVec> output(5); 
+    names[4] = "potential"; names[5] = "aparallel";
+    for( unsigned i=0; i<names.size(); i++)
+        if( status = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]) ){
+            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+
+    if( status = nc_enddef(ncid)){std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+
     ///////////////////////////////////first output/////////////////////////
+    size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    size_t start[4] = {0, 0, 0, 0};
     feltor.exp( y0,y0,2); //transform to correct values
-    for( unsigned i=0; i<4; i++)
-        output[i] = y0[i];
-    output[4] = feltor.potential()[0];
-    t5file.write( output, names, dims, time );
-    t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
+    dg::HVec output;
+
+    for( unsigned i=0; i<2; i++)
+    {
+        output = y0[i];//transfer to host
+        if( status = nc_put_vara_double( ncid, dataIDs[i], start, count, output.data() ) ){
+            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    }
+    output = feltor.uparallel()[0];
+    if( status = nc_put_vara_double( ncid, dataIDs[2], start, count, output.data() ) ){
+        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    output = feltor.uparallel()[1];
+    if( status = nc_put_vara_double( ncid, dataIDs[3], start, count, output.data() ) ){
+        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    output = feltor.potential()[0];
+    if( status = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() ) ){
+        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    output =feltor.aparallel();
+    if( status = nc_put_vara_double( ncid, dataIDs[5], start, count, output.data() ) ){
+        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
     try
+
     {
 #ifdef DG_BENCHMARK
     unsigned step = 0;
@@ -147,14 +181,38 @@ int main( int argc, char* argv[])
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 break;
             }
-            t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
+            //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
         }
         time += p.itstp*p.dt;
+        //new time stuff
+        double timei=i;
+        const size_t Tcount = 1;
+        const size_t Tstart = i;
+        start[0] = i;
+
         feltor.exp( y0,y0,2); //transform to correct values
-        for( unsigned i=0; i<4; i++)
-            output[i] = y0[i];
-        output[4] = feltor.potential()[0];
-        t5file.write( output, names, dims, time );
+        for( unsigned j=0; j<2; j++)
+        {
+            output = y0[j];//transfer to host
+            if( status = nc_put_vara_double( ncid, dataIDs[j], start, count, output.data() ) ){
+                std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+        }
+
+        output = feltor.uparallel()[0];
+        if( status = nc_put_vara_double( ncid, dataIDs[2], start, count, output.data() ) ){
+            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+        output = feltor.uparallel()[1];
+        if( status = nc_put_vara_double( ncid, dataIDs[3], start, count, output.data() ) ){
+            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+        output = feltor.potential()[0];
+        if( status = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() ) ){
+            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+        output = feltor.aparallel();
+        if( status = nc_put_vara_double( ncid, dataIDs[5], start, count, output.data() ) ){
+            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+        if(  status = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &timei)){
+            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+
 #ifdef DG_BENCHMARK
         ti.toc();
         step+=p.itstp;
@@ -174,6 +232,7 @@ int main( int argc, char* argv[])
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+    if( (status = nc_close(ncid))){std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
 
     return 0;
 
