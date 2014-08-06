@@ -24,6 +24,7 @@ int main()
     thrust::host_vector<double> data = dg::evaluate( function, g);
     int ncid, retval;
     //retval = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
+
     retval = nc_create( "test.nc", NC_CLOBBER, &ncid);
     retval = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
     int dim_ids[4], tvarID;

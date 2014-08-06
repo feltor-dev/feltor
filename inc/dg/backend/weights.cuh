@@ -177,6 +177,7 @@ int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
 template <class T>
 thrust::host_vector<T> w2d( const Grid2d<T>& g)
 {
+    //choose layout
     thrust::host_vector<T> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
         //v[i] = g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
@@ -212,7 +213,8 @@ thrust::host_vector<T> w3d( const Grid3d<T>& g)
 {
     thrust::host_vector<T> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        v[i] = g.hz()*g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
+        //v[i] = g.hz()*g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
+        v[i] = g.hz()*g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), g.Nx(), i)]*g.dlt().weights()[detail::get_j(g.n(), g.Nx(), i)];
     return v;
 }
 /**
