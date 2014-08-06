@@ -1,12 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-system=leo3
-=======
-system=vsc
->>>>>>> 08f521beb571a691e1102a0c2181c2f9767d111e
-=======
 system=home
->>>>>>> bb23f9e8e388a0ecf881acf1f2b97574f308eb68
 device=gpu
 
 INCLUDE = -I../../ # other project libraries
