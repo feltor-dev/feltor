@@ -49,7 +49,7 @@ fftw_r2r_kind fftw_convert( enum bc bc)
     switch( bc)
     {
         case( TL_PERIODIC): 
-            throw Message( "Cannot convert TL_PERIODIC to fftw_r2r_kind!", ping);
+            throw Message( "Cannot convert TL_PERIODIC to fftw_r2r_kind!", _ping_);
             break;
         case( TL_DST00) : kind = FFTW_RODFT00; break;
         case( TL_DST10) : kind = FFTW_RODFT10; break;

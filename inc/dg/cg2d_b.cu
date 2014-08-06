@@ -4,14 +4,13 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "matrix_traits_thrust.h"
 #include "timer.cuh"
 #include "evaluation.cuh"
-#include "cg.cuh"
 #include "derivatives.cuh"
-
 #include "typedefs.cuh"
+#include "cusp_thrust_backend.h"
 
+#include "cg.h"
 
 //leo3 can do 350 x 350 but not 375 x 375
 const double ly = 2.*M_PI;
@@ -19,11 +18,11 @@ const double ly = 2.*M_PI;
 const double eps = 1e-6; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
-const double lx = M_PI;
+const double lx = 2.*M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double derivative( double x, double y){return cos(x)*sin(y);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
-dg::bc bcx = dg::DIR;
+dg::bc bcx = dg::PER;
 //const double lx = 2./3.*M_PI;
 //double fct(double x, double y){ return sin(y)*sin(3.*x/4.);}
 //double laplace_fct( double x, double y) { return 25./16.*sin(y)*sin(3.*x/4.);}
@@ -38,17 +37,17 @@ int main()
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
-    const dg::HVec s2d_h = dg::create::s2d( grid);
+    const dg::HVec s2d_h = dg::create::weights( grid);
     const dg::DVec s2d_d( s2d_h);
-    const dg::HVec t2d_h = dg::create::t2d( grid);
+    const dg::HVec t2d_h = dg::create::precond( grid);
     const dg::DVec t2d_d( t2d_h);
     std::cout<<"Expand initial condition\n";
-    dg::HVec x = dg::expand( initial, grid);
+    dg::HVec x = dg::evaluate( initial, grid);
 
     std::cout << "Create symmetric Laplacian\n";
     t.tic();
-    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::forward); 
-    dg::DMatrix DX = dg::create::dx( grid, dg::LSPACE);
+    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
+    dg::DMatrix DX = dg::create::dx( grid);
     dg::HMatrix A = dA;
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
@@ -57,9 +56,9 @@ int main()
     dg::CG< dg::HVec > pcg_host( x, n*n*Nx*Ny);
 
     std::cout<<"Expand right hand side\n";
-    const dg::HVec solution = dg::expand ( fct, grid);
-    const dg::DVec deriv = dg::expand( derivative, grid);
-    dg::HVec b = dg::expand ( laplace_fct, grid);
+    const dg::HVec solution = dg::evaluate ( fct, grid);
+    const dg::DVec deriv = dg::evaluate( derivative, grid);
+    dg::HVec b = dg::evaluate ( laplace_fct, grid);
     //compute S b
     dg::blas2::symv( s2d_h, b, b);
 

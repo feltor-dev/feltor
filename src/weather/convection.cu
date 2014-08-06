@@ -6,10 +6,11 @@
 #include "draw/host_window.h"
 
 #include "convection.cuh"
-#include "dg/karniadakis.cuh"
-#include "dg/timer.cuh"
-
+#include "dg/backend/typedefs.cuh"
+#include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
+
+
 
 struct InitDens
 {

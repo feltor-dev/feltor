@@ -6,7 +6,7 @@
 
 #include "timer.cuh"
 #include "evaluation.cuh"
-#include "cg.cuh"
+#include "cg.h"
 #include "derivatives.cuh"
 
 #include "typedefs.cuh"
@@ -56,7 +56,7 @@ int main()
 
     dg::DVec w3d_d(w3d), v3d_d(v3d), x3_d(x3), b3_d(b3);
 
-    dg::HMatrix A3 = dg::create::laplacianM_perp( g3d, dg::not_normed, dg::XSPACE); 
+    dg::HMatrix A3 = dg::create::laplacianM_perp( g3d, dg::not_normed); 
     dg::DMatrix A3_d(A3);
     dg::CG<dg::HVec > pcg3_host( x3, g3d.size());
     dg::CG<dg::DVec > pcg3_d( x3_d, g3d.size());
@@ -80,22 +80,21 @@ int main()
     //cout << "L2 Norm2 of Solution is        " << norm3 << endl;
     cout << "L2 Norm of relative error is   " <<sqrt( eps3/norm3)<<endl;
     /////////////////STD_VECTOR MATRIX//////////////////////////
-    dg::Grid2d<double> g2d( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
-    dg::DVec w2d = dg::create::w2d( g2d), v2d( dg::create::v2d(g2d));
-    dg::DMatrix A2  =dg::create::laplacianM( g2d, dg::not_normed, dg::XSPACE);
-    dg::DVec x2 = dg::evaluate( initial, g2d);
-    dg::DVec b2 = dg::evaluate( laplace_fct, g2d);
-    dg::blas2::symv( w2d, b2, b2);
-    std::vector<dg::DVec> v2_( g3d.Nz(), v2d);
-    std::vector<dg::DVec> b2_( g3d.Nz(), b2);
-    std::vector<dg::DVec> x2_( g3d.Nz(), x2);
-    std::vector<dg::DMatrix*> A2_( g3d.Nz(), &A2);
-    dg::CG<std::vector<dg::DVec> > pcg2( x2_, g2d.size());
-    t.tic();
-    cout << "Number of pcg iterations "<< pcg2( A2_, x2_, b2_, v2_, eps)<<endl;
-    t.toc();
-    cout << "... for a precision of "<< eps<<endl;
-    cout << "... on the device took "<< t.diff()<<"s\n";
+    //dg::Grid2d<double> g2d( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+    //dg::DVec w2d = dg::create::w2d( g2d), v2d( dg::create::v2d(g2d));
+    //dg::DMatrix A2  =dg::create::laplacianM( g2d, dg::not_normed);
+    //dg::DVec x2 = dg::evaluate( initial, g2d);
+    //dg::DVec b2 = dg::evaluate( laplace_fct, g2d);
+    //dg::blas2::symv( w2d, b2, b2);
+    //std::vector<dg::DVec> v2_( g3d.Nz(), v2d);
+    //std::vector<dg::DVec> b2_( g3d.Nz(), b2);
+    //std::vector<dg::DVec> x2_( g3d.Nz(), x2);
+    //dg::CG<std::vector<dg::DVec> > pcg2( x2_, g2d.size());
+    //t.tic();
+    //cout << "Number of pcg iterations "<< pcg2( A2, x2_, b2_, v2_, eps)<<endl;
+    //t.toc();
+    //cout << "... for a precision of "<< eps<<endl;
+    //cout << "... on the device took "<< t.diff()<<"s\n";
 
 
     return 0;

@@ -6,7 +6,7 @@
 #include <thrust/host_vector.h>
 
 #include "evaluation.cuh"
-#include "arakawa.cuh"
+#include "arakawa.h"
 #include "blas.h"
 #include "typedefs.cuh"
 
@@ -61,6 +61,7 @@ int main( int argc, char* argv[])
     //}
     //std::ofstream ost( argv[1]);
     //ost << "# points jacobian lhs*jac rhs*jac error"<<std::endl;
+    std::cout << "# points jacobian lhs*jac rhs*jac error"<<std::endl;
     unsigned n, Nx, Ny;
     for( unsigned i=2; i<=nmax; i++)
     {

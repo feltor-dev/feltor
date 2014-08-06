@@ -4,8 +4,9 @@
 #include <sstream>
 
 #include "draw/host_window.h"
-#include "dg/xspacelib.cuh"
-#include "dg/timer.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/file.h"
 
@@ -49,8 +50,10 @@ int main( int argc, char* argv[])
     dg::Grid3d<double> grid( p.R_0-p.a*1.1, p.R_0+p.a*1.1, -p.a*1.1, p.a*1.1, 0., 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
     dg::HVec visual(  grid.size(), 0.), input( visual);
     dg::HMatrix equi = dg::create::backscatter( grid);
-    dg::HMatrix laplacianM = dg::create::laplacianM_perp( grid, dg::normed, dg::XSPACE);
-    draw::ColorMapRedBlueExt colors( 1.);
+    dg::HMatrix laplacianM = dg::create::laplacianM_perp( grid, dg::normed);
+//     draw::ColorMapRedBlueExt colors( 1.);
+        draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
+
     //create timer
     unsigned index = 1;
     std::cout << "PRESS N FOR NEXT FRAME!\n";
@@ -82,10 +85,14 @@ int main( int argc, char* argv[])
         t5file.get_field( input, "electrons", index);
         thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
         dg::blas2::gemv( equi, input, visual);
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        if( v[6] > 0) colors.scale() = v[6];
+//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+//         if( v[6] > 0) colors.scale() = v[6];
+//         title << std::setprecision(2) << std::scientific;
+//         title <<"ne / "<<colors.scale()<<"\t";
+                colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
-        title <<"ne / "<<colors.scale()<<"\t";
+        title <<"ne / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v[2]; k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
@@ -96,10 +103,14 @@ int main( int argc, char* argv[])
         t5file.get_field( input, "ions", index);
         thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
         dg::blas2::gemv( equi, input, visual);
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        if( v[6] > 0) colors.scale() = v[6];
+//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+//         if( v[6] > 0) colors.scale() = v[6];
+//         title << std::setprecision(2) << std::scientific;
+//         title <<"ni / "<<colors.scale()<<"\t";
+          colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
-        title <<"ni / "<<colors.scale()<<"\t";
+        title <<"ni / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v[2]; k++)
         {
             unsigned size=p.n*p.n*p.Nx*p.Ny;
@@ -114,12 +125,15 @@ int main( int argc, char* argv[])
         input.swap( visual);
         dg::blas2::gemv( equi, input, visual);
         dg::blas1::axpby( -1., visual, 0., visual);//minus laplacian
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        if(colors.scale() == 0) { colors.scale() = 1;}
-        if( v[7] > 0)
-            colors.scale() = v[7];
-        //draw phi and swap buffers
-        title <<"omega / "<<colors.scale()<<"\t";
+//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+//         if(colors.scale() == 0) { colors.scale() = 1;}
+//         if( v[7] > 0)
+//             colors.scale() = v[7];
+//         //draw phi and swap buffers
+//         title <<"omega / "<<colors.scale()<<"\t";
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        title <<"omega / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v[2]; k++)
         {
             unsigned size=p.n*p.n*p.Nx*p.Ny;
@@ -128,10 +142,13 @@ int main( int argc, char* argv[])
         }
         t5file.get_field( input, "Ue", index);
         dg::blas2::gemv( equi, input, visual);
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        if( v[6] > 0) colors.scale() = v[6];
-        title << std::setprecision(2) << std::scientific;
-        title <<"Ue / "<<colors.scale()<<"\t";
+//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+//         if( v[6] > 0) colors.scale() = v[6];
+//         title << std::setprecision(2) << std::scientific;
+//         title <<"Ue / "<<colors.scale()<<"\t";
+                colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v[2]; k++)
         {
             unsigned size=p.n*p.n*p.Nx*p.Ny;
@@ -141,10 +158,13 @@ int main( int argc, char* argv[])
 
         t5file.get_field( input, "Ui", index);
         dg::blas2::gemv( equi, input, visual);
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        if( v[6] > 0) colors.scale() = v[6];
-        title << std::setprecision(2) << std::scientific;
-        title <<"Ui / "<<colors.scale()<<"\t";
+//         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+//         if( v[6] > 0) colors.scale() = v[6];
+//         title << std::setprecision(2) << std::scientific;
+//         title <<"Ui / "<<colors.scale()<<"\t";
+                colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v[2]; k++)
         {
             unsigned size=p.n*p.n*p.Nx*p.Ny;

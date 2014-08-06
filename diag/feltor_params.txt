@@ -4,7 +4,7 @@
             ----------------------------------------------
 
 1) # of rows                  = 5
-2) draw every #th plane       = 1
+2) draw every #th plane       = 16
 3) box width (in pixel)       = 200 
 4) box height(in pixel)       = 200 
 5) output frame               = 10

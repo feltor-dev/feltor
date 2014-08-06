@@ -169,7 +169,7 @@ void DRT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DRT_DFT>,n>& v, enum
     {
 #ifdef TL_DEBUG
         if( v[k].isVoid())
-            throw Message("You gave me a void Matrix!!", ping);
+            throw Message("You gave me a void Matrix!!", _ping_);
 #endif
         drt_dft.r2c_T( v[k], cdens[k]);
     }
@@ -234,7 +234,7 @@ void DRT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DRT_DFT>,n>& v, enum
                 }
             break;
         case( TL_ALL):
-            throw Message( "TL_ALL not treated yet!", ping);
+            throw Message( "TL_ALL not treated yet!", _ping_);
     }
     //compute the rest cphi[k]
     for( unsigned k=0; k<n-1; k++)
@@ -256,7 +256,7 @@ void DRT_DFT_Solver<n>::getField( Matrix<double, TL_DRT_DFT>& m, enum target t)
 {
 #ifdef TL_DEBUG
     if(m.isVoid()) 
-        throw Message( "You may not swap in a void Matrix!\n", ping);
+        throw Message( "You may not swap in a void Matrix!\n", _ping_);
 #endif
     switch( t)
     {
@@ -264,7 +264,7 @@ void DRT_DFT_Solver<n>::getField( Matrix<double, TL_DRT_DFT>& m, enum target t)
         case( TL_IONS):         swap_fields( m, nonlinear[1]); break;
         case( TL_IMPURITIES):   swap_fields( m, nonlinear[2]); break;
         case( TL_POTENTIAL):    swap_fields( m, cphi[0]); break;
-        case( TL_ALL):          throw Message( "TL_ALL not allowed here", ping);
+        case( TL_ALL):          throw Message( "TL_ALL not allowed here", _ping_);
     }
 }
 template< size_t n>
@@ -277,7 +277,7 @@ const Matrix<double, TL_DRT_DFT>& DRT_DFT_Solver<n>::getField( enum target t) co
         case( TL_IONS):         m = &dens[1]; break;
         case( TL_IMPURITIES):   m = &dens[2]; break;
         case( TL_POTENTIAL):    m = &phi[0]; break;
-        case( TL_ALL):          throw Message( "TL_ALL not allowed here", ping);
+        case( TL_ALL):          throw Message( "TL_ALL not allowed here", _ping_);
     }
     return *m;
 }

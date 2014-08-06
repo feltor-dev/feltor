@@ -1,13 +1,11 @@
 #include <iostream>
 #include <iomanip>
 
-#include "timer.cuh"
-#include <cusp/copy.h>
-#include <cusp/print.h>
-#include <cusp/hyb_matrix.h>
+#include "backend/timer.cuh"
 
+#include "polarisation.h"
 #include "xspacelib.cuh"
-#include "cg.cuh"
+#include "cg.h"
 
 
 //NOTE: IF DEVICE=CPU THEN THE POLARISATION ASSEMBLY IS NOT PARALLEL AS IT IS NOW 
@@ -35,12 +33,6 @@ double der(double x, double y)  { return cos( x)*sin(y);}
 
 using namespace std;
 
-//replace DVec with HVec and DMatrix with HMAtrix to compute on host vs device
-typedef dg::DVec Vector;
-typedef dg::DMatrix Matrix;
-//typedef cusp::ell_matrix<int, double, cusp::device_memory> Matrix;
-//typedef dg::HVec Vector;
-//typedef dg::HMatrix Matrix;
 int main()
 {
     dg::Timer t;
@@ -49,83 +41,42 @@ int main()
     cout << "Type n, Nx and Ny and epsilon! \n";
     cin >> n >> Nx >> Ny; //more N means less iterations for same error
     cin >> eps;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
-    Vector v2d = dg::create::v2d( grid);
-    Vector w2d = dg::create::w2d( grid);
-    //create functions A(chi) x = b
-    Vector x =    dg::evaluate( initial, grid);
-    Vector b =    dg::evaluate( rhs, grid);
-    Vector chi =  dg::evaluate( pol, grid);
-
-
-    cout << "Create HOST Polarisation object!\n";
-    t.tic();
-    dg::Polarisation2dX<dg::HVec> pol_host( grid, dg::backward);
-    t.toc();
-    cout << "Creation of HOST polarisation object took: "<<t.diff()<<"s\n";
-    cout << "Create DEVICE Polarisation object!\n";
-    t.tic();
-    dg::Polarisation2dX<dg::DVec, dg::DMatrix> pol_device( grid, dg::backward);
-    t.toc();
-    cout << "Creation of DEVICE polarisation object took: "<<t.diff()<<"s\n";
-    cout << "Create Polarisation matrix!\n";
-    dg::Timer ti;
-    ti.tic();
-    t.tic();
-    dg::HMatrix B_ = pol_host.create(chi);
-    t.toc();
-    cout << "Creation of polarisation matrix took: "<<t.diff()<<"s\n";
-    t.tic();
-    //TODO: Umwandlung Memory-technisch überprüfen!!!
-    //cusp::csr_matrix<int, double, cusp::device_memory> B = B_;
-    cusp::ell_matrix<int, double, cusp::host_memory> B = B_;
-    t.toc();
-    cout << "Conversion (1) to device matrix took: "<<t.diff()<<"s\n";
-    t.tic();
-    Matrix A = B;  
-    t.toc();
-    cout << "Conversion (2) to device matrix took: "<<t.diff()<<"s\n";
-    ti.toc();
-    std::cout <<"TOTAL TIME: "<<ti.diff()<<"s\n";
-
-
     cout << "# of polynomial coefficients: "<< n <<endl;
     cout << "# of 2d cells                 "<< Nx*Ny <<endl;
-    dg::CG<Vector > pcg( x, n*n*Nx*Ny);
-    //compute W b
-    dg::blas2::symv( w2d, b, b);
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
+    dg::DVec v2d = dg::create::v2d( grid);
+    dg::DVec w2d = dg::create::w2d( grid);
+    //create functions A(chi) x = b
+    dg::DVec x =    dg::evaluate( initial, grid);
+    dg::DVec b =    dg::evaluate( rhs, grid);
+    dg::DVec chi =  dg::evaluate( pol, grid);
+
+
+    cout << "Create Polarisation object and set chi!\n";
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg( A, x, b, v2d, eps)<<endl;
+    dg::Polarisation<dg::DMatrix, dg::DVec, dg::DVec> pol( grid);
+    pol.set_chi( chi);
+    t.toc();
+    cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
+
+    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
+    t.tic();
+    std::cout << "Number of pcg iterations "<< invert( pol, x, b)<<endl;
     t.toc();
     cout << "For a precision of "<< eps<<endl;
     cout << "Took "<<t.diff()<<"s\n";
 
-    Vector xd =    dg::evaluate( initial, grid);
-    Vector bd =    dg::evaluate( rhs, grid);
-    Vector chid =  dg::evaluate( pol, grid);
-    dg::Polarisation<Matrix, dg::DVec, dg::DVec> pol_device_p( grid, xd);
-    pol_device_p.set_chi( chid);
-    dg::Invert< dg::DVec> invert( xd, n*n*Nx*Ny, eps);
-    t.tic();
-    std::cout << "Number of pcg iterations "<< invert( pol_device_p, xd, bd)<<endl;
-    t.toc();
-    std::cout << "For a precision of "<< eps<<endl;
-    std::cout << "Took "<<t.diff()<<"s\n";
-
-
-
-
     //compute error
-    const Vector solution = dg::evaluate( sol, grid);
-    const Vector derivati = dg::evaluate( der, grid);
-    Vector error( solution);
+    const dg::DVec solution = dg::evaluate( sol, grid);
+    const dg::DVec derivati = dg::evaluate( der, grid);
+    dg::DVec error( solution);
     dg::blas1::axpby( 1.,x,-1., error);
 
     double err = dg::blas2::dot( w2d, error);
     std::cout << "L2 Norm2 of Error is " << err << endl;
     double norm = dg::blas2::dot( w2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
-    Matrix DX = dg::create::dx( grid);
+    dg::DMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);
@@ -133,11 +84,6 @@ int main()
     norm = dg::blas2::dot( w2d, derivati);
     std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
-    //compute error
-    dg::blas1::axpby( 1.,xd,-1., solution, error);
-    err = dg::blas2::dot( w2d, error);
-    std::cout << "L2 Norm2 of Error is " << err << endl;
-    std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
 
     return 0;
 }

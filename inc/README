@@ -18,8 +18,6 @@ codes.
 - the TOEFL library needs fftw3 installed and relies on some features of the 
   new C++11 standard. (minimal gcc version is 4.4)
         http://www.fftw.org/
-- the DRAW library comes in handy for compiling some test codes that use OpenGL 
-        https://github.com/mwiesenberger/draw
 
 2. Library documentation
 Each library comes with a documentation that can be 
