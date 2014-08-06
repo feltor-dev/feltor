@@ -28,7 +28,7 @@ struct Fail : public std::exception
      */
     double epsilon() const { return eps;}
     /**
-     * @brief Waht string
+     * @brief What string
      *
      * @return string "Failed to converge"
      */
