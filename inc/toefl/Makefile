@@ -1,4 +1,4 @@
-INCLUDE = -I../../../
+INCLUDE = -I$(HOME)/include
 CXX = g++
 CFLAGS = -Wall -fopenmp -std=c++0x
 LIBS = -lfftw3 -lm

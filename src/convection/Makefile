@@ -1,5 +1,5 @@
 INCLUDE = -I../../inc
-INCLUDE += -I/home/markus/Dokumente/Phd/Include
+INCLUDE += -I$(HOME)/include
 
 CFLAGS = -Wall -std=c++0x -fopenmp
 LIBS = -lfftw3 -lm -lGL -lglfw3 -lrt -lX11 -lXxf86vm -lXi -lXrandr

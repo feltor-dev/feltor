@@ -1,10 +1,11 @@
 CXX=g++
-system = leo3
+system = home
 
 INCLUDE =-I../
-INCLUDE+=-I/home/matthias/include
+INCLUDE+=-I$(HOME)/include
 
 CFLAGS = -Wall -std=c++0x 
+LIBS = -lnetcdf
 
 ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(HOME)/include
