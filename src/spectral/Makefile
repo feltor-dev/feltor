@@ -1,8 +1,10 @@
-system = home
+system = leo3
 INCLUDE = -I../../inc
 INCLUDE += -I/home/matthias/include
 
 CFLAGS = -Wall -std=c++0x -fopenmp
+GLFLAGS= -lfftw3 -lm -lGL -lglfw3 -lrt -lX11 -lXxf86vm -lXi -lXrandr
+LIBS = -lfftw3 -lhdf5 -lhdf5_hl
 
 ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(HOME)/include
@@ -20,16 +22,16 @@ endif
 all: innto innblobs innto_hpc innto_hw
 
 innto: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
-	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
+	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 
 innto_per: innto_per.cpp dft_dft_solver.h blueprint.h equations.h
-	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
+	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 
 innblobs: innblobs.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
-	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
+	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 
 innto_t: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
-	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@
+	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 	./$@
 
 innto_hpc: innto_hpc.cpp drt_dft_solver.h blueprint.h equations.h
