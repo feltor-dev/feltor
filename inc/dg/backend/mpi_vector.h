@@ -22,34 +22,34 @@ struct MPI_Vector
     unsigned Nz()const {return Nz_;}
     unsigned size() const{return n_*n_*Nx_*Ny_*Nz_;}
     double operator[]( unsigned idx) const {return data_[idx];}
+    /**
+     * @brief exchanged data of overlapping rows
+     *
+     * @param comm Communicator
+     */
     void x_row( MPI_Comm comm);
+    /**
+     * @brief exchange data of overlapping columns
+     *
+     * @param comm Communicator
+     */
     void x_col( MPI_Comm comm);
-    void display( std::ostream& os)
+    void display( std::ostream& os) const
     {
-        for( unsigned i=0; i<Nx_; i++)
-        {
-            for( unsigned j=0; j<Ny_; j++)
+        for( unsigned s=0; s<Nz_; s++)
+            for( unsigned i=0; i<n_*Ny_; i++)
             {
-                for( unsigned k=0; k<n_; k++)
-                    os << data_[(i*Nx_ + j)*n_+k] << " ";
-                os << " ";
+                for( unsigned j=0; j<n_*Nx_; j++)
+                    os << data_[(s*n_*Ny_+i)*n_*Nx_ + j] << " ";
+                os << "\n";
             }
-            os << "\n";
-        }
     }
     friend std::ostream& operator<<( std::ostream& os, const MPI_Vector& v)
     {
-        std::cout << "Vector with "<<v.Ny_<<" rows and "<<v.Nx_<<" columns: \n";
-        for( unsigned i=0; i<v.Ny_; i++)
-        {
-            for( unsigned j=0; j<v.Nx_; j++)
-            {
-                for( unsigned k=0; k<v.n_; k++)
-                    os << v.data_[(i*v.Nx_ + j)*v.n_+k] << " ";
-                os << " ";
-            }
-            os << "\n";
-        }
+        os << "Vector with Nz = "<<v.Nz_<<", Ny = "<<v.Ny_
+           <<" Nx = "<<v.Nx_<<" and n = "<<v.n_<<": \n";
+        v.display(os);
+        return os;
     }
   private:
     unsigned n_, Nx_, Ny_, Nz_; //!< has to know interior 
@@ -63,35 +63,13 @@ struct VectorTraits<MPI_Vector> {
 };
 
 
-void MPI_Vector::x_row( MPI_Comm comm)
-{
-    MPI_Status status;
-    int cols = Nx_*n_;
-    int rows = Ny_*n_;
-    int source, dest;
-    MPI_Cart_shift( comm, 1, -1, &source, &dest);
-    //MPI_Sendrecv is good for sending in a "chain"
-    MPI_Sendrecv(   &data_[n_*cols], n_*cols, MPI_DOUBLE,  //sender
-                    dest, 7,  //destination
-                    &data_[cols*(rows-n_)], n_*cols, MPI_DOUBLE, //receiver
-                    source, 7, //source
-                    MPI_COMM_WORLD, &status);
-
-    MPI_Cart_shift( comm, 1, +1, &source, &dest);
-    MPI_Sendrecv(   &data_[(rows-2*n_)*cols], n_*cols, MPI_DOUBLE,  //sender
-                    dest, 1,  //destination
-                    &data_[0], n_*cols, MPI_DOUBLE, //receiver
-                    source, 1, //source
-                    MPI_COMM_WORLD, &status);
-
-
-}
 void MPI_Vector::x_col( MPI_Comm comm)
 {
+    //shift data in zero-th dimension
     MPI_Status status;
     int n = n_;
     int cols = Nx_;
-    int rows = n_*Ny_;
+    int rows = n_*Ny_*Nz_;
     //create buffer before sending single cells (1 is left side, 2 is right side)
     thrust::host_vector<double> sendbuffer1( rows*n);
     thrust::host_vector<double> recvbuffer1( rows*n);
@@ -99,13 +77,11 @@ void MPI_Vector::x_col( MPI_Comm comm)
     thrust::host_vector<double> recvbuffer2( rows*n);
     //copy into buffers
     for( int i=0; i<rows; i++)
-    {
         for( int j=0; j<n; j++)
         {
             sendbuffer1[i*n+j] = data_[(i*cols + 1       )*n+j];
             sendbuffer2[i*n+j] = data_[(i*cols + cols - 2)*n+j];
         }
-    }
     int source, dest;
     MPI_Cart_shift( comm, 0, -1, &source, &dest);
     MPI_Sendrecv(   sendbuffer1.data(), rows*n, MPI_DOUBLE,  //sender
@@ -121,14 +97,62 @@ void MPI_Vector::x_col( MPI_Comm comm)
                     MPI_COMM_WORLD, &status);
     //copy back into vector
     for( int i=0; i<rows; i++)
-    {
         for( int j=0; j<n; j++)
         {
             data_[(i*cols           )*n+j] = recvbuffer1[i*n+j];
             data_[(i*cols + cols - 1)*n+j] = recvbuffer2[i*n+j];
         }
-    }
 }
 
+void MPI_Vector::x_row( MPI_Comm comm)
+{
+    //shift data in first dimension
+    MPI_Status status;
+    int n = n_;
+    int cols = Nx_*n_;
+    int rows = Ny_*n_;
+    int number = Nz_*Nx_*n;
+
+    thrust::host_vector<double> sendbuffer1( n*number);
+    thrust::host_vector<double> recvbuffer1( n*number);
+    thrust::host_vector<double> sendbuffer2( n*number);
+    thrust::host_vector<double> recvbuffer2( n*number);
+    //copy into buffers
+    for( int s=0; s<Nz_; s++)
+        for( int k=0; k<n; k++)
+            for( int j=0; j<cols; j++)
+            {
+                sendbuffer1[(s*n+k)*cols+j] = 
+                    data_[((s*Ny_ + 1)*n + k)*cols + j];
+                sendbuffer2[(s*n+k)*cols+j] = 
+                    data_[((s*Ny_ + Ny_ - 2)*n + k)*cols + j];
+            }
+    int source, dest;
+    MPI_Cart_shift( comm, 1, -1, &source, &dest);
+    //MPI_Sendrecv is good for sending in a "chain"
+    MPI_Sendrecv(   sendbuffer1.data(), n*number, MPI_DOUBLE,  //sender
+                    dest, 7,  //destination
+                    recvbuffer2.data(), n*number, MPI_DOUBLE, //receiver
+                    source, 7, //source
+                    comm, &status);
+
+    MPI_Cart_shift( comm, 1, +1, &source, &dest);
+    MPI_Sendrecv(   sendbuffer2.data(), n*number, MPI_DOUBLE,  //sender
+                    dest, 1,  //destination
+                    recvbuffer1.data(), n*number, MPI_DOUBLE, //receiver
+                    source, 1, //source
+                    comm, &status);
+    //copy back into vector
+    for( int s=0; s<Nz_; s++)
+        for( int k=0; k<n; k++)
+            for( int j=0; j<cols; j++)
+            {
+                data_[((s*Ny_    )*n + k)*cols + j] = 
+                    recvbuffer1[(s*n+k)*cols+j];
+                data_[((s*Ny_ + Ny_ - 1)*n + k)*cols + j] =
+                    recvbuffer2[(s*n+k)*cols+j]; 
+            }
+
+}
 
 }//namespace dg
