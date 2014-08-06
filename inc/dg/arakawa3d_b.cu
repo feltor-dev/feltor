@@ -6,7 +6,7 @@
 
 #include "timer.cuh"
 #include "evaluation.cuh"
-#include "arakawa.cuh"
+#include "arakawa.h"
 #include "blas.h"
 #include "typedefs.cuh"
 
@@ -49,7 +49,7 @@ int main()
     dg::DVec eins( grid.size(), 1.);
     dg::Timer t;
 
-    dg::ArakawaX<dg::DVec> arakawa( grid);
+    dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
     t.tic(); 
     for( unsigned i=0; i<20; i++)
         arakawa( lhs, rhs, jac);

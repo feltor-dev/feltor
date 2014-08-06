@@ -3,12 +3,12 @@
 
 #include <exception>
 
-#include "dg/xspacelib.cuh"
-#include "dg/cg.cuh"
-#include "dg/gamma.cuh"
+#include "dg/algorithm.h"
+#include "dg/backend/polarisation.cuh"
+#include "dg/backend/typedefs.cuh"
 
 #ifdef DG_BENCHMARK
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh"
 #endif
 
 
@@ -21,8 +21,8 @@ namespace dg
 template<class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):nu_(nu), global(global), w2d( 2, dg::create::w2d(g)), v2d( 2, dg::create::v2d(g)), temp( g.size()), expx(temp){
-        LaplacianM_perp = dg::create::laplacianM( g, dg::normed, dg::XSPACE);
+    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):nu_(nu), global(global), w2d( dg::create::w2d(g)), v2d( dg::create::v2d(g)), temp( g.size()), expx(temp){
+        LaplacianM_perp = dg::create::laplacianM( g, dg::normed);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -45,8 +45,8 @@ struct Diffusion
         }
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    const std::vector<container>& weights(){return w2d;}
-    const std::vector<container>& precond(){return v2d;}
+    const container& weights(){return w2d;}
+    const container& precond(){return v2d;}
 
   private:
     void divide( const container& zaehler, const container& nenner, container& result)
@@ -56,18 +56,9 @@ struct Diffusion
     }
     double nu_;
     bool global;
-    const std::vector<container> w2d, v2d;
+    const container w2d, v2d;
     container temp, expx;
     dg::DMatrix LaplacianM_perp;
-};
-struct Fail : public std::exception
-{
-
-    Fail( double eps): eps( eps) {}
-    double epsilon() const { return eps;}
-    char const* what() const throw(){ return "Failed to converge";}
-  private:
-    double eps;
 };
 
 template< class container=thrust::device_vector<double> >
@@ -131,7 +122,7 @@ struct ToeflR
      *
      * @return Gamma operator
      */
-    const Gamma<Matrix, container >&  gamma() const {return gamma1;}
+    dg::Helmholtz<Matrix, container, container >&  gamma() {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -139,7 +130,7 @@ struct ToeflR
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -187,9 +178,9 @@ struct ToeflR
     //matrices and solvers
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
-    Gamma< Matrix, container > gamma1;
-    ArakawaX< container> arakawa; 
-    Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
+    Helmholtz< Matrix, container, container > gamma1;
+    ArakawaX< Matrix, container> arakawa; 
+    Polarisation2dX< thrust::host_vector<value_type>, dg::HMatrix > pol; //note the host vector
     CG<container > pcg;
 
     const container w2d, v2d, one;
@@ -207,7 +198,7 @@ ToeflR< container>::ToeflR( const Grid2d<value_type>& grid, double kappa, double
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  laplaceM, w2d, -0.5*tau),
+    gamma1(  laplaceM, w2d,v2d, -0.5*tau),
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 
@@ -215,9 +206,9 @@ ToeflR< container>::ToeflR( const Grid2d<value_type>& grid, double kappa, double
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed, dg::XSPACE, dg::symmetric); //doesn't hurt to be symmetric but doesn't solver pb
+    laplaceM = create::laplacianM( grid, normed, dg::symmetric); //doesn't hurt to be symmetric but doesn't solver pb
     //if( !global)
-    A = create::laplacianM( grid, not_normed, dg::XSPACE, dg::symmetric);
+    A = create::laplacianM( grid, not_normed, dg::symmetric);
 
 }
 
@@ -342,7 +333,7 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
 }
 
 template< class container>
-void ToeflR< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void ToeflR< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());
@@ -414,20 +405,24 @@ template< class container>
 void ToeflR< container>::exp( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
-        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<value_type>());
+        dg::blas1::transform(y[i], target[i], dg::EXP<value_type>());
+        //thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<value_type>());
 }
 template< class container>
 void ToeflR< container>::log( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
-        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
+        dg::blas1::transform( y[i], target[i], dg::LN<value_type>());
+        //thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
 }
 
 template< class container>
 void ToeflR<container>::divide( const container& zaehler, const container& nenner, container& result)
 {
-    thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
-            thrust::divides< typename container::value_type>());
+    dg::blas1::pointwiseDivide( zaehler, nenner, result);
+
+    //thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
+            //thrust::divides< typename container::value_type>());
 }
 
 }//namespace dg

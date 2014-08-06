@@ -349,7 +349,7 @@ struct T5rdonly
     /**
      * @brief Read a field at a specified index
      *
-     * @param field Container
+     * @param field Container is resized to fit the dimensions
      * @param name Name of the field (electron, ions, potential or impurities)
      * @param idx Index
      */
@@ -359,9 +359,14 @@ struct T5rdonly
         assert( idx > 0); //idx 0 is the inputfile
         std::string grpName = file::getName( file_, idx);//get group name
         hid_t group = H5Gopen( file_, grpName.data(), H5P_DEFAULT);
-        hsize_t size[2]; //get dataset size
+        int rank;
+        herr_t status = H5LTget_dataset_ndims( group, name, &rank);
+        hsize_t size[rank]; //get dataset size
         status_ = H5LTget_dataset_info( group, name, size, NULL, NULL);
-        field.resize( size[0]*size[1]);
+        unsigned number =1;
+        for( unsigned i=0; i<rank; i++)
+            number*= size[i];
+        field.resize(number);
         status_ = H5LTread_dataset_double( group, name, &field[0] );
         H5Gclose( group); //close group
     }

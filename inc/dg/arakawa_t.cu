@@ -4,9 +4,8 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "preconditioner2d.cuh"
 #include "evaluation.cuh"
-#include "arakawa.cuh"
+#include "arakawa.h"
 #include "blas.h"
 #include "typedefs.cuh"
 
@@ -40,6 +39,8 @@ double jacobian( double x, double y)
 /*
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return sin(y)*cos(x);} 
+const double lx = 2.*M_PI;
+const double ly = 2.*M_PI;
 dg::bc bcx = dg::PER; 
 dg::bc bcy = dg::PER;
 //double right2( double x, double y) {return sin(y);}
@@ -76,7 +77,7 @@ int main()
     const DVec sol = evaluate ( jacobian, grid);
     DVec eins = evaluate( one, grid);
 
-    ArakawaX< DVec> arakawa( grid);
+    ArakawaX<DMatrix, DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     //arakawa( lhs, rhs1, jac1);

@@ -44,7 +44,7 @@ struct Shu
     Shu( const Grid2d<value_type>& grid, double eps);
 
     const Matrix& lap() const { return laplaceM;}
-    ArakawaX<container>& arakawa() {return arakawa_;}
+    ArakawaX<Matrix, container>& arakawa() {return arakawa_;}
     /**
      * @brief Returns psi that belong to the last y in operator()
      *

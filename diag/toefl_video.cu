@@ -4,13 +4,14 @@
 #include <sstream>
 
 #include "draw/host_window.h"
-#include "dg/xspacelib.cuh"
-#include "dg/timer.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/file.h"
 
-//#include "galerkin/parameters.h"
-#include "lamb_dipole/parameters.h"
+#include "galerkin/parameters.h"
+//#include "lamb_dipole/parameters.h"
 
 
 //can read TOEFL and INNTO h5-files and plot them on screen
@@ -20,7 +21,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     std::stringstream title;
     std::vector<double> v = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3], v[4], "");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3]*v[2], v[4]*v[1], "");
     draw::RenderHostData render( v[1], v[2]);
 
     if( argc != 2)
@@ -63,7 +64,7 @@ int main( int argc, char* argv[])
     dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual);
     dg::HMatrix equi = dg::create::backscatter( grid);
-    dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed, dg::XSPACE);
+    dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     unsigned index = 1;

@@ -67,14 +67,14 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
     const size_t rows = c.rows(), cols = c.cols();
 #ifdef TL_DEBUG
     if( c.isVoid())
-        throw Message( "Cannot work with void Matrices!\n", ping);
+        throw Message( "Cannot work with void Matrices!\n", _ping_);
     for( unsigned k=0; k<n; k++)
     {
         if( c.rows() != in[k].rows() || c.rows() != out[k].rows())
             if( c.cols() != in[k].cols() || c.cols() != out[k].cols())
-                throw Message( "Cannot multiply coefficients! Sizes not equal!", ping);
+                throw Message( "Cannot multiply coefficients! Sizes not equal!", _ping_);
         if( in[k].isVoid() || out[k].isVoid() )
-            throw Message( "Cannot work with void Matrices!\n", ping);
+            throw Message( "Cannot work with void Matrices!\n", _ping_);
     }
 #endif
 #pragma omp parallel for 
@@ -174,7 +174,7 @@ class Karniadakis
     {
 #ifdef TL_DEBUG
         if( c_origin.isVoid())
-            throw Message( "Init coefficients first!", ping);
+            throw Message( "Init coefficients first!", _ping_);
 #endif
         multiply_coeff< n,T_k,Fourier_T>( c_inv,v,v);
     }
@@ -217,11 +217,11 @@ void Karniadakis<n,T_k,P>::init_coeff( Matrix<QuadMat<T_k, n> > & coeff_origin, 
 {
 #ifdef TL_DEBUG
     if( normalisation < 1.)
-        throw Message( "Yield the prefactor, not its inverse!", ping);
+        throw Message( "Yield the prefactor, not its inverse!", _ping_);
     if( coeff_origin.isVoid())
-        throw Message("Your coefficients are void!", ping);
+        throw Message("Your coefficients are void!", _ping_);
     if( coeff_origin.rows() != c_origin.rows() || coeff_origin.cols() != c_origin.cols())
-        throw Message("Your coefficients have wrong size!\n", ping);
+        throw Message("Your coefficients have wrong size!\n", _ping_);
 #endif
     prefactor = normalisation; 
     if( c_origin.isVoid())
@@ -230,7 +230,7 @@ void Karniadakis<n,T_k,P>::init_coeff( Matrix<QuadMat<T_k, n> > & coeff_origin, 
         c_inv.allocate( );
     }
     else
-        throw Message("You've already initialized coefficients", ping);
+        throw Message("You've already initialized coefficients", _ping_);
 }
 template< size_t n, typename T, enum Padding P>
 template< enum stepper S>
@@ -238,7 +238,7 @@ void Karniadakis< n,T,P>::invert_coeff( )
 {
 #ifdef TL_DEBUG
     if( c_origin.isVoid())
-        throw Message( "Init your coefficients first!", ping);
+        throw Message( "Init your coefficients first!", _ping_);
 #endif
     //invert coefficients
     for(unsigned i=0; i<c_inv.rows(); i++)
@@ -265,11 +265,11 @@ void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::arr
     {
 #ifdef TL_DEBUG
         if( v0[k].isVoid()||n0[k].isVoid()) 
-            throw Message( "ERROR: Cannot work on void matrices!\n", ping);
+            throw Message( "ERROR: Cannot work on void matrices!\n", _ping_);
         if( v0[k].rows() != rows || v0[k].cols() != cols)
-            throw Message( "ERROR: One of the v0 has wrong size!\n", ping);
+            throw Message( "ERROR: One of the v0 has wrong size!\n", _ping_);
         if( n0[k].rows() != rows || n0[k].cols() != cols)
-            throw Message( "ERROR: One of the n0 has wrong size!\n", ping);
+            throw Message( "ERROR: One of the n0 has wrong size!\n", _ping_);
 #endif
 #pragma omp parallel for 
         for( size_t i = 0; i < rows; i++)

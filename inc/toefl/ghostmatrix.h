@@ -118,9 +118,9 @@ T& GhostMatrix<T,P>::at( const int i, const int j)
     const int n = this->rows(), m = this->cols();
 #ifdef TL_DEBUG
    if( i < -1 || i > n || j < -1|| j > m)
-       throw BadIndex( i,n, j,m, ping);
+       throw BadIndex( i,n, j,m, _ping_);
    if( this->isVoid()) 
-       throw Message( "Trying to access a void matrix!", ping);
+       throw Message( "Trying to access a void matrix!", _ping_);
 #endif
     if( i == -1 ) //j = -1,...,m
         return ghostRows( 0, j + 1); 
@@ -139,9 +139,9 @@ const T& GhostMatrix<T,P>::at( const int i, const int j) const
     const int n = this->rows(), m = this->cols();
 #ifdef TL_DEBUG
    if( i < -1 || i > n || j < -1|| j > m)
-       throw BadIndex( i,n, j,m, ping);
+       throw BadIndex( i,n, j,m, _ping_);
    if( this->isVoid()) 
-       throw Message( "Trying to access a void matrix!", ping);
+       throw Message( "Trying to access a void matrix!", _ping_);
 #endif
     if( i == -1 ) //j = -1,...,m
         return ghostRows( 0, j + 1); 
@@ -267,7 +267,7 @@ void GhostMatrix<T,P>::display( std::ostream& os)
 {
 #ifdef TL_DEBUG
    if( this->isVoid()) 
-       throw Message( "Trying to access a void matrix!", ping);
+       throw Message( "Trying to access a void matrix!", _ping_);
 #endif
     for(int i = -1; i < (int)this->rows() + 1; i++)
     {

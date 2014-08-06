@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
+#include <cusp/print.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
@@ -10,9 +11,9 @@
 #include "derivatives.cuh"
 #include "typedefs.cuh"
 
-const unsigned n = 3; //global relative error in L2 norm is O(h^P)
-const unsigned Nx = 20;  //more N means less iterations for same error
-const unsigned Ny = 20;  //more N means less iterations for same error
+const unsigned n = 1; //global relative error in L2 norm is O(h^P)
+const unsigned Nx = 3;  //more N means less iterations for same error
+const unsigned Ny = 3;  //more N means less iterations for same error
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
@@ -39,7 +40,8 @@ int main()
     dg::HVec x = dg::expand( initial, grid);
 
     cout << "Create Laplacian\n";
-    dg::HMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::symmetric); 
+    dg::HMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::LSPACE, dg::forward); 
+    cusp::print(A);
     dg::CG<dg::HVec > pcg( x, n*n*Nx*Ny);
     cout<<"Expand right hand side\n";
     dg::HVec b = dg::expand ( laplace_fct, grid);

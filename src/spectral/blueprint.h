@@ -231,7 +231,7 @@ class Blueprint
             case( TL_IMPURITY) : imp = true;     break;
             case( TL_GLOBAL):    global = true;  break;
             case( TL_MHW):       mhw = true;     break;
-            default: throw Message( "Unknown Capacity\n", ping); //is this necessary?
+            default: throw Message( "Unknown Capacity\n", _ping_); //is this necessary?
         }
     }
     /*! @brief Check if a capacity is enabled
@@ -245,7 +245,7 @@ class Blueprint
             case( TL_IMPURITY) : return imp;
             case( TL_GLOBAL):    return global;
             case( TL_MHW):       return mhw;
-            default: throw Message( "Unknown Capacity\n", ping);
+            default: throw Message( "Unknown Capacity\n", _ping_);
         }
     }
     /*! @brief Perform several consistency checks on the set of parameters
@@ -268,7 +268,7 @@ class Blueprint
             //<<"Global solvers are: \n"
             //<<"    "<<(global?enabled:disabled)<<"\n"
             <<"Modified Hasegawa Wakatani: \n"
-            <<"    "<<(mhw?enabled:disabled)<<"\n";
+            <<"    "<<(mhw?enabled:disabled)<<std::endl;
     }
 
 };
@@ -277,27 +277,27 @@ void Blueprint::consistencyCheck() const
 {
     //Check algorithm and boundaries
     if( alg.dt <= 0) 
-        throw Message( "dt <= 0!\n", ping);
+        throw Message( "dt <= 0!\n", _ping_);
     if( fabs( alg.h - bound.lx/(double)alg.nx) > 1e-15) 
-        throw Message( "h != lx/nx\n", ping); 
+        throw Message( "h != lx/nx\n", _ping_); 
     if( fabs( alg.h - bound.ly/(double)alg.ny) > 1e-15) 
-        throw Message( "h != ly/ny\n", ping);
+        throw Message( "h != ly/ny\n", _ping_);
     if( alg.nx == 0||alg.ny == 0) 
-        throw Message( "Set nx and ny!\n", ping);
+        throw Message( "Set nx and ny!\n", _ping_);
     //Check physical parameters
     if( phys.nu < 0) 
-        throw Message( "nu < 0!\n", ping);
+        throw Message( "nu < 0!\n", _ping_);
     if( phys.a[0] <= 0 || phys.mu[0] <= 0 || phys.tau[0] < 0) 
-        throw Message( "Ion species badly set\n", ping);
+        throw Message( "Ion species badly set\n", _ping_);
     if( imp && (phys.a[1] < 0 || phys.mu[1] <= 0 || phys.tau[1] < 0)) 
-        throw Message( "Impuritiy species badly set\n", ping);
+        throw Message( "Impuritiy species badly set\n", _ping_);
     if( fabs(phys.a[0] + phys.a[1] - 1) > 1e-15)
-        throw Message( "a_i + a_z != 1 (background not neutral)\n", ping);
+        throw Message( "a_i + a_z != 1 (background not neutral)\n", _ping_);
     if( fabs( phys.g_e - phys.a[0]*phys.g[0]- phys.a[1]*phys.g[1]) > 1e-15)
-        throw Message( "Background is not neutral! \n", ping);
+        throw Message( "Background is not neutral! \n", _ping_);
     //inconsistency when impurities are not set??
     if( !imp && (phys.a[1] != 0 || phys.mu[1] != 0 || phys.tau[1] != 0)) 
-        throw Message( "Impurity disabled but z species not 0!\n", ping);
+        throw Message( "Impurity disabled but z species not 0!\n", _ping_);
     //Some Warnings
     if( global && (phys.g_e != 0||phys.g[0] != 0||phys.g[1] != 0))
         std::cerr << "TL_WARNING: Global solver ignores gradients\n";

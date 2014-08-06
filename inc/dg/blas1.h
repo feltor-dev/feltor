@@ -1,8 +1,12 @@
 #pragma once
 
-#include "vector_traits.h"
-#include "blas/thrust_vector.cuh"
-#include "blas/std_vector.cuh"
+#include "backend/vector_traits.h"
+#include "backend/thrust_vector.cuh"
+#ifdef MPI_VERSION
+#include "backend/mpi_vector.h"
+#include "backend/mpi_vector_blas.h"
+#endif
+#include "backend/std_vector.cuh"
 
 namespace dg{
 
@@ -33,7 +37,8 @@ namespace blas1
  * @param y Right Vector may equal y
  * @return Scalar product
  * @note This routine is always executed synchronously due to the 
-        implicit memcpy of the result.
+        implicit memcpy of the result. With mpi the result is broadcasted to all
+        processes
  * @note If DG_DEBUG is defined a range check shall be performed
  */
 template< class Vector>
@@ -53,14 +58,14 @@ inline typename VectorTraits<Vector>::value_type dot( const Vector& x, const Vec
  * @param x Vector x may equal y 
  * @param beta Scalar
  * @param y Vector y contains solution on output
- * @note In an implementation you may want to check for alpha == 0 and beta == 1
+ * @note Checks for alpha == 0 and beta == 1
  * @note If DG_DEBUG is defined a range check shall be performed
- * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
 template< class Vector>
 inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, Vector& y)
 {
-    return dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 
 /*! @brief Modified BLAS 1 routine axpy
@@ -71,27 +76,43 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
  * @param beta Scalar
  * @param y Vector y may equal result
  * @param result Vector contains solution on output
- * @note In an implementation you may want to check for alpha == 0 and beta == 1
+ * @note Checks for alpha == 0 and beta == 1
  * @note If DG_DEBUG is defined a range check shall be performed
  * @attention If a thrust::device_vector is used then this routine is NON-BLOCKING!
  */
 template< class Vector>
 inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, Vector& result)
 {
-    return dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
+}
+/*! @brief "new" BLAS 1 routine transform
+ *
+ * This routine computes \f[ y_i = f(x_i) \f] 
+ * This is actually not a BLAS routine since f can be a nonlinear function.
+ * It is rather the first step towards a more general library conception.
+ * @param x Vector x may equal result
+ * @param op Operator to use on every element
+ * @note In an implementation you may want to check for alpha == 0
+ */
+template< class Vector, class UnaryOp>
+inline void transform( const Vector& x, Vector& y, UnaryOp op)
+{
+    dg::blas1::detail::doTransform( x, y, op, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 
 /*! @brief BLAS 1 routine scal
  *
  * This routine computes \f[ x \leftarrow  \alpha x \f] 
  * @param alpha Scalar  
- * @param x Vector x may equal result
- * @note In an implementation you may want to check for alpha == 0
+ * @param x Vector x 
  */
 template< class Vector>
 inline void scal( Vector& x, typename VectorTraits<Vector>::value_type alpha)
 {
-    return dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 
 /**
@@ -106,7 +127,8 @@ inline void scal( Vector& x, typename VectorTraits<Vector>::value_type alpha)
 template< class Vector>
 inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 {
-    return dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 /**
 * @brief A 'new' BLAS 1 routine. 
@@ -120,7 +142,8 @@ inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 template< class Vector>
 inline void pointwiseDivide( const Vector& x1, const Vector& x2, Vector& y)
 {
-    return dg::blas1::detail::doPointwiseDivide( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doPointwiseDivide( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 ///@}
 }//namespace blas1

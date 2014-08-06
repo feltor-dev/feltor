@@ -17,7 +17,11 @@ OPT	   = -O3
 endif
 
 ifeq ($(strip $(system)),home)
+<<<<<<< HEAD
+INCLUDE += -I/home/markus/Dokumente/Phd/Include # cusp and thrust libraries
+=======
 INCLUDE += -I/home/matthias/include # cusp and thrust libraries
+>>>>>>> 59d72ffe59a0f56db1161f01ae2e1c83bcf024bc
 #you might check the libs here, cf your glfw installation
 GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
@@ -42,10 +46,10 @@ endif
 all: convection
 
 convection: convection.cu convection.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(CC)  $(OPT) -DDG_BENCHMARK $(CFLAGS) $(INCLUDE)$< -o $@ $(GLFLAGS)   
 	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean
 
 clean:
-	rm -f toeflR toefl_hpc
+	rm -f convection

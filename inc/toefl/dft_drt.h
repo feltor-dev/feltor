@@ -69,11 +69,11 @@ DFT_DRT::DFT_DRT( const size_t rows, const size_t cols, const fftw_r2r_kind kind
     r2r_backward = plan_drt_1d( cols + 2 - cols%2, rows, temp.getPtr(), temp.getPtr(), kind_bw, flags);
 #ifdef TL_DEBUG
     if( forward == NULL || backward == NULL)
-        throw Message( "r2c plan creation failed!", ping);
+        throw Message( "r2c plan creation failed!", _ping_);
     if( transpose_forward == NULL || transpose_backward == NULL)
-        throw Message( "transpose plan creation failed!", ping);
+        throw Message( "transpose plan creation failed!", _ping_);
     if( r2r_forward == NULL || r2r_backward == NULL)
-        throw Message( "r2r plan creation failed!", ping);
+        throw Message( "r2r plan creation failed!", _ping_);
 #endif
 
 }
@@ -98,11 +98,11 @@ void DFT_DRT::r2c( Matrix<double, TL_DFT>& m, Matrix<complex, TL_NONE>& swap)
 {
 #ifdef TL_DEBUG
     if( m.rows() != rows || m.cols() != cols)
-        throw Message( "Matrix hasn't got the right size!", ping);
+        throw Message( "Matrix hasn't got the right size!", _ping_);
     if( m.isVoid())  
-        throw Message( "Cannot transform a void matrix!", ping);
+        throw Message( "Cannot transform a void matrix!", _ping_);
     if( swap.rows() != rows || swap.cols()!= cols/2 +1)
-        throw Message( "Swap Matrix has wrong size!", ping);
+        throw Message( "Swap Matrix has wrong size!", _ping_);
 #endif
     fftw_execute_dft_r2c( forward, m.getPtr(), reinterpret_cast<fftw_complex*>(m.getPtr()));
     fftw_execute_r2r( transpose_forward, m.getPtr(), m.getPtr());
@@ -121,11 +121,11 @@ void DFT_DRT::c2r( Matrix<complex, TL_NONE>& m, Matrix<double, TL_DFT>& swap)
 {
 #ifdef TL_DEBUG
     if( swap.rows() != rows || swap.cols() != cols)
-        throw Message( "Matrix hasn't got the right size!", ping);
+        throw Message( "Matrix hasn't got the right size!", _ping_);
     if( m.isVoid())  
-        throw Message( "Cannot transform a void matrix!", ping);
+        throw Message( "Cannot transform a void matrix!", _ping_);
     if( m.rows() != rows || m.cols()!= cols/2 +1)
-        throw Message( "Swap Matrix has wrong size!", ping);
+        throw Message( "Swap Matrix has wrong size!", _ping_);
 #endif
     swap_fields( m, swap);
     fftw_execute_r2r( transpose_forward, swap.getPtr(), swap.getPtr());

@@ -43,7 +43,7 @@ class QuadMat
     QuadMat( std::initializer_list<T> l)
     {
         if( l.size() != n*n)
-            throw Message( "Initializer list has wrong size", ping);
+            throw Message( "Initializer list has wrong size", _ping_);
         unsigned i=0;
         for( auto& s: l)
             data[i++] = s;
@@ -67,7 +67,7 @@ class QuadMat
     T& operator()(const size_t i, const size_t j){
 #ifdef TL_DEBUG
         if( i >= n || j >= n)
-            throw BadIndex( i, n, j, n, ping);
+            throw BadIndex( i, n, j, n, _ping_);
 #endif
         return data[ i*n+j];
     }
@@ -81,7 +81,7 @@ class QuadMat
     const T& operator()(const size_t i, const size_t j) const {
 #ifdef TL_DEBUG
         if( i >= n || j >= n)
-            throw BadIndex( i, n, j, n, ping);
+            throw BadIndex( i, n, j, n, _ping_);
 #endif
         return data[ i*n+j];
     }
@@ -177,7 +177,7 @@ void invert(const QuadMat<T, 2>& m, QuadMat<T,2>& m1)
 {
     T det, temp;
     det = m(0,0)*m(1,1) - m(0,1)*m(1,0);
-    if( det== (T)0) throw Message("Determinant is Zero\n", ping);
+    if( det== (T)0) throw Message("Determinant is Zero\n", _ping_);
     temp = m(0,0);
     m1(0,0) = m(1,1)/det;
     m1(0,1) /=-det;
@@ -201,7 +201,7 @@ void invert( const QuadMat< T, 3>& m, QuadMat<T,3>& m1 )
 {
     T det, temp00, temp01, temp02, temp10, temp11, temp20;
     det = m(0,0)*(m(1,1)*m(2,2)-m(2,1)*m(1,2))+m(0,1)*(m(1,2)*m(2,0)-m(1,0)*m(2,2))+m(0,2)*(m(1,0)*m(2,1)-m(2,0)*m(1,1));
-    if( det== (T)0) throw Message("Determinant is Zero\n", ping);
+    if( det== (T)0) throw Message("Determinant is Zero\n", _ping_);
     temp00 = m(0,0);
     temp01 = m(0,1);
     temp02 = m(0,2);

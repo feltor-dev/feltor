@@ -85,9 +85,9 @@ DRT_DFT::DRT_DFT( const size_t rows, const size_t cols, const fftw_r2r_kind kind
     backward = plan_dft_1d_c2r_T( rows, cols, reinterpret_cast<fftw_complex*>(temp.getPtr()), temp.getPtr(), FFTW_MEASURE);
 #ifdef TL_DEBUG
     if(forward == 0|| backward == 0)
-        throw Message( "r2c Planner routine failed!", ping);
+        throw Message( "r2c Planner routine failed!", _ping_);
     if( real_forward == 0 || real_backward == 0)
-        throw Message( "Sine trafo Planner routine failed!", ping);
+        throw Message( "Sine trafo Planner routine failed!", _ping_);
 #endif
 }
 DRT_DFT::~DRT_DFT()
@@ -102,9 +102,9 @@ void DRT_DFT::r2c_T( Matrix<double, TL_DRT_DFT>& inout, Matrix<complex, TL_NONE>
 {
 #ifdef TL_DEBUG
     if( inout.rows() != rows|| inout.cols() != cols)
-        throw Message( "Matrix for transformation doesn't have the right size!", ping);
+        throw Message( "Matrix for transformation doesn't have the right size!", _ping_);
     if( swap.rows() != cols|| swap.cols() != rows/2 + 1) 
-        throw Message( "Swap Matrix in 2d_r2c doesn't have the right size!", ping);
+        throw Message( "Swap Matrix in 2d_r2c doesn't have the right size!", _ping_);
 #endif
     fftw_execute_r2r( real_forward, inout.getPtr(), inout.getPtr());
     fftw_execute_dft_r2c( forward, inout.getPtr(), reinterpret_cast<fftw_complex*>(inout.getPtr()));
@@ -115,9 +115,9 @@ void DRT_DFT::c_T2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DRT_DFT>
 {
 #ifdef TL_DEBUG
     if( inout.rows() != cols || inout.cols() != rows/2 + 1)
-        throw Message( "Matrix for transformation doesn't have the right size!", ping);
+        throw Message( "Matrix for transformation doesn't have the right size!", _ping_);
     if( swap.rows() != rows || swap.cols() != cols) 
-        throw Message( "Swap Matrix in 2d_r2c doesn't have the right size!", ping);
+        throw Message( "Swap Matrix in 2d_r2c doesn't have the right size!", _ping_);
 #endif
     swap_fields( inout, swap);
     fftw_execute_dft_c2r( backward, reinterpret_cast<fftw_complex*>(swap.getPtr()),swap.getPtr());
