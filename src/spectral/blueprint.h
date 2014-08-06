@@ -268,7 +268,7 @@ class Blueprint
             //<<"Global solvers are: \n"
             //<<"    "<<(global?enabled:disabled)<<"\n"
             <<"Modified Hasegawa Wakatani: \n"
-            <<"    "<<(mhw?enabled:disabled)<<"\n";
+            <<"    "<<(mhw?enabled:disabled)<<std::endl;
     }
 
 };

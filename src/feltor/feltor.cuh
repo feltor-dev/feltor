@@ -17,11 +17,12 @@ namespace eule
 template<class Matrix, class container, class Preconditioner>
 struct Rolkar
 {
-    Rolkar( const dg::Grid3d<double>& g, Parameters p, solovev::GeomParameters gp):
+    template<class Grid3d>
+    Rolkar( const Grid3d& g, Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
         w3d_( dg::create::weights(g)), v3d_(dg::create::precond(g)),
-        temp( g.size()),
+        temp( dg::evaluate(dg::one, g)),
 //         pupil_( dg::evaluate( solovev::Pupil( gp), g)),
 //                 pupil_( dg::evaluate( solovev::GaussianDamping( gp), g)),
 
@@ -96,7 +97,8 @@ struct Feltor
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
-    Feltor( const dg::Grid3d<value_type>& g, Parameters p,solovev::GeomParameters gp);
+    template<class Grid3d>
+    Feltor( const Grid3d& g, Parameters p,solovev::GeomParameters gp);
 
     void exp( const std::vector<container>& src, std::vector<container>& dst, unsigned);
 
@@ -155,8 +157,9 @@ struct Feltor
 };
 
 template<class Matrix, class container, class P>
-Feltor<Matrix, container, P>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solovev::GeomParameters gp): 
-    chi( g.size(), 0.), omega(chi),
+template<class Grid>
+Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::GeomParameters gp): 
+    chi( dg::evaluate( dg::one, g)), omega(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),

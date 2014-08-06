@@ -20,7 +20,7 @@ using namespace toefl;
 
 const unsigned n = 2;
 typedef DFT_DFT_Solver<n> Sol;
-typedef typename Sol::Matrix_Type Mat;
+typedef Sol::Matrix_Type Mat;
     
 unsigned itstp; //initialized by init function
 unsigned max_out;
