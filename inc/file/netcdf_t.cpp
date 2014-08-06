@@ -23,10 +23,11 @@ int main()
     std::string hello = "Hello world\n";
     thrust::host_vector<double> data = dg::evaluate( function, g);
     int ncid, retval;
-    //retval = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    //retval = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
     file::NC_Error_Handle err;
     err = nc_create( "test.nc", NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
+
     int dim_ids[4], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, g);
     int dataID;
