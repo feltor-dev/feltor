@@ -77,9 +77,9 @@ int main( int argc, char* argv[])
 
     
     //with bath
-      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
      //with zonal flow field
-//       solovev::ZonalFlow init0(gp,p.amp);
+      solovev::ZonalFlow init0(gp,p.amp);
     //with gaussians
 //     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
 //     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
@@ -103,8 +103,8 @@ int main( int argc, char* argv[])
 //     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);
 //     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[1]);
 
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
-    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0
+    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set w = 0
+    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set w = 0
 
     feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
     
@@ -180,7 +180,7 @@ int main( int argc, char* argv[])
         }
 
         //draw U_e
-        hvisual = y0[2];
+        hvisual = feltor.uparallel()[0]; //=U_parallel_e
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -193,7 +193,7 @@ int main( int argc, char* argv[])
         }
 
         //draw U_i
-        hvisual = y0[3];
+        hvisual =feltor.uparallel()[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -205,7 +205,19 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
-
+        //draw a parallel
+        hvisual =feltor.aparallel();
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        title <<"A / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
+        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
+        
         title << std::fixed; 
         title << " &&   time = "<<time;
         glfwSetWindowTitle(w,title.str().c_str());

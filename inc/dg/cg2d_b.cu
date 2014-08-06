@@ -8,7 +8,7 @@
 #include "evaluation.cuh"
 #include "derivatives.cuh"
 #include "typedefs.cuh"
-#include "cusp_thrust_backend.h"
+#include "backend/cusp_thrust_backend.h"
 
 #include "cg.h"
 

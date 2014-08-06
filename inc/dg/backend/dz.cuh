@@ -19,18 +19,16 @@ double zero( double R, double Z){return 0;}
  * @brief Class for the evaluation of a parallel derivative
  *
  * @ingroup dz
- * @tparam Field The Fieldlines to be integrated: Has to provide void  operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
- dg::HVec has to be used because of the cutting routine
- * @tparam container The container-class to operate on (does not need to be dg::HVec)
+ * @tparam Matrix The matrix class of the interpolation matrix
+ * @tparam container The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
  */
 template< class Matrix = dg::DMatrix, class container=thrust::device_vector<double> >
 struct DZ 
 {
-    typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     /**
      * @brief Construct from a field and a grid
      *
+     * @tparam Field The Fieldlines to be integrated: Has to provide void  operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
      * @param field The field to integrate
      * @param grid The grid on which to operate
      * @param eps Desired accuracy of runge kutta
@@ -90,7 +88,6 @@ struct DZ
   private:
     void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g)
     {
-//         int c1=0,c2=0,c3=0,c4=0,c5=0;
         for( unsigned i=0; i<g.size(); i++)
         {            
             if      (yp[0][i] < g.x0())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i];  }
@@ -99,22 +96,7 @@ struct DZ
             else if (yp[1][i] > g.y1())  {  yp[0][i] = y[0][i]; yp[1][i] = y[1][i];  }
             else                         { }
                 
-//             else {
-//                 yp[0][i] = y[0][i];
-//                 yp[1][i] = y[1][i];
-//             }
-            //if( func(y[0][i], y[1][i], M_PI/2.) - func(yp[0][i], yp[1][i], M_PI/2.) > 1e-10 )
-            //{
-            //    std::cerr << "Not on same radius\n";
-            //    std::cerr << func(y[0][i], y[1][i], M_PI/2.) - func(yp[0][i], yp[1][i], M_PI/2.)<<"\n";
-            //}
         }
-//         std::cout << "c1 = " <<c1 <<  "\n";
-//         std::cout << "c2 = " <<c2 <<  "\n";
-//         std::cout << "c3 = " <<c3 <<  "\n";
-//         std::cout << "c4 = " <<c4 <<  "\n";
-//         std::cout << "c5 = " <<c5 <<  "\n";
-//         std::cout << "sum= " <<c1+c2+c3+c4+c5 <<  "\n";
 
     }
     Matrix plus, minus; //interpolation matrices

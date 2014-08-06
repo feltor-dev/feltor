@@ -23,15 +23,16 @@ int main()
     std::string hello = "Hello world\n";
     thrust::host_vector<double> data = dg::evaluate( function, g);
     int ncid, retval;
-    retval = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    //retval = nc_create( "test.nc", NC_CLOBBER, &ncid);
-    retval = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
+    //retval = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
+    file::NC_Error_Handle err;
+    err = nc_create( "test.nc", NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
+
     int dim_ids[4], tvarID;
-    if( retval = file::define_dimensions( ncid, dim_ids, &tvarID, g)) {
-        std::cerr<< "Error: "<<nc_strerror(retval)<<"\n";}
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, g);
     int dataID;
-    retval = nc_def_var( ncid, "data", NC_DOUBLE, 4, dim_ids, &dataID);
-    retval = nc_enddef( ncid);
+    err = nc_def_var( ncid, "data", NC_DOUBLE, 4, dim_ids, &dataID);
+    err = nc_enddef( ncid);
     size_t count[4] = {1, g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
     size_t start[4] = {0, 0, 0, 0};
     for(unsigned i=0; i<=NT; i++)
@@ -43,10 +44,9 @@ int main()
         dg::blas1::scal( data, cos( time));
         start[0] = i;
         //write dataset (one timeslice)
-        retval = nc_put_vara_double( ncid, dataID, start, count, data.data());
-        retval = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
+        err = nc_put_vara_double( ncid, dataID, start, count, data.data());
+        err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
     }
-    retval = nc_close(ncid);
-    if( retval) std::cerr<< "Error: "<<nc_strerror(retval)<<"\n";
+    err = nc_close(ncid);
     return 0;
 }

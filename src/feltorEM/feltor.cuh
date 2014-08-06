@@ -93,8 +93,10 @@ struct Feltor
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
-    //for rolkar 
-//     const container& aparallel( ) const { return apar;}
+    //new quantities
+    const container& aparallel( ) const { return apar;}
+    const std::vector<container>& uparallel( ) const { return u;}
+
 
 
     /**
@@ -169,7 +171,7 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solov
     pol(     g), 
     invert_pol( omega, omega.size(), p.eps_pol), 
     w3d( dg::create::w3d(g)), v3d( dg::create::v3d(g)), one( g.size(), 1.),
-    maxwell(A,w3d,v3d, -1.),
+    maxwell(A,w3d,v3d, 1.), //sign is already correct!
     invert_maxwell(rho, rho.size(), p.eps_maxwell),
     p(p),
     gp(gp)
@@ -263,8 +265,10 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     double Upare = -0.5*p.mu[0]*dg::blas2::dot( expy[0], w3d, omega); 
     dg::blas1::pointwiseDot(u[1], u[1], omega); //U_i^2
     double Upari =  0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
-    energy_ = Ue + Ui + Uphi + Upare + Upari;
-    //add Apar term : U_apar = p.beta * |nabla_perp A_par|^2
+    arakawa.variation(apar,omega); // (dx A_parallel)^2 + (dy A_parallel)^2
+    double Uapar = p.beta*sqrt(dg::blas2::dot( omega, w3d, omega));
+    energy_ = Ue + Ui + Uphi + Upare + Upari + Uapar;
+    
     
     curve( apar, curvapar); //K(A_parallel)
     dg::blas1::axpby(  1.,  gradlnB,p.beta,  curvapar);  // gradlnB + beta K(A_parallel)
@@ -284,13 +288,13 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
         dg::blas1::pointwiseDot(arakAphi[i],binv,arakAphi[i]); //1/B [A_parallel,phi]_RZ
 
         //compute parallel derivatives
-        dz(y[i], dzy[i]);
-        dz(phi[i], dzphi[i]);
-        dz(u[i], dzy[2+i]);
-        //add A_parallel terms to the parallel derivaitives
-        dg::blas1::axpby(-p.beta,arakAN[i]   ,1.,dzy[i]);  //= dz lnN -beta/B [phi,lnN ] 
-        dg::blas1::axpby(-p.beta,arakAphi[i] ,1.,dzphi[i]);//= dz phi -beta/B [phi,phi ] 
-        dg::blas1::axpby(-p.beta,arakAU[i]   ,1.,dzy[2+i]);//= dz U-beta/B [phi,U ] 
+        dz(y[i], dzy[i]);     //dz(lnN)
+        dz(phi[i], dzphi[i]); //dz(phi)
+        dz(u[i], dzy[2+i]);   //dz(U)
+        //add A_parallel terms to the parallel derivatives
+        dg::blas1::axpby(-p.beta,arakAN[i]   ,1.,dzy[i]);  //= dz lnN -beta/B [A_parallel,lnN ] 
+        dg::blas1::axpby(-p.beta,arakAphi[i] ,1.,dzphi[i]);//= dz phi -beta/B [A_parallel,phi ] 
+        dg::blas1::axpby(-p.beta,arakAU[i]   ,1.,dzy[2+i]);//= dz U-beta/B [A_parallel,U ] 
 
 
         //parallel advection terms
@@ -300,33 +304,33 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
         dg::blas1::pointwiseDot(u[i], curvapar, omega);                     
         dg::blas1::axpby( 1., omega, 1., yp[i]);                            //dtlnN = dtlnN + U dz ln B
         dg::blas1::pointwiseDot(u[i], dzy[2+i], omega);                    
-        dg::blas1::axpby( -1., omega, 1., yp[2+i]);                         //dtw = dtU - U dz U
+        dg::blas1::axpby( -1., omega, 1., yp[2+i]);                         //dtw = dtw - U dz U
 
         //parallel force terms
-        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]); //dtw = dtU - tau/(hat(mu))*dz lnN
-        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtw = dtU - 1/(hat(mu))*dz phi
+        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]); //dtw = dtw - tau/(hat(mu))*dz lnN
+        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtw = dtw - 1/(hat(mu))*dz phi
 
         //curvature terms
-        curve( y[i], curvy[i]); //K(N)
-        curve( u[i], curvy[2+i]);//K(U)
+        curve( y[i], curvy[i]);     //K(N)
+        curve( u[i], curvy[2+i]);  //K(U)
         curve( phi[i], curvphi[i]);//K(phi)
 
         dg::blas1::pointwiseDot( u[i], curvy[2+i], omega); //U K(U)
         dg::blas1::pointwiseDot( u[i], omega, chi); //U^2 K(U)
         dg::blas1::axpby( -p.mu[i]*p.eps_hat, omega, 1., yp[i]);             //dtlnN = dtlnN - (hat(mu)) U K(U)
-        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]);         //dtw = dtU - 0.5 (hat(mu)) U^2 K(U)
+        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]);         //dtw = dtw - 0.5 (hat(mu)) U^2 K(U)
 
         dg::blas1::pointwiseDot(u[i], curvy[i], omega); //U K(ln N)
         dg::blas1::pointwiseDot( u[i], omega, chi); //U^2K(ln N)
-        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                    //dtw = dtU - tau U K(lnN)
+        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                    //dtw = dtw - tau U K(lnN)
         dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[i]);           //dtlnN = dtlnN -0.5mu U^2K(lnN)
 
         dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);                   //dtlnN = dtlnN - tau K(lnN)
-        dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);            //dtw = dtU - 2 tau K(U)
+        dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);            //dtw = dtw - 2 tau K(U)
         dg::blas1::axpby( -1., curvphi[i], 1., yp[i]);                       //dtlnN= dtlnN - K(psi)
 
         dg::blas1::pointwiseDot( u[i], curvphi[i], omega);  //U K(phi)
-        dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                         //dtw = dtU -0.5 U K(psi)
+        dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                         //dtw = dtw -0.5 U K(psi)
 
 
     }
@@ -337,8 +341,8 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
 //         //for 1/N_i
 // //         dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
-        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);  // dtU_e =- C/hat(mu)_e J_par/N_e
-        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., yp[3]);  // dtU_e =- C/hat(mu)_e J_par/N_e
+    dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);  // dtU_e =- C/hat(mu)_e J_par/N_e
+    dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., yp[3]);  // dtU_e =- C/hat(mu)_e J_par/N_e
         
     //add parallel diffusion with naive implementation
 //     for( unsigned i=0; i<4; i++)
@@ -359,6 +363,8 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
 //         dg::blas1::axpby( -1., omega, 1., yp[i]);
 //         dg::blas1::pointwiseDot( damping, y[i], omega); 
 //         dg::blas1::axpby( -1., omega, 1., yp[i]);
+                dg::blas1::pointwiseDot( iris, u[i], u[i]); 
+
     }
     for( unsigned i=0; i<4; i++) //damping and pupil on N and w
     {

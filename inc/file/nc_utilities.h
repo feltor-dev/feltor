@@ -1,5 +1,6 @@
 #pragma once
 
+#include <exception>
 #include <netcdf.h>
 #include "thrust/host_vector.h"
 
@@ -8,6 +9,57 @@
 
 namespace file
 {
+
+/**
+ * @brief Class thrown by the NC_ErrorHandle
+ *
+ * @ingroup utilities
+ */
+struct NC_Error : public std::exception
+{
+
+    /**
+     * @brief Construct from error code
+     *
+     * @param error netcdf error code
+     */
+    NC_Error( int error): error_( error) {}
+    /**
+     * @brief What string
+     *
+     * @return string netcdf error message
+     */
+    char const* what() const throw(){ 
+        return nc_strerror(error_);}
+  private:
+    int error_;
+};
+
+/**
+ * @brief Utitlity class that handles return values of netcdf
+ * functions and throws NC_Error if something goes wrong
+ */
+struct NC_Error_Handle
+{
+    NC_Error_Handle operator=( int err)
+    {
+        NC_Error_Handle h;
+        return h(err);
+    }
+    /**
+     * @brief Construct from error code
+     *
+     * @param err netcdf error code
+     *
+     * @return 
+     */
+    NC_Error_Handle operator()( int err)
+    {
+        if( err)
+            throw NC_Error( err);
+        return *this;
+    }
+};
 
 /**
  * @brief Define dimensions and associate values in NetCDF-file
@@ -22,6 +74,7 @@ namespace file
  */
 int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid3d<double>& g)
 {
+    //change to NC_Error_Handle?
     dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
     dg::Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
