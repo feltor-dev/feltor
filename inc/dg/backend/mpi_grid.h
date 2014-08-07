@@ -74,11 +74,23 @@ struct MPI_Grid2d
     double hx() const {return g.hx();}
     double hy() const {return g.hy();}
     unsigned n() const {return g.n();}
+    /**
+     * @brief Return the local number of cells 
+     *
+     * Not the one given in the constructor
+     * @return number of cells
+     */
     unsigned Nx() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
         return g.Nx()/dims[0]+2;
     }
+    /**
+     * @brief Return the local number of cells 
+     *
+     * Not the one given in the constructor
+     * @return number of cells
+     */
     unsigned Ny() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
@@ -204,16 +216,34 @@ struct MPI_Grid3d
     double hy() const {return g.hy();}
     double hz() const {return g.hz();}
     unsigned n() const {return g.n();}
+    /**
+     * @brief Return the local number of cells 
+     *
+     * Not the one given in the constructor
+     * @return number of cells
+     */
     unsigned Nx() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
         return g.Nx()/dims[0]+2;
     }
+    /**
+     * @brief Return the local number of cells 
+     *
+     * Not the one given in the constructor
+     * @return number of cells
+     */
     unsigned Ny() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
         return g.Ny()/dims[1]+2;
     }
+    /**
+     * @brief Return the local number of cells 
+     *
+     * Not the one given in the constructor
+     * @return number of cells
+     */
     unsigned Nz() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);

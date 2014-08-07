@@ -1,7 +1,5 @@
 #pragma once
 
-//#include "mpi_config.h"
-
 #include <thrust/host_vector.h>
 #include "vector_traits.h"
 
@@ -174,11 +172,11 @@ void MPI_Vector::x_row( MPI_Comm comm)
 
 thrust::host_vector<double> MPI_Vector::reduce() const
 {
-    thrust::host_vector<double> reduce( n_*n_*(Nx_-2)*(Ny_-2)*Nz_);
-    for( unsigned s=0; s<Nz_;s++)
-        for( unsigned i=1; i<(Ny_-1)*n_; i++)
-            for( unsigned j=1; j<(Nx_-1)*n_; j++)
-                reduce[ j-1 + (Nx_-2)*n_*( i-1 + (Ny_-2)*n_*s)] = 
+    thrust::host_vector<double> reduce( n_*n_*(Nx_-2)*(Ny_-2)*Nz_, 1.);
+    for( unsigned s=0; s<Nz_; s++)
+        for( unsigned i=n_; i<(Ny_-1)*n_; i++)
+            for( unsigned j=n_; j<(Nx_-1)*n_; j++)
+                reduce[ j-n_ + (Nx_-2)*n_*( i-n_ + (Ny_-2)*n_*s)] = 
                     data_[ j + Nx_*n_*(i + Ny_*n_*s)];
     return reduce;
 }

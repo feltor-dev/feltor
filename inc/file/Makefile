@@ -1,12 +1,13 @@
 CXX=g++
+MPICXX=mpic++
 system = home
 
 INCLUDE =-I../
-INCLUDE+=-I$(HOME)/include
-INCLUDE+=-I$(HOME)/netcdf/include
+INCLUDE += -I$(HOME)/include
 
-CFLAGS = -Wall -std=c++0x 
-LIBS =-L$(HOME)/netcdf/lib -lnetcdf
+CFLAGS = #-Wall -std=c++0x 
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+LIBS = -lnetcdf
 
 ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(HOME)/include
@@ -17,14 +18,17 @@ LIBS 	 = -L$(UIBK_NETCDF_LIB) -lnetcdf
 GLFLAGS  = -lm
 endif
 
+all: read_input_t netcdf_t netcdf_mpit
 
 read_input_t: read_input_t.cpp read_input.h 
 	$(CXX) $< -o $@ 
 
 
 netcdf_t: netcdf_t.cpp nc_utilities.h
-	$(CXX) $< -o $@ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP  $(INCLUDE) $(LIBS) 
+	$(CXX) $< -o $@ $(CFLAGS) $(INCLUDE) $(LIBS) 
 
+netcdf_mpit: netcdf_mpit.cpp nc_utilities.h
+	$(MPICXX) $< -o $@ $(CFLAGS) $(INCLUDE) $(LIBS) 
 
 .PHONY: doc clean
 
@@ -33,4 +37,4 @@ doc:
 
 
 clean:
-	rm -f read_input_t netcdf_t
+	rm -f read_input_t netcdf_t netcdf_mpit

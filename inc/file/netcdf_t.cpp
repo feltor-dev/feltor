@@ -22,10 +22,10 @@ int main()
     dg::Grid3d<double> g( gx, gy, gz);
     std::string hello = "Hello world\n";
     thrust::host_vector<double> data = dg::evaluate( function, g);
-    int ncid, retval;
-    //retval = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
+    int ncid;
     file::NC_Error_Handle err;
-    err = nc_create( "test.nc", NC_CLOBBER, &ncid);
+    err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
+    //err = nc_create( "test.nc", NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
 
     int dim_ids[4], tvarID;
@@ -47,6 +47,7 @@ int main()
         err = nc_put_vara_double( ncid, dataID, start, count, data.data());
         err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
     }
+
     err = nc_close(ncid);
     return 0;
 }

@@ -6,7 +6,6 @@
 #include <thrust/gather.h>
 #include <thrust/scatter.h>
 
-#include "mpi_config.h"
 #include "thrust/host_vector.h"
 
 namespace dg{

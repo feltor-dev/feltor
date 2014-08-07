@@ -1,9 +1,8 @@
 #include <iostream>
 #include <vector>
 
-#define MPI_BACKEND
-
-#include "mpi_evaluation.h"
+#include <mpi.h>
+#include "backend/mpi_evaluation.h"
 #include "blas1.h"
 
 
