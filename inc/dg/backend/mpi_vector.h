@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mpi_config.h"
+//#include "mpi_config.h"
 
 #include <thrust/host_vector.h>
 #include "vector_traits.h"
@@ -10,12 +10,13 @@ namespace dg
 
 struct MPI_Vector
 {
-    MPI_Vector( unsigned n, unsigned Nx, unsigned Ny): 
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(1), data_( n*n*Nx*Ny) {}
-    MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz): 
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), data_( n*n*Nx*Ny*Nz) {}
+    MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): 
+        n_(n), Nx_(Nx), Ny_(Ny), Nz_(1), data_( n*n*Nx*Ny), comm_(comm) {}
+    MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
+        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), data_( n*n*Nx*Ny*Nz), comm_(comm) {}
     thrust::host_vector<double>& data() {return data_;}
     const thrust::host_vector<double>& data() const {return data_;}
+    thrust::host_vector<double> reduce() const;
     unsigned n() const {return n_;}
     unsigned Nx()const {return Nx_;}
     unsigned Ny()const {return Ny_;}
@@ -51,13 +52,29 @@ struct MPI_Vector
         v.display(os);
         return os;
     }
+    void swap( MPI_Vector& that){ 
+#ifdef DG_DEBUG
+        assert( n_ == that.n_);
+        assert( Nx_ == that.Nx_);
+        assert( Ny_ == that.Ny_);
+        assert( Nz_ == that.Nz_);
+        assert( comm_ == that.comm_);
+#endif
+        data_.swap(that.data_);
+    }
   private:
     unsigned n_, Nx_, Ny_, Nz_; //!< has to know interior 
     thrust::host_vector<double> data_; //!< thrust host vector as data type
+    MPI_Comm comm_;
 };
 
 template<> 
 struct VectorTraits<MPI_Vector> {
+    typedef double value_type;
+    typedef MPIVectorTag vector_category;
+};
+template<> 
+struct VectorTraits<const MPI_Vector> {
     typedef double value_type;
     typedef MPIVectorTag vector_category;
 };
@@ -71,10 +88,10 @@ void MPI_Vector::x_col( MPI_Comm comm)
     int cols = Nx_;
     int rows = n_*Ny_*Nz_;
     //create buffer before sending single cells (1 is left side, 2 is right side)
-    thrust::host_vector<double> sendbuffer1( rows*n);
-    thrust::host_vector<double> recvbuffer1( rows*n);
-    thrust::host_vector<double> sendbuffer2( rows*n);
-    thrust::host_vector<double> recvbuffer2( rows*n);
+    thrust::host_vector<double> sendbuffer1( rows*n, 0);
+    thrust::host_vector<double> recvbuffer1( rows*n, 0);
+    thrust::host_vector<double> sendbuffer2( rows*n, 0);
+    thrust::host_vector<double> recvbuffer2( rows*n, 0);
     //copy into buffers
     for( int i=0; i<rows; i++)
         for( int j=0; j<n; j++)
@@ -113,10 +130,10 @@ void MPI_Vector::x_row( MPI_Comm comm)
     int rows = Ny_*n_;
     int number = Nz_*Nx_*n;
 
-    thrust::host_vector<double> sendbuffer1( n*number);
-    thrust::host_vector<double> recvbuffer1( n*number);
-    thrust::host_vector<double> sendbuffer2( n*number);
-    thrust::host_vector<double> recvbuffer2( n*number);
+    thrust::host_vector<double> sendbuffer1( n*number, 0);
+    thrust::host_vector<double> recvbuffer1( n*number, 0);
+    thrust::host_vector<double> sendbuffer2( n*number, 0);
+    thrust::host_vector<double> recvbuffer2( n*number, 0);
     //copy into buffers
     for( int s=0; s<Nz_; s++)
         for( int k=0; k<n; k++)
@@ -153,6 +170,17 @@ void MPI_Vector::x_row( MPI_Comm comm)
                     recvbuffer2[(s*n+k)*cols+j]; 
             }
 
+}
+
+thrust::host_vector<double> MPI_Vector::reduce() const
+{
+    thrust::host_vector<double> reduce( n_*n_*(Nx_-2)*(Ny_-2)*Nz_);
+    for( unsigned s=0; s<Nz_;s++)
+        for( unsigned i=1; i<(Ny_-1)*n_; i++)
+            for( unsigned j=1; j<(Nx_-1)*n_; j++)
+                reduce[ j-1 + (Nx_-2)*n_*( i-1 + (Ny_-2)*n_*s)] = 
+                    data_[ j + Nx_*n_*(i + Ny_*n_*s)];
+    return reduce;
 }
 
 }//namespace dg

@@ -4,7 +4,6 @@
 
 //#include "derivatives.cuh"
 #include "mpi_grid.h"
-#include "mpi_config.h"
 #include "mpi_vector.h"
 #include "mpi_precon_blas.h"
 #include "operator.h"
@@ -75,33 +74,35 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );
 #endif //DG_DEBUG
-    unsigned rows = x.Nz()*x.Ny(), cols = x.Nx(), n = x.n();
+    unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
     for( unsigned i=0; i<y.data().size(); i++)
         y.data()[i] = 0;
     for( unsigned m=0; m<dataX_.size(); m++)
     {
         if( !dataX_[m].empty())
+            for( unsigned s=0; s<x.Nz(); s++)
             for( unsigned i=1; i<rows-1; i++)
-                for( unsigned k=0; k<n; k++)
-                    for( unsigned j=1; j<cols-1; j++)
-                        for( unsigned l=0; l<n; l++)
-                            for( unsigned q=0; q<n; q++)
-                            {
-                                y.data()[((i*n+k)*cols + j)*n +l] += 
-                                dataX_[m][l*n+q]
-                                *x.data()[((i*n+k)*cols + j)*n + q + offset_[m]];
-                            }
+            for( unsigned k=0; k<n; k++)
+            for( unsigned j=1; j<cols-1; j++)
+            for( unsigned l=0; l<n; l++)
+            for( unsigned q=0; q<n; q++)
+            {
+                y.data()[(((s*rows+i)*n+k)*cols + j)*n +l] += 
+                    dataX_[m][l*n+q]
+                    *x.data()[(((s*rows+i)*n+k)*cols + j)*n + q + offset_[m]];
+            }
         if( !dataY_[m].empty())
+            for( unsigned s=0; s<x.Nz(); s++)
             for( unsigned i=1; i<rows-1; i++)
-                for( unsigned k=0; k<n; k++)
-                    for( unsigned j=1; j<cols-1; j++)
-                        for( unsigned l=0; l<n; l++)
-                            for( unsigned p=0; p<n; p++)
-                            {
-                                y.data()[((i*n+k)*cols + j)*n +l] += 
-                                 dataY_[m][k*n+p]
-                                *x.data()[((i*n+p)*cols + j)*n + l + offset_[m]];
-                            }
+            for( unsigned k=0; k<n; k++)
+            for( unsigned j=1; j<cols-1; j++)
+            for( unsigned l=0; l<n; l++)
+            for( unsigned p=0; p<n; p++)
+            {
+                y.data()[(((s*rows+i)*n+k)*cols + j)*n +l] += 
+                     dataY_[m][k*n+p]
+                    *x.data()[(((s*rows+i)*n+p)*cols + j)*n + l + offset_[m]];
+            }
     }
     if( !p_.data.empty())
         dg::blas2::detail::doSymv( p_, y, y, MPIPreconTag(), MPIVectorTag(), MPIVectorTag());

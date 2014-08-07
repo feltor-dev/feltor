@@ -3,9 +3,10 @@ system = home
 
 INCLUDE =-I../
 INCLUDE+=-I$(HOME)/include
+INCLUDE+=-I$(HOME)/netcdf/include
 
 CFLAGS = -Wall -std=c++0x 
-LIBS = -lnetcdf
+LIBS =-L$(HOME)/netcdf/lib -lnetcdf
 
 ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(HOME)/include
@@ -32,4 +33,4 @@ doc:
 
 
 clean:
-	rm -f read_input_t
+	rm -f read_input_t netcdf_t

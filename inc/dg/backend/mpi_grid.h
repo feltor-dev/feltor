@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include "../enums.h"
-#include "mpi_config.h"
+//#include "mpi_config.h"
 #include "grid.h"
 
 namespace dg

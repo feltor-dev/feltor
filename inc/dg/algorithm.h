@@ -1,8 +1,8 @@
 #pragma once
 
-#include "helmholtz.h"
 #include "blas.h"
 #include "arakawa.h"
+#include "helmholtz.h"
 #include "cg.h"
 #include "exceptions.h"
 #include "functors.h"
