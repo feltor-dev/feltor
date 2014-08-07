@@ -25,13 +25,14 @@
 19) triangularity            =  0.0
 ------------------Miscellaneous----------------------
 20) alpha (Damping thickness)=  0.05
-21) inner density ( log10 N )=  2.5
+21) inner density ( log10 N )=  0.01
 22) k_psi (zonal modes)      =  2
 23) RK4 epsilon              =  1e-5
-24) boxscale (1<bs<R0/a)     =  1.4
-25) Profile amplitude        =  2.0
-26) psip_max_cut             =  0.0
-27) psip_max_lap             =  0.0
+24) boxscale (1<bs<R0/a)     =  1.2
+25) Profile amplitude        =  10.
+26) Background Prof amplitude=  1.
+27) psip_max_cut             =  0.0
+28) psip_max_lap             =  0.0
 
 
 

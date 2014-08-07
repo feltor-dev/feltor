@@ -70,49 +70,26 @@ int main( int argc, char* argv[])
     double Zmax=(gp.boxscale)*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
-     
+//         dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::NEU, dg::NEU, dg::PER);    
     //create RHS 
     eule::Feltor< dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     eule::Rolkar< dg::DVec > rolkar( grid, p,gp);
 
-    
-    //with bath
-//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
-//      //with zonal flow field
-      solovev::ZonalFlow init0(gp,p.amp);
-    //with gaussians
-//     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
-//     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-//     dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-//     dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
+
+      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+//       solovev::ZonalFlow init0(gp,p.amp);
     
 //     solovev::Gradient grad(gp); //background gradient
     solovev::Nprofile grad(gp); //initial profile
 
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
-
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[0]);
-    
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
-   
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[1]);
-   
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[1]);
-
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
-    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0
-
+    //damp the bath on psi boundaries 
+    dg::blas1::pointwiseDot(rolkar.pupil(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
+    dg::blas1::axpby( 1., y1[0], 1., y0[0]);
+    dg::blas1::axpby( 1., y1[0], 1., y0[1]);
+    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
+    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
-    
-//     dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]); //is pupil on bath
-//     dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]); //is pupil on bath
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]); //is damping on bath
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]); //is damping on bath
-    
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
     ab.init( feltor, rolkar, y0, p.dt);
 
@@ -136,13 +113,13 @@ int main( int argc, char* argv[])
         feltor.exp( y0, y1, 2); //calculate real densities from logdensities
 
         //plot electrons
-        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1.));//ne-1
+        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemin() = 1.0;
         title << std::setprecision(2) << std::scientific;
-        title <<"ne / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
@@ -151,13 +128,13 @@ int main( int argc, char* argv[])
         }
 
         //draw ions
-        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1.));//ne-1
+        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemin() = 1.0;        
         title << std::setprecision(2) << std::scientific;
-        title <<"ni / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();

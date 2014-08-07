@@ -23,10 +23,10 @@ struct Rolkar
         gp(gp),
         w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         temp( g.size()),
-//         pupil_( dg::evaluate( solovev::Pupil( gp), g)),
-//                 pupil_( dg::evaluate( solovev::GaussianDamping( gp), g)),
-
-                pupil_( dg::evaluate( solovev::TanhDamping(gp ), g)),
+        dampin_( dg::evaluate( solovev::TanhDampingIn(gp ), g)),
+        dampout_( dg::evaluate( solovev::TanhDampingOut(gp ), g)),
+        dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
+        pupil_( dg::evaluate( solovev::Pupil( gp), g)),
         lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g))
     {
         LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::symmetric);
@@ -58,18 +58,21 @@ struct Rolkar
         dg::blas1::pointwiseDot( expy[1], x[3], chi); //N_i U_i
         dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i
         dg::blas1::pointwiseDivide( chi, expy[0], omega);//J_par/N_e
-        dg::blas1::pointwiseDivide( chi, expy[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
+//         dg::blas1::pointwiseDivide( chi, expy[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
         dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);  // dtU_e =- C/hat(mu)_e J_par/N_e
-        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat,chi, 1., y[3]);    // dtU_e =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i
+        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat,omega, 1., y[3]);    // dtU_e =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i
         
 //         //cut contributions to boundary now with damping on all 4 quantities
-        for( unsigned i=0; i<y.size(); i++)
+        for( unsigned i=0; i<y.size(); i++){
+            dg::blas1::pointwiseDot( dampin_, y[i], y[i]);
             dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
+        }
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
     const container& weights(){return w3d_;}
     const container& precond(){return v3d_;}
-    const container& iris(){return pupil_;}
+    const container& pupil(){return pupil_;}
+    const container& dampin(){return dampin_;}
 
   private:
     void divide( const container& zaehler, const container& nenner, container& result)
@@ -80,6 +83,9 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container w3d_, v3d_;
     container temp;
+    const container dampin_;
+    const container dampout_;
+    const container dampgauss_;
     const container pupil_;
     const container lapiris_;
     
@@ -135,7 +141,7 @@ struct Feltor
     container chi, omega;
 
     const container binv, curvR, curvZ, gradlnB;
-    const container iris, source, damping;
+    const container pupil, source, damping;
     const container w3d, v3d, one;
     std::vector<container> phi, curvphi, dzphi, expy;
     std::vector<container> dzy, curvy; 
@@ -162,11 +168,11 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solov
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
-    iris( dg::evaluate( solovev::Pupil( gp), g)),
+    pupil( dg::evaluate( solovev::Pupil( gp), g)),
 //     source( dg::evaluate( dg::Gaussian( gp.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
 //     source( dg::evaluate( solovev::Gradient(gp), g)),
      source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
-    damping( dg::evaluate( solovev::TanhDamping(gp ), g)), 
+    damping( dg::evaluate( solovev::TanhDampingIn(gp ), g)), 
 //     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
@@ -210,6 +216,8 @@ const container& Feltor< container>::polarisation( const std::vector<container>&
     dg::blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
+        //correction
+    dg::blas1::axpby( -p.mu[0], expy[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_i
     //A = pol.create( chi);
     pol.set_chi( chi);
     thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
@@ -267,11 +275,11 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
         dg::blas1::pointwiseDot(y[i+2], gradlnB, omega);                     
         dg::blas1::axpby( 1., omega, 1., yp[i]);                            //dtlnN = dtlnN + U dz ln B
         dg::blas1::pointwiseDot(y[i+2], dzy[2+i], omega);                    
-        dg::blas1::axpby( -1., omega, 1., yp[2+i]);                         //dtw = dtU - U dz U
+        dg::blas1::axpby( -1., omega, 1., yp[2+i]);                         //dtU = dtU - U dz U
 
         //parallel force terms
-        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]); //dtw = dtU - tau/(hat(mu))*dz lnN
-        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtw = dtU - 1/(hat(mu))*dz phi
+        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
+        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtU = dtU - 1/(hat(mu))*dz phi
 
         //curvature terms
         curve( y[i], curvy[i]);     //K(N)
@@ -281,19 +289,19 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
         dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega); //U K(U)
         dg::blas1::pointwiseDot( y[i+2], omega, chi); //U^2 K(U)
         dg::blas1::axpby( -p.mu[i]*p.eps_hat, omega, 1., yp[i]);             //dtlnN = dtlnN - (hat(mu)) U K(U)
-        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]);         //dtw = dtU - 0.5 (hat(mu)) U^2 K(U)
+        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]);         //dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
 
         dg::blas1::pointwiseDot(y[i+2], curvy[i], omega); //U K(ln N)
         dg::blas1::pointwiseDot( y[i+2], omega, chi); //U^2K(ln N)
-        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                    //dtw = dtU - tau U K(lnN)
+        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                    //dtU = dtU - tau U K(lnN)
         dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[i]);           //dtlnN = dtlnN -0.5mu U^2K(lnN)
 
         dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);                   //dtlnN = dtlnN - tau K(lnN)
-        dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);            //dtw = dtU - 2 tau K(U)
+        dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);            //dtU = dtU - 2 tau K(U)
         dg::blas1::axpby( -1., curvphi[i], 1., yp[i]);                       //dtlnN= dtlnN - K(psi)
 
         dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);  //U K(phi)
-        dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                         //dtw = dtU -0.5 U K(psi)
+        dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                         //dtU = dtU -0.5 U K(psi)
     }
         
     //add parallel diffusion with naive implementation
@@ -305,14 +313,14 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     //add particle source to dtN
     for( unsigned i=0; i<2; i++)
     {
-        dg::blas1::pointwiseDivide( source, expy[i], omega); //source/N
-        dg::blas1::axpby( 1., omega, 1, yp[i]  );       //dtlnN = dtlnN + source/N
+//         dg::blas1::pointwiseDivide( source, expy[i], omega); //source/N
+//         dg::blas1::axpby( 1., omega, 1, yp[i]  );       //dtlnN = dtlnN + source/N
     }
 
     for( unsigned i=0; i<4; i++) //damping and pupil on N and w
     {
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]); 
-        dg::blas1::pointwiseDot( iris, yp[i], yp[i]);
+        dg::blas1::pointwiseDot( pupil, yp[i], yp[i]);
     }
 }
 
