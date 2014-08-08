@@ -1,7 +1,6 @@
 #pragma once
 
 #include "dg/algorithm.h"
-//#include "dg/backend/dz.cuh"
 
 #include "parameters.h"
 // #include "geometry_circ.h"
@@ -27,11 +26,10 @@ struct Rolkar
         dampout_( dg::evaluate( solovev::TanhDampingOut(gp ), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         pupil_( dg::evaluate( solovev::Pupil( gp), g)),
-
-        lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g))
+        lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
+        LaplacianM_perp ( dg::create::laplacianM_perp( g, dg::normed, dg::symmetric))
+        //LaplacianM_para ( dg::create::laplacianM_parallel( g, dg::PER))
     {
-        LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::symmetric);
-        LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -93,7 +91,7 @@ struct Rolkar
     const container lapiris_;
     
     Matrix LaplacianM_perp;
-    Matrix LaplacianM_para;
+    //Matrix LaplacianM_para;
 
 };
 
@@ -101,7 +99,7 @@ template< class Matrix, class container=thrust::device_vector<double>, class Pre
 struct Feltor
 {
     //typedef std::vector<container> Vector;
-    typedef typename container::value_type value_type;
+    typedef typename dg::VectorTraits<container>::value_type value_type;
     //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
@@ -186,13 +184,11 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
     pol(     g), 
-    invert_pol( omega, omega.size(), p.eps_pol), one( g.size(), 1.),
+    invert_pol( omega, omega.size(), p.eps_pol), one( dg::evaluate( dg::one, g)),
     w3d( dg::create::weights(g)), v3d( dg::create::precond(g)), 
     p(p),
     gp(gp)
-{
-
-}
+{ }
 template< class Matrix, class container, class P>
 const container& Feltor<Matrix,container, P>::compute_vesqr( container& potential)
 {
@@ -312,18 +308,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby( 1., omega, 1., yp[i]);                            //dtlnN = dtlnN + U dz ln B
         dg::blas1::pointwiseDot(y[i+2], dzy[2+i], omega);                    
         dg::blas1::axpby( -1., omega, 1., yp[2+i]);                         //dtU = dtU - U dz U
-
-        //parallel force terms
-        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
-        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtU = dtU - 1/(hat(mu))*dz phi
-
-        //curvature terms
-        curve( y[i], curvy[i]);     //K(N)
-        curve( y[i+2], curvy[2+i]); //K(U)
-        curve( phi[i], curvphi[i]); //K(phi)
-
-        dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega); //U K(U)
-        dg::blas1::pointwiseDot( y[i+2], omega, chi); //U^2 K(U)
+//parallel force terms dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtU = dtU - 1/(hat(mu))*dz phi //curvature terms curve( y[i], curvy[i]);     //K(N) curve( y[i+2], curvy[2+i]); //K(U) curve( phi[i], curvphi[i]); //K(phi) dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega); //U K(U) dg::blas1::pointwiseDot( y[i+2], omega, chi); //U^2 K(U)
         dg::blas1::axpby( -p.mu[i]*p.eps_hat, omega, 1., yp[i]);             //dtlnN = dtlnN - (hat(mu)) U K(U)
         dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]);         //dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
 

@@ -4,10 +4,10 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "timer.cuh"
-#include "evaluation.cuh"
-#include "derivatives.cuh"
-#include "typedefs.cuh"
+#include "backend/timer.cuh"
+#include "backend/evaluation.cuh"
+#include "backend/derivatives.cuh"
+#include "backend/typedefs.cuh"
 #include "backend/cusp_thrust_backend.h"
 
 #include "cg.h"

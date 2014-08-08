@@ -1,10 +1,10 @@
 #include <iostream>
 #include <iomanip>
 
+#include "backend/xspacelib.cuh"
 #include "backend/timer.cuh"
 
 #include "polarisation.h"
-#include "xspacelib.cuh"
 #include "cg.h"
 
 
@@ -31,18 +31,17 @@ double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(
 double sol(double x, double y)  { return sin( x)*sin(y);}
 double der(double x, double y)  { return cos( x)*sin(y);}
 
-using namespace std;
 
 int main()
 {
     dg::Timer t;
     unsigned n, Nx, Ny; 
     double eps;
-    cout << "Type n, Nx and Ny and epsilon! \n";
-    cin >> n >> Nx >> Ny; //more N means less iterations for same error
-    cin >> eps;
-    cout << "# of polynomial coefficients: "<< n <<endl;
-    cout << "# of 2d cells                 "<< Nx*Ny <<endl;
+    std::cout << "Type n, Nx and Ny and epsilon! \n";
+    std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
+    std::cin >> eps;
+    std::cout << "# of polynomial coefficients: "<< n <<std::endl;
+    std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
     dg::DVec v2d = dg::create::v2d( grid);
     dg::DVec w2d = dg::create::w2d( grid);
@@ -52,19 +51,19 @@ int main()
     dg::DVec chi =  dg::evaluate( pol, grid);
 
 
-    cout << "Create Polarisation object and set chi!\n";
+    std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     dg::Polarisation<dg::DMatrix, dg::DVec, dg::DVec> pol( grid);
     pol.set_chi( chi);
     t.toc();
-    cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
+    std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
     t.tic();
-    std::cout << "Number of pcg iterations "<< invert( pol, x, b)<<endl;
+    std::cout << "Number of pcg iterations "<< invert( pol, x, b)<<std::endl;
     t.toc();
-    cout << "For a precision of "<< eps<<endl;
-    cout << "Took "<<t.diff()<<"s\n";
+    std::cout << "For a precision of "<< eps<<std::endl;
+    std::cout << "Took "<<t.diff()<<"s\n";
 
     //compute error
     const dg::DVec solution = dg::evaluate( sol, grid);
@@ -73,14 +72,14 @@ int main()
     dg::blas1::axpby( 1.,x,-1., error);
 
     double err = dg::blas2::dot( w2d, error);
-    std::cout << "L2 Norm2 of Error is " << err << endl;
+    std::cout << "L2 Norm2 of Error is " << err << std::endl;
     double norm = dg::blas2::dot( w2d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
     dg::DMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);
-    std::cout << "L2 Norm2 of Error in derivative is " << err << endl;
+    std::cout << "L2 Norm2 of Error in derivative is " << err << std::endl;
     norm = dg::blas2::dot( w2d, derivati);
     std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2

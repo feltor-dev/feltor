@@ -34,12 +34,12 @@ struct Pattern
         int rank, size; 
         MPI_Comm_rank( comm_, &rank);
         MPI_Comm_size( comm_, &size);
-        assert( sendTo_.size() == size);
+        assert( sendTo_.size() == (unsigned)size);
         thrust::host_vector<unsigned> global_( size*size);
         MPI_Allgather( sendTo_.data(),  size, MPI_UNSIGNED,
                        global_.data(), size, MPI_UNSIGNED,
                        comm_);
-        for( unsigned i=0; i<size; i++)
+        for( unsigned i=0; i<(unsigned)size; i++)
             recvFrom_[i] = global_[i*size+rank]; 
         thrust::exclusive_scan( sendTo_.begin(),   sendTo_.end(),   accS_.begin());
         thrust::exclusive_scan( recvFrom_.begin(), recvFrom_.end(), accR_.begin());
@@ -94,7 +94,7 @@ thrust::host_vector<double> Pattern::scatter( const thrust::host_vector<double>&
 }
 void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
 {
-    assert( gatherFrom.size() == thrust::reduce( recvFrom_.begin(), recvFrom_.end()));
+    assert( gatherFrom.size() == (unsigned)thrust::reduce( recvFrom_.begin(), recvFrom_.end()));
     values.resize( thrust::reduce( sendTo_.begin(), sendTo_.end()) );
     MPI_Alltoallv( 
             gatherFrom.data(), recvFrom_.data(), accR_.data(), MPI_DOUBLE, 
@@ -217,7 +217,7 @@ struct Buffer
         MPI_Comm_rank( p_.comm(), &rank);
         thrust::host_vector<MPI_Request > Sreq( p_.size());
         thrust::host_vector<MPI_Request > Rreq( p_.size());
-        for( int i=0; i<p_.size(); i++)
+        for( int i=0; i<(int)p_.size(); i++)
         {
             if( p_.sendTo(i) != 0)
                 MPI_Isend( sendbuf_[i].data(), p_.sendTo(i), MPI_DOUBLE, 
@@ -226,7 +226,7 @@ struct Buffer
                 MPI_Irecv( recvbuf_[i].data(), p_.recvFrom(i), MPI_DOUBLE,
                         i, i, p_.comm(), &Rreq[i]);
         }
-        for( int i=0; i<p_.size(); i++)
+        for( int i=0; i<(int)p_.size(); i++)
         {
             if( p_.sendTo(i) != 0)
                 MPI_Wait( &Sreq[i], MPI_STATUS_IGNORE);
@@ -285,6 +285,7 @@ thrust::host_vector<double> Buffer::get_received() const
         thrust::copy_n( recvbuf_[i].begin(), recvbuf_[i].size(), position);
         position = position + recvbuf_[i].size();
     }
+    return v;
 }
 
 void Buffer::set_toSend( const thrust::host_vector<double>& v)
@@ -307,7 +308,7 @@ struct Sender
      */
     Sender( const thrust::host_vector<int>& ranks, MPI_Comm comm): map_(ranks), idx_(ranks)
     {
-        int rank, size; 
+        int size; 
         MPI_Comm_size( comm, &size);
         for( unsigned i=0; i<ranks.size(); i++)
             assert( 0 <= ranks[i] && ranks[i] <= size);

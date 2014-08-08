@@ -1,10 +1,10 @@
 #pragma once
 
-namespace dg{
-typedef MPI_Vector MVec;
-typedef MPI_Matrix MMatrix;
-typedef MPI_Precon MPrecon;
-}
+//namespace dg{
+//typedef MPI_Vector MVec;
+//typedef MPI_Matrix MMatrix;
+//typedef MPI_Precon MPrecon;
+//}
 
 void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm  )
 {
@@ -31,9 +31,9 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
         std::cout << "Type n, Nx and Ny\n";
         std::cin >> n >> Nx >> Ny;
     }
-    MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, comm);
+    MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, comm);
+    MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, comm);
 
 }
 

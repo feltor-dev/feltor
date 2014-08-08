@@ -14,7 +14,7 @@ struct MPI_Vector
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), data_( n*n*Nx*Ny*Nz), comm_(comm) {}
     thrust::host_vector<double>& data() {return data_;}
     const thrust::host_vector<double>& data() const {return data_;}
-    thrust::host_vector<double> reduce() const;
+    thrust::host_vector<double> cut_overlap() const;
     unsigned n() const {return n_;}
     unsigned Nx()const {return Nx_;}
     unsigned Ny()const {return Ny_;}
@@ -66,6 +66,7 @@ struct MPI_Vector
     MPI_Comm comm_;
 };
 
+typedef MPI_Vector MVec;
 template<> 
 struct VectorTraits<MPI_Vector> {
     typedef double value_type;
@@ -123,19 +124,18 @@ void MPI_Vector::x_row( MPI_Comm comm)
 {
     //shift data in first dimension
     MPI_Status status;
-    int n = n_;
-    int cols = Nx_*n_;
-    int rows = Ny_*n_;
-    int number = Nz_*Nx_*n;
+    unsigned n = n_;
+    unsigned cols = Nx_*n_;
+    unsigned number = Nz_*Nx_*n;
 
     thrust::host_vector<double> sendbuffer1( n*number, 0);
     thrust::host_vector<double> recvbuffer1( n*number, 0);
     thrust::host_vector<double> sendbuffer2( n*number, 0);
     thrust::host_vector<double> recvbuffer2( n*number, 0);
     //copy into buffers
-    for( int s=0; s<Nz_; s++)
-        for( int k=0; k<n; k++)
-            for( int j=0; j<cols; j++)
+    for( unsigned s=0; s<Nz_; s++)
+        for( unsigned k=0; k<n; k++)
+            for( unsigned j=0; j<cols; j++)
             {
                 sendbuffer1[(s*n+k)*cols+j] = 
                     data_[((s*Ny_ + 1)*n + k)*cols + j];
@@ -158,9 +158,9 @@ void MPI_Vector::x_row( MPI_Comm comm)
                     source, 1, //source
                     comm, &status);
     //copy back into vector
-    for( int s=0; s<Nz_; s++)
-        for( int k=0; k<n; k++)
-            for( int j=0; j<cols; j++)
+    for( unsigned s=0; s<Nz_; s++)
+        for( unsigned k=0; k<n; k++)
+            for( unsigned j=0; j<cols; j++)
             {
                 data_[((s*Ny_    )*n + k)*cols + j] = 
                     recvbuffer1[(s*n+k)*cols+j];
@@ -170,7 +170,7 @@ void MPI_Vector::x_row( MPI_Comm comm)
 
 }
 
-thrust::host_vector<double> MPI_Vector::reduce() const
+thrust::host_vector<double> MPI_Vector::cut_overlap() const
 {
     thrust::host_vector<double> reduce( n_*n_*(Nx_-2)*(Ny_-2)*Nz_, 1.);
     for( unsigned s=0; s<Nz_; s++)

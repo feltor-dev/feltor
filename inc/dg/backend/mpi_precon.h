@@ -11,6 +11,7 @@ struct MPI_Precon
     std::vector<double> data;
 };
 
+typedef MPI_Precon MPrecon;
 template <>
 struct MatrixTraits<MPI_Precon>
 {
