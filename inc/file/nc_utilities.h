@@ -126,7 +126,7 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
     if( (retval = nc_def_dim( ncid, "x", gx.size(), &xid)) ) { return retval;}
     if( (retval = nc_def_dim( ncid, "y", gy.size(), &yid)) ){ return retval;}
     if( (retval = nc_def_dim( ncid, "time", NC_UNLIMITED, &tid)) ){ return retval;}
-    int xvarID, yvarID, zvarID;
+    int xvarID, yvarID;
     if( (retval = nc_def_var( ncid, "x", NC_DOUBLE, 1, &xid, &xvarID))){return retval;}
     if( (retval = nc_def_var( ncid, "y", NC_DOUBLE, 1, &yid, &yvarID))){return retval;}
     if( (retval = nc_def_var( ncid, "time", NC_DOUBLE, 1, &tid, tvarID))){return retval;}

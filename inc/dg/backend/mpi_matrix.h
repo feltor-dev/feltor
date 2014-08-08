@@ -55,6 +55,7 @@ struct MPI_Matrix
     MPI_Comm comm_;
 };
 
+typedef MPI_Matrix MMatrix;
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
     int rank;
@@ -117,7 +118,8 @@ void MPI_Matrix::update_boundaryX( MPI_Vector& v)const
     if( bcx_ == PER) return;
     int low_sign, upp_sign;
     if( bcx_ == DIR)
-        low_sign=upp_sign=-1;
+        low_sign=upp_sign=-0;
+        //low_sign=upp_sign=-1;
     else if( bcx_ == NEU)
         low_sign=upp_sign=+1;
     else if( bcx_ == DIR_NEU)
@@ -130,13 +132,13 @@ void MPI_Matrix::update_boundaryX( MPI_Vector& v)const
     MPI_Cart_get( comm_, ndims, dims, periods, coords);
     unsigned rows = v.Nz()*v.Ny()*v.n(), cols =v.Nx(), n = v.n();
     if( coords[0] == dims[0]-1)
-        for( int i=0; i<rows; i++)
-            for( int j=0; j<n; j++)
+        for( unsigned i=0; i<rows; i++)
+            for( unsigned j=0; j<n; j++)
                 v.data()[(i*cols + cols-1)*n+j] = 
                     upp_sign*v.data()[(i*cols + cols-2)*n + n-j-1];
     if( coords[0] == 0) //both ifs may be true
-        for( int i=0; i<rows; i++)
-            for( int j=0; j<n; j++)
+        for( unsigned i=0; i<rows; i++)
+            for( unsigned j=0; j<n; j++)
                 v.data()[(i*cols + 0)*n+j] = 
                     low_sign*v.data()[(i*cols+1)*n+ n-j-1];
     return;
@@ -147,7 +149,8 @@ void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
     if( bcy_ == PER) return;
     int low_sign, upp_sign;
     if( bcy_ == DIR)
-        low_sign=upp_sign=-1;
+        low_sign=upp_sign=-0;
+        //low_sign=upp_sign=-1;
     else if( bcy_ == NEU)
         low_sign=upp_sign=+1;
     else if( bcy_ == DIR_NEU)
@@ -160,15 +163,15 @@ void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
     MPI_Cart_get( comm_, ndims, dims, periods, coords);
     unsigned cols =v.Nx()*v.n(), n = v.n();
     if( coords[1] == dims[1]-1)
-        for( int s=0; s<v.Nz(); s++)
-            for( int k=0; k<n; k++)
-                for( int j=0; j<cols; j++)
+        for( unsigned s=0; s<v.Nz(); s++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned j=0; j<cols; j++)
                     v.data()[((s*v.Ny() + v.Ny()-1)*n+k)*cols + j] = 
                         upp_sign*v.data()[((s*v.Ny() + v.Ny() -2)*n+n-k-1)*cols + j];
     if( coords[1] == 0) //both ifs may be true
-        for( int s=0; s<v.Nz(); s++)
-            for( int k=0; k<n; k++)
-                for( int j=0; j<cols; j++)
+        for( unsigned s=0; s<v.Nz(); s++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned j=0; j<cols; j++)
                     v.data()[((s*v.Ny() + 0)*n + k)*cols + j] = 
                         low_sign*v.data()[((s*v.Ny() + 1)*n + n-k-1)*cols+j];
     return;

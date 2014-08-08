@@ -11,10 +11,12 @@ double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
 
 int main(int argc, char* argv[])
 {
+    //init MPI
     MPI_Init( &argc, &argv);
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
+    //create a grid and some data
     if( size != 4){ std::cerr << "Please run with 4 threads!\n"; return -1;}
     double Tmax=2.*M_PI;
     double NT = 100;
@@ -25,6 +27,8 @@ int main(int argc, char* argv[])
     dg::Grid3d<double> g( gx, gy, gz);
     std::string hello = "Hello world\n";
     thrust::host_vector<double> data = dg::evaluate( function, g);
+
+    //create NetCDF File
     int ncid;
     file::NC_Error_Handle err;
     MPI_Info info = MPI_INFO_NULL;

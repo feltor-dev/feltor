@@ -118,7 +118,7 @@ int main( int argc, char* argv[])
         //compute the total temperature
         dg::blas1::axpby( 1., y0[0],  0., temperature);
         dg::blas1::axpby( 1., ground, 1., temperature);
-        thrust::host_vector<double> reduc = temperature.reduce();
+        thrust::host_vector<double> reduc = temperature.cut_overlap();
         h = nc_put_vara_double( ncid, dataID, start, count, reduc.data());
         h = nc_put_vara_double( ncid, tvarID, &start[0], &tcount, &time);
         start[0]++;

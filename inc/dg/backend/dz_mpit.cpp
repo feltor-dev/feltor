@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <cusp/print.h>
+#include <mpi.h>
 
 #include "mpi_evaluation.h"
 #include "mpi_precon.h"
@@ -46,16 +47,16 @@ double deri(double R, double Z, double phi)
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    int np[3], rank;
+    int rank;
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( dg::PER, dg::PER, dg::PER, np, n, Nx, Ny, Nz, comm);
+    mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     Field field( R_0, I_0);
     dg::MPI_Grid3d g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, comm);
     const dg::MPI_Precon w3d = dg::create::weights( g3d);
-    dg::DZ<dg::HMatrix, dg::MVec> dz( field, g3d);
+    dg::DZ<dg::MMatrix, dg::MVec> dz( field, g3d);
 
     dg::MVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::MVec solution = dg::evaluate( deri, g3d);

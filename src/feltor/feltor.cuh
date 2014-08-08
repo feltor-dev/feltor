@@ -1,7 +1,6 @@
 #pragma once
 
 #include "dg/algorithm.h"
-//#include "dg/backend/dz.cuh"
 
 #include "parameters.h"
 // #include "geometry_circ.h"
@@ -27,10 +26,10 @@ struct Rolkar
 //                 pupil_( dg::evaluate( solovev::GaussianDamping( gp), g)),
 
                 pupil_( dg::evaluate( solovev::TanhDamping(gp ), g)),
-        lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g))
+        lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
+        LaplacianM_perp ( dg::create::laplacianM_perp( g, dg::normed, dg::symmetric))
+        //LaplacianM_para ( dg::create::laplacianM_parallel( g, dg::PER))
     {
-        LaplacianM_perp = dg::create::laplacianM_perp( g, dg::normed, dg::symmetric);
-        LaplacianM_para = dg::create::laplacianM_parallel( g, dg::PER);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -84,7 +83,7 @@ struct Rolkar
     const container lapiris_;
     
     Matrix LaplacianM_perp;
-    Matrix LaplacianM_para;
+    //Matrix LaplacianM_para;
 
 };
 
@@ -92,7 +91,7 @@ template< class Matrix, class container=thrust::device_vector<double>, class Pre
 struct Feltor
 {
     //typedef std::vector<container> Vector;
-    typedef typename container::value_type value_type;
+    typedef typename dg::VectorTraits<container>::value_type value_type;
     //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
@@ -176,13 +175,11 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
     pol(     g), 
-    invert_pol( omega, omega.size(), p.eps_pol), one( g.size(), 1.),
+    invert_pol( omega, omega.size(), p.eps_pol), one( dg::evaluate( dg::one, g)),
     w3d( dg::create::weights(g)), v3d( dg::create::precond(g)), 
     p(p),
     gp(gp)
-{
-
-}
+{ }
 template< class Matrix, class container, class P>
 const container& Feltor<Matrix,container, P>::compute_vesqr( container& potential)
 {
