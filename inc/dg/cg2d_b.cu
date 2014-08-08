@@ -8,7 +8,7 @@
 #include "evaluation.cuh"
 #include "derivatives.cuh"
 #include "typedefs.cuh"
-#include "cusp_thrust_backend.h"
+#include "backend/cusp_thrust_backend.h"
 
 #include "cg.h"
 
@@ -22,7 +22,7 @@ const double lx = 2.*M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double derivative( double x, double y){return cos(x)*sin(y);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
-dg::bc bcx = dg::PER;
+dg::bc bcx = dg::DIR;
 //const double lx = 2./3.*M_PI;
 //double fct(double x, double y){ return sin(y)*sin(3.*x/4.);}
 //double laplace_fct( double x, double y) { return 25./16.*sin(y)*sin(3.*x/4.);}

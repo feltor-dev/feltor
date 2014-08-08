@@ -161,6 +161,36 @@ inline double one( double x, double y) {return 1;}
  * @return 1
  */
 inline double one( double x, double y, double z) {return 1;}
+/**
+ * @brief The constant 
+ *
+ * Useful for integration.
+ * @param x x-value
+ *
+ * @return 1
+ */
+inline double zero( double x) {return 0.;}
+/**
+ * @brief The constant 
+ *
+ * Useful for integration.
+ * @param x x-value
+ * @param y y-value
+ *
+ * @return 1
+ */
+inline double zero( double x, double y) {return 0.;}
+/**
+ * @brief The constant 
+ *
+ * Useful for integration.
+ * @param x x-value
+ * @param y x-value
+ * @param z x-value
+ *
+ * @return 1
+ */
+inline double zero( double x, double y, double z) {return 0.;}
 } //namespace dg
 
 ///@}

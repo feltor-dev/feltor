@@ -17,7 +17,7 @@
 6)  eps_pol (stop for polarisation)      =   1e-2 (1e-6)
 7)  eps_max (stop for induction)         =   0.0 (1e-6)
 8)  eps_gamma (stop for Gamma CG)        =   1e-3  (1e-8)
-9)  eps_time ( stop for time inversion ) =   1e-9 
+9)  eps_time ( stop for time inversion ) =   1e-8 
 
 ------------------Boundary conditions----------------------
 

@@ -25,7 +25,7 @@ namespace dg
  *
  * @ingroup highlevel
  *
- * The term discretized is \f[ \nabla ( \chi \nabla ) \f]
+ * The term discretized is \f[ -\nabla ( \chi \nabla ) \f]
  * @tparam Matrix The Matrix class to use
  * @tparam Vector The Vector class to use
  * @tparam Preconditioner The Preconditioner class to use

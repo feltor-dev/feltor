@@ -78,7 +78,7 @@ int main()
     double eps3 = dg::blas2::dot(w3d , error3);
     double norm3 = dg::blas2::dot(w3d , solution3);
     //cout << "L2 Norm2 of Solution is        " << norm3 << endl;
-    cout << "L2 Norm of relative error is   " <<sqrt( eps3/norm3)<<endl;
+    cout << "L2 Norm of relative error is:  " <<sqrt( eps3/norm3)<<endl;
     /////////////////STD_VECTOR MATRIX//////////////////////////
     //dg::Grid2d<double> g2d( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
     //dg::DVec w2d = dg::create::w2d( g2d), v2d( dg::create::v2d(g2d));

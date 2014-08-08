@@ -112,24 +112,21 @@ int main( int argc, char* argv[])
 
     /////////////////////////////set up hdf5/////////////////////////////////
     //file::T5trunc t5file( argv[2], input);
-    int status, ncid;
-    if( status = nc_create( argv[2], NC_CLOBBER, &ncid)) {std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
-    if( status = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data()) ) {
-        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
-    if( status = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data()) ) {
-        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    file::NC_Error_Handle h;
+    int h, ncid;
+    h = nc_create( argv[2], NC_CLOBBER, &ncid);
+    h = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    h = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
-    if( status = file::define_dimensions( ncid, dim_ids, &tvarID, grid) ){
-        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    h = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
 
     std::vector<std::string> names(5); 
     int dataIDs[names.size()];
     names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
     names[4] = "potential";
     for( unsigned i=0; i<names.size(); i++)
-        if( status = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]) ){
-            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
-    if( status = nc_enddef(ncid)){std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+        h = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);
+    h = nc_enddef(ncid);
 
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
@@ -139,12 +136,10 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<4; i++)
     {
         output = y0[i];//transfer to host
-        if( status = nc_put_vara_double( ncid, dataIDs[i], start, count, output.data() ) ){
-            std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+        h = nc_put_vara_double( ncid, dataIDs[i], start, count, output.data() );
     }
     output = feltor.potential()[0];
-    if( status = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() ) ){
-        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
 
     //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -178,12 +173,10 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<4; j++)
         {
             output = y0[j];//transfer to host
-            if( status = nc_put_vara_double( ncid, dataIDs[j], start, count, output.data() ) ){
-                std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+            h = nc_put_vara_double( ncid, dataIDs[j], start, count, output.data());
         }
         output = feltor.potential()[0];
-        if( status = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() ) ){
-        std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+        h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
 #ifdef DG_BENCHMARK
         ti.toc();
         step+=p.itstp;
@@ -203,7 +196,7 @@ int main( int argc, char* argv[])
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-    if( (status = nc_close(ncid))){std::cerr << "Error: "<<nc_strerror(status)<<"\n";}
+    h = nc_close(ncid);
 
     return 0;
 

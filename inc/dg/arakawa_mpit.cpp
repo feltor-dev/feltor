@@ -3,11 +3,11 @@
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+#include <mpi.h>
 
-#include "mpi_evaluation.h"
+#include "backend/mpi_evaluation.h"
 #include "arakawa.h"
-#include "blas.h"
-#include "mpi_init.h"
+#include "backend/mpi_init.h"
 
 
 
@@ -61,10 +61,10 @@ double jacobian( double x, double y)
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    int np[2], rank;
+    int rank;
     unsigned n, Nx, Ny; 
     MPI_Comm comm;
-    mpi_init2d( bcx, bcy, np, n, Nx, Ny, comm);
+    mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     dg::MPI_Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
