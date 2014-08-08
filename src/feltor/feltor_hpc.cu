@@ -70,9 +70,9 @@ int main( int argc, char* argv[])
 
     
     //with bath
-//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
      //with zonal flow field
-      solovev::ZonalFlow init0(gp,p.amp);
+//       solovev::ZonalFlow init0(gp,p.amp);
     //with gaussians
 //     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
 //     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
