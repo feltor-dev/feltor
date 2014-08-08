@@ -75,14 +75,11 @@ int main( int argc, char* argv[])
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
-
-      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+    //The initial field
+    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
-
-    
-     solovev::Gradient grad(gp); //background gradient
+    solovev::Gradient grad(gp); //background gradient
     //solovev::Nprofile grad(gp); //initial profile
-
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
     dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
@@ -90,8 +87,9 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., y1[0], 1., y0[1]);
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
-
-    feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
+    //transform to logarithmic values (ne and ni)
+    feltor.log( y0, y0, 2); 
+    
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
     ab.init( feltor, rolkar, y0, p.dt);
 
