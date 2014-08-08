@@ -64,8 +64,9 @@ struct Rolkar
         
 //         //cut contributions to boundary now with damping on all 4 quantities
         for( unsigned i=0; i<y.size(); i++){
-            dg::blas1::pointwiseDot( dampin_, y[i], y[i]);
-            dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
+//             dg::blas1::pointwiseDot( dampin_, y[i], y[i]);
+//             dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
+            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
         }
     }
     const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
@@ -172,8 +173,8 @@ Feltor< container>::Feltor( const dg::Grid3d<value_type>& g, Parameters p, solov
 //     source( dg::evaluate( dg::Gaussian( gp.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
 //     source( dg::evaluate( solovev::Gradient(gp), g)),
      source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
-    damping( dg::evaluate( solovev::TanhDampingIn(gp ), g)), 
-//     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
+//     damping( dg::evaluate( solovev::TanhDampingIn(gp ), g)), 
+    damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
     A (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
@@ -254,6 +255,13 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     double Upari =  0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
     energy_ = Ue + Ui + Uphi + Upare + Upari;
 
+    // the resistive dissipation
+    dg::blas1::pointwiseDot( expy[0], y[2], omega); //N_e U_e 
+    dg::blas1::pointwiseDot( expy[1], y[3], chi); //N_i U_i
+    dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i                  //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
+    double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*J_parallel^2
+    ediff_ = Dres;
+    
     for( unsigned i=0; i<2; i++)
     {
         //Compute RZ poisson  brackets
@@ -320,7 +328,7 @@ void Feltor< container>::operator()( std::vector<container>& y, std::vector<cont
     for( unsigned i=0; i<4; i++) //damping and pupil on N and w
     {
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]); 
-        dg::blas1::pointwiseDot( pupil, yp[i], yp[i]);
+//         dg::blas1::pointwiseDot( pupil, yp[i], yp[i]);
     }
 }
 

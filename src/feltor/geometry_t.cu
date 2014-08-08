@@ -63,7 +63,7 @@ int main()
     solovev::Field field(gp);
     solovev::Iris iris(gp);
     solovev::Pupil pupil(gp);
-    solovev::GaussianDamping damping(gp);
+    solovev::GaussianDamping dampgauss(gp);
     solovev::ZonalFlow zonalflow(gp,0.5);
     solovev::Gradient gradient(gp);
     solovev::Nprofile prof(gp);
@@ -83,7 +83,7 @@ int main()
     dg::HVec hvisual6 = dg::evaluate( gradLnB, grid);
     dg::HVec hvisual7 = dg::evaluate( iris, grid);
     dg::HVec hvisual8 = dg::evaluate( pupil, grid);
-    dg::HVec hvisual9 = dg::evaluate( damping, grid);
+    dg::HVec hvisual9 = dg::evaluate( dampgauss, grid);
     dg::HVec hvisual10 = dg::evaluate( zonalflow, grid);
     dg::HVec hvisual11 = dg::evaluate( gradient, grid);
     dg::HVec hvisual12 = dg::evaluate( field, grid);
@@ -94,7 +94,8 @@ int main()
     dg::HVec hvisual17 = dg::evaluate( bath1,grid);
     dg::blas1::pointwiseDot(hvisual8, hvisual17,hvisual17);
     dg::HVec hvisual18 = dg::evaluate( bath2,grid);
-    dg::blas1::pointwiseDot(hvisual8, hvisual18, hvisual18);
+    dg::blas1::pointwiseDot(hvisual9, hvisual18, hvisual18);
+//     dg::blas1::pointwiseDot(hvisual8, hvisual18, hvisual18);
     dg::blas1::axpby( 1.,hvisual13 , 1., hvisual18,hvisual18);
     //allocate mem for visual
     dg::HVec visual1( grid.size());

@@ -84,7 +84,7 @@ int main( int argc, char* argv[])
 
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.pupil(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
+    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
     dg::blas1::axpby( 1., y1[0], 1., y0[0]);
     dg::blas1::axpby( 1., y1[0], 1., y0[1]);
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0

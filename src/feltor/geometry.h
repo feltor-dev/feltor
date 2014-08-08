@@ -829,7 +829,7 @@ struct Pupil
     Psip psip_;
 };
 /**
- * @brief Damps the outer boundary in a zone with thickness alpha
+ * @brief Damps the outer boundary in a zone from psipmax to psipmax+ 4*alpha with a normal distribution
  */ 
 struct GaussianDamping
 {
@@ -839,15 +839,15 @@ struct GaussianDamping
         }
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmax) return 0.;
-        if( psip_(R,Z) < (gp_.psipmax-3.*gp_.alpha)) return 1.;
-        return 1. - exp( -( psip_(R,Z)-gp_.psipmax)*( psip_(R,Z)-gp_.psipmax)/2./gp_.alpha/gp_.alpha);
+        if( psip_(R,Z) > gp_.psipmax + 4.*gp_.alpha) return 0.;
+        if( psip_(R,Z) < (gp_.psipmax)) return 1.;
+        return exp( -( psip_(R,Z)-gp_.psipmax)*( psip_(R,Z)-gp_.psipmax)/2./gp_.alpha/gp_.alpha);
     }
     double operator( )(double R, double Z, double phi)
     {
-        if( psip_(R,Z,phi) > gp_.psipmax) return 0.;
-        if( psip_(R,Z,phi) < (gp_.psipmax-3.*gp_.alpha)) return 1.;
-        return 1. - exp( -( psip_(R,Z,phi)-gp_.psipmax)*( psip_(R,Z,phi)-gp_.psipmax)/2./gp_.alpha/gp_.alpha);
+        if( psip_(R,Z,phi) > gp_.psipmax + 4.*gp_.alpha) return 0.;
+        if( psip_(R,Z,phi) < (gp_.psipmax)) return 1.;
+        return exp( -( psip_(R,Z,phi)-gp_.psipmax)*( psip_(R,Z,phi)-gp_.psipmax)/2./gp_.alpha/gp_.alpha);
 
     }
     private:
