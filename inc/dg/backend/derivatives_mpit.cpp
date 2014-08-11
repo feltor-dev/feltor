@@ -15,10 +15,10 @@ double function( double x, double y, double z) { return sin(3./4.*z);}
 double derivative( double x, double y, double z) { return 3./4.*cos(3./4.*z);}
 dg::bc bcz = dg::DIR_NEU;
 */
-double function( double x, double y) { return sin(x);}
-double derivative( double x, double y) { return cos(x);}
+double function( double x, double y)   { return sin(y);}
+double derivative( double x, double y) { return cos(y);}
 
-dg::bc bcx = dg::DIR, bcy = dg::PER;
+dg::bc bcx = dg::PER, bcy = dg::PER;
 
 int main(int argc, char* argv[])
 {
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
     dg::MPI_Grid2d g( 0, lx, 0, lx, n, Nx, Ny, bcx, bcy, comm);
 
 
-    dg::MMatrix dx = dg::create::dx( g, bcx, dg::normed, dg::symmetric);
+    dg::MMatrix dx = dg::create::dy( g, bcx, dg::normed, dg::symmetric);
     dg::MMatrix lzM = dg::create::laplacianM( g, bcx, bcy, dg::normed, dg::symmetric);
 
     dg::MVec func = dg::evaluate( function, g);

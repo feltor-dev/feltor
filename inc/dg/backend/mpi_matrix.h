@@ -18,6 +18,7 @@ struct BoundaryTerms
     std::vector<int> col_;
     void applyX( const MPI_Vector& x, MPI_Vector& y) const
     {
+        if(data_.empty()) return;
         unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
         for( unsigned m=0; m<data_.size(); m++) //all blocks
         {
@@ -49,6 +50,7 @@ struct BoundaryTerms
 
     void applyY( const MPI_Vector& x, MPI_Vector& y) const
     {
+        if(data_.empty()) return;
         unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
         for( unsigned m=0; m<data_.size(); m++) //all blocks
         {
@@ -177,8 +179,8 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
                     *x.data()[(((s*rows+i)*n+p)*cols + j)*n + l + offset_[m]];
             }
     }
-    xterm_.applyX( x,y);
-    yterm_.applyY( x,y);
+    //xterm_.applyX( x,y);
+    //yterm_.applyY( x,y);
     if( !p_.data.empty())
         dg::blas2::detail::doSymv( p_, y, y, MPIPreconTag(), MPIVectorTag(), MPIVectorTag());
 
@@ -190,16 +192,16 @@ void MPI_Matrix::update_boundaryX( MPI_Vector& v)const
     //int rank;
     //MPI_Comm_rank(comm_, &rank);
     if( bcx_ == PER) return;
-    int low_sign, upp_sign;
-    if( bcx_ == DIR)
-        low_sign=upp_sign=-0;
-        //low_sign=upp_sign=-1;
-    else if( bcx_ == NEU)
-        low_sign=upp_sign=+1;
-    else if( bcx_ == DIR_NEU)
-        low_sign=-1, upp_sign=+1;
-    else if( bcx_ == NEU_DIR)
-        low_sign=+1, upp_sign=-1;
+    int low_sign(0), upp_sign(0);
+    //if( bcx_ == DIR)
+    //    low_sign=upp_sign=-0;
+    //    //low_sign=upp_sign=-1;
+    //else if( bcx_ == NEU)
+    //    low_sign=upp_sign=+1;
+    //else if( bcx_ == DIR_NEU)
+    //    low_sign=-1, upp_sign=+1;
+    //else if( bcx_ == NEU_DIR)
+    //    low_sign=+1, upp_sign=-1;
     int ndims;
     MPI_Cartdim_get( comm_, &ndims);
     int dims[ndims], periods[ndims], coords[ndims];
@@ -221,16 +223,16 @@ void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
 {
     v.x_row(comm_);
     if( bcy_ == PER) return;
-    int low_sign, upp_sign;
-    if( bcy_ == DIR)
-        low_sign=upp_sign=-0;
-        //low_sign=upp_sign=-1;
-    else if( bcy_ == NEU)
-        low_sign=upp_sign=+1;
-    else if( bcy_ == DIR_NEU)
-        low_sign=-1, upp_sign=+1;
-    else if( bcy_ == NEU_DIR)
-        low_sign=+1, upp_sign=-1;
+    int low_sign(0), upp_sign(0);
+    //if( bcy_ == DIR)
+    //    low_sign=upp_sign=-0;
+    //    //low_sign=upp_sign=-1;
+    //else if( bcy_ == NEU)
+    //    low_sign=upp_sign=+1;
+    //else if( bcy_ == DIR_NEU)
+    //    low_sign=-1, upp_sign=+1;
+    //else if( bcy_ == NEU_DIR)
+    //    low_sign=+1, upp_sign=-1;
     int ndims;
     MPI_Cartdim_get( comm_, &ndims);
     int dims[ndims], periods[ndims], coords[ndims];

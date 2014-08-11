@@ -77,10 +77,12 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir)
         if( dir == dg::symmetric)
         {
             row_.resize(4), col_.resize(4), data.resize(4);
-            row_[0] = col_[0] = 0, row_[1] = 0, col_[1] = 1;
-            row_[2] = col_[2] = g.N()-1, row_[3] = g.N()-1, col_[3] = g.N()-2;
-            data_[1] = rl;
-            data_[3] = -lr;
+            row_[0] = 0, col_[0] = 0; 
+            row_[1] = 0, col_[1] = 1;
+            row_[2] = g.N()-1, col_[2] = g.N()-1; 
+            row_[3] = g.N()-1, col_[3] = g.N()-2;
+            data_[1] = 0.5*rl;
+            data_[3] = -0.5*lr;
             switch( bcx)
             {
                 case( dg::DIR): data_[0] = 0.5*(d-d.transpose()+l); 
@@ -133,11 +135,11 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir)
                 case( dg::NEU): data_[2] = (d+l); 
                                 data_[0] = d;
                                 break;
-                case( dg::DIR_NEU): data_[2] = -d.transpose();
-                                    data_[0] = d;
-                                    break;
-                case( dg::NEU_DIR): data_[2] = (d+l);
+                case( dg::DIR_NEU): data_[2] = (d+l);
                                     data_[0] = (d+l);
+                                    break;
+                case( dg::NEU_DIR): data_[2] = -d.transpose();
+                                    data_[0] = d;
                                     break;
             }
         }
@@ -231,20 +233,31 @@ MPI_Matrix dxx( const Grid1d<double>& g, bc bcx, direction dir , MPI_Comm comm)
 
     a = (lr*t*rl + (d+l)*t*(d+l).transpose() + (l + r));
     b = -(d+l)*t*rl-rl;
-    ap = (rl*t*lr + (d+l).transpose()*t*(d+l) + (l + r));
-    bp  = (-rl*t*(d+l) - rl);
-    
     bt = b.transpose();
-    btp = bp.transpose();
-    a = 0.5*backward*t*(a+ap)*forward, 
-    bt = 0.5*backward*t*(bt+btp)*forward, 
-    b = 0.5*backward*t*(b+bp)*forward;
 
     MPI_Matrix m(bcx, comm,  3);
     m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
+    if( bcx == DIR_NEU || bcx == NEU_DIR) //cannot be symmetric
+    {
+        a  = 0.5*backward*t*(a)*forward, 
+        bt = 0.5*backward*t*(bt)*forward, 
+        b  = 0.5*backward*t*(b)*forward;
+        m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
+    }
+    else
+    {
+        ap = (rl*t*lr + (d+l).transpose()*t*(d+l) + (l + r));
+        bp  = (-rl*t*(d+l) - rl);
+        btp = bp.transpose();
+        //a  = 0.5*backward*t*(a+ap)*forward, 
+        //bt = 0.5*backward*t*(bt+btp)*forward, 
+        //b  = 0.5*backward*t*(b+bp)*forward;
+        a  = 0.5*backward*t*(a)*forward, 
+        bt = 0.5*backward*t*(bt)*forward, 
+        b  = 0.5*backward*t*(b)*forward;
 
-
-    m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
+        m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
+    }
     return m;
 }
 BoundaryTerms boundaryDXX( const Grid1d<double>& g, bc bcx, direction dir)
@@ -261,20 +274,31 @@ BoundaryTerms boundaryDXX( const Grid1d<double>& g, bc bcx, direction dir)
     Operator<double> backward= g.dlt().backward();
     Operator<double> t = create::pipj_inv(n);
     t *= 2./hx;
-    BoundaryTerms xterm;
     Operator<double> a(n), b(a), bt(a), bp(b), bpt(bp), ap(a), app(a), appp(a); 
     a = 0.5*( (lr*t*rl + (d+l)*t*(d+l).transpose() + l + r)
             + (rl*t*lr + (d+l).transpose()*t*(d+l) + l + r) );
-    b = 0.5*(-(d+l)*t*rl-rl + -rl*t*(d+l) - rl);
+    b = 0.5*(-(d+l)*t*rl-rl -rl*t*(d+l) - rl);
     bt = b.transpose();
     bp = 0.5*(-d*t*rl-rl - rl*t*d -rl);
     bpt = bp.transpose();
     ap = 0.5*(d*t*d.transpose()+l+r + d.transpose()*t*d+l+r);
     app = 0.5*((d+l)*t*(d+l).transpose()+r + (d+l).transpose()*t*(d+l)+r);
     appp = 0.5*(lr*t*rl+d.transpose()*t*d + l + rl*t*lr + d*t*d.transpose() + l);
+    if( bcx == dg::NEU_DIR||bcx == dg::DIR_NEU) //these can't be symmetric
+    {
+        a = (lr*t*rl + (d+l)*t*(d+l).transpose() + l + r);
+        b = -(d+l)*t*rl-rl;
+        bt = b.transpose();
+        bp = -d*t*rl-rl;
+        bpt = bp.transpose();
+        ap = d*t*d.transpose()+l+r;
+        app = (d+l)*t*(d+l).transpose()+r;
+        appp = lr*t*rl+d.transpose()*t*d + l;
+    }
     std::vector<int> row_, col_;
     std::vector<std::vector<double> > data;
     Operator<double> data_[5];
+    BoundaryTerms xterm;
     if( bcx != dg::PER)
     {
         std::vector<int> row_, col_;

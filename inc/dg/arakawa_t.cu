@@ -4,10 +4,9 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "evaluation.cuh"
 #include "arakawa.h"
 #include "blas.h"
-#include "typedefs.cuh"
+#include "backend/typedefs.cuh"
 
 using namespace std;
 using namespace dg;
