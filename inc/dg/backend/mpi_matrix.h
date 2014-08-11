@@ -11,6 +11,73 @@
 
 namespace dg
 {
+struct BoundaryTerms
+{
+    std::vector<std::vector<double> > data_;
+    std::vector<int> row_; //row of data in 1D without block
+    std::vector<int> col_;
+    void applyX( const MPI_Vector& x, MPI_Vector& y) const
+    {
+        unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
+        for( unsigned m=0; m<data_.size(); m++) //all blocks
+        {
+            for( unsigned s=0; s<x.Nz(); s++) //z-loop
+            for( unsigned i=1; i<rows-1; i++) //y-loop
+            for( unsigned k=0; k<n; k++)
+            //for( unsigned j=0; j<col.size()-1; j++) //x-loop
+            for( unsigned l=0; l<n; l++)
+            for( unsigned q=0; q<n; q++) //multiplication-loop
+            {
+                y.data()[(((s*rows+i)*n+k)*cols + row_[m]+1)*n +l] = 0;
+            }
+        }
+        for( unsigned m=0; m<data_.size(); m++) //all blocks
+        {
+            for( unsigned s=0; s<x.Nz(); s++) //z-loop
+            for( unsigned i=1; i<rows-1; i++) //y-loop
+            for( unsigned k=0; k<n; k++)
+            //for( unsigned j=0; j<col.size()-1; j++) //x-loop
+            for( unsigned l=0; l<n; l++)
+            for( unsigned q=0; q<n; q++) //multiplication-loop
+            {
+                y.data()[(((s*rows+i)*n+k)*cols + row_[m]+1)*n +l] += 
+                    data_[m][l*n+q]
+                    *x.data()[(((s*rows+i)*n+k)*cols + col_[m]+1)*n + q ];
+            }
+        }
+    }
+
+    void applyY( const MPI_Vector& x, MPI_Vector& y) const
+    {
+        unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
+        for( unsigned m=0; m<data_.size(); m++) //all blocks
+        {
+            for( unsigned s=0; s<x.Nz(); s++)//z-loop
+            //for( unsigned i=1; i<rows-1; i++) //y-loop
+            for( unsigned k=0; k<n; k++)
+            for( unsigned j=1; j<cols-1; j++) //x-loop
+            for( unsigned l=0; l<n; l++)
+            for( unsigned p=0; p<n; p++)
+            {
+                y.data()[(((s*rows+row_[m]+1)*n+k)*cols + j)*n +l] = 0;
+            }
+        }
+        for( unsigned m=0; m<data_.size(); m++) //all blocks
+        {
+            for( unsigned s=0; s<x.Nz(); s++)//z-loop
+            //for( unsigned i=1; i<rows-1; i++) //y-loop
+            for( unsigned k=0; k<n; k++)
+            for( unsigned j=1; j<cols-1; j++) //x-loop
+            for( unsigned l=0; l<n; l++)
+            for( unsigned p=0; p<n; p++)
+            {
+                y.data()[(((s*rows+row_[m]+1)*n+k)*cols + j)*n +l] += 
+                     data_[m][k*n+p]
+                    *x.data()[(((s*rows+col_[m]+1)*n+p)*cols + j)*n + l];
+            }
+        }
+    }
+};
 
 /**
  * @brief Matrix class for block matrices for 2D and 3D derivatives in X and Y direction
@@ -39,11 +106,13 @@ struct MPI_Matrix
     std::vector<std::vector<double> >& dataY()    {return dataY_;}
     std::vector<std::vector<double> >& dataX()    {return dataX_;}
     std::vector<int>&                  offset()  {return offset_;}
+    BoundaryTerms& xterm() {return xterm_;}
+    BoundaryTerms& yterm() {return yterm_;}
     MPI_Precon& precond() {return p_;}
-    const std::vector<std::vector<double> >& dataY()const {return dataY_;}
-    const std::vector<std::vector<double> >& dataX()const {return dataX_;}
-    const std::vector<int>& offset()const {return offset_;}
-    const MPI_Precon precond()const {return p_;}
+    //const std::vector<std::vector<double> >& dataY()const {return dataY_;}
+    //const std::vector<std::vector<double> >& dataX()const {return dataX_;}
+    //const std::vector<int>& offset()const {return offset_;}
+    //const MPI_Precon precond()const {return p_;}
 
     void symv( MPI_Vector& x, MPI_Vector& y) const;
   private:
@@ -51,9 +120,12 @@ struct MPI_Matrix
     std::vector<std::vector<double> > dataY_;
     std::vector<std::vector<double> > dataX_;
     std::vector<int> offset_;
+    BoundaryTerms xterm_;
+    BoundaryTerms yterm_;
     bc bcx_, bcy_;
     MPI_Comm comm_;
 };
+
 
 typedef MPI_Matrix MMatrix;
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
@@ -78,15 +150,15 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
     unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
     for( unsigned i=0; i<y.data().size(); i++)
         y.data()[i] = 0;
-    for( unsigned m=0; m<dataX_.size(); m++)
+    for( unsigned m=0; m<dataX_.size(); m++) //all blocks
     {
         if( !dataX_[m].empty())
-            for( unsigned s=0; s<x.Nz(); s++)
-            for( unsigned i=1; i<rows-1; i++)
+            for( unsigned s=0; s<x.Nz(); s++) //z-loop
+            for( unsigned i=1; i<rows-1; i++) //y-loop
             for( unsigned k=0; k<n; k++)
-            for( unsigned j=1; j<cols-1; j++)
+            for( unsigned j=1; j<cols-1; j++) //x-loop
             for( unsigned l=0; l<n; l++)
-            for( unsigned q=0; q<n; q++)
+            for( unsigned q=0; q<n; q++) //multiplication-loop
             {
                 y.data()[(((s*rows+i)*n+k)*cols + j)*n +l] += 
                     dataX_[m][l*n+q]
@@ -105,6 +177,8 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
                     *x.data()[(((s*rows+i)*n+p)*cols + j)*n + l + offset_[m]];
             }
     }
+    xterm_.applyX( x,y);
+    yterm_.applyY( x,y);
     if( !p_.data.empty())
         dg::blas2::detail::doSymv( p_, y, y, MPIPreconTag(), MPIVectorTag(), MPIVectorTag());
 
