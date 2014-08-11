@@ -150,7 +150,7 @@ struct Feltor
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
-    Matrix A; 
+    Matrix lapperp; 
     dg::DZ<Matrix, container> dz;
     dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
@@ -180,7 +180,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
-    A (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
+    lapperp (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
     pol(     g), 
@@ -250,18 +250,41 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     double Ue = p.tau[0]*dg::blas2::dot( y[0], w3d, expy[0]); // tau_e n_e ln(n_e)
     double Ui = p.tau[1]*dg::blas2::dot( y[1], w3d, expy[1]);// tau_i n_i ln(n_i)
     double Uphi = 0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
-    dg::blas1::pointwiseDot( y[2], y[2], omega); //U_e^2
+        dg::blas1::pointwiseDot( y[2], y[2], omega); //U_e^2
     double Upare = -0.5*p.mu[0]*dg::blas2::dot( expy[0], w3d, omega); 
-    dg::blas1::pointwiseDot(y[3], y[3], omega); //U_i^2
+        dg::blas1::pointwiseDot(y[3], y[3], omega); //U_i^2
     double Upari =  0.5*p.mu[1]*dg::blas2::dot( expy[1], w3d, omega); 
     energy_ = Ue + Ui + Uphi + Upare + Upari;
 
-    // the resistive dissipation
-    dg::blas1::pointwiseDot( expy[0], y[2], omega); //N_e U_e 
-    dg::blas1::pointwiseDot( expy[1], y[3], chi); //N_i U_i
-    dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i                  //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
+    // the resistive dissipation without FLR      
+        dg::blas1::pointwiseDot( expy[0], y[2], omega); //N_e U_e 
+        dg::blas1::pointwiseDot( expy[1], y[3], chi); //N_i U_i
+        dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i                  //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
     double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*J_parallel^2
-    ediff_ = Dres;
+
+    //Dissipative terms without FLR
+//         dg::blas1::axpby(1.,dg::evaluate( dg::one, g),1., y[0] ,chi); //(1+lnN_e)
+//         dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //(1+lnN_e-phi)
+//         dg::blas1::pointwiseDot( expy[0], chi, omega); //N_e phi_e     
+//         dg::blas2::gemv( lapperp, y[0],chi);
+//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 lnN_e
+//     double Dperpne =  p.nu_perp*dg::blas2::dot(omega, w3d, chi);
+//         dg::blas1::axpby(1.,dg::evaluate( dg::one, g),1., y[1] ,chi); //(1+lnN_i)
+//         dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //(1+lnN_i-phi)
+//         dg::blas1::pointwiseDot( expy[1], chi, omega); //N_i phi_i     
+//         dg::blas2::gemv( lapperp, y[1], chi);
+//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 lnN_i
+//     double Dperpni = - p.nu_perp*dg::blas2::dot(omega, w3d, chi);
+//         dg::blas1::pointwiseDot( expy[0], y[2], omega); //N_e U_e     
+//         dg::blas2::gemv( lapperp, y[2], chi);
+//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 U_e
+//     double Dperpue = p.nu_perp*p.mu[0]* dg::blas2::dot(omega, w3d, chi);
+//         dg::blas1::pointwiseDot( expy[1], y[3], omega); //N_e U_e     
+//         dg::blas2::gemv( lapperp, y[3], chi);
+//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 U_i
+//     double Dperpui = - p.nu_perp*p.mu[1]* dg::blas2::dot(omega, w3d, chi);
+//     ediff_ = Dres + Dperpne + Dperpni + Dperpue + Dperpui;
+    //the parallel part is done elsewhere
     
     for( unsigned i=0; i<2; i++)
     {
@@ -307,6 +330,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     {
         dz(dzy[i], omega); //dz (dz (N,U))
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);                     //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
+        //add them to the dissipative energy theorem
     }
     //add particle source to dtN
     for( unsigned i=0; i<2; i++)

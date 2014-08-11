@@ -65,45 +65,24 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
      
     //create RHS 
-    eule::Feltor< dg::DVec > feltor( grid, p,gp); 
-    eule::Rolkar< dg::DVec > rolkar( grid, p,gp);
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     
-    //with bath
-      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
-     //with zonal flow field
+    //The initial field
+    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
-    //with gaussians
-//     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
-//     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-//     dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-//     dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-    
-//     solovev::Gradient grad(gp); //background gradient
-    solovev::Nprofile grad(gp); //initial profile
-
-
+    solovev::Gradient grad(gp); //background gradient
+    //solovev::Nprofile grad(gp); //initial profile
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
-
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[0]);
-    
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
-   
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[1]);
-   
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[1]);
-
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
-    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0
-
-    feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
-    
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]); //is pupil on bath
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]); //is pupil on bath
+    //damp the bath on psi boundaries 
+    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
+    dg::blas1::axpby( 1., y1[0], 1., y0[0]);
+    dg::blas1::axpby( 1., y1[0], 1., y0[1]);
+    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
+    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
+    //transform to logarithmic values (ne and ni)
+    feltor.log( y0, y0, 2); 
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
@@ -113,7 +92,7 @@ int main( int argc, char* argv[])
     /////////////////////////////set up hdf5/////////////////////////////////
     //file::T5trunc t5file( argv[2], input);
     file::NC_Error_Handle h;
-    int h, ncid;
+    int ncid;
     h = nc_create( argv[2], NC_CLOBBER, &ncid);
     h = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     h = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
@@ -140,7 +119,8 @@ int main( int argc, char* argv[])
     }
     output = feltor.potential()[0];
     h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
-
+    h = nc_close(ncid);
+  
     //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
@@ -168,8 +148,11 @@ int main( int argc, char* argv[])
             //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
         }
         time += p.itstp*p.dt;
+
         start[0] = i;
         feltor.exp( y0,y0,2); //transform to correct values
+        h = nc_open(argv[2], NC_WRITE, &ncid);
+//         h = nc_inq_varid(ncid, "data", &varid) 
         for( unsigned j=0; j<4; j++)
         {
             output = y0[j];//transfer to host
@@ -177,6 +160,9 @@ int main( int argc, char* argv[])
         }
         output = feltor.potential()[0];
         h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
+        //write time data
+        h = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        h = nc_close(ncid);
 #ifdef DG_BENCHMARK
         ti.toc();
         step+=p.itstp;
@@ -196,7 +182,7 @@ int main( int argc, char* argv[])
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-    h = nc_close(ncid);
+//     h = nc_close(ncid);
 
     return 0;
 
