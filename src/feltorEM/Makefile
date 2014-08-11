@@ -55,13 +55,10 @@ feltor: feltor.cu feltor.cuh geometry.h
 feltor_hpc: feltor_hpc.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
-<<<<<<< HEAD
 
 feltor_hpc_h5: feltor_hpc_h5.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
-=======
->>>>>>> f186240f2ac88ca4e34841fabe589708d6699e8c
 	
 dz_geom_t: dz_geom_t.cu geometry.h 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 

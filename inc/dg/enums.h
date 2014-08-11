@@ -33,6 +33,15 @@ enum direction{
     backward, //!< backward derivative
     symmetric //!< up-down symmetrie
 };
+/**
+ * @brief Coordinate system
+ *
+ * @ingroup creation
+ */
+enum cos{
+    cartesian, //!< cartesian coordinate system
+    cylindrical //!< cylindrical coordinate system
+};
 ///@addtogroup creation
 ///@{
 /**
