@@ -15,7 +15,7 @@ dg::bc bcz = dg::DIR_NEU;
 */
 double function  ( double x, double y) { return sin(x);}
 double derivative( double x, double y) { return cos(x);}
-dg::bc bcx = dg::PER;
+dg::bc bcx = dg::DIR;
 
 void multiply( dg::Operator<double>& op, const double* x, double* y)
 {
@@ -38,7 +38,7 @@ int main()
     std::cout << "# of polynomials    " << n <<"\n";
     dg::Grid2d<double> g( 0, lx, 0, lx, n, Nx, Ny, bcx, dg::PER);
     dg::DMatrix dx = dg::create::dx( g, bcx);
-    dg::DMatrix lxM = dg::create::laplacianM( g, bcx, dg::PER, dg::normed, dg::XSPACE, dg::forward);
+    dg::DMatrix lxM = dg::create::laplacianM( g, bcx, dg::PER, dg::normed, dg::symmetric);
     const dg::DVec hv = dg::evaluate( function, g);
     dg::DVec hw = hv;
     const dg::DVec hu = dg::evaluate( derivative, g);
@@ -64,7 +64,7 @@ int main()
     //n = 3 -> p = 3      3
     //n = 4 -> p = 3      3
     //n = 5 -> p = 5      5
-    std::cout << "TEST VARIOUS HOST VERSIONS OF DERIVATIVE!\N";
+    std::cout << "TEST VARIOUS HOST VERSIONS OF DERIVATIVE!\n";
     dg::Operator<double> forw( g.dlt().forward( ));
     dg::Operator<double> back( g.dlt().forward( ));
     dg::HMatrix DX(dx);

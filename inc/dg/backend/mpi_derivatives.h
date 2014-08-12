@@ -57,7 +57,7 @@ MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
 
 BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir)
 {
-    unsigned n=g.n();
+    unsigned n=g.n(), N = g.N()-2;
     double hx = g.h();
     Operator<double> l = create::lilj(n);
     Operator<double> r = create::rirj(n);
@@ -79,8 +79,8 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir)
             row_.resize(4), col_.resize(4), data.resize(4);
             row_[0] = 0, col_[0] = 0; 
             row_[1] = 0, col_[1] = 1;
-            row_[2] = g.N()-1, col_[2] = g.N()-1; 
-            row_[3] = g.N()-1, col_[3] = g.N()-2;
+            row_[2] = N-1, col_[2] = N-1; 
+            row_[3] = N-1, col_[3] = N-2;
             data_[1] = 0.5*rl;
             data_[3] = -0.5*lr;
             switch( bcx)
@@ -103,7 +103,7 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir)
         {
             row_.resize(3), col_.resize(3), data.resize(3);
             row_[0] = col_[0] = 0, row_[1] = 0, col_[1] = 1;
-            row_[2] = col_[2] = g.N()-1;
+            row_[2] = col_[2] = N-1;
             data_[1] = rl;
             switch( bcx)
             {
@@ -125,7 +125,7 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir)
         {
             row_.resize(3), col_.resize(3), data.resize(3);
             row_[0] = col_[0] = 0;
-            row_[2] = col_[2] = g.N()-1, row_[1] = g.N()-1, col_[1] = g.N()-2;
+            row_[2] = col_[2] = N-1, row_[1] = N-1, col_[1] = N-2;
             data_[1] = -lr;
             switch( bcx)
             {
@@ -239,9 +239,9 @@ MPI_Matrix dxx( const Grid1d<double>& g, bc bcx, direction dir , MPI_Comm comm)
     m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
     if( bcx == DIR_NEU || bcx == NEU_DIR) //cannot be symmetric
     {
-        a  = 0.5*backward*t*(a)*forward, 
-        bt = 0.5*backward*t*(bt)*forward, 
-        b  = 0.5*backward*t*(b)*forward;
+        a  = backward*t*(a)*forward, 
+        bt = backward*t*(bt)*forward, 
+        b  = backward*t*(b)*forward;
         m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
     }
     else
@@ -249,12 +249,9 @@ MPI_Matrix dxx( const Grid1d<double>& g, bc bcx, direction dir , MPI_Comm comm)
         ap = (rl*t*lr + (d+l).transpose()*t*(d+l) + (l + r));
         bp  = (-rl*t*(d+l) - rl);
         btp = bp.transpose();
-        //a  = 0.5*backward*t*(a+ap)*forward, 
-        //bt = 0.5*backward*t*(bt+btp)*forward, 
-        //b  = 0.5*backward*t*(b+bp)*forward;
-        a  = 0.5*backward*t*(a)*forward, 
-        bt = 0.5*backward*t*(bt)*forward, 
-        b  = 0.5*backward*t*(b)*forward;
+        a  = 0.5*backward*t*(a+ap)*forward, 
+        bt = 0.5*backward*t*(bt+btp)*forward, 
+        b  = 0.5*backward*t*(b+bp)*forward;
 
         m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
     }
@@ -263,7 +260,7 @@ MPI_Matrix dxx( const Grid1d<double>& g, bc bcx, direction dir , MPI_Comm comm)
 BoundaryTerms boundaryDXX( const Grid1d<double>& g, bc bcx, direction dir)
 {
     //only implement symmetric laplacian
-    unsigned n=g.n();
+    unsigned n=g.n(), N = g.N()-2;
     double hx = g.h();
     Operator<double> l = create::lilj(n);
     Operator<double> r = create::rirj(n);
@@ -274,30 +271,25 @@ BoundaryTerms boundaryDXX( const Grid1d<double>& g, bc bcx, direction dir)
     Operator<double> backward= g.dlt().backward();
     Operator<double> t = create::pipj_inv(n);
     t *= 2./hx;
-    Operator<double> a(n), b(a), bt(a), bp(b), bpt(bp), ap(a), app(a), appp(a); 
-    a = 0.5*( (lr*t*rl + (d+l)*t*(d+l).transpose() + l + r)
-            + (rl*t*lr + (d+l).transpose()*t*(d+l) + l + r) );
-    b = 0.5*(-(d+l)*t*rl-rl -rl*t*(d+l) - rl);
-    bt = b.transpose();
-    bp = 0.5*(-d*t*rl-rl - rl*t*d -rl);
-    bpt = bp.transpose();
-    ap = 0.5*(d*t*d.transpose()+l+r + d.transpose()*t*d+l+r);
-    app = 0.5*((d+l)*t*(d+l).transpose()+r + (d+l).transpose()*t*(d+l)+r);
-    appp = 0.5*(lr*t*rl+d.transpose()*t*d + l + rl*t*lr + d*t*d.transpose() + l);
-    if( bcx == dg::NEU_DIR||bcx == dg::DIR_NEU) //these can't be symmetric
-    {
-        a = (lr*t*rl + (d+l)*t*(d+l).transpose() + l + r);
-        b = -(d+l)*t*rl-rl;
-        bt = b.transpose();
-        bp = -d*t*rl-rl;
-        bpt = bp.transpose();
-        ap = d*t*d.transpose()+l+r;
-        app = (d+l)*t*(d+l).transpose()+r;
-        appp = lr*t*rl+d.transpose()*t*d + l;
-    }
+    Operator<double> aF =  (lr*t*rl + (d+l)*t*(d+l).transpose() + l + r);
+    Operator<double> aB =  (rl*t*lr + (d+l).transpose()*t*(d+l) + l + r) ;
+    Operator<double> bF = -(d+l)*t*rl-rl;
+    Operator<double> bB = -rl*t*(d+l)-rl;
+    Operator<double> bFT = bF.transpose();
+    Operator<double> bBT = bB.transpose();
+    Operator<double> bpF = -d*t*rl-rl;
+    Operator<double> bpB = d*t*lr-rl;//-rl*t*d-rl;
+    Operator<double> bpFT = bpF.transpose();
+    Operator<double> bpBT = bpB.transpose();
+    Operator<double> apF = d*t*d.transpose()+l+r;
+    Operator<double> apB = apF; //d.transpose()*t*d+l+r;
+    Operator<double> appF = (d+l)*t*(d+l).transpose()+r;
+    Operator<double> appB = appF; //(d+l).transpose()*t*(d+l)+r;
+    Operator<double> apppF = lr*t*rl+d.transpose()*t*d + l ;
+    Operator<double> apppB = apppF; //rl*t*lr+d*t*d.transpose() + l;
     std::vector<int> row_, col_;
     std::vector<std::vector<double> > data;
-    Operator<double> data_[5];
+    Operator<double> data_[10];
     BoundaryTerms xterm;
     if( bcx != dg::PER)
     {
@@ -305,32 +297,43 @@ BoundaryTerms boundaryDXX( const Grid1d<double>& g, bc bcx, direction dir)
         switch( bcx)
         {
             case( dg::DIR): 
-                row_.resize(5), col_.resize(5), data.resize(5);
-                row_[0] = 0, col_[0] = 0, data_[0] = ap;
-                row_[1] = 0, col_[1] = 1, data_[1] = bp;
-                row_[2] = 1, col_[2] = 0, data_[2] = bpt;
-                row_[3] = 1, col_[3] = 1, data_[3] = a;
-                row_[4] = 1, col_[4] = 2, data_[4] = b;
+                row_.resize(10), col_.resize(10), data.resize(10);
+                row_[0] = 0, col_[0] = 0, data_[0] = 0.5*( apF + aB);
+                row_[1] = 0, col_[1] = 1, data_[1] = 0.5*( bpF + bB);
+                row_[2] = 1, col_[2] = 0, data_[2] = 0.5*( bpFT + bBT);
+                row_[3] = 1, col_[3] = 1, data_[3] = 0.5*( aF + aB);
+                row_[4] = 1, col_[4] = 2, data_[4] = 0.5*( bF + bB);
+                row_[5] = N-1, col_[5] = N-2, data_[5] = 0.5*(bFT+bpBT);
+                row_[6] = N-1, col_[6] = N-1, data_[6] = 0.5*(aF+apB);
+                row_[7] = N-2, col_[7] = N-3, data_[7] = 0.5*(bFT+bBT);
+                row_[8] = N-2, col_[8] = N-2, data_[8] = 0.5*(aF+aB);
+                row_[9] = N-2, col_[9] = N-1, data_[9] = 0.5*(bF+bpB);
+                std::cout << " aF + aB \n"<<data_[0]<<std::endl;
+                std::cout << " aF + aB \n"<<data_[6]<<std::endl;
+                std::cout << " aF + aB \n"<<data_[2]<<std::endl;
+                std::cout << " aF + aB \n"<<data_[5]<<std::endl;
                 break;
             case( dg::NEU): 
                 row_.resize(4), col_.resize(4), data.resize(4);
-                row_[0] = 0, col_[0] = 0, data_[0] = app;
-                row_[1] = 0, col_[1] = 1, data_[1] = b;
-                row_[2] = g.N()-1, col_[2] = g.N()-2, data_[2] = bt;
-                row_[3] = g.N()-1, col_[3] = g.N()-1, data_[3] = appp;
+                row_[0] = 0, col_[0] = 0, data_[0] = 0.5*(appF+apppB);
+                row_[1] = 0, col_[1] = 1, data_[1] = 0.5*(bF+bB);
+                row_[2] = N-1, col_[2] = N-2, data_[2] = 0.5*(bFT+bBT);
+                row_[3] = N-1, col_[3] = N-1, data_[3] = 0.5*(apppF+appB);
                 break;
             case( dg::DIR_NEU): 
                 row_.resize(5), col_.resize(5), data.resize(5);
-                row_[0] = 0, col_[0] = 0, data_[0] = ap;
-                row_[1] = 0, col_[1] = 1, data_[1] = bp;
-                row_[2] = 1, col_[2] = 0, data_[2] = bpt;
-                row_[3] = g.N()-1, col_[3] = g.N()-2, data_[3] = bt;
-                row_[4] = g.N()-1, col_[4] = g.N()-1, data_[4] = appp;
+                row_[0] = 0, col_[0] = 0, data_[0] = apF;
+                row_[1] = 0, col_[1] = 1, data_[1] = bpF;
+                row_[2] = 1, col_[2] = 0, data_[2] = bpFT;
+                row_[3] = N-1, col_[3] = N-2, data_[3] = bFT;
+                row_[4] = N-1, col_[4] = N-1, data_[4] = apppF;
                 break;
             case( dg::NEU_DIR): 
-                row_.resize(2), col_.resize(2), data.resize(2);
-                row_[0] = 0, col_[0] = 0, data_[0] = app;
-                row_[1] = 0, col_[1] = 1, data_[1] = b;
+                row_.resize(4), col_.resize(4), data.resize(4);
+                row_[0] = 0, col_[0] = 0, data_[0] = appF;
+                row_[1] = 0, col_[1] = 1, data_[1] = bF;
+                row_[2] = N-1, col_[2] = N-2, data_[2] = bFT;
+                row_[3] = N-1, col_[3] = N-1, data_[3] = aF;
                 break;
         }
         for( unsigned i=0; i<row_.size(); i++)
