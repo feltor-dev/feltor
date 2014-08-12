@@ -20,67 +20,82 @@ namespace dg
 {
 
 namespace create{
+namespace detail{
+
+bc inverse( bc bound)
+{
+    if( bound==DIR)return NEU;
+    if( bound==NEU)return DIR;
+    if( bound==DIR_NEU)return NEU_DIR;
+    if( bound==NEU_DIR)return DIR_NEU;
+    return PER;
+}
+}//namespace detail
 ///@cond
 
 /**
- * @brief Function for the creation of a 1d laplacian in LSPACE
+ * @brief Function for the creation of a 1d laplacian in XSPACE
  *
  * @ingroup highlevel
  * @tparam T value_type
  * @param g The grid on which to create the laplacian (including boundary condition)
  * @param no use normed if you want to compute e.g. diffusive terms
-            use not_normed if you want to solve symmetric matrix equations (T is missing)
+            use not_normed if you want to solve symmetric matrix equations (V is missing)
  *
  * @return Host Matrix in coordinate form
  */
 template< class value_type>
-cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<value_type>& g, norm no = not_normed, direction dir = forward )
+cusp::coo_matrix<int, value_type, cusp::host_memory> laplace1d( const Grid1d<value_type>& g, bc bcx, norm no = not_normed, direction dir = forward )
 {
     typedef cusp::coo_matrix<int, value_type, cusp::host_memory> HMatrix;
-    HMatrix S = dg::tensor( g.N(), dg::create::pipj( g.n())); 
-    cusp::blas::scal( S.values, g.h()/2.);
-    HMatrix T = dg::tensor( g.N(), dg::create::pipj_inv( g.n())); 
-    cusp::blas::scal( T.values, 2./g.h());
-    HMatrix right;
+
+    HMatrix W = dg::tensor( g.N(), dg::create::weights( g.n())); 
+    cusp::blas::scal( W.values, g.h()/2.);
+    HMatrix left, right;
     if( dir == forward)
-        right = create::dx_plus_mt( g.n(), g.N(), g.h(), g.bcx());
+    {
+        right = create::dx_plus_normed( g.n(), g.N(), g.h(), bcx);
+        left  = create::dx_minus_normed( g.n(), g.N(), g.h(), detail::inverse( bcx));
+    }
     else if ( dir == backward) 
-        right = create::dx_minus_mt( g.n(), g.N(), g.h(), g.bcx());
+    {
+        right = create::dx_minus_normed( g.n(), g.N(), g.h(), bcx);
+        left  = create::dx_plus_normed( g.n(), g.N(), g.h(), detail::inverse( bcx));
+    }
     else //dir == symmetric
     {
-        if( g.bcx() == PER || g.bcx() == NEU_DIR)
-            return laplace1d( g, no, forward); //per is symmetric, NEU_DIR cannot be
-        if( g.bcx() == DIR_NEU)
-            return laplace1d( g, no, backward);//cannot be symmetric
-        HMatrix laplus = laplace1d( g, no, forward); //recursive call
-        HMatrix laminus = laplace1d( g, no, backward);
+        if( bcx == PER || bcx == NEU_DIR)
+            return laplace1d( g, bcx, no, forward); //per is symmetric, NEU_DIR cannot be
+        if( bcx == DIR_NEU)
+            return laplace1d( g, bcx, no, backward);//cannot be symmetric
+        HMatrix laplus = laplace1d( g, bcx, no, forward); //recursive call
+        HMatrix laminus = laplace1d( g, bcx, no, backward);
         HMatrix laplace;
         
         cusp::add( laplus, laminus, laplace);//only add values??
         cusp::blas::scal( laplace.values, 0.5);
         return laplace;
     }
-    HMatrix left, temp;
-    cusp::transpose( right, left);
-    cusp::multiply( left, S, temp);
 
     HMatrix laplace_oJ, laplace;
-    cusp::multiply( temp, right, laplace_oJ);
-    if( g.n() == 1 && g.bcx() == dg::PER)
+    cusp::multiply( left, right, laplace_oJ);
+    cusp::blas::scal( laplace_oJ.values, -1.);
+    //make 2nd order for n = 1  and periodic BC
+    if( g.n() == 1 && bcx == dg::PER)
     {
-        if( no == normed) 
+        if( no == not_normed) 
         {
-            cusp::multiply( T, laplace_oJ, laplace);
+            cusp::multiply( W, laplace_oJ, laplace);
             return laplace;
         }
         return laplace_oJ;
     }
-    HMatrix J = dg::create::jump_ot<value_type>( g.n(), g.N(), g.bcx());
+    HMatrix J = dg::create::jump_normed<value_type>( g.n(), g.N(), g.h(), bcx);
     cusp::add( laplace_oJ, J, laplace);
     laplace.sort_by_row_and_column();
-    if( no == normed) 
+    if( no == not_normed) 
     {
-        cusp::multiply( T, laplace, laplace_oJ);
+        cusp::multiply( W, laplace, laplace_oJ);
         return laplace_oJ;
     }
     return laplace;

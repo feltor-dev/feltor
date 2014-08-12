@@ -5,8 +5,8 @@
 #include "blas.h"
 #include "dx.cuh"
 #include "evaluation.cuh"
-#include "preconditioner.cuh"
 #include "typedefs.cuh"
+#include "weights.cuh"
 
 
 using namespace std;
@@ -40,23 +40,24 @@ bc bcx = NEU_DIR;
 
 int main ()
 {
-    cout << "Note the supraconvergence!\n";
-    cout << "Type in n an Nx!\n";
-    cin >> n>> N;
-    cout << "# of Legendre nodes " << n <<"\n";
-    cout << "# of cells          " << N <<"\n";
-    Grid1d<double> g( 0, lx, n, N);
+    std::cout << "Note the supraconvergence!\n";
+    std::cout << "Type in n an Nx!\n";
+    std::cin >> n>> N;
+    std::cout << "# of Legendre nodes " << n <<"\n";
+    std::cout << "# of cells          " << N <<"\n";
+    dg::Grid1d<double> g( 0, lx, n, N);
     const double hx = lx/(double)N;
-    //cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_symm<double>( n, N, hx, bcx);
-    cusp::ell_matrix< int, double, cusp::host_memory> hm = create::dx_minus_mt<double>( n, N, hx, bcx);
-    HVec hv = expand( function, g);
-    HVec hw = hv;
-    const HVec hu = expand( derivative, g);
+    //cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_symm_normed<double>( n, N, hx, bcx);
+    //cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_minus_normed<double>( n, N, hx, bcx);
+    cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_plus_normed<double>( n, N, hx, bcx);
+    dg::HVec hv = evaluate( function, g);
+    dg::HVec hw = hv;
+    const dg::HVec hu = evaluate( derivative, g);
 
-    blas2::symv( hm, hv, hw);
-    blas1::axpby( 1., hu, -1., hw);
+    dg::blas2::symv( hm, hv, hw);
+    dg::blas1::axpby( 1., hu, -1., hw);
     
-    cout << "Distance to true solution: "<<sqrt(blas2::dot( S1D<double>(g), hw) )<<"\n";
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot( create::weights(g), hw) )<<"\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

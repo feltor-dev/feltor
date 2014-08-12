@@ -10,31 +10,31 @@ double function( double x, double y, double z) { return sin(3./4.*z);}
 double derivative( double x, double y, double z) { return 3./4.*cos(3./4.*z);}
 dg::bc bcz = dg::DIR_NEU;
 */
-double function( double x, double y, double z) { return sin(z);}
-double derivative( double x, double y, double z) { return cos(z);}
-dg::bc bcz = dg::PER;
+double function( double x, double y, double z) { return sin(x);}
+double derivative( double x, double y, double z) { return cos(x);}
+dg::bc bcx = dg::PER;
 
 
 int main()
 {
-    unsigned N;
+    unsigned n, Nx, Ny, Nz;
     std::cout << "Note the supraconvergence!\n";
-    std::cout << "Type in Nz!\n";
-    std::cin >> N;
-    std::cout << "# of cells          " << N <<"\n";
-    dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, 1, N, N, N, dg::PER, dg::PER, bcz);
-    cusp::ell_matrix< int, double, cusp::host_memory> dz = dg::create::dz<double>( g, bcz, dg::symmetric);
-    cusp::ell_matrix< int, double, cusp::host_memory> lzM = dg::create::laplacianM_parallel<double>( g, bcz, dg::symmetric);
-    const dg::HVec hv = dg::evaluate( function, g);
-    dg::HVec hw = hv;
-    const dg::HVec hu = dg::evaluate( derivative, g);
+    std::cout << "Type in n, Nx and Ny and Nz!\n";
+    std::cin >> n >> Nx >> Ny >> Nz;
+    dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER);
+    dg::DMatrix dx = dg::create::dx<double>( g, bcx, dg::normed, dg::symmetric);
+    dg::DMatrix lzM = dg::create::laplacianM_perp<double>( g, bcx, dg::PER, dg::normed, dg::symmetric);
+    const dg::DVec hv = dg::evaluate( function, g);
+    dg::DVec hw = hv;
+    const dg::DVec hu = dg::evaluate( derivative, g);
 
-    dg::blas2::symv( dz, hv, hw);
+    const dg::DVec w3d = dg::create::weights( g);
+    dg::blas2::symv( dx, hv, hw);
     dg::blas1::axpby( 1., hu, -1., hw);
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(hw, dg::create::w3d(g), hw))<<"\n";
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(hw, w3d, hw))<<"\n";
     dg::blas2::symv( lzM, hv, hw);
     dg::blas1::axpby( 1., hv, -1., hw);
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(hw, dg::create::w3d(g), hw))<<"\n";
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(hw, w3d, hw))<<" (Note the supraconvergence!)\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

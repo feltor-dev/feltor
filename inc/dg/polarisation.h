@@ -52,7 +52,7 @@ class Polarisation
         righty( dg::create::dy( g, g.bcy(), normed, forward)),
         leftx ( dg::create::dx( g, inverse( g.bcx()), normed, backward)),
         lefty ( dg::create::dy( g, inverse( g.bcy()), normed, backward)),
-        jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()) ) 
+        jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()), normed ) 
     { }
     /**
      * @brief Construct from grid and boundary conditions
@@ -71,7 +71,7 @@ class Polarisation
         righty(dg::create::dy( g,bcy, normed, forward)),
         leftx (dg::create::dx( g, inverse(bcx), normed, backward)),
         lefty (dg::create::dy( g, inverse(bcy), normed, backward)),
-        jump  (dg::create::jump2d( g, bcx, bcy))
+        jump  (dg::create::jump2d( g, bcx, bcy, normed))
     { }
 
     /**

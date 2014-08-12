@@ -19,7 +19,7 @@ namespace create
 ///@addtogroup lowlevel
 ///@{
 /**
-* @brief Create and assemble a cusp Matrix for the symmetric 1d single derivative
+* @brief Create and assemble a cusp Matrix for the symmetric 1d single derivative in XSPACE
 *
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * The matrix isn't symmetric due to the normalisation T.
@@ -32,7 +32,7 @@ namespace create
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h, bc bcx)
+cusp::coo_matrix<int, T, cusp::host_memory> dx_symm_normed(unsigned n, unsigned N, T h, bc bcx)
 {
     unsigned size;
     if( bcx == PER) //periodic
@@ -41,8 +41,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
         size = 3*n*n*N-2*n*n;
     cusp::coo_matrix<int, T, cusp::host_memory> A( n*N, n*N, size);
 
-    //std::cout << A.row_indices.size(); 
-    //std::cout << A.num_cols; //this works!!
     Operator<T> l = create::lilj(n);
     Operator<T> r = create::rirj(n);
     Operator<T> lr = create::lirj(n);
@@ -66,11 +64,15 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
         a_bound_right += 0.5*t*r;
     if( bcx == PER ) //periodic bc
         a_bound_left = a_bound_right = a;
-    //Operator< T> a_bound_right = t*(-1./2.*l-d.transpose()); //=T[ 0.5(D-D^T)-0.5 R]
-    //Operator< T> a_bound_left = t*(1./2.*r-d.transpose());// = T[ 0.5(D-D^T) +0.5 L]
     Operator< T> b = t*(1./2.*rl);
     Operator< T> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
-    //std::cout << a << "\n"<<b <<std::endl;
+    //transform to XSPACE
+    Grid1d<T> g( 0,1, n, N);
+    Operator<T> backward=g.dlt().backward();
+    Operator<T> forward=g.dlt().forward();
+    a = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
+    b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
+    bp = backward*bp*forward;
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
@@ -111,7 +113,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the 1d single forward derivative
+* @brief Create and assemble a cusp Matrix for the 1d single forward derivative in XSPACE
 *
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * Neumann BC means inner value for flux
@@ -124,7 +126,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm(unsigned n, unsigned N, T h,
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_plus_mt( unsigned n, unsigned N, T h, bc bcx )
+cusp::coo_matrix<int, T, cusp::host_memory> dx_plus_normed( unsigned n, unsigned N, T h, bc bcx )
 {
     unsigned size;
     if( bcx == PER) //periodic
@@ -150,6 +152,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_plus_mt( unsigned n, unsigned N, 
     if( bcx == dg::NEU || bcx == dg::DIR_NEU)
         a_bound_right = t*(d);
     Operator< T> b = t*rl;
+    //transform to XSPACE
+    Grid1d<T> g( 0,1, n, N);
+    Operator<T> backward=g.dlt().backward();
+    Operator<T> forward=g.dlt().forward();
+    a = backward*a*forward, a_bound_left = backward*a_bound_left*forward;
+    b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
@@ -180,7 +188,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_plus_mt( unsigned n, unsigned N, 
     return A;
 };
 /**
-* @brief Create and assemble a cusp Matrix for the 1d single backward derivative
+* @brief Create and assemble a cusp Matrix for the 1d single backward derivative in XSPACE
 *
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * Neumann BC means inner value for flux
@@ -193,7 +201,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_plus_mt( unsigned n, unsigned N, 
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx_minus_mt( unsigned n, unsigned N, T h, bc bcx )
+cusp::coo_matrix<int, T, cusp::host_memory> dx_minus_normed( unsigned n, unsigned N, T h, bc bcx )
 {
     unsigned size;
     if( bcx == PER) //periodic
@@ -219,6 +227,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_minus_mt( unsigned n, unsigned N,
     if( bcx == dg::NEU || bcx == dg::NEU_DIR)
         a_bound_left = t*d;
     Operator< T> bp = -t*lr;
+    //transform to XSPACE
+    Grid1d<T> g( 0,1, n, N);
+    Operator<T> backward=g.dlt().backward();
+    Operator<T> forward=g.dlt().forward();
+    a  = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
+    bp = backward*bp*forward, a_bound_right = backward*a_bound_right*forward;
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
@@ -250,7 +264,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_minus_mt( unsigned n, unsigned N,
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the unnormalised jump in 1d.
+* @brief Create and assemble a cusp Matrix for the normalised jump in 1d in XSPACE.
 *
 * @ingroup create
 * Use cusp internal conversion to create e.g. the fast ell_matrix format.
@@ -263,7 +277,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_minus_mt( unsigned n, unsigned N,
 * @return Host Matrix in coordinate form 
 */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc bcx)
+cusp::coo_matrix<int, T, cusp::host_memory> jump_normed( unsigned n, unsigned N, T h, bc bcx)
 {
     unsigned size;
     if( bcx == PER) //periodic
@@ -287,6 +301,15 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump_ot( unsigned n, unsigned N, bc 
         a_bound_right = l;
     Operator< T> b = -rl;
     Operator< T> bp = -lr; 
+    //transform to XSPACE
+    Operator<T> t = create::pipj_inv(n);
+    t *= 2./h;
+    Grid1d<T> g( 0,1, n, N);
+    Operator<T> backward=g.dlt().backward();
+    Operator<T> forward=g.dlt().forward();
+    a = backward*t*a*forward, a_bound_left  = backward*t*a_bound_left*forward;
+    b = backward*t*b*forward, a_bound_right = backward*t*a_bound_right*forward;
+    bp = backward*t*bp*forward;
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
