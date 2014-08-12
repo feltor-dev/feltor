@@ -61,12 +61,11 @@ std::vector<double> coefficients( double xn, unsigned n)
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d<double>& g)
 {
-    assert( x.size() == g.size());
-    assert( y.size() == g.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> A( g.size(), g.size(), g.size()*g.n()*g.n());
+    assert( x.size() == y.size());
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
 
     int number = 0;
-    for( unsigned i=0; i<g.size(); i++)
+    for( unsigned i=0; i<x.size(); i++)
     {
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
             std::cerr << "xi = " << x[i] <<std::endl;

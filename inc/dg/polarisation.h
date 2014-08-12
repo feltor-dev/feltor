@@ -47,11 +47,11 @@ class Polarisation
     template< class Grid>
     Polarisation( const Grid& g): 
         xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx),
-        weights_(dg::create::weights(g)), precond_(dg::create::precond(g)), 
+        weights_(dg::create::weights(g, dg::cylindrical)), precond_(dg::create::precond(g, dg::cylindrical)), 
         rightx( dg::create::dx( g, g.bcx(), normed, forward)),
         righty( dg::create::dy( g, g.bcy(), normed, forward)),
-        leftx ( dg::create::dx( g, inverse( g.bcx()), not_normed, backward)),
-        lefty ( dg::create::dy( g, inverse( g.bcy()), not_normed, backward)),
+        leftx ( dg::create::dx( g, inverse( g.bcx()), normed, backward)),
+        lefty ( dg::create::dy( g, inverse( g.bcy()), normed, backward)),
         jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()) ) 
     { }
     /**
@@ -69,8 +69,8 @@ class Polarisation
         weights_(dg::create::weights(g)), precond_(dg::create::precond(g)),
         rightx(dg::create::dx( g,bcx, normed, forward)),
         righty(dg::create::dy( g,bcy, normed, forward)),
-        leftx (dg::create::dx( g, inverse(bcx), not_normed, backward)),
-        lefty (dg::create::dy( g, inverse(bcy), not_normed, backward)),
+        leftx (dg::create::dx( g, inverse(bcx), normed, backward)),
+        lefty (dg::create::dy( g, inverse(bcy), normed, backward)),
         jump  (dg::create::jump2d( g, bcx, bcy))
     { }
 
@@ -108,10 +108,12 @@ class Polarisation
         dg::blas2::gemv( rightx, x, temp); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 
         dg::blas2::gemv( leftx, temp, xx); //L_x*Chi*R_x*x
+        dg::blas2::symv( weights_, xx, xx);
 
         dg::blas2::gemv( righty, x, temp);
         dg::blas1::pointwiseDot( xchi, temp, temp);
         dg::blas2::gemv( lefty, temp, y);
+        dg::blas2::symv( weights_, y, y);
         
         dg::blas2::symv( jump, x, temp);
         dg::blas1::axpby( -1., xx, -1., y, xx); //-D_xx - D_yy + J
