@@ -51,8 +51,6 @@ int main( int argc, char* argv[])
     geom = file::read_file( "geometry_params.txt");
     std::cout << geom << std::endl;
         for( unsigned i = 0; i<v.size(); i++)
-//             std::cout << v3[i] << " ";
-//             std::cout << std::endl;
         return -1;}
 
      const solovev::GeomParameters gp(v3);
@@ -108,7 +106,6 @@ int main( int argc, char* argv[])
         h = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
     nc_def_var( ncid, names[5].data(), NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
     h = nc_enddef(ncid);
-std::cout << "1" << "\n";
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
     size_t start[4] = {0, 0, 0, 0};
@@ -125,7 +122,7 @@ std::cout << "1" << "\n";
   
     //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
     ///////////////////////////////////////Timeloop/////////////////////////////////
-        double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
+    double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
 
     dg::Timer t;
     t.tic();
@@ -188,7 +185,6 @@ std::cout << "1" << "\n";
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-//     h = nc_close(ncid);
 
     return 0;
 
