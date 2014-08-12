@@ -59,10 +59,6 @@ feltor: feltor.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
-feltor_hpc_h5: feltor_hpc_h5.cu feltor.cuh geometry.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
-	
 ifeq ($(strip $(device)),mpi)
 feltor_hpc: feltor_hpc.cpp feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
