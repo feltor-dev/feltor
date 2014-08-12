@@ -99,14 +99,16 @@ int main( int argc, char* argv[])
     int dim_ids[4], tvarID;
     h = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
 
-    std::vector<std::string> names(5); 
+    std::vector<std::string> names(6); 
     int dataIDs[names.size()];
     names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
-    names[4] = "potential";
-    for( unsigned i=0; i<names.size(); i++)
-        h = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);
+    names[4] = "potential"; 
+    names[5] = "energy";
+    for( unsigned i=0; i<names.size()-1; i++){
+        h = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
+    nc_def_var( ncid, names[5].data(), NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
     h = nc_enddef(ncid);
-
+std::cout << "1" << "\n";
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
     size_t start[4] = {0, 0, 0, 0};
@@ -123,6 +125,8 @@ int main( int argc, char* argv[])
   
     //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
     ///////////////////////////////////////Timeloop/////////////////////////////////
+        double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
+
     dg::Timer t;
     t.tic();
     try
@@ -148,11 +152,10 @@ int main( int argc, char* argv[])
             //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
         }
         time += p.itstp*p.dt;
-
         start[0] = i;
         feltor.exp( y0,y0,2); //transform to correct values
         h = nc_open(argv[2], NC_WRITE, &ncid);
-//         h = nc_inq_varid(ncid, "data", &varid) 
+
         for( unsigned j=0; j<4; j++)
         {
             output = y0[j];//transfer to host
@@ -162,6 +165,9 @@ int main( int argc, char* argv[])
         h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
         //write time data
         h = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        E1 = (feltor.energy()-energy0)/energy0;
+        h = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
+
         h = nc_close(ncid);
 #ifdef DG_BENCHMARK
         ti.toc();

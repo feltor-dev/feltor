@@ -52,14 +52,10 @@ int main( int argc, char* argv[])
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
     //////////////////////////////////////////////////////////////////////////
-//     dg::Grid3d<double > grid( p.R_0-p.a*(1.05), p.R_0 + p.a*(1.05),  -p.a*(1.05), p.a*(1.05), 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
-    
     try{ v3 = file::read_input( "geometry_params.txt"); }
     catch (toefl::Message& m) {  
         m.display(); 
         for( unsigned i = 0; i<v.size(); i++)
-//             std::cout << v3[i] << " ";
-//             std::cout << std::endl;
         return -1;}
 
     const solovev::GeomParameters gp(v3);
@@ -72,8 +68,8 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
      
     //create RHS 
-    eule::Feltor< dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
-    eule::Rolkar< dg::DVec > rolkar( grid, p,gp);
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
 
       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
@@ -151,8 +147,8 @@ int main( int argc, char* argv[])
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        title <<"phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        colors.scalemin() = - colors.scalemax() ;
+        title <<"phi / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
@@ -190,8 +186,8 @@ int main( int argc, char* argv[])
         hvisual =feltor.aparallel();
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        title <<"A / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
+        colors.scalemin() = - colors.scalemax();
+        title <<"A / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<< "  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
