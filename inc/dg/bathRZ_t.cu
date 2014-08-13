@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
-#include "xspacelib.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "functors.h"
 #include <fstream>
 #include "draw/host_window.h"
 #include <sstream>
@@ -9,8 +10,9 @@
 int main()
 {
     unsigned Nx=100, Ny=100,polcoeff=3;
-    double gamma=30., eddysize=30.,Rmin,Zmin,Rmax,Zmax;
-    double Nxh = Nx/2.,Nyh=Ny/2.,R0=1000.;
+    double gamma=30., eddysize=15.;
+    double Rmin,Zmin,Rmax,Zmax;
+    double Nxh = Nx/2.,Nyh=Ny/2.,R0=150.;
     double amplitude=0.1; 
     Rmin=R0-Nxh;
     Zmin=-Nyh;
@@ -22,7 +24,7 @@ int main()
     //make dggrid
     dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, polcoeff,Nx,Ny,dg::PER,dg::PER);
     //construct bathRZ
-    dg::BathRZ bathRZ(16, 16, 1, Rmin,Zmin, gamma,eddysize,amplitude);
+    dg::BathRZ bathRZ(4, 4, 1, Rmin,Zmin, gamma,eddysize,amplitude);
     //evaluate bathRZ on the dggrid on a hvector
     dg::HVec hvisual = dg::evaluate( bathRZ, grid);
     //allocate mem for visual
@@ -36,9 +38,7 @@ int main()
     GLFWwindow* w = draw::glfwInitAndCreateWindow( 400, 400, "Random field");
     draw::RenderHostData render( 1, 1);
     // generate a vector on the grid to visualize 
-  
-    //create a colormap
-//     draw::ColorMapRedBlueExt colors( 1.);
+      //create a colormap
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
 
     //set scale
