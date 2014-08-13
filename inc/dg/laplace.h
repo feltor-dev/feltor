@@ -21,11 +21,12 @@ namespace dg
 {
 
 /**
- * @brief X-space version of polarisation term
+ * @brief X-space version of laplacian
  *
  * @ingroup highlevel
  *
- * The term discretized is \f[ -\nabla ( \chi \nabla ) \f]
+ * The term discretized is \f[ -\nabla ( \nabla_\perp ) \f]
+ * (Is a factor 2 slower than it could be since jump terms are evaluated seperately)
  * @tparam Matrix The Matrix class to use
  * @tparam Vector The Vector class to use
  * @tparam Preconditioner The Preconditioner class to use
@@ -34,7 +35,7 @@ namespace dg
  *
  */
 template <class Matrix, class Vector, class Preconditioner>
-class Polarisation
+class Laplace2d
 {
     public:
     /**
@@ -45,14 +46,14 @@ class Polarisation
      * @param g The Grid, boundary conditions are taken from here
      */
     template< class Grid>
-    Polarisation( const Grid& g): 
+    Laplace2d( const Grid& g): 
         xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx),
-        weights_(dg::create::weights(g, dg::cylindrical)), precond_(dg::create::precond(g, dg::cylindrical)), 
+        weights_(dg::create::weights(g)), precond_(dg::create::precond(g)), 
         rightx( dg::create::dx( g, g.bcx(), normed, forward)),
         righty( dg::create::dy( g, g.bcy(), normed, forward)),
-        leftx ( dg::create::dx( g, inverse( g.bcx()), normed, backward)),
-        lefty ( dg::create::dy( g, inverse( g.bcy()), normed, backward)),
-        jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()), normed ) 
+        leftx ( dg::create::dx( g, inverse( g.bcx()), not_normed, backward)),
+        lefty ( dg::create::dy( g, inverse( g.bcy()), not_normed, backward)),
+        jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()) ) 
     { }
     /**
      * @brief Construct from grid and boundary conditions
@@ -64,26 +65,16 @@ class Polarisation
      * @param bcy boundary contition in y
      */
     template< class Grid>
-    Polarisation( const Grid& g, bc bcx, bc bcy): 
+    Laplace2d( const Grid& g, bc bcx, bc bcy): 
         xchi( dg::evaluate(one, g)), xx(xchi), temp( xx),
         weights_(dg::create::weights(g)), precond_(dg::create::precond(g)),
         rightx(dg::create::dx( g,bcx, normed, forward)),
         righty(dg::create::dy( g,bcy, normed, forward)),
-        leftx (dg::create::dx( g, inverse(bcx), normed, backward)),
-        lefty (dg::create::dy( g, inverse(bcy), normed, backward)),
-        jump  (dg::create::jump2d( g, bcx, bcy, normed))
+        leftx (dg::create::dx( g, inverse(bcx), not_normed, backward)),
+        lefty (dg::create::dy( g, inverse(bcy), not_normed, backward)),
+        jump  (dg::create::jump2d( g, bcx, bcy))
     { }
 
-    /**
-     * @brief Change Chi
-     *
-     * @param chi The new chi
-     */
-    void set_chi( const Vector& chi)
-    {
-        xchi = chi;
-        //dg::blas1::pointwiseDot( weights_, chi, xchi);
-    }
     /**
      * @brief Returns the weights to use in conjugate gradient
      *
@@ -108,12 +99,10 @@ class Polarisation
         dg::blas2::gemv( rightx, x, temp); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 
         dg::blas2::gemv( leftx, temp, xx); //L_x*Chi*R_x*x
-        dg::blas2::symv( weights_, xx, xx);
 
         dg::blas2::gemv( righty, x, temp);
         dg::blas1::pointwiseDot( xchi, temp, temp);
         dg::blas2::gemv( lefty, temp, y);
-        dg::blas2::symv( weights_, y, y);
         
         dg::blas2::symv( jump, x, temp);
         dg::blas1::axpby( -1., xx, -1., y, xx); //-D_xx - D_yy + J
@@ -135,7 +124,7 @@ class Polarisation
 
 ///@cond
 template< class M, class V, class P>
-struct MatrixTraits< Polarisation<M, V, P> >
+struct MatrixTraits< Laplace2d<M, V, P> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;

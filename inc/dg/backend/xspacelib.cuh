@@ -174,10 +174,10 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g)
     Matrix transformY = dg::tensor( g.Ny(), backward1d);
     Matrix backward = dg::dgtensor( g.n(), transformY, transformX);
 
-    thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
-    Matrix p = gather( map);
-    Matrix scatter( p);
-    cusp::multiply( p, backward, scatter);
+    //thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
+    //Matrix p = gather( map);
+    //Matrix scatter( p);
+    //cusp::multiply( p, backward, scatter);
     //choose vector layout
     //return scatter;
     return backward; 
@@ -200,56 +200,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g)
     cusp::coo_matrix<int,T, cusp::host_memory> back2d = backscatter( g2d);
     return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), back2d);
 }
-
-
-/**
- * @brief Index map for scatter operation on dg - formatted vectors
- *
- * Use in thrust::scatter function on a dg-formatted vector. We obtain a vector 
- where the y direction is contiguous in memory. 
- * @param n # of polynomial coefficients
- * @param Nx # of points in x
- * @param Ny # of points in y
- *
- * @return map of indices
- */
-thrust::host_vector<int> scatterMapInvertxy( unsigned n, unsigned Nx, unsigned Ny)
-{
-    unsigned Nx_ = n*Nx, Ny_ = n*Ny;
-    thrust::host_vector<int> reorder = scatterMap( n, Nx, Ny);
-    thrust::host_vector<int> map( n*n*Nx*Ny);
-    thrust::host_vector<int> map2( map);
-    for( unsigned i=0; i<map.size(); i++)
-    {
-        int row = i/Nx_;
-        int col = i%Nx_;
-
-        map[i] =  col*Ny_+row;
-    }
-    for( unsigned i=0; i<map.size(); i++)
-        map2[i] = map[reorder[i]];
-    return map2;
-}
-
-/**
- * @brief write a matrix containing it's line number as elements
- *
- * Useful in a reduce_by_key computation
- * @param rows # of rows of the matrix
- * @param cols # of cols of the matrix
- *
- * @return a vector of size rows*cols containing line numbers
- */
-thrust::host_vector<int> contiguousLineNumbers( unsigned rows, unsigned cols)
-{
-    thrust::host_vector<int> map( rows*cols);
-    for( unsigned i=0; i<map.size(); i++)
-    {
-        map[i] = i/cols;
-    }
-    return map;
-}
-
 ///@}
 
 } //namespace create

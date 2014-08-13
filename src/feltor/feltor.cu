@@ -52,14 +52,10 @@ int main( int argc, char* argv[])
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
     //////////////////////////////////////////////////////////////////////////
-//     dg::Grid3d<double > grid( p.R_0-p.a*(1.05), p.R_0 + p.a*(1.05),  -p.a*(1.05), p.a*(1.05), 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);
-    
     try{ v3 = file::read_input( "geometry_params.txt"); }
     catch (toefl::Message& m) {  
         m.display(); 
         for( unsigned i = 0; i<v.size(); i++)
-//             std::cout << v3[i] << " ";
-//             std::cout << std::endl;
         return -1;}
 
     const solovev::GeomParameters gp(v3);
@@ -78,8 +74,8 @@ int main( int argc, char* argv[])
     //The initial field
     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Gradient grad(gp); //background gradient
-    //solovev::Nprofile grad(gp); //initial profile
+    solovev::Nprofile grad(gp); //initial profile
+    
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
     dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
@@ -142,13 +138,14 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
-        //transform phi
+        //transform to Vor
         dg::blas2::gemv( rolkar.laplacianM(), feltor.potential()[0], y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        title <<"phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemin() = -colors.scalemax();
+        title <<"Vor / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();

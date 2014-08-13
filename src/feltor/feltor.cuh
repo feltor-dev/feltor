@@ -308,7 +308,17 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby( 1., omega, 1., yp[i]);                            //dtlnN = dtlnN + U dz ln B
         dg::blas1::pointwiseDot(y[i+2], dzy[2+i], omega);                    
         dg::blas1::axpby( -1., omega, 1., yp[2+i]);                         //dtU = dtU - U dz U
-//parallel force terms dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtU = dtU - 1/(hat(mu))*dz phi //curvature terms curve( y[i], curvy[i]);     //K(N) curve( y[i+2], curvy[2+i]); //K(U) curve( phi[i], curvphi[i]); //K(phi) dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega); //U K(U) dg::blas1::pointwiseDot( y[i+2], omega, chi); //U^2 K(U)
+        //parallel force terms
+        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzy[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
+        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtU = dtU - 1/(hat(mu))*dz phi 
+        //curvature terms
+        curve( y[i], curvy[i]);     //K(N) 
+        curve( y[i+2], curvy[2+i]); //K(U) 
+        curve( phi[i], curvphi[i]); //K(phi) 
+        
+        dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega); //U K(U) 
+        dg::blas1::pointwiseDot( y[i+2], omega, chi); //U^2 K(U)
+        
         dg::blas1::axpby( -p.mu[i]*p.eps_hat, omega, 1., yp[i]);             //dtlnN = dtlnN - (hat(mu)) U K(U)
         dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]);         //dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
 
@@ -333,11 +343,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //add them to the dissipative energy theorem
     }
     //add particle source to dtN
-    for( unsigned i=0; i<2; i++)
-    {
+//     for( unsigned i=0; i<2; i++)
+//     {
 //         dg::blas1::pointwiseDivide( source, expy[i], omega); //source/N
 //         dg::blas1::axpby( 1., omega, 1, yp[i]  );       //dtlnN = dtlnN + source/N
-    }
+//     }
 
     for( unsigned i=0; i<4; i++) //damping and pupil on N and w
     {
@@ -346,6 +356,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     }
 }
 
+//Computes curvature operator
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::curve( const container& src, container& target)
 {
@@ -355,13 +366,14 @@ void Feltor<Matrix, container, P>::curve( const container& src, container& targe
     dg::blas1::pointwiseDot( curvZ, omega, omega);   // C^Z d_Z src
     dg::blas1::axpby( 1., omega, 1., target ); // (C^R d_R + C^Z d_Z) src
 }
-
+//Exp
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::exp( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
 {
     for( unsigned i=0; i<howmany; i++)
         dg::blas1::transform( y[i], target[i], dg::EXP<value_type>());
 }
+//Log
 template< class M, class container, class P>
 void Feltor<M, container, P>::log( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
 {

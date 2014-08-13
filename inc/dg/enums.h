@@ -38,7 +38,7 @@ enum direction{
  *
  * @ingroup creation
  */
-enum COS{
+enum system{
     cartesian, //!< cartesian coordinate system
     cylindrical //!< cylindrical coordinate system
 };

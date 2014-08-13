@@ -1,43 +1,68 @@
 #include <iostream>
 
-#include <cusp/print.h>
 #include <cusp/ell_matrix.h>
 
-#include "laplace.cuh"
 #include "blas.h"
-
+#include "laplace.cuh"
+#include "evaluation.cuh"
 #include "typedefs.cuh"
+#include "weights.cuh"
 
-const unsigned n = 1;
-const unsigned N = 4; //minimum 3
 
-using namespace dg;
 using namespace std;
+using namespace dg;
 
+unsigned n = 3;
+unsigned N = 40;
+const double lx = 2*M_PI;
 
-int main()
+/*
+double function( double x) { return sin(x);}
+double derivative( double x) { return cos(x);}
+bc bcx = PER;
+double function (double  x) {return x*(x-2*M_PI)*exp(x);}
+double derivative( double x) { return (2.*x-2*M_PI)*exp(x) + function(x);}
+bc bcx = DIR;
+*/
+/*
+double function( double x) { return cos(x);}
+double derivative( double x) { return -sin(x);}
+bc bcx = NEU;
+*/
+double function( double x) { return sin(x);}
+double derivative( double x) { return cos(x);}
+bc bcx = DIR;
+/*
+double function( double x) { return cos(3./4.*x);}
+double derivative( double x) { return -3./4.*sin(3./4.*x);}
+bc bcx = NEU_DIR;
+*/
+
+int main ()
 {
-    cout<< "# of polynomial coeff per dim: "<<n<<"\n";
-    cout<< "# of cells per dim: "<<N<<"\n";
-    //HArrVec hv( n, N,  1);
-    //for( unsigned k=0; k<N; k++)
-    //    for( unsigned i=0; i<n; i++)
-    //        hv( k, i) = i;
+    std::cout << "Note the supraconvergence!\n";
+    std::cout << "Type in n an Nx!\n";
+    std::cin >> n>> N;
+    std::cout << "# of Legendre nodes " << n <<"\n";
+    std::cout << "# of cells          " << N <<"\n";
+    dg::Grid1d<double> g( 0, lx, n, N);
+    dg::HMatrix hm = dg::create::laplace1d<double>( g, bcx, normed, forward);
+    const dg::HVec hv = evaluate( function, g);
+    dg::HVec hw = hv;
+    //const dg::HVec hu = evaluate( derivative, g);
 
-    //dg::HVec hw( n, N);
-    //dg::DVec dv( hv.data()), dw( hw.data());
-    double h = 1./N;
-    DMatrix laplace1d = create::laplace1d_per<double>(n, N, h);
-    dg::Grid1d<double> g( 0, 1., n, N, DIR);
-    DMatrix laplace1dp = create::laplace1d<double>(g, dg::normed, dg::symmetric);
+    dg::blas2::symv( hm, hv, hw);
+    dg::blas1::axpby( 1., hv, -1., hw);
+    
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot( create::weights(g), hw) )<<"(Note the supraconvergence)\n";
+    //for periodic bc | dirichlet bc
+    //n = 1 -> p = 2      2
+    //n = 2 -> p = 1      1
+    //n = 3 -> p = 3      3
+    //n = 4 -> p = 3      3
+    //n = 5 -> p = 5      5
 
-    cout << "The DG Laplacian: \n";
-    //cusp::print( laplace1d);
-    cusp::print( laplace1dp);
-    //blas2::symv( laplace1d, dv, dw);
-    //cusp::array1d_view<DVec::iterator> dv_view( dv.begin(), dv.end());
-    //cusp::array1d_view<DVec::iterator> dw_view( dw.begin(), dw.end());
-    //cusp::print( dw_view);
+
+    
     return 0;
 }
-

@@ -6,9 +6,9 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   50 (192)
-3)  ny (grid points in y)                =   50 (192)
-4)  nz (grid points in z)                =   16 (16)
+2)  nx (grid points in x)                =   60 (192)
+3)  ny (grid points in y)                =   60 (192)
+4)  nz (grid points in z)                =   20 (16)
 
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
@@ -45,8 +45,8 @@
 
 ------------------Miscellaneous----------------------------
 
-25) itstp (steps between output)            = 10     (5)
-26) # of outputs (excluding first)          = 10
+25) itstp (steps between output)            = 2     (5)
+26) # of outputs (excluding first)          = 5
 27) Damping zone thickness (in units of rho_s)  = 20 
 28) Damping zone strength                   = 1e-3
 29) particle source amplitude               = 0.0

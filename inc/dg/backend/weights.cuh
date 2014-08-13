@@ -248,6 +248,26 @@ thrust::host_vector<T> weights( const Grid3d<T>& g){return w3d(g);}
 template <class T>
 thrust::host_vector<T> precond( const Grid3d<T>& g){return v3d(g);}
 
+template <class T>
+thrust::host_vector<T> weights( const Grid3d<T>& g, system sys)
+{
+    if( sys == cartesian)
+        return w3d(g);
+    Grid1d<T> gR( g.x0(), g.x1(), g.n(), g.Nx());
+    thrust::host_vector<T> absc( abscissas( gR)); 
+    thrust::host_vector<T> v( g.size());
+    for( unsigned i=0; i<g.size(); i++)
+        v[i] = g.hz()*g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), g.Nx(), i)]*g.dlt().weights()[detail::get_j(g.n(), g.Nx(), i)]*absc[i%(g.n()*g.Nx())];
+    return v;
+}
+template <class T>
+thrust::host_vector<T> precond( const Grid3d<T>& g, system sys)
+{
+    thrust::host_vector<T> v = weights( g, sys);
+    for( unsigned i=0; i<g.size(); i++)
+        v[i] = 1./v[i];
+    return v;
+}
 ///@cond
 /**
 * @brief create host_vector containing 1d X-space abscissas 

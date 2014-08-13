@@ -610,15 +610,15 @@ struct CurvatureR
  */ 
     double operator()( double R, double Z)
     {
-//         return -invB_(R,Z)*invB_(R,Z)*bZ_(R,Z); //factor 2 stays under discussion
-        return -ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bZ_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
+        return -2.*invB_(R,Z)*invB_(R,Z)*bZ_(R,Z); //factor 2 stays under discussion
+//         return -ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bZ_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
 
     }
     
     double operator()( double R, double Z, double phi)
     {
-//         return -invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi); //factor 2 stays under discussion
-        return -ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
+        return -2.*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi); //factor 2 stays under discussion
+//         return -ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
     }
     private:    
 //     InvB invB_; 
@@ -654,13 +654,13 @@ struct CurvatureZ
  */    
     double operator()( double R, double Z)
     {
-//         return invB_(R,Z)*invB_(R,Z)*bR_(R,Z); //factor 2 stays under discussion
-        return  ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bR_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
+        return 2.*invB_(R,Z)*invB_(R,Z)*bR_(R,Z); //factor 2 stays under discussion
+//         return  ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bR_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
     }
     double operator()( double R, double Z, double phi)
     {
-//         return invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi); //factor 2 stays under discussion
-        return ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
+        return 2.*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi); //factor 2 stays under discussion
+//         return ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
 
     }
     private:    
@@ -756,15 +756,15 @@ struct Field
     double operator()( double R, double Z)
     {
         //modified
-         return invB_(R,Z)* invB_(R,Z)*ipol_(R,Z)*gp_.R_0/R;
-//         return invB_(R,Z);
+//          return invB_(R,Z)* invB_(R,Z)*ipol_(R,Z)*gp_.R_0/R;
+        return invB_(R,Z);
     }
     //inverse B
     double operator()( double R, double Z, double phi)
     {
-//         return invB_(R,Z,phi);
+        return invB_(R,Z,phi);
 
-        return invB_(R,Z,phi)*invB_(R,Z,phi)*ipol_(R,Z,phi)*gp_.R_0/R;
+//         return invB_(R,Z,phi)*invB_(R,Z,phi)*ipol_(R,Z,phi)*gp_.R_0/R;
     }
     
     private:

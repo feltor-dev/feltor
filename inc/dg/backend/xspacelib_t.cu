@@ -38,20 +38,5 @@ int main()
     cout << "Rel error "<<sqrt( blas2::dot(w2d, x))/sqrt(  blas2::dot( w2d, sol) )<<endl;
     cout << "Bracket "<< blas2::dot(w2d,sol)<<endl;
     cout << "Rel error "<<(blas2::dot(w2d,sol)-M_PI*M_PI)/M_PI/M_PI<<endl;
-
-
-    /*
-    dg::ArrVec2d<int, n, HVec> map( dg::create::scatterMap<n>(Nx, Ny), Nx);
-    cout << map <<endl;
-    cout << endl << endl;
-    const dg::Grid<double,2> grid2( 0,1,0,1, 4,4);
-    Matrix equi = create::backscatter( grid2);
-    cusp::array1d<double, cusp::host_memory> arr( thrust::make_counting_iterator(0), thrust::make_counting_iterator( 64)), arr2( arr);
-    thrust::host_vector<int> map = dg::makePermutationMap<2>( 4, 4);
-//    thrust::scatter( visual_t.begin(), visual_t.end(), map.begin(), visual.begin());//dont't scatter 
-
-    blas2::mv( equi, arr, arr2);
-    cusp::print( arr2);
-    */
     return 0;
 }

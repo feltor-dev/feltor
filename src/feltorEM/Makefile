@@ -10,9 +10,16 @@ CFLAGS+= -Xcompiler -fopenmp
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 GLFLAGS= -lGLEW
 OPT	   = -O2
-else
+endif
+ifeq ($(strip $(device)),omp)
 CC = g++
 CFLAGS = -Wall -fopenmp -x c++
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+OPT	   = -O3
+endif
+ifeq ($(strip $(device)),mpi)
+CC = mpic++
+CFLAGS = #-Wall -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 OPT	   = -O3
 endif
@@ -52,13 +59,14 @@ feltor: feltor.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
+ifeq ($(strip $(device)),mpi)
+feltor_hpc: feltor_hpc.cpp feltor.cuh geometry.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+else
 feltor_hpc: feltor_hpc.cu feltor.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
-
-feltor_hpc_h5: feltor_hpc_h5.cu feltor.cuh geometry.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
-	echo "Attention: No compiler warnings are issued!" 
+endif
 	
 dz_geom_t: dz_geom_t.cu geometry.h 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
