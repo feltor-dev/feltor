@@ -525,7 +525,7 @@ struct BathRZ{
     double  RR, ZZ;
     RR=R-R_min_;
     ZZ=Z-Z_min_;
-    f=0;
+    f=0.;
     for (unsigned j=0;j<Zm_;j++)
       {
       for (unsigned i=0;i<Rm_;i++)
@@ -565,8 +565,8 @@ struct BathRZ{
         }
     return 1.+amp_*norm*abs(f);
     }
-        else {
-        return 1.;
+    else {
+    return 1.;
     }
   }
   private:

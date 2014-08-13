@@ -1,10 +1,8 @@
 #ifndef _DG_TOEFL_CUH
 #define _DG_TOEFL_CUH
 
-#include <cusp/ell_matrix.h>
-
+#include "algorithm.h"
 #include "blas.h"
-
 #include "arakawa.h"
 #include "cg.h"
 
@@ -12,49 +10,43 @@ namespace dg
 {
 
 //Garcia equations with switched x <-> y  and phi -> -phi
-template< class container=thrust::device_vector<double> >
+template<class Matrix, class container, class Preconditioner >
 struct Toefl
 {
-    typedef std::vector<container> Vector;
-    typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    Toefl( const Grid2d<value_type>& ,  double R, double P, double eps);
+    template<class Grid>
+    Toefl( const Grid& ,  double R, double P, double eps);
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
   private:
     Matrix laplaceM;
     container omega, phi, phi_old, dxtheta, dxphi;
     ArakawaX<Matrix, container> arakawaX; 
-    CG<container > pcg;
-    container w2d, v2d;
+    Invert<container > pcg;
+    Preconditioner w2d, v2d;
 
     double Ra, Pr;
-    double eps; 
 };
 
-template< class container>
-Toefl<container>::Toefl( const Grid2d<value_type>& grid, double R, double P, double eps): 
-    omega( grid.size(), 0.), phi(omega), phi_old( phi), dxtheta(omega), dxphi(omega), 
+template< class Matrix, class container, class Prec>
+template< class Grid>
+Toefl<Matrix, container, Prec>::Toefl( const Grid& grid, double R, double P, double eps): 
+    laplaceM( dg::create::laplacianM( grid, not_normed, dg::symmetric)),
+    omega( dg::evaluate(one, grid) ), phi(omega), phi_old( phi), 
+    dxtheta(omega), dxphi(omega), 
     arakawaX( grid), 
-    pcg( omega, grid.size()),
-    v2d( create::v2d(grid)), w2d( create::w2d(grid)), Ra (R), Pr(P), eps(eps)
+    pcg( omega, grid.size(), eps),
+    v2d( dg::create::precond(grid)), w2d( dg::create::weights(grid)), Ra (R), Pr(P)
 {
-    laplaceM = dg::create::laplacianM( grid, not_normed);
 }
 
-template< class container>
-void Toefl< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template< class Matrix, class container, class P>
+void Toefl< Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());
     //omega 
     blas1::axpby( 1., y[1], 0., omega);
-    //compute S omega 
-    blas2::symv( w2d, omega, omega);
-    blas1::axpby( 2., phi, -1.,  phi_old);
-    phi.swap( phi_old);
-    unsigned number = pcg( laplaceM, phi, omega, v2d, eps);
+    unsigned number = pcg( laplaceM, phi, omega, w2d, v2d);
     number +=0; //avoid warning
 #ifdef DG_BENHMARK
     std::cout << "Number of pcg iterations "<<  number << "\n";

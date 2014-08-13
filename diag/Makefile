@@ -1,7 +1,12 @@
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
+<<<<<<< HEAD
 device = cpu
 system = leo3
+=======
+device = gpu
+system = home
+>>>>>>> 9943ea5aa0ddae60528ec3243fb8a60a17fae541
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -20,7 +25,8 @@ endif
 
 ifeq ($(strip $(system)),home)
 CXX = g++
-INCLUDE += -I/home/markus/Dokumente/Phd/Include # cusp and thrust libraries
+CXXFLAGS = -Wall -x c++
+INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
@@ -72,22 +78,22 @@ feltor_video: feltor_video.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl 
 
 show: show.cpp
-	$(CXX) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) -lhdf5 -lhdf5_hl -Wall
+	$(CXX) $< -o $@ -std=c++0x $(CXXFLAGS) $(INCLUDE) -lhdf5 -lhdf5_hl -Wall
 
 com: com.cu
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 imp: imp.cu
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 probe: probe.cu
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) -lhdf5 -lhdf5_hl 
 
 figure17: figure17.cu
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 vmax: vmax.cu
-	$(CXX) -O2 $(CFLAGS) $< -o $@ -std=c++0x $(CFLAGS) $(INCLUDE) 
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ -std=c++0x $(INCLUDE) 
 .PHONY: clean
 
 clean:

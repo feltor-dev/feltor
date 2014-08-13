@@ -193,7 +193,6 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
     Matrix laplace;
     cusp::add( ddxx, ddyy, laplace); //cusp add does not sort output!!!!
     laplace.sort_by_row_and_column();
-    //std::cout << "Is sorted? "<<laplace.is_sorted_by_row_and_column()<<"\n";
     return laplace;
 }
 
@@ -218,6 +217,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, bc bcx, bc bcy)
 {
+    //jump is never normed and does not have a direction
     const unsigned& n = g.n();
     Operator<T> normx(n, 0.), normy(n, 0.);
     for( unsigned i=0; i<n; i++)
@@ -225,8 +225,9 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, bc bcx, 
     normx *= g.hx()/2.;
     normy *= g.hy()/2.; // normalisation because F is invariant
     typedef cusp::coo_matrix<int, T, cusp::host_memory> HMatrix;
-    HMatrix jumpx = create::jump_ot<T>( n, g.Nx(), bcx); //jump without t!
     Operator<T> forward1d( g.dlt().forward( ));
+
+    HMatrix jumpx = create::jump_ot<T>( n, g.Nx(), bcx); //jump without t!
     jumpx = sandwich( forward1d.transpose(), jumpx, forward1d);
     jumpx = dg::dgtensor( n, tensor( g.Ny(), normy), jumpx); //proper normalisation
 

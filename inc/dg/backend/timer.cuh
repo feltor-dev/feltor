@@ -30,7 +30,7 @@ class Timer
   private:
     double start, stop;
 };
-#else
+#else //MPI_VERSION
 
 #include "../../toefl/timer.h"
     /**
@@ -38,7 +38,7 @@ class Timer
      */
     typedef toefl::Timer Timer;
 #endif //MPI_VERSION
-#else
+#else //THRUST
 
 /*! @brief Very simple tool for performance measurements using CUDA-API 
  * @ingroup utilities
@@ -76,7 +76,7 @@ class Timer
   private:
     cudaEvent_t start, stop;
 };
-#endif
+#endif //THRUST
 
 } //namespace dg
 

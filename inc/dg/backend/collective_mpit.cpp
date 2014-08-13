@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <mpi.h>
 #include "mpi_collective.h"
 
 

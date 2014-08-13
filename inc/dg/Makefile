@@ -1,13 +1,11 @@
 system=home
 device=gpu
 
-INCLUDE = -I../../ # other project libraries
-INCLUDE+= -I../
-INCLUDE+= -I./backend # header files
+INCLUDE = -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
 
-INCLUDE+= -I/home/matthias/include  # cusp and thrust libraries
+INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
 GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
@@ -68,7 +66,7 @@ backscatter_t: backscatter_t.cu xspacelib.cuh
 toefl_t: toefl_t.cu toefl.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 toefl_b: toefl_b.cu toefl.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
 blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ 

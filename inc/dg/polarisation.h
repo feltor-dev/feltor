@@ -114,8 +114,8 @@ class Polarisation
         dg::blas2::gemv( lefty, temp, y);
         
         dg::blas2::symv( jump, x, temp);
-        dg::blas1::axpby( -1., xx, -1., y, xx); //D_xx + D_yy
-        dg::blas1::axpby( +1., temp, 1., xx, y);
+        dg::blas1::axpby( -1., xx, -1., y, xx); //-D_xx - D_yy + J
+        dg::blas1::axpby( +1., temp, 1., xx, y); 
     }
     private:
     bc inverse( bc bound)

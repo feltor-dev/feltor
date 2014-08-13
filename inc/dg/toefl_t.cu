@@ -51,7 +51,7 @@ int main()
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and RK
-    Toefl<dg::DVec> test( grid, Ra, Pr, 1e-6); 
+    Toefl<dg::DMatrix, dg::DVec> test( grid, Ra, Pr, 1e-6); 
     AB< k, vector<dg::DVec> > ab( y0);
 
 
@@ -59,7 +59,7 @@ int main()
     dg::DVec dvisual(  grid.size());
     dg::HVec hvisual( grid.size());
     dg::DVec ground = evaluate ( groundState, grid), temperature( ground);
-    dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
+    dg::DMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, y0, dt);
     while (!glfwWindowShouldClose(w))

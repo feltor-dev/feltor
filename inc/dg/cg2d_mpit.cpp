@@ -1,16 +1,15 @@
 #include <iostream>
-
 #include <iomanip>
-
-#include <mpi.h>
+#include "mpi.h"
 
 #include <thrust/host_vector.h>
+
 #include "backend/timer.cuh"
 #include "backend/mpi_evaluation.h"
-#include "cg.h"
 #include "backend/mpi_derivatives.h"
-
 #include "backend/mpi_init.h"
+
+#include "cg.h"
 
 //leo3 can do 350 x 350 but not 375 x 375
 const double ly = 2.*M_PI;
@@ -23,7 +22,6 @@ double fct(double x, double y){ return sin(y)*sin(x);}
 double derivative( double x, double y){return cos(x)*sin(y);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
 dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::PER;
 double initial( double x, double y) {return sin(0);}
 
 
@@ -32,9 +30,9 @@ int main( int argc, char* argv[])
     MPI_Init(&argc, &argv);
     unsigned n, Nx, Ny; 
     MPI_Comm comm;
-    mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
+    mpi_init2d( bcx, dg::PER, n, Nx, Ny, comm);
 
-    dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
+    dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER, comm);
     const dg::MPrecon w2d = dg::create::weights( grid);
     const dg::MPrecon v2d = dg::create::precond( grid);
     int rank;

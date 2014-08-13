@@ -1,13 +1,12 @@
-system = leo3
+system = home
 INCLUDE = -I../../inc
-INCLUDE += -I/home/matthias/include
+INCLUDE += -I$(HOME)/include
 
 CFLAGS = -Wall -std=c++0x -fopenmp
 GLFLAGS= -lfftw3 -lm -lGL -lglfw3 -lrt -lX11 -lXxf86vm -lXi -lXrandr
 LIBS = -lfftw3 -lhdf5 -lhdf5_hl
 
 ifeq ($(strip $(system)),leo3)
-INCLUDE += -I$(HOME)/include
 INCLUDE += -I$(UIBK_HDF5_INC)
 #INCLUDE += -I$(UIBK_OPENMPI_INC)
 INCLUDE += -I$(UIBK_FFTW_INC)

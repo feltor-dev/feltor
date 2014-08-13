@@ -1,6 +1,6 @@
 #pragma once
-#include "mpi_config.h"
 
+#include "matrix_traits.h"
 
 namespace dg
 {
@@ -11,6 +11,7 @@ struct MPI_Precon
     std::vector<double> data;
 };
 
+typedef MPI_Precon MPrecon;
 template <>
 struct MatrixTraits<MPI_Precon>
 {
