@@ -208,10 +208,11 @@ const container& Feltor<Matrix, container, P>::polarisation( const std::vector<c
     //compute chi and polarisation
     exp( y, expy, 2);
     dg::blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
+    //correction
+//     dg::blas1::axpby( -p.mu[0], expy[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_i
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
-        //correction
-    dg::blas1::axpby( -p.mu[0], expy[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_i
+
     //A = pol.create( chi);
     pol.set_chi( chi);
     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
@@ -331,7 +332,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     for( unsigned i=0; i<4; i++)
     {
         dz(dzy[i], omega); //dz (dz (N,U))
-        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);                     //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
+        dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[i]);                     //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
         //add them to the dissipative energy theorem
     }
     //add particle source to dtN
@@ -344,7 +345,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     for( unsigned i=0; i<4; i++) //damping and pupil on N and w
     {
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]); 
-//         dg::blas1::pointwiseDot( pupil, yp[i], yp[i]);
     }
 }
 

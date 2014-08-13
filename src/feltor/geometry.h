@@ -621,8 +621,6 @@ struct CurvatureR
 //         return -ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
     }
     private:    
-//     InvB invB_; 
-//     BZ bZ_;
     GeomParameters gp_;
     Psip   psip_;    
     PsipR  psipR_;
@@ -661,7 +659,6 @@ struct CurvatureZ
     {
         return 2.*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi); //factor 2 stays under discussion
 //         return ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
-
     }
     private:    
     GeomParameters gp_;
@@ -981,7 +978,7 @@ struct Gradient
     Psip psip_;
 };
 /**
- * @brief Returns density profile with variable peak amplitude and background amplitude which is additionaly damped with a tanh
+ * @brief Returns density profile with variable peak amplitude and background amplitude 
  */ 
 struct Nprofile
 {

@@ -63,16 +63,15 @@ int main()
     solovev::Field field(gp);
     solovev::Iris iris(gp);
     solovev::Pupil pupil(gp);
-    solovev::Damping damping(gp);
+    solovev::GaussianDamping dampgauss(gp);
     solovev::ZonalFlow zonalflow(gp,0.5);
     solovev::Gradient gradient(gp);
     solovev::Nprofile prof(gp);
-    solovev::TanhDamping damp2(gp);
+    solovev::TanhDampingIn damp2(gp);
     solovev::TanhDampingProf dampcut(gp);
     solovev::TanhDampingInv source(gp);
-    
-//     //make dggrid
-    std::cout << "kR "<<curvatureR(Rmin,Zmin) <<"\n";
+    dg::BathRZ bath1(16,16,0,Rmin,Zmin, 30.,30.,1.);
+    dg::BathRZ bath2(16,16,0,Rmin,Zmin, 30.,30.,10.);
 
     dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
     
@@ -84,7 +83,7 @@ int main()
     dg::HVec hvisual6 = dg::evaluate( gradLnB, grid);
     dg::HVec hvisual7 = dg::evaluate( iris, grid);
     dg::HVec hvisual8 = dg::evaluate( pupil, grid);
-    dg::HVec hvisual9 = dg::evaluate( damping, grid);
+    dg::HVec hvisual9 = dg::evaluate( dampgauss, grid);
     dg::HVec hvisual10 = dg::evaluate( zonalflow, grid);
     dg::HVec hvisual11 = dg::evaluate( gradient, grid);
     dg::HVec hvisual12 = dg::evaluate( field, grid);
@@ -92,7 +91,12 @@ int main()
     dg::HVec hvisual14 = dg::evaluate( damp2, grid);
     dg::HVec hvisual15 = dg::evaluate( dampcut, grid);
     dg::HVec hvisual16 = dg::evaluate( source, grid);
-
+    dg::HVec hvisual17 = dg::evaluate( bath1,grid);
+    dg::blas1::pointwiseDot(hvisual8, hvisual17,hvisual17);
+    dg::HVec hvisual18 = dg::evaluate( bath2,grid);
+    dg::blas1::pointwiseDot(hvisual9, hvisual18, hvisual18);
+//     dg::blas1::pointwiseDot(hvisual8, hvisual18, hvisual18);
+    dg::blas1::axpby( 1.,hvisual13 , 1., hvisual18,hvisual18);
     //allocate mem for visual
     dg::HVec visual1( grid.size());
     dg::HVec visual2( grid.size());
@@ -110,6 +114,9 @@ int main()
     dg::HVec visual14( grid.size());
     dg::HVec visual15( grid.size());
     dg::HVec visual16( grid.size());
+    dg::HVec visual17( grid.size());
+    dg::HVec visual18( grid.size());
+
     //make equidistant grid from dggrid
     dg::HMatrix equigrid = dg::create::backscatter(grid);
     //evaluate on valzues from devicevector on equidistant visual hvisual vector
@@ -129,11 +136,13 @@ int main()
     dg::blas2::gemv( equigrid, hvisual14, visual14);
     dg::blas2::gemv( equigrid, hvisual15, visual15);
     dg::blas2::gemv( equigrid, hvisual16, visual16);
+    dg::blas2::gemv( equigrid, hvisual17, visual17);
+    dg::blas2::gemv( equigrid, hvisual18, visual18);
 
 
     //Create Window and set window title
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( 1200, 1200, "");
-    draw::RenderHostData render( 4, 4);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 900, 1800, "");
+    draw::RenderHostData render( 6, 3);
   
     //create a colormap
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
@@ -221,6 +230,16 @@ int main()
         colors.scalemin() =  (float)thrust::reduce( visual16.begin(), visual16.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"source / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         render.renderQuad( visual16, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
+        colors.scalemax() = (float)thrust::reduce( visual17.begin(), visual17.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemin() =  (float)thrust::reduce( visual17.begin(), visual17.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"bath / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        render.renderQuad( visual17, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+ 
+        colors.scalemax() = (float)thrust::reduce( visual18.begin(), visual18.end(), 0., dg::AbsMax<double>()  );
+        colors.scalemin() =  1.0;
+        title <<"bath / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        render.renderQuad( visual18, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         title << std::fixed; 
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
