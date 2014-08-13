@@ -44,7 +44,7 @@
 
 ------------------Miscellaneous----------------------------
 
-25) itstp (steps between output)            = 500     (5)
+25) itstp (steps between output)            = 100     (5)
 26) # of outputs (excluding first)          = 10000
 27) Damping zone thickness (in units of rho_s)  = 20 
 28) Damping zone strength                   = 1e-3

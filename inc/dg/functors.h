@@ -521,8 +521,7 @@ struct BathRZ{
      */
   double operator()(double R, double Z)
   { 
-    double f, RZphasecos;
-    double  RR, ZZ;
+    double f, RZphasecos, RR, ZZ;
     RR=R-R_min_;
     ZZ=Z-Z_min_;
     f=0.;
@@ -535,8 +534,7 @@ struct BathRZ{
         f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]); 
       }      
     }
-    return amp_*norm*abs(f);
-    
+    return amp_*norm*abs(f);    
   }
     /**
      * @brief Return the value of the Bath for first phi plane

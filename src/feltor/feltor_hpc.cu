@@ -165,7 +165,7 @@ int main( int argc, char* argv[])
         h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
         //write time data
         h = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        E1 = (feltor.energy()-energy0)/energy0;
+        E1 = feltor.energy()/energy0;
         h = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
 
         h = nc_close(ncid);
