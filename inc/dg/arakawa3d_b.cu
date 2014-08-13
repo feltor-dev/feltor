@@ -4,11 +4,11 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "timer.cuh"
-#include "evaluation.cuh"
+#include "backend/timer.cuh"
+#include "backend/evaluation.cuh"
 #include "arakawa.h"
 #include "blas.h"
-#include "typedefs.cuh"
+#include "backend/typedefs.cuh"
 
 
 
@@ -39,7 +39,7 @@ int main()
     std::cout << "Type n, Nx, Ny and Nz! \n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d<double> grid( 0, lx, 0, ly,0,lz, n, Nx, Ny,Nz, dg::PER, dg::PER);
-    dg::DVec w3d = dg::create::w3d( grid);
+    dg::DVec w3d = dg::create::weights( grid);
     std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
     std::cout << "# of z  planes                    " << Nz <<std::endl;
     std::cout << "# of Legendre nodes per dimension "<< n <<std::endl;

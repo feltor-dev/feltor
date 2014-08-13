@@ -20,8 +20,8 @@ int main()
 
     DVec b = dg::evaluate( sine, grid), x( b.size(), 0);
     const DVec sol = evaluate( solution, grid);
-    DVec w2d = create::w2d( grid);
-    DVec v2d = create::v2d( grid);
+    DVec w2d = create::weights( grid);
+    DVec v2d = create::inv_weights( grid);
 
     Polarisation2dX<DVec> polarisation ( grid);
     DMatrix laplace = create::laplacianM( grid, not_normed);

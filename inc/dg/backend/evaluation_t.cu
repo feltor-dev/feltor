@@ -51,11 +51,11 @@ int main()
     HVec h_x = dg::evaluate( function, g1d);
     HVec h_n = dg::evaluate( function, g2d);
     HVec h_z = dg::evaluate( function, g3d);
-    HVec w3d = dg::create::w3d( g3d);
+    HVec w3d = dg::create::weights( g3d);
 
     //test preconditioners
-    double normX = dg::blas2::dot( h_x, dg::create::w1d(g1d), h_x);
-    double norm2X = dg::blas2::dot( dg::create::w2d(g2d), h_n);
+    double normX = dg::blas2::dot( h_x, dg::create::weights(g1d), h_x);
+    double norm2X = dg::blas2::dot( dg::create::weights(g2d), h_n);
     double norm3X = dg::blas2::dot( h_z, w3d, h_z);
 
     cout << "Square normalized 1DXnorm "<< normX <<"\n";

@@ -50,14 +50,14 @@ int main()
     t.toc();
     std::cout << "Evaluation of dx took "<<t.diff()/10.<<"s\n";
     dg::blas1::axpby( 1., hu, -1., hw);
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(hw, (dg::DVec)dg::create::w2d(g), hw))<<"\n";
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(hw, (dg::DVec)dg::create::weights(g), hw))<<"\n";
     t.tic();
     for( unsigned i=0; i<10; i++)
         dg::blas2::symv( lxM, hv, hw);
     t.toc();
     std::cout << "Evaluation of Lx took "<<t.diff()/10.<<"s\n";
     dg::blas1::axpby( 1., hv, -1., hw);
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(hw, (dg::DVec)dg::create::w2d(g), hw))<<"\n";
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(hw, (dg::DVec)dg::create::weights(g), hw))<<"\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

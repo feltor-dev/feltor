@@ -3,7 +3,7 @@
 #include <cusp/ell_matrix.h>
 
 #include "blas.h"
-#include "laplace.cuh"
+#include "dxx.cuh"
 #include "evaluation.cuh"
 #include "typedefs.cuh"
 #include "weights.cuh"

@@ -131,7 +131,7 @@ struct Grid2d
      *
      * @return cartesian
      */
-    system system() const{return sys_;}
+    dg::system system() const{return sys_;}
     /**
      * @brief The total number of points
      *
@@ -181,6 +181,8 @@ struct Grid2d
 /**
  * @brief A 3D grid class 
  *
+ * In the third dimension only 1 polynomial coefficient is used,
+ * not n.
  * @tparam T scalar value type 
  */
 template< class T>
@@ -258,7 +260,7 @@ struct Grid3d
     bc bcy() const {return bcy_;}
     bc bcz() const {return bcz_;}
     const DLT<T>& dlt() const{return dlt_;}
-    system system() const {return sys_;}
+    dg::system system() const {return sys_;}
     /**
      * @brief The total number of points
      *

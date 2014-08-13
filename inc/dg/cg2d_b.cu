@@ -11,7 +11,7 @@
 #include "backend/cusp_thrust_backend.h"
 
 #include "cg.h"
-#include "laplace.h"
+#include "elliptic.h"
 
 //leo3 can do 350 x 350 but not 375 x 375
 const double ly = 2.*M_PI;
@@ -40,7 +40,7 @@ int main()
     dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
     const dg::HVec s2d_h = dg::create::weights( grid);
     const dg::DVec s2d_d( s2d_h);
-    const dg::HVec t2d_h = dg::create::precond( grid);
+    const dg::HVec t2d_h = dg::create::inv_weights( grid);
     const dg::DVec t2d_d( t2d_h);
     std::cout<<"Expand initial condition\n";
     dg::HVec x = dg::evaluate( initial, grid);
@@ -50,7 +50,7 @@ int main()
     dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
     dg::DMatrix DX = dg::create::dx( grid);
     dg::HMatrix A = dA;
-    dg::Laplace2d<dg::DMatrix, dg::DVec, dg::DVec> lap(grid);
+    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> lap(grid);
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -107,7 +107,7 @@ int main()
     double normerr = dg::blas2::dot( s2d_d, derror);
     double norm = dg::blas2::dot( s2d_d, dsolution);
     std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
-    dg::blas2::gemv( DX, dsolution, derror);
+    dg::blas2::gemv( DX, dx, derror);
     dg::blas1::axpby( 1., deriv, -1., derror);
     normerr = dg::blas2::dot( s2d_d, derror); 
     norm = dg::blas2::dot( s2d_d, deriv);

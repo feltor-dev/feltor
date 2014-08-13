@@ -50,8 +50,8 @@ int main()
     cin >> n >> Nx >> Ny; //more N means less iterations for same error
     cin >> eps;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
-    Vector v2d = dg::create::v2d( grid);
-    Vector w2d = dg::create::w2d( grid);
+    Vector v2d = dg::create::inv_weights( grid);
+    Vector w2d = dg::create::weights( grid);
     //create functions A(chi) x = b
     Vector x =    dg::evaluate( initial, grid);
     Vector b =    dg::evaluate( rhs, grid);

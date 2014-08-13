@@ -8,7 +8,7 @@
 #include "backend/timer.cuh"
 #include "backend/mpi_evaluation.h"
 #include "cg.h"
-#include "laplace.h"
+#include "elliptic.h"
 #include "backend/mpi_derivatives.h"
 
 #include "backend/mpi_init.h"

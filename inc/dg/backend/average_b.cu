@@ -20,7 +20,7 @@ int main()
 
     dg::HVec vector = dg::evaluate( function ,g), vector_y( vector);
     dg::DVec dvector( vector), dvector_y( vector_y);
-    dg::HVec w2d = dg::create::w2d( g);
+    dg::HVec w2d = dg::create::weights( g);
     dg::DVec w2d_device( w2d);
     t.tic();
     pol( vector, vector_y);

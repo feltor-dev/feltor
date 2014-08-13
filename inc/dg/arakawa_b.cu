@@ -52,7 +52,7 @@ int main()
     cin >> n >> Nx >> Ny;
     Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     //S2D<double > s2d( grid);
-    DVec w2d = create::w2d( grid);
+    DVec w2d = create::weights( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     DVec lhs = evaluate ( left, grid), jac(lhs);
