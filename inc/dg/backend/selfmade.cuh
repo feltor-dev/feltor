@@ -19,6 +19,20 @@ inline void doSymv(
 #endif //DG_DEBUG
     m.symv( x,y);
 }
+template< class Matrix, class Vector1, class Vector2>
+inline void doGemv(  
+              Matrix& m, 
+              Vector1& x,
+              Vector2& y, 
+              SelfMadeMatrixTag,
+              AnyVectorTag,
+              AnyVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
+    m.symv( x,y);
+}
 
 } //namespace detail
 } //namespace blas2
