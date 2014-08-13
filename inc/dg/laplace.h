@@ -54,7 +54,10 @@ class Laplace2d
         leftx ( dg::create::dx( g, inverse( g.bcx()), not_normed, backward)),
         lefty ( dg::create::dy( g, inverse( g.bcy()), not_normed, backward)),
         jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()) ) 
-    { }
+    { 
+        if( g.system() == cylindrical)
+            xchi = dg::evaluate( dg::coo1, g);
+    }
     /**
      * @brief Construct from grid and boundary conditions
      *
@@ -73,7 +76,10 @@ class Laplace2d
         leftx (dg::create::dx( g, inverse(bcx), not_normed, backward)),
         lefty (dg::create::dy( g, inverse(bcy), not_normed, backward)),
         jump  (dg::create::jump2d( g, bcx, bcy))
-    { }
+    { 
+        if( g.system() == cylindrical)
+            xchi = dg::evaluate( dg::coo1, g);
+    }
 
     /**
      * @brief Returns the weights to use in conjugate gradient
@@ -99,12 +105,12 @@ class Laplace2d
         dg::blas2::gemv( rightx, x, temp); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 
         dg::blas2::gemv( leftx, temp, xx); //L_x*Chi*R_x*x
+        dg::blas1::pointwiseDivide( xx, xchi, xx); 
 
         dg::blas2::gemv( righty, x, temp);
-        dg::blas1::pointwiseDot( xchi, temp, temp);
         dg::blas2::gemv( lefty, temp, y);
         
-        dg::blas2::symv( jump, x, temp);
+        dg::blas2::symv( jump, x, temp);//this takes as long as all the rest
         dg::blas1::axpby( -1., xx, -1., y, xx); //-D_xx - D_yy + J
         dg::blas1::axpby( +1., temp, 1., xx, y); 
     }

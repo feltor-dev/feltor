@@ -46,14 +46,17 @@ class Polarisation
      */
     template< class Grid>
     Polarisation( const Grid& g): 
-        xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx),
+        xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx), R(xchi),
         weights_(dg::create::weights(g, dg::cylindrical)), precond_(dg::create::precond(g, dg::cylindrical)), 
         rightx( dg::create::dx( g, g.bcx(), normed, forward)),
         righty( dg::create::dy( g, g.bcy(), normed, forward)),
         leftx ( dg::create::dx( g, inverse( g.bcx()), normed, backward)),
         lefty ( dg::create::dy( g, inverse( g.bcy()), normed, backward)),
         jump  ( dg::create::jump2d( g, g.bcx(), g.bcy()), normed ) 
-    { }
+    { 
+        if( g.system() == cylindrical)
+            R = dg::evaluate( dg::coo1, g);
+    }
     /**
      * @brief Construct from grid and boundary conditions
      *
@@ -65,14 +68,17 @@ class Polarisation
      */
     template< class Grid>
     Polarisation( const Grid& g, bc bcx, bc bcy): 
-        xchi( dg::evaluate(one, g)), xx(xchi), temp( xx),
+        xchi( dg::evaluate(one, g)), xx(xchi), temp( xx), R(xchi),
         weights_(dg::create::weights(g)), precond_(dg::create::precond(g)),
         rightx(dg::create::dx( g,bcx, normed, forward)),
         righty(dg::create::dy( g,bcy, normed, forward)),
         leftx (dg::create::dx( g, inverse(bcx), normed, backward)),
         lefty (dg::create::dy( g, inverse(bcy), normed, backward)),
         jump  (dg::create::jump2d( g, bcx, bcy, normed))
-    { }
+    { 
+        if( g.system() == cylindrical)
+            R = dg::evaluate( dg::coo1, g);
+    }
 
     /**
      * @brief Change Chi
@@ -107,8 +113,10 @@ class Polarisation
     {
         dg::blas2::gemv( rightx, x, temp); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 
+        dg::blas1::pointwiseDot( R, temp, temp); 
         dg::blas2::gemv( leftx, temp, xx); //L_x*Chi*R_x*x
         dg::blas2::symv( weights_, xx, xx);
+        dg::blas1::pointwiseDivide( xx, R, xx); 
 
         dg::blas2::gemv( righty, x, temp);
         dg::blas1::pointwiseDot( xchi, temp, temp);
@@ -130,7 +138,7 @@ class Polarisation
     }
     Matrix leftx, lefty, rightx, righty, jump;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
-    Vector xchi, xx, temp;
+    Vector xchi, R, xx, temp;
 };
 
 ///@cond

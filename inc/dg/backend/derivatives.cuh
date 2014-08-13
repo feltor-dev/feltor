@@ -7,7 +7,7 @@
 #include "creation.cuh"
 #include "dx.cuh"
 #include "functions.h"
-#include "laplace.cuh"
+#include "dxx.cuh"
 #include "operator_tensor.cuh"
 #include "tensor.cuh"
 
