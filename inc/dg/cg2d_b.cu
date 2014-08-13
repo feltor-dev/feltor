@@ -11,6 +11,7 @@
 #include "backend/cusp_thrust_backend.h"
 
 #include "cg.h"
+#include "laplace.h"
 
 //leo3 can do 350 x 350 but not 375 x 375
 const double ly = 2.*M_PI;
@@ -49,6 +50,7 @@ int main()
     dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
     dg::DMatrix DX = dg::create::dx( grid);
     dg::HMatrix A = dA;
+    dg::Laplace2d<dg::DMatrix, dg::DVec, dg::DVec> lap(grid);
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -74,10 +76,10 @@ int main()
     std::cout << "# of polynomial coefficients: "<< n <<std::endl;
     std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
     
+    std::cout << "... for a precision of "<< eps<<std::endl;
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg( dA, dx, db, t2d_d, eps)<<std::endl;
     t.toc();
-    std::cout << "... for a precision of "<< eps<<std::endl;
     std::cout << "... on the device took "<< t.diff()<<"s\n";
     t.tic();
     dg::cg( dA, dx_, db_, t2d_d, eps, dx_.size());
@@ -86,12 +88,17 @@ int main()
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg_host( A, x, b, t2d_h, eps)<<std::endl;
     t.toc();
-    std::cout << "... for a precision of "<< eps<<std::endl;
     std::cout << "... on the host took   "<< t.diff()<<"s\n";
     t.tic();
     dg::cg( A, x_, b_, t2d_h, eps, x_.size());
     t.toc();
     std::cout << "... with function took "<< t.diff()<<"s\n";
+
+    dg::blas1::scal( dx, 0);
+    t.tic();
+    std::cout << "Number of pcg iterations "<< pcg( lap, dx, db, t2d_d, eps)<<std::endl;
+    t.toc();
+    std::cout << "... on the device took "<< t.diff()<<"s\n";
     dg::DVec derror( dsolution);
     dg::HVec  error(  solution);
     dg::blas1::axpby( 1.,dx,-1.,derror);
