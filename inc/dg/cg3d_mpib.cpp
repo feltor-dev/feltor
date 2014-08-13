@@ -7,6 +7,7 @@
 #include "backend/mpi_evaluation.h"
 #include "backend/mpi_derivatives.h"
 
+#include "elliptic.h"
 #include "cg.h"
 #include "backend/mpi_init.h"
 
@@ -31,9 +32,9 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
 
-    dg::MPI_Grid3d grid( 0., lx, 0, ly, 0, lz, n, Nx, Ny,Nz, bcx, dg::PER,dg::PER, comm);
+    dg::MPI_Grid3d grid( 0., lx, 0, ly, 0, lz, n, Nx, Ny,Nz, bcx, dg::PER,dg::PER, dg::cartesian, comm);
     const dg::MPrecon w3d = dg::create::weights( grid);
-    const dg::MPrecon v3d = dg::create::precond( grid);
+    const dg::MPrecon v3d = dg::create::inv_weights( grid);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if( rank == 0) std::cout<<"Expand initial condition\n";
@@ -42,7 +43,7 @@ int main( int argc, char* argv[])
     if( rank == 0) std::cout << "Create symmetric Laplacian\n";
     dg::Timer t;
     t.tic();
-    dg::MMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
+    dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> A ( grid, dg::not_normed); 
     t.toc();
     if( rank == 0) std::cout<< "Creation took "<<t.diff()<<"s\n";
 

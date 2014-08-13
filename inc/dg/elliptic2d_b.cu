@@ -13,21 +13,22 @@
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
 
-const double lx = M_PI/2.;
+const double lx = M_PI;
 const double ly = M_PI;
-dg::bc bcx = dg::DIR_NEU;
+dg::bc bcx = dg::DIR;
+dg::bc bcy = dg::DIR;
 //const double eps = 1e-3; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double initial( double x, double y) {return 0.;}
 double amp = 1;
-//double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
+double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
-double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
+//double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
 
-//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
+double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
-double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
+//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
 double der(double x, double y)  { return cos( x)*sin(y);}
 
@@ -42,7 +43,7 @@ int main()
     std::cin >> eps;
     std::cout << "# of polynomial coefficients: "<< n <<std::endl;
     std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
     dg::DVec v2d = dg::create::inv_weights( grid);
     //create functions A(chi) x = b

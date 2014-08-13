@@ -4,10 +4,7 @@
 namespace dg
 {
 #if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA)
-
 #ifdef MPI_VERSION
-#include <mpi.h>
-
 class Timer
 {
   public:
@@ -16,13 +13,13 @@ class Timer
     *
     * @param stream the stream in which the Event is placed
     */
-    void tic( ){  start = MPI_Wtime();}
+    void tic( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); start = MPI_Wtime();}
     /**
     * @brief Stop timer using cudaEventRecord and Synchronize
     *
     * @param stream the stream in which the Event is placed
     */
-    void toc( ){ stop = MPI_Wtime(); }
+    void toc( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); stop = MPI_Wtime(); }
     /*! \brief Return time elapsed between tic and toc
      *
      * \return Time in seconds between calls of tic and toc*/

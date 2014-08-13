@@ -30,13 +30,13 @@ int main()
     t.tic();
     double norm = dg::blas2::dot( w2d, x);
     t.toc();
-    std::cout<<"DOT took                         " <<t.diff()<<"s\n";
+    std::cout<<"DOT took                         " <<t.diff()<<"s   result: "<<norm<<"\n";
     dg::DVec y(x);
     dg::DMatrix DX = dg::create::dx( grid);
     t.tic();
     dg::blas2::symv( DX, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s\n";
+    std::cout<<"SYMV took                        "<<t.diff()<<"s (depends on matrix structure!)\n";
     t.tic();
     dg::blas1::axpby( 1., y, -1., x);
     t.toc();
