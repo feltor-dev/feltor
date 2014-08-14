@@ -110,6 +110,7 @@ struct Feltor
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
+    void initialni( const container& y, container& target);
 
     /**
      * @brief Return the Gamma operator used by this object
@@ -142,7 +143,6 @@ struct Feltor
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
-    //Matrix lapperp; 
     dg::DZ<Matrix, container> dz;
     dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
@@ -167,10 +167,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
     pupil( dg::evaluate( solovev::Pupil( gp), g)),
-//     source( dg::evaluate( dg::Gaussian( gp.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
-//     source( dg::evaluate( solovev::Gradient(gp), g)),
-     source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
-//     damping( dg::evaluate( solovev::TanhDampingIn(gp ), g)), 
+    source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
@@ -199,11 +196,35 @@ const container& Feltor<Matrix,container, P>::compute_psi( container& potential)
     //without FLR
 //     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
     //with FLR
+    #ifdef DG_BENCHMARK
+    dg::Timer t; 
+    t.tic();
+    #endif
     invert_gamma(gamma,chi,potential);
+    #ifdef DG_BENCHMARK
+    t.toc();
+    std::cout<< "Gamma operator took "<<t.diff()<<"s\n";
+    #endif
     dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);
+    
     return phi[1];
+    
 }
-
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::initialni( const container& src, container& target)
+{
+    #ifdef DG_BENCHMARK
+    dg::Timer t; 
+    t.tic();
+    #endif
+    dg::blas1::transform( src,omega, dg::PLUS<double>(-1)); //n_e -1
+    invert_gamma(gamma,target,omega);   //ni-1
+    dg::blas1::transform( target,target, dg::PLUS<double>(1)); //n_i
+    #ifdef DG_BENCHMARK
+    t.toc();
+    std::cout<< "Computation of intial ni field took "<<t.diff()<<"s\n";
+    #endif 
+}
 
 //computes and modifies expy!!
 template<class Matrix, class container, class P>
@@ -226,13 +247,13 @@ const container& Feltor<Matrix, container, P>::polarisation( const std::vector<c
     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
     dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
     //with FLR
-    invert_gamma(gamma,omega,omega);    
+    invert_gamma(gamma,chi,omega,w3d, v3d);    
 #ifdef DG_BENCHMARK
     t.toc();
-    //std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
+    std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
 #endif 
-    dg::blas1::axpby( -1., expy[0], 1., omega); //n_i-n_e
-    unsigned number = invert_pol( pol, phi[0], omega, w3d, v3d);
+    dg::blas1::axpby( -1., expy[0], 1., chi); //n_i-n_e
+    unsigned number = invert_pol( pol, phi[0], chi, w3d, v3d);
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
