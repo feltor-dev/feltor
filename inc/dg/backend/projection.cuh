@@ -268,9 +268,9 @@ struct DifferenceNorm
                             lcm( g1.Ny(), g2.Ny()) );
         p1 = dg::create::projection2d( g1, gC);
         p2 = dg::create::projection2d( g2, gC);
-        w2d = dg::create::w2d( gC); v11 = w2d, v22 = w2d;
-        wg1 = dg::create::w2d( g1); 
-        wg2 = dg::create::w2d( g2); 
+        w2d = dg::create::weights( gC); v11 = w2d, v22 = w2d;
+        wg1 = dg::create::weights( g1); 
+        wg2 = dg::create::weights( g2); 
     }
     double operator()( const container& v1, const container& v2)
     {

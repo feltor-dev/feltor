@@ -1,8 +1,7 @@
 MPICXX=mpic++
 CXXFLAGS=#-Wall
 CXXFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-INCLUDE += -I$(HOME)/netcdf/include
-LIBS = -L$(HOME)/netcdf/lib -lnetcdf
+LIBS = -lnetcdf
 
 %_mpit: %_mpit.cpp 
 	$(MPICXX) $(INCLUDE) -DDG_DEBUG $(CXXFLAGS) $< -o $@

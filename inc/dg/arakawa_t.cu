@@ -4,10 +4,9 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "evaluation.cuh"
 #include "arakawa.h"
 #include "blas.h"
-#include "typedefs.cuh"
+#include "backend/typedefs.cuh"
 
 using namespace std;
 using namespace dg;
@@ -68,7 +67,7 @@ double jacobian( double x, double y)
 int main()
 {
     Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    DVec w2d = create::w2d( grid);
+    DVec w2d = create::weights( grid);
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;
     cout <<fixed<< setprecision(2)<<endl;

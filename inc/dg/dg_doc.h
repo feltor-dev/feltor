@@ -18,18 +18,15 @@
  *          of analytic functions on a given grid. In 1D the discretisation
  *          simply consists of n function values per grid cell ( where n is the number
  *          of Legendre coefficients used; currently 1, 2, 3, 4 or 5) evaluated at
- *          the gaussian abscissas in the respective cell. In 2D we store all nxn 
- *          values per cell contiguously in memory. We choose x to be the contiguous direction.
+ *          the gaussian abscissas in the respective cell. In 2D and 3D we simply 
+ *          use the product space. We choose x to be the contiguous direction.
  *          The first elements of the resulting vector lie in the cell at (x0,y0) and the last
  *          in (x1, y1).
- *          The expand functions are equivalent to a call to the respective evaluate
- *          function followed by a forward dlt transformation in each cell. (i.e. a multiplication 
- *          with DLT<n>::forward)
  *      @defgroup functions Functions and Functors
  *
  *          The functions are useful mainly in the constructor of Operator objects. 
  *          The functors are useful for either vector transformations or
- *          as init functions in the evaluate or expand routines.
+ *          as init functions in the evaluate routines.
  *
  *      @defgroup creation Discrete derivatives 
  *      @{
@@ -38,7 +35,7 @@
  *          @defgroup highlevel Matrix creation functions and classes
  *              High level matrix creation functions
  *          @defgroup arakawa Arakawas scheme
- *          @defgroup dz Parallel derivative along a field line
+ *          @defgroup operators Classes that act as matrices in blas2 routines
  *      @}
  *      @defgroup blas Basic Linear Algebra Subprograms
  *

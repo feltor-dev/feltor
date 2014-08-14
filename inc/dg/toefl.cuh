@@ -35,7 +35,7 @@ Toefl<Matrix, container, Prec>::Toefl( const Grid& grid, double R, double P, dou
     dxtheta(omega), dxphi(omega), 
     arakawaX( grid), 
     pcg( omega, grid.size(), eps),
-    v2d( dg::create::precond(grid)), w2d( dg::create::weights(grid)), Ra (R), Pr(P)
+    v2d( dg::create::inv_weights(grid)), w2d( dg::create::weights(grid)), Ra (R), Pr(P)
 {
 }
 

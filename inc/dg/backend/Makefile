@@ -42,13 +42,6 @@ CFLAGS = -openmp -mmic -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 endif
 
-all: version cusp_thrust arakawa_t blas1_t \
-	 cg2d_b cg2d_t cg_t dlt2d_b dlt2d_t dlt_t dx_t \
-	 evaluation_b evaluation_t helmholtz_t backscatter_ laplace_b laplace_t \
-	 operator_matrix_t operator_dynamic_b operator_t \
-	 polarisation2d_b polarisation2d_t polarisation_b polarisation_t \
-	 runge_kutta2d_t tensor_b toefl_b toefl_t xspacelib_t
-
 
 version: version.cu 
 	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
@@ -90,7 +83,7 @@ blas%_t: blas%_t.cu ../blas%.h
 #	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
 #	echo "Attention: No compiler warnings are issued!" 
 
-dg_t: dg_t.cpp ../dg.h 
+dg_t: dg_t.cpp dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
 	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 

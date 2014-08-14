@@ -15,7 +15,7 @@ double function( double x, double y, double z) { return sin(3./4.*z);}
 double derivative( double x, double y, double z) { return 3./4.*cos(3./4.*z);}
 dg::bc bcz = dg::DIR_NEU;
 */
-double function( double x, double y) { return sin(x);}
+double function( double x, double y)   { return sin(x);}
 double derivative( double x, double y) { return cos(x);}
 
 dg::bc bcx = dg::DIR, bcy = dg::PER;
@@ -41,6 +41,8 @@ int main(int argc, char* argv[])
     dg::MVec deriv = dg::evaluate( derivative, g);
 
     dg::blas2::symv( dx, func, result);
+    //if(rank==0) std::cout << func <<std::endl;
+    //if(rank==0) std::cout << result <<std::endl;
     //double norm = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
     //if(rank==0) std::cout << "Norm of result             "<<norm<<"\n";
 

@@ -4,12 +4,12 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "timer.cuh"
-#include "evaluation.cuh"
+#include "backend/timer.cuh"
+#include "backend/evaluation.cuh"
+#include "backend/derivatives.cuh"
 #include "cg.h"
-#include "derivatives.cuh"
 
-#include "typedefs.cuh"
+#include "backend/typedefs.cuh"
 
 
 //leo3 can do 350 x 350 but not 375 x 375
@@ -48,8 +48,8 @@ int main()
 
     cout << "TEST 3D VERSION\n";
     dg::Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, dg::PER);
-    dg::HVec w3d = dg::create::w3d( g3d);
-    dg::HVec v3d = dg::create::v3d( g3d);
+    dg::HVec w3d = dg::create::weights( g3d);
+    dg::HVec v3d = dg::create::inv_weights( g3d);
     dg::HVec x3 = dg::evaluate( initial, g3d);
     dg::HVec b3 = dg::evaluate ( laplace_fct, g3d);
     dg::blas2::symv( w3d, b3, b3);
@@ -77,24 +77,7 @@ int main()
 
     double eps3 = dg::blas2::dot(w3d , error3);
     double norm3 = dg::blas2::dot(w3d , solution3);
-    //cout << "L2 Norm2 of Solution is        " << norm3 << endl;
     cout << "L2 Norm of relative error is:  " <<sqrt( eps3/norm3)<<endl;
-    /////////////////STD_VECTOR MATRIX//////////////////////////
-    //dg::Grid2d<double> g2d( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
-    //dg::DVec w2d = dg::create::w2d( g2d), v2d( dg::create::v2d(g2d));
-    //dg::DMatrix A2  =dg::create::laplacianM( g2d, dg::not_normed);
-    //dg::DVec x2 = dg::evaluate( initial, g2d);
-    //dg::DVec b2 = dg::evaluate( laplace_fct, g2d);
-    //dg::blas2::symv( w2d, b2, b2);
-    //std::vector<dg::DVec> v2_( g3d.Nz(), v2d);
-    //std::vector<dg::DVec> b2_( g3d.Nz(), b2);
-    //std::vector<dg::DVec> x2_( g3d.Nz(), x2);
-    //dg::CG<std::vector<dg::DVec> > pcg2( x2_, g2d.size());
-    //t.tic();
-    //cout << "Number of pcg iterations "<< pcg2( A2, x2_, b2_, v2_, eps)<<endl;
-    //t.toc();
-    //cout << "... for a precision of "<< eps<<endl;
-    //cout << "... on the device took "<< t.diff()<<"s\n";
 
 
     return 0;
