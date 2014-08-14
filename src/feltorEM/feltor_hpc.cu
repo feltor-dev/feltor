@@ -65,8 +65,8 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
      
     //create RHS 
-    eule::Feltor< dg::DVec > feltor( grid, p,gp); 
-    eule::Rolkar< dg::DVec > rolkar( grid, p,gp);
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
+    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     
     //with bath
@@ -102,8 +102,8 @@ int main( int argc, char* argv[])
 
     feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
     
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]); //is pupil on bath
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]); //is pupil on bath
+    dg::blas1::pointwiseDot(rolkar.dampin(),y0[0],y0[0]); //is pupil on bath
+    dg::blas1::pointwiseDot(rolkar.dampin(),y0[1],y0[1]); //is pupil on bath
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);

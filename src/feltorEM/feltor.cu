@@ -143,7 +143,8 @@ int main( int argc, char* argv[])
         }
 
         //transform phi
-        dg::blas2::gemv( rolkar.laplacianM(), feltor.potential()[0], y1[1]);
+        dvisual=feltor.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
