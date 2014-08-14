@@ -4,7 +4,7 @@
 #include "backend/xspacelib.cuh"
 #include "backend/timer.cuh"
 
-#include "polarisation.h"
+#include "elliptic.h"
 #include "cg.h"
 
 
@@ -43,8 +43,8 @@ int main()
     std::cout << "# of polynomial coefficients: "<< n <<std::endl;
     std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, dg::DIR);
-    dg::DVec v2d = dg::create::v2d( grid);
-    dg::DVec w2d = dg::create::w2d( grid);
+    dg::DVec w2d = dg::create::weights( grid);
+    dg::DVec v2d = dg::create::inv_weights( grid);
     //create functions A(chi) x = b
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);
@@ -53,7 +53,7 @@ int main()
 
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
-    dg::Polarisation<dg::DMatrix, dg::DVec, dg::DVec> pol( grid);
+    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> pol( grid);
     pol.set_chi( chi);
     t.toc();
     std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";

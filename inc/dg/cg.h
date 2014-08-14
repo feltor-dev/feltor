@@ -9,6 +9,10 @@
 #include "backend/timer.cuh"
 #endif
 
+/*!@file
+ * Conjugate gradient class and functions
+ */
+
 namespace dg{
 
 //// TO DO: check for better stopping criteria using condition number estimates
@@ -80,9 +84,9 @@ class CG
 
 /*
     compared to unpreconditioned compare
-    ddot(r,r), axpby()
+    dot(r,r), axpby()
     to 
-    ddot( r,P,r), dsymv(P)
+    dot( r,P,r), symv(P)
     i.e. it will be slower, if P needs to be stored
     (but in our case P_{ii} can be computed directly
     compared to normal preconditioned compare
@@ -200,11 +204,19 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
  * the last two solutions.
  *
  * @ingroup algorithms
- * Solves the Equation \f[ \hat O \phi = \rho \f]
- * for any symmetric operator O. 
+ * Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
+ * for any operator \f$\hat O\f$ that was made symmetric 
+ * by appropriate weights \f$W\f$ (s. comment below). 
  * It uses solutions from the last two calls to 
  * extrapolate a solution for the current call.
  * @tparam container The Vector class to be used
+ * @note A note on weights and preconditioning. 
+ * A normalized DG-discretized derivative or operator is normally not symmetric. 
+ * The diagonal coefficient matrix that is used to make the operator 
+ * symmetric is called weights W, i.e. \f$ \hat O = W\cdot O\f$ is symmetric. 
+ * Independent from this, a preconditioner should be used to solve the
+ * symmetric matrix equation. Most often the inverse of \f$W\f$ is 
+ * a good preconditioner. 
  */
 template<class container>
 struct Invert
@@ -227,7 +239,7 @@ struct Invert
      * of the last solutions
      * @tparam SymmetricOp Symmetric operator with the SelfMadeMatrixTag
         The functions weights() and precond() need to be callable and return
-        weights and the preconditioner for the conjugate gradient method
+        weights and the preconditioner for the conjugate gradient method.
         The Operator is assumed to be symmetric!
      * @param op selfmade symmetric Matrix operator class
      * @param phi solution (write only)

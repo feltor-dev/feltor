@@ -8,6 +8,7 @@
 #include "backend/timer.cuh"
 #include "backend/mpi_evaluation.h"
 #include "cg.h"
+#include "elliptic.h"
 #include "backend/mpi_derivatives.h"
 
 #include "backend/mpi_init.h"
@@ -46,6 +47,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     t.tic();
     dg::MMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
+    dg::Laplace2d<dg::MMatrix, dg::MVec, dg::MPrecon> lap( grid);
     t.toc();
     if( rank == 0) std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -60,6 +62,16 @@ int main( int argc, char* argv[])
     
     t.tic();
     int number = pcg( A, x, b, v2d, eps);
+    t.toc();
+    if( rank == 0)
+    {
+        std::cout << "# of pcg itersations   "<<number<<std::endl;
+        std::cout << "... for a precision of "<< eps<<std::endl;
+        std::cout << "...               took "<< t.diff()<<"s\n";
+    }
+    dg::blas1::scal( x, 0.);
+    t.tic();
+    number = pcg( lap, x, b, v2d, eps);
     t.toc();
     if( rank == 0)
     {

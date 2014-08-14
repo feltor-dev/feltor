@@ -65,7 +65,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
     double Zmax=(gp.boxscale)*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
 //         dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::NEU, dg::NEU, dg::PER);    
     //create RHS 
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
@@ -139,7 +139,8 @@ int main( int argc, char* argv[])
         }
 
         //transform to Vor
-        dg::blas2::gemv( rolkar.laplacianM(), feltor.potential()[0], y1[1]);
+        dvisual=feltor.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
