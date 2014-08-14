@@ -12,6 +12,31 @@
 namespace dg{
 namespace create{
 
+///@cond
+/**
+* @brief create host_vector containing 1d X-space abscissas 
+*
+* same as evaluation of f(x) = x on the grid
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
+template <class T>
+thrust::host_vector<T> abscissas( const Grid1d<T>& g)
+{
+    thrust::host_vector<T> v(g.size()); 
+    T xp=1.;
+    for( unsigned i=0; i<g.N(); i++)
+    {
+        for( unsigned j=0; j<g.n(); j++)
+            v[i*g.n()+j] =  g.h()/2.*(xp + g.dlt().abscissas()[j])+g.x0();
+        xp+=2.;
+    }
+    return v;
+}
+///@endcond
+
 ///@addtogroup highlevel
 ///@{
 
@@ -141,30 +166,6 @@ thrust::host_vector<T> inv_weights( const Grid3d<T>& g)
     return v;
 }
 
-///@cond
-/**
-* @brief create host_vector containing 1d X-space abscissas 
-*
-* same as evaluation of f(x) = x on the grid
-* @tparam T value type
-* @param g The grid 
-*
-* @return Host Vector
-*/
-template <class T>
-thrust::host_vector<T> abscissas( const Grid1d<T>& g)
-{
-    thrust::host_vector<T> v(g.size()); 
-    T xp=1.;
-    for( unsigned i=0; i<g.N(); i++)
-    {
-        for( unsigned j=0; j<g.n(); j++)
-            v[i*g.n()+j] =  g.h()/2.*(xp + g.dlt().abscissas()[j])+g.x0();
-        xp+=2.;
-    }
-    return v;
-}
-///@endcond
 
 ///@}
 }//namespace create

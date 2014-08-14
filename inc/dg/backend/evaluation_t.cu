@@ -45,7 +45,7 @@ int main()
 
     dg::Grid1d<double> g1d( 0, lx, n, N);
     dg::Grid2d<double> g2d( 0, lx,0, ly,n, Nx, Ny);
-    dg::Grid3d<double> g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz);
+    dg::Grid3d<double> g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER,dg::cylindrical);
 
     //test evaluation functions
     HVec h_x = dg::evaluate( function, g1d);
@@ -66,6 +66,8 @@ int main()
     cout << "Correct square norm is    "<<solution2<<endl;
 
     cout << "Square normalized 3DXnorm   "<< norm3X<<"\n";
+    if( g3d.system() == dg::cylindrical)
+        solution = (3*exp(4.)+1.)/4.;
     double solution3 = solution2*solution;
     cout << "Correct square norm is      "<<solution3<<endl;
     return 0;

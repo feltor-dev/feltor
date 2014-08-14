@@ -18,14 +18,6 @@ struct BoundaryTerms
     std::vector<int> col_;
     void applyX( const MPI_Vector& x, MPI_Vector& y) const
     {
-        //std::cout<< "rows("<<data_.size()<<")";
-        //for( unsigned i=0; i<row_.size(); i++) 
-        //    std::cout<< row_[i]<<" ";
-        //std::cout << "\n";
-        //std::cout<< "cols:  ";
-        //for( unsigned i=0; i<col_.size(); i++) 
-        //    std::cout<< col_[i]<<" ";
-        //std::cout << "\n";
         if(data_.empty()) return;
         unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
         for( unsigned m=0; m<data_.size(); m++) //all blocks
@@ -39,10 +31,6 @@ struct BoundaryTerms
                 y.data()[(((s*rows+i)*n+k)*cols + row_[m]+1)*n +l] = 0;
             }
         }
-        //std::cout << std::endl;
-        //std::cout << "y after zero\n"<<std::endl;
-        //std::cout << y<<std::endl;
-        //std::cout << std::endl;
         for( unsigned m=0; m<data_.size(); m++) //all blocks
         {
             for( unsigned s=0; s<x.Nz(); s++) //z-loop
@@ -56,9 +44,6 @@ struct BoundaryTerms
                     *x.data()[(((s*rows+i)*n+k)*cols + col_[m]+1)*n + q ];
             }
         }
-        std::cout << "y after apply\n"<<std::endl;
-        //std::cout << y<<std::endl;
-        std::cout << std::endl;
     }
 
     void applyY( const MPI_Vector& x, MPI_Vector& y) const
@@ -68,7 +53,6 @@ struct BoundaryTerms
         for( unsigned m=0; m<data_.size(); m++) //all blocks
         {
             for( unsigned s=0; s<x.Nz(); s++)//z-loop
-            //for( unsigned i=1; i<rows-1; i++) //y-loop
             for( unsigned k=0; k<n; k++)
             for( unsigned j=1; j<cols-1; j++) //x-loop
             for( unsigned l=0; l<n; l++)
@@ -80,7 +64,6 @@ struct BoundaryTerms
         for( unsigned m=0; m<data_.size(); m++) //all blocks
         {
             for( unsigned s=0; s<x.Nz(); s++)//z-loop
-            //for( unsigned i=1; i<rows-1; i++) //y-loop
             for( unsigned k=0; k<n; k++)
             for( unsigned j=1; j<cols-1; j++) //x-loop
             for( unsigned l=0; l<n; l++)
@@ -156,9 +139,9 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
             updateX = true;
     }
     if( updateX )
-        update_boundaryX( x);
+        x.x_col(comm_); 
     if( updateY) 
-        update_boundaryY( x);
+        x.x_row(comm_);
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );
 #endif //DG_DEBUG
@@ -193,7 +176,7 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
             }
     }
     xterm_.applyX( x,y);
-    //yterm_.applyY( x,y);
+    yterm_.applyY( x,y);
     if( !p_.data.empty())
         dg::blas2::detail::doSymv( p_, y, y, MPIPreconTag(), MPIVectorTag(), MPIVectorTag());
 

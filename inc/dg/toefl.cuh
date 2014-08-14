@@ -18,11 +18,10 @@ struct Toefl
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
   private:
-    Matrix laplaceM;
+    Elliptic<Matrix, container, Preconditioner> laplaceM;
     container omega, phi, phi_old, dxtheta, dxphi;
     ArakawaX<Matrix, container> arakawaX; 
-    Invert<container > pcg;
-    Preconditioner w2d, v2d;
+    Invert<container > invert;
 
     double Ra, Pr;
 };
@@ -30,14 +29,12 @@ struct Toefl
 template< class Matrix, class container, class Prec>
 template< class Grid>
 Toefl<Matrix, container, Prec>::Toefl( const Grid& grid, double R, double P, double eps): 
-    laplaceM( dg::create::laplacianM( grid, not_normed, dg::symmetric)),
+    laplaceM( grid, not_normed),
     omega( dg::evaluate(one, grid) ), phi(omega), phi_old( phi), 
     dxtheta(omega), dxphi(omega), 
     arakawaX( grid), 
-    pcg( omega, grid.size(), eps),
-    v2d( dg::create::inv_weights(grid)), w2d( dg::create::weights(grid)), Ra (R), Pr(P)
-{
-}
+    invert( omega, grid.size(), eps), Ra(R), Pr(P)
+{ }
 
 template< class Matrix, class container, class P>
 void Toefl< Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
@@ -46,7 +43,7 @@ void Toefl< Matrix, container, P>::operator()( std::vector<container>& y, std::v
     assert( y.size() == yp.size());
     //omega 
     blas1::axpby( 1., y[1], 0., omega);
-    unsigned number = pcg( laplaceM, phi, omega, w2d, v2d);
+    unsigned number = invert( laplaceM, phi, omega);
     number +=0; //avoid warning
 #ifdef DG_BENHMARK
     std::cout << "Number of pcg iterations "<<  number << "\n";
@@ -63,9 +60,9 @@ void Toefl< Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
     //laplace terms
     blas2::symv( laplaceM, y[0], dxphi);
-    blas2::symv( -1., v2d, dxphi, 1., yp[0]); 
+    blas2::symv( -1., laplaceM.precond(), dxphi, 1., yp[0]); 
     blas2::symv( laplaceM, y[1], dxphi);
-    blas2::symv( -Pr, v2d, dxphi, 1., yp[1]); 
+    blas2::symv( -Pr, laplaceM.precond(), dxphi, 1., yp[1]); 
 
 
 }

@@ -153,7 +153,7 @@ class Elliptic
     }
     Matrix leftx, lefty, rightx, righty, jump;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
-    Vector xchi, R, xx, temp;
+    Vector xchi, xx, temp, R;
     norm no_;
 };
 
