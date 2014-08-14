@@ -87,7 +87,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., y1[0], 1., y0[1]);
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
-//     dg::blas1::pointwiseDot(rolkar.dampout(),y0[1],y0[1]); //is damping on bath
+    
     feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
     
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);

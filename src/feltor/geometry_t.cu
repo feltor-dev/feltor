@@ -14,13 +14,7 @@
 
 int main()
 {
-//     unsigned Nx=100, Ny=100,polcoeff=3;
-//     double Nxh = Nx/2.,Nyh=Ny/2.;
-//     double a, elongation,triangularity;
-    double Rmin,Zmin,Rmax,Zmax;
-//     double A,R_0,psipmin,psipmax;
-//     std::vector<double> c(13);
-     std::cout << "Type n, Nx, Ny\n";
+    std::cout << "Type n, Nx, Ny\n";
     unsigned n, Nx, Ny;
     std::cin >> n>> Nx>>Ny;   
     std::vector<double> v;
@@ -40,11 +34,10 @@ int main()
 
     const solovev::GeomParameters gp(v);
     gp.display( std::cout);
-    Rmin=gp.R_0-1.1*gp.a;
-    Zmin=-1.1*gp.a*gp.elongation;
-    Rmax=gp.R_0+1.1*gp.a; 
-    Zmax=1.1*gp.a*gp.elongation;
-
+    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
+    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
+    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
+    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
     //construct all geometry quantities
     solovev::Psip psip(gp.R_0,gp.A,gp.c);
     solovev::PsipR psipR(gp.R_0,gp.A,gp.c);
@@ -70,7 +63,7 @@ int main()
     solovev::TanhDampingIn damp2(gp);
     solovev::TanhDampingProf dampcut(gp);
     solovev::TanhDampingInv source(gp);
-    dg::BathRZ bath1(16,16,0,Rmin,Zmin, 30.,30.,1.);
+    dg::BathRZ bath1(16,16,0,Rmin,Zmin, 30.,3.,1.);
     dg::BathRZ bath2(16,16,0,Rmin,Zmin, 30.,30.,10.);
 
     dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
@@ -90,7 +83,7 @@ int main()
     dg::HVec hvisual13 = dg::evaluate( prof, grid);
     dg::HVec hvisual14 = dg::evaluate( damp2, grid);
     dg::HVec hvisual15 = dg::evaluate( dampcut, grid);
-    dg::HVec hvisual16 = dg::evaluate( source, grid);
+    dg::HVec hvisual16 = dg::evaluate( bath1, grid);
     dg::HVec hvisual17 = dg::evaluate( bath1,grid);
     dg::blas1::pointwiseDot(hvisual8, hvisual17,hvisual17);
     dg::HVec hvisual18 = dg::evaluate( bath2,grid);

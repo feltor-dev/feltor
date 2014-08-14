@@ -53,7 +53,6 @@ struct Rolkar
         for( unsigned i=0; i<y.size(); i++)
         {
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
-//             dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
         }
     }
     dg::Elliptic<Matrix,container,Preconditioner>& laplacianM() {return LaplacianM_perp;}
@@ -166,10 +165,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
     pupil( dg::evaluate( solovev::Pupil( gp), g)),
-//     source( dg::evaluate( dg::Gaussian( gp.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
-//     source( dg::evaluate( solovev::Gradient(gp), g)),
-     source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
-//     damping( dg::evaluate( solovev::TanhDampingIn(gp ), g)), 
+    source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     arakAN( phi), arakAU( phi), arakAphi(phi),u(phi),   
@@ -213,7 +209,7 @@ const container& Feltor<Matrix, container, P>::polarisation( const std::vector<c
     exp( y, expy, 2);
     dg::blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
     //correction
-    dg::blas1::axpby( -p.mu[0], expy[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_i
+//     dg::blas1::axpby( -p.mu[0], expy[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_i
 
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
@@ -283,7 +279,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     
     
     curve( apar, curvapar); //K(A_parallel)
-    dg::blas1::axpby(  1.,  gradlnB,0.5*p.beta,  curvapar);  // gradlnB + beta K(A_parallel)//factor 0.5 for energetic consistency
+    dg::blas1::axpby(  1.,  gradlnB,0.5*p.beta,  curvapar);  // gradlnB + beta K(A_parallel)
     for( unsigned i=0; i<2; i++)
     {
         //Compute RZ poisson  brackets
@@ -304,7 +300,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dz(phi[i], dzphi[i]); //dz(phi)
         dz(u[i], dzy[2+i]);   //dz(U)
         //add A_parallel terms to the parallel derivatives
-        //factor 0.5 for energetic consistency
         dg::blas1::axpby(-0.5*p.beta,arakAN[i]   ,1.,dzy[i]);  //= dz lnN -beta/B [A_parallel,lnN ] 
         dg::blas1::axpby(-0.5*p.beta,arakAphi[i] ,1.,dzphi[i]);//= dz phi -beta/B [A_parallel,phi ] 
         dg::blas1::axpby(-0.5*p.beta,arakAU[i]   ,1.,dzy[2+i]);//= dz U-beta/B [A_parallel,U ] 
@@ -361,7 +356,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     for( unsigned i=0; i<4; i++)
     {
         dz(dzy[i], omega); //dz (dz (N,U))
-        dg::blas1::axpby(- p.nu_parallel, omega, 1., yp[i]);                     //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
+        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);                     //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
     }
     //add particle source to dtN
 //     for( unsigned i=0; i<2; i++)
@@ -371,7 +366,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //     }
     for( unsigned i=0; i<2; i++) //pupil on U for nicer plot <- does not contribute to dynamics
     {
-        dg::blas1::pointwiseDot( pupil, u[i], u[i]); 
+        dg::blas1::pointwiseDot( damping, u[i], u[i]); 
     }
     for( unsigned i=0; i<4; i++) //damping  on N and w
     {

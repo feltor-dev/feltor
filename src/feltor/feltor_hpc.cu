@@ -51,8 +51,6 @@ int main( int argc, char* argv[])
     geom = file::read_file( "geometry_params.txt");
     std::cout << geom << std::endl;
         for( unsigned i = 0; i<v.size(); i++)
-//             std::cout << v3[i] << " ";
-//             std::cout << std::endl;
         return -1;}
 
      const solovev::GeomParameters gp(v3);
@@ -69,20 +67,23 @@ int main( int argc, char* argv[])
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     
-    //The initial field
-    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
-//       solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Gradient grad(gp); //background gradient
-    //solovev::Nprofile grad(gp); //initial profile
+//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+      solovev::ZonalFlow init0(gp,p.amp);
+    
+//     solovev::Gradient grad(gp); //background gradient
+    solovev::Nprofile grad(gp); //initial profile
+
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
+    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath
+
+    
     dg::blas1::axpby( 1., y1[0], 1., y0[0]);
     dg::blas1::axpby( 1., y1[0], 1., y0[1]);
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
-    //transform to logarithmic values (ne and ni)
-    feltor.log( y0, y0, 2); 
+//     dg::blas1::pointwiseDot(rolkar.dampout(),y0[1],y0[1]); //is damping on bath
+    feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
@@ -108,7 +109,6 @@ int main( int argc, char* argv[])
         h = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
     nc_def_var( ncid, names[5].data(), NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
     h = nc_enddef(ncid);
-std::cout << "1" << "\n";
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
     size_t start[4] = {0, 0, 0, 0};
@@ -125,7 +125,7 @@ std::cout << "1" << "\n";
   
     //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
     ///////////////////////////////////////Timeloop/////////////////////////////////
-        double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
+    double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
 
     dg::Timer t;
     t.tic();
@@ -165,7 +165,7 @@ std::cout << "1" << "\n";
         h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
         //write time data
         h = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        E1 = (feltor.energy()-energy0)/energy0;
+        E1 = feltor.energy()/energy0;
         h = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
 
         h = nc_close(ncid);
@@ -188,7 +188,6 @@ std::cout << "1" << "\n";
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-//     h = nc_close(ncid);
 
     return 0;
 

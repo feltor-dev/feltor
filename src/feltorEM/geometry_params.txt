@@ -24,7 +24,7 @@
 18) elongation               =  1.0
 19) triangularity            =  0.0
 ------------------Miscellaneous----------------------
-20) alpha (Damping thickness)=  0.2
+20) alpha (Damping thickness)=  0.05
 21) inner density ( log10 N )=  0.01
 22) k_psi (zonal modes)      =  2
 23) RK4 epsilon              =  1e-5

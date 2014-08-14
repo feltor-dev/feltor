@@ -8,9 +8,8 @@
 1)  n  (# of x,y-polynomials)            =   3     (3)
 2)  nx (grid points in x)                =   50   (192)
 3)  ny (grid points in y)                =   50   (192)
-4)  nz (grid points in z)                =   20   (16)
-
-5)  dt (time step in units c_s/rho_s)    =  1e-2  (0.01)
+4)  nz (grid points in z)                =   10  (16)
+5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
@@ -46,7 +45,7 @@
 ------------------Miscellaneous----------------------------
 
 25) itstp (steps between output)                = 100     (5)
-26) # of outputs (excluding first)              = 500
+26) # of outputs (excluding first)              = 5000
 27) Damping zone thickness (in units of rho_s)  = 20 
 28) Damping zone strength                       = 1e-3
 29) particle source amplitude                   = 1e-3

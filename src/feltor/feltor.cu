@@ -72,8 +72,8 @@ int main( int argc, char* argv[])
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     //The initial field
-    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
-//       solovev::ZonalFlow init0(gp,p.amp);
+//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+      solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
@@ -139,14 +139,15 @@ int main( int argc, char* argv[])
         }
 
         //transform to Vor
-        dvisual=feltor.potential()[0];
-        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        hvisual = y1[1];
+        //dvisual=feltor.potential()[0];
+        //dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        //hvisual = y1[1];
+        hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
-//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        colors.scalemin() = -colors.scalemax();
-        title <<"Vor / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+//         colors.scalemin() = -colors.scalemax();
+        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
