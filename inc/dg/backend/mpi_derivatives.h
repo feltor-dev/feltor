@@ -1,5 +1,6 @@
 #pragma once
 
+#include "functions.h"
 #include "mpi_matrix.h"
 
 namespace dg{

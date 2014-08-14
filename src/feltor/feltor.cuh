@@ -20,7 +20,8 @@ struct Rolkar
     Rolkar( const Grid3d& g, Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
-        temp( g.size()),
+        temp( dg::evaluate(dg::zero, g)), chi(temp), omega(chi),
+        expy(2, temp),
         dampin_( dg::evaluate( solovev::TanhDampingIn(gp ), g)),
         dampout_( dg::evaluate( solovev::TanhDampingOut(gp ), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
@@ -46,9 +47,6 @@ struct Rolkar
         }
 
         //add parallel resistivity
-        std::vector<container>  expy(2);
-        expy[0].resize( x[0].size()), expy[1].resize( x[1].size());
-        container chi( x[0].size()), omega( x[0].size());
         for( unsigned i=0; i<2; i++)
             dg::blas1::transform( x[i], expy[i], dg::EXP<double>());
         dg::blas1::pointwiseDot( expy[0], x[2], omega); //N_e U_e 
@@ -71,12 +69,11 @@ struct Rolkar
     const Preconditioner& precond(){return LaplacianM_perp.precond();}
     const container& pupil(){return pupil_;}
     const container& dampin(){return dampin_;}
-
-
   private:
     const Parameters p;
     const solovev::GeomParameters gp;
-    container temp;
+    container temp, chi, omega;
+    std::vector<container> expy;
     const container dampin_;
     const container dampout_;
     const container dampgauss_;
@@ -125,18 +122,18 @@ struct Feltor
     double energy_diffusion( ){ return ediff_;}
 
   private:
-    void curve( const container& y, container& target);
+    void curve( container& y, container& target);
     //use chi and omega as helpers to compute square velocity in omega
-    const container& compute_vesqr( container& potential);
+    container& compute_vesqr( container& potential);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
-    const container& compute_psi( container& potential);
-    const container& polarisation( const std::vector<container>& y); //solves polarisation equation
+    container& compute_psi( container& potential);
+    container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
     container chi, omega;
 
     const container binv, curvR, curvZ, gradlnB;
-    const container pupil, source, damping;
-    const container w3d, v3d, one;
+    const container pupil, source, damping, one;
+    const Preconditioner w3d, v3d;
 
     std::vector<container> phi, curvphi, dzphi, expy;
     std::vector<container> dzy, curvy; 
@@ -182,7 +179,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     gp(gp)
 { }
 template< class Matrix, class container, class P>
-const container& Feltor<Matrix,container, P>::compute_vesqr( container& potential)
+container& Feltor<Matrix,container, P>::compute_vesqr( container& potential)
 {
     arakawa.bracketS( potential, potential, chi);
     dg::blas1::pointwiseDot( binv, binv, omega);
@@ -190,7 +187,7 @@ const container& Feltor<Matrix,container, P>::compute_vesqr( container& potentia
     return omega;
 }
 template< class Matrix, class container, class P>
-const container& Feltor<Matrix,container, P>::compute_psi( container& potential)
+container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 {
     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
     return phi[1];
@@ -199,7 +196,7 @@ const container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 
 //computes and modifies expy!!
 template<class Matrix, class container, class P>
-const container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
+container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
 #ifdef DG_BENCHMARK
     dg::Timer t; 
@@ -222,7 +219,7 @@ const container& Feltor<Matrix, container, P>::polarisation( const std::vector<c
     //std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
 #endif 
     dg::blas1::axpby( -1., expy[0], 1., omega); //n_i-n_e
-    unsigned number = invert_pol( pol, phi[0], omega, w3d, v3d);
+    unsigned number = invert_pol( pol, phi[0], omega);
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
@@ -350,7 +347,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
 //Computes curvature operator
 template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::curve( const container& src, container& target)
+void Feltor<Matrix, container, P>::curve( container& src, container& target)
 {
     dg::blas2::gemv( arakawa.dx(), src, target); //d_R src
     dg::blas2::gemv( arakawa.dy(), src, omega);  //d_Z src

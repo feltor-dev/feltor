@@ -1,12 +1,7 @@
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
-<<<<<<< HEAD
-device = cpu
-system = leo3
-=======
 device = gpu
 system = home
->>>>>>> 9943ea5aa0ddae60528ec3243fb8a60a17fae541
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
