@@ -155,8 +155,9 @@ struct Feltor
     dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     dg::Polarisation< Matrix, container, Preconditioner > pol; //note the host vector
-    dg::Invert<container> invert_pol;
-
+    dg::Helmholtz<Matrix,container, Preconditioner> gamma;
+    dg::Invert<container> invert_pol,invert_gamma;
+    
     const Parameters p;
     const solovev::GeomParameters gp;
 
@@ -183,9 +184,12 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     lapperp (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
-    pol(     g), 
-    invert_pol( omega, omega.size(), p.eps_pol), one( dg::evaluate( dg::one, g)),
     w3d( dg::create::weights(g)), v3d( dg::create::precond(g)), 
+    pol(     g), 
+    gamma(lapperp,w3d,v3d,-0.5*p.tau[1]*p.mu[1]),
+    invert_pol( omega, omega.size(), p.eps_pol),
+    invert_gamma( omega, omega.size(), p.eps_gamma),
+    one( dg::evaluate( dg::one, g)),    
     p(p),
     gp(gp)
 { }
@@ -200,7 +204,11 @@ const container& Feltor<Matrix,container, P>::compute_vesqr( container& potentia
 template< class Matrix, class container, class P>
 const container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
+    //without FLR
+//     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
+    //with FLR
+    invert_gamma(gamma,chi,potential);
+    dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);
     return phi[1];
 }
 
@@ -225,6 +233,8 @@ const container& Feltor<Matrix, container, P>::polarisation( const std::vector<c
     pol.set_chi( chi);
     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
     dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
+    //with FLR
+    invert_gamma(gamma,omega,omega);    
 #ifdef DG_BENCHMARK
     t.toc();
     //std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";

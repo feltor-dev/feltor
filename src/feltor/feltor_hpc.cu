@@ -67,8 +67,8 @@ int main( int argc, char* argv[])
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     
-//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
-      solovev::ZonalFlow init0(gp,p.amp);
+      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+//       solovev::ZonalFlow init0(gp,p.amp);
     
 //     solovev::Gradient grad(gp); //background gradient
     solovev::Nprofile grad(gp); //initial profile

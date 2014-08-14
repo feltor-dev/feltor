@@ -550,8 +550,8 @@ struct BathRZ{
     RR=R-R_min_;
     ZZ=Z-Z_min_;
     f=0;
-    if (phi== M_PI/Nz_)
-    {
+//     if (phi== M_PI/Nz_)
+//     {
         for (unsigned j=0;j<Zm_;j++)
         {
             for (unsigned i=0;i<Rm_;i++)
@@ -561,11 +561,11 @@ struct BathRZ{
                 f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]); 
             }      
         }
-    return 1.+amp_*norm*abs(f);
-    }
-    else {
-    return 1.;
-    }
+    return amp_*norm*abs(f);
+//     }
+//     else {
+//     return 0.;
+//     }
   }
   private:
   unsigned Rm_,Zm_,Nz_;
