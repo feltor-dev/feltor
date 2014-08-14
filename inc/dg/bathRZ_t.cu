@@ -24,7 +24,7 @@ int main()
     //make dggrid
     dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, polcoeff,Nx,Ny,dg::PER,dg::PER);
     //construct bathRZ
-    dg::BathRZ bathRZ(4, 4, 1, Rmin,Zmin, gamma,eddysize,amplitude);
+    dg::BathRZ bathRZ(16, 16, 1, Rmin,Zmin, gamma,eddysize,amplitude);
     //evaluate bathRZ on the dggrid on a hvector
     dg::HVec hvisual = dg::evaluate( bathRZ, grid);
     //allocate mem for visual
