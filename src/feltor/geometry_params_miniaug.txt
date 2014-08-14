@@ -3,7 +3,6 @@
           ------------------------------------
 
 ------------------Solovev coefficients----------------------
-
 1)  A                        = -2.27272727272727272727272727272727272727272727272727272727273     
 2)  c1                       =  0.214957360664829231719469233939    
 3)  c2                       =  7.18041263889389012132123644681   
@@ -26,11 +25,12 @@
 19) triangularity            =  0.33
 ------------------Miscellaneous----------------------
 20) alpha (Damping thickness)=  0.05
-21) inner density ( log10 N )=  2.5
-22) k_psi (zonal modes)      =  8
+21) inner density ( log10 N )=  0.01
+22) k_psi (zonal modes)      =  4
 23) RK4 epsilon              =  1e-5
 24) boxscale (1<bs<R0/a)     =  1.2
-25) Profile amplitude        =  1.
-26) psip_max_cut             =  0.1
-27) psip_max_lap             =  0.1
+25) Profile amplitude        =  4.0
+26) Background Prof amplitude=  1.
+27) psip_max_cut             =  0.0
+28) psip_max_lap             =  0.0
 

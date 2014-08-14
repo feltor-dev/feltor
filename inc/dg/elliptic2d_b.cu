@@ -73,14 +73,14 @@ int main()
     dg::blas1::axpby( 1.,x,-1., error);
 
     double err = dg::blas2::dot( w2d, error);
-    std::cout << "L2 Norm2 of Error is " << err << std::endl;
+    std::cout << "L2 Norm2 of Error is                       " << err << std::endl;
     double norm = dg::blas2::dot( w2d, solution);
-    std::cout << "L2 Norm of relative error is "<<sqrt( err/norm)<<std::endl;
+    std::cout << "L2 Norm of relative error is               "<<sqrt( err/norm)<<std::endl;
     dg::DMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);
-    std::cout << "L2 Norm2 of Error in derivative is " << err << std::endl;
+    std::cout << "L2 Norm2 of Error in derivative is         " << err << std::endl;
     norm = dg::blas2::dot( w2d, derivati);
     std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2

@@ -13,7 +13,6 @@
 #include "cg.h"
 #include "elliptic.h"
 
-const double eps = 1e-6; 
 
 const double R_0 = 1000;
 const double lx = 2.*M_PI;
@@ -32,6 +31,9 @@ int main()
     unsigned n, Nx, Ny, Nz; 
     std::cout << "Type n, Nx, Ny and Nz\n";
     std::cin >> n >> Nx >> Ny >> Nz;
+    double eps;
+    std::cout << "Type epsilon! \n";
+    std::cin >> eps;
     dg::Grid3d<double> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
     dg::DVec w3d = dg::create::weights( grid);
     dg::DVec v3d = dg::create::inv_weights( grid);

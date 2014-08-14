@@ -79,7 +79,6 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
     
-    
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
     double time = 0;

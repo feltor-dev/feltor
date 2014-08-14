@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm2d);
     mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm3d);
     dg::MPI_Grid2d g2d( 0, lx, 0, lx, n, Nx, Ny, dg::PER, dg::PER, comm2d);
-    dg::MPI_Grid3d g3d( 0, lx, 0, lx, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, dg::cartesian, comm3d);
+    dg::MPI_Grid3d g3d( 0, lx, 0, lx, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, dg::cylindrical, comm3d);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     //test evaluation and expand functions
@@ -58,6 +58,8 @@ int main(int argc, char** argv)
 
     if(rank==0) cout << "Square normalized 3DXnorm   "<< norm3d<<"\n";
     double solution = (exp(4.) -exp(0))/2.;
+    if( g3d.system() == dg::cylindrical)
+        solution = (3*exp(4.)+1.)/4.;
     double solution3 = solution2*solution;
     if(rank==0) cout << "Correct square norm is      "<<solution3<<endl;
     MPI_Finalize();

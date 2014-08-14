@@ -139,9 +139,9 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
             updateX = true;
     }
     if( updateX )
-        update_boundaryX( x);
+        x.x_col(comm_); 
     if( updateY) 
-        update_boundaryY( x);
+        x.x_row(comm_);
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );
 #endif //DG_DEBUG
