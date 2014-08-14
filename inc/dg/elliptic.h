@@ -26,7 +26,7 @@ namespace dg
  * where \f$ \nabla_\perp \f$ is the perpendicular gradient. In cartesian 
  * coordinates that means \f[ -\partial_x(\chi\partial_x) - \partial_y(\chi\partial_y)\f]
  * is discretized while in cylindrical coordinates
- * \f[ - \frac{1}{R}\partial_R( R\chi\partial_R) - \partial_Z^2\f]
+ * \f[ - \frac{1}{R}\partial_R( R\chi\partial_R) - \partial_Z(\chi\partial_Z)\f]
  * is discretized.
  * @tparam Matrix The Matrix class to use
  * @tparam Vector The Vector class to use
@@ -58,7 +58,8 @@ class Elliptic
         righty( dg::create::dy( g, g.bcy(), normed, forward)),
         leftx ( dg::create::dx( g, inverse( g.bcx()), no, backward)),
         lefty ( dg::create::dy( g, inverse( g.bcy()), no, backward)),
-        jump  ( dg::create::jump2d( g, g.bcx(), g.bcy(), no )) 
+        jump  ( dg::create::jump2d( g, g.bcx(), g.bcy(), no )),
+        no_(no)
     { 
         if( g.system() == cylindrical)
         {
@@ -85,7 +86,8 @@ class Elliptic
         righty(dg::create::dy( g,bcy, normed, forward)),
         leftx (dg::create::dx( g, inverse(bcx), no, backward)),
         lefty (dg::create::dy( g, inverse(bcy), no, backward)),
-        jump  (dg::create::jump2d( g, bcx, bcy, no))
+        jump  (dg::create::jump2d( g, bcx, bcy, no)),
+        no_(no)
     { 
         if( g.system() == cylindrical)
         {
@@ -136,6 +138,8 @@ class Elliptic
         
         dg::blas2::symv( jump, x, temp);
         dg::blas1::axpby( -1., xx, -1., y, xx); //-D_xx - D_yy + J
+        if(no_==normed) //if cylindrical then R = 1
+            dg::blas1::pointwiseDivide( xx, R, xx);
         dg::blas1::axpby( +1., temp, 1., xx, y); 
     }
     private:
@@ -150,6 +154,7 @@ class Elliptic
     Matrix leftx, lefty, rightx, righty, jump;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
     Vector xchi, R, xx, temp;
+    norm no_;
 };
 
 ///@cond
