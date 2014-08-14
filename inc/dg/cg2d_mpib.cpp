@@ -58,9 +58,9 @@ int main( int argc, char* argv[])
     //compute W b
     dg::blas2::symv( w2d, b, b);
     //////////////////////////////////////////////////////////////////////
-    t.tic();
+    t.tic(comm);
     int number = pcg( lap, x, b, v2d, eps);
-    t.toc();
+    t.toc(comm);
     if( rank == 0)
     {
         std::cout << "# of pcg itersations   "<<number<<std::endl;

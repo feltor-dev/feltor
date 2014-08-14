@@ -26,7 +26,7 @@ namespace dg
  * where \f$ \nabla_\perp \f$ is the perpendicular gradient. In cartesian 
  * coordinates that means \f[ -\partial_x(\chi\partial_x) - \partial_y(\chi\partial_y)\f]
  * is discretized while in cylindrical coordinates
- * \f[ - \frac{1}{R}\partial_R( R\chi\partial_R) - \partial_Z^2\f]
+ * \f[ - \frac{1}{R}\partial_R( R\chi\partial_R) - \partial_Z(\chi\partial_Z)\f]
  * is discretized.
  * @tparam Matrix The Matrix class to use
  * @tparam Vector The Vector class to use
@@ -149,7 +149,7 @@ class Elliptic
     }
     Matrix leftx, lefty, rightx, righty, jump;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
-    Vector xchi, R, xx, temp;
+    Vector xchi, xx, temp, R;
 };
 
 ///@cond
