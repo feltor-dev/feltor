@@ -174,7 +174,6 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
-    //lapperp (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
