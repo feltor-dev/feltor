@@ -48,7 +48,7 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz);
-    const dg::DVec w3d = dg::create::w3d( g3d);
+    const dg::DVec w3d = dg::create::weights( g3d);
     dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d);
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);

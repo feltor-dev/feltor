@@ -20,18 +20,16 @@ struct Rolkar
     Rolkar( const Grid3d& g, Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
-        w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
         temp( g.size()),
         dampin_( dg::evaluate( solovev::TanhDampingIn(gp ), g)),
         dampout_( dg::evaluate( solovev::TanhDampingOut(gp ), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         pupil_( dg::evaluate( solovev::Pupil( gp), g)),
         lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
-        LaplacianM_perp ( dg::create::laplacianM_perp( g, dg::normed, dg::symmetric))
-        //LaplacianM_para ( dg::create::laplacianM_parallel( g, dg::PER))
+        LaplacianM_perp ( g, dg::normed)
     {
     }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( std::vector<container>& x, std::vector<container>& y)
     {
         for( unsigned i=0; i<x.size(); i++)
         {
@@ -68,21 +66,16 @@ struct Rolkar
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
         }
     }
-    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    const container& weights(){return w3d_;}
-    const container& precond(){return v3d_;}
+    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
+    const Preconditioner& weights(){return LaplacianM_perp.weights();}
+    const Preconditioner& precond(){return LaplacianM_perp.precond();}
     const container& pupil(){return pupil_;}
     const container& dampin(){return dampin_;}
 
 
   private:
-    void divide( const container& zaehler, const container& nenner, container& result)
-    {
-        dg::blas1::pointwiseDivide( zaehler, nenner, result);
-    }
     const Parameters p;
     const solovev::GeomParameters gp;
-    const Preconditioner w3d_, v3d_;
     container temp;
     const container dampin_;
     const container dampout_;
@@ -90,8 +83,7 @@ struct Rolkar
     const container pupil_;
     const container lapiris_;
     
-    Matrix LaplacianM_perp;
-    //Matrix LaplacianM_para;
+    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perp;
 
 };
 
@@ -150,11 +142,11 @@ struct Feltor
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
-    Matrix lapperp; 
+    //Matrix lapperp; 
     dg::DZ<Matrix, container> dz;
     dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
-    dg::Polarisation< Matrix, container, Preconditioner > pol; //note the host vector
+    dg::Elliptic< Matrix, container, Preconditioner > pol; //note the host vector
     dg::Invert<container> invert_pol;
 
     const Parameters p;
@@ -180,12 +172,12 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
-    lapperp (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
+    //lapperp (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
     pol(     g), 
     invert_pol( omega, omega.size(), p.eps_pol), one( dg::evaluate( dg::one, g)),
-    w3d( dg::create::weights(g)), v3d( dg::create::precond(g)), 
+    w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     p(p),
     gp(gp)
 { }

@@ -34,8 +34,8 @@ int main()
     std::cout << "Write n Nx Ny and eps!\n";
     std::cin >> n >> Nx >> Ny >> eps;
     dg::Grid3d<double> grid( 0, lx, 0, ly,0., 1., n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
-    dg::DVec v3d = dg::create::v3d( grid);
-    dg::DVec w3d = dg::create::w3d( grid);
+    dg::DVec v3d = dg::create::inv_weights( grid);
+    dg::DVec w3d = dg::create::weights( grid);
     //create functions A(chi) x = b
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);

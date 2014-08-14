@@ -8,6 +8,7 @@
 #include "backend/mpi_evaluation.h"
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_init.h"
+#include "elliptic.h"
 
 #include "cg.h"
 
@@ -34,7 +35,7 @@ int main( int argc, char* argv[])
 
     dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER, comm);
     const dg::MPrecon w2d = dg::create::weights( grid);
-    const dg::MPrecon v2d = dg::create::precond( grid);
+    const dg::MPrecon v2d = dg::create::inv_weights( grid);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if( rank == 0) std::cout<<"Expand initial condition\n";
@@ -43,7 +44,7 @@ int main( int argc, char* argv[])
     if( rank == 0) std::cout << "Create symmetric Laplacian\n";
     dg::Timer t;
     t.tic();
-    dg::MMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
+    dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> A ( grid, dg::not_normed); 
     t.toc();
     if( rank == 0) std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -73,8 +74,7 @@ int main( int argc, char* argv[])
     double norm = dg::blas2::dot( w2d, solution);
     if( rank == 0) std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
     dg::MMatrix DX = dg::create::dx( grid);
-    dg::MVec mod_solution = dg::evaluate ( fct, grid);
-    dg::blas2::gemv( DX, mod_solution, error);
+    dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w2d, error); 
     norm = dg::blas2::dot( w2d, deriv);

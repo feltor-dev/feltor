@@ -89,7 +89,7 @@ struct Grid2d
      */
     Grid2d( T x0, T x1, T y0, T y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
-        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
+        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n), sys_(cartesian)
     {
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
@@ -105,7 +105,7 @@ struct Grid2d
      */
     Grid2d( const Grid1d<T>& gx, const Grid1d<T>& gy): 
         x0_(gx.x0()), x1_(gx.x1()), y0_(gy.x0()), y1_(gy.x1()), 
-        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n())
+        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n()), sys_(cartesian)
     {
         assert( gx.n() == gy.n() );
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
@@ -126,6 +126,12 @@ struct Grid2d
     bc bcy() const {return bcy_;}
     Grid2d<double> local_grid() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
     const DLT<T>& dlt() const{return dlt_;}
+    /**
+     * @brief So far always returns cartesian
+     *
+     * @return cartesian
+     */
+    dg::system system() const{return sys_;}
     /**
      * @brief The total number of points
      *
@@ -169,11 +175,14 @@ struct Grid2d
     T hx_, hy_;
     bc bcx_, bcy_;
     DLT<T> dlt_;
+    dg::system sys_;
 };
 
 /**
  * @brief A 3D grid class 
  *
+ * In the third dimension only 1 polynomial coefficient is used,
+ * not n.
  * @tparam T scalar value type 
  */
 template< class T>
@@ -197,9 +206,9 @@ struct Grid3d
      * @param bcy boundary condition in y
      * @attention # of coefficients in z direction is always 1
      */
-    Grid3d( T x0, T x1, T y0, T y1, T z0, T z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
+    Grid3d( T x0, T x1, T y0, T y1, T z0, T z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER, system sys = cartesian):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1),
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
+        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n), sys_(sys)
     {
         assert( n != 0);
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
@@ -209,7 +218,7 @@ struct Grid3d
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
     }
     /**
-     * @brief Construct a 3d grid as the product of three 1d grids
+     * @brief Construct a 3d cartesian grid as the product of three 1d grids
      *
      * @param gx Grid in x - direction
      * @param gy Grid in y - direction
@@ -221,7 +230,7 @@ struct Grid3d
         z0_(gz.x0()), z1_(gz.x1()),
         n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), Nz_(gz.N()),
         bcx_(gx.bcx()), bcy_( gy.bcx()), bcz_(gz.bcx()), 
-        dlt_(gx.n())
+        dlt_(gx.n()), sys_(cartesian)
     {
         assert( gx.n() == gy.n() );
         lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
@@ -251,6 +260,7 @@ struct Grid3d
     bc bcy() const {return bcy_;}
     bc bcz() const {return bcz_;}
     const DLT<T>& dlt() const{return dlt_;}
+    dg::system system() const {return sys_;}
     /**
      * @brief The total number of points
      *
@@ -304,6 +314,7 @@ struct Grid3d
     T hx_, hy_, hz_;
     bc bcx_, bcy_, bcz_;
     DLT<T> dlt_;
+    dg::system sys_;
 };
 
 

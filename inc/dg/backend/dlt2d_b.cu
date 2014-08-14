@@ -8,7 +8,7 @@
 
 #include "blas.h"
 #include "grid.h"
-#include "laplace.cuh"
+#include "dxx.cuh"
 #include "tensor.cuh"
 #include "dlt.h"
 #include "evaluation.cuh"
@@ -58,11 +58,11 @@ int main()
     HMatrix hforwardx = dgtensor<double>(n, tensor(Ny, create::delta(n)), tensor(Nx, forward));
     DMatrix dforwardx( hforwardx);
     t.tic();
-    blas2::symv( dforwardy, dv2.data(), dv2.data());
+    blas2::symv( dforwardy, dv2, dv2);
     t.toc();
     cout << "Foward - y cusp transform took     "<<t.diff()<<"s\n";
     t.tic();
-    blas2::symv( dforwardx, dv2.data(), dv2.data());
+    blas2::symv( dforwardx, dv2, dv2);
     t.toc();
     cout << "Foward - x cusp transform took     "<<t.diff()<<"s\n";
     //t.tic();
@@ -71,15 +71,15 @@ int main()
     //t.toc();
     //cout << "Foward cusp-thrust transform took  "<<t.diff()<<"s\n";
     t.tic();
-    blas2::symv( dforwardy, dv2.data(), dv2.data());
-    blas2::symv( dforwardx, dv2.data(), dv2.data());
+    blas2::symv( dforwardy, dv2, dv2);
+    blas2::symv( dforwardx, dv2, dv2);
     t.toc();
     cout << "Foward cusp-cusp transform took    "<<t.diff()<<"s\n";
 
     HMatrix hforwardxy = dgtensor<double>(n, tensor(Ny, forward), tensor(Nx, forward));
     DMatrix dforwardxy( hforwardxy);
     t.tic();
-    blas2::symv( dforwardxy, dv2.data(), dv2.data());
+    blas2::symv( dforwardxy, dv2, dv2);
     t.toc();
     cout << "Foward cusp transform took         "<<t.diff()<<"s\n";
     

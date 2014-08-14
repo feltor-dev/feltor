@@ -16,8 +16,8 @@ int main()
     dg::Grid1d<double> gn ( 0, M_PI, n_new, N*Nf);
     cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection1d( g, gn);
     thrust::host_vector<double> v = dg::evaluate( sine, g);
-    thrust::host_vector<double> w1d = dg::create::w1d( g);
-    thrust::host_vector<double> w1dn = dg::create::w1d( gn);
+    thrust::host_vector<double> w1d = dg::create::weights( g);
+    thrust::host_vector<double> w1dn = dg::create::weights( gn);
     dg::HVec one( g.size(), 1.);
     dg::HVec onen( gn.size(), 1.);
     thrust::host_vector<double> w( gn.size());
@@ -51,8 +51,8 @@ int main()
     dg::Grid2d<double> g2n (0, M_PI, 0, M_PI, n_new, N, N*Nf);
     cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection2d( g2, g2n);
     dg::HVec v2 = dg::evaluate( sine, g2);
-    dg::HVec w2d = dg::create::w2d( g2);
-    dg::HVec w2dn = dg::create::w2d( g2n);
+    dg::HVec w2d = dg::create::weights( g2);
+    dg::HVec w2dn = dg::create::weights( g2n);
     dg::HVec w2( g2n.size()), w222 = dg::evaluate( sine, g2n);
     dg::blas2::gemv( proj2d, v2, w2);
     std::cout << "Original vector  "<<dg::blas2::dot( v2, w2d, v2) << "\n";

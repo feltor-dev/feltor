@@ -100,6 +100,7 @@ struct MPI_Grid2d
     bc bcy() const {return g.bcy();}
     MPI_Comm communicator() const{return comm;}
     const DLT<double>& dlt() const{return g.dlt();}
+    dg::system system() const{return dg::cartesian;}
     /**
      * @brief The total number of points
      *
@@ -159,8 +160,8 @@ struct MPI_Grid3d
             assert( Nz%dims[2] == 0);
         }
     }
-    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
+    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz,dg::system sys, MPI_Comm comm):
+        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, sys), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
@@ -254,6 +255,7 @@ struct MPI_Grid3d
     bc bcz() const {return g.bcz();}
     MPI_Comm communicator() const{return comm;}
     const DLT<double>& dlt() const{return g.dlt();}
+    dg::system system() const {return g.system();}
     /**
      * @brief The total number of points
      *
@@ -282,7 +284,7 @@ struct MPI_Grid3d
      * class itself
      * @return Grid object
      */
-    Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
+    Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz(), system());}
     Grid3d<double> global() const {return g;}
     /**
      * @brief Returns the pid of the process that holds the grid surrounding a given pint

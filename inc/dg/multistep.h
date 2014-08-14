@@ -248,6 +248,7 @@ struct Karniadakis
     * @param f right hand side function or functor (is called for u)
     * @param diff diffusion operator treated implicitely 
     * @param u (write-only), contains next step of time-integration on output
+     * @note Both Functor and LinearOp may change their first (input) argument, i.e. the first argument need not be const
     */
     template< class Functor, class LinearOp>
     void operator()( Functor& f, LinearOp& diff, Vector& u);

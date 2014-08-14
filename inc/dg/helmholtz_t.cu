@@ -7,11 +7,12 @@
 #include "multistep.h"
 
 #include "cg.h"
+
 template< class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu):
-        w2d( dg::create::w2d( g)), v2d( dg::create::v2d(g)) { 
+        w2d( dg::create::weights( g)), v2d( dg::create::inv_weights(g)) { 
         dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed); 
         cusp::blas::scal( Laplacian_.values, -nu);
         Laplacian = Laplacian_;
@@ -40,14 +41,13 @@ int main()
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n>> Nx >> Ny;
     dg::Grid2d<double> grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
-    const dg::DVec w2d = dg::create::w2d( grid);
-    const dg::DVec v2d = dg::create::v2d( grid);
+    const dg::DVec w2d = dg::create::weights( grid);
+    const dg::DVec v2d = dg::create::inv_weights( grid);
     const dg::DVec rho = dg::evaluate( rhs, grid);
     const dg::DVec sol = dg::evaluate( lhs, grid);
     dg::DVec x(rho.size(), 0.), rho_(rho);
 
-    dg::DMatrix A = dg::create::laplacianM( grid, dg::normed); 
-    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > gamma1inv( A, w2d, v2d, alpha);
+    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > gamma1inv( grid, alpha);
 
     std::cout << "FIRST METHOD:\n";
     dg::CG< dg::DVec > cg(x, x.size());
@@ -57,7 +57,7 @@ int main()
     std::cout << "SECOND METHOD:\n";
     dg::DVec x_(rho.size(), 0.);
     dg::Invert<dg::DVec> invert( x_, grid.size(), eps);
-    dg::Maxwell< dg::DMatrix, dg::DVec, dg::DVec > maxwell( A, w2d, v2d, alpha);
+    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > maxwell( grid, alpha);
     invert( maxwell, x_, rho);
 
     std::cout << "THIRD METHOD:\n";

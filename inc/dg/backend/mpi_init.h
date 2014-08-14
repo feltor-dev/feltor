@@ -30,6 +30,7 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
     {
         std::cout << "Type n, Nx and Ny\n";
         std::cin >> n >> Nx >> Ny;
+        std::cout<< "You typed "<<n <<" "<<Nx<<" "<<Ny<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, comm);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, comm);
@@ -61,6 +62,7 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, 
     {
         std::cout << "Type n, Nx and Ny and Nz\n";
         std::cin >> n >> Nx >> Ny >> Nz;
+        std::cout<< "You typed "<<n <<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);

@@ -11,8 +11,8 @@ typedef thrust::host_vector<double> dg_container;
 
 struct dg_workspace
 {
-    dg_workspace( const dg::Grid<double>& g):size(g.size()), pol(g), cg( thrust::host_vector<double>(g.size()) , g.size() ),
-    w2d( dg::create::w2d(g)), v2d( dg::create::v2d(g))
+    dg_workspace( const dg::Grid2d<double>& g):size(g.size()), pol(g), cg( thrust::host_vector<double>(g.size()) , g.size() ),
+    w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g))
                       {}
     unsigned size;
     dg::Polarisation2dX<dg_container > pol; 
@@ -44,7 +44,7 @@ typedef dg_workspace dg_workspace;
  */
 dg_workspace* dg_create_workspace( unsigned Nx, unsigned Ny, double hx, double hy, dg::bc bcx, dg::bc bcy)
 {
-    dg::Grid<double> g( 0, Nx*hx, 0, Ny*hy, 1, Nx, Ny, bcx, bcy); 
+    dg::Grid2d<double> g( 0, Nx*hx, 0, Ny*hy, 1, Nx, Ny, bcx, bcy); 
     dg_workspace* w = new dg_workspace( g);
     return w;
 }

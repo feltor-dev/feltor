@@ -60,7 +60,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
     double Zmax=(gp.boxscale)*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
      
     //create RHS 
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
@@ -165,7 +165,7 @@ int main( int argc, char* argv[])
         h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
         //write time data
         h = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        E1 = (feltor.energy()-energy0)/energy0;
+        E1 = feltor.energy()/energy0;
         h = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
 
         h = nc_close(ncid);

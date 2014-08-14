@@ -4,10 +4,10 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "evaluation.cuh"
+#include "backend/evaluation.cuh"
 #include "cg.h"
-#include "laplace.cuh"
-#include "typedefs.cuh"
+#include "backend/dxx.cuh"
+#include "backend/typedefs.cuh"
 
 unsigned n = 3; //global relative error in L2 norm is O(h^P)
 unsigned N = 200;  //more N means less iterations for same error
@@ -38,9 +38,9 @@ int main()
     cin >> n >> N;
     dg::Grid1d<double > g( 0, lx, n, N, bcx);
     dg::DVec x = dg::evaluate( initial, g);
-    dg::DVec w1d = dg::create::w1d( g);
-    dg::DVec v1d = dg::create::v1d( g);
-    dg::DMatrix A = dg::create::laplace1d( g, dg::not_normed, dg::symmetric); 
+    dg::DVec w1d = dg::create::weights( g);
+    dg::DVec v1d = dg::create::inv_weights( g);
+    dg::DMatrix A = dg::create::laplace1d( g,bcx, dg::not_normed, dg::symmetric); 
 
     dg::CG< dg::DVec > cg( x, x.size());
     dg::DVec b = dg::evaluate ( sine, g);
