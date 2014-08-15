@@ -18,59 +18,39 @@
 
 namespace dg
 {
-template<class container>
+template<class Matrix, class container, class Preconditioner>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):nu_(nu), global(global), w2d( dg::create::w2d(g)), v2d( dg::create::v2d(g)), temp( g.size()), expx(temp){
-        LaplacianM_perp = dg::create::laplacianM( g, dg::normed);
+    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):
+        nu_(nu), global(global), 
+        w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
+        temp( dg::evaluate(dg::zero, g)), expx(temp),
+        LaplacianM_perp( g, dg::normed){
     }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( std::vector<container>& x, std::vector<container>& y)
     {
         for( unsigned i=0; i<x.size(); i++)
         {
-            //if( global)
-            //{
-            //    thrust::transform( x[i].begin(), x[i].end(), expx.begin(), dg::EXP<typename container::value_type>());
-            //    dg::blas2::gemv( LaplacianM_perp, expx, temp);
-            //    //dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            //    dg::blas1::axpby( -nu_, temp, 0., y[i]);
-            //    divide( y[i], expx, y[i]);
-            //}
-            //else
-            {
-                dg::blas2::gemv( LaplacianM_perp, x[i], temp);
-                dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-                dg::blas1::axpby( -nu_, y[i], 0., y[i]);
-            }
+            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+            dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            dg::blas1::axpby( -nu_, y[i], 0., y[i]);
         }
     }
-    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
+    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return w2d;}
     const container& precond(){return v2d;}
 
   private:
-    void divide( const container& zaehler, const container& nenner, container& result)
-    {
-        thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
-                thrust::divides< typename container::value_type>());
-    }
     double nu_;
     bool global;
     const container w2d, v2d;
     container temp, expx;
-    dg::DMatrix LaplacianM_perp;
+    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perp;
 };
 
-template< class container=thrust::device_vector<double> >
+template< class Matrix, class container, class Preconditioner >
 struct ToeflR
 {
-    typedef std::vector<container> Vector;
-    typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
-    //typedef in ArakawaX ??
-
     /**
      * @brief Construct a ToeflR solver object
      *
@@ -82,7 +62,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const Grid2d<value_type>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
+    ToeflR( const Grid2d<double>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -115,7 +95,7 @@ struct ToeflR
      *
      * @return cusp matrix
      */
-    const Matrix& laplacianM( ) const { return laplaceM;}
+    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM( ) { return laplaceM;}
 
     /**
      * @brief Return the Gamma operator used by this object
@@ -176,14 +156,16 @@ struct ToeflR
     std::vector<container> expy, dxy, dyy, lapy;
 
     //matrices and solvers
-    Matrix A; //contains unnormalized laplacian if local
-    Matrix laplaceM; //contains normalized laplacian
+    //Elliptic<Matrix, container, Preconditioner> A; //contains unnormalized laplacian if local
+    Elliptic<Matrix, container, Preconditioner> laplaceM; //contains normalized laplacian
     Helmholtz< Matrix, container, container > gamma1;
     ArakawaX< Matrix, container> arakawa; 
-    Polarisation2dX< thrust::host_vector<value_type>, dg::HMatrix > pol; //note the host vector
+    Elliptic<Matrix, container, Preconditioner> pol;
+    //Polarisation2dX< thrust::host_vector<double>, dg::HMatrix > pol; //note the host vector
     CG<container > pcg;
 
-    const container w2d, v2d, one;
+    const Preconditioner w2d, v2d;
+    const container one;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
     const int global;
@@ -192,28 +174,25 @@ struct ToeflR
 
 };
 
-template< class container>
-ToeflR< container>::ToeflR( const Grid2d<value_type>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
+template< class M, class container, class P>
+ToeflR< M, container,P>::ToeflR( const Grid2d<double>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  laplaceM, w2d,v2d, -0.5*tau),
+    gamma1(  grid, -0.5*tau),
     arakawa( grid), 
-    pol(     grid), 
+    pol(     grid, not_normed), 
     pcg( omega, omega.size()), 
-    w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
-    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
+    w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( dg::evaluate( dg::one, grid)), 
+    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global),
+    laplaceM( grid, normed)
+    //A( grid, not_normed)
 {
-    //create derivatives
-    laplaceM = create::laplacianM( grid, normed, dg::symmetric); //doesn't hurt to be symmetric but doesn't solver pb
-    //if( !global)
-    A = create::laplacianM( grid, not_normed, dg::symmetric);
-
 }
 
-template< class container>
-const container& ToeflR<container>::compute_vesqr( const container& potential)
+template< class M, class container, class P>
+const container& ToeflR<M, container, P>::compute_vesqr( const container& potential)
 {
     assert( global);
     blas2::gemv( arakawa.dx(), potential, chi);
@@ -225,8 +204,8 @@ const container& ToeflR<container>::compute_vesqr( const container& potential)
     blas1::axpby( 1., chi, 1.,  omega);
     return omega;
 }
-template< class container>
-const container& ToeflR<container>::compute_psi( const container& potential)
+template< class M, class container, class P>
+const container& ToeflR<M, container, P>::compute_psi( const container& potential)
 {
     //compute Gamma phi[0]
     blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
@@ -255,9 +234,10 @@ const container& ToeflR<container>::compute_psi( const container& potential)
 
 
 //computes and modifies expy!!
-template<class container>
-const container& ToeflR< container>::polarisation( const std::vector<container>& y)
+template<class M, class container, class P>
+const container& ToeflR< M, container, P>::polarisation( const std::vector<container>& y)
 {
+    //USE INVERT CLASS 
     //extrapolate phi and gamma_n
     blas1::axpby( 2., phi[0], -1.,  phi_old[0]);
     blas1::axpby( 2., gamma_n, -1., gamma_old);
@@ -274,17 +254,14 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     if( global) 
     {
         exp( y, expy);
-        //blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
         blas1::pointwiseDot( binv, expy[1], chi); //\chi = n_i
         blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        //cusp::csr_matrix<int, double, MemorySpace> B = pol.create(chi); //first transfer to device
-        //cusp::ell_matrix<int, double, cusp::host_memory> B = pol.create(chi); //first convert on host
         //A = B;  
         if( global == 1)
-            A = pol.create( chi);
+            pol.set_chi( chi);
         //compute omega
-        thrust::transform( expy[0].begin(), expy[0].end(), expy[0].begin(), dg::PLUS<double>(-1)); //n_e -1
-        thrust::transform( expy[1].begin(), expy[1].end(), omega.begin(), dg::PLUS<double>(-1)); //n_i -1
+        dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
+        dg::blas1::transform( expy[1], omega, dg::PLUS<double>(-1)); //n_i -1
     }
     else
     {
@@ -320,7 +297,7 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
         blas2::symv( gamma1, chi, omega); //apply \Gamma_0^-1 ( gamma_n - n_e)
         gamma1.alpha() = -0.5*tau;
     }
-    number = pcg( A, phi[0], omega, v2d, eps_pol);
+    number = pcg( pol, phi[0], omega, v2d, eps_pol);
     if( number == pcg.get_max())
         throw Fail( eps_pol);
 #ifdef DG_BENCHMARK
@@ -332,8 +309,8 @@ const container& ToeflR< container>::polarisation( const std::vector<container>&
     return phi[0];
 }
 
-template< class container>
-void ToeflR< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template< class M, class container, class P>
+void ToeflR<M, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());
@@ -353,7 +330,7 @@ void ToeflR< container>::operator()( std::vector<container>& y, std::vector<cont
 
         for( unsigned i=0; i<y.size(); i++)
         {
-            thrust::transform( expy[i].begin(), expy[i].end(), expy[i].begin(), dg::PLUS<double>(-1));
+            dg::blas1::transform( expy[i], expy[i], dg::PLUS<double>(-1));
             blas2::gemv( laplaceM, expy[i], lapy[i]); //Laplace wants Dir BC!!
         }
         diff_ = -nu*blas2::dot( one, w2d, lapy[0]);
@@ -401,28 +378,23 @@ void ToeflR< container>::operator()( std::vector<container>& y, std::vector<cont
 
 }
 
-template< class container>
-void ToeflR< container>::exp( const std::vector<container>& y, std::vector<container>& target)
+template< class M, class container, class P>
+void ToeflR< M, container, P>::exp( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
-        dg::blas1::transform(y[i], target[i], dg::EXP<value_type>());
-        //thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<value_type>());
+        dg::blas1::transform(y[i], target[i], dg::EXP<double>());
 }
-template< class container>
-void ToeflR< container>::log( const std::vector<container>& y, std::vector<container>& target)
+template< class M, class container, class P>
+void ToeflR< M, container, P>::log( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
-        dg::blas1::transform( y[i], target[i], dg::LN<value_type>());
-        //thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
+        dg::blas1::transform( y[i], target[i], dg::LN<double>());
 }
 
-template< class container>
-void ToeflR<container>::divide( const container& zaehler, const container& nenner, container& result)
+template< class M, class container, class P>
+void ToeflR<M, container, P>::divide( const container& zaehler, const container& nenner, container& result)
 {
     dg::blas1::pointwiseDivide( zaehler, nenner, result);
-
-    //thrust::transform( zaehler.begin(), zaehler.end(), nenner.begin(), result.begin(), 
-            //thrust::divides< typename container::value_type>());
 }
 
 }//namespace dg
