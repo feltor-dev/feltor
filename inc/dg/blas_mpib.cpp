@@ -2,8 +2,9 @@
 #include <iomanip>
 
 #include <mpi.h>
-#include "blas.h"
+#include <thrust/host_vector.h>
 #include "backend/timer.cuh"
+#include "blas.h"
 #include "backend/mpi_evaluation.h"
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_init.h"
@@ -35,11 +36,31 @@ int main( int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<"DOT took                         " <<t.diff()<<"s    result: "<<norm<<"\n";
     dg::MVec y(x);
-    dg::MMatrix DX = dg::create::dx( grid);
+    dg::MMatrix M = dg::create::dx( grid, dg::normed, dg::symmetric);
     t.tic();
-    dg::blas2::symv( DX, x, y);
+    dg::blas2::symv( M, x, y);
     t.toc();
-    if(rank==0)std::cout<<"SYMV took                        "<<t.diff()<<"s (depends on matrix structure!)\n";
+    if(rank==0)std::cout<<"SYMV took                        "<<t.diff()<<"s (symmetric x derivative!)\n";
+    M = dg::create::dx( grid, dg::normed, dg::forward);
+    t.tic();
+    dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"SYMV took                        "<<t.diff()<<"s (forward x derivative!)\n";
+    M = dg::create::dy( grid, dg::normed, dg::forward);
+    t.tic();
+    dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"SYMV took                        "<<t.diff()<<"s (forward y derivative!)\n";
+    M = dg::create::dy( grid, dg::normed, dg::symmetric);
+    t.tic();
+    dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"SYMV took                        "<<t.diff()<<"s (symmetric y derivative!)\n";
+    M = dg::create::jump2d( grid, dg::not_normed);
+    t.tic();
+    dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"SYMV took                        "<<t.diff()<<"s (2d jump!)\n";
     t.tic();
     dg::blas1::axpby( 1., y, -1., x);
     t.toc();
