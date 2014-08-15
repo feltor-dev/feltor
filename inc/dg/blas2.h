@@ -12,6 +12,11 @@
 #include "backend/selfmade.cuh"
 #include "backend/std_matrix.cuh"
 
+
+/*!@file 
+ *
+ * blas level 2 functions
+ */
 namespace dg{
 /*! @brief BLAS Level 2 routines 
 

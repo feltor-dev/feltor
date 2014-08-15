@@ -82,5 +82,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
     //both function and derivative converge with order P 
 
+    MPI_Finalize();
     return 0;
 }

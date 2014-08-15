@@ -138,7 +138,7 @@ class Elliptic
         
         dg::blas2::symv( jump, x, temp);
         dg::blas1::axpby( -1., xx, -1., y, xx); //-D_xx - D_yy + J
-        if(no_==normed) //if cylindrical then R = 1
+        if(no_==normed) //if cartesian then R = 1
             dg::blas1::pointwiseDivide( xx, R, xx);
         dg::blas1::axpby( +1., temp, 1., xx, y); 
     }
