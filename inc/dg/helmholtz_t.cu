@@ -33,13 +33,24 @@ const double eps = 1e-4;
 const double alpha = -0.5; 
 double lhs( double x, double y){ return sin(x)*sin(y);}
 double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
-//double rhs( double x, double y){ return lhs(x,y);}
+const double R_0 = 1000;
+const double lx = 2.*M_PI;
+const double ly = 2.*M_PI;
+const double lz = 2.*M_PI;
+double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
+double laplace_fct( double x, double y, double z) { 
+    return -1./x*cos(x-R_0)*sin(y) + 2.*sin(x-R_0)*sin(y);}
+double helmholtz_fct( double x, double y, double z) { 
+    return fct(x,y,z) - alpha*laplace_fct(x,y,z);}
+
+dg::bc bcx = dg::DIR;
+double initial( double x, double y, double z) {return sin(0);}
 int main()
 {
     
-    unsigned n, Nx, Ny; 
-    std::cout << "Type n, Nx and Ny\n";
-    std::cin >> n>> Nx >> Ny;
+    unsigned n, Nx, Ny, Nz; 
+    std::cout << "Type n, Nx Ny and Nz\n";
+    std::cin >> n>> Nx >> Ny >> Nz;
     dg::Grid2d<double> grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
     const dg::DVec w2d = dg::create::weights( grid);
     const dg::DVec v2d = dg::create::inv_weights( grid);
@@ -78,6 +89,21 @@ int main()
     std::cout << "error1 " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
     std::cout << "error2 " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
     std::cout << "error3 " << sqrt( dg::blas2::dot( w2d, x__))<<std::endl;
+    std::cout << "Test 3d cylincdrical norm:\n";
+    dg::Grid3d<double> g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
+    dg::DVec fct_ = dg::evaluate(fct, g3d );
+    dg::DVec laplace_fct_ = dg::evaluate( laplace_fct, g3d);
+    dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);
+    dg::DVec temp_(fct_);
+    dg::Elliptic< dg::DMatrix, dg::DVec, dg::DVec > laplaceM( g3d, dg::normed);
+    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > helmholtz( g3d, alpha);
+    dg::blas2::symv( laplaceM, fct_, temp_);
+    dg::blas1::axpby( 1., laplace_fct_, -1., temp_);
+    std::cout << "error Laplace " << sqrt( dg::blas2::dot( laplaceM.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;
+    dg::blas2::symv( helmholtz, fct_, temp_);
+    dg::blas2::symv( helmholtz.precond(), temp_, temp_);
+    dg::blas1::axpby( 1., helmholtz_fct_, -1, temp_);
+    std::cout << "error " << sqrt( dg::blas2::dot( helmholtz.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;
 
 
 

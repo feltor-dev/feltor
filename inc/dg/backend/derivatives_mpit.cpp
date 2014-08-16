@@ -8,6 +8,7 @@
 #include "mpi_matrix.h"
 #include "mpi_precon.h"
 #include "mpi_init.h"
+#include "../elliptic.h"
 
 const double lx = 2*M_PI;
 /*
@@ -18,7 +19,8 @@ dg::bc bcz = dg::DIR_NEU;
 double function( double x, double y)   { return sin(x);}
 double derivative( double x, double y) { return cos(x);}
 
-dg::bc bcx = dg::DIR, bcy = dg::PER;
+dg::bc bcx = dg::DIR; 
+dg::bc bcy = dg::PER;
 
 int main(int argc, char* argv[])
 {
@@ -34,6 +36,7 @@ int main(int argc, char* argv[])
 
 
     dg::MMatrix dx = dg::create::dx( g, bcx, dg::normed, dg::forward);
+    dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> lap( g, bcx, bcy, dg::normed);
 
     dg::MVec func = dg::evaluate( function, g);
     dg::MVec result( func);
@@ -44,6 +47,12 @@ int main(int argc, char* argv[])
     dg::blas1::axpby( 1., deriv, -1., result);
     double error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
     if(rank==0) std::cout << "Distance to true solution: "<<error<<"\n";
+    dg::blas2::symv( lap, func, result);
+
+    dg::blas1::axpby( 1., func, -1., result);
+    error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
+    if(rank==0) std::cout << "Distance to true solution: "<<error<<" (Note the supraconvergence!)\n";
+;
 
     MPI_Finalize();
     return 0;

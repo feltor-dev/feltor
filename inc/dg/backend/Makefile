@@ -42,6 +42,10 @@ CFLAGS = -openmp -mmic -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 endif
 
+CPPFILES=$(wildcard *.cpp)
+CUFILES=$(wildcard *.cu)
+
+all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
 version: version.cu 
 	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
@@ -53,11 +57,6 @@ cusp_thrust: cusp_thrust.cu
 
 backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
-
-toefl_t: toefl_t.cu toefl.cuh
-	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
-toefl_b: toefl_b.cu toefl.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 
 blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ 
