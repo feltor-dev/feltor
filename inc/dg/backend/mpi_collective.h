@@ -88,7 +88,7 @@ struct Pattern
 thrust::host_vector<double> Pattern::scatter( const thrust::host_vector<double>& values)
 {
     thrust::host_vector<double> received(thrust::reduce( recvFrom_.begin(), recvFrom_.end() ));
-    MPI_Alltoallv( values.data(), sendTo_.data(), accS_.data(), MPI_DOUBLE,
+    MPI_Alltoallv( const_cast<double*>(values.data()), sendTo_.data(), accS_.data(), MPI_DOUBLE,
                    received.data(), recvFrom_.data(), accR_.data(), MPI_DOUBLE, comm_);
     return received;
 }
@@ -97,7 +97,7 @@ void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::hos
     assert( gatherFrom.size() == (unsigned)thrust::reduce( recvFrom_.begin(), recvFrom_.end()));
     values.resize( thrust::reduce( sendTo_.begin(), sendTo_.end()) );
     MPI_Alltoallv( 
-            gatherFrom.data(), recvFrom_.data(), accR_.data(), MPI_DOUBLE, 
+            const_cast<double*>(gatherFrom.data()), recvFrom_.data(), accR_.data(), MPI_DOUBLE, 
             values.data(), sendTo_.data(), accS_.data(), MPI_DOUBLE, comm_);
 }
 ///@endcond
