@@ -82,7 +82,7 @@ int main( int argc, char* argv[])
     //without FLR
     //dg::blas1::axpby( 1., y1[0], 1., y0[1]);
     //with FLR
-    feltor.initialni(y0[1],y0[0]);    
+    feltor.initializene(y0[1],y0[0]);    
     feltor.log( y0, y0, 2); 
     dg::DVec one = dg::evaluate( dg::one, grid);
     dg::DVec w3d = dg::create::weights( grid);

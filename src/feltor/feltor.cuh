@@ -110,7 +110,7 @@ struct Feltor
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
-    void initialni( const container& y, container& target);
+    void initializene( const container& y, container& target);
 
     /**
      * @brief Return the Gamma operator used by this object
@@ -210,20 +210,15 @@ const container& Feltor<Matrix,container, P>::compute_psi( container& potential)
     
 }
 template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::initialni( const container& src, container& target)
+void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
     #ifdef DG_BENCHMARK
     dg::Timer t; 
     t.tic();
     #endif
-//     std::cout<< "int src " << dg::blas2::dot( one, w3d, src)<<std::endl;
     dg::blas1::transform( src,omega, dg::PLUS<double>(-1)); //n_i -1
-//     std::cout<< "int src " << dg::blas2::dot( one, w3d, omega)<<" alpha "<<invgamma.alpha()<<std::endl;
     invert_invgamma(invgamma,target,omega); //=ne-1 = Gamma (ni-1)    
 
-//     dg::blas2::symv(invgamma,omega,target); //Weights*Gamma^-1 (ne-1)
-//     dg::blas1::pointwiseDot( target, invgamma.precond(), target);
-//     std::cout<< "int target " << dg::blas2::dot( one, w3d, target)<<std::endl;
     dg::blas1::transform( target,target, dg::PLUS<double>(+1)); //n_i
 //     std::cout<< "int target " << dg::blas2::dot( one, w3d, target)<<std::endl;
 //     dg::blas1::transform( src, omega, dg::LN<double>());
