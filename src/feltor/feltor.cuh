@@ -193,15 +193,15 @@ container& Feltor<Matrix,container, P>::compute_psi( container& potential)
     //without FLR
 //     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
     //with FLR
-    #ifdef DG_BENCHMARK
-    dg::Timer t; 
-    t.tic();
-    #endif
-    invert_invgamma(invgamma,chi,potential,w3d, v3d);
-    #ifdef DG_BENCHMARK
-    t.toc();
-    std::cout<< "Gamma operator took "<<t.diff()<<"s\n";
-    #endif
+//     #ifdef DG_BENCHMARK
+//     dg::Timer t; 
+//     t.tic();
+//     #endif
+    invert_invgamma(invgamma,chi,potential);
+//     #ifdef DG_BENCHMARK
+//     t.toc();
+//     std::cout<< "Gamma operator took "<<t.diff()<<"s\n";
+//     #endif
     dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);    
     return phi[1];
     
@@ -209,29 +209,29 @@ container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
-    #ifdef DG_BENCHMARK
-    dg::Timer t; 
-    t.tic();
-    #endif
+//     #ifdef DG_BENCHMARK
+//     dg::Timer t; 
+//     t.tic();
+//     #endif
     dg::blas1::transform( src,omega, dg::PLUS<double>(-1)); //n_i -1
     invert_invgamma(invgamma,target,omega); //=ne-1 = Gamma (ni-1)    
     dg::blas1::transform( target,target, dg::PLUS<double>(+1)); //n_i
 
-    #ifdef DG_BENCHMARK
-
-    t.toc();
-    std::cout<< "Computation of intial ne field took "<<t.diff()<<"s\n";
-    #endif 
+//     #ifdef DG_BENCHMARK
+// 
+//     t.toc();
+//     std::cout<< "Computation of intial ne field took "<<t.diff()<<"s\n";
+//     #endif 
 }
 
 //computes and modifies expy!!
 template<class Matrix, class container, class P>
 container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
-#ifdef DG_BENCHMARK
-    dg::Timer t; 
-    t.tic();
-#endif
+// #ifdef DG_BENCHMARK
+//     dg::Timer t; 
+//     t.tic();
+// #endif
     //compute chi and polarisation
     exp( y, expy, 2);
     dg::blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
@@ -244,17 +244,14 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     pol.set_chi( chi);
     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
     dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
-        std::cout << "norm_in = " << dg::blas2::dot(expy[1],w3d,expy[1]) << std::endl;
     //with FLR
-    std::cout << "1" << "\n";
     unsigned numberg =  invert_invgamma(invgamma,chi,omega);    //chi= Gamma (Omega) = Gamma (ni-1)
-    if( numberg == invert_invgamma.get_max())
-        throw dg::Fail( p.eps_gamma);  
-    std::cout << "2" << "\n";
-#ifdef DG_BENCHMARK
-    t.toc();
-    std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
-#endif 
+/*    if( numberg == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);*/  
+// #ifdef DG_BENCHMARK
+//     t.toc();
+//     std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
+// #endif 
     dg::blas1::axpby( -1., expy[0], 1.,chi); //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
     unsigned number = invert_pol( pol, phi[0], chi); //Gamma n_i -ne = -nabla chi nabla phi
 

@@ -140,6 +140,12 @@ struct Gaussian3d
      */
     Gaussian3d( double x0, double y0, double z0, double sigma_x, double sigma_y, double sigma_z, double amp)
         : x00(x0), y00(y0), z00(z0), sigma_x(sigma_x), sigma_y(sigma_y), sigma_z(sigma_z), amplitude(amp){}
+    double operator()(double x, double y)
+    {
+        return  amplitude*
+                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
+                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+    }
     /**
      * @brief Return the value of the gaussian
      *
@@ -153,10 +159,16 @@ struct Gaussian3d
      */
     double operator()(double x, double y, double z)
     {
-        return  amplitude*
-                   exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                          (z-z00)*(z-z00)/2./sigma_z/sigma_z +
-                          (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        if (z== z00)
+        {
+            return  amplitude*
+                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
+    //                           (z-z00)*(z-z00)/2./sigma_z/sigma_z +
+                            (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+        }
+        else {
+        return 0.;
+        }
     }
   private:
     double  x00, y00, z00, sigma_x, sigma_y, sigma_z, amplitude;
