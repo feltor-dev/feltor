@@ -215,22 +215,12 @@ void Feltor<Matrix, container, P>::initializene( const container& src, container
     #endif
     dg::blas1::transform( src,omega, dg::PLUS<double>(-1)); //n_i -1
     invert_invgamma(invgamma,target,omega); //=ne-1 = Gamma (ni-1)    
-
     dg::blas1::transform( target,target, dg::PLUS<double>(+1)); //n_i
-//     std::cout<< "int target " << dg::blas2::dot( one, w3d, target)<<std::endl;
-//     dg::blas1::transform( src, omega, dg::LN<double>());
-//     std::cout<< "int ln target " << dg::blas2::dot( one, w3d, omega)<<std::endl;    
-//     dg::blas1::transform( omega, omega, dg::EXP<double>());
+
     #ifdef DG_BENCHMARK
-    //Check ne_in=ne_out
-//     dg::blas1::transform( target,omega, dg::PLUS<double>(-1)); //n_i-1
-//     std::cout << "norm_in = " << dg::blas2::dot(one,w3d,omega) << std::endl;
-//     invert_invgamma(invgamma,chi,omega); //=ne-1 = Gamma (ni-1)    
-//     dg::blas1::transform( chi,chi, dg::PLUS<double>(+1)); //n_e = Gamma(ni-1)+1    
-//     dg::blas1::axpby( 1., chi, -1., src,omega); //ne_out - ne_in
-//     std::cout << "ne_out - ne_in = " << dg::blas2::dot(omega,w3d,omega) << std::endl;
+
     t.toc();
-    std::cout<< "Computation of intial ni field took "<<t.diff()<<"s\n";
+    std::cout<< "Computation of intial ne field took "<<t.diff()<<"s\n";
     #endif 
 }
 
