@@ -5,12 +5,12 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "evaluation.cuh"
+#include "backend/evaluation.cuh"
 #include "arakawa.h"
 #include "blas.h"
-#include "typedefs.cuh"
+#include "backend/typedefs.cuh"
 
-#include "timer.cuh"
+#include "backend/timer.cuh"
 
 using namespace std;
 using namespace dg;
@@ -71,7 +71,7 @@ int main( int argc, char* argv[])
             n=i;
             Nx = Ny = (unsigned)((double)Nmin*pow( 2., (double)j));
             Grid2d<double> grid( -2., 2., -2., 2., n, Nx, Ny, dg::PER, dg::PER);
-            DVec w2d = create::w2d( grid);
+            DVec w2d = create::weights( grid);
             DVec lhs = evaluate ( left, grid), jac(lhs);
             DVec rhs = evaluate ( right,grid);
             const DVec sol = evaluate( jacobian, grid );

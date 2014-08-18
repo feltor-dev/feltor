@@ -4,10 +4,10 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "evaluation.cuh"
+#include "backend/evaluation.cuh"
 #include "arakawa.h"
 #include "runge_kutta.h"
-#include "typedefs.cuh"
+#include "backend/typedefs.cuh"
 
 //#include "cg.cuh"
 //#include "laplace.cuh"
@@ -56,7 +56,7 @@ struct RHS
 int main()
 {
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    dg::DVec w2d = dg::create::w2d( grid);
+    dg::DVec w2d = dg::create::weights( grid);
     //Also test std::vector<DVec> functionality
     cout << "# of 2d cells                     " << Nx*Ny <<endl;
     cout << "# of Legendre nodes per dimension "<< n <<endl;

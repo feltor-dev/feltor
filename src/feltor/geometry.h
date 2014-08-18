@@ -1043,7 +1043,7 @@ struct TestFunction
 };
 /**
  * @brief analyitcal solution of the parallel derivative of the testfunction
- *  \f[ \nabla_\parallel f = \psi_p(R,Z) b^\varhi \cos{(\varphi)}\f]
+ *  \f[ \nabla_\parallel f = \psi_p(R,Z) b^\varphi \cos{(\varphi)}\f]
  */ 
 struct DeriTestFunction
 {

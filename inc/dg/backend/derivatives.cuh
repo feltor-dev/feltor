@@ -7,7 +7,7 @@
 #include "creation.cuh"
 #include "dx.cuh"
 #include "functions.h"
-#include "laplace.cuh"
+#include "dxx.cuh"
 #include "operator_tensor.cuh"
 #include "tensor.cuh"
 
@@ -22,6 +22,39 @@ namespace dg{
  * @brief Contains functions used for matrix creation
  */
 namespace create{
+namespace detail{
+
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> weights( const Grid2d<T>& g)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Matrix Wx = dg::tensor( g.Nx(), dg::create::weights( g.n())); 
+    cusp::blas::scal( Wx.values, g.hx()/2.);
+    Matrix Wy = dg::tensor( g.Ny(), dg::create::weights( g.n())); 
+    cusp::blas::scal( Wy.values, g.hy()/2.);
+    return dg::dgtensor(g.n(), Wy, Wx);
+}
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> precond( const Grid2d<T>& g)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Matrix W2D = weights( g);
+    for(unsigned i=0; i < W2D.values.size(); i++)
+        W2D.values[i] = 1./W2D.values[i];
+    return W2D;
+}
+
+template< class T>
+cusp::coo_matrix<int, T, cusp::host_memory> renorm( const cusp::coo_matrix<int, T, cusp::host_memory>& matrix, const Grid2d<T>& g)
+{
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Matrix W2D = detail::weights( g);
+    Matrix renormed;
+    cusp::multiply( W2D, matrix, renormed);
+    return renormed;
+}
+
+}
 
 ///@addtogroup highlevel
 ///@{
@@ -43,31 +76,18 @@ template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm no = normed, direction dir = symmetric)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Matrix deltaY = dg::tensor( g.Ny(), dg::create::delta( g.n())); 
     Matrix dx;
     if( dir == symmetric)
-        dx = create::dx_symm<T>(g.n(), g.Nx(), g.hx(), bcx);
+        dx = create::dx_symm_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
     else if (dir == forward)
-        dx = create::dx_plus_mt<T>(g.n(), g.Nx(), g.hx(), bcx);
+        dx = create::dx_plus_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
     else if (dir == backward)
-        dx = create::dx_minus_mt<T>(g.n(), g.Nx(), g.hx(), bcx);
-    Matrix bdxf( dx);
-
-    //norm 1 x b*dx*f or w x w*b*dx*f
-    Operator<T> backward=g.dlt().backward();
-    Operator<T> normx(g.n(), 0.), normy(g.n(), 0.);
+        dx = create::dx_minus_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
+    Matrix bdxf = dgtensor( g.n(), deltaY, dx); 
     if( no == not_normed)
-    {
-        for( unsigned i=0; i<g.n(); i++)
-            normx( i,i) = normy( i,i) = g.dlt().weights()[i];
-        normx *= g.hx()/2.;
-        normy *= g.hy()/2.; // normalisation because F is invariant
-    }
-    else
-    {
-        normx = normy = create::delta(g.n());
-    }
-    bdxf = sandwich<T>( normx*backward, dx, g.dlt().forward());
-    return dgtensor<T>( g.n(), tensor<T>( g.Ny(), normy ), bdxf );
+        return detail::renorm( bdxf, g);
+    return bdxf;
 }
 /**
  * @brief Create 2d derivative in x-direction
@@ -99,31 +119,18 @@ template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, norm no = normed, direction dir = symmetric)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Matrix deltaX = dg::tensor( g.Nx(), dg::create::delta( g.n())); 
     Matrix dy;
     if( dir == symmetric)
-        dy = create::dx_symm<T>(g.n(), g.Ny(), g.hy(), bcy);
+        dy = create::dx_symm_normed<T>(g.n(), g.Ny(), g.hy(), bcy);
     else if (dir == forward)
-        dy = create::dx_plus_mt<T>(g.n(), g.Ny(), g.hy(), bcy);
+        dy = create::dx_plus_normed<T>(g.n(), g.Ny(), g.hy(), bcy);
     else if (dir == backward)
-        dy = create::dx_minus_mt<T>(g.n(), g.Ny(), g.hy(), bcy);
-
-    Matrix bdyf(dy);
-    //norm b*dy*f x 1 or w*b*dy*f x 1
-    Operator<T> backward=g.dlt().backward();
-    Operator<T> normx(g.n(), 0.), normy(g.n(), 0.);
+        dy = create::dx_minus_normed<T>(g.n(), g.Ny(), g.hy(), bcy);
+    Matrix bdyf = dgtensor( g.n(), dy, deltaX); 
     if( no == not_normed)
-    {
-        for( unsigned i=0; i<g.n(); i++)
-            normx( i,i) = normy( i,i) = g.dlt().weights()[i];
-        normx *= g.hx()/2.;
-        normy *= g.hy()/2.; // normalisation because F is invariant
-    }
-    else
-    {
-        normx = normy = create::delta(g.n());
-    }
-    bdyf = sandwich<T>( normy*backward, dy, g.dlt().forward());
-    return dgtensor<T>( g.n(), bdyf, tensor<T>( g.Nx(), normx ) );
+        return detail::renorm( bdyf,g);
+    return bdyf;
 }
 /**
  * @brief Create 2d derivative in y-direction
@@ -160,39 +167,18 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
 
     Grid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    Matrix ly = create::laplace1d( gy, no, dir);
+    Matrix ly = create::laplace1d( gy, bcy, normed, dir);
     
     Grid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
-    Matrix lx = create:: laplace1d( gx, no, dir);
+    Matrix lx = create:: laplace1d( gx, bcx, normed, dir);
 
-    Matrix flxf(lx), flyf(ly);
-    //sandwich with correctly normalized matrices
-    Operator<T> forward1d( g.dlt().forward( ));
-    Operator<T> backward1d( g.dlt().backward( ));
-    Operator<T> leftx( backward1d ), lefty( backward1d);
-    if( no == not_normed)
-        leftx = lefty = forward1d.transpose();
-
-    flxf = sandwich<T>( leftx, lx, forward1d);
-    flyf = sandwich<T>( lefty, ly, forward1d);
-    Operator<T> normx(g.n(), 0.), normy( g.n(), 0.);
-
-    //generate norm (w1d or s1d)
-    if( no == not_normed) 
-    {
-        for( unsigned i=0; i<g.n(); i++)
-            normx( i,i) = normy( i,i) = g.dlt().weights()[i];
-        normx *= g.hx()/2.;
-        normy *= g.hy()/2.;
-    }
-    else
-        normx = normy = create::delta(g.n());
-
-    Matrix ddyy = dgtensor<double>( g.n(), flyf, tensor( g.Nx(), normx));
-    Matrix ddxx = dgtensor<double>( g.n(), tensor(g.Ny(), normy), flxf);
+    Matrix ddyy = dgtensor<double>( g.n(), ly, tensor( g.Nx(), create::delta(g.n())));
+    Matrix ddxx = dgtensor<double>( g.n(), tensor(g.Ny(), create::delta(g.n())), lx);
     Matrix laplace;
     cusp::add( ddxx, ddyy, laplace); //cusp add does not sort output!!!!
     laplace.sort_by_row_and_column();
+    if( no == not_normed)
+        return detail::renorm( laplace, g);
     return laplace;
 }
 
@@ -215,49 +201,43 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm
 }
 
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, bc bcx, bc bcy)
+cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, bc bcx, bc bcy, norm no)
 {
-    //jump is never normed and does not have a direction
-    const unsigned& n = g.n();
-    Operator<T> normx(n, 0.), normy(n, 0.);
-    for( unsigned i=0; i<n; i++)
-        normx( i,i) = normy( i,i) = g.dlt().weights()[i];
-    normx *= g.hx()/2.;
-    normy *= g.hy()/2.; // normalisation because F is invariant
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> HMatrix;
-    Operator<T> forward1d( g.dlt().forward( ));
-
-    HMatrix jumpx = create::jump_ot<T>( n, g.Nx(), bcx); //jump without t!
-    jumpx = sandwich( forward1d.transpose(), jumpx, forward1d);
-    jumpx = dg::dgtensor( n, tensor( g.Ny(), normy), jumpx); //proper normalisation
-
-    HMatrix jumpy = create::jump_ot<T>( n, g.Ny(), bcy); //without jump cg is unstable
-    jumpy = sandwich( forward1d.transpose(), jumpy, forward1d);
-    jumpy = dg::dgtensor(n, jumpy, tensor( g.Nx(), normx));
-    HMatrix jump_;
-    cusp::add( jumpx, jumpy, jump_); //does not respect sorting!!!
-    jump_.sort_by_row_and_column();
-    return jump_;
+    //without jump cg is unstable
+    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Matrix jumpx = create::jump_normed<T>( g.n(), g.Nx(), g.hx(), bcx); 
+    Matrix jumpy = create::jump_normed<T>( g.n(), g.Ny(), g.hy(), bcy); 
+    Matrix yy = dgtensor<double>( g.n(), jumpy, tensor( g.Nx(), create::delta(g.n())));
+    Matrix xx = dgtensor<double>( g.n(), tensor(g.Ny(), create::delta(g.n())), jumpx);
+    Matrix jump;
+    cusp::add( xx, yy, jump); //cusp add does not sort output!!!!
+    jump.sort_by_row_and_column();
+    if( no == not_normed)
+        return detail::renorm( jump, g);
+    return jump;
 }
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g)
+cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, norm no)
 {
-    return jump2d( g, g.bcx(), g.bcy());
+    return jump2d( g, g.bcx(), g.bcy(), no);
 }
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, bc bcx, bc bcy)
+cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, bc bcx, bc bcy, norm no)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
-    Matrix jump_ = create::jump2d( g2d, bcx, bcy);
-    return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), jump_); //w*hz/2 = hz
+    Matrix jump_ = create::jump2d( g2d, bcx, bcy, no);
+    if( no == normed)
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1) ), jump_);
+    else 
+        return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), jump_); //w*hz/2 = hz
 }
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g)
+cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, norm no)
 {
-    return jump( g, g.bcx(), g.bcy());
+    return jump( g, g.bcx(), g.bcy(), no);
 }
 /**
  * @brief Create 3d derivative in x-direction
@@ -353,11 +333,11 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, bc bcz, dire
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Matrix dz; 
     if( dir == forward) 
-        dz = create::dx_plus_mt<T>(1, g.Nz(), g.hz(), bcz);
+        dz = create::dx_plus_normed<T>(1, g.Nz(), g.hz(), bcz);
     else if( dir == backward) 
-        dz = create::dx_minus_mt<T>(1, g.Nz(), g.hz(), bcz);
+        dz = create::dx_minus_normed<T>(1, g.Nz(), g.hz(), bcz);
     else
-        dz = create::dx_symm<T>(1, g.Nz(), g.hz(), bcz);
+        dz = create::dx_symm_normed<T>(1, g.Nz(), g.hz(), bcz);
     return dgtensor<T>( 1, dz,  tensor<T>( g.Nx()*g.Ny(), delta(g.n()*g.n()) ));
 }
 /**
@@ -432,7 +412,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_parallel( const Grid3d<T>
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid1d<T> g1d( g.z0(), g.z1(), 1, g.Nz(), bcz);
-    Matrix lz = create::laplace1d( g1d, normed, dir);
+    Matrix lz = create::laplace1d( g1d, bcz, normed, dir);
 
     return dgtensor<T>( 1, lz, tensor<T>( g.Nx()*g.Ny(), delta(g.n()*g.n())));
 

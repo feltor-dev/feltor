@@ -8,6 +8,7 @@
 #ifdef DG_DEBUG
 #include <cassert>
 #endif
+#include "dlt.h"
 
 namespace dg{
 
@@ -331,6 +332,24 @@ Operator<double> lilj( unsigned n)
         for( unsigned j=0; j<n; j++)
             if( ((i+j)%2) == 0)
                 op( i,j) = 1.;
+    return op;
+}
+
+
+Operator<double> weights( const DLT<double>& dlt)
+{
+    unsigned n = dlt.weights().size();
+    Operator<double> op( n, 0);
+    for( unsigned i=0; i<n; i++)
+        op(i,i) = dlt.weights()[i];
+    return op;
+}
+Operator<double> precond( const DLT<double>& dlt)
+{
+    unsigned n = dlt.weights().size();
+    Operator<double> op( n, 0);
+    for( unsigned i=0; i<n; i++)
+        op(i,i) = 1./dlt.weights()[i];
     return op;
 }
 ///@}

@@ -5,9 +5,9 @@
 #include "timer.cuh"
 #include "evaluation.cuh"
 #include "dz.cuh"
-#include "rk.cuh"
 #include "functions.h"
-#include "functors.cuh"
+#include "../functors.h"
+#include "../blas.h"
 #include "interpolation.cuh"
 
 
@@ -48,24 +48,26 @@ int main()
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
+    std::cout << "Yout typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
     dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz);
-    const dg::DVec w3d = dg::create::w3d( g3d);
+    const dg::DVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::DZ<Field, dg::DVec> dz( field, g3d);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d);
     t.toc();
-    std::cout << "Creation of parallel Derivative took "<<t.diff()<<"s\n";
+    std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::DVec solution = dg::evaluate( deri, g3d);
     t.tic();
     dz( function, derivative);
     t.toc();
-    std::cout << "Application of parallel Derivative took "<<t.diff()<<"s\n";
+    std::cout << "Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., solution, -1., derivative);
     double norm = dg::blas2::dot( w3d, solution);
     std::cout << "Norm Solution "<<sqrt( norm)<<"\n";
     std::cout << "Relative Difference Is "<< sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm )<<"\n";
+    std::cout << "Error is from the parallel derivative only if n>2\n"; //since the function is a parabola
 
 
     

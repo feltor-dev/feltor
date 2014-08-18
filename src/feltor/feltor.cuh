@@ -20,18 +20,17 @@ struct Rolkar
     Rolkar( const Grid3d& g, Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
-        w3d_( dg::create::w3d(g)), v3d_(dg::create::v3d(g)),
-        temp( g.size()),
+        temp( dg::evaluate(dg::zero, g)), chi(temp), omega(chi),
+        expy(2, temp),
         dampin_( dg::evaluate( solovev::TanhDampingIn(gp ), g)),
         dampout_( dg::evaluate( solovev::TanhDampingOut(gp ), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         pupil_( dg::evaluate( solovev::Pupil( gp), g)),
         lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
-        LaplacianM_perp ( dg::create::laplacianM_perp( g, dg::normed, dg::symmetric))
-        //LaplacianM_para ( dg::create::laplacianM_parallel( g, dg::PER))
+        LaplacianM_perp ( g, dg::normed)
     {
     }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( std::vector<container>& x, std::vector<container>& y)
     {
         for( unsigned i=0; i<x.size(); i++)
         {
@@ -48,9 +47,6 @@ struct Rolkar
         }
 
         //add parallel resistivity
-        std::vector<container>  expy(2);
-        expy[0].resize( x[0].size()), expy[1].resize( x[1].size());
-        container chi( x[0].size()), omega( x[0].size());
         for( unsigned i=0; i<2; i++)
             dg::blas1::transform( x[i], expy[i], dg::EXP<double>());
         dg::blas1::pointwiseDot( expy[0], x[2], omega); //N_e U_e 
@@ -68,30 +64,23 @@ struct Rolkar
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
         }
     }
-    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
-    const container& weights(){return w3d_;}
-    const container& precond(){return v3d_;}
+    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
+    const Preconditioner& weights(){return LaplacianM_perp.weights();}
+    const Preconditioner& precond(){return LaplacianM_perp.precond();}
     const container& pupil(){return pupil_;}
     const container& dampin(){return dampin_;}
-
-
   private:
-    void divide( const container& zaehler, const container& nenner, container& result)
-    {
-        dg::blas1::pointwiseDivide( zaehler, nenner, result);
-    }
     const Parameters p;
     const solovev::GeomParameters gp;
-    const Preconditioner w3d_, v3d_;
-    container temp;
+    container temp, chi, omega;
+    std::vector<container> expy;
     const container dampin_;
     const container dampout_;
     const container dampgauss_;
     const container pupil_;
     const container lapiris_;
     
-    Matrix LaplacianM_perp;
-    //Matrix LaplacianM_para;
+    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perp;
 
 };
 
@@ -118,6 +107,7 @@ struct Feltor
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
+    void initializene( const container& y, container& target);
 
     /**
      * @brief Return the Gamma operator used by this object
@@ -133,29 +123,30 @@ struct Feltor
     double energy_diffusion( ){ return ediff_;}
 
   private:
-    void curve( const container& y, container& target);
+    void curve( container& y, container& target);
     //use chi and omega as helpers to compute square velocity in omega
-    const container& compute_vesqr( container& potential);
+    container& compute_vesqr( container& potential);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
-    const container& compute_psi( container& potential);
-    const container& polarisation( const std::vector<container>& y); //solves polarisation equation
+    container& compute_psi( container& potential);
+    container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
     container chi, omega;
 
     const container binv, curvR, curvZ, gradlnB;
-    const container pupil, source, damping;
-    const container w3d, v3d, one;
+    const container pupil, source, damping, one;
+    const Preconditioner w3d, v3d;
 
     std::vector<container> phi, curvphi, dzphi, expy;
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
-    Matrix lapperp; 
     dg::DZ<Matrix, container> dz;
     dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
-    dg::Polarisation< Matrix, container, Preconditioner > pol; //note the host vector
-    dg::Invert<container> invert_pol;
+
+    dg::Elliptic< Matrix, container, Preconditioner > pol; //note the host vector
+    dg::Helmholtz< Matrix, container, Preconditioner > invgamma;
+    dg::Invert<container> invert_pol,invert_invgamma;
 
     const Parameters p;
     const solovev::GeomParameters gp;
@@ -173,24 +164,23 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
     pupil( dg::evaluate( solovev::Pupil( gp), g)),
-//     source( dg::evaluate( dg::Gaussian( gp.R_0, 0, p.b, p.b, p.amp_source, 0), g)),
-//     source( dg::evaluate( solovev::Gradient(gp), g)),
-     source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
-//     damping( dg::evaluate( solovev::TanhDampingIn(gp ), g)), 
+    source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
-    lapperp (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
+    w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     pol(     g), 
-    invert_pol( omega, omega.size(), p.eps_pol), one( dg::evaluate( dg::one, g)),
-    w3d( dg::create::weights(g)), v3d( dg::create::precond(g)), 
+    invgamma(g,-0.5*p.tau[1]*p.mu[1]),
+    invert_pol( omega, omega.size(), p.eps_pol),
+    invert_invgamma( omega, omega.size(), p.eps_gamma),
+    one( dg::evaluate( dg::one, g)),    
     p(p),
     gp(gp)
 { }
 template< class Matrix, class container, class P>
-const container& Feltor<Matrix,container, P>::compute_vesqr( container& potential)
+container& Feltor<Matrix,container, P>::compute_vesqr( container& potential)
 {
     arakawa.bracketS( potential, potential, chi);
     dg::blas1::pointwiseDot( binv, binv, omega);
@@ -198,16 +188,45 @@ const container& Feltor<Matrix,container, P>::compute_vesqr( container& potentia
     return omega;
 }
 template< class Matrix, class container, class P>
-const container& Feltor<Matrix,container, P>::compute_psi( container& potential)
+container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
+    //without FLR
+//     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
+    //with FLR
+    #ifdef DG_BENCHMARK
+    dg::Timer t; 
+    t.tic();
+    #endif
+    invert_invgamma(invgamma,chi,potential,w3d, v3d);
+    #ifdef DG_BENCHMARK
+    t.toc();
+    std::cout<< "Gamma operator took "<<t.diff()<<"s\n";
+    #endif
+    dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);    
     return phi[1];
+    
 }
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
+{ 
+    #ifdef DG_BENCHMARK
+    dg::Timer t; 
+    t.tic();
+    #endif
+    dg::blas1::transform( src,omega, dg::PLUS<double>(-1)); //n_i -1
+    invert_invgamma(invgamma,target,omega); //=ne-1 = Gamma (ni-1)    
+    dg::blas1::transform( target,target, dg::PLUS<double>(+1)); //n_i
 
+    #ifdef DG_BENCHMARK
+
+    t.toc();
+    std::cout<< "Computation of intial ne field took "<<t.diff()<<"s\n";
+    #endif 
+}
 
 //computes and modifies expy!!
 template<class Matrix, class container, class P>
-const container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
+container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
 #ifdef DG_BENCHMARK
     dg::Timer t; 
@@ -217,7 +236,7 @@ const container& Feltor<Matrix, container, P>::polarisation( const std::vector<c
     exp( y, expy, 2);
     dg::blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
     //correction
-//     dg::blas1::axpby( -p.mu[0], expy[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_i
+    dg::blas1::axpby( -p.mu[0], expy[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_e
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
 
@@ -225,12 +244,20 @@ const container& Feltor<Matrix, container, P>::polarisation( const std::vector<c
     pol.set_chi( chi);
     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
     dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
+        std::cout << "norm_in = " << dg::blas2::dot(expy[1],w3d,expy[1]) << std::endl;
+    //with FLR
+    std::cout << "1" << "\n";
+    unsigned numberg =  invert_invgamma(invgamma,chi,omega);    //chi= Gamma (Omega) = Gamma (ni-1)
+    if( numberg == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);  
+    std::cout << "2" << "\n";
 #ifdef DG_BENCHMARK
     t.toc();
-    //std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
+    std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
 #endif 
-    dg::blas1::axpby( -1., expy[0], 1., omega); //n_i-n_e
-    unsigned number = invert_pol( pol, phi[0], omega, w3d, v3d);
+    dg::blas1::axpby( -1., expy[0], 1.,chi); //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
+    unsigned number = invert_pol( pol, phi[0], chi); //Gamma n_i -ne = -nabla chi nabla phi
+
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
@@ -358,7 +385,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
 //Computes curvature operator
 template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::curve( const container& src, container& target)
+void Feltor<Matrix, container, P>::curve( container& src, container& target)
 {
     dg::blas2::gemv( arakawa.dx(), src, target); //d_R src
     dg::blas2::gemv( arakawa.dy(), src, omega);  //d_Z src

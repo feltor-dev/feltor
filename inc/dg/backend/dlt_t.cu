@@ -1,34 +1,30 @@
 #include <iostream>
 #include <iomanip>
 
-#include "dlt.cuh"
+#include "dlt.h"
 #include "operator.h"
-
-
-using namespace std;
-using namespace dg;
 
 
 int main()
 {
     unsigned n;
-    cout << "Type n! \n";
-    cin >> n;
-    DLT<double> dlt( n);
+    std::cout << "Type n! \n";
+    std::cin >> n;
+    dg::DLT<double> dlt( n);
 
-    Operator<double> forward( dlt.forward());
-    Operator<double> backward( dlt.backward());
-    cout << "Forward * Backward should give Delta: \n";
-    cout << setprecision(2);
-    cout << forward*backward;
-    cout << setprecision(16);
-    cout << "Abscissas:\n";
+    dg::Operator<double> forward( dlt.forward());
+    dg::Operator<double> backward( dlt.backward());
+    std::cout << "Forward * Backward should give Delta: \n";
+    std::cout << std::setprecision(2);
+    std::cout << forward*backward;
+    std::cout << std::setprecision(16);
+    std::cout << "Abscissas:\n";
     for( unsigned i=0; i<n; i++)
-        cout << dlt.abscissas()[i]<<" ";
-    cout << endl;
-    cout << "Weights:\n";
+        std::cout << dlt.abscissas()[i]<<" ";
+    std::cout << std::endl;
+    std::cout << "Weights:\n";
     for( unsigned i=0; i<n; i++)
-        cout << dlt.weights()[i]<<" ";
-    cout << endl;
+        std::cout << dlt.weights()[i]<<" ";
+    std::cout << std::endl;
     return 0;
 }

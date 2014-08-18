@@ -174,10 +174,10 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g)
     Matrix transformY = dg::tensor( g.Ny(), backward1d);
     Matrix backward = dg::dgtensor( g.n(), transformY, transformX);
 
-    thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
-    Matrix p = gather( map);
-    Matrix scatter( p);
-    cusp::multiply( p, backward, scatter);
+    //thrust::host_vector<int> map = dg::create::gatherMap( g.n(), g.Nx(), g.Ny());
+    //Matrix p = gather( map);
+    //Matrix scatter( p);
+    //cusp::multiply( p, backward, scatter);
     //choose vector layout
     //return scatter;
     return backward; 

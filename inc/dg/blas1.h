@@ -8,6 +8,10 @@
 #include "backend/thrust_vector.cuh"
 #include "backend/std_vector.cuh"
 
+/*!@file 
+ *
+ * blas level 1 functions
+ */
 namespace dg{
 
 //TODO Throw messages instead of assertions because origin of message can 

@@ -94,7 +94,7 @@ inline void doSymv(
 */
 
 template< class Matrix, class Vector>
-inline typename Vector::value_type  doDot( 
+inline typename MatrixTraits<Matrix>::value_type  doDot( 
               const std::vector<Vector>& x, 
               const Matrix& m,
               const std::vector<Vector>& y, 
@@ -104,7 +104,7 @@ inline typename Vector::value_type  doDot(
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    typename Vector::value_type sum = 0;
+    typename MatrixTraits<Matrix>::value_type sum = 0;
     for( unsigned i=0; i<x.size(); i++)
         sum += doDot( x[i], m, y[i],
                        typename dg::MatrixTraits<Matrix>::matrix_category(),
@@ -118,7 +118,7 @@ inline typename VectorTraits<Vector>::value_type  doDot(
               AnyMatrixTag,
               StdVectorTag)
 {
-    typename Vector::value_type sum = 0;
+    typename MatrixTraits<Matrix>::value_type sum = 0;
     for( unsigned i=0; i<y.size(); i++)
         sum += doDot( y[i], m, y[i],
                        typename dg::MatrixTraits<Matrix>::matrix_category(),

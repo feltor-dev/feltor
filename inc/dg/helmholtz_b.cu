@@ -26,16 +26,15 @@ int main()
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n>> Nx >> Ny;
     dg::Grid2d<double> grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
-    const dg::DVec w2d = dg::create::w2d( grid);
-    const dg::DVec v2d = dg::create::v2d( grid);
+    const dg::DVec w2d = dg::create::weights( grid);
+    const dg::DVec v2d = dg::create::inv_weights( grid);
     const dg::DVec one(grid.size(), 1.);
     dg::DVec rho = dg::evaluate( rhs, grid);
     const dg::DVec sol = dg::evaluate( lhs, grid);
     dg::DVec x(rho.size(), 0.);
     //dg::DVec x(rho);
 
-    dg::DMatrix A = dg::create::laplacianM( grid, dg::normed); 
-    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > gamma1( A, w2d, v2d, alpha);
+    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > gamma1( grid, alpha);
 
     dg::CG< dg::DVec > cg(x, x.size());
     dg::blas2::symv( w2d, rho, rho);

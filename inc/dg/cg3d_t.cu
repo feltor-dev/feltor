@@ -4,11 +4,11 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "evaluation.cuh"
+#include "backend/evaluation.cuh"
 #include "cg.h"
-#include "tensor.cuh"
-#include "derivatives.cuh"
-#include "typedefs.cuh"
+#include "backend/tensor.cuh"
+#include "backend/derivatives.cuh"
+#include "backend/typedefs.cuh"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 const unsigned Nx = 20;  //more N means less iterations for same error
@@ -34,8 +34,8 @@ int main()
 {
     cout << "TEST 3D VERSION\n";
     dg::Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER);
-    dg::HVec w3d = dg::create::w3d( g3d);
-    dg::HVec v3d = dg::create::v3d( g3d);
+    dg::HVec w3d = dg::create::weights( g3d);
+    dg::HVec v3d = dg::create::inv_weights( g3d);
     dg::HVec x3 = dg::evaluate( initial, g3d);
 
     dg::HMatrix A3 = dg::create::laplacianM_perp( g3d, dg::not_normed); 
