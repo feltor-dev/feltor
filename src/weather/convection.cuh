@@ -12,7 +12,7 @@ template< class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double L, double P): L_(L), P_(P),
-        w2d(dg::create::w2d( g)), v2d(dg::create::v2d(g)), temp( g.size()) { 
+        w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)), temp( g.size()) { 
             LaplacianM_dir = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::normed, dg::symmetric);
             LaplacianM_neu = dg::create::laplacianM( g, dg::PER, dg::NEU, dg::normed, dg::symmetric);
 
@@ -115,7 +115,7 @@ Convection<container>::Convection( const dg::Grid2d<value_type>& g, Params p, do
     phi( g.size()), phi_old(phi), dxphi( phi), dyphi( phi),
     dxT( phi), source_(phi), temp( phi),
     background_( dg::evaluate( dg::LinearY( -p.R, p.R*p.zeta), g)), 
-    w2d( dg::create::w2d(g)), v2d( dg::create::v2d(g)),
+    w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)),
     pcg( temp, g.size()), 
     //arakawaX( g), 
     eps_( p.eps), R_(p.R), R_l_( p.R_l), L_(p.L), P_(p.P), 

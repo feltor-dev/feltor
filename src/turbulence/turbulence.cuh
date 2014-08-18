@@ -2,13 +2,12 @@
 
 #include <exception>
 
-#include "dg/xspacelib.cuh"
-#include "dg/average.cuh"
-#include "dg/cg.cuh"
-#include "dg/gamma.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/average.cuh"
+#include "dg/algorithm.h"
 
 #ifdef DG_BENCHMARK
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh"
 #endif
 
 
@@ -33,9 +32,9 @@ struct Damping
 template<class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu):nu_(nu), w2d( 2, dg::create::w2d(g)), v2d( 2, dg::create::v2d(g)), temp( g.size()), damp( dg::evaluate( Damping( 0.9*g.x1()), g))
+    Diffusion( const dg::Grid2d<double>& g, double nu):nu_(nu), w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), temp( g.size()), damp( dg::evaluate( Damping( 0.9*g.x1()), g))
     {
-        laplaceM = dg::create::laplacianM( g, dg::normed, dg::XSPACE, dg::symmetric);
+        laplaceM = dg::create::laplacianM( g, dg::normed, dg::symmetric);
     }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -51,12 +50,12 @@ struct Diffusion
         }
     }
     const dg::DMatrix& laplacianM()const {return laplaceM;}
-    const std::vector<container>& weights(){return w2d;}
-    const std::vector<container>& precond(){return v2d;}
+    const container& weights(){return w2d;}
+    const container& precond(){return v2d;}
 
   private:
     double nu_;
-    const std::vector<container> w2d, v2d;
+    const container w2d, v2d;
     container temp;
     const container damp;
     dg::DMatrix laplaceM;
@@ -115,8 +114,8 @@ struct Turbulence
      *
      * @return Gamma operator
      */
-    const Helmholtz<Matrix, container >&  gamma() const {return gamma1;}
-    ArakawaX<container>& arakawa() {return arakawa_;}
+    Helmholtz<Matrix, container, container >&  gamma() {return gamma1;}
+    ArakawaX<Matrix,container>& arakawa() {return arakawa_;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -124,7 +123,7 @@ struct Turbulence
      * @param y input vector (without background gradient)
      * @param yp the rhs yp = f(y)
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()(std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -173,13 +172,13 @@ struct Turbulence
     //matrices and solvers
     Matrix A, B; //contains polarisation matrix
     Matrix laplaceM; //contains normalized laplacian
-    ArakawaX< container> arakawa_; 
+    ArakawaX< Matrix, container> arakawa_; 
     Polarisation2dX< thrust::host_vector<value_type> > plus_pol, minus_pol; //note the host vector
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
 
     const container w2d, v2d, one;
-    Helmholtz< Matrix, container > gamma1;
+    Helmholtz< Matrix, container, container > gamma1;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau, d_;
 
@@ -199,12 +198,12 @@ Turbulence< container>::Turbulence( const Grid2d<value_type>& grid, double kappa
     plus_pol(     grid, forward), minus_pol( grid,   backward),
     pcg( omega, omega.size()), 
     average( grid),
-    w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
-    gamma1(  laplaceM, w2d, v2d, -0.5*tau),
+    w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
+    gamma1(  grid, -0.5*tau),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), d_(d)
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed, XSPACE, forward);
+    laplaceM = create::laplacianM( grid, normed, forward);
 }
 
 template< class container>
@@ -303,7 +302,7 @@ const container& Turbulence< container>::polarisation( const std::vector<contain
 //y is the density without background gradient (such that the BC is zero)
 //background is -gx + 1 + gl_x
 template< class container>
-void Turbulence< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Turbulence< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

@@ -185,7 +185,7 @@ void Convection_Solver::init( std::array< Matrix<double, TL_DFT>,2>& v, enum tar
     {
 #ifdef TL_DEBUG
         if( v[k].isVoid())
-            throw Message("You gave me a void Matrix!!", ping);
+            throw Message("You gave me a void Matrix!!", _ping_);
 #endif
         dft_drt.r2c( v[k], cdens[k]);
     }
@@ -198,7 +198,7 @@ void Convection_Solver::init( std::array< Matrix<double, TL_DFT>,2>& v, enum tar
     switch( t) //which field must be computed?
     {
         case( TEMPERATURE): 
-            throw Message( "Temperature independent", ping);
+            throw Message( "Temperature independent", _ping_);
             break;
         case( VORTICITY):
             //bring cdens and cphi in the right order
@@ -231,7 +231,7 @@ void Convection_Solver::getField( Matrix<double, TL_DFT>& m, enum target t)
 {
 #ifdef TL_DEBUG
     if(m.isVoid()) 
-        throw Message( "You may not swap in a void Matrix!\n", ping);
+        throw Message( "You may not swap in a void Matrix!\n", _ping_);
 #endif
     switch( t)
     {

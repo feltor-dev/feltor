@@ -13,7 +13,7 @@
 #include "file/nc_utilities.h"
 
 
-#include "feltor.cuh"
+#include "asela.cuh"
 #include "bessel.h"
 #include "parameters.h"
 #include "geometry.h"

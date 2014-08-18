@@ -7,10 +7,9 @@
 //#include "draw/device_window.cuh"
 
 #include "toeflI.cuh"
-#include "dg/rk.cuh"
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh" 
 #include "file/read_input.h"
-#include "../galerkin/parameters.h"
+#include "../toefl/parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -51,7 +50,7 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     dg::ToeflI< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.a_z, p.mu_z, p.tau_z, p.eps_pol, p.eps_gamma); 
 
@@ -59,13 +58,14 @@ int main( int argc, char* argv[])
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) ), y1(y0);
     //dg::blas1::axpby( 1., y0[0], 1., (dg::DVec)dg::evaluate( g, grid), y0[0]);//n_e = 1+ gaussian
-    typename dg::ToeflI<dg::DVec>::Operator& gamma = test.gamma();
+    dg::Helmholtz<dg::DMatrix, dg::DVec, dg::DVec>& gamma = test.gamma();
     if( v[25] == 1)
     {
         gamma.alpha() = -0.5*p.tau;
         y0[0] = dg::evaluate( g, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1 
-        dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+        dg::DVec v2d=dg::create::inv_weights(grid);
+        dg::blas2::symv( v2d, y0[1], y0[1]);
         dg::blas1::axpby( 1./(1.-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
         y0[2] = dg::evaluate( dg::one, grid);
         dg::blas1::axpby( 1., y0[2], 1., y0[0]);
@@ -78,7 +78,8 @@ int main( int argc, char* argv[])
         dg::DVec wallv = dg::evaluate( wall, grid);
         gamma.alpha() = -0.5*p.tau_z*p.mu_z;
         dg::blas2::symv( gamma, wallv, y0[2]); 
-        dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[2], y0[2]);
+        dg::DVec v2d=dg::create::inv_weights(grid);
+        dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a_z != 0.)
             dg::blas1::axpby( 1./p.a_z, y0[2], 0., y0[2]); //n_z ~1./a_z
 
@@ -86,7 +87,8 @@ int main( int argc, char* argv[])
         gamma.alpha() = -0.5*p.tau;
         y0[0] = dg::evaluate( g, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]); 
-        dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+        dg::blas2::symv( v2d, y0[2], y0[2]);
+        dg::blas2::symv( v2d, y0[1], y0[1]);
         if( p.a_z == 1)
         {
             std::cerr << "No blob with trace ions possible!\n";
@@ -107,7 +109,8 @@ int main( int argc, char* argv[])
         gamma.alpha() = -0.5*p.tau_z*p.mu_z;
         y0[0] = dg::evaluate( g, grid);
         dg::blas2::symv( gamma, y0[0], y0[2]); 
-        dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[2], y0[2]);
+        dg::DVec v2d=dg::create::inv_weights(grid);
+        dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a_z == 0)
         {
             std::cerr << "No impurity blob with trace impurities possible!\n";
@@ -132,8 +135,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     double time = 0;
     ab.init( test, y0, p.dt);
-    ab( test, y0, y1, p.dt);
-    y0.swap( y1); 
+    ab( test, y1);
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
@@ -189,14 +191,13 @@ int main( int argc, char* argv[])
                 std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
-            try{ ab( test, y0, y1, p.dt);}
+            try{ ab( test, y1);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);
                 break;
             }
-            y0.swap( y1); //attention on -O3 ?
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

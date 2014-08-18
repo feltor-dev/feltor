@@ -2,13 +2,12 @@
 #include <exception>
 #include <cassert>
 
-#include "dg/xspacelib.cuh"
-#include "dg/average.cuh"
-#include "dg/cg.cuh"
-#include "dg/gamma.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/average.cuh"
+#include "dg/algorithm.h"
 
 #ifdef DG_BENCHMARK
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh"
 #endif
 
 
@@ -117,7 +116,7 @@ struct Esel
      *
      * @return Gamma operator
      */
-    const Helmholtz<Matrix, container >&  gamma() const {return gamma1;}
+    Helmholtz<Matrix, container, container >&  gamma() {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -125,7 +124,7 @@ struct Esel
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -173,13 +172,13 @@ struct Esel
     //matrices and solvers
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
-    ArakawaX< container> arakawa; 
+    ArakawaX< Matrix, container> arakawa; 
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
 
     const container w2d, v2d, one;
-    Helmholtz< Matrix, container > gamma1;
+    Helmholtz< Matrix, container, container > gamma1;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
     const double dd;
@@ -200,14 +199,14 @@ Esel< container>::Esel( const Grid2d<value_type>& grid, double kappa, double nu,
     pol(     grid, forward), 
     pcg( omega, omega.size()), 
     average( grid),
-    w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
-    gamma1(  laplaceM, w2d, v2d, -0.5*tau),
+    w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( grid.size(), 1.),
+    gamma1(  grid, -0.5*tau),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau),
     dd( sol.get_dd()),
     sol_( evaluate(sol, grid) )
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed, XSPACE, forward);
+    laplaceM = create::laplacianM( grid, normed, forward);
     //if( !global)
         //A = create::laplacianM( grid, not_normed);
 
@@ -311,7 +310,7 @@ const container& Esel< container>::polarisation( const std::vector<container>& y
 }
 
 template< class container>
-void Esel< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Esel< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

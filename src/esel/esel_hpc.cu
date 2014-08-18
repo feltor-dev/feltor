@@ -4,12 +4,12 @@
 
 
 #include "esel.cuh"
-#include "../galerkin/parameters.h"
-#include "dg/rk.cuh"
+#include "../toefl/parameters.h"
+#include "dg/multistep.h"
 #include "file/file.h"
 #include "file/read_input.h"
 
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh"
 
 
 /*
@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     }
 
     ////////////////////////////////set up computations///////////////////////////
-    dg::Grid<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::SOL sol( v[22], v[23], v[24], v[25], v[27]);
     std::cout << "The SOL parameters are: \n"
               << "    x_l:     "<<v[22] <<"\n    x_w:     "<<v[23]<<"\n"
@@ -78,7 +78,10 @@ int main( int argc, char* argv[])
 
 
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
+    {
+    dg::DVec v2d = dg::create::inv_weights(grid);
+    dg::blas2::symv( v2d, y0[1], y0[1]);
+    }
     assert( p.tau == 0);
     assert( p.global);
     assert( p.bc_x == dg::DIR_NEU);
@@ -88,8 +91,8 @@ int main( int argc, char* argv[])
     double time = 0;
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
     ab.init( test, y0, p.dt);
-    ab( test, y0, y1, p.dt);
-    y0.swap( y1); //y1 now contains value at zero time
+    ab( test, y1);
+    //y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up hdf5/////////////////////////////////
     file::T5trunc t5file( argv[2], input);
     dg::HVec output[3] = { y1[0], y1[0], y1[0]}; //intermediate transport locations
@@ -114,8 +117,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            ab( test, y0, y1, p.dt);
-            y0.swap( y1); //attention on -O3 ?
+            ab( test, y1);
             //store accuracy details
             t5file.append( test.mass(), test.mass_diffusion(), test.energy(), test.energy_diffusion());
         }
