@@ -23,7 +23,7 @@ namespace dg{
  *
  * @ingroup operators
  *
- * Discretization of \f[ (\chi+\alpha\Delta) \f]
+ * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
@@ -69,7 +69,18 @@ struct Helmholtz
             blas2::symv( 1., laplaceM_.weights(), x, -alpha_, y);
 
     }
+    /**
+     * @brief These are the weights that made the operator symmetric
+     *
+     * i.e. divide result by these coefficients to get the normed result
+     * @return weights
+     */
     const Preconditioner& weights()const {return laplaceM_.weights();}
+    /**
+     * @brief Preconditioner to use in conjugate gradient solvers
+     *
+     * @return Preconditioner
+     */
     const Preconditioner& precond()const {return laplaceM_.precond();}
     /**
      * @brief Change alpha
