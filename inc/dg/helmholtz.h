@@ -72,13 +72,13 @@ struct Helmholtz
     /**
      * @brief These are the weights that made the operator symmetric
      *
-     * i.e. divide result by these coefficients to get the normed result
      * @return weights
      */
     const Preconditioner& weights()const {return laplaceM_.weights();}
     /**
      * @brief Preconditioner to use in conjugate gradient solvers
      *
+     * multiply result by these coefficients to get the normed result
      * @return Preconditioner
      */
     const Preconditioner& precond()const {return laplaceM_.precond();}

@@ -53,22 +53,21 @@ int main( int argc, char* argv[])
 
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::DVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR< dg::DMatrix, dg::DVec, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
+    dg::Diffusion<dg::DMatrix, dg::DVec, dg::DVec> diffusion( grid, p.nu, p.global);
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
-        dg::DVec v2d = dg::create::v2d(grid);
+        dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
 
     if( p.global)
     {
-        thrust::transform( y0[0].begin(), y0[0].end(), y0[0].begin(), dg::PLUS<double>(+1));
-        thrust::transform( y0[1].begin(), y0[1].end(), y0[1].begin(), dg::PLUS<double>(+1));
+        dg::blas1::transform( y0[0], y0[0], dg::PLUS<double>(+1));
+        dg::blas1::transform( y0[1], y0[1], dg::PLUS<double>(+1));
         test.log( y0, y0); //transform to logarithmic values
     }
 
@@ -82,10 +81,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    //ab.init( test, y0, p.dt);
     ab.init( test, diffusion, y0, p.dt);
-    //ab( test, y0, y1, p.dt);
-    //y0.swap( y1); 
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
@@ -112,7 +108,8 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //transform phi
-        dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
+        dvisual = test.potential()[0];
+        dg::blas2::gemv( test.laplacianM(), dvisual, y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -152,7 +149,6 @@ int main( int argc, char* argv[])
                 glfwSetWindowShouldClose( w, GL_TRUE);
                 break;
             }
-            //y0.swap( y1); //attention on -O3 ?
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

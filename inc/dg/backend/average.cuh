@@ -24,9 +24,9 @@ struct PoloidalAverage
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
         reorder = create::scatterMap( g.n(), g.Nx(), g.Ny());
         lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());
-        w2d = create::w2d( g);
+        w2d = create::weights( g);
         Grid1d<double> g1x( 0, g.lx(), g.n(), g.Nx());
-        v1d = create::v1d( g1x);
+        v1d = create::inv_weights( g1x);
 
     }
     /**

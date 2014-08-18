@@ -3,7 +3,7 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/print.h>
 
-#include "dlt.cuh"
+#include "dlt.h"
 #include "functions.h"
 #include "operator_tensor.cuh"
 
