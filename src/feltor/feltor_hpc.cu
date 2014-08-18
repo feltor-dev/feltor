@@ -60,7 +60,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
     double Zmax=(gp.boxscale)*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cartesian);  
      
     //create RHS 
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
@@ -75,11 +75,13 @@ int main( int argc, char* argv[])
 
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath
+    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
+    dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ne
+    //without FLR
+    //dg::blas1::axpby( 1., y1[0], 1., y0[1]);
+    //with FLR
+    feltor.initialni(y0[0],y0[1]);    
 
-    
-    dg::blas1::axpby( 1., y1[0], 1., y0[0]);
-    dg::blas1::axpby( 1., y1[0], 1., y0[1]);
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 //     dg::blas1::pointwiseDot(rolkar.dampout(),y0[1],y0[1]); //is damping on bath
