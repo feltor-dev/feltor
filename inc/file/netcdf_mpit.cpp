@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <mpi.h>
-#include "netcdf_par.h"
+#include <netcdf_par.h>
 #include <cmath>
 
 #include "dg/algorithm.h"
