@@ -3,8 +3,8 @@
             * Input-File for "TOEFL" & "TOEFL-R" Code *
             -------------------------------------------
 
-1) # of rows                  = 1
-2) # of cols                  = 6 
-3) box width (in pixel)       = 150
-4) box height(in pixel)       = 600
+1) # of rows                  = 6
+2) draw every                 = 2    (th z-plane)
+3) box width (in pixel)       = 200
+4) box height(in pixel)       = 200
 5) output frame               = 2

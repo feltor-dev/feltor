@@ -131,10 +131,10 @@ struct DZ< MPI_Matrix, MPI_Vector>
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {            
-            if      (yp[0][i] < g.x0()-g.hx()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[0][i] > g.x1()+g.hx()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[1][i] < g.y0()-g.hy()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[1][i] > g.y1()+g.hy()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
+            if      (yp[0][i] < g.x0()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
+            else if (yp[0][i] > g.x1()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
+            else if (yp[1][i] < g.y0()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
+            else if (yp[1][i] > g.y1()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
             else                         { }
         }
     }

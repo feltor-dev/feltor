@@ -10,12 +10,12 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 
 template <class Matrix, class container>
 struct Vesqr
 {
-    Vesqr( const dg::Grid2d<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::w2d(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
+    Vesqr( const dg::Grid2d<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::weights(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
     const container& operator()( const container& phi)
     {
         dg::blas2::gemv( arakawa.dx(), phi, dx);
@@ -37,7 +37,7 @@ struct Vesqr
 template <class Matrix, class container>
 struct Nonlinearity 
 {
-    Nonlinearity( const dg::Grid2d<double>& grid): dxn( grid.size()), dyn(dxn), dxphi( dxn), dyphi( dyn), logni(dyn), one( grid.size(), 1.), w2d( dg::create::w2d(grid)), arakawa(grid){}
+    Nonlinearity( const dg::Grid2d<double>& grid): dxn( grid.size()), dyn(dxn), dxphi( dxn), dyphi( dyn), logni(dyn), one( grid.size(), 1.), w2d( dg::create::weights(grid)), arakawa(grid){}
     const container& operator()( const container& ni, const container& phi)
     {
         thrust::transform( ni.begin(), ni.end(), logni.begin(), dg::LN<double>());
@@ -86,7 +86,7 @@ int main( int argc, char* argv[])
     p.display();
     dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual), input2( visual);
-    dg::HVec w2d = dg::create::w2d( grid);
+    dg::HVec w2d = dg::create::weights( grid);
     dg::HMatrix equi = dg::create::backscatter( grid);
     dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed);
     draw::ColorMapRedBlueExt colors( 1.);

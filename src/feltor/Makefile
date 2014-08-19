@@ -45,11 +45,13 @@ ifeq ($(strip $(system)),vsc)
 INCLUDE += -I$(HOME)/include
 INCLUDE += -I/opt/sw/hdf5/1.8.11/include
 INCLUDE += -I/opt/intel/impi/4.1.0/include64 
+INCLUDE += -I/opt/sw/netcdf/4.0.1/intel-hdf5/include
 CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
 
 LIBS 	 = -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
 LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
 LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
+LIBS    += -L/opt/sw/netcdf/4.0.1/intel-hdf5/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
@@ -79,7 +81,7 @@ geometry_t: geometry_t.cu geometry.h
 generator: generator.cpp 
 	g++ generator.cpp -o generator -std=c++0x -Wall
 
-.PHONY: clean
+.PHONY: clean doc
 
 doc: 
 	doxygen Doxyfile

@@ -5,6 +5,7 @@
 #include "xspacelib.cuh"
 #include "matrix_traits_thrust.h"
 
+//STILL WORKS WITH NEW DATA LAYOUT??
 namespace dg{
 namespace create{
 ///@cond

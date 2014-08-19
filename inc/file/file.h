@@ -364,7 +364,7 @@ struct T5rdonly
         hsize_t size[rank]; //get dataset size
         status_ = H5LTget_dataset_info( group, name, size, NULL, NULL);
         unsigned number =1;
-        for( unsigned i=0; i<rank; i++)
+        for( int i=0; i<rank; i++)
             number*= size[i];
         field.resize(number);
         status_ = H5LTread_dataset_double( group, name, &field[0] );

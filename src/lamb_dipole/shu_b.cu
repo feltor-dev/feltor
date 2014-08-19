@@ -4,13 +4,14 @@
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
-#include "dg/evaluation.cuh"
-#include "dg/rk.cuh"
-#include "dg/karniadakis.cuh"
-#include "dg/xspacelib.cuh"
-#include "dg/typedefs.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/functors.h"
+#include "dg/backend/evaluation.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/runge_kutta.h"
+#include "dg/multistep.h"
+#include "dg/helmholtz.h"
+#include "dg/backend/typedefs.cuh"
 
 #include "draw/host_window.h"
 
@@ -42,7 +43,7 @@ int main()
         return -1;
     }
     Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    DVec w2d( create::w2d(grid));
+    DVec w2d( create::weights(grid));
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
     std::stringstream title;
@@ -85,7 +86,7 @@ int main()
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
-    dg::DMatrix equidistant = dg::create::backscatter( grid, XSPACE );
+    dg::DMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( shu, diffusion, y0, p.dt);
     ab( shu, diffusion, y0); //make potential ready

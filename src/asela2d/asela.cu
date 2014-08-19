@@ -4,10 +4,13 @@
 #include <sstream>
 
 #include "draw/host_window.h"
+//#include "draw/device_window.cuh"
 
-#include "turbulence.cuh"
-#include "dg/karniadakis.cuh"
-#include "dg/timer.cuh"
+#include "asela.cuh"
+
+#include "dg/runge_kutta.h"
+#include "dg/multistep.h"
+#include "dg/backend/timer.cuh"
 #include "file/read_input.h"
 #include "parameters.h"
 
@@ -19,14 +22,19 @@
 
 const unsigned k = 3; //!< a change of k needs a recompilation!
 
+double aparallel( double x, double y)
+{
+    return 0.1/cosh(x)/cosh(x)*cos(1./8.*y);
+}
+
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
     std::vector<double> v, v2;
+    std::stringstream title;
     if( argc == 1)
     {
-
-        try{v = file::read_input("input.txt");}catch( toefl::Message& m){m.display();}
+        v = file::read_input("input.txt");
     }
     else if( argc == 2)
     {
@@ -39,54 +47,46 @@ int main( int argc, char* argv[])
     }
 
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow * w = draw::glfwInitAndCreateWindow( v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render( v2[1], v2[2]);
-    std::stringstream title;
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[2]*v2[3], v2[1]*v2[4], "");
+    draw::RenderHostData render(v2[1], v2[2]);
     /////////////////////////////////////////////////////////////////////////
-    const Parameters p( v);
+    const eule::Parameters p( v);
     p.display( std::cout);
-    if( p.k != k)
-    {
-        std::cerr << "ERROR: k doesn't match: "<<k<<" vs. "<<p.k<<"\n";
-        return -1;
-    }
 
-    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    grid.display();
+    dg::Grid2d<double > grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bcx, p.bcy);
     //create RHS 
-    dg::Turbulence< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.gradient, p.d); 
+    eule::Asela< dg::DVec > asela( grid, p); 
+    eule::Diffusion<dg::DVec> diffusion( grid, p.nu, 1., 1. );
     //create initial vector
-    dg::Gaussian gaussian( 0.25*p.posX*grid.lx(), 0.5*p.posY*grid.ly(), p.sigma, p.sigma, 100*p.n0); //gaussian width is in absolute values
-    dg::Vortex vortex( p.posX*grid.lx(), p.posY*grid.ly(), 0, p.sigma, p.n0);
-    dg::Vortex vortex2( p.posX*grid.lx(), 0.5*p.posY*grid.ly(), 0, p.sigma, p.n0);
-    std::vector<dg::DVec> y0(2, dg::evaluate( gaussian, grid)), y1(y0); // n_e' = gaussian
-    dg::DVec vor2 = dg::evaluate( vortex, grid);
-    dg::blas1::axpby( 1., vor2, 1., y0[0]);
+    std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); // n_e' = gaussian
+    y0[2] = y0[3] = dg::evaluate( aparallel, grid);
+    dg::DVec temp( y0[2]);
+    dg::blas2::gemv( diffusion.laplacianM(), y0[2], temp); //u_e = \Delta A_parallel
+    dg::blas1::axpby( p.dhat[0]*p.dhat[0], temp, 1., y0[2]);//w_e = \Delta A + beta/mue A
+   
+    asela.log( y0, y0, 2); //transform to logarithmic values
 
-    dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' 
-    dg::blas2::symv( (dg::DVec)dg::create::v2d( grid), y0[1], y0[1]);
-
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, grid.size(), 1e-9);
-    dg::Diffusion< dg::DVec> diff( grid, p.nu);
+    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
 
     dg::DVec dvisual( grid.size(), 0.);
-    const dg::DVec gradient =  dg::evaluate( dg::LinearY( -p.gradient, p.gradient*grid.ly()/2.), grid);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( test, diff, y0, p.dt);
-    ab( test, diff, y0);
+    //ab.init( asela, y0, p.dt);
+    ab.init( asela, diffusion, y0, p.dt);
+    //ab( asela, y0, y1, p.dt);
+    //y0.swap( y1); 
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    while (!glfwWindowShouldClose(w))
+    while ( !glfwWindowShouldClose( w ))
     {
-        //transform field to an equidistant grid
-        dvisual = ab.last()[0];
-        dg::blas1::axpby( 1., dvisual, 1., gradient, dvisual);
+        asela.exp( y0, y1, 2);
+
+        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -97,72 +97,63 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
 
-        //transform field to an equidistant grid
-        dg::blas1::axpby( 1., test.potential()[0], -0., test.potential()[1], dvisual);
-        //dg::blas2::gemv( test.polarisationM(), test.potential()[0], dvisual);
-        //dvisual = y0[1];
-        //dg::blas1::axpby( 1., dvisual, 1., gradient, dvisual);
+        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1));
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw ions
         title << std::setprecision(2) << std::scientific;
-        title <<"potential / "<<colors.scale()<<"\t";
+        title <<"ni / "<<colors.scale()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
 
-        //transform field to an equidistant grid
-        test.arakawa().bracket( test.potential()[0], test.potential()[0], dvisual);
+        dvisual = asela.potential()[0];
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw ions
-        title << std::setprecision(2) << std::scientific;
-        title <<"v_E^2 / "<<colors.scale()<<"\t";
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-
-
-        //transform field to an equidistant grid
-        //test.arakawa().bracket( y0[1], test.potential()[0], dvisual);
-        dg::blas2::gemv( test.arakawa().dy(), test.potential()[0], dvisual);
-        hvisual = dvisual;
-        dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw ions
-        title << std::setprecision(2) << std::scientific;
-        title <<"dy phi / "<<colors.scale()<<"\t";
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-
-
-        //transform field to an equidistant grid
-        dg::blas2::gemv( test.arakawa().dx(), test.potential()[0], dvisual);
-        //dg::blas1::axpby( 1., gradient, 1., y0[1]);
-        //dg::blas1::pointwiseDot( dvisual, y0[1], dvisual);
-        hvisual = dvisual;
-        dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw ions
-        title << std::setprecision(2) << std::scientific;
-        title <<"dx phi / "<<colors.scale()<<"\t";
+        //draw phi and swap buffers
+        title <<"Potential / "<<colors.scale()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
 
         //transform phi
-        dg::blas2::gemv( test.polarisationM(), test.potential()[0], dvisual);
-        //dg::blas1::axpby(1, test.potential()[0], 0, dvisual);
+        dg::blas2::gemv( asela.laplacianM(), asela.potential()[0], dvisual);
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        title <<"div( Ngrad phi) / "<<colors.scale()<<"\t";
+        //draw phi and swap buffers
+        title <<"omega / "<<colors.scale()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+
+        //transform Aparallel
+        dvisual = asela.aparallel();
+        hvisual = dvisual;
+        dg::blas2::gemv( equi, hvisual, visual);
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw phi and swap buffers
+        title <<"Aparallel / "<<colors.scale()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+
+        //transform Aparallel
+        dg::blas2::gemv( asela.laplacianM(), asela.aparallel(), dvisual);
+        hvisual = dvisual;
+        dg::blas2::gemv( equi, hvisual, visual);
+        //compute the color scale
+        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+        //draw phi and swap buffers
+        title <<"Jpar / "<<colors.scale()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
+
         title << std::fixed; 
         title << " &&   time = "<<time;
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        glfwSetWindowTitle( w, title.str().c_str());
+        glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
         glfwPollEvents();
         glfwSwapBuffers( w);
@@ -174,13 +165,14 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
-            try{ ab( test, diff, y0);}
+            try{ ab( asela, diffusion, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose(w, GL_TRUE);
+                glfwSetWindowShouldClose( w, GL_TRUE);
                 break;
             }
+            //y0.swap( y1); //attention on -O3 ?
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

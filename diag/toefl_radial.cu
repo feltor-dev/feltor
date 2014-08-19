@@ -7,7 +7,7 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 //#include "lamb_dipole/parameters.h"
 
 //t2s10a020 50, 100, 150, 200, 250 posX und posY_max

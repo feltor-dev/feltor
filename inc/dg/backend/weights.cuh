@@ -11,7 +11,7 @@
 
 namespace dg{
 namespace create{
-
+    
 ///@cond
 /**
 * @brief create host_vector containing 1d X-space abscissas 
@@ -36,6 +36,7 @@ thrust::host_vector<T> abscissas( const Grid1d<T>& g)
     return v;
 }
 ///@endcond
+
 
 ///@addtogroup highlevel
 ///@{

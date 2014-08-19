@@ -1,14 +1,11 @@
 #ifndef _DG_TOEFLR_CUH
 #define _DG_TOEFLR_CUH
 
-#include <exception>
-
-#include "dg/xspacelib.cuh"
-#include "dg/cg.cuh"
-#include "dg/gamma.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/algorithm.h"
 
 #ifdef DG_BENCHMARK
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh"
 #endif
 
 
@@ -18,15 +15,6 @@
 
 namespace dg
 {
-struct Fail : public std::exception
-{
-
-    Fail( double eps): eps( eps) {}
-    double epsilon() const { return eps;}
-    char const* what() const throw(){ return "Failed to converge";}
-  private:
-    double eps;
-};
 
 template< class container=thrust::device_vector<double> >
 struct ToeflI
@@ -37,7 +25,6 @@ struct ToeflI
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
     //typedef in ArakawaX ??
-    typedef Gamma<Matrix, container> Operator;
 
     /**
      * @brief Construct a ToeflI solver object
@@ -49,7 +36,7 @@ struct ToeflI
      * @param eps_pol stopping criterion for polarization equation
      * @param eps_gamma stopping criterion for Gamma operator
      */
-    ToeflI( const Grid<value_type>& g, double kappa, double nu, double tau, double a_z, double mu_z, double tau_z, double eps_pol, double eps_gamma);
+    ToeflI( const Grid2d<value_type>& g, double kappa, double nu, double tau, double a_z, double mu_z, double tau_z, double eps_pol, double eps_gamma);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -89,7 +76,7 @@ struct ToeflI
      *
      * @return Gamma operator
      */
-    Operator& gamma() {return gamma1;}
+    Helmholtz<Matrix, container, container>& gamma() {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -97,7 +84,7 @@ struct ToeflI
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -126,9 +113,9 @@ struct ToeflI
 
   private:
     //use chi and omega as helpers to compute square velocity in omega
-    const container& compute_vesqr( const container& potential);
+    const container& compute_vesqr( container& potential);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
-    const container& compute_psi( const container& potential, int idx);
+    const container& compute_psi( container& potential, int idx);
     const container& polarization( const std::vector<container>& y);
 
     container chi, omega;
@@ -141,8 +128,8 @@ struct ToeflI
     //matrices and solvers
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
-    Gamma< Matrix, container > gamma1;
-    ArakawaX< container> arakawa; 
+    Helmholtz< Matrix, container, container > gamma1;
+    ArakawaX< Matrix, container> arakawa; 
     Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
 
@@ -156,17 +143,17 @@ struct ToeflI
 };
 
 template< class container>
-ToeflI< container>::ToeflI( const Grid<value_type>& grid, double kappa, double nu, double tau_i, double a_z, double mu_z, double tau_z,  double eps_pol, double eps_gamma ): 
+ToeflI< container>::ToeflI( const Grid2d<value_type>& grid, double kappa, double nu, double tau_i, double a_z, double mu_z, double tau_z,  double eps_pol, double eps_gamma ): 
     chi( grid.size(), 0.), omega(chi),  
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 3, chi), phi_old( phi), dyphi( phi),
     gamma_n( 2, chi), gamma_old( gamma_n),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  laplaceM, w2d, -0.5*tau_i),
+    gamma1(  grid, -0.5*tau_i),
     arakawa( grid), 
     pol(     grid), 
     pcg( omega, omega.size()), 
-    w2d( create::w2d(grid)), v2d( create::v2d(grid)), one( grid.size(), 1.),
+    w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu)
 {
     tau_[0] = -1; 
@@ -180,13 +167,13 @@ ToeflI< container>::ToeflI( const Grid<value_type>& grid, double kappa, double n
     //std::cout << tau_[0]<<" "<<tau_[1]<<" "<<tau_[2]<<"\n";
     //std::cin >> tau_z;
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed, dg::XSPACE, dg::symmetric); //doesn't hurt to be symmetric but doesn't solve pb
-    A = create::laplacianM( grid, not_normed, dg::XSPACE, dg::symmetric);
+    laplaceM = create::laplacianM( grid, normed, dg::symmetric); //doesn't hurt to be symmetric but doesn't solve pb
+    A = create::laplacianM( grid, not_normed, dg::symmetric);
 
 }
 
 template< class container>
-const container& ToeflI<container>::compute_vesqr( const container& potential)
+const container& ToeflI<container>::compute_vesqr( container& potential)
 {
     blas2::gemv( arakawa.dx(), potential, chi);
     blas2::gemv( arakawa.dy(), potential, omega);
@@ -200,7 +187,7 @@ const container& ToeflI<container>::compute_vesqr( const container& potential)
 
 //idx is impurity species one or two
 template< class container>
-const container& ToeflI<container>::compute_psi( const container& potential, int idx)
+const container& ToeflI<container>::compute_psi( container& potential, int idx)
 {
     //compute Gamma phi[0]
     blas1::axpby( 2., phi[idx], -1.,  phi_old[idx]);
@@ -289,7 +276,7 @@ const container& ToeflI< container>::polarization( const std::vector<container>&
 }
 
 template< class container>
-void ToeflI< container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void ToeflI< container>::operator()(std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 3);
     assert( y.size() == yp.size());
