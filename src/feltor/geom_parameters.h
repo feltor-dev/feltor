@@ -13,7 +13,22 @@ namespace solovev
  */    
 struct GeomParameters
 {
-    double A,R_0,psipmin,psipmax,a, elongation,triangularity,alpha,lnN_inner,k_psi,rk4eps, boxscale,nprofileamp,bgprofamp,psipmaxcut,psipmaxlap;
+    double A,
+           R_0,
+           psipmin,
+           psipmax,
+           a, 
+           elongation,
+           triangularity,
+           alpha,
+           lnN_inner,
+           k_psi,
+           rk4eps, 
+           boxscale,
+           nprofileamp,
+           bgprofamp,
+           psipmaxcut,
+           psipmaxlap;
     std::vector<double> c; 
      /**
      * @brief constructor to make a const object

@@ -9,6 +9,7 @@
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
+#include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
@@ -32,9 +33,9 @@ int main( int argc, char* argv[])
     //Parameter initialisation
     std::vector<double> v,v3;
     std::string input, geom;
-    if( argc != 3)
+    if( argc != 4)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
         return -1;
     }
     else 
@@ -46,24 +47,26 @@ int main( int argc, char* argv[])
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
-    try{ v3 = file::read_input( "geometry_params.txt"); }
+    try{ v3 = file::read_input( argv[2]); }
     catch (toefl::Message& m) {  m.display(); 
-    geom = file::read_file( "geometry_params.txt");
-    std::cout << geom << std::endl;
+        geom = file::read_file( argv[2]);
+        std::cout << geom << std::endl;
         for( unsigned i = 0; i<v.size(); i++)
-        return -1;}
+        return -1;
+    }
 
-     const solovev::GeomParameters gp(v3);
+    const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     double Rmin=gp.R_0-(gp.boxscale)*gp.a;
     double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
     double Zmax=(gp.boxscale)*gp.a*gp.elongation;
-    //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cartesian);  
+    //Make grids
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
      
     //create RHS 
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     //The initial field
@@ -82,25 +85,22 @@ int main( int argc, char* argv[])
     feltor.initializene(y0[1],y0[0]);    
     feltor.log( y0, y0, 2); 
 
-
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
-    //transform to logarithmic values (ne and ni)
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
     double time = 0;
     unsigned step = 0;
 
-    /////////////////////////////set up hdf5/////////////////////////////////
-    //file::T5trunc t5file( argv[2], input);
+    /////////////////////////////set up netcdf//////////////////////////////
     file::NC_Error_Handle h;
     int ncid;
     h = nc_create( argv[2], NC_CLOBBER, &ncid);
     h = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     h = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
-    h = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    h = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
 
     std::vector<std::string> names(6); 
     int dataIDs[names.size()];
@@ -114,18 +114,23 @@ int main( int argc, char* argv[])
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
     size_t start[4] = {0, 0, 0, 0};
+    dg::DVec transfer(  dg::evaluate(dg::zero, grid));
+    dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     feltor.exp( y0,y0,2); //transform to correct values
-    dg::HVec output;
     for( unsigned i=0; i<4; i++)
     {
-        output = y0[i];//transfer to host
-        h = nc_put_vara_double( ncid, dataIDs[i], start, count, output.data() );
+        dg::blas2::symv( interpolate, y0[i], transferD);
+        transferH = transferD;//transfer to host
+        h = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
-    output = feltor.potential()[0];
-    h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
+    transfer = feltor.potential()[0];
+    dg::blas2::symv( interpolate, transfer, transferD);
+    transferH = transferD;//transfer to host
+    h = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+    h = nc_put_vara_double( ncid, tvarID, start, count, &time);
     h = nc_close(ncid);
-  
-    //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
     ///////////////////////////////////////Timeloop/////////////////////////////////
     double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
 
@@ -151,7 +156,6 @@ int main( int argc, char* argv[])
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 break;
             }
-            //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
         }
         time += p.itstp*p.dt;
         start[0] = i;
@@ -160,11 +164,14 @@ int main( int argc, char* argv[])
 
         for( unsigned j=0; j<4; j++)
         {
-            output = y0[j];//transfer to host
-            h = nc_put_vara_double( ncid, dataIDs[j], start, count, output.data());
+            dg::blas2::symv( interpolate, y0[j], transferD);
+            transferH = transferD;//transfer to host
+            h = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        output = feltor.potential()[0];
-        h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
+        transfer = feltor.potential()[0];
+        dg::blas2::symv( interpolate, transfer, transferD);
+        transferH = transferD;//transfer to host
+        h = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         //write time data
         h = nc_put_vara_double( ncid, tvarID, start, count, &time);
         E1 = feltor.energy()/energy0;

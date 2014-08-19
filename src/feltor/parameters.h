@@ -27,6 +27,7 @@ struct Parameters
     double amp_source;
     double m_par;
 
+    unsigned n_out, Nx_out, Ny_out, Nz_out; 
     unsigned itstp; 
     unsigned maxout;
 
@@ -67,11 +68,15 @@ struct Parameters
             posX = v[22];
             posY = v[23];
             m_par = v[24];
-            itstp = v[25];
-            maxout = v[26];
-            damping_width    = v[27];
-            damping_strength = v[28];
-            amp_source = v[29];
+            damping_width    = v[25];
+            damping_strength = v[26];
+            amp_source = v[27];
+            n_out = v[28];
+            Nx_out = v[29];
+            Ny_out = v[30];
+            Nz_out = v[31];
+            itstp = v[32];
+            maxout = v[33];
         }
     }
     /**
@@ -108,9 +113,14 @@ struct Parameters
             << "    posY:         "<<posY<<"\n";
         os << "Stopping for Polar CG:   "<<eps_pol<<"\n"
             <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
-            <<"Stopping for Time  CG:   "<<eps_time<<"\n"
+            <<"Stopping for Time  CG:   "<<eps_time<<"\n";
+        os << "Output parameters are: \n"
             <<"Steps between output:    "<<itstp<<"\n"
-            <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
+            <<"Number of outputs:       "<<maxout<<"\n"
+            <<"    n_out  = "<<n_out<<"\n"
+            <<"    Nx_out = "<<Nx_out<<"\n"
+            <<"    Ny_out = "<<Ny_out<<"\n"
+            <<"    Nz_out = "<<Nz_out<<std::endl; //the endl is for the implicit flush 
     }
     private:
     int layout_;

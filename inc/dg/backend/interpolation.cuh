@@ -116,13 +116,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector given in XSPACE to the points in XSPACE
+ * Transforms from a vector defined on the grid to the given points 
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param y Z-coordinates of interpolation points
  * @param g The Grid on which to operate
  *
  * @return interpolation matrix
+ * @note The values of x, y and z must lie within the boundaries of g
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const Grid3d<double>& g)
 {
@@ -187,5 +188,35 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     return B;
 }
 
+/**
+ * @brief Create interpolation between two grids
+ *
+ * This matrix can be applied to vectors defined on the old grid to obtain
+ * its values on the new grid.
+ * 
+ * @param g_new The new points 
+ * @param g_old The old grid
+ *
+ * @return Interpolation matrix
+ * @note Both grids need to have the same boundary values in order to succeed
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<double>& g_new, const Grid3d<double>& g_old)
+{
+    //assert both grids are on the same box
+    assert( g_new.x0() == g_old.x0());
+    assert( g_new.x1() == g_old.x1());
+    assert( g_new.y0() == g_old.y0());
+    assert( g_new.y1() == g_old.y1());
+    assert( g_new.z0() == g_old.z0());
+    assert( g_new.z1() == g_old.z1());
+    dg::Grid1d<double> gx( g_new.x0(), g_new.x1(), g_new.n(), g_new.Nx());
+    dg::Grid1d<double> gy( g_new.y0(), g_new.y1(), g_new.n(), g_new.Ny());
+    dg::Grid1d<double> gz( g_new.z0(), g_new.z1(), 1, g_new.Nz());
+    thrust::host_vector<double> pointsX = dg::create::abscissas( gx);
+    thrust::host_vector<double> pointsY = dg::create::abscissas( gy);
+    thrust::host_vector<double> pointsZ = dg::create::abscissas( gz);
+    return interpolation( pointsX, pointsY, pointsZ, g_old);
+
+}
 }//namespace create
 } //namespace dg

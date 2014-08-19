@@ -25,7 +25,7 @@ read_input_t: read_input_t.cpp read_input.h
 
 
 netcdf_t: netcdf_t.cpp nc_utilities.h
-	$(CXX) $< -o $@ $(CFLAGS) $(INCLUDE) $(LIBS) 
+	$(CXX) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS) 
 
 netcdf_mpit: netcdf_mpit.cpp nc_utilities.h
 	$(MPICXX) $< -o $@ $(CFLAGS) $(INCLUDE) $(LIBS) 

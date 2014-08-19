@@ -44,11 +44,15 @@
 
 ------------------Miscellaneous----------------------------
 
-25) itstp (steps between output)            = 100     (5)
-26) # of outputs (excluding first)          = 100
-27) Damping zone thickness (in units of rho_s)  = 20 
-28) Damping zone strength                   = 1e-3
-29) particle source amplitude               = 0.0
+25) Damping zone thickness (in units of rho_s)  = 20 
+26) Damping zone strength                   = 1e-3
+27) particle source amplitude               = 0.0
+28) n_out (# of x-y polynomials in output)  = 3
+29) nx_out (# grid points in output field)  = 30
+30) ny_out (# grid points in output field)  = 30
+31) nz_out (# grid points in output field)  = 10
+32) itstp  (steps between outputs)          = 100     (5)
+33) total # of outputs (excluding first)    = 100
 
 
 @ ------------------------------------------------------------
