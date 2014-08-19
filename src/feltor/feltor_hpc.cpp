@@ -115,7 +115,7 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle h;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    h = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);
+    h = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);
     h = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     h = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());
     int dimids[4], tvarID;
@@ -182,7 +182,7 @@ int main( int argc, char* argv[])
         time += p.itstp*p.dt;
         start[0] = i;
         feltor.exp( y0,y0,2); //transform to correct values
-        h = nc_open( argv[2], NC_WRITE, &ncid);
+        h = nc_open( argv[3], NC_WRITE, &ncid);
         for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j].data(), transferH.data());

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "grid.h"
+#include "evaluation.cuh"
+#include "functions.h"
 #include "creation.cuh"
 #include "tensor.cuh"
 #include "operator_tensor.cuh"
@@ -209,12 +211,9 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
     assert( g_new.y1() == g_old.y1());
     assert( g_new.z0() == g_old.z0());
     assert( g_new.z1() == g_old.z1());
-    dg::Grid1d<double> gx( g_new.x0(), g_new.x1(), g_new.n(), g_new.Nx());
-    dg::Grid1d<double> gy( g_new.y0(), g_new.y1(), g_new.n(), g_new.Ny());
-    dg::Grid1d<double> gz( g_new.z0(), g_new.z1(), 1, g_new.Nz());
-    thrust::host_vector<double> pointsX = dg::create::abscissas( gx);
-    thrust::host_vector<double> pointsY = dg::create::abscissas( gy);
-    thrust::host_vector<double> pointsZ = dg::create::abscissas( gz);
+    thrust::host_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
+    thrust::host_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
+    thrust::host_vector<double> pointsZ = dg::evaluate( dg::coo3, g_new);
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }

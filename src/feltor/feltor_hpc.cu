@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
     /////////////////////////////set up netcdf//////////////////////////////
     file::NC_Error_Handle h;
     int ncid;
-    h = nc_create( argv[2], NC_CLOBBER, &ncid);
+    h = nc_create( argv[3], NC_CLOBBER, &ncid);
     h = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     h = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
@@ -112,7 +112,7 @@ int main( int argc, char* argv[])
     nc_def_var( ncid, names[5].data(), NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
     h = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
-    size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[4] = {0, 0, 0, 0};
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
@@ -160,7 +160,7 @@ int main( int argc, char* argv[])
         time += p.itstp*p.dt;
         start[0] = i;
         feltor.exp( y0,y0,2); //transform to correct values
-        h = nc_open(argv[2], NC_WRITE, &ncid);
+        h = nc_open(argv[3], NC_WRITE, &ncid);
 
         for( unsigned j=0; j<4; j++)
         {
