@@ -182,7 +182,7 @@ int main( int argc, char* argv[])
         time += p.itstp*p.dt;
         start[0] = i;
         feltor.exp( y0,y0,2); //transform to correct values
-        h = nc_open( argv[2], NC_WRITE, &ncid);
+        h = nc_open( argv[3], NC_WRITE, &ncid);
         for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j].data(), transferH.data());
