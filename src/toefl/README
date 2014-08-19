@@ -1,0 +1,4 @@
+project description: 2d global blobs. This code produced results for the paper
+"Radial convection of finite ion temperature, high amplitude plasma blobs"
+
+Problems: Old file format. Invert class and Elliptic class not used. 

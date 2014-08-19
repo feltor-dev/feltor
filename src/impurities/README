@@ -1,0 +1,5 @@
+Project description: 2d blobs with impurities
+
+Problems: The file output is still the
+old hdf5 file.h format and the inversion of the matrices should be 
+changed to the invert class. 
