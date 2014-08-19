@@ -11,7 +11,7 @@
 #include "file/file.h"
 #include "dg/backend/timer.cuh"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 
 
 //read and evaluate TOEFL & INNTO h5 files
@@ -26,7 +26,7 @@ void log( const container& y, container& target)
 template <class Matrix, class container>
 struct Vesqr
 {
-    Vesqr( const dg::Grid2d<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::w2d(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
+    Vesqr( const dg::Grid2d<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::weights(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
     const container& operator()( const container& phi)
     {
         dg::blas2::gemv( arakawa.dx(), phi, dx);
@@ -85,7 +85,7 @@ int main( int argc, char* argv[])
     dg::HVec xvec = dg::evaluate( X, grid);
     dg::HVec yvec = dg::evaluate( Y, grid);
     dg::HVec one = dg::evaluate( dg::one, grid);
-    dg::HVec w2d = dg::create::w2d( grid);
+    dg::HVec w2d = dg::create::weights( grid);
     dg::HMatrix equi = dg::create::backscatter( grid);
 
     t5file.get_field( input0, "electrons", 1);

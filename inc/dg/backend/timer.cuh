@@ -34,6 +34,7 @@ class Timer
 };
 #else //MPI_VERSION
 
+#include <sys/time.h>
 /*! @brief Very simple tool for performance measuring
  * @ingroup utilities
  */
