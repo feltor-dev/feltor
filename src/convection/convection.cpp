@@ -7,7 +7,6 @@
 #include "toefl/toefl.h"
 #include "file/read_input.h"
 #include "draw/host_window.h"
-//#include "utility.h"
 #include "convection_solver.h"
 
 using namespace std;

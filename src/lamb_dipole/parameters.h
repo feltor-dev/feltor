@@ -1,6 +1,6 @@
 #ifndef _SHU_PARAMETERS_
 #define _SHU_PARAMETERS_
-#include "dg/grid.cuh"
+#include "dg/backend/grid.h"
 
 /**
  * @brief Provide a mapping between input file and named parameters

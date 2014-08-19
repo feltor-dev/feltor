@@ -2,6 +2,7 @@
 #define _DG_FUNCTORS_CUH_
 
 #include <cmath>
+#include <vector>
 #include <thrust/random/linear_congruential_engine.h>
 #include <thrust/random/uniform_real_distribution.h>
 #include <thrust/random/normal_distribution.h>
