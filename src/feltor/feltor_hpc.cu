@@ -42,7 +42,7 @@ int main( int argc, char* argv[])
         v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const Parameters p( v);
+    const eule::Parameters p( v);
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////

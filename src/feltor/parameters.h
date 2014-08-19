@@ -1,6 +1,7 @@
 #pragma once
 #include "dg/enums.h"
 
+namespace eule{
 /**
  * @brief Provide a mapping between input file and named parameters
  */
@@ -158,6 +159,8 @@ struct Parameters
         os <<"\n";
     }
 };
+
+}//namespace eule
 
 
     

@@ -81,7 +81,7 @@ geometry_t: geometry_t.cu geometry.h
 generator: generator.cpp 
 	g++ generator.cpp -o generator -std=c++0x -Wall
 
-.PHONY: clean
+.PHONY: clean doc
 
 doc: 
 	doxygen Doxyfile
