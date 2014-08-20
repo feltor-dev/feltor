@@ -41,9 +41,9 @@ int main( int argc, char* argv[])
     if(rank==0)
     {
         std::cin>> np[0] >> np[1] >>np[2];
-        std::cout << "Computing with "<<np[0]<<np[1]<<np[2]<<std::endl;
+        std::cout << "Computing with "<<np[0]<<" "<<np[1]<<" "<<np[2]<<std::endl;
         std::cout << "Size is "<<size<<std::endl;
-        if(rank==0)assert( size == np[0]*np[1]*np[2]);
+        assert( size == np[0]*np[1]*np[2]);
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm comm;
@@ -73,7 +73,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     const solovev::GeomParameters gp(v3);
-    gp.display( std::cout);
+    if(rank==0) gp.display( std::cout);
     double Rmin=gp.R_0-(gp.boxscale)*gp.a;
     double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
@@ -212,9 +212,9 @@ int main( int argc, char* argv[])
     unsigned hour = (unsigned)floor(t.diff()/3600);
     unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
     double second = t.diff() - hour*3600 - minute*60;
-    std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
-    std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
-    std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+    if(rank==0)std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
+    if(rank==0)std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
+    if(rank==0)std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
     h = nc_close(ncid);
     MPI_Finalize();
 

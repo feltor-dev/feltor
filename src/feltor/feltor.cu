@@ -18,7 +18,7 @@
 
 /*
    - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
+   - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 

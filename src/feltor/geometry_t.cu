@@ -11,6 +11,7 @@
 #include "draw/host_window.h"
 
 #include "geometry.h"
+#include "init.h"
 
 int main()
 {

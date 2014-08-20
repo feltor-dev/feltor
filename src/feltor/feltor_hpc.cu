@@ -94,13 +94,28 @@ int main( int argc, char* argv[])
     unsigned step = 0;
 
     /////////////////////////////set up netcdf//////////////////////////////
-    file::NC_Error_Handle h;
+    file::NC_Error_Handle err;
     int ncid;
-    h = nc_create( argv[3], NC_CLOBBER, &ncid);
-    h = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    h = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
+    err = nc_create( argv[3], NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
-    h = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    solovev::FieldR fieldR(gp);
+    solovev::FieldZ fieldZ(gp);
+    solovev::FieldP fieldP(gp);
+    dg::HVec vecR = dg::evaluate( fieldR, grid_out);
+    dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
+    dg::HVec vecP = dg::evaluate( fieldP, grid_out);
+    int vecID[3];
+    err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim_ids[1], &vecID[0]);
+    err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim_ids[1], &vecID[1]);
+    err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim_ids[1], &vecID[2]);
+    err = nc_enddef( ncid);
+    err = nc_put_var_double( ncid, vecID[0], vecR.data());
+    err = nc_put_var_double( ncid, vecID[1], vecZ.data());
+    err = nc_put_var_double( ncid, vecID[2], vecP.data());
+    err = nc_redef(ncid);
 
     std::vector<std::string> names(6); 
     int dataIDs[names.size()];
@@ -108,9 +123,9 @@ int main( int argc, char* argv[])
     names[4] = "potential"; 
     names[5] = "energy";
     for( unsigned i=0; i<names.size()-1; i++){
-        h = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
+        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
     nc_def_var( ncid, names[5].data(), NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
-    h = nc_enddef(ncid);
+    err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[4] = {0, 0, 0, 0};
@@ -123,14 +138,14 @@ int main( int argc, char* argv[])
     {
         dg::blas2::symv( interpolate, y0[i], transferD);
         transferH = transferD;//transfer to host
-        h = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transfer = feltor.potential()[0];
     dg::blas2::symv( interpolate, transfer, transferD);
     transferH = transferD;//transfer to host
-    h = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-    h = nc_put_vara_double( ncid, tvarID, start, count, &time);
-    h = nc_close(ncid);
+    err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
     double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
 
@@ -160,24 +175,24 @@ int main( int argc, char* argv[])
         time += p.itstp*p.dt;
         start[0] = i;
         feltor.exp( y0,y0,2); //transform to correct values
-        h = nc_open(argv[3], NC_WRITE, &ncid);
+        err = nc_open(argv[3], NC_WRITE, &ncid);
 
         for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
             transferH = transferD;//transfer to host
-            h = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
+            err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = feltor.potential()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
         transferH = transferD;//transfer to host
-        h = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         //write time data
-        h = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         E1 = feltor.energy()/energy0;
-        h = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
+        err = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
 
-        h = nc_close(ncid);
+        err = nc_close(ncid);
 #ifdef DG_BENCHMARK
         ti.toc();
         step+=p.itstp;
