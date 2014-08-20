@@ -743,7 +743,7 @@ struct FieldZ
         return  -R_0/R*psipR_(R,Z);
     }
     private:
-    PsipZ  psipR_;
+    PsipR  psipR_;
     double R_0;
    
 };
