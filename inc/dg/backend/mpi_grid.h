@@ -305,11 +305,11 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    //points in the ghost cells layer?
-    //if( x < g.x0() && x > g.x0() - g.hx()) x += g.hx();
-    //if( x > g.x1() && x < g.x1() + g.hx()) x -= g.hx();
-    //if( y < g.y0() && y > g.y0() - g.hy()) y += g.hy();
-    //if( y > g.y1() && y < g.y1() + g.hy()) y -= g.hy();
+    //points in the (outer) ghost cells layer? (note the global grid used)
+    if( x < g.x0() && x > g.x0() - g.hx()) x += g.hx();
+    if( x > g.x1() && x < g.x1() + g.hx()) x -= g.hx();
+    if( y < g.y0() && y > g.y0() - g.hy()) y += g.hy();
+    if( y > g.y1() && y < g.y1() + g.hy()) y -= g.hy();
     coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
     coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
     coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );

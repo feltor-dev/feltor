@@ -8,7 +8,7 @@
 1)  n  (# of x,y-polynomials)            =   3      (3)
 2)  nx (grid points in x)                =   40 (192)
 3)  ny (grid points in y)                =   40 (192)
-4)  nz (grid points in z)                =   16 (16)
+4)  nz (grid points in z)                =   20 (16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------

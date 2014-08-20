@@ -6,10 +6,6 @@
 #include "blas.h"
 #include "elliptic.h"
 
-#ifdef DG_BENCHMARK
-#include "backend/timer.cuh"
-#endif
-
 /*!@file
  *
  * Contains Helmholtz and Maxwell operators
@@ -129,88 +125,6 @@ struct MatrixTraits< const Helmholtz<M, V, P> >
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-///@endcond
-
-///**
-// * @brief Matrix class that represents a Helmholtz-type operator that appears in the parallel induction equation
-// *
-// * @ingroup operators
-// *
-// * Discretization of \f[ (\alpha\Delta + \chi) \f]
-// * can be used by the Invert class
-// * @tparam Matrix The cusp-matrix class you want to use
-// * @tparam container The type of Vector you want to use
-// * @tparam Preconditioner The Preconditioner type
-// */
-//template< class Matrix, class Vector, class Preconditioner>
-//struct Maxwell
-//{
-//    /**
-//     * @brief Construct from existing matrices
-//     *
-//     * Since memory is small on gpus Maxwell can be constructed using an existing laplace operator
-//     * @param laplaceM negative normalised laplacian
-//     * @param weights weights
-//     * @param precon preconditioner
-//     * @param alpha The factor alpha
-//     * @attention The class takes care of the negative sign of laplacianM, so the alpha given is the alpha in the above formula
-//     */
-//    template <class Grid>
-//    Maxwell( const Grid& g, const Matrix& laplaceM, 
-//              const Preconditioner& weights, const Preconditioner& precon, double alpha=1.):         
-//        laplaceM_(laplaceM), chi_(dg::evaluate(dg::one, grid)), temp_(chi_), w2d(weights), v2d(precon),  alpha_(alpha){ }
-//    Maxwell( Elliptic<Matrix, Vector, Preconditioner>& laplaceM, 
-//               const Preconditioner& weights, const Preconditioner& precond, double alpha):
-//        p_(weights), q_(precond), laplaceM_(laplaceM), alpha_( alpha){
-//    /**
-//     * @brief apply Maxwell operator
-//     *
-//     * same as blas2::symv( gamma, x, y);
-//     * \f[ y = W  ( \chi + \alpha\Delta) x \f]
-//     * @param x lhs
-//     * @param y rhs contains solution
-//     * @note Takes care of sign in laplaceM
-//     */
-//    void symv( Vector& x, Vector& y) 
-//    {
-//        blas1::pointwiseDot( chi_, x, temp_);
-//        if( alpha_ != 0);
-//            blas2::symv( laplaceM_, x, y);
-//        blas1::axpby( 1., temp_, -alpha_, y);
-//        blas1::pointwiseDot( w2d, y, y);
-//    }
-//    const Preconditioner& weights()const {return p_;}
-//    const Preconditioner& precond()const {return q_;}
-//    double& alpha( ){  return alpha_;}
-//    double alpha( ) const  {return alpha_;}
-//    /**
-//     * @brief Set chi
-//     *
-//     * @return reference to internal chi
-//     */
-//    Vector& chi(){return chi_;}
-//  private:
-//    const Matrix& laplaceM_;
-//    Vector chi_, temp_;
-//    const Preconditioner& p_, q_;
-//    double alpha_;
-//};
-
-
-///@}
-///@cond
-//template< class M, class V, class P >
-//struct MatrixTraits< Maxwell<M, V, P> >
-//{
-//    typedef double value_type;
-//    typedef SelfMadeMatrixTag matrix_category;
-//};
-//template< class M, class V, class P >
-//struct MatrixTraits< const Maxwell<M, V, P> >
-//{
-//    typedef double value_type;
-//    typedef SelfMadeMatrixTag matrix_category;
-//};
 ///@endcond
 
 
