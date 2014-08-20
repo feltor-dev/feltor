@@ -81,7 +81,7 @@ int main( int argc, char* argv[])
    
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
      dg::MPI_Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical, comm);  
-     dg::MPI_Grid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical, comm);  
+     dg::Grid3d<double> grid_out = dg::create::ghostless_grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, comm);  
      
     //create RHS 
     eule::Feltor< dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p,gp); 
@@ -136,21 +136,21 @@ int main( int argc, char* argv[])
     ///////////////////////////////////first output/////////////////////////
     int dims[3],  coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*(grid_out.Ny()-2), grid_out.n()*(grid_out.Nx()-2)};
+    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
     dg::MVec transferD( dg::evaluate(dg::zero, grid));
-    dg::MVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     //create local interpolation matrix
-    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
+    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out, grid.local()); 
     feltor.exp( y0,y0,2); //transform to correct values
     for( unsigned i=0; i<4; i++)
     {
-        dg::blas2::symv( interpolate, y0[i].data(), transferH.data());
-        h = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.cut_overlap().data() );
+        dg::blas2::symv( interpolate, y0[i].data(), transferH);
+        h = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transferD = feltor.potential()[0];
-    dg::blas2::symv( interpolate, transferD.data(), transferH.data());
-    h = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.cut_overlap().data() );
+    dg::blas2::symv( interpolate, transferD.data(), transferH);
+    h = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data());
     h = nc_put_vara_double( ncid, tvarID, &start[0], &count[0], &time);
     h = nc_close(ncid);
 
@@ -185,12 +185,12 @@ int main( int argc, char* argv[])
         h = nc_open( argv[3], NC_WRITE, &ncid);
         for( unsigned j=0; j<4; j++)
         {
-            dg::blas2::symv( interpolate, y0[j].data(), transferH.data());
-            h = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.cut_overlap().data());
+            dg::blas2::symv( interpolate, y0[j].data(), transferH);
+            h = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transferD = feltor.potential()[0];
-        dg::blas2::symv( interpolate, transferD.data(), transferH.data());
-        h = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.cut_overlap().data() );
+        dg::blas2::symv( interpolate, transferD.data(), transferH);
+        h = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         h = nc_put_vara_double( ncid, tvarID, &start[0], &count[0], &time);
         E1 = feltor.energy()/energy0;
         h = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
