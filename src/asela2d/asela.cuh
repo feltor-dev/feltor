@@ -195,13 +195,13 @@ template< class container>
 void Asela< container>::exp( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
 {
     for( unsigned i=0; i<howmany; i++)
-        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::EXP<value_type>());
+        dg::blas1::transform( y[i], target[i], dg::EXP<value_type>());
 }
 template< class container>
 void Asela< container>::log( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
 {
     for( unsigned i=0; i<howmany; i++)
-        thrust::transform( y[i].begin(), y[i].end(), target[i].begin(), dg::LN<value_type>());
+        dg::blas1::transform( y[i], target[i], dg::LN<value_type>());
 }
 
 

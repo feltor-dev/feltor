@@ -1,10 +1,9 @@
 #include <iostream>
 #include <vector>
+#include <sstream>
 #include "dg/backend/xspacelib.cuh"
 #include "functors.h"
-#include <fstream>
 #include "draw/host_window.h"
-#include <sstream>
 
 // #include "draw/device_window.cuh"
 int main()
@@ -29,7 +28,7 @@ int main()
     dg::HVec hvisual = dg::evaluate( bathRZ, grid);
     //allocate mem for visual
     dg::HVec visual( grid.size());
-    //make equidistant grid from dggrid
+    //make equidistant trafo matrix from dggrid
     dg::HMatrix equigrid = dg::create::backscatter(grid);
     //evaluate on valzues from devicevector on equidistant visual hvisual vector
     dg::blas2::gemv( equigrid, hvisual, visual);
@@ -45,17 +44,18 @@ int main()
 //     colors.scale() =  1.;
     while (!glfwWindowShouldClose( w ))
     {
+
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(),-100., thrust::maximum<double>()  );
         colors.scalemin() = (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax(), thrust::minimum<double>()  );
         title <<"bath / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-               title << std::fixed; 
+        title << std::fixed; 
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
         glfwSwapBuffers(w);
         glfwWaitEvents();
     }
     glfwTerminate();
- return 0;
+    return 0;
 }

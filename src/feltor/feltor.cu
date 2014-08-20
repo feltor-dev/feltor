@@ -18,7 +18,7 @@
 
 /*
    - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
+   - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     }
 
     /////////////////////////////////////////////////////////////////////////
-    const Parameters p( v);
+    const eule::Parameters p( v);
     p.display( std::cout);
     v2 = file::read_input( "window_params.txt");
     GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4], "");

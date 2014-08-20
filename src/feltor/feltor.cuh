@@ -5,19 +5,32 @@
 #include "parameters.h"
 // #include "geometry_circ.h"
 #include "geometry.h"
+#include "init.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
 #endif //DG_BENCHMARK
+/*!@file
+
+  Contains the solvers 
+  */
 
 namespace eule
 {
-//diffusive terms (add mu_hat?)
+///@addtogroup solver
+///@{
+/**
+ * @brief Diffusive terms for Feltor solver
+ *
+ * @tparam Matrix The Matrix class
+ * @tparam container The Vector class 
+ * @tparam Preconditioner The Preconditioner class
+ */
 template<class Matrix, class container, class Preconditioner>
 struct Rolkar
 {
     template<class Grid3d>
-    Rolkar( const Grid3d& g, Parameters p, solovev::GeomParameters gp):
+    Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
         temp( dg::evaluate(dg::zero, g)), chi(temp), omega(chi),
@@ -61,7 +74,7 @@ struct Rolkar
     const container& pupil(){return pupil_;}
     const container& dampin(){return dampin_;}
   private:
-    const Parameters p;
+    const eule::Parameters p;
     const solovev::GeomParameters gp;
     container temp, chi, omega;
     std::vector<container> expy;
@@ -85,7 +98,7 @@ struct Feltor
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     template<class Grid3d>
-    Feltor( const Grid3d& g, Parameters p,solovev::GeomParameters gp);
+    Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
 
     void exp( const std::vector<container>& src, std::vector<container>& dst, unsigned);
 
@@ -99,12 +112,6 @@ struct Feltor
      */
     const std::vector<container>& potential( ) const { return phi;}
     void initializene( const container& y, container& target);
-
-    /**
-     * @brief Return the Gamma operator used by this object
-     *
-     * @return Gamma operator
-     */
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
 
@@ -139,7 +146,7 @@ struct Feltor
     dg::Helmholtz< Matrix, container, Preconditioner > invgamma;
     dg::Invert<container> invert_pol,invert_invgamma;
 
-    const Parameters p;
+    const eule::Parameters p;
     const solovev::GeomParameters gp;
 
     double mass_, energy_, diff_, ediff_;
@@ -148,7 +155,7 @@ struct Feltor
 
 template<class Matrix, class container, class P>
 template<class Grid>
-Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::GeomParameters gp): 
+Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::one, g)), omega(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
@@ -389,5 +396,6 @@ void Feltor<M, container, P>::log( const std::vector<container>& y, std::vector<
         dg::blas1::transform( y[i], target[i], dg::LN<value_type>());
 }
 
+///@}
 
 } //namespace eule
