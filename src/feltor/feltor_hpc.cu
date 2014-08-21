@@ -145,10 +145,12 @@ int main( int argc, char* argv[])
     transferH = transferD;//transfer to host
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-    err = nc_close(ncid);
-    ///////////////////////////////////////Timeloop/////////////////////////////////
-    double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
 
+    double E0 = feltor.energy(), energy0 = E0, E1 = 1, diff = 0;
+    err = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
+    err = nc_close(ncid);
+
+    ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
     try

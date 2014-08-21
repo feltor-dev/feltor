@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
     //create a grid and some data
     if( size != 4){ std::cerr << "Please run with 4 threads!\n"; return -1;}
     double Tmax=2.*M_PI;
-    double NT = 100;
+    double NT = 10;
     double dt = Tmax/NT;
     dg::Grid1d<double> gx( 0, 2.*M_PI, 3, 10);
     dg::Grid1d<double> gy( 0, 2.*M_PI, 3, 10);
@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     int ncid;
     file::NC_Error_Handle err;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( "testmpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER,MPI_COMM_WORLD, info, &ncid); 
+    err = nc_create_par( "testmpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, MPI_COMM_WORLD, info, &ncid); 
     err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
 
     int dimids[4], tvarID;
@@ -52,8 +52,11 @@ int main(int argc, char* argv[])
     err = nc_var_par_access(ncid, tvarID , NC_COLLECTIVE);
     size_t Tcount=1, Tstart=0;
     double time = 0;
+    //err = nc_close(ncid);
     for(unsigned i=0; i<=NT; i++)
     {
+        if(rank==0)std::cout<<"Write timestep "<<i<<"\n";
+        //err = nc_open_par( "testmpi.nc", NC_WRITE|NC_MPIIO, MPI_COMM_WORLD, info, &ncid); //doesn't work I don't know why
         time = i*dt;
         Tstart = i;
         data = dg::evaluate( function, g);
@@ -62,6 +65,7 @@ int main(int argc, char* argv[])
         //write dataset (one timeslice)
         err = nc_put_vara_double( ncid, dataID, start, count, data.data() + start[1]*count[2]*count[3]);
         err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
+        //err = nc_close(ncid);
     }
     err = nc_close(ncid);
     MPI_Finalize();
