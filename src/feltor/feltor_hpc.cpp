@@ -72,6 +72,7 @@ int main( int argc, char* argv[])
         if(rank==0) std::cout << geom << std::endl;
         return -1;
     }
+    geom = file::read_file( argv[2]);
     const solovev::GeomParameters gp(v3);
     if(rank==0) gp.display( std::cout);
     double Rmin=gp.R_0-(gp.boxscale)*gp.a;
@@ -82,6 +83,7 @@ int main( int argc, char* argv[])
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
      dg::MPI_Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical, comm);  
      dg::Grid3d<double> grid_out = dg::create::ghostless_grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, comm);  
+     dg::Grid3d<double> global_grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out);  
      
     //create RHS 
     eule::Feltor< dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p,gp); 
@@ -123,7 +125,8 @@ int main( int argc, char* argv[])
     int dataIDs[names.size()], energyID, tvarID; //VARIABLE IDS
     names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
     names[4] = "potential";
-    err = file::define_dimensions( ncid, dimids, &tvarID, grid.global());
+    //use global dimensionality
+    err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
     for( unsigned i=0; i<names.size(); i++)
     {
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dimids, &dataIDs[i]);
