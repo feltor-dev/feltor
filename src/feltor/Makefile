@@ -1,4 +1,4 @@
-system=home # Use as Makefile parameter!
+system=home
 device=gpu
 
 INCLUDE = -I../../inc # other project libraries
@@ -21,7 +21,7 @@ ifeq ($(strip $(device)),mpi)
 CC = mpic++
 CFLAGS = #-Wall -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-OPT	   = -O3
+OPT	   = -O3 
 endif
 
 ifeq ($(strip $(system)),home)
@@ -37,7 +37,8 @@ INCLUDE += -I$(HOME)/include
 INCLUDE += -I$(UIBK_HDF5_INC)
 INCLUDE += -I$(UIBK_OPENMPI_INC)
 
-LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl
+LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
+LIBS 	+= -L$(HOME)/lib -lnetcdf -lcurl -lm
 GLFLAGS  = -lm
 endif
 

@@ -305,11 +305,11 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    //points in the ghost cells layer?
-    //if( x < g.x0() && x > g.x0() - g.hx()) x += g.hx();
-    //if( x > g.x1() && x < g.x1() + g.hx()) x -= g.hx();
-    //if( y < g.y0() && y > g.y0() - g.hy()) y += g.hy();
-    //if( y > g.y1() && y < g.y1() + g.hy()) y -= g.hy();
+    //points in the (outer) ghost cells layer? (note the global grid used)
+    if( x < g.x0() && x > g.x0() - g.hx()) x += g.hx();
+    if( x > g.x1() && x < g.x1() + g.hx()) x -= g.hx();
+    if( y < g.y0() && y > g.y0() - g.hy()) y += g.hy();
+    if( y > g.y1() && y < g.y1() + g.hy()) y -= g.hy();
     coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
     coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
     coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );
@@ -319,5 +319,54 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
     else
         return -1;
 }
+
+namespace create{
+/**
+ * @brief Create a local grid without ghostcells (useful for interpolation)
+ *
+ * @param x0 global x0
+ * @param x1 global x1
+ * @param y0 global y0
+ * @param y1 global y1
+ * @param z0 global z0
+ * @param z1 global z1
+ * @param n global n
+ * @param Nx global Nx
+ * @param Ny global Ny
+ * @param Nz global Nz
+ * @param comm MPI communicator
+ *
+ * @return local grid without overlapping cells
+ */
+Grid3d<double> ghostless_grid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm)
+{
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( comm, 3, dims, periods, coords);
+    if( coords[0] == 0 && coords[1] == 0 && coords[2] == 0)
+    {
+        if(!(Nx%dims[0]==0))
+            std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
+        assert( Nx%dims[0] == 0);
+        if( !(Ny%dims[1]==0))
+            std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
+        assert( Ny%dims[1] == 0);
+        if( !(Nz%dims[2]==0))
+            std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
+        assert( Nz%dims[2] == 0);
+    }
+    return Grid3d<double>( 
+            x0 + (x1-x0)/(double)dims[0]*(double)coords[0], 
+            x0 + (x1-x0)/(double)dims[0]*(double)(coords[0]+1), 
+            y0 + (y1-y0)/(double)dims[1]*(double)coords[1], 
+            y0 + (y1-y0)/(double)dims[1]*(double)(coords[1]+1), 
+            z0 + (z1-z0)/(double)dims[2]*(double)coords[2], 
+            z0 + (z1-z0)/(double)dims[2]*(double)(coords[2]+1), 
+            n,
+            Nx/dims[0],
+            Ny/dims[1], 
+            Nz/dims[2]);
+}
+
+} //namespace create
 
 }//namespace dg

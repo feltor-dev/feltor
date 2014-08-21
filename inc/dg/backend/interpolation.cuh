@@ -200,17 +200,17 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @param g_old The old grid
  *
  * @return Interpolation matrix
- * @note Both grids need to have the same boundary values in order to succeed
+ * @note The boundaries of the old brid must lie within the boundaries of the new grid
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<double>& g_new, const Grid3d<double>& g_old)
 {
     //assert both grids are on the same box
-    assert( g_new.x0() == g_old.x0());
-    assert( g_new.x1() == g_old.x1());
-    assert( g_new.y0() == g_old.y0());
-    assert( g_new.y1() == g_old.y1());
-    assert( g_new.z0() == g_old.z0());
-    assert( g_new.z1() == g_old.z1());
+    assert( g_new.x0() >= g_old.x0());
+    assert( g_new.x1() <= g_old.x1());
+    assert( g_new.y0() >= g_old.y0());
+    assert( g_new.y1() <= g_old.y1());
+    assert( g_new.z0() >= g_old.z0());
+    assert( g_new.z1() <= g_old.z1());
     thrust::host_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
     thrust::host_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
     thrust::host_vector<double> pointsZ = dg::evaluate( dg::coo3, g_new);

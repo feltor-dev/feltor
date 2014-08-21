@@ -322,14 +322,21 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
     blas2::symv( diff.weights(), u, u);
     detail::Implicit<Diffusion, Vector> implicit( -dt_/11.*6., diff, f_[0]);
 #ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif//MPI
     Timer t;
     t.tic(); 
     unsigned number = pcg( implicit, u_[0], u, diff.precond(), eps_);
     t.toc();
+#ifdef MPI_VERSION
+    if(rank==0)
+#endif//MPI
     std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<t.diff()<<"s\n";
 #else
     pcg( implicit, u_[0], u, diff.precond(), eps_);
-#endif
+#endif //BENCHMARK
     blas1::axpby( 1., u_[0], 0, u); //save u_[0]
 
 
