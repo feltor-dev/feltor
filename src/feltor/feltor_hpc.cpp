@@ -155,7 +155,7 @@ int main( int argc, char* argv[])
     transferD = feltor.potential()[0];
     dg::blas2::symv( interpolate, transferD.data(), transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data());
-    err = nc_put_vara_double( ncid, tvarID, &start[0], &count[0], &time);
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     double E0 = feltor.energy(), energy0 = E0, E1 = 1, diff = 0;
     err = nc_put_vara_double( ncid, energyID, start, count, &E1);
     //err = nc_close(ncid);
@@ -196,7 +196,7 @@ int main( int argc, char* argv[])
         transferD = feltor.potential()[0];
         dg::blas2::symv( interpolate, transferD.data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-        err = nc_put_vara_double( ncid, tvarID, &start[0], &count[0], &time);
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         E1 = feltor.energy()/energy0;
         err = nc_put_vara_double( ncid, energyID, start, count, &E1);
 
