@@ -65,14 +65,15 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
     double Zmax=(gp.boxscale)*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER,dg::cylindrical);  
      
     //create RHS 
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
+      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a,5.*M_PI/p.Nz, p.sigma, p.sigma, 0.25*p.sigma, p.amp);
 
-      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
     
 //     solovev::Gradient grad(gp); //background gradient
@@ -141,15 +142,16 @@ int main( int argc, char* argv[])
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
-        //transform phi
-        dvisual=feltor.potential()[0];
-        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        hvisual = y1[1];
+        //transform to Vor
+        //dvisual=feltor.potential()[0];
+        //dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        //hvisual = y1[1];
+        hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
-        colors.scalemin() = - colors.scalemax() ;
-        title <<"phi / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+//         colors.scalemin() = -colors.scalemax();
+        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
