@@ -47,10 +47,10 @@ int main()
     const solovev::GeomParameters gp(v);
     gp.display( std::cout);
 
-    Rmin=gp.R_0-1.1*gp.a;
-    Zmin=-1.1*gp.a*gp.elongation;
-    Rmax=gp.R_0+1.1*gp.a; 
-    Zmax=1.1*gp.a*gp.elongation;
+    Rmin=gp.R_0-(gp.boxscale)*gp.a;
+    Zmin=-(gp.boxscale)*gp.a*gp.elongation;
+    Rmax=gp.R_0+(gp.boxscale)*gp.a; 
+    Zmax=(gp.boxscale)*gp.a*gp.elongation;
     std::cout << "The grid parameters" <<"\n";
     std::cout  << Rmin<<"rho_s " << Rmax <<"rho_s " << Zmin <<"rho_s " <<Zmax <<"rho_s " <<"\n";
     std::cout << "Type n, Nx, Ny, Nz\n";
@@ -85,7 +85,9 @@ int main()
 
     file::NC_Error_Handle err;
     int ncid, dim_ids[3];
-    err = nc_create( "geometry.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( "geometry.nc", NC_CLOBBER, &ncid);
+//         err = nc_create( "geometry.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+
     err = file::define_dimensions( ncid, dim_ids, grid);
     int vecID[3];
     err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, dim_ids, &vecID[0]);

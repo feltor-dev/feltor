@@ -31,8 +31,8 @@
 15) tau (Ti/Te)                         = 0.0    (0.0)
 16) beta_e0                             = 0.0  (1e-4)
 17) nu_perp                             = 1e-3
-18) nu_parallel  (viscosity)            = 1e-15   (0.001)
-19) para resistivity (c)                = 1e-2  (3e-5)
+18) nu_parallel  (viscosity)            = 1e-4   (0.001)
+19) para resistivity (c)                = 1e-3  (3e-5)
 
 ---------------Initial perturbation parameters---------------------
 
