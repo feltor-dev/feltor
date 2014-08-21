@@ -17,6 +17,7 @@
 #include "derivatives.cuh"
 #include "polarisation.cuh"
 #include "weights.cuh"
+#include "interpolation.cuh"
 
 //integral functions
 #include "typedefs.cuh"
