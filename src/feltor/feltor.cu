@@ -65,13 +65,15 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
     double Zmax=(gp.boxscale)*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cartesian);  
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     //The initial field
-    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    //Monopole
+      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
+//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
     
@@ -84,16 +86,12 @@ int main( int argc, char* argv[])
     //with FLR
     feltor.initializene(y0[1],y0[0]);    
     feltor.log( y0, y0, 2); 
-    dg::DVec one = dg::evaluate( dg::one, grid);
-    dg::DVec w3d = dg::create::weights( grid);
-    std::cout<< "int ni " << dg::blas2::dot( one, w3d, y0[1])<<std::endl;
+
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     //transform to logarithmic values (ne and ni)
-  
-    std::cout<< "int ln ni " << dg::blas2::dot( one, w3d, y0[1])<<std::endl;
-//     std::cout << "ne_out - ne_in = " << dg::blas2::dot(omega,w3d,omega) << std::endl;    
+
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
     ab.init( feltor, rolkar, y0, p.dt);
 

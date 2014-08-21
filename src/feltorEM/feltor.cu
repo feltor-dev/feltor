@@ -71,8 +71,9 @@ int main( int argc, char* argv[])
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
-
+//Bath
       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
+//Zonalflow
 //       solovev::ZonalFlow init0(gp,p.amp);
     
 //     solovev::Gradient grad(gp); //background gradient

@@ -66,26 +66,26 @@ int main( int argc, char* argv[])
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
-    
-      dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    //The initial field
+    dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
+//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
-    
-//     solovev::Gradient grad(gp); //background gradient
     solovev::Nprofile grad(gp); //initial profile
-
+    
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[0]); //is damping on bath    
-    dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ne
+    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[1]); //is damping on bath    
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ne
     //without FLR
     //dg::blas1::axpby( 1., y1[0], 1., y0[1]);
     //with FLR
-    feltor.initialni(y0[0],y0[1]);    
+    feltor.initializene(y0[1],y0[0]);    
+    feltor.log( y0, y0, 2); 
+
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
-//     dg::blas1::pointwiseDot(rolkar.dampout(),y0[1],y0[1]); //is damping on bath
-    feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
+    //transform to logarithmic values (ne and ni)
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);

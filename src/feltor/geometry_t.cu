@@ -65,9 +65,9 @@ int main()
     solovev::TanhDampingInv source(gp);
     dg::BathRZ bath1(16,16,0,Rmin,Zmin, 30.,3.,1.);
     dg::BathRZ bath2(16,16,0,Rmin,Zmin, 30.,30.,10.);
+    dg::Gaussian3d init0(gp.R_0+0.75*gp.a, 0.,M_PI/20., 2., 2., 2.,2.);
 
     dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
-    
     dg::HVec hvisual1 = dg::evaluate( psip, grid);
     dg::HVec hvisual2 = dg::evaluate( ipol, grid);
     dg::HVec hvisual3 = dg::evaluate( invB, grid);
@@ -86,10 +86,11 @@ int main()
     dg::HVec hvisual16 = dg::evaluate( bath1, grid);
     dg::HVec hvisual17 = dg::evaluate( bath1,grid);
     dg::blas1::pointwiseDot(hvisual8, hvisual17,hvisual17);
-    dg::HVec hvisual18 = dg::evaluate( bath2,grid);
+    dg::HVec hvisual18 = dg::evaluate( init0,grid);
     dg::blas1::pointwiseDot(hvisual9, hvisual18, hvisual18);
+
 //     dg::blas1::pointwiseDot(hvisual8, hvisual18, hvisual18);
-    dg::blas1::axpby( 1.,hvisual13 , 1., hvisual18,hvisual18);
+    dg::blas1::axpby( 1.,hvisual13 , 1.,hvisual18,hvisual18);
     //allocate mem for visual
     dg::HVec visual1( grid.size());
     dg::HVec visual2( grid.size());
