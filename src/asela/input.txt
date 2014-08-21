@@ -28,7 +28,7 @@
 ------------------Physical parameters----------------------
 
 14) mu_e (-m_e/m_i)                     =-0.5e-4
-15) tau (Ti/Te)                         = 0.25    (0.0)
+15) tau (Ti/Te)                         = 0.0    (0.0)
 16) beta_e0                             = 1e-4  (1e-4)
 17) nu_perp                             = 1e-3
 18) nu_parallel  (viscosity)            = 1e-4   (0.001)
