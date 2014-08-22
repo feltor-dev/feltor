@@ -49,16 +49,9 @@ struct Rolkar
         {
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); // - nu_perp lapl_RZ (lapl_RZ (lnN,U)) //factor MISSING!?!
-            //additional heavy damping zone
-//             dg::blas1::pointwiseDot( lapiris_, temp, temp); //N_i U_i
-//             dg::blas1::axpby( 0.1, temp, 1., y[i]); // - nu_lap_perp lapl_RZ (lnN,U) //factor MISSING!?!
-            //parallel derivative
-//             dg::blas2::gemv( LaplacianM_para, x[i], temp);
-//             dg::blas1::axpby(  p.nu_parallel, temp, 1., y[i]); //-nu_lap_varphi (lnN,U) //
-
+            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (lnN,U)) 
         }
-
+//         dg::blas1::scal( y[2],-1./p.mu[0]); //factor nu_e on U_e
         //add parallel resistivity
         for( unsigned i=0; i<2; i++)
             dg::blas1::transform( x[i], expy[i], dg::EXP<double>());
@@ -72,8 +65,6 @@ struct Rolkar
         
 //         //cut contributions to boundary now with damping on all 4 quantities
         for( unsigned i=0; i<y.size(); i++){
-//             dg::blas1::pointwiseDot( dampin_, y[i], y[i]);
-//             dg::blas1::pointwiseDot( pupil_, y[i], y[i]);
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
         }
     }
@@ -200,15 +191,7 @@ container& Feltor<Matrix,container, P>::compute_psi( container& potential)
     //without FLR
 //     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
     //with FLR
-//     #ifdef DG_BENCHMARK
-//     dg::Timer t; 
-//     t.tic();
-//     #endif
     invert_invgamma(invgamma,chi,potential);
-//     #ifdef DG_BENCHMARK
-//     t.toc();
-//     std::cout<< "Gamma operator took "<<t.diff()<<"s\n";
-//     #endif
     dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);    
     return phi[1];
     
@@ -216,19 +199,11 @@ container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
-//     #ifdef DG_BENCHMARK
-//     dg::Timer t; 
-//     t.tic();
-//     #endif
+
     dg::blas1::transform( src,omega, dg::PLUS<double>(-1)); //n_i -1
     invert_invgamma(invgamma,target,omega); //=ne-1 = Gamma (ni-1)    
     dg::blas1::transform( target,target, dg::PLUS<double>(+1)); //n_i
 
-//     #ifdef DG_BENCHMARK
-// 
-//     t.toc();
-//     std::cout<< "Computation of intial ne field took "<<t.diff()<<"s\n";
-//     #endif 
 }
 
 //computes and modifies expy!!
@@ -366,14 +341,25 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);  //U K(phi)
         dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                         //dtU = dtU -0.5 U K(psi)
     }
-        
-    //add parallel diffusion with naive implementation
+//     dz(expy[0], dzy[0]);    
+//     dz(dzy[0], omega);
+//     dg::blas1::pointwiseDivide( omega, expy[0] ,omega); //N_e U_e 
+//     dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[0]);
+//     dz(expy[1], dzy[1]);    
+//     dz(dzy[1], omega);
+//     dg::blas1::pointwiseDivide( omega, expy[1] ,omega); //N_e U_e 
+//     dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[1]);
+
     for( unsigned i=0; i<4; i++)
     {
         dz(dzy[i], omega); //dz (dz (N,U))
-        dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[i]);                     //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
-        //add them to the dissipative energy theorem
+//         if (i==2) dg::blas1::axpby( -p.nu_parallel/p.mu[0], omega, 1., yp[i]);         //factor mu_e on U_e
+         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
+         //gradlnBcorrection
+         dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
+         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
     }
+
     //add particle source to dtN
 //     for( unsigned i=0; i<2; i++)
 //     {
