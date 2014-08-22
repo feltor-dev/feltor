@@ -288,7 +288,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     
     
     curve( apar, curvapar); //K(A_parallel)
-    dg::blas1::axpby(  1.,  gradlnB,0.5*p.beta,  curvapar);  // gradlnB + beta K(A_parallel)
+    dg::blas1::axpby(  1.,  gradlnB,p.beta,  curvapar);  // gradlnB + beta K(A_parallel) factor 0.5 or not?
     for( unsigned i=0; i<2; i++)
     {
         //Compute RZ poisson  brackets
