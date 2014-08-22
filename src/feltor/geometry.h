@@ -393,7 +393,7 @@ struct Ipol
     std::cout<< R_0_ <<"  "  << A_ <<"\n";
   }
   private:
-  double A_,R_0_;
+  double R_0_, A_;
   Psip psip_;
 };
 

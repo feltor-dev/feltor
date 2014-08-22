@@ -164,16 +164,16 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     pupil( dg::evaluate( solovev::Pupil( gp), g)),
     source( dg::evaluate(solovev::TanhSource(gp, p.amp_source), g)),
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
+    one( dg::evaluate( dg::one, g)),    
+    w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
     dz(solovev::Field(gp), g, gp.rk4eps),
     arakawa( g), 
-    w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     pol(     g), 
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
-    one( dg::evaluate( dg::one, g)),    
     p(p),
     gp(gp)
 { }
@@ -210,10 +210,6 @@ void Feltor<Matrix, container, P>::initializene( const container& src, container
 template<class Matrix, class container, class P>
 container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
-// #ifdef DG_BENCHMARK
-//     dg::Timer t; 
-//     t.tic();
-// #endif
     //compute chi and polarisation
     exp( y, expy, 2);
     dg::blas1::axpby( 1., expy[1], 0., chi); //\chi = a_i \mu_i n_i
@@ -227,15 +223,11 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
     dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
     //with FLR
-    unsigned numberg =  invert_invgamma(invgamma,chi,omega);    //chi= Gamma (Omega) = Gamma (ni-1)
+    unsigned number =  invert_invgamma(invgamma,chi,omega);    //chi= Gamma (Omega) = Gamma (ni-1)
 /*    if( numberg == invert_invgamma.get_max())
         throw dg::Fail( p.eps_gamma);*/  
-// #ifdef DG_BENCHMARK
-//     t.toc();
-//     std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
-// #endif 
     dg::blas1::axpby( -1., expy[0], 1.,chi); //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
-    unsigned number = invert_pol( pol, phi[0], chi); //Gamma n_i -ne = -nabla chi nabla phi
+    number = invert_pol( pol, phi[0], chi); //Gamma n_i -ne = -nabla chi nabla phi
 
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
@@ -267,7 +259,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( expy[0], y[2], omega); //N_e U_e 
         dg::blas1::pointwiseDot( expy[1], y[3], chi); //N_i U_i
         dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i                  //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
-    double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*J_parallel^2
+    //double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*J_parallel^2
 
     //Dissipative terms without FLR
 //         dg::blas1::axpby(1.,dg::evaluate( dg::one, g),1., y[0] ,chi); //(1+lnN_e)

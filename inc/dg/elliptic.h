@@ -52,13 +52,13 @@ class Elliptic
      */
     template< class Grid>
     Elliptic( const Grid& g, norm no = not_normed): 
-        xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx), R(xchi),
-        weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
-        rightx( dg::create::dx( g, g.bcx(), normed, forward)),
-        righty( dg::create::dy( g, g.bcy(), normed, forward)),
         leftx ( dg::create::dx( g, inverse( g.bcx()), no, backward)),
         lefty ( dg::create::dy( g, inverse( g.bcy()), no, backward)),
+        rightx( dg::create::dx( g, g.bcx(), normed, forward)),
+        righty( dg::create::dy( g, g.bcy(), normed, forward)),
         jump  ( dg::create::jump2d( g, g.bcx(), g.bcy(), no )),
+        weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
+        xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx), R(xchi),
         no_(no)
     { 
         if( g.system() == cylindrical)
@@ -80,13 +80,13 @@ class Elliptic
      */
     template< class Grid>
     Elliptic( const Grid& g, bc bcx, bc bcy, norm no = not_normed): 
-        xchi( dg::evaluate(one, g)), xx(xchi), temp( xx), R(xchi),
-        weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)),
-        rightx(dg::create::dx( g,bcx, normed, forward)),
-        righty(dg::create::dy( g,bcy, normed, forward)),
         leftx (dg::create::dx( g, inverse(bcx), no, backward)),
         lefty (dg::create::dy( g, inverse(bcy), no, backward)),
+        rightx(dg::create::dx( g,bcx, normed, forward)),
+        righty(dg::create::dy( g,bcy, normed, forward)),
         jump  (dg::create::jump2d( g, bcx, bcy, no)),
+        weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)),
+        xchi( dg::evaluate(one, g)), xx(xchi), temp( xx), R(xchi),
         no_(no)
     { 
         if( g.system() == cylindrical)

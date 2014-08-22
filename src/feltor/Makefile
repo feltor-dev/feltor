@@ -1,5 +1,5 @@
-system=leo3
-device=mpi
+system=home
+device=gpu
 
 INCLUDE = -I../../inc # other project libraries
 
