@@ -30,13 +30,13 @@
 14) mu_e (-m_e/m_i)                     =-0.5e-4
 15) tau (Ti/Te)                         = 0.0    (0.0)
 16) beta_e0                             = 0.0  (1e-4)
-17) nu_perp                             = 1e-4
-18) nu_parallel  (viscosity)            = 1e-3   (0.001)
+17) nu_perp                             = 1e-3
+18) nu_parallel  (viscosity)            = 1e-4   (0.001)
 19) para resistivity (c)                = 1e-3  (3e-5)
 
 ---------------Initial perturbation parameters---------------------
 
-20) amp (perturbation amplitude)            =  1.     (1.0)
+20) amp (perturbation amplitude)            = 0.5     (1.0)
 21) sigma (blob variance in units of rho_s) =  2     (10)
 22) x-position ( in units of a)             =  0.75   (0.4)
 23) y-position ( in units of a)             =  0.0   (0.5)
@@ -51,8 +51,9 @@
 29) nx_out (# grid points in output field)  = 30
 30) ny_out (# grid points in output field)  = 30
 31) nz_out (# grid points in output field)  = 10
-32) itstp  (steps between outputs)          = 100     (5)
+32) itstp  (steps between outputs)          = 10     (5)
 33) total # of outputs (excluding first)    = 100
+
 
 
 @ ------------------------------------------------------------

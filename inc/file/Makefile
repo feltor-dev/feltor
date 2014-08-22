@@ -12,10 +12,11 @@ LIBS = -lnetcdf
 ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(HOME)/include
 INCLUDE += -I$(UIBK_HDF5_INC)
+INCLUDE += -I$(UIBK_NETCDF_4_INC)
 INCLUDE += -I$(UIBK_OPENMPI_INC)
 
 LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
-LIBS 	+= -L$(HOME)/lib -lnetcdf -lcurl -lm
+LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
 GLFLAGS  = -lm 
 endif
 

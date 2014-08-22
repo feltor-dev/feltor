@@ -103,13 +103,13 @@ struct DZ< MPI_Matrix, MPI_Vector>
     void operator()( const MPI_Vector& f, MPI_Vector& dzf)
     {
         assert( &f != &dzf);
-        cusp::array1d_view< typename thrust::host_vector<double>::const_iterator> 
+        cusp::array1d_view< thrust::host_vector<double>::const_iterator> 
             fv( f.data().cbegin(), f.data().cend());
-        cusp::array1d_view< typename thrust::host_vector<double>::iterator> 
+        cusp::array1d_view< thrust::host_vector<double>::iterator> 
             P( interP.begin(), interP.end() );
         cusp::multiply( plus, fv, P); //interpolate input vector 
 
-        cusp::array1d_view< typename thrust::host_vector<double>::iterator> 
+        cusp::array1d_view< thrust::host_vector<double>::iterator> 
             M( interM.begin(), interM.end() );
         cusp::multiply( minus, fv, M);
         //gather results from all processes
