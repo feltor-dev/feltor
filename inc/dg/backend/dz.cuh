@@ -3,17 +3,10 @@
 #include "grid.h"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
+#include "functions.h"
 #include "../runge_kutta.h"
 
 namespace dg{
-
-///@cond
-namespace detail{
-double oneR( double R, double Z){return R;}
-double oneZ( double R, double Z){return Z;}
-double zero( double R, double Z){return 0;}
-} //namespace detail
-///@endcond
 
 /**
  * @brief Class for the evaluation of a parallel derivative
@@ -41,9 +34,9 @@ struct DZ
         hz.resize( g2d.size());
         tempM.resize( g2d.size());
         tempP.resize( g2d.size());
-        std::vector<dg::HVec> y( 3, dg::evaluate( detail::oneR, g2d)), yp(y), ym(y); 
-        y[1] = dg::evaluate( detail::oneZ, g2d);
-        y[2] = dg::evaluate( detail::zero, g2d);
+        std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y); 
+        y[1] = dg::evaluate( dg::coo2, g2d);
+        y[2] = dg::evaluate( dg::zero, g2d);
         std::cout<<"Integrate with RK4" << "\n";
         dg::integrateRK4( field, y, yp,  g_.hz(), eps);
         cut( y, yp, g2d);
