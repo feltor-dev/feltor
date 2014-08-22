@@ -9,7 +9,7 @@
 2)  nx (grid points in x)                =   60 (192)
 3)  ny (grid points in y)                =   60 (192)
 4)  nz (grid points in z)                =   20 (16)
-5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   5e-3  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
@@ -51,7 +51,7 @@
 29) nx_out (# grid points in output field)  = 30
 30) ny_out (# grid points in output field)  = 30
 31) nz_out (# grid points in output field)  = 10
-32) itstp  (steps between outputs)          = 100     (5)
+32) itstp  (steps between outputs)          = 10     (5)
 33) total # of outputs (excluding first)    = 100
 
 

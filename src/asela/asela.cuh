@@ -39,8 +39,7 @@ struct Rolkar
         {
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); // - nu_perp lapl_RZ (lapl_RZ (lnN,U)) //factor MISSING!?!
-
+            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); 
         }
        
         //cut contributions to boundary now with damping on all 4 quantities
@@ -215,7 +214,6 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
 
-    //A = pol.create( chi);
     pol.set_chi( chi);
 //     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
     dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
@@ -288,7 +286,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     
     
     curve( apar, curvapar); //K(A_parallel)
-    dg::blas1::axpby(  1.,  gradlnB,p.beta,  curvapar);  // gradlnB + beta K(A_parallel) factor 0.5 or not?
+    dg::blas1::axpby(  1.,  gradlnB,0.5*p.beta,  curvapar);  // gradlnB + beta K(A_parallel) factor 0.5 or not?
     for( unsigned i=0; i<2; i++)
     {
         //Compute RZ poisson  brackets
@@ -311,7 +309,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //add A_parallel terms to the parallel derivatives
         dg::blas1::axpby(-0.5*p.beta,arakAN[i]   ,1.,dzy[i]);  //= dz lnN -beta/B [A_parallel,lnN ] 
         dg::blas1::axpby(-0.5*p.beta,arakAphi[i] ,1.,dzphi[i]);//= dz phi -beta/B [A_parallel,phi ] 
-        dg::blas1::axpby(-0.5*p.beta,arakAU[i]   ,1.,dzy[2+i]);//= dz U-beta/B [A_parallel,U ] 
+        dg::blas1::axpby(-0.5*p.beta,arakAU[i]   ,1.,dzy[2+i]);//= dz U   -beta/B [A_parallel,U ] 
 
 
         //parallel advection terms
@@ -359,13 +357,16 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //         //for 1/N_i
 // //         dg::blas1::pointwiseDivide( chi, expy[1], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
     dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., yp[2]);  // dtU_e =- C/hat(mu)_e J_par/N_e
-    dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., yp[3]);  // dtU_e =- C/hat(mu)_e J_par/N_e
+    dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., yp[3]);  // dtU_i =- C/hat(mu)_i J_par/N_e
         
     //add parallel diffusion with naive implementation
     for( unsigned i=0; i<4; i++)
     {
         dz(dzy[i], omega); //dz (dz (N,U))
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);                     //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
+                 //gradlnBcorrection
+         dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
+         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);   
     }
     //add particle source to dtN
 //     for( unsigned i=0; i<2; i++)
