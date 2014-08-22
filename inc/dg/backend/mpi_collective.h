@@ -125,7 +125,7 @@ struct Collective
         thrust::host_vector<int> one( pids.size(), 1), keys(one), number(one);
         thrust::stable_sort_by_key( pids.begin(), pids.end(), idx_.begin());
 
-        typedef typename thrust::host_vector<int>::iterator iterator;
+        typedef thrust::host_vector<int>::iterator iterator;
         thrust::pair< iterator, iterator> new_end = 
             thrust::reduce_by_key( pids.begin(), pids.end(), one.begin(), 
                                                      keys.begin(), number.begin() ); 
