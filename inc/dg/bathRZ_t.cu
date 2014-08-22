@@ -26,7 +26,8 @@ int main()
     //make dggrid and interpolation
     dg::Grid2d<double> grid_old(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
     dg::Grid2d<double> grid_new(Rmin,Rmax,Zmin,Zmax, n_out,Nx_out,Ny_out,dg::PER,dg::PER);
-    dg::HMatrix interpolate = dg::create::interpolation( grid_new, grid_old);
+    //dg::HMatrix interpolate = dg::create::interpolation( grid_new, grid_old);
+    dg::HMatrix interpolate = dg::create::projection( grid_old, grid_new);
     //construct bathRZ
     dg::BathRZ bathRZ(16, 16, 1, Rmin,Zmin, gamma,eddysize,amplitude);
     //evaluate bathRZ on the dggrid on a hvector
@@ -47,7 +48,7 @@ int main()
     dg::blas2::gemv( equigrid_new, hvisual_new, visual_new);
 
     //Create Window and set window title
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( 400, 800, "Random field");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 800, 400, "Random field");
     draw::RenderHostData render( 1, 2);
     // generate a vector on the grid to visualize 
       //create a colormap

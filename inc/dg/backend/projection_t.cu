@@ -15,7 +15,7 @@ int main()
     unsigned n_old = 4, n_new = 3, N = 10, Nf = 1;
     dg::Grid1d<double> go ( 0, M_PI, n_old, N);
     dg::Grid1d<double> gn ( 0, M_PI, n_new, N*Nf);
-    cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection1d( go, gn);
+    cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection( go, gn);
     thrust::host_vector<double> v = dg::evaluate( sine, go);
     thrust::host_vector<double> w1do = dg::create::weights( go);
     thrust::host_vector<double> w1dn = dg::create::weights( gn);
@@ -45,27 +45,28 @@ int main()
     */
 
     std::cout << "TEST 2D\n";
-    n_old = 7, n_new = 3, N = 20, Nf = 1;
-    dg::Grid2d<double> g2o (0, M_PI, 0, M_PI, n_old, N, N);
-    dg::Grid2d<double> g2n (0, M_PI, 0, M_PI, n_new, N, N*Nf);
-    cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection2d( g2o, g2n);
+    n_old = 7, n_new = 3, N = 4, Nf = 3;
+    //old grid is larger than the new grid
+    dg::Grid2d<double> g2o (0, M_PI, 0, M_PI, n_old, N*Nf, N*Nf);
+    dg::Grid2d<double> g2n (0, M_PI, 0, M_PI, n_new, N, N);
+    cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection( g2o, g2n);
     const dg::HVec sinO = dg::evaluate( sine, g2o), 
                    sinN = dg::evaluate( sine, g2n);
     dg::HVec w2do = dg::create::weights( g2o);
     dg::HVec w2dn = dg::create::weights( g2n);
     dg::HVec sinP( g2n.size());
     dg::blas2::gemv( proj2d, sinO, sinP);
-    std::cout << "Original vector  "<<dg::blas2::dot( sinO, w2do, sinO) << "\n";
-    std::cout << "Projected vector "<<dg::blas2::dot( sinP, w2dn, sinP) << "\n";
-    std::cout << "Evaluated vector "<<dg::blas2::dot(sinN, w2dn, sinN) << "\n";
-    std::cout << "Difference       "<<dg::blas2::dot( sinO, w2do, sinO) - dg::blas2::dot( sinP, w2dn, sinP) << "\n" << std::endl;
+    std::cout << "Original vector     "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) << "\n";
+    std::cout << "Projected vector    "<<sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n";
+    //std::cout << "Evaluated vector "<<dg::blas2::dot(sinN, w2dn, sinN) << "\n";
+    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
 
     std::cout << "TEST OF DIFFERENCE\n";
     dg::DifferenceNorm<dg::HVec> diff( g2o, g2n);
-    std::cout << "Information loss due to projection:\n";
+    std::cout << "Difference between original and projection:\n";
     std::cout << diff( sinO, sinP)<<" (should converge to zero) \n";
-    std::cout << "Difference between two grid evaluations:\n";
-    std::cout << diff( sinO, sinN)<<" (should converge to zero!) \n";
+    //std::cout << "Difference between two grid evaluations:\n";
+    //std::cout << diff( sinO, sinN)<<" (should converge to zero!) \n";
     std::cout << "Difference between projection and evaluation      \n";
     dg::blas1::axpby( 1., sinN, -1., sinP);
     std::cout << dg::blas2::dot( sinP, w2dn, sinP)<<" (smaller than above)\n";

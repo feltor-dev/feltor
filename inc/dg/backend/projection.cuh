@@ -9,47 +9,6 @@
   contains the Difference Norm class that computes differences between vectors on different grids
  */
 namespace dg{
-namespace create{
-
-/**
- * @brief Create a 1D projection matrix onto a finer grid
- *
- * Grid space must be equal. Nx of the second grid must be a multiple of 
- * Nx of the first grid.
- * @param g1 Grid of the original vector
- * @param g2 Grid of the target vector
- *
- * @return Projection matrix
- */
-cusp::coo_matrix< int, double, cusp::host_memory> projection1d( const Grid1d<double>& g1, const Grid1d<double>& g2)
-{
-    assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
-    assert( g2.N() % g1.N() == 0);
-    return dg::create::interpolation( g2, g1);
-}
-/**
- * @brief Create a 2D projection matrix onto a finer grid
- *
- * Grid space must be equal. Nx and Ny of the second grid must be multiples of 
- * Nx and Ny of the first grid.
- * @param g1 Grid of the original vector
- * @param g2 Grid of the target vector
- *
- * @return Projection matrix
- */
-cusp::coo_matrix< int, double, cusp::host_memory> projection2d( const Grid2d<double>& g1, const Grid2d<double>& g2)
-{
-    //TODO: projection in y direction needs permutation
-    assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
-    assert( g1.y0() == g2.y0()); assert( g1.y1() == g2.y1());
-    assert( g2.Nx() % g1.Nx() == 0);
-    assert( g2.Ny() % g1.Ny() == 0);
-    return dg::create::interpolation( g2, g1);
-}
-
-
-}//namespace create
-
 /**
  * @brief Greatest common divisor
  *
@@ -82,6 +41,47 @@ unsigned lcm( unsigned a, unsigned b)
     unsigned g = gcd( a,b);
     return a/g*b;
 }
+namespace create{
+
+/**
+ * @brief Create a 1D projection matrix onto a finer grid
+ *
+ * Grid space must be equal. Nx of the second grid must be a multiple of 
+ * Nx of the first grid.
+ * @param g1 Grid of the original vector
+ * @param g2 Grid of the target vector
+ *
+ * @return Projection matrix
+ */
+cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d<double>& g1, const Grid1d<double>& g2)
+{
+    assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
+    assert( g2.N() % g1.N() == 0);
+    return dg::create::interpolation( g2, g1);
+}
+/**
+ * @brief Create a 2D projection matrix onto a finer grid
+ *
+ * Grid space must be equal. Nx and Ny of the second grid must be multiples of 
+ * Nx and Ny of the first grid.
+ * @param g1 Grid of the original vector
+ * @param g2 Grid of the target vector
+ *
+ * @return Projection matrix
+ */
+cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d<double>& g1, const Grid2d<double>& g2)
+{
+    //TODO: projection in y direction needs permutation
+    assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
+    assert( g1.y0() == g2.y0()); assert( g1.y1() == g2.y1());
+    //assert( g2.Nx() % g1.Nx() == 0);
+    //assert( g2.Ny() % g1.Ny() == 0);
+    return dg::create::interpolation( g2, g1);
+}
+
+
+}//namespace create
+
 
 //eventuell könnte man zwei Projektionsmatrizen malnehmen um eine kleinere zu erhalten
 template <typename container>

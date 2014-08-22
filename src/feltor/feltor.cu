@@ -7,8 +7,8 @@
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
-#include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
 #include "file/read_input.h"
 
 #include "feltor.cuh"
@@ -72,9 +72,9 @@ int main( int argc, char* argv[])
 
     //The initial field
     //Monopole
-      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
+      //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//       solovev::ZonalFlow init0(gp,p.amp);
+    solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
