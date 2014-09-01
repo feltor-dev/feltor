@@ -54,6 +54,14 @@ double deri2(double R, double Z, double phi)
     return -bphi/R*sin(phi) - bR*cos(phi)/R/R ;
 }
 
+struct newLimter
+{
+    bool operator()(double x, double y)
+    {
+        if ( x
+        return 
+    }
+};
 
 int main()
 {

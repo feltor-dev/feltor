@@ -157,7 +157,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     arakAN( phi), arakAU( phi), arakAphi(phi),u(phi),   
     dzy( 4, chi), curvy(dzy),
     //A (dg::create::laplacianM_perp( g, dg::not_normed, dg::symmetric)),
-    dz(solovev::Field(gp), g, gp.rk4eps),
+    dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
     arakawa( g), 
     pol(     g), 
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
