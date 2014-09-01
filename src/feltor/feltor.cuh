@@ -223,11 +223,11 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
     dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
     //with FLR
-    unsigned number =  invert_invgamma(invgamma,chi,omega);    //chi= Gamma (Omega) = Gamma (ni-1)
+    unsigned numberg =  invert_invgamma(invgamma,chi,omega);    //chi= Gamma (Omega) = Gamma (ni-1)
 /*    if( numberg == invert_invgamma.get_max())
         throw dg::Fail( p.eps_gamma);*/  
     dg::blas1::axpby( -1., expy[0], 1.,chi); //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
-    number = invert_pol( pol, phi[0], chi); //Gamma n_i -ne = -nabla chi nabla phi
+    unsigned number = invert_pol( pol, phi[0], chi); //Gamma n_i -ne = -nabla chi nabla phi
 
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);

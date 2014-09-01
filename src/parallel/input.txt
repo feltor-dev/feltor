@@ -6,9 +6,9 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   30 (192)
-3)  ny (grid points in y)                =   40 (192) (mind elongation
-4)  nz (grid points in z)                =   20 (>16)
+2)  nx (grid points in x)                =   50 (192)
+3)  ny (grid points in y)                =   50 (192) (mind elongation
+4)  nz (grid points in z)                =   10 (>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
@@ -36,7 +36,7 @@
 
 ---------------Initial perturbation parameters---------------------
 
-20) amp (perturbation amplitude)            = 0.5     (1.0)
+20) amp (perturbation amplitude)            =  0.5     (1.0)
 21) sigma (blob variance in units of rho_s) =  2     (10)
 22) x-position ( in units of a)             =  0.75   (0.4)
 23) y-position ( in units of a)             =  0.0   (0.5)

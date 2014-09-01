@@ -72,9 +72,9 @@ int main( int argc, char* argv[])
 
     //The initial field
     //Monopole
-      //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
+      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(gp,p.amp);
+//     solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
@@ -206,7 +206,10 @@ int main( int argc, char* argv[])
             std::cout << "(m_tot-m_0)/m_0: "<< (parallel.mass()-mass0)/mass_blob0<<"\t";
             E0 = E1;
             E1 = parallel.energy();
-            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\n";
+            diff = (E1 - E0)/p.dt;
+            double diss = parallel.energy_diffusion( );
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             try{ ab( parallel, rolkar, y0);}
             catch( dg::Fail& fail) { 
