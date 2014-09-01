@@ -63,7 +63,7 @@ struct Rolkar
         dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);  // dtU_e =- C/hat(mu)_e J_par/N_e
         dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat,omega, 1., y[3]);    // dtU_e =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i
         
-//         //cut contributions to boundary now with damping on all 4 quantities
+        //cut contributions to boundary now with damping on all 4 quantities
         for( unsigned i=0; i<y.size(); i++){
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
         }
@@ -73,6 +73,7 @@ struct Rolkar
     const Preconditioner& precond(){return LaplacianM_perp.precond();}
     const container& pupil(){return pupil_;}
     const container& dampin(){return dampin_;}
+    const container& dampout(){return dampout_;}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
@@ -168,7 +169,8 @@ ParallelFeltor<Matrix, container, P>::ParallelFeltor( const Grid& g, eule::Param
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
-    dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
+//     dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
+    dz(solovev::Field(gp), g, gp.rk4eps,solovev::Pupil(gp)),
     arakawa( g), 
     pol(     g), 
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
@@ -290,8 +292,10 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
         //Compute RZ poisson  brackets
 
         //compute parallel derivatives
+        dz.set_boundaries( dg::NEU, 0, 0); //for all quantities
         dz(y[i], dzy[i]);
         dz(phi[i], dzphi[i]);
+        dz.set_boundaries( dg::DIR, 1., -1.); //for all quantities
         dz(y[i+2], dzy[2+i]);
 
         //parallel advection terms
@@ -308,25 +312,27 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
         //curvature terms
 
     }
-//     dz(expy[0], dzy[0]);    
-//     dz(dzy[0], omega);
-//     dg::blas1::pointwiseDivide( omega, expy[0] ,omega); //N_e U_e 
-//     dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[0]);
-//     dz(expy[1], dzy[1]);    
-//     dz(dzy[1], omega);
-//     dg::blas1::pointwiseDivide( omega, expy[1] ,omega); //N_e U_e 
-//     dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[1]);
-
-    for( unsigned i=0; i<4; i++)
+    for( unsigned i=0; i<3; i++)
     {
-        dz(dzy[i], omega); //dz (dz (N,U))
-//         if (i==2) dg::blas1::axpby( -p.nu_parallel/p.mu[0], omega, 1., yp[i]);         //factor mu_e on U_e
+        dz.set_boundaries( dg::NEU, 0, 0); //for all quantities
+
+        dz.dzz(y[i],omega);
+//          if (i==2 || i==3 ) dg::blas1::axpby( -p.nu_parallel/abs(p.mu[0]), omega, 1., yp[i]); 
          dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
          //gradlnBcorrection
          dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
          dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
     }
-
+    for( unsigned i=2; i<4; i++)
+    {
+        dz.set_boundaries( dg::DIR, 1., -1.);
+        dz.dzz(y[i],omega);
+         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
+         //gradlnBcorrection
+         dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
+         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
+    }
+    
     //add particle source to dtN
 //     for( unsigned i=0; i<2; i++)
 //     {
