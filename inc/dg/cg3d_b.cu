@@ -12,21 +12,10 @@
 #include "backend/typedefs.cuh"
 
 
-//leo3 can do 350 x 350 but not 375 x 375
-const double ly = 2.*M_PI;
-
-const double eps = 1e-6; //# of pcg iterations increases very much if 
- // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
-
 const double lx = 2.*M_PI;
-const double lz = 1.;
-double fct(double x, double y){ return sin(y)*sin(x);}
-double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
+const double ly = 2.*M_PI;
+const double lz = 100;
 dg::bc bcx = dg::DIR;
-//const double lx = 2./3.*M_PI;
-//double fct(double x, double y){ return sin(y)*sin(3.*x/4.);}
-//double laplace_fct( double x, double y) { return 25./16.*sin(y)*sin(3.*x/4.);}
-//dg::bc bcx = dg::DIR_NEU;
 double initial( double x, double y) {return sin(0);}
 
 double fct(double x, double y, double z){ return sin(y)*sin(x);}
@@ -45,6 +34,9 @@ int main()
     unsigned n, Nx, Ny, Nz; 
     std::cout << "Type n, Nx, Ny and Nz\n";
     std::cin >> n >> Nx >> Ny>> Nz;
+    std::cout << "Type in eps\n";
+    double eps = 1e-6; //# of pcg iterations increases very much if 
+    std::cin >> eps;
 
     cout << "TEST 3D VERSION\n";
     dg::Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, dg::PER);
@@ -61,12 +53,12 @@ int main()
     dg::CG<dg::HVec > pcg3_host( x3, g3d.size());
     dg::CG<dg::DVec > pcg3_d( x3_d, g3d.size());
     t.tic();
-    cout << "Number of pcg iterations "<< pcg3_d( A3_d, x3_d, b3_d, v3d_d, eps)<<endl;
+    cout << "Number of pcg iterations "<< pcg3_d( A3_d, x3_d, b3_d, v3d_d, eps, sqrt(lz))<<endl;
     t.toc();
     cout << "... for a precision of "<< eps<<endl;
     cout << "... on the device took "<< t.diff()<<"s\n";
     t.tic();
-    cout << "Number of pcg iterations "<< pcg3_host( A3, x3, b3, v3d, eps)<<endl;
+    cout << "Number of pcg iterations "<< pcg3_host( A3, x3, b3, v3d, eps, sqrt(lz))<<endl;
     t.toc();
     cout << "... for a precision of "<< eps<<endl;
     cout << "... on the host took   "<< t.diff()<<"s\n";
