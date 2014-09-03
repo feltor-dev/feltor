@@ -6,13 +6,13 @@
 
 #include "draw/host_window.h"
 
-#include "dg/functors.cuh"
-#include "dg/evaluation.cuh"
-#include "dg/xspacelib.cuh"
-#include "dg/rk.cuh"
-#include "dg/karniadakis.cuh"
-#include "dg/gamma.cuh"
-#include "dg/typedefs.cuh"
+#include "dg/functors.h"
+#include "dg/backend/evaluation.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/runge_kutta.h"
+#include "dg/multistep.h"
+#include "dg/helmholtz.h"
+#include "dg/backend/typedefs.cuh"
 
 #include "shu.cuh"
 
@@ -41,7 +41,7 @@ int main()
     const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
     
     Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    DVec w2d( create::w2d( grid));
+    DVec w2d( create::weights( grid));
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
@@ -67,7 +67,7 @@ int main()
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
-    dg::DMatrix equidistant = dg::create::backscatter( grid, LSPACE );
+    dg::DMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, diffusion, y0, dt);
     while (!glfwWindowShouldClose(w))

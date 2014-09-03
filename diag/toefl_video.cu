@@ -10,7 +10,7 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 //#include "lamb_dipole/parameters.h"
 
 

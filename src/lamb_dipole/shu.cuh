@@ -5,9 +5,9 @@
 #include <cusp/ell_matrix.h>
 
 #include "dg/blas.h"
-#include "dg/arakawa.cuh"
-#include "dg/derivatives.cuh"
-#include "dg/cg.cuh"
+#include "dg/arakawa.h"
+#include "dg/backend/derivatives.cuh"
+#include "dg/cg.h"
 
 namespace dg
 {
@@ -15,9 +15,9 @@ template< class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
-        w2d( dg::create::w2d( g) ), v2d( dg::create::v2d(g) ) 
+        w2d( dg::create::weights( g) ), v2d( dg::create::inv_weights(g) ) 
     { 
-        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed, dg::XSPACE); 
+        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed); 
         cusp::blas::scal( Laplacian_.values, -nu);
         Laplacian = Laplacian_;
     }
@@ -52,27 +52,27 @@ struct Shu
      * @return psi is the potential
      */
     const container& potential( ) {return psi;}
-    void operator()( const Vector& y, Vector& yp);
+    void operator()( Vector& y, Vector& yp);
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
     container psi, w2d, v2d;
     Matrix laplaceM;
-    ArakawaX< container> arakawa_; 
+    ArakawaX< dg::DMatrix, container> arakawa_; 
     Invert<container> invert;
 };
 
 template< class container>
 Shu< container>::Shu( const Grid2d<value_type>& g, double eps): 
     psi( g.size()),
-    w2d( create::w2d( g)), v2d( create::v2d(g)),  
-    laplaceM( dg::create::laplacianM( g, not_normed, XSPACE)),
+    w2d( create::weights( g)), v2d( create::inv_weights(g)),  
+    laplaceM( dg::create::laplacianM( g, not_normed)),
     arakawa_( g), 
     invert( psi, g.size(), eps)
 {
 }
 
 template< class container>
-void Shu<container>::operator()( const Vector& y, Vector& yp)
+void Shu<container>::operator()( Vector& y, Vector& yp)
 {
     invert( laplaceM, psi, y, w2d, v2d);
     arakawa_( y, psi, yp); //A(y,psi)-> yp

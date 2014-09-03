@@ -2,6 +2,7 @@
 #define _DG_FUNCTORS_CUH_
 
 #include <cmath>
+#include <vector>
 #include <thrust/random/linear_congruential_engine.h>
 #include <thrust/random/uniform_real_distribution.h>
 #include <thrust/random/normal_distribution.h>
@@ -159,16 +160,16 @@ struct Gaussian3d
      */
     double operator()(double x, double y, double z)
     {
-        if (z== z00)
-        {
+//         if (z== z00)
+//         {
             return  amplitude*
                     exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-    //                           (z-z00)*(z-z00)/2./sigma_z/sigma_z +
+                              (z-z00)*(z-z00)/2./sigma_z/sigma_z +
                             (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
-        }
-        else {
-        return 0.;
-        }
+//         }
+//         else {
+//         return 0.;
+//         }
     }
   private:
     double  x00, y00, z00, sigma_x, sigma_y, sigma_z, amplitude;
@@ -451,27 +452,6 @@ struct Vortex
  * @brief Makes a random bath in the RZ plane
  */
 struct BathRZ{
-    /**
-    * @param Rm2 squared Number of Fourier modes in R direction
-    * @param Zm2 squared Number of Fourier modes in Z direction
-    * @param RZm \f[RZm= (Rm2+Zm2)^{1/2};\f]
-    * @param norm normalisation factor \f[norm= (2/(Rm* Zm))^{1/2}\f]
-    * @param tpi \f[tpi= 2 \pi\f]
-    * @param tpi2 \f[tpi= 4 \pi^2\f]
-    * @param k \f[k=(k_R^2+k_Z^2)^{1/2}\f]
-    * @param sqEkvec  \f[ E_k^{1/2}\f]
-    * @param unif1 uniform real random variable between [0,2 pi]
-    * @param unif2 uniform real random variable between [0,2 pi]
-    * @param normal1 normal random variable with mean=0 and standarddeviation=1
-    * @param normal2 normal random variable with mean=0 and standarddeviation=1
-    * @param normalamp \f[normalamp= (normal1^2+normal2^2)^{1/2}\f]
-    * @param normalphase \f[normalphase= arctan(normal2/normal1)\f]
-    */
-  double Rm2, Zm2, RZm;
-  double norm,tpi,tpi2;    
-  std::vector<double> kvec;
-  std::vector<double> sqEkvec;
-  std::vector<double> unif1, unif2, normal1,normal2,normalamp,normalphase;
       /**
      * @brief Functor returning a random field in the RZ-plane or in the first RZ-plane
      *
@@ -484,49 +464,46 @@ struct BathRZ{
      * @param eddysize \f[k_0=2*\pi*eddysize/XYm \f]
      * @param amp Amplitude
      */  
-  BathRZ( unsigned Rm, unsigned Zm, unsigned Nz, double R_min, double Z_min, double gamma, double eddysize, double amp) : Rm_(Rm), Zm_(Zm), Nz_(Nz),R_min_(R_min), Z_min_(Z_min), gamma_(gamma), eddysize_(eddysize) , amp_(amp) {
-    std::cout << "Constructing initial bath" << "\n";
-    Rm2=(double)Rm_*(double)Rm_;
-    Zm2=(double)Zm_*(double)Zm_;
-    RZm= sqrt(Rm2+Zm2);
-    norm=sqrt(2./(double)Rm_/(double)Zm_); 
-    tpi=2.*M_PI; tpi2=tpi*tpi;
-    double k0= tpi*eddysize_/RZm;
-    double Rmh = Rm_/2.;
-    double Zmh = Zm_/2.;
-    
-    kvec.resize(Rm_*Zm_);
-    sqEkvec.resize(Rm_*Zm_);
-    unif1.resize(Rm_*Zm_);
-    unif2.resize(Rm_*Zm_);
-    normal1.resize(Rm_*Zm_);
-    normal2.resize(Rm_*Zm_);
-    normalamp.resize(Rm_*Zm_);
-    normalphase.resize(Rm_*Zm_);
-    
-    thrust::random::minstd_rand generator;
-    thrust::random::normal_distribution<float> ndistribution;
-    thrust::random::uniform_real_distribution<float> udistribution(0.0,tpi);
-    
-    for (unsigned j=1;j<=Zm_;j++)
+    BathRZ( unsigned Rm, unsigned Zm, unsigned Nz, double R_min, double Z_min, double gamma, double eddysize, double amp) : 
+        Rm_(Rm), Zm_(Zm), Nz_(Nz), 
+        R_min_(R_min), Z_min_(Z_min), 
+        gamma_(gamma), eddysize_(eddysize) , amp_(amp),
+        kvec( Rm_*Zm_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
+        normal1(kvec), normal2(kvec), normalamp(kvec), normalphase(kvec)
     {
-      double kZ2=tpi2*(j-Zmh)*(j-Zmh)/(Zm2);
-      for (unsigned i=1;i<=Rm_;i++)
-      {
-        double kR2=tpi2*(i-Rmh)*(i-Rmh)/(Rm2);
-        int z=(j-1)*(Rm_)+(i-1);
-        kvec[z]= sqrt(kR2 + kZ2);  //radial k number
-        sqEkvec[z]=pow(kvec[z]*4.*k0/(kvec[z]+k0)/(kvec[z]+k0),gamma_/2.); //Energie in k space with max at 1.
-        unif1[z]=cos(udistribution(generator));
-        unif2[z]=sin(udistribution(generator));
-        normal1[z]=ndistribution(generator);
-        normal2[z]=ndistribution(generator);
-        normalamp[z]=sqrt(normal1[z]*normal1[z]+normal2[z]*normal2[z]);
-        normalphase[z]=atan2(normal2[z],normal1[z]);
-      }
-    }
+        std::cout << "Constructing initial bath" << "\n";
+        double Rm2=(double)(Rm_*Rm_);
+        double Zm2=(double)(Zm_*Zm_);
+        double RZm= sqrt(Rm2+Zm2);
+
+        norm_=sqrt(2./(double)Rm_/(double)Zm_); 
+        double tpi=2.*M_PI, tpi2=tpi*tpi;
+        double k0= tpi*eddysize_/RZm;
+        double Rmh = Rm_/2.;
+        double Zmh = Zm_/2.;
+        
+        thrust::random::minstd_rand generator;
+        thrust::random::normal_distribution<double> ndistribution;
+        thrust::random::uniform_real_distribution<double> udistribution(0.0,tpi);
+        for (unsigned j=1;j<=Zm_;j++)
+        {
+            double kZ2=tpi2*(j-Zmh)*(j-Zmh)/(Zm2);
+            for (unsigned i=1;i<=Rm_;i++)
+            {
+                double kR2=tpi2*(i-Rmh)*(i-Rmh)/(Rm2);
+                int z=(j-1)*(Rm_)+(i-1);
+                kvec[z]= sqrt(kR2 + kZ2);  //radial k number
+                sqEkvec[z]=pow(kvec[z]*4.*k0/(kvec[z]+k0)/(kvec[z]+k0),gamma_/2.); //Energie in k space with max at 1.
+                unif1[z]=cos(udistribution(generator));
+                unif2[z]=sin(udistribution(generator));
+                normal1[z]=ndistribution(generator);
+                normal2[z]=ndistribution(generator);
+                normalamp[z]=sqrt(normal1[z]*normal1[z]+normal2[z]*normal2[z]);
+                normalphase[z]=atan2(normal2[z],normal1[z]);
+            }
+        }
     
-  }
+    }
       /**
      * @brief Return the value of the Bath
      *
@@ -534,23 +511,23 @@ struct BathRZ{
      * @param Z Z - coordinate
      *
      */
-  double operator()(double R, double Z)
-  { 
-    double f, RZphasecos, RR, ZZ;
-    RR=R-R_min_;
-    ZZ=Z-Z_min_;
-    f=0.;
-    for (unsigned j=0;j<Zm_;j++)
-      {
-      for (unsigned i=0;i<Rm_;i++)
-       {
-        int z=j*Rm_+i;
-        RZphasecos= RR*unif1[z]+ZZ*unif2[z];        
-        f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]); 
-      }      
+    double operator()(double R, double Z)
+    { 
+        double f, RZphasecos, RR, ZZ;
+        RR=R-R_min_;
+        ZZ=Z-Z_min_;
+        f=0.;
+        for (unsigned j=0;j<Zm_;j++)
+        {
+            for (unsigned i=0;i<Rm_;i++)
+            {
+                int z=j*Rm_+i;
+                RZphasecos= RR*unif1[z]+ZZ*unif2[z];        
+                f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]); 
+            }      
+        }
+        return amp_*norm_*abs(f);    
     }
-    return amp_*norm*abs(f);    
-  }
     /**
      * @brief Return the value of the Bath for first phi plane
      *
@@ -559,33 +536,49 @@ struct BathRZ{
      * @param phi phi - coordinate
      *
      */
-  double operator()(double R, double Z, double phi) { 
-    double f, RZphasecos;
-    double  RR, ZZ;
-    RR=R-R_min_;
-    ZZ=Z-Z_min_;
-    f=0;
-//     if (phi== M_PI/Nz_)
-//     {
-        for (unsigned j=0;j<Zm_;j++)
-        {
-            for (unsigned i=0;i<Rm_;i++)
+    double operator()(double R, double Z, double phi) { 
+        double f, RZphasecos;
+        double  RR, ZZ;
+        RR=R-R_min_;
+        ZZ=Z-Z_min_;
+        f=0;
+//         if (phi== M_PI/Nz_)
+//         {
+            for (unsigned j=0;j<Zm_;j++)
             {
-                int z=(j)*(Rm_)+(i);
-                RZphasecos= RR*unif1[z]+ZZ*unif2[z];        
-                f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]); 
-            }      
-        }
-    return amp_*norm*abs(f);
-//     }
-//     else {
-//     return 0.;
-//     }
-  }
+                for (unsigned i=0;i<Rm_;i++)
+                {
+                    int z=(j)*(Rm_)+(i);
+                    RZphasecos= RR*unif1[z]+ZZ*unif2[z];        
+                    f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]); 
+                }      
+            }
+        return amp_*norm_*abs(f);
+//         }
+//         else {
+//         return 0.;
+//         }
+    }
   private:
-  unsigned Rm_,Zm_,Nz_;
-  double gamma_, eddysize_, R_min_, Z_min_;
-  double amp_;
+    /**
+    * @param norm normalisation factor \f[norm= (2/(Rm* Zm))^{1/2}\f]
+    * @param k \f[k=(k_R^2+k_Z^2)^{1/2}\f]
+    * @param sqEkvec  \f[ E_k^{1/2}\f]
+    * @param unif1 uniform real random variable between [0,2 pi]
+    * @param unif2 uniform real random variable between [0,2 pi]
+    * @param normal1 normal random variable with mean=0 and standarddeviation=1
+    * @param normal2 normal random variable with mean=0 and standarddeviation=1
+    * @param normalamp \f[normalamp= (normal1^2+normal2^2)^{1/2}\f]
+    * @param normalphase \f[normalphase= arctan(normal2/normal1)\f]
+    */
+    unsigned Rm_,Zm_,Nz_;
+    double R_min_, Z_min_;
+    double gamma_, eddysize_;
+    double amp_;
+    double norm_;
+    std::vector<double> kvec;
+    std::vector<double> sqEkvec;
+    std::vector<double> unif1, unif2, normal1,normal2,normalamp,normalphase;
 };
 /**
  * @brief Exponential

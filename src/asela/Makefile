@@ -53,17 +53,17 @@ LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
 GLFLAGS  = -lm
 endif
 
-all: feltor feltor_hpc
+all: asela asela_hpc
 
-feltor: feltor.cu feltor.cuh geometry.h
+asela: asela.cu asela.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
 ifeq ($(strip $(device)),mpi)
-feltor_hpc: feltor_hpc.cpp feltor.cuh geometry.h
+asela_hpc: asela_hpc.cpp asela.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 else
-feltor_hpc: feltor_hpc.cu feltor.cuh geometry.h
+asela_hpc: asela_hpc.cu asela.cuh geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
 endif
@@ -85,4 +85,4 @@ doc:
 	doxygen Doxyfile
 	
 clean:
-	rm -f feltor feltor_hpc geometry_t dz_geom_t
+	rm -f asela asela_hpc geometry_t dz_geom_t

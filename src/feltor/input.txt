@@ -13,9 +13,9 @@
 
 ------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stop for polarisation)      =   1e-2 (1e-6)
+6)  eps_pol (stop for polarisation)      =   1e-3 (1e-6)
 7)  eps_max (stop for induction)         =   0.0 (1e-6)
-8)  eps_gamma (stop for Gamma CG)        =   1e-4 (1e-8)
+8)  eps_gamma (stop for Gamma CG)        =   1e-5 (1e-8)
 9)  eps_time ( stop for time inversion ) =   1e-8 
 
 ------------------Boundary conditions----------------------
@@ -36,7 +36,7 @@
 
 ---------------Initial perturbation parameters---------------------
 
-20) amp (perturbation amplitude)            =  3.     (1.0)
+20) amp (perturbation amplitude)            = 0.5     (1.0)
 21) sigma (blob variance in units of rho_s) =  2     (10)
 22) x-position ( in units of a)             =  0.75   (0.4)
 23) y-position ( in units of a)             =  0.0   (0.5)
@@ -44,11 +44,16 @@
 
 ------------------Miscellaneous----------------------------
 
-25) itstp (steps between output)            = 1000     (5)
-26) # of outputs (excluding first)          = 2000
-27) Damping zone thickness (in units of rho_s)  = 20 
-28) Damping zone strength                   = 1e-3
-29) particle source amplitude               = 0.0
+
+25) Damping zone thickness (in units of rho_s)  = 20 
+26) Damping zone strength                   = 1e-3
+27) particle source amplitude               = 0.0
+28) n_out (# of x-y polynomials in output)  = 3
+29) nx_out (# grid points in output field)  = 60
+30) ny_out (# grid points in output field)  = 60
+31) nz_out (# grid points in output field)  = 20
+32) itstp  (steps between outputs)          = 1000     (5)
+33) total # of outputs (excluding first)    = 5000
 
 
 @ ------------------------------------------------------------

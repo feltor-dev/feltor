@@ -14,11 +14,14 @@
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "geometry.h"
+#include "init.h"
 #include "dg/backend/dz.cuh"
 #include "dg/algorithm.h"
 #include "dg/backend/functions.h"
 #include "dg/backend/interpolation.cuh"
 #include "draw/host_window.h"
+
+#include "file/nc_utilities.h"
 
 
 int main()
@@ -44,10 +47,10 @@ int main()
     const solovev::GeomParameters gp(v);
     gp.display( std::cout);
 
-    Rmin=gp.R_0-1.1*gp.a;
-    Zmin=-1.1*gp.a*gp.elongation;
-    Rmax=gp.R_0+1.1*gp.a; 
-    Zmax=1.1*gp.a*gp.elongation;
+    Rmin=gp.R_0-(gp.boxscale)*gp.a;
+    Zmin=-(gp.boxscale)*gp.a*gp.elongation;
+    Rmax=gp.R_0+(gp.boxscale)*gp.a; 
+    Zmax=(gp.boxscale)*gp.a*gp.elongation;
     std::cout << "The grid parameters" <<"\n";
     std::cout  << Rmin<<"rho_s " << Rmax <<"rho_s " << Zmin <<"rho_s " <<Zmax <<"rho_s " <<"\n";
     std::cout << "Type n, Nx, Ny, Nz\n";
@@ -70,6 +73,31 @@ int main()
     solovev::CurvatureZ curvatureZ(gp);
     solovev::GradLnB gradLnB(gp);
     solovev::Pupil pupil(gp);
+
+    solovev::FieldR fieldR(gp);
+    solovev::FieldZ fieldZ(gp);
+    solovev::FieldP fieldP(gp);
+
+    dg::Grid3d<double> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,n, Nx, Ny,Nz);
+    dg::HVec vecR = dg::evaluate( fieldR, grid);
+    dg::HVec vecZ = dg::evaluate( fieldZ, grid);
+    dg::HVec vecP = dg::evaluate( fieldP, grid);
+
+    file::NC_Error_Handle err;
+    int ncid, dim_ids[3];
+    err = nc_create( "geometry.nc", NC_CLOBBER, &ncid);
+//         err = nc_create( "geometry.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+
+    err = file::define_dimensions( ncid, dim_ids, grid);
+    int vecID[3];
+    err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, dim_ids, &vecID[0]);
+    err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, dim_ids, &vecID[1]);
+    err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, dim_ids, &vecID[2]);
+    err = nc_enddef( ncid);
+    err = nc_put_var_double( ncid, vecID[0], vecR.data());
+    err = nc_put_var_double( ncid, vecID[1], vecZ.data());
+    err = nc_put_var_double( ncid, vecID[2], vecP.data());
+    nc_close(ncid);
     
     dg::HVec v5(1, 0);
     std::vector<thrust::host_vector<double> > in(3, v5);
@@ -84,6 +112,7 @@ int main()
     std::cout <<"Rin =  "<< in[0][0] <<" Zin =  "<<in[1][0] <<" sin  = "<<in[2][0]<<"\n";
     std::cout <<"Rout = "<< out[0][0]<<" Zout = "<<out[1][0]<<" sout = "<<out[2][0]<<"\n";
 
+    /*
     for (unsigned k=1;k<2;k++) //n iterator
     {
         for (unsigned i=0;i<1;i++) //Nxy iterator
@@ -100,7 +129,7 @@ int main()
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz);
-                const dg::DVec w3d = dg::create::w3d( g3d);
+                const dg::DVec w3d = dg::create::weights( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
 
@@ -163,6 +192,7 @@ int main()
         }
 
     }
+    */
 
     return 0;
 }

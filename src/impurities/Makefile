@@ -1,4 +1,4 @@
-system=vsc # Use as Makefile parameter!
+system=home # Use as Makefile parameter!
 device=gpu
 
 INCLUDE = -I../../inc/ # other project libraries

@@ -362,19 +362,19 @@ void ToeflR<M, container, P>::operator()( std::vector<container>& y, std::vector
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
 
     //add laplacians
-    for( unsigned i=0; i<y.size(); i++)
-    {
-        blas2::gemv( laplaceM, y[i], lapy[i]);
-        if( global)
-        {
-            blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
-            blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
-            //now sum all 3 terms up 
-            blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
-            blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
-        }
-        //blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
-    }
+    //for( unsigned i=0; i<y.size(); i++)
+    //{
+    //    blas2::gemv( laplaceM, y[i], lapy[i]);
+    //    if( global)
+    //    {
+    //        blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
+    //        blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
+    //        //now sum all 3 terms up 
+    //        blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
+    //        blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
+    //    }
+    //    //blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
+    //}
 
 }
 

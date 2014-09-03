@@ -7,18 +7,11 @@
 #include "mpi_grid.h"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
+#include "functions.h"
 #include "../runge_kutta.h"
 
 namespace dg{
 
-///@cond
-namespace detail{
-double oneR( double R, double Z, double phi){return R;}
-double oneZ( double R, double Z, double phi){return Z;}
-double zero( double R, double Z, double phi){return 0;}
-double  phi( double R, double Z, double phi){return phi;}
-} //namespace detail
-///@endcond
 
 /**
  * @brief Class for the evaluation of a parallel derivative
@@ -44,16 +37,16 @@ struct DZ< MPI_Matrix, MPI_Vector>
     {
         //set up grid points as start for fieldline integrations
         std::vector<dg::HVec> y( 3);
-        y[0] = dg::evaluate( detail::oneR, grid.local());
-        y[1] = dg::evaluate( detail::oneZ, grid.local());
-        y[2] = dg::evaluate( detail::zero, grid.local());//distance (not angle)
+        y[0] = dg::evaluate( dg::coo1, grid.local());
+        y[1] = dg::evaluate( dg::coo2, grid.local());
+        y[2] = dg::evaluate( dg::zero, grid.local());//distance (not angle)
         //integrate to next z-plane
         std::vector<dg::HVec> yp(y), ym(y); 
         dg::integrateRK4( field, y, yp,  grid.hz(), eps);
         cut( y, yp, grid.global() ); //cut points 
         //determine pid of result 
         thrust::host_vector<int> pids( grid.size());
-        thrust::host_vector<double> angle = dg::evaluate( detail::phi, grid.local());
+        thrust::host_vector<double> angle = dg::evaluate( dg::coo3, grid.local());
         for( unsigned i=0; i<pids.size(); i++)
         {
             angle[i] += grid.hz();
@@ -131,12 +124,13 @@ struct DZ< MPI_Matrix, MPI_Vector>
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {            
-            if      (yp[0][i] < g.x0()-g.hx()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[0][i] > g.x1()+g.hx()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[1][i] < g.y0()-g.hy()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[1][i] > g.y1()+g.hy()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
+            if      (yp[0][i] < g.x0()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
+            else if (yp[0][i] > g.x1()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
+            else if (yp[1][i] < g.y0()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
+            else if (yp[1][i] > g.y1()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
             else                         { }
         }
+        //yp can still be outside the global grid (ghostcells!)
     }
     thrust::host_vector<double> hz, tempP, tempM, interP, interM;
     cusp::csr_matrix<int, double, cusp::host_memory> plus, minus; //interpolation matrices

@@ -21,7 +21,7 @@ ifeq ($(strip $(device)),mpi)
 CC = mpic++
 CFLAGS = #-Wall -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-OPT	   = -O3
+OPT	   = -O3 
 endif
 
 ifeq ($(strip $(system)),home)
@@ -37,7 +37,8 @@ INCLUDE += -I$(HOME)/include
 INCLUDE += -I$(UIBK_HDF5_INC)
 INCLUDE += -I$(UIBK_OPENMPI_INC)
 
-LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl
+LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
+LIBS 	+= -L$(HOME)/lib -lnetcdf -lcurl -lm
 GLFLAGS  = -lm
 endif
 
@@ -71,7 +72,7 @@ feltor_hpc: feltor_hpc.cu feltor.cuh geometry.h
 endif
 	
 dz_geom_t: dz_geom_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)
 	echo "Attention: No compiler warnings are issued!" 
 	
 geometry_t: geometry_t.cu geometry.h 
@@ -81,7 +82,7 @@ geometry_t: geometry_t.cu geometry.h
 generator: generator.cpp 
 	g++ generator.cpp -o generator -std=c++0x -Wall
 
-.PHONY: clean
+.PHONY: clean doc
 
 doc: 
 	doxygen Doxyfile

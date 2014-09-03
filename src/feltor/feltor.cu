@@ -18,7 +18,7 @@
 
 /*
    - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
+   - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     }
 
     /////////////////////////////////////////////////////////////////////////
-    const Parameters p( v);
+    const eule::Parameters p( v);
     p.display( std::cout);
     v2 = file::read_input( "window_params.txt");
     GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4], "");
@@ -72,7 +72,7 @@ int main( int argc, char* argv[])
 
     //The initial field
     //Monopole
-      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
+      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a,5.*M_PI/p.Nz, p.sigma, p.sigma, 0.25*p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
@@ -90,7 +90,6 @@ int main( int argc, char* argv[])
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
-    //transform to logarithmic values (ne and ni)
 
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
     ab.init( feltor, rolkar, y0, p.dt);

@@ -4,84 +4,16 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
-//6 analytical quantities
+#include "geom_parameters.h"
+/*!@file
+ *
+ * Geometry objects (6 analytical quantities)
+ */
 namespace solovev
 {
-/**
- * @brief Constructs and display geometric parameters
- */    
-struct GeomParameters
-{
-    double A,R_0,psipmin,psipmax,a, elongation,triangularity,alpha,lnN_inner,k_psi,rk4eps, boxscale,nprofileamp,bgprofamp,psipmaxcut,psipmaxlap;
-    std::vector<double> c; 
-     /**
-     * @brief constructor to make a const object
-     *
-     * @param v Vector from read_input function
-     */   
-    GeomParameters( const std::vector< double>& v):layout_(0) {
-        if( layout_ == 0)
-        {
-            A=v[1];
-            c.resize(13);
-            for (unsigned i=0;i<12;i++) c[i]=v[i+2];
-            R_0 = v[14];
-            psipmin= v[15];
-            psipmax= v[16];
-            a=R_0*v[17];
-            elongation=v[18];
-            triangularity=v[19];
-            alpha=v[20];
-            lnN_inner=v[21];
-            k_psi=v[22];
-            rk4eps=v[23];
-            boxscale=v[24];
-            nprofileamp=v[25];
-            bgprofamp=v[26];
-            psipmaxcut = v[27];
-            psipmaxlap = v[28];
-        }
-    }
-    /**
-     * @brief Display parameters
-     *
-     * @param os Output stream
-     */
-    void display( std::ostream& os = std::cout ) const
-    {
-        os << "Geometrical parameters are: \n"
-            <<"A             = "<<A<<"\n"
-            <<"c1            = "<<c[0]<<"\n"
-            <<"c2            = "<<c[1]<<"\n"
-            <<"c3            = "<<c[2]<<"\n"
-            <<"c4            = "<<c[3]<<"\n"
-            <<"c5            = "<<c[4]<<"\n"
-            <<"c6            = "<<c[5]<<"\n"
-            <<"c7            = "<<c[6]<<"\n"
-            <<"c8            = "<<c[7]<<"\n"
-            <<"c9            = "<<c[8]<<"\n"
-            <<"c10           = "<<c[9]<<"\n"
-            <<"c11           = "<<c[10]<<"\n"
-            <<"c12           = "<<c[11]<<"\n"
-            <<"R0            = "<<R_0<<"\n"
-            <<"psipmin       = "<<psipmin<<"\n"
-            <<"psipmax       = "<<psipmax<<"\n"
-            <<"epsilon_a     = "<<a/R_0<<"\n"
-            <<"elongation    = "<<elongation<<"\n"
-            <<"triangularity = "<<triangularity<<"\n"
-            <<"alpha         = "<<alpha<<"\n"
-            <<"lnN_inner     = "<<lnN_inner<<"\n"
-            <<"zonal modes   = "<<k_psi<<"\n" 
-            <<"rk4 epsilon   = "<<rk4eps<<"\n"
-            <<"boxscale      = "<<boxscale<<"\n"
-            <<"nprofileamp   = "<<nprofileamp<<"\n"
-            <<"bgprofamp     = "<<bgprofamp<<"\n"
-            <<"psipmaxcut    = "<<psipmaxcut<<"\n"
-            <<"psipmaxlap    = "<<psipmaxlap<<"\n"; 
-    }
-    private:
-    int layout_;
-};
+///@addtogroup geom
+///@{
+
 /**
  * @brief \f[ \hat{\psi}_p  \f]
  */    
@@ -777,287 +709,43 @@ struct Field
    
 };
 
-/**
- * @brief Sets values to zero outside psipmax and inside psipmin
- */ 
-struct Iris
+struct FieldP
 {
-    Iris( GeomParameters gp ): 
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) > gp_.psipmax) return 0.;
-        if( psip_(R,Z) < gp_.psipmin) return 0.;
-        return 1.;
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        if( psip_(R,Z,phi) > gp_.psipmax) return 0.;
-        if( psip_(R,Z,phi) < gp_.psipmin) return 0.;
-        return 1.;
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-/**
- * @brief Sets values to zero outside psipmax 
- */ 
-struct Pupil
-{
-    Pupil( GeomParameters gp): 
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) > gp_.psipmaxcut) return 0.;
-        return 1.;
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        if( psip_(R,Z,phi) > gp_.psipmaxcut) return 0.;
-        return 1.;
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-/**
- * @brief Damps the outer boundary in a zone from psipmax to psipmax+ 4*alpha with a normal distribution
- */ 
-struct GaussianDamping
-{
-    GaussianDamping( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) > gp_.psipmax + 4.*gp_.alpha) return 0.;
-        if( psip_(R,Z) < (gp_.psipmax)) return 1.;
-        return exp( -( psip_(R,Z)-gp_.psipmax)*( psip_(R,Z)-gp_.psipmax)/2./gp_.alpha/gp_.alpha);
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        if( psip_(R,Z,phi) > gp_.psipmax + 4.*gp_.alpha) return 0.;
-        if( psip_(R,Z,phi) < (gp_.psipmax)) return 1.;
-        return exp( -( psip_(R,Z,phi)-gp_.psipmax)*( psip_(R,Z,phi)-gp_.psipmax)/2./gp_.alpha/gp_.alpha);
-
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-/**
- * @brief Damps lnN quantitie with tanh
- */ 
-struct TanhDampingProf
-{
-        TanhDampingProf( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmax + 3.*gp_.alpha)/gp_.alpha) );
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmax + 3.*gp_.alpha)/gp_.alpha) );
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-/*damps from psi_max on outwards*/
-struct TanhDampingOut
-{
-        TanhDampingOut( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-struct TanhDampingIn
-{
-        TanhDampingIn( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-/*increases from psi_maxlap on*/
-struct TanhDampingInv
-{
-        TanhDampingInv( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        return 1.-0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxlap - 3.*gp_.alpha)/gp_.alpha) );
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return 1.-0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxlap - 3.*gp_.alpha)/gp_.alpha) );
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-
-/**
- * @brief source for quantities N ... dtlnN = ...+ source/N
- */
-struct TanhSource
-{
-        TanhSource( GeomParameters gp, double amp):
-        gp_(gp),
-        amp_(amp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        return amp_*0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return amp_*0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
-    }
-    private:
-    GeomParameters gp_;
-    double amp_;
-    Psip psip_;
-};
-/**
- * @brief Computes the background gradient for the logarithmic densities on n>=1
- */ 
-struct Gradient
-{
-    Gradient( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-   double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) < (gp_.psipmin)) return exp(gp_.lnN_inner*log(10)); 
-        if( psip_(R,Z) < 0.) return -1./gp_.psipmin*(psip_(R,Z) -gp_.psipmin +exp(gp_.lnN_inner*log(10))*(- psip_(R,Z)));
-        return 1.;
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        if( psip_(R,Z,phi) < (gp_.psipmin)) return exp(gp_.lnN_inner*log(10)); 
-        if( psip_(R,Z,phi) < 0.) return -1./gp_.psipmin*(psip_(R,Z,phi) -gp_.psipmin +exp(gp_.lnN_inner*log(10))*(- psip_(R,Z,phi)));
-        return 1.;
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-/**
- * @brief Returns density profile with variable peak amplitude and background amplitude 
- */ 
-struct Nprofile
-{
-     Nprofile( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-   double operator( )(double R, double Z)
-    {
-        if (psip_(R,Z)<0.) return gp_.bgprofamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*gp_.nprofileamp);
-        return gp_.bgprofamp;
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        if (psip_(R,Z,phi)<0.) return gp_.bgprofamp+(psip_(R,Z,phi)/psip_(gp_.R_0,0.0,0.0)*gp_.nprofileamp);
-        return gp_.bgprofamp;
-    }
-    private:
-    GeomParameters gp_;    
-    Psip psip_;
-};   
-
-/**
- * @brief returns zonal flow field 
- */ 
-struct ZonalFlow
-{
-    ZonalFlow(GeomParameters gp,  double amp):
-        gp_(gp),
-        amp_(amp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-    }
-    double operator() (double R, double Z) 
-    {
-      if (psip_(R,Z)<0.) return (amp_*abs(cos(2.*M_PI*psip_(R,Z)*gp_.k_psi)));
-      return 0.;
-      
-    }
-    double operator() (double R, double Z,double phi) 
-    {
-        if (psip_(R,Z,phi)<0.) return ( amp_*abs(cos(2.*M_PI*psip_(R,Z,phi)*gp_.k_psi)));
-        return 0.;
-    }
-    private:
-    GeomParameters gp_;
-    double amp_;
-    Psip psip_;
-};
-
-/**
- * @brief testfunction to test the parallel derivative \f[ f = \psi_p(R,Z) \sin{(\varphi)}\f]
- */ 
-struct TestFunction
-{
-    TestFunction(Psip psip) : psip_(psip){}
+    FieldP( GeomParameters gp): R_0(gp.R_0), 
+    ipol_(gp.R_0,gp.A,Psip(gp.R_0, gp.A, gp.c)){}
     double operator()( double R, double Z, double phi)
     {
-        return psip_(R,Z,phi)*sin(phi);
+        return R_0*ipol_(R,Z)/R/R;
     }
+    
     private:
-    Psip psip_;
-};
-/**
- * @brief analyitcal solution of the parallel derivative of the testfunction
- *  \f[ \nabla_\parallel f = \psi_p(R,Z) b^\varphi \cos{(\varphi)}\f]
- */ 
-struct DeriTestFunction
+    double R_0;
+    Ipol   ipol_;
+   
+}; 
+struct FieldR
 {
-    DeriTestFunction(GeomParameters gp, Psip psip,PsipR psipR, PsipZ psipZ, Ipol ipol, InvB invB) :gp_(gp), psip_(psip), psipR_(psipR), psipZ_(psipZ),ipol_(ipol), invB_(invB) {}
+    FieldR( GeomParameters gp): psipZ_(gp.R_0,gp.A,gp.c), R_0(gp.R_0){ }
     double operator()( double R, double Z, double phi)
     {
-        return  gp_.R_0*psip_(R,Z,phi)*ipol_(R,Z,phi)*cos(phi)*invB_(R,Z,phi)/R/R;
+        return  R_0/R*psipZ_(R,Z);
     }
     private:
-    GeomParameters gp_;
-    Psip psip_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    Ipol ipol_;
-    InvB invB_;
+    PsipZ  psipZ_;
+    double R_0;
+   
 };
+struct FieldZ
+{
+    FieldZ( GeomParameters gp): psipR_(gp.R_0,gp.A,gp.c), R_0(gp.R_0){ }
+    double operator()( double R, double Z, double phi)
+    {
+        return  -R_0/R*psipR_(R,Z);
+    }
+    private:
+    PsipR  psipR_;
+    double R_0;
+   
+};
+///@} 
 } //namespace dg

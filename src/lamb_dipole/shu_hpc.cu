@@ -1,13 +1,15 @@
 #include <iostream>
 #include <iomanip>
 
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
-#include "dg/evaluation.cuh"
-#include "dg/rk.cuh"
-#include "dg/karniadakis.cuh"
-#include "dg/xspacelib.cuh"
-#include "dg/typedefs.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/functors.h"
+#include "dg/backend/evaluation.cuh"
+#include "dg/runge_kutta.h"
+#include "dg/multistep.h"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/typedefs.cuh"
+
+#include "dg/exceptions.h"
 
 #include "file/read_input.h"
 #include "file/file.h"
@@ -53,7 +55,7 @@ int main( int argc, char * argv[])
 
     //initiate solver 
     dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::DVec w2d( dg::create::w2d(grid));
+    dg::DVec w2d( dg::create::weights(grid));
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
     //dg::HVec omega = dg::evaluate ( lamb, grid);
     dg::HVec omega = dg::evaluate ( shearLayer, grid);
@@ -75,11 +77,12 @@ int main( int argc, char * argv[])
     ab( shu, diff, y0); //make potential ready
     //y0.swap( y1); //y1 now contains value at zero time
 
-    dg::DVec varphi( grid.size());
+    dg::DVec varphi( grid.size()), potential;
     double vorticity = dg::blas2::dot( one , w2d, ab.last());
     double enstrophy = 0.5*dg::blas2::dot( ab.last(), w2d, ab.last());
     double energy =    0.5*dg::blas2::dot( ab.last(), w2d, shu.potential()) ;
-    shu.arakawa().variation( shu.potential(), varphi);
+    potential = shu.potential();
+    shu.arakawa().variation( potential, varphi);
     double variation = dg::blas2::dot( varphi, w2d, one );
     /////////////////////////////////////////////////////////////////
     file::T5trunc t5file( argv[2], input);
@@ -100,8 +103,9 @@ int main( int argc, char * argv[])
             ab( shu, diff, y0);//one step further
             vorticity = dg::blas2::dot( one , w2d, ab.last());
             enstrophy = 0.5*dg::blas2::dot( ab.last(), w2d, ab.last());
-            energy    = 0.5*dg::blas2::dot( ab.last(), w2d, shu.potential()) ;
-            shu.arakawa().variation( shu.potential(), varphi);
+            potential = shu.potential();
+            energy    = 0.5*dg::blas2::dot( ab.last(), w2d, potential) ;
+            shu.arakawa().variation(potential, varphi);
             variation = dg::blas2::dot( varphi, w2d, one );
             t5file.append( vorticity, enstrophy, energy, variation);
             if( energy>1e6) throw dg::Fail(p.eps);
