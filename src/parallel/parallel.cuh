@@ -186,9 +186,6 @@ container& ParallelFeltor<Matrix,container, P>::compute_vesqr( container& potent
 template< class Matrix, class container, class P>
 container& ParallelFeltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    //without FLR
-//     dg::blas1::axpby( 1., potential, -0.5, compute_vesqr( potential), phi[1]);
-    //with FLR
     invert_invgamma(invgamma,chi,potential);
     dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);    
     return phi[1];
@@ -197,26 +194,18 @@ container& ParallelFeltor<Matrix,container, P>::compute_psi( container& potentia
 template<class Matrix, class container, class P>
 void ParallelFeltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
-
-//     dg::blas1::transform( src,omega, dg::PLUS<double>(-1)); //n_i -1
-    std::cout << "creating ne" << "\n";
     invert_invgamma(invgamma,target,src); //=ne-1 = Gamma (ni-1)    
-//     dg::blas1::transform( target,target, dg::PLUS<double>(+1)); //n_i
-
 }
 
 //computes and modifies expy!!
 template<class Matrix, class container, class P>
 container& ParallelFeltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
-
     dg::blas1::axpby( 1., y[1], 0., chi); //\chi = a_i \mu_i n_i
     //correction
     dg::blas1::axpby( -p.mu[0], y[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_e
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
-
-
     pol.set_chi( chi);
     //with FLR
     unsigned numberg =  invert_invgamma(invgamma,chi,y[1]);    //chi= Gamma (Omega) = Gamma (ni-1)
@@ -248,8 +237,8 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
     double Upari =  0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); 
     energy_ = Ue + Ui  + Upare + Upari;
     // the resistive dissipation without FLR      
-/*        dg::blas1::pointwiseDot( expy[0], y[2], omega); //N_e U_e 
-        dg::blas1::pointwiseDot( expy[1], y[3], chi); //N_i U_i
+/*        dg::blas1::pointwiseDot( y[0], y[2], omega); //N_e U_e 
+        dg::blas1::pointwiseDot( y[1], y[3], chi); //N_i U_i
         dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i    */              //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
     //double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*J_parallel^2
 
