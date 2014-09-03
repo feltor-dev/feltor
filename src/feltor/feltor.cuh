@@ -51,7 +51,6 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (lnN,U)) 
         }
-//         dg::blas1::scal( y[2],-1./p.mu[0]); //factor nu_e on U_e
         //add parallel resistivity
         for( unsigned i=0; i<2; i++)
             dg::blas1::transform( x[i], expy[i], dg::EXP<double>());
@@ -168,7 +167,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), expy(phi),  
     dzy( 4, chi), curvy(dzy),
-    dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
+//     dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
+    dz(solovev::Field(gp), g, gp.rk4eps,solovev::Pupil(gp)),
     arakawa( g), 
     pol(     g), 
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
@@ -218,7 +218,6 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
 
-    //A = pol.create( chi);
     pol.set_chi( chi);
     dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
     dg::blas1::transform( expy[1], omega,   dg::PLUS<double>(-1)); //n_i -1
@@ -295,8 +294,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
 
         //compute parallel derivatives
+        dz.set_boundaries( dg::NEU, 0, 0); //for all quantities
         dz(y[i], dzy[i]);
         dz(phi[i], dzphi[i]);
+        dz.set_boundaries( dg::DIR, -1., 1.); //for all quantities
         dz(y[i+2], dzy[2+i]);
 
         //parallel advection terms
@@ -333,19 +334,19 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);  //U K(phi)
         dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                         //dtU = dtU -0.5 U K(psi)
     }
-//     dz(expy[0], dzy[0]);    
-//     dz(dzy[0], omega);
-//     dg::blas1::pointwiseDivide( omega, expy[0] ,omega); //N_e U_e 
-//     dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[0]);
-//     dz(expy[1], dzy[1]);    
-//     dz(dzy[1], omega);
-//     dg::blas1::pointwiseDivide( omega, expy[1] ,omega); //N_e U_e 
-//     dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[1]);
-
-    for( unsigned i=0; i<4; i++)
+    for( unsigned i=0; i<2; i++)
     {
-        dz(dzy[i], omega); //dz (dz (N,U))
-//         if (i==2) dg::blas1::axpby( -p.nu_parallel/p.mu[0], omega, 1., yp[i]);         //factor mu_e on U_e
+        dz.set_boundaries( dg::NEU, 0, 0); 
+        dz.dzz(y[i],omega);
+        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
+         //gradlnBcorrection
+         dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
+         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
+    }
+    for( unsigned i=2; i<4; i++)
+    {
+        dz.set_boundaries( dg::DIR, -1., 1.);
+        dz.dzz(y[i],omega);
          dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
          //gradlnBcorrection
          dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    

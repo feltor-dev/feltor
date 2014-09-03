@@ -362,11 +362,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //add parallel diffusion with naive implementation
     for( unsigned i=0; i<4; i++)
     {
-        dz(dzy[i], omega); //dz (dz (N,U))
+        dz.dzz(y[i],omega);
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);                     //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
-                 //gradlnBcorrection
-         dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
-         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);   
+        //gradlnBcorrection
+        dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
+        dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);   
     }
     //add particle source to dtN
 //     for( unsigned i=0; i<2; i++)
