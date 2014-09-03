@@ -10,23 +10,22 @@ double sine( double x, double y){return sin(x)*sin(y);}
 
 int main()
 {
+    //Projection might not be correct any more due to layout change
     std::cout << "TEST 1D\n";
     unsigned n_old = 4, n_new = 3, N = 10, Nf = 1;
-    dg::Grid1d<double> g  ( 0, M_PI, n_old, N);
+    dg::Grid1d<double> go ( 0, M_PI, n_old, N);
     dg::Grid1d<double> gn ( 0, M_PI, n_new, N*Nf);
-    cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection1d( g, gn);
-    thrust::host_vector<double> v = dg::evaluate( sine, g);
-    thrust::host_vector<double> w1d = dg::create::weights( g);
+    cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection( go, gn);
+    thrust::host_vector<double> v = dg::evaluate( sine, go);
+    thrust::host_vector<double> w1do = dg::create::weights( go);
     thrust::host_vector<double> w1dn = dg::create::weights( gn);
-    dg::HVec one( g.size(), 1.);
+    dg::HVec oneo( go.size(), 1.);
     dg::HVec onen( gn.size(), 1.);
     thrust::host_vector<double> w( gn.size());
     dg::blas2::gemv( proj, v, w);
-    //for( unsigned i=0; i<n_new*N; i++)
-        //std::cout << v[i]<< " "<<w[i]<<"\n";
-    std::cout << "Original vector  "<<dg::blas2::dot( one, w1d, v) << "\n";
+    std::cout << "Original vector  "<<dg::blas2::dot( oneo, w1do, v) << "\n";
     std::cout << "Projected vector "<<dg::blas2::dot( onen, w1dn, w) << "\n";
-    std::cout << "Difference       "<<dg::blas2::dot( one, w1d, v) - dg::blas2::dot( onen, w1dn, w) << "\n"<<std::endl;
+    std::cout << "Difference       "<<dg::blas2::dot( oneo, w1do, v) - dg::blas2::dot( onen, w1dn, w) << "\n"<<std::endl;
 
     /*
     std::cout << "TEST KRONECKER PRODUCT\n";
@@ -46,32 +45,31 @@ int main()
     */
 
     std::cout << "TEST 2D\n";
-    n_old = 7, n_new = 3, N = 5, Nf = 1;
-    dg::Grid2d<double> g2 (0, M_PI, 0, M_PI, n_old, N, N);
-    dg::Grid2d<double> g2n (0, M_PI, 0, M_PI, n_new, N, N*Nf);
-    cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection2d( g2, g2n);
-    dg::HVec v2 = dg::evaluate( sine, g2);
-    dg::HVec w2d = dg::create::weights( g2);
+    n_old = 7, n_new = 3, N = 4, Nf = 3;
+    //old grid is larger than the new grid
+    dg::Grid2d<double> g2o (0, M_PI, 0, M_PI, n_old, N*Nf, N*Nf);
+    dg::Grid2d<double> g2n (0, M_PI, 0, M_PI, n_new, N, N);
+    cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection( g2o, g2n);
+    const dg::HVec sinO = dg::evaluate( sine, g2o), 
+                   sinN = dg::evaluate( sine, g2n);
+    dg::HVec w2do = dg::create::weights( g2o);
     dg::HVec w2dn = dg::create::weights( g2n);
-    dg::HVec w2( g2n.size()), w222 = dg::evaluate( sine, g2n);
-    dg::blas2::gemv( proj2d, v2, w2);
-    std::cout << "Original vector  "<<dg::blas2::dot( v2, w2d, v2) << "\n";
-    std::cout << "Projected vector "<<dg::blas2::dot( w2, w2dn, w2) << "\n";
-    std::cout << "Evaluated vector "<<dg::blas2::dot( w222, w2dn, w222) << "\n";
-    std::cout << "Difference       "<<dg::blas2::dot( v2, w2d, v2) - dg::blas2::dot( w2, w2dn, w2) << "\n" << std::endl;
+    dg::HVec sinP( g2n.size());
+    dg::blas2::gemv( proj2d, sinO, sinP);
+    std::cout << "Original vector     "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) << "\n";
+    std::cout << "Projected vector    "<<sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n";
+    //std::cout << "Evaluated vector "<<dg::blas2::dot(sinN, w2dn, sinN) << "\n";
+    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
 
     std::cout << "TEST OF DIFFERENCE\n";
-    dg::DifferenceNorm<dg::HVec> diff( g2, g2n);
-    dg::HVec x2 = evaluate( sine, g2);
-    dg::HVec y2 = evaluate( sine, g2n);
-    dg::blas2::gemv( proj2d, x2, w2);
-    std::cout << "Information loss due to projection:\n";
-    std::cout << diff( x2, w2)<<" (should converge to zero) \n";
-    std::cout << "Difference between two grid evaluations:\n";
-    std::cout << diff( x2, y2)<<" (should converge to zero!) \n";
+    dg::DifferenceNorm<dg::HVec> diff( g2o, g2n);
+    std::cout << "Difference between original and projection:\n";
+    std::cout << diff( sinO, sinP)<<" (should converge to zero) \n";
+    //std::cout << "Difference between two grid evaluations:\n";
+    //std::cout << diff( sinO, sinN)<<" (should converge to zero!) \n";
     std::cout << "Difference between projection and evaluation      \n";
-    dg::blas1::axpby( 1., y2, -1., w2);
-    std::cout << dg::blas2::dot( w2, w2dn, w2)<<" (smaller than above)\n";
+    dg::blas1::axpby( 1., sinN, -1., sinP);
+    std::cout << dg::blas2::dot( sinP, w2dn, sinP)<<" (smaller than above)\n";
 
 
     return 0;

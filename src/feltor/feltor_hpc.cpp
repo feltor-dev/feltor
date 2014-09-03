@@ -72,6 +72,7 @@ int main( int argc, char* argv[])
         if(rank==0) std::cout << geom << std::endl;
         return -1;
     }
+    geom = file::read_file( argv[2]);
     const solovev::GeomParameters gp(v3);
     if(rank==0) gp.display( std::cout);
     double Rmin=gp.R_0-(gp.boxscale)*gp.a;
@@ -123,7 +124,9 @@ int main( int argc, char* argv[])
     int dataIDs[names.size()], energyID, tvarID; //VARIABLE IDS
     names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
     names[4] = "potential";
-    err = file::define_dimensions( ncid, dimids, &tvarID, grid.global());
+    //use global dimensionality
+    dg::Grid3d<double> global_grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out);  
+    err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
     for( unsigned i=0; i<names.size(); i++)
     {
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dimids, &dataIDs[i]);
@@ -152,7 +155,7 @@ int main( int argc, char* argv[])
     transferD = feltor.potential()[0];
     dg::blas2::symv( interpolate, transferD.data(), transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data());
-    err = nc_put_vara_double( ncid, tvarID, &start[0], &count[0], &time);
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     double E0 = feltor.energy(), energy0 = E0, E1 = 1, diff = 0;
     err = nc_put_vara_double( ncid, energyID, start, count, &E1);
     //err = nc_close(ncid);
@@ -193,7 +196,7 @@ int main( int argc, char* argv[])
         transferD = feltor.potential()[0];
         dg::blas2::symv( interpolate, transferD.data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-        err = nc_put_vara_double( ncid, tvarID, &start[0], &count[0], &time);
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         E1 = feltor.energy()/energy0;
         err = nc_put_vara_double( ncid, energyID, start, count, &E1);
 

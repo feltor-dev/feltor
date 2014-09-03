@@ -1,7 +1,8 @@
-system=vsc # Use as Makefile parameter!
+system=home
 device=gpu
 
 INCLUDE = -I../../inc # other project libraries
+INCLUDE+= -I../feltor/
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -57,36 +58,13 @@ LIBS    += -L/opt/sw/netcdf/4.0.1/intel-hdf5/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
-all: feltor feltor_hpc
+all: parallel
 
-feltor: feltor.cu feltor.cuh geometry.h
+parallel: parallel.cu parallel.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
-ifeq ($(strip $(device)),mpi)
-feltor_hpc: feltor_hpc.cpp feltor.cuh geometry.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
-else
-feltor_hpc: feltor_hpc.cu feltor.cuh geometry.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
-	echo "Attention: No compiler warnings are issued!" 
-endif
-	
-dz_geom_t: dz_geom_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)
-	echo "Attention: No compiler warnings are issued!" 
-	
-geometry_t: geometry_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
-	
-generator: generator.cpp 
-	g++ generator.cpp -o generator -std=c++0x -Wall
-
-.PHONY: clean doc
-
-doc: 
-	doxygen Doxyfile
+.PHONY: clean
 	
 clean:
-	rm -f feltor feltor_hpc geometry_t dz_geom_t
+	rm -f parallel parallel_hpc geometry_t dz_geom_t
