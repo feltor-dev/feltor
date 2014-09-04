@@ -17,7 +17,13 @@ struct DefaultLimiter
         return 1;
     }
 };
-
+struct NoLimiter
+{
+    double operator()(double x, double y)
+    {
+        return 0.;
+    }
+};
 /**
  * @brief Class for the evaluation of a parallel derivative
  *

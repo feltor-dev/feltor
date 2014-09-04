@@ -194,23 +194,21 @@ container& ParallelFeltor<Matrix,container, P>::compute_psi( container& potentia
 template<class Matrix, class container, class P>
 void ParallelFeltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
-    invert_invgamma(invgamma,target,src); //=ne-1 = Gamma (ni-1)    
+    invert_invgamma(invgamma,target,src); //=ne = Gamma (ni)    
 }
 
 //computes and modifies expy!!
 template<class Matrix, class container, class P>
 container& ParallelFeltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
-    dg::blas1::axpby( 1., y[1], 0., chi); //\chi = a_i \mu_i n_i
-    //correction
-    dg::blas1::axpby( -p.mu[0], y[0], 1., chi); //\chi = a_i \mu_i n_i -a_e \mu_e n_e
+    dg::blas1::axpby( p.mu[1], y[1], 0., chi); //\chi = \mu_i n_i
+    dg::blas1::axpby( -p.mu[0], y[0], 1., chi); //\chi =  \mu_i n_i - \mu_e n_e
     dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi); //chi/= B^2
+    dg::blas1::pointwiseDot( chi, binv, chi); //(\mu_i n_i - \mu_e n_e) /B^2
     pol.set_chi( chi);
-    //with FLR
-    unsigned numberg =  invert_invgamma(invgamma,chi,y[1]);    //chi= Gamma (Omega) = Gamma (ni-1)
-    dg::blas1::axpby( -1., y[0], 1.,chi); //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
-    unsigned number = invert_pol( pol, phi[0], chi); //Gamma n_i -ne = -nabla chi nabla phi
+    unsigned numberg =  invert_invgamma(invgamma,omega,y[1]);    //omega= Gamma (Ni)
+    dg::blas1::axpby( -1., y[0], 1.,omega); //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
+    unsigned number = invert_pol( pol, phi[0], omega); //Gamma n_i -ne = -nabla chi nabla phi
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
