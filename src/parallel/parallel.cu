@@ -72,22 +72,15 @@ int main( int argc, char* argv[])
 
     //The initial field
     //Monopole
-      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+    dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
-    
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
     dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[1]); //is damping on bath    
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
-    //without FLR
-//     dg::blas1::axpby( 1., y1[1], 1., y0[0]);
-    //with FLR
     parallel.initializene(y0[1],y0[0]);    
-//     parallel.log( y0, y0, 2); 
-
-
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
@@ -114,7 +107,7 @@ int main( int argc, char* argv[])
         hvisual = y0[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 0.0;
+        colors.scalemin() = 1.0;
         title << std::setprecision(2) << std::scientific;
         title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
@@ -128,7 +121,7 @@ int main( int argc, char* argv[])
         hvisual = y0[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 0.0;        
+        colors.scalemin() = 1.0;        
         title << std::setprecision(2) << std::scientific;
         title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)

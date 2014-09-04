@@ -165,54 +165,55 @@ ParallelFeltor<Matrix, container, P>::ParallelFeltor( const Grid& g, eule::Param
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi), dzphi(phi), dzun(phi),dzlogn(phi),dzu2(phi),expy(phi),  logy(phi),
     dzy( 4, chi),curvy(dzy), 
-//     dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
-    dz(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
+    dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
+//     dz(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
-    pol(     g), 
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
+    pol(     g),     
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),
     gp(gp)
 { }
+
+template<class Matrix, class container, class P>
+container& ParallelFeltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
+{
+    dg::blas1::axpby( -p.mu[0], y[0], p.mu[1], y[1], chi);    //chi =  \mu_i n_i - \mu_e n_e
+    dg::blas1::pointwiseDot( chi, binv, chi);
+    dg::blas1::pointwiseDot( chi, binv, chi);                 //(\mu_i n_i - \mu_e n_e) /B^2
+    pol.set_chi( chi);
+    unsigned numberg =  invert_invgamma(invgamma,omega,y[1]); //omega= Gamma (Ni)
+    dg::blas1::axpby( -1., y[0], 1.,omega);                   //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
+    unsigned number = invert_pol( pol, phi[0], omega);        //Gamma n_i -ne = -nabla chi nabla phi
+    if( number == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);
+    return phi[0];
+}
+
 template< class Matrix, class container, class P>
 container& ParallelFeltor<Matrix,container, P>::compute_vesqr( container& potential)
 {
-    arakawa.bracketS( potential, potential, chi);
+    arakawa.bracketS( potential, potential, chi);                           //dR phi dR phi + Dz phi Dz phi
     dg::blas1::pointwiseDot( binv, binv, omega);
     dg::blas1::pointwiseDot( chi, omega, omega);
-    return omega;
+    return omega;                                                           //u_E = (dR phi dR phi + Dz phi Dz phi)/B^2
 }
 template< class Matrix, class container, class P>
 container& ParallelFeltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    invert_invgamma(invgamma,chi,potential);
-    dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);    
+    invert_invgamma(invgamma,chi,potential);                               //chi = Gamma phi
+    dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);    //psi = Gamma phi - 0.5 u_E^2
     return phi[1];
     
 }
 template<class Matrix, class container, class P>
 void ParallelFeltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
-    invert_invgamma(invgamma,target,src); //=ne = Gamma (ni)    
+    invert_invgamma(invgamma,target,src);                                  //=> ne = Gamma (ni)    
 }
 
-//computes and modifies expy!!
-template<class Matrix, class container, class P>
-container& ParallelFeltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
-{
-    dg::blas1::axpby( p.mu[1], y[1], 0., chi); //\chi = \mu_i n_i
-    dg::blas1::axpby( -p.mu[0], y[0], 1., chi); //\chi =  \mu_i n_i - \mu_e n_e
-    dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi); //(\mu_i n_i - \mu_e n_e) /B^2
-    pol.set_chi( chi);
-    unsigned numberg =  invert_invgamma(invgamma,omega,y[1]);    //omega= Gamma (Ni)
-    dg::blas1::axpby( -1., y[0], 1.,omega); //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
-    unsigned number = invert_pol( pol, phi[0], omega); //Gamma n_i -ne = -nabla chi nabla phi
-    if( number == invert_pol.get_max())
-        throw dg::Fail( p.eps_pol);
-    return phi[0];
-}
+
 
 template<class Matrix, class container, class P>
 void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
@@ -266,65 +267,46 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
     
     for( unsigned i=0; i<2; i++)
     {
-        //compute parallel derivatives
-//         dz.set_boundaries( dg::NEU, 0, 0); //for all quantities
-//         dz(y[i], dzy[i]); //dz N
-//         dz(phi[i], dzphi[i]);
-//         dz.set_boundaries( dg::DIR, -1., 1.); //for all quantities
-//         dz(y[i+2], dzy[2+i]);
-// 
-
-        
-        //new prallel advection
-//         dz.set_boundaries( dg::NEU, 0, 0); //for all quantities
+//         dz.set_boundaries( dg::NEU, 0, 0);
+        dz(y[i], dzy[i]);                                                       //dz N
+//         dz.set_boundaries( dg::DIR, -1., 1.);
+        dz(y[i+2], dzy[2+i]);                                                   //dz U
+        dg::blas1::pointwiseDot(y[i],y[i+2], omega);                            //U N
         dz.set_boundaries( dg::NEU, 0, 0);
-        dz(y[i], dzy[i]); //dz N
-        dz.set_boundaries( dg::DIR, -1., 1.);
-        dz(y[i+2], dzy[2+i]); //dz U
-        dg::blas1::pointwiseDot(y[i],y[i+2], omega); //U N
-        dz.set_boundaries( dg::NEU, 0, 0);
-        dz(omega, dzun[i]); //dz UN
-        dg::blas1::axpby( -1., dzun[i], 1., yp[i]);                            //dtN = dtN - dz U N
-        dg::blas1::pointwiseDot(omega, gradlnB, omega);                     
-        dg::blas1::axpby( 1., omega, 1., yp[i]);                            //dtN = dtN + U N dz ln B
+        dz(omega, dzun[i]);                                                     //dz UN
+        dg::blas1::axpby( -1., dzun[i], 1., yp[i]);                             //dtN = dtN - dz U N
+        dg::blas1::pointwiseDot(omega, gradlnB, omega);                         //U N dz ln B
+        dg::blas1::axpby( 1., omega, 1., yp[i]);                                //dtN = dtN + U N dz ln B
         //parallel force terms
-        dz.set_boundaries( dg::NEU, 0, 0);
-        dz(phi[i], dzphi[i]); //dz psi
-        dz.set_boundaries( dg::NEU, 0, 0);
-        dz(logy[i], dzlogn[i]); //dz psi
+//         dz.set_boundaries( dg::NEU, 0, 0);
+        dz(phi[i], dzphi[i]);                                                   //dz psi
+//         dz.set_boundaries( dg::NEU, 0, 0);
+        dz(logy[i], dzlogn[i]);                                                 //dz lnN
         dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzlogn[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
-        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);     //dtU = dtU - 1/(hat(mu))*dz phi  
-         //new prallel advection
-//          dz.set_boundaries( dg::NEU, 0, 0);//for all quantities
-          
-        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega); //U^2
-        dz.set_boundaries( dg::DIR, -1., 1.);
-        dz(omega, dzu2[i]); //dz u^2
-        dg::blas1::axpby( -0.5, dzu2[i], 1., yp[2+i]);                         //dtU = dtU - 0.5 dz U^2
-            
-          
-   
-
+        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);        //dtU = dtU - 1/(hat(mu))  *dz phi  
+         
+        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);                          //U^2
+//         dz.set_boundaries( dg::DIR, -1., 1.);
+        dz(omega, dzu2[i]);                                                     //dz u^2
+        dg::blas1::axpby( -0.5, dzu2[i], 1., yp[2+i]);                          //dtU = dtU - 0.5 dz U^2
     }
     for( unsigned i=0; i<2; i++)
     {
-       dz.set_boundaries( dg::NEU, 0, 0);
-       dz.dzz(y[i],omega); //Lap_parallel N
+//        dz.set_boundaries( dg::NEU, 0, 0);
+       dz.dzz(y[i],omega);                                                     //dz^2 N 
        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
        //gradlnBcorrection
-       dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
+       dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);                         // dz lnB dz N    
        dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
+       //         dz.set_boundaries( dg::DIR, -1., 1.);       
+       dz.dzz(y[i+2],omega);                                                   //dz^2 U 
+       dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);               
+       //gradlnBcorrection
+       dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);                       // dz lnB dz U
+       dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
 
     }
-    for( unsigned i=2; i<4; i++)
-    {
-        dz.set_boundaries( dg::DIR, -1., 1.);        
-        dz.dzz(y[i],omega); //Lap_parallel U
-        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
-        //gradlnBcorrection
-        dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);    
-        dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
-    }
+
     
     //add particle source to dtN
 //     for( unsigned i=0; i<2; i++)
