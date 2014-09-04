@@ -84,7 +84,7 @@ int main( int argc, char* argv[])
     //dg::blas1::axpby( 1., y1[0], 1., y0[1]);
     //with FLR
     feltor.initializene(y0[1],y0[0]);    
-    feltor.log( y0, y0, 2); 
+//    feltor.log( y0, y0, 2); 
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
@@ -134,7 +134,7 @@ int main( int argc, char* argv[])
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
-    feltor.exp( y0,y0,2); //transform to correct values
+  //  feltor.exp( y0,y0,2); //transform to correct values
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::symv( interpolate, y0[i], transferD);
@@ -177,7 +177,7 @@ int main( int argc, char* argv[])
         }
         time += p.itstp*p.dt;
         start[0] = i;
-        feltor.exp( y0,y0,2); //transform to correct values
+     //   feltor.exp( y0,y0,2); //transform to correct values
         err = nc_open(argv[3], NC_WRITE, &ncid);
 
         for( unsigned j=0; j<4; j++)
