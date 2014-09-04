@@ -18,8 +18,8 @@ const double lz = 100;
 dg::bc bcx = dg::DIR;
 double initial( double x, double y) {return sin(0);}
 
-double fct(double x, double y, double z){ return sin(y)*sin(x);}
-double laplace_fct( double x, double y, double z) { return 2*sin(y)*sin(x);}
+double fct(double x, double y, double z){ return sin(y)*sin(x)*sin(2.*M_PI*z);}
+double laplace_fct( double x, double y, double z) { return 2*sin(y)*sin(x)*sin(2.*M_PI*z);}
 //const double lx = 2./3.*M_PI;
 //double fct(double x, double y){ return sin(y)*sin(3.*x/4.);}
 //double laplace_fct( double x, double y) { return 25./16.*sin(y)*sin(3.*x/4.);}

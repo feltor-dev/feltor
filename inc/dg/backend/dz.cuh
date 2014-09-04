@@ -94,7 +94,7 @@ struct DZ
             cusp::multiply( plus, fp, tempPV);
             cusp::multiply( minus, fm, tempMV );
             //make ghostcells
-            if( i0==0)
+            if( i0==0 && bcz_ != dg::PER)
             {
                 cusp::copy( f0, ghostMV);
                 if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
@@ -111,9 +111,10 @@ struct DZ
                 dg::blas1::axpby( 1., ghostM, 1., tempM);
 
             }
-            else if( i0==g_.Nz()-1)
+            else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
             {
-                cusp::copy( f0, ghostPV);
+                if( bcz_ != dg::PER)
+                    cusp::copy( f0, ghostPV);
                 if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
                 {
                     dg::blas1::scal( ghostP, -1.);
@@ -173,7 +174,7 @@ struct DZ
             cusp::multiply( plus, fp, tempPV);
             cusp::multiply( minus, fm, tempMV );
             //make ghostcells
-            if( i0==0)
+            if( i0==0 && bcz_ != dg::PER)
             {
                 if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
                 {
@@ -188,7 +189,7 @@ struct DZ
                 dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
                 dg::blas1::axpby( 1., ghostM, 1., tempM);
             }
-            else if( i0==g_.Nz()-1)
+            else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
             {
                 if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
                 {
