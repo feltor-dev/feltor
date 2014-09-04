@@ -57,6 +57,29 @@ struct Pupil
     Psip psip_;
 };
 /**
+ * @brief Sets values to zero outside psipmax 
+ */ 
+struct PsiLimiter
+{
+    PsiLimiter( GeomParameters gp): 
+        gp_(gp),
+        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        }
+    double operator( )(double R, double Z)
+    {
+        if( psip_(R,Z) > gp_.psipmaxcut) return 1.;
+        return 0.;
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        if( psip_(R,Z,phi) > gp_.psipmaxcut) return 1.;
+        return 0.;
+    }
+    private:
+    GeomParameters gp_;
+    Psip psip_;
+};
+/**
  * @brief Damps the outer boundary in a zone from psipmax to psipmax+ 4*alpha with a normal distribution
  */ 
 struct GaussianDamping

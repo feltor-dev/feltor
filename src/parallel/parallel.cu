@@ -72,20 +72,20 @@ int main( int argc, char* argv[])
 
     //The initial field
     //Monopole
-      //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
+      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(gp,p.amp);
+//     solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
     dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[1]); //is damping on bath    
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ne
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     //without FLR
-    //dg::blas1::axpby( 1., y1[0], 1., y0[1]);
+//     dg::blas1::axpby( 1., y1[1], 1., y0[0]);
     //with FLR
     parallel.initializene(y0[1],y0[0]);    
-    parallel.log( y0, y0, 2); 
+//     parallel.log( y0, y0, 2); 
 
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
@@ -110,15 +110,11 @@ int main( int argc, char* argv[])
     std::cout << std::scientific << std::setprecision( 2);
     while ( !glfwWindowShouldClose( w ))
     {
-        //transform field to an equidistant grid
-        parallel.exp( y0, y1, 2); //calculate real densities from logdensities
 
-        //plot electrons
-        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
-        hvisual = dvisual;
+        hvisual = y0[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 1.0;
+        colors.scalemin() = 0.0;
         title << std::setprecision(2) << std::scientific;
         title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
@@ -128,12 +124,11 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
-        //draw ions
-        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
-        hvisual = dvisual;
+
+        hvisual = y0[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 1.0;        
+        colors.scalemin() = 0.0;        
         title << std::setprecision(2) << std::scientific;
         title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
@@ -143,10 +138,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
-        //transform to Vor
-        //dvisual=parallel.potential()[0];
-        //dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        //hvisual = y1[1];
+
         hvisual = parallel.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
@@ -206,7 +198,10 @@ int main( int argc, char* argv[])
             std::cout << "(m_tot-m_0)/m_0: "<< (parallel.mass()-mass0)/mass_blob0<<"\t";
             E0 = E1;
             E1 = parallel.energy();
-            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\n";
+            diff = (E1 - E0)/p.dt;
+            double diss = parallel.energy_diffusion( );
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             try{ ab( parallel, rolkar, y0);}
             catch( dg::Fail& fail) { 
