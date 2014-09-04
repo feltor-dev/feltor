@@ -21,6 +21,7 @@
    - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
+// const unsigned k = 3; //!< a change of k needs a recompilation!
 
 
 int main( int argc, char* argv[])
@@ -72,15 +73,15 @@ int main( int argc, char* argv[])
 
     //The initial field
     //Monopole
-//       dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(gp,p.amp);
+//     solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
     dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[1]); 
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ne
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     //with FLR
     feltor.initializene(y0[1],y0[0]);    
 
@@ -89,8 +90,9 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
+//     dg::AB< k, std::vector<dg::DVec> > ab( y0);
     ab.init( feltor, rolkar, y0, p.dt);
-
+// // ab.init( feltor,  y0, p.dt);
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
@@ -111,7 +113,9 @@ int main( int argc, char* argv[])
         hvisual = y0[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 1.0;
+//         colors.scalemin() = 1.0;
+                colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+
         title << std::setprecision(2) << std::scientific;
         title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
@@ -126,7 +130,9 @@ int main( int argc, char* argv[])
         hvisual = y0[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 1.0;        
+//         colors.scalemin() = 1.0;        
+                colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+
         title << std::setprecision(2) << std::scientific;
         title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
@@ -205,6 +211,7 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             try{ ab( feltor, rolkar, y0);}
+//             try{ ab( feltor,  y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

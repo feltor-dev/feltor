@@ -16,21 +16,21 @@
 6)  eps_pol (stop for polarisation)      =   1e-3 (1e-6)
 7)  eps_max (stop for induction)         =   0.0 (1e-6)
 8)  eps_gamma (stop for Gamma CG)        =   1e-20 (1e-8)
-9)  eps_time ( stop for time inversion ) =   1e-10 
+9)  eps_time ( stop for time inversion ) =   1e-20 
 
 ------------------Physical parameters----------------------
 
 10) mu_e (-m_e/m_i)                     =-0.5e-4
 11) tau (Ti/Te)                         = 0.0    (0.0)
 12) beta_e0                             = 0.0  (1e-4)
-13) nu_perp                             = 1e-4
-14) nu_parallel  (viscosity)            = 1e-4   (0.001)
+13) nu_perp                             = 1e-3
+14) nu_parallel  (viscosity)            = 1e-3   (0.001)
 15) para resistivity (c)                = 1e-20  (3e-5)
 
 ---------------Initial perturbation parameters---------------------
 
-16) amp (perturbation amplitude)            =  0.2     (1.0)
-17) sigma (blob variance in units of rho_s) =  1.5     (10)
+16) amp (perturbation amplitude)            =  0.5     (1.0)
+17) sigma (blob variance in units of rho_s) =  1.8     (10)
 18) x-position ( in units of a)             =  0.75   (0.4)
 19) y-position ( in units of a)             =  0.0   (0.5)
 20) z mode number (sin(2*Pi*m*z))           =  2

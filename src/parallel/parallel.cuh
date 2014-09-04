@@ -125,7 +125,7 @@ struct ParallelFeltor
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
-    container chi, omega;
+    container chi, omega,gammani;
 
     const container binv, curvR, curvZ, gradlnB;
     const container pupil, source, damping, one;
@@ -153,7 +153,7 @@ struct ParallelFeltor
 template<class Matrix, class container, class P>
 template<class Grid>
 ParallelFeltor<Matrix, container, P>::ParallelFeltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
-    chi( dg::evaluate( dg::one, g)), omega(chi),
+    chi( dg::evaluate( dg::one, g)), omega(chi), gammani(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
@@ -183,9 +183,11 @@ container& ParallelFeltor<Matrix, container, P>::polarisation( const std::vector
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);                 //(\mu_i n_i - \mu_e n_e) /B^2
     pol.set_chi( chi);
-    unsigned numberg =  invert_invgamma(invgamma,omega,y[1]); //omega= Gamma (Ni)
-    dg::blas1::axpby( -1., y[0], 1.,omega);                   //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_1 - n_e
-    unsigned number = invert_pol( pol, phi[0], omega);        //Gamma n_i -ne = -nabla chi nabla phi
+    dg::blas1::transform( y[1], omega,   dg::PLUS<double>(-1));//omega= Ni-1 
+    unsigned numberg    =  invert_invgamma(invgamma,chi,omega); //omega= Gamma (Ni-1)
+    dg::blas1::transform(  chi, gammani, dg::PLUS<double>(+1));
+    dg::blas1::axpby( -1., y[0], 1.,gammani,chi);                   //chi=  Gamma (n_i-1) +1  - (n_e) = Gamma n_i - n_e
+    unsigned number = invert_pol( pol, phi[0], chi);        //Gamma n_i -ne = -nabla chi nabla phi
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
@@ -210,7 +212,9 @@ container& ParallelFeltor<Matrix,container, P>::compute_psi( container& potentia
 template<class Matrix, class container, class P>
 void ParallelFeltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
-    invert_invgamma(invgamma,target,src);                                  //=> ne = Gamma (ni)    
+    dg::blas1::transform( src,omega, dg::PLUS<double>(-1)); //n_i -1
+    invert_invgamma(invgamma,target,omega); //=ne-1 = Gamma (ni-1)    
+    dg::blas1::transform( target,target, dg::PLUS<double>(+1)); //n_i
 }
 
 
@@ -304,7 +308,6 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
        //gradlnBcorrection
        dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);                       // dz lnB dz U
        dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
-
     }
 
     

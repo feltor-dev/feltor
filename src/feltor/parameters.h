@@ -90,11 +90,6 @@ struct Parameters
             <<"    perp Viscosity:   = "<<nu_perp<<"\n"
             <<"    perp Resistivity: = "<<c<<"\n"
             <<"    par Viscosity:    = "<<nu_parallel<<"\n";
-        os << "Boundary parameters are: \n"
-            <<"    Ring thickness = "<<a-b<<"\n"
-            <<"    minor Radius a = "<<a<<"\n"
-            <<"    major Radius R = "<<R_0<<"\n"
-            <<"    inner density ln n = "<<lnn_inner<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
