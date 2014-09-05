@@ -51,13 +51,14 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (lnN,U)) 
         }
+//       Resistivity
         dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
         dg::blas1::pointwiseDot( x[1], x[3], chi); //N_i U_i
-        dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i
+        dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
         dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
-//         dg::blas1::pointwiseDivide( chi, expy[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
-        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);  // dtU_e =- C/hat(mu)_e J_par/N_e
-        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat,omega, 1., y[3]);    // dtU_e =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i     
+//         dg::blas1::pointwiseDivide( chi, x[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
+        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   // dt U_e =- C/hat(mu)_e J_par/N_e
+        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   // dt U_i =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i now
         //cut contributions to boundary now with damping on all 4 quantities
         for( unsigned i=0; i<y.size(); i++){
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);

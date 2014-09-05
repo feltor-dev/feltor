@@ -45,26 +45,25 @@ struct Rolkar
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
-        dg::blas1::axpby( 0., x, 0, y);
-//         for( unsigned i=0; i<x.size(); i++)
-//         {
-//             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
-//             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-//             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (N,U)) 
-//         }
-      // Resistivity
-//         dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
-//         dg::blas1::pointwiseDot( x[1], x[3], chi); //N_i U_i
-//         dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
-//         dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
-//         dg::blas1::pointwiseDivide( chi, expy[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
-//         dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);  // dtU_e =- C/hat(mu)_e J_par/N_e
-//         dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat,omega, 1., y[3]); 
-        // dtU_e =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i 
-//         cut contributions to boundary now with damping on all 4 quantities
-//         for( unsigned i=0; i<y.size(); i++){
-//             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
-//         }
+//         dg::blas1::axpby( 0., x, 0, y);
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+            dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (N,U)) 
+        }
+//       Resistivity
+        dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
+        dg::blas1::pointwiseDot( x[1], x[3], chi); //N_i U_i
+        dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
+        dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
+//         dg::blas1::pointwiseDivide( chi, x[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
+        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   // dt U_e =- C/hat(mu)_e J_par/N_e
+        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   // dt U_i =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i now
+        //damping
+        for( unsigned i=0; i<y.size(); i++){
+            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
+        }
     }
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const Preconditioner& weights(){return LaplacianM_perp.weights();}
@@ -279,12 +278,12 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);                    // dtU =1/B [U,phi]_RZ  
         
         //Parallel dynamics
-//         dz.set_boundaries( dg::NEU, 0, 0);
+        dz.set_boundaries( dg::NEU, 0, 0);
         dz(y[i], dzy[i]);                                                       //dz N
 //         dz.set_boundaries( dg::DIR, -1., 1.);
         dz(y[i+2], dzy[2+i]);                                                   //dz U
         dg::blas1::pointwiseDot(y[i],y[i+2], omega);                            //U N
-        dz.set_boundaries( dg::NEU, 0, 0);
+//         dz.set_boundaries( dg::NEU, 0, 0);
         dz(omega, dzun[i]);                                                     //dz UN
         dg::blas1::axpby( -1., dzun[i], 1., yp[i]);                             //dtN = dtN - dz U N
         dg::blas1::pointwiseDot(omega, gradlnB, omega);                         //U N dz ln B
@@ -334,15 +333,20 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //        dz.set_boundaries( dg::NEU, 0, 0);
         dz.dzz(y[i],omega);                                                     //dz^2 N 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
-        //gradlnBcorrection
+//         //gradlnBcorrection
         dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);                         // dz lnB dz N    
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
-        //         dz.set_boundaries( dg::DIR, -1., 1.);       
+//         //         dz.set_boundaries( dg::DIR, -1., 1.);       
         dz.dzz(y[i+2],omega);                                                   //dz^2 U 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);               
-        //gradlnBcorrection
+//         //gradlnBcorrection
         dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);                       // dz lnB dz U
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
+        
+        //damping 
+        dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
+        dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
+
     }
 
     //add particle source to dtN
@@ -352,10 +356,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //         dg::blas1::axpby( 1., omega, 1, yp[i]  );       //dtlnN = dtlnN + source/N
 //     }
 
-    for( unsigned i=0; i<4; i++) //damping and pupil on N and w
-    {
-        dg::blas1::pointwiseDot( damping, yp[i], yp[i]); 
-    }
 }
 
 //Computes curvature operator

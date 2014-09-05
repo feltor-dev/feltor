@@ -56,8 +56,7 @@ struct Parameters
             beta = v[12];
             nu_perp = v[13];
             nu_parallel = v[14];
-            c = v[15];
-            
+            c = v[15];            
             amp = v[16];
             sigma = v[18];
             posX = v[18];
