@@ -136,6 +136,7 @@ struct Gaussian3d
      * @param y0 y-center-coordinate
      * @param sigma_x x - variance
      * @param sigma_y y - variance 
+     * @param sigma_z z - variance 
      * @param amp Amplitude
      * @param kz wavenumber in z direction
      */

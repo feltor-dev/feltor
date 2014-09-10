@@ -58,7 +58,7 @@ struct Parameters
             nu_parallel = v[14];
             c = v[15];            
             amp = v[16];
-            sigma = v[18];
+            sigma = v[17];
             posX = v[18];
             posY = v[19];
             m_par = v[20];

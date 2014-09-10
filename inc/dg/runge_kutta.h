@@ -182,6 +182,11 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
         error = sqrt( dg::blas1::dot( end, end));
         end = y0;
 #ifdef DG_DEBUG
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
         std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
 #endif //DG_DEBUG
     }

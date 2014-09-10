@@ -86,7 +86,6 @@ struct DZ
         unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
         View tempPV( tempP.begin(), tempP.end());
         View tempMV( tempM.begin(), tempM.end());
-        View temp0V( temp0.begin(), temp0.end());
 
         View ghostPV( ghostP.begin(), ghostP.end());
         View ghostMV( ghostM.begin(), ghostM.end());
@@ -102,6 +101,7 @@ struct DZ
             //make ghostcells
             if( i0==0 && bcz_ != dg::PER)
             {
+                //overwrite tempM
                 cusp::copy( f0, ghostMV);
                 if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
                 {
@@ -119,8 +119,8 @@ struct DZ
             }
             else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
             {
-                if( bcz_ != dg::PER)
-                    cusp::copy( f0, ghostPV);
+                //overwrite tempP
+                cusp::copy( f0, ghostPV);
                 if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
                 {
                     dg::blas1::scal( ghostP, -1.);
@@ -161,8 +161,6 @@ struct DZ
      */
     void dzz( const container& f, container& dzzf)
     {
-        typedef cusp::array1d_view< typename container::iterator> View;
-        typedef cusp::array1d_view< typename container::const_iterator> cView;
         assert( &f != &dzzf);
         unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
         View tempPV( tempP.begin(), tempP.end());

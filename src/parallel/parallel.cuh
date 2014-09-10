@@ -52,10 +52,11 @@ struct Rolkar
             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (lnN,U)) 
         }
 //       Resistivity
-        dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
-        dg::blas1::pointwiseDot( x[1], x[3], chi); //N_i U_i
-        dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
-        dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
+        dg::blas1::axpby( 1., x[3], -1, x[1], omega);
+        //dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
+        //dg::blas1::pointwiseDot( x[1], x[3], chi); //N_i U_i
+        //dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
+        //dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
 //         dg::blas1::pointwiseDivide( chi, x[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
         dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   // dt U_e =- C/hat(mu)_e J_par/N_e
         dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   // dt U_i =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i now
@@ -167,7 +168,7 @@ ParallelFeltor<Matrix, container, P>::ParallelFeltor( const Grid& g, eule::Param
     phi( 2, chi), curvphi( phi), dzphi(phi), dzun(phi),dzlogn(phi),dzu2(phi),expy(phi),  logy(phi),
     dzy( 4, chi),curvy(dzy), 
     dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
-//     dz(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
+    //dz(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
     pol(     g),     
@@ -272,7 +273,7 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
     
     for( unsigned i=0; i<2; i++)
     {
-//         dz.set_boundaries( dg::NEU, 0, 0);
+        dz.set_boundaries( dg::NEU, 0, 0);
         dz(y[i], dzy[i]);                                                       //dz N
 //         dz.set_boundaries( dg::DIR, -1., 1.);
         dz(y[i+2], dzy[2+i]);                                                   //dz U
@@ -284,14 +285,14 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
         dg::blas1::axpby( 1., omega, 1., yp[i]);                                //dtN = dtN + U N dz ln B
         //parallel force terms
 //         dz.set_boundaries( dg::NEU, 0, 0);
-        dz(phi[i], dzphi[i]);                                                   //dz psi
-//         dz.set_boundaries( dg::NEU, 0, 0);
         dz(logy[i], dzlogn[i]);                                                 //dz lnN
+        dz.set_boundaries( dg::DIR, 0, 0);
+        dz(phi[i], dzphi[i]);                                                   //dz psi
         dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzlogn[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
         dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);        //dtU = dtU - 1/(hat(mu))  *dz phi  
          
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);                          //U^2
-//         dz.set_boundaries( dg::DIR, -1., 1.);
+        dz.set_boundaries( dg::NEU, 0., 0.);
         dz(omega, dzu2[i]);                                                     //dz u^2
         dg::blas1::axpby( -0.5, dzu2[i], 1., yp[2+i]);                          //dtU = dtU - 0.5 dz U^2
     }

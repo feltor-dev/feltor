@@ -61,11 +61,12 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     double z0 = 0, z1 = 2.*M_PI;
+    //double z0 = M_PI/2., z1 = 3./2.*M_PI;
     dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz);
     const dg::DVec w3d = dg::create::weights( g3d);
     dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, 1e-10, dg::DefaultLimiter());
-    dz.set_boundaries( dg::PER, 0, 0);
-    //dz.set_boundaries( dg::DIR, 1., -1.);
+    //dz.set_boundaries( dg::PER, 0, 0);
+    dz.set_boundaries( dg::DIR, 0., -0.);
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function), 
              dzz(dg::evaluate(deri2, g3d));
