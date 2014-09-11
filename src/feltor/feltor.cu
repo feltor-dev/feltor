@@ -69,27 +69,24 @@ int main( int argc, char* argv[])
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
-    //The initial field
-    //Monopole
+    /////////////////////The initial field///////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Nprofile grad(gp); //initial profile
+    solovev::Nprofile grad(gp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[1]); 
+    dg::blas1::pointwiseDot(rolkar.damping(),(dg::DVec)dg::evaluate(init0, grid), y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
-    //with FLR
     feltor.initializene(y0[1],y0[0]);    
-
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
 //     dg::AB< 3, std::vector<dg::DVec> > ab( y0);
-    ab.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, rolkar, y0, p.dt);
 // // ab.init( feltor,  y0, p.dt);
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -197,8 +194,6 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
-        //double x;
-        //std::cin >> x;
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
@@ -210,7 +205,7 @@ int main( int argc, char* argv[])
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
-            try{ ab( feltor, rolkar, y0);}
+            try{ karniadakis( feltor, rolkar, y0);}
 //             try{ ab( feltor,  y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

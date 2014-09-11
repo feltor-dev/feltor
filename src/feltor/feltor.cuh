@@ -67,7 +67,7 @@ struct Rolkar
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const Preconditioner& weights(){return LaplacianM_perp.weights();}
     const Preconditioner& precond(){return LaplacianM_perp.precond();}
-    const container& dampin(){return dampgauss_;}
+    const container& damping(){return dampgauss_;}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;

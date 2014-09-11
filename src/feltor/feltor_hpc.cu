@@ -68,23 +68,17 @@ int main( int argc, char* argv[])
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
-    //The initial field
-      dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-
-
-//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//       solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Nprofile grad(gp); //initial profile
+    /////////////////////The initial field///////////////////////////////////////////
+      //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    //solovev::ZonalFlow init0(gp,p.amp);
+    solovev::Nprofile grad(gp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[1]); //is damping on bath    
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ne
-    //without FLR
-    //dg::blas1::axpby( 1., y1[0], 1., y0[1]);
-    //with FLR
+    dg::blas1::pointwiseDot(rolkar.damping(),(dg::DVec)dg::evaluate(init0, grid), y1[1]);  
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     feltor.initializene(y0[1],y0[0]);    
-//     feltor.log( y0, y0, 2); 
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
@@ -97,7 +91,7 @@ int main( int argc, char* argv[])
     /////////////////////////////set up netcdf//////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
-    err = nc_create( argv[3], NC_CLOBBER, &ncid);
+    err = nc_create( argv[3], NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
@@ -118,14 +112,11 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, vecID[2], vecP.data());
     err = nc_redef(ncid);
 
-    std::vector<std::string> names(6); 
-    int dataIDs[names.size()];
-    names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
-    names[4] = "potential"; 
-    names[5] = "energy";
-    for( unsigned i=0; i<names.size()-1; i++){
+    std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
+    int dataIDs[5];
+    for( unsigned i=0; i<5; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
-    nc_def_var( ncid, names[5].data(), NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
+    nc_def_var( ncid, "energy", NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
@@ -134,7 +125,6 @@ int main( int argc, char* argv[])
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
-//     feltor.exp( y0,y0,2); //transform to correct values
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::symv( interpolate, y0[i], transferD);
@@ -177,7 +167,6 @@ int main( int argc, char* argv[])
         }
         time += p.itstp*p.dt;
         start[0] = i;
-//         feltor.exp( y0,y0,2); //transform to correct values
         err = nc_open(argv[3], NC_WRITE, &ncid);
 
         for( unsigned j=0; j<4; j++)

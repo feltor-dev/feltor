@@ -41,11 +41,11 @@
 22) Damping zone strength                   = 1e-3
 23) particle source amplitude               = 0.0
 24) n_out (# of x-y polynomials in output)  = 3
-25) nx_out (# grid points in output field)  = 100
-26) ny_out (# grid points in output field)  = 100
-27) nz_out (# grid points in output field)  = 20
+25) nx_out (# grid points in output field)  = 30 
+26) ny_out (# grid points in output field)  = 30
+27) nz_out (# grid points in output field)  = 30
 28) itstp  (steps between outputs)          = 1     (5)
-29) total # of outputs (excluding first)    = 100000
+29) total # of outputs (excluding first)    = 3
 
 
 
