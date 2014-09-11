@@ -52,7 +52,7 @@ struct Rolkar
             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (lnN,U)) 
         }
 //       Resistivity
-        dg::blas1::axpby( 1., x[3], -1, x[1], omega);
+        dg::blas1::axpby( 1., x[3], -1, x[2], omega);
         //dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
         //dg::blas1::pointwiseDot( x[1], x[3], chi); //N_i U_i
         //dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
@@ -298,7 +298,7 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
     }
     for( unsigned i=0; i<2; i++)
     {
-//        dz.set_boundaries( dg::NEU, 0, 0);
+       dz.set_boundaries( dg::NEU, 0, 0);
        dz.dzz(y[i],omega);                                                     //dz^2 N 
        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
        //gradlnBcorrection

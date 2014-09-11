@@ -6,10 +6,10 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   50 (192)
-3)  ny (grid points in y)                =   50 (192) 
-4)  nz (grid points in z)                =   20 (>16)
-5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
+2)  nx (grid points in x)                =   30 (192)
+3)  ny (grid points in y)                =   30 (192) 
+4)  nz (grid points in z)                =   30 (>16)
+5)  dt (time step in units c_s/rho_s)    =   3e-3  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
@@ -23,9 +23,9 @@
 10) mu_e (-m_e/m_i)                     =-0.5e-4
 11) tau (Ti/Te)                         = 0.0    (0.0)
 12) beta_e0                             = 0.0  (1e-4)
-13) nu_perp                             = 1e-3
+13) nu_perp                             = 1e-2
 14) nu_parallel  (viscosity)            = 1e-3   (0.001)
-15) para resistivity (c)                = 0.001   (3e-5)
+15) para resistivity (c)                = 1e-5   (3e-5)
 
 ---------------Initial perturbation parameters---------------------
 

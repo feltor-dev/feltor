@@ -15,7 +15,6 @@
 
 
 #include "feltor.cuh"
-#include "bessel.h"
 #include "parameters.h"
 #include "geometry.h"
 

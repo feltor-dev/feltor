@@ -12,7 +12,6 @@
 #include "file/read_input.h"
 
 #include "parallel.cuh"
-#include "bessel.h"
 #include "parameters.h"
 #include "geometry.h"
 

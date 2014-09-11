@@ -131,6 +131,7 @@ inline double lilj( unsigned i, unsigned j)
 
 ///@addtogroup functions
 ///@{
+
 /**
  * @brief The constant 
  *
@@ -140,6 +141,7 @@ inline double lilj( unsigned i, unsigned j)
  * @return 1
  */
 inline double one( double x) {return 1;}
+
 /**
  * @brief The constant 
  *
@@ -150,6 +152,7 @@ inline double one( double x) {return 1;}
  * @return 1
  */
 inline double one( double x, double y) {return 1;}
+
 /**
  * @brief The constant 
  *
@@ -161,6 +164,7 @@ inline double one( double x, double y) {return 1;}
  * @return 1
  */
 inline double one( double x, double y, double z) {return 1;}
+
 /**
  * @brief The constant 
  *
@@ -170,6 +174,7 @@ inline double one( double x, double y, double z) {return 1;}
  * @return 1
  */
 inline double zero( double x) {return 0.;}
+
 /**
  * @brief The constant 
  *
@@ -180,6 +185,7 @@ inline double zero( double x) {return 0.;}
  * @return 1
  */
 inline double zero( double x, double y) {return 0.;}
+
 /**
  * @brief The constant 
  *

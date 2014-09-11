@@ -393,7 +393,7 @@ struct Ipol
     std::cout<< R_0_ <<"  "  << A_ <<"\n";
   }
   private:
-  double A_,R_0_;
+  double R_0_, A_;
   Psip psip_;
 };
 
@@ -709,6 +709,9 @@ struct Field
    
 };
 
+/**
+ * @brief Phi component of magnetic field \f$ B_\Phi\f$
+ */
 struct FieldP
 {
     FieldP( GeomParameters gp): R_0(gp.R_0), 
@@ -723,6 +726,9 @@ struct FieldP
     Ipol   ipol_;
    
 }; 
+/**
+ * @brief R component of magnetic field\f$ B_R\f$
+ */
 struct FieldR
 {
     FieldR( GeomParameters gp): psipZ_(gp.R_0,gp.A,gp.c), R_0(gp.R_0){ }
@@ -735,6 +741,9 @@ struct FieldR
     double R_0;
    
 };
+/**
+ * @brief Z component of magnetic field \f$ B_Z\f$
+ */
 struct FieldZ
 {
     FieldZ( GeomParameters gp): psipR_(gp.R_0,gp.A,gp.c), R_0(gp.R_0){ }
