@@ -9,12 +9,12 @@
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
+#include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 
 #include "feltor.cuh"
-#include "bessel.h"
 #include "parameters.h"
 #include "geometry.h"
 
@@ -32,9 +32,9 @@ int main( int argc, char* argv[])
     //Parameter initialisation
     std::vector<double> v,v3;
     std::string input, geom;
-    if( argc != 3)
+    if( argc != 4)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
         return -1;
     }
     else 
@@ -42,106 +42,105 @@ int main( int argc, char* argv[])
         v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const Parameters p( v);
+    const eule::Parameters p( v);
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
-    try{ v3 = file::read_input( "geometry_params.txt"); }
+    try{ v3 = file::read_input( argv[2]); }
     catch (toefl::Message& m) {  m.display(); 
-    geom = file::read_file( "geometry_params.txt");
-    std::cout << geom << std::endl;
+        geom = file::read_file( argv[2]);
+        std::cout << geom << std::endl;
         for( unsigned i = 0; i<v.size(); i++)
-//             std::cout << v3[i] << " ";
-//             std::cout << std::endl;
-        return -1;}
+        return -1;
+    }
 
-     const solovev::GeomParameters gp(v3);
+    const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     double Rmin=gp.R_0-(gp.boxscale)*gp.a;
     double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
     double Zmax=(gp.boxscale)*gp.a*gp.elongation;
-    //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
+    //Make grids
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
      
     //create RHS 
-    eule::Feltor< dg::DVec > feltor( grid, p,gp); 
-    eule::Rolkar< dg::DVec > rolkar( grid, p,gp);
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
+    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
+    /////////////////////The initial field///////////////////////////////////////////
+      //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    //solovev::ZonalFlow init0(gp,p.amp);
+    solovev::Nprofile grad(gp); //initial background profile
     
-    //with bath
-//       dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,15.,p.amp);
-     //with zonal flow field
-      solovev::ZonalFlow init0(gp,p.amp);
-    //with gaussians
-//     dg::Gaussian3d init0( p.R_0, p.posY*p.a,    M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp );     
-//     dg::Gaussian3d init1( p.R_0, -p.a*p.posY,   M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-//     dg::Gaussian3d init2( p.R_0+p.posX*p.a, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-//     dg::Gaussian3d init3( p.R_0-p.a*p.posX, 0., M_PI, p.sigma, p.sigma, M_PI/8.*p.m_par, p.amp ); 
-    
-//     solovev::Gradient grad(gp); //background gradient
-    solovev::Nprofile grad(gp); //initial profile
-
-
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
+    //damp the bath on psi boundaries 
+    dg::blas1::pointwiseDot(rolkar.damping(),(dg::DVec)dg::evaluate(init0, grid), y1[1]);  
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
+    feltor.initializene(y0[1],y0[0]);    
 
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[0]);
-    
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[0]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[0]);
-   
-    dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init0, grid), 1., y0[1]);
-   
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init1, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init2, grid), 1., y0[1]);
-//     dg::blas1::axpby( 1., (dg::DVec)dg::evaluate(init3, grid), 1., y0[1]);
-
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set U = 0
-    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set U = 0
-
-    feltor.log( y0, y0, 2); //transform to logarithmic values (ne and ni)
-    
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[0],y0[0]); //is pupil on bath
-    dg::blas1::pointwiseDot(rolkar.iris(),y0[1],y0[1]); //is pupil on bath
+    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
+    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
     double time = 0;
     unsigned step = 0;
 
-    /////////////////////////////set up hdf5/////////////////////////////////
-    //file::T5trunc t5file( argv[2], input);
-    file::NC_Error_Handle h;
-    int h, ncid;
-    h = nc_create( argv[2], NC_CLOBBER, &ncid);
-    h = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    h = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
+    /////////////////////////////set up netcdf//////////////////////////////
+    file::NC_Error_Handle err;
+    int ncid;
+    err = nc_create( argv[3], NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
-    h = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+    solovev::FieldR fieldR(gp);
+    solovev::FieldZ fieldZ(gp);
+    solovev::FieldP fieldP(gp);
+    dg::HVec vecR = dg::evaluate( fieldR, grid_out);
+    dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
+    dg::HVec vecP = dg::evaluate( fieldP, grid_out);
+    int vecID[3];
+    err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim_ids[1], &vecID[0]);
+    err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim_ids[1], &vecID[1]);
+    err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim_ids[1], &vecID[2]);
+    err = nc_enddef( ncid);
+    err = nc_put_var_double( ncid, vecID[0], vecR.data());
+    err = nc_put_var_double( ncid, vecID[1], vecZ.data());
+    err = nc_put_var_double( ncid, vecID[2], vecP.data());
+    err = nc_redef(ncid);
 
-    std::vector<std::string> names(5); 
-    int dataIDs[names.size()];
-    names[0] = "electrons", names[1] = "ions", names[2] = "Ue", names[3] = "Ui";
-    names[4] = "potential";
-    for( unsigned i=0; i<names.size(); i++)
-        h = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);
-    h = nc_enddef(ncid);
-
+    std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
+    int dataIDs[5];
+    for( unsigned i=0; i<5; i++){
+        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
+    nc_def_var( ncid, "energy", NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
+    err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
-    size_t count[4] = {1., grid.Nz(), grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[4] = {0, 0, 0, 0};
-    feltor.exp( y0,y0,2); //transform to correct values
-    dg::HVec output;
+    dg::DVec transfer(  dg::evaluate(dg::zero, grid));
+    dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<4; i++)
     {
-        output = y0[i];//transfer to host
-        h = nc_put_vara_double( ncid, dataIDs[i], start, count, output.data() );
+        dg::blas2::symv( interpolate, y0[i], transferD);
+        transferH = transferD;//transfer to host
+        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
-    output = feltor.potential()[0];
-    h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
+    transfer = feltor.potential()[0];
+    dg::blas2::symv( interpolate, transfer, transferD);
+    transferH = transferD;//transfer to host
+    err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 
-    //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
+    double E0 = feltor.energy(), energy0 = E0, E1 = 1, diff = 0;
+    err = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
+    err = nc_close(ncid);
+
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
@@ -165,18 +164,27 @@ int main( int argc, char* argv[])
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 break;
             }
-            //t5file.append( feltor.mass(), feltor.mass_diffusion(), feltor.energy(), feltor.energy_diffusion());
         }
         time += p.itstp*p.dt;
         start[0] = i;
-        feltor.exp( y0,y0,2); //transform to correct values
+        err = nc_open(argv[3], NC_WRITE, &ncid);
+
         for( unsigned j=0; j<4; j++)
         {
-            output = y0[j];//transfer to host
-            h = nc_put_vara_double( ncid, dataIDs[j], start, count, output.data());
+            dg::blas2::symv( interpolate, y0[j], transferD);
+            transferH = transferD;//transfer to host
+            err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        output = feltor.potential()[0];
-        h = nc_put_vara_double( ncid, dataIDs[4], start, count, output.data() );
+        transfer = feltor.potential()[0];
+        dg::blas2::symv( interpolate, transfer, transferD);
+        transferH = transferD;//transfer to host
+        err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+        //write time data
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        E1 = feltor.energy()/energy0;
+        err = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
+
+        err = nc_close(ncid);
 #ifdef DG_BENCHMARK
         ti.toc();
         step+=p.itstp;
@@ -196,7 +204,6 @@ int main( int argc, char* argv[])
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-    h = nc_close(ncid);
 
     return 0;
 

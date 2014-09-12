@@ -19,16 +19,27 @@ inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const P
     const unsigned n = x.n();
     for( unsigned m=0; m<x.Nz(); m++)
         for( unsigned i=1; i<(x.Ny()-1); i++)
-            for( unsigned k=0; k<n; k++)
+        for( unsigned k=0; k<n; k++)
+        {
+            if( P.vec.empty() )
                 for( unsigned j=1; j<(x.Nx()-1); j++)
-                    for( unsigned l=0; l<n; l++)
-                    {
-                        temp+=P.norm*P.data[k]*P.data[l]*
-                          x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ]*
-                          y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
-                    }
+                for( unsigned l=0; l<n; l++)
+                {
+                    temp+=P.norm*P.data[k]*P.data[l]*
+                      x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ]*
+                      y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
+                }
+            else
+                for( unsigned j=1; j<(x.Nx()-1); j++)
+                for( unsigned l=0; l<n; l++)
+                {
+                    temp+=P.norm*P.data[k]*P.data[l]*P.vec[j*n+l]*
+                      x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ]*
+                      y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
+                }
+        }
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD); 
 
     return sum;
 }
@@ -68,17 +79,33 @@ inline void doSymv(
     const unsigned n = x.n();
     for( unsigned m=0; m<x.Nz(); m++)
         for( unsigned i=1; i<(x.Ny()-1); i++)
-            for( unsigned k=0; k<n; k++)
+        for( unsigned k=0; k<n; k++)
+            if( P.vec.empty())
+            {
                 for( unsigned j=1; j<(x.Nx()-1); j++)
-                    for( unsigned l=0; l<n; l++)
-                    {
-                          y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] = 
-                              alpha*
-                              P.norm*P.data[k]*P.data[l]*
-                              x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] + 
-                              beta*
-                              y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
-                    }
+                for( unsigned l=0; l<n; l++)
+                {
+                      y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] = 
+                          alpha*
+                          P.norm*P.data[k]*P.data[l]*
+                          x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] + 
+                          beta*
+                          y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
+                }
+            }
+            else
+            {
+                for( unsigned j=1; j<(x.Nx()-1); j++)
+                for( unsigned l=0; l<n; l++)
+                {
+                      y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] = 
+                          alpha*
+                          P.norm*P.data[k]*P.data[l]*P.vec[j*n+l]*
+                          x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] + 
+                          beta*
+                          y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
+                }
+            }
 }
 
 template< class Matrix, class Vector>

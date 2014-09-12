@@ -1,6 +1,7 @@
 #pragma once
-#include "mpi_config.h"
 
+#include "matrix_traits.h"
+#include "weights.cuh"
 
 namespace dg
 {
@@ -9,8 +10,10 @@ struct MPI_Precon
 {
     double norm;
     std::vector<double> data;
+    thrust::host_vector<double> vec;
 };
 
+typedef MPI_Precon MPrecon;
 template <>
 struct MatrixTraits<MPI_Precon>
 {
@@ -48,7 +51,7 @@ MPI_Precon weights( const MPI_Grid2d& g)
 *
 * @return Preconditioner
 */
-MPI_Precon precond( const MPI_Grid2d& g)
+MPI_Precon inv_weights( const MPI_Grid2d& g)
 {
     MPI_Precon v = weights( g);
     v.norm = 1./v.norm;
@@ -68,6 +71,11 @@ MPI_Precon weights( const MPI_Grid3d& g)
     MPI_Precon p;
     p.data = g.dlt().weights();
     p.norm = g.hz()*g.hx()*g.hy()/4.;
+    if( g.system() == cylindrical)
+    {
+        Grid1d<double> gR( g.x0(), g.x1(), g.n(), g.Nx());
+        p.vec = abscissas( gR); 
+    }
     return p;
 }
 /**
@@ -77,12 +85,17 @@ MPI_Precon weights( const MPI_Grid3d& g)
 *
 * @return Preconditioner
 */
-MPI_Precon precond( const MPI_Grid3d& g)
+MPI_Precon inv_weights( const MPI_Grid3d& g)
 {
     MPI_Precon v = weights( g);
     v.norm = 1./v.norm;
     for( unsigned i=0; i<v.data.size(); i++)
         v.data[i] = 1./v.data[i];
+    if( g.system() == cylindrical)
+    {
+        for( unsigned i=0; i<v.vec.size(); i++)
+            v.vec[i] = 1./v.vec[i]; 
+    }
     return v;
 }
 

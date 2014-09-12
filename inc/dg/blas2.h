@@ -1,17 +1,22 @@
 #pragma once 
 
+#ifdef MPI_VERSION
+#include "backend/mpi_matrix_blas.h"
+#include "backend/mpi_precon_blas.h"
+#endif //MPI_VERSION
 #include "backend/vector_traits.h"
 #include "backend/matrix_traits.h"
 #include "backend/matrix_traits_thrust.h"
 #include "backend/thrust_matrix.cuh"
 #include "backend/cusp_matrix.cuh"
-#ifdef MPI_VERSION
-#include "backend/mpi_matrix_blas.h"
-#include "backend/mpi_precon_blas.h"
-#endif //MPI_VERSION
 #include "backend/selfmade.cuh"
 #include "backend/std_matrix.cuh"
 
+
+/*!@file 
+ *
+ * blas level 2 functions
+ */
 namespace dg{
 /*! @brief BLAS Level 2 routines 
 

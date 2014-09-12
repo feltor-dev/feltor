@@ -1,6 +1,8 @@
 #pragma once
 
 #include "grid.h"
+#include "evaluation.cuh"
+#include "functions.h"
 #include "creation.cuh"
 #include "tensor.cuh"
 #include "operator_tensor.cuh"
@@ -48,6 +50,48 @@ std::vector<double> coefficients( double xn, unsigned n)
 
 }//namespace detail
 ///@endcond
+/**
+ * @brief Create interpolation matrix
+ *
+ * Transforms from a vector given in XSPACE to the points in XSPACE
+ * @param x X-coordinates of interpolation points
+ * @param g The Grid on which to operate
+ *
+ * @return interpolation matrix
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const Grid1d<double>& g)
+{
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
+
+    int number = 0;
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
+            std::cerr << "xi = " << x[i] <<std::endl;
+        }
+        assert(x[i] >= g.x0() && x[i] <= g.x1());
+
+        //determine which cell (x) lies in 
+        unsigned n = (unsigned)floor((x[i]-g.x0())/g.h());
+        //determine normalized coordinates
+        double xn = 2.*(x[i]-g.x0())/g.h() - (double)(2*n+1); 
+        //evaluate 2d Legendre polynomials at (xn, yn)...
+        std::vector<double> px = detail::coefficients( xn, g.n());
+        //...these are the matrix coefficients with which to multiply 
+        unsigned col_begin = n*g.n();
+        detail::add_line( A, number, i,  col_begin, px);
+        //choose layout from comments
+    }
+    typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
+    
+    dg::Operator<double> forward( g.dlt().forward());
+    Matrix transformX = dg::tensor( g.N(), forward);
+
+    Matrix B;
+    cusp::multiply( A, transformX, B);
+    B.sort_by_row_and_column();
+    return B;
+}
 
 /**
  * @brief Create interpolation matrix
@@ -61,12 +105,11 @@ std::vector<double> coefficients( double xn, unsigned n)
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d<double>& g)
 {
-    assert( x.size() == g.size());
-    assert( y.size() == g.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> A( g.size(), g.size(), g.size()*g.n()*g.n());
+    assert( x.size() == y.size());
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
 
     int number = 0;
-    for( unsigned i=0; i<g.size(); i++)
+    for( unsigned i=0; i<x.size(); i++)
     {
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
             std::cerr << "xi = " << x[i] <<std::endl;
@@ -117,13 +160,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector given in XSPACE to the points in XSPACE
+ * Transforms from a vector defined on the grid to the given points 
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param y Z-coordinates of interpolation points
  * @param g The Grid on which to operate
  *
  * @return interpolation matrix
+ * @note The values of x, y and z must lie within the boundaries of g
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const Grid3d<double>& g)
 {
@@ -187,6 +231,78 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     B.sort_by_row_and_column();
     return B;
 }
+/**
+ * @brief Create interpolation between two grids
+ *
+ * This matrix can be applied to vectors defined on the old grid to obtain
+ * its values on the new grid.
+ * 
+ * @param g_new The new points 
+ * @param g_old The old grid
+ *
+ * @return Interpolation matrix
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d<double>& g_new, const Grid1d<double>& g_old)
+{
+    //assert both grids are on the same box
+    assert( g_new.x0() >= g_old.x0());
+    assert( g_new.x1() <= g_old.x1());
+    thrust::host_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
+    return interpolation( pointsX, g_old);
 
+}
+/**
+ * @brief Create interpolation between two grids
+ *
+ * This matrix can be applied to vectors defined on the old grid to obtain
+ * its values on the new grid.
+ * 
+ * @param g_new The new points 
+ * @param g_old The old grid
+ *
+ * @return Interpolation matrix
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d<double>& g_new, const Grid2d<double>& g_old)
+{
+    //assert both grids are on the same box
+    assert( g_new.x0() >= g_old.x0());
+    assert( g_new.x1() <= g_old.x1());
+    assert( g_new.y0() >= g_old.y0());
+    assert( g_new.y1() <= g_old.y1());
+    thrust::host_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
+    thrust::host_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
+    return interpolation( pointsX, pointsY, g_old);
+
+}
+
+/**
+ * @brief Create interpolation between two grids
+ *
+ * This matrix can be applied to vectors defined on the old grid to obtain
+ * its values on the new grid.
+ * 
+ * @param g_new The new points 
+ * @param g_old The old grid
+ *
+ * @return Interpolation matrix
+ * @note The boundaries of the old brid must lie within the boundaries of the new grid
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<double>& g_new, const Grid3d<double>& g_old)
+{
+    //assert both grids are on the same box
+    assert( g_new.x0() >= g_old.x0());
+    assert( g_new.x1() <= g_old.x1());
+    assert( g_new.y0() >= g_old.y0());
+    assert( g_new.y1() <= g_old.y1());
+    assert( g_new.z0() >= g_old.z0());
+    assert( g_new.z1() <= g_old.z1());
+    thrust::host_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
+    thrust::host_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
+    thrust::host_vector<double> pointsZ = dg::evaluate( dg::coo3, g_new);
+    return interpolation( pointsX, pointsY, pointsZ, g_old);
+
+}
 }//namespace create
 } //namespace dg

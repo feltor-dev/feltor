@@ -3,26 +3,28 @@
 
 namespace dg
 {
-#if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA)
-
-#ifdef MPI_VERSION
-#include <mpi.h>
-
+#if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA) //if we don't use a GPU
+#ifdef MPI_VERSION //(mpi.h is included)
+/*! @brief Very simple tool for performance measuring
+ * @ingroup utilities
+ */
 class Timer
 {
   public:
     /**
-    * @brief Start timer using cudaEventRecord
+    * @brief Start timer using MPI_Wtime
     *
-    * @param stream the stream in which the Event is placed
+    * @param comm the communicator 
+    * @note uses MPI_Barrier(comm)
     */
-    void tic( ){  start = MPI_Wtime();}
+    void tic( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); start = MPI_Wtime();}
     /**
-    * @brief Stop timer using cudaEventRecord and Synchronize
+    * @brief Stop timer using MPI_Wtime
     *
-    * @param stream the stream in which the Event is placed
+    * @param comm the communicator 
+    * @note uses MPI_Barrier(comm)
     */
-    void toc( ){ stop = MPI_Wtime(); }
+    void toc( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); stop = MPI_Wtime(); }
     /*! \brief Return time elapsed between tic and toc
      *
      * \return Time in seconds between calls of tic and toc*/
@@ -30,15 +32,28 @@ class Timer
   private:
     double start, stop;
 };
-#else
+#else //MPI_VERSION
 
-#include "../../toefl/timer.h"
-    /**
-     * @brief If we compute on the host we use the toefl timer
-     */
-    typedef toefl::Timer Timer;
+#include <sys/time.h>
+/*! @brief Very simple tool for performance measuring
+ * @ingroup utilities
+ */
+class Timer
+{
+    timeval start;
+    timeval stop;
+    public:
+    /*! @brief Start timer using gettimeofday */
+    void tic(){ gettimeofday( &start, NULL);}
+    /*! @brief Stop timer using gettimeofday */
+    void toc(){ gettimeofday( &stop, NULL);}
+    /*! \brief Return time elapsed between tic and toc
+     *
+     * \return Time in seconds between calls of tic and toc*/
+    double diff(){ return (stop.tv_sec - start.tv_sec) + 1e-6*(stop.tv_usec - start.tv_usec);}
+};
 #endif //MPI_VERSION
-#else
+#else //THRUST
 
 /*! @brief Very simple tool for performance measurements using CUDA-API 
  * @ingroup utilities
@@ -76,7 +91,7 @@ class Timer
   private:
     cudaEvent_t start, stop;
 };
-#endif
+#endif //THRUST
 
 } //namespace dg
 

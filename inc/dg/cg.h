@@ -9,6 +9,10 @@
 #include "backend/timer.cuh"
 #endif
 
+/*!@file
+ * Conjugate gradient class and functions
+ */
+
 namespace dg{
 
 //// TO DO: check for better stopping criteria using condition number estimates
@@ -72,7 +76,7 @@ class CG
      * @return Number of iterations used to achieve desired precision
      */
     template< class Matrix, class Preconditioner >
-    unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P , value_type eps = 1e-12);
+    unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
     Vector r, p, ap; 
     unsigned max_iter;
@@ -80,9 +84,9 @@ class CG
 
 /*
     compared to unpreconditioned compare
-    ddot(r,r), axpby()
+    dot(r,r), axpby()
     to 
-    ddot( r,P,r), dsymv(P)
+    dot( r,P,r), symv(P)
     i.e. it will be slower, if P needs to be stored
     (but in our case P_{ii} can be computed directly
     compared to normal preconditioned compare
@@ -96,7 +100,7 @@ class CG
 */
 template< class Vector>
 template< class Matrix, class Preconditioner>
-unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, value_type eps)
+unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
@@ -114,6 +118,8 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
     blas2::symv( P, r, p );//<-- compute p_0
     //note that dot does automatically synchronize
     value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
+    if( sqrt( nrm2r_old ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
+        return 0;
     value_type alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
@@ -127,7 +133,7 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
         std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
         std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
 #endif //DG_DEBUG
-        if( sqrt( nrm2r_new) < eps*nrmb + eps) 
+        if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction)) 
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
         nrm2r_old=nrm2r_new;
@@ -172,6 +178,8 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
     blas2::symv( P, r, p );//<-- compute p_0
     //note that dot does automatically synchronize
     value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
+    if( sqrt( nrm2r_old ) < eps*nrmb + eps)
+        return 0;
     value_type alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
@@ -200,11 +208,19 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
  * the last two solutions.
  *
  * @ingroup algorithms
- * Solves the Equation \f[ \hat O \phi = \rho \f]
- * for any symmetric operator O. 
+ * Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
+ * for any operator \f$\hat O\f$ that was made symmetric 
+ * by appropriate weights \f$W\f$ (s. comment below). 
  * It uses solutions from the last two calls to 
  * extrapolate a solution for the current call.
  * @tparam container The Vector class to be used
+ * @note A note on weights and preconditioning. 
+ * A normalized DG-discretized derivative or operator is normally not symmetric. 
+ * The diagonal coefficient matrix that is used to make the operator 
+ * symmetric is called weights W, i.e. \f$ \hat O = W\cdot O\f$ is symmetric. 
+ * Independent from this, a preconditioner should be used to solve the
+ * symmetric matrix equation. Most often the inverse of \f$W\f$ is 
+ * a good preconditioner. 
  */
 template<class container>
 struct Invert
@@ -216,8 +232,8 @@ struct Invert
      * @param max_iter maximum iteration in conjugate gradient
      * @param eps relative error in conjugate gradient
      */
-    Invert(const container& copyable, unsigned max_iter, double eps): 
-        eps_(eps),
+    Invert(const container& copyable, unsigned max_iter, double eps, double nrmb_correction = 1): 
+        eps_(eps), nrmb_correction_(nrmb_correction),
         phi0( copyable), phi1( copyable), phi2(phi1), cg( copyable, max_iter) { }
     /**
      * @brief Solve linear problem
@@ -227,7 +243,7 @@ struct Invert
      * of the last solutions
      * @tparam SymmetricOp Symmetric operator with the SelfMadeMatrixTag
         The functions weights() and precond() need to be callable and return
-        weights and the preconditioner for the conjugate gradient method
+        weights and the preconditioner for the conjugate gradient method.
         The Operator is assumed to be symmetric!
      * @param op selfmade symmetric Matrix operator class
      * @param phi solution (write only)
@@ -270,13 +286,23 @@ struct Invert
         //blas1::axpby( 2., phi1, -1.,  phi2, phi);
         dg::blas2::symv( w, rho, phi2);
 #ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
         Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        unsigned number = cg( op, phi, phi2, p, eps_);
+        unsigned number = cg( op, phi, phi2, p, eps_, nrmb_correction_);
 #ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif //MPI
         std::cout << "# of cg iterations \t"<< number << "\t";
         t.toc();
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif //MPI
         std::cout<< "took \t"<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
         phi1.swap( phi2);
@@ -299,7 +325,7 @@ struct Invert
      */
     unsigned get_max() const {return cg.get_max();}
   private:
-    double eps_;
+    double eps_, nrmb_correction_;
     container phi0, phi1, phi2;
     dg::CG< container > cg;
 };

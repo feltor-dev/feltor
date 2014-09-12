@@ -1,12 +1,12 @@
 #pragma once
 
-namespace dg{
-typedef MPI_Vector MVec;
-typedef MPI_Matrix MMatrix;
-typedef MPI_Precon MPrecon;
-}
+//namespace dg{
+//typedef MPI_Vector MVec;
+//typedef MPI_Matrix MMatrix;
+//typedef MPI_Precon MPrecon;
+//}
 
-void mpi_init2d( dg::bc bcx, dg::bc bcy, int np[], unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm  )
+void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm  )
 {
     int periods[2] = {false,false};
     if( bcx == dg::PER) periods[0] = true;
@@ -14,6 +14,8 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, int np[], unsigned& n, unsigned& Nx, un
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
+    if(rank==0)std::cout << "MPI v"<<MPI_VERSION<<"."<<MPI_SUBVERSION<<std::endl;
+    int np[2];
     if( rank == 0)
     {
         std::cout << "Type npx and npy\n";
@@ -28,14 +30,15 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, int np[], unsigned& n, unsigned& Nx, un
     {
         std::cout << "Type n, Nx and Ny\n";
         std::cin >> n >> Nx >> Ny;
+        std::cout<< "You typed "<<n <<" "<<Nx<<" "<<Ny<<std::endl;
     }
-    MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, comm);
+    MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, comm);
+    MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, comm);
 
 }
 
-void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, int np[], unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm  )
+void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm  )
 {
     int periods[3] = {false,false, false};
     if( bcx == dg::PER) periods[0] = true;
@@ -44,6 +47,7 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, int np[], unsigned& n, unsi
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
+    int np[3];
     if( rank == 0)
     {
         std::cout << "Type npx and npy and npz\n";
@@ -58,6 +62,7 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, int np[], unsigned& n, unsi
     {
         std::cout << "Type n, Nx and Ny and Nz\n";
         std::cin >> n >> Nx >> Ny >> Nz;
+        std::cout<< "You typed "<<n <<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);

@@ -42,7 +42,8 @@ void add_operator( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
 template< class T>
 void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm, 
                 int& number, 
-                unsigned row_index, unsigned col_begin, 
+                unsigned row_index, 
+                unsigned col_begin, 
                 std::vector<T>& vec )
 {
     for( unsigned k=0; k<vec.size(); k++)

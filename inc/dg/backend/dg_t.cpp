@@ -25,7 +25,7 @@ int main()
     std::cin >> Nx >> Ny >> eps; 
 
     //create functions A(chi) x = b
-    dg::Grid<double> grid( 0, lx, 0, ly, 1, Nx, Ny, dg::DIR, dg::DIR);
+    dg::Grid2d<double> grid( 0, lx, 0, ly, 1, Nx, Ny, dg::DIR, dg::DIR);
     dg_container x =    dg::evaluate( initial, grid);
     const dg_container b =    dg::evaluate( rhs, grid);
     const dg_container chi =  dg::evaluate( pol, grid);

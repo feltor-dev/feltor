@@ -1,6 +1,7 @@
 #pragma once
 #include "dg/enums.h"
 
+namespace eule{
 /**
  * @brief Provide a mapping between input file and named parameters
  */
@@ -26,6 +27,7 @@ struct Parameters
     double amp_source;
     double m_par;
 
+    unsigned n_out, Nx_out, Ny_out, Nz_out; 
     unsigned itstp; 
     unsigned maxout;
 
@@ -46,31 +48,29 @@ struct Parameters
             eps_maxwell = v[7];
             eps_gamma = v[8];
             eps_time = v[9];
-            b = v[10];
-            a = v[11];
-            assert( a>b && "Source radius must be smaller than minor radius!" );
-            R_0 = v[12];
             eps_hat = 1.;//4.*M_PI*M_PI*R_0*R_0;
-            lnn_inner = v[13];
-            mu[0] = v[14];
+            mu[0] = v[10];
             mu[1] = 1.;
             tau[0] = -1.;
-            tau[1] = v[15];
-            beta = v[16];
-            nu_perp = v[17];
-            nu_parallel = v[18];
-            c = v[19];
-            
-            amp = v[20];
-            sigma = v[21];
-            posX = v[22];
-            posY = v[23];
-            m_par = v[24];
-            itstp = v[25];
-            maxout = v[26];
-            damping_width    = v[27];
-            damping_strength = v[28];
-            amp_source = v[29];
+            tau[1] = v[11];
+            beta = v[12];
+            nu_perp = v[13];
+            nu_parallel = v[14];
+            c = v[15];            
+            amp = v[16];
+            sigma = v[17];
+            posX = v[18];
+            posY = v[19];
+            m_par = v[20];
+            damping_width    = v[21];
+            damping_strength = v[22];
+            amp_source = v[23];
+            n_out = v[24];
+            Nx_out = v[25];
+            Ny_out = v[26];
+            Nz_out = v[27];
+            itstp = v[28];
+            maxout = v[29];
         }
     }
     /**
@@ -89,11 +89,6 @@ struct Parameters
             <<"    perp Viscosity:   = "<<nu_perp<<"\n"
             <<"    perp Resistivity: = "<<c<<"\n"
             <<"    par Viscosity:    = "<<nu_parallel<<"\n";
-        os << "Boundary parameters are: \n"
-            <<"    Ring thickness = "<<a-b<<"\n"
-            <<"    minor Radius a = "<<a<<"\n"
-            <<"    major Radius R = "<<R_0<<"\n"
-            <<"    inner density ln n = "<<lnn_inner<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
@@ -107,9 +102,14 @@ struct Parameters
             << "    posY:         "<<posY<<"\n";
         os << "Stopping for Polar CG:   "<<eps_pol<<"\n"
             <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
-            <<"Stopping for Time  CG:   "<<eps_time<<"\n"
+            <<"Stopping for Time  CG:   "<<eps_time<<"\n";
+        os << "Output parameters are: \n"
             <<"Steps between output:    "<<itstp<<"\n"
-            <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
+            <<"Number of outputs:       "<<maxout<<"\n"
+            <<"    n_out  = "<<n_out<<"\n"
+            <<"    Nx_out = "<<Nx_out<<"\n"
+            <<"    Ny_out = "<<Ny_out<<"\n"
+            <<"    Nz_out = "<<Nz_out<<std::endl; //the endl is for the implicit flush 
     }
     private:
     int layout_;
@@ -158,6 +158,8 @@ struct Parameters
         os <<"\n";
     }
 };
+
+}//namespace eule
 
 
     

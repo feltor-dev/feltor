@@ -3,18 +3,19 @@
 #include <vector>
 
 #include "draw/host_window.h"
+#include "dg/arakawa.h"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 
-template <class container>
+template <class Matrix, class container>
 struct Vesqr
 {
-    Vesqr( const dg::Grid2d<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::w2d(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
+    Vesqr( const dg::Grid2d<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::weights(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
     const container& operator()( const container& phi)
     {
         dg::blas2::gemv( arakawa.dx(), phi, dx);
@@ -29,14 +30,14 @@ struct Vesqr
     }
   private:
     container dx, dy, one, w2d, binv;    
-    dg::ArakawaX<container> arakawa;
+    dg::ArakawaX<Matrix, container> arakawa;
 
 };
 
-template <class container>
+template <class Matrix, class container>
 struct Nonlinearity 
 {
-    Nonlinearity( const dg::Grid2d<double>& grid): dxn( grid.size()), dyn(dxn), dxphi( dxn), dyphi( dyn), logni(dyn), one( grid.size(), 1.), w2d( dg::create::w2d(grid)), arakawa(grid){}
+    Nonlinearity( const dg::Grid2d<double>& grid): dxn( grid.size()), dyn(dxn), dxphi( dxn), dyphi( dyn), logni(dyn), one( grid.size(), 1.), w2d( dg::create::weights(grid)), arakawa(grid){}
     const container& operator()( const container& ni, const container& phi)
     {
         thrust::transform( ni.begin(), ni.end(), logni.begin(), dg::LN<double>());
@@ -52,16 +53,17 @@ struct Nonlinearity
     }
   private:
     container dxn, dyn, dxphi, dyphi, logni, one, w2d;    
-    dg::ArakawaX<container> arakawa;
+    dg::ArakawaX<Matrix, container> arakawa;
 
 };
 
 
 int main( int argc, char* argv[])
 {
+    std::stringstream title;
     std::vector<double> v = file::read_input( "window_params.txt");
-    draw::HostWindow w(v[3], v[4]);
-    w.set_multiplot( v[1], v[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3]*v[2], v[4]*v[1], "");
+    draw::RenderHostData render( v[1], v[2]);
 
     if( argc != 2)
     {
@@ -71,6 +73,7 @@ int main( int argc, char* argv[])
 
     std::string in;
     file::T5rdonly t5file( argv[1], in);
+    unsigned nlinks = t5file.get_size();
 
     int layout = 0;
     if( in.find( "TOEFL") != std::string::npos)
@@ -83,7 +86,7 @@ int main( int argc, char* argv[])
     p.display();
     dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual), input2( visual);
-    dg::HVec w2d = dg::create::w2d( grid);
+    dg::HVec w2d = dg::create::weights( grid);
     dg::HMatrix equi = dg::create::backscatter( grid);
     dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed);
     draw::ColorMapRedBlueExt colors( 1.);
@@ -125,9 +128,9 @@ int main( int argc, char* argv[])
             }
         }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
         */
-    Vesqr<dg::HVec> vesqr(grid, p.kappa);
-    Nonlinearity<dg::HVec> nonlinear( grid);
-    while (running && index < p.maxout + 2 )
+    Vesqr<dg::HMatrix, dg::HVec> vesqr(grid, p.kappa);
+    Nonlinearity<dg::HMatrix, dg::HVec> nonlinear( grid);
+    while (!glfwWindowShouldClose(w) && index < nlinks + 1 )
     {
         t5file.get_field( input, "potential", index);
 
@@ -140,9 +143,9 @@ int main( int argc, char* argv[])
         if( v[6] > 0)
             colors.scale() = v[6];
         //draw ions
-        w.title() << std::setprecision(2) << std::scientific;
-        w.title() <<"potential / "<<colors.scale()<<"\t";
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        title << std::setprecision(2) << std::scientific;
+        title <<"potential / "<<colors.scale()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //transform phi
         //t5file.get_field( input, "potential", index);
         t5file.get_field( input2, "ions", index);
@@ -157,10 +160,10 @@ int main( int argc, char* argv[])
         if( v[7] > 0 )
             colors.scale() = v[7];
         //draw phi and swap buffers
-        w.title() <<"Nonlinearity / "<<colors.scale()<<"\t";
-        w.title() << std::fixed; 
-        w.title() << " &&  time = "<<t5file.get_time( index); //read time as double from string
-        w.draw( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        title <<"Nonlinearity / "<<colors.scale()<<"\t";
+        title << std::fixed; 
+        title << " &&  time = "<<t5file.get_time( index); //read time as double from string
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         if(p.global)
         {
@@ -172,19 +175,18 @@ int main( int argc, char* argv[])
         do
         {
             glfwPollEvents();
-            if( glfwGetKey( 'B')||glfwGetKey( 'P') ){
+            if( glfwGetKey(w, 'B')||glfwGetKey(w, 'P') ){
                 index -= v[5];
                 waiting = false;
             }
-            else if( glfwGetKey( 'N') ){
+            else if( glfwGetKey(w, 'N') ){
                 index +=v[5];
                 waiting = false;
             }
             //glfwWaitEvents();
-        }while( waiting && !glfwGetKey( GLFW_KEY_ESC) && glfwGetWindowParam( GLFW_OPENED));
+        }while( waiting && !glfwGetKey(w, GLFW_KEY_ESCAPE) );
 
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
+    glfwTerminate();
     return 0;
 }

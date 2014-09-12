@@ -42,6 +42,14 @@ inline void doScal(  Vector& x,
     for( unsigned i=0; i<x.data().size(); i++)
         x.data()[i]*=alpha;
 }
+template< class Vector, class UnaryOp>
+inline void doTransform(  const Vector& x, Vector& y,
+                          UnaryOp op,
+                          MPIVectorTag)
+{
+    thrust::transform( x.data().begin(), x.data().end(), 
+                       y.data().begin(), op);
+}
 
 template< class Vector>
 inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 

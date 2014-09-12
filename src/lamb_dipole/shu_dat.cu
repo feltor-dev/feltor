@@ -2,9 +2,9 @@
 #include <iomanip>
 #include <vector>
 
-#include "dg/xspacelib.cuh"
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/file.h"
 
@@ -25,7 +25,7 @@ int main( int argc, char* argv[])
     unsigned nlinks = t5file.get_size();
     const Parameters p( file::read_input(in));
     dg::Grid2d<double> g( 0, p.lx, 0., p.ly, p.n, p.Nx, p.Ny);
-    const dg::HVec w2d( dg::create::w2d(g));
+    const dg::HVec w2d( dg::create::weights(g));
     const dg::HVec one( g.size(), 1.);
 
     std::vector<double> vort, enstrophy, energy, variation; 

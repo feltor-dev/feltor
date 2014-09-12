@@ -18,7 +18,7 @@ int main()
 
     dg::HVec vector = dg::evaluate( function ,g), average_y( vector);
     const dg::HVec solution = dg::evaluate( pol_average, g);
-    dg::HVec w2d = dg::create::w2d( g);
+    dg::HVec w2d = dg::create::weights( g);
     std::cout << "Integration is: "<<dg::blas1::dot( vector, w2d)<<std::endl;
 
     pol( vector, average_y);

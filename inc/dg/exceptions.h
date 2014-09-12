@@ -4,6 +4,10 @@
 #include <exception>
 
 
+/*!@file 
+ *
+ * Error class to thow. Derived from std::exception
+ */
 namespace dg
 {
 

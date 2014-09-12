@@ -3,13 +3,13 @@
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
-#include "dg/evaluation.cuh"
-#include "dg/rk.cuh"
-#include "dg/karniadakis.cuh"
-#include "dg/xspacelib.cuh"
-#include "dg/typedefs.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/functors.h"
+#include "dg/backend/evaluation.cuh"
+#include "dg/runge_kutta.h"
+#include "dg/multistep.h"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/typedefs.cuh"
 
 #include "shu.cuh"
 
@@ -63,7 +63,7 @@ int main()
         {
             unsigned Nx = 8*pow(2,i), Ny = Nx;
             Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-            DVec w2d( create::w2d(grid));
+            DVec w2d( create::weights(grid));
 
             double dx = lx/(double)Nx;
             double eps = 1e-1/pow(10, n)*pow(dx,n);

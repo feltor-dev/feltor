@@ -4,12 +4,14 @@
 #include <vector>
 #include <string>
 
-#include "dg/xspacelib.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/arakawa.h"
+#include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/file.h"
-#include "dg/timer.cuh"
+#include "dg/backend/timer.cuh"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 
 
 //read and evaluate TOEFL & INNTO h5 files
@@ -21,10 +23,10 @@ void log( const container& y, container& target)
 {
     thrust::transform( y.begin(), y.end(), target.begin(), dg::LN<double>());
 }
-template <class container>
+template <class Matrix, class container>
 struct Vesqr
 {
-    Vesqr( const dg::Grid<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::w2d(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
+    Vesqr( const dg::Grid2d<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::weights(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
     const container& operator()( const container& phi)
     {
         dg::blas2::gemv( arakawa.dx(), phi, dx);
@@ -39,7 +41,7 @@ struct Vesqr
     }
   private:
     container dx, dy, one, w2d, binv;    
-    dg::ArakawaX<container> arakawa;
+    dg::ArakawaX<Matrix, container> arakawa;
 
 };
 
@@ -66,7 +68,7 @@ int main( int argc, char* argv[])
         std::cerr << "Unknown input file format: default to 0"<<std::endl;
     const Parameters p( file::read_input( in), layout);
     p.display();
-    dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
 
     dg::HVec input_h( grid.size());
     dg::HVec input0( input_h), input1(input0), ln0( input0), ln1(input0);
@@ -83,7 +85,7 @@ int main( int argc, char* argv[])
     dg::HVec xvec = dg::evaluate( X, grid);
     dg::HVec yvec = dg::evaluate( Y, grid);
     dg::HVec one = dg::evaluate( dg::one, grid);
-    dg::HVec w2d = dg::create::w2d( grid);
+    dg::HVec w2d = dg::create::weights( grid);
     dg::HMatrix equi = dg::create::backscatter( grid);
 
     t5file.get_field( input0, "electrons", 1);
@@ -105,7 +107,7 @@ int main( int argc, char* argv[])
         double velX_old = -posX/deltaT, velY_old = -posY/deltaT; 
         //velX_old = NAN, velY_old = NAN;
 
-    Vesqr<dg::HVec> vesqr( grid, p.kappa);
+    Vesqr<dg::HMatrix, dg::HVec> vesqr( grid, p.kappa);
     os << "#Time(1) posX(2) posY(3) velX(4) velY(5) mass(6) diff(7) (m_tot-m_0)/m_0(8) "
        << "Ue(9) Ui(10) Uphi(11) Utot(12) (U_tot-U_0)/U_0(13) diss(14) posX_max(15) posY_max(16) accX(17) acc(18) max_amp(19)\n";
     //dg::Timer t;

@@ -248,6 +248,7 @@ struct Karniadakis
     * @param f right hand side function or functor (is called for u)
     * @param diff diffusion operator treated implicitely 
     * @param u (write-only), contains next step of time-integration on output
+     * @note Both Functor and LinearOp may change their first (input) argument, i.e. the first argument need not be const
     */
     template< class Functor, class LinearOp>
     void operator()( Functor& f, LinearOp& diff, Vector& u);
@@ -317,18 +318,25 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
     //compute implicit part
     double alpha[2] = {2., -1.};
     //double alpha[2] = {1., 0.};
-    blas1::axpby( alpha[0], u_[1], -alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
+    blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
     blas2::symv( diff.weights(), u, u);
     detail::Implicit<Diffusion, Vector> implicit( -dt_/11.*6., diff, f_[0]);
 #ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif//MPI
     Timer t;
     t.tic(); 
     unsigned number = pcg( implicit, u_[0], u, diff.precond(), eps_);
     t.toc();
+#ifdef MPI_VERSION
+    if(rank==0)
+#endif//MPI
     std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<t.diff()<<"s\n";
 #else
     pcg( implicit, u_[0], u, diff.precond(), eps_);
-#endif
+#endif //BENCHMARK
     blas1::axpby( 1., u_[0], 0, u); //save u_[0]
 
 

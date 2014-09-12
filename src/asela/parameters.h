@@ -1,13 +1,6 @@
 #pragma once
-#include "dg/backend/grid.h"
-<<<<<<< HEAD
-
-=======
 #include "dg/enums.h"
->>>>>>> 69b95fe1d05493e5e4cb97e206edbf72f11aab09
 
-namespace eule
-{
 /**
  * @brief Provide a mapping between input file and named parameters
  */
@@ -16,20 +9,25 @@ struct Parameters
     unsigned n, Nx, Ny, Nz; 
     double dt; 
 
-    double eps_pol, eps_maxwell, eps_time;
-    double lxhalf, lyhalf; 
+    double eps_pol, eps_maxwell, eps_gamma, eps_time;
 
-    double nu;
+    double a, b, R_0; 
+    double damping_width, damping_strength;
+    double eps_hat;
 
-    double dhat[2];
-    double rhohat[2];
+    double lnn_inner;
+    double nu_perp, nu_parallel, c;
+
+    double mu[2];
     double tau[2];
-
-    double amp;
+    double beta;
+    
+    double amp, sigma, posX, posY;
+    double amp_source;
+    double m_par;
 
     unsigned itstp; 
     unsigned maxout;
-    dg::bc bcx, bcy;
 
     /**
      * @brief constructor to make a const object
@@ -46,19 +44,33 @@ struct Parameters
             dt = v[5];
             eps_pol = v[6];
             eps_maxwell = v[7];
-            eps_time = v[8];
-            lxhalf = v[9]*M_PI;
-            lyhalf = v[10]*M_PI;
-            bcx = map((int)v[11]), bcy = map((int)v[12]);
-            dhat[0] = v[13];
-            dhat[1] = v[14];
-            rhohat[0] = v[15];
-            rhohat[1] = v[16];
-            nu  = v[17];
+            eps_gamma = v[8];
+            eps_time = v[9];
+            b = v[10];
+            a = v[11];
+            assert( a>b && "Source radius must be smaller than minor radius!" );
+            R_0 = v[12];
+            eps_hat = 1.;//4.*M_PI*M_PI*R_0*R_0;
+            lnn_inner = v[13];
+            mu[0] = v[14];
+            mu[1] = 1.;
+            tau[0] = -1.;
+            tau[1] = v[15];
+            beta = v[16];
+            nu_perp = v[17];
+            nu_parallel = v[18];
+            c = v[19];
             
-            amp = v[19];
-            itstp = v[20];
-            maxout = v[21];
+            amp = v[20];
+            sigma = v[21];
+            posX = v[22];
+            posY = v[23];
+            m_par = v[24];
+            itstp = v[25];
+            maxout = v[26];
+            damping_width    = v[27];
+            damping_strength = v[28];
+            amp_source = v[29];
         }
     }
     /**
@@ -69,26 +81,32 @@ struct Parameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
-            <<"    rhos  = "<<rhohat[0]<<"\n"
-            <<"    rhoi  = "<<rhohat[1]<<"\n"
-            <<"    de: = "<<dhat[0]<<"\n"
-            <<"    di: = "<<dhat[1]<<"\n"
-            <<"    Viscosity:       = "<<nu<<"\n";
+            <<"    mu_e             = "<<mu[0]<<"\n"
+            <<"    mu_i             = "<<mu[1]<<"\n"
+            <<"    beta             = "<<beta<<"\n"
+            <<"Electron-temperature: = "<<tau[0]<<"\n"
+            <<"    Ion-temperature:  = "<<tau[1]<<"\n"
+            <<"    perp Viscosity:   = "<<nu_perp<<"\n"
+            <<"    perp Resistivity: = "<<c<<"\n"
+            <<"    par Viscosity:    = "<<nu_parallel<<"\n";
         os << "Boundary parameters are: \n"
-            <<"    lx = "<<2.*lxhalf<<"\n"
-            <<"    ly = "<<2.*lyhalf<<"\n";
-        displayBC(os, bcx, bcy);
-
+            <<"    Ring thickness = "<<a-b<<"\n"
+            <<"    minor Radius a = "<<a<<"\n"
+            <<"    major Radius R = "<<R_0<<"\n"
+            <<"    inner density ln n = "<<lnn_inner<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
             <<"    Ny = "<<Ny<<"\n"
             <<"    Nz = "<<Nz<<"\n"
             <<"    dt = "<<dt<<"\n";
-        os  <<"Perturbation parameters are: \n"
-            << "    amplitude:    "<<amp<<"\n";
+        os  <<"Blob parameters are: \n"
+            << "    amplitude:    "<<amp<<"\n"
+            << "    width:        "<<sigma<<"\n"
+            << "    posX:         "<<posX<<"\n"
+            << "    posY:         "<<posY<<"\n";
         os << "Stopping for Polar CG:   "<<eps_pol<<"\n"
-            <<"Stopping for Aparl CG:   "<<eps_maxwell<<"\n"
+            <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"Stopping for Time  CG:   "<<eps_time<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
@@ -140,7 +158,6 @@ struct Parameters
         os <<"\n";
     }
 };
-} //namespace eule
 
 
     

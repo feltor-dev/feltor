@@ -10,7 +10,7 @@
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 
 //compare two TOEFL h5 files with equal physical parameters
 
@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
     //std::cout << DT1 << " "<<DT2<<" "<<DT<<" D1 "<<D1<<"D2 "<<D2<<std::endl;
     unsigned idx1=1, idx2=1;
     dg::HVec field1( grid1.size()), field2( grid2.size());
-    dg::HVec w1 = dg::create::w2d( grid1), w2 = dg::create::w2d( grid2);
+    dg::HVec w1 = dg::create::weights( grid1), w2 = dg::create::weights( grid2);
     std::cout << "Begin computation...\n";
     std::cout << "Differences \tTime \tElectrons \tIons    \tPotential\n";
     while( (idx1 <= t5file1.get_size()) && (idx2<=t5file2.get_size()))

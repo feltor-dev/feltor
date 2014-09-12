@@ -6,10 +6,10 @@
 #include <thrust/host_vector.h>
 
 #include "multistep.h"
-#include "grid.h"
-#include "evaluation.cuh"
-#include "derivatives.cuh"
-#include "typedefs.cuh"
+#include "backend/grid.h"
+#include "backend/evaluation.cuh"
+#include "backend/derivatives.cuh"
+#include "backend/typedefs.cuh"
 
 template < class container = thrust::device_vector<double> >
 struct RHS
@@ -33,7 +33,7 @@ template< class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
-        w2d(dg::create::w2d( g)), v2d(dg::create::v2d(g)) { 
+        w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)) { 
         LaplacianM = dg::create::laplacianM( g, dg::normed); 
         }
 
@@ -84,7 +84,7 @@ int main()
     cout << "# of timesteps:           "<<NT<<endl;
 
     Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, PER, PER);
-    dg::DVec w2d = create::w2d( grid);
+    dg::DVec w2d = create::weights( grid);
 
     std::vector<DVec> y0(2, evaluate( sine, grid)), y1(y0);
 
