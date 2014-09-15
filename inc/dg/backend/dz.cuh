@@ -17,6 +17,7 @@ struct DefaultLimiter
         return 1;
     }
 };
+
 struct NoLimiter
 {
     double operator()(double x, double y)
@@ -24,6 +25,7 @@ struct NoLimiter
         return 0.;
     }
 };
+
 /**
  * @brief Class for the evaluation of a parallel derivative
  *
@@ -74,70 +76,15 @@ struct DZ
         dg::blas1::axpby(  1., hp, +1., hm, hz);
         std::cout<<"Parallel derivative constructed" << "\n";
     }
+
     /**
      * @brief Apply the derivative on a 3d vector
      *
      * @param f The vector to derive
      * @param dzf contains result on output (write only)
      */
-    void operator()( const container& f, container& dzf)
-    {
-        assert( &f != &dzf);
-        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-        View tempPV( tempP.begin(), tempP.end());
-        View tempMV( tempM.begin(), tempM.end());
+    void operator()( const container& f, container& dzf);
 
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        for( unsigned i0=0; i0<g_.Nz(); i0++)
-        {
-            unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
-            unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
-            cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
-            cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-            cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
-            cusp::multiply( plus, fp, tempPV);
-            cusp::multiply( minus, fm, tempMV );
-            //make ghostcells
-            if( i0==0 && bcz_ != dg::PER)
-            {
-                //overwrite tempM
-                cusp::copy( f0, ghostMV);
-                if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-                {
-                    dg::blas1::scal( ghostM, -1.);
-                    dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
-                }
-                if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-                {
-                    dg::blas1::axpby( -left_, hm, 1., ghostM);
-                }
-                dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
-                dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
-                dg::blas1::axpby( 1., ghostM, 1., tempM);
-
-            }
-            else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
-            {
-                //overwrite tempP
-                cusp::copy( f0, ghostPV);
-                if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-                {
-                    dg::blas1::scal( ghostP, -1.);
-                    dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
-                }
-                if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-                {
-                    dg::blas1::axpby( right_, hp, 1., ghostP);
-                }
-                dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
-                dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
-                dg::blas1::axpby( 1., ghostP, 1., tempP);
-            }
-            dg::blas1::axpby( 1., tempP, -1., tempM);
-            thrust::transform( tempM.begin(), tempM.end(), hz.begin(), dzf.begin()+i0*size, thrust::divides<double>());
-        }
-    }
     /**
      * @brief Set boundary conditions
      *
@@ -153,77 +100,27 @@ struct DZ
         left_ = left;
         right_ = right;
     }
+
     /**
      * @brief Compute the second derivative using finite differences
      *
      * @param f input function
      * @param dzzf output (write-only)
      */
-    void dzz( const container& f, container& dzzf)
-    {
-        assert( &f != &dzzf);
-        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-        View tempPV( tempP.begin(), tempP.end());
-        View temp0V( temp0.begin(), temp0.end());
-        View tempMV( tempM.begin(), tempM.end());
-        for( unsigned i0=0; i0<g_.Nz(); i0++)
-        {
-            unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
-            unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
+    void dzz( const container& f, container& dzzf);
 
-            cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
-            cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-            cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
-            cusp::copy( f0, temp0V);
-            cusp::multiply( plus, fp, tempPV);
-            cusp::multiply( minus, fm, tempMV );
-            //make ghostcells
-            if( i0==0 && bcz_ != dg::PER)
-            {
-                if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-                {
-                    dg::blas1::axpby( -1., temp0, 0., ghostM);
-                    dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
-                }
-                if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-                {
-                    dg::blas1::axpby( -left_, hm, 1., temp0, ghostM);
-                }
-                dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
-                dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
-                dg::blas1::axpby( 1., ghostM, 1., tempM);
-            }
-            else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
-            {
-                if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-                {
-                    dg::blas1::axpby( -1., temp0, 0., ghostP);
-                    dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
-                }
-                if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-                {
-                    dg::blas1::axpby( right_, hp, 1., temp0, ghostP);
-                }
-                dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
-                dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
-                dg::blas1::axpby( 1., ghostP, 1., tempP);
-            }
-
-            {
-                dg::blas1::pointwiseDivide( tempP, hp, tempP);
-                dg::blas1::pointwiseDivide( tempP, hz, tempP);
-                dg::blas1::pointwiseDivide( temp0, hp, temp0);
-                dg::blas1::pointwiseDivide( temp0, hm, temp0);
-                dg::blas1::pointwiseDivide( tempM, hm, tempM);
-                dg::blas1::pointwiseDivide( tempM, hz, tempM);
-            }
-
-            dg::blas1::axpby(  2., tempP, +2., tempM); //fp+fm
-            dg::blas1::axpby( -2., temp0, +1., tempM); 
-            View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
-            cusp::copy( tempMV, dzzf0);
-        }
-    }
+    /**
+     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to 
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * @tparam BinaryOp Binary Functor 
+     * @param f Functor to evaluate
+     *
+     * @return Returns an instance of container
+     */
+    template< class BinaryOp>
+    container evaluate( BinaryOp f);
   private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
@@ -233,21 +130,171 @@ struct DZ
     dg::bc bcz_;
     double left_, right_;
     container limiter;
-    void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g)
+    void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g);
+};
+
+template<class M, class container>
+void DZ<M,container>::operator()( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View tempPV( tempP.begin(), tempP.end());
+    View tempMV( tempM.begin(), tempM.end());
+
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
     {
-        //implements "Neumann" boundaries for lines that cross the wall
-        for( unsigned i=0; i<g.size(); i++)
-        {            
-            if      (yp[0][i] < g.x0())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
-            else if (yp[0][i] > g.x1())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
-            else if (yp[1][i] < g.y0())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
-            else if (yp[1][i] > g.y1())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
-            else                         { }
-                
+        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
+        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
+        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
+        cusp::multiply( plus, fp, tempPV);
+        cusp::multiply( minus, fm, tempMV );
+        //make ghostcells
+        if( i0==0 && bcz_ != dg::PER)
+        {
+            //overwrite tempM
+            cusp::copy( f0, ghostMV);
+            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+            {
+                dg::blas1::scal( ghostM, -1.);
+                dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+            {
+                dg::blas1::axpby( -left_, hm, 1., ghostM);
+            }
+            dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
+            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+            dg::blas1::axpby( 1., ghostM, 1., tempM);
+
+        }
+        else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
+        {
+            //overwrite tempP
+            cusp::copy( f0, ghostPV);
+            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+            {
+                dg::blas1::scal( ghostP, -1.);
+                dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+            {
+                dg::blas1::axpby( right_, hp, 1., ghostP);
+            }
+            dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
+            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+            dg::blas1::axpby( 1., ghostP, 1., tempP);
+        }
+        dg::blas1::axpby( 1., tempP, -1., tempM);
+        thrust::transform( tempM.begin(), tempM.end(), hz.begin(), dzf.begin()+i0*size, thrust::divides<double>());
+    }
+}
+
+template< class M, class container >
+void DZ<M,container>::dzz( const container& f, container& dzzf)
+{
+    assert( &f != &dzzf);
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View tempPV( tempP.begin(), tempP.end());
+    View temp0V( temp0.begin(), temp0.end());
+    View tempMV( tempM.begin(), tempM.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
+        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
+
+        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
+        cusp::copy( f0, temp0V);
+        cusp::multiply( plus, fp, tempPV);
+        cusp::multiply( minus, fm, tempMV );
+        //make ghostcells
+        if( i0==0 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+            {
+                dg::blas1::axpby( -1., temp0, 0., ghostM);
+                dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+            {
+                dg::blas1::axpby( -left_, hm, 1., temp0, ghostM);
+            }
+            dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
+            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+            dg::blas1::axpby( 1., ghostM, 1., tempM);
+        }
+        else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+            {
+                dg::blas1::axpby( -1., temp0, 0., ghostP);
+                dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+            {
+                dg::blas1::axpby( right_, hp, 1., temp0, ghostP);
+            }
+            dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
+            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+            dg::blas1::axpby( 1., ghostP, 1., tempP);
         }
 
+        {
+            dg::blas1::pointwiseDivide( tempP, hp, tempP);
+            dg::blas1::pointwiseDivide( tempP, hz, tempP);
+            dg::blas1::pointwiseDivide( temp0, hp, temp0);
+            dg::blas1::pointwiseDivide( temp0, hm, temp0);
+            dg::blas1::pointwiseDivide( tempM, hm, tempM);
+            dg::blas1::pointwiseDivide( tempM, hz, tempM);
+        }
+
+        dg::blas1::axpby(  2., tempP, +2., tempM); //fp+fm
+        dg::blas1::axpby( -2., temp0, +1., tempM); 
+        View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
+        cusp::copy( tempMV, dzzf0);
     }
-};
+}
+
+template< class M, class V >
+void DZ<M,V>::cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g)
+{
+    //implements "Neumann" boundaries for lines that cross the wall
+    for( unsigned i=0; i<g.size(); i++)
+    {            
+        if      (yp[0][i] < g.x0())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
+        else if (yp[0][i] > g.x1())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
+        else if (yp[1][i] < g.y0())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
+        else if (yp[1][i] > g.y1())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
+        else                         { }
+            
+    }
+
+}
+
+template< class M, class container>
+template< class BinaryOp>
+container DZ<M,container>::evaluate( BinaryOp f)
+{
+    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    container vec2d = dg::evaluate( f, g2d);
+    View g0( vec2d.begin(), vec2d.begin() + g2d.size());
+    container vec3d( g_.size());
+    View f0( vec3d.begin(), vec3d.begin() + g2d.size());
+    cusp::copy( g0, f0);
+    for( unsigned i0=1; i0<g_.Nz(); i0++)
+    {
+        unsigned im = i0-1;
+        View fm( vec3d.begin() + im*g2d.size(), vec3d.begin() + (im+1)*g2d.size());
+        View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
+        cusp::multiply( minus, fm, f0 );
+    }
+    return vec3d;
+}
 
 }//namespace dg
 

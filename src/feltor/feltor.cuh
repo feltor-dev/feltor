@@ -96,6 +96,7 @@ struct Feltor
     void exp( const std::vector<container>& src, std::vector<container>& dst, unsigned);
 
     void log( const std::vector<container>& src, std::vector<container>& dst, unsigned);
+    dg::DZ<Matrix, container> dz(){return dz_;}
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -131,7 +132,7 @@ struct Feltor
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
-    dg::DZ<Matrix, container> dz;
+    dg::DZ<Matrix, container> dz_;
     dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
@@ -162,7 +163,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     dzy( 4, chi),curvy(dzy), 
 //  dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
 //  dz(solovev::Field(gp), g, gp.rk4eps, dg::NoLimiter()),
-    dz(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
+    dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
     pol(     g), 
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
@@ -273,24 +274,24 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);                    // dtU =1/B [U,phi]_RZ  
         
         //Parallel dynamics
-        dz.set_boundaries( dg::NEU, 0, 0);
-        dz(y[i], dzy[i]);                                                       //dz N
-        dz(y[i+2], dzy[2+i]);                                                   //dz U
+        dz_.set_boundaries( dg::NEU, 0, 0);
+        dz_(y[i], dzy[i]);                                                       //dz N
+        dz_(y[i+2], dzy[2+i]);                                                   //dz U
         dg::blas1::pointwiseDot(y[i],y[i+2], omega);                            //U N
-        dz(omega, dzun[i]);                                                     //dz UN
+        dz_(omega, dzun[i]);                                                     //dz UN
         dg::blas1::axpby( -1., dzun[i], 1., yp[i]);                             //dtN = dtN - dz U N
         dg::blas1::pointwiseDot(omega, gradlnB, omega);                         //U N dz ln B
         dg::blas1::axpby( 1., omega, 1., yp[i]);                                //dtN = dtN + U N dz ln B
         //parallel force terms
-        dz.set_boundaries( dg::DIR, 0, 0);
-        dz(phi[i], dzphi[i]);                                                   //dz psi
-        dz.set_boundaries( dg::NEU, 0, 0);
-        dz(logy[i], dzlogn[i]);                                                 //dz lnN
+        dz_.set_boundaries( dg::DIR, 0, 0);
+        dz_(phi[i], dzphi[i]);                                                   //dz psi
+        dz_.set_boundaries( dg::NEU, 0, 0);
+        dz_(logy[i], dzlogn[i]);                                                 //dz lnN
         dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzlogn[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
         dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);        //dtU = dtU - 1/(hat(mu))  *dz phi  
          
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);                          //U^2
-        dz(omega, dzu2[i]);                                                     //dz u^2
+        dz_(omega, dzu2[i]);                                                     //dz u^2
         dg::blas1::axpby( -0.5, dzu2[i], 1., yp[2+i]);                          //dtU = dtU - 0.5 dz U^2
         
         //Curvature dynamics
@@ -322,13 +323,13 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                            //dtU = dtU -0.5 U K(psi)
 
         //Parallel dissipation
-        dz.set_boundaries( dg::NEU, 0, 0);
-        dz.dzz(y[i],omega);                                                     //dz^2 N 
+        dz_.set_boundaries( dg::NEU, 0, 0);
+        dz_.dzz(y[i],omega);                                                     //dz^2 N 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
         //gradlnBcorrection
         dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);                         // dz lnB dz N    
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
-        dz.dzz(y[i+2],omega);                                                   //dz^2 U 
+        dz_.dzz(y[i+2],omega);                                                   //dz^2 U 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);               
         //gradlnBcorrection
         dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);                       // dz lnB dz U

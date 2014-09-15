@@ -289,8 +289,8 @@ struct DZ< MPI_Matrix, MPI_Vector>
     }
 
   private:
-    typedef cusp::array1d_view< typename thrust::host_vector<double>::iterator> View;
-    typedef cusp::array1d_view< typename thrust::host_vector<double>::const_iterator> cView;
+    typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
+    typedef cusp::array1d_view< thrust::host_vector<double>::const_iterator> cView;
     void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, const dg::Grid3d<double>& g) //global grid
     {
         for( unsigned i=0; i<y[0].size(); i++)

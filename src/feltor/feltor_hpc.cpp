@@ -85,7 +85,7 @@ int main( int argc, char* argv[])
     eule::Feltor< dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p,gp); 
     eule::Rolkar< dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p,gp);
 
-    //The initial field
+    /////////////////////The initial field////////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
@@ -93,13 +93,9 @@ int main( int argc, char* argv[])
     
     std::vector<dg::MVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.damping(), dg::evaluate(init0, grid), y1[1]); //is damping on bath    
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ne
-    //without FLR
-    //dg::blas1::axpby( 1., y1[0], 1., y0[1]);
-    //with FLR
+    dg::blas1::pointwiseDot(rolkar.damping(), dg::evaluate(init0, grid), y1[1]); 
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     feltor.initializene(y0[1],y0[0]);    
-    //feltor.log( y0, y0, 2); 
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
@@ -199,7 +195,6 @@ int main( int argc, char* argv[])
         }
         time += p.itstp*p.dt;
         start[0] = i;
-        feltor.exp( y0,y0,2); //transform to correct values
         //err = nc_open_par( argv[3], NC_WRITE|NC_MPIIO, comm, info, &ncid);
         for( unsigned j=0; j<4; j++)
         {

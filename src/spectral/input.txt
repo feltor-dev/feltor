@@ -14,7 +14,7 @@ zonal flows.
 4) ly (length of y in units of rho_s)         =   64   (64.)
 5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   0     (1.0)
 ---------------------Physical parameters----------------------
-6) mhw:1, ohw:0 (modified/ordinary HW) =   0       (1)
+6) mhw:1, ohw:0 (modified/ordinary HW) =   1       (1)
 7) ddd (dissip. coupling)              =   0.5     (0.5)
 8) nu  (artif. hyper-viscosity)        =   0.0005   (0.001)
 9) mcv (magnetic curvature)            =   0.0000 (-0.0005)
@@ -24,7 +24,7 @@ zonal flows.
 12) tau_i (Ti/Te)                       =   0.0     (0.0)
 (Z of ions is always 1, g_i and a_i are computed from 
 quasineutrality condition)
-13) impurities yes(1) / no(0)           =   0       (0)
+13) impurities yes(1) / no(0)           =   1       (0)
 14) nd0 (impurity amplitude)            =   1     (0.1)
 15) g_z (impurity gradient)             =   1.0     (0.0)
 16) a_z (Z*nz/ne) (density)             =   0.00010   (small)

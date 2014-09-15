@@ -248,6 +248,37 @@ struct GaussianY
     double  y00, sigma_y, amplitude;
 
 };
+struct GaussianZ
+{
+    /**
+     * @brief Functor returning a gaussian
+     *
+     * @param z0 z-center-coordinate
+     * @param sigma_z z - variance 
+     * @param amp Amplitude
+     */
+    GaussianZ( double z0, double sigma_z, double amp)
+        : z00(z0), sigma_z(sigma_z), amplitude(amp){}
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     * @param z z - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()(double x, double y, double z)
+    {
+        return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
+    }
+  private:
+    double  z00, sigma_z, amplitude;
+
+};
 
 
 /**
