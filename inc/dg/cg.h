@@ -60,6 +60,8 @@ class CG
     /**
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *
+     * The iteration stops if \f$ ||Ax|| < \epsilon( ||b|| + C) \f$ where \f$C\f$ is 
+     * a correction factor to the absolute error
      @tparam Matrix The matrix class: no requirements except for the 
             BLAS routines
      @tparam Preconditioner no requirements except for the blas routines. Thus far the dg library
@@ -72,6 +74,7 @@ class CG
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
      * @param eps The relative error to be respected
+     * @param nrmb_correction Correction factor C for norm of b
      *
      * @return Number of iterations used to achieve desired precision
      */
@@ -231,6 +234,7 @@ struct Invert
      * @param copyable Needed to construct the two previous solutions
      * @param max_iter maximum iteration in conjugate gradient
      * @param eps relative error in conjugate gradient
+     * @param nrmb_correction Correction factor for norm of b (cf. CG)
      */
     Invert(const container& copyable, unsigned max_iter, double eps, double nrmb_correction = 1): 
         eps_(eps), nrmb_correction_(nrmb_correction),

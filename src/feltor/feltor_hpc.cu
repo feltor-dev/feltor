@@ -152,8 +152,6 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
-    try
-    {
 #ifdef DG_BENCHMARK
     unsigned step = 0;
 #endif //DG_BENCHMARK
@@ -170,7 +168,7 @@ int main( int argc, char* argv[])
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
-                break;
+                return -1;
             }
         }
         time += p.itstp*p.dt;
@@ -199,11 +197,6 @@ int main( int argc, char* argv[])
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
-    }
-    }
-    catch( dg::Fail& fail) { 
-        std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-        std::cerr << "Does Simulation respect CFL condition?\n";
     }
     t.toc(); 
     unsigned hour = (unsigned)floor(t.diff()/3600);
