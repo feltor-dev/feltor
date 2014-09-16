@@ -163,7 +163,7 @@ int main( int argc, char* argv[])
 
     if( bp.boundary().bc_x != TL_PERIODIC)
     {
-        cerr << "Only periodic boundaries allowed!\n";
+        cerr << "ERROR: Only periodic boundaries allowed!\n";
         return -1;
     }
     //construct solvers 

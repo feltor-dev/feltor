@@ -29,10 +29,10 @@
 21) inner density ( log10 N )=  0.01
 22) k_psi (zonal modes)      =  1    
 23) RK4 epsilon              =  1e-5 (error for Runge Kutta)
-24) boxscale (1<bs<R0/a)     =  1.1  (a little larger than 1)
+24) boxscale (1<bs<R0/a)     =  1.2  (a little larger than 1)
 25) Profile amplitude        =  0.0  (peak amplitude)
 26) Background Prof amplitude=  1.   (density on the boundary)
-27) psip_max_cut             =  -0.0  (critical psip for limiter, -1 < psip < psipmax)
+27) psip_max_cut             =  -2.0  (critical psip for limiter, -1 < psip < psipmax)
 28) psip_max_lap             =  0.0  (?)
 
 

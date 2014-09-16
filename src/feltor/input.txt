@@ -6,8 +6,8 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   60 (192)
-3)  ny (grid points in y)                =   60 (192) 
+2)  nx (grid points in x)                =   30 (192)
+3)  ny (grid points in y)                =   30 (192) 
 4)  nz (grid points in z)                =   5 (>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
@@ -23,16 +23,16 @@
 10) mu_e (-m_e/m_i)                     =-0.5e-4
 11) tau (Ti/Te)                         = 0.0    (0.0)
 12) beta_e0                             = 0.0  (1e-4)
-13) nu_perp                             = 5e-3
+13) nu_perp                             = 5e-4
 14) nu_parallel  (viscosity)            = 1e-4   (0.001)
 15) para resistivity (c)                = 1e-5   (3e-5)
 
 ---------------Initial perturbation parameters---------------------
 
-16) amp (perturbation amplitude)            =  0.5     (1.0)
-17) sigma (blob variance in units of rho_s) =  3.0     (10)
+16) amp (perturbation amplitude)            =  1.0     (1.0)
+17) sigma (blob variance in units of rho_s) =  4.0     (10)
 18) x-position ( in units of a)             =  -0.05   (0.4)
-19) y-position ( in units of a)             =  0.5  (0.5)
+19) y-position ( in units of a)             =  0.25  (0.5)
 20) z mode number (sin(2*Pi*m*z))           =  2
 
 ------------------Miscellaneous----------------------------
@@ -44,7 +44,7 @@
 25) nx_out (# grid points in output field)  = 30 
 26) ny_out (# grid points in output field)  = 30
 27) nz_out (# grid points in output field)  = 20
-28) itstp  (steps between outputs)          = 4     (5)
+28) itstp  (steps between outputs)          = 5     (5)
 29) total # of outputs (excluding first)    = 100 
 
 

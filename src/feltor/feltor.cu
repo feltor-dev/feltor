@@ -130,7 +130,7 @@ int main( int argc, char* argv[])
         }
 
         //draw ions
-        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
+        //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
         hvisual = y0[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
@@ -155,7 +155,8 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
-        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"Phi / "<< colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
@@ -169,7 +170,8 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
-        title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        //title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"Ue / " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
@@ -183,7 +185,8 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
-        title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
+        //title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
+        title <<"Ui / " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();

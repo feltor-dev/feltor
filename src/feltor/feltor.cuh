@@ -56,9 +56,10 @@ struct Rolkar
         //dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
         //dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   // dt U_e =- C/hat(mu)_e J_par/N_e
         //dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   // dt U_i =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i now
-        dg::blas1::axpby( 1., x[3], -1, x[2], omega);
-        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   
-        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   
+        ////or U_i - U_e
+        //dg::blas1::axpby( 1., x[3], -1, x[2], omega);
+        //dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   
+        //dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   
         //damping
         for( unsigned i=0; i<y.size(); i++){
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
@@ -93,9 +94,6 @@ struct Feltor
     template<class Grid3d>
     Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
 
-    void exp( const std::vector<container>& src, std::vector<container>& dst, unsigned);
-
-    void log( const std::vector<container>& src, std::vector<container>& dst, unsigned);
     dg::DZ<Matrix, container> dz(){return dz_;}
 
     /**
@@ -116,8 +114,6 @@ struct Feltor
 
   private:
     void curve( container& y, container& target);
-    //use chi and omega as helpers to compute square velocity in omega
-    container& compute_vesqr( container& potential);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
@@ -191,20 +187,16 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
 }
 
 template< class Matrix, class container, class P>
-container& Feltor<Matrix,container, P>::compute_vesqr( container& potential)
-{
-    arakawa.bracketS( potential, potential, chi);                           //dR phi dR phi + Dz phi Dz phi
-    dg::blas1::pointwiseDot( binv, binv, omega);
-    dg::blas1::pointwiseDot( chi, omega, omega);
-    return omega;                                                           //u_E = (dR phi dR phi + Dz phi Dz phi)/B^2
-}
-template< class Matrix, class container, class P>
 container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    invert_invgamma(invgamma,chi,potential);                               //chi = Gamma phi
-    dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);    //psi = Gamma phi - 0.5 u_E^2
+    invert_invgamma(invgamma,chi,potential);                               //chi  Gamma phi
+    arakawa.bracketS( potential, potential, omega);                           //dR phi dR phi + Dz phi Dz phi
+    dg::blas1::pointwiseDot( binv, omega, omega);
+    dg::blas1::pointwiseDot( binv, omega, omega);
+    dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);    //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }
+
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
@@ -212,7 +204,6 @@ void Feltor<Matrix, container, P>::initializene( const container& src, container
     invert_invgamma(invgamma,target,omega); //=ne-1 = Gamma (ni-1)    
     dg::blas1::transform( target,target, dg::PLUS<double>(+1)); //n_i
 }
-
 
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
@@ -224,7 +215,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     phi[1] = compute_psi( phi[0]);
 
     //update energetics, 2% of total time
-    log( y, logy, 2);
+    for(unsigned i=0; i<2; i++)
+        dg::blas1::transform( y[i], logy[i], dg::LN<value_type>());
     mass_ = dg::blas2::dot( one, w3d, y[0] ); //take real ion density which is electron density!!
     double Ue = p.tau[0]*dg::blas2::dot( logy[0], w3d, y[0]); // tau_e n_e ln(n_e)
     double Ui = p.tau[1]*dg::blas2::dot( logy[1], w3d, y[1]);// tau_i n_i ln(n_i)
@@ -235,10 +227,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     double Upari =  0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); //N_i U_i^2
     energy_ = Ue + Ui  + Uphi + Upare + Upari;
 
-    // the resistive dissipation without FLR      
-        dg::blas1::pointwiseDot(y[0], y[2], omega); //N_e U_e 
-        dg::blas1::pointwiseDot( y[1], y[3], chi); //N_i U_i
-        dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i                  //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
+    //// the resistive dissipation without FLR      
+    //    dg::blas1::pointwiseDot(y[0], y[2], omega); //N_e U_e 
+    //    dg::blas1::pointwiseDot( y[1], y[3], chi); //N_i U_i
+    //    dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i                  //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
     //double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*J_parallel^2
 
     //Dissipative terms without FLR
@@ -359,20 +351,6 @@ void Feltor<Matrix, container, P>::curve( container& src, container& target)
     dg::blas1::pointwiseDot( curvR, target, target); // C^R d_R src
     dg::blas1::pointwiseDot( curvZ, omega, omega);   // C^Z d_Z src
     dg::blas1::axpby( 1., omega, 1., target ); // (C^R d_R + C^Z d_Z) src
-}
-//Exp
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::exp( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
-{
-    for( unsigned i=0; i<howmany; i++)
-        dg::blas1::transform( y[i], target[i], dg::EXP<value_type>());
-}
-//Log
-template< class M, class container, class P>
-void Feltor<M, container, P>::log( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
-{
-    for( unsigned i=0; i<howmany; i++)
-        dg::blas1::transform( y[i], target[i], dg::LN<value_type>());
 }
 
 ///@}

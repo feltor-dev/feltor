@@ -121,8 +121,6 @@ struct ParallelFeltor
 
   private:
     void curve( container& y, container& target);
-    //use chi and omega as helpers to compute square velocity in omega
-    container& compute_vesqr( container& potential);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
@@ -196,19 +194,14 @@ container& ParallelFeltor<Matrix, container, P>::polarisation( const std::vector
 }
 
 template< class Matrix, class container, class P>
-container& ParallelFeltor<Matrix,container, P>::compute_vesqr( container& potential)
-{
-    arakawa.bracketS( potential, potential, chi);                           //dR phi dR phi + Dz phi Dz phi
-    dg::blas1::pointwiseDot( binv, binv, omega);
-    dg::blas1::pointwiseDot( chi, omega, omega);
-    return omega;                                                           //u_E = (dR phi dR phi + Dz phi Dz phi)/B^2
-}
-template< class Matrix, class container, class P>
 container& ParallelFeltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    invert_invgamma(invgamma,chi,potential);                               //chi = Gamma phi
-    dg::blas1::axpby( 1., chi, -0.5, compute_vesqr( potential),phi[1]);    //psi = Gamma phi - 0.5 u_E^2
-    return phi[1];
+    invert_invgamma(invgamma,chi,potential);                               //chi  Gamma phi
+    arakawa.bracketS( potential, potential, omega);                           //dR phi dR phi + Dz phi Dz phi
+    dg::blas1::pointwiseDot( binv, omega, omega);
+    dg::blas1::pointwiseDot( binv, omega, omega);
+    dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);    //psi  Gamma phi - 0.5 u_E^2
+    return phi[1];    
     
 }
 template<class Matrix, class container, class P>
