@@ -36,10 +36,12 @@ struct DZ< MPI_Matrix, MPI_Vector>
      */
     template <class Field, class Limiter>
     DZ(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-3, Limiter limit = DefaultLimiter()): 
-        hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), ghostM( tempP), ghostP(tempP), g_(grid), bcz_(grid.bcz()), left_(0), right_(0)
+        hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), ghostM( tempP), ghostP(tempP), g_(grid), bcz_(grid.bcz())
     {
         dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
         limiter_ = dg::evaluate( limit, g2d);
+        left_ = dg::evaluate( zero, g2d);
+        right_ = left_;
         ghostM.resize( g2d.size());
         ghostP.resize( g2d.size());
         //set up grid points as start for fieldline integrations
@@ -109,79 +111,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @param f The vector to derive
      * @param dzf contains result on output (write only)
      */
-    void operator()( const MPI_Vector& f, MPI_Vector& dzf)
-    {
-        assert( &f != &dzf);
-        const thrust::host_vector<double>& in = f.data();
-        thrust::host_vector<double>& out = dzf.data();
-        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-
-        cView fv( in.cbegin(), in.cend());
-        View P( interP.begin(), interP.end() );
-        cusp::multiply( plus, fv, P); //interpolate input vector 
-        View M( interM.begin(), interM.end() );
-        cusp::multiply( minus, fv, M);
-        //gather results from all processes
-        collM_.gather( interM, tempM); 
-        collP_.gather( interP, tempP);
-        //make ghostcells
-        if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
-        {
-            unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
-            cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-            cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-            cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-            View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
-            View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
-            View ghostPV( ghostP.begin(), ghostP.end());
-            View ghostMV( ghostM.begin(), ghostM.end());
-            //overwrite tempM
-            cusp::copy( f0, ghostMV);
-            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-            {
-                dg::blas1::scal( ghostM, -1.);
-                dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-            {
-                dg::blas1::axpby( -left_, hm, 1., ghostM);
-            }
-            cusp::blas::axpby(  ghostMV,  tempMV, ghostMV, 1.,-1.);
-            dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-            cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
-
-        }
-        else if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
-        {
-            unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
-            cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-            cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-            cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-            View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
-            View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
-            View ghostPV( ghostP.begin(), ghostP.end());
-            View ghostMV( ghostM.begin(), ghostM.end());
-            //overwrite tempP
-            if( bcz_ != dg::PER)
-                cusp::copy( f0, ghostPV);
-            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-            {
-                dg::blas1::scal( ghostP, -1.);
-                dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-            {
-                dg::blas1::axpby( right_, hp, 1., ghostP);
-            }
-            cusp::blas::axpby(  ghostPV,  tempPV, ghostPV, 1.,-1.);
-            dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-            cusp::blas::axpby(  ghostPV,  tempPV, tempPV, 1.,1.);
-        }
-        //compute finite difference formula
-        dg::blas1::axpby( 1., tempP, -1., tempM);
-        dg::blas1::pointwiseDivide( tempM, hz, dzf.data());
-    }    
-
+    void operator()( const MPI_Vector& f, MPI_Vector& dzf);
     /**
      * @brief Set boundary conditions
      *
@@ -194,6 +124,23 @@ struct DZ< MPI_Matrix, MPI_Vector>
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         bcz_ = bcz; 
+        const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        left_  = dg::evaluate( dg::CONSTANT(left), g2d);
+        right_ = dg::evaluate( dg::CONSTANT(right),g2d);
+    }
+
+    /**
+     * @brief Set boundary conditions
+     *
+     * if Dirichlet boundaries are used the left value is the left function
+     value, if Neumann boundaries are used the left value is the left derivative value
+     * @param bcz boundary condition
+     * @param left left boundary value 
+     * @param right right boundary value
+     */
+    void set_boundaries( dg::bc bcz, const thrust::host_vector<double>& left, const thrust::host_vector<double>& right)
+    {
+        bcz_ = bcz; 
         left_ = left;
         right_ = right;
     }
@@ -203,90 +150,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @param f input function
      * @param dzzf output (write-only)
      */
-    void dzz( const MPI_Vector& f, MPI_Vector& dzzf)
-    {
-        assert( &f != &dzzf);
-
-        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-        const thrust::host_vector<double>& in = f.data();
-        thrust::host_vector<double>& out = dzzf.data();
-
-        cView fv( in.cbegin(), in.cend());
-        View P( interP.begin(), interP.end() );
-        cusp::multiply( plus, fv, P); //interpolate input vector 
-        View M( interM.begin(), interM.end() );
-        cusp::multiply( minus, fv, M);
-        //gather results from all processes
-        collM_.gather( interM, tempM); 
-        collP_.gather( interP, tempP);
-        //make ghostcells
-        if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
-        {
-            unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
-            cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-            cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-            cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-            View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
-            View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
-            View ghostPV( ghostP.begin(), ghostP.end());
-            View ghostMV( ghostM.begin(), ghostM.end());
-            //overwrite tempM
-            cusp::copy( f0, ghostMV);
-            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-            {
-                dg::blas1::scal( ghostM, -1.);
-                dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-            {
-                dg::blas1::axpby( -left_, hm, 1., ghostM);
-            }
-            cusp::blas::axpby(  ghostMV,  tempMV, ghostMV, 1.,-1.);
-            dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-            cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
-
-        }
-        else if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
-        {
-            unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
-            cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-            cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-            cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-            View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
-            View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
-            View ghostPV( ghostP.begin(), ghostP.end());
-            View ghostMV( ghostM.begin(), ghostM.end());
-            //overwrite tempP
-            if( bcz_ != dg::PER)
-                cusp::copy( f0, ghostPV);
-            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-            {
-                dg::blas1::scal( ghostP, -1.);
-                dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-            {
-                dg::blas1::axpby( right_, hp, 1., ghostP);
-            }
-            cusp::blas::axpby(  ghostPV,  tempPV, ghostPV, 1.,-1.);
-            dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-            cusp::blas::axpby(  ghostPV,  tempPV, tempPV, 1.,1.);
-        }
-
-        {
-            dg::blas1::pointwiseDivide( tempP, hp, tempP);
-            dg::blas1::pointwiseDivide( tempP, hz, tempP);
-            dg::blas1::pointwiseDivide( f.data(), hp, temp0);
-            dg::blas1::pointwiseDivide( temp0, hm, temp0);
-            dg::blas1::pointwiseDivide( tempM, hm, tempM);
-            dg::blas1::pointwiseDivide( tempM, hz, tempM);
-        }
-
-        dg::blas1::axpby(  2., tempP, +2., tempM); //fp+fm
-        dg::blas1::axpby( -2., temp0, +1., tempM, dzzf.data()); 
-        //View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
-        //cusp::copy( tempMV, dzzf0);
-    }
+    void dzz( const MPI_Vector& f, MPI_Vector& dzzf);
 
   private:
     typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
@@ -307,11 +171,165 @@ struct DZ< MPI_Matrix, MPI_Vector>
     thrust::host_vector<double> ghostM, ghostP;
     MPI_Grid3d g_;
     dg::bc bcz_;
-    double left_, right_;
+    thrust::host_vector<double> left_, right_;
     thrust::host_vector<double> limiter_;
     cusp::csr_matrix<int, double, cusp::host_memory> plus, minus; //interpolation matrices
     Collective collM_, collP_;
 
 };
+void DZ<MPI_Matrix, MPI_Vector>::operator()( const MPI_Vector& f, MPI_Vector& dzf)
+{
+    assert( &f != &dzf);
+    const thrust::host_vector<double>& in = f.data();
+    thrust::host_vector<double>& out = dzf.data();
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+
+    cView fv( in.cbegin(), in.cend());
+    View P( interP.begin(), interP.end() );
+    cusp::multiply( plus, fv, P); //interpolate input vector 
+    View M( interM.begin(), interM.end() );
+    cusp::multiply( minus, fv, M);
+    //gather results from all processes
+    collM_.gather( interM, tempM); 
+    collP_.gather( interP, tempP);
+    //make ghostcells
+    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
+    {
+        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
+        View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite tempM
+        cusp::copy( f0, ghostMV);
+        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::axpby( 2., left_, -1, ghostM);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::pointwiseDot( left_, hm, ghostP);
+            dg::blas1::axpby( -1, ghostP, 1., ghostM);
+        }
+        cusp::blas::axpby(  ghostMV,  tempMV, ghostMV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
+        cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
+
+    }
+    else if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
+    {
+        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
+        View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite tempP
+        cusp::copy( f0, ghostPV);
+        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::axpby( 2., right_, -1, ghostP);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::pointwiseDot( right_, hp, ghostM);
+            dg::blas1::axpby( 1., ghostM, 1., ghostP);
+        }
+        cusp::blas::axpby(  ghostPV,  tempPV, ghostPV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
+        cusp::blas::axpby(  ghostPV,  tempPV, tempPV, 1.,1.);
+    }
+    //compute finite difference formula
+    dg::blas1::axpby( 1., tempP, -1., tempM);
+    dg::blas1::pointwiseDivide( tempM, hz, dzf.data());
+}    
+void DZ<MPI_Matrix, MPI_Vector>::dzz( const MPI_Vector& f, MPI_Vector& dzzf)
+{
+    assert( &f != &dzzf);
+
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    const thrust::host_vector<double>& in = f.data();
+    thrust::host_vector<double>& out = dzzf.data();
+
+    cView fv( in.cbegin(), in.cend());
+    View P( interP.begin(), interP.end() );
+    cusp::multiply( plus, fv, P); //interpolate input vector 
+    View M( interM.begin(), interM.end() );
+    cusp::multiply( minus, fv, M);
+    //gather results from all processes
+    collM_.gather( interM, tempM); 
+    collP_.gather( interP, tempP);
+    //make ghostcells
+    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
+    {
+        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
+        View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite tempM
+        cusp::copy( f0, ghostMV);
+        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::axpby( 2., left_, -1, ghostM);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::pointwiseDot( left_, hm, ghostP);
+            dg::blas1::axpby( -1, ghostP, 1., ghostM);
+        }
+        cusp::blas::axpby(  ghostMV,  tempMV, ghostMV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
+        cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
+
+    }
+    else if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
+    {
+        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
+        View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite tempP
+        cusp::copy( f0, ghostPV);
+        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::axpby( 2., right_, -1, ghostP);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::pointwiseDot( right_, hp, ghostM);
+            dg::blas1::axpby( 1., ghostM, 1., ghostP);
+        }
+        cusp::blas::axpby(  ghostPV,  tempPV, ghostPV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
+        cusp::blas::axpby(  ghostPV,  tempPV, tempPV, 1.,1.);
+    }
+
+    {
+        dg::blas1::pointwiseDivide( tempP, hp, tempP);
+        dg::blas1::pointwiseDivide( tempP, hz, tempP);
+        dg::blas1::pointwiseDivide( f.data(), hp, temp0);
+        dg::blas1::pointwiseDivide( temp0, hm, temp0);
+        dg::blas1::pointwiseDivide( tempM, hm, tempM);
+        dg::blas1::pointwiseDivide( tempM, hz, tempM);
+    }
+
+    dg::blas1::axpby(  2., tempP, +2., tempM); //fp+fm
+    dg::blas1::axpby( -2., temp0, +1., tempM, dzzf.data()); 
+    //View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
+    //cusp::copy( tempMV, dzzf0);
+}
 }//namespace dg
 

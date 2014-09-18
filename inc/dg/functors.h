@@ -889,6 +889,15 @@ struct ABS
         T operator()(const T& x){ return fabs(x);}
 };
 
+struct CONSTANT
+{
+    CONSTANT( double value): value_(value){}
+    double operator()(double x){return value_;}
+    double operator()(double x, double y){return value_;}
+    double operator()(double x, double y, double z){return value_;}
+    private:
+    double value_;
+};
 ///@}
 } //namespace dg
 

@@ -8,6 +8,14 @@ namespace dg
 
 struct MPI_Vector
 {
+    /**
+     * @brief construct a vector
+     *
+     * @param n polynomial coefficients
+     * @param Nx local # of cells in x 
+     * @param Ny local # of cells in y
+     * @param comm MPI communicator
+     */
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(1), data_( n*n*Nx*Ny), comm_(comm) {}
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
@@ -19,6 +27,11 @@ struct MPI_Vector
     unsigned Nx()const {return Nx_;}
     unsigned Ny()const {return Ny_;}
     unsigned Nz()const {return Nz_;}
+    /**
+     * @brief Return local size
+     * 
+     * @return local size
+     */
     unsigned size() const{return n_*n_*Nx_*Ny_*Nz_;}
     double operator[]( unsigned idx) const {return data_[idx];}
     /**

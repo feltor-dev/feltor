@@ -48,11 +48,14 @@ struct DZ
      * @param limit Instance of the limiter class
      */
     template <class Field, class Limiter>
-    DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter()): g_(grid), bcz_(grid.bcz()), left_(0), right_(0)
+    DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter()): 
+        g_(grid), bcz_(grid.bcz())
     {
         std::cout<<"Constructing the parallel derivative" << "\n";
         dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
         limiter = dg::evaluate( limit, g2d);
+        left_ = dg::evaluate( zero, g2d);
+        right_ = left_;
         hz.resize( g2d.size());
         hp.resize( g2d.size());
         hm.resize( g2d.size());
@@ -97,6 +100,22 @@ struct DZ
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         bcz_ = bcz; 
+        const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        left_  = dg::evaluate( dg::CONSTANT(left), g2d);
+        right_ = dg::evaluate( dg::CONSTANT(right),g2d);
+    }
+    /**
+     * @brief Set boundary conditions
+     *
+     * if Dirichlet boundaries are used the left value is the left function
+     value, if Neumann boundaries are used the left value is the left derivative value
+     * @param bcz boundary condition
+     * @param left left boundary value 
+     * @param right right boundary value
+     */
+    void set_boundaries( dg::bc bcz, const container& left, const container& right)
+    {
+        bcz_ = bcz;
         left_ = left;
         right_ = right;
     }
@@ -128,7 +147,7 @@ struct DZ
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
-    double left_, right_;
+    container left_, right_;
     container limiter;
     void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g);
 };
@@ -159,12 +178,14 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
             cusp::copy( f0, ghostMV);
             if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
             {
-                dg::blas1::scal( ghostM, -1.);
-                dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
+                //dg::blas1::scal( ghostM, -1.);
+                dg::blas1::axpby( 2., left_, -1, ghostM);
+                //dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
             }
             if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
             {
-                dg::blas1::axpby( -left_, hm, 1., ghostM);
+                dg::blas1::pointwiseDot( left_, hm, ghostP);
+                dg::blas1::axpby( -1, ghostP, 1., ghostM);
             }
             dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
             dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
@@ -177,12 +198,14 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
             cusp::copy( f0, ghostPV);
             if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
             {
-                dg::blas1::scal( ghostP, -1.);
-                dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
+                //dg::blas1::scal( ghostP, -1.);
+                dg::blas1::axpby( 2., right_, -1, ghostP);
+                //dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
             }
             if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
             {
-                dg::blas1::axpby( right_, hp, 1., ghostP);
+                dg::blas1::pointwiseDot( right_, hp, ghostM);
+                dg::blas1::axpby( 1., ghostM, 1., ghostP);
             }
             dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
             dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
@@ -217,12 +240,15 @@ void DZ<M,container>::dzz( const container& f, container& dzzf)
         {
             if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
             {
-                dg::blas1::axpby( -1., temp0, 0., ghostM);
-                dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
+                //dg::blas1::axpby( -1., temp0, 0., ghostM);
+                //dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
+                dg::blas1::axpby( 2., left_, -1, temp0, ghostM);
             }
             if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
             {
-                dg::blas1::axpby( -left_, hm, 1., temp0, ghostM);
+                dg::blas1::pointwiseDot( left_, hm, ghostP);
+                dg::blas1::axpby( -1, ghostP, 1., temp0, ghostM);
+                //dg::blas1::axpby( -left_, hm, 1., temp0, ghostM);
             }
             dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
             dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
@@ -232,12 +258,15 @@ void DZ<M,container>::dzz( const container& f, container& dzzf)
         {
             if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
             {
-                dg::blas1::axpby( -1., temp0, 0., ghostP);
-                dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
+                //dg::blas1::axpby( -1., temp0, 0., ghostP);
+                //dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
+                dg::blas1::axpby( 2., right_, -1, temp0, ghostP);
             }
             if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
             {
-                dg::blas1::axpby( right_, hp, 1., temp0, ghostP);
+                dg::blas1::pointwiseDot( right_, hp, ghostM);
+                dg::blas1::axpby( -1, ghostM, 1., temp0, ghostP);
+                //dg::blas1::axpby( right_, hp, 1., temp0, ghostP);
             }
             dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
             dg::blas1::pointwiseDot( limiter, ghostP, ghostP);

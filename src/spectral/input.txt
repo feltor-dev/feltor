@@ -9,19 +9,19 @@ zonal flows.
 ---------------------Algorithmic parameters-------------------
 1) nx (grid points in x)                =   256     (256.)
 2) ny (grid points in y)                =   256     (256.)
-3) dt (time step in units c_s/L_p)      =   0.01    (0.01)
+3) dt (time step in units c_s/L_p)      =   0.41    (0.01)
 ---------------------Boundary conditions----------------------
 4) ly (length of y in units of rho_s)         =   64   (64.)
 5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   0     (1.0)
 ---------------------Physical parameters----------------------
 6) mhw:1, ohw:0 (modified/ordinary HW) =   1       (1)
-7) ddd (dissip. coupling)              =   0.5     (0.5)
+7) ddd (dissip. coupling)              =   0.1     (0.5)
 8) nu  (artif. hyper-viscosity)        =   0.0005   (0.001)
-9) mcv (magnetic curvature)            =   0.0000 (-0.0005)
+9) mcv (magnetic curvature)            =   -0.0005 (-0.0005)
 -------------------------Species------------------------------
 10) n00 (perturbation amplitude)        =   1.0     (1.0)
-11) g_e (e density gradient)            =   1.0     (1.0)
-12) tau_i (Ti/Te)                       =   0.0     (0.0)
+11) g_e (e density gradient)            =   0.0     (1.0)
+12) tau_i (Ti/Te)                       =   3.0     (0.0)
 (Z of ions is always 1, g_i and a_i are computed from 
 quasineutrality condition)
 13) impurities yes(1) / no(0)           =   1       (0)

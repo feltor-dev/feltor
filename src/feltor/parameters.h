@@ -86,9 +86,9 @@ struct Parameters
             <<"    beta             = "<<beta<<"\n"
             <<"Electron-temperature: = "<<tau[0]<<"\n"
             <<"    Ion-temperature:  = "<<tau[1]<<"\n"
-            <<"    perp Viscosity:   = "<<nu_perp<<"\n"
-            <<"    perp Resistivity: = "<<c<<"\n"
-            <<"    par Viscosity:    = "<<nu_parallel<<"\n";
+            <<"    perp. Viscosity:  = "<<nu_perp<<"\n"
+            <<"    par. Resistivity: = "<<c<<"\n"
+            <<"    par. Viscosity:   = "<<nu_parallel<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"

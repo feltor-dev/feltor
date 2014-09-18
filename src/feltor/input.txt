@@ -6,8 +6,8 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   30 (192)
-3)  ny (grid points in y)                =   30 (192) 
+2)  nx (grid points in x)                =   40 (192)
+3)  ny (grid points in y)                =   40 (192) 
 4)  nz (grid points in z)                =   5 (>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
@@ -15,7 +15,7 @@
 
 6)  eps_pol (stop for polarisation)      =   1e-2 (1e-6)
 7)  eps_max (stop for induction)         =   0.0 (1e-6)
-8)  eps_gamma (stop for Gamma CG)        =   1e-14 (1e-8)
+8)  eps_gamma (stop for Gamma CG)        =   1e-8 (1e-8)
 9)  eps_time ( stop for time inversion ) =   1e-8 
 
 ------------------Physical parameters----------------------
@@ -25,7 +25,7 @@
 12) beta_e0                             = 0.0  (1e-4)
 13) nu_perp                             = 5e-4
 14) nu_parallel  (viscosity)            = 1e-4   (0.001)
-15) para resistivity (c)                = 1e-5   (3e-5)
+15) para resistivity (c)                = 1e-9   (3e-5)
 
 ---------------Initial perturbation parameters---------------------
 

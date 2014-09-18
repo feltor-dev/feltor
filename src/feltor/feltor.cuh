@@ -56,10 +56,10 @@ struct Rolkar
         //dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
         //dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   // dt U_e =- C/hat(mu)_e J_par/N_e
         //dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   // dt U_i =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i now
-        ////or U_i - U_e
-        //dg::blas1::axpby( 1., x[3], -1, x[2], omega);
-        //dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   
-        //dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   
+        //or U_i - U_e
+        dg::blas1::axpby( 1., x[3], -1, x[2], omega);
+        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   
+        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   
         //damping
         for( unsigned i=0; i<y.size(); i++){
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
