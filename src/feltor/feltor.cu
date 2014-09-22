@@ -89,6 +89,7 @@ int main( int argc, char* argv[])
     //damp the bath on psi boundaries 
     //dg::blas1::pointwiseDot(rolkar.damping(),y1[1], y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
     feltor.initializene(y0[1],y0[0]);    
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
@@ -118,13 +119,13 @@ int main( int argc, char* argv[])
         hvisual = y0[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 2.0-colors.scalemax();        
+        colors.scalemin() = -colors.scalemax();        
         //colors.scalemin() = 1.0;
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
 
         title << std::setprecision(2) << std::scientific;
         //title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"ne-1 / " << colors.scalemax()-1<<"\t";
+        title <<"ne-1 / " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();

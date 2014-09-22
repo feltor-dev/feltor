@@ -136,11 +136,12 @@ struct DZ
      * get the values in the 3rd dimension. Uses the grid given in the constructor.
      * @tparam BinaryOp Binary Functor 
      * @param f Functor to evaluate
+     * @param plane The number of the plane to start
      *
      * @return Returns an instance of container
      */
     template< class BinaryOp>
-    container evaluate( BinaryOp f);
+    container evaluate( BinaryOp f, unsigned plane=0);
   private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
@@ -308,20 +309,29 @@ void DZ<M,V>::cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg
 
 template< class M, class container>
 template< class BinaryOp>
-container DZ<M,container>::evaluate( BinaryOp f)
+container DZ<M,container>::evaluate( BinaryOp f, unsigned p0)
 {
+    assert( p0 < g_.Nz());
     const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
     container vec2d = dg::evaluate( f, g2d);
-    View g0( vec2d.begin(), vec2d.begin() + g2d.size());
+    View g0( vec2d.begin(), vec2d.end());
     container vec3d( g_.size());
-    View f0( vec3d.begin(), vec3d.begin() + g2d.size());
+    View f0( vec3d.begin() + p0*g2d.size(), vec3d.begin() + (p0+1)*g2d.size());
+    //copy 2d function into given plane and then follow fieldline in both directions
     cusp::copy( g0, f0);
-    for( unsigned i0=1; i0<g_.Nz(); i0++)
+    for( unsigned i0=p0+1; i0<g_.Nz(); i0++)
     {
         unsigned im = i0-1;
         View fm( vec3d.begin() + im*g2d.size(), vec3d.begin() + (im+1)*g2d.size());
         View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
         cusp::multiply( minus, fm, f0 );
+    }
+    for( unsigned i0=p0-1; i0>=0; i0--)
+    {
+        unsigned ip = i0+1;
+        View fp( vec3d.begin() + ip*g2d.size(), vec3d.begin() + (ip+1)*g2d.size());
+        View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
+        cusp::multiply( plus, fp, f0 );
     }
     return vec3d;
 }

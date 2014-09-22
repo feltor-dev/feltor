@@ -35,7 +35,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @param limit Instance of the Limiter class
      */
     template <class Field, class Limiter>
-    DZ(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-3, Limiter limit = DefaultLimiter()): 
+    DZ(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-3, Limiter limit = DefaultLimiter()): eps_(eps),
         hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), ghostM( tempP), ghostP(tempP), g_(grid), bcz_(grid.bcz())
     {
         dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
@@ -112,6 +112,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @param dzf contains result on output (write only)
      */
     void operator()( const MPI_Vector& f, MPI_Vector& dzf);
+
     /**
      * @brief Set boundary conditions
      *
@@ -144,6 +145,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
         left_ = left;
         right_ = right;
     }
+
     /**
      * @brief Compute the second derivative using finite differences
      *
@@ -151,6 +153,20 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @param dzzf output (write-only)
      */
     void dzz( const MPI_Vector& f, MPI_Vector& dzzf);
+
+    /**
+     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to 
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * @tparam BinaryOp Binary Functor 
+     * @param f Functor to evaluate
+     * @param plane The number of the plane to start
+     *
+     * @return Returns an instance of container
+     */
+    template< class BinaryOp>
+    container evaluate( BinaryOp f, unsigned plane=0);
 
   private:
     typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
@@ -167,6 +183,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
         }
         //yp can still be outside the global grid (ghostcells!)
     }
+    double eps_;
     thrust::host_vector<double> hz, hp, hm, tempP, temp0, tempM, interP, interM;
     thrust::host_vector<double> ghostM, ghostP;
     MPI_Grid3d g_;
@@ -177,6 +194,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
     Collective collM_, collP_;
 
 };
+
 void DZ<MPI_Matrix, MPI_Vector>::operator()( const MPI_Vector& f, MPI_Vector& dzf)
 {
     assert( &f != &dzf);
@@ -248,6 +266,7 @@ void DZ<MPI_Matrix, MPI_Vector>::operator()( const MPI_Vector& f, MPI_Vector& dz
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf.data());
 }    
+
 void DZ<MPI_Matrix, MPI_Vector>::dzz( const MPI_Vector& f, MPI_Vector& dzzf)
 {
     assert( &f != &dzzf);
@@ -331,5 +350,29 @@ void DZ<MPI_Matrix, MPI_Vector>::dzz( const MPI_Vector& f, MPI_Vector& dzzf)
     //View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
     //cusp::copy( tempMV, dzzf0);
 }
+
+template< class BinaryOp>
+MPI_Vector DZ<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, unsigned p0)
+{
+    dg::DZ<cusp::csr_matrix<int, double, cusp::host_memory>, thrust::host_vector<double> > dz( g_.global(), eps_);
+    thrust::host_vector<double> global_vec = dz.evaluate( f, p0);
+    MPI_Vector mpi_vec( g_.n(), g_.Nx(), g_.Ny(), g_.Nz(), g_.comm());
+    thrust::host_vector<double> vec = mpi_vec.cut_boundaries();
+    //now take the relevant part 
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( g_.comm(), 3, dims, periods, coords);
+    unsigned Nx = (g_.Nx()-2)*g_.n(), Ny = (g_.Ny()-2)*g_.n(), Nz = g_.Nz();
+    for( unsigned s=0; s<Nz; s++)
+        for( unsigned i=0; i<Ny; i++)
+            for( unsigned j=0; j<Nx; j++)
+                vec[ (s*Ny+i)*Nx + j ] 
+                    = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
+    mpi_vec.copy_into_interior( vec);
+
+
+
+
+}
+
 }//namespace dg
 

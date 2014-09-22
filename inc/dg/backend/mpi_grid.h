@@ -148,6 +148,7 @@ struct MPI_Grid2d
  * Note
  * that the grids of different processes overlap in the x- and y- coordinate but 
  * not in the z-coordinate.
+ * Also note that a single cell is never divided across processes.
  */
 struct MPI_Grid3d
 {

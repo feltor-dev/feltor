@@ -844,7 +844,7 @@ struct MinMod
  *
  * @tparam T value type
  */
-template <class T>
+template <class T = double>
 struct PLUS
 {
     /**
