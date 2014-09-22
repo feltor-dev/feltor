@@ -45,7 +45,8 @@ struct DZ
      * @param field The field to integrate
      * @param grid The grid on which to operate
      * @param eps Desired accuracy of runge kutta
-     * @param limit Instance of the limiter class
+     * @param limit Instance of the limiter class (Default is a limiter everywhere)
+     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
      */
     template <class Field, class Limiter>
     DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter()): 
@@ -89,7 +90,7 @@ struct DZ
     void operator()( const container& f, container& dzf);
 
     /**
-     * @brief Set boundary conditions
+     * @brief Set boundary conditions in the limiter region
      *
      * if Dirichlet boundaries are used the left value is the left function
      value, if Neumann boundaries are used the left value is the left derivative value
@@ -105,7 +106,7 @@ struct DZ
         right_ = dg::evaluate( dg::CONSTANT(right),g2d);
     }
     /**
-     * @brief Set boundary conditions
+     * @brief Set boundary conditions in the limiter region
      *
      * if Dirichlet boundaries are used the left value is the left function
      value, if Neumann boundaries are used the left value is the left derivative value

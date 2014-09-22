@@ -71,16 +71,23 @@ int main( int argc, char* argv[])
 
     ////////////////////////////////The initial field////////////////////////////////
     //Monopole
-    dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, 0.9*M_PI, p.sigma, p.sigma, 0.1*p.sigma, p.amp);
+    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, 0.9*M_PI, p.sigma, p.sigma, 0.1*p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial profile
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
+    //field aligned blob (gpu only)
+    dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+    dg::GaussianZ gaussianZ( M_PI, M_PI, 1);
+    y1[1] = parallel.dz().evaluate( gaussian);
+    y1[2] = dg::evaluate( gaussianZ, grid);
+    dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.dampin(),(dg::DVec)dg::evaluate(init0, grid), y1[1]); //is damping on bath    
-    dg::blas1::axpby( 0., y1[1], 1., y0[1]); //initialize ni
+    //y1[1] = dg::evaluate( init0, grid);
+    dg::blas1::pointwiseDot(rolkar.dampin(),y1[1], y1[1]); //is damping on bath    
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     parallel.initializene(y0[1],y0[0]);    
-    dg::blas1::axpby( 100., y1[1], 0., y0[2]); //set Ue = 0
+    dg::blas1::axpby( 0., y1[1], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     //////////////////////////////////////////////////////////////////////////////////
 

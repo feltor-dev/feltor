@@ -43,11 +43,18 @@ struct Rolkar
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
-        for( unsigned i=0; i<x.size(); i++)
+        dg::blas1::axpby( 0., x, 0, y);
+        for( unsigned i=0; i<2; i++)
         {
-            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+            //not linear any more (cannot be written as y = Ax)
+            dg::blas1::transform( x[i], chi, dg::PLUS<double>(-1.)); //N-1
+            dg::blas2::gemv( LaplacianM_perp, chi, temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (N,U)) 
+            dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
+
+            dg::blas2::gemv( LaplacianM_perp, x[i+2], temp);
+            dg::blas2::gemv( LaplacianM_perp, temp, y[i+2]);
+            dg::blas1::scal( y[i+2], -p.nu_perp); //  nu_perp lapl_RZ (lapl_RZ U) 
         }
         //Resistivity
         //dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
@@ -61,9 +68,9 @@ struct Rolkar
         dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   
         dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   
         //damping
-        for( unsigned i=0; i<y.size(); i++){
-            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
-        }
+        //for( unsigned i=0; i<y.size(); i++){
+        //    dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
+        //}
     }
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const Preconditioner& weights(){return LaplacianM_perp.weights();}
@@ -118,13 +125,15 @@ struct Feltor
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
-    container chi, omega, gammani;
+    container chi, omega; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
+    container gammani, nme;
 
     const container binv, curvR, curvZ, gradlnB;
     const container source, damping, one;
     const Preconditioner w3d, v3d;
 
-    std::vector<container> phi, curvphi,curvlogn, dzphi,dzun,dzlogn,dzu2, expy,logy;
+    std::vector<container> phi, curvphi;
+    std::vector<container> expy, logn; 
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
@@ -132,7 +141,8 @@ struct Feltor
     dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
-    dg::Elliptic< Matrix, container, Preconditioner > pol; //note the host vector
+    dg::Elliptic< Matrix, container, Preconditioner > pol; 
+    dg::Elliptic< Matrix, container, Preconditioner > LaplacianM_perp; 
     dg::Helmholtz< Matrix, container, Preconditioner > invgamma;
     dg::Invert<container> invert_pol,invert_invgamma;
 
@@ -146,7 +156,7 @@ struct Feltor
 template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
-    chi( dg::evaluate( dg::one, g)), omega(chi), gammani(chi),
+    chi( dg::evaluate( dg::one, g)), omega(chi), gammani(chi), nme(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
@@ -155,13 +165,14 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
-    phi( 2, chi), curvphi( phi),curvlogn(phi), dzphi(phi), dzun(phi),dzlogn(phi),dzu2(phi),expy(phi),  logy(phi),
+    phi( 2, chi), curvphi( phi), expy(phi),  logn(phi),
     dzy( 4, chi),curvy(dzy), 
 //  dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
 //  dz(solovev::Field(gp), g, gp.rk4eps, dg::NoLimiter()),
     dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
     pol(     g), 
+    LaplacianM_perp ( g, dg::normed),
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
@@ -172,15 +183,15 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
 template<class Matrix, class container, class P>
 container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
-    dg::blas1::axpby( -p.mu[0], y[0], p.mu[1], y[1], chi);    //chi =  \mu_i n_i - \mu_e n_e
+    dg::blas1::axpby( -p.mu[0], y[0], p.mu[1], y[1], chi);      //chi =  \mu_i n_i - \mu_e n_e
     dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi);                 //(\mu_i n_i - \mu_e n_e) /B^2
+    dg::blas1::pointwiseDot( chi, binv, chi);                   //(\mu_i n_i - \mu_e n_e) /B^2
     pol.set_chi( chi);
-    dg::blas1::transform( y[1], omega,   dg::PLUS<double>(-1));//omega= Ni-1 
+    dg::blas1::transform( y[1], omega,   dg::PLUS<double>(-1)); //omega= Ni-1 
     unsigned numberg    =  invert_invgamma(invgamma,chi,omega); //omega= Gamma (Ni-1)
     dg::blas1::transform(  chi, gammani, dg::PLUS<double>(+1));
-    dg::blas1::axpby( -1., y[0], 1.,gammani,chi);                   //chi=  Gamma (n_i-1) +1  - (n_e) = Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);        //Gamma n_i -ne = -nabla chi nabla phi
+    dg::blas1::axpby( -1., y[0], 1.,gammani,chi);               //chi=  Gamma (n_i-1) +1  - (n_e) = Gamma n_i - n_e
+    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
@@ -189,11 +200,11 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
 template< class Matrix, class container, class P>
 container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    invert_invgamma(invgamma,chi,potential);                               //chi  Gamma phi
-    arakawa.bracketS( potential, potential, omega);                           //dR phi dR phi + Dz phi Dz phi
+    invert_invgamma(invgamma,chi,potential);                    //chi  Gamma phi
+    arakawa.bracketS( potential, potential, omega);             //dR phi dR phi + Dz phi Dz phi
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);    //psi  Gamma phi - 0.5 u_E^2
+    dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }
 
@@ -216,16 +227,16 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
     //update energetics, 2% of total time
     for(unsigned i=0; i<2; i++)
-        dg::blas1::transform( y[i], logy[i], dg::LN<value_type>());
-    mass_ = dg::blas2::dot( one, w3d, y[0] ); //take real ion density which is electron density!!
-    double Ue = p.tau[0]*dg::blas2::dot( logy[0], w3d, y[0]); // tau_e n_e ln(n_e)
-    double Ui = p.tau[1]*dg::blas2::dot( logy[1], w3d, y[1]);// tau_i n_i ln(n_i)
-    double Uphi = 0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); 
-        dg::blas1::pointwiseDot( y[2], y[2], omega); //U_e^2
-    double Upare = -0.5*p.mu[0]*dg::blas2::dot( y[0], w3d, omega); //N_e U_e^2
-        dg::blas1::pointwiseDot(y[3], y[3], omega); //U_i^2
-    double Upari =  0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); //N_i U_i^2
-    energy_ = Ue + Ui  + Uphi + Upare + Upari;
+        dg::blas1::transform( y[i], logn[i], dg::LN<value_type>());
+    //mass_ = dg::blas2::dot( one, w3d, y[0] ); //take real ion density which is electron density!!
+    //double Ue = p.tau[0]*dg::blas2::dot( logn[0], w3d, y[0]); // tau_e n_e ln(n_e)
+    //double Ui = p.tau[1]*dg::blas2::dot( logn[1], w3d, y[1]);// tau_i n_i ln(n_i)
+    //double Uphi = 0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); 
+    //    dg::blas1::pointwiseDot( y[2], y[2], omega); //U_e^2
+    //double Upare = -0.5*p.mu[0]*dg::blas2::dot( y[0], w3d, omega); //N_e U_e^2
+    //    dg::blas1::pointwiseDot(y[3], y[3], omega); //U_i^2
+    //double Upari =  0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); //N_i U_i^2
+    //energy_ = Ue + Ui  + Uphi + Upare + Upari;
 
     //// the resistive dissipation without FLR      
     //    dg::blas1::pointwiseDot(y[0], y[2], omega); //N_e U_e 
@@ -260,7 +271,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     for( unsigned i=0; i<2; i++)
     {
         //ExB dynamics
-        arakawa( y[i], phi[i], yp[i]);  //[N,phi]_RZ
+        dg::blas1::transform( y[i], nme, dg::PLUS<double>(-1));
+        arakawa( nme, phi[i], yp[i]);  //[N-1,phi]_RZ
         arakawa( y[i+2], phi[i], yp[i+2]);//[U,phi]_RZ  
         dg::blas1::pointwiseDot( yp[i], binv, yp[i]);                        // dtN =1/B [N,phi]_RZ
         dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);                    // dtU =1/B [U,phi]_RZ  
@@ -269,67 +281,72 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dz_.set_boundaries( dg::NEU, 0, 0);
         dz_(y[i], dzy[i]);                                                       //dz N
         dz_(y[i+2], dzy[2+i]);                                                   //dz U
-        dg::blas1::pointwiseDot(y[i],y[i+2], omega);                            //U N
-        dz_(omega, dzun[i]);                                                     //dz UN
-        dg::blas1::axpby( -1., dzun[i], 1., yp[i]);                             //dtN = dtN - dz U N
-        dg::blas1::pointwiseDot(omega, gradlnB, omega);                         //U N dz ln B
-        dg::blas1::axpby( 1., omega, 1., yp[i]);                                //dtN = dtN + U N dz ln B
+
+        dg::blas1::pointwiseDot(y[i], y[i+2], omega);                       //U N
+        dz_(omega, chi);                                                    //dz UN
+        dg::blas1::pointwiseDot(omega, gradlnB, omega);                     //U N dz ln B
+        dg::blas1::axpby( -1., chi, 1., yp[i]);                             //dtN = dtN - dz U N
+        dg::blas1::axpby( 1., omega, 1., yp[i]);                            //dtN = dtN + U N dz ln B
         //parallel force terms
-        dz_.set_boundaries( dg::DIR, 0, 0);
-        dz_(phi[i], dzphi[i]);                                                   //dz psi
         dz_.set_boundaries( dg::NEU, 0, 0);
-        dz_(logy[i], dzlogn[i]);                                                 //dz lnN
-        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, dzlogn[i], 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
-        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);        //dtU = dtU - 1/(hat(mu))  *dz phi  
+        dz_(logn[i], omega);                                                //dz lnN
+        dg::blas1::axpby( -p.tau[i]/p.mu[i]/p.eps_hat, omega, 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
+
+        dz_.set_boundaries( dg::DIR, 0, 0);
+        dz_(phi[i], omega);                                             //dz psi
+        dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, omega, 1., yp[2+i]);   //dtU = dtU - 1/(hat(mu))  *dz psi  
          
-        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);                          //U^2
-        dz_(omega, dzu2[i]);                                                     //dz u^2
-        dg::blas1::axpby( -0.5, dzu2[i], 1., yp[2+i]);                          //dtU = dtU - 0.5 dz U^2
+        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);                  //U^2
+        dz_(omega, chi);                                                //dz U^2
+        dg::blas1::axpby( -0.5, chi, 1., yp[2+i]);                      //dtU = dtU - 0.5 dz U^2
         
-        //Curvature dynamics
-        curve( y[i], curvy[i]);                                                 //K(N) 
-        curve( y[i+2], curvy[2+i]);                                             //K(U) 
-        curve( phi[i], curvphi[i]);                                             //K(phi) 
-        curve( logy[i], curvlogn[i]);                                           //K(logn) 
+        //Curvature dynamics: 
+        curve( nme, curvy[i]);                                          //K(N) = K(N-1)
+        curve( y[i+2], curvy[2+i]);                                     //K(U) 
+        curve( phi[i], curvphi[i]);                                     //K(phi) 
         
-        dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega);                     //U K(U) 
-        dg::blas1::pointwiseDot( y[i+2], omega, chi);                           //U^2 K(U)
-        dg::blas1::pointwiseDot( y[i], omega, omega);                           //N U K(U)
+        dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega);             //U K(U) 
+        dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K(U)
+        dg::blas1::pointwiseDot( y[i], omega, omega);                   //N U K(U)
         
-        dg::blas1::axpby( -p.mu[i]*p.eps_hat, omega, 1., yp[i]);                //dtN = dtN - (hat(mu)) N U K(U)
-        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]);            //dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
+        dg::blas1::axpby( -p.mu[i]*p.eps_hat, omega, 1., yp[i]);        //dtN = dtN - (hat(mu)) N U K(U)
+        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[2+i]);    //dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
 
-        dg::blas1::pointwiseDot(y[i+2], curvlogn[i], omega);                    //U K(ln N)
-        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                       //dtU = dtU - tau U K(lnN)
+        curve( logn[i], omega);                                         //K(ln N) 
+        dg::blas1::pointwiseDot(y[i+2], omega, omega);                  //U K(ln N)
+        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);               //dtU = dtU - tau U K(lnN)
         
-        dg::blas1::pointwiseDot(y[i+2], curvy[i], omega);                       //U K( N)
-        dg::blas1::pointwiseDot( y[i+2], omega, chi);                           //U^2K( N)
-        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[i]);              //dtN = dtN - 0.5 mu U^2 K(N)
+        dg::blas1::pointwiseDot(y[i+2], curvy[i], omega);               //U K( N)
+        dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2K( N)
+        dg::blas1::axpby( -0.5*p.mu[i]*p.eps_hat, chi, 1., yp[i]);      //dtN = dtN - 0.5 mu U^2 K(N)
 
-        dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);                      //dtN = dtN - tau K(N)
-        dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);               //dtU = dtU - 2 tau K(U)
-        dg::blas1::pointwiseDot(y[i],curvphi[i], omega);                        //N K(psi)
-        dg::blas1::axpby( -1., omega, 1., yp[i]);                               //dtN= dtN - N K(psi)
+        dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);              //dtN = dtN - tau K(N)
+        dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);       //dtU = dtU - 2 tau K(U)
+        dg::blas1::pointwiseDot(y[i],curvphi[i], omega);                //N K(psi)
+        dg::blas1::axpby( -1., omega, 1., yp[i]);                       //dtN= dtN - N K(psi)
 
-        dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);                    //U K(phi)
-        dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                            //dtU = dtU -0.5 U K(psi)
+        dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);            //U K(phi)
+        dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                    //dtU = dtU -0.5 U K(psi)
 
         //Parallel dissipation
         dz_.set_boundaries( dg::NEU, 0, 0);
-        dz_.dzz(y[i],omega);                                                     //dz^2 N 
-        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
+        dz_.dzz(y[i],omega);                                             //dz^2 N 
+        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);             
         //gradlnBcorrection
-        dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);                         // dz lnB dz N    
+        dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                 // dz lnB dz N    
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
-        dz_.dzz(y[i+2],omega);                                                   //dz^2 U 
-        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);               
+        dz_.dzz(y[i+2],omega);                                           //dz^2 U 
+        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);           
         //gradlnBcorrection
-        dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);                       // dz lnB dz U
+        dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);               // dz lnB dz U
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
         
         //damping 
-        dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
-        dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
+        //dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
+        //dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
+        //dg::blas2::gemv( LaplacianM_perp, nme, omega);
+        //dg::blas2::gemv( LaplacianM_perp, omega, chi);
+        //dg::blas1::axpby( -p.nu_perp, chi, 1., yp[i]);  //  nu_perp lapl_RZ (lapl_RZ N) 
 
     }
 

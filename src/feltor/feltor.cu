@@ -80,14 +80,14 @@ int main( int argc, char* argv[])
 
     //field aligned blob (gpu only)
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::GaussianZ gaussianZ( M_PI, M_PI, 1);
+    dg::GaussianZ gaussianZ( M_PI, M_PI/2., 1);
     y1[1] = feltor.dz().evaluate( gaussian);
     y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
     //y1[1] = dg::evaluate( init0, grid);
     //damp the bath on psi boundaries 
-    dg::blas1::pointwiseDot(rolkar.damping(),y1[1], y1[1]); 
+    //dg::blas1::pointwiseDot(rolkar.damping(),y1[1], y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     feltor.initializene(y0[1],y0[0]);    
 
@@ -151,7 +151,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
-        //transform to Vor
+        ////transform to Vor
         dvisual=feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
         hvisual = y1[1];
