@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
     //field aligned blob 
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
     dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
-    y1[1] = feltor.dz().evaluate( gaussian, grid.global().Nz()/2+1);
+    y1[1] = feltor.dz().evaluate( gaussian, p.Nz/2+1);
     y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
