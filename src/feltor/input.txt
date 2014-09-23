@@ -23,7 +23,7 @@
 10) mu_e (-m_e/m_i)                     =-0.5e-4
 11) tau (Ti/Te)                         = 0.0    (0.0)
 12) beta_e0                             = 0.0  (1e-4)
-13) nu_perp                             = 1e-4
+13) nu_perp                             = 1e-3
 14) nu_parallel  (viscosity)            = 1e-1   (0.001)
 15) para resistivity (c)                = 1e-3   (3e-5 gives a drift wave)
 
@@ -33,7 +33,7 @@
 17) sigma (blob variance in units of rho_s) =  2.0     (10)
 18) x-position ( in units of a)             =  -0.05   (0.4)
 19) y-position ( in units of a)             =  0.25  (0.5)
-20) z mode number (sin(2*Pi*m*z))           =  2
+20) sigma_z (variance in units of R_0)      =  1
 
 ------------------Miscellaneous----------------------------
 

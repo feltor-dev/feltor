@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <thrust/host_vector.h>
 #include "vector_traits.h"
 
@@ -205,7 +206,7 @@ thrust::host_vector<double> MPI_Vector::cut_overlap() const
                     data_[ j + Nx_*n_*(i + Ny_*n_*s)];
     return reduce;
 }
-void copy_into_interior( const thrust::host_vector<double>& src)
+void MPI_Vector::copy_into_interior( const thrust::host_vector<double>& src)
 {
     assert( src.size() == size());
     for( unsigned s=0; s<Nz_; s++)

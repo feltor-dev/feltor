@@ -326,7 +326,7 @@ container DZ<M,container>::evaluate( BinaryOp f, unsigned p0)
         View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
         cusp::multiply( minus, fm, f0 );
     }
-    for( unsigned i0=p0-1; i0>=0; i0--)
+    for( int i0=p0-1; i0>=0; i0--)
     {
         unsigned ip = i0+1;
         View fp( vec3d.begin() + ip*g2d.size(), vec3d.begin() + (ip+1)*g2d.size());

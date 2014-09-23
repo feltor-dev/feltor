@@ -71,17 +71,16 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(gp,p.amp);
+    //solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 
-    //field aligned blob (gpu only)
+    //field aligned blob 
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::GaussianZ gaussianZ( M_PI, M_PI/2., 1);
-    y1[1] = feltor.dz().evaluate( gaussian);
+    dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
+    y1[1] = feltor.dz().evaluate( gaussian, grid.Nz()/2+1);
     y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
@@ -139,12 +138,12 @@ int main( int argc, char* argv[])
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         //colors.scalemin() = 1.0;        
-        colors.scalemin() = 2.0-colors.scalemax();        
+        colors.scalemin() = -colors.scalemax();        
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
 
         title << std::setprecision(2) << std::scientific;
         //title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"ni-1 / " << colors.scalemax()-1<<"\t";
+        title <<"ni-1 / " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();

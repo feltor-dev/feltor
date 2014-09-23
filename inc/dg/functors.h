@@ -71,7 +71,7 @@ struct AbsMin
 /**
  * @brief Functor returning a gaussian
  * \f[
-   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+   f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)} 
    \f]
  */
 struct Gaussian
@@ -127,6 +127,13 @@ struct Gaussian
     double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
 
 };
+
+/**
+* @brief The 3d gaussian
+* \f[
+f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)} 
+\f]
+*/
 struct Gaussian3d
 {
     /**
@@ -134,14 +141,25 @@ struct Gaussian3d
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
+     * @param z0 z-center-coordinate
      * @param sigma_x x - variance
      * @param sigma_y y - variance 
      * @param sigma_z z - variance 
      * @param amp Amplitude
-     * @param kz wavenumber in z direction
      */
     Gaussian3d( double x0, double y0, double z0, double sigma_x, double sigma_y, double sigma_z, double amp)
         : x00(x0), y00(y0), z00(z0), sigma_x(sigma_x), sigma_y(sigma_y), sigma_z(sigma_z), amplitude(amp){}
+    /**
+     * @brief Return a 2d gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return gaussian
+     */
     double operator()(double x, double y)
     {
         return  amplitude*
@@ -152,10 +170,11 @@ struct Gaussian3d
      * @brief Return the value of the gaussian
      *
      * \f[
-       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}+\frac{(z-z_0)^2}{2\sigma_z^2})} 
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
+     * @param z z - coordinate
      *
      * @return gaussian
      */
@@ -165,8 +184,8 @@ struct Gaussian3d
 //         {
             return  amplitude*
                     exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                              (z-z00)*(z-z00)/2./sigma_z/sigma_z +
-                            (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+                           (z-z00)*(z-z00)/2./sigma_z/sigma_z +
+                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
 //         }
 //         else {
 //         return 0.;
@@ -248,6 +267,12 @@ struct GaussianY
     double  y00, sigma_y, amplitude;
 
 };
+/**
+ * @brief Functor returning a gaussian in z-direction
+ * \f[
+   f(x,y) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
+   \f]
+ */
 struct GaussianZ
 {
     /**
