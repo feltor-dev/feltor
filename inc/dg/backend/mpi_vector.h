@@ -206,9 +206,10 @@ thrust::host_vector<double> MPI_Vector::cut_overlap() const
                     data_[ j + Nx_*n_*(i + Ny_*n_*s)];
     return reduce;
 }
+
 void MPI_Vector::copy_into_interior( const thrust::host_vector<double>& src)
 {
-    assert( src.size() == size());
+    assert( src.size() == n_*n_*(Nx_-2)*(Ny_-2)*Nz_);
     for( unsigned s=0; s<Nz_; s++)
         for( unsigned i=n_; i<(Ny_-1)*n_; i++)
             for( unsigned j=n_; j<(Nx_-1)*n_; j++)

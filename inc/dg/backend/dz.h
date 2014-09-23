@@ -369,10 +369,7 @@ MPI_Vector DZ<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, unsigned p0)
                 vec[ (s*Ny+i)*Nx + j ] 
                     = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
     mpi_vec.copy_into_interior( vec);
-
-
-
-
+    return mpi_vec;
 }
 
 }//namespace dg

@@ -41,6 +41,14 @@ double func(double R, double Z, double phi)
     double bphi = I_0/R/R/B;
     return 1/bphi/R*sin(phi);
 }
+double func2d(double R, double Z)
+{
+    double r2 = (R-R_0)*(R-R_0)+Z*Z;
+    double B = sqrt(I_0*I_0+r2)/R;
+    double bphi = I_0/R/R/B;
+    return 1/bphi/R;
+}
+double sine( double R, double Z, double phi) {return sin(phi);}
 double deri(double R, double Z, double phi)
 {
     //double r2 = (R-R_0)*(R-R_0)+Z*Z;
@@ -66,12 +74,17 @@ int main()
     //double z0 = M_PI/2., z1 = 3./2.*M_PI;
     dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz);
     const dg::DVec w3d = dg::create::weights( g3d);
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, 1e-4, dg::DefaultLimiter());
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, 1e-8, dg::DefaultLimiter());
     //dz.set_boundaries( dg::PER, 0, 0);
     dz.set_boundaries( dg::DIR, 0., -0.);
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function), 
              dzz(dg::evaluate(deri2, g3d));
+    dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( sine, g3d));
+    dg::blas1::pointwiseDot( follow, sinz, follow);
+    dg::blas1::axpby( 1., function, -1., follow);
+    double diff = dg::blas2::dot( w3d, follow);
+    std::cout << "Difference between function and followed evaluation: "<<diff<<"\n";
     const dg::DVec solution = dg::evaluate( deri, g3d);
     const dg::DVec solution2 = dg::evaluate( deri2, g3d);
     dz( function, derivative);

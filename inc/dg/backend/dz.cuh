@@ -52,7 +52,6 @@ struct DZ
     DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter()): 
         g_(grid), bcz_(grid.bcz())
     {
-        std::cout<<"Constructing the parallel derivative" << "\n";
         dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
         limiter = dg::evaluate( limit, g2d);
         left_ = dg::evaluate( zero, g2d);
@@ -68,7 +67,6 @@ struct DZ
         std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y); 
         y[1] = dg::evaluate( dg::coo2, g2d);
         y[2] = dg::evaluate( dg::zero, g2d);
-        std::cout<<"Integrate with RK4" << "\n";
         dg::integrateRK4( field, y, yp,  g_.hz(), eps);
         cut( y, yp, g2d);
         dg::integrateRK4( field, y, ym, -g_.hz(), eps);
@@ -78,7 +76,6 @@ struct DZ
         dg::blas1::axpby(  1., (container)yp[2], 0, hp);
         dg::blas1::axpby( -1., (container)ym[2], 0, hm);
         dg::blas1::axpby(  1., hp, +1., hm, hz);
-        std::cout<<"Parallel derivative constructed" << "\n";
     }
 
     /**
