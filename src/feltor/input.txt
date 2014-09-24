@@ -24,13 +24,13 @@
 11) tau (Ti/Te)                         = 0.0    (0.0)
 12) beta_e0                             = 0.0  (1e-4)
 13) nu_perp                             = 1e-3
-14) nu_parallel  (viscosity)            = 1e-1   (0.001)
+14) nu_parallel  (viscosity)            = 1e-3   (0.001)
 15) para resistivity (c)                = 1e-3   (3e-5 gives a drift wave)
 
 ---------------Initial perturbation parameters---------------------
 
 16) amp (perturbation amplitude)            =  1.0     (1.0)
-17) sigma (blob variance in units of rho_s) =  5.0     (10)
+17) sigma (blob variance in units of rho_s) =  2.0     (10)
 18) x-position ( in units of a)             =  0.40   (0.4)
 19) y-position ( in units of a)             =  0.00  (0.5)
 20) sigma_z (variance in units of R_0)      =  1

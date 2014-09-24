@@ -280,7 +280,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);                    // dtU =1/B [U,phi]_RZ  
         
         //Parallel dynamics
-        dz_.set_boundaries( dg::NEU, 0, 0);
+        //dz_.set_boundaries( dg::NEU, 0, 0);
         dz_(y[i], dzy[i]);                                                       //dz N
         dz_(y[i+2], dzy[2+i]);                                                   //dz U
 
@@ -290,11 +290,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby( -1., chi, 1., yp[i]);                             //dtN = dtN - dz U N
         dg::blas1::axpby( 1., omega, 1., yp[i]);                            //dtN = dtN + U N dz ln B
         //parallel force terms
-        dz_.set_boundaries( dg::NEU, 0, 0);
+        //dz_.set_boundaries( dg::NEU, 0, 0);
         dz_(logn[i], omega);                                                //dz lnN
         dg::blas1::axpby( -p.tau[i]/p.mu[i], omega, 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
 
-        dz_.set_boundaries( dg::DIR, 0, 0);
+        //dz_.set_boundaries( dg::DIR, 0, 0);
         dz_(phi[i], omega);                                             //dz psi
         dg::blas1::axpby( -1./p.mu[i], omega, 1., yp[2+i]);   //dtU = dtU - 1/(hat(mu))  *dz psi  
          
@@ -331,13 +331,14 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                    //dtU = dtU -0.5 U K(psi)
 
         //Parallel dissipation
-        dz_.set_boundaries( dg::NEU, 0, 0);
-        dz_.dzz(y[i],omega);                                             //dz^2 N 
+        //dz_.set_boundaries( dg::NEU, 0, 0);
+        dz_.dzz(y[i],omega);                                            //dz^2 N 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);             
         //gradlnBcorrection
-        dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                 // dz lnB dz N    
+        dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
-        dz_.dzz(y[i+2],omega);                                           //dz^2 U 
+
+        dz_.dzz(y[i+2],omega);                                          //dz^2 U 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);           
         //gradlnBcorrection
         dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);               // dz lnB dz U

@@ -208,7 +208,7 @@ int main( int argc, char* argv[])
         if(rank==0)std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
         //err = nc_open_par( argv[3], NC_WRITE|NC_MPIIO, comm, info, &ncid);
-        start[0] = i
+        start[0] = i;
         for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j].data(), transferH);

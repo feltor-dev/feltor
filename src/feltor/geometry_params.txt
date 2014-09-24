@@ -32,7 +32,7 @@
 24) boxscale (1<bs<R0/a)     =  1.2  (a little larger than 1)
 25) Profile amplitude        =  0.0  (peak amplitude)
 26) Background Prof amplitude=  1.   (density on the boundary)
-27) psip_max_cut             =  0.0  (von außen bis critical psip for limiter, -1 < psip < psipmax)
+27) psip_max_cut             =  1000.0  (von außen bis critical psip for limiter, -1 < psip < psipmax)
 28) psip_max_lap             =  0.0  (?)
 
 
