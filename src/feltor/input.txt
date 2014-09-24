@@ -30,9 +30,9 @@
 ---------------Initial perturbation parameters---------------------
 
 16) amp (perturbation amplitude)            =  1.0     (1.0)
-17) sigma (blob variance in units of rho_s) =  2.0     (10)
-18) x-position ( in units of a)             =  -0.05   (0.4)
-19) y-position ( in units of a)             =  0.25  (0.5)
+17) sigma (blob variance in units of rho_s) =  5.0     (10)
+18) x-position ( in units of a)             =  0.40   (0.4)
+19) y-position ( in units of a)             =  0.00  (0.5)
 20) sigma_z (variance in units of R_0)      =  1
 
 ------------------Miscellaneous----------------------------

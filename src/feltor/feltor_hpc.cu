@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
     //field aligned blob 
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
     dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
-    y1[1] = feltor.dz().evaluate( gaussian, grid.Nz()/2+1);
+    y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
     y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
@@ -172,9 +172,15 @@ int main( int argc, char* argv[])
             }
         }
         time += p.itstp*p.dt;
+#ifdef DG_BENCHMARK
+        ti.toc();
+        step+=p.itstp;
+        std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
+        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+#endif//DG_BENCHMARK
+
         start[0] = i;
         err = nc_open(argv[3], NC_WRITE, &ncid);
-
         for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
@@ -191,12 +197,6 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
 
         err = nc_close(ncid);
-#ifdef DG_BENCHMARK
-        ti.toc();
-        step+=p.itstp;
-        std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
-        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
-#endif//DG_BENCHMARK
     }
     t.toc(); 
     unsigned hour = (unsigned)floor(t.diff()/3600);

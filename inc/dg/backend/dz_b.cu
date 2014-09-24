@@ -53,7 +53,7 @@ int main()
     const dg::DVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, 1e-8, dg::DefaultLimiter());
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
