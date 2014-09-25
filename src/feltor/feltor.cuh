@@ -38,7 +38,7 @@ struct Rolkar
         dampin_( dg::evaluate( solovev::TanhDampingIn(gp ), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
-        LaplacianM_perp ( g, dg::normed)
+        LaplacianM_perp ( g, dg::normed, dg::symmetric)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -170,7 +170,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
 //  dz(solovev::Field(gp), g, gp.rk4eps, dg::NoLimiter()),
     dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
-    pol(     g), 
+    pol(     g, dg::not_normed, dg::symmetric), 
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
@@ -219,6 +219,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
        y[2] := U_e
        y[3] := U_i
     */
+    dg::Timer t;
+    t.tic();
     assert( y.size() == 4);
     assert( y.size() == yp.size());
     //compute phi via polarisation
@@ -349,6 +351,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
 
     }
+    t.toc();
+    std::cout << "One rhs took "<<t.diff()<<"s\n";
 
     //add particle source to dtN
 //     for( unsigned i=0; i<2; i++)

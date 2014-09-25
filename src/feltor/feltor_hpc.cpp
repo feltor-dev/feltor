@@ -205,7 +205,8 @@ int main( int argc, char* argv[])
         ti.toc();
         step+=p.itstp;
         if(rank==0)std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
-        if(rank==0)std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+        if(rank==0)std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s";
+        ti.tic();
 #endif//DG_BENCHMARK
         //err = nc_open_par( argv[3], NC_WRITE|NC_MPIIO, comm, info, &ncid);
         start[0] = i;
@@ -222,6 +223,11 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, energyID, start, count, &E1);
 
         //err = nc_close(ncid); DONT DO IT DOESNT WORK
+#ifdef DG_BENCHMARK
+        ti.toc();
+        if(rank==0)std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
+        ti.tic();
+#endif//DG_BENCHMARK
     }
     t.toc(); 
     unsigned hour = (unsigned)floor(t.diff()/3600);

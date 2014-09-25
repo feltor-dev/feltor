@@ -4,6 +4,7 @@
 #include <cassert>
 #include <vector>
 
+#include "exceptions.h"
 #include "blas1.h"
 
 
@@ -168,7 +169,7 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     double dt = T_max;
     unsigned NT = 1;
     double error = 1e10;
-    while( error > eps_abs)
+    while( error > eps_abs && NT < pow( 2, 12))
     {
         dt /= 2.;
         NT *= 2;
@@ -190,6 +191,8 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
         std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
 #endif //DG_DEBUG
     }
+    if( error > eps_abs)
+        throw Fail( eps_abs);
 
 }
 

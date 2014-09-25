@@ -39,8 +39,8 @@ struct Helmholtz
      * @note The default value of \f$\chi\f$ is one
      */
     template<class Grid>
-    Helmholtz( const Grid& g, double alpha = 1.):
-        laplaceM_(g, not_normed), 
+    Helmholtz( const Grid& g, double alpha = 1., direction dir = dg::forward):
+        laplaceM_(g, not_normed, dir), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
         alpha_(alpha), isSet(false)
     { }

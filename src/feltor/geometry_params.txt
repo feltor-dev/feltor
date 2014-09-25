@@ -28,7 +28,7 @@
 20) alpha (Damping thickness)=  0.01 (sehr klein)
 21) inner density ( log10 N )=  0.01
 22) k_psi (zonal modes)      =  1    
-23) RK4 epsilon              =  1e-5 (error for Runge Kutta)
+23) RK4 epsilon              =  1e-6 (absolute error for Runge Kutta)
 24) boxscale (1<bs<R0/a)     =  1.2  (a little larger than 1)
 25) Profile amplitude        =  0.0  (peak amplitude)
 26) Background Prof amplitude=  1.   (density on the boundary)

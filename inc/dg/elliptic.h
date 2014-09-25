@@ -51,11 +51,11 @@ class Elliptic
      * @param g The Grid, boundary conditions are taken from here
      */
     template< class Grid>
-    Elliptic( const Grid& g, norm no = not_normed): 
-        leftx ( dg::create::dx( g, inverse( g.bcx()), no, backward)),
-        lefty ( dg::create::dy( g, inverse( g.bcy()), no, backward)),
-        rightx( dg::create::dx( g, g.bcx(), normed, forward)),
-        righty( dg::create::dy( g, g.bcy(), normed, forward)),
+    Elliptic( const Grid& g, norm no = not_normed, direction dir = forward): 
+        leftx ( dg::create::dx( g, inverse( g.bcx()), no, inverse(dir))),
+        lefty ( dg::create::dy( g, inverse( g.bcy()), no, inverse(dir))),
+        rightx( dg::create::dx( g, g.bcx(), normed, dir)),
+        righty( dg::create::dy( g, g.bcy(), normed, dir)),
         jump  ( dg::create::jump2d( g, g.bcx(), g.bcy(), no )),
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx), R(xchi),
@@ -79,11 +79,11 @@ class Elliptic
      * @param bcy boundary contition in y
      */
     template< class Grid>
-    Elliptic( const Grid& g, bc bcx, bc bcy, norm no = not_normed): 
-        leftx (dg::create::dx( g, inverse(bcx), no, backward)),
-        lefty (dg::create::dy( g, inverse(bcy), no, backward)),
-        rightx(dg::create::dx( g,bcx, normed, forward)),
-        righty(dg::create::dy( g,bcy, normed, forward)),
+    Elliptic( const Grid& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
+        leftx (dg::create::dx( g, inverse(bcx), no, inverse(dir))),
+        lefty (dg::create::dy( g, inverse(bcy), no, inverse(dir))),
+        rightx(dg::create::dx( g,bcx, normed, dir)),
+        righty(dg::create::dy( g,bcy, normed, dir)),
         jump  (dg::create::jump2d( g, bcx, bcy, no)),
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)),
         xchi( dg::evaluate(one, g)), xx(xchi), temp( xx), R(xchi),
@@ -150,6 +150,12 @@ class Elliptic
         if( bound == DIR_NEU) return NEU_DIR;
         if( bound == NEU_DIR) return DIR_NEU;
         return PER;
+    }
+    direction inverse( direction dir)
+    {
+        if( dir == forward) return backward;
+        if( dir == backward) return forward;
+        return symmetric;
     }
     Matrix leftx, lefty, rightx, righty, jump;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication

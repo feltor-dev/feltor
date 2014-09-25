@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
     params.R = p.R, params.L = p.L, params.R_l = p.R_l, params.zeta = p.zeta;
 
     dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, dg::PER, dg::DIR);
-    Convection< dg::DVec> convect( grid, params, p.eps_lap);
+    Convection<dg::DMatrix, dg::DVec, dg::DVec> convect( grid, params, p.eps_lap);
     //initial conditions
     dg::Gaussian g1( 0.2*p.lx, 0.5*p.ly, 0.05, 0.05, p.n0);
     dg::Gaussian g2( 0.7*p.lx, 0.3*p.ly, 0.05, 0.05, p.n0);
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
     dg::blas1::axpby( 1., y0[2], -1, y0[2]);
     //init timestepper
     dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
-    Diffusion<dg::DVec> diffusion( grid, p.L, p.P);
+    Diffusion<dg::DMatrix, dg::DVec, dg::DVec> diffusion( grid, p.L, p.P);
     //dg::AB< k, std::vector<dg::DVec> > ab(y0);
     ab.init( convect, diffusion, y0, p.dt);
     //std::vector<dg::DVec> y1( y0);
