@@ -49,6 +49,8 @@ class Elliptic
      * must return instances of the Preconditioner class and 
      * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid, boundary conditions are taken from here
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative
      */
     template< class Grid>
     Elliptic( const Grid& g, norm no = not_normed, direction dir = forward): 
@@ -77,6 +79,8 @@ class Elliptic
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative (i.e. forward, backward or symmetric)
      */
     template< class Grid>
     Elliptic( const Grid& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 

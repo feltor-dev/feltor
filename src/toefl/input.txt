@@ -14,7 +14,7 @@
 
 ---------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stopping for polarisation) =   1e-2  (1e-6)
+6)  eps_pol (stopping for polarisation) =   1e-3  (1e-6)
 7)  eps_gamma (stopping for Gamma CG)   =   1e-3  (1e-8)
 
 ---------------------Boundary conditions----------------------
@@ -33,7 +33,7 @@
 
 ------------------Initial blob parameters---------------------
 
-16) amp (perturbation amplitude)            =  -0.3     (1.0)
+16) amp (perturbation amplitude)            =  0.5    (1.0)
 17) sigma (blob variance in units of rho_s) =  10     (10)
 18) x-position ( in units of lx)            =  0.25   (0.4)
 19) y-position ( in units of ly)            =  0.5   (0.5)

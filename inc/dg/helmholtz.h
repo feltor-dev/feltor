@@ -36,6 +36,7 @@ struct Helmholtz
      * @tparam Grid The Grid class
      * @param grid The grid to use
      * @param alpha Scalar in the above formula
+     * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
     template<class Grid>

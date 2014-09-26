@@ -6,14 +6,14 @@
 --------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   40 (192)
-3)  ny (grid points in y)                =   40 (192) 
-4)  nz (grid points in z)                =   9 (>16)
-5)  dt (time step in units c_s/rho_s)    =   3e-2  (0.01)
+2)  nx (grid points in x)                =   60 (192)
+3)  ny (grid points in y)                =   60 (192) 
+4)  nz (grid points in z)                =   5 (>16)
+5)  dt (time step in units c_s/rho_s)    =   5e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
-6)  eps_pol (stop for polarisation)      =   1e-4 (1e-6)
+6)  eps_pol (stop for polarisation)      =   1e-3 (1e-6)
 7)  eps_max (stop for induction)         =   0.0 (1e-6)
 8)  eps_gamma (stop for Gamma CG)        =   1e-4 (1e-8)
 9)  eps_time ( stop for time inversion ) =   1e-8 
@@ -31,7 +31,7 @@
 
 16) amp (perturbation amplitude)            =  1.0     (1.0)
 17) sigma (blob variance in units of rho_s) =  2.0     (10)
-18) x-position ( in units of a)             =  -0.40   (0.4)
+18) x-position ( in units of a)             =  0.40   (0.4)
 19) y-position ( in units of a)             =  0.00  (0.5)
 20) sigma_z (variance in units of R_0)      =  1
 
