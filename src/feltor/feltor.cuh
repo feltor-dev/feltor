@@ -352,7 +352,13 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
     }
     t.toc();
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    if(rank==0)
+#endif 
     std::cout << "One rhs took "<<t.diff()<<"s\n";
+
 
     //add particle source to dtN
 //     for( unsigned i=0; i<2; i++)
