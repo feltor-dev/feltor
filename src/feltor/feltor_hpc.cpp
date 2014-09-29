@@ -222,11 +222,10 @@ int main( int argc, char* argv[])
         E1 = feltor.energy()/energy0;
         err = nc_put_vara_double( ncid, energyID, start, count, &E1);
 
-        //err = nc_close(ncid); DONT DO IT DOESNT WORK
+        //err = nc_close(ncid); DONT DO IT!
 #ifdef DG_BENCHMARK
         ti.toc();
         if(rank==0)std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
-        ti.tic();
 #endif//DG_BENCHMARK
     }
     t.toc(); 
