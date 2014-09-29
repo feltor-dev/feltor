@@ -12,7 +12,7 @@
 #include "file/read_input.h"
 
 #include "asela.cuh"
-#include "bessel.h"
+//#include "bessel.h"
 #include "parameters.h"
 #include "geometry.h"
 

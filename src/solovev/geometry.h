@@ -21,8 +21,12 @@ struct Psip
 {
   Psip( double R_0, double A, std::vector<double> c ): R_0_(R_0), A_(A), c_(c) {}
 /**
- * @brief \f[ \hat{\psi}_p =
-      \hat{R}_0\Bigg\{A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]+c_1+
+ * @brief \f[ \hat{\psi}_p = 
+      \hat{R}_0\Bigg\{A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
+      + \sum_{i=1}^{12} c_i\bar \psi_{pi}(\bar R, \bar Z) \Bigg\}
+      =
+      \hat{R}_0\Bigg\{A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
+      +c_1+
       c_{10} \left[ \bar{Z}^3-3 \bar{R}^2  \bar{Z} \ln{(\bar{R}   )}\right]+ 
       c_{11} \left[3 \bar{R}^4  \bar{Z}-4 \bar{R}^2  \bar{Z}^3\right)      +
       c_{12} \left[-(45 \bar{R}^4  \bar{Z})+60 \bar{R}^4  \bar{Z} \ln{(\bar{R}   )}-
@@ -37,12 +41,13 @@ struct Psip
        \bar{Z}^2 \ln{(\bar{R}   )}-140 \bar{R}^2  \bar{Z}^4-120 \bar{R}^2  \bar{Z}^4 
       \ln{(\bar{R}   )}+8  \bar{Z}^6 \right] +
       +c_8  \bar{Z}+c_9 \bar{R}^2  \bar{Z}+(\bar{R}^4 )/8 \Bigg\} \f]
+      with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  */
   double operator()(double R, double Z)
   {    
      double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,Zn6,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
+     Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
+     Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
      lgRn= log(Rn);
      return   R_0_*( Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.) 
                     + c_[0] 
@@ -62,25 +67,7 @@ struct Psip
   }
   double operator()(double R, double Z, double phi)
   {    
-     double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,Zn6,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
-     lgRn= log(Rn);
-     return   R_0_*( Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.) 
-                    + c_[0] 
-            + c_[1]  *Rn2
-            + c_[2]  *(Zn2 - Rn2 * lgRn ) 
-            + c_[3]  *(Rn4 - 4.* Rn2*Zn2 ) 
-            + c_[4]  *(3.* Rn4 * lgRn  -9.*Rn2*Zn2 -12.* Rn2*Zn2 * lgRn + 2.*Zn4)
-            + c_[5]  *(Rn4*Rn2-12.* Rn4*Zn2 +8.* Rn2 *Zn4 ) 
-            + c_[6]  *(-15.*Rn4*Rn2 * lgRn + 75.* Rn4 *Zn2 + 180.* Rn4*Zn2 * lgRn 
-                       -140.*Rn2*Zn4 - 120.* Rn2*Zn4 *lgRn + 8.* Zn6 )
-            + c_[7]  *Zn
-            + c_[8]  *Rn2*Zn            
-                    + c_[9] *(Zn2*Zn - 3.* Rn2*Zn * lgRn)
-            + c_[10] *( 3. * Rn4*Zn - 4. * Rn2*Zn3)
-            + c_[11] *(-45.* Rn4*Zn + 60.* Rn4*Zn* lgRn - 80.* Rn2*Zn3* lgRn + 8. * Zn5)            
-                    );
+      return operator()(R,Z);
   }
   void display()
   {
@@ -131,19 +118,7 @@ struct PsipR
   }
   double operator()(double R, double Z, double phi)
   {    
-     double Rn,Rn2,Rn3,Rn5,Zn,Zn2,Zn3,Zn4,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn; Rn5 = Rn3*Rn2; 
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2;
-     lgRn= log(Rn);
-     return   (Rn3/2. + (Rn/2. - Rn3/2. + Rn*lgRn)* A_ + 
-        2.* Rn* c_[1] + (-Rn - 2.* Rn*lgRn)* c_[2] + (4.*Rn3 - 8.* Rn *Zn2)* c_[3] + 
-        (3. *Rn3 - 30.* Rn *Zn2 + 12. *Rn3*lgRn -  24.* Rn *Zn2*lgRn)* c_[4]
-        + (6 *Rn5 - 48 *Rn3 *Zn2 + 16.* Rn *Zn4)*c_[5]
-        + (-15. *Rn5 + 480. *Rn3 *Zn2 - 400.* Rn *Zn4 - 90. *Rn5*lgRn + 
-            720. *Rn3 *Zn2*lgRn - 240.* Rn *Zn4*lgRn)* c_[6] + 
-        2.* Rn *Zn *c_[8] + (-3. *Rn *Zn - 6.* Rn* Zn*lgRn)* c_[9] + (12. *Rn3* Zn - 8.* Rn *Zn3)* c_[10] + (-120. *Rn3* Zn - 80.* Rn *Zn3 + 240. *Rn3* Zn*lgRn - 
-            160.* Rn *Zn3*lgRn) *c_[11]
-          );
+      return operator()(R,Z);
   }
   void display()
   {
@@ -191,17 +166,7 @@ struct PsipRR
   }
   double operator()(double R, double Z, double phi)
   {    
-     double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2; 
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; 
-     lgRn= log(Rn);
-     return   1./R_0_*( (3.* Rn2)/2. + (3./2. - (3. *Rn2)/2. +lgRn) *A_ +  2.* c_[1] + (-3. - 2.*lgRn)* c_[2] + (12. *Rn2 - 8. *Zn2) *c_[3] + 
-       (21. *Rn2 - 54. *Zn2 + 36. *Rn2*lgRn - 24. *Zn2*lgRn)* c_[4]
-       + (30. *Rn4 - 144. *Rn2 *Zn2 + 16.*Zn4)*c_[5] + (-165. *Rn4 + 2160. *Rn2 *Zn2 - 640. *Zn4 - 450. *Rn4*lgRn + 
-    2160. *Rn2 *Zn2*lgRn - 240. *Zn4*lgRn)* c_[6] + 
- 2.* Zn* c_[8] + (-9. *Zn - 6.* Zn*lgRn) *c_[9] 
- + (36. *Rn2* Zn - 8. *Zn3) *c_[10]
- + (-120. *Rn2* Zn - 240. *Zn3 + 720. *Rn2* Zn*lgRn - 160. *Zn3*lgRn)* c_[11]);
+      return operator()(R,Z);
   }
   void display()
   {
@@ -251,22 +216,7 @@ struct PsipZ
   }
   double operator()(double R, double Z, double phi)
   {    
-     double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2; 
-     Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; 
-     lgRn= log(Rn);
-
-     return   (2.* Zn* c_[2] 
-            -  8. *Rn2* Zn* c_[3] +
-              ((-18.)*Rn2 *Zn + 8. *Zn3 - 24. *Rn2* Zn*lgRn) *c_[4] 
-            + ((-24.) *Rn4* Zn + 32. *Rn2 *Zn3)* c_[5]   
-            + (150. *Rn4* Zn - 560. *Rn2 *Zn3 + 48. *Zn5 + 360. *Rn4* Zn*lgRn - 480. *Rn2 *Zn3*lgRn)* c_[6] 
-            + c_[7]
-            + Rn2 * c_[8]
-            + (3. *Zn2 - 3. *Rn2*lgRn)* c_[9]
-            + (3. *Rn4 - 12. *Rn2 *Zn2) *c_[10]
-            + ((-45.)*Rn4 + 40. *Zn4 + 60. *Rn4*lgRn -  240. *Rn2 *Zn2*lgRn)* c_[11]);
-          
+      return operator()(R,Z);
   }
   void display()
   {
@@ -303,12 +253,7 @@ struct PsipZZ
   }
   double operator()(double R, double Z, double phi)
   {    
-     double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2; 
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; 
-     lgRn= log(Rn);
-     return   1./R_0_*( 2.* c_[2] - 8. *Rn2* c_[3] + (-18. *Rn2 + 24. *Zn2 - 24. *Rn2*lgRn) *c_[4] + (-24.*Rn4 + 96. *Rn2 *Zn2) *c_[5]
-     + (150. *Rn4 - 1680. *Rn2 *Zn2 + 240. *Zn4 + 360. *Rn4*lgRn - 1440. *Rn2 *Zn2*lgRn)* c_[6] + 6.* Zn* c_[9] -  24. *Rn2 *Zn *c_[10] + (160. *Zn3 - 480. *Rn2* Zn*lgRn) *c_[11]);
+      return operator()(R,Z);
   }
   void display()
   {
@@ -350,15 +295,7 @@ struct PsipRZ
   }
   double operator()(double R, double Z, double phi)
   {    
-     double Rn,Rn2,Rn3,Zn,Zn2,Zn3,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn; 
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; 
-     lgRn= log(Rn);
-     return   1./R_0_*(
-              -16.* Rn* Zn* c_[3] + (-60.* Rn* Zn - 48.* Rn* Zn*lgRn)* c_[4] + (-96. *Rn3* Zn + 64.*Rn *Zn3)* c_[5]
-            + (960. *Rn3 *Zn - 1600.* Rn *Zn3 + 1440. *Rn3* Zn*lgRn - 960. *Rn *Zn3*lgRn) *c_[6] +  2.* Rn* c_[8] + (-3.* Rn - 6.* Rn*lgRn)* c_[9]
-            + (12. *Rn3 - 24.* Rn *Zn2) *c_[10] + (-120. *Rn3 - 240. *Rn *Zn2 + 240. *Rn3*lgRn -   480.* Rn *Zn2*lgRn)* c_[11]
-                 );
+      return operator()(R,Z);
   }
   void display()
   {
@@ -393,7 +330,7 @@ struct Ipol
     std::cout<< R_0_ <<"  "  << A_ <<"\n";
   }
   private:
-  double A_,R_0_;
+  double R_0_, A_;
   Psip psip_;
 };
 
@@ -709,6 +646,9 @@ struct Field
    
 };
 
+/**
+ * @brief Phi component of magnetic field \f$ B_\Phi\f$
+ */
 struct FieldP
 {
     FieldP( GeomParameters gp): R_0(gp.R_0), 
@@ -723,6 +663,9 @@ struct FieldP
     Ipol   ipol_;
    
 }; 
+/**
+ * @brief R component of magnetic field\f$ B_R\f$
+ */
 struct FieldR
 {
     FieldR( GeomParameters gp): psipZ_(gp.R_0,gp.A,gp.c), R_0(gp.R_0){ }
@@ -735,6 +678,9 @@ struct FieldR
     double R_0;
    
 };
+/**
+ * @brief Z component of magnetic field \f$ B_Z\f$
+ */
 struct FieldZ
 {
     FieldZ( GeomParameters gp): psipR_(gp.R_0,gp.A,gp.c), R_0(gp.R_0){ }

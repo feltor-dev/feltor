@@ -71,7 +71,7 @@ struct AbsMin
 /**
  * @brief Functor returning a gaussian
  * \f[
-   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+   f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)} 
    \f]
  */
 struct Gaussian
@@ -127,6 +127,13 @@ struct Gaussian
     double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
 
 };
+
+/**
+* @brief The 3d gaussian
+* \f[
+f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)} 
+\f]
+*/
 struct Gaussian3d
 {
     /**
@@ -134,13 +141,25 @@ struct Gaussian3d
      *
      * @param x0 x-center-coordinate
      * @param y0 y-center-coordinate
+     * @param z0 z-center-coordinate
      * @param sigma_x x - variance
      * @param sigma_y y - variance 
+     * @param sigma_z z - variance 
      * @param amp Amplitude
-     * @param kz wavenumber in z direction
      */
     Gaussian3d( double x0, double y0, double z0, double sigma_x, double sigma_y, double sigma_z, double amp)
         : x00(x0), y00(y0), z00(z0), sigma_x(sigma_x), sigma_y(sigma_y), sigma_z(sigma_z), amplitude(amp){}
+    /**
+     * @brief Return a 2d gaussian
+     *
+     * \f[
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return gaussian
+     */
     double operator()(double x, double y)
     {
         return  amplitude*
@@ -151,10 +170,11 @@ struct Gaussian3d
      * @brief Return the value of the gaussian
      *
      * \f[
-       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
+       f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}+\frac{(z-z_0)^2}{2\sigma_z^2})} 
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
+     * @param z z - coordinate
      *
      * @return gaussian
      */
@@ -164,8 +184,8 @@ struct Gaussian3d
 //         {
             return  amplitude*
                     exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
-                              (z-z00)*(z-z00)/2./sigma_z/sigma_z +
-                            (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
+                           (z-z00)*(z-z00)/2./sigma_z/sigma_z +
+                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
 //         }
 //         else {
 //         return 0.;
@@ -245,6 +265,43 @@ struct GaussianY
     }
   private:
     double  y00, sigma_y, amplitude;
+
+};
+/**
+ * @brief Functor returning a gaussian in z-direction
+ * \f[
+   f(x,y) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
+   \f]
+ */
+struct GaussianZ
+{
+    /**
+     * @brief Functor returning a gaussian
+     *
+     * @param z0 z-center-coordinate
+     * @param sigma_z z - variance 
+     * @param amp Amplitude
+     */
+    GaussianZ( double z0, double sigma_z, double amp)
+        : z00(z0), sigma_z(sigma_z), amplitude(amp){}
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
+       \f]
+     * @param x x - coordinate
+     * @param y y - coordinate
+     * @param z z - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()(double x, double y, double z)
+    {
+        return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
+    }
+  private:
+    double  z00, sigma_z, amplitude;
 
 };
 
@@ -357,6 +414,101 @@ struct Lamb
   private:
     double R_, U_, x0_, y0_, lambda_, gamma_, j_;
 };
+// ----------------------------------------------------------------------
+/**
+ * @brief Returns the Bessel function \f$ J_1(x)\f$ for any real x. 
+ *
+ * @param x x-value
+ *
+ * @return J_1(x)
+ */
+double bessj1(double x) 
+{   double ax,z; 
+    double xx,y,ans,ans1,ans2; 
+    if ((ax=fabs(x)) < 8.0) 
+    { 
+	y=x*x; 
+	ans1 = x*(72362614232.0 + y*(-7895059235.0 + 
+		   y*(242396853.1 + y*(-2972611.439 + 
+		     y*(15704.48260+y*(-30.16036606))))));  
+	ans2 = 144725228442.0 + y*(2300535178.0 + 
+		   y*(18583304.74 + y*(99447.43394 + 
+		    y*(376.9991397+y*1.0)))); 
+	ans=ans1/ans2; 
+    } 
+    else 
+    { 
+	z=8.0/ax; 
+	y=z*z; 
+	xx=ax-2.356194491; 
+	ans1 = 1.0+y*(0.183105e-2+y*(-0.3516396496e-4 +
+		   y*(0.2457520174e-5+y*(-0.240337019e-6)))); 
+	ans2 = 0.04687499995+y*(-0.2002690873e-3 +
+                   y*(0.8449199096e-5+y*(-0.88228987e-6 +y*0.105787412e-6))); 
+	ans = sqrt(0.636619772/ax)*(cos(xx)*ans1-z*sin(xx)*ans2); 
+	if (x < 0.0) ans = -ans; 
+    } 
+    return ans; 
+}   
+
+// ----------------------------------------------------------------------
+
+/**
+ * @brief Returns the modified Bessel function \f$ I_1(x)\f$ for any real x. 
+ *
+ * @param x
+ *
+ * @return I_1(x)
+ */
+double bessi1(double x) 
+{   double ax,ans; 
+    double y; 
+    if ((ax=fabs(x)) < 3.75) 
+    {
+	y=x/3.75; 
+	y*=y; 
+	ans = ax*(0.5+y*(0.87890594+y*(0.51498869+y*(0.15084934 +
+               y*(0.2658733e-1+y*(0.301532e-2+y*0.32411e-3)))))); 
+    } 
+    else 
+    { 
+	y=3.75/ax; 
+	ans = 0.2282967e-1+y*(-0.2895312e-1+y*(0.1787654e-1 -
+              y*0.420059e-2)); ans=0.39894228+y*(-0.3988024e-1+
+              y*(-0.362018e-2 +y*(0.163801e-2+y*(-0.1031555e-1+y*ans)))); 
+	ans *= (exp(ax)/sqrt(ax)); 
+    } 
+    return x < 0.0 ? -ans : ans; 
+}
+
+// ----------------------------------------------------------------------
+/**
+ * @brief Returns the modified Bessel function \f$ K_1(x)\f$ for positive real x.
+ *
+ * @param x x-value
+ *
+ * @return K_1(x)
+ */
+double bessk1(double x)
+{ 
+    double bessi1(double x); 
+    double y,ans;
+    if (x <= 2.0) 
+    {
+	y=x*x/4.0; 
+	ans = (log(x/2.0)*bessi1(x))+(1.0/x)*(1.0+y*(0.15443144 +
+               y*(-0.67278579+y*(-0.18156897+y*(-0.1919402e-1 +
+               y*(-0.110404e-2+y*(-0.4686e-4))))))); 
+    } 
+    else 
+    { 
+	y=2.0/x; 
+	ans = (exp(-x)/sqrt(x))*(1.25331414+y*(0.23498619 +
+              y*(-0.3655620e-1+y*(0.1504268e-1+y*(-0.780353e-2 +
+              y*(0.325614e-2+y*(-0.68245e-3))))))); 
+    } 
+    return ans; 
+}
 
 struct Vortex
 {
@@ -717,7 +869,7 @@ struct MinMod
  *
  * @tparam T value type
  */
-template <class T>
+template <class T = double>
 struct PLUS
 {
     /**
@@ -762,6 +914,15 @@ struct ABS
         T operator()(const T& x){ return fabs(x);}
 };
 
+struct CONSTANT
+{
+    CONSTANT( double value): value_(value){}
+    double operator()(double x){return value_;}
+    double operator()(double x, double y){return value_;}
+    double operator()(double x, double y, double z){return value_;}
+    private:
+    double value_;
+};
 ///@}
 } //namespace dg
 

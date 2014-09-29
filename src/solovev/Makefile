@@ -2,8 +2,6 @@ system=home
 device=gpu
 
 INCLUDE = -I../../inc # other project libraries
-INCLUDE+= -I../solovev/
-INCLUDE+= -I../feltor/
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -59,13 +57,20 @@ LIBS    += -L/opt/sw/netcdf/4.0.1/intel-hdf5/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
-all: parallel
+all: dz_geom_t geometry_t
 
-parallel: parallel.cu parallel.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+dz_geom_t: dz_geom_t.cu geometry.h 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)
 	echo "Attention: No compiler warnings are issued!" 
+	
+geometry_t: geometry_t.cu geometry.h 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	echo "Attention: No compiler warnings are issued!" 
+	
+.PHONY: clean doc
 
-.PHONY: clean
+doc: 
+	doxygen Doxyfile
 	
 clean:
-	rm -f parallel parallel_hpc geometry_t dz_geom_t
+	rm -f feltor feltor_hpc geometry_t dz_geom_t

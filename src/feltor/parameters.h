@@ -58,7 +58,7 @@ struct Parameters
             nu_parallel = v[14];
             c = v[15];            
             amp = v[16];
-            sigma = v[18];
+            sigma = v[17];
             posX = v[18];
             posY = v[19];
             m_par = v[20];
@@ -86,9 +86,9 @@ struct Parameters
             <<"    beta             = "<<beta<<"\n"
             <<"Electron-temperature: = "<<tau[0]<<"\n"
             <<"    Ion-temperature:  = "<<tau[1]<<"\n"
-            <<"    perp Viscosity:   = "<<nu_perp<<"\n"
-            <<"    perp Resistivity: = "<<c<<"\n"
-            <<"    par Viscosity:    = "<<nu_parallel<<"\n";
+            <<"    perp. Viscosity:  = "<<nu_perp<<"\n"
+            <<"    par. Resistivity: = "<<c<<"\n"
+            <<"    par. Viscosity:   = "<<nu_parallel<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"

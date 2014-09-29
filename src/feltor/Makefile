@@ -1,7 +1,8 @@
 system=home
 device=gpu
 
-INCLUDE = -I../../inc # other project libraries
+INCLUDE = -I../../inc  # other project libraries
+INCLUDE+= -I../solovev # geometry library
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -45,40 +46,31 @@ endif
 
 ifeq ($(strip $(system)),vsc)
 INCLUDE += -I$(HOME)/include
-INCLUDE += -I/opt/sw/hdf5/1.8.11/include
 INCLUDE += -I/opt/intel/impi/4.1.0/include64 
-INCLUDE += -I/opt/sw/netcdf/4.0.1/intel-hdf5/include
+INCLUDE += -I/opt/sw/netcdf/4.3/include
 CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
 
-LIBS 	 = -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
+LIBS 	 = -L/opt/sw/hdf5/1.8.10-p1/lib -lhdf5 -lz
 LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
 LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
-LIBS    += -L/opt/sw/netcdf/4.0.1/intel-hdf5/lib -lnetcdf
+LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
 all: feltor feltor_hpc
 
-feltor: feltor.cu feltor.cuh geometry.h
+feltor: feltor.cu feltor.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
 ifeq ($(strip $(device)),mpi)
-feltor_hpc: feltor_hpc.cpp feltor.cuh geometry.h
+feltor_hpc: feltor_hpc.cpp feltor.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 else
-feltor_hpc: feltor_hpc.cu feltor.cuh geometry.h
+feltor_hpc: feltor_hpc.cu feltor.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
 endif
-	
-dz_geom_t: dz_geom_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)
-	echo "Attention: No compiler warnings are issued!" 
-	
-geometry_t: geometry_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 	
 generator: generator.cpp 
 	g++ generator.cpp -o generator -std=c++0x -Wall

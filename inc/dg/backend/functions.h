@@ -131,6 +131,7 @@ inline double lilj( unsigned i, unsigned j)
 
 ///@addtogroup functions
 ///@{
+
 /**
  * @brief The constant 
  *
@@ -140,6 +141,7 @@ inline double lilj( unsigned i, unsigned j)
  * @return 1
  */
 inline double one( double x) {return 1;}
+
 /**
  * @brief The constant 
  *
@@ -150,6 +152,7 @@ inline double one( double x) {return 1;}
  * @return 1
  */
 inline double one( double x, double y) {return 1;}
+
 /**
  * @brief The constant 
  *
@@ -161,6 +164,7 @@ inline double one( double x, double y) {return 1;}
  * @return 1
  */
 inline double one( double x, double y, double z) {return 1;}
+
 /**
  * @brief The constant 
  *
@@ -170,6 +174,7 @@ inline double one( double x, double y, double z) {return 1;}
  * @return 1
  */
 inline double zero( double x) {return 0.;}
+
 /**
  * @brief The constant 
  *
@@ -180,6 +185,7 @@ inline double zero( double x) {return 0.;}
  * @return 1
  */
 inline double zero( double x, double y) {return 0.;}
+
 /**
  * @brief The constant 
  *
@@ -192,11 +198,61 @@ inline double zero( double x, double y) {return 0.;}
  */
 inline double zero( double x, double y, double z) {return 0.;}
 
+/**
+ * @brief Return x
+ *
+ * @param x
+ *
+ * @return 
+ */
 double coo1( double x) {return x;}
+/**
+ * @brief Return x
+ *
+ * @param x
+ * @param y
+ *
+ * @return 
+ */
 double coo1( double x, double y) {return x;}
+/**
+ * @brief Return x
+ *
+ * @param x
+ * @param y
+ * @param z
+ *
+ * @return 
+ */
 double coo1( double x, double y, double z) {return x;}
+/**
+ * @brief Return y
+ *
+ * @param x
+ * @param y
+ *
+ * @return 
+ */
 double coo2( double x, double y) {return y;}
+/**
+ * @brief Return y
+ *
+ * @param x
+ * @param y
+ * @param z
+ *
+ * @return 
+ */
 double coo2( double x, double y, double z) {return y;}
+/**
+ * @brief Return z
+ *
+ * @param x
+ * @param y
+ * @param z
+ *
+ * @return 
+ */
 double coo3( double x, double y, double z) {return z;}
 } //namespace dg
 

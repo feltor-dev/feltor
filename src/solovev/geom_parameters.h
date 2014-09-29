@@ -28,7 +28,7 @@ struct GeomParameters
            nprofileamp,
            bgprofamp,
            psipmaxcut,
-           psipmaxlap;
+           psipmaxlap; //only for inverse tanh damping profile
     std::vector<double> c; 
      /**
      * @brief constructor to make a const object

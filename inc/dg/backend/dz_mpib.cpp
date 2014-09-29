@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     const dg::MPI_Precon w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::DZ<dg::MMatrix, dg::MVec> dz( field, g3d);
+    dg::DZ<dg::MMatrix, dg::MVec> dz( field, g3d, 1e-8, dg::DefaultLimiter());
     t.toc();
     if(rank==0)std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 

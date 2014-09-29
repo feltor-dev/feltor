@@ -18,8 +18,8 @@
 13) c12                      =  0.0 
 ------------------geometric coefficients----------------------
 14) R0 (in units of rhos)    =  1500.     (150)
-15) psip_min                 = -0.7
-16) psip_max                 =  0.0 (0.0)
+15) psip_min                 = -0.7       (used for iris and source > -1)
+16) psip_max                 =  0.0 (0.0) (used for damping)
 17) inv aspect ratio (a/R0)  =  0.016666666666666666666666667
 18) elongation               =  1.0
 19) triangularity            =  0.0
