@@ -45,20 +45,22 @@ struct Rolkar
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
-        for( unsigned i=0; i<x.size(); i++)
-        {
-            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
-            dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (lnN,U)) 
-        }
-//       Resistivity
-        dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
-        dg::blas1::pointwiseDot( x[1], x[3], chi); //N_i U_i
-        dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
-        dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
-//         dg::blas1::pointwiseDivide( chi, x[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
-        dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   // dt U_e =- C/hat(mu)_e J_par/N_e
-        dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   // dt U_i =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i now
+                dg::blas1::axpby( 0., x, 0, y);
+
+//         for( unsigned i=0; i<x.size(); i++)
+//         {
+//             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+//             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+//             dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (lnN,U)) 
+//         }
+// //       Resistivity
+//         dg::blas1::pointwiseDot( x[0], x[2], omega); //N_e U_e 
+//         dg::blas1::pointwiseDot( x[1], x[3], chi); //N_i U_i
+//         dg::blas1::axpby( -1., omega, 1., chi); //J_par = -N_e U_e + N_i U_i
+//         dg::blas1::pointwiseDivide( chi, x[0], omega);//J_par/N_e
+// //         dg::blas1::pointwiseDivide( chi, x[0], chi); //J_par/N_i    now //J_par/N_e  //n_e instead of n_i
+//         dg::blas1::axpby( -p.c/p.mu[0]/p.eps_hat, omega, 1., y[2]);   // dt U_e =- C/hat(mu)_e J_par/N_e
+//         dg::blas1::axpby( -p.c/p.mu[1]/p.eps_hat, omega, 1., y[3]);   // dt U_i =- C/hat(mu)_i J_par/N_i   //n_e instead of n_i now
         //cut contributions to boundary now with damping on all 4 quantities
         for( unsigned i=0; i<y.size(); i++){
             dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
@@ -186,6 +188,8 @@ container& ParallelFeltor<Matrix, container, P>::polarisation( const std::vector
     pol.set_chi( chi);
     dg::blas1::transform( y[1], omega,   dg::PLUS<double>(-1));//omega= Ni-1 
     unsigned numberg    =  invert_invgamma(invgamma,chi,omega); //omega= Gamma (Ni-1)
+    if( numberg == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);
     dg::blas1::transform(  chi, gammani, dg::PLUS<double>(+1));
     dg::blas1::axpby( -1., y[0], 1.,gammani,chi);                   //chi=  Gamma (n_i-1) +1  - (n_e) = Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);        //Gamma n_i -ne = -nabla chi nabla phi
@@ -277,7 +281,7 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
 //         dz.set_boundaries( dg::DIR, -1., 1.);
         dz(y[i+2], dzy[2+i]);                                                   //dz U
         dg::blas1::pointwiseDot(y[i],y[i+2], omega);                            //U N
-        dz.set_boundaries( dg::NEU, 0, 0);
+//         dz.set_boundaries( dg::NEU, 0, 0);
         dz(omega, dzun[i]);                                                     //dz UN
         dg::blas1::axpby( -1., dzun[i], 1., yp[i]);                             //dtN = dtN - dz U N
         dg::blas1::pointwiseDot(omega, gradlnB, omega);                         //U N dz ln B

@@ -186,6 +186,8 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     pol.set_chi( chi);
     dg::blas1::transform( y[1], omega,   dg::PLUS<double>(-1));//omega= Ni-1 
     unsigned numberg    =  invert_invgamma(invgamma,chi,omega); //omega= Gamma (Ni-1)
+    if( numberg == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);
     dg::blas1::transform(  chi, gammani, dg::PLUS<double>(+1));
     dg::blas1::axpby( -1., y[0], 1.,gammani,chi);                   //chi=  Gamma (n_i-1) +1  - (n_e) = Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);        //Gamma n_i -ne = -nabla chi nabla phi
