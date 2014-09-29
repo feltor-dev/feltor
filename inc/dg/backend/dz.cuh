@@ -117,6 +117,29 @@ struct DZ
         left_ = left;
         right_ = right;
     }
+    /**
+     * @brief Set boundary conditions in the limiter region
+     *
+     * if Dirichlet boundaries are used the left value is the left function
+     value, if Neumann boundaries are used the left value is the left derivative value
+     * @param bcz boundary condition
+     * @param global 3D vector containing boundary values
+     * @param scal_left left scaling factor
+     * @param scal_right right scaling factor
+     */
+    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
+    {
+        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        cView left( global.cbegin(), global.cbegin() + size);
+        cView right( global.cbegin()+(g_.Nz()-1)*size, global.cbegin() + g_.Nz()*size);
+        View leftView( left_.begin(), left_.end());
+        View rightView( right_.begin(), right_.end());
+        cusp::copy( left, leftView);
+        cusp::copy( right, rightView);
+        dg::blas1::scal( left_, scal_left);
+        dg::blas1::scal( right_, scal_right);
+        bcz_ = bcz;
+    }
 
     /**
      * @brief Compute the second derivative using finite differences
