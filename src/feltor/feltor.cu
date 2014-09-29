@@ -91,7 +91,7 @@ int main( int argc, char* argv[])
     //dg::blas1::pointwiseDot(rolkar.damping(),y1[1], y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
-    feltor.initializene(y0[1],y0[0]);    
+    feltor.initializene( y0[1], y0[0]);    
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
