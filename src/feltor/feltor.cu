@@ -154,16 +154,16 @@ int main( int argc, char* argv[])
         }
 
         ////transform to Vor
-        dvisual=feltor.potential()[0];
-        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        hvisual = y1[1];
-        //hvisual = feltor.potential()[0];
+//         dvisual=feltor.potential()[0];
+//         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+//         hvisual = y1[1];
+        hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
-        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        colors.scalemin() = -colors.scalemax();
-        //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
-        title <<"Omega / "<< colors.scalemax()<<"\t";
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+//         colors.scalemin() = -colors.scalemax();
+        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+//         title <<"Omega / "<< colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();

@@ -69,9 +69,9 @@ struct Rolkar
         dg::blas1::axpby( -p.c/p.mu[0], omega, 1., y[2]);   
         dg::blas1::axpby( -p.c/p.mu[1], omega, 1., y[3]);   
         //damping
-        for( unsigned i=0; i<y.size(); i++){
-           dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
-        }
+//         for( unsigned i=0; i<y.size(); i++){
+//            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
+//         }
     }
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const Preconditioner& weights(){return LaplacianM_perp.weights();}
@@ -275,10 +275,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //     ediff_ = Dres + Dperpne + Dperpni + Dperpue + Dperpui;
     //the parallel part is done elsewhere
     //set U_sheath
-    dg::blas1::axpby( -1.0, phi[0], 0., ush[0]);                          //U_sh_e  = - phi
-    dg::blas1::transform( phi[0],ush[0], dg::EXP<value_type>());          //U_sh_e =EXP(-phi)                  
-    dg::blas1::scal(ush[0], 1.0/sqrt(-2.*M_PI*p.mu[0]));                  //U_sh_e  = 1./sqrt(-2.*M_PI*mu[0])*EXP(-phi)
-    dg::blas1::axpby( 1.0, one, 0., ush[1]);        //U_sh_i = 1.
+    dg::blas1::axpby( -1.0, phi[0], 0., ush[0]);                       //U_sh_e = - phi
+    dg::blas1::transform(  ush[0],ush[0], dg::EXP<value_type>());      //U_sh_e = EXP(-phi)                  
+    dg::blas1::scal(ush[0], 1.0/sqrt(-2.*M_PI*p.mu[0]));               //U_sh_e = 1./sqrt(-2.*M_PI*mu[0])*EXP(-phi)
+    dg::blas1::axpby( 1.0, one, 0., ush[1]);                           //U_sh_i = 1.
 
     for( unsigned i=0; i<2; i++)
     {
@@ -291,30 +291,30 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //Parallel dynamics
         dz_.set_boundaries( dg::NEU, 0, 0);                                  //dz N = 0 on limiter
         dz_(y[i], dzy[i]);       
-        dg::blas1::axpby(-1.0, ush[i],0., omega);   
-        dz_.set_boundaries( dg::DIR, omega, ush[i]);                          //U_e = 1/sqrt(2 pi nu_e)       
-        dz_(y[i+2], dzy[i+2]);                                                   //dz U_i
+//         dz_.set_boundaries( dg::DIR,  ush[i],-1.0,1.0);                      //dz U = {1./sqrt(-2.*M_PI*mu[0])*EXP(-phi),1} on limiter
+        dz_.set_boundaries( dg::NEU, 0, 0);                                  //dz N = 0 on limiter
+        dz_(y[i+2], dzy[i+2]);                                               //dz U
 
-        dg::blas1::pointwiseDot(npe[i], ush[i], omega); 
-        dg::blas1::axpby(-1.0, omega,0., chi);  
-        dz_.set_boundaries( dg::DIR, omega, chi);
-        dg::blas1::pointwiseDot(npe[i], y[i+2], omega);                      //U N
-        dz_(omega, chi);                                                     //dz UN
-        dg::blas1::pointwiseDot(omega, gradlnB, omega);                      //U N dz ln B
-        dg::blas1::axpby( -1., chi, 1., yp[i]);                              //dtN = dtN - dz U N
-        dg::blas1::axpby( 1., omega, 1., yp[i]);                             //dtN = dtN + U N dz ln B
+//         dg::blas1::pointwiseDot(npe[i], ush[i], omega);                      // U N on limiter
+//         dz_.set_boundaries( dg::DIR, omega, -1.0,1.0);                       // dz U N = {ne/sqrt(-2.*M_PI*mu[0])*EXP(-phi),ne}  on
+        dz_.set_boundaries( dg::NEU, 0, 0);  
+        dg::blas1::pointwiseDot(npe[i], y[i+2], omega);                      // U N
+        dz_(omega, chi);                                                     // dz UN
+        dg::blas1::pointwiseDot(omega, gradlnB, omega);                      // U N dz ln B
+        dg::blas1::axpby( -1., chi, 1., yp[i]);                              // dtN = dtN - dz U N
+        dg::blas1::axpby( 1., omega, 1., yp[i]);                             // dtN = dtN + U N dz ln B
         //parallel force terms
         dz_.set_boundaries( dg::NEU, 0, 0); 
         dz_(logn[i], omega);                                                //dz lnN
         dg::blas1::axpby( -p.tau[i]/p.mu[i], omega, 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
+        dz_.set_boundaries( dg::DIR, 0, 0); 
 
         dz_(phi[i], omega);                                             //dz psi
         dg::blas1::axpby( -1./p.mu[i], omega, 1., yp[2+i]);   //dtU = dtU - 1/(hat(mu))  *dz psi  
 
-        dg::blas1::pointwiseDot( ush[i], ush[i], omega); 
-//         dg::blas1::axpby(-1.0, omega,0., chi);  
-        dz_.set_boundaries( dg::DIR, omega, omega);   
-        
+//         dg::blas1::pointwiseDot( ush[i], ush[i], omega); 
+//         dz_.set_boundaries( dg::DIR, omega, 1.0,1.0); 
+                dz_.set_boundaries( dg::NEU, 0, 0); 
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);                  //U^2
         dz_(omega, chi);                                                //dz U^2
         dg::blas1::axpby( -0.5, chi, 1., yp[2+i]);                      //dtU = dtU - 0.5 dz U^2
@@ -355,8 +355,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
         
-        dg::blas1::axpby(-1.0, ush[i],0., omega);   
-        dz_.set_boundaries( dg::DIR, omega, ush[i]);  
+        
+//         dz_.set_boundaries( dg::DIR,ush[i],-1.0,1.0);  
+                dz_.set_boundaries( dg::NEU, 0, 0);
+
         dz_.dzz(y[i+2],omega);                                          //dz^2 U 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);           
         //gradlnBcorrection
@@ -364,8 +366,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
         
         //damping 
-        dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
-        dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
+//         dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
+//         dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
 
     }
     t.toc();
