@@ -45,11 +45,14 @@ struct Rolkar
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
-        for( unsigned i=0; i<x.size(); i++)
+   dg::blas1::axpby( 0., x, 0, y);
+        for( unsigned i=0; i<4; i++)
         {
+            //not linear any more (cannot be written as y = Ax)
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            dg::blas1::axpby( -p.nu_perp, y[i], 0., y[i]); //  nu_perp lapl_RZ (lapl_RZ (lnN,U)) 
+            dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
+
         }
 //       Resistivity
         dg::blas1::axpby( 1., x[3], -1, x[2], omega);
@@ -183,6 +186,8 @@ container& ParallelFeltor<Matrix, container, P>::polarisation( const std::vector
     pol.set_chi( chi);
     dg::blas1::transform( y[1], omega,   dg::PLUS<double>(-1));//omega= Ni-1 
     unsigned numberg    =  invert_invgamma(invgamma,chi,omega); //omega= Gamma (Ni-1)
+    if( numberg == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);
     dg::blas1::transform(  chi, gammani, dg::PLUS<double>(+1));
     dg::blas1::axpby( -1., y[0], 1.,gammani,chi);                   //chi=  Gamma (n_i-1) +1  - (n_e) = Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);        //Gamma n_i -ne = -nabla chi nabla phi
@@ -265,9 +270,10 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
     
     for( unsigned i=0; i<2; i++)
     {
-        dz_.set_boundaries( dg::NEU, 0, 0);
+
+//         dz_.set_boundaries( dg::NEU, 0, 0);
         dz_(y[i], dzy[i]);                                                       //dz N
-        dz_.set_boundaries( dg::DIR, -1., 1.);
+//         dz_.set_boundaries( dg::DIR, -1., 1.);
         dz_(y[i+2], dzy[2+i]);                                                   //dz U
         //dg::blas1::pointwiseDot(y[i],y[i+2], omega);                            //U N
         //dz_.set_boundaries( dg::NEU, 0, 0);
@@ -280,7 +286,7 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
         dg::blas1::pointwiseDot(omega, gradlnB, omega);                         //U N dz ln B
         dg::blas1::axpby( 1., omega, 1., yp[i]);                                //dtN = dtN + U N dz ln B
         //parallel force terms
-        dz_.set_boundaries( dg::NEU, 0, 0);
+//         dz_.set_boundaries( dg::NEU, 0, 0);
         dz_(logy[i], dzlogn[i]);                                                 //dz lnN
         //dz_.set_boundaries( dg::DIR, 0, 0);
         dz_(phi[i], dzphi[i]);                                                   //dz psi
@@ -288,19 +294,19 @@ void ParallelFeltor<Matrix, container, P>::operator()( std::vector<container>& y
         dg::blas1::axpby( -1./p.mu[i]/p.eps_hat, dzphi[i], 1., yp[2+i]);        //dtU = dtU - 1/(hat(mu))  *dz phi  
          
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);                          //U^2
-        dz_.set_boundaries( dg::DIR, 1., 1.);
+//         dz_.set_boundaries( dg::DIR, 1., 1.);
         dz_(omega, dzu2[i]);                                                     //dz u^2
         dg::blas1::axpby( -0.5, dzu2[i], 1., yp[2+i]);                          //dtU = dtU - 0.5 dz U^2
     }
     for( unsigned i=0; i<2; i++)
     {
-       dz_.set_boundaries( dg::NEU, 0, 0);
+//        dz_.set_boundaries( dg::NEU, 0, 0);
        dz_.dzz(y[i],omega);                                                     //dz^2 N 
        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);               
        //gradlnBcorrection
        dg::blas1::pointwiseDot(gradlnB,dzy[i], omega);                         // dz lnB dz N    
        dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
-       dz_.set_boundaries( dg::DIR, -1., 1.);       
+//        dz_.set_boundaries( dg::DIR, -1., 1.);       
        dz_.dzz(y[i+2],omega);                                                   //dz^2 U 
        dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);               
        //gradlnBcorrection
