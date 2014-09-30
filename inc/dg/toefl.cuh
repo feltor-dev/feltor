@@ -29,7 +29,7 @@ struct Toefl
 template< class Matrix, class container, class Prec>
 template< class Grid>
 Toefl<Matrix, container, Prec>::Toefl( const Grid& grid, double R, double P, double eps): 
-    laplaceM( grid, not_normed),
+    laplaceM( grid, not_normed, dg::symmetric),
     omega( dg::evaluate(one, grid) ), phi(omega), phi_old( phi), 
     dxtheta(omega), dxphi(omega), 
     arakawaX( grid), 

@@ -1,8 +1,9 @@
 
-          * Input-File for axisymmetric solovev equilibrium*
-          ------------------------------------
+          * Input-File for TJK axisymmetric solovev equilibrium *
+          -------------------------------------------------------
 
-1)  A                        = -2.27272727272727272727272727272727272727272727272727272727273     
+------------------Solovev coefficients----------------------
+1)  A                        = -2.272727272727272727272727272727     
 2)  c1                       =  5.52873565347557600912284629032    
 3)  c2                       =  107.650339979568281543089523687   
 4)  c3                       = -106.530249502845287366120536235     
@@ -15,9 +16,20 @@
 11) c10                      = -32.3107744312579193561458322246    
 12) c11                      = -8.12368872653900798161863698193     
 13) c12                      =  0.808592505451987167071349630166     
+------------------geometric coefficients----------------------
 14) R0 (in units of rhos)    =  150.     (150)
 15) psip_min                 = -1.
 16) psip_max                 =  0.1 (0.0)
 17) inv aspect ratio (a/R0)  =  0.16666666666666666666666667
 18) elongation               =  1.0
 19) triangularity            =  0.0
+------------------Miscellaneous----------------------
+20) alpha (Damping thickness)=  0.01 (sehr klein)
+21) inner density ( log10 N )=  0.01
+22) k_psi (zonal modes)      =  4    
+23) RK4 epsilon              =  1e-5 (error for Runge Kutta)
+24) boxscale (1<bs<R0/a)     =  1.2  (a little larger than cut)
+25) Profile amplitude        =  2.0  (peak amplitude)
+26) Background Prof amplitude=  1.   (density on the boundary)
+27) psip_max_cut             =  -0.5  (critical psip for limiter, -1 < psip < psipmax)
+28) psip_max_lap             =  0.0  (?)

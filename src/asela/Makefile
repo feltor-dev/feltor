@@ -2,6 +2,7 @@ system=home # Use as Makefile parameter!
 device=gpu
 
 INCLUDE = -I../../inc # other project libraries
+INCLUDE+= -I../solovev
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -55,26 +56,18 @@ endif
 
 all: asela asela_hpc
 
-asela: asela.cu asela.cuh geometry.h
+asela: asela.cu asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
 ifeq ($(strip $(device)),mpi)
-asela_hpc: asela_hpc.cpp asela.cuh geometry.h
+asela_hpc: asela_hpc.cpp asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 else
-asela_hpc: asela_hpc.cu asela.cuh geometry.h
+asela_hpc: asela_hpc.cu asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
 endif
-	
-dz_geom_t: dz_geom_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
-	
-geometry_t: geometry_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 	
 generator: generator.cpp 
 	g++ generator.cpp -o generator -std=c++0x -Wall

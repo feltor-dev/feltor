@@ -7,26 +7,20 @@
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
 2)  nx (grid points in x)                =   60 (192)
-3)  ny (grid points in y)                =   60 (192)
-4)  nz (grid points in z)                =   20 (16)
-5)  dt (time step in units c_s/rho_s)    =   5e-3  (0.01)
+3)  ny (grid points in y)                =   60 (192) 
+4)  nz (grid points in z)                =   5 (>16)
+5)  dt (time step in units c_s/rho_s)    =   5e-2  (0.01)
 
 ------------------Algorithmic parameters-------------------
 
 6)  eps_pol (stop for polarisation)      =   1e-3 (1e-6)
 7)  eps_max (stop for induction)         =   0.0 (1e-6)
-8)  eps_gamma (stop for Gamma CG)        =   1e-5 (1e-8)
+8)  eps_gamma (stop for Gamma CG)        =   1e-4 (1e-8)
 9)  eps_time ( stop for time inversion ) =   1e-8 
-
-------------------Boundary conditions----------------------
-
-10) source radius  (in units of rho_s, !<a)      =   10    (128.) DEPRECATED
-11) minor radius a ( in units of rho_s)          =   25    (256) DEPRECATED
-12) major radius R_0 (eps_a ~ a/R_0, L_p ~ 6R_0) =   150  DEPRECATED
-13) inner density ( log10 N )                    =   0.1 DEPRECATED
 
 ------------------Physical parameters----------------------
 
+<<<<<<< HEAD
 14) mu_e (-m_e/m_i)                     =-0.5e-4
 15) tau (Ti/Te)                         = 0.0    (0.0)
 16) beta_e0                             = 0.0  (1e-4)
@@ -54,5 +48,35 @@
 31) nz_out (# grid points in output field)  = 20
 32) itstp  (steps between outputs)          = 1000     (5)
 33) total # of outputs (excluding first)    = 5000
+=======
+10) mu_e (-m_e/m_i)                     =-0.5e-4
+11) tau (Ti/Te)                         = 0.0    (0.0)
+12) beta_e0                             = 0.0  (1e-4)
+13) nu_perp                             = 1e-3
+14) nu_parallel  (viscosity)            = 1e-3   (0.001)
+15) para resistivity (c)                = 1e-3   (3e-5 gives a drift wave)
+
+---------------Initial perturbation parameters---------------------
+
+16) amp (perturbation amplitude)            =  1.0     (1.0)
+17) sigma (blob variance in units of rho_s) =  2.0     (10)
+18) x-position ( in units of a)             =  0.40   (0.4)
+19) y-position ( in units of a)             =  0.00  (0.5)
+20) sigma_z (variance in units of R_0)      =  1
+
+------------------Miscellaneous----------------------------
+
+21) Damping zone thickness (in units of rho_s)  = 20 
+22) Damping zone strength                   = 1e-3
+23) particle source amplitude               = 0.0
+24) n_out (# of x-y polynomials in output)  = 3
+25) nx_out (# grid points in output field)  = 40 
+26) ny_out (# grid points in output field)  = 40
+27) nz_out (# grid points in output field)  =  5
+28) itstp  (steps between outputs)          = 20     (5)
+29) total # of outputs (excluding first)    = 300 
+
+
+>>>>>>> e6518ba57bc8ecf474931c46d703c7223cfa5053
 
 @ ------------------------------------------------------------

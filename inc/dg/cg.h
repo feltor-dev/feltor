@@ -60,6 +60,8 @@ class CG
     /**
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *
+     * The iteration stops if \f$ ||Ax|| < \epsilon( ||b|| + C) \f$ where \f$C\f$ is 
+     * a correction factor to the absolute error
      @tparam Matrix The matrix class: no requirements except for the 
             BLAS routines
      @tparam Preconditioner no requirements except for the blas routines. Thus far the dg library
@@ -72,11 +74,12 @@ class CG
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
      * @param eps The relative error to be respected
+     * @param nrmb_correction Correction factor C for norm of b
      *
      * @return Number of iterations used to achieve desired precision
      */
     template< class Matrix, class Preconditioner >
-    unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P , value_type eps = 1e-12);
+    unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
     Vector r, p, ap; 
     unsigned max_iter;
@@ -100,7 +103,7 @@ class CG
 */
 template< class Vector>
 template< class Matrix, class Preconditioner>
-unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, value_type eps)
+unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
@@ -118,6 +121,8 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
     blas2::symv( P, r, p );//<-- compute p_0
     //note that dot does automatically synchronize
     value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
+    if( sqrt( nrm2r_old ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
+        return 0;
     value_type alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
@@ -131,7 +136,7 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
         std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
         std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
 #endif //DG_DEBUG
-        if( sqrt( nrm2r_new) < eps*nrmb + eps) 
+        if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction)) 
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
         nrm2r_old=nrm2r_new;
@@ -176,6 +181,8 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
     blas2::symv( P, r, p );//<-- compute p_0
     //note that dot does automatically synchronize
     value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
+    if( sqrt( nrm2r_old ) < eps*nrmb + eps)
+        return 0;
     value_type alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
@@ -227,9 +234,10 @@ struct Invert
      * @param copyable Needed to construct the two previous solutions
      * @param max_iter maximum iteration in conjugate gradient
      * @param eps relative error in conjugate gradient
+     * @param nrmb_correction Correction factor for norm of b (cf. CG)
      */
-    Invert(const container& copyable, unsigned max_iter, double eps): 
-        eps_(eps),
+    Invert(const container& copyable, unsigned max_iter, double eps, double nrmb_correction = 1): 
+        eps_(eps), nrmb_correction_(nrmb_correction),
         phi0( copyable), phi1( copyable), phi2(phi1), cg( copyable, max_iter) { }
     /**
      * @brief Solve linear problem
@@ -289,7 +297,7 @@ struct Invert
         Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        unsigned number = cg( op, phi, phi2, p, eps_);
+        unsigned number = cg( op, phi, phi2, p, eps_, nrmb_correction_);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
         if(rank==0)
@@ -321,7 +329,7 @@ struct Invert
      */
     unsigned get_max() const {return cg.get_max();}
   private:
-    double eps_;
+    double eps_, nrmb_correction_;
     container phi0, phi1, phi2;
     dg::CG< container > cg;
 };

@@ -1,6 +1,7 @@
 
-          * Input-File for axisymmetric solovev equilibrium*
-          ------------------------------------
+          * Input-File for axisymmetric solovev equilibrium *
+
+          ---------------------------------------------------
           
 ------------------Solovev coefficients----------------------
 1)  A                        =  0.0     

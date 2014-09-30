@@ -8,16 +8,15 @@
 #include "dg/backend/typedefs.cuh"
 //#include "dg/backend/xspacelib.cuh"
 
-template< class container>
+template< class Matrix, class container, class Preconditioner>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double L, double P): L_(L), P_(P),
-        w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)), temp( g.size()) { 
-            LaplacianM_dir = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::normed, dg::symmetric);
-            LaplacianM_neu = dg::create::laplacianM( g, dg::PER, dg::NEU, dg::normed, dg::symmetric);
-
-        }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+        w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)), temp( g.size()),
+        LaplacianM_dir( g, dg::PER, dg::DIR, dg::normed, dg::forward),
+        LaplacianM_neu( g, dg::PER, dg::NEU, dg::normed, dg::forward)
+    { }
+    void operator()( std::vector<container>& x, std::vector<container>& y)
     {
         dg::blas2::gemv( LaplacianM_dir, x[0], y[0]);
         dg::blas1::axpby( -1., y[0], 0., y[0]);
@@ -38,8 +37,7 @@ struct Diffusion
     double L_, P_;
     const container w2d, v2d;
     container temp;
-    dg::DMatrix LaplacianM_dir;
-    dg::DMatrix LaplacianM_neu;
+    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_dir, LaplacianM_neu;
 };
 
 struct Source
@@ -66,20 +64,20 @@ struct Fail : public std::exception
     double eps;
 };
 
-template< class container>
+template< class Matrix, class container, class Preconditioner>
 struct Convection
 {
     typedef typename container::value_type value_type;
-    typedef dg::DMatrix Matrix; 
+    //typedef dg::Matrix Matrix; 
     Convection( const dg::Grid2d<value_type>&, Params, double eps_lap);
 
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( std::vector<container>& y, std::vector<container>& yp);
     /**
      * @brief Return the normalized negative laplacian used by this object
      *
      * @return cusp matrix
      */
-    const Matrix& laplacianM( ) const { return laplaceM;}
+    const dg::Elliptic<Matrix, container, Preconditioner>& laplacianM( ) const { return laplaceM;}
     /**
      * @brief Returns phi that belong to the last y in operator()
      *
@@ -94,7 +92,7 @@ struct Convection
     const container& compute_phi( const container& omega);
 
     Matrix dx_per, dy_dir, dy_neu;
-    Matrix laplaceM;
+    dg::Elliptic<Matrix, container, Preconditioner> laplaceM;
 
 
     container phi, phi_old, dxphi, dyphi;
@@ -110,8 +108,9 @@ struct Convection
 
 };
 
-template <class container>
-Convection<container>::Convection( const dg::Grid2d<value_type>& g, Params p, double eps_lap ): 
+template <class M, class container, class P>
+Convection<M, container, P>::Convection( const dg::Grid2d<value_type>& g, Params p, double eps_lap ): 
+    laplaceM( g, dg::PER, dg::DIR, dg::not_normed, dg::forward),
     phi( g.size()), phi_old(phi), dxphi( phi), dyphi( phi),
     dxT( phi), source_(phi), temp( phi),
     background_( dg::evaluate( dg::LinearY( -p.R, p.R*p.zeta), g)), 
@@ -124,12 +123,10 @@ Convection<container>::Convection( const dg::Grid2d<value_type>& g, Params p, do
     dx_per = dg::create::dx( g, dg::PER);
     dy_dir = dg::create::dy( g, dg::DIR);
     dy_neu = dg::create::dy( g, dg::NEU);
-    laplaceM = dg::create::laplacianM( g, dg::PER, dg::DIR, dg::not_normed, dg::symmetric);
-
 }
 
-template<class container>
-const container& Convection<container>::compute_phi( const container& omega)
+template<class M, class container, class P>
+const container& Convection<M, container, P>::compute_phi( const container& omega)
 {
     dg::blas1::axpby( 2., phi, -1., phi_old);
     phi.swap( phi_old);
@@ -149,8 +146,8 @@ const container& Convection<container>::compute_phi( const container& omega)
     return phi;
 }
 
-template<class container>
-void Convection<container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+template<class M, class container, class P>
+void Convection<M, container, P>::operator()(  std::vector<container>& y, std::vector<container>& yp)
 {
     phi = compute_phi(y[2]);
     dg::blas2::gemv( dx_per, phi, dxphi);

@@ -11,4 +11,4 @@ LIBS = -lnetcdf
 	
 
 toefl_mpib: toefl_mpib.cpp toefl.cuh
-	$(MPICXX) -O3 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+	$(MPICXX) -O3 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK

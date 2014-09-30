@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <thrust/host_vector.h>
 #include "vector_traits.h"
 
@@ -8,17 +9,42 @@ namespace dg
 
 struct MPI_Vector
 {
+    /**
+     * @brief construct a vector
+     *
+     * @param n polynomial coefficients
+     * @param Nx local # of cells in x 
+     * @param Ny local # of cells in y
+     * @param comm MPI communicator
+     */
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(1), data_( n*n*Nx*Ny), comm_(comm) {}
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), data_( n*n*Nx*Ny*Nz), comm_(comm) {}
     thrust::host_vector<double>& data() {return data_;}
     const thrust::host_vector<double>& data() const {return data_;}
+    /**
+     * @brief Cut the ghostcells and leave interior
+     *
+     * @return  The interior without ghostcells
+     */
     thrust::host_vector<double> cut_overlap() const;
+    /**
+     * @brief Opposite of cut_overlap, copies values into interior
+     *
+     * a cut_overlap followed by a copy_into_interior leaves the values unchanged
+     * @param src The source values
+     */
+    void copy_into_interior( const thrust::host_vector<double>& src);
     unsigned n() const {return n_;}
     unsigned Nx()const {return Nx_;}
     unsigned Ny()const {return Ny_;}
     unsigned Nz()const {return Nz_;}
+    /**
+     * @brief Return local size
+     * 
+     * @return local size
+     */
     unsigned size() const{return n_*n_*Nx_*Ny_*Nz_;}
     double operator[]( unsigned idx) const {return data_[idx];}
     /**
@@ -179,6 +205,16 @@ thrust::host_vector<double> MPI_Vector::cut_overlap() const
                 reduce[ j-n_ + (Nx_-2)*n_*( i-n_ + (Ny_-2)*n_*s)] = 
                     data_[ j + Nx_*n_*(i + Ny_*n_*s)];
     return reduce;
+}
+
+void MPI_Vector::copy_into_interior( const thrust::host_vector<double>& src)
+{
+    assert( src.size() == n_*n_*(Nx_-2)*(Ny_-2)*Nz_);
+    for( unsigned s=0; s<Nz_; s++)
+        for( unsigned i=n_; i<(Ny_-1)*n_; i++)
+            for( unsigned j=n_; j<(Nx_-1)*n_; j++)
+                data_[ j + Nx_*n_*(i + Ny_*n_*s)] =
+                    src[ j-n_ + (Nx_-2)*n_*( i-n_ + (Ny_-2)*n_*s)];
 }
 
 }//namespace dg

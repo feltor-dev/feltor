@@ -9,7 +9,7 @@ namespace solovev
 ///@addtogroup geom
 ///@{
 /**
- * @brief Sets values to zero outside psipmax and inside psipmin
+ * @brief Returns zero outside psipmax and inside psipmin, otherwise 1
  */ 
 struct Iris
 {
@@ -34,7 +34,7 @@ struct Iris
     Psip psip_;
 };
 /**
- * @brief Sets values to zero outside psipmax 
+ * @brief Returns zero outside psipmax otherwise 1
  */ 
 struct Pupil
 {
@@ -57,7 +57,44 @@ struct Pupil
     Psip psip_;
 };
 /**
- * @brief Damps the outer boundary in a zone from psipmax to psipmax+ 4*alpha with a normal distribution
+ * @brief Sets values to one outside psipmaxcut, zero else
+ *
+ * \f$ 1 \f$, if \f$ \psi_p(R,Z) > \psi_{p,maxcut}\f$
+ *
+ * \f$ 0 \f$, if \f$ \psi_p(R,Z) < \psi_{p,maxcut}\f$
+ */ 
+struct PsiLimiter
+{
+    PsiLimiter( GeomParameters gp): 
+        gp_(gp),
+        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        }
+
+    double operator( )(double R, double Z)
+    {
+        if( psip_(R,Z) > gp_.psipmaxcut) return 1.;
+        return 0.;
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        if( psip_(R,Z,phi) > gp_.psipmaxcut) return 1.;
+        return 0.;
+    }
+    private:
+    GeomParameters gp_;
+    Psip psip_;
+};
+
+/**
+ * @brief Damps the outer boundary in a zone 
+ * from psipmax to psipmax+ 4*alpha with a normal distribution
+ * Returns 1 inside, zero outside and a gaussian within
+ *
+ * \f$ 0 \f$, if \f$ \psi_p(R,Z) > \psi_{p,max} + 4\alpha \f$
+ *
+ * \f$ 1 \f$, if \f$ \psi_p(R,Z) < \psi_{p,max}\f$
+ *
+ * \f$ \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right)\f$, else
  */ 
 struct GaussianDamping
 {
@@ -82,15 +119,15 @@ struct GaussianDamping
     GeomParameters gp_;
     Psip psip_;
 };
+
 /**
- * @brief Damps lnN quantitie with tanh
+ * @brief Returns a tanh profile shifted to psipmax - 3*alpha
  */ 
 struct TanhDampingProf
 {
-        TanhDampingProf( GeomParameters gp):
+    TanhDampingProf( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
+        psip_(Psip(gp.R_0,gp.A,gp.c)) { }
     double operator( )(double R, double Z)
     {
         return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmax + 3.*gp_.alpha)/gp_.alpha) );
@@ -103,13 +140,14 @@ struct TanhDampingProf
     GeomParameters gp_;
     Psip psip_;
 };
-/*damps from psi_max on outwards*/
+/**
+ * @brief Returns a tanh profile shifted to psipmaxcut + 3*alpha
+ */ 
 struct TanhDampingOut
 {
         TanhDampingOut( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
+        psip_(Psip(gp.R_0,gp.A,gp.c)) { }
     double operator( )(double R, double Z)
     {
         return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
@@ -122,6 +160,10 @@ struct TanhDampingOut
     GeomParameters gp_;
     Psip psip_;
 };
+
+/**
+ * @brief Returns a tanh profile shifted to psipmaxcut - 3*alpha
+ */ 
 struct TanhDampingIn
 {
         TanhDampingIn( GeomParameters gp):
@@ -140,7 +182,10 @@ struct TanhDampingIn
     GeomParameters gp_;
     Psip psip_;
 };
-/*increases from psi_maxlap on*/
+
+/**
+ * @brief Returns an inverse tanh profile shifted to psipmaxlap + 3*alpha
+ */ 
 struct TanhDampingInv
 {
         TanhDampingInv( GeomParameters gp):
@@ -162,6 +207,7 @@ struct TanhDampingInv
 
 /**
  * @brief source for quantities N ... dtlnN = ...+ source/N
+ * Returns a tanh profile shifted to psipmin-3*alpha
  */
 struct TanhSource
 {
@@ -210,6 +256,10 @@ struct Gradient
 };
 /**
  * @brief Returns density profile with variable peak amplitude and background amplitude 
+ *
+ * \f$ N(R,Z) =  A_{bg} + A_{peak}\frac{\psi_p} {\psi_p(R_0, 0)} \f$, for \f$\psi_p <0 \f$ 
+ *
+ * \f$ N(R,Z) =  A_{bg} \f$, else
  */ 
 struct Nprofile
 {
