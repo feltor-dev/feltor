@@ -30,35 +30,39 @@ int main( int argc, char* argv[])
     if( argc == 1)
     {
         try{
-        v = file::read_input("input.txt");
-        }catch( toefl::Message& m){m.display();}
+            v = file::read_input("input.txt");
+            v3 = file::read_input( "geometry_params.txt"); 
+        }catch( toefl::Message& m){
+            m.display();
+            return -1;
+        }
     }
-    else if( argc == 2)
+    else if( argc == 3)
     {
-        v = file::read_input( argv[1]);
+        try{
+            v = file::read_input(argv[1]);
+            v3 = file::read_input( argv[2]); 
+        }catch( toefl::Message& m){
+            m.display();
+            return -1;
+        }
     }
     else
     {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
 
     /////////////////////////////////////////////////////////////////////////
     const eule::Parameters p( v);
     p.display( std::cout);
+    const solovev::GeomParameters gp(v3);
+    gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4], "");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4]*gp.elongation, "");
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
     //////////////////////////////////////////////////////////////////////////
-    try{ v3 = file::read_input( "geometry_params.txt"); }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-        return -1;}
-
-    const solovev::GeomParameters gp(v3);
-    gp.display( std::cout);
     double Rmin=gp.R_0-(gp.boxscale)*gp.a;
     double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
     double Rmax=gp.R_0+(gp.boxscale)*gp.a; 

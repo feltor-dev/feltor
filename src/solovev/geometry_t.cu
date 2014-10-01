@@ -121,7 +121,7 @@ int main( int argc, char* argv[])
            "source", "bath", "bath"};
 
 
-    title << std::setprecision(2) << std::scientific;
+    title << std::setprecision(4) << std::scientific;
     while (!glfwWindowShouldClose( w ))
     {
         for(unsigned i=1; i<=18; i++)
@@ -131,6 +131,7 @@ int main( int argc, char* argv[])
             colors.scalemax() = (float)thrust::reduce( visual[i].begin(), visual[i].end(), -100., thrust::maximum<double>()   );
             colors.scalemin() =  (float)thrust::reduce( visual[i].begin(), visual[i].end(), colors.scalemax() ,thrust::minimum<double>() );
             if(i==1) colors.scalemax() = - colors.scalemin();
+            if(i<=6 && i>=4) colors.scalemax() = - colors.scalemin();
             if(i==18) colors.scalemin() = 1.0;
             title <<names[i]<<" / "/*<<colors.scalemin()<<"  "*/ << colors.scalemax()<<"\t";
             render.renderQuad( visual[i], grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);

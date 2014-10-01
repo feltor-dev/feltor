@@ -33,7 +33,7 @@
 
 ------------------Initial blob parameters---------------------
 
-16) amp (perturbation amplitude)            =  0.5    (1.0)
+16) amp (perturbation amplitude)            =  1.0    (1.0)
 17) sigma (blob variance in units of rho_s) =  10     (10)
 18) x-position ( in units of lx)            =  0.25   (0.4)
 19) y-position ( in units of ly)            =  0.5   (0.5)

@@ -27,10 +27,10 @@
 ------------------Miscellaneous----------------------
 20) alpha (Damping thickness)=  0.05
 21) inner density ( log10 N )=  1.5
-22) k_psi (zonal modes)      =  8
-23) RK4 epsilon              =  1e-5
-24) boxscale (1<bs<R0/a)     =  1.2  (a little larger than cut)
-25) Profile amplitude        =  2.0  (peak amplitude)
+22) k_psi (zonal modes)      =  1
+23) RK4 epsilon              =  1e-4
+24) boxscale (1<bs<R0/a)     =  0.43 (a little larger than cut)
+25) Profile amplitude        =  0.0  (peak amplitude)
 26) Background Prof amplitude=  1.   (density on the boundary)
 27) psip_max_cut             =  -0.5  (critical psip for limiter, -1 < psip < psipmax)
 28) psip_max_lap             =  0.0  (?)

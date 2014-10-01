@@ -50,7 +50,6 @@ int main( int argc, char* argv[])
     catch (toefl::Message& m) {  m.display(); 
         geom = file::read_file( argv[2]);
         std::cout << geom << std::endl;
-        for( unsigned i = 0; i<v.size(); i++)
         return -1;
     }
 
