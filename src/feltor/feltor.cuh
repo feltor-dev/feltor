@@ -186,9 +186,11 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
+
     unsigned numberg    =  invert_invgamma(invgamma,chi,y[1]); //omega= Gamma (Ni-1)
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+
     if( number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
@@ -230,7 +232,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //update energetics, 2% of total time
     for(unsigned i=0; i<2; i++)
     {
-        dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1));
+        dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1)); //npe = N+1
         dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
     }
     mass_ = dg::blas2::dot( one, w3d, npe[0] ); //take real ion density which is electron density!!
