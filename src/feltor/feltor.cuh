@@ -69,14 +69,14 @@ struct Rolkar
         dg::blas1::axpby( -p.c/p.mu[0], omega, 1., y[2]);   
         dg::blas1::axpby( -p.c/p.mu[1], omega, 1., y[3]);   
         //damping
-//         for( unsigned i=0; i<y.size(); i++){
-//            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
-//         }
+        for( unsigned i=0; i<y.size(); i++){
+           dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
+        }
     }
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const Preconditioner& weights(){return LaplacianM_perp.weights();}
     const Preconditioner& precond(){return LaplacianM_perp.precond();}
-    const container& damping(){return dampgauss_;}
+    const container& damping(){return dampin_;}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
@@ -366,8 +366,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
         
         //damping 
-//         dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
-//         dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
+        dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
+        dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
 
     }
     t.toc();
