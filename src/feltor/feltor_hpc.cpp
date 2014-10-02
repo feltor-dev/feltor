@@ -72,10 +72,10 @@ int main( int argc, char* argv[])
     geom = file::read_file( argv[2]);
     const solovev::GeomParameters gp(v3);
     if(rank==0) gp.display( std::cout);
-    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
-    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
-    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscale*gp.a;
+    double Zmin=-p.boxscale*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscale*gp.a; 
+    double Zmax=p.boxscale*gp.a*gp.elongation;
    
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
      dg::MPI_Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical, comm);  
@@ -89,13 +89,13 @@ int main( int argc, char* argv[])
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
     //solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Nprofile grad(gp); //initial background profile
+    solovev::Nprofile grad(gp, p.bgprofamp, p.nprofileamp); //initial background profile
     
     std::vector<dg::MVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 
     //field aligned blob 
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
     y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
     y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);

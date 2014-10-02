@@ -63,10 +63,10 @@ int main( int argc, char* argv[])
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
 
     //////////////////////////////////////////////////////////////////////////
-    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
-    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
-    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscale*gp.a;
+    double Zmin=-p.boxscale*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscale*gp.a; 
+    double Zmax=p.boxscale*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
@@ -79,13 +79,13 @@ int main( int argc, char* argv[])
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
     //solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Nprofile grad(gp); //initial background profile
+    solovev::Nprofile grad(gp, p.bgprofamp, p.nprofileamp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 
     //field aligned blob 
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
     y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
     y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
@@ -95,13 +95,13 @@ int main( int argc, char* argv[])
     //dg::blas1::pointwiseDot(rolkar.damping(),y1[1], y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
-    feltor.initializene(y0[1],y0[0]);    
+    //feltor.initializene(y0[1],y0[0]);    
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-//     dg::AB< 3, std::vector<dg::DVec> > ab( y0);
+//   dg::AB< 3, std::vector<dg::DVec> > ab( y0);
     karniadakis.init( feltor, rolkar, y0, p.dt);
 // // ab.init( feltor,  y0, p.dt);
     dg::DVec dvisual( grid.size(), 0.);
@@ -228,14 +228,14 @@ int main( int argc, char* argv[])
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
-            try{ karniadakis( feltor, rolkar, y0);}
+            //try{ karniadakis( feltor, rolkar, y0);}
 //             try{ ab( feltor,  y0);}
-            catch( dg::Fail& fail) { 
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose( w, GL_TRUE);
-                break;
-            }
+            //catch( dg::Fail& fail) { 
+            //    std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+            //    std::cerr << "Does Simulation respect CFL condition?\n";
+            //    glfwSetWindowShouldClose( w, GL_TRUE);
+            //    break;
+            //}
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

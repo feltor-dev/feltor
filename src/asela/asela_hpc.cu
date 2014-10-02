@@ -14,9 +14,8 @@
 
 
 #include "asela.cuh"
-#include "bessel.h"
-#include "parameters.h"
-#include "geometry.h"
+#include "feltor/parameters.h"
+#include "solovev/geometry.h"
 
 
 /*
@@ -43,7 +42,7 @@ int main( int argc, char* argv[])
         v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const Parameters p( v);
+    const eule::Parameters p( v);
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
@@ -56,10 +55,10 @@ int main( int argc, char* argv[])
 
      const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
-    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
-    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscale*gp.a;
+    double Zmin=-p.boxscale*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscale*gp.a; 
+    double Zmax=p.boxscale*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER);  
      
@@ -71,7 +70,7 @@ int main( int argc, char* argv[])
 //       dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a,5.*M_PI/p.Nz, p.sigma, p.sigma, 0.25*p.sigma, p.amp);
     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //       solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Nprofile grad(gp); //initial profile
+    solovev::Nprofile grad(gp, p.bgprofamp, p.nprofileamp); //initial profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
     //damp the bath on psi boundaries 

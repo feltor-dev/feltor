@@ -184,7 +184,7 @@ struct TanhDampingIn
 };
 
 /**
- * @brief Returns an inverse tanh profile shifted to psipmaxlap + 3*alpha
+ * @brief Returns an inverse tanh profile shifted to psipmaxcut + 3*alpha
  */ 
 struct TanhDampingInv
 {
@@ -194,11 +194,11 @@ struct TanhDampingInv
         }
     double operator( )(double R, double Z)
     {
-        return 1.-0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxlap - 3.*gp_.alpha)/gp_.alpha) );
+        return 1.-0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
     }
     double operator( )(double R, double Z, double phi)
     {
-        return 1.-0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxlap - 3.*gp_.alpha)/gp_.alpha) );
+        return 1.-0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
     GeomParameters gp_;
@@ -230,29 +230,28 @@ struct TanhSource
     Psip psip_;
 };
 /**
- * @brief Computes the background gradient for the logarithmic densities on n>=1
+ * @brief Computes a background gradient 
  */ 
 struct Gradient
 {
-    Gradient( GeomParameters gp):
+    Gradient( GeomParameters gp, double amp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(Psip(gp.R_0,gp.A,gp.c)),amp_(amp) {
         }
    double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) < (gp_.psipmin)) return exp(gp_.lnN_inner*log(10)); 
-        if( psip_(R,Z) < 0.) return -1./gp_.psipmin*(psip_(R,Z) -gp_.psipmin +exp(gp_.lnN_inner*log(10))*(- psip_(R,Z)));
+        if( psip_(R,Z) < (gp_.psipmin)) return amp_; 
+        if( psip_(R,Z) < 0.) return -1./gp_.psipmin*(psip_(R,Z) -gp_.psipmin +amp_*(- psip_(R,Z)));
         return 1.;
     }
     double operator( )(double R, double Z, double phi)
     {
-        if( psip_(R,Z,phi) < (gp_.psipmin)) return exp(gp_.lnN_inner*log(10)); 
-        if( psip_(R,Z,phi) < 0.) return -1./gp_.psipmin*(psip_(R,Z,phi) -gp_.psipmin +exp(gp_.lnN_inner*log(10))*(- psip_(R,Z,phi)));
-        return 1.;
+        return operator()(R,Z);
     }
     private:
     GeomParameters gp_;
     Psip psip_;
+    double amp_;
 };
 /**
  * @brief Returns density profile with variable peak amplitude and background amplitude 
@@ -263,23 +262,23 @@ struct Gradient
  */ 
 struct Nprofile
 {
-     Nprofile( GeomParameters gp):
+     Nprofile( GeomParameters gp, double amp_bg, double amp_peak):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(Psip(gp.R_0,gp.A,gp.c)),ampbg_(amp_bg), amppeak_(amp_peak){
         }
    double operator( )(double R, double Z)
     {
-        if (psip_(R,Z)<0.) return gp_.bgprofamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*gp_.nprofileamp);
-        return gp_.bgprofamp;
+        if (psip_(R,Z)<0.) return ampbg_ + psip_(R,Z)/psip_(gp_.R_0,0.0)*amppeak_;
+        return ampbg_;
     }
     double operator( )(double R, double Z, double phi)
     {
-        if (psip_(R,Z,phi)<0.) return gp_.bgprofamp+(psip_(R,Z,phi)/psip_(gp_.R_0,0.0,0.0)*gp_.nprofileamp);
-        return gp_.bgprofamp;
+        return (*this)(R,Z);
     }
     private:
     GeomParameters gp_;    
     Psip psip_;
+    double ampbg_, amppeak_;
 };   
 
 /**
@@ -287,25 +286,25 @@ struct Nprofile
  */ 
 struct ZonalFlow
 {
-    ZonalFlow(GeomParameters gp,  double amp):
+    ZonalFlow(GeomParameters gp,  double amp, double k_psi):
         gp_(gp),
-        amp_(amp),
+        amp_(amp), kpsi_(k_psi),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
     }
     double operator() (double R, double Z) 
     {
-      if (psip_(R,Z)<0.) return (amp_*abs(cos(2.*M_PI*psip_(R,Z)*gp_.k_psi)));
+      if (psip_(R,Z)<0.) return (amp_*abs(cos(2.*M_PI*psip_(R,Z)*kpsi_)));
       return 0.;
       
     }
     double operator() (double R, double Z,double phi) 
     {
-        if (psip_(R,Z,phi)<0.) return ( amp_*abs(cos(2.*M_PI*psip_(R,Z,phi)*gp_.k_psi)));
+        if (psip_(R,Z,phi)<0.) return ( amp_*abs(cos(2.*M_PI*psip_(R,Z,phi)*kpsi_)));
         return 0.;
     }
     private:
     GeomParameters gp_;
-    double amp_;
+    double amp_, kpsi_;
     Psip psip_;
 };
 

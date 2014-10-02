@@ -181,10 +181,10 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
 template<class Matrix, class container, class P>
 container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
-    dg::blas1::axpby( -p.mu[0], y[0], p.mu[1], y[1], chi);      //chi =  \mu_i (n_i-1) - \mu_e (n_e-1)
-    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]-p.mu[0]));
+    dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
+    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
     dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi);                   //(\mu_i n_i - \mu_e n_e) /B^2
+    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
     unsigned numberg    =  invert_invgamma(invgamma,chi,y[1]); //omega= Gamma (Ni-1)
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
@@ -233,7 +233,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1));
         dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
     }
-    mass_ = dg::blas2::dot( one, w3d, y[0] ); //take real ion density which is electron density!!
+    mass_ = dg::blas2::dot( one, w3d, npe[0] ); //take real ion density which is electron density!!
     double Ue = p.tau[0]*dg::blas2::dot( logn[0], w3d, y[0]); // tau_e n_e ln(n_e)
     double Ui = p.tau[1]*dg::blas2::dot( logn[1], w3d, y[1]);// tau_i n_i ln(n_i)
     double Uphi = 0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); 

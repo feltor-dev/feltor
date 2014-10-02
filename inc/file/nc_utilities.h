@@ -119,9 +119,9 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::Grid3d<double>& g)
     dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
     dg::Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
     int retval;
-    if( retval = define_dimension( ncid, "x", &dimsIDs[2], gx));
-    if( retval = define_dimension( ncid, "y", &dimsIDs[1], gy));
-    if( retval = define_dimension( ncid, "z", &dimsIDs[0], gz));
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx)));
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy)));
+    if( (retval = define_dimension( ncid, "z", &dimsIDs[0], gz)));
     return retval;
 }
 
@@ -163,8 +163,8 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
     dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
-    if( retval = define_dimension( ncid, "x", &dimsIDs[2], gx));
-    if( retval = define_dimension( ncid, "y", &dimsIDs[1], gy));
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx)));
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy)));
 
     if( (retval = nc_def_dim( ncid, "time", NC_UNLIMITED, &dimsIDs[0])) ){ return retval;}
     if( (retval = nc_def_var( ncid, "time", NC_DOUBLE, 1, &dimsIDs[0], tvarID))){return retval;}

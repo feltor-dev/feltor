@@ -40,10 +40,10 @@ int main( int argc, char* argv[])
 
     const solovev::GeomParameters gp(v);
     gp.display( std::cout);
-    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
-    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
-    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
+    double Rmin=gp.R_0-(1.2)*gp.a;
+    double Zmin=-(1.2)*gp.a*gp.elongation;
+    double Rmax=gp.R_0+(1.2)*gp.a; 
+    double Zmax=(1.2)*gp.a*gp.elongation;
     //construct all geometry quantities
     solovev::Psip psip(gp.R_0,gp.A,gp.c);
     solovev::PsipR psipR(gp.R_0,gp.A,gp.c);
@@ -64,9 +64,9 @@ int main( int argc, char* argv[])
     solovev::Pupil pupil(gp);
     solovev::PsiLimiter limiter(gp);
     solovev::GaussianDamping dampgauss(gp);
-    solovev::ZonalFlow zonalflow(gp,0.5);
-    solovev::Gradient gradient(gp);
-    solovev::Nprofile prof(gp);
+    solovev::ZonalFlow zonalflow(gp, 0.5, 1);
+    solovev::Gradient gradient(gp, 1);
+    solovev::Nprofile prof(gp, 1, 2);
     solovev::TanhDampingIn damp2(gp);
     solovev::TanhDampingProf dampcut(gp);
     solovev::TanhDampingInv source(gp);
@@ -82,17 +82,19 @@ int main( int argc, char* argv[])
     hvisual[4 ] = dg::evaluate( curvatureR, grid);
     hvisual[5 ] = dg::evaluate( curvatureZ, grid);
     hvisual[6 ] = dg::evaluate( gradLnB, grid);
+
     hvisual[7 ] = dg::evaluate( iris, grid);
     hvisual[8 ] = dg::evaluate( pupil, grid);
     hvisual[9 ] = dg::evaluate( dampgauss, grid);
     hvisual[10] = dg::evaluate( zonalflow, grid);
     hvisual[11] = dg::evaluate( gradient, grid);
     hvisual[12] = dg::evaluate( field, grid);
+
     hvisual[13] = dg::evaluate( prof, grid);
     hvisual[14] = dg::evaluate( limiter, grid);
     hvisual[15] = dg::evaluate( dampcut, grid);
     hvisual[16] = dg::evaluate( bath1, grid);
-    hvisual[17] = dg::evaluate( bath1,grid);
+    hvisual[17] = dg::evaluate( bath2, grid);
     dg::blas1::pointwiseDot(hvisual[8], hvisual[17],hvisual[17]);
     hvisual[18] = dg::evaluate( init0,grid);
     dg::blas1::pointwiseDot(hvisual[9], hvisual[18], hvisual[18]);
@@ -115,13 +117,12 @@ int main( int argc, char* argv[])
     //create a colormap
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
 
-    std::string names[] = { "", "psip", "ipol", "1/B", "K^R", "K_Z", 
-           "gradLnB", "iris", "pupil", "damping", "zonal", 
-           "grad", "invbf", "nprof", "limiter", "tanhcut", 
-           "source", "bath", "bath"};
+    std::string names[] = { "", "psip", "ipol", "1/B", "K^R", "K_Z", "gradLnB", 
+        "iris", "pupil", "damping", "zonal", "grad", "invbf", 
+        "nprof", "limiter", "tanhcut", "bath1", "bath2", "gaussian3d"};
 
 
-    title << std::setprecision(4) << std::scientific;
+    title << std::setprecision(2) << std::scientific;
     while (!glfwWindowShouldClose( w ))
     {
         for(unsigned i=1; i<=18; i++)

@@ -3,7 +3,7 @@
                           mini AUG with X-point
           ---------------------------------------------------
 
-------------------Solovev coefficients----------------------
+@------------------Solovev coefficients----------------------
 1)  A                        = -2.27272727272727272727272727272727272727272727272727272727273     
 2)  c1                       =  0.214957360664829231719469233939    
 3)  c2                       =  7.18041263889389012132123644681   
@@ -18,20 +18,14 @@
 12) c11                      = -0.743117068017008983595856348483     
 13) c12                      =  0.0804081093281427254944680087478   
 ------------------geometric coefficients----------------------
-14)  R0 (in units of rhos)   =  150.     (150)
-15)  psip_min                = -1. (>-1.5)
-16)  psip_max                =  0.1 (0.0)
-17) inv aspect ratio (a/R0)  =  0.16666666666666666666666667
-18) elongation               =  1.7
-19) triangularity            =  0.33
+14) R0 (in units of rhos)    =  150.     (150)
+15) inv aspect ratio (a/R0)  =  0.16666666666666666666666667
+16) elongation               =  1.7
+17) triangularity            =  0.33
 ------------------Miscellaneous----------------------
-20) alpha (Damping thickness)=  0.05
-21) inner density ( log10 N )=  0.01
-22) k_psi (zonal modes)      =  1
-23) RK4 epsilon              =  1e-5
-24) boxscale (1<bs<R0/a)     =  1.2
-25) Profile amplitude        =  4.0
-26) Background Prof amplitude=  1.
-27) psip_max_cut             =  -0.5
-28) psip_max_lap             =  0.0
-
+18) alpha (Damping thickness)=  0.05
+19) RK4 epsilon              =  1e-5
+20) psip_min                 = -1. (>-1.5)
+21) psip_max                 =  0.1 (0.0)
+22) psip_max_cut             =  -0.5
+@ ------------------------------------------------------------------------

@@ -2,10 +2,10 @@
 
 #include "dg/algorithm.h"
 
-#include "parameters.h"
+#include "feltor/parameters.h"
 // #include "geometry_circ.h"
-#include "geometry.h"
-#include "init.h"
+#include "solovev/geometry.h"
+#include "solovev/init.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
