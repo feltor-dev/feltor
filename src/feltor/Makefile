@@ -48,12 +48,13 @@ ifeq ($(strip $(system)),vsc)
 INCLUDE += -I$(HOME)/include
 INCLUDE += -I/opt/intel/impi/4.1.0/include64 
 INCLUDE += -I/opt/sw/netcdf/4.3/include
+INCLUDE += -I/opt/sw/hdf5/1.8.10-p1/include
 CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
 
-LIBS 	 = -L/opt/sw/hdf5/1.8.10-p1/lib -lhdf5 -lz
+LIBS 	 = -L/opt/sw/hdf5/1.8.10-p1/lib -lhdf5 -lhdf5_hl
 LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
 LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
-LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf
+LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
 
