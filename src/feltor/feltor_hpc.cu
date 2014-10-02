@@ -99,7 +99,7 @@ int main( int argc, char* argv[])
     /////////////////////////////set up netcdf//////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
-    err = nc_create( argv[3], NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;

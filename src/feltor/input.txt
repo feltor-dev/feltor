@@ -5,6 +5,7 @@
 
 --------------------Space and Time discretization------------
 
+
 1)  n  (# of x,y-polynomials)            =   4      (3)
 2)  nx (grid points in x)                =   80 (192)
 3)  ny (grid points in y)                =   80 (192) 
@@ -20,7 +21,6 @@
 
 ------------------Physical parameters----------------------
 
-<<<<<<< HEAD
 14) mu_e (-m_e/m_i)                     =-0.5e-4
 15) tau (Ti/Te)                         = 0.0    (0.0)
 16) beta_e0                             = 0.0  (1e-4)
@@ -38,7 +38,6 @@
 
 ------------------Miscellaneous----------------------------
 
-
 25) Damping zone thickness (in units of rho_s)  = 20 
 26) Damping zone strength                   = 1e-3
 27) particle source amplitude               = 0.0
@@ -48,35 +47,6 @@
 31) nz_out (# grid points in output field)  = 20
 32) itstp  (steps between outputs)          = 1000     (5)
 33) total # of outputs (excluding first)    = 5000
-=======
-10) mu_e (-m_e/m_i)                     =-0.5e-4
-11) tau (Ti/Te)                         = 0.0    (0.0)
-12) beta_e0                             = 0.0  (1e-4)
-13) nu_perp                             = 1e-4
-14) nu_parallel  (viscosity)            = 1e-3   (0.001)
-15) para resistivity (c)                = 5e-4   (3e-5 gives a drift wave)
 
----------------Initial perturbation parameters---------------------
-
-16) amp (perturbation amplitude)            =  0.25     (1.0)
-17) sigma (blob variance in units of rho_s) =  2.0     (10)
-18) x-position ( in units of a)             =  0.70   (0.4)
-19) y-position ( in units of a)             =  0.00  (0.5)
-20) sigma_z (variance in units of R_0)      =  1
-
-------------------Miscellaneous----------------------------
-
-21) Damping zone thickness (in units of rho_s)  = 20 
-22) Damping zone strength                   = 1e-3
-23) particle source amplitude               = 0.0
-24) n_out (# of x-y polynomials in output)  = 3
-25) nx_out (# grid points in output field)  = 70 
-26) ny_out (# grid points in output field)  = 70
-27) nz_out (# grid points in output field)  =  20
-28) itstp  (steps between outputs)          = 10    (5)
-29) total # of outputs (excluding first)    = 5000 
-
-
->>>>>>> e6518ba57bc8ecf474931c46d703c7223cfa5053
 
 @ ------------------------------------------------------------
