@@ -11,10 +11,10 @@
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  40 
-8)  ny_out (# grid points in output field)  =  40
+7)  nx_out (# grid points in output field)  =  50 
+8)  ny_out (# grid points in output field)  =  50
 9)  nz_out (# grid points in output field)  =   5
-10) itstp  (steps between outputs)          =  1     (5)
+10) itstp  (steps between outputs)          =  20     (5)
 11) total # of outputs (excluding first)    =  300 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-3 (1e-6)
