@@ -71,21 +71,21 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    //solovev::ZonalFlow init0(gp,p.amp);
+    solovev::ZonalFlow init0(gp,p.amp);
     solovev::Nprofile grad(gp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 
     //field aligned blob 
-    dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
-    y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
-    y1[2] = dg::evaluate( gaussianZ, grid);
-    dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
+//     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+//     dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
+//     y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
+//     y1[2] = dg::evaluate( gaussianZ, grid);
+//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
-    //y1[1] = dg::evaluate( init0, grid);
+    y1[1] = dg::evaluate( init0, grid);
     //damp the bath on psi boundaries 
-    //dg::blas1::pointwiseDot(rolkar.damping(), y1[1], y1[1]);  
+    dg::blas1::pointwiseDot(rolkar.damping(), y1[1], y1[1]);  
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
     feltor.initializene(y0[1],y0[0]);    
