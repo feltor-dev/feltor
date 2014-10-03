@@ -37,7 +37,6 @@ struct Rolkar
         expy(2, temp),
         dampin_( dg::evaluate( solovev::TanhDampingIn(gp ), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
-        lapiris_( dg::evaluate( solovev::TanhDampingInv(gp ), g)),
         LaplacianM_perp ( g, dg::normed, dg::symmetric)
     {
     }
@@ -243,21 +242,21 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     double Upare = -0.5*p.mu[0]*dg::blas2::dot( y[0], w3d, omega); //N_e U_e^2
         dg::blas1::pointwiseDot(y[3], y[3], omega); //U_i^2
     double Upari =  0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); //N_i U_i^2
-    energy_ = Ue + Ui  + Uphi + Upare + Upari;
+    energy_ = Ue + Ui  + Uphi + Upare + Upari; //E_Ne +E_Ni + E_E + E_Ue + E_Ui
 
-    //// the resistive dissipation without FLR      
-    //    dg::blas1::pointwiseDot(y[0], y[2], omega); //N_e U_e 
-    //    dg::blas1::pointwiseDot( y[1], y[3], chi); //N_i U_i
-    //    dg::blas1::axpby( -1., omega, 1., chi); //-N_e U_e + N_i U_i                  //dt(lnN,U) = dt(lnN,U) + dz (dz (lnN,U))
-    //double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*J_parallel^2
+    //// the resistive dissipation
+    dg::blas1::pointwiseDot(npe[0], y[2], omega); //N_e U_e 
+    dg::blas1::pointwiseDot( npe[0], y[3], chi); //N_e U_i
+    dg::blas1::axpby( -1., omega, 1., chi); //chi  = -N_e U_e + N_e U_i   
+    double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*N_e^2 e^2 (U_i-U_e)^2
 
     //Dissipative terms without FLR
-//         dg::blas1::axpby(1.,dg::evaluate( dg::one, g),1., y[0] ,chi); //(1+lnN_e)
+//         dg::blas1::axpby(1.,dg::evaluate( dg::one, g),1., logn[0] ,chi); //(1+lnN_e)
 //         dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //(1+lnN_e-phi)
-//         dg::blas1::pointwiseDot( expy[0], chi, omega); //N_e phi_e     
+//         dg::blas1::pointwiseDot( npe[0], chi, omega); //N_e phi_e     
 //         dg::blas2::gemv( lapperp, y[0],chi);
 //         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 lnN_e
-//     double Dperpne =  p.nu_perp*dg::blas2::dot(omega, w3d, chi);
+//     double Dperpne =  p.nu_perp*dg::blas2::dot(omega, w3d, chi); // 
 //         dg::blas1::axpby(1.,dg::evaluate( dg::one, g),1., y[1] ,chi); //(1+lnN_i)
 //         dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //(1+lnN_i-phi)
 //         dg::blas1::pointwiseDot( expy[1], chi, omega); //N_i phi_i     
