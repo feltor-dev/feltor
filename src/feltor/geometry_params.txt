@@ -24,7 +24,7 @@
 17) triangularity               =  0.0
 ------------------Miscellaneous--------------------------------------
 18) alpha (Damping thickness)   =  0.01 (sehr klein)
-19) RK4 epsilon                 =  1e-1 (absolute error for Runge Kutta)
+19) RK4 epsilon                 =  1e-5 (absolute error for Runge Kutta)
 20) psip_min                    = -0.7       (used for iris and source > -1)
 21) psip_max                    =  1000.0 (0.0) (used for damping)
 22) psip_max_cut                =  1000.0  (von außen bis critical psip for limiter, -1 < psip < psipmax)

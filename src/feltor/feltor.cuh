@@ -83,7 +83,6 @@ struct Rolkar
     std::vector<container> expy;
     const container dampin_;
     const container dampgauss_;
-    const container lapiris_;
     
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perp;
 
@@ -140,7 +139,7 @@ struct Feltor
     dg::ArakawaX< Matrix, container>    arakawa; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
-    dg::Elliptic< Matrix, container, Preconditioner > pol; 
+    dg::Elliptic< Matrix, container, Preconditioner > pol,lapperp; 
     dg::Helmholtz< Matrix, container, Preconditioner > invgamma;
     dg::Invert<container> invert_pol,invert_invgamma;
 
@@ -170,6 +169,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
     pol(     g, dg::not_normed, dg::symmetric), 
+    lapperp ( g, dg::normed, dg::symmetric),
     invgamma(g,-0.5*p.tau[1]*p.mu[1]),
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
@@ -245,29 +245,29 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     energy_ = Ue + Ui  + Uphi + Upare + Upari; //E_Ne +E_Ni + E_E + E_Ue + E_Ui
 
     //// the resistive dissipation
-    dg::blas1::pointwiseDot(npe[0], y[2], omega); //N_e U_e 
-    dg::blas1::pointwiseDot( npe[0], y[3], chi); //N_e U_i
-    dg::blas1::axpby( -1., omega, 1., chi); //chi  = -N_e U_e + N_e U_i   
-    double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*N_e^2 e^2 (U_i-U_e)^2
-
-    //Dissipative terms without FLR
-//         dg::blas1::axpby(1.,dg::evaluate( dg::one, g),1., logn[0] ,chi); //(1+lnN_e)
+//     dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e 
+//     dg::blas1::pointwiseDot( npe[1], y[3], chi);  //N_i U_i
+//     dg::blas1::axpby( -1., omega, 1., chi); //chi  = -N_e U_e + N_i U_i   
+//     double Dres = -p.c*dg::blas2::dot(chi, w3d, chi); //- C*(N_i U_i + N_e U_e)^2
+// 
+//     //Perpendicular Dissipative terms
+//         dg::blas1::axpby(1.,one,1., logn[0] ,chi); //(1+lnN_e)
 //         dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //(1+lnN_e-phi)
 //         dg::blas1::pointwiseDot( npe[0], chi, omega); //N_e phi_e     
 //         dg::blas2::gemv( lapperp, y[0],chi);
-//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 lnN_e
+//         dg::blas2::gemv(lapperp, chi,chi);//nabla_RZ^4 lnN_e
 //     double Dperpne =  p.nu_perp*dg::blas2::dot(omega, w3d, chi); // 
-//         dg::blas1::axpby(1.,dg::evaluate( dg::one, g),1., y[1] ,chi); //(1+lnN_i)
+//         dg::blas1::axpby(1.,one,1., logn[1] ,chi); //(1+lnN_i)
 //         dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //(1+lnN_i-phi)
-//         dg::blas1::pointwiseDot( expy[1], chi, omega); //N_i phi_i     
-//         dg::blas2::gemv( lapperp, y[1], chi);
-//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 lnN_i
+//         dg::blas1::pointwiseDot( npe[1], chi, omega); //N_i phi_i     
+//         dg::blas2::gemv( lapperp,y[1], chi);
+//         dg::blas2::gemv( lapperp,chi,chi);//nabla_RZ^4 lnN_i
 //     double Dperpni = - p.nu_perp*dg::blas2::dot(omega, w3d, chi);
-//         dg::blas1::pointwiseDot( expy[0], y[2], omega); //N_e U_e     
+//         dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e     
 //         dg::blas2::gemv( lapperp, y[2], chi);
 //         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 U_e
 //     double Dperpue = p.nu_perp*p.mu[0]* dg::blas2::dot(omega, w3d, chi);
-//         dg::blas1::pointwiseDot( expy[1], y[3], omega); //N_e U_e     
+//         dg::blas1::pointwiseDot( npe[1], y[3], omega); //N_e U_e     
 //         dg::blas2::gemv( lapperp, y[3], chi);
 //         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 U_i
 //     double Dperpui = - p.nu_perp*p.mu[1]* dg::blas2::dot(omega, w3d, chi);
