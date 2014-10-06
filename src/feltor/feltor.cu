@@ -10,10 +10,10 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
+#include "solovev/geometry.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
-#include "geometry.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -30,39 +30,44 @@ int main( int argc, char* argv[])
     if( argc == 1)
     {
         try{
-        v = file::read_input("input.txt");
-        }catch( toefl::Message& m){m.display();}
+            v = file::read_input("input.txt");
+            v3 = file::read_input( "geometry_params.txt"); 
+        }catch( toefl::Message& m){
+            m.display();
+            return -1;
+        }
     }
-    else if( argc == 2)
+    else if( argc == 3)
     {
-        v = file::read_input( argv[1]);
+        try{
+            v = file::read_input(argv[1]);
+            v3 = file::read_input( argv[2]); 
+        }catch( toefl::Message& m){
+            m.display();
+            return -1;
+        }
     }
     else
     {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
 
     /////////////////////////////////////////////////////////////////////////
     const eule::Parameters p( v);
     p.display( std::cout);
+    const solovev::GeomParameters gp(v3);
+    gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
     draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
 
-    //////////////////////////////////////////////////////////////////////////
-    try{ v3 = file::read_input( "geometry_params.txt"); }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-        return -1;}
 
-    const solovev::GeomParameters gp(v3);
-    gp.display( std::cout);
-    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
-    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
-    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
+    //////////////////////////////////////////////////////////////////////////
+    double Rmin=gp.R_0-p.boxscale*gp.a;
+    double Zmin=-p.boxscale*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscale*gp.a; 
+    double Zmax=p.boxscale*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
@@ -74,8 +79,9 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Nprofile grad(gp); //initial background profile
+    solovev::ZonalFlow init0(p, gp);
+    solovev::Nprofile grad(p, gp); //initial background profile
+
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 
@@ -85,6 +91,7 @@ int main( int argc, char* argv[])
 //     y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
+
 
     y1[1] = dg::evaluate( init0, grid);
     //damp the bath on psi boundaries 
@@ -97,7 +104,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-//     dg::AB< 3, std::vector<dg::DVec> > ab( y0);
+//   dg::AB< 3, std::vector<dg::DVec> > ab( y0);
     karniadakis.init( feltor, rolkar, y0, p.dt);
 // // ab.init( feltor,  y0, p.dt);
     dg::DVec dvisual( grid.size(), 0.);

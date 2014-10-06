@@ -1,7 +1,9 @@
 
           * Input-File for axisymmetric solovev equilibrium*
-          ------------------------------------
+                         miniaug without X-point
+          --------------------------------------------------
 
+@-------------------------Solovev coefficients----------------------
 1)  A                        = -2.27272727272727272727272727272727272727272727272727272727273     
 2)  c1                       =  -0.135254    
 3)  c2                       =  0.0219917   
@@ -15,12 +17,15 @@
 11) c10                      =  0.0 
 12) c11                      =  0.0 
 13) c12                      =  0.0 
-14)  R0 (in units of rhos)   =  150.     (150)
-15)  psip_min                = -1.
-16)  psip_max                =  0.1 (0.0)
-17) inv aspect ratio (a/R0)  =  0.16666666666666666666666667
-18) elongation               =  1.7
-19) triangularity            =  0.33
-20) alpha (Damping thickness)=  0.05
-
-
+------------------geometric coefficients-----------------------------
+14) R0 (in units of rhos)       =  150.     (150)
+15) inv aspect ratio (a/R0)     =  0.16666666666666666666666667
+16) elongation                  =  1.7
+17) triangularity               =  0.33
+------------------Miscellaneous--------------------------------------
+18) alpha (Damping thickness)   =  0.05 (sehr klein)
+19) RK4 epsilon                 =  1e-6 (absolute error for Runge Kutta)
+20) psip_min                    = -1       (used for iris and source > -1)
+21) psip_max                    =  0.1 (0.0) (used for damping)
+22) psip_max_cut                =  1000.0  (von außen bis critical psip for limiter, -1 < psip < psipmax)
+@ ------------------------------------------------------------------------

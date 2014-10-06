@@ -3,50 +3,41 @@
                 ---------------------------
 
 
---------------------Space and Time discretization------------
-
-
+@-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   60 (192)
-3)  ny (grid points in y)                =   60 (192) 
+2)  nx (grid points in x)                =   50 (192)
+3)  ny (grid points in y)                =   50 (192) 
 4)  nz (grid points in z)                =   10 (>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
-
-------------------Algorithmic parameters-------------------
-
-6)  eps_pol (stop for polarisation)      =   1e-3 (1e-6)
-7)  eps_max (stop for induction)         =   0.0 (1e-6)
-8)  eps_gamma (stop for Gamma CG)        =   1e-8 (1e-8)
-9)  eps_time ( stop for time inversion ) =   1e-8 
-
-------------------Physical parameters----------------------
-
-14) mu_e (-m_e/m_i)                     =-0.5e-4
-15) tau (Ti/Te)                         = 0.0    (0.0)
-16) beta_e0                             = 0.0  (1e-4)
-17) nu_perp                             = 1e-4
-18) nu_parallel  (viscosity)            = 1e-10   (0.001)
-19) para resistivity (c)                = 5e-4  (3e-5)
-
----------------Initial perturbation parameters---------------------
-
-20) amp (perturbation amplitude)            =  2.     (1.0)
-21) sigma (blob variance in units of rho_s) =  2     (10)
-22) x-position ( in units of a)             =  0.75   (0.4)
-23) y-position ( in units of a)             =  0.0   (0.5)
-24) z mode number (sin(2*Pi*m*z))           =  2
-
-------------------Miscellaneous----------------------------
-
-25) Damping zone thickness (in units of rho_s)  = 20 
-26) Damping zone strength                   = 1e-3
-27) particle source amplitude               = 0.0
-28) n_out (# of x-y polynomials in output)  = 3
-29) nx_out (# grid points in output field)  = 80
-30) ny_out (# grid points in output field)  = 80
-31) nz_out (# grid points in output field)  = 20
-32) itstp  (steps between outputs)          = 10     (5)
-33) total # of outputs (excluding first)    = 5000
-
-
+----------------------------------Output parameters--------------------
+6)  n_out (# of x-y polynomials in output)  =  3
+7)  nx_out (# grid points in output field)  =  50 
+8)  ny_out (# grid points in output field)  =  50
+9)  nz_out (# grid points in output field)  =   5
+10) itstp  (steps between outputs)          =  10     (5)
+11) total # of outputs (excluding first)    =  300 
+-------------------------Algorithmic parameters------------------------
+12)  eps_pol (stop for polarisation)        =   1e-3 (1e-6)
+13)  eps_max (stop for induction)           =   0.0 (1e-6)
+14)  eps_gamma (stop for Gamma CG)          =   1e-8 (1e-8)
+15)  eps_time ( stop for time inversion )   =   1e-8 
+-------------------------Physical parameters----------------------------
+16) mu_e (-m_e/m_i)                         = -0.5e-4
+17) tau (Ti/Te)                             =  0.0    (0.0)
+18) beta_e0                                 =  0.0  (1e-4)
+19) nu_perp                                 =  1e-3
+20) nu_parallel  (viscosity)                =  1e-3   (0.001)
+21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
+------------------------Initial perturbation parameters---------------------
+22) amp (blob amplitude)                    =  0.25    (1.0)
+23) sigma (blob variance in units of rho_s) =  2.0     (10)
+24) x-position ( in units of a)             =  0.4   (0.4)
+25) y-position ( in units of a)             =  0.00  (0.5)
+26) sigma_z (variance in units of R_0)      =  1
+27) k_psi (zonal modes)                     =  3.    
+28) Profile amplitude                       =  10.0  (peak amplitude)
+29) Background Prof amplitude               =  1.   (density on the boundary)
+----------------------------------Miscellaneous----------------------------
+30) particle source amplitude               =  0.0
+31) boxscale (1<bs<R0/a)                    =  1.25  (a little larger than 1)
 @ ------------------------------------------------------------

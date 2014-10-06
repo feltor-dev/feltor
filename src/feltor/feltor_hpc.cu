@@ -12,11 +12,10 @@
 #include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-
+#include "solovev/geometry.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
-#include "geometry.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -50,19 +49,18 @@ int main( int argc, char* argv[])
     catch (toefl::Message& m) {  m.display(); 
         geom = file::read_file( argv[2]);
         std::cout << geom << std::endl;
-        for( unsigned i = 0; i<v.size(); i++)
         return -1;
     }
 
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
-    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
-    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscale*gp.a;
+    double Zmin=-p.boxscale*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscale*gp.a; 
+    double Zmax=p.boxscale*gp.a*gp.elongation;
     //Make grids
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
-     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+    dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
      
     //create RHS 
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
@@ -71,17 +69,20 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(gp,p.amp);
+
+    solovev::ZonalFlow init0(p,gp);
     solovev::Nprofile grad(gp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 
     //field aligned blob 
+
 //     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 //     dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
 //     y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
+
 
     y1[1] = dg::evaluate( init0, grid);
     //damp the bath on psi boundaries 
@@ -121,10 +122,10 @@ int main( int argc, char* argv[])
     err = nc_redef(ncid);
 
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
-    int dataIDs[5];
+    int dataIDs[5], energyID;
     for( unsigned i=0; i<5; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
-    err = nc_def_var( ncid, "energy", NC_DOUBLE, 1, dim_ids, &dataIDs[5]);
+    err = nc_def_var( ncid, "energy", NC_DOUBLE, 1, dim_ids, &energyID);
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
@@ -146,7 +147,7 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 
     double E0 = feltor.energy(), energy0 = E0, E1 = 1, diff = 0;
-    err = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
+    err = nc_put_vara_double( ncid, energyID, start, count,&E1);
     err = nc_close(ncid);
 
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -194,7 +195,7 @@ int main( int argc, char* argv[])
         //write time data
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         E1 = feltor.energy()/energy0;
-        err = nc_put_vara_double( ncid, dataIDs[5], start, count,&E1);
+        err = nc_put_vara_double( ncid, energyID, start, count,&E1);
 
         err = nc_close(ncid);
     }

@@ -58,10 +58,10 @@ int main()
     const solovev::GeomParameters gp(v);
     gp.display( std::cout);
 
-    Rmin=gp.R_0-(gp.boxscale)*gp.a;
-    Zmin=-(gp.boxscale)*gp.a*gp.elongation;
-    Rmax=gp.R_0+(gp.boxscale)*gp.a; 
-    Zmax=(gp.boxscale)*gp.a*gp.elongation;
+    Rmin=gp.R_0-gp.a;
+    Zmin=-gp.a*gp.elongation;
+    Rmax=gp.R_0+gp.a; 
+    Zmax=gp.a*gp.elongation;
     std::cout << "The grid parameters" <<"\n";
     std::cout  << Rmin<<"rho_s " << Rmax <<"rho_s " << Zmin <<"rho_s " <<Zmax <<"rho_s " <<"\n";
     std::cout << "Type n, Nx, Ny, Nz\n";

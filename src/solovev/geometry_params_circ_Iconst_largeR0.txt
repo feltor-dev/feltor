@@ -1,8 +1,9 @@
 
           * Input-File for axisymmetric solovev equilibrium*
-          ------------------------------------
+                            large R0 I_const
+          --------------------------------------------------
 
-------------------Solovev coefficients----------------------
+@------------------Solovev coefficients----------------------
 1)  A                        =  0.0     
 2)  c1                       =  0.0423830791857851111212633618126
 3)  c2                       = -0.108658341742015429132771074262
@@ -18,18 +19,13 @@
 13) c12                      =  0.0 
 ------------------geometric coefficients----------------------
 14) R0 (in units of rhos)    =  1500.     (150)
-15) psip_min                 = -0.7
-16) psip_max                 =  0.0 (0.0)
-17) inv aspect ratio (a/R0)  =  0.016666666666666666666666667
-18) elongation               =  1.0
-19) triangularity            =  0.0
-------------------Miscellaneous----------------------
-20) alpha (Damping thickness)=  0.05
-21) inner density ( log10 N )=  0.01
-22) k_psi (zonal modes)      =  4
-23) RK4 epsilon              =  1e-5
-24) boxscale (1<bs<R0/a)     =  1.3
-25) Profile amplitude        =  0.0
-26) Background Prof amplitude=  1.
-27) psip_max_cut             =  0.0
-28) psip_max_lap             =  0.0
+15) inv aspect ratio (a/R0)  =  0.016666666666666666666666667
+16) elongation               =  1.0
+17) triangularity            =  0.0
+--------------------Miscellaneous----------------------
+18) alpha (Damping thickness)=  0.05
+19) RK4 epsilon              =  1e-5
+20) psip_min                 = -0.7
+21) psip_max                 =  0.0 (0.0)
+22) psip_max_cut             =  0.0
+@ ------------------------------------------------------------------------

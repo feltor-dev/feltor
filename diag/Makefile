@@ -25,7 +25,7 @@ CXXFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
-LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
+LIBS 	 = -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
 ifeq ($(strip $(system)),leo3)
@@ -33,8 +33,10 @@ CXX = mpicxx
 INCLUDE += -I$(HOME)/include
 INCLUDE += -I$(UIBK_HDF5_INC)
 INCLUDE += -I$(UIBK_OPENMPI_INC)
+INCLUDE += -I$(UIBK_NETCDF_4_INC)
 
-LIBS 	+= -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl
+LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl
+LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm 
 GLFLAGS  = -lm
 endif
 
@@ -43,11 +45,13 @@ CXX = g++
 INCLUDE += -I$(HOME)/include
 INCLUDE += -I/opt/sw/hdf5/1.8.11/include
 INCLUDE += -I/opt/intel/impi/4.1.0/include64 
+INCLUDE += -I/opt/sw/netcdf/4.3/include
 CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
 
 LIBS     = -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
 LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
 LIBS 	+= -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
+LIBS 	+= -L/opt/sw/netcdf/4.3/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
@@ -71,6 +75,9 @@ show: show.cpp
 	$(CXX) $< -o $@ -std=c++0x $(CXXFLAGS) $(INCLUDE) -lhdf5 -lhdf5_hl -Wall
 
 com: com.cu
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+
+ncdiag: ncdiag.cpp
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 imp: imp.cu

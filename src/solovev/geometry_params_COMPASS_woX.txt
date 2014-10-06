@@ -3,7 +3,7 @@
                         COMPASS without X-point
           ---------------------------------------------------
           
-------------------Solovev coefficients----------------------
+@------------------Solovev coefficients----------------------
 1)  A                        = -0.531998   
 2)  c1                       =  0.0198511676217816594301918517221
 3)  c2                       = -0.213837708304158653603234606660
@@ -19,21 +19,13 @@
 13) c12                      =  0.0 
 ------------------geometric coefficients----------------------
 14) R0 (in units of rhos)    =  124.096     (150)
-15) psip_min                 = -6. (>-7.6)
-16) psip_max                 =  0.0 (0.0)
-17) inv aspect ratio (a/R0)  =  0.410714
-18) elongation               =  1.75
-19) triangularity            =  0.47
+15) inv aspect ratio (a/R0)  =  0.410714
+16) elongation               =  1.75
+17) triangularity            =  0.47
 ------------------Miscellaneous----------------------
-20) alpha (Damping thickness)=  0.05
-21) inner density ( log10 N )=  0.01
-22) k_psi (zonal modes)      =  1
-23) RK4 epsilon              =  1e-5
-24) boxscale (1<bs<R0/a)     =  1.2
-25) Profile amplitude        =  5.0
-26) Background Prof amplitude=  1.
-27) psip_max_cut             =  0.0
-28) psip_max_lap             =  0.0
-
-
-
+18) alpha (Damping thickness)=  0.05
+19) RK4 epsilon              =  1e-5
+20) psip_min                 = -6. (>-7.6)
+21) psip_max                 =  0.0 (0.0)
+22) psip_max_cut             =  0.0
+@ ------------------------------------------------------------------------
