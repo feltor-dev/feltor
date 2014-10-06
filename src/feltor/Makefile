@@ -2,7 +2,7 @@ system=home
 device=gpu
 
 INCLUDE = -I../../inc  # other project libraries
-INCLUDE+= -I../solovev # geometry library
+INCLUDE+= -I../ # geometry library
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
