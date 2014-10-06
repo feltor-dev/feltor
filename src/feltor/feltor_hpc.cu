@@ -12,11 +12,10 @@
 #include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-
+#include "solovev/geometry.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
-#include "geometry.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -70,8 +69,9 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    //solovev::ZonalFlow init0(p,gp);
-    solovev::Nprofile grad(p,gp); //initial background profile
+
+    //solovev::ZonalFlow init0(gp,p.amp);
+    solovev::Nprofile grad(p, gp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 

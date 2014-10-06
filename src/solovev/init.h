@@ -1,5 +1,7 @@
 #pragma once
 #include "geometry.h"
+#include "feltor/parameters.h"
+
 /*!@file
  *
  * Initialize and Damping objects
@@ -184,75 +186,30 @@ struct TanhDampingIn
 };
 
 /**
- * @brief Returns an inverse tanh profile shifted to psipmaxcut + 3*alpha
- */ 
-struct TanhDampingInv
-{
-        TanhDampingInv( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
-    double operator( )(double R, double Z)
-    {
-        return 1.-0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return 1.-0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-
-/**
  * @brief source for quantities N ... dtlnN = ...+ source/N
  * Returns a tanh profile shifted to psipmin-3*alpha
  */
 struct TanhSource
 {
-        TanhSource( GeomParameters gp, double amp):
+        TanhSource( eule::Parameters p, GeomParameters gp):
+        p_(p),
         gp_(gp),
-        amp_(amp),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
         }
     double operator( )(double R, double Z)
     {
-        return amp_*0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+        return p_.amp_source*0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
     }
     double operator( )(double R, double Z, double phi)
     {
-        return amp_*0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+        return p_.amp_source*0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
-    GeomParameters gp_;
-    double amp_;
-    Psip psip_;
-};
-/**
- * @brief Computes a background gradient 
- */ 
-struct Gradient
-{
-    Gradient( GeomParameters gp, double amp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)),amp_(amp) {
-        }
-   double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) < (gp_.psipmin)) return amp_; 
-        if( psip_(R,Z) < 0.) return -1./gp_.psipmin*(psip_(R,Z) -gp_.psipmin +amp_*(- psip_(R,Z)));
-        return 1.;
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return operator()(R,Z);
-    }
-    private:
+    eule::Parameters p_;
     GeomParameters gp_;
     Psip psip_;
-    double amp_;
 };
+
 /**
  * @brief Returns density profile with variable peak amplitude and background amplitude 
  *
@@ -262,49 +219,50 @@ struct Gradient
  */ 
 struct Nprofile
 {
-     Nprofile( GeomParameters gp, double amp_bg, double amp_peak):
+     Nprofile( eule::Parameters p, GeomParameters gp):
+        p_(p),
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)),ampbg_(amp_bg), amppeak_(amp_peak){
+        psip_(Psip(gp.R_0,gp.A,gp.c)) {
         }
    double operator( )(double R, double Z)
     {
-        if (psip_(R,Z)<0.) return ampbg_ + psip_(R,Z)/psip_(gp_.R_0,0.0)*amppeak_;
-        return ampbg_;
+        if (psip_(R,Z)<0.) return p_.bgprofamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*p_.nprofileamp);
+        return p_.bgprofamp;
     }
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;    
+    eule::Parameters p_;
+    GeomParameters gp_;
     Psip psip_;
-    double ampbg_, amppeak_;
-};   
+};
 
 /**
  * @brief returns zonal flow field 
  */ 
 struct ZonalFlow
 {
-    ZonalFlow(GeomParameters gp,  double amp, double k_psi):
+    ZonalFlow(  eule::Parameters p,GeomParameters gp):
+        p_(p),
         gp_(gp),
-        amp_(amp), kpsi_(k_psi),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
     }
-    double operator() (double R, double Z) 
+    double operator() (double R, double Z)
     {
-      if (psip_(R,Z)<0.) return (amp_*abs(cos(2.*M_PI*psip_(R,Z)*kpsi_)));
+      if (psip_(R,Z)<0.) return (p_.amp*abs(cos(2.*M_PI*psip_(R,Z)*p_.k_psi)));
       return 0.;
-      
+
     }
-    double operator() (double R, double Z,double phi) 
+    double operator() (double R, double Z,double phi)
     {
-        if (psip_(R,Z,phi)<0.) return ( amp_*abs(cos(2.*M_PI*psip_(R,Z,phi)*kpsi_)));
+        if (psip_(R,Z,phi)<0.) return ( p_.amp*abs(cos(2.*M_PI*psip_(R,Z,phi)*p_.k_psi)));
         return 0.;
     }
     private:
     GeomParameters gp_;
-    double amp_, kpsi_;
+    eule::Parameters p_;
     Psip psip_;
 };
 
@@ -340,5 +298,48 @@ struct DeriTestFunction
     Ipol ipol_;
     InvB invB_;
 };
-///@} 
+
+struct DeltaFunction
+{
+    DeltaFunction(Psip psip, double epsilon,double psivalue) :
+         psip_(psip),epsilon_(epsilon),psivalue_(psivalue){
+    }
+    void setepsilon(double temp ){epsilon_ = temp;}
+    void setpsi(double temp ){psivalue_ = temp;}
+
+    double operator()( double R, double Z)
+    {
+        return 1./sqrt(2.*M_PI*epsilon_)*
+               exp( -( (psip_(R,Z)-psivalue_)* (psip_(R,Z)-psivalue_))/2./epsilon_);
+    }
+    double operator()( double R, double Z, double phi)
+    {
+        return 1./sqrt(2.*M_PI*epsilon_)*
+               exp( -((psip_(R,Z,phi)-psivalue_)* (psip_(R,Z,phi)-psivalue_))/2./epsilon_);
+    }
+    private:
+    Psip psip_;
+    double epsilon_;
+    double psivalue_;
+};
+// struct FluxAverage
+// {
+//     FluxAverage(Psip psip, PsipR psipR,PsipZ psipZ, DeltaFunction deltaf) :
+//          psip_(psip),psipR_(psipR),psipZ_(psipZ),deltaf_(deltaf) {
+//
+//     }
+//     double operator()( double psivalue)
+//     {
+//         deltaf.setpsi(psivalue);
+//
+//     }
+//
+//     private:
+//     Psip psip_;
+//     double epsilon_;
+//     double psivalue_;
+// };
+
+///@}
 }//namespace solovev
+

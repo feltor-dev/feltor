@@ -4,8 +4,8 @@
 
 #include "parameters.h"
 // #include "geometry_circ.h"
-#include "geometry.h"
-#include "init.h"
+#include "solovev/geometry.h"
+#include "solovev/init.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -158,7 +158,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
-    source( dg::evaluate(solovev::TanhSource(p,gp), g)),
+    source( dg::evaluate(solovev::TanhSource(p, gp), g)),
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 

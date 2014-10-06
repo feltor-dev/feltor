@@ -29,7 +29,7 @@
 20) nu_parallel  (viscosity)                =  1e-3   (0.001)
 21) para resistivity (c)                    =  1e-3   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
-22) amp (blob amplitude)                    =  1.0     (1.0)
+22) amp (blob amplitude)                    =  0.1    (1.0)
 23) sigma (blob variance in units of rho_s) =  2.0     (10)
 24) x-position ( in units of a)             =  0.4   (0.4)
 25) y-position ( in units of a)             =  0.00  (0.5)

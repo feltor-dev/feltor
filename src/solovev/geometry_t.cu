@@ -18,12 +18,19 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny\n";
     unsigned n, Nx, Ny;
     std::cin >> n>> Nx>>Ny;   
-    std::vector<double> v;
+    std::vector<double> v, v2;
     try{ 
         if( argc==1)
+        {
             v = file::read_input( "geometry_params.txt"); 
+            v2 = file::read_input( "../feltor/input.txt");
+
+        }
         else
+        {
             v = file::read_input( argv[1]); 
+            v2 = file::read_input( argv[2]);
+        }
     }
     catch (toefl::Message& m) {  
         m.display(); 
@@ -31,15 +38,13 @@ int main( int argc, char* argv[])
             std::cout << v[i] << " ";
             std::cout << std::endl;
         return -1;}
-    for( unsigned i = 1; i<v.size(); i++)
-    std::cout <<  v[i] << " ";
-    std::cout << std::endl;
-    std::cout << "Total number of parameters read is: "<<v.size()-1 <<"\n";
-    std::stringstream title;
-    //write parameters from file into variables
 
+    //write parameters from file into variables
     const solovev::GeomParameters gp(v);
+    const eule::Parameters p(v2);
+    p.display( std::cout);
     gp.display( std::cout);
+
     double Rmin=gp.R_0-(1.2)*gp.a;
     double Zmin=-(1.2)*gp.a*gp.elongation;
     double Rmax=gp.R_0+(1.2)*gp.a; 
@@ -64,12 +69,10 @@ int main( int argc, char* argv[])
     solovev::Pupil pupil(gp);
     solovev::PsiLimiter limiter(gp);
     solovev::GaussianDamping dampgauss(gp);
-    solovev::ZonalFlow zonalflow(gp, 0.5, 1);
-    solovev::Gradient gradient(gp, 1);
-    solovev::Nprofile prof(gp, 1, 2);
+    solovev::ZonalFlow zonalflow(p, gp);
+    solovev::Nprofile prof(p, gp);
     solovev::TanhDampingIn damp2(gp);
     solovev::TanhDampingProf dampcut(gp);
-    solovev::TanhDampingInv source(gp);
     dg::BathRZ bath1(16,16,0,Rmin,Zmin, 30.,3.,1.);
     dg::BathRZ bath2(16,16,0,Rmin,Zmin, 30.,30.,10.);
     dg::Gaussian3d init0(gp.R_0+0.75*gp.a, 0.,M_PI/20., 2., 2., 2.,2.);
@@ -87,7 +90,7 @@ int main( int argc, char* argv[])
     hvisual[8 ] = dg::evaluate( pupil, grid);
     hvisual[9 ] = dg::evaluate( dampgauss, grid);
     hvisual[10] = dg::evaluate( zonalflow, grid);
-    hvisual[11] = dg::evaluate( gradient, grid);
+    hvisual[11] = dg::evaluate( zonalflow, grid);
     hvisual[12] = dg::evaluate( field, grid);
 
     hvisual[13] = dg::evaluate( prof, grid);
@@ -118,10 +121,11 @@ int main( int argc, char* argv[])
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
 
     std::string names[] = { "", "psip", "ipol", "1/B", "K^R", "K_Z", "gradLnB", 
-        "iris", "pupil", "damping", "zonal", "grad", "invbf", 
+        "iris", "pupil", "damping", "zonal", "zonal", "invbf", 
         "nprof", "limiter", "tanhcut", "bath1", "bath2", "gaussian3d"};
 
 
+    std::stringstream title;
     title << std::setprecision(2) << std::scientific;
     while (!glfwWindowShouldClose( w ))
     {
