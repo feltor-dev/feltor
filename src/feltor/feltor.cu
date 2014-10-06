@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    //solovev::ZonalFlow init0(gp,p);
+    //solovev::ZonalFlow init0(p,gp);
     solovev::Nprofile grad(p, gp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
@@ -95,7 +95,7 @@ int main( int argc, char* argv[])
     //dg::blas1::pointwiseDot(rolkar.damping(),y1[1], y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
-    //feltor.initializene(y0[1],y0[0]);    
+    feltor.initializene(y0[1],y0[0]);    
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
@@ -228,14 +228,14 @@ int main( int argc, char* argv[])
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
-            //try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis( feltor, rolkar, y0);}
 //             try{ ab( feltor,  y0);}
-            //catch( dg::Fail& fail) { 
-            //    std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-            //    std::cerr << "Does Simulation respect CFL condition?\n";
-            //    glfwSetWindowShouldClose( w, GL_TRUE);
-            //    break;
-            //}
+            catch( dg::Fail& fail) { 
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                glfwSetWindowShouldClose( w, GL_TRUE);
+                break;
+            }
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

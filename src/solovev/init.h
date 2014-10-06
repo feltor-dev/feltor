@@ -1,5 +1,7 @@
 #pragma once
 #include "geometry.h"
+#include "feltor/parameters.h"
+
 /*!@file
  *
  * Initialize and Damping objects

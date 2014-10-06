@@ -2,6 +2,7 @@ system=home
 device=gpu
 
 INCLUDE = -I../../inc # other project libraries
+INCLUDE+= -I../ # other project libraries
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
