@@ -384,3 +384,4 @@ void Feltor<Matrix, container, P>::curve( container& src, container& target)
 ///@}
 
 } //namespace eule
+
