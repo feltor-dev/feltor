@@ -34,7 +34,7 @@
 24) x-position ( in units of a)             =  0.4   (0.4)
 25) y-position ( in units of a)             =  0.00  (0.5)
 26) sigma_z (variance in units of R_0)      =  1
-27) k_psi (zonal modes)                     =  3.    
+27) k_psi (zonal modes)                     =  0.05    
 28) Profile amplitude                       =  10.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
