@@ -88,7 +88,7 @@ int main( int argc, char* argv[])
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
     //dg::CONSTANT gaussianZ( 1.);
-    y1[1] = feltor.dz().evaluate( gaussian, gaussianZ, (unsigned)p.Nz/2, 2);
+    y1[1] = feltor.dz().evaluate( gaussian, gaussianZ, (unsigned)p.Nz/2, 3);
     //y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
@@ -103,9 +103,9 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-//   dg::AB< 3, std::vector<dg::DVec> > ab( y0);
-    //karniadakis.init( feltor, rolkar, y0, p.dt);
-// // ab.init( feltor,  y0, p.dt);
+    karniadakis.init( feltor, rolkar, y0, p.dt);
+//  dg::AB< 3, std::vector<dg::DVec> > ab( y0);
+//  ab.init( feltor,  y0, p.dt);
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
@@ -219,26 +219,26 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
-        //for( unsigned i=0; i<p.itstp; i++)
-        //{
-        //    step++;
-        //    std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
-        //    E0 = E1;
-        //    E1 = feltor.energy();
-        //    diff = (E1 - E0)/p.dt;
-        //    double diss = feltor.energy_diffusion( );
-        //    std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-        //    std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
+        for( unsigned i=0; i<p.itstp; i++)
+        {
+            step++;
+            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
+            E0 = E1;
+            E1 = feltor.energy();
+            diff = (E1 - E0)/p.dt;
+            double diss = feltor.energy_diffusion( );
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
-        //    try{ karniadakis( feltor, rolkar, y0);}
-//      //       try{ ab( feltor,  y0);}
-        //    catch( dg::Fail& fail) { 
-        //        std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-        //        std::cerr << "Does Simulation respect CFL condition?\n";
-        //        glfwSetWindowShouldClose( w, GL_TRUE);
-        //        break;
-        //    }
-        //}
+            try{ karniadakis( feltor, rolkar, y0);}
+//             try{ ab( feltor,  y0);}
+            catch( dg::Fail& fail) { 
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                glfwSetWindowShouldClose( w, GL_TRUE);
+                break;
+            }
+        }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();

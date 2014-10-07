@@ -167,6 +167,24 @@ struct DZ< MPI_Matrix, MPI_Vector>
      */
     template< class BinaryOp>
     MPI_Vector evaluate( BinaryOp f, unsigned plane=0);
+    /**
+     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to 
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * The second functor is used to scale the values along the fieldlines.
+     * The fieldlines are assumed to be periodic.
+     * @tparam BinaryOp Binary Functor 
+     * @tparam UnaryOp Unary Functor 
+     * @param f Functor to evaluate in x-y
+     * @param g Functor to evaluate in z
+     * @param plane The number of the plane to start
+     * @param rounds The number of rounds to follow a fieldline
+     *
+     * @return Returns an instance of container
+     */
+    template< class BinaryOp, class UnaryOp>
+    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
   private:
     typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
@@ -357,6 +375,25 @@ MPI_Vector DZ<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, unsigned p0)
 {
     //let all processes integrate the fieldlines
     thrust::host_vector<double> global_vec = dz_.evaluate( f, p0);
+    MPI_Vector mpi_vec( g_.n(), g_.Nx(), g_.Ny(), g_.Nz(), g_.communicator());
+    thrust::host_vector<double> vec = mpi_vec.cut_overlap();
+    //now take the relevant part 
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
+    unsigned Nx = (g_.Nx()-2)*g_.n(), Ny = (g_.Ny()-2)*g_.n(), Nz = g_.Nz();
+    for( unsigned s=0; s<Nz; s++)
+        for( unsigned i=0; i<Ny; i++)
+            for( unsigned j=0; j<Nx; j++)
+                vec[ (s*Ny+i)*Nx + j ] 
+                    = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
+    mpi_vec.copy_into_interior( vec);
+    return mpi_vec;
+}
+template< class BinaryOp, class UnaryOp>
+MPI_Vector DZ<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
+{
+    //let all processes integrate the fieldlines
+    thrust::host_vector<double> global_vec = dz_.evaluate( f, g,p0, rounds);
     MPI_Vector mpi_vec( g_.n(), g_.Nx(), g_.Ny(), g_.Nz(), g_.communicator());
     thrust::host_vector<double> vec = mpi_vec.cut_overlap();
     //now take the relevant part 
