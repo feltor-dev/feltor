@@ -107,10 +107,11 @@ int main( int argc, char* argv[])
         err2d = nc_open(argv[3], NC_WRITE, &ncid2d);
         for( int i=0; i<5; i++)
         {
-            start[1] = grid_out.Nz()/2;
+            start[1] = grid_out.Nz()/2; //set midplane
             err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
             err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
             start[1] = 0; 
+            //write midplane into 2d netcdf file
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i], start, count, data2d.data());
         }
 
@@ -118,7 +119,7 @@ int main( int argc, char* argv[])
         dg::HVec data2davg = dg::evaluate( dg::one, grid2d_out);    
         for( int i=0; i<5; i++)
         {
-            dg::blas1::axpby(0.0,data2d,0.0,data2d); //data2d=0;
+            dg::blas1::axpby(0.0,data2d,   0.0,data2d); //data2d=0;
             dg::blas1::axpby(0.0,data2davg,0.0,data2davg);  //data2davg=0;
             for( int k=0; k<grid_out.Nz(); k++)
             {
@@ -131,12 +132,14 @@ int main( int argc, char* argv[])
             start[1] = 0;
             //Scale avg
             dg::blas1::scal(data2davg,1./grid_out.Nz());
+            //write avg into 2d netcdf file
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start, count, data2davg.data());
 
         }
         err2d = nc_put_vara_double( ncid2d, tvarID, start, count, &time);
         err2d = nc_close(ncid2d);
     }
+    err = nc_close(ncid);
     //Compute flux average
     //Compute energys
     
