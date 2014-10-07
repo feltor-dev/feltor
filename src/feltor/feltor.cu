@@ -24,8 +24,8 @@
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
-    std::vector<double> v, v2,v3;
+    ////////////////////////Parameter initialisation//////////////////////////
+    std::vector<double> v,v3;
     std::stringstream title;
     if( argc == 1)
     {
@@ -52,16 +52,13 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-
-    /////////////////////////////////////////////////////////////////////////
     const eule::Parameters p( v);
     p.display( std::cout);
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    v2 = file::read_input( "window_params.txt");
+    std::vector<double> v2 = file::read_input( "window_params.txt");
     GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4]*gp.elongation, "");
     draw::RenderHostData render(v2[1], p.Nz/v2[2]);
-
     //////////////////////////////////////////////////////////////////////////
     double Rmin=gp.R_0-p.boxscale*gp.a;
     double Zmin=-p.boxscale*gp.a*gp.elongation;

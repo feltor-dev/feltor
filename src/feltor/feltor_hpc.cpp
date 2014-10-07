@@ -55,23 +55,24 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        v = file::read_input( argv[1]);
-        input = file::read_file( argv[1]);
+        try{
+            input = file::read_file( argv[1]);
+            geom = file::read_file( argv[2]);
+            v = file::read_input( argv[1]);
+            v3 = file::read_input( argv[2]); 
+        }catch( toefl::Message& m){
+            if(rank==0)m.display();
+            if(rank==0) std::cout << input << std::endl;
+            if(rank==0) std::cout << geom << std::endl;
+            return -1;
+        }
     }
     const eule::Parameters p( v);
     if(rank==0) p.display( std::cout);
-
-    ////////////////////////////////set up computations///////////////////////////
-    try{ v3 = file::read_input( argv[2]); }
-    catch (toefl::Message& m) {  
-        if(rank==0) m.display(); 
-        geom = file::read_file( argv[2]);
-        if(rank==0) std::cout << geom << std::endl;
-        return -1;
-    }
-    geom = file::read_file( argv[2]);
     const solovev::GeomParameters gp(v3);
     if(rank==0) gp.display( std::cout);
+    ////////////////////////////////set up computations///////////////////////////
+    
     double Rmin=gp.R_0-p.boxscale*gp.a;
     double Zmin=-p.boxscale*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscale*gp.a; 

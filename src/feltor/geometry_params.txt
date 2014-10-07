@@ -19,7 +19,7 @@
 13) c12                      =  0.0 
 ----------------------geometric coefficients----------------------
 14) R0 (in units of rhos)    =  548.08     
-15) inv aspect ratio (a/R0)  =  0.410714
+15) inv aspect ratio (a/R0)  =  0.410714 ( a ~ 225)
 16) elongation               =  1.75
 17) triangularity            =  0.47
 ----------------------Miscellaneous----------------------
