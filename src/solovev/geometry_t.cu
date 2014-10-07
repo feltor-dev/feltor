@@ -70,12 +70,13 @@ int main( int argc, char* argv[])
     solovev::PsiLimiter limiter(gp);
     solovev::GaussianDamping dampgauss(gp);
     solovev::ZonalFlow zonalflow(p, gp);
+    solovev::PsiLimiter psilimiter(gp);
     solovev::Nprofile prof(p, gp);
     solovev::TanhDampingIn damp2(gp);
     solovev::TanhDampingProf dampcut(gp);
     dg::BathRZ bath1(16,16,0,Rmin,Zmin, 30.,3.,1.);
     dg::BathRZ bath2(16,16,0,Rmin,Zmin, 30.,30.,10.);
-    dg::Gaussian3d init0(gp.R_0+0.75*gp.a, 0.,M_PI/20., 2., 2., 2.,2.);
+    dg::Gaussian3d init0(gp.R_0+0.75*gp.a, 0.,M_PI/20., 1., 2., 2.,2.);
 
     dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
     std::vector<dg::HVec> hvisual(19);
@@ -90,7 +91,7 @@ int main( int argc, char* argv[])
     hvisual[8 ] = dg::evaluate( pupil, grid);
     hvisual[9 ] = dg::evaluate( dampgauss, grid);
     hvisual[10] = dg::evaluate( zonalflow, grid);
-    hvisual[11] = dg::evaluate( zonalflow, grid);
+    hvisual[11] = dg::evaluate( psilimiter, grid);
     hvisual[12] = dg::evaluate( field, grid);
 
     hvisual[13] = dg::evaluate( prof, grid);
