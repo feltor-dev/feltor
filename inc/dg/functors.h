@@ -290,6 +290,20 @@ struct GaussianZ
      * \f[
        f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
        \f]
+     * @param z z - coordinate
+     *
+     * @return gaussian
+     */
+    double operator()( double z)
+    {
+        return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
+    }
+    /**
+     * @brief Return the value of the gaussian
+     *
+     * \f[
+       f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
+       \f]
      * @param x x - coordinate
      * @param y y - coordinate
      * @param z z - coordinate

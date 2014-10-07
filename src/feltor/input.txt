@@ -8,7 +8,7 @@
 2)  nx (grid points in x)                =   50 (192)
 3)  ny (grid points in y)                =   50 (192) 
 4)  nz (grid points in z)                =   10 (>16)
-5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   1e-1  (0.01)
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
 7)  nx_out (# grid points in output field)  =  50 
@@ -27,13 +27,13 @@
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-3
 20) nu_parallel  (viscosity)                =  1e-3   (0.001)
-21) para resistivity (c)                    =  1e-3   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
-22) amp (blob amplitude)                    =  0.1    (1.0)
-23) sigma (blob variance in units of rho_s) =  2.0     (10)
-24) x-position ( in units of a)             =  0.4   (0.4)
+22) amp (blob amplitude)                    =  1.0    (1.0)
+23) sigma (blob variance in units of rho_s) = 10.0     (10)
+24) x-position ( in units of a)             =  0.7   (0.4)
 25) y-position ( in units of a)             =  0.00  (0.5)
-26) sigma_z (variance in units of R_0)      =  1
+26) sigma_z (variance in units of R_0)      =  10 
 27) k_psi (zonal modes)                     =  1    
 28) Profile amplitude                       =  0.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
