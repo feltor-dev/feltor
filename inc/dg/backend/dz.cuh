@@ -163,6 +163,22 @@ struct DZ
     template< class BinaryOp>
     container evaluate( BinaryOp f, unsigned plane=0);
 
+    /**
+     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to 
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * The second functor is used to scale the values along the fieldlines.
+     * The fieldlines are assumed to be periodic.
+     * @tparam BinaryOp Binary Functor 
+     * @tparam UnaryOp Unary Functor 
+     * @param f Functor to evaluate in x-y
+     * @param g Functor to evaluate in z
+     * @param plane The number of the plane to start
+     * @param rounds The number of rounds to follow a fieldline
+     *
+     * @return Returns an instance of container
+     */
     template< class BinaryOp, class UnaryOp>
     container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
   private:
@@ -389,7 +405,7 @@ container DZ<M,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigne
         }
         for( int i0=g_.Nz()-1; i0>=0; i0--)
         {
-            int ip = i0==g_.Nz()-1?0:ip+1;
+            int ip = i0==g_.Nz()-1?0:i0+1;
             int k0 = k;
             int km = i0==g_.Nz()-1?k-1:k;
             View fp( vec4dM[km].begin() + ip*g2d.size(), vec4dM[km].begin() + (ip+1)*g2d.size());
