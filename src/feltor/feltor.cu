@@ -87,14 +87,13 @@ int main( int argc, char* argv[])
     //field aligned blob 
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
-    //dg::CONSTANT gaussianZ( 1.);
     y1[1] = feltor.dz().evaluate( gaussian, gaussianZ, (unsigned)p.Nz/2, 3);
     //y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
     //y1[1] = dg::evaluate( init0, grid);
     //damp the bath on psi boundaries 
-    //dg::blas1::pointwiseDot(rolkar.damping(),y1[1], y1[1]); 
+    //dg::blas1::pointwiseDot(rolkar.damping(), y1[1], y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
     feltor.initializene(y0[1],y0[0]);    
