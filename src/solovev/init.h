@@ -164,7 +164,7 @@ struct TanhDampingOut
 };
 
 /**
- * @brief Returns a tanh profile shifted to psipmaxcut - 3*alpha
+ * @brief Returns a tanh profile shifted to psipmax - 3*alpha
  */ 
 struct TanhDampingIn
 {
@@ -174,11 +174,11 @@ struct TanhDampingIn
         }
     double operator( )(double R, double Z)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmax + 3.*gp_.alpha)/gp_.alpha) );
     }
     double operator( )(double R, double Z, double phi)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmax + 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
     GeomParameters gp_;
