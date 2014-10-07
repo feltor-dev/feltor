@@ -77,36 +77,23 @@ int main( int argc, char* argv[])
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     /////////////////////The initial field///////////////////////////////////////////
+    //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
-
-//     solovev::ZonalFlow init0(p, gp);
+//  solovev::ZonalFlow init0(p, gp);
+    //background profile
     solovev::Nprofile grad(p, gp); //initial background profile
-
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
-
-
-    //field aligned blob 
-//     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
+    //For field alongated perturbation
     //dg::CONSTANT gaussianZ( 1.);
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
     y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 2);
-    //y1[2] = dg::evaluate( gaussianZ, grid);
-
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
-    //field aligned blob 
-//     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::GaussianZ gaussianZ( M_PI, p.m_par, 1);
-//     y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
-//     y1[2] = dg::evaluate( gaussianZ, grid);
-//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
-
-
 //     y1[1] = dg::evaluate( init0, grid);
-    //damp the bath on psi boundaries 
+    
+    //damp initialni on boundaries psimax
     dg::blas1::pointwiseDot(rolkar.damping(),y1[1], y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
@@ -117,7 +104,7 @@ int main( int argc, char* argv[])
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
 //   dg::AB< 3, std::vector<dg::DVec> > ab( y0);
-    //karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, rolkar, y0, p.dt);
 // // ab.init( feltor,  y0, p.dt);
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);

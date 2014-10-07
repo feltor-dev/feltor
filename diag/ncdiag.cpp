@@ -43,13 +43,13 @@ struct Vesqr
 
 int main( int argc, char* argv[])
 {
-    if( argc != 3)
+    if( argc != 4)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [input.nc] [output.dat]\n";
+        std::cerr << "Usage: "<<argv[0]<<" [input.nc] [output.dat] [output2d.nc]\n";
         return -1;
     }
     std::ofstream os( argv[2]);
-    std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
+    std::cout << argv[1]<< " -> "<<argv[2]<<" & "<<argv[3]<<std::endl;
 
     //////////////////////////////open nc file//////////////////////////////////
     file::NC_Error_Handle err;
@@ -64,7 +64,7 @@ int main( int argc, char* argv[])
     std::string geom( length, 'x');
     err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
     std::cout << "input "<<input<<std::endl;
-    std::cout << "geome "<<geom<<std::endl;
+    std::cout << "geome "<<geom <<std::endl;
     const eule::Parameters p(file::read_input( input));
     const solovev::GeomParameters gp(file::read_input( geom));
     p.display();
@@ -74,19 +74,72 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+(p.boxscale)*gp.a; 
     double Zmax=(p.boxscale)*gp.a*gp.elongation;
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+    dg::Grid2d<double> grid2d_out( grid_out.x0(), grid_out.x1(), grid_out.y0(), grid_out.y1(), grid_out.n(), grid_out.Nx(), grid_out.Ny());
 
     //for loop
-    //read in midpland of electrons, ions Ue, Ui, and potential, and energy
+    //read in midplane of electrons, ions Ue, Ui, and potential, and energy
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
     int dataIDs[5];
-    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    std::string names2d[10] = {"electrons_mp", "ions_mp", "Ue_mp", "Ui_mp", "potential_mp","electrons_avg", "ions_avg", "Ue_avg", "Ui_avg", "potential_avg"}; 
+    int dataIDs2d[10];
+     //generate 2d nc file for one time step
+    file::NC_Error_Handle err2d; 
+    int ncid2d; 
+    err2d = nc_create(argv[3],NC_NETCDF4|NC_CLOBBER, &ncid2d);
+    err2d = nc_put_att_text( ncid2d, NC_GLOBAL, "inputfile", input.size(), input.data());
+    err2d = nc_put_att_text( ncid2d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
+    int dim_ids[4], tvarID;
+    err2d = file::define_dimensions( ncid2d, dim_ids, &tvarID, grid2d_out);
+    for( unsigned i=0; i<10; i++){
+        err2d = nc_def_var( ncid2d, names2d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs2d[i]);
+    }   
+    //midplane 2d fields
+    size_t count[4] = {1., 1., grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[4] = {0, 0, 0, 0};
-    dg::HVec data = dg::evaluate( dg::one, grid_out);
-    for( int i=0; i<5; i++)
+    dg::HVec data2d = dg::evaluate( dg::one, grid2d_out);
+    err2d = nc_close(ncid2d);
+    double time=0.;
+    for( unsigned i=0; i<p.maxout; i++)//timestepping
     {
-        err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
-        err = nc_get_vara_double( ncid, dataIDs[i], start, count, data.data());
+        start[0] = i; //set specific time  
+        std::cout << "timestep = " << i << "\n";
+        time += p.itstp*p.dt;
+        err2d = nc_open(argv[3], NC_WRITE, &ncid2d);
+        for( int i=0; i<5; i++)
+        {
+            start[1] = grid_out.Nz()/2;
+            err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
+            err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
+            start[1] = 0; 
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i], start, count, data2d.data());
+        }
+
+        //Compute phi average
+        dg::HVec data2davg = dg::evaluate( dg::one, grid2d_out);    
+        for( int i=0; i<5; i++)
+        {
+            dg::blas1::axpby(0.0,data2d,0.0,data2d); //data2d=0;
+            dg::blas1::axpby(0.0,data2davg,0.0,data2davg);  //data2davg=0;
+            for( int k=0; k<grid_out.Nz(); k++)
+            {
+                start[1] = k; //get specific plane
+                err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
+                err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
+                //Sum up avg
+                dg::blas1::axpby(1.0,data2d,1.0,data2davg); //data2davg+=data2d;;
+            }
+            start[1] = 0;
+            //Scale avg
+            dg::blas1::scal(data2davg,1./grid_out.Nz());
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start, count, data2davg.data());
+
+        }
+        err2d = nc_put_vara_double( ncid2d, tvarID, start, count, &time);
+        err2d = nc_close(ncid2d);
     }
+    //Compute flux average
+    //Compute energys
+    
     
     //const unsigned num_out = t5file.get_size();
 
