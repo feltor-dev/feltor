@@ -162,6 +162,25 @@ struct DZ
      */
     template< class BinaryOp>
     container evaluate( BinaryOp f, unsigned plane=0);
+
+    /**
+     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to 
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * The second functor is used to scale the values along the fieldlines.
+     * The fieldlines are assumed to be periodic.
+     * @tparam BinaryOp Binary Functor 
+     * @tparam UnaryOp Unary Functor 
+     * @param f Functor to evaluate in x-y
+     * @param g Functor to evaluate in z
+     * @param plane The number of the plane to start
+     * @param rounds The number of rounds to follow a fieldline
+     *
+     * @return Returns an instance of container
+     */
+    template< class BinaryOp, class UnaryOp>
+    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
   private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
@@ -353,6 +372,55 @@ container DZ<M,container>::evaluate( BinaryOp f, unsigned p0)
         View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
         cusp::multiply( plus, fp, f0 );
     }
+    return vec3d;
+}
+
+template< class M, class container>
+template< class BinaryOp, class UnaryOp>
+container DZ<M,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
+{
+    container vec3d = evaluate( f, p0);
+    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    //scal 
+    for( unsigned i=0; i<g_.Nz(); i++)
+    {
+        View f0( vec3d.begin() + i*g2d.size(), vec3d.begin() + (i+1)*g2d.size());
+        cusp::blas::scal(f0, g( g_.z0() + (double)(i+0.5)*g_.hz() ));
+    }
+    //make room for plus and minus continuation
+    std::vector<container > vec4dP( rounds, vec3d);
+    std::vector<container > vec4dM( rounds, vec3d);
+    //now follow field lines back and forth 
+    for( unsigned k=1; k<rounds; k++)
+    {
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            int im = i0==0?g_.Nz()-1:i0-1;
+            int k0 = k;
+            int km = i0==0?k-1:k;
+            View fm( vec4dP[km].begin() + im*g2d.size(), vec4dP[km].begin() + (im+1)*g2d.size());
+            View f0( vec4dP[k0].begin() + i0*g2d.size(), vec4dP[k0].begin() + (i0+1)*g2d.size());
+            cusp::multiply( minus, fm, f0 );
+            cusp::blas::scal( f0, g( g_.z0() + (double)(k*g_.Nz()+i0+0.5)*g_.hz() ) );
+        }
+        for( int i0=g_.Nz()-1; i0>=0; i0--)
+        {
+            int ip = i0==g_.Nz()-1?0:i0+1;
+            int k0 = k;
+            int km = i0==g_.Nz()-1?k-1:k;
+            View fp( vec4dM[km].begin() + ip*g2d.size(), vec4dM[km].begin() + (ip+1)*g2d.size());
+            View f0( vec4dM[k0].begin() + i0*g2d.size(), vec4dM[k0].begin() + (i0+1)*g2d.size());
+            cusp::multiply( plus, fp, f0 );
+            cusp::blas::scal( f0, g( g_.z0() - (double)(k*g_.Nz()-0.5-i0)*g_.hz() ) );
+        }
+    }
+    //sum up results
+    for( unsigned i=1; i<rounds; i++)
+    {
+        dg::blas1::axpby( 1., vec4dP[i], 1., vec3d);
+        dg::blas1::axpby( 1., vec4dM[i], 1., vec3d);
+    }
+
     return vec3d;
 }
 
