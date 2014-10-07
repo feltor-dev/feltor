@@ -217,23 +217,23 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
-            step++;
-            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
-            E0 = E1;
-            E1 = feltor.energy();
-            diff = (E1 - E0)/p.dt;
-            double diss = feltor.energy_diffusion( );
-            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
+           step++;
+           std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
+           E0 = E1;
+           E1 = feltor.energy();
+           diff = (E1 - E0)/p.dt;
+           double diss = feltor.energy_diffusion( );
+           std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+           std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
-            try{ karniadakis( feltor, rolkar, y0);}
-//             try{ ab( feltor,  y0);}
-            catch( dg::Fail& fail) { 
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose( w, GL_TRUE);
-                break;
-            }
+           try{ karniadakis( feltor, rolkar, y0);}
+           //try{ ab( feltor,  y0);}
+           catch( dg::Fail& fail) { 
+               std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+               std::cerr << "Does Simulation respect CFL condition?\n";
+               glfwSetWindowShouldClose( w, GL_TRUE);
+               break;
+           }
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
