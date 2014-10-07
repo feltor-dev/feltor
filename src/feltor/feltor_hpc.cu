@@ -71,6 +71,7 @@ int main( int argc, char* argv[])
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 
     solovev::ZonalFlow init0(p,gp);
+
     solovev::Nprofile grad(gp); //initial background profile
     
     std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
@@ -82,6 +83,7 @@ int main( int argc, char* argv[])
 //     y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
+
 
 
     y1[1] = dg::evaluate( init0, grid);

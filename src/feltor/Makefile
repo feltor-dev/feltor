@@ -1,5 +1,5 @@
 
-system=home
+system=vsc
 device=gpu
 
 INCLUDE = -I../../inc  # other project libraries
