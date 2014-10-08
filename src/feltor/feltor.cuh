@@ -234,15 +234,15 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1)); //npe = N+1
         dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
     }
-    mass_ = dg::blas2::dot( one, w3d, npe[0] ); //take real ion density which is electron density!!
-    double Ue = p.tau[0]*dg::blas2::dot( logn[0], w3d, y[0]); // tau_e n_e ln(n_e)
-    double Ui = p.tau[1]*dg::blas2::dot( logn[1], w3d, y[1]);// tau_i n_i ln(n_i)
-    double Uphi = 0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); 
-        dg::blas1::pointwiseDot( y[2], y[2], omega); //U_e^2
-    double Upare = -0.5*p.mu[0]*dg::blas2::dot( y[0], w3d, omega); //N_e U_e^2
-        dg::blas1::pointwiseDot(y[3], y[3], omega); //U_i^2
-    double Upari =  0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); //N_i U_i^2
-    energy_ = Ue + Ui  + Uphi + Upare + Upari; //E_Ne +E_Ni + E_E + E_Ue + E_Ui
+    //mass_ = dg::blas2::dot( one, w3d, npe[0] ); //take real ion density which is electron density!!
+    //double Ue = p.tau[0]*dg::blas2::dot( logn[0], w3d, y[0]); // tau_e n_e ln(n_e)
+    //double Ui = p.tau[1]*dg::blas2::dot( logn[1], w3d, y[1]);// tau_i n_i ln(n_i)
+    //double Uphi = 0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); 
+    //    dg::blas1::pointwiseDot( y[2], y[2], omega); //U_e^2
+    //double Upare = -0.5*p.mu[0]*dg::blas2::dot( y[0], w3d, omega); //N_e U_e^2
+    //    dg::blas1::pointwiseDot(y[3], y[3], omega); //U_i^2
+    //double Upari =  0.5*p.mu[1]*dg::blas2::dot( y[1], w3d, omega); //N_i U_i^2
+    //energy_ = Ue + Ui  + Uphi + Upare + Upari; //E_Ne +E_Ni + E_E + E_Ue + E_Ui
 
     //// the resistive dissipation
 //     dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e 

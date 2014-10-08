@@ -5,9 +5,9 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   50 (192)
-3)  ny (grid points in y)                =   50 (192) 
-4)  nz (grid points in z)                =   10 (>16)
+2)  nx (grid points in x)                =   40 (192)
+3)  ny (grid points in y)                =   70 (192) 
+4)  nz (grid points in z)                =   5 (>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
@@ -23,22 +23,22 @@
 15)  eps_time ( stop for time inversion )   =   1e-8 
 -------------------------Physical parameters----------------------------
 16) mu_e (-m_e/m_i)                         = -0.5e-4
-17) tau (Ti/Te)                             =  0.0    (0.0)
+17) tau (Ti/Te)                             =  1.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-3
-20) nu_parallel  (viscosity)                =  1e-3   (0.001)
-21) para resistivity (c)                    =  1e-5   (3e-5 )
+20) nu_parallel  (viscosity)                =  0e-1   (0.001)
+21) para resistivity (c)                    =  1e-4   (3e-5 )
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  1.0    (1.0)
-23) sigma (blob variance in units of rho_s) =  20.0     (10)
-24) x-position ( in units of a)             =  0.7   (0.4)
+23) sigma (blob variance in units of rho_s) =  2.0     (10)
+24) x-position ( in units of a)             =  0.35   (0.4)
 25) y-position ( in units of a)             =  0.00  (0.5)
-26) sigma_z (variance in units of R_0)      =  3.1415 
+26) sigma_z (variance in units of R_0)      =  3.2415 
 27) k_psi (zonal modes)                     =  1    
 28) Profile amplitude                       =  0.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
-31) boxscale (1<bs<R0/a)                    =  1.2  (a little larger than 1)
+31) boxscale (1<bs<R0/a)                    =  0.6  (a little larger than 1)
 
 @ ------------------------------------------------------------

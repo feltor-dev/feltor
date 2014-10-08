@@ -10,17 +10,17 @@
 3)  ny (grid points in y)                =   100   (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   1  (0.01)
+5)  dt (time step in units c_s/L_p)      =   0.5  (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
 6)  eps_pol (stopping for polarisation) =   1e-3  (1e-6)
-7)  eps_gamma (stopping for Gamma CG)   =   1e-3  (1e-8)
+7)  eps_gamma (stopping for Gamma CG)   =   1e-4  (1e-8)
 
 ---------------------Boundary conditions----------------------
 
-8)  lx (length of x in units of rho_s)   =   400    (128.)
-9)  ly (length of y in units of rho_s)   =   400    (64.)
+8)  lx (length of x in units of rho_s)   =   100    (128.)
+9)  ly (length of y in units of rho_s)   =   100    (64.)
 10) bc_x (0 periodic, 1 Dirichlet )      =   1      (1.0)
 11) bc_y (0 periodic, 1 Dirichlet )      =   0      (1.0)
 
@@ -28,13 +28,13 @@
 
 12) local (0) or global (1) pseudo(2)   =   1       (0)
 13) nu  (viscosity)                     =   1e-3    (0.001)
-14) mcv (magnetic curvature)            =   0.0035  (0.0005)
-15) tau (Ti/Te)                         =   0.0     (0.0)
+14) mcv (magnetic curvature)            =   0.0135  (0.0005)
+15) tau (Ti/Te)                         =   1.0     (0.0)
 
 ------------------Initial blob parameters---------------------
 
 16) amp (perturbation amplitude)            =  1.0    (1.0)
-17) sigma (blob variance in units of rho_s) =  10     (10)
+17) sigma (blob variance in units of rho_s) =  5     (10)
 18) x-position ( in units of lx)            =  0.25   (0.4)
 19) y-position ( in units of ly)            =  0.5   (0.5)
 
