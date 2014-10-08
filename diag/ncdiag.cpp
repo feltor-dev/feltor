@@ -88,12 +88,14 @@ int main( int argc, char* argv[])
     err2d = nc_create(argv[3],NC_NETCDF4|NC_CLOBBER, &ncid2d);
     err2d = nc_put_att_text( ncid2d, NC_GLOBAL, "inputfile", input.size(), input.data());
     err2d = nc_put_att_text( ncid2d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
-    int dim_ids[4], tvarID;
+    int dim_ids[3], tvarID;
     err2d = file::define_dimensions( ncid2d, dim_ids, &tvarID, grid2d_out);
     for( unsigned i=0; i<10; i++){
         err2d = nc_def_var( ncid2d, names2d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs2d[i]);
     }   
     //midplane 2d fields
+    size_t count2d[3] = {1., grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    size_t start2d[3] = {0, 0, 0};
     size_t count[4] = {1., 1., grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[4] = {0, 0, 0, 0};
     dg::HVec data2d = dg::evaluate( dg::one, grid2d_out);
@@ -102,6 +104,7 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<p.maxout; i++)//timestepping
     {
         start[0] = i; //set specific time  
+        start2d[0] = i;
         std::cout << "timestep = " << i << "\n";
         time += p.itstp*p.dt;
         err2d = nc_open(argv[3], NC_WRITE, &ncid2d);
@@ -110,9 +113,9 @@ int main( int argc, char* argv[])
             start[1] = grid_out.Nz()/2; //set midplane
             err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
             err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
-            start[1] = 0; 
+//             start[1] = 0; 
             //write midplane into 2d netcdf file
-            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i], start, count, data2d.data());
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i], start2d, count2d, data2d.data());
         }
 
         //Compute phi average
@@ -129,14 +132,14 @@ int main( int argc, char* argv[])
                 //Sum up avg
                 dg::blas1::axpby(1.0,data2d,1.0,data2davg); //data2davg+=data2d;;
             }
-            start[1] = 0;
+//             start[1] = 0;
             //Scale avg
             dg::blas1::scal(data2davg,1./grid_out.Nz());
             //write avg into 2d netcdf file
-            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start, count, data2davg.data());
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2davg.data());
 
         }
-        err2d = nc_put_vara_double( ncid2d, tvarID, start, count, &time);
+        err2d = nc_put_vara_double( ncid2d, tvarID, start2d, count2d, &time);
         err2d = nc_close(ncid2d);
     }
     err = nc_close(ncid);

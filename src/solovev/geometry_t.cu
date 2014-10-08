@@ -89,7 +89,7 @@ int main( int argc, char* argv[])
 
     hvisual[7 ] = dg::evaluate( iris, grid);
     hvisual[8 ] = dg::evaluate( pupil, grid);
-    hvisual[9 ] = dg::evaluate( dampgauss, grid);
+    hvisual[9 ] = dg::evaluate( damp2, grid);
     hvisual[10] = dg::evaluate( zonalflow, grid);
     hvisual[11] = dg::evaluate( psilimiter, grid);
     hvisual[12] = dg::evaluate( field, grid);
@@ -100,11 +100,13 @@ int main( int argc, char* argv[])
     hvisual[16] = dg::evaluate( bath1, grid);
     hvisual[17] = dg::evaluate( bath2, grid);
     dg::blas1::pointwiseDot(hvisual[8], hvisual[17],hvisual[17]);
-    hvisual[18] = dg::evaluate( init0,grid);
-    dg::blas1::pointwiseDot(hvisual[9], hvisual[18], hvisual[18]);
+    hvisual[18] = dg::evaluate( zonalflow,grid);
 
 //     dg::blas1::pointwiseDot(hvisual8, hvisual18, hvisual18);
     dg::blas1::axpby( 1.,hvisual[13] , 1.,hvisual[18],hvisual[18]);
+        dg::blas1::pointwiseDot(hvisual[9], hvisual[18], hvisual[18]);
+
+    dg::blas1::transform(hvisual[18], hvisual[18], dg::PLUS<>(-1));
     //allocate mem for visual
     std::vector<dg::HVec> visual(hvisual);
 
