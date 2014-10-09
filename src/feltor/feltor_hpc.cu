@@ -72,30 +72,27 @@ int main( int argc, char* argv[])
 /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(p, gp);
-    //background profile
-    solovev::Nprofile grad(p, gp); //initial background profile
+    //dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+
+    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+//     solovev::ZonalFlow init0(p, gp);
     
-    std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
-    //For field alongated perturbation
+    //background profile
+    solovev::Nprofile prof(p, gp); //initial background profile
+    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
+    
+    //field aligning
     //dg::CONSTANT gaussianZ( 1.);
-//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
-//     y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 2);
-//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
-
-    //field aligned blob 
-    dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
-    y1[1] = feltor.dz().evaluate( gaussian, gaussianZ, (unsigned)p.Nz/2, 3);
-    //y1[2] = dg::evaluate( gaussianZ, grid);
+    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 2); //rounds =2 ->2*2-1
+    y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
-
+    //no field aligning
     //y1[1] = dg::evaluate( init0, grid);
-    //damp the bath on psi boundaries 
-    //dg::blas1::pointwiseDot(rolkar.damping(), y1[1], y1[1]);  
+    
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
+    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
     feltor.initializene( y0[1], y0[0]);    
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
@@ -128,10 +125,13 @@ int main( int argc, char* argv[])
     err = nc_redef(ncid);
 
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
-    int dataIDs[5], energyID;
+    int dataIDs[5], energyID,diffID,dissID,accuracyID;
     for( unsigned i=0; i<5; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
-    err = nc_def_var( ncid, "energy", NC_DOUBLE, 1, dim_ids, &energyID);
+    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, dim_ids, &energyID);
+    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, dim_ids, &diffID);
+    err = nc_def_var( ncid, "Lambda",   NC_DOUBLE, 1, dim_ids, &dissID);
+    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, dim_ids, &accuracyID);
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
@@ -152,8 +152,11 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 
-    double E0 = feltor.energy(), energy0 = E0, E1 = 1, diff = 0;
-    err = nc_put_vara_double( ncid, energyID, start, count,&E1);
+    double E0 = feltor.energy(), energy0 = E0, E1 = 0.0, diff = 0., diss = 0., accuracy=0.;
+    err = nc_put_vara_double( ncid, energyID,   start, count,&E1);
+    err = nc_put_vara_double( ncid, diffID,     start, count,&diff);
+    err = nc_put_vara_double( ncid, dissID,     start, count,&diss);
+    err = nc_put_vara_double( ncid, accuracyID, start, count,&accuracy);
     err = nc_close(ncid);
 
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -200,8 +203,15 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         //write time data
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        E1 = feltor.energy()/energy0;
-        err = nc_put_vara_double( ncid, energyID, start, count,&E1);
+        E1 = feltor.energy()/energy0; //E_norm
+        diff = (E0 - feltor.energy())/p.dt; //d E/dt 
+        diss = feltor.energy_diffusion( );  //lambda
+        accuracy = 2.*(diff-diss)/(diff+diss);
+        err = nc_put_vara_double( ncid, energyID,   start, count, &E1);
+        err = nc_put_vara_double( ncid, diffID,     start, count, &diff);
+        err = nc_put_vara_double( ncid, dissID,     start, count, &diss);
+        err = nc_put_vara_double( ncid, accuracyID, start, count, &accuracy);
+        E0 = feltor.energy(); //save for next timestep
 
         err = nc_close(ncid);
     }
