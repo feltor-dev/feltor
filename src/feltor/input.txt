@@ -14,7 +14,7 @@
 7)  nx_out (# grid points in output field)  =  50 
 8)  ny_out (# grid points in output field)  =  50
 9)  nz_out (# grid points in output field)  =   5
-10) itstp  (steps between outputs)          =  20     (5)
+10) itstp  (steps between outputs)          =  1     (5)
 11) total # of outputs (excluding first)    =  300 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-3 (1e-6)
@@ -30,7 +30,7 @@
 21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  1.0    (1.0)
-23) sigma (blob variance in units of rho_s) = 10.0     (10)
+23) sigma (blob variance in units of rho_s) =  1.0     (10)
 24) x-position ( in units of a)             =  0.7   (0.4)
 25) y-position ( in units of a)             =  0.00  (0.5)
 26) sigma_z (variance in units of R_0)      =  10 

@@ -223,9 +223,9 @@ int main( int argc, char* argv[])
         {
            step++;
            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
-           E0 = E1;
            E1 = feltor.energy();
            diff = (E1 - E0)/p.dt;
+           E0 = E1;
            double diss = feltor.energy_diffusion( );
            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
