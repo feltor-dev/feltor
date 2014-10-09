@@ -28,5 +28,7 @@
 20) psip_min                    = -0.7       (used for iris and source > -1)
 21) psip_max                    =  0.25 (0.0) (used for damping)
 22) psip_max_cut                =  0.0  (von außen bis critical psip for limiter, -1 < psip < psipmax)
+23) psip_max_lim                =  1e10  
+
 @ ------------------------------------------------------------------------
 

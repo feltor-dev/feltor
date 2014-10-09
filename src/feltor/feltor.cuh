@@ -35,7 +35,7 @@ struct Rolkar
         gp(gp),
         temp( dg::evaluate(dg::zero, g)), chi(temp), omega(chi),
         expy(2, temp),
-        dampin_( dg::evaluate( solovev::TanhDampingIn(gp ), g)),
+        dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perp ( g, dg::normed, dg::symmetric)
     {
@@ -68,13 +68,13 @@ struct Rolkar
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const Preconditioner& weights(){return LaplacianM_perp.weights();}
     const Preconditioner& precond(){return LaplacianM_perp.precond();}
-    const container& damping(){return dampin_;}
+    const container& damping(){return dampprof_;}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
     container temp, chi, omega;
     std::vector<container> expy;
-    const container dampin_;
+    const container dampprof_;
     const container dampgauss_;
     
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perp;
@@ -157,8 +157,6 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi), expy(phi), npe(phi), logn(phi),ush(phi),
     dzy( 4, chi),curvy(dzy), 
-//  dz(solovev::Field(gp), g, gp.rk4eps, dg::DefaultLimiter()),
-//  dz(solovev::Field(gp), g, gp.rk4eps, dg::NoLimiter()),
     dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
     pol(     g, dg::not_normed, dg::symmetric), 
