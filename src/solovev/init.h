@@ -27,16 +27,14 @@ struct Iris
     }
     double operator( )(double R, double Z, double phi)
     {
-        if( psip_(R,Z,phi) > gp_.psipmax) return 0.;
-        if( psip_(R,Z,phi) < gp_.psipmin) return 0.;
-        return 1.;
+        return (*this)(R,Z);
     }
     private:
     GeomParameters gp_;
     Psip psip_;
 };
 /**
- * @brief Returns zero outside psipmax otherwise 1
+ * @brief Returns zero outside psipmaxcut otherwise 1
  */ 
 struct Pupil
 {
@@ -51,8 +49,7 @@ struct Pupil
     }
     double operator( )(double R, double Z, double phi)
     {
-        if( psip_(R,Z,phi) > gp_.psipmaxcut) return 0.;
-        return 1.;
+        return (*this)(R,Z);
     }
     private:
     GeomParameters gp_;
@@ -74,13 +71,12 @@ struct PsiLimiter
 
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmaxcut) return 1.;
+        if( psip_(R,Z) > gp_.psipmaxlim) return 1.;
         return 0.;
     }
     double operator( )(double R, double Z, double phi)
     {
-        if( psip_(R,Z,phi) > gp_.psipmaxcut) return 1.;
-        return 0.;
+        return (*this)(R,Z);
     }
     private:
     GeomParameters gp_;
@@ -89,14 +85,14 @@ struct PsiLimiter
 
 /**
  * @brief Damps the outer boundary in a zone 
- * from psipmax to psipmax+ 4*alpha with a normal distribution
+ * from psipmaxcut to psipmaxcut+ 4*alpha with a normal distribution
  * Returns 1 inside, zero outside and a gaussian within
  *
- * \f$ 0 \f$, if \f$ \psi_p(R,Z) > \psi_{p,max} + 4\alpha \f$
+ * \f$ 0 \f$, if \f$ \psi_p(R,Z) > \psi_{p,max,cut} + 4\alpha \f$
  *
- * \f$ 1 \f$, if \f$ \psi_p(R,Z) < \psi_{p,max}\f$
+ * \f$ 1 \f$, if \f$ \psi_p(R,Z) < \psi_{p,max,cut}\f$
  *
- * \f$ \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right)\f$, else
+ * \f$ \exp\left( - \frac{(\psi_p - \psi_{p,max,cut})^2}{2\alpha^2}\right)\f$, else
  */ 
 struct GaussianDamping
 {
@@ -106,84 +102,50 @@ struct GaussianDamping
         }
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmax + 4.*gp_.alpha) return 0.;
-        if( psip_(R,Z) < (gp_.psipmax)) return 1.;
-        return exp( -( psip_(R,Z)-gp_.psipmax)*( psip_(R,Z)-gp_.psipmax)/2./gp_.alpha/gp_.alpha);
+        if( psip_(R,Z) > gp_.psipmaxcut + 4.*gp_.alpha) return 0.;
+        if( psip_(R,Z) < (gp_.psipmaxcut)) return 1.;
+        return exp( -( psip_(R,Z)-gp_.psipmaxcut)*( psip_(R,Z)-gp_.psipmaxcut)/2./gp_.alpha/gp_.alpha);
     }
     double operator( )(double R, double Z, double phi)
     {
-        if( psip_(R,Z,phi) > gp_.psipmax + 4.*gp_.alpha) return 0.;
-        if( psip_(R,Z,phi) < (gp_.psipmax)) return 1.;
-        return exp( -( psip_(R,Z,phi)-gp_.psipmax)*( psip_(R,Z,phi)-gp_.psipmax)/2./gp_.alpha/gp_.alpha);
-
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-
-/**
- * @brief Returns a tanh profile shifted to psipmax - 3*alpha
- */ 
-struct TanhDampingProf
-{
-    TanhDampingProf( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) { }
-    double operator( )(double R, double Z)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmax + 3.*gp_.alpha)/gp_.alpha) );
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmax + 3.*gp_.alpha)/gp_.alpha) );
+        return (*this)(R,Z);
     }
     private:
     GeomParameters gp_;
     Psip psip_;
 };
 /**
- * @brief Returns a tanh profile shifted to psipmaxcut + 3*alpha
+ * @brief Damps the inner boundary in a zone 
+ * from psipmax to psipmax+ 4*alpha with a normal distribution
+ * Returns 1 inside, zero outside and a gaussian within
+ *
+ * \f$ 0 \f$, if \f$ \psi_p(R,Z) > \psi_{p,max} + 4\alpha \f$
+ *
+ * \f$ 1 \f$, if \f$ \psi_p(R,Z) < \psi_{p,max}\f$
+ *
+ * \f$ \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right)\f$, else
  */ 
-struct TanhDampingOut
+struct GaussianProfDamping
 {
-        TanhDampingOut( GeomParameters gp):
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) { }
-    double operator( )(double R, double Z)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut - 3.*gp_.alpha)/gp_.alpha) );
-    }
-    private:
-    GeomParameters gp_;
-    Psip psip_;
-};
-
-/**
- * @brief Returns a tanh profile shifted to psipmaxcut - 3*alpha
- */ 
-struct TanhDampingIn
-{
-        TanhDampingIn( GeomParameters gp):
+    GaussianProfDamping( GeomParameters gp):
         gp_(gp),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {
         }
     double operator( )(double R, double Z)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+        if( psip_(R,Z) > gp_.psipmax) return 0.;
+        if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
+        return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }
     double operator( )(double R, double Z, double phi)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmaxcut + 3.*gp_.alpha)/gp_.alpha) );
+        return (*this)(R,Z);
     }
     private:
     GeomParameters gp_;
     Psip psip_;
 };
+
 
 /**
  * @brief source for quantities N ... dtlnN = ...+ source/N
@@ -213,7 +175,7 @@ struct TanhSource
 /**
  * @brief Returns density profile with variable peak amplitude and background amplitude 
  *
- * \f$ N(R,Z) =  A_{bg} + A_{peak}\frac{\psi_p} {\psi_p(R_0, 0)} \f$, for \f$\psi_p <0 \f$ 
+ * \f$ N(R,Z) =  A_{bg} + A_{peak}\frac{\psi_p} {\psi_p(R_0, 0)} \f$, for \f$\psi_p < \f$\psi_p_max\f$ 
  *
  * \f$ N(R,Z) =  A_{bg} \f$, else
  */ 
@@ -226,7 +188,7 @@ struct Nprofile
         }
    double operator( )(double R, double Z)
     {
-        if (psip_(R,Z)<0.) return p_.bgprofamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*p_.nprofileamp);
+        if (psip_(R,Z)<gp_.psipmax) return p_.bgprofamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*p_.nprofileamp);
         return p_.bgprofamp;
     }
     double operator( )(double R, double Z, double phi)
@@ -251,14 +213,13 @@ struct ZonalFlow
     }
     double operator() (double R, double Z)
     {
-      if (psip_(R,Z)<0.) return (p_.amp*abs(cos(2.*M_PI*psip_(R,Z)*p_.k_psi)));
+      if (psip_(R,Z)<gp_.psipmax) return (p_.amp*abs(cos(2.*M_PI*psip_(R,Z)*p_.k_psi)));
       return 0.;
 
     }
     double operator() (double R, double Z,double phi)
     {
-        if (psip_(R,Z,phi)<0.) return ( p_.amp*abs(cos(2.*M_PI*psip_(R,Z,phi)*p_.k_psi)));
-        return 0.;
+        return (*this)(R,Z);
     }
     private:
     GeomParameters gp_;
@@ -314,31 +275,14 @@ struct DeltaFunction
     }
     double operator()( double R, double Z, double phi)
     {
-        return 1./sqrt(2.*M_PI*epsilon_)*
-               exp( -((psip_(R,Z,phi)-psivalue_)* (psip_(R,Z,phi)-psivalue_))/2./epsilon_);
+        return (*this)(R,Z);
     }
     private:
     Psip psip_;
     double epsilon_;
     double psivalue_;
 };
-// struct FluxAverage
-// {
-//     FluxAverage(Psip psip, PsipR psipR,PsipZ psipZ, DeltaFunction deltaf) :
-//          psip_(psip),psipR_(psipR),psipZ_(psipZ),deltaf_(deltaf) {
-//
-//     }
-//     double operator()( double psivalue)
-//     {
-//         deltaf.setpsi(psivalue);
-//
-//     }
-//
-//     private:
-//     Psip psip_;
-//     double epsilon_;
-//     double psivalue_;
-// };
+
 
 ///@}
 }//namespace solovev

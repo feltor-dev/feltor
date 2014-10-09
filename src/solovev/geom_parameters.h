@@ -22,7 +22,8 @@ struct GeomParameters
            rk4eps, 
            psipmin,
            psipmax,
-           psipmaxcut;
+           psipmaxcut,
+           psipmaxlim;
     std::vector<double> c; 
      /**
      * @brief constructor to make a const object
@@ -42,6 +43,7 @@ struct GeomParameters
         psipmin= v[20];
         psipmax= v[21];
         psipmaxcut = v[22];
+        psipmaxlim = v[23];
     }
     /**
      * @brief Display parameters
@@ -63,7 +65,8 @@ struct GeomParameters
             <<" rk4 epsilon   = "<<rk4eps<<"\n"
             <<" psipmin       = "<<psipmin<<"\n"
             <<" psipmax       = "<<psipmax<<"\n"
-            <<" psipmaxcut    = "<<psipmaxcut<<"\n";
+            <<" psipmaxcut    = "<<psipmaxcut<<"\n"
+            <<" psipmaxlim    = "<<psipmaxlim<<"\n";
         os << std::flush;
 
     }
