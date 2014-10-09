@@ -28,7 +28,7 @@ const unsigned k = 3;//!< a change in k needs a recompilation
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
+    ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
     std::string input, geom;
     if( argc != 4)
@@ -38,22 +38,24 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        v = file::read_input( argv[1]);
-        input = file::read_file( argv[1]);
+        try{
+            input = file::read_file( argv[1]);
+            geom = file::read_file( argv[2]);
+            v = file::read_input( argv[1]);
+            v3 = file::read_input( argv[2]); 
+        }catch( toefl::Message& m){
+            m.display();
+            std::cout << input << std::endl;
+            std::cout << geom << std::endl;
+            return -1;
+        }
     }
     const eule::Parameters p( v);
     p.display( std::cout);
-
-    ////////////////////////////////set up computations///////////////////////////
-    try{ v3 = file::read_input( argv[2]); }
-    catch (toefl::Message& m) {  m.display(); 
-        geom = file::read_file( argv[2]);
-        std::cout << geom << std::endl;
-        return -1;
-    }
-
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
+    ////////////////////////////////set up computations///////////////////////////
+
     double Rmin=gp.R_0-p.boxscale*gp.a;
     double Zmin=-p.boxscale*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscale*gp.a; 
@@ -78,8 +80,8 @@ int main( int argc, char* argv[])
     //field aligned blob 
     dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
-    y1[1] = feltor.dz().evaluate( gaussian, (unsigned)p.Nz/2);
-    y1[2] = dg::evaluate( gaussianZ, grid);
+    y1[1] = feltor.dz().evaluate( gaussian, gaussianZ, (unsigned)p.Nz/2, 3);
+    //y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
     //y1[1] = dg::evaluate( init0, grid);

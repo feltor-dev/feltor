@@ -27,13 +27,13 @@
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-3
 20) nu_parallel  (viscosity)                =  1e-3   (0.001)
-21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-5   (3e-5 )
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  1.0    (1.0)
 23) sigma (blob variance in units of rho_s) =  1.0     (10)
 24) x-position ( in units of a)             =  0.7   (0.4)
 25) y-position ( in units of a)             =  0.00  (0.5)
-26) sigma_z (variance in units of R_0)      =  10 
+26) sigma_z (variance in units of R_0)      =  3.1415 
 27) k_psi (zonal modes)                     =  1    
 28) Profile amplitude                       =  0.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
