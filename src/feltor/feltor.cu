@@ -24,8 +24,8 @@
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
-    std::vector<double> v, v2,v3;
+    ////////////////////////Parameter initialisation//////////////////////////
+    std::vector<double> v,v2,v3;
     std::stringstream title;
     if( argc == 1)
     {
@@ -52,8 +52,6 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-
-    /////////////////////////////////////////////////////////////////////////
     const eule::Parameters p( v);
     p.display( std::cout);
     const solovev::GeomParameters gp(v3);
@@ -61,6 +59,7 @@ int main( int argc, char* argv[])
     v2 = file::read_input( "window_params.txt");
     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
     draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
+
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -84,16 +83,19 @@ int main( int argc, char* argv[])
     //background profile
     solovev::Nprofile prof(p, gp); //initial background profile
     
-    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
-    //For field alongated perturbation
-    //dg::CONSTANT gaussianZ( 1.);
+
+    std::vector<dg::DVec> y0(4, dg::evaluate(prof, grid)), y1(y0); 
+
+    //field aligned blob 
+    dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z, 1);
-    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 2);
+    y1[1] = feltor.dz().evaluate( gaussian, gaussianZ, (unsigned)p.Nz/2, 3);
+    //y1[2] = dg::evaluate( gaussianZ, grid);
     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
 
-//     y1[1] = dg::evaluate( init0, grid);
-    
-    //damp initialni on boundaries psimax
+    //y1[1] = dg::evaluate( init0, grid);
+    //damp the bath on psi boundaries 
+    //dg::blas1::pointwiseDot(rolkar.damping(), y1[1], y1[1]); 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //goto ni-1
     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
@@ -104,9 +106,10 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-//   dg::AB< 3, std::vector<dg::DVec> > ab( y0);
+
     karniadakis.init( feltor, rolkar, y0, p.dt);
-// // ab.init( feltor,  y0, p.dt);
+//  dg::AB< 3, std::vector<dg::DVec> > ab( y0);
+//  ab.init( feltor,  y0, p.dt);
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
@@ -250,6 +253,7 @@ int main( int argc, char* argv[])
 
            try{ karniadakis( feltor, rolkar, y0);}
      //       try{ ab( feltor,  y0);}
+
            catch( dg::Fail& fail) { 
                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                std::cerr << "Does Simulation respect CFL condition?\n";

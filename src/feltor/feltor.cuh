@@ -119,6 +119,7 @@ struct Feltor
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
+
     const container binv, curvR, curvZ, gradlnB;
     const container source, damping, one;
     const Preconditioner w3d, v3d;
@@ -218,12 +219,12 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //compute phi via polarisation
     phi[0] = polarisation( y);
     phi[1] = compute_psi( phi[0]); //sets omega
+
     double z[2]    = {-1.0,1.0};
     double U[2]    = {0.0, 0.0};
     double Tpar[2] = {0.0, 0.0};
     double Dpar[4] = {0.0, 0.0,0.0,0.0};
     double Dperp[4] = {0.0, 0.0,0.0,0.0};
-    
 
     //transform compute n and logn and energies
     for(unsigned i=0; i<2; i++)
@@ -245,12 +246,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     dg::blas1::axpby( -1., omega, 1., chi); //chi  = + N_i U_i -N_e U_e
     dg::blas1::axpby( -1., y[2], 1., y[3], omega); //lambda  = -N_e U_e + N_e U_i   
     double Dres = -p.c*dg::blas2::dot(omega, w3d, chi); //- C*(N_i U_i + N_e U_e)(U_i - U_e)
-
-#ifdef MPI_VERSION
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if(rank==0)
-#endif 
 
     //the parallel part is done elsewhere
     //set U_sheath
@@ -331,6 +326,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dz_.set_boundaries( dg::NEU, 0, 0);
         dz_.dzz(y[i],omega);                                            //dz^2 N 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
+
         // for energytheorem 
         dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 N 
         //gradlnBcorrection
@@ -350,12 +346,14 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dz_.set_boundaries( dg::NEU, 0, 0);
         dz_.dzz(y[i+2],omega);                                          //dz^2 U 
         dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);      
+
         // for energytheorem 
         dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 U 
         //gradlnBcorrection
         dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);               // dz lnB dz U
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
-        // for energytheorem 
+
+         // for energytheorem 
         dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N     
         //Compute parallel and perp dissipative energy for U
         dg::blas1::pointwiseDot( npe[i], y[i+2], omega); //N U   
@@ -363,7 +361,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas2::gemv( lapperp, y[i+2], lambda);
         dg::blas2::gemv( lapperp, lambda,chi);//nabla_RZ^4 U
         Dperp[i+2] = -z[i]*p.mu[i]*p.nu_perp* dg::blas2::dot(omega, w3d, chi);
-        
 
         //damping 
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]);

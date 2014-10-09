@@ -17,6 +17,7 @@
 9)  nz_out (# grid points in output field)  =  11
 10) itstp  (steps between outputs)          =  10     (5)
 11) total # of outputs (excluding first)    =  30000 
+
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
 13)  eps_max (stop for induction)           =   0.0 (1e-6)
@@ -36,7 +37,7 @@
 25) y-position ( in units of a)             =  0.00  (0.5)
 26) sigma_z (variance in units of R_0)      =  1.
 27) k_psi (zonal modes)                     =  3.    
-28) Profile amplitude                       =  5.0  (peak amplitude)
+28) Profile amplitude                       =  4.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
