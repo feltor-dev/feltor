@@ -7,6 +7,8 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/arakawa.h"
 #include "dg/functors.h"
+#include "dg/elliptic.h"
+#include "solovev/geometry.h"
 
 #include "solovev/geom_parameters.h"
 #include "feltor/parameters.h"
@@ -19,27 +21,6 @@
 double X( double x, double y) {return x;}
 double Y( double x, double y) {return y;}
 
-template <class Matrix, class container>
-struct Vesqr
-{
-    Vesqr( const dg::Grid2d<double>& grid, double kappa): dx( grid.size()), dy(dx), one( grid.size(), 1.), w2d( dg::create::weights(grid)), binv( evaluate( dg::LinearX( kappa, 1.), grid)), arakawa(grid){}
-    const container& operator()( const container& phi)
-    {
-        dg::blas2::gemv( arakawa.dx(), phi, dx);
-        dg::blas2::gemv( arakawa.dy(), phi, dy);
-        dg::blas1::pointwiseDot( binv, dx, dx);
-        dg::blas1::pointwiseDot( binv, dy, dy);
-        dg::blas1::pointwiseDot( dx, dx, dx);
-        dg::blas1::pointwiseDot( dy, dy, dy);
-        dg::blas1::axpby( 1., dx, 1.,  dy);
-        return dy;
-
-    }
-  private:
-    container dx, dy, one, w2d, binv;    
-    dg::ArakawaX<Matrix, container> arakawa;
-
-};
 
 int main( int argc, char* argv[])
 {
@@ -100,50 +81,195 @@ int main( int argc, char* argv[])
     size_t start[4] = {0, 0, 0, 0};
     dg::HVec data2d = dg::evaluate( dg::one, grid2d_out);
     err2d = nc_close(ncid2d);
+    err = nc_close(ncid); 
     double time=0.;
+    dg::HVec one3d    = dg::evaluate( dg::one,  grid_out);
+    dg::HVec omega    = dg::evaluate( dg::one,  grid_out);
+    dg::HVec chi    = dg::evaluate( dg::one,  grid_out);
+    dg::HVec lambda    = dg::evaluate( dg::one,  grid_out);
+    dg::HVec w3d    = dg::create::weights(  grid_out);
+    dg::HVec binv    = dg::evaluate(solovev::Field(gp) , grid_out);
+    dg::ArakawaX<dg::HMatrix, dg::HVec >           arakawa (grid_out); 
+    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> lapperp(grid_out, dg::not_normed, dg::symmetric);
+
+    double energy_0 =0.,U_i_0=0.,U_e_0=0.,U_phi_0=0.,U_pare_0=0.,U_pari_0=0.,mass_0=0.;
+    
     for( unsigned i=0; i<p.maxout; i++)//timestepping
     {
         start[0] = i; //set specific time  
         start2d[0] = i;
-        std::cout << "timestep = " << i << "\n";
+        std::cout << "Timestep = " << i << "\n";
         time += p.itstp*p.dt;
         err2d = nc_open(argv[3], NC_WRITE, &ncid2d);
-        for( int i=0; i<5; i++)
+        //3d macroscopic fields
+        dg::HVec ne    = dg::evaluate( dg::one,  grid_out);
+        dg::HVec ni    = dg::evaluate( dg::one,  grid_out);
+        dg::HVec logni = dg::evaluate( dg::one,  grid_out);
+        dg::HVec logne = dg::evaluate( dg::one,  grid_out);
+        dg::HVec ue    = dg::evaluate( dg::one,  grid_out);
+        dg::HVec ui    = dg::evaluate( dg::one,  grid_out);
+        dg::HVec phi    = dg::evaluate( dg::one,  grid_out);
+        
+        std::cout << "Extract midplane 2d field"<< "\n";
+        for( unsigned i=0; i<5; i++)
         {
-            start[1] = grid_out.Nz()/2; //set midplane
-            err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
-            err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
-//             start[1] = 0; 
+            err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
+                start[1] = grid_out.Nz()/2; count[1] =1.;//set midplane
+                err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
+                err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
+            err = nc_close(ncid);  //close 3d file
+            err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
+                start[1] = 0; count[1] = grid_out.Nz(); //3d fields
+                err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
+                if (i==0) {
+                    err = nc_get_vara_double( ncid, dataIDs[0], start, count, ne.data()); 
+                    dg::blas1::transform( ne, ne, dg::PLUS<>(+1)); 
+                    dg::blas1::transform( ne, logne, dg::LN<double>());                
+                }
+                if (i==1) {
+                    err = nc_get_vara_double( ncid, dataIDs[i], start, count, ni.data()); 
+                    dg::blas1::transform( ni, ni, dg::PLUS<>(+1)); 
+                    dg::blas1::transform( ni, logni, dg::LN<double>());                
+                }
+                if (i==2) {
+                    err = nc_get_vara_double( ncid, dataIDs[i], start, count, ue.data()); 
+                }
+                if (i==3) {
+                    err = nc_get_vara_double( ncid, dataIDs[i], start, count, ui.data()); 
+                }
+                if (i==4) {
+                    err = nc_get_vara_double( ncid, dataIDs[i], start, count, phi.data()); 
+                }
+
+            err = nc_close(ncid); //close 3d file
             //write midplane into 2d netcdf file
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i], start2d, count2d, data2d.data());
         }
 
-        //Compute phi average
+        //Compute toroidal average
         dg::HVec data2davg = dg::evaluate( dg::one, grid2d_out);    
-        for( int i=0; i<5; i++)
+        std::cout << "Extract 2d planes for avg 2d field"<< "\n";
+        for( unsigned i=0; i<5; i++)
         {
             dg::blas1::axpby(0.0,data2d,   0.0,data2d); //data2d=0;
             dg::blas1::axpby(0.0,data2davg,0.0,data2davg);  //data2davg=0;
-            for( int k=0; k<grid_out.Nz(); k++)
+            for( unsigned k=0; k<grid_out.Nz(); k++)
             {
-                start[1] = k; //get specific plane
+                err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
+                start[1] = k;  count[1] = 1.;//get specific plane
                 err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
                 err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
+                err = nc_close(ncid);  //close 3d file
                 //Sum up avg
                 dg::blas1::axpby(1.0,data2d,1.0,data2davg); //data2davg+=data2d;;
             }
-//             start[1] = 0;
+
             //Scale avg
             dg::blas1::scal(data2davg,1./grid_out.Nz());
             //write avg into 2d netcdf file
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2davg.data());
 
         }
+
         err2d = nc_put_vara_double( ncid2d, tvarID, start2d, count2d, &time);
-        err2d = nc_close(ncid2d);
-    }
-    err = nc_close(ncid);
+        err2d = nc_close(ncid2d); //close 2d netcdf files
+      
+        // ---- Compute energies ----
+        std::cout << "Compute macroscopic timedependent quantities"<< "\n";
+        //compute mass
+        double mass = dg::blas2::dot( one3d, w3d, ne );
+        //compute U_e
+        double U_e = p.tau[0]*dg::blas2::dot( logne, w3d, ne);
+        //compute U_i
+        double U_i = p.tau[1]*dg::blas2::dot( logni, w3d, ni);
+        //compute U_phi
+        arakawa.bracketS( phi, phi, omega);             //dR phi dR phi + Dz phi Dz phi
+        dg::blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::pointwiseDot( binv, omega, omega);
+        double U_phi = 0.5*p.mu[1]*dg::blas2::dot( ni, w3d, omega); 
+        //Compute U_parallel_e
+        dg::blas1::pointwiseDot( ue, ue, omega);
+        double U_pare =-0.5*p.mu[0]*dg::blas2::dot( ne, w3d, omega);
+        //Compute U_parallel_i
+        dg::blas1::pointwiseDot( ui, ui, omega);
+        double U_pari = 0.5*p.mu[1]*dg::blas2::dot( ni, w3d, omega);
+        //Compute total energy
+        double energy= U_e + U_i  + U_phi + U_pare + U_pari;
+        //set t=0 energies
+        if (i==0) {
+            energy_0=energy; mass_0=mass; U_e_0=U_e; U_i_0=U_i; U_phi_0=U_phi; U_pare_0=U_pare; U_pari_0=U_pari;
+        }
+        //normalize energies
+        double energy_diff = (energy-energy_0)/energy_0;
+        double energy_norm = energy/energy_0;
+        double mass_norm = mass/mass_0;
+        double U_e_norm = U_e/U_e_0;
+        double U_i_norm =U_i/U_i_0;
+        double U_phi_norm = U_phi/U_phi_0;
+        double U_pare_norm = U_pare/U_pare_0;
+        double U_pari_norm = U_pari/U_pari_0;
+        //Compute resistive dissipation
+        dg::blas1::pointwiseDot( ne, ue, omega); //N_e U_e 
+        dg::blas1::pointwiseDot( ni, ui, chi);  //N_i U_i
+        dg::blas1::pointwiseDot( ne, ui, lambda);  //N_e U_i
+        dg::blas1::axpby( -1., omega, 1., chi); //chi  = -N_e U_e + N_i U_i
+        dg::blas1::axpby( -1., omega, 1., lambda); //lambda  = -N_e U_e + N_e U_i   
+        double Dres = -p.c*dg::blas2::dot(lambda, w3d, chi); //- C*(N_i U_i - N_e U_e)*(N_e U_i - N_e U_e)
+        //Compute perpendicular dissipation
+        //         dg::blas1::axpby(1.,one,1., logn[0] ,chi); //(1+lnN_e)
+//         dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //(1+lnN_e-phi)
+//         dg::blas1::pointwiseDot( npe[0], chi, omega); //N_e phi_e     
+//         dg::blas2::gemv( lapperp, y[0],chi);
+//         dg::blas2::gemv(lapperp, chi,chi);//nabla_RZ^4 lnN_e
+//     double Dperpne =  p.nu_perp*dg::blas2::dot(omega, w3d, chi); // 
+//         dg::blas1::axpby(1.,one,1., logn[1] ,chi); //(1+lnN_i)
+//         dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //(1+lnN_i-phi)
+//         dg::blas1::pointwiseDot( npe[1], chi, omega); //N_i phi_i     
+//         dg::blas2::gemv( lapperp,y[1], chi);
+//         dg::blas2::gemv( lapperp,chi,chi);//nabla_RZ^4 lnN_i
+//     double Dperpni = - p.nu_perp*dg::blas2::dot(omega, w3d, chi);
+//         dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e     
+//         dg::blas2::gemv( lapperp, y[2], chi);
+//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 U_e
+//     double Dperpue = p.nu_perp*p.mu[0]* dg::blas2::dot(omega, w3d, chi);
+//         dg::blas1::pointwiseDot( npe[1], y[3], omega); //N_e U_e     
+//         dg::blas2::gemv( lapperp, y[3], chi);
+//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 U_i
+//     double Dperpui = - p.nu_perp*p.mu[1]* dg::blas2::dot(omega, w3d, chi);
+//     ediff_ = Dres + Dperpne + Dperpni + Dperpue + Dperpui;
+        //Compute parallel dissipation
+        //compute total dissipation
+        double diss = Dres;
+        //write macroscopic timedependent quantities into output.dat file
+        os << time << " " << mass_norm << " " <<  U_e_norm <<" " <<  U_i_norm <<" " << U_phi_norm <<" " << U_pare_norm <<" " << U_pari_norm <<" "  << energy_norm <<" " << energy_diff<<std::endl;
+    } //end timestepping
+    
     //Compute flux average
+//     std::cout << "Compute flux average of psi   "<< "\n";
+//     dg::DVec psipongrid   = dg::evaluate( psip, grid2d_out);
+//     dg::DVec psipRongrid  = dg::evaluate( psipR, grid2d_out);
+//     dg::DVec psipZongrid  = dg::evaluate( psipZ, grid2d_out);
+//     dg::DVec oneongrid    = dg::evaluate( dg::one, grid2d_out);
+//     
+//     double psipRmax = (float)thrust::reduce( psipRongrid .begin(), psipRongrid .end(),  0.,     thrust::maximum<double>()  );    
+//     double psipRmin = (float)thrust::reduce( psipRongrid .begin(), psipRongrid .end(),  psipRmax,thrust::minimum<double>()  );
+//     double psipZmax = (float)thrust::reduce( psipZongrid .begin(), psipZongrid  .end(), 0.,     thrust::maximum<double>()  );    
+//     double psipZmin = (float)thrust::reduce( psipZongrid .begin(), psipZongrid  .end(), psipZmax,thrust::minimum<double>()  );
+//     double deltapsi = abs(psipZmin/Nx/n +psipRmin/Ny/n);
+//     std::cout << "deltapsi = " << deltapsi << "\n";
+//     deltaf.setepsilon(deltapsi/4. );
+// 
+//     for (unsigned i=0;i<10;i++)
+//     {
+//         deltaf.setpsi( (double)i/(-10.));
+//         dg::DVec deltafongrid = dg::evaluate( deltaf, grid);
+//         const dg::DVec w2d = dg::create::weights( grid);
+//         double psipcut = dg::blas2::dot( psipongrid,w2d,deltafongrid); //int deltaf psip
+//         double vol     = dg::blas2::dot( oneongrid , w2d,deltafongrid); //int deltaf
+//         double psipflavg = psipcut/vol;
+//         std::cout << "psi = " << (double)i/(-10.)<< " psipflavg  = "<< psipflavg << " diff = "<< psipflavg-(double)i/(-10.)<<"\n";
+//     }
+    
     //Compute energys
     
     
