@@ -15,17 +15,16 @@
 
 int main( int argc, char* argv[])
 {
-    std::cout << "Type n, Nx, Ny\n";
+    //std::cout << "Type n, Nx, Ny\n";
     unsigned n, Nx, Ny;
-    std::cin >> n>> Nx>>Ny;   
+    //std::cin >> n>> Nx>>Ny;   
     std::vector<double> v, v2;
 
     try{ 
         if( argc==1)
         {
-            v = file::read_input( "./geometry_params.txt"); 
-            v2 = file::read_input( "../feltor/input.txt");
-
+            v = file::read_input( "../feltor/input.txt");
+            v2 = file::read_input( "geometry_params.txt"); 
         }
         else
         {
@@ -40,10 +39,11 @@ int main( int argc, char* argv[])
             std::cout << std::endl;
         return -1;}
     //write parameters from file into variables
-    const solovev::GeomParameters gp(v);
-    const eule::Parameters p(v2);
+    const eule::Parameters p(v);
+    const solovev::GeomParameters gp(v2);
     p.display( std::cout);
     gp.display( std::cout);
+    n = p.n, Nx = p.Nx, Ny = p.Ny;
     double Rmin=gp.R_0-p.boxscale*gp.a;
     double Zmin=-p.boxscale*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscale*gp.a; 
