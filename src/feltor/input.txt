@@ -15,11 +15,11 @@
 7)  nx_out (# grid points in output field)  =  80 
 8)  ny_out (# grid points in output field)  =  80
 9)  nz_out (# grid points in output field)  =  13
-10) itstp  (steps between outputs)          =  1    (5)
+10) itstp  (steps between outputs)          =  100    (5)
 11) total # of outputs (excluding first)    =  10000 
 
 -------------------------Algorithmic parameters------------------------
-12)  eps_pol (stop for polarisation)        =   1e-2 (1e-6)
+12)  eps_pol (stop for polarisation)        =   1e-3 (1e-6)
 13)  eps_max (stop for induction)           =   0.0 (1e-6)
 14)  eps_gamma (stop for Gamma CG)          =   1e-8 (1e-8)
 15)  eps_time ( stop for time inversion )   =   1e-8 
@@ -31,7 +31,7 @@
 20) nu_parallel  (viscosity)                =  1e-3    (0.001)
 21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
-22) amp (blob amplitude)                    =  0.1    (1.0)
+22) amp (blob amplitude)                    =  0.2    (1.0)
 23) sigma (blob variance in units of rho_s) =  2.0     (10)
 24) x-position ( in units of a)             =  0.4   (0.4)
 25) y-position ( in units of a)             =  0.00  (0.5)
@@ -41,7 +41,7 @@
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
-31) boxscale (1<bs<R0/a)                    =  1.1  (a little larger than 1)
+31) boxscale (1<bs<R0/a)                    =  1.05  (a little larger than 1)
 
 
 @ ------------------------------------------------------------
