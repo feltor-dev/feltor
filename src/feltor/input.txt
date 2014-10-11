@@ -35,7 +35,7 @@
 23) sigma (blob variance in units of rho_s) =  5.0     (10)
 24) x-position ( in units of a)             =  0.15   (0.4)
 25) y-position ( in units of a)             =  0.00  (0.5)
-26) sigma_z (variance in units of R_0)      =  10.
+26) sigma_z (variance in units of R_0*Pi)   =  2.   (0.5)
 27) k_psi (zonal modes)                     =  3.    
 28) Profile amplitude                       =  0.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
