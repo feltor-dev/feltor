@@ -106,8 +106,6 @@ int main( int argc, char* argv[])
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
 
     karniadakis.init( feltor, rolkar, y0, p.dt);
-//  dg::AB< 3, std::vector<dg::DVec> > ab( y0);
-//  ab.init( feltor,  y0, p.dt);
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
@@ -239,25 +237,22 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
-           step++;
-           std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
-           E1 = feltor.energy();
-           diff = (E0 - E1)/p.dt; //
-           double diss = feltor.energy_diffusion( );
-           std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-           std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
-           E0 = E1;
+            step++;
+            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
+            E1 = feltor.energy();
+            diff = (E1 - E0)/p.dt; //
+            double diss = feltor.energy_diffusion( );
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
+            E0 = E1;
 
-
-           try{ karniadakis( feltor, rolkar, y0);}
-     //       try{ ab( feltor,  y0);}
-
-           catch( dg::Fail& fail) { 
-               std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-               std::cerr << "Does Simulation respect CFL condition?\n";
-               glfwSetWindowShouldClose( w, GL_TRUE);
-               break;
-           }
+            try{ karniadakis( feltor, rolkar, y0);}
+            catch( dg::Fail& fail) { 
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                glfwSetWindowShouldClose( w, GL_TRUE);
+                break;
+            }
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

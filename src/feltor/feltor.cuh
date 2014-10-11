@@ -109,6 +109,7 @@ struct Feltor
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
     double energy( ) {return energy_;}
+    std::vector<double> energy_vector( ) {return evec;}
     double energy_diffusion( ){ return ediff_;}
 
   private:
@@ -141,6 +142,7 @@ struct Feltor
     const solovev::GeomParameters gp;
 
     double mass_, energy_, diff_, ediff_;
+    std::vector<double> evec;
 
 };
 
@@ -166,7 +168,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),
-    gp(gp)
+    gp(gp),
+    evec(5)
 { }
 
 template<class Matrix, class container, class P>
@@ -231,7 +234,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     {
         dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1)); //npe = N+1
         dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
-        U[i]    = p.tau[i]*dg::blas2::dot( logn[i], w3d, npe[i]);
+        U[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w3d, npe[i]);
         dg::blas1::pointwiseDot( y[i+2], y[i+2], chi); 
         Tpar[i] = z[i]*0.5*p.mu[i]*dg::blas2::dot( npe[i], w3d, chi);
     }
@@ -239,6 +242,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w3d, omega);   //= 0.5 mu_i N_i u_E^2
     //energytheorem
     energy_ = U[0] + U[1]  + Tperp + Tpar[0] + Tpar[1]; 
+    evec[0] = U[0], evec[1] = U[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1];
      
     //// the resistive dissipative energy
     dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e 
@@ -338,8 +342,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
         Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(dz^2 N -dz lnB dz N)
-        dg::blas2::gemv( lapperp, y[i],lambda);
-        dg::blas2::gemv(lapperp,  lambda, omega);//nabla_RZ^4 N_e
+        dg::blas2::gemv( lapperp, y[i], lambda);
+        dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w3d, omega);  
         
 //         dz_.set_boundaries( dg::DIR,ush[i],-1.0,1.0);  

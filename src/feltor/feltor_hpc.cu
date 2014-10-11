@@ -69,7 +69,7 @@ int main( int argc, char* argv[])
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
-/////////////////////The initial field///////////////////////////////////////////
+    /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     //dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
@@ -99,8 +99,8 @@ int main( int argc, char* argv[])
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
-    double time = 0;
-    /////////////////////////////set up netcdf//////////////////////////////
+    karniadakis( feltor, rolkar, y0); //now energies and potential are at time 0
+    /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -124,25 +124,34 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, vecID[2], vecP.data());
     err = nc_redef(ncid);
 
+    //field IDs
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
-    int dataIDs[5], energyID,diffID,dissID,accuracyID;
+    int dataIDs[5]; 
     for( unsigned i=0; i<5; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
+
+    //energy IDs
+    int energyID, massID, energyIDs[5], dissID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, dim_ids, &energyID);
-    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, dim_ids, &diffID);
-    err = nc_def_var( ncid, "Lambda",   NC_DOUBLE, 1, dim_ids, &dissID);
+    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, dim_ids, &massID);
+    std::string energies[5] = {"Se", "Si", "Uperp", "Upare", "Upari"}; 
+    for( unsigned i=0; i<5; i++){
+        err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, dim_ids, &energyIDs[i]);}
+    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, dim_ids, &dissID);
+    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, dim_ids, &dEdtID);
     err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, dim_ids, &accuracyID);
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
-    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    std::cout << "First output ... \n";
     size_t start[4] = {0, 0, 0, 0};
+    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<4; i++)
     {
-        dg::blas2::symv( interpolate, y0[i], transferD);
+        dg::blas2::symv( interpolate, karniadakis.last()[i], transferD);
         transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
@@ -150,14 +159,23 @@ int main( int argc, char* argv[])
     dg::blas2::symv( interpolate, transfer, transferD);
     transferH = transferD;//transfer to host
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+    double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 
-    double E0 = feltor.energy(), energy0 = E0, E1 = 0.0, diff = 0., diss = 0., accuracy=0.;
-    err = nc_put_vara_double( ncid, energyID,   start, count,&E1);
-    err = nc_put_vara_double( ncid, diffID,     start, count,&diff);
-    err = nc_put_vara_double( ncid, dissID,     start, count,&diss);
-    err = nc_put_vara_double( ncid, accuracyID, start, count,&accuracy);
+    size_t Estart[] = {0};
+    size_t Ecount[] = {1};
+    double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+    std::vector<double> evec = feltor.energy_vector();
+    err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
+    err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
+    for( unsigned i=0; i<5; i++)
+        err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
+
+    err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+    err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+    err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     err = nc_close(ncid);
+    std::cout << "First write successful!\n";
 
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
@@ -165,7 +183,7 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
     unsigned step = 0;
 #endif //DG_BENCHMARK
-    for( unsigned i=0; i<p.maxout; i++)
+    for( unsigned i=1; i<=p.maxout; i++)
     {
 
 #ifdef DG_BENCHMARK
@@ -178,22 +196,44 @@ int main( int argc, char* argv[])
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
+                err = nc_close(ncid);
                 return -1;
             }
+            step++;
+            Estart[0] = step;
+            E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
+            dEdt = (E1 - E0)/p.dt; 
+            E0 = E1;
+            accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
+            evec = feltor.energy_vector();
+            err = nc_open(argv[3], NC_WRITE, &ncid);
+            err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
+            err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
+            for( unsigned i=0; i<5; i++)
+            {
+                err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
+            }
+            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
+            err = nc_close(ncid);
+
         }
         time += p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         ti.toc();
-        step+=p.itstp;
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
-
+        //////////////////////////write fields////////////////////////
         start[0] = i;
         err = nc_open(argv[3], NC_WRITE, &ncid);
         for( unsigned j=0; j<4; j++)
         {
-            dg::blas2::symv( interpolate, y0[j], transferD);
+            dg::blas2::symv( interpolate, karniadakis.last()[j], transferD);
             transferH = transferD;//transfer to host
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
@@ -203,16 +243,6 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         //write time data
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        E1 = feltor.energy()/energy0; //E_norm
-        diff = (E0 - feltor.energy())/p.dt; //d E/dt 
-        diss = feltor.energy_diffusion( );  //lambda
-        accuracy = 2.*(diff-diss)/(diff+diss);
-        err = nc_put_vara_double( ncid, energyID,   start, count, &E1);
-        err = nc_put_vara_double( ncid, diffID,     start, count, &diff);
-        err = nc_put_vara_double( ncid, dissID,     start, count, &diss);
-        err = nc_put_vara_double( ncid, accuracyID, start, count, &accuracy);
-        E0 = feltor.energy(); //save for next timestep
-
         err = nc_close(ncid);
     }
     t.toc(); 
