@@ -45,9 +45,9 @@ int main(int argc, char* argv[] )
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::Timer t;
-    double eps;
-    if(rank==0)std::cout << "Type epsilon! \n";
-    if(rank==0)std::cin >> eps;
+    double eps = 1e-6;
+    //if(rank==0)std::cout << "Type epsilon! \n";
+    //if(rank==0)std::cin >> eps;
     MPI_Bcast(  &eps,1 , MPI_DOUBLE, 0, comm);
     //////////////////////begin program///////////////////////
     //create functions A(chi) x = b
@@ -59,20 +59,20 @@ int main(int argc, char* argv[] )
     dg::MVec chi =  dg::evaluate( pol, grid);
 
 
-    if(rank==0)std::cout << "Create Polarisation object and set chi!\n";
+    //if(rank==0)std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> pol( grid, dg::not_normed, dg::symmetric);
     pol.set_chi( chi);
     t.toc();
-    if(rank==0)std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
+    //if(rank==0)std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
     dg::Invert<dg::MVec > invert( x, n*n*Nx*Ny, eps);
     t.tic();
     unsigned number = invert( pol, x, b);
     t.toc();
-    if(rank==0)std::cout << "Number of pcg iterations "<< number<<std::endl;
-    if(rank==0)std::cout << "For a precision of "<< eps<<std::endl;
-    if(rank==0)std::cout << "Took "<<t.diff()<<"s\n";
+    //if(rank==0)std::cout << "Number of pcg iterations "<< number<<std::endl;
+    //if(rank==0)std::cout << "For a precision of "<< eps<<std::endl;
+    if(rank==0)std::cout << " took "<<t.diff()<<"s\n";
 
     //compute error
     const dg::MVec solution = dg::evaluate( sol, grid);
@@ -83,14 +83,14 @@ int main(int argc, char* argv[] )
     double err = dg::blas2::dot( w2d, error);
     //if(rank==0)std::cout << "L2 Norm2 of Error is " << err << std::endl;
     double norm = dg::blas2::dot( w2d, solution);
-    if(rank==0)std::cout << "L2 Norm of relative error is               "<<sqrt( err/norm)<<std::endl;
+    //if(rank==0)std::cout << "L2 Norm of relative error is               "<<sqrt( err/norm)<<std::endl;
     dg::MMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);
     //if(rank==0)std::cout << "L2 Norm2 of Error in derivative is " << err << std::endl;
     norm = dg::blas2::dot( w2d, derivati);
-    if(rank==0)std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
+    //if(rank==0)std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
 
     MPI_Finalize();
