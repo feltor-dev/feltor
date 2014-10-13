@@ -283,6 +283,49 @@ struct DeltaFunction
     double psivalue_;
 };
 
+template <class Matrix = dg::HMatrix, class container = thrust::host_vector<double> >
+struct FluxSurfaceAverage
+{
+    FluxSurfaceAverage(GeomParameters gp, dg::Grid2d<double>& g2d, unsigned Npsi) :
+    gp_(gp),
+    g2d_(g2d),
+    Npsi_(Npsi),
+    psip_(Psip(gp.R_0,gp.A,gp.c)),
+    psipR_(PsipR(gp.R_0,gp.A,gp.c)),
+    psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
+    deltaf_(DeltaFunction(psip_,0.0,0.0)
+    {
+      dg::HVec psipog2d   = dg::evaluate( psip, g2d_);
+      dg::HVec psipRog2d  = dg::evaluate( psipR, g2d_);
+      dg::HVec psipZog2d  = dg::evaluate( psipZ, g2d_);
+      double psipmin = (float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
+      double psipRmax = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );    
+      double psipRmin = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
+      double psipZmax = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,     thrust::maximum<double>()  );    
+      double psipZmin = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
+      double deltapsi = abs(psipZmin/Nx/n +psipRmin/Ny/n);
+      deltaf.setepsilon(deltapsi/4.);
+      dg::Grid1d<double> g1d(psipmin ,0.0, 1,Npsi_,dg::DIR);
+    }
+    void operator()( const container& f, container& fsaf)
+    {
+    for (unsigned i=0;i<g1d.N() ;i++)
+    {
+        deltaf.setpsi( (double)i/(g1d.N())*psipmin);
+        dg::DVec deltafongrid = dg::evaluate( deltaf, grid);
+        const dg::DVec w2d = dg::create::weights( grid);
+        double psipcut = dg::blas2::dot( psipongrid,w2d,deltafongrid); //int deltaf psip
+        double vol     = dg::blas2::dot( oneongrid , w2d,deltafongrid); //int deltaf
+        double psipflavg = psipcut/vol;
+        std::cout << "psi = " << (double)i/(g1d.N())*psipmin<< " psipflavg  = "<< psipflavg << " diff = "<< psipflavg-(double)i/(g1d.N())*psipmin<<"\n";
+    }
+    }
+    private:
+    GeomParameters gp_;
+    Psip   psip_;    
+    PsipR  psipR_;
+    PsipZ  psipZ_;
+};
 
 ///@}
 }//namespace solovev
