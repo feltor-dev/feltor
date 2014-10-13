@@ -122,39 +122,27 @@ int main( int argc, char* argv[])
 
 
 //         Compute flux average
-       //construct deltaf
-    solovev::DeltaFunction deltaf(psip,0.1,-0.1);
+    solovev::Alpha alpha(gp); // = B^phi / |nabla psip |
     
     std::cout << "Compute flux average of psi   "<< "\n";
-    dg::DVec psipongrid   = dg::evaluate( psip, grid);
-    dg::DVec psipRongrid  = dg::evaluate( psipR, grid);
-    dg::DVec psipZongrid  = dg::evaluate( psipZ, grid);
-    dg::DVec oneongrid    = dg::evaluate( dg::one, grid);
+    dg::DVec psipog2d   = dg::evaluate( psip, grid);
+    dg::DVec alphaog2d   = dg::evaluate( alpha, grid); 
     
-    double psipRmax = (float)thrust::reduce( psipRongrid .begin(), psipRongrid .end(),  0.,     thrust::maximum<double>()  );    
-    double psipRmin = (float)thrust::reduce( psipRongrid .begin(), psipRongrid .end(),  psipRmax,thrust::minimum<double>()  );
-    double psipZmax = (float)thrust::reduce( psipZongrid .begin(), psipZongrid  .end(), 0.,     thrust::maximum<double>()  );    
-    double psipZmin = (float)thrust::reduce( psipZongrid .begin(), psipZongrid  .end(), psipZmax,thrust::minimum<double>()  );
-    double psipmin = (float)thrust::reduce( psipongrid.begin(), psipongrid.end(), 0.0,thrust::minimum<double>()  );
-    std::cout << "psipmin = " << psipmin << "\n";
+    double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned Npsi = 10;//set number of psivalues
-    dg::Grid1d<double> psigrid(psipmin ,0.0, 1,Npsi,dg::DIR);
+    dg::Grid1d<double> g1d(psipmin ,0.0, 1,Npsi,dg::DIR);
     
-    double deltapsi = abs(psipZmin/Nx/n +psipRmin/Ny/n);
-    
-    std::cout << "deltapsi = " << deltapsi << "\n";
-    deltaf.setepsilon(deltapsi/4. );
+    solovev::FluxSurfaceAverage<dg::HVec> fsa1(grid,gp,psipog2d );
+    solovev::FluxSurfaceAverage<dg::HVec> fsa2(grid,gp,alphaog2d );
+    dg::HVec fsaofpsip = dg::evaluate(fsa1,g1d);
+    dg::HVec fsaofalpha = dg::evaluate(fsa2,g1d);
+    dg::HVec abs = dg::evaluate( dg::coo1, g1d);
 
-    for (unsigned i=0;i<psigrid.N() ;i++)
-    {
-        deltaf.setpsi( (double)i/(psigrid.N())*psipmin);
-        dg::DVec deltafongrid = dg::evaluate( deltaf, grid);
-        const dg::DVec w2d = dg::create::weights( grid);
-        double psipcut = dg::blas2::dot( psipongrid,w2d,deltafongrid); //int deltaf psip
-        double vol     = dg::blas2::dot( oneongrid , w2d,deltafongrid); //int deltaf
-        double psipflavg = psipcut/vol;
-        std::cout << "psi = " << (double)i/(psigrid.N())*psipmin<< " psipflavg  = "<< psipflavg << " diff = "<< psipflavg-(double)i/(psigrid.N())*psipmin<<"\n";
-    }
+    
+for (unsigned i=0;i<g1d.size() ;i++) {
+    std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << fsaofalpha[i]<<"\n";
+}
+    
     //make equidistant grid from dggrid
     dg::HMatrix equigrid = dg::create::backscatter(grid);               
 

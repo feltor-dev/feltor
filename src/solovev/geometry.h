@@ -693,5 +693,104 @@ struct FieldZ
     double R_0;
    
 };
+
+/**
+ * @brief Delta function for poloidal flux \f$ B_Z\f$
+ */
+struct DeltaFunction
+{
+    DeltaFunction(Psip psip, double epsilon,double psivalue) :
+         psip_(psip),epsilon_(epsilon),psivalue_(psivalue){
+    }
+    void setepsilon(double temp ){epsilon_ = temp;}
+    void setpsi(double temp ){psivalue_ = temp;}
+
+    double operator()( double R, double Z)
+    {
+        return 1./sqrt(2.*M_PI*epsilon_)*
+               exp( -( (psip_(R,Z)-psivalue_)* (psip_(R,Z)-psivalue_))/2./epsilon_);
+    }
+    double operator()( double R, double Z, double phi)
+    {
+        return (*this)(R,Z);
+    }
+    private:
+    Psip psip_;
+    double epsilon_;
+    double psivalue_;
+};
+/**
+ * @brief Flux surface average over quantity 
+ */
+template <class container = thrust::host_vector<double> >
+struct FluxSurfaceAverage
+{
+    FluxSurfaceAverage(const dg::Grid2d<double>& g2d, GeomParameters gp,   const container& f) :
+    g2d_(g2d),
+    gp_(gp),
+    f_(f),
+    psip_(Psip(gp.R_0,gp.A,gp.c)),
+    psipR_(PsipR(gp.R_0,gp.A,gp.c)),
+    psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
+    deltaf_(DeltaFunction(psip_,0.0,0.0)),
+    w2d_ ( dg::create::weights( g2d_)),
+    oneongrid_(dg::evaluate(dg::one,g2d_))              
+    {
+      dg::HVec psipRog2d  = dg::evaluate( psipR_, g2d_);
+      dg::HVec psipZog2d  = dg::evaluate( psipZ_, g2d_);
+      double psipRmax = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );    
+      double psipRmin = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
+      double psipZmax = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
+      double psipZmin = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
+      double deltapsi = abs(psipZmin/g2d_.Nx()/g2d_.n() +psipRmin/g2d_.Ny()/g2d_.n());
+      deltaf_.setepsilon(deltapsi/4.);
+    }
+    double operator()(double psip0)
+    {
+            deltaf_.setpsi( psip0);
+            container deltafog2d = dg::evaluate( deltaf_, g2d_);    
+            double psipcut = dg::blas2::dot( f_,w2d_,deltafog2d); //int deltaf psip
+            double vol     = dg::blas2::dot( oneongrid_ , w2d_,deltafog2d); //int deltaf
+            double psipflavg = psipcut/vol;
+        return psipflavg;
+    }
+    private:
+    dg::Grid2d<double> g2d_;
+    GeomParameters gp_;    
+    container f_;
+    Psip   psip_;    
+    PsipR  psipR_;
+    PsipZ  psipZ_;
+    DeltaFunction deltaf_;    
+    const container w2d_;
+    const container oneongrid_;
+};
+/**
+ * @brief Global safety factor
+ */
+struct Alpha
+{
+    Alpha( GeomParameters gp):
+        psipR_(gp.R_0,gp.A,gp.c), 
+        psipZ_(gp.R_0,gp.A,gp.c),
+        ipol_(gp.R_0,gp.A,Psip(gp.R_0, gp.A, gp.c)),
+        R_0(gp.R_0){ }
+    double operator()( double R, double Z)
+    {
+                return  (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+
+    }
+    double operator()( double R, double Z, double phi)
+    {
+        return  (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+    }
+    private:
+    PsipR  psipR_;
+    PsipZ  psipZ_;
+    Ipol   ipol_;
+    double R_0;
+    
+   
+};
 ///@} 
 } //namespace dg

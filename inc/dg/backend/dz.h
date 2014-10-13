@@ -184,7 +184,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @return Returns an instance of container
      */
     template< class BinaryOp, class UnaryOp>
-    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    MPI_Vector evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
   private:
     typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
@@ -389,6 +389,7 @@ MPI_Vector DZ<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, unsigned p0)
     mpi_vec.copy_into_interior( vec);
     return mpi_vec;
 }
+
 template< class BinaryOp, class UnaryOp>
 MPI_Vector DZ<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
 {
