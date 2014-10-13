@@ -3,11 +3,11 @@
         
 export NAME=feltorsim
 export DATA_DIR=data/$NAME
-export DESCR=feltorlimiter
+export DESCR=fnlt0n5r6
 export INPUT=input.txt
 export GEOMINPUT=geometry_params.txt
-#$ -N feltor_sim
-#$ -o feltorsim.out
+#$ -N feltorsim4
+#$ -o feltorsim4.out
 #$ -P fermi
 #$ -q kepler
 #$ -j yes
