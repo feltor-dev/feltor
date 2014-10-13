@@ -250,7 +250,6 @@ int main( int argc, char* argv[])
         time += p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         ti.toc();
-        step+=p.itstp;
         if(rank==0)std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         if(rank==0)std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s";
         ti.tic();
