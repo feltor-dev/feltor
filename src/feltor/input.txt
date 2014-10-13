@@ -5,17 +5,17 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   100 (192)
-3)  ny (grid points in y)                =   100 (192) 
-4)  nz (grid points in z)                =   13(>16)
-5)  dt (time step in units c_s/rho_s)    =   5e-3  (0.01)
+2)  nx (grid points in x)                =   50 (192)
+3)  ny (grid points in y)                =   50 (192) 
+4)  nz (grid points in z)                =   5(>16)
+5)  dt (time step in units c_s/rho_s)    =   1e-2  (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
 7)  nx_out (# grid points in output field)  =  100 
 8)  ny_out (# grid points in output field)  =  100
-9)  nz_out (# grid points in output field)  =  13
-10) itstp  (steps between outputs)          = 1  (5)
+9)  nz_out (# grid points in output field)  =  15
+10) itstp  (steps between outputs)          =  100  (5)
 11) total # of outputs (excluding first)    =  10000 
 
 -------------------------Algorithmic parameters------------------------
@@ -31,16 +31,16 @@
 20) nu_parallel  (viscosity)                =  1e-3    (0.001)
 21) para resistivity (c)                    =  2e-5   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
-22) amp (blob amplitude)                    =  0.5    (1.0)
+22) amp (blob amplitude)                    =  0.2    (1.0)
 23) sigma (blob variance in units of rho_s) =  5.0     (10)
 24) x-position ( in units of a)             =  0.25   (0.4)
-25) y-position ( in units of a)             =  0.00  (0.5)
-26) sigma_z (variance in units of R_0)      =  12.5
-27) k_psi (zonal modes)                     =  3.    
-28) Profile amplitude                       =  0.0  (peak amplitude)
+25) y-position ( in units of a)             =  0.00   (0.5)
+26) sigma_z (variance in units of R_0)      =  0.75       (12.5 for oo)
+27) k_psi (zonal modes)                     =  1.0    
+28) Profile amplitude                       =  5.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
-31) boxscale (1<bs<R0/a)                    =  0.5  (a little larger than 1)
+31) boxscale (1<bs<R0/a)                    =  1.05  (a little larger than 1)
 
 @ ------------------------------------------------------------

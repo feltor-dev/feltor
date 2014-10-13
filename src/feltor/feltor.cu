@@ -72,15 +72,16 @@ int main( int argc, char* argv[])
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
-    std::cout << "Done!\n";
+    std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
+    std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 
-//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
     
     //background profile
