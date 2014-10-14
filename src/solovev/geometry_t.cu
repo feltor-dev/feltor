@@ -140,7 +140,7 @@ int main( int argc, char* argv[])
 
     
 for (unsigned i=0;i<g1d.size() ;i++) {
-    std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << fsaofalpha[i]<<"\n";
+    std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << (2.*M_PI)*(2.*M_PI)*fsaofalpha[i]<<"\n";
 }
     
     //make equidistant grid from dggrid

@@ -751,8 +751,8 @@ struct FluxSurfaceAverage
             container deltafog2d = dg::evaluate( deltaf_, g2d_);    
             double psipcut = dg::blas2::dot( f_,w2d_,deltafog2d); //int deltaf psip
             double vol     = dg::blas2::dot( oneongrid_ , w2d_,deltafog2d); //int deltaf
-            double psipflavg = psipcut/vol;
-        return psipflavg;
+            double fsa = psipcut/vol;
+        return fsa;
     }
     private:
     dg::Grid2d<double> g2d_;
