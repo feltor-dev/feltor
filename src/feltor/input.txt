@@ -15,8 +15,7 @@
 7)  nx_out (# grid points in output field)  =  110 
 8)  ny_out (# grid points in output field)  =  110
 9)  nz_out (# grid points in output field)  =  11
-10) itstp  (steps between outputs)          =  10  (5)
-
+10) itstp  (steps between outputs)          =  100  (5)
 11) total # of outputs (excluding first)    =  10000 
 
 -------------------------Algorithmic parameters------------------------
