@@ -28,7 +28,7 @@
 
 12) local (0) or global (1) pseudo(2)   =   1       (0)
 13) nu  (viscosity)                     =   1e-3    (0.001)
-14) mcv (magnetic curvature)            =   0.0135  (0.0005)
+14) mcv (magnetic curvature)            =   0.0035  (0.0005)
 15) tau (Ti/Te)                         =   1.0     (0.0)
 
 ------------------Initial blob parameters---------------------

@@ -64,6 +64,25 @@ struct NC_Error_Handle
         return *this;
     }
 };
+/**
+ * @brief Define an unlimited time variable 
+ *
+ * @param ncid file ID
+ * @param name Name of time variable
+ * @param dimID time-dimension ID
+ * @param tvarID time-variable ID
+ *
+ * @return netcdf error code if any
+ */
+int define_time( int ncid, const char* name, int* dimID, int* tvarID)
+{
+    int retval;
+    if( (retval = nc_def_dim( ncid, name, NC_UNLIMITED, dimID)) ){ return retval;}
+    if( (retval = nc_def_var( ncid, name, NC_DOUBLE, 1, dimID, tvarID))){return retval;}
+    std::string t = "time since start"; //needed for paraview to recognize timeaxis
+    if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
+    return retval;
+}
 
 /**
  * @brief Define a dimension variable together with its data points
@@ -140,10 +159,7 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid3d<dou
 {
     int retval;
     if( (retval = define_dimensions( ncid, &dimsIDs[1], g)) ){ return retval;}
-    if( (retval = nc_def_dim( ncid, "time", NC_UNLIMITED, &dimsIDs[0])) ){ return retval;}
-    if( (retval = nc_def_var( ncid, "time", NC_DOUBLE, 1, &dimsIDs[0], tvarID))){return retval;}
-    std::string t = "time since start"; //needed for paraview to recognize timeaxis
-    if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
+    if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
     return retval;
 }
 
@@ -165,11 +181,8 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
     int retval;
     if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx)));
     if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy)));
+    if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
 
-    if( (retval = nc_def_dim( ncid, "time", NC_UNLIMITED, &dimsIDs[0])) ){ return retval;}
-    if( (retval = nc_def_var( ncid, "time", NC_DOUBLE, 1, &dimsIDs[0], tvarID))){return retval;}
-    std::string t = "time since start"; //needed for paraview to recognize timeaxis
-    if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
     return retval;
 }
 

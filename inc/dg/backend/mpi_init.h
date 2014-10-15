@@ -14,14 +14,13 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if(rank==0)std::cout << "MPI v"<<MPI_VERSION<<"."<<MPI_SUBVERSION<<std::endl;
+    //if(rank==0)std::cout << "MPI v"<<MPI_VERSION<<"."<<MPI_SUBVERSION<<std::endl;
     int np[2];
     if( rank == 0)
     {
         std::cout << "Type npx and npy\n";
         std::cin >> np[0] >> np[1];
-        std::cout<< "You typed "<<np[0] <<" and "<<np[1]<<std::endl;
-        std::cout << "Size is "<<size<<std::endl;
+        std::cout<< "Computing with "<<np[0] <<" x "<<np[1]<<" = "<<size<<" processes! ";//<<std::endl;
         assert( size == np[0]*np[1]);
     }
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
@@ -30,7 +29,7 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
     {
         std::cout << "Type n, Nx and Ny\n";
         std::cin >> n >> Nx >> Ny;
-        std::cout<< "You typed "<<n <<" "<<Nx<<" "<<Ny<<std::endl;
+        std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, comm);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, comm);
@@ -52,8 +51,7 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, 
     {
         std::cout << "Type npx and npy and npz\n";
         std::cin >> np[0] >> np[1]>>np[2];
-        std::cout<< "You typed "<<np[0] <<" and "<<np[1]<<" and "<<np[2]<<std::endl;
-        std::cout << "Size is "<<size<<std::endl;
+        std::cout<< "Computing with "<<np[0] <<" x "<<np[1]<<" x "<<np[2]<<" = "<<size<<" processses! ";//<<std::endl;
         assert( size == np[0]*np[1]*np[2]);
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
@@ -62,7 +60,7 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, 
     {
         std::cout << "Type n, Nx and Ny and Nz\n";
         std::cin >> n >> Nx >> Ny >> Nz;
-        std::cout<< "You typed "<<n <<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
+        std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
