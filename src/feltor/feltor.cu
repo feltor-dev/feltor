@@ -79,9 +79,9 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+    dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 
-    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
     
     //background profile
@@ -169,16 +169,16 @@ int main( int argc, char* argv[])
         }
         dg::blas1::scal(avisual,1./p.Nz);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        ////transform to Vor
-//         dvisual=feltor.potential()[0];
-//         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-//         hvisual = y1[1];
+        //transform to Vor
+        dvisual=feltor.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        hvisual = y1[1];
 
         colors.scalemax() = (float)thrust::reduce( potvisual.begin(),potvisual.end(), 0.,thrust::maximum<double>()  );
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
-        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
-//         title <<"Omega / "<< colors.scalemax()<<"\t";
+        //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"Omega / "<< colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
