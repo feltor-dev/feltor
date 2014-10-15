@@ -1,6 +1,6 @@
 
           * Input-File for COMPASS axisymmetric solovev equilibrium *
-    I const without X-point, Force Free, Te_50eV,B0_1T,deuterium
+    I const without X-point, Force Free, Te_50eV,B0_1T,deuterium,Cref_2e-5
           -----------------------------------------------------------
           
 ----------------------Solovev coefficients----------------------

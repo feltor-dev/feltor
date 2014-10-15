@@ -154,20 +154,20 @@ int main( int argc, char* argv[])
     err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
     //energy IDs 
     int energyID, massID, energyIDs[5], dissID, dEdtID, accuracyID;
-    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, dim_ids, &energyID);
+    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, dimids, &energyID);
     err = nc_var_par_access( ncid, energyID, NC_COLLECTIVE);
-    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, dim_ids, &massID);
+    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, dimids, &massID);
     err = nc_var_par_access( ncid, massID, NC_COLLECTIVE);
     std::string energies[5] = {"Se", "Si", "Uperp", "Upare", "Upari"}; 
     for( unsigned i=0; i<5; i++){
         err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, dim_ids, &energyIDs[i]);
         err = nc_var_par_access( ncid, energyIDs[i], NC_COLLECTIVE);
     }
-    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, dim_ids, &dissID);
+    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, dimids, &dissID);
     err = nc_var_par_access( ncid, dissID, NC_COLLECTIVE);
-    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, dim_ids, &dEdtID);
+    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, dimids, &dEdtID);
     err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
-    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, dim_ids, &accuracyID);
+    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, dimids, &accuracyID);
     err = nc_var_par_access( ncid, accuracyID, NC_COLLECTIVE);
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////////////

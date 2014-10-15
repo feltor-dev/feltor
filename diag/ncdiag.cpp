@@ -243,7 +243,8 @@ int main( int argc, char* argv[])
         //write macroscopic timedependent quantities into output.dat file
         os << time << " " << mass_norm << " " <<  U_e_norm <<" " <<  U_i_norm <<" " << U_phi_norm <<" " << U_pare_norm <<" " << U_pari_norm <<" "  << energy_norm <<" " << energy_diff<<std::endl;
     } //end timestepping
-    
+    //cross correleation between phi and ne
+    //relative fluctuation amplitude(psi) = delta n/n0
     //Compute flux average
 //     std::cout << "Compute flux average of psi   "<< "\n";
 //     dg::DVec psipongrid   = dg::evaluate( psip, grid2d_out);

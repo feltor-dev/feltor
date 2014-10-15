@@ -699,8 +699,11 @@ struct FieldZ
  */
 struct DeltaFunction
 {
-    DeltaFunction(Psip psip, double epsilon,double psivalue) :
-         psip_(psip),epsilon_(epsilon),psivalue_(psivalue){
+    DeltaFunction(Psip psip, PsipR psipR, PsipZ psipZ, double epsilon,double psivalue) :
+       psip_(psip),epsilon_(epsilon),
+        psipR_(psipR), 
+        psipZ_(psipZ),
+        psivalue_(psivalue){
     }
     void setepsilon(double temp ){epsilon_ = temp;}
     void setpsi(double temp ){psivalue_ = temp;}
@@ -708,7 +711,7 @@ struct DeltaFunction
     double operator()( double R, double Z)
     {
         return 1./sqrt(2.*M_PI*epsilon_)*
-               exp( -( (psip_(R,Z)-psivalue_)* (psip_(R,Z)-psivalue_))/2./epsilon_);
+               exp(-( (psip_(R,Z)-psivalue_)* (psip_(R,Z)-psivalue_))/2./epsilon_)*sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z));
     }
     double operator()( double R, double Z, double phi)
     {
@@ -716,7 +719,30 @@ struct DeltaFunction
     }
     private:
     Psip psip_;
+    PsipR  psipR_;
+    PsipZ  psipZ_;
     double epsilon_;
+    double psivalue_;
+};
+struct HeavisideFunction
+{
+    HeavisideFunction(Psip psip, double psivalue) :
+         psip_(psip),psivalue_(psivalue){
+    }
+    void setpsi(double temp ){psivalue_ = temp;}
+
+    double operator()( double R, double Z)
+    {
+        if( psip_(R,Z) < psivalue_) return 1.;
+        return 0.;
+        
+    }
+    double operator()( double R, double Z, double phi)
+    {
+        return (*this)(R,Z);
+    }
+    private:
+    Psip psip_;
     double psivalue_;
 };
 /**
@@ -732,7 +758,7 @@ struct FluxSurfaceAverage
     psip_(Psip(gp.R_0,gp.A,gp.c)),
     psipR_(PsipR(gp.R_0,gp.A,gp.c)),
     psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
-    deltaf_(DeltaFunction(psip_,0.0,0.0)),
+    deltaf_(DeltaFunction(psip_,psipR_,psipZ_,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
     oneongrid_(dg::evaluate(dg::one,g2d_))              
     {
@@ -765,6 +791,49 @@ struct FluxSurfaceAverage
     const container w2d_;
     const container oneongrid_;
 };
+template <class container = thrust::host_vector<double> >
+struct SafetyFactor
+{
+    SafetyFactor(const dg::Grid2d<double>& g2d, GeomParameters gp,   const container& f) :
+    g2d_(g2d),
+    gp_(gp),
+    f_(f),
+    psip_(Psip(gp.R_0,gp.A,gp.c)),
+    psipR_(PsipR(gp.R_0,gp.A,gp.c)),
+    psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
+    deltaf_(DeltaFunction(psip_,psipR_,psipZ_,0.0,0.0)),
+    w2d_ ( dg::create::weights( g2d_)),
+    oneongrid_(dg::evaluate(dg::one,g2d_))              
+    {
+      dg::HVec psipRog2d  = dg::evaluate( psipR_, g2d_);
+      dg::HVec psipZog2d  = dg::evaluate( psipZ_, g2d_);
+      double psipRmax = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );    
+      double psipRmin = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
+      double psipZmax = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
+      double psipZmin = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
+      double deltapsi = abs(psipZmin/g2d_.Nx()/g2d_.n() +psipRmin/g2d_.Ny()/g2d_.n());
+      deltaf_.setepsilon(deltapsi/4.);
+    }
+    double operator()(double psip0)
+    {
+            deltaf_.setpsi( psip0);
+            container deltafog2d = dg::evaluate( deltaf_, g2d_);    
+            double psipcut = dg::blas2::dot( f_,w2d_,deltafog2d); //int deltaf psip
+//             double vol     = dg::blas2::dot( oneongrid_ , w2d_,deltafog2d); //int deltaf
+            double fsa = psipcut/(2.*M_PI);;
+        return fsa;
+    }
+    private:
+    dg::Grid2d<double> g2d_;
+    GeomParameters gp_;    
+    container f_;
+    Psip   psip_;    
+    PsipR  psipR_;
+    PsipZ  psipZ_;
+    DeltaFunction deltaf_;    
+    const container w2d_;
+    const container oneongrid_;
+};
 /**
  * @brief Global safety factor
  */
@@ -777,8 +846,12 @@ struct Alpha
         R_0(gp.R_0){ }
     double operator()( double R, double Z)
     {
-                return  (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
-
+                return (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+//         return (R_0/R/R);
+//                 return  (R_0/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)));
+//                         return  (ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)));
+//            return  1./(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)));
+//         return 1 ;
     }
     double operator()( double R, double Z, double phi)
     {
@@ -788,9 +861,7 @@ struct Alpha
     PsipR  psipR_;
     PsipZ  psipZ_;
     Ipol   ipol_;
-    double R_0;
-    
-   
+    double R_0;  
 };
 ///@} 
 } //namespace dg

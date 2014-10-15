@@ -129,18 +129,18 @@ int main( int argc, char* argv[])
     dg::DVec alphaog2d   = dg::evaluate( alpha, grid); 
     
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
-    unsigned Npsi = 10;//set number of psivalues
+    unsigned Npsi = 100;//set number of psivalues
     dg::Grid1d<double> g1d(psipmin ,0.0, 1,Npsi,dg::DIR);
     
     solovev::FluxSurfaceAverage<dg::HVec> fsa1(grid,gp,psipog2d );
-    solovev::FluxSurfaceAverage<dg::HVec> fsa2(grid,gp,alphaog2d );
+    solovev::SafetyFactor<dg::HVec> qprof(grid,gp,alphaog2d );
     dg::HVec fsaofpsip = dg::evaluate(fsa1,g1d);
-    dg::HVec fsaofalpha = dg::evaluate(fsa2,g1d);
+    dg::HVec sf = dg::evaluate(qprof,g1d);
     dg::HVec abs = dg::evaluate( dg::coo1, g1d);
 
     
 for (unsigned i=0;i<g1d.size() ;i++) {
-    std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << (2.*M_PI)*(2.*M_PI)*fsaofalpha[i]<<"\n";
+    std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << sf[i]<<"\n";
 }
     
     //make equidistant grid from dggrid
