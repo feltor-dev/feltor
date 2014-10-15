@@ -134,15 +134,17 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
 
     //energy IDs
+    int EtimeID, EtimevarID;
+    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, energyIDs[5], dissID, dEdtID, accuracyID;
-    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, dim_ids, &energyID);
-    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, dim_ids, &massID);
+    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
+    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
     std::string energies[5] = {"Se", "Si", "Uperp", "Upare", "Upari"}; 
     for( unsigned i=0; i<5; i++){
-        err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, dim_ids, &energyIDs[i]);}
-    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, dim_ids, &dissID);
-    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, dim_ids, &dEdtID);
-    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, dim_ids, &accuracyID);
+        err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);}
+    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
+    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
+    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
@@ -164,6 +166,7 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
@@ -203,6 +206,7 @@ int main( int argc, char* argv[])
                 return -1;
             }
             step++;
+            time+=p.dt;
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
@@ -210,6 +214,7 @@ int main( int argc, char* argv[])
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
             err = nc_open(argv[3], NC_WRITE, &ncid);
+            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
             for( unsigned i=0; i<5; i++)
@@ -225,7 +230,6 @@ int main( int argc, char* argv[])
             err = nc_close(ncid);
 
         }
-        time += p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         ti.toc();
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
