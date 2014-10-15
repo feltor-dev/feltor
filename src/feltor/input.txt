@@ -25,7 +25,7 @@
 15)  eps_time ( stop for time inversion )   =   1e-8 
 -------------------------Physical parameters----------------------------
 16) mu_e (-m_e/m_i)                         = -0.000272121, (-0.000544617,-0.000272121,-0.000181372 )
-17) tau (Ti/Te)                             =  0.0    (0.0)
+17) tau (Ti/Te)                             =  1.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-4 
 20) nu_parallel  (viscosity)                =  1e-3    (0.001)
