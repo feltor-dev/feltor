@@ -38,8 +38,7 @@ int main( int argc, char* argv[])
     if(rank==0)
     {
         std::cin>> np[0] >> np[1] >>np[2];
-        std::cout << "Computing with "<<np[0]<<" "<<np[1]<<" "<<np[2]<<std::endl;
-        std::cout << "Size is "<<size<<std::endl;
+        std::cout << "Computing with "<<np[0]<<" x "<<np[1]<<" x "<<np[2] << " = "<<size<<std::endl;
         assert( size == np[0]*np[1]*np[2]);
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
