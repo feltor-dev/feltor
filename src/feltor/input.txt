@@ -5,17 +5,17 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   60 (192)
-3)  ny (grid points in y)                =   60 (192) 
-4)  nz (grid points in z)                =   7(>16)
-5)  dt (time step in units c_s/rho_s)    =   5e-2 (0.01)
+2)  nx (grid points in x)                =   70 (192)
+3)  ny (grid points in y)                =   70 (192) 
+4)  nz (grid points in z)                =   20(>16)
+5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  60 
-8)  ny_out (# grid points in output field)  =  60
-9)  nz_out (# grid points in output field)  =  7
-10) itstp  (steps between outputs)          =  10  (5)
+7)  nx_out (# grid points in output field)  =  70 
+8)  ny_out (# grid points in output field)  =  70
+9)  nz_out (# grid points in output field)  =  20
+10) itstp  (steps between outputs)          =  100  (5)
 11) total # of outputs (excluding first)    =  10000 
 
 -------------------------Algorithmic parameters------------------------
@@ -29,7 +29,7 @@
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-4 
 20) nu_parallel  (viscosity)                =  0e-3    (0.001)
-21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.1    (1.0)
