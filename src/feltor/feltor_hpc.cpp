@@ -154,6 +154,7 @@ int main( int argc, char* argv[])
     //energy IDs 
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
     int energyID, massID, energyIDs[5], dissID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_var_par_access( ncid, energyID, NC_COLLECTIVE);
