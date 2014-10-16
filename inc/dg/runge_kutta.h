@@ -191,8 +191,11 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
         std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
 #endif //DG_DEBUG
     }
-    if( error > eps_abs)
+    if( error > eps_abs || isnan(error) )
+    {
+        std::cerr << "ATTENTION: error is "<<error<<std::endl;
         throw Fail( eps_abs);
+    }
 
 }
 
