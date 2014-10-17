@@ -98,7 +98,7 @@ struct Parameters
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
             <<"     background profile amplitude: "<<bgprofamp<<"\n"
             <<"     boxscale:                     "<<boxscale<<"\n"
-            <<"     boxlimscale:                  "<<boxscale<<"\n";
+            <<"     boxlimscale:                  "<<boxlimscale<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"     n  = "<<n<<"\n"
             <<"     Nx = "<<Nx<<"\n"

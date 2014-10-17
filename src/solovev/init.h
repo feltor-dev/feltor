@@ -85,7 +85,7 @@ struct PsiLimiter
 
 struct BoxLimiter
 {
-    Limiter(eule::Parameters p, GeomParameters gp): 
+    BoxLimiter(eule::Parameters p, GeomParameters gp): 
         p_(p),
         gp_(gp),
         psip_(Psip(gp.R_0,gp.A,gp.c)) {

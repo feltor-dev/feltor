@@ -248,7 +248,6 @@ int main( int argc, char* argv[])
         dg::blas2::symv( interpolate, transfer, transferD);
         transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-        //write time data
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);
     }

@@ -609,9 +609,9 @@ struct Field
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {
-            yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i])/gp_.R_0;       //ds/dphi =  R^2 B/I/R_0_hat
-            yp[0][i] =  y[0][i]*psipZ_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);              //dR/dphi =  R/I Psip_Z
-            yp[1][i] = -y[0][i]*psipR_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]) ;             //dZ/dphi = -R/I Psip_R
+            yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i])/gp_.R_0;//ds/dphi =  R^2 B/I/R_0_hat
+            yp[0][i] =  y[0][i]*psipZ_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);               //dR/dphi =  R/I Psip_Z
+            yp[1][i] = -y[0][i]*psipR_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]) ;              //dZ/dphi = -R/I Psip_R
         }
     }
     /**

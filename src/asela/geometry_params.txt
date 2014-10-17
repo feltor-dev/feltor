@@ -1,31 +1,36 @@
 
-          * Input-File for axisymmetric solovev equilibrium *
-                           Circular I_const
-          ---------------------------------------------------
-
-@-------------------------Solovev coefficients----------------------
-1)  A                        =  0.0     
-2)  c1                       =  0.0403162440217088926137331276458
-3)  c2                       = -0.113249225711363322310928799904 
-4)  c3                       =  0.0634862912404154388735883683720   
-5)  c4                       =  -0.0575970145004191118394682987154 
-6)  c5                       =  0.00647124092809912612244240837665
-7)  c6                       = -0.00139632170043048529705940852849
-8)  c7                       = -0.0000434608401532115232752655381332
+          * Input-File for TJ-K axisymmetric solovev equilibrium *
+    I const without X-point, Force Free, Te_10eV,B0_0.07T,hydrogen,Cref_1e-5
+          -----------------------------------------------------------
+          
+----------------------Solovev coefficients----------------------
+1)  A                        =  1.0     
+2)  c1                       =  0.131045220883676952272050123436
+3)  c2                       = -0.105132409761098259542121486358
+4)  c3                       =  0.182806714466852263553185998058
+5)  c4                       = -0.0299272999454872165110425699752
+6)  c5                       =  0.00903171898354270096080342772585
+7)  c6                       = -0.00291174442476659136544803144820
+8)  c7                       = -0.0000939530737927094685797929769612
 9)  c8                       =  0.0 
 10) c9                       =  0.0 
 11) c10                      =  0.0 
 12) c11                      =  0.0 
 13) c12                      =  0.0 
-------------------geometric coefficients-----------------------------
-14) R0 (in units of rhos)       =  150.     (150)
-15) inv aspect ratio (a/R0)     =  0.16666666666666666666666667
-16) elongation                  =  1.0
-17) triangularity               =  0.0
-------------------Miscellaneous--------------------------------------
-18) alpha (Damping thickness)   =  0.01 (sehr klein)
-19) RK4 epsilon                 =  1e-1 (absolute error for Runge Kutta)
-20) psip_min                    = -0.7       (used for iris and source > -1)
-21) psip_max                    =  1000.0 (0.0) (used for damping)
-22) psip_max_cut                =  1000.0  (von außen bis critical psip for limiter, -1 < psip < psipmax)
+----------------------geometric coefficients----------------------
+14) R0 (in units of rhos)    =  129.989 
+15) inv aspect ratio (a/R0)  =  0.166667
+16) elongation               =  1.00
+17) triangularity            =  0.0
+----------------------Miscellaneous----------------------
+18) alpha (Damping thickness)=  0.02
+19) RK4 epsilon              =  1e-5
+20) psip_min                 = -6.
+21) psip_max                 =  0.0 (> -7.4)
+22) psip_max_cut             =  0.0
+23) psip_max_lim             =  1e10   
+
 @ ------------------------------------------------------------------------
+
+
+
