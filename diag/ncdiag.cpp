@@ -177,72 +177,11 @@ int main( int argc, char* argv[])
       
         // ---- Compute energies ----
         std::cout << "Compute macroscopic timedependent quantities"<< "\n";
-        //compute mass
-        double mass = dg::blas2::dot( one3d, w3d, ne );
-        //compute U_e
-        double U_e = p.tau[0]*dg::blas2::dot( logne, w3d, ne);
-        //compute U_i
-        double U_i = p.tau[1]*dg::blas2::dot( logni, w3d, ni);
-        //compute U_phi
-        arakawa.bracketS( phi, phi, omega);             //dR phi dR phi + Dz phi Dz phi
-        dg::blas1::pointwiseDot( binv, omega, omega);
-        dg::blas1::pointwiseDot( binv, omega, omega);
-        double U_phi = 0.5*p.mu[1]*dg::blas2::dot( ni, w3d, omega); 
-        //Compute U_parallel_e
-        dg::blas1::pointwiseDot( ue, ue, omega);
-        double U_pare =-0.5*p.mu[0]*dg::blas2::dot( ne, w3d, omega);
-        //Compute U_parallel_i
-        dg::blas1::pointwiseDot( ui, ui, omega);
-        double U_pari = 0.5*p.mu[1]*dg::blas2::dot( ni, w3d, omega);
-        //Compute total energy
-        double energy= U_e + U_i  + U_phi + U_pare + U_pari;
-        //set t=0 energies
-        if (i==0) {
-            energy_0=energy; mass_0=mass; U_e_0=U_e; U_i_0=U_i; U_phi_0=U_phi; U_pare_0=U_pare; U_pari_0=U_pari;
-        }
-        //normalize energies
-        double energy_diff = (energy-energy_0)/energy_0;
-        double energy_norm = energy/energy_0;
-        double mass_norm = mass/mass_0;
-        double U_e_norm = U_e/U_e_0;
-        double U_i_norm =U_i/U_i_0;
-        double U_phi_norm = U_phi/U_phi_0;
-        double U_pare_norm = U_pare/U_pare_0;
-        double U_pari_norm = U_pari/U_pari_0;
-        //Compute resistive dissipation
-        dg::blas1::pointwiseDot( ne, ue, omega); //N_e U_e 
-        dg::blas1::pointwiseDot( ni, ui, chi);  //N_i U_i
-        dg::blas1::pointwiseDot( ne, ui, lambda);  //N_e U_i
-        dg::blas1::axpby( -1., omega, 1., chi); //chi  = -N_e U_e + N_i U_i
-        dg::blas1::axpby( -1., omega, 1., lambda); //lambda  = -N_e U_e + N_e U_i   
-        double Dres = -p.c*dg::blas2::dot(lambda, w3d, chi); //- C*(N_i U_i - N_e U_e)*(N_e U_i - N_e U_e)
-        //Compute perpendicular dissipation
-        //         dg::blas1::axpby(1.,one,1., logn[0] ,chi); //(1+lnN_e)
-//         dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //(1+lnN_e-phi)
-//         dg::blas1::pointwiseDot( npe[0], chi, omega); //N_e phi_e     
-//         dg::blas2::gemv( lapperp, y[0],chi);
-//         dg::blas2::gemv(lapperp, chi,chi);//nabla_RZ^4 lnN_e
-//     double Dperpne =  p.nu_perp*dg::blas2::dot(omega, w3d, chi); // 
-//         dg::blas1::axpby(1.,one,1., logn[1] ,chi); //(1+lnN_i)
-//         dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //(1+lnN_i-phi)
-//         dg::blas1::pointwiseDot( npe[1], chi, omega); //N_i phi_i     
-//         dg::blas2::gemv( lapperp,y[1], chi);
-//         dg::blas2::gemv( lapperp,chi,chi);//nabla_RZ^4 lnN_i
-//     double Dperpni = - p.nu_perp*dg::blas2::dot(omega, w3d, chi);
-//         dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e     
-//         dg::blas2::gemv( lapperp, y[2], chi);
-//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 U_e
-//     double Dperpue = p.nu_perp*p.mu[0]* dg::blas2::dot(omega, w3d, chi);
-//         dg::blas1::pointwiseDot( npe[1], y[3], omega); //N_e U_e     
-//         dg::blas2::gemv( lapperp, y[3], chi);
-//         dg::blas2::gemv( lapperp, chi,chi);//nabla_RZ^4 U_i
-//     double Dperpui = - p.nu_perp*p.mu[1]* dg::blas2::dot(omega, w3d, chi);
-//     ediff_ = Dres + Dperpne + Dperpni + Dperpue + Dperpui;
-        //Compute parallel dissipation
-        //compute total dissipation
-        double diss = Dres;
+        
         //write macroscopic timedependent quantities into output.dat file
-        os << time << " " << mass_norm << " " <<  U_e_norm <<" " <<  U_i_norm <<" " << U_phi_norm <<" " << U_pare_norm <<" " << U_pari_norm <<" "  << energy_norm <<" " << energy_diff<<std::endl;
+//         os << time << " " << mass_norm << " " <<  U_e_norm <<" " <<  U_i_norm <<" " << U_phi_norm <<" " << U_pare_norm <<" " << U_pari_norm <<" "  << energy_norm <<" " << energy_diff<<std::endl;
+        
+        
     } //end timestepping
     //cross correleation between phi and ne
     //relative fluctuation amplitude(psi) = delta n/n0

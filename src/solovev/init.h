@@ -83,6 +83,32 @@ struct PsiLimiter
     Psip psip_;
 };
 
+struct BoxLimiter
+{
+    Limiter(eule::Parameters p, GeomParameters gp): 
+        p_(p),
+        gp_(gp),
+        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        }
+
+    double operator( )(double R, double Z)
+    {
+        if      (R < gp_.R_0 - p_.boxlimscale*gp_.a)  { return 1.; }
+        else if (R > gp_.R_0 + p_.boxlimscale*gp_.a)  { return 1.; }
+        else if (Z < -p_.boxlimscale*gp_.a*gp_.elongation)  { return 1.; }
+        else if (Z >  p_.boxlimscale*gp_.a*gp_.elongation)  { return 1.; }
+        else     { return 0.;}
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        return (*this)(R,Z);
+    }
+    private:
+    eule::Parameters p_;
+    GeomParameters gp_;
+    Psip psip_;
+};
+
 /**
  * @brief Damps the outer boundary in a zone 
  * from psipmaxcut to psipmaxcut+ 4*alpha with a normal distribution
