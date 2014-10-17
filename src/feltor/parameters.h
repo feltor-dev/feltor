@@ -24,7 +24,7 @@ struct Parameters
     double amp, sigma, posX, posY, sigma_z;
     double k_psi; 
 
-    double amp_source, boxscale, nprofileamp, bgprofamp;
+    double amp_source, boxscale,boxlimscale, nprofileamp, bgprofamp;
 
     /**
      * @brief constructor to make a const object
@@ -68,6 +68,7 @@ struct Parameters
             bgprofamp = v[29];
             amp_source = v[30];
             boxscale = v[31];
+            boxlimscale = v[32];
         }
     }
     /**
@@ -96,7 +97,8 @@ struct Parameters
             <<"     Source strength:              "<<amp_source<<"\n"
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
             <<"     background profile amplitude: "<<bgprofamp<<"\n"
-            <<"     boxscale:                     "<<boxscale<<"\n";
+            <<"     boxscale:                     "<<boxscale<<"\n"
+            <<"     boxlimscale:                  "<<boxscale<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"     n  = "<<n<<"\n"
             <<"     Nx = "<<Nx<<"\n"

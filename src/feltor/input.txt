@@ -43,5 +43,6 @@
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
 31) boxscale (1<bs<R0/a)                    =  1.2 (a little larger than 1)
+32) boxlimiterscale (1<bs<R0/a)             =  1.1 (a little larger than 1)
 
 @ ------------------------------------------------------------
