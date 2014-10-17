@@ -93,10 +93,10 @@ struct BoxLimiter
 
     double operator( )(double R, double Z)
     {
-        if      (R < gp_.R_0 - p_.boxscale*gp_.a)  { return 1.; }
-        else if (R > gp_.R_0 + p_.boxscale*gp_.a)  { return 1.; }
-        else if (Z < -p_.boxscale*gp_.a*gp_.elongation)  { return 1.; }
-        else if (Z >  p_.boxscale*gp_.a*gp_.elongation)  { return 1.; }
+        if      (R < gp_.R_0 - p_.boxlimscale*gp_.a)  { return 1.; }
+        else if (R > gp_.R_0 + p_.boxlimscale*gp_.a)  { return 1.; }
+        else if (Z < -p_.boxlimscale*gp_.a*gp_.elongation)  { return 1.; }
+        else if (Z >  p_.boxlimscale*gp_.a*gp_.elongation)  { return 1.; }
         else     { return 0.;}
     }
     double operator( )(double R, double Z, double phi)
