@@ -724,33 +724,21 @@ struct DeltaFunction
     double epsilon_;
     double psivalue_;
 };
-struct HeavisideFunction
-{
-    HeavisideFunction(Psip psip, double psivalue) :
-         psip_(psip),psivalue_(psivalue){
-    }
-    void setpsi(double temp ){psivalue_ = temp;}
 
-    double operator()( double R, double Z)
-    {
-        if( psip_(R,Z) < psivalue_) return 1.;
-        return 0.;
-        
-    }
-    double operator()( double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
-    private:
-    Psip psip_;
-    double psivalue_;
-};
 /**
- * @brief Flux surface average over quantity 
+ * @brief Flux surface average over quantity
+ * @tparam container 
+ *
  */
 template <class container = thrust::host_vector<double> >
 struct FluxSurfaceAverage
 {
+     /**
+     * @brief Construct from a field and a grid
+     * @param g2d 2d grid
+     * @param gp  geometry parameters
+     * @param f container for global safety factor
+     */
     FluxSurfaceAverage(const dg::Grid2d<double>& g2d, GeomParameters gp,   const container& f) :
     g2d_(g2d),
     gp_(gp),
@@ -771,6 +759,11 @@ struct FluxSurfaceAverage
       double deltapsi = abs(psipZmin/g2d_.Nx()/g2d_.n() +psipRmin/g2d_.Ny()/g2d_.n());
       deltaf_.setepsilon(deltapsi/4.);
     }
+    /**
+     * @brief Calculate the Flux Surface Average
+     *
+     * @param psip0 the actual psi value for q(psi)
+     */
     double operator()(double psip0)
     {
             deltaf_.setpsi( psip0);
@@ -791,9 +784,20 @@ struct FluxSurfaceAverage
     const container w2d_;
     const container oneongrid_;
 };
+/**
+ * @brief Class for the evaluation of the safety factor q
+ * @tparam container 
+ *
+ */
 template <class container = thrust::host_vector<double> >
 struct SafetyFactor
 {
+     /**
+     * @brief Construct from a field and a grid
+     * @param g2d 2d grid
+     * @param gp  geometry parameters
+     * @param f container for global safety factor
+     */
     SafetyFactor(const dg::Grid2d<double>& g2d, GeomParameters gp,   const container& f) :
     g2d_(g2d),
     gp_(gp),
@@ -807,21 +811,24 @@ struct SafetyFactor
     {
       dg::HVec psipRog2d  = dg::evaluate( psipR_, g2d_);
       dg::HVec psipZog2d  = dg::evaluate( psipZ_, g2d_);
-      double psipRmax = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );    
+      double psipRmax = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(), 0.,     thrust::maximum<double>()  );    
       double psipRmin = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
       double psipZmax = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
       double psipZmin = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
       double deltapsi = abs(psipZmin/g2d_.Nx()/g2d_.n() +psipRmin/g2d_.Ny()/g2d_.n());
       deltaf_.setepsilon(deltapsi/4.);
     }
+    /**
+     * @brief Calculate the q profile over the function f which has to be the global safety factor
+     *
+     * @param psip0 the actual psi value for q(psi)
+     */
     double operator()(double psip0)
     {
             deltaf_.setpsi( psip0);
             container deltafog2d = dg::evaluate( deltaf_, g2d_);    
-            double psipcut = dg::blas2::dot( f_,w2d_,deltafog2d); //int deltaf psip
-//             double vol     = dg::blas2::dot( oneongrid_ , w2d_,deltafog2d); //int deltaf
-            double fsa = psipcut/(2.*M_PI);;
-        return fsa;
+            double q = dg::blas2::dot( f_,w2d_,deltafog2d)/(2.*M_PI);
+        return q;
     }
     private:
     dg::Grid2d<double> g2d_;
@@ -847,11 +854,6 @@ struct Alpha
     double operator()( double R, double Z)
     {
                 return (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
-//         return (R_0/R/R);
-//                 return  (R_0/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)));
-//                         return  (ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)));
-//            return  1./(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)));
-//         return 1 ;
     }
     double operator()( double R, double Z, double phi)
     {

@@ -341,8 +341,6 @@ void DZ<M,V>::cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg
         else if (yp[0][i] > g.x1())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
         else if (yp[1][i] < g.y0())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
         else if (yp[1][i] > g.y1())  { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
-//         else if (isnan(yp[0][i] == 1)) {yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
-//         else if (isnan(yp[1][i] == 1)) {yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
         else                         { }
 
             
