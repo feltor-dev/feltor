@@ -15,20 +15,20 @@
 7)  nx_out (# grid points in output field)  =  50 
 8)  ny_out (# grid points in output field)  =  50
 9)  nz_out (# grid points in output field)  =  5
-10) itstp  (steps between outputs)          =  5  (5)
+10) itstp  (steps between outputs)          =  5  (> 5)
 11) total # of outputs (excluding first)    =  10000 
 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-3 (1e-6)
-13)  eps_max (stop for induction)           =   1e-4 (1e-6)
-14)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
-15)  eps_time ( stop for time inversion )   =   1e-8 
+13)  eps_max (stop for induction)           =   1e-1 (1e-6)
+14)  eps_gamma (stop for Gamma CG)          =   1e-1 (1e-8)
+15)  eps_time ( stop for time inversion )   =   1e-8
 -------------------------Physical parameters----------------------------
 16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-3 
-20) nu_parallel  (viscosity)                =  1e-3    (0.001)
+20) nu_parallel  (viscosity)                =  0e-3    (0.001)
 21) para resistivity (c)                    =  1e-3   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
@@ -43,6 +43,6 @@
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
 31) boxscale (1<bs<R0/a)                    =  1.2 (a little larger than 1)
-32) boxlimiterscale (1<bs<R0/a)             =  1.1 (a little larger than 1)
+32) boxlimiterscale (1<bs<R0/a)             =  1.05 (a little larger than 1)
 
 @ ------------------------------------------------------------
