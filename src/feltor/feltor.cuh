@@ -164,7 +164,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     arakawa( g), 
     pol(     g, dg::not_normed, dg::symmetric), 
     lapperp ( g, dg::normed, dg::symmetric),
-    invgamma(g,-0.5*p.tau[1]*p.mu[1]),
+    invgamma(g,-0.5*p.tau[1]*p.mu[1], dg::symmetric),
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),
