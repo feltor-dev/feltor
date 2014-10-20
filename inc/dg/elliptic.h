@@ -80,7 +80,7 @@ class Elliptic
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param no Not normed for elliptic equations, normed else
-     * @param dir Direction of the right first derivative (i.e. forward, backward or symmetric)
+     * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
      */
     template< class Grid>
     Elliptic( const Grid& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
@@ -159,7 +159,7 @@ class Elliptic
     {
         if( dir == forward) return backward;
         if( dir == backward) return forward;
-        return symmetric;
+        return centered;
     }
     Matrix leftx, lefty, rightx, righty, jump;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication

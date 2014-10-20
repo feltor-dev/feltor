@@ -36,7 +36,7 @@ int main( int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<"DOT took                         " <<t.diff()<<"s    result: "<<norm<<"\n";
     dg::MVec y(x);
-    dg::MMatrix M = dg::create::dx( grid, dg::normed, dg::symmetric);
+    dg::MMatrix M = dg::create::dx( grid, dg::normed, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
@@ -51,7 +51,7 @@ int main( int argc, char* argv[])
     dg::blas2::symv( M, x, y);
     t.toc();
     if(rank==0)std::cout<<"SYMV took                        "<<t.diff()<<"s (forward y derivative!)\n";
-    M = dg::create::dy( grid, dg::normed, dg::symmetric);
+    M = dg::create::dy( grid, dg::normed, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();

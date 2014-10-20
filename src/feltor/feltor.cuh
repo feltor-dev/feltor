@@ -37,7 +37,7 @@ struct Rolkar
         expy(2, temp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
-        LaplacianM_perp ( g, dg::normed, dg::symmetric)
+        LaplacianM_perp ( g, dg::normed, dg::centered)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -162,9 +162,9 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     dzy( 4, chi),curvy(dzy), 
     dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
-    pol(     g, dg::not_normed, dg::symmetric), 
-    lapperp ( g, dg::normed, dg::symmetric),
-    invgamma(g,-0.5*p.tau[1]*p.mu[1], dg::symmetric),
+    pol(     g, dg::not_normed, dg::centered), 
+    lapperp ( g, dg::normed, dg::centered),
+    invgamma(g,-0.5*p.tau[1]*p.mu[1], dg::centered),
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),

@@ -24,7 +24,7 @@ int main()
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER);
     //dg::Grid2d<double> g( 0, lx, 0, lx, n, Nx, Ny, bcx, dg::PER);
-    dg::DMatrix dx = dg::create::dx<double>( g, bcx, dg::normed, dg::symmetric);
+    dg::DMatrix dx = dg::create::dx<double>( g, bcx, dg::normed, dg::centered);
     dg::DMatrix lzM = dg::create::laplacianM_perp<double>( g, bcx, dg::PER, dg::normed, dg::forward);
     //dg::DMatrix lzM = dg::create::laplacianM<double>( g, bcx, dg::PER, dg::normed, dg::forward);
     dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> lap( g, bcx, dg::PER, dg::normed);

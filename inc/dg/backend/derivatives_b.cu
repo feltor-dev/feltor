@@ -38,7 +38,7 @@ int main()
     std::cout << "# of polynomials    " << n <<"\n";
     dg::Grid2d<double> g( 0, lx, 0, lx, n, Nx, Ny, bcx, dg::PER);
     dg::DMatrix dx = dg::create::dx( g, bcx);
-    dg::DMatrix lxM = dg::create::laplacianM( g, bcx, dg::PER, dg::normed, dg::symmetric);
+    dg::DMatrix lxM = dg::create::laplacianM( g, bcx, dg::PER, dg::normed, dg::centered);
     const dg::DVec hv = dg::evaluate( function, g);
     dg::DVec hw = hv;
     const dg::DVec hu = dg::evaluate( derivative, g);

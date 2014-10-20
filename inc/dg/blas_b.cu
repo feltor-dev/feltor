@@ -32,11 +32,11 @@ int main()
     t.toc();
     std::cout<<"DOT took                         " <<t.diff()<<"s   result: "<<norm<<"\n";
     dg::DVec y(x);
-    dg::DMatrix M = dg::create::dx( grid, dg::normed, dg::symmetric);
+    dg::DMatrix M = dg::create::dx( grid, dg::normed, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s (symmetric x derivative!)\n";
+    std::cout<<"SYMV took                        "<<t.diff()<<"s (centered x derivative!)\n";
     M = dg::create::dx( grid, dg::normed, dg::forward);
     t.tic();
     dg::blas2::symv( M, x, y);
@@ -47,11 +47,11 @@ int main()
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"SYMV took                        "<<t.diff()<<"s (forward y derivative!)\n";
-    M = dg::create::dy( grid, dg::normed, dg::symmetric);
+    M = dg::create::dy( grid, dg::normed, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s (symmetric y derivative!)\n";
+    std::cout<<"SYMV took                        "<<t.diff()<<"s (centered y derivative!)\n";
     M = dg::create::jump2d( grid, dg::not_normed);
     t.tic();
     dg::blas2::symv( M, x, y);
