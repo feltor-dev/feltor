@@ -99,7 +99,7 @@ struct Feltor
     container& induct(const std::vector<container>& y);//solves induction equation
 
     container chi, omega,lambda;//1d container
-    container apar,rho,gammani;//1d container
+    container apar,rho;//1d container
 
     const container binv, curvR, curvZ, gradlnB;
     const container source, damping, one;
@@ -129,7 +129,7 @@ template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::one, g)), omega(chi),lambda(chi),  //1d container
-    rho( chi), apar(chi), curvapar(chi),gammani(chi),
+    rho( chi), apar(chi), curvapar(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
@@ -184,7 +184,6 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
 
     unsigned numberg    =  invert_invgamma(invgamma,chi,y[1]); //chi= Gamma (Ni-1)
     //Set gamma_ni <- do not change afterwards
-    dg::blas1::transform( chi, gammani, dg::PLUS<>(+1)); //gammani = chi+1
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
 
@@ -240,7 +239,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     phi[0] = polarisation( y); //computes phi and Gamma n_i
     phi[1] = compute_psi( phi[0]); //sets omega = u_E^2
     //compute A_parallel via induction and compute U_e and U_i from it
-    apar = induct(y); //computes a_par and needs correct gammani,npe
+    apar = induct(y); //computes a_par and needs correct npe
 
     //calculate U from Apar and w
     dg::blas1::axpby( 1., y[2], - p.beta/p.mu[0], apar, u[0]); // U_e = w_e -beta/mu_e A_parallel

@@ -57,8 +57,8 @@ int main( int argc, char* argv[])
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (p.Nz)/v2[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
+    draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
 
 
 
@@ -134,27 +134,34 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
         title << std::setprecision(2) << std::scientific;
-        title <<"ne -1/ "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"ne-1 / " << colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         hvisual = y0[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
         title << std::setprecision(2) << std::scientific;
-        title <<"ni-1 / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"ni-1 / " << colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //transform to Vor
         //dvisual=feltor.potential()[0];
         //dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
@@ -162,13 +169,17 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( potvisual.begin(), potvisual.end(), 0.,thrust::maximum<double>()  );
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
-        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"Phi / " << colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( potvisual.begin() + k*v2[2]*size, potvisual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, potvisual);
         //draw U_e
@@ -176,27 +187,33 @@ int main( int argc, char* argv[])
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
-        title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"Ue / " << colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw U_i
         hvisual =feltor.uparallel()[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
-        title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
+        title <<"Ui / "<< colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw a parallel
 
         colors.scalemax() = (float)thrust::reduce( aparvisual.begin(),aparvisual.end(), 0., thrust::maximum<double>()  );
@@ -206,8 +223,12 @@ int main( int argc, char* argv[])
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( aparvisual.begin() + k*v2[2]*size, aparvisual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
+
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         hvisual = feltor.aparallel();
         dg::blas2::gemv( equi, hvisual, aparvisual);     
         

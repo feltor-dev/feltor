@@ -57,7 +57,7 @@ struct Rolkar
 
         }
         //Resistivity
-        dg::blas1::axpby( 1., x[3], -1, x[2], omega); //U_e - U_i
+        dg::blas1::axpby( 1., x[3], -1, x[2], omega); //U_i - U_e
         dg::blas1::axpby( -p.c/p.mu[0], omega, 1., y[2]);  //- C/mu_e (U_e - U_i)
         dg::blas1::axpby( -p.c/p.mu[1], omega, 1., y[3]);  //- C/mu_i (U_e - U_i)
         //damping
