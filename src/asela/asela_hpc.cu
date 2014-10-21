@@ -138,11 +138,11 @@ int main( int argc, char* argv[])
     //energy IDs
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    int energyID, massID, energyIDs[5], dissID, dEdtID, accuracyID;
+    int energyID, massID, energyIDs[6], dissID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
-    std::string energies[5] = {"Se", "Si", "Uperp", "Upare", "Upari"}; 
-    for( unsigned i=0; i<5; i++){
+    std::string energies[6] = {"Se", "Si", "Uperp", "Upare", "Upari","Uapar"}; 
+    for( unsigned i=0; i<6; i++){
         err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);}
     err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
     err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
@@ -188,7 +188,7 @@ int main( int argc, char* argv[])
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
-    for( unsigned i=0; i<5; i++)
+    for( unsigned i=0; i<6; i++)
         err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
 
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
@@ -231,14 +231,13 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
-            for( unsigned i=0; i<5; i++)
+            for( unsigned i=0; i<6; i++)
             {
                 err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
             }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
-            err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
@@ -276,6 +275,8 @@ int main( int argc, char* argv[])
         dg::blas2::symv( interpolate, transfer, transferD);
         transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+
         err = nc_close(ncid);
     }
     t.toc(); 

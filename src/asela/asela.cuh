@@ -152,7 +152,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),
     gp(gp),
-    evec(5)
+    evec(6)
 { }
 
 template<class Matrix, class container, class P>
@@ -253,12 +253,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     }
     mass_ = dg::blas2::dot( one, w3d, y[0] ); //take real ion density which is electron density!!
     double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w3d, omega);   //= 0.5 mu_i N_i u_E^2
-     arakawa.bracketS( apar,apar, omega);    
-//     arakawa.variation(apar,omega); // (dx A_parallel)^2 + (dy A_parallel)^2
+     arakawa.bracketS( apar,apar, omega); // (dx A_parallel)^2 + (dy A_parallel)^2   
     double Uapar = p.beta*dg::blas2::dot( one, w3d, omega);
     //energytheorem
     energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1] + Uapar; 
-    evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1];
+    evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1]; evec[5] = Uapar;
      
     //// the resistive dissipative energy
     dg::blas1::pointwiseDot( npe[0], u[0], omega); //N_e U_e 
