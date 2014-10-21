@@ -57,7 +57,7 @@ struct Rolkar
 
         }
         //Resistivity
-        dg::blas1::axpby( 1., x[3], -1, x[2], omega); //U_e - U_i
+        dg::blas1::axpby( 1., x[3], -1, x[2], omega); //U_i - U_e
         dg::blas1::axpby( -p.c/p.mu[0], omega, 1., y[2]);  //- C/mu_e (U_e - U_i)
         dg::blas1::axpby( -p.c/p.mu[1], omega, 1., y[3]);  //- C/mu_i (U_e - U_i)
         //damping
@@ -224,25 +224,24 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     phi[1] = compute_psi( phi[0]); //sets omega
 
     double z[2]    = {-1.0,1.0};
-    double U[2]    = {0.0, 0.0};
+    double S[2]    = {0.0, 0.0};
     double Tpar[2] = {0.0, 0.0};
     double Dpar[4] = {0.0, 0.0,0.0,0.0};
     double Dperp[4] = {0.0, 0.0,0.0,0.0};
-
     //transform compute n and logn and energies
     for(unsigned i=0; i<2; i++)
     {
         dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1)); //npe = N+1
         dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
-        U[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w3d, npe[i]);
+        S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w3d, npe[i]);
         dg::blas1::pointwiseDot( y[i+2], y[i+2], chi); 
         Tpar[i] = z[i]*0.5*p.mu[i]*dg::blas2::dot( npe[i], w3d, chi);
     }
     mass_ = dg::blas2::dot( one, w3d, y[0] ); //take real ion density which is electron density!!
     double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w3d, omega);   //= 0.5 mu_i N_i u_E^2
     //energytheorem
-    energy_ = U[0] + U[1]  + Tperp + Tpar[0] + Tpar[1]; 
-    evec[0] = U[0], evec[1] = U[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1];
+    energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
+    evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1];
      
     //// the resistive dissipative energy
     dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e 
@@ -271,7 +270,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dz_.set_boundaries( dg::NEU, 0, 0);                                  //dz N = 0 on limiter
         dz_(y[i], dzy[i]);       
 //         dz_.set_boundaries( dg::DIR,  ush[i],-1.0,1.0);                      //dz U = {1./sqrt(-2.*M_PI*mu[0])*EXP(-phi),1} on limiter
-        dz_.set_boundaries( dg::NEU, 0, 0);                                  //dz N = 0 on limiter
+        dz_.set_boundaries( dg::NEU, 0, 0);                                  //dz U = 0 on limiter
         dz_(y[i+2], dzy[i+2]);                                               //dz U
 
 //         dg::blas1::pointwiseDot(npe[i], ush[i], omega);                      // U N on limiter

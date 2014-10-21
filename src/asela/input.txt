@@ -1,43 +1,48 @@
 
-                * Input-File for FELTOR and ASELA *
-                ----------------------------------
+                * Input-File for "FELTOR" *
+                ---------------------------
 
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
 2)  nx (grid points in x)                =   50 (192)
 3)  ny (grid points in y)                =   50 (192) 
-4)  nz (grid points in z)                =   5 (>16)
-5)  dt (time step in units c_s/rho_s)    =   1e-4  (0.01)
+4)  nz (grid points in z)                =   11(>16)
+5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
+
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  40 
-8)  ny_out (# grid points in output field)  =  40
-9)  nz_out (# grid points in output field)  =   5
-10) itstp  (steps between outputs)          =  20     (5)
-11) total # of outputs (excluding first)    =  300 
+7)  nx_out (# grid points in output field)  =  50 
+8)  ny_out (# grid points in output field)  =  50
+9)  nz_out (# grid points in output field)  =  11
+10) itstp  (steps between outputs)          =  100  (> 5)
+11) total # of outputs (excluding first)    =  5000
+
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-3 (1e-6)
-13)  eps_max (stop for induction)           =   0.0 (1e-6)
-14)  eps_gamma (stop for Gamma CG)          =   1e-4 (1e-8)
-15)  eps_time ( stop for time inversion )   =   1e-8 
+13)  eps_max (stop for induction)           =   1e-4 (1e-6)
+14)  eps_gamma (stop for Gamma CG)          =   1e-1 (1e-8)
+15)  eps_time ( stop for time inversion )   =   1e-8
 -------------------------Physical parameters----------------------------
-16) mu_e (-m_e/m_i)                         = -0.5e-4
+16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
-18) beta_e0                                 =  0.0  (1e-4)
-19) nu_perp                                 =  1e-3
+18) beta_e0                                 =  5e-6    (5e-6 tjk, 4e-3 compass)
+19) nu_perp                                 =  1e-3 
 20) nu_parallel  (viscosity)                =  0e-3   (0.001)
-21) para resistivity (c)                    =  1e-3   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-4   (5e-5 tjk)
+
 ------------------------Initial perturbation parameters---------------------
-22) amp (blob amplitude)                    =  1.0     (1.0)
-23) sigma (blob variance in units of rho_s) =  2.0     (10)
-24) x-position ( in units of a)             =  0.4   (0.4)
-25) y-position ( in units of a)             =  0.00  (0.5)
-26) sigma_z (variance in units of R_0)      =  1
-27) k_psi (zonal modes)                     =  1    
-28) Profile amplitude                       =  20.0  (peak amplitude)
-29) Background Prof amplitude               =  10.   (density on the boundary)
+22) amp (blob amplitude)                    =  0.1    (1.0)
+23) sigma (blob variance in units of rho_s) =  5.0     (10)
+24) x-position ( in units of a)             =  0.15   (0.4)
+25) y-position ( in units of a)             =  0.00   (0.5)
+26) sigma_z (variance in units of R_0)      =  0.5       (12.5 for oo)
+27) k_psi (zonal modes)                     =  7.0   
+28) Profile amplitude                       =  2.5  (peak amplitude)
+29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
-31) boxscale (1<bs<R0/a)                    =  1.2  (a little larger than 1)
+31) boxscale (1<bs<R0/a)                    =  1.1 (a little larger than 1)
+32) boxlimiterscale (1<bs<R0/a)             =  1.1 (a little larger than 1)
+
 @ ------------------------------------------------------------

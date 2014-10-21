@@ -7,14 +7,14 @@
 1)  n  (# of x,y-polynomials)            =   3      (3)
 2)  nx (grid points in x)                =   80 (192)
 3)  ny (grid points in y)                =   80 (192) 
-4)  nz (grid points in z)                =   20(>16)
-5)  dt (time step in units c_s/rho_s)    =   5e-3 (0.01)
+4)  nz (grid points in z)                =   5(>16)
+5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
 7)  nx_out (# grid points in output field)  =  80 
 8)  ny_out (# grid points in output field)  =  80
-9)  nz_out (# grid points in output field)  =  20
+9)  nz_out (# grid points in output field)  =  5
 10) itstp  (steps between outputs)          =  200  (5)
 11) total # of outputs (excluding first)    =  10000 
 
@@ -29,7 +29,7 @@
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-3 
 20) nu_parallel  (viscosity)                =  1e-3    (0.001)
-21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-3   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.1    (1.0)
@@ -42,7 +42,7 @@
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
-31) boxscale (1<bs<R0/a)                    =  1.2 (a little larger than 1)
+31) boxscale (1<bs<R0/a)                    =  1.4 (a little larger than 1)
 32) boxlimiterscale (1<bs<R0/a)             =  1.1 (a little larger than 1)
 
 @ ------------------------------------------------------------
