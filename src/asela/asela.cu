@@ -108,7 +108,7 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, rolkar, y0, p.dt);
 
     dg::DVec dvisual( grid.size(), 0.);
-    dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual),potvisual(hvisual),aparvisual(hvisual);
+    dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
     //create timer
@@ -120,16 +120,12 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     
-    hvisual = feltor.potential()[0];
-    dg::blas2::gemv( equi, hvisual, potvisual);
-    hvisual = feltor.aparallel();
-    dg::blas2::gemv( equi, hvisual, aparvisual);
+   
+
     while ( !glfwWindowShouldClose( w ))
     {
-
-
         //plot electrons
-        hvisual =y0[0];
+        hvisual = karniadakis.last()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
@@ -146,7 +142,7 @@ int main( int argc, char* argv[])
         dg::blas1::scal(avisual,1./p.Nz);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
-        hvisual = y0[1];
+        hvisual =  karniadakis.last()[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
@@ -162,11 +158,14 @@ int main( int argc, char* argv[])
         }
         dg::blas1::scal(avisual,1./p.Nz);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        //draw Potential
+        hvisual = feltor.potential()[0];
+        dg::blas2::gemv( equi, hvisual, visual);
         //transform to Vor
         //dvisual=feltor.potential()[0];
         //dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
         //hvisual = y1[1];
-        colors.scalemax() = (float)thrust::reduce( potvisual.begin(), potvisual.end(), 0.,thrust::maximum<double>()  );
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
         title <<"Phi / " << colors.scalemax()<<"\t";
@@ -174,14 +173,13 @@ int main( int argc, char* argv[])
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( potvisual.begin() + k*v2[2]*size, potvisual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
             dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::scal(avisual,1./p.Nz);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        hvisual = feltor.potential()[0];
-        dg::blas2::gemv( equi, hvisual, potvisual);
+
         //draw U_e
         hvisual = feltor.uparallel()[0]; //=U_parallel_e
         dg::blas2::gemv( equi, hvisual, visual);
@@ -215,22 +213,22 @@ int main( int argc, char* argv[])
         dg::blas1::scal(avisual,1./p.Nz);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw a parallel
-
-        colors.scalemax() = (float)thrust::reduce( aparvisual.begin(),aparvisual.end(), 0., thrust::maximum<double>()  );
+        hvisual = feltor.aparallel();
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0., thrust::maximum<double>()  );
         colors.scalemin() = - colors.scalemax();
-        title <<"A / "<<(float)thrust::reduce( aparvisual.begin(), aparvisual.end(), colors.scalemax()  ,thrust::minimum<double>() )<< "  " << colors.scalemax()<<"\t";
+        title <<"A / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<< "  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( aparvisual.begin() + k*v2[2]*size, aparvisual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
             dg::blas1::axpby(1.0,part,1.0,avisual);
 
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::scal(avisual,1./p.Nz);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        hvisual = feltor.aparallel();
-        dg::blas2::gemv( equi, hvisual, aparvisual);     
+ 
         
         title << std::fixed; 
         title << " &&   time = "<<time;
