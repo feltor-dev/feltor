@@ -31,7 +31,7 @@ enum norm{
 enum direction{
     forward, //!< forward derivative
     backward, //!< backward derivative
-    symmetric //!< up-down symmetrie
+    centered //!< centered derivative
 };
 /**
  * @brief Coordinate system

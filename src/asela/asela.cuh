@@ -24,7 +24,7 @@ struct Rolkar
         temp( dg::evaluate(dg::zero, g)),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
-        LaplacianM_perp ( g, dg::normed, dg::symmetric)
+        LaplacianM_perp ( g, dg::normed, dg::centered)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -142,12 +142,12 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     dzy( 4, chi), curvy(dzy), //4d container
     dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
-    pol(     g, dg::not_normed, dg::symmetric), 
-    lapperp ( g, dg::normed, dg::symmetric),
-    invgamma(g,-0.5*p.tau[1]*p.mu[1],dg::symmetric),
+    pol(     g, dg::not_normed, dg::centered), 
+    lapperp ( g, dg::normed, dg::centered),
+    invgamma(g,-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol( omega, omega.size(), p.eps_pol), 
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), one(dg::evaluate( dg::one, g)),
-    maxwell(g, 1., dg::symmetric), //sign is already correct!
+    maxwell(g, 1., dg::centered), //sign is already correct!
     invert_maxwell(omega, omega.size(), p.eps_maxwell),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),

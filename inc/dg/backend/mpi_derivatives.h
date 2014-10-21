@@ -40,7 +40,7 @@ MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
     t *= 2./hx;
 
     Operator<double> a(n), b(n), bt(n);
-    if( dir == dg::symmetric)
+    if( dir == dg::centered)
     {
         MPI_Matrix m(bcx, comm,  3);
         m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
@@ -89,7 +89,7 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir, int co
     Operator<double> data_[4];
     if( bcx != dg::PER)
     {
-        if( dir == dg::symmetric)
+        if( dir == dg::centered)
         {
             row_.resize(4), col_.resize(4);
             row_[0] = 0, col_[0] = 0; 
@@ -174,7 +174,7 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir, int co
 
 } //namespace detail
 
-MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = symmetric)
+MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = centered)
 {
     MPI_Comm comm = g.communicator();
     Grid1d<double> g1d( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
@@ -188,12 +188,12 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = sy
     return dx;
 }
 
-MPI_Matrix dx( const MPI_Grid2d& g, norm no = normed, direction dir = symmetric)
+MPI_Matrix dx( const MPI_Grid2d& g, norm no = normed, direction dir = centered)
 {
     return dx( g, g.bcx(), no, dir);
 }
 
-MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = symmetric)
+MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = centered)
 {
     MPI_Comm comm = g.communicator();
     Grid1d<double> g1d( g.y0(), g.y1(), g.n(), g.Ny());
@@ -209,11 +209,11 @@ MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = sy
     m.yterm() = detail::boundaryDX( g1d, bcy, dir, coords[1], dims[1]);
     return m;
 }
-MPI_Matrix dy( const MPI_Grid2d& g, norm no = normed, direction dir = symmetric)
+MPI_Matrix dy( const MPI_Grid2d& g, norm no = normed, direction dir = centered)
 {
     return dy( g, g.bcy(), no, dir);
 }
-MPI_Matrix dx( const MPI_Grid3d& g, bc bcx, norm no = normed, direction dir = symmetric)
+MPI_Matrix dx( const MPI_Grid3d& g, bc bcx, norm no = normed, direction dir = centered)
 {
     MPI_Comm comm = g.communicator();
     Grid1d<double> g1d( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
@@ -227,12 +227,12 @@ MPI_Matrix dx( const MPI_Grid3d& g, bc bcx, norm no = normed, direction dir = sy
     return dx;
 }
 
-MPI_Matrix dx( const MPI_Grid3d& g, norm no = normed, direction dir = symmetric)
+MPI_Matrix dx( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
 {
     return dx( g, g.bcx(), no, dir);
 }
 
-MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = symmetric)
+MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = centered)
 {
     MPI_Comm comm = g.communicator();
     Grid1d<double> g1d( g.y0(), g.y1(), g.n(), g.Ny());
@@ -248,7 +248,7 @@ MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = sy
     m.yterm() = detail::boundaryDX( g1d, bcy, dir, coords[1], dims[1]);
     return m;
 }
-MPI_Matrix dy( const MPI_Grid3d& g, norm no = normed, direction dir = symmetric)
+MPI_Matrix dy( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
 {
     return dy( g, g.bcy(), no, dir);
 }

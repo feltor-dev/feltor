@@ -40,7 +40,7 @@ int main()
     dg::DVec x = dg::evaluate( initial, g);
     dg::DVec w1d = dg::create::weights( g);
     dg::DVec v1d = dg::create::inv_weights( g);
-    dg::DMatrix A = dg::create::laplace1d( g,bcx, dg::not_normed, dg::symmetric); 
+    dg::DMatrix A = dg::create::laplace1d( g,bcx, dg::not_normed, dg::centered); 
 
     dg::CG< dg::DVec > cg( x, x.size());
     dg::DVec b = dg::evaluate ( sine, g);

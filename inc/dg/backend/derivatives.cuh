@@ -73,12 +73,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> renorm( const cusp::coo_matrix<int, 
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm no = normed, direction dir = symmetric)
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm no = normed, direction dir = centered)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Matrix deltaY = dg::tensor( g.Ny(), dg::create::delta( g.n())); 
     Matrix dx;
-    if( dir == symmetric)
+    if( dir == centered)
         dx = create::dx_symm_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
     else if (dir == forward)
         dx = create::dx_plus_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
@@ -101,7 +101,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, norm no = normed, direction dir = symmetric) { return dx( g, g.bcx(), no, dir);}
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, norm no = normed, direction dir = centered) { return dx( g, g.bcx(), no, dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -116,12 +116,12 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, norm no = no
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, norm no = normed, direction dir = symmetric)
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, norm no = normed, direction dir = centered)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Matrix deltaX = dg::tensor( g.Nx(), dg::create::delta( g.n())); 
     Matrix dy;
-    if( dir == symmetric)
+    if( dir == centered)
         dy = create::dx_symm_normed<T>(g.n(), g.Ny(), g.hy(), bcy);
     else if (dir == forward)
         dy = create::dx_plus_normed<T>(g.n(), g.Ny(), g.hy(), bcy);
@@ -144,7 +144,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, norm
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, norm no = normed, direction dir = symmetric){ return dy( g, g.bcy(), no, dir);}
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, norm no = normed, direction dir = centered){ return dy( g, g.bcy(), no, dir);}
 
 //the behaviour of CG is completely the same in xspace as in lspace
 /**
@@ -252,7 +252,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, norm no)
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, norm no = normed, direction dir = symmetric)
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, norm no = normed, direction dir = centered)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
@@ -276,7 +276,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, bc bcx, norm
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, norm no = normed, direction dir = symmetric) { return dx( g, g.bcx(), no, dir);}
+cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, norm no = normed, direction dir = centered) { return dx( g, g.bcx(), no, dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
@@ -291,7 +291,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid3d<T>& g, norm no = no
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, norm no = normed, direction dir = symmetric)
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, norm no = normed, direction dir = centered)
 {
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
@@ -314,7 +314,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, norm
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, norm no = normed, direction dir = symmetric){ return dy( g, g.bcy(),no, dir);}
+cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, norm no = normed, direction dir = centered){ return dy( g, g.bcy(),no, dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
@@ -349,7 +349,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, bc bcz, dire
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( g, g.bcz(), symmetric);}
+cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( g, g.bcz(), centered);}
 
 /**
  * @brief Create 3d negative laplacian_perp

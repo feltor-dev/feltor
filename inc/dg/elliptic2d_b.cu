@@ -54,7 +54,7 @@ int main()
 
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> pol( grid, dg::not_normed, dg::symmetric);
+    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> pol( grid, dg::not_normed, dg::centered);
     pol.set_chi( chi);
     t.toc();
     std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";

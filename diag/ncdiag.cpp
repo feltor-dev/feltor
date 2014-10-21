@@ -16,7 +16,7 @@
 #include "file/nc_utilities.h"
 
 
-//read and evaluate TOEFL & INNTO h5 files
+//read and evaluate FELTOR nc files
 
 double X( double x, double y) {return x;}
 double Y( double x, double y) {return y;}
@@ -36,7 +36,7 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
-    //read in and show attributes inputfile und geomfile
+    ///////////////////read in and show inputfile und geomfile//////////////////
     size_t length;
     err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
     std::string input( length, 'x');
@@ -50,6 +50,7 @@ int main( int argc, char* argv[])
     const solovev::GeomParameters gp(file::read_input( geom));
     p.display();
     gp.display();
+    ///////////////////////////////////////////////////////////////////////////
     double Rmin=gp.R_0-(p.boxscale)*gp.a;
     double Zmin=-(p.boxscale)*gp.a*gp.elongation;
     double Rmax=gp.R_0+(p.boxscale)*gp.a; 
@@ -57,7 +58,6 @@ int main( int argc, char* argv[])
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     dg::Grid2d<double> grid2d_out( grid_out.x0(), grid_out.x1(), grid_out.y0(), grid_out.y1(), grid_out.n(), grid_out.Nx(), grid_out.Ny());
 
-    //for loop
     //read in midplane of electrons, ions Ue, Ui, and potential, and energy
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
     int dataIDs[5];
@@ -93,6 +93,7 @@ int main( int argc, char* argv[])
     dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> lapperp(grid_out, dg::not_normed, dg::symmetric);
 
     double energy_0 =0.,U_i_0=0.,U_e_0=0.,U_phi_0=0.,U_pare_0=0.,U_pari_0=0.,mass_0=0.;
+    os << "#Time(1) mass(2) Ue(3) Ui(4) Uphi(5) Upare(6) Upari(7) Utot(8) EDiff(9)\n";
     
     for( unsigned i=0; i<p.maxout; i++)//timestepping
     {

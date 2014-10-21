@@ -148,6 +148,21 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
     }
 }
 
+struct NotANumber : public std::exception
+{
+    /**
+     * @brief Construct 
+     *
+     */
+    NotANumber( ) {}
+    /**
+     * @brief What string
+     *
+     * @return string "NaN returned!"
+     */
+    char const* what() const throw(){ return "NaN returned!";}
+};
+
 /**
  * @brief Integrates the differential equation using RK4 and a rudimentary stepsize-control
  *
@@ -165,23 +180,25 @@ template< class RHS, class Vector>
 void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
 {
     RK<4, Vector > rk( begin); 
-    Vector y0(end), y1(end);
+    Vector old_end(begin), temp(begin);
+    end = begin;
+    if( T_max == 0) return;
     double dt = T_max;
     unsigned NT = 1;
     double error = 1e10;
-    while( error > eps_abs && NT < pow( 2, 12))
+    while( error > eps_abs && NT < pow( 2, 14))
     {
         dt /= 2.;
         NT *= 2;
-        y0 = begin;
+        end = begin;
         for( unsigned i=0; i < NT; i++)
         {
-            rk( rhs, y0, y1, dt); 
-            y0.swap( y1); //y0 is one step further
+            rk( rhs, end, temp, dt); 
+            end.swap( temp); //end is one step further
         }
-        dg::blas1::axpby( 1., y0, -1., end); 
-        error = sqrt( dg::blas1::dot( end, end));
-        end = y0;
+        dg::blas1::axpby( 1., end, -1., old_end); 
+        error = sqrt( dg::blas1::dot( old_end, old_end));
+        old_end = end;
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
         int rank;
@@ -191,8 +208,13 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
         std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
 #endif //DG_DEBUG
     }
-    if( error > eps_abs)
+    if( error > eps_abs )
+    {
+        std::cerr << "ATTENTION: error is "<<error<<std::endl;
         throw Fail( eps_abs);
+    }
+    if( isnan(error) )
+        throw NotANumber();
 
 }
 

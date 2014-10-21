@@ -52,7 +52,7 @@ int main()
     dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
     dg::DMatrix DX = dg::create::dx( grid);
     dg::HMatrix A = dA;
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> lap(grid, dg::not_normed, dg::symmetric );
+    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> lap(grid, dg::not_normed, dg::centered );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 

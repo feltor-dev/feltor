@@ -34,7 +34,7 @@ int main()
     dg::DVec x(rho.size(), 0.);
     //dg::DVec x(rho);
 
-    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > gamma1( grid, alpha, dg::symmetric);
+    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > gamma1( grid, alpha, dg::centered);
 
     dg::CG< dg::DVec > cg(x, x.size());
     dg::blas2::symv( w2d, rho, rho);
