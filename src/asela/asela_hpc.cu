@@ -77,9 +77,9 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+//      dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 
-//    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+   dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
     
     //background profile
@@ -178,7 +178,7 @@ int main( int argc, char* argv[])
     dg::blas2::symv( interpolate, transfer, transferD);
     transferH = transferD;//transfer to host
     err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
-    double time = -p.dt;
+    double time = 0.;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 

@@ -37,20 +37,24 @@ ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(HOME)/include
 INCLUDE += -I$(UIBK_HDF5_INC)
 INCLUDE += -I$(UIBK_OPENMPI_INC)
+INCLUDE += -I$(UIBK_NETCDF_4_INC)
 
-LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl
+LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
+LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
 GLFLAGS  = -lm
 endif
 
 ifeq ($(strip $(system)),vsc)
 INCLUDE += -I$(HOME)/include
-INCLUDE += -I/opt/sw/hdf5/1.8.11/include
 INCLUDE += -I/opt/intel/impi/4.1.0/include64 
+INCLUDE += -I/opt/sw/netcdf/4.3/include
+INCLUDE += -I/opt/sw/hdf5/1.8.10-p1/include
 CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
 
-LIBS 	 = -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
+LIBS 	 = -L/opt/sw/hdf5/1.8.10-p1/lib -lhdf5 -lhdf5_hl
 LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
 LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
+LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
 

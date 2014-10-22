@@ -162,9 +162,9 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     dzy( 4, chi),curvy(dzy), 
     dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
     arakawa( g), 
-    pol(     g, dg::not_normed, dg::centered), 
-    lapperp ( g, dg::normed, dg::centered),
-    invgamma(g,-0.5*p.tau[1]*p.mu[1], dg::centered),
+    pol(      g, dg::not_normed,      dg::centered), 
+    lapperp ( g,     dg::normed,      dg::centered),
+    invgamma( g,-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol( omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),
@@ -247,7 +247,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e 
     dg::blas1::pointwiseDot( npe[1], y[3], chi);  //N_i U_i
     dg::blas1::axpby( -1., omega, 1., chi); //chi  = + N_i U_i -N_e U_e
-    dg::blas1::axpby( -1., y[2], 1., y[3], omega); //lambda  = -N_e U_e + N_e U_i   
+    dg::blas1::axpby( -1., y[2], 1., y[3], omega); //omega  = - U_e + U_i   
     double Dres = -p.c*dg::blas2::dot(omega, w3d, chi); //- C*(N_i U_i + N_e U_e)(U_i - U_e)
 
     //the parallel part is done elsewhere
@@ -340,6 +340,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //Compute parallel and perp dissipative energy for N
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
+        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  
+        dg::blas1::axpby(0.5*p.mu[i],omega,1., chi); //chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(dz^2 N -dz lnB dz N)
         dg::blas2::gemv( lapperp, y[i], lambda);
         dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
