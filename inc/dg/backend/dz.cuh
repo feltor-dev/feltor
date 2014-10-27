@@ -69,10 +69,11 @@ struct DZ
   * @param grid The grid on which to operate
   * @param eps Desired accuracy of runge kutta
   * @param limit Instance of the limiter class (Default is a limiter everywhere)
+  * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
   * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
   */
   template <class Field, class Limiter>
-  DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter()):
+  DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = DIR):
   g_(grid), bcz_(grid.bcz())
   {
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
@@ -89,59 +90,83 @@ struct DZ
     y[1] = dg::evaluate( dg::coo2, g2d);
     y[2] = dg::evaluate( dg::zero, g2d);
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3),coordsPt(3),coordsMt(3);
-    for( unsigned i=0; i<size; i++)
+    if (globalbcz == dg::DIR)
     {
-   
-        //assumes that perp boundary condition is constant on the entire 3d box surface
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-        dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
-        dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
-          if ( !(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
-          || !(coordsP[1] >= g_.y0() && coordsP[1] <= g_.y1()))
-          {
-            double tempvaluex;double tempvaluey;
-            unsigned mem=0;
-            if (coordsP[0] <= g_.x0()) { tempvaluex=g_.x0();mem=0;}
-            if (coordsP[0] >= g_.x1()) { tempvaluex=g_.x1();mem=0;}
-            if (coordsP[1] <= g_.y0()) { tempvaluey=g_.y0();mem=1;}
-            if (coordsP[1] >= g_.y1()) { tempvaluey=g_.y1();mem=1;}
-            BoxIntegrator<Field> boxy( field, g2d, eps);
-            boxy.set_coords( coords); //nimm alte koordinaten
-            double dPhiMin = 0, dPhiMax = g_.hz();
-            dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
-            dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
-            if (mem==0) { coordsP[0]=tempvaluex; }
-            if (mem==1) {coordsP[1]=tempvaluey;  }     
-//             std::cout << dPhiMin << std::endl;
-          }
-          if ( !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
-          || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
-          {
-            double tempvaluex;double tempvaluey;
-            unsigned mem=0;
-            if (coordsM[0] <= g_.x0()) { tempvaluex=g_.x0(); mem=0;}
-            if (coordsM[0] >= g_.x1()) { tempvaluex=g_.x1(); mem=0;}
-            if (coordsM[1] <= g_.y0()) { tempvaluey=g_.y0(); mem=1;}
-            if (coordsM[1] >= g_.y1()) { tempvaluey=g_.y1(); mem=1;}
-            BoxIntegrator<Field> boxy( field, g2d, eps);
-            boxy.set_coords( coords);
-            double dPhiMin = -g_.hz(), dPhiMax = 0;
-            dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
-            dg::integrateRK4( field, coords, coordsM, dPhiMax, eps);
-            if (mem==0) { coordsM[0]=tempvaluex;   }
-            if (mem==1) { coordsM[1]=tempvaluey;   }  
-//            std::cout << dPhiMax << std::endl;
-         }
+        for( unsigned i=0; i<size; i++)
+        {
+    
+            //assumes that perp boundary condition is constant on the entire 3d box surface
+            coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+            dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
+            dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
+            if ( !(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
+            || !(coordsP[1] >= g_.y0() && coordsP[1] <= g_.y1()))
+            {
+                double tempvaluex;double tempvaluey;
+                unsigned mem=0;
+                if (coordsP[0] <= g_.x0()) { tempvaluex=g_.x0();mem=0;}
+                if (coordsP[0] >= g_.x1()) { tempvaluex=g_.x1();mem=0;}
+                if (coordsP[1] <= g_.y0()) { tempvaluey=g_.y0();mem=1;}
+                if (coordsP[1] >= g_.y1()) { tempvaluey=g_.y1();mem=1;}
+                BoxIntegrator<Field> boxy( field, g2d, eps);
+                boxy.set_coords( coords); //nimm alte koordinaten
+                double dPhiMin = 0, dPhiMax = g_.hz();
+                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
+                dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
+                if (mem==0) { coordsP[0]=tempvaluex; }
+                if (mem==1) {coordsP[1]=tempvaluey;  }     
+    //             std::cout << dPhiMin << std::endl;
+            }
+            if ( !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
+            || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
+            {
+                double tempvaluex;double tempvaluey;
+                unsigned mem=0;
+                if (coordsM[0] <= g_.x0()) { tempvaluex=g_.x0(); mem=0;}
+                if (coordsM[0] >= g_.x1()) { tempvaluex=g_.x1(); mem=0;}
+                if (coordsM[1] <= g_.y0()) { tempvaluey=g_.y0(); mem=1;}
+                if (coordsM[1] >= g_.y1()) { tempvaluey=g_.y1(); mem=1;}
+                BoxIntegrator<Field> boxy( field, g2d, eps);
+                boxy.set_coords( coords);
+                double dPhiMin = -g_.hz(), dPhiMax = 0;
+                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
+                dg::integrateRK4( field, coords, coordsM, dPhiMax, eps);
+                if (mem==0) { coordsM[0]=tempvaluex;   }
+                if (mem==1) { coordsM[1]=tempvaluey;   }  
+    //            std::cout << dPhiMax << std::endl;
+            }
 
-        yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-        ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+            yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+            ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+        }
+        //dg::integrateRK4( field, y, ym, -g_.hz(), eps);
+    //     cut( y, yp, g2d);
+    //     cut( y, ym, g2d);
+        plus  = dg::create::interpolation( yp[0], yp[1], g2d,DIR);
+        minus = dg::create::interpolation( ym[0], ym[1], g2d,DIR);
     }
-    //dg::integrateRK4( field, y, ym, -g_.hz(), eps);
-//     cut( y, yp, g2d);
-//     cut( y, ym, g2d);
-    plus  = dg::create::interpolation( yp[0], yp[1], g2d);
-    minus = dg::create::interpolation( ym[0], ym[1], g2d);
+    if (globalbcz == dg::NEU )
+    {
+        for( unsigned i=0; i<size; i++)
+        {
+    
+            //assumes that perp boundary condition is constant on the entire 3d box surface
+            coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+            dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
+            dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
 
+            yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+            ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+        }
+        //dg::integrateRK4( field, y, ym, -g_.hz(), eps);
+        cut( y, yp, g2d);
+        cut( y, ym, g2d);
+        plus  = dg::create::interpolation( yp[0], yp[1], g2d,NEU);
+        minus = dg::create::interpolation( ym[0], ym[1], g2d,NEU);
+    }
+    if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
+    if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
+    if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
     dg::blas1::axpby( 1., (container)yp[2], 0, hp);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm);
     dg::blas1::axpby( 1., hp, +1., hm, hz);
@@ -392,20 +417,13 @@ void DZ<M,V>::cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg
     //implements "Neumann" boundaries for lines that cross the wall
     for( unsigned i=0; i<g.size(); i++)
     {
-        if (yp[0][i] < g.x0()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i];std::cout << "cut "<< std::endl;}
-        else if (yp[0][i] > g.x1()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; std::cout << "cut "<< std::endl; }
-        else if (yp[1][i] < g.y0()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; std::cout << "cut "<< std::endl;}
-        else if (yp[1][i] > g.y1()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; std::cout << "cut "<< std::endl;}
+        if (yp[0][i] < g.x0()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i];}
+        else if (yp[0][i] > g.x1()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
+        else if (yp[1][i] < g.y0()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
+        else if (yp[1][i] > g.y1()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
         else { }
     }
-    for( unsigned i=0; i<g.size(); i++)
-    {
-        if (yp[0][i] == g.x0()) {std::cout << "bound"<< std::endl;}
-        else if (yp[0][i] == g.x1()) {std::cout << "bound"<< std::endl; }
-        else if (yp[1][i] == g.y0()) {std::cout << "bound"<< std::endl;}
-        else if (yp[1][i] == g.y1()) {std::cout << "bound"<< std::endl;}
-        else { }
-    }
+
 }
 template< class M, class container>
 template< class BinaryOp>

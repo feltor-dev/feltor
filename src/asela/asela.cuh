@@ -140,7 +140,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::Geom
     curvphi( phi), dzphi(phi),dzlogn(phi), dzun(phi),dzu2(phi),
     arakan( phi), arakaw( phi),arakaun(phi),arakalogn(phi), arakAphi(phi),arakau2(phi), 
     dzy( 4, chi), curvy(dzy), //4d container
-    dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp)),
+    dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
+//     dz_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp), dg::NEU),
     arakawa( g), 
     pol(      g, dg::not_normed,      dg::centered), 
     lapperp ( g,     dg::normed,      dg::centered),
