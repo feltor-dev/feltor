@@ -8,7 +8,7 @@
 
 #include <cusp/print.h>
 
-#define DG_DEBUG
+// #define DG_DEBUG
 
 
 #include "file/read_input.h"
@@ -128,7 +128,6 @@ int main( int argc, char* argv[])
     in[0][0]=gp.R_0+0.9*gp.a; 
 //     in[1][0]=0.9*gp.a*gp.elongation;
     in[1][0]=0.0;
-
     in[2][0]=0.;
     
 
@@ -154,7 +153,8 @@ int main( int argc, char* argv[])
             for (unsigned zz=0;zz<1;zz++) //Nz iterator
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
-                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
+                //Similar to feltor grid
+                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
                 const dg::DVec w3d = dg::create::weights( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
@@ -200,7 +200,7 @@ int main( int argc, char* argv[])
 
 
                 dg::blas1::axpby( 1., gradLnBsolution , -1., dzlnBongrid,diff2); //diff = gradlnB - dz(ln(B))
-//                 dg::blas1::pointwiseDot( pupilongrid,diff2,diff2); 
+                dg::blas1::pointwiseDot( pupilongrid,diff2,diff2); 
 
                 double normdz2 = dg::blas2::dot( w3d, dzlnBongrid); //=  Integral (gdz(ln(B))^2 )
                 std::cout << "Norm dz  = "<<sqrt( normdz2)<<"\n";
@@ -238,8 +238,8 @@ int main( int argc, char* argv[])
                 dg::DVec dZbZ(g3d.size());                
                 dg::DVec invRbR(g3d.size());                
 //                    //cut boundaries
-//                 dg::blas1::pointwiseDot( pupilongrid, bRongrid,bRongrid); 
-//                 dg::blas1::pointwiseDot( pupilongrid, bZongrid, bZongrid); 
+                dg::blas1::pointwiseDot( pupilongrid, bRongrid,bRongrid); 
+                dg::blas1::pointwiseDot( pupilongrid, bZongrid, bZongrid); 
                 
                 dg::DVec divB(g3d.size());                
                 dg::blas2::gemv( arakawa.dx(), bRongrid, dRbR);

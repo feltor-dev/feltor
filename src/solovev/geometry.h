@@ -624,9 +624,10 @@ struct Field
         yp[2] =  y[0]*y[0]/invB_(y[0],y[1])/ipol_(y[0],y[1])/gp_.R_0;       //ds/dphi =  R^2 B/I/R_0_hat
         yp[0] =  y[0]*psipZ_(y[0],y[1])/ipol_(y[0],y[1]);              //dR/dphi =  R/I Psip_Z
         yp[1] = -y[0]*psipR_(y[0],y[1])/ipol_(y[0],y[1]) ;             //dZ/dphi = -R/I Psip_R
-        //std::cout << y[0] << " "<<y[1]<<" "<<y[2]<<"  "<<yp[0]<<" "<<yp[1]<<" "<<yp[2]<<std::endl;
+
         if( isnan( yp[0]) || isnan( yp[1]) || isnan( yp[2])) 
-                yp[0] = yp[1] = yp[2] = 0;
+        {       yp[0] = yp[1] = yp[2] = 0;
+                        std::cout << y[0] << " "<<y[1]<<" "<<y[2]<<"  "<<yp[0]<<" "<<yp[1]<<" "<<yp[2]<<std::endl;}
 
     }
     /**

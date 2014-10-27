@@ -19,8 +19,8 @@
 11) total # of outputs (excluding first)    =  5000
 
 -------------------------Algorithmic parameters------------------------
-12)  eps_pol (stop for polarisation)        =   1e-3 (1e-6)
-13)  eps_max (stop for induction)           =   1e-3 (1e-6)
+12)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
+13)  eps_max (stop for induction)           =   1e-4 (1e-6)
 14)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
 15)  eps_time ( stop for time inversion )   =   1e-9
 -------------------------Physical parameters----------------------------
@@ -28,7 +28,7 @@
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  5e-6    (5e-6 tjk, 4e-3 compass)
 19) nu_perp                                 =  1e-4 
-20) nu_parallel  (viscosity)                =  1e-3   (0.001)
+20) nu_parallel  (viscosity)                =  0e-3   (0.001)
 21) para resistivity (c)                    =  1e-4   (5e-5 tjk)
 
 ------------------------Initial perturbation parameters---------------------

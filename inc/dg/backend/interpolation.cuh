@@ -123,12 +123,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         assert( y[i] >= g.y0() && y[i] <= g.y1());
 
         //determine which cell (x,y) lies in 
-        unsigned n = (unsigned)floor((x[i]-g.x0())/g.hx());
+        unsigned n =(unsigned)floor((x[i]-g.x0())/g.hx());
         unsigned m = (unsigned)floor((y[i]-g.y0())/g.hy());
 
         //determine normalized coordinates
-        double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*n+1); 
-        double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*m+1); 
+        double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*(n)+1); 
+        double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*(m)+1); 
 
         //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n()), 
@@ -137,16 +137,26 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         for(unsigned k=0; k<py.size(); k++)
             for( unsigned l=0; l<px.size(); l++)
                 pxy[k*px.size()+l]= py[k]*px[l];
-
-        //...these are the matrix coefficients with which to multiply 
-        //unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n()*g.n();
+        //these are the matrix coefficients with which to multiply 
+//         unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n()*g.n();
         //detail::add_line( A, number, i,  col_begin, pxy);
-        unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n();
-        detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxy);
+        if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
+        {
+           for(unsigned k=0; k<py.size(); k++)
+            for( unsigned l=0; l<px.size(); l++)
+                pxy[k*px.size()+l]= 0; 
+            n=(n==(unsigned)floor((g.x1()-g.x0())/g.hx())) ? n-1 :n;
+            m=(m==(unsigned)floor((g.y1()-g.y0())/g.hy())) ? m-1 :m;
+            
+        }
+        unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
+
+        detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxy); 
+
         //choose layout from comments
+
     }
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    
     dg::Operator<double> forward( g.dlt().forward());
     Matrix transformX = dg::tensor( g.Nx(), forward);
     Matrix transformY = dg::tensor( g.Ny(), forward);
