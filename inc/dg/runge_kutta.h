@@ -180,24 +180,62 @@ template< class RHS, class Vector>
 void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
 {
     RK<4, Vector > rk( begin); 
-    Vector old_end(begin), temp(begin);
+    Vector old_end(begin), temp(begin),diffm(begin),diffp(begin);
     end = begin;
     if( T_max == 0) return;
-    double dt = T_max;
+    double dt = T_max/1;
     unsigned NT = 1;
     double error = 1e10;
-    while( error > eps_abs && NT < pow( 2, 14))
+    bool flag = false; 
+ 
+    while( error > eps_abs && NT < pow( 2, 20) )
     {
         dt /= 2.;
         NT *= 2;
         end = begin;
-        for( unsigned i=0; i < NT; i++)
+        //integrieren bis ausserhalb grenze oder eps
+        for( int i=0; i < NT; i++)
         {
             rk( rhs, end, temp, dt); 
-            end.swap( temp); //end is one step further
-        }
-        dg::blas1::axpby( 1., end, -1., old_end); 
-        error = sqrt( dg::blas1::dot( old_end, old_end));
+            end.swap( temp); //end is one step further 
+
+//             dg::blas1::axpby( 1., end, 1., old_end,diffp); //abs error=oldend = end+oldend
+            dg::blas1::axpby( 1., end, -1., old_end,diffm); //abs error=oldend = end-oldend
+//             std::cout << "ne "<< end[0]<<" "<<end[1]<<" "<<end[2]<< "NT "<<NT<<" dt "<<dt<< " i" << i <<  std::endl;
+
+            error = sqrt( dg::blas1::dot( diffm, diffm)/dg::blas1::dot( old_end,old_end));
+            if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2])        ) 
+            {
+                dt /= 2.;
+                NT *= 2;
+                i=-1;
+                end = begin;
+                #ifdef DG_DEBUG
+//                 std::cout << "choosing smaller step size and redo integration" << "NT "<<NT<<" dt "<<dt<< std::endl;
+                #endif
+
+
+            }
+            //if new integrated point outside domain
+            if ((1e-5 > end[0]  ) || (1e5 < end[0])  ||(-1e5  > end[1]  ) || (1e5 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+
+            {
+                error = eps_abs/10;
+                #ifdef DG_DEBUG
+//                 std::cout << "outside box -> stop integration" << std::endl; 
+                #endif
+
+                i=NT;
+            }
+//             if(error < eps_abs ) std::cout << "converged" << std::endl;
+//             std::cout << "nt "<< temp[0]<<" "<<temp[1]<<" "<<temp[2]<<   std::endl;
+//             std::cout << "ne "<< end[0]<<" "<<end[1]<<" "<<end[2]<<   std::endl;
+//             std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
+
+
+        }  
+
+
         old_end = end;
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
@@ -208,13 +246,17 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
         std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
 #endif //DG_DEBUG
     }
+
+    if( isnan(error) )
+    {
+        throw NotANumber();
+    }
     if( error > eps_abs )
     {
         std::cerr << "ATTENTION: error is "<<error<<std::endl;
         throw Fail( eps_abs);
     }
-    if( isnan(error) )
-        throw NotANumber();
+
 
 }
 

@@ -18,6 +18,7 @@
 #include "init.h"
 #include "dg/backend/dz.cuh"
 #include "dg/algorithm.h"
+#include "dg/poisson.h"
 #include "dg/backend/functions.h"
 #include "dg/backend/interpolation.cuh"
 #include "draw/host_window.h"
@@ -121,20 +122,18 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, vecID[1], vecZ.data());
     err = nc_put_var_double( ncid, vecID[2], vecP.data());
     nc_close(ncid);
-    std::cout << "Check single field by integrating from 0 to 2pi" << "\n";
-    dg::HVec v5(1, 0);
-    std::vector<thrust::host_vector<double> > in(3, v5);
-    std::vector<thrust::host_vector<double> > out(3, v5);
-    in[0][0]=gp.R_0+0.9*gp.a; 
-//     in[1][0]=0.9*gp.a*gp.elongation;
-    in[1][0]=0.0;
-    in[2][0]=0.;
-    
-
-    dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps);
-    
-    std::cout <<"Rin =  "<< in[0][0] <<" Zin =  "<<in[1][0] <<" sin  = "<<in[2][0]<<"\n";
-    std::cout <<"Rout = "<< out[0][0]<<" Zout = "<<out[1][0]<<" sout = "<<out[2][0]<<"\n";
+//     std::cout << "Check single field by integrating from 0 to 2pi" << "\n";
+//     dg::HVec v5(1, 0);
+//     thrust::host_vector<double>  in(3);
+//     thrust::host_vector<double>  out(3);
+//     in[0]=gp.R_0+0.9*gp.a; 
+// //     in[1][0]=0.9*gp.a*gp.elongation;
+//     in[1]=0.0;
+//     in[2]=0.;
+//     dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps, dg::DIR);
+//     
+//     std::cout <<"Rin =  "<< in[0] <<" Zin =  "<<in[1] <<" sin  = "<<in[2]<<"\n";
+//     std::cout <<"Rout = "<< out[0]<<" Zout = "<<out[1]<<" sout = "<<out[2]<<"\n";
 
 
     
@@ -165,7 +164,7 @@ int main( int argc, char* argv[])
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
-                dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d,gp.rk4eps,solovev::PsiLimiter(gp)); 
+                dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d,gp.rk4eps,solovev::PsiLimiter(gp), g3d.bcx()); //choose bc of grid
                 t.toc();
                 std::cout << "Creation of parallel Derivative took "<<t.diff()<<"s\n";
 
@@ -200,6 +199,7 @@ int main( int argc, char* argv[])
 
 
                 dg::blas1::axpby( 1., gradLnBsolution , -1., dzlnBongrid,diff2); //diff = gradlnB - dz(ln(B))
+                //cut boundaries
                 dg::blas1::pointwiseDot( pupilongrid,diff2,diff2); 
 
                 double normdz2 = dg::blas2::dot( w3d, dzlnBongrid); //=  Integral (gdz(ln(B))^2 )
@@ -210,24 +210,42 @@ int main( int argc, char* argv[])
                 double reldiff2 =sqrt( normdiff2/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff2 <<"\n";
                 
-                std::cout <<"-----(3) test with gradlnb and with Arakawa discretization" << "\n";    
+                std::cout <<"-----(3) test with gradlnb and with (a) Arakawa and (b) Poisson discretization" << "\n";    
                 dg::ArakawaX< dg::DMatrix, dg::DVec>    arakawa(g3d); 
+                dg::Poisson< dg::DMatrix, dg::DVec>     poiss(g3d);
                 dg::DVec invBongrid = dg::evaluate( invB, g3d);
                 dg::DVec psipongrid = dg::evaluate( psip, g3d);
                 dg::DVec invnormrongrid = dg::evaluate( invnormr, g3d);
                 dg::DVec arakawasolution(g3d.size());
+                dg::DVec poisssolution(g3d.size());
                 dg::DVec diff3(g3d.size());
+                dg::DVec diff4(g3d.size());
 
                 arakawa( lnBongrid, psipongrid, arakawasolution); //1/B [B,psip]
+                poiss( lnBongrid, psipongrid, poisssolution); //1/B [B,psip]
                 dg::blas1::pointwiseDot( invBongrid, arakawasolution, arakawasolution); 
                 dg::blas1::pointwiseDot( invnormrongrid, arakawasolution, arakawasolution); 
-                dg::blas1::pointwiseDot( pupilongrid, arakawasolution, arakawasolution); 
+//                 dg::blas1::pointwiseDot( pupilongrid, arakawasolution, arakawasolution); 
+                
+                dg::blas1::pointwiseDot( invBongrid, poisssolution, poisssolution); 
+                dg::blas1::pointwiseDot( invnormrongrid, poisssolution, poisssolution); 
+//                 dg::blas1::pointwiseDot( pupilongrid, poisssolution, poisssolution); 
+    
+                
                 dg::blas1::axpby( 1., gradLnBsolution , -1., arakawasolution,diff3);
                 double normarak= dg::blas2::dot( w3d, arakawasolution); //=  Integral (gdz(ln(B))^2 )
                 std::cout << "Norm normarak  = "<<sqrt( normarak)<<"\n";
                 double normdiff3=dg::blas2::dot( w3d, diff3); //=  Integral ((gradlnB - dz(ln(B)))^2)
                 double reldiff3 =sqrt( normdiff3/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff3 <<"\n";
+                
+                dg::blas1::axpby( 1., gradLnBsolution , -1., poisssolution,diff4);
+                double normpoiss= dg::blas2::dot( w3d, poisssolution); //=  Integral (gdz(ln(B))^2 )
+                std::cout << "Norm normpoiss  = "<<sqrt( normpoiss)<<"\n";
+                double normdiff4=dg::blas2::dot( w3d, diff4); //=  Integral ((gradlnB - dz(ln(B)))^2)
+                double reldiff4 =sqrt( normdiff4/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
+                std::cout << "Rel Diff = "<<reldiff4 <<"\n";
+                
                 dzerrfile1 << pow(2,zz)*Nz <<" " << reldiff << std::endl;
                 dzerrfile2 << pow(2,zz)*Nz <<" " << reldiff2 << std::endl;
                 
@@ -238,12 +256,14 @@ int main( int argc, char* argv[])
                 dg::DVec dZbZ(g3d.size());                
                 dg::DVec invRbR(g3d.size());                
 //                    //cut boundaries
-                dg::blas1::pointwiseDot( pupilongrid, bRongrid,bRongrid); 
-                dg::blas1::pointwiseDot( pupilongrid, bZongrid, bZongrid); 
+//                 dg::blas1::pointwiseDot( pupilongrid, bRongrid,bRongrid); 
+//                 dg::blas1::pointwiseDot( pupilongrid, bZongrid, bZongrid); 
                 
                 dg::DVec divB(g3d.size());                
-                dg::blas2::gemv( arakawa.dx(), bRongrid, dRbR);
-                dg::blas2::gemv( arakawa.dy(), bZongrid, dZbZ);
+//                 dg::blas2::gemv( arakawa.dx(), bRongrid, dRbR);
+//                 dg::blas2::gemv( arakawa.dy(), bZongrid, dZbZ);
+                dg::blas2::gemv( poiss.dxlhs(), bRongrid, dRbR);
+                dg::blas2::gemv( poiss.dylhs(), bZongrid, dZbZ);
                 dg::blas1::pointwiseDot( invnormrongrid , bRongrid, invRbR);
                 dg::blas1::axpby( 1., dRbR   , 1., dZbZ, divB);
                 dg::blas1::axpby( 1./gp.R_0, invRbR , 1., divB);

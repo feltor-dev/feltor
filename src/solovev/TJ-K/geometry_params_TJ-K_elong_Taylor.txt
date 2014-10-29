@@ -1,6 +1,6 @@
 
           * Input-File for TJ-K axisymmetric solovev equilibrium *
-    I const with X-point, elongated, Force Free, Te_10eV,B0_0.07T,hydrogen,Cref_1e-5
+        X-point, elongated, Force Free, Te_10eV,B0_0.07T,hydrogen,Cref_1e-5
           -----------------------------------------------------------
           
 ----------------------Solovev coefficients----------------------

@@ -145,8 +145,8 @@ struct Poisson
 //needs less memory!! and is faster
 template< class Matrix, class container>
 template< class Grid>
-Poisson<Matrix, container>::PoissonX( const Grid& g ): 
-    dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhshs_), dylhslhs_(dxlhslhs_), dyrhsrhs( dxlhslhs_), helper_( dxlhslhs_),
+Poisson<Matrix, container>::Poisson( const Grid& g ): 
+    dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, g.bcx())),
     dylhs_(dg::create::dy( g, g.bcy())),
     dxrhs_(dg::create::dx( g, g.bcx())),
@@ -154,9 +154,8 @@ Poisson<Matrix, container>::PoissonX( const Grid& g ):
 { }
 template< class Matrix, class container>
 template< class Grid>
-Poisson<Matrix, container>::PoissonX( const Grid& g, bc bcx, bc bcy): 
-    dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhshs_), dylhslhs_(dxlhslhs_), dyrhsrhs( dxlhslhs_), helper_( dxlhslhs_),
-    helper_(dg::evaluate( one, g) ),
+Poisson<Matrix, container>::Poisson( const Grid& g, bc bcx, bc bcy): 
+    dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, bcx)),
     dylhs_(dg::create::dy( g, bcy)),
     dxrhs_(dg::create::dx( g, bcx)),
@@ -165,9 +164,8 @@ Poisson<Matrix, container>::PoissonX( const Grid& g, bc bcx, bc bcy):
 }
 template< class Matrix, class container>
 template< class Grid>
-Poisson<Matrix, container>::PoissonX(  const Grid& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
-    dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhshs_), dylhslhs_(dxlhslhs_), dyrhsrhs( dxlhslhs_), helper_( dxlhslhs_),
-    helper_(dg::evaluate( one, g) ),
+Poisson<Matrix, container>::Poisson(  const Grid& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
+    dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, bcxlhs)),
     dylhs_(dg::create::dy( g, bcylhs)),
     dxrhs_(dg::create::dx( g, bcxrhs)),

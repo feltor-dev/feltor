@@ -73,7 +73,7 @@ struct DZ
   * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
   */
   template <class Field, class Limiter>
-  DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = DIR):
+  DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR):
   g_(grid), bcz_(grid.bcz())
   {
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
@@ -99,7 +99,7 @@ struct DZ
             coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
             dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
             dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
-            if ( !(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
+            if (!(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
             || !(coordsP[1] >= g_.y0() && coordsP[1] <= g_.y1()))
             {
                 double tempvaluex;double tempvaluey;
@@ -139,11 +139,9 @@ struct DZ
             yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
             ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
         }
-        //dg::integrateRK4( field, y, ym, -g_.hz(), eps);
-    //     cut( y, yp, g2d);
-    //     cut( y, ym, g2d);
-        plus  = dg::create::interpolation( yp[0], yp[1], g2d,DIR);
-        minus = dg::create::interpolation( ym[0], ym[1], g2d,DIR);
+
+        plus  = dg::create::interpolation( yp[0], yp[1], g2d, dg::DIR);
+        minus = dg::create::interpolation( ym[0], ym[1], g2d, dg::DIR);
     }
     if (globalbcz == dg::NEU )
     {
@@ -152,7 +150,7 @@ struct DZ
     
             //assumes that perp boundary condition is constant on the entire 3d box surface
             coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-            dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
+            dg::integrateRK4( field, coords, coordsP, g_.hz(), eps);  //+ integration
             dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
 
             yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
@@ -161,8 +159,8 @@ struct DZ
         //dg::integrateRK4( field, y, ym, -g_.hz(), eps);
         cut( y, yp, g2d);
         cut( y, ym, g2d);
-        plus  = dg::create::interpolation( yp[0], yp[1], g2d,NEU);
-        minus = dg::create::interpolation( ym[0], ym[1], g2d,NEU);
+        plus  = dg::create::interpolation( yp[0], yp[1], g2d, dg::NEU);
+        minus = dg::create::interpolation( ym[0], ym[1], g2d, dg::NEU);
     }
     if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
     if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
@@ -345,71 +343,71 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
 {
-assert( &f != &dzzf);
-unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-View tempPV( tempP.begin(), tempP.end());
-View temp0V( temp0.begin(), temp0.end());
-View tempMV( tempM.begin(), tempM.end());
-for( unsigned i0=0; i0<g_.Nz(); i0++)
-{
-unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
-unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
-cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
-cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
-cusp::copy( f0, temp0V);
-cusp::multiply( plus, fp, tempPV);
-cusp::multiply( minus, fm, tempMV );
-//make ghostcells
-if( i0==0 && bcz_ != dg::PER)
-{
-if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-{
-//dg::blas1::axpby( -1., temp0, 0., ghostM);
-//dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
-dg::blas1::axpby( 2., left_, -1, temp0, ghostM);
-}
-if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-{
-dg::blas1::pointwiseDot( left_, hm, ghostP);
-dg::blas1::axpby( -1, ghostP, 1., temp0, ghostM);
-//dg::blas1::axpby( -left_, hm, 1., temp0, ghostM);
-}
-dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
-dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
-dg::blas1::axpby( 1., ghostM, 1., tempM);
-}
-else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
-{
-if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-{
-//dg::blas1::axpby( -1., temp0, 0., ghostP);
-//dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
-dg::blas1::axpby( 2., right_, -1, temp0, ghostP);
-}
-if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-{
-dg::blas1::pointwiseDot( right_, hp, ghostM);
-dg::blas1::axpby( -1, ghostM, 1., temp0, ghostP);
-//dg::blas1::axpby( right_, hp, 1., temp0, ghostP);
-}
-dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
-dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
-dg::blas1::axpby( 1., ghostP, 1., tempP);
-}
-{
-dg::blas1::pointwiseDivide( tempP, hp, tempP);
-dg::blas1::pointwiseDivide( tempP, hz, tempP);
-dg::blas1::pointwiseDivide( temp0, hp, temp0);
-dg::blas1::pointwiseDivide( temp0, hm, temp0);
-dg::blas1::pointwiseDivide( tempM, hm, tempM);
-dg::blas1::pointwiseDivide( tempM, hz, tempM);
-}
-dg::blas1::axpby( 2., tempP, +2., tempM); //fp+fm
-dg::blas1::axpby( -2., temp0, +1., tempM);
-View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
-cusp::copy( tempMV, dzzf0);
-}
+    assert( &f != &dzzf);
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View tempPV( tempP.begin(), tempP.end());
+    View temp0V( temp0.begin(), temp0.end());
+    View tempMV( tempM.begin(), tempM.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
+        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
+        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
+        cusp::copy( f0, temp0V);
+        cusp::multiply( plus, fp, tempPV);
+        cusp::multiply( minus, fm, tempMV );
+    //make ghostcells
+    if( i0==0 && bcz_ != dg::PER)
+    {
+        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+        {
+            //dg::blas1::axpby( -1., temp0, 0., ghostM);
+            //dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
+            dg::blas1::axpby( 2., left_, -1, temp0, ghostM);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::pointwiseDot( left_, hm, ghostP);
+            dg::blas1::axpby( -1, ghostP, 1., temp0, ghostM);
+            //dg::blas1::axpby( -left_, hm, 1., temp0, ghostM);
+        }
+        dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
+        dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+        dg::blas1::axpby( 1., ghostM, 1., tempM);
+    }
+    else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
+    {
+        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+        {
+            //dg::blas1::axpby( -1., temp0, 0., ghostP);
+            //dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
+            dg::blas1::axpby( 2., right_, -1, temp0, ghostP);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::pointwiseDot( right_, hp, ghostM);
+            dg::blas1::axpby( -1, ghostM, 1., temp0, ghostP);
+            //dg::blas1::axpby( right_, hp, 1., temp0, ghostP);
+        }
+        dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
+        dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+        dg::blas1::axpby( 1., ghostP, 1., tempP);
+    }
+    {
+        dg::blas1::pointwiseDivide( tempP, hp, tempP);
+        dg::blas1::pointwiseDivide( tempP, hz, tempP);
+        dg::blas1::pointwiseDivide( temp0, hp, temp0);
+        dg::blas1::pointwiseDivide( temp0, hm, temp0);
+        dg::blas1::pointwiseDivide( tempM, hm, tempM);
+        dg::blas1::pointwiseDivide( tempM, hz, tempM);
+    }
+    dg::blas1::axpby( 2., tempP, +2., tempM); //fp+fm
+    dg::blas1::axpby( -2., temp0, +1., tempM);
+    View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
+    cusp::copy( tempMV, dzzf0);
+    }
 }
 template< class M, class V >
 void DZ<M,V>::cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g)
@@ -417,10 +415,10 @@ void DZ<M,V>::cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg
     //implements "Neumann" boundaries for lines that cross the wall
     for( unsigned i=0; i<g.size(); i++)
     {
-        if (yp[0][i] < g.x0()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i];}
-        else if (yp[0][i] > g.x1()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
-        else if (yp[1][i] < g.y0()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
-        else if (yp[1][i] > g.y1()) { yp[0][i] = y[0][i]; yp[1][i] = y[1][i]; }
+        if (!(yp[0][i]  >= g_.x0() && yp[0][i] <= g_.x1()) || !(yp[1][i]  >= g_.y0() && yp[1][i]  <= g_.y1()))
+        {
+            yp[0][i] = y[0][i]; yp[1][i] = y[1][i];  
+        }
         else { }
     }
 
