@@ -153,7 +153,7 @@ int main( int argc, char* argv[])
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 //Similar to feltor grid
-                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
+                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
                 const dg::DVec w3d = dg::create::weights( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
@@ -174,8 +174,8 @@ int main( int argc, char* argv[])
                 dg::DVec solution = dg::evaluate( derifunc, g3d);
                 dz( function, dzfunc);
                 //cut boundaries
-                dg::blas1::pointwiseDot( pupilongrid, dzfunc, dzfunc); 
-                dg::blas1::pointwiseDot( pupilongrid, solution, solution); 
+                dg::blas1::pointwiseDot( pupilongrid, dzfunc, dzfunc);  //damped dzfunc
+                dg::blas1::pointwiseDot( pupilongrid, solution, solution); //damped dzsol
 
                 dg::blas1::axpby( 1., solution, -1., dzfunc,diff);
                 double normdz = dg::blas2::dot( w3d, dzfunc);
@@ -191,20 +191,20 @@ int main( int argc, char* argv[])
                 dg::DVec lnBongrid = dg::evaluate( lnB, g3d);
                 dg::DVec dzlnBongrid(g3d.size());
                 dg::DVec diff2(g3d.size());
+                dg::DVec pupilongradLnBsolution(g3d.size());
                 dz(lnBongrid,dzlnBongrid);
                 
                 //cut boundaries
                 dg::blas1::pointwiseDot( pupilongrid, dzlnBongrid, dzlnBongrid); 
-                dg::blas1::pointwiseDot( pupilongrid, gradLnBsolution, gradLnBsolution); 
+                dg::blas1::pointwiseDot( pupilongrid, gradLnBsolution, pupilongradLnBsolution); 
 
 
-                dg::blas1::axpby( 1., gradLnBsolution , -1., dzlnBongrid,diff2); //diff = gradlnB - dz(ln(B))
+                dg::blas1::axpby( 1., pupilongradLnBsolution , -1., dzlnBongrid,diff2); //diff = gradlnB - dz(ln(B))
                 //cut boundaries
-                dg::blas1::pointwiseDot( pupilongrid,diff2,diff2); 
 
                 double normdz2 = dg::blas2::dot( w3d, dzlnBongrid); //=  Integral (gdz(ln(B))^2 )
                 std::cout << "Norm dz  = "<<sqrt( normdz2)<<"\n";
-                double normsol2 = dg::blas2::dot( w3d,gradLnBsolution);//=  Integral (gradlnB^2 )
+                double normsol2 = dg::blas2::dot( w3d,pupilongradLnBsolution);//=  Integral (gradlnB^2 )
                 std::cout << "Norm sol = "<<sqrt( normsol2)<<"\n";
                 double normdiff2=dg::blas2::dot( w3d, diff2); //=  Integral ((gradlnB - dz(ln(B)))^2)
                 double reldiff2 =sqrt( normdiff2/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
@@ -220,26 +220,30 @@ int main( int argc, char* argv[])
                 dg::DVec poisssolution(g3d.size());
                 dg::DVec diff3(g3d.size());
                 dg::DVec diff4(g3d.size());
+                dg::blas1::pointwiseDot( pupilongrid, invnormrongrid, invnormrongrid); 
+                dg::blas1::pointwiseDot( pupilongrid, invBongrid, invBongrid); 
 
                 arakawa( lnBongrid, psipongrid, arakawasolution); //1/B [B,psip]
-                poiss( lnBongrid, psipongrid, poisssolution); //1/B [B,psip]
-                dg::blas1::pointwiseDot( invBongrid, arakawasolution, arakawasolution); 
-                dg::blas1::pointwiseDot( invnormrongrid, arakawasolution, arakawasolution); 
-//                 dg::blas1::pointwiseDot( pupilongrid, arakawasolution, arakawasolution); 
+                poiss(   lnBongrid, psipongrid, poisssolution); //1/B [B,psip]
+                dg::blas1::pointwiseDot( invBongrid, arakawasolution, arakawasolution); //1/B^2 [B,psip]
+                dg::blas1::pointwiseDot( invnormrongrid, arakawasolution, arakawasolution); //1/(R B^2) [B,psip]
+                dg::blas1::pointwiseDot( pupilongrid, arakawasolution, arakawasolution); 
+
+                dg::blas1::pointwiseDot( invBongrid, poisssolution, poisssolution); //    1/B^2 [B,psip]
+                dg::blas1::pointwiseDot( invnormrongrid, poisssolution, poisssolution); //1/(R B^2) [B,psip]
+                dg::blas1::pointwiseDot( pupilongrid, poisssolution, poisssolution); 
+
                 
-                dg::blas1::pointwiseDot( invBongrid, poisssolution, poisssolution); 
-                dg::blas1::pointwiseDot( invnormrongrid, poisssolution, poisssolution); 
-//                 dg::blas1::pointwiseDot( pupilongrid, poisssolution, poisssolution); 
-    
-                
-                dg::blas1::axpby( 1., gradLnBsolution , -1., arakawasolution,diff3);
+                dg::blas1::axpby( 1., pupilongradLnBsolution , -1., arakawasolution,diff3);
+
                 double normarak= dg::blas2::dot( w3d, arakawasolution); //=  Integral (gdz(ln(B))^2 )
                 std::cout << "Norm normarak  = "<<sqrt( normarak)<<"\n";
                 double normdiff3=dg::blas2::dot( w3d, diff3); //=  Integral ((gradlnB - dz(ln(B)))^2)
                 double reldiff3 =sqrt( normdiff3/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff3 <<"\n";
                 
-                dg::blas1::axpby( 1., gradLnBsolution , -1., poisssolution,diff4);
+                dg::blas1::axpby( 1., pupilongradLnBsolution , -1., poisssolution,diff4);
+
                 double normpoiss= dg::blas2::dot( w3d, poisssolution); //=  Integral (gdz(ln(B))^2 )
                 std::cout << "Norm normpoiss  = "<<sqrt( normpoiss)<<"\n";
                 double normdiff4=dg::blas2::dot( w3d, diff4); //=  Integral ((gradlnB - dz(ln(B)))^2)
@@ -255,9 +259,9 @@ int main( int argc, char* argv[])
                 dg::DVec dRbR(g3d.size());
                 dg::DVec dZbZ(g3d.size());                
                 dg::DVec invRbR(g3d.size());                
-//                    //cut boundaries
-//                 dg::blas1::pointwiseDot( pupilongrid, bRongrid,bRongrid); 
-//                 dg::blas1::pointwiseDot( pupilongrid, bZongrid, bZongrid); 
+//              //cut boundaries
+                dg::blas1::pointwiseDot( pupilongrid, bRongrid,bRongrid); 
+                dg::blas1::pointwiseDot( pupilongrid, bZongrid, bZongrid); 
                 
                 dg::DVec divB(g3d.size());                
 //                 dg::blas2::gemv( arakawa.dx(), bRongrid, dRbR);
@@ -267,6 +271,8 @@ int main( int argc, char* argv[])
                 dg::blas1::pointwiseDot( invnormrongrid , bRongrid, invRbR);
                 dg::blas1::axpby( 1., dRbR   , 1., dZbZ, divB);
                 dg::blas1::axpby( 1./gp.R_0, invRbR , 1., divB);
+                                dg::blas1::pointwiseDot( pupilongrid, divB, divB); 
+
                 double normdivB2= dg::blas2::dot( w3d, divB); 
                 std::cout << "divB = "<<sqrt( normdivB2)<<"\n";
                 

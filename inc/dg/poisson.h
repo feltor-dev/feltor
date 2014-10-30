@@ -125,15 +125,15 @@ struct Poisson
      */
     void bracketS( container& lhs, container& rhs, container& result)
     {
-    blas2::symv(  dxlhs_, lhs,  dxlhslhs_); //dx_lhs lhs
-    blas2::symv(  dylhs_, lhs,  dylhslhs_); //dy_lhs lhs
-    blas2::symv(  dxrhs_, rhs,  dxrhsrhs_); //dx_rhs rhs
-    blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
-    
-    blas1::pointwiseDot( dxlhslhs_, dyrhsrhs_, helper_);   //dx_lhs lhs * dy_rhs rhs
-    blas1::pointwiseDot( dylhslhs_, dyrhsrhs_, result);    //dy_lhs lhs * dx_rhs rhs
-    
-    blas1::axpby( 1., helper_, 1., result,result);        //dx_lhs lhs * dy_rhs rhs + dy_lhs lhs * dx_rhs rhs
+        blas2::symv(  dxlhs_, lhs,  dxlhslhs_); //dx_lhs lhs
+        blas2::symv(  dylhs_, lhs,  dylhslhs_); //dy_lhs lhs
+        blas2::symv(  dxrhs_, rhs,  dxrhsrhs_); //dx_rhs rhs
+        blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
+        
+        blas1::pointwiseDot( dxlhslhs_, dyrhsrhs_, helper_);   //dx_lhs lhs * dy_rhs rhs
+        blas1::pointwiseDot( dylhslhs_, dyrhsrhs_, result);    //dy_lhs lhs * dx_rhs rhs
+        
+        blas1::axpby( 1., helper_, 1., result,result);        //dx_lhs lhs * dy_rhs rhs + dy_lhs lhs * dx_rhs rhs
     }
 
   private:
@@ -147,29 +147,29 @@ template< class Matrix, class container>
 template< class Grid>
 Poisson<Matrix, container>::Poisson( const Grid& g ): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
-    dxlhs_(dg::create::dx( g, g.bcx())),
-    dylhs_(dg::create::dy( g, g.bcy())),
-    dxrhs_(dg::create::dx( g, g.bcx())),
-    dyrhs_(dg::create::dy( g, g.bcy()))
+    dxlhs_(dg::create::dx( g, g.bcx(),dg::normed,dg::centered)),
+    dylhs_(dg::create::dy( g, g.bcy(),dg::normed,dg::centered)),
+    dxrhs_(dg::create::dx( g, g.bcx(),dg::normed,dg::centered)),
+    dyrhs_(dg::create::dy( g, g.bcy(),dg::normed,dg::centered))
 { }
 template< class Matrix, class container>
 template< class Grid>
 Poisson<Matrix, container>::Poisson( const Grid& g, bc bcx, bc bcy): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
-    dxlhs_(dg::create::dx( g, bcx)),
-    dylhs_(dg::create::dy( g, bcy)),
-    dxrhs_(dg::create::dx( g, bcx)),
-    dyrhs_(dg::create::dy( g, bcy))
+    dxlhs_(dg::create::dx( g, bcx,dg::normed,dg::centered)),
+    dylhs_(dg::create::dy( g, bcy,dg::normed,dg::centered)),
+    dxrhs_(dg::create::dx( g, bcx,dg::normed,dg::centered)),
+    dyrhs_(dg::create::dy( g, bcy,dg::normed,dg::centered))
 {
 }
 template< class Matrix, class container>
 template< class Grid>
 Poisson<Matrix, container>::Poisson(  const Grid& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
-    dxlhs_(dg::create::dx( g, bcxlhs)),
-    dylhs_(dg::create::dy( g, bcylhs)),
-    dxrhs_(dg::create::dx( g, bcxrhs)),
-    dyrhs_(dg::create::dy( g, bcyrhs))
+    dxlhs_(dg::create::dx( g, bcxlhs,dg::normed,dg::centered)),
+    dylhs_(dg::create::dy( g, bcylhs,dg::normed,dg::centered)),
+    dxrhs_(dg::create::dx( g, bcxrhs,dg::normed,dg::centered)),
+    dyrhs_(dg::create::dy( g, bcyrhs,dg::normed,dg::centered))
 {
 }
 template< class Matrix, class container>
@@ -181,7 +181,7 @@ void Poisson< Matrix, container>::operator()( container& lhs, container& rhs, co
     blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
     
     blas1::pointwiseDot( dxlhslhs_, dyrhsrhs_, helper_);   //dx_lhs lhs * dy_rhs rhs
-    blas1::pointwiseDot( dylhslhs_, dyrhsrhs_, result);    //dy_lhs lhs * dx_rhs rhs
+    blas1::pointwiseDot( dylhslhs_, dxrhsrhs_, result);    //dy_lhs lhs * dx_rhs rhs
     
     blas1::axpby( 1., helper_, -1., result,result);        //dx_lhs lhs * dy_rhs rhs - dy_lhs lhs * dx_rhs rhs
 }

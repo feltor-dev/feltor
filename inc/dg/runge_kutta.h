@@ -180,7 +180,7 @@ template< class RHS, class Vector>
 void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
 {
     RK<4, Vector > rk( begin); 
-    Vector old_end(begin), temp(begin),diffm(begin),diffp(begin);
+    Vector old_end(begin), temp(begin),diffm(begin);
     end = begin;
     if( T_max == 0) return;
     double dt = T_max/1;
@@ -199,11 +199,8 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
             rk( rhs, end, temp, dt); 
             end.swap( temp); //end is one step further 
 
-//             dg::blas1::axpby( 1., end, 1., old_end,diffp); //abs error=oldend = end+oldend
             dg::blas1::axpby( 1., end, -1., old_end,diffm); //abs error=oldend = end-oldend
-//             std::cout << "ne "<< end[0]<<" "<<end[1]<<" "<<end[2]<< "NT "<<NT<<" dt "<<dt<< " i" << i <<  std::endl;
-
-            error = sqrt( dg::blas1::dot( diffm, diffm)/dg::blas1::dot( old_end,old_end));
+            error = sqrt( dg::blas1::dot( diffm, diffm));
             if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2])        ) 
             {
                 dt /= 2.;
@@ -217,12 +214,12 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
 
             }
             //if new integrated point outside domain
-            if ((1e-5 > end[0]  ) || (1e5 < end[0])  ||(-1e5  > end[1]  ) || (1e5 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+            if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
 
             {
                 error = eps_abs/10;
                 #ifdef DG_DEBUG
-//                 std::cout << "outside box -> stop integration" << std::endl; 
+                //                 std::cout << "outside box -> stop integration" << std::endl; 
                 #endif
 
                 i=NT;
