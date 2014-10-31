@@ -153,7 +153,7 @@ int main( int argc, char* argv[])
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 //Similar to feltor grid
-                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
+                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
                 const dg::DVec w3d = dg::create::weights( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
@@ -197,7 +197,6 @@ int main( int argc, char* argv[])
                 //cut boundaries
                 dg::blas1::pointwiseDot( pupilongrid, dzlnBongrid, dzlnBongrid); 
                 dg::blas1::pointwiseDot( pupilongrid, gradLnBsolution, pupilongradLnBsolution); 
-
 
                 dg::blas1::axpby( 1., pupilongradLnBsolution , -1., dzlnBongrid,diff2); //diff = gradlnB - dz(ln(B))
                 //cut boundaries
@@ -260,18 +259,19 @@ int main( int argc, char* argv[])
                 dg::DVec dZbZ(g3d.size());                
                 dg::DVec invRbR(g3d.size());                
 //              //cut boundaries
-                dg::blas1::pointwiseDot( pupilongrid, bRongrid,bRongrid); 
-                dg::blas1::pointwiseDot( pupilongrid, bZongrid, bZongrid); 
-                
+//                 dg::blas1::pointwiseDot( pupilongrid, bRongrid,bRongrid); 
+//                 dg::blas1::pointwiseDot( pupilongrid, bZongrid, bZongrid); 
+                invnormrongrid = dg::evaluate( invnormr, g3d);
+
                 dg::DVec divB(g3d.size());                
 //                 dg::blas2::gemv( arakawa.dx(), bRongrid, dRbR);
 //                 dg::blas2::gemv( arakawa.dy(), bZongrid, dZbZ);
-                dg::blas2::gemv( poiss.dxlhs(), bRongrid, dRbR);
-                dg::blas2::gemv( poiss.dylhs(), bZongrid, dZbZ);
-                dg::blas1::pointwiseDot( invnormrongrid , bRongrid, invRbR);
-                dg::blas1::axpby( 1., dRbR   , 1., dZbZ, divB);
-                dg::blas1::axpby( 1./gp.R_0, invRbR , 1., divB);
-                                dg::blas1::pointwiseDot( pupilongrid, divB, divB); 
+                dg::blas2::gemv( poiss.dxlhs(), bRongrid, dRbR); //d_R B^R
+                dg::blas2::gemv( poiss.dylhs(), bZongrid, dZbZ); //d_Z B^Z
+                dg::blas1::pointwiseDot( invnormrongrid , bRongrid, invRbR); // 1/R B^R
+                dg::blas1::axpby( 1., dRbR   , 1., dZbZ, divB); //d_R B^R + d_Z B^Z
+                dg::blas1::axpby( 1./gp.R_0, invRbR , 1., divB); //( B^R/R/R_0 + d_R B^R + d_Z B^Z)
+                dg::blas1::pointwiseDot( pupilongrid, divB, divB);  //cut 
 
                 double normdivB2= dg::blas2::dot( w3d, divB); 
                 std::cout << "divB = "<<sqrt( normdivB2)<<"\n";

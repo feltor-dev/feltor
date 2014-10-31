@@ -80,8 +80,8 @@ int main( int argc, char* argv[])
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(p, gp);
+//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    solovev::ZonalFlow init0(p, gp);
 
     
     //background profile
@@ -90,24 +90,31 @@ int main( int argc, char* argv[])
     
     //field aligning
     //dg::CONSTANT gaussianZ( 1.);
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-    y1[2] = dg::evaluate( gaussianZ, grid);
-    dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
+//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+//     y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+//     y1[2] = dg::evaluate( gaussianZ, grid);
+//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning
-//     y1[1] = dg::evaluate( init0, grid);
+    y1[1] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    std::cout << "intiialize ne" << std::endl;
     feltor.initializene( y0[1], y0[0]);    
+    std::cout << "Done!\n";
+
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-
+    std::cout << "intiialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
+    std::cout << "Done!\n";
+    std::cout << "first karniadakis" << std::endl;
+
     karniadakis( feltor, rolkar, y0); //now energies and potential are at time 0
+    std::cout << "Done!\n";
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
