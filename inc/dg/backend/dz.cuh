@@ -115,7 +115,6 @@ struct DZ
                 dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
                 if (mem==0) { coordsP[0]=tempvaluex; }
                 if (mem==1) {coordsP[1]=tempvaluey;  }     
-    //             std::cout << dPhiMin << std::endl;
             }
             if ( !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
             || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
@@ -133,7 +132,6 @@ struct DZ
                 dg::integrateRK4( field, coords, coordsM, dPhiMax, eps);
                 if (mem==0) { coordsM[0]=tempvaluex;   }
                 if (mem==1) { coordsM[1]=tempvaluey;   }  
-    //            std::cout << dPhiMax << std::endl;
             }
 
             yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];

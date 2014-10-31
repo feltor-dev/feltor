@@ -262,6 +262,8 @@ struct TestFunction
     double operator()( double R, double Z, double phi)
     {
         return psip_(R,Z,phi)*sin(phi);
+//         return sin(phi);
+
     }
     private:
     Psip psip_;
@@ -276,6 +278,7 @@ struct DeriTestFunction
     double operator()( double R, double Z, double phi)
     {
         return  gp_.R_0*psip_(R,Z,phi)*ipol_(R,Z,phi)*cos(phi)*invB_(R,Z,phi)/R/R;
+//         return  gp_.R_0*ipol_(R,Z,phi)*cos(phi)*invB_(R,Z,phi)/R/R;
     }
     private:
     GeomParameters gp_;
