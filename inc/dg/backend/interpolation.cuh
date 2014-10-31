@@ -92,7 +92,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     B.sort_by_row_and_column();
     return B;
 }
-
 /**
  * @brief Create interpolation matrix
  *
@@ -100,53 +99,112 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param g The Grid on which to operate
+ * @param globalbcz NEU for common interpolation. DIR for zeros at Box
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d<double>& g)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d<double>& g , dg::bc globalbcz = dg::NEU)
 {
     assert( x.size() == y.size());
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
 
     int number = 0;
-    for( unsigned i=0; i<x.size(); i++)
+    if (globalbcz == dg::NEU)
     {
-        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << "xi = " << x[i] <<std::endl;
-        }
+        for( unsigned i=0; i<x.size(); i++)
+        {
+            if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
+                std::cerr << "xi = " << x[i] <<std::endl;
+            }
+            
+            assert(x[i] >= g.x0() && x[i] <= g.x1());
+            
+            if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
+                std::cerr << "yi = " << y[i] <<std::endl;
+            }
+            assert( y[i] >= g.y0() && y[i] <= g.y1());
+
+            //determine which cell (x,y) lies in 
+            unsigned n =(unsigned)floor((x[i]-g.x0())/g.hx());
+            unsigned m = (unsigned)floor((y[i]-g.y0())/g.hy());
+
+            //determine normalized coordinates
+            double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*(n)+1); 
+            double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*(m)+1); 
+
+            //evaluate 2d Legendre polynomials at (xn, yn)...
+            std::vector<double> px = detail::coefficients( xn, g.n()), 
+                                py = detail::coefficients( yn, g.n());
+            std::vector<double> pxy( g.n()*g.n());
+            for(unsigned k=0; k<py.size(); k++)
+                for( unsigned l=0; l<px.size(); l++)
+                    pxy[k*px.size()+l]= py[k]*px[l];
+            //these are the matrix coefficients with which to multiply 
+    //         unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n()*g.n();
+            //detail::add_line( A, number, i,  col_begin, pxy);
         
-        assert(x[i] >= g.x0() && x[i] <= g.x1());
-        
-        if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
-            std::cerr << "yi = " << y[i] <<std::endl;
+            unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
+
+            detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxy); 
+
+            //choose layout from comments
+
         }
-        assert( y[i] >= g.y0() && y[i] <= g.y1());
-
-        //determine which cell (x,y) lies in 
-        unsigned n = (unsigned)floor((x[i]-g.x0())/g.hx());
-        unsigned m = (unsigned)floor((y[i]-g.y0())/g.hy());
-
-        //determine normalized coordinates
-        double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*n+1); 
-        double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*m+1); 
-
-        //evaluate 2d Legendre polynomials at (xn, yn)...
-        std::vector<double> px = detail::coefficients( xn, g.n()), 
-                            py = detail::coefficients( yn, g.n());
-        std::vector<double> pxy( g.n()*g.n());
-        for(unsigned k=0; k<py.size(); k++)
-            for( unsigned l=0; l<px.size(); l++)
-                pxy[k*px.size()+l]= py[k]*px[l];
-
-        //...these are the matrix coefficients with which to multiply 
-        //unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n()*g.n();
-        //detail::add_line( A, number, i,  col_begin, pxy);
-        unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n();
-        detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxy);
-        //choose layout from comments
     }
+    if (globalbcz == dg::DIR)
+    {
+    for( unsigned i=0; i<x.size(); i++)
+        {
+            if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
+                std::cerr << "xi = " << x[i] <<std::endl;
+            }
+            
+            assert(x[i] >= g.x0() && x[i] <= g.x1());
+            
+            if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
+                std::cerr << "yi = " << y[i] <<std::endl;
+            }
+            assert( y[i] >= g.y0() && y[i] <= g.y1());
+
+            //determine which cell (x,y) lies in 
+            unsigned n =(unsigned)floor((x[i]-g.x0())/g.hx());
+            unsigned m = (unsigned)floor((y[i]-g.y0())/g.hy());
+
+            //determine normalized coordinates
+            double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*(n)+1); 
+            double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*(m)+1); 
+
+            //evaluate 2d Legendre polynomials at (xn, yn)...
+            std::vector<double> px = detail::coefficients( xn, g.n()), 
+                                py = detail::coefficients( yn, g.n());
+            std::vector<double> pxy( g.n()*g.n());
+            for(unsigned k=0; k<py.size(); k++)
+                for( unsigned l=0; l<px.size(); l++)
+                    pxy[k*px.size()+l]= py[k]*px[l];
+            //these are the matrix coefficients with which to multiply 
+    //         unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n()*g.n();
+            //detail::add_line( A, number, i,  col_begin, pxy);
+            if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
+            {
+            for(unsigned k=0; k<py.size(); k++)
+                for( unsigned l=0; l<px.size(); l++)
+                    pxy[k*px.size()+l]= 0; 
+                n=(n==(unsigned)floor((g.x1()-g.x0())/g.hx())) ? n-1 :n;
+                m=(m==(unsigned)floor((g.y1()-g.y0())/g.hy())) ? m-1 :m;
+                
+            }
+            unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
+
+            detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxy); 
+
+            //choose layout from comments
+
+        }
+    }
+    if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
+    if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
+    if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    
     dg::Operator<double> forward( g.dlt().forward());
     Matrix transformX = dg::tensor( g.Nx(), forward);
     Matrix transformY = dg::tensor( g.Ny(), forward);
@@ -158,13 +216,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     return B;
 }
 
+
 /**
  * @brief Create interpolation matrix
  *
  * Transforms from a vector defined on the grid to the given points 
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
- * @param y Z-coordinates of interpolation points
+ * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
  *
  * @return interpolation matrix
