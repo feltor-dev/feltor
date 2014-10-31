@@ -104,13 +104,13 @@ struct Poisson
      * @param varphi may equal phi, contains result on output
      * @note same as a call to bracketS( phi, phi, varphi)
      */
-    void variation( container& phi, container& varphi)
+    void variationRHS( container& phi, container& varphi)
     {
         blas2::symv( dxrhs_, phi, dxrhsrhs_);
         blas2::symv( dyrhs_, phi, dyrhsrhs_);
-        blas1::pointwiseDot(dxrhsrhs_, dxrhsrhs_, dxrhsrhs_);
-        blas1::pointwiseDot(dyrhsrhs_, dyrhsrhs_, dyrhsrhs_);
-        blas1::axpby( 1., dxrhsrhs_, 1., dyrhsrhs_, varphi);
+        blas1::pointwiseDot(dxrhsrhs_, dxrhsrhs_, helper_);
+        blas1::pointwiseDot(dyrhsrhs_, dyrhsrhs_, varphi);
+        blas1::axpby( 1.,helper_, 1., varphi, varphi);
         //typedef typename VectorTraits<container>::value_type value_type; 
         //blas1::transform( varphi, varphi, dg::SQRT<value_type>() );
     }

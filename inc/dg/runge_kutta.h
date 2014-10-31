@@ -188,7 +188,7 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     double error = 1e10;
     bool flag = false; 
  
-    while( error > eps_abs && NT < pow( 2, 20) )
+    while( error > eps_abs && NT < pow( 2, 25) )
     {
         dt /= 2.;
         NT *= 2;

@@ -41,7 +41,24 @@ struct Helmholtz
      */
     template<class Grid>
     Helmholtz( const Grid& g, double alpha = 1., direction dir = dg::forward):
-        laplaceM_(g, not_normed, dir), 
+        laplaceM_(g, dg::DIR,dg::DIR, not_normed, dir), 
+        temp_(dg::evaluate(dg::one, g)), chi_(temp_),
+        alpha_(alpha), isSet(false)
+    { }
+    /**\
+     * @brief Construct Helmholtz operator
+     *
+     * @tparam Grid The Grid class
+     * @param grid The grid to use
+     * @param bcx boundary condition in x
+     * @param bcy boundary contition in y
+     * @param alpha Scalar in the above formula
+     * @param dir Direction of the Laplace operator
+     * @note The default value of \f$\chi\f$ is one
+     */
+    template<class Grid>
+    Helmholtz( const Grid& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward):
+        laplaceM_(g, bcx,bcy,not_normed, dir), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
         alpha_(alpha), isSet(false)
     { }
