@@ -124,18 +124,17 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, vecID[1], vecZ.data());
     err = nc_put_var_double( ncid, vecID[2], vecP.data());
     nc_close(ncid);
-//     std::cout << "Check single field by integrating from 0 to 2pi" << "\n";
-//     dg::HVec v5(1, 0);
-//     thrust::host_vector<double>  in(3);
-//     thrust::host_vector<double>  out(3);
-//     in[0]=gp.R_0+0.9*gp.a; 
-// //     in[1][0]=0.9*gp.a*gp.elongation;
-//     in[1]=0.0;
-//     in[2]=0.;
-//     dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps, dg::DIR);
-//     
-//     std::cout <<"Rin =  "<< in[0] <<" Zin =  "<<in[1] <<" sin  = "<<in[2]<<"\n";
-//     std::cout <<"Rout = "<< out[0]<<" Zout = "<<out[1]<<" sout = "<<out[2]<<"\n";
+    std::cout << "-----(0) Check single field by integrating from 0 to 2pi (psi=0 surface)" << "\n";
+    thrust::host_vector<double>  in(3);
+    thrust::host_vector<double>  out(3);
+    in[0]=gp.R_0+gp.a; 
+//     in[1][0]=0.9*gp.a*gp.elongation;
+    in[1]=0.0;
+    in[2]=0.;
+    dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps);
+    
+    std::cout <<"Rin =  "<< in[0] <<" Zin =  "<<in[1] <<" sin  = "<<in[2]<<"\n";
+    std::cout <<"Rout = "<< out[0]<<" Zout = "<<out[1]<<" sout = "<<out[2]<<"\n";
 
 
     
@@ -160,15 +159,15 @@ int main( int argc, char* argv[])
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
 
-                std::cout <<"-----(1a) test with testfunction" << "\n";
+                std::cout <<"-----(1a) test parallel derivative created by RK4 with testfunction" << "\n";
                 solovev::TestFunction func(psip);
                 solovev::DeriTestFunction derifunc(gp,psip,psipR,psipZ,ipol,invB);
-                std::cout << "Construct parallel  derivative\n";
+                std::cout << "-----> Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
                 dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d,gp.rk4eps,solovev::PsiLimiter(gp), g3d.bcx()); //choose bc of grid
                 t.toc();
-                std::cout << "Creation of parallel Derivative took "<<t.diff()<<"s\n";
+                std::cout << "-----> Creation of parallel Derivative took "<<t.diff()<<"s\n";
 
                 dg::DVec function = dg::evaluate( func, g3d),dzfunc(function);
                 dg::DVec diff(g3d.size());
@@ -187,10 +186,10 @@ int main( int argc, char* argv[])
                 double normdiff = dg::blas2::dot( w3d, diff);
                 double reldiff=sqrt( normdiff/normsol );
                 std::cout << "Rel Diff = "<< reldiff<<"\n";
-                  std::cout <<"-----(1b) test with testfunction" << "\n";
+                  std::cout <<"-----(1b) test parallel derivative created brackets with testfunction" << "\n";
 //                 solovev::TestFunction func(psip);
 //                 solovev::DeriTestFunction derifunc(gp,psip,psipR,psipZ,ipol,invB);
-                std::cout << "Construct parallel  derivative\n";
+                std::cout << "-----> Construct parallel  derivative\n";
                 t.tic();
                 dg::DVec dzRZPhifunction(g3d.size());
                 dg::DVec dzR(g3d.size());
@@ -216,7 +215,7 @@ int main( int argc, char* argv[])
                 dg::blas1::axpby(1.,dzPHI,1.,dzRZPhifunction,dzRZPhifunction); //BR*dR f + BZ*dZ f+Bphi*dphi f
 //                 dg::blas1::pointwiseDot(invBfordz,dzRZPhifunction,dzRZPhifunction);//1/B (BR*dR f + BZ*dZ f+Bphi*dphi f)
 
-                std::cout << "Creation of parallel Derivative took "<<t.diff()<<"s\n";
+                std::cout << "-----> Creation of parallel Derivative took "<<t.diff()<<"s\n";
 
                 dg::DVec diffRZPhi(g3d.size());
 
@@ -298,18 +297,18 @@ int main( int argc, char* argv[])
                 dg::DVec poisssolution(g3d.size());
                 dg::DVec diff3(g3d.size());
                 dg::DVec diff4(g3d.size());
-                dg::blas1::pointwiseDot( pupilongrid, invnormrongrid, invnormrongrid); 
-                dg::blas1::pointwiseDot( pupilongrid, invBongrid, invBongrid); 
+//                 dg::blas1::pointwiseDot( pupilongrid, invnormrongrid, invnormrongrid); 
+//                 dg::blas1::pointwiseDot( pupilongrid, invBongrid, invBongrid); 
 
                 arakawa( lnBongrid, psipongrid, arakawasolution); //1/B [B,psip]
                 poiss(   lnBongrid, psipongrid, poisssolution); //1/B [B,psip]
                 dg::blas1::pointwiseDot( invBongrid, arakawasolution, arakawasolution); //1/B^2 [B,psip]
                 dg::blas1::pointwiseDot( invnormrongrid, arakawasolution, arakawasolution); //1/(R B^2) [B,psip]
-                dg::blas1::pointwiseDot( pupilongrid, arakawasolution, arakawasolution); 
+//                 dg::blas1::pointwiseDot( pupilongrid, arakawasolution, arakawasolution); 
 
                 dg::blas1::pointwiseDot( invBongrid, poisssolution, poisssolution); //    1/B^2 [B,psip]
                 dg::blas1::pointwiseDot( invnormrongrid, poisssolution, poisssolution); //1/(R B^2) [B,psip]
-                dg::blas1::pointwiseDot( pupilongrid, poisssolution, poisssolution); 
+//                 dg::blas1::pointwiseDot( pupilongrid, poisssolution, poisssolution); 
 
                 
                 dg::blas1::axpby( 1., pupilongradLnBsolution , -1., arakawasolution,diff3);

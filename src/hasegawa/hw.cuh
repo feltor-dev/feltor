@@ -23,10 +23,11 @@ struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
         w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()) { 
-        LaplacianM = dg::create::laplacianM( g, dg::normed); 
+        LaplacianM = dg::create::laplacianM( g, dg::normed, dg::centered); 
         }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
+        dg::blas1::axpby( 0., x, 0, y);
         for( unsigned i=0; i<x.size(); i++)
         {
             dg::blas2::gemv( LaplacianM, x[i], temp);
@@ -162,8 +163,8 @@ HW< container>::HW( const Grid2d<value_type>& grid, double alpha, double g, doub
     alpha( alpha), g(g), nu( nu), eps_pol(eps_pol), mhw( mhw)
 {
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed, dg::forward); //doesn't hurt to be symmetric but doesn't solver pb
-    A = create::laplacianM( grid, not_normed, dg::forward);
+    laplaceM = create::laplacianM( grid, normed, dg::centered); //doesn't hurt to be symmetric but doesn't solver pb
+    A = create::laplacianM( grid, not_normed, dg::centered);
 
 }
 
