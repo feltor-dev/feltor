@@ -82,17 +82,17 @@ int main( int argc, char* argv[])
     std::cin >> n>> Nx>>Ny>>Nz;
         
     solovev::Field field(gp);
-    solovev::Psip psip(gp.R_0,gp.A,gp.c);
-    solovev::PsipR psipR(gp.R_0,gp.A,gp.c);
-    solovev::PsipRR psipRR(gp.R_0,gp.A,gp.c);  
-    solovev::PsipZ psipZ(gp.R_0,gp.A,gp.c);  
-    solovev::PsipZZ psipZZ(gp.R_0,gp.A,gp.c);   
-    solovev::PsipRZ psipRZ(gp.R_0,gp.A,gp.c);  
-    solovev::Ipol ipol(gp.R_0,gp.A,psip);
-    solovev::InvB invB(gp.R_0,ipol,psipR,psipZ);
-    solovev::LnB lnB(gp.R_0,ipol,psipR,psipZ);
-    solovev::BR bR(gp.R_0,gp.A,psipR,psipRR,psipZ,psipRZ,invB);
-    solovev::BZ bZ(gp.R_0,gp.A,psipR,psipZ,psipZZ,psipRZ,invB);
+    solovev::Psip psip(gp);
+    solovev::PsipR psipR(gp);
+    solovev::PsipRR psipRR(gp);  
+    solovev::PsipZ psipZ(gp);  
+    solovev::PsipZZ psipZZ(gp);   
+    solovev::PsipRZ psipRZ(gp);  
+    solovev::Ipol ipol(gp);
+    solovev::InvB invB(gp);
+    solovev::LnB lnB(gp);
+    solovev::BR bR(gp);
+    solovev::BZ bZ(gp);
     solovev::CurvatureR curvatureR(gp);
     solovev::CurvatureZ curvatureZ(gp);
     solovev::GradLnB gradLnB(gp);
@@ -159,8 +159,8 @@ int main( int argc, char* argv[])
 
 
                 std::cout <<"-----(1) test with testfunction" << "\n";
-                solovev::TestFunction func(psip);
-                solovev::DeriTestFunction derifunc(gp,psip,psipR,psipZ,ipol,invB);
+                solovev::TestFunction func(gp);
+                solovev::DeriTestFunction derifunc(gp);
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
@@ -191,7 +191,8 @@ int main( int argc, char* argv[])
                 dg::DVec lnBongrid = dg::evaluate( lnB, g3d);
                 dg::DVec dzlnBongrid(g3d.size());
                 dg::DVec diff2(g3d.size());
-                dg::DVec pupilongradLnBsolution(g3d.size());
+                dg::DVec pupilongradLnBsolution(gradLnBsolution);
+
                 dz(lnBongrid,dzlnBongrid);
                 
                 //cut boundaries
@@ -268,7 +269,7 @@ int main( int argc, char* argv[])
 //                 dg::blas2::gemv( arakawa.dy(), bZongrid, dZbZ);
                 dg::blas2::gemv( poiss.dxlhs(), bRongrid, dRbR); //d_R B^R
                 dg::blas2::gemv( poiss.dylhs(), bZongrid, dZbZ); //d_Z B^Z
-                dg::blas1::pointwiseDot( invnormrongrid , bRongrid, invRbR); // 1/R B^R
+                dg::blas1::pointwiseDot( invnormrongrid , bRongrid, invRbR); // R_0/R B^R
                 dg::blas1::axpby( 1., dRbR   , 1., dZbZ, divB); //d_R B^R + d_Z B^Z
                 dg::blas1::axpby( 1./gp.R_0, invRbR , 1., divB); //( B^R/R/R_0 + d_R B^R + d_Z B^Z)
                 dg::blas1::pointwiseDot( pupilongrid, divB, divB);  //cut 
