@@ -2,7 +2,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
-#include "parameters.h"
+#include "feltor/parameters.h"
 // #include "geometry_circ.h"
 #include "solovev/geometry.h"
 #include "solovev/init.h"
