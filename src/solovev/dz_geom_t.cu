@@ -128,7 +128,6 @@ int main( int argc, char* argv[])
     thrust::host_vector<double>  in(3);
     thrust::host_vector<double>  out(3);
     in[0]=gp.R_0+gp.a; 
-//     in[1][0]=0.9*gp.a*gp.elongation;
     in[1]=0.0;
     in[2]=0.;
     dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps);
@@ -158,11 +157,12 @@ int main( int argc, char* argv[])
                 const dg::DVec w3d = dg::create::weights( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
+                std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
 
                 std::cout <<"-----(1a) test parallel derivative created by RK4 with testfunction" << "\n";
                 solovev::TestFunction func(psip);
                 solovev::DeriTestFunction derifunc(gp,psip,psipR,psipZ,ipol,invB);
-                std::cout << "-----> Construct parallel  derivative\n";
+                std::cout << "-----> Construct parallel derivative\n";
                 dg::Timer t;
                 t.tic();
                 dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d,gp.rk4eps,solovev::PsiLimiter(gp), g3d.bcx()); //choose bc of grid
@@ -231,8 +231,7 @@ int main( int argc, char* argv[])
                 double reldiffRZPhi=sqrt( normdiffRZPhi/normsol );
                 std::cout << "Rel Diff = "<< reldiffRZPhi<<"\n";
                 
-                
-
+                std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(2a) test with gradlnb" << "\n";    
                 dg::DVec gradLnBsolution = dg::evaluate( gradLnB, g3d);
                 dg::DVec lnBongrid = dg::evaluate( lnB, g3d);
@@ -286,7 +285,7 @@ int main( int argc, char* argv[])
                 double normdiff2b=dg::blas2::dot( w3d, diff2b); //=  Integral ((gradlnB - dz(ln(B)))^2)
                 double reldiff2b =sqrt( normdiff2b/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff2b <<"\n";
-                
+                std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(3) test with gradlnb and with (a) Arakawa and (b) Poisson discretization" << "\n";    
                 dg::ArakawaX< dg::DMatrix, dg::DVec>    arakawa(g3d); 
                 dg::Poisson< dg::DMatrix, dg::DVec>     poiss(g3d);
@@ -329,7 +328,7 @@ int main( int argc, char* argv[])
                 
                 dzerrfile1 << pow(2,zz)*Nz <<" " << reldiff << std::endl;
                 dzerrfile2 << pow(2,zz)*Nz <<" " << reldiff2 << std::endl;
-                
+                std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"----(4) test div(B) != 0 "<<"\n";
                 dg::DVec bRongrid = dg::evaluate( fieldR, grid);
                 dg::DVec bZongrid = dg::evaluate( fieldZ, grid);

@@ -5,9 +5,9 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   80 (192)
-3)  ny (grid points in y)                =   80 (192) 
-4)  nz (grid points in z)                =   7(>16)
+2)  nx (grid points in x)                =   50 (192)
+3)  ny (grid points in y)                =   50 (192) 
+4)  nz (grid points in z)                =   5(>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-1 (0.01)
 
 ----------------------------------Output parameters--------------------
@@ -42,7 +42,7 @@
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
-31) boxscale (1<bs<R0/a)                    =  1.2 (a little larger than 1)
+31) boxscale (1<bs<R0/a)                    =  1.1 (a little larger than 1)
 32) boxlimiterscale (1<bs<R0/a)             =  1.1 (a little larger than 1)
 
 @ ------------------------------------------------------------
