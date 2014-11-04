@@ -784,6 +784,64 @@ struct FieldZ
 };
 
 /**
+ * @brief R component of magnetic field\f$ b_R\f$
+ */
+struct BHatR
+{
+    BHatR( GeomParameters gp): 
+        psipZ_(gp), R_0(gp.R_0),
+        invB_(gp){ }
+    double operator()( double R, double Z, double phi)
+    {
+        return  invB_(R,Z)*R_0/R*psipZ_(R,Z);
+    }
+    private:
+    PsipZ  psipZ_;
+    double R_0;
+    InvB   invB_;
+
+};
+/**
+ * @brief Z component of magnetic field \f$ b_Z\f$
+ */
+struct BHatZ
+{
+    BHatZ( GeomParameters gp): 
+        psipR_(gp), R_0(gp.R_0),
+        invB_(gp){ }
+
+    double operator()( double R, double Z, double phi)
+    {
+        return  -invB_(R,Z)*R_0/R*psipR_(R,Z);
+    }
+    private:
+    PsipR  psipR_;
+    double R_0;
+    InvB   invB_;
+
+};
+/**
+ * @brief Phi component of magnetic field \f$ b_\Phi\f$
+ */
+struct BHatP
+{
+    BHatP( GeomParameters gp):
+        R_0(gp.R_0), 
+        ipol_(gp),
+        invB_(gp){}
+    double operator()( double R, double Z, double phi)
+    {
+        return invB_(R,Z)*R_0*ipol_(R,Z)/R/R;
+    }
+    
+    private:
+    double R_0;
+    Ipol   ipol_;
+    InvB   invB_;
+  
+}; 
+
+/**
  * @brief Delta function for poloidal flux \f$ B_Z\f$
  */
 struct DeltaFunction
