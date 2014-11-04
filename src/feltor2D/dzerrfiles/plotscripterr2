@@ -1,2 +1,0 @@
-set log xy
-plot "dzerr2n1Nxy10.txt" w l,"dzerr2n1Nxy20.txt" w l,"dzerr2n1Nxy40.txt" w l,"dzerr2n1Nxy80.txt" w l,"dzerr2n1Nxy160.txt" w l,"dzerr2n1Nxy320.txt" w l,"dzerr2n2Nxy10.txt" w l,"dzerr2n2Nxy20.txt" w l,"dzerr2n2Nxy40.txt" w l,"dzerr2n2Nxy80.txt" w l,"dzerr2n2Nxy160.txt" w l,"dzerr2n2Nxy320.txt" w l,"dzerr2n3Nxy10.txt" w l,"dzerr2n3Nxy20.txt" w l,"dzerr2n3Nxy40.txt" w l,"dzerr2n3Nxy80.txt" w l,"dzerr2n3Nxy160.txt" w l,"dzerr2n3Nxy320.txt" w l
