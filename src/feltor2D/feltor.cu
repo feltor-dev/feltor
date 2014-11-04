@@ -57,8 +57,8 @@ int main( int argc, char* argv[])
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz)/v2[2]*v2[3], v2[1]*v2[4], "");
+    draw::RenderHostData render(v2[1], (p.Nz)/v2[2]);
 
 
 
@@ -89,12 +89,6 @@ int main( int argc, char* argv[])
     solovev::Nprofile prof(p, gp); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     
-    //field aligning
-//     dg::CONSTANT gaussianZ( 1.);
-//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-//     y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-//     y1[2] = dg::evaluate( gaussianZ, grid);
-//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning
     y1[1] = dg::evaluate( init0, grid);
     
@@ -150,11 +144,9 @@ int main( int argc, char* argv[])
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
-        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
         hvisual = karniadakis.last()[1];
@@ -172,11 +164,9 @@ int main( int argc, char* argv[])
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
-        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
         
         //draw potential
         //transform to Vor
@@ -195,11 +185,9 @@ int main( int argc, char* argv[])
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
-        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
 
         //draw U_e
         hvisual = karniadakis.last()[2];
@@ -214,11 +202,9 @@ int main( int argc, char* argv[])
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
-        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
         //draw U_i
         hvisual = karniadakis.last()[3];
         dg::blas2::gemv( equi, hvisual, visual);
@@ -232,11 +218,9 @@ int main( int argc, char* argv[])
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
-        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
         
         title << std::fixed; 
         title << " &&   time = "<<time;

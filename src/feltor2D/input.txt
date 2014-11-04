@@ -5,9 +5,9 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =  3      (3)
-2)  nx (grid points in x)                =   120 (192)
-3)  ny (grid points in y)                =   120 (192) 
-4)  nz (grid points in z)                =   1(>16)
+2)  nx (grid points in x)                =   60 (192)
+3)  ny (grid points in y)                =   60 (192) 
+4)  nz (grid points in z)                =   1  (1)
 5)  dt (time step in units c_s/rho_s)    =   1e-3(0.01)
 
 ----------------------------------Output parameters--------------------
@@ -27,7 +27,7 @@
 16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
-19) nu_perp                                 =  1e-2 
+19) nu_perp                                 =  1e-3 
 20) nu_parallel  (viscosity)                =  0e-2    (0.001)
 21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
 
