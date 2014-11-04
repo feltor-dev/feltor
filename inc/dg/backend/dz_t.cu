@@ -42,13 +42,6 @@ struct Field
 double R_0 = 150;
 double I_0 = 40;
 //func is a polynomial in R,Z so exact for higher order dG
-double func(double R, double Z, double phi)
-{
-    double r2 = (R-R_0)*(R-R_0)+Z*Z;
-    double B = sqrt(I_0*I_0+r2)/R;
-    double bphi = I_0/R/R/B;
-    return 1/bphi/R*sin(phi);
-}
 double func2d(double R, double Z)
 {
     double r2 = (R-R_0)*(R-R_0)+Z*Z;
@@ -56,7 +49,15 @@ double func2d(double R, double Z)
     double bphi = I_0/R/R/B;
     return 1/bphi/R;
 }
+double func(double R, double Z, double phi)
+{
+    return func2d(R,Z)*sin(phi);
+}
 double sine( double R, double Z, double phi) {return sin(phi);}
+double deri2d(double R, double Z)
+{
+    return 0;
+}
 double deri(double R, double Z, double phi)
 {
     //double r2 = (R-R_0)*(R-R_0)+Z*Z;
@@ -81,8 +82,10 @@ int main()
     double z0 = 0, z1 = 2.*M_PI;
     //double z0 = M_PI/2., z1 = 3./2.*M_PI;
     dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz);
+    dg::Grid2d<double> g2d( R_0 - 1, R_0+1, -1, 1,  n, Nx, Ny);
     const dg::DVec w3d = dg::create::weights( g3d);
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, 1e-8, dg::DefaultLimiter());
+    const dg::DVec w2d = dg::create::weights( g2d);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, 1e-8, dg::DefaultLimiter(), dg::DIR);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     //dz.set_boundaries( dg::PER, 0, 0);
     dz.set_boundaries( dg::DIR, 0., -0.);
@@ -90,6 +93,7 @@ int main()
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function), 
              dzz(dg::evaluate(deri2, g3d));
+    dg::DVec function2d = dg::evaluate( func2d, g2d), derivative2d( function2d) ;
     dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( sine, g3d));
     dg::blas1::pointwiseDot( follow, sinz, follow);
     dg::blas1::axpby( 1., function, -1., follow);
@@ -97,7 +101,9 @@ int main()
     std::cout << "Difference between function and followed evaluation: "<<diff<<"\n";
     const dg::DVec solution = dg::evaluate( deri, g3d);
     const dg::DVec solution2 = dg::evaluate( deri2, g3d);
+    const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
     dz( function, derivative);
+    dz.dz2d( function2d, derivative2d);
     dz.dzz( function, dzz);
     //dz( derivative, dzz);
     dg::blas1::axpby( 1., solution, -1., derivative);
@@ -107,5 +113,8 @@ int main()
     dg::blas1::axpby( 1., solution2, -1., dzz);
     norm = dg::blas2::dot( w3d, solution2);
     std::cout << "Relative Difference in DZZ is "<< sqrt( dg::blas2::dot( w3d, dzz)/norm )<<"\n";    
+    dg::blas1::axpby( 1., solution2d, -1., derivative2d);
+    norm = dg::blas2::dot( w2d, solution2d);
+    std::cout << "Difference in DZ2d is "<< sqrt( dg::blas2::dot( w2d, derivative2d) )<<"\n";    
     return 0;
 }

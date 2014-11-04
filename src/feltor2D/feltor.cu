@@ -57,8 +57,8 @@ int main( int argc, char* argv[])
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (p.Nz)/v2[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( (1)/v2[2]*v2[3], v2[1]*v2[4], "");
+    draw::RenderHostData render(v2[1], (1)/v2[2]);
 
 
 
@@ -69,9 +69,10 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscale*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+     dg::Grid3d<double > gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp, gridfordz); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
     std::cout << "Done!\n";
@@ -80,7 +81,7 @@ int main( int argc, char* argv[])
     //initial perturbation
 //     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+//     dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 
@@ -95,7 +96,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
-    std::cout << "intiialize ne" << std::endl;
+    std::cout << "initialize ne" << std::endl;
     feltor.initializene( y0[1], y0[0]);    
     std::cout << "Done!\n";
 
@@ -103,7 +104,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    std::cout << "intiialize karniadakis" << std::endl;
+    std::cout << "initialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     std::cout << "Done!\n";
     std::cout << "first karniadakis" << std::endl;
@@ -140,7 +141,7 @@ int main( int argc, char* argv[])
         //title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         title <<"ne-1 / " << colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<1/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
@@ -160,7 +161,7 @@ int main( int argc, char* argv[])
         //title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         title <<"ni-1 / " << colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<1/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
@@ -181,7 +182,7 @@ int main( int argc, char* argv[])
         //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         title <<"Omega / "<< colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<1/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
@@ -198,7 +199,7 @@ int main( int argc, char* argv[])
         //title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         title <<"Ue / " << colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<1/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
@@ -214,7 +215,7 @@ int main( int argc, char* argv[])
         //title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
         title <<"Ui / " << colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<1/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);

@@ -413,12 +413,10 @@ template<class M, class container>
 void DZ<M,container>::dz2d( const container& f, container& dzf)
 {
     assert( &f != &dzf);
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     View tempPV( tempP.begin(), tempP.end());
     View tempMV( tempM.begin(), tempM.end());
-    cView fp( f.cbegin() , f.cbegin() + size);
-    cView f0( f.cbegin() , f.cbegin() + size);
-    cView fm( f.cbegin() , f.cbegin() + size);
+    cView fp( f.cbegin() , f.cend());
+    cView fm( f.cbegin() , f.cend());
     cusp::multiply( plus, fp, tempPV);
     cusp::multiply( minus, fm, tempMV );
     dg::blas1::axpby( 1., tempP, -1., tempM);

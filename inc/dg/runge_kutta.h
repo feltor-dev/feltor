@@ -184,9 +184,9 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     end = begin;
     if( T_max == 0) return;
     double dt = T_max/1;
-    unsigned NT = 1;
+    int NT = 1;
     double error = 1e10;
-    bool flag = false; 
+    //bool flag = false; 
  
     while( error > eps_abs && NT < pow( 2, 18) )
     {
