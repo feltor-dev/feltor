@@ -271,8 +271,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);                    // dtU =1/B [U,phi]_RZ  
         
         //Parallel dynamics
-        nablaparNU(y[i], dzy[i]);       
-        nablaparNU(y[i+2], dzy[i+2]);  
 
         dg::blas1::pointwiseDot(npe[i], y[i+2], omega);                      // U N
 
@@ -285,8 +283,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby( -p.tau[i]/p.mu[i], omega, 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
         nablaparDIR(phi[i], omega);      
         dg::blas1::axpby( -1./p.mu[i], omega, 1., yp[2+i]);   //dtU = dtU - 1/(hat(mu))  *dz psi  
-
-
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);                  //U^2
         nablaparNU(omega, chi);  
 
@@ -297,8 +293,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         curveNU( y[i+2], curvy[2+i]);                                     //K(U) 
         curveDIR( phi[i], curvphi[i]);                                     //K(phi) 
         
-        dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega);             //U K(U) 
-        dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K(U)
+        dg::blas1::pointwiseDot( y[i+2], curvy[2+i], omega);              //U K(U) 
+        dg::blas1::pointwiseDot( y[i+2], omega, chi);                     //U^2 K(U)
         dg::blas1::pointwiseDot( npe[i], omega, omega);                   //N U K(U)
         
         dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);        //dtN = dtN - (hat(mu)) N U K(U)
