@@ -13,7 +13,7 @@
 #include "solovev/geometry.h"
 
 #include "feltor.cuh"
-#include "parameters.h"
+#include "feltor/parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 

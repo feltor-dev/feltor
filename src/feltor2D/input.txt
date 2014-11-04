@@ -5,8 +5,8 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =  3      (3)
-2)  nx (grid points in x)                =   60 (192)
-3)  ny (grid points in y)                =   100 (192) 
+2)  nx (grid points in x)                =   20 (192)
+3)  ny (grid points in y)                =   30 (192) 
 4)  nz (grid points in z)                =   1  (1)
 5)  dt (time step in units c_s/rho_s)    =   1e-2(0.01)
 

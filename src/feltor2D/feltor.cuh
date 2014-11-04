@@ -2,7 +2,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
-#include "parameters.h"
+#include "feltor/parameters.h"
 // #include "geometry_circ.h"
 #include "solovev/geometry.h"
 #include "solovev/init.h"
@@ -362,8 +362,10 @@ template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::nablaparNU( container& src, container& target)
 {
     container temp1(src),temp2(src);
+
     dg::blas2::gemv( poisson.dxlhs(), src, target); //d_R src
     dg::blas2::gemv( poisson.dylhs(), src, temp1);  //d_Z src
+
 //     dg::blas2::gemv( dphi, src, temp2);  //d_phi src
     dg::blas1::pointwiseDot( bhatR, target, target); // b^R d_R src
     dg::blas1::pointwiseDot( bhatZ, temp1, temp1); // b^Z d_Z src
@@ -376,8 +378,10 @@ template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::nablaparDIR( container& src, container& target)
 {
     container temp1(src),temp2(src);
+
     dg::blas2::gemv( poisson.dxrhs(), src, target); //d_R src
     dg::blas2::gemv( poisson.dyrhs(), src, temp1);  //d_Z src
+
 //     dg::blas2::gemv( dphi, src, temp2);  //d_phi src
     dg::blas1::pointwiseDot( bhatR, target, target); // b^R d_R src
     dg::blas1::pointwiseDot( bhatZ, temp1, temp1); // b^Z d_Z src
