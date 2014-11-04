@@ -27,7 +27,7 @@
 16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
-19) nu_perp                                 =  1e-3 
+19) nu_perp                                 =  1e-4 
 20) nu_parallel  (viscosity)                =  0e-2    (0.001)
 21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
 

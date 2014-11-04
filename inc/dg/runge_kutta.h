@@ -188,17 +188,17 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     double error = 1e10;
     bool flag = false; 
  
-    while( error > eps_abs && NT < pow( 2, 25) )
+    while( error > eps_abs && NT < pow( 2, 18) )
     {
         dt /= 2.;
         NT *= 2;
         end = begin;
-        //integrieren bis ausserhalb grenze oder eps
-        for( int i=0; i < NT; i++)
+
+        int i=0;
+        while (i<NT && NT < pow( 2, 18))
         {
             rk( rhs, end, temp, dt); 
             end.swap( temp); //end is one step further 
-
             dg::blas1::axpby( 1., end, -1., old_end,diffm); //abs error=oldend = end-oldend
             error = sqrt( dg::blas1::dot( diffm, diffm));
             if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2])        ) 
@@ -208,28 +208,19 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
                 i=-1;
                 end = begin;
                 #ifdef DG_DEBUG
-//                 std::cout << "choosing smaller step size and redo integration" << "NT "<<NT<<" dt "<<dt<< std::endl;
+                    std::cout << "---------Got NaN -> choosing smaller step size and redo integration" << " NT "<<NT<<" dt "<<dt<< std::endl;
                 #endif
-
-
             }
             //if new integrated point outside domain
             if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-
             {
                 error = eps_abs/10;
                 #ifdef DG_DEBUG
-                //                 std::cout << "outside box -> stop integration" << std::endl; 
+                    std::cout << "---------Point outside box -> stop integration" << std::endl; 
                 #endif
-
                 i=NT;
             }
-//             if(error < eps_abs ) std::cout << "converged" << std::endl;
-//             std::cout << "nt "<< temp[0]<<" "<<temp[1]<<" "<<temp[2]<<   std::endl;
-//             std::cout << "ne "<< end[0]<<" "<<end[1]<<" "<<end[2]<<   std::endl;
-//             std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
-
-
+            i++;
         }  
 
 
@@ -246,6 +237,7 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
 
     if( isnan(error) )
     {
+        std::cerr << "ATTENTION: Choose more parallel planes for convergence! "<<std::endl;
         throw NotANumber();
     }
     if( error > eps_abs )
