@@ -181,10 +181,10 @@ int main( int argc, char* argv[])
         
         //draw potential
         //transform to Vor
-//         dvisual=feltor.potential()[0];
-//         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-//         hvisual = y1[1];
-        hvisual = feltor.potential()[0];
+        dvisual=feltor.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        hvisual = y1[1];
+        //hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );

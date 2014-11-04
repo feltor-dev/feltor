@@ -174,6 +174,8 @@ struct DZ
 * @param dzf contains result on output (write only)
 */
 void operator()( const container& f, container& dzf);
+void dz2d( const container& f, container& dzf);
+void dzz2d( const container& f, container& dzzf);
 /**
 * @brief Set boundary conditions in the limiter region
 *
@@ -407,6 +409,47 @@ void DZ<M,container>::dzz( const container& f, container& dzzf)
     cusp::copy( tempMV, dzzf0);
     }
 }
+template<class M, class container>
+void DZ<M,container>::dz2d( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View tempPV( tempP.begin(), tempP.end());
+    View tempMV( tempM.begin(), tempM.end());
+    cView fp( f.cbegin() , f.cbegin() + size);
+    cView f0( f.cbegin() , f.cbegin() + size);
+    cView fm( f.cbegin() , f.cbegin() + size);
+    cusp::multiply( plus, fp, tempPV);
+    cusp::multiply( minus, fm, tempMV );
+    dg::blas1::axpby( 1., tempP, -1., tempM);
+    thrust::transform( tempM.begin(), tempM.end(), hz.begin(), dzf.begin(), thrust::divides<double>());
+}
+template< class M, class container >
+void DZ<M,container>::dzz2d( const container& f, container& dzzf)
+{
+    assert( &f != &dzzf);
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View tempPV( tempP.begin(), tempP.end());
+    View temp0V( temp0.begin(), temp0.end());
+    View tempMV( tempM.begin(), tempM.end());
+    cView fp( f.cbegin() , f.cbegin() + size);
+    cView f0( f.cbegin() , f.cbegin() + size);
+    cView fm( f.cbegin() , f.cbegin() + size);
+    cusp::copy( f0, temp0V);
+    cusp::multiply( plus, fp, tempPV);
+    cusp::multiply( minus, fm, tempMV );
+    {
+        dg::blas1::pointwiseDivide( tempP, hp, tempP);
+        dg::blas1::pointwiseDivide( tempP, hz, tempP);
+        dg::blas1::pointwiseDivide( temp0, hp, temp0);
+        dg::blas1::pointwiseDivide( temp0, hm, temp0);
+        dg::blas1::pointwiseDivide( tempM, hm, tempM);
+        dg::blas1::pointwiseDivide( tempM, hz, tempM);
+    }
+    dg::blas1::axpby( 2., tempP, +2., tempM); //fp+fm
+    dg::blas1::axpby( -2., temp0, +1., tempM, dzzf);
+}
+
 template< class M, class V >
 void DZ<M,V>::cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g)
 {
