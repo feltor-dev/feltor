@@ -18,12 +18,12 @@ struct GeomParameters
            a, 
            elongation,
            triangularity,
-           alpha,
+           alpha, //for damping width
            rk4eps, 
-           psipmin,
-           psipmax,
-           psipmaxcut,
-           psipmaxlim;
+           psipmin, //for source ??
+           psipmax, //for profile
+           psipmaxcut, //for cutting
+           psipmaxlim; //for limiter
     std::vector<double> c; 
      /**
      * @brief constructor to make a const object

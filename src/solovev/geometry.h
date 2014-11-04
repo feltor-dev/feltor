@@ -19,7 +19,7 @@ namespace solovev
  */    
 struct Psip
 {
-  Psip( double R_0, double A, std::vector<double> c ): R_0_(R_0), A_(A), c_(c) {}
+    Psip( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psi_0(gp.psipmaxcut), alpha_( gp.alpha) {}
 /**
  * @brief \f[ \hat{\psi}_p = 
       \hat{R}_0\Bigg\{A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
@@ -43,40 +43,73 @@ struct Psip
       +c_8  \bar{Z}+c_9 \bar{R}^2  \bar{Z}+(\bar{R}^4 )/8 \Bigg\} \f]
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  */
-  double operator()(double R, double Z)
-  {    
-     double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,Zn6,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
-     Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
-     lgRn= log(Rn);
-     return   R_0_*( Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.) 
-                    + c_[0] 
-            + c_[1]  *Rn2
-            + c_[2]  *(Zn2 - Rn2 * lgRn ) 
-            + c_[3]  *(Rn4 - 4.* Rn2*Zn2 ) 
-            + c_[4]  *(3.* Rn4 * lgRn  -9.*Rn2*Zn2 -12.* Rn2*Zn2 * lgRn + 2.*Zn4)
-            + c_[5]  *(Rn4*Rn2-12.* Rn4*Zn2 +8.* Rn2 *Zn4 ) 
-            + c_[6]  *(-15.*Rn4*Rn2 * lgRn + 75.* Rn4 *Zn2 + 180.* Rn4*Zn2 * lgRn 
-                       -140.*Rn2*Zn4 - 120.* Rn2*Zn4 *lgRn + 8.* Zn6 )
-            + c_[7]  *Zn
-            + c_[8]  *Rn2*Zn            
-                    + c_[9] *(Zn2*Zn - 3.* Rn2*Zn * lgRn)
-            + c_[10] *( 3. * Rn4*Zn - 4. * Rn2*Zn3)
-            + c_[11] *(-45.* Rn4*Zn + 60.* Rn4*Zn* lgRn - 80.* Rn2*Zn3* lgRn + 8. * Zn5)            
-                    );
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-      return operator()(R,Z);
-  }
-  void display()
-  {
-    std::cout << R_0_ <<"  " <<A_ <<"\n";
-    std::cout << c_[0] <<"\n";
-  }
+    double operator()(double R, double Z)
+    {    
+        return psi_alt( R, Z);
+    }
+    double psi_neu( double psi)
+    {
+        if( psi <= psi_0)
+            return psi;
+        else if( psi <= psi_0 + alpha_*M_PI)
+            return psi_0 + alpha_/2.*( sin( (psi-psi_0)/alpha_) + (psi-psi_0)/alpha_ );
+        else 
+            return psi_0 + alpha_*M_PI/2.;
+    }
+    double diff_psi_neu( double R, double Z)
+    {
+        double psi = psi_alt( R, Z);
+        if( psi <= psi_0)
+            return 1;
+        if( psi <= psi_0 + alpha_*M_PI)
+            return 1./2.*( cos( (psi-psi_0)/alpha_) + 1. );
+        return 0.;
+    }
+    double diffdiff_psi_neu( double R, double Z)
+    {
+        double psi = psi_alt( R, Z);
+        if( psi <= psi_0)
+            return 0;
+        if( psi <= psi_0 + alpha_*M_PI)
+            return -1./2./alpha_* sin( (psi-psi_0)/alpha_) ;
+        return 0.;
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+        return operator()(R,Z);
+    }
+    void display()
+    {
+      std::cout << R_0_ <<"  " <<A_ <<"\n";
+      std::cout << c_[0] <<"\n";
+    }
   private:
-  double R_0_, A_;
-  std::vector<double> c_;
+    double psi_alt(double R, double Z)
+    {
+       double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,Zn6,lgRn;
+       Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
+       Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
+       lgRn= log(Rn);
+       return   R_0_*( Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.) 
+                      + c_[0] 
+              + c_[1]  *Rn2
+              + c_[2]  *(Zn2 - Rn2 * lgRn ) 
+              + c_[3]  *(Rn4 - 4.* Rn2*Zn2 ) 
+              + c_[4]  *(3.* Rn4 * lgRn  -9.*Rn2*Zn2 -12.* Rn2*Zn2 * lgRn + 2.*Zn4)
+              + c_[5]  *(Rn4*Rn2-12.* Rn4*Zn2 +8.* Rn2 *Zn4 ) 
+              + c_[6]  *(-15.*Rn4*Rn2 * lgRn + 75.* Rn4 *Zn2 + 180.* Rn4*Zn2 * lgRn 
+                         -140.*Rn2*Zn4 - 120.* Rn2*Zn4 *lgRn + 8.* Zn6 )
+              + c_[7]  *Zn
+              + c_[8]  *Rn2*Zn            
+                      + c_[9] *(Zn2*Zn - 3.* Rn2*Zn * lgRn)
+              + c_[10] *( 3. * Rn4*Zn - 4. * Rn2*Zn3)
+              + c_[11] *(-45.* Rn4*Zn + 60.* Rn4*Zn* lgRn - 80.* Rn2*Zn3* lgRn + 8. * Zn5)            
+                      );
+    }
+    double R_0_, A_;
+    std::vector<double> c_;
+    double psi_0;
+    double alpha_;
 //   double * c;
 };
 /**
@@ -84,7 +117,7 @@ struct Psip
  */ 
 struct PsipR
 {
-  PsipR( double R_0, double A, std::vector<double> c ): R_0_(R_0), A_(A), c_(c) {}
+    PsipR( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp) {}
 /**
  * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} =
       \Bigg\{ 2 c_2 \bar{R} +(\bar{R}^3 )/2+2 c_9 \bar{R}  \bar{Z}
@@ -100,13 +133,13 @@ struct PsipR
       \ln{(\bar{R}   )}+720 \bar{R}^3  \bar{Z}^2 \ln{(\bar{R}   )}-240 \bar{R}  \bar{Z}^4
       \ln{(\bar{R}   )})\Bigg\} \f]
  */ 
-  double operator()(double R, double Z)
-  {    
-     double Rn,Rn2,Rn3,Rn5,Zn,Zn2,Zn3,Zn4,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn;  Rn5 = Rn3*Rn2; 
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; 
-     lgRn= log(Rn);
-     return   (Rn3/2. + (Rn/2. - Rn3/2. + Rn*lgRn)* A_ + 
+    double psipR_alt(double R, double Z)
+    {    
+        double Rn,Rn2,Rn3,Rn5,Zn,Zn2,Zn3,Zn4,lgRn;
+        Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn;  Rn5 = Rn3*Rn2; 
+        Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; 
+        lgRn= log(Rn);
+        return   (Rn3/2. + (Rn/2. - Rn3/2. + Rn*lgRn)* A_ + 
         2.* Rn* c_[1] + (-Rn - 2.* Rn*lgRn)* c_[2] + (4.*Rn3 - 8.* Rn *Zn2)* c_[3] + 
         (3. *Rn3 - 30.* Rn *Zn2 + 12. *Rn3*lgRn -  24.* Rn *Zn2*lgRn)* c_[4]
         + (6 *Rn5 - 48 *Rn3 *Zn2 + 16.* Rn *Zn4)*c_[5]
@@ -115,26 +148,32 @@ struct PsipR
         2.* Rn *Zn *c_[8] + (-3. *Rn *Zn - 6.* Rn* Zn*lgRn)* c_[9] + (12. *Rn3* Zn - 8.* Rn *Zn3)* c_[10] + (-120. *Rn3* Zn - 80.* Rn *Zn3 + 240. *Rn3* Zn*lgRn - 
             160.* Rn *Zn3*lgRn) *c_[11]
           );
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-      return operator()(R,Z);
-  }
-  void display()
-  {
-    std::cout << R_0_ <<"  " <<A_ <<"\n";
-    std::cout << c_[0] <<"\n";
-  }
+    }
+    double operator()(double R, double Z)
+    {    
+        //return psip_.diff_psi_neu( R, Z)* psipR_alt( R,Z);
+        return psipR_alt( R, Z);
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+        return operator()(R,Z);
+    }
+    void display()
+    {
+      std::cout << R_0_ <<"  " <<A_ <<"\n";
+      std::cout << c_[0] <<"\n";
+    }
   private:
-  double R_0_, A_;
-  std::vector<double> c_;
+    double R_0_, A_;
+    std::vector<double> c_;
+    Psip psip_;
 };
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
  */ 
 struct PsipRR
 {
-  PsipRR( double R_0, double A, std::vector<double> c ): R_0_(R_0), A_(A), c_(c) {}
+    PsipRR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp), psipR_(gp) {}
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}=
      \hat{R}_0^{-1} \Bigg\{ 2 c_2 +(3 \hat{\bar{R}}^2 )/2+2 c_9  \bar{Z}+c_4 (12 \bar{R}^2 -8  \bar{Z}^2)+c_{11} 
@@ -150,39 +189,47 @@ struct PsipRR
       + c_7 (-165 \bar{R}^4 +2160 \bar{R}^2  \bar{Z}^2-640  \bar{Z}^4-450 \bar{R}^4  \ln{(\bar{R}   )}+2160 \bar{R}^2  \bar{Z}^2
       \ln{(\bar{R}   )}-240  \bar{Z}^4 \ln{(\bar{R}   )})\Bigg\}\f]
  */ 
-  double operator()(double R, double Z)
-  {    
-     double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; 
-     lgRn= log(Rn);
-     return   1./R_0_*( (3.* Rn2)/2. + (3./2. - (3. *Rn2)/2. +lgRn) *A_ +  2.* c_[1] + (-3. - 2.*lgRn)* c_[2] + (12. *Rn2 - 8. *Zn2) *c_[3] + 
-       (21. *Rn2 - 54. *Zn2 + 36. *Rn2*lgRn - 24. *Zn2*lgRn)* c_[4]
-       + (30. *Rn4 - 144. *Rn2 *Zn2 + 16.*Zn4)*c_[5] + (-165. *Rn4 + 2160. *Rn2 *Zn2 - 640. *Zn4 - 450. *Rn4*lgRn + 
-    2160. *Rn2 *Zn2*lgRn - 240. *Zn4*lgRn)* c_[6] + 
- 2.* Zn* c_[8] + (-9. *Zn - 6.* Zn*lgRn) *c_[9] 
- + (36. *Rn2* Zn - 8. *Zn3) *c_[10]
- + (-120. *Rn2* Zn - 240. *Zn3 + 720. *Rn2* Zn*lgRn - 160. *Zn3*lgRn)* c_[11]);
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-      return operator()(R,Z);
-  }
-  void display()
-  {
-    std::cout << R_0_ <<"  " <<A_ <<"\n";
-    std::cout << c_[0] <<"\n";
-  }
+    double operator()(double R, double Z)
+    {    
+        //double psipR = psipR_.psipR_alt( R,Z);
+        //return psip_.diff_psi_neu( R, Z)* psipRR_alt( R,Z) + psip_.diffdiff_psi_neu( R, Z) *psipR;
+        return psipRR_alt( R, Z);
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+        return operator()(R,Z);
+    }
+    void display()
+    {
+      std::cout << R_0_ <<"  " <<A_ <<"\n";
+      std::cout << c_[0] <<"\n";
+    }
   private:
-  double R_0_, A_;
-  std::vector<double> c_;
+    double psipRR_alt(double R, double Z)
+    {    
+       double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
+       Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
+       Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; 
+       lgRn= log(Rn);
+       return   1./R_0_*( (3.* Rn2)/2. + (3./2. - (3. *Rn2)/2. +lgRn) *A_ +  2.* c_[1] + (-3. - 2.*lgRn)* c_[2] + (12. *Rn2 - 8. *Zn2) *c_[3] + 
+         (21. *Rn2 - 54. *Zn2 + 36. *Rn2*lgRn - 24. *Zn2*lgRn)* c_[4]
+         + (30. *Rn4 - 144. *Rn2 *Zn2 + 16.*Zn4)*c_[5] + (-165. *Rn4 + 2160. *Rn2 *Zn2 - 640. *Zn4 - 450. *Rn4*lgRn + 
+      2160. *Rn2 *Zn2*lgRn - 240. *Zn4*lgRn)* c_[6] + 
+      2.* Zn* c_[8] + (-9. *Zn - 6.* Zn*lgRn) *c_[9] 
+ +   (36. *Rn2* Zn - 8. *Zn3) *c_[10]
+ +   (-120. *Rn2* Zn - 240. *Zn3 + 720. *Rn2* Zn*lgRn - 160. *Zn3*lgRn)* c_[11]);
+    }
+    double R_0_, A_;
+    std::vector<double> c_;
+    Psip psip_;
+    PsipR psipR_;
 };
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\f]
  */ 
 struct PsipZ
 {
-  PsipZ( double R_0, double A, std::vector<double> c ): R_0_(R_0), A_(A), c_(c) { }
+    PsipZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp) { }
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}= 
       \Bigg\{c_8 +c_9 \bar{R}^2 +2 c_3  \bar{Z}-8 c_4 \bar{R}^2  \bar{Z}+c_{11} 
@@ -195,14 +242,14 @@ struct PsipZ
       +c_7 (150 \bar{R}^4  \bar{Z}-560 \bar{R}^2  \bar{Z}^3+48  
       \bar{Z}^5+360 \bar{R}^4  \bar{Z} \ln{(\bar{R}   )}-480 \bar{R}^2  \bar{Z}^3 \ln{(\bar{R}   )})\Bigg\} \f]
  */ 
-  double operator()(double R, double Z)
-  {    
-     double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2; 
-     Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; 
-     lgRn= log(Rn);
+    double psipZ_alt(double R, double Z)
+    {
+        double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,lgRn;
+        Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2; 
+        Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; 
+        lgRn= log(Rn);
 
-     return   (2.* Zn* c_[2] 
+        return   (2.* Zn* c_[2] 
             -  8. *Rn2* Zn* c_[3] +
               ((-18.)*Rn2 *Zn + 8. *Zn3 - 24. *Rn2* Zn*lgRn) *c_[4] 
             + ((-24.) *Rn4* Zn + 32. *Rn2 *Zn3)* c_[5]   
@@ -213,26 +260,32 @@ struct PsipZ
             + (3. *Rn4 - 12. *Rn2 *Zn2) *c_[10]
             + ((-45.)*Rn4 + 40. *Zn4 + 60. *Rn4*lgRn -  240. *Rn2 *Zn2*lgRn)* c_[11]);
           
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-      return operator()(R,Z);
-  }
-  void display()
-  {
-    std::cout << R_0_ <<"  " <<A_ <<"\n";
-    std::cout << c_[0] <<"\n";
-  }
+    }
+    double operator()(double R, double Z)
+    {    
+        //return psip_.diff_psi_neu( R, Z)* psipZ_alt( R,Z);
+        return psipZ_alt(R, Z);
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+        return operator()(R,Z);
+    }
+    void display()
+    {
+        std::cout << R_0_ <<"  " <<A_ <<"\n";
+        std::cout << c_[0] <<"\n";
+    }
   private:
-  double R_0_, A_;
-  std::vector<double> c_;
+    double R_0_, A_;
+    std::vector<double> c_;
+    Psip psip_;
 };
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}\f]
  */ 
 struct PsipZZ
 {
-  PsipZZ( double R_0, double A, std::vector<double> c ): R_0_(R_0), A_(A), c_(c)  {  }
+  PsipZZ( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp), psipZ_(gp) { }
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}=
       \hat{R}_0^{-1} \Bigg\{2 c_3 -8 c_4 \bar{R}^2 +6 c_{10}  \bar{Z}-24 c_{11}
@@ -242,34 +295,43 @@ struct PsipZZ
       +c_7 (150 \bar{R}^4 -1680 \bar{R}^2  \bar{Z}^2+240  \bar{Z}^4+360 \bar{R}^4 
       \ln{(\bar{R}   )}-1440 \bar{R}^2  \bar{Z}^2 \ln{(\bar{R}   )})\Bigg\} \f]
  */ 
-  double operator()(double R, double Z)
-  {    
-     double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2; 
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; 
-     lgRn= log(Rn);
-     return   1./R_0_*( 2.* c_[2] - 8. *Rn2* c_[3] + (-18. *Rn2 + 24. *Zn2 - 24. *Rn2*lgRn) *c_[4] + (-24.*Rn4 + 96. *Rn2 *Zn2) *c_[5]
-     + (150. *Rn4 - 1680. *Rn2 *Zn2 + 240. *Zn4 + 360. *Rn4*lgRn - 1440. *Rn2 *Zn2*lgRn)* c_[6] + 6.* Zn* c_[9] -  24. *Rn2 *Zn *c_[10] + (160. *Zn3 - 480. *Rn2* Zn*lgRn) *c_[11]);
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-      return operator()(R,Z);
-  }
-  void display()
-  {
-    std::cout << R_0_ <<"  " <<A_ <<"\n";
-    std::cout << c_[0] <<"\n";
-  }
+    double operator()(double R, double Z)
+    {    
+        //double psipZ = psipZ_.psipZ_alt(R,Z);
+        //return psip_.diff_psi_neu( R, Z)* psipZZ_alt( R,Z) + 
+        //       psip_.diffdiff_psi_neu( R, Z) *psipZ*psipZ;
+        return psipZZ_alt( R, Z);
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+        return operator()(R,Z);
+    }
+    void display()
+    {
+        std::cout << R_0_ <<"  " <<A_ <<"\n";
+        std::cout << c_[0] <<"\n";
+    }
   private:
-  double R_0_, A_;
-  std::vector<double> c_;
+    double psipZZ_alt(double R, double Z)
+    {
+        double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
+        Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2; 
+        Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; 
+        lgRn= log(Rn);
+        return   1./R_0_*( 2.* c_[2] - 8. *Rn2* c_[3] + (-18. *Rn2 + 24. *Zn2 - 24. *Rn2*lgRn) *c_[4] + (-24.*Rn4 + 96. *Rn2 *Zn2) *c_[5]
+        + (150. *Rn4 - 1680. *Rn2 *Zn2 + 240. *Zn4 + 360. *Rn4*lgRn - 1440. *Rn2 *Zn2*lgRn)* c_[6] + 6.* Zn* c_[9] -  24. *Rn2 *Zn *c_[10] + (160. *Zn3 - 480. *Rn2* Zn*lgRn) *c_[11]);
+    }
+    double R_0_, A_;
+    std::vector<double> c_;
+    Psip psip_; 
+    PsipZ psipZ_;
 };
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\f] 
  */ 
 struct PsipRZ
 {
-  PsipRZ( double R_0, double A, std::vector<double> c ): R_0_(R_0), A_(A), c_(c) {  }
+    PsipRZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp), psipZ_(gp), psipR_(gp) {  }
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}= 
         \hat{R}_0^{-1} \Bigg\{2 c_9 \bar{R} -16 c_4 \bar{R}  \bar{Z}+c_{11} 
@@ -281,57 +343,66 @@ struct PsipRZ
       +c_7(960 \bar{R}^3  \bar{Z}-1600 \bar{R}  \bar{Z}^3+1440 \bar{R}^3  \bar{Z} \ln{(\bar{R} 
       )}-960 \bar{R}  \bar{Z}^3 \ln{(\bar{R}   )})\Bigg\} \f] 
  */ 
-  double operator()(double R, double Z)
-  {    
-     double Rn,Rn2,Rn3,Zn,Zn2,Zn3,lgRn;
-     Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn; 
-     Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; 
-     lgRn= log(Rn);
-     return   1./R_0_*(
+    double operator()(double R, double Z)
+    {    
+        //return psip_.diff_psi_neu( R, Z)* psipRZ_alt( R,Z) + 
+        //       psip_.diffdiff_psi_neu( R, Z) *psipR_.psipR_alt(R,Z)*psipZ_.psipZ_alt(R,Z);
+        return psipRZ_alt( R, Z);
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+        return operator()(R,Z);
+    }
+    void display()
+    {
+        std::cout << R_0_ <<"  " <<A_ <<"\n";
+        std::cout << c_[0] <<"\n";
+    }
+  private:
+    double psipRZ_alt(double R, double Z)
+    {
+        double Rn,Rn2,Rn3,Zn,Zn2,Zn3,lgRn;
+        Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn; 
+        Zn = Z/R_0_; Zn2 =Zn*Zn; Zn3 = Zn2*Zn; 
+        lgRn= log(Rn);
+        return   1./R_0_*(
               -16.* Rn* Zn* c_[3] + (-60.* Rn* Zn - 48.* Rn* Zn*lgRn)* c_[4] + (-96. *Rn3* Zn + 64.*Rn *Zn3)* c_[5]
             + (960. *Rn3 *Zn - 1600.* Rn *Zn3 + 1440. *Rn3* Zn*lgRn - 960. *Rn *Zn3*lgRn) *c_[6] +  2.* Rn* c_[8] + (-3.* Rn - 6.* Rn*lgRn)* c_[9]
             + (12. *Rn3 - 24.* Rn *Zn2) *c_[10] + (-120. *Rn3 - 240. *Rn *Zn2 + 240. *Rn3*lgRn -   480.* Rn *Zn2*lgRn)* c_[11]
                  );
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-      return operator()(R,Z);
-  }
-  void display()
-  {
-    std::cout << R_0_ <<"  " <<A_ <<"\n";
-    std::cout << c_[0] <<"\n";
-  }
-  private:
-  double R_0_, A_;
-  std::vector<double> c_;
+    }
+    double R_0_, A_;
+    std::vector<double> c_;
+    Psip psip_; 
+    PsipZ psipZ_;
+    PsipR psipR_;
 };
 /**
  * @brief \f[\hat{I}\f] 
  */ 
 struct Ipol
 {
-  Ipol(  double R_0, double A, Psip psip ):  R_0_(R_0), A_(A), psip_(psip) { }
-/**
- * @brief \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f] 
- */ 
-  double operator()(double R, double Z)
-  {    
-      //sign before A changed to -
-    return sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-      //sign before A changed to -
-    return sqrt(-2.*A_*psip_(R,Z,phi)/R_0_ + 1.);
-  }
-  void display()
-  {
-    std::cout<< R_0_ <<"  "  << A_ <<"\n";
-  }
-  private:
-  double R_0_, A_;
-  Psip psip_;
+    Ipol(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), psip_(gp) { }
+    /**
+    * @brief \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f] 
+    */ 
+    double operator()(double R, double Z)
+    {    
+        //sign before A changed to -
+        return sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+        //sign before A changed to -
+      return sqrt(-2.*A_*psip_(R,Z,phi)/R_0_ + 1.);
+    }
+    void display()
+    {
+      std::cout<< R_0_ <<"  "  << A_ <<"\n";
+    }
+    private:
+    double R_0_, A_;
+    Psip psip_;
 };
 
 /**
@@ -339,59 +410,61 @@ struct Ipol
  */ 
 struct InvB
 {
-  InvB(  double R_0, Ipol ipol, PsipR psipR, PsipZ psipZ ):  R_0_(R_0), ipol_(ipol), psipR_(psipR), psipZ_(psipZ)  { }
-/**
- * @brief \f[   \frac{1}{\hat{B}} = 
-      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
-      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
- */ 
-  double operator()(double R, double Z)
-  {    
-    return R/(R_0_*sqrt(ipol_(R,Z)*ipol_(R,Z) + psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-    return R/(R_0_*sqrt(ipol_(R,Z,phi)*ipol_(R,Z,phi) + psipR_(R,Z,phi)*psipR_(R,Z,phi) +psipZ_(R,Z,phi)*psipZ_(R,Z,phi))) ;
-  }
-  void display() { }
+    InvB(  GeomParameters gp ):  R_0_(gp.R_0), ipol_(gp), psipR_(gp), psipZ_(gp)  { }
+    /**
+    * @brief \f[   \frac{1}{\hat{B}} = 
+        \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
+        + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
+    */ 
+    double operator()(double R, double Z)
+    {    
+        double psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
+        return R/(R_0_*sqrt(ipol_(R,Z)*ipol_(R,Z) + psipR*psipR +psipZ*psipZ)) ;
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+        double psipR = psipR_(R,Z, phi), psipZ = psipZ_(R,Z, phi);
+        return R/(R_0_*sqrt(ipol_(R,Z,phi)*ipol_(R,Z,phi) + psipR*psipR +psipZ*psipZ)) ;
+    }
+    void display() { }
   private:
-  double R_0_;
-  Ipol ipol_;
-  PsipR psipR_;
-  PsipZ psipZ_;  
+    double R_0_;
+    Ipol ipol_;
+    PsipR psipR_;
+    PsipZ psipZ_;  
 };
 /**
  * @brief \f[   \ln{(   \hat{B})}  \f]
  */ 
 struct LnB
 {
-  LnB(  double R_0, Ipol ipol, PsipR psipR, PsipZ psipZ ):  R_0_(R_0), ipol_(ipol), psipR_(psipR), psipZ_(psipZ)  { }
+    LnB( GeomParameters gp ):  R_0_(gp.R_0), ipol_(gp), psipR_(gp), psipZ_(gp)  { }
 /**
  * @brief \f[   \ln{(   \hat{B})} = \ln{\left[
       \frac{\hat{R}_0}{\hat{R}} \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
       + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2} \right] } \f]
  */ 
-  double operator()(double R, double Z)
-  {    
-    return log((R_0_*sqrt(ipol_(R,Z)*ipol_(R,Z) + psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)))/R) ;
-  }
-  double operator()(double R, double Z, double phi)
-  {    
-    return log((R_0_*sqrt(ipol_(R,Z,phi)*ipol_(R,Z,phi) + psipR_(R,Z,phi)*psipR_(R,Z,phi) +psipZ_(R,Z,phi)*psipZ_(R,Z,phi)))/R) ;
-  }
-  void display() { }
+    double operator()(double R, double Z)
+    {    
+      return log((R_0_*sqrt(ipol_(R,Z)*ipol_(R,Z) + psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)))/R) ;
+    }
+    double operator()(double R, double Z, double phi)
+    {    
+      return log((R_0_*sqrt(ipol_(R,Z,phi)*ipol_(R,Z,phi) + psipR_(R,Z,phi)*psipR_(R,Z,phi) +psipZ_(R,Z,phi)*psipZ_(R,Z,phi)))/R) ;
+    }
+    void display() { }
   private:
-  double R_0_;
-  Ipol ipol_;
-  PsipR psipR_;
-  PsipZ psipZ_;  
+    double R_0_;
+    Ipol ipol_;
+    PsipR psipR_;
+    PsipZ psipZ_;  
 };
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}}  \f]
  */ 
 struct BR
 {
-  BR(double R_0, double A, PsipR psipR, PsipRR psipRR, PsipZ psipZ, PsipRZ psipRZ, InvB invB):  R_0_(R_0), A_(A), psipR_(psipR), psipRR_(psipRR),psipZ_(psipZ) ,psipRZ_(psipRZ), invB_(invB) { }
+    BR(GeomParameters gp):  R_0_(gp.R_0), A_(gp.A), psipR_(gp), psipRR_(gp),psipZ_(gp) ,psipRZ_(gp), invB_(gp) { }
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
       -\frac{\hat{R}^2\hat{R}_0^{-2} \hat{B}^2+A\hat{R} \hat{R}_0^{-1}   \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)  
@@ -414,20 +487,20 @@ struct BR
   }
   void display() { }
   private:
-  double R_0_;
-  double A_;
-  PsipR psipR_;
-  PsipRR psipRR_;
-  PsipZ psipZ_;
-  PsipRZ psipRZ_;  
-  InvB invB_;
+    double R_0_;
+    double A_;
+    PsipR psipR_;
+    PsipRR psipRR_;
+    PsipZ psipZ_;
+    PsipRZ psipRZ_;  
+    InvB invB_;
 };
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}}  \f]
  */ 
 struct BZ
 {
-  BZ(double R_0, double A, PsipR psipR,  PsipZ psipZ, PsipZZ psipZZ, PsipRZ psipRZ, InvB invB):  R_0_(R_0), A_(A), psipR_(psipR),psipZ_(psipZ), psipZZ_(psipZZ) ,psipRZ_(psipRZ), invB_(invB) { }
+    BZ( GeomParameters gp):  R_0_(gp.R_0), A_(gp.A), psipR_(gp),psipZ_(gp), psipZZ_(gp) ,psipRZ_(gp), invB_(gp) { }
   /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
  \frac{-A \hat{R}_0^{-1}    \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}   \right)+
@@ -450,13 +523,13 @@ struct BZ
   }
   void display() { }
   private:
-  double R_0_;
-  double A_;
-  PsipR psipR_;
-  PsipZ psipZ_;
-  PsipZZ psipZZ_;
-  PsipRZ psipRZ_;  
-  InvB invB_; 
+    double R_0_;
+    double A_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipZZ psipZZ_;
+    PsipRZ psipRZ_;  
+    InvB invB_; 
 };
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}  \f]
@@ -465,15 +538,12 @@ struct CurvatureR
 {
     CurvatureR( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)),
-        psipR_(PsipR(gp.R_0,gp.A,gp.c)),
-        psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
-        psipZZ_(PsipZZ(gp.R_0,gp.A,gp.c)),
-        psipRZ_(PsipRZ(gp.R_0,gp.A,gp.c)),
-        ipol_(Ipol(gp.R_0,gp.A,psip_)),
-        invB_(InvB(gp.R_0,ipol_,psipR_,psipZ_)),
-        bZ_(BZ(gp.R_0,gp.A,psipR_,psipZ_,psipZZ_,psipRZ_,invB_)) {
-    }
+        psip_(gp),
+        psipR_(gp), psipZ_(gp),
+        psipZZ_(gp), psipRZ_(gp),
+        ipol_(gp),
+        invB_(gp),
+        bZ_(gp) { }
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
  */ 
@@ -507,15 +577,14 @@ struct CurvatureZ
 {
     CurvatureZ( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)),
-        psipR_(PsipR(gp.R_0,gp.A,gp.c)),
-        psipRR_(PsipRR(gp.R_0,gp.A,gp.c)),
-        psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
-        psipRZ_(PsipRZ(gp.R_0,gp.A,gp.c)),
-        ipol_(Ipol(gp.R_0,gp.A,psip_)),
-        invB_(InvB(gp.R_0,ipol_,psipR_,psipZ_)),
-        bR_(BR(gp.R_0,gp.A,psipR_,psipRR_,psipZ_,psipRZ_,invB_)) {
-    }
+        psip_(gp),
+        psipR_(gp),
+        psipRR_(gp),
+        psipZ_(gp),
+        psipRZ_(gp),
+        ipol_(gp),
+        invB_(gp),
+        bR_(gp) { }
  /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
  */    
@@ -548,16 +617,16 @@ struct GradLnB
 {
     GradLnB( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)),
-        psipR_(PsipR(gp.R_0,gp.A,gp.c)),
-        psipRR_(PsipRR(gp.R_0,gp.A,gp.c)),
-        psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
-        psipZZ_(PsipZZ(gp.R_0,gp.A,gp.c)),
-        psipRZ_(PsipRZ(gp.R_0,gp.A,gp.c)),
-        ipol_(Ipol(gp.R_0,gp.A,psip_)),
-        invB_(InvB(gp.R_0,ipol_,psipR_,psipZ_)),
-        bR_(BR(gp.R_0,gp.A,psipR_,psipRR_,psipZ_,psipRZ_,invB_)), 
-        bZ_(BZ(gp.R_0,gp.A,psipR_,psipZ_,psipZZ_,psipRZ_,invB_)) {
+        psip_(gp),
+        psipR_(gp),
+        psipRR_(gp),
+        psipZ_(gp),
+        psipZZ_(gp),
+        psipRZ_(gp),
+        ipol_(gp),
+        invB_(gp),
+        bR_(gp), 
+        bZ_(gp) {
 
     } 
     /**
@@ -591,14 +660,14 @@ struct Field
 {
     Field( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)),
-        psipR_(PsipR(gp.R_0,gp.A,gp.c)),
-        psipRR_(PsipRR(gp.R_0,gp.A,gp.c)),
-        psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
-        psipZZ_(PsipZZ(gp.R_0,gp.A,gp.c)),
-        psipRZ_(PsipRZ(gp.R_0,gp.A,gp.c)),
-        ipol_(Ipol(gp.R_0,gp.A,psip_)),
-        invB_(InvB(gp.R_0,ipol_,psipR_,psipZ_)) {
+        psip_(gp),
+        psipR_(gp),
+        psipRR_(gp),
+        psipZ_(gp),
+        psipZZ_(gp),
+        psipRZ_(gp),
+        ipol_(gp),
+        invB_(gp) {
     }
     /**
  * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
@@ -664,7 +733,7 @@ struct Field
 struct FieldP
 {
     FieldP( GeomParameters gp): R_0(gp.R_0), 
-    ipol_(gp.R_0,gp.A,Psip(gp.R_0, gp.A, gp.c)){}
+    ipol_(gp){}
     double operator()( double R, double Z, double phi)
     {
         return R_0*ipol_(R,Z)/R/R;
@@ -680,7 +749,11 @@ struct FieldP
  */
 struct FieldR
 {
-    FieldR( GeomParameters gp): psipZ_(gp.R_0,gp.A,gp.c), R_0(gp.R_0){ }
+    FieldR( GeomParameters gp): psipZ_(gp), R_0(gp.R_0){ }
+    double operator()( double R, double Z)
+    {
+        return  R_0/R*psipZ_(R,Z);
+    }
     double operator()( double R, double Z, double phi)
     {
         return  R_0/R*psipZ_(R,Z);
@@ -695,7 +768,11 @@ struct FieldR
  */
 struct FieldZ
 {
-    FieldZ( GeomParameters gp): psipR_(gp.R_0,gp.A,gp.c), R_0(gp.R_0){ }
+    FieldZ( GeomParameters gp): psipR_(gp), R_0(gp.R_0){ }
+    double operator()( double R, double Z)
+    {
+        return  -R_0/R*psipR_(R,Z);
+    }
     double operator()( double R, double Z, double phi)
     {
         return  -R_0/R*psipR_(R,Z);
@@ -712,8 +789,8 @@ struct FieldZ
 struct BHatR
 {
     BHatR( GeomParameters gp): 
-        psipZ_(gp.R_0,gp.A,gp.c), R_0(gp.R_0),
-        invB_(InvB(gp.R_0,Ipol(gp.R_0,gp.A,Psip(gp.R_0, gp.A, gp.c)),PsipR(gp.R_0, gp.A, gp.c),psipZ_)){ }
+        psipZ_(gp), R_0(gp.R_0),
+        invB_(gp){ }
     double operator()( double R, double Z, double phi)
     {
         return  invB_(R,Z)*R_0/R*psipZ_(R,Z);
@@ -730,8 +807,8 @@ struct BHatR
 struct BHatZ
 {
     BHatZ( GeomParameters gp): 
-        psipR_(gp.R_0,gp.A,gp.c), R_0(gp.R_0),
-        invB_(InvB(gp.R_0,Ipol(gp.R_0,gp.A,Psip(gp.R_0, gp.A, gp.c)),psipR_,PsipZ(gp.R_0, gp.A, gp.c))){ }
+        psipR_(gp), R_0(gp.R_0),
+        invB_(gp){ }
 
     double operator()( double R, double Z, double phi)
     {
@@ -750,8 +827,8 @@ struct BHatP
 {
     BHatP( GeomParameters gp):
         R_0(gp.R_0), 
-        ipol_(gp.R_0,gp.A,Psip(gp.R_0, gp.A, gp.c)),
-        invB_(InvB(gp.R_0,ipol_,PsipR(gp.R_0, gp.A, gp.c),PsipZ(gp.R_0, gp.A, gp.c))){}
+        ipol_(gp),
+        invB_(gp){}
     double operator()( double R, double Z, double phi)
     {
         return invB_(R,Z)*R_0*ipol_(R,Z)/R/R;
@@ -769,10 +846,11 @@ struct BHatP
  */
 struct DeltaFunction
 {
-    DeltaFunction(Psip psip, PsipR psipR, PsipZ psipZ, double epsilon,double psivalue) :
-       psip_(psip),epsilon_(epsilon),
-        psipR_(psipR), 
-        psipZ_(psipZ),
+    DeltaFunction(GeomParameters gp, double epsilon,double psivalue) :
+        psip_(gp),
+        psipR_(gp), 
+        psipZ_(gp), 
+        epsilon_(epsilon),
         psivalue_(psivalue){
     }
     void setepsilon(double temp ){epsilon_ = temp;}
@@ -813,10 +891,10 @@ struct FluxSurfaceAverage
     g2d_(g2d),
     gp_(gp),
     f_(f),
-    psip_(Psip(gp.R_0,gp.A,gp.c)),
-    psipR_(PsipR(gp.R_0,gp.A,gp.c)),
-    psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
-    deltaf_(DeltaFunction(psip_,psipR_,psipZ_,0.0,0.0)),
+    psip_(gp),
+    psipR_(gp),
+    psipZ_(gp),
+    deltaf_(DeltaFunction(gp,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
     oneongrid_(dg::evaluate(dg::one,g2d_))              
     {
@@ -836,11 +914,11 @@ struct FluxSurfaceAverage
      */
     double operator()(double psip0)
     {
-            deltaf_.setpsi( psip0);
-            container deltafog2d = dg::evaluate( deltaf_, g2d_);    
-            double psipcut = dg::blas2::dot( f_,w2d_,deltafog2d); //int deltaf psip
-            double vol     = dg::blas2::dot( oneongrid_ , w2d_,deltafog2d); //int deltaf
-            double fsa = psipcut/vol;
+        deltaf_.setpsi( psip0);
+        container deltafog2d = dg::evaluate( deltaf_, g2d_);    
+        double psipcut = dg::blas2::dot( f_,w2d_,deltafog2d); //int deltaf psip
+        double vol     = dg::blas2::dot( oneongrid_ , w2d_,deltafog2d); //int deltaf
+        double fsa = psipcut/vol;
         return fsa;
     }
     private:
@@ -872,10 +950,10 @@ struct SafetyFactor
     g2d_(g2d),
     gp_(gp),
     f_(f),
-    psip_(Psip(gp.R_0,gp.A,gp.c)),
-    psipR_(PsipR(gp.R_0,gp.A,gp.c)),
-    psipZ_(PsipZ(gp.R_0,gp.A,gp.c)),
-    deltaf_(DeltaFunction(psip_,psipR_,psipZ_,0.0,0.0)),
+    psip_(gp),
+    psipR_(gp),
+    psipZ_(gp),
+    deltaf_(DeltaFunction(gp,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
     oneongrid_(dg::evaluate(dg::one,g2d_))              
     {
@@ -917,9 +995,9 @@ struct SafetyFactor
 struct Alpha
 {
     Alpha( GeomParameters gp):
-        psipR_(gp.R_0,gp.A,gp.c), 
-        psipZ_(gp.R_0,gp.A,gp.c),
-        ipol_(gp.R_0,gp.A,Psip(gp.R_0, gp.A, gp.c)),
+        psipR_(gp), 
+        psipZ_(gp),
+        ipol_(gp),
         R_0(gp.R_0){ }
     double operator()( double R, double Z)
     {

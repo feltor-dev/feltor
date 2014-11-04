@@ -17,7 +17,7 @@ struct Iris
 {
     Iris( GeomParameters gp ): 
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -40,7 +40,7 @@ struct Pupil
 {
     Pupil( GeomParameters gp): 
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -66,7 +66,7 @@ struct PsiLimiter
 {
     PsiLimiter( GeomParameters gp): 
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
 
     double operator( )(double R, double Z)
@@ -88,7 +88,7 @@ struct BoxLimiter
     BoxLimiter(eule::Parameters p, GeomParameters gp): 
         p_(p),
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
 
     double operator( )(double R, double Z)
@@ -124,7 +124,7 @@ struct GaussianDamping
 {
     GaussianDamping( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -155,7 +155,7 @@ struct GaussianProfDamping
 {
     GaussianProfDamping( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -182,7 +182,7 @@ struct TanhSource
         TanhSource( eule::Parameters p, GeomParameters gp):
         p_(p),
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -210,7 +210,7 @@ struct Nprofile
      Nprofile( eule::Parameters p, GeomParameters gp):
         p_(p),
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
    double operator( )(double R, double Z)
     {
@@ -235,7 +235,7 @@ struct ZonalFlow
     ZonalFlow(  eule::Parameters p,GeomParameters gp):
         p_(p),
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
     }
     double operator() (double R, double Z)
     {
@@ -258,7 +258,7 @@ struct ZonalFlow
  */ 
 struct TestFunction
 {
-    TestFunction(Psip psip) : psip_(psip){}
+    TestFunction(GeomParameters gp) : psip_(gp){}
     double operator()( double R, double Z, double phi)
     {
         return psip_(R,Z,phi)*sin(phi);
@@ -274,7 +274,7 @@ struct TestFunction
  */ 
 struct DeriTestFunction
 {
-    DeriTestFunction(GeomParameters gp, Psip psip,PsipR psipR, PsipZ psipZ, Ipol ipol, InvB invB) :gp_(gp), psip_(psip), psipR_(psipR), psipZ_(psipZ),ipol_(ipol), invB_(invB) {}
+    DeriTestFunction(GeomParameters gp) :gp_(gp), psip_(gp), psipR_(gp), psipZ_(gp),ipol_(gp), invB_(gp) {}
     double operator()( double R, double Z, double phi)
     {
         return  gp_.R_0*psip_(R,Z,phi)*ipol_(R,Z,phi)*cos(phi)*invB_(R,Z,phi)/R/R;
