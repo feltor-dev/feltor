@@ -5,29 +5,29 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =  3      (3)
-2)  nx (grid points in x)                =   60 (192)
-3)  ny (grid points in y)                =   80 (192) 
+2)  nx (grid points in x)                =   65 (192)
+3)  ny (grid points in y)                =   110 (192) 
 4)  nz (grid points in z)                =   30  (1)
 5)  dt (time step in units c_s/rho_s)    =   1e-2(0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  60 
-8)  ny_out (# grid points in output field)  =  60
+7)  nx_out (# grid points in output field)  =  65 
+8)  ny_out (# grid points in output field)  =  110
 9)  nz_out (# grid points in output field)  =  1
-10) itstp  (steps between outputs)          =  10  (5)
-11) total # of outputs (excluding first)    =  3
+10) itstp  (steps between outputs)          =  500  (5)
+11) total # of outputs (excluding first)    =  10000
 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
 13)  eps_max (stop for induction)           =   0.0 (1e-6)
 14)  eps_gamma (stop for Gamma CG)          =   1e-6 (1e-8)
-15)  eps_time ( stop for time inversion )   =   1e-10 
+15)  eps_time ( stop for time inversion )   =   1e-12 
 -------------------------Physical parameters----------------------------
 16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
-19) nu_perp                                 =  5e-4 
+19) nu_perp                                 =  1e-3 
 20) nu_parallel  (viscosity)                =  0e-2    (0.001)
 21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
 

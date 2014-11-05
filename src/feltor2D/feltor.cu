@@ -81,8 +81,8 @@ int main( int argc, char* argv[])
     //initial perturbation
 //     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(p, gp);
+    dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
+//     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 
     
