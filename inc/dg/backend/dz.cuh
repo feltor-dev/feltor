@@ -30,17 +30,17 @@ struct BoxIntegrator
     void set_coords( const thrust::host_vector<double>& coords){ coords_ = coords;}
     double operator()( double deltaPhi)
     {
-    try{
-      dg::integrateRK4( field_, coords_, coordsp_, deltaPhi, eps_);
-    }
-    catch( dg::NotANumber& exception) { return -1;}
-    if (!(coordsp_[0] >= g_.x0() && coordsp_[0] <= g_.x1())) {
-      return -1;
-    }
-    if (!(coordsp_[1] >= g_.y0() && coordsp_[1] <= g_.y1())) {
-      return -1;
-    }
-    return +1;
+        try{
+            dg::integrateRK4( field_, coords_, coordsp_, deltaPhi, eps_);
+        }
+        catch( dg::NotANumber& exception) { return -1;}
+        if (!(coordsp_[0] >= g_.x0() && coordsp_[0] <= g_.x1())) {
+            return -1;
+        }
+        if (!(coordsp_[1] >= g_.y0() && coordsp_[1] <= g_.y1())) {
+            return -1;
+        }
+        return +1;
     }
     private:
     Field field_;
@@ -59,271 +59,217 @@ struct BoxIntegrator
 template< class Matrix = dg::DMatrix, class container=thrust::device_vector<double> >
 struct DZ
 {
-  /**
-  * @brief Construct from a field and a grid
-  *
-  * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
-  * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-  is a limiter and 0 if there isn't
-  * @param field The field to integrate
-  * @param grid The grid on which to operate
-  * @param eps Desired accuracy of runge kutta
-  * @param limit Instance of the limiter class (Default is a limiter everywhere)
-  * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
-  * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
-  */
-  template <class Field, class Limiter>
-  DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR):
-  g_(grid), bcz_(grid.bcz())
-  {
-    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    unsigned size = g2d.size();
-    limiter = dg::evaluate( limit, g2d);
-    left_ = dg::evaluate( zero, g2d);
-    right_ = left_;
-    //Resize vectors to 2D grid size
-    hz.resize( size); hp.resize( size); hm.resize( size);
-    ghostM.resize( size); ghostP.resize( size);
-    tempM.resize( size); temp0.resize( size); tempP.resize( size);
-    std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
-    //Set starting points
-    y[1] = dg::evaluate( dg::coo2, g2d);
-    y[2] = dg::evaluate( dg::zero, g2d);
-    thrust::host_vector<double> coords(3), coordsP(3), coordsM(3),coordsPt(3),coordsMt(3);
-    if (globalbcz == dg::DIR)
+    /**
+    * @brief Construct from a field and a grid
+    *
+    * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
+    * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
+    is a limiter and 0 if there isn't
+    * @param field The field to integrate
+    * @param grid The grid on which to operate
+    * @param eps Desired accuracy of runge kutta
+    * @param limit Instance of the limiter class (Default is a limiter everywhere)
+    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
+    * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
+    */
+    template <class Field, class Limiter>
+    DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR):
+    g_(grid), bcz_(grid.bcz())
     {
-        for( unsigned i=0; i<size; i++)
+        dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        unsigned size = g2d.size();
+        limiter = dg::evaluate( limit, g2d);
+        left_ = dg::evaluate( zero, g2d);
+        right_ = left_;
+        //Resize vectors to 2D grid size
+        hz.resize( size); hp.resize( size); hm.resize( size);
+        ghostM.resize( size); ghostP.resize( size);
+        tempM.resize( size); temp0.resize( size); tempP.resize( size);
+        //Set starting points
+        std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
+        y[1] = dg::evaluate( dg::coo2, g2d);
+        y[2] = dg::evaluate( dg::zero, g2d);
+        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3),coordsPt(3),coordsMt(3);
+        if (globalbcz == dg::DIR )
         {
+            for( unsigned i=0; i<size; i++)
+            {
+                //assumes that perp boundary condition is constant on the entire 3d box surface
+                coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+                dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
+                dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
+                if (    !(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
+                     || !(coordsP[1] >= g_.y0() && coordsP[1] <= g_.y1()))
+                {
+                    BoxIntegrator<Field> boxy( field, g2d, eps);
+                    boxy.set_coords( coords); //nimm alte koordinaten
+                    double dPhiMin = 0, dPhiMax = g_.hz();
+                    dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
+                    dg::integrateRK4( field, coords, coordsP, dPhiMax, eps); //integriere bis über 0 stelle raus
+                    if (coordsP[0] <= g_.x0()) { coordsP[0]=g_.x0();}
+                    if (coordsP[0] >= g_.x1()) { coordsP[0]=g_.x1();}
+                    if (coordsP[1] <= g_.y0()) { coordsP[1]=g_.y0();}
+                    if (coordsP[1] >= g_.y1()) { coordsP[1]=g_.y1();}
+                }
+                if (    !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
+                     || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
+                {
+                    BoxIntegrator<Field> boxy( field, g2d, eps);
+                    boxy.set_coords( coords);
+                    double dPhiMin = -g_.hz(), dPhiMax = 0;
+                    dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
+                    dg::integrateRK4( field, coords, coordsM, dPhiMin, eps);
+                    if (coordsM[0] <= g_.x0()) { coordsM[0]=g_.x0();}
+                    if (coordsM[0] >= g_.x1()) { coordsM[0]=g_.x1();}
+                    if (coordsM[1] <= g_.y0()) { coordsM[1]=g_.y0();}
+                    if (coordsM[1] >= g_.y1()) { coordsM[1]=g_.y1();}
+                }
     
-            //assumes that perp boundary condition is constant on the entire 3d box surface
-            coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-            dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
-            dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
-            if (!(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
-            || !(coordsP[1] >= g_.y0() && coordsP[1] <= g_.y1()))
-            {
-                double tempvaluex;double tempvaluey;
-                unsigned mem=0;
-                if (coordsP[0] <= g_.x0()) { tempvaluex=g_.x0();mem=0;}
-                if (coordsP[0] >= g_.x1()) { tempvaluex=g_.x1();mem=0;}
-                if (coordsP[1] <= g_.y0()) { tempvaluey=g_.y0();mem=1;}
-                if (coordsP[1] >= g_.y1()) { tempvaluey=g_.y1();mem=1;}
-                BoxIntegrator<Field> boxy( field, g2d, eps);
-                boxy.set_coords( coords); //nimm alte koordinaten
-                double dPhiMin = 0, dPhiMax = g_.hz();
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
-                dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
-                if (mem==0) { coordsP[0]=tempvaluex; }
-                if (mem==1) {coordsP[1]=tempvaluey;  }     
+                yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+                ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
             }
-            if ( !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
-            || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
-            {
-                double tempvaluex;double tempvaluey;
-                unsigned mem=0;
-                if (coordsM[0] <= g_.x0()) { tempvaluex=g_.x0(); mem=0;}
-                if (coordsM[0] >= g_.x1()) { tempvaluex=g_.x1(); mem=0;}
-                if (coordsM[1] <= g_.y0()) { tempvaluey=g_.y0(); mem=1;}
-                if (coordsM[1] >= g_.y1()) { tempvaluey=g_.y1(); mem=1;}
-                BoxIntegrator<Field> boxy( field, g2d, eps);
-                boxy.set_coords( coords);
-                double dPhiMin = -g_.hz(), dPhiMax = 0;
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
-                dg::integrateRK4( field, coords, coordsM, dPhiMax, eps);
-                if (mem==0) { coordsM[0]=tempvaluex;   }
-                if (mem==1) { coordsM[1]=tempvaluey;   }  
-            }
-
-            yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-            ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+    
         }
-
-        plus  = dg::create::interpolation( yp[0], yp[1], g2d, dg::DIR);
-        minus = dg::create::interpolation( ym[0], ym[1], g2d, dg::DIR);
+        else if (globalbcz == dg::NEU )
+        {
+             for( unsigned i=0; i<size; i++)
+             {
+         
+                 //assumes that perp boundary condition is constant on the entire 3d box surface
+                 coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+                 dg::integrateRK4( field, coords, coordsP, g_.hz(), eps);  //+ integration
+                 dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
+     
+                 yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+                 ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+             }
+             //Neumann boundary contitions are only truely fullfilled for functions that are constant on the flux surface ( in 2D the Dirichlet approach could work)
+             //dg::integrateRK4( field, y, ym, -g_.hz(), eps);
+             cut( y, yp, g2d);
+             cut( y, ym, g2d);
+        }
+        else if (globalbcz == DIR_NEU )std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
+        else if (globalbcz == NEU_DIR )std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
+        else if (globalbcz == dg::PER )std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
+        plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+        minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+        dg::blas1::axpby( 1., (container)yp[2], 0, hp);
+        dg::blas1::axpby( -1., (container)ym[2], 0, hm);
+        dg::blas1::axpby( 1., hp, +1., hm, hz);
     }
-    if (globalbcz == dg::NEU )
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void operator()( const container& f, container& dzf);
+    void dz2d( const container& f, container& dzf);
+    void dzz2d( const container& f, container& dzzf);
+    /**
+    * @brief Set boundary conditions in the limiter region
+    *
+    * if Dirichlet boundaries are used the left value is the left function
+    value, if Neumann boundaries are used the left value is the left derivative value
+    * @param bcz boundary condition
+    * @param left left boundary value
+    * @param right right boundary value
+    */
+    void set_boundaries( dg::bc bcz, double left, double right)
     {
-//         for( unsigned i=0; i<size; i++)
-//         {
-//     
-//             //assumes that perp boundary condition is constant on the entire 3d box surface
-//             coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-//             dg::integrateRK4( field, coords, coordsP, g_.hz(), eps);  //+ integration
-//             dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
-// 
-//             yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-//             ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
-//         }
-//         //dg::integrateRK4( field, y, ym, -g_.hz(), eps);
-//         cut( y, yp, g2d);
-//         cut( y, ym, g2d);
- for( unsigned i=0; i<size; i++)
-        {
-    
-            //assumes that perp boundary condition is constant on the entire 3d box surface
-            coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-            dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
-            dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
-            if (!(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
-            || !(coordsP[1] >= g_.y0() && coordsP[1] <= g_.y1()))
-            {
-                double tempvaluex;double tempvaluey;
-                unsigned mem=0;
-                if (coordsP[0] <= g_.x0()) { tempvaluex=g_.x0();mem=0;}
-                if (coordsP[0] >= g_.x1()) { tempvaluex=g_.x1();mem=0;}
-                if (coordsP[1] <= g_.y0()) { tempvaluey=g_.y0();mem=1;}
-                if (coordsP[1] >= g_.y1()) { tempvaluey=g_.y1();mem=1;}
-                BoxIntegrator<Field> boxy( field, g2d, eps);
-                boxy.set_coords( coords); //nimm alte koordinaten
-                double dPhiMin = 0, dPhiMax = g_.hz();
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
-                dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
-                if (mem==0) { coordsP[0]=tempvaluex; }
-                if (mem==1) {coordsP[1]=tempvaluey;  }     
-            }
-            if ( !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
-            || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
-            {
-                double tempvaluex;double tempvaluey;
-                unsigned mem=0;
-                if (coordsM[0] <= g_.x0()) { tempvaluex=g_.x0(); mem=0;}
-                if (coordsM[0] >= g_.x1()) { tempvaluex=g_.x1(); mem=0;}
-                if (coordsM[1] <= g_.y0()) { tempvaluey=g_.y0(); mem=1;}
-                if (coordsM[1] >= g_.y1()) { tempvaluey=g_.y1(); mem=1;}
-                BoxIntegrator<Field> boxy( field, g2d, eps);
-                boxy.set_coords( coords);
-                double dPhiMin = -g_.hz(), dPhiMax = 0;
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
-                dg::integrateRK4( field, coords, coordsM, dPhiMax, eps);
-                if (mem==0) { coordsM[0]=tempvaluex;   }
-                if (mem==1) { coordsM[1]=tempvaluey;   }  
-            }
-
-            yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-            ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
-        }
-        plus  = dg::create::interpolation( yp[0], yp[1], g2d, dg::NEU);
-        minus = dg::create::interpolation( ym[0], ym[1], g2d, dg::NEU);
+        bcz_ = bcz;
+        const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        left_ = dg::evaluate( dg::CONSTANT(left), g2d);
+        right_ = dg::evaluate( dg::CONSTANT(right),g2d);
     }
-    if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
-    if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
-    if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
-    dg::blas1::axpby( 1., (container)yp[2], 0, hp);
-    dg::blas1::axpby( -1., (container)ym[2], 0, hm);
-    dg::blas1::axpby( 1., hp, +1., hm, hz);
-}
-/**
-* @brief Apply the derivative on a 3d vector
-*
-* @param f The vector to derive
-* @param dzf contains result on output (write only)
-*/
-void operator()( const container& f, container& dzf);
-void dz2d( const container& f, container& dzf);
-void dzz2d( const container& f, container& dzzf);
-/**
-* @brief Set boundary conditions in the limiter region
-*
-* if Dirichlet boundaries are used the left value is the left function
-value, if Neumann boundaries are used the left value is the left derivative value
-* @param bcz boundary condition
-* @param left left boundary value
-* @param right right boundary value
-*/
-void set_boundaries( dg::bc bcz, double left, double right)
-{
-    bcz_ = bcz;
-    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    left_ = dg::evaluate( dg::CONSTANT(left), g2d);
-    right_ = dg::evaluate( dg::CONSTANT(right),g2d);
-}
-/**
-* @brief Set boundary conditions in the limiter region
-*
-* if Dirichlet boundaries are used the left value is the left function
-value, if Neumann boundaries are used the left value is the left derivative value
-* @param bcz boundary condition
-* @param left left boundary value
-* @param right right boundary value
-*/
-void set_boundaries( dg::bc bcz, const container& left, const container& right)
-{
-    bcz_ = bcz;
-    left_ = left;
-    right_ = right;
-}
-/**
-* @brief Set boundary conditions in the limiter region
-*
-* if Dirichlet boundaries are used the left value is the left function
-value, if Neumann boundaries are used the left value is the left derivative value
-* @param bcz boundary condition
-* @param global 3D vector containing boundary values
-* @param scal_left left scaling factor
-* @param scal_right right scaling factor
-*/
-void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
-{
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    cView left( global.cbegin(), global.cbegin() + size);
-    cView right( global.cbegin()+(g_.Nz()-1)*size, global.cbegin() + g_.Nz()*size);
-    View leftView( left_.begin(), left_.end());
-    View rightView( right_.begin(), right_.end());
-    cusp::copy( left, leftView);
-    cusp::copy( right, rightView);
-    dg::blas1::scal( left_, scal_left);
-    dg::blas1::scal( right_, scal_right);
-    bcz_ = bcz;
-}
-/**
-* @brief Compute the second derivative using finite differences
-*
-* @param f input function
-* @param dzzf output (write-only)
-*/
-void dzz( const container& f, container& dzzf);
-/**
-* @brief Evaluate a 2d functor and transform to all planes along the fieldlines
-*
-* Evaluates the given functor on a 2d plane and then follows fieldlines to
-* get the values in the 3rd dimension. Uses the grid given in the constructor.
-* @tparam BinaryOp Binary Functor
-* @param f Functor to evaluate
-* @param plane The number of the plane to start
-*
-* @return Returns an instance of container
-*/
-template< class BinaryOp>
-container evaluate( BinaryOp f, unsigned plane=0);
-/**
-* @brief Evaluate a 2d functor and transform to all planes along the fieldlines
-*
-* Evaluates the given functor on a 2d plane and then follows fieldlines to
-* get the values in the 3rd dimension. Uses the grid given in the constructor.
-* The second functor is used to scale the values along the fieldlines.
-* The fieldlines are assumed to be periodic.
-* @tparam BinaryOp Binary Functor
-* @tparam UnaryOp Unary Functor
-* @param f Functor to evaluate in x-y
-* @param g Functor to evaluate in z
-* @param plane The number of the plane to start
-* @param rounds The number of rounds to follow a fieldline
-*
-* @return Returns an instance of container
-*/
-template< class BinaryOp, class UnaryOp>
-container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
-private:
-typedef cusp::array1d_view< typename container::iterator> View;
-typedef cusp::array1d_view< typename container::const_iterator> cView;
-Matrix plus, minus; //interpolation matrices
-container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
-dg::Grid3d<double> g_;
-dg::bc bcz_;
-container left_, right_;
-container limiter;
-void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g);
+    /**
+    * @brief Set boundary conditions in the limiter region
+    *
+    * if Dirichlet boundaries are used the left value is the left function
+    value, if Neumann boundaries are used the left value is the left derivative value
+    * @param bcz boundary condition
+    * @param left left boundary value
+    * @param right right boundary value
+    */
+    void set_boundaries( dg::bc bcz, const container& left, const container& right)
+    {
+        bcz_ = bcz;
+        left_ = left;
+        right_ = right;
+    }
+    /**
+    * @brief Set boundary conditions in the limiter region
+    *
+    * if Dirichlet boundaries are used the left value is the left function
+    value, if Neumann boundaries are used the left value is the left derivative value
+    * @param bcz boundary condition
+    * @param global 3D vector containing boundary values
+    * @param scal_left left scaling factor
+    * @param scal_right right scaling factor
+    */
+    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
+    {
+        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        cView left( global.cbegin(), global.cbegin() + size);
+        cView right( global.cbegin()+(g_.Nz()-1)*size, global.cbegin() + g_.Nz()*size);
+        View leftView( left_.begin(), left_.end());
+        View rightView( right_.begin(), right_.end());
+        cusp::copy( left, leftView);
+        cusp::copy( right, rightView);
+        dg::blas1::scal( left_, scal_left);
+        dg::blas1::scal( right_, scal_right);
+        bcz_ = bcz;
+    }
+    /**
+    * @brief Compute the second derivative using finite differences
+    *
+    * @param f input function
+    * @param dzzf output (write-only)
+    */
+    void dzz( const container& f, container& dzzf);
+    /**
+    * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+    *
+    * Evaluates the given functor on a 2d plane and then follows fieldlines to
+    * get the values in the 3rd dimension. Uses the grid given in the constructor.
+    * @tparam BinaryOp Binary Functor
+    * @param f Functor to evaluate
+    * @param plane The number of the plane to start
+    *
+    * @return Returns an instance of container
+    */
+    template< class BinaryOp>
+    container evaluate( BinaryOp f, unsigned plane=0);
+    /**
+    * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+    *
+    * Evaluates the given functor on a 2d plane and then follows fieldlines to
+    * get the values in the 3rd dimension. Uses the grid given in the constructor.
+    * The second functor is used to scale the values along the fieldlines.
+    * The fieldlines are assumed to be periodic.
+    * @tparam BinaryOp Binary Functor
+    * @tparam UnaryOp Unary Functor
+    * @param f Functor to evaluate in x-y
+    * @param g Functor to evaluate in z
+    * @param plane The number of the plane to start
+    * @param rounds The number of rounds to follow a fieldline
+    *
+    * @return Returns an instance of container
+    */
+    template< class BinaryOp, class UnaryOp>
+    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    private:
+    typedef cusp::array1d_view< typename container::iterator> View;
+    typedef cusp::array1d_view< typename container::const_iterator> cView;
+    Matrix plus, minus; //interpolation matrices
+    container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
+    dg::Grid3d<double> g_;
+    dg::bc bcz_;
+    container left_, right_;
+    container limiter;
+    void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g);
 };
+
 template<class M, class container>
 void DZ<M,container>::operator()( const container& f, container& dzf)
 {
