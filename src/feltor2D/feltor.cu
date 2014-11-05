@@ -57,8 +57,8 @@ int main( int argc, char* argv[])
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (1)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (1)/v2[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow(  v2[1]*v2[4],(1)/v2[2]*v2[3], "");
+    draw::RenderHostData render( (1)/v2[2],v2[1]);
 
 
 
@@ -81,8 +81,8 @@ int main( int argc, char* argv[])
     //initial perturbation
 //     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(p, gp);
+    dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
+//     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 
     
@@ -180,7 +180,7 @@ int main( int argc, char* argv[])
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
         //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
-        title <<"Omega / "<< colors.scalemax()<<"\t";
+        title <<"phi / "<< colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<1/v2[2];k++)
         {
@@ -188,7 +188,6 @@ int main( int argc, char* argv[])
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
 
         //draw U_e
         hvisual = karniadakis.last()[2];
@@ -222,6 +221,26 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
+      
+        //draw VOR
+        //transform to Vor
+        dvisual=feltor.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        hvisual = y1[1];
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
+//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemin() = -colors.scalemax();
+        //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"vor / "<< colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        for( unsigned k=0; k<1/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
+        
         
         title << std::fixed; 
         title << " &&   time = "<<time;

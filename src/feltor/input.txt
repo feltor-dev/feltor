@@ -15,7 +15,7 @@
 7)  nx_out (# grid points in output field)  =  40 
 8)  ny_out (# grid points in output field)  =  50
 9)  nz_out (# grid points in output field)  =  30
-10) itstp  (steps between outputs)          =  500  (5)
+10) itstp  (steps between outputs)          =  50  (5)
 11) total # of outputs (excluding first)    =  4000 
 
 -------------------------Algorithmic parameters------------------------
@@ -42,7 +42,7 @@
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
-31) boxscale (1<bs<R0/a)                    =  1.0(a little larger than 1)
+31) boxscale (1<bs<R0/a)                    =  1.1 (a little larger than 1)
 32) boxlimiterscale (1<bs<R0/a)             =  1.1 (a little larger than 1)
 
 @ ------------------------------------------------------------

@@ -433,6 +433,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
         //parallel dynamics
         add_parallel_dynamics( y, yp);
+        energies( y);
 
         //damping 
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
