@@ -180,7 +180,7 @@ int main( int argc, char* argv[])
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
         //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
-        title <<"Omega / "<< colors.scalemax()<<"\t";
+        title <<"phi / "<< colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<1/v2[2];k++)
         {
@@ -188,7 +188,6 @@ int main( int argc, char* argv[])
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
 
         //draw U_e
         hvisual = karniadakis.last()[2];
@@ -222,6 +221,26 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
 
+      
+        //draw VOR
+        //transform to Vor
+        dvisual=feltor.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        hvisual = y1[1];
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
+//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemin() = -colors.scalemax();
+        //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"vor / "<< colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        for( unsigned k=0; k<1/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
+        
         
         title << std::fixed; 
         title << " &&   time = "<<time;
