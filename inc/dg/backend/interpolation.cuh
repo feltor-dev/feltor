@@ -143,6 +143,13 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     //         unsigned col_begin = m*g.Nx()*g.n()*g.n() + n*g.n()*g.n();
             //detail::add_line( A, number, i,  col_begin, pxy);
         
+            if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
+            {
+
+                n=(n==(unsigned)floor((g.x1()-g.x0())/g.hx())) ? n-1 :n;
+                m=(m==(unsigned)floor((g.y1()-g.y0())/g.hy())) ? m-1 :m;
+                
+            }
             unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
 
             detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxy); 

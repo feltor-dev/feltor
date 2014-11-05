@@ -161,8 +161,8 @@ int main( int argc, char* argv[])
 
 
                 std::cout <<"-----(1a) test with testfunction" << "\n";
-                solovev::TestFunction func(gp);
-                solovev::DeriTestFunction derifunc(gp);
+                solovev::TestFunction func(p,gp);
+                solovev::DeriTestFunction derifunc(p,gp);
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
