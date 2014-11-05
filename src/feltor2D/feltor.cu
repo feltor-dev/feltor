@@ -57,8 +57,8 @@ int main( int argc, char* argv[])
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (1)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (1)/v2[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow(  v2[1]*v2[4],(1)/v2[2]*v2[3], "");
+    draw::RenderHostData render( (1)/v2[2],v2[1]);
 
 
 
