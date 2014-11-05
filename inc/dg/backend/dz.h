@@ -35,24 +35,33 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @param limit Instance of the Limiter class
      */
     template <class Field, class Limiter>
-    DZ(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-3, Limiter limit = DefaultLimiter()): eps_(eps),
-        hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), ghostM( tempP), ghostP(tempP), g_(grid), bcz_(grid.bcz()), dz_(field, grid.global(), eps, limit)
+    DZ(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-3, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR ): eps_(eps),
+        hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), ghostM( tempP), ghostP(tempP), g_(grid), bcz_(grid.bcz()), dz_(field, grid.global(), eps, limit, globalbcz)
     {
         dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
         limiter_ = dg::evaluate( limit, g2d);
-        left_ = dg::evaluate( zero, g2d);
-        right_ = left_;
-        ghostM.resize( g2d.size());
-        ghostP.resize( g2d.size());
+        right_ = left_ = dg::evaluate( zero, g2d);
+        ghostM.resize( g2d.size()); ghostP.resize( g2d.size());
         //set up grid points as start for fieldline integrations
         std::vector<dg::HVec> y( 3);
         y[0] = dg::evaluate( dg::coo1, grid.local());
         y[1] = dg::evaluate( dg::coo2, grid.local());
         y[2] = dg::evaluate( dg::zero, grid.local());//distance (not angle)
-        //integrate to next z-plane
+        //integrate to next z-planes
         std::vector<dg::HVec> yp(y), ym(y); 
-        dg::integrateRK4( field, y, yp,  grid.hz(), eps);
-        cut( y, yp, grid.global() ); //cut points 
+        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
+        for( unsigned i=0; i<grid.local().size(); i++)
+        {
+            coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+            double phi1 = g_.hz();
+            boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
+            phi1 = -g_.hz();
+            boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
+            yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+            ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+        }
+
+
         //determine pid of result 
         thrust::host_vector<int> pids( grid.size());
         thrust::host_vector<double> angle = dg::evaluate( dg::coo3, grid.local());
@@ -77,9 +86,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
         plus  = dg::create::interpolation( pX, pY, pZ, grid.local());
         
 
-        //do the same for the previous z-plane
-        dg::integrateRK4( field, y, ym, -grid.hz(), eps);
-        cut( y, ym, grid.global() );
+        //do the same for the minus z-plane
         for( unsigned i=0; i<pids.size(); i++)
         {
             angle[i] -= 2.*grid.hz();
@@ -189,18 +196,6 @@ struct DZ< MPI_Matrix, MPI_Vector>
   private:
     typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
     typedef cusp::array1d_view< thrust::host_vector<double>::const_iterator> cView;
-    void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, const dg::Grid3d<double>& g) //global grid
-    {
-        for( unsigned i=0; i<y[0].size(); i++)
-        {            
-            if      (yp[0][i] < g.x0()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[0][i] > g.x1()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[1][i] < g.y0()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else if (yp[1][i] > g.y1()) { yp[0][i]=y[0][i]; yp[1][i]=y[1][i]; }
-            else                         { }
-        }
-        //yp can still be outside the global grid (ghostcells!)
-    }
     double eps_;
     thrust::host_vector<double> hz, hp, hm, tempP, temp0, tempM, interP, interM;
     thrust::host_vector<double> ghostM, ghostP;

@@ -29,7 +29,6 @@ struct Field
         double gradpsi = ((y[0]-R_0)*(y[0]-R_0) + y[1]*y[1])/I_0/I_0;
         yp[2] = y[0]*sqrt(1 + gradpsi);
         yp[0] = y[0]*y[1]/I_0;
-        //yp[1] = -y[0]*y[0]/I_0 + R_0/I_0*y[0] ;
         yp[1] = y[0]/I_0*(R_0-y[0]) ;
     }
     private:
