@@ -114,7 +114,7 @@ struct DZ
                 dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
                 dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
                 if (mem==0) { coordsP[0]=tempvaluex; }
-                if (mem==1) {coordsP[1]=tempvaluey;  }     
+                if (mem==1) { coordsP[1]=tempvaluey;  }     
             }
             if ( !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
             || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
@@ -178,6 +178,7 @@ struct DZ
                 double dPhiMin = 0, dPhiMax = g_.hz();
                 dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
                 dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
+                std::cout << "dPhimin " << dPhiMin << std::endl;
                 if (mem==0) { coordsP[0]=tempvaluex; }
                 if (mem==1) {coordsP[1]=tempvaluey;  }     
             }
@@ -195,6 +196,7 @@ struct DZ
                 double dPhiMin = -g_.hz(), dPhiMax = 0;
                 dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
                 dg::integrateRK4( field, coords, coordsM, dPhiMax, eps);
+                std::cout << "dPhimin " << dPhiMin << std::endl;
                 if (mem==0) { coordsM[0]=tempvaluex;   }
                 if (mem==1) { coordsM[1]=tempvaluey;   }  
             }

@@ -61,7 +61,7 @@ endif
 all: dz_geom_t geometry_t
 
 dz_geom_t: dz_geom_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)  
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)  -DDGDEBUG
 	echo "Attention: No compiler warnings are issued!" 
 	
 geometry_t: geometry_t.cu geometry.h 
