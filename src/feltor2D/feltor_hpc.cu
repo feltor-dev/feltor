@@ -65,7 +65,6 @@ int main( int argc, char* argv[])
     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     dg::Grid3d<double > gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
-     
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp, gridfordz); 
@@ -98,13 +97,18 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    std::cout << "initialize ne" << std::endl;
     feltor.initializene( y0[1], y0[0]);    
+    std::cout << "Done!\n";
+
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
+    std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
-    karniadakis( feltor, rolkar, y0); //now energies and potential are at time 0
+    feltor.energies(y0); //now energies and potential are at time 0
+    std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -158,7 +162,7 @@ int main( int argc, char* argv[])
     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<4; i++)
     {
-        dg::blas2::symv( interpolate, karniadakis.last()[i], transferD);
+        dg::blas2::symv( interpolate, y0[i], transferD);
         transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
@@ -209,6 +213,7 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
+            feltor.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
@@ -242,7 +247,7 @@ int main( int argc, char* argv[])
         err = nc_open(argv[3], NC_WRITE, &ncid);
         for( unsigned j=0; j<4; j++)
         {
-            dg::blas2::symv( interpolate, karniadakis.last()[j], transferD);
+            dg::blas2::symv( interpolate, y0[j], transferD);
             transferH = transferD;//transfer to host
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }

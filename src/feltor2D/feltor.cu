@@ -108,8 +108,8 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
 
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "initialize karniadakis" << std::endl;
+    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
     feltor.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
