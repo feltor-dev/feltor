@@ -73,6 +73,10 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
+    //background profile
+    solovev::Nprofile prof(p, gp); //initial background profile
+    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
+
     //initial perturbation
    //     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
@@ -80,16 +84,9 @@ int main( int argc, char* argv[])
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 
-    
-    //background profile
-    solovev::Nprofile prof(p, gp); //initial background profile
-    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
-    
-        
     //averaged field aligned initializer
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
     y1[1] = feltor.dz().evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-    
     
     //no field aligning
 //     y1[1] = dg::evaluate( init0, grid);

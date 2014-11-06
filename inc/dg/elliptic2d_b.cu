@@ -4,6 +4,7 @@
 #include "backend/xspacelib.cuh"
 #include "backend/timer.cuh"
 
+
 #include "elliptic.h"
 #include "cg.h"
 
@@ -22,12 +23,12 @@ dg::bc bcy = dg::DIR;
 
 double initial( double x, double y) {return 0.;}
 double amp = 1;
-//double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
-double pol( double x, double y) {return 1.; }
+double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
+//double pol( double x, double y) {return 1.; }
 //double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
 
-//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
-double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
+double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
+//double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
 double der(double x, double y)  { return cos( x)*sin(y);}
@@ -68,7 +69,7 @@ int main()
     t.tic();
     std::cout << " "<< invert( pol, x, b);
     t.toc();
-    //std::cout << "Took "<<t.diff()<<"s\n";
+    std::cout << "Took "<<t.diff()<<"s\n";
     }
 
     //compute error
