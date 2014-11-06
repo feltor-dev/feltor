@@ -174,10 +174,11 @@ int main( int argc, char* argv[])
         hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
-//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        colors.scalemin() = -colors.scalemax();
-        //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
-        title <<"phi / "<< colors.scalemax()<<"\t";
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+//         colors.scalemin() = -colors.scalemax();
+//         colors.scalemax() = -colors.scalemin();
+        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+//         title <<"phi / "<< colors.scalemax()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw U_e
