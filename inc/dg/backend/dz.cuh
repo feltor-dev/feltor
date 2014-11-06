@@ -30,17 +30,17 @@ struct BoxIntegrator
     void set_coords( const thrust::host_vector<double>& coords){ coords_ = coords;}
     double operator()( double deltaPhi)
     {
-    try{
-      dg::integrateRK4( field_, coords_, coordsp_, deltaPhi, eps_);
-    }
-    catch( dg::NotANumber& exception) { return -1;}
-    if (!(coordsp_[0] >= g_.x0() && coordsp_[0] <= g_.x1())) {
-      return -1;
-    }
-    if (!(coordsp_[1] >= g_.y0() && coordsp_[1] <= g_.y1())) {
-      return -1;
-    }
-    return +1;
+        try{
+            dg::integrateRK4( field_, coords_, coordsp_, deltaPhi, eps_);
+        }
+        catch( dg::NotANumber& exception) { return -1;}
+        if (!(coordsp_[0] >= g_.x0() && coordsp_[0] <= g_.x1())) {
+            return -1;
+        }
+        if (!(coordsp_[1] >= g_.y0() && coordsp_[1] <= g_.y1())) {
+            return -1;
+        }
+        return +1;
     }
     private:
     Field field_;
@@ -49,6 +49,45 @@ struct BoxIntegrator
     double eps_;
 };
 
+template< class Field, class Grid>
+void boxintegrator( Field& field, Grid& g_, const thrust::host_vector<double>& coords0, thrust::host_vector<double>& coords1, double& phi1, double eps, dg::bc globalbcz)
+{
+    dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
+    if (    !(coords1[0] >= g_.x0() && coords1[0] <= g_.x1())
+         || !(coords1[1] >= g_.y0() && coords1[1] <= g_.y1()))
+    {
+        if( globalbcz == dg::DIR)
+        {
+            BoxIntegrator<Field> boxy( field, g_, eps);
+            boxy.set_coords( coords0); //nimm alte koordinaten
+            if( phi1 > 0)
+            {
+                double dPhiMin = 0, dPhiMax = phi1;
+                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
+                phi1 = (dPhiMin+dPhiMax)/2.;
+                dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus
+            }
+            else
+            {
+                double dPhiMin = phi1, dPhiMax = 0;
+                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
+                phi1 = (dPhiMin+dPhiMax)/2.;
+                dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
+            }
+            if (coords1[0] <= g_.x0()) { coords1[0]=g_.x0();}
+            if (coords1[0] >= g_.x1()) { coords1[0]=g_.x1();}
+            if (coords1[1] <= g_.y0()) { coords1[1]=g_.y0();}
+            if (coords1[1] >= g_.y1()) { coords1[1]=g_.y1();}
+        }
+        else if (globalbcz == dg::NEU )
+        {
+             coords1[0] = coords0[0]; coords1[1] = coords0[1];  
+        }
+        else if (globalbcz == DIR_NEU )std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
+        else if (globalbcz == NEU_DIR )std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
+        else if (globalbcz == dg::PER )std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
+    }
+}
 /**
 * @brief Class for the evaluation of a parallel derivative
 *
@@ -59,456 +98,244 @@ struct BoxIntegrator
 template< class Matrix = dg::DMatrix, class container=thrust::device_vector<double> >
 struct DZ
 {
-  /**
-  * @brief Construct from a field and a grid
-  *
-  * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
-  * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-  is a limiter and 0 if there isn't
-  * @param field The field to integrate
-  * @param grid The grid on which to operate
-  * @param eps Desired accuracy of runge kutta
-  * @param limit Instance of the limiter class (Default is a limiter everywhere)
-  * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
-  * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
-  */
-  template <class Field, class Limiter>
-  DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR):
-  g_(grid), bcz_(grid.bcz())
-  {
-    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    unsigned size = g2d.size();
-    limiter = dg::evaluate( limit, g2d);
-    left_ = dg::evaluate( zero, g2d);
-    right_ = left_;
-    //Resize vectors to 2D grid size
-    hz.resize( size); hp.resize( size); hm.resize( size);
-    ghostM.resize( size); ghostP.resize( size);
-    tempM.resize( size); temp0.resize( size); tempP.resize( size);
-    std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
-    //Set starting points
-    y[1] = dg::evaluate( dg::coo2, g2d);
-    y[2] = dg::evaluate( dg::zero, g2d);
-    thrust::host_vector<double> coords(3), coordsP(3), coordsM(3),coordsPt(3),coordsMt(3);
-    if (globalbcz == dg::DIR)
+    /**
+    * @brief Construct from a field and a grid
+    *
+    * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
+    * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
+    is a limiter and 0 if there isn't
+    * @param field The field to integrate
+    * @param grid The grid on which to operate
+    * @param eps Desired accuracy of runge kutta
+    * @param limit Instance of the limiter class (Default is a limiter everywhere)
+    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
+    * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
+    */
+    template <class Field, class Limiter>
+    DZ(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR):
+        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
+        g_(grid), bcz_(grid.bcz())
     {
+        //Resize vectors to 2D grid size
+        dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        unsigned size = g2d.size();
+        limiter = dg::evaluate( limit, g2d);
+        right_ = left_ = dg::evaluate( zero, g2d);
+        hz_plane.resize( size); hp_plane.resize( size); hm_plane.resize( size);
+        ghostM.resize( size); ghostP.resize( size);
+        //Set starting points
+        std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
+        y[1] = dg::evaluate( dg::coo2, g2d);
+        y[2] = dg::evaluate( dg::zero, g2d);
+        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
+        //integrate field lines for all points
         for( unsigned i=0; i<size; i++)
         {
-    
-            //assumes that perp boundary condition is constant on the entire 3d box surface
             coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-            dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
-            dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
-            if (!(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
-            || !(coordsP[1] >= g_.y0() && coordsP[1] <= g_.y1()))
-            {
-                double tempvaluex;double tempvaluey;
-                unsigned mem=0;
-                if (coordsP[0] <= g_.x0()) { tempvaluex=g_.x0();mem=0;}
-                if (coordsP[0] >= g_.x1()) { tempvaluex=g_.x1();mem=0;}
-                if (coordsP[1] <= g_.y0()) { tempvaluey=g_.y0();mem=1;}
-                if (coordsP[1] >= g_.y1()) { tempvaluey=g_.y1();mem=1;}
-                BoxIntegrator<Field> boxy( field, g2d, eps);
-                boxy.set_coords( coords); //nimm alte koordinaten
-                double dPhiMin = 0, dPhiMax = g_.hz();
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
-                dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
-                if (mem==0) { coordsP[0]=tempvaluex; }
-                if (mem==1) { coordsP[1]=tempvaluey;  }     
-            }
-            if ( !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
-            || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
-            {
-                double tempvaluex;double tempvaluey;
-                unsigned mem=0;
-                if (coordsM[0] <= g_.x0()) { tempvaluex=g_.x0(); mem=0;}
-                if (coordsM[0] >= g_.x1()) { tempvaluex=g_.x1(); mem=0;}
-                if (coordsM[1] <= g_.y0()) { tempvaluey=g_.y0(); mem=1;}
-                if (coordsM[1] >= g_.y1()) { tempvaluey=g_.y1(); mem=1;}
-                BoxIntegrator<Field> boxy( field, g2d, eps);
-                boxy.set_coords( coords);
-                double dPhiMin = -g_.hz(), dPhiMax = 0;
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
-                dg::integrateRK4( field, coords, coordsM, dPhiMax, eps);
-                if (mem==0) { coordsM[0]=tempvaluex;   }
-                if (mem==1) { coordsM[1]=tempvaluey;   }  
-            }
 
+            double phi1 = g_.hz();
+            boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
+            phi1 = -g_.hz();
+            boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
             yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
             ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
         }
-
-        plus  = dg::create::interpolation( yp[0], yp[1], g2d, dg::DIR);
-        minus = dg::create::interpolation( ym[0], ym[1], g2d, dg::DIR);
-    }
-    if (globalbcz == dg::NEU )
-    {
-//         for( unsigned i=0; i<size; i++)
-//         {
-//     
-//             //assumes that perp boundary condition is constant on the entire 3d box surface
-//             coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-//             dg::integrateRK4( field, coords, coordsP, g_.hz(), eps);  //+ integration
-//             dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
-// 
-//             yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-//             ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
-//         }
-//         //dg::integrateRK4( field, y, ym, -g_.hz(), eps);
-//         cut( y, yp, g2d);
-//         cut( y, ym, g2d);
- for( unsigned i=0; i<size; i++)
+        plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+        minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+        //copy into h vectors
+        for( unsigned i=0; i<grid.Nz(); i++)
         {
-    
-            //assumes that perp boundary condition is constant on the entire 3d box surface
-            coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-            dg::integrateRK4( field, coords, coordsP, g_.hz(), eps); //+ integration
-            dg::integrateRK4( field, coords, coordsM, -g_.hz(), eps); //- integration
-            if (!(coordsP[0] >= g_.x0() && coordsP[0] <= g_.x1())
-            || !(coordsP[1] >= g_.y0() && coordsP[1] <= g_.y1()))
-            {
-                double tempvaluex;double tempvaluey;
-                unsigned mem=0;
-                if (coordsP[0] <= g_.x0()) { tempvaluex=g_.x0();mem=0;}
-                if (coordsP[0] >= g_.x1()) { tempvaluex=g_.x1();mem=0;}
-                if (coordsP[1] <= g_.y0()) { tempvaluey=g_.y0();mem=1;}
-                if (coordsP[1] >= g_.y1()) { tempvaluey=g_.y1();mem=1;}
-                BoxIntegrator<Field> boxy( field, g2d, eps);
-                boxy.set_coords( coords); //nimm alte koordinaten
-                double dPhiMin = 0, dPhiMax = g_.hz();
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
-                dg::integrateRK4( field, coords, coordsP, dPhiMin, eps); //integriere bis 0 stelle     
-                std::cout << "dPhimin " << dPhiMin << std::endl;
-                if (mem==0) { coordsP[0]=tempvaluex; }
-                if (mem==1) {coordsP[1]=tempvaluey;  }     
-            }
-            if ( !(coordsM[0] >= g_.x0() && coordsM[0] <= g_.x1())
-            || !(coordsM[1] >= g_.y0() && coordsM[1] <= g_.y1()))
-            {
-                double tempvaluex;double tempvaluey;
-                unsigned mem=0;
-                if (coordsM[0] <= g_.x0()) { tempvaluex=g_.x0(); mem=0;}
-                if (coordsM[0] >= g_.x1()) { tempvaluex=g_.x1(); mem=0;}
-                if (coordsM[1] <= g_.y0()) { tempvaluey=g_.y0(); mem=1;}
-                if (coordsM[1] >= g_.y1()) { tempvaluey=g_.y1(); mem=1;}
-                BoxIntegrator<Field> boxy( field, g2d, eps);
-                boxy.set_coords( coords);
-                double dPhiMin = -g_.hz(), dPhiMax = 0;
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
-                dg::integrateRK4( field, coords, coordsM, dPhiMax, eps);
-                std::cout << "dPhimin " << dPhiMin << std::endl;
-                if (mem==0) { coordsM[0]=tempvaluex;   }
-                if (mem==1) { coordsM[1]=tempvaluey;   }  
-            }
-
-            yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-            ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+            thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
+            thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());
         }
-        plus  = dg::create::interpolation( yp[0], yp[1], g2d, dg::NEU);
-        minus = dg::create::interpolation( ym[0], ym[1], g2d, dg::NEU);
+        dg::blas1::scal( hm, -1.);
+        dg::blas1::axpby(  1., hp, +1., hm, hz);
+
+        dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
+        dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
+        dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
     }
-    if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
-    if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
-    if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
-    dg::blas1::axpby( 1., (container)yp[2], 0, hp);
-    dg::blas1::axpby( -1., (container)ym[2], 0, hm);
-    dg::blas1::axpby( 1., hp, +1., hm, hz);
-}
-/**
-* @brief Apply the derivative on a 3d vector
-*
-* @param f The vector to derive
-* @param dzf contains result on output (write only)
-*/
-void operator()( const container& f, container& dzf);
-void dz2d( const container& f, container& dzf);
-void dzz2d( const container& f, container& dzzf);
-/**
-* @brief Set boundary conditions in the limiter region
-*
-* if Dirichlet boundaries are used the left value is the left function
-value, if Neumann boundaries are used the left value is the left derivative value
-* @param bcz boundary condition
-* @param left left boundary value
-* @param right right boundary value
-*/
-void set_boundaries( dg::bc bcz, double left, double right)
-{
-    bcz_ = bcz;
-    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    left_ = dg::evaluate( dg::CONSTANT(left), g2d);
-    right_ = dg::evaluate( dg::CONSTANT(right),g2d);
-}
-/**
-* @brief Set boundary conditions in the limiter region
-*
-* if Dirichlet boundaries are used the left value is the left function
-value, if Neumann boundaries are used the left value is the left derivative value
-* @param bcz boundary condition
-* @param left left boundary value
-* @param right right boundary value
-*/
-void set_boundaries( dg::bc bcz, const container& left, const container& right)
-{
-    bcz_ = bcz;
-    left_ = left;
-    right_ = right;
-}
-/**
-* @brief Set boundary conditions in the limiter region
-*
-* if Dirichlet boundaries are used the left value is the left function
-value, if Neumann boundaries are used the left value is the left derivative value
-* @param bcz boundary condition
-* @param global 3D vector containing boundary values
-* @param scal_left left scaling factor
-* @param scal_right right scaling factor
-*/
-void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
-{
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    cView left( global.cbegin(), global.cbegin() + size);
-    cView right( global.cbegin()+(g_.Nz()-1)*size, global.cbegin() + g_.Nz()*size);
-    View leftView( left_.begin(), left_.end());
-    View rightView( right_.begin(), right_.end());
-    cusp::copy( left, leftView);
-    cusp::copy( right, rightView);
-    dg::blas1::scal( left_, scal_left);
-    dg::blas1::scal( right_, scal_right);
-    bcz_ = bcz;
-}
-/**
-* @brief Compute the second derivative using finite differences
-*
-* @param f input function
-* @param dzzf output (write-only)
-*/
-void dzz( const container& f, container& dzzf);
-/**
-* @brief Evaluate a 2d functor and transform to all planes along the fieldlines
-*
-* Evaluates the given functor on a 2d plane and then follows fieldlines to
-* get the values in the 3rd dimension. Uses the grid given in the constructor.
-* @tparam BinaryOp Binary Functor
-* @param f Functor to evaluate
-* @param plane The number of the plane to start
-*
-* @return Returns an instance of container
-*/
-template< class BinaryOp>
-container evaluate( BinaryOp f, unsigned plane=0);
-/**
-* @brief Evaluate a 2d functor and transform to all planes along the fieldlines
-*
-* Evaluates the given functor on a 2d plane and then follows fieldlines to
-* get the values in the 3rd dimension. Uses the grid given in the constructor.
-* The second functor is used to scale the values along the fieldlines.
-* The fieldlines are assumed to be periodic.
-* @tparam BinaryOp Binary Functor
-* @tparam UnaryOp Unary Functor
-* @param f Functor to evaluate in x-y
-* @param g Functor to evaluate in z
-* @param plane The number of the plane to start
-* @param rounds The number of rounds to follow a fieldline
-*
-* @return Returns an instance of container
-*/
-template< class BinaryOp, class UnaryOp>
-container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
-private:
-typedef cusp::array1d_view< typename container::iterator> View;
-typedef cusp::array1d_view< typename container::const_iterator> cView;
-Matrix plus, minus; //interpolation matrices
-container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
-dg::Grid3d<double> g_;
-dg::bc bcz_;
-container left_, right_;
-container limiter;
-void cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g);
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void operator()( const container& f, container& dzf);
+    void dz2d( const container& f, container& dzf);
+    void dzz2d( const container& f, container& dzzf);
+    /**
+    * @brief Set boundary conditions in the limiter region
+    *
+    * if Dirichlet boundaries are used the left value is the left function
+    value, if Neumann boundaries are used the left value is the left derivative value
+    * @param bcz boundary condition
+    * @param left left boundary value
+    * @param right right boundary value
+    */
+    void set_boundaries( dg::bc bcz, double left, double right)
+    {
+
+        bcz_ = bcz;
+        const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        left_ = dg::evaluate( dg::CONSTANT(left), g2d);
+        right_ = dg::evaluate( dg::CONSTANT(right),g2d);
+    }
+    /**
+     * @brief Set boundary conditions in the limiter region
+     *
+     * if Dirichlet boundaries are used the left value is the left function
+     value, if Neumann boundaries are used the left value is the left derivative value
+     * @param bcz boundary condition
+     * @param left left boundary value
+     * @param right right boundary value
+    */
+    void set_boundaries( dg::bc bcz, const container& left, const container& right)
+    {
+        bcz_ = bcz;
+        left_ = left;
+        right_ = right;
+    }
+    /**
+     * @brief Set boundary conditions in the limiter region
+     *
+     * if Dirichlet boundaries are used the left value is the left function
+     value, if Neumann boundaries are used the left value is the left derivative value
+     * @param bcz boundary condition
+     * @param global 3D vector containing boundary values
+     * @param scal_left left scaling factor
+     * @param scal_right right scaling factor
+     */
+    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
+    {
+        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        cView left( global.cbegin(), global.cbegin() + size);
+        cView right( global.cbegin()+(g_.Nz()-1)*size, global.cbegin() + g_.Nz()*size);
+        View leftView( left_.begin(), left_.end());
+        View rightView( right_.begin(), right_.end());
+        cusp::copy( left, leftView);
+        cusp::copy( right, rightView);
+        dg::blas1::scal( left_, scal_left);
+        dg::blas1::scal( right_, scal_right);
+        bcz_ = bcz;
+    }
+    /**
+     * @brief Compute the second derivative using finite differences
+     *
+     * @param f input function
+     * @param dzzf output (write-only)
+     */
+    void dzz( const container& f, container& dzzf);
+    /**
+     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * @tparam BinaryOp Binary Functor
+     * @param f Functor to evaluate
+     * @param plane The number of the plane to start
+     *
+     * @return Returns an instance of container
+     */
+    template< class BinaryOp>
+    container evaluate( BinaryOp f, unsigned plane=0);
+    /**
+     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * The second functor is used to scale the values along the fieldlines.
+     * The fieldlines are assumed to be periodic.
+     * @tparam BinaryOp Binary Functor
+     * @tparam UnaryOp Unary Functor
+     * @param f Functor to evaluate in x-y
+     * @param g Functor to evaluate in z
+     * @param plane The number of the plane to start
+     * @param rounds The number of rounds to follow a fieldline
+     *
+     * @return Returns an instance of container
+     */
+    template< class BinaryOp, class UnaryOp>
+    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    template< class BinaryOp, class UnaryOp>
+    container evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    void einsPlus( const container& n, container& npe);
+    void einsMinus( const container& n, container& nme);
+    private:
+    typedef cusp::array1d_view< typename container::iterator> View;
+    typedef cusp::array1d_view< typename container::const_iterator> cView;
+    Matrix plus, minus; //interpolation matrices
+    container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
+    container hz_plane, hp_plane, hm_plane;
+    dg::Grid3d<double> g_;
+    dg::bc bcz_;
+    container left_, right_;
+    container limiter;
 };
+
 template<class M, class container>
 void DZ<M,container>::operator()( const container& f, container& dzf)
 {
     assert( &f != &dzf);
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    View tempPV( tempP.begin(), tempP.end());
-    View tempMV( tempM.begin(), tempM.end());
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    for( unsigned i0=0; i0<g_.Nz(); i0++)
-    {
-        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
-        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
-        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
-        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
-        cusp::multiply( plus, fp, tempPV);
-        cusp::multiply( minus, fm, tempMV );
-        //make ghostcells
-        if( i0==0 && bcz_ != dg::PER)
-        {
-        //overwrite tempM
-        cusp::copy( f0, ghostMV);
-        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-        {
-            //dg::blas1::scal( ghostM, -1.);
-            dg::blas1::axpby( 2., left_, -1, ghostM);
-            //dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-        {
-            dg::blas1::pointwiseDot( left_, hm, ghostP);
-            dg::blas1::axpby( -1, ghostP, 1., ghostM);
-        }
-        dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
-        dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
-        dg::blas1::axpby( 1., ghostM, 1., tempM);
-        }
-        else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
-        {
-        //overwrite tempP
-        cusp::copy( f0, ghostPV);
-        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-        {
-        //dg::blas1::scal( ghostP, -1.);
-            dg::blas1::axpby( 2., right_, -1, ghostP);
-        //dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-        {
-            dg::blas1::pointwiseDot( right_, hp, ghostM);
-            dg::blas1::axpby( 1., ghostM, 1., ghostP);
-        }
-        dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
-        dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
-        dg::blas1::axpby( 1., ghostP, 1., tempP);
-        }
-        dg::blas1::axpby( 1., tempP, -1., tempM);
-        thrust::transform( tempM.begin(), tempM.end(), hz.begin(), dzf.begin()+i0*size, thrust::divides<double>());
-    }
+
+    einsPlus( f, tempP);
+    einsMinus( f, tempM);
+    dg::blas1::axpby( 1., tempP, -1., tempM);
+    dg::blas1::pointwiseDivide( tempM, hz, dzf);
 }
+
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
 {
     assert( &f != &dzzf);
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    View tempPV( tempP.begin(), tempP.end());
-    View temp0V( temp0.begin(), temp0.end());
-    View tempMV( tempM.begin(), tempM.end());
-    for( unsigned i0=0; i0<g_.Nz(); i0++)
-    {
-        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
-        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
-        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
-        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
-        cusp::copy( f0, temp0V);
-        cusp::multiply( plus, fp, tempPV);
-        cusp::multiply( minus, fm, tempMV );
-    //make ghostcells
-    if( i0==0 && bcz_ != dg::PER)
-    {
-        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-        {
-            //dg::blas1::axpby( -1., temp0, 0., ghostM);
-            //dg::blas1::transform( ghostM, ghostM, dg::PLUS<double>( 2.*left_));
-            dg::blas1::axpby( 2., left_, -1, temp0, ghostM);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-        {
-            dg::blas1::pointwiseDot( left_, hm, ghostP);
-            dg::blas1::axpby( -1, ghostP, 1., temp0, ghostM);
-            //dg::blas1::axpby( -left_, hm, 1., temp0, ghostM);
-        }
-        dg::blas1::axpby( 1., ghostM, -1., tempM, ghostM);
-        dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
-        dg::blas1::axpby( 1., ghostM, 1., tempM);
-    }
-    else if( i0==g_.Nz()-1 && bcz_ != dg::PER)
-    {
-        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-        {
-            //dg::blas1::axpby( -1., temp0, 0., ghostP);
-            //dg::blas1::transform( ghostP, ghostP, dg::PLUS<double>( 2.*right_));
-            dg::blas1::axpby( 2., right_, -1, temp0, ghostP);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-        {
-            dg::blas1::pointwiseDot( right_, hp, ghostM);
-            dg::blas1::axpby( -1, ghostM, 1., temp0, ghostP);
-            //dg::blas1::axpby( right_, hp, 1., temp0, ghostP);
-        }
-        dg::blas1::axpby( 1., ghostP, -1., tempP, ghostP);
-        dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
-        dg::blas1::axpby( 1., ghostP, 1., tempP);
-    }
-    {
-        dg::blas1::pointwiseDivide( tempP, hp, tempP);
-        dg::blas1::pointwiseDivide( tempP, hz, tempP);
-        dg::blas1::pointwiseDivide( temp0, hp, temp0);
-        dg::blas1::pointwiseDivide( temp0, hm, temp0);
-        dg::blas1::pointwiseDivide( tempM, hm, tempM);
-        dg::blas1::pointwiseDivide( tempM, hz, tempM);
-    }
-    dg::blas1::axpby( 2., tempP, +2., tempM); //fp+fm
-    dg::blas1::axpby( -2., temp0, +1., tempM);
-    View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
-    cusp::copy( tempMV, dzzf0);
-    }
+    einsPlus( f, tempP);
+    einsMinus( f, tempM);
+    dg::blas1::pointwiseDivide( tempP, hp, tempP);
+    dg::blas1::pointwiseDivide( tempP, hz, tempP);
+    dg::blas1::pointwiseDivide( f, hp, temp0);
+    dg::blas1::pointwiseDivide( temp0, hm, temp0);
+    dg::blas1::pointwiseDivide( tempM, hm, tempM);
+    dg::blas1::pointwiseDivide( tempM, hz, tempM);
+    dg::blas1::axpby(  2., tempP, +2., tempM); //fp+fm
+    dg::blas1::axpby( -2., temp0, +1., tempM, dzzf); 
 }
+
 template<class M, class container>
 void DZ<M,container>::dz2d( const container& f, container& dzf)
 {
     assert( &f != &dzf);
-    View tempPV( tempP.begin(), tempP.end());
-    View tempMV( tempM.begin(), tempM.end());
-    cView fp( f.cbegin() , f.cend());
-    cView fm( f.cbegin() , f.cend());
-    cusp::multiply( plus, fp, tempPV);
-    cusp::multiply( minus, fm, tempMV );
-    dg::blas1::axpby( 1., tempP, -1., tempM);
-    thrust::transform( tempM.begin(), tempM.end(), hz.begin(), dzf.begin(), thrust::divides<double>());
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView fp( f.cbegin(), f.cend());
+    cView fm( f.cbegin(), f.cend());
+
+    cusp::multiply( plus, fp, ghostPV);
+    cusp::multiply( minus, fm, ghostMV );
+    dg::blas1::axpby( 1., ghostP, -1., ghostM);
+    dg::blas1::pointwiseDivide( ghostM, hz_plane, dzf);
 }
 template< class M, class container >
 void DZ<M,container>::dzz2d( const container& f, container& dzzf)
 {
     assert( &f != &dzzf);
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    View tempPV( tempP.begin(), tempP.end());
-    View temp0V( temp0.begin(), temp0.end());
-    View tempMV( tempM.begin(), tempM.end());
-    cView fp( f.cbegin() , f.cbegin() + size);
-    cView f0( f.cbegin() , f.cbegin() + size);
-    cView fm( f.cbegin() , f.cbegin() + size);
-    cusp::copy( f0, temp0V);
-    cusp::multiply( plus, fp, tempPV);
-    cusp::multiply( minus, fm, tempMV );
-    {
-        dg::blas1::pointwiseDivide( tempP, hp, tempP);
-        dg::blas1::pointwiseDivide( tempP, hz, tempP);
-        dg::blas1::pointwiseDivide( temp0, hp, temp0);
-        dg::blas1::pointwiseDivide( temp0, hm, temp0);
-        dg::blas1::pointwiseDivide( tempM, hm, tempM);
-        dg::blas1::pointwiseDivide( tempM, hz, tempM);
-    }
-    dg::blas1::axpby( 2., tempP, +2., tempM); //fp+fm
-    dg::blas1::axpby( -2., temp0, +1., tempM, dzzf);
+
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView fp( f.cbegin() , f.cend());
+    cView fm( f.cbegin() , f.cend());
+
+    cusp::multiply( plus, fp, ghostPV);
+    cusp::multiply( minus, fm, ghostMV );
+    dg::blas1::pointwiseDivide( ghostP, hp_plane, ghostP);
+    dg::blas1::pointwiseDivide( ghostP, hz_plane, ghostP);
+    dg::blas1::pointwiseDivide( f,      hp_plane, dzzf);
+    dg::blas1::pointwiseDivide( dzzf,   hm_plane, dzzf);
+    dg::blas1::pointwiseDivide( ghostM, hm_plane, ghostM);
+    dg::blas1::pointwiseDivide( ghostM, hz_plane, ghostM);
+    dg::blas1::axpby( 2., ghostP, +2., ghostM); //fp+fm
+    dg::blas1::axpby( -2., dzzf, +1., ghostM, dzzf);
 }
 
-template< class M, class V >
-void DZ<M,V>::cut( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp, dg::Grid2d<double>& g)
-{
-    //implements "Neumann" boundaries for lines that cross the wall
-    for( unsigned i=0; i<g.size(); i++)
-    {
-        if (!(yp[0][i]  >= g_.x0() && yp[0][i] <= g_.x1()) || !(yp[1][i]  >= g_.y0() && yp[1][i]  <= g_.y1()))
-        {
-            yp[0][i] = y[0][i]; yp[1][i] = y[1][i];  
-        }
-        else { }
-    }
-
-}
 template< class M, class container>
 template< class BinaryOp>
 container DZ<M,container>::evaluate( BinaryOp f, unsigned p0)
@@ -583,6 +410,93 @@ container DZ<M,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigne
         dg::blas1::axpby( 1., vec4dM[i], 1., vec3d);
     }
     return vec3d;
+}
+
+template< class M, class container>
+template< class BinaryOp, class UnaryOp>
+container DZ<M,container>::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
+{
+      
+      container vec3d = evaluate( f, g, p0, rounds);
+      container vec2d(g_.size()/g_.Nz());
+
+      for (unsigned i = 0; i<g_.Nz(); i++)
+      {
+            container part( vec3d.begin() + i* (g_.size()/g_.Nz()), vec3d.begin()+(i+1)*(g_.size()/g_.Nz()));
+            dg::blas1::axpby(1.0,part,1.0,vec2d);
+      }
+        dg::blas1::scal(vec2d,1./g_.Nz());
+        return vec2d;
+}
+template< class M, class container>
+void DZ<M, container>::einsPlus( const container& f, container& fpe)
+{
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView rightV( right_.begin(), right_.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
+
+        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fP( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
+        cusp::multiply( plus, fp, fP);
+        //make ghostcells i.e. modify fpe in the limiter region
+        if( i0==g_.Nz()-1 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+            {
+                cusp::blas::axpby( rightV, f0, ghostPV, 2., -1.);
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+            {
+                thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+                cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
+            }
+            //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
+            cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
+            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+            cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
+        }
+    }
+}
+
+template< class M, class container>
+void DZ<M, container>::einsMinus( const container& f, container& fme)
+{
+    //note that thrust functions don't work on views
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView leftV( left_.begin(), left_.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
+        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fM( fme.begin() + i0*size, fme.begin() + (i0+1)*size);
+        cusp::multiply( minus, fm, fM );
+        //make ghostcells
+        if( i0==0 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+            {
+                cusp::blas::axpby( leftV,  f0, ghostMV, 2., -1.);
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+            {
+                thrust::transform( left_.begin(), left_.end(),  hm.begin(), ghostP.begin(), thrust::multiplies<double>());
+                cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
+            }
+            //interlay ghostcells with periodic cells: L*g + (1-L)*fme
+            cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
+            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+            cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
+
+        }
+    }
 }
 }//namespace dg
 

@@ -26,12 +26,19 @@ struct Field
             yp[1][i] = -y[0][i]*y[0][i]/I_0 + R_0/I_0*y[0][i] ;
         }
     }
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+        double gradpsi = ((y[0]-R_0)*(y[0]-R_0) + y[1]*y[1])/I_0/I_0;
+        yp[2] = y[0]*sqrt(1 + gradpsi);
+        yp[0] = y[0]*y[1]/I_0;
+        yp[1] = y[0]/I_0*(R_0-y[0]) ;
+    }
     private:
     double R_0, I_0;
 };
 
-double R_0 = 150;
-double I_0 = 40;
+double R_0 = 10;
+double I_0 = 10;
 //psi = 0.5*r^2
 //b_phi = I_0/R/sqrt(I_0*I_0+r2) = I_0/R/B
 //b_R =   Z/R/B
@@ -78,14 +85,13 @@ int main(int argc, char* argv[])
     //double z0 = M_PI/2., z1 = 3./2.*M_PI;
     dg::MPI_Grid3d g3d( R_0 - 1, R_0+1, -1, 1, z0, z1, n, Nx, Ny, Nz, comm);
     const dg::MPI_Precon w3d = dg::create::weights( g3d);
-    dg::DZ<dg::MMatrix, dg::MVec> dz( field, g3d, 1e-8, dg::DefaultLimiter());
-    //dz.set_boundaries( dg::PER, 0, 0);
-    dz.set_boundaries( dg::DIR, 0., -0.);
+    dg::DZ<dg::MMatrix, dg::MVec> dz( field, g3d, 1e-8, dg::DefaultLimiter(), dg::NEU);
+    dz.set_boundaries( dg::PER, 0, 0);
+    //dz.set_boundaries( dg::DIR, 0., -0.);
 
     dg::MVec function = dg::evaluate( func, g3d), derivative(function), 
              dzz(dg::evaluate(deri2, g3d));
     dg::MVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( sine, g3d));
-    if(rank==0)std::cout << "Follow: "<<follow.data().size()<<" "<<sinz.data().size()<<"\n";
     dg::blas1::pointwiseDot( follow, sinz, follow);
     dg::blas1::axpby( 1., function, -1., follow);
     double diff = dg::blas2::dot( w3d, follow);

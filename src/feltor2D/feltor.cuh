@@ -37,7 +37,7 @@ struct Rolkar
         expy(2, temp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::forward)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -58,8 +58,8 @@ struct Rolkar
         }
         //Resistivity
         dg::blas1::axpby( 1., x[3], -1, x[2], omega); //U_i - U_e
-        dg::blas1::axpby( -p.c/p.mu[0], omega, 1., y[2]);  //- C/mu_e (U_e - U_i)
-        dg::blas1::axpby( -p.c/p.mu[1], omega, 1., y[3]);  //- C/mu_i (U_e - U_i)
+        dg::blas1::axpby( -p.c/p.mu[0], omega, 1., y[2]);  //- C/mu_e (U_i - U_e)
+        dg::blas1::axpby( -p.c/p.mu[1], omega, 1., y[3]);  //- C/mu_i (U_i - U_e)
         //damping
         for( unsigned i=0; i<y.size(); i++){
            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
@@ -93,7 +93,7 @@ struct Feltor
     template<class Grid3d>
     Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp, const Grid3d& gridfordz);
 
-//     dg::DZ<Matrix, container> dz(){return dzDIR_;}
+    dg::DZ<Matrix, container> dz(){return dzDIR_;}
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -172,9 +172,9 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     dzNU_(solovev::Field(gp), gridfordz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
     poisson(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
-    lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
-    invgammaDIR( g,dg::DIR, dg::DIR,-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invgammaNU( g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
+    lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::forward),
+    invgammaDIR( g,dg::DIR, dg::DIR,-0.5*p.tau[1]*p.mu[1],dg::forward),
+    invgammaNU( g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::forward),
     invert_pol(      omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),

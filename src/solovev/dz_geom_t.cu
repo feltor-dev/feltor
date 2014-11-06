@@ -153,13 +153,11 @@ int main( int argc, char* argv[])
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 //Similar to feltor grid
-                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
+                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
                 const dg::DVec w3d = dg::create::weights( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
-
-
                 std::cout <<"-----(1a) test with testfunction" << "\n";
                 solovev::TestFunction func(p,gp);
                 solovev::DeriTestFunction derifunc(p,gp);
@@ -199,10 +197,9 @@ int main( int argc, char* argv[])
                 dg::DVec BvecR = dg::evaluate( bhatR, grid);
                 dg::DVec BvecZ = dg::evaluate( bhatZ, grid);
                 dg::DVec BvecPHI = dg::evaluate( bhatP, grid);
-//                 dg::DVec invBfordz = dg::evaluate( invB, grid);
 
-                dg::DMatrix dR   =dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::forward);
-                dg::DMatrix dZ   =dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::forward);
+                dg::DMatrix dR   =dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::centered);
+                dg::DMatrix dZ   =dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::centered);
                 dg::DMatrix dPHI =dg::create::dz( g3d, g3d.bcz(),dg::centered);
                 
                 dg::blas2::symv( dR, function, dzR);  
@@ -214,7 +211,6 @@ int main( int argc, char* argv[])
                 
                 dg::blas1::axpby(1.,dzR,1.,dzZ,dzRZPhifunction); //BR*dR f + BZ*dZ f
                 dg::blas1::axpby(1.,dzPHI,1.,dzRZPhifunction,dzRZPhifunction); //BR*dR f + BZ*dZ f+Bphi*dphi f
-//                 dg::blas1::pointwiseDot(invBfordz,dzRZPhifunction,dzRZPhifunction);//1/B (BR*dR f + BZ*dZ f+Bphi*dphi f)
                 t.toc();
 
                 std::cout << "-----> Creation of parallel Derivative took "<<t.diff()<<"s\n";

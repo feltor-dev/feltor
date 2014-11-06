@@ -271,10 +271,10 @@ struct TestFunction
         double Zmax = (p_.boxscale)*gp_.a*gp_.elongation;
         double kZ = 1.*M_PI/(Zmax - Zmin);
         double kP = 1.;
-//         return sin(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ);
+        return sin(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
 //         return cos(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ);
-//         return sin(phi*kP);
-        return cos(phi*kP);
+//         return sin(phi*kP); //DIR
+//         return cos(phi*kP); //NEU
 
     }
     private:
@@ -302,14 +302,14 @@ struct DeriTestFunction
         double Zmax = (p_.boxscale)*gp_.a*gp_.elongation;
         double kZ = 1.*M_PI/(Zmax - Zmin);
         double kP = 1.;
-//         return bhatR_(R,Z,phi)*sin(phi)*sin((Z-Zmin)*kZ)*cos((R-Rmin)*kR)*kR+
-//                bhatZ_(R,Z,phi)*sin(phi)*sin((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kZ+
-//                bhatP_(R,Z,phi)*cos(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kP;
+         return bhatR_(R,Z,phi)*sin(phi)*sin((Z-Zmin)*kZ)*cos((R-Rmin)*kR)*kR+
+                bhatZ_(R,Z,phi)*sin(phi)*sin((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kZ+
+                bhatP_(R,Z,phi)*cos(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kP; //DIR
 //         return -bhatR_(R,Z,phi)*cos(phi)*cos((Z-Zmin)*kZ)*sin((R-Rmin)*kR)*kR-
 //                bhatZ_(R,Z,phi)*cos(phi)*cos((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kZ-
 //                bhatP_(R,Z,phi)*sin(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kP;
-//         return  bhatP_(R,Z,phi)*cos(phi*kP)*kP;
-           return  -bhatP_(R,Z,phi)*sin(phi*kP)*kP;
+//         return  bhatP_(R,Z,phi)*cos(phi*kP)*kP; //DIR
+//         return  -bhatP_(R,Z,phi)*sin(phi*kP)*kP; //NEU
     }
     private:
     eule::Parameters p_;
