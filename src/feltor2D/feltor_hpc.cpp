@@ -16,8 +16,8 @@
 
 #include "solovev/geometry.h"
 
-#include "feltor.cuh"
-#include "parameters.h"
+#include "feltor/feltor.cuh"
+#include "feltor/parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -80,11 +80,10 @@ int main( int argc, char* argv[])
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
     dg::MPI_Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, dg::DIR, dg::DIR, dg::PER, dg::cylindrical, comm);  
     dg::Grid3d<double> grid_out = dg::create::ghostless_grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, comm);  
-    dg::MPI_Grid3d gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
      
     //create RHS 
-    eule::Feltor< dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p,gp, gridfordz); 
-    eule::Rolkar< dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p,gp);
+    eule::Feltor< dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p, gp); 
+    eule::Rolkar< dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p, gp);
 
     /////////////////////The initial field////////////////////////////////////////////
     //background profile
@@ -99,11 +98,11 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT init0( 0.);
 
     //averaged field aligned initializer
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    //dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    //y1[1] = feltor.dz().evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 
     //no field aligning
-    //y1[1] = dg::evaluate( init0, grid);
+    y1[1] = dg::evaluate( init0, grid);
 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1

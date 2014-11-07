@@ -169,8 +169,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi), expy(phi), npe(phi), logn(phi),ush(phi),
     dzy( 4, chi),curvy(dzy), 
-    dzDIR_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
-    dzNU_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+    dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
+    dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
     poisson(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),

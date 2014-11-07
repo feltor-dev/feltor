@@ -352,7 +352,7 @@ template< class M, class container>
 template< class BinaryOp>
 container DZ<M,container>::evaluate( BinaryOp binary, unsigned p0)
 {
-    assert( p0 < g_.Nz());
+    assert( p0 < g_.Nz() && g_.Nz() > 1);
     const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
     container vec2d = dg::evaluate( binary, g2d);
     View g0( vec2d.begin(), vec2d.end());
@@ -381,6 +381,7 @@ template< class M, class container>
 template< class BinaryOp, class UnaryOp>
 container DZ<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds)
 {
+    assert( g_.Nz() > 1);
     container vec3d = evaluate( binary, p0);
     const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
     //scal
@@ -425,11 +426,11 @@ container DZ<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0
     return vec3d;
 }
 
-/*
 template< class M, class container>
 template< class BinaryOp, class UnaryOp>
 container DZ<M,container>::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
 {
+    assert( g_.Nz() > 1);
     container vec3d = evaluate( f, g, p0, rounds);
     container vec2d(g_.size()/g_.Nz());
 
@@ -441,7 +442,7 @@ container DZ<M,container>::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsi
     dg::blas1::scal(vec2d,1./g_.Nz());
     return vec2d;
 }
-*/
+
 template< class M, class container>
 void DZ<M, container>::einsPlus( const container& f, container& fpe)
 {

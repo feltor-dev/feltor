@@ -12,7 +12,7 @@
 #include "file/read_input.h"
 #include "solovev/geometry.h"
 
-#include "feltor.cuh"
+#include "feltor/feltor.cuh"
 #include "feltor/parameters.h"
 
 /*
@@ -69,12 +69,11 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
-     dg::Grid3d<double > gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp, gridfordz); //initialize before rolkar!
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -92,11 +91,13 @@ int main( int argc, char* argv[])
     
     //averaged field aligned initializer
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    dg::Grid3d<double > gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+    dg::DZ<dg::DMatrix, dg::DVec> dz( solovev::Field(gp), gridfordz, gridfordz.hz(), gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR);
+    y1[1] = dz.evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
     
     
     //no field aligning
-//     y1[1] = dg::evaluate( init0, grid);
+    //y1[1] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
