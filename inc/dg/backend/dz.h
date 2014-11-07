@@ -35,82 +35,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @param limit Instance of the Limiter class
      */
     template <class Field, class Limiter>
-    DZ(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-3, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR ): eps_(eps),
-        hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), ghostM( tempP), ghostP(tempP), g_(grid), bcz_(grid.bcz()), dz_(field, grid.global(), eps, limit, globalbcz)
-    {
-        dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-        limiter_ = dg::evaluate( limit, g2d);
-        right_ = left_ = dg::evaluate( zero, g2d);
-        ghostM.resize( g2d.size()); ghostP.resize( g2d.size());
-        //set up grid points as start for fieldline integrations
-        std::vector<dg::HVec> y( 3);
-        y[0] = dg::evaluate( dg::coo1, grid.local());
-        y[1] = dg::evaluate( dg::coo2, grid.local());
-        y[2] = dg::evaluate( dg::zero, grid.local());//distance (not angle)
-        //integrate to next z-planes
-        std::vector<dg::HVec> yp(y), ym(y); 
-        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
-        for( unsigned i=0; i<grid.local().size(); i++)
-        {
-            coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-            double phi1 = g_.hz();
-            boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
-            phi1 = -g_.hz();
-            boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
-            yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-            ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
-        }
-
-
-        //determine pid of result 
-        thrust::host_vector<int> pids( grid.size());
-        thrust::host_vector<double> angle = dg::evaluate( dg::coo3, grid.local());
-        for( unsigned i=0; i<pids.size(); i++)
-        {
-            angle[i] += grid.hz();
-            if( angle[i] >= grid.global().z1()) angle[i] -= grid.global().lz();
-            pids[i]  = grid.pidOf( yp[0][i], yp[1][i], angle[i]);
-            if( pids[i]  == -1)
-            {
-                std::cerr << "ERROR: PID NOT FOUND!\n";
-                return;
-            }
-        }
-        //construct scatter operation from pids
-        Collective cp( pids, grid.communicator());
-        collP_ = cp;
-        thrust::host_vector<double> pX = collP_.scatter( yp[0]),
-                                    pY = collP_.scatter( yp[1]),
-                                    pZ = collP_.scatter( angle);
-        //construt interpolation matrix
-        plus  = dg::create::interpolation( pX, pY, pZ, grid.local());
-        
-
-        //do the same for the minus z-plane
-        for( unsigned i=0; i<pids.size(); i++)
-        {
-            angle[i] -= 2.*grid.hz();
-            if( angle[i] <= grid.global().z0()) angle[i] += grid.global().lz();
-            pids[i]  = grid.pidOf( ym[0][i], ym[1][i], angle[i]);
-            if( pids[i] == -1)
-            {
-                std::cerr << "ERROR: PID NOT FOUND!\n";
-                return;
-            }
-        }
-        Collective cm( pids, grid.communicator());
-        collM_ = cm;
-        pX = collM_.scatter( ym[0]),
-        pY = collM_.scatter( ym[1]),
-        pZ = collM_.scatter( angle);
-        minus = dg::create::interpolation( pX, pY, pZ, grid.local());
-        dg::blas1::axpby(  1., yp[2], 0, hp);
-        dg::blas1::axpby( -1., ym[2], 0, hm);
-        dg::blas1::axpby(  1., hp, +1., hm, hz);
-
-        interM.resize( collM_.recv_size());
-        interP.resize( collP_.recv_size());
-    }
+    DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps = 1e-3, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
 
     /**
      * @brief Apply the derivative on a 3d vector
@@ -193,6 +118,8 @@ struct DZ< MPI_Matrix, MPI_Vector>
     template< class BinaryOp, class UnaryOp>
     MPI_Vector evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
+    void einsPlus( const MPI_Vector& n, thrust::host_vector<double>& npe);
+    void einsMinus( const MPI_Vector& n, thrust::host_vector<double>& nme);
   private:
     typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
     typedef cusp::array1d_view< thrust::host_vector<double>::const_iterator> cView;
@@ -209,160 +136,108 @@ struct DZ< MPI_Matrix, MPI_Vector>
     dg::DZ<cusp::csr_matrix<int, double, cusp::host_memory>, thrust::host_vector<double> > dz_;
 };
 
+template <class Field, class Limiter>
+DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz ): 
+    eps_(eps),
+    hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()), dz_(field, grid.global(), deltaPhi, eps, limit, globalbcz)
+{
+    assert( deltaPhi == grid.hz() || grid.Nz() == 1);
+    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    limiter_ = dg::evaluate( limit, g2d);
+    right_ = left_ = dg::evaluate( zero, g2d);
+    ghostM.resize( g2d.size()); ghostP.resize( g2d.size());
+    //set up grid points as start for fieldline integrations
+    std::vector<dg::HVec> y( 3);
+    y[0] = dg::evaluate( dg::coo1, grid.local());
+    y[1] = dg::evaluate( dg::coo2, grid.local());
+    y[2] = dg::evaluate( dg::zero, grid.local());//distance (not angle)
+    //integrate to next z-planes
+    std::vector<dg::HVec> yp(y), ym(y); 
+    thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
+    for( unsigned i=0; i<grid.local().size(); i++)
+    {
+        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+        double phi1 = deltaPhi;
+        boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
+        phi1 = -deltaPhi;
+        boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
+        yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+        ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+    }
+
+
+    //determine pid of result 
+    thrust::host_vector<int> pids( grid.size());
+    thrust::host_vector<double> angle = dg::evaluate( dg::coo3, grid.local());
+    for( unsigned i=0; i<pids.size(); i++)
+    {
+        angle[i] += deltaPhi;
+        if( angle[i] >= grid.global().z1()) angle[i] -= grid.global().lz();
+        pids[i]  = grid.pidOf( yp[0][i], yp[1][i], angle[i]);
+        if( pids[i]  == -1)
+        {
+            std::cerr << "ERROR: PID NOT FOUND!\n";
+            return;
+        }
+    }
+    //construct scatter operation from pids
+    Collective cp( pids, grid.communicator());
+    collP_ = cp;
+    thrust::host_vector<double> pX = collP_.scatter( yp[0]),
+                                pY = collP_.scatter( yp[1]),
+                                pZ = collP_.scatter( angle);
+    //construt interpolation matrix
+    plus  = dg::create::interpolation( pX, pY, pZ, grid.local());
+    
+
+    //do the same for the minus z-plane
+    for( unsigned i=0; i<pids.size(); i++)
+    {
+        angle[i] -= 2.*deltaPhi;
+        if( angle[i] <= grid.global().z0()) angle[i] += grid.global().lz();
+        pids[i]  = grid.pidOf( ym[0][i], ym[1][i], angle[i]);
+        if( pids[i] == -1)
+        {
+            std::cerr << "ERROR: PID NOT FOUND!\n";
+            return;
+        }
+    }
+    Collective cm( pids, grid.communicator());
+    collM_ = cm;
+    pX = collM_.scatter( ym[0]),
+    pY = collM_.scatter( ym[1]),
+    pZ = collM_.scatter( angle);
+    minus = dg::create::interpolation( pX, pY, pZ, grid.local());
+    dg::blas1::axpby(  1., yp[2], 0, hp);
+    dg::blas1::axpby( -1., ym[2], 0, hm);
+    dg::blas1::axpby(  1., hp, +1., hm, hz);
+
+    interM.resize( collM_.recv_size());
+    interP.resize( collP_.recv_size());
+}
+
 void DZ<MPI_Matrix, MPI_Vector>::operator()( const MPI_Vector& f, MPI_Vector& dzf)
 {
     assert( &f != &dzf);
-    const thrust::host_vector<double>& in = f.data();
-    thrust::host_vector<double>& out = dzf.data();
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-
-    cView fv( in.cbegin(), in.cend());
-    View P( interP.begin(), interP.end() );
-    cusp::multiply( plus, fv, P); //interpolate input vector 
-    View M( interM.begin(), interM.end() );
-    cusp::multiply( minus, fv, M);
-    //gather results from all processes
-    collM_.gather( interM, tempM); 
-    collP_.gather( interP, tempP);
-    //make ghostcells
-    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
-    {
-        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
-        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
-        View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite tempM
-        cusp::copy( f0, ghostMV);
-        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-        {
-            dg::blas1::axpby( 2., left_, -1, ghostM);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-        {
-            dg::blas1::pointwiseDot( left_, hm, ghostP);
-            dg::blas1::axpby( -1, ghostP, 1., ghostM);
-        }
-        cusp::blas::axpby(  ghostMV,  tempMV, ghostMV, 1.,-1.);
-        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-        cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
-
-    }
-    else if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
-    {
-        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
-        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
-        View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite tempP
-        cusp::copy( f0, ghostPV);
-        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-        {
-            dg::blas1::axpby( 2., right_, -1, ghostP);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-        {
-            dg::blas1::pointwiseDot( right_, hp, ghostM);
-            dg::blas1::axpby( 1., ghostM, 1., ghostP);
-        }
-        cusp::blas::axpby(  ghostPV,  tempPV, ghostPV, 1.,-1.);
-        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-        cusp::blas::axpby(  ghostPV,  tempPV, tempPV, 1.,1.);
-    }
-    //compute finite difference formula
+    einsPlus( f, tempP); 
+    einsMinus( f, tempM); 
     dg::blas1::axpby( 1., tempP, -1., tempM);
-    dg::blas1::pointwiseDivide( tempM, hz, dzf.data());
+    dg::blas1::pointwiseDivide( tempM, hz, dzf.data() );
 }    
 
 void DZ<MPI_Matrix, MPI_Vector>::dzz( const MPI_Vector& f, MPI_Vector& dzzf)
 {
     assert( &f != &dzzf);
-
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    const thrust::host_vector<double>& in = f.data();
-    thrust::host_vector<double>& out = dzzf.data();
-
-    cView fv( in.cbegin(), in.cend());
-    View P( interP.begin(), interP.end() );
-    cusp::multiply( plus, fv, P); //interpolate input vector 
-    View M( interM.begin(), interM.end() );
-    cusp::multiply( minus, fv, M);
-    //gather results from all processes
-    collM_.gather( interM, tempM); 
-    collP_.gather( interP, tempP);
-    //make ghostcells
-    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
-    {
-        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
-        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
-        View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite tempM
-        cusp::copy( f0, ghostMV);
-        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-        {
-            dg::blas1::axpby( 2., left_, -1, ghostM);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-        {
-            dg::blas1::pointwiseDot( left_, hm, ghostP);
-            dg::blas1::axpby( -1, ghostP, 1., ghostM);
-        }
-        cusp::blas::axpby(  ghostMV,  tempMV, ghostMV, 1.,-1.);
-        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-        cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
-
-    }
-    else if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
-    {
-        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
-        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View tempPV( tempP.begin() + i0*size, tempP.begin() + (i0+1)*size);
-        View tempMV( tempM.begin() + i0*size, tempM.begin() + (i0+1)*size);
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite tempP
-        cusp::copy( f0, ghostPV);
-        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-        {
-            dg::blas1::axpby( 2., right_, -1, ghostP);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-        {
-            dg::blas1::pointwiseDot( right_, hp, ghostM);
-            dg::blas1::axpby( 1., ghostM, 1., ghostP);
-        }
-        cusp::blas::axpby(  ghostPV,  tempPV, ghostPV, 1.,-1.);
-        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-        cusp::blas::axpby(  ghostPV,  tempPV, tempPV, 1.,1.);
-    }
-
-    {
-        dg::blas1::pointwiseDivide( tempP, hp, tempP);
-        dg::blas1::pointwiseDivide( tempP, hz, tempP);
-        dg::blas1::pointwiseDivide( f.data(), hp, temp0);
-        dg::blas1::pointwiseDivide( temp0, hm, temp0);
-        dg::blas1::pointwiseDivide( tempM, hm, tempM);
-        dg::blas1::pointwiseDivide( tempM, hz, tempM);
-    }
-
+    einsPlus( f, tempP); 
+    einsMinus( f, tempM); 
+    dg::blas1::pointwiseDivide( tempP, hp, tempP);
+    dg::blas1::pointwiseDivide( tempP, hz, tempP);
+    dg::blas1::pointwiseDivide( f.data(), hp, temp0);
+    dg::blas1::pointwiseDivide( temp0, hm, temp0);
+    dg::blas1::pointwiseDivide( tempM, hm, tempM);
+    dg::blas1::pointwiseDivide( tempM, hz, tempM);
     dg::blas1::axpby(  2., tempP, +2., tempM); //fp+fm
     dg::blas1::axpby( -2., temp0, +1., tempM, dzzf.data()); 
-    //View dzzf0( dzzf.begin() + i0*size, dzzf.begin() + (i0+1)*size);
-    //cusp::copy( tempMV, dzzf0);
 }
 
 template< class BinaryOp>
@@ -405,5 +280,95 @@ MPI_Vector DZ<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, UnaryOp g, unsigned 
     return mpi_vec;
 }
 
+/*
+template< class BinaryOp, class UnaryOp>
+MPI_Vector DZ<MPI_Matrix, MPI_Vector>::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
+{
+    MPI_Vector vec3d = evaluate( f, g, p0, rounds);
+    MPI_Vector vec2d(g_.size()/g_.Nz());
+
+    for (unsigned i = 0; i<g_.Nz(); i++)
+    {
+        part( vec3d.begin() + i* (g_.size()/g_.Nz()), vec3d.begin()+(i+1)*(g_.size()/g_.Nz()));
+        dg::blas1::axpby(1.0,part,1.0,vec2d);
+    }
+    dg::blas1::scal(vec2d,1./g_.Nz());
+    return vec2d;
+}
+*/
+
+void DZ<MPI_Matrix, MPI_Vector>::einsPlus( const MPI_Vector& f, thrust::host_vector<double>& fplus ) 
+{
+    const thrust::host_vector<double>& in = f.data();
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    cView fv( in.cbegin(), in.cend());
+
+    View P( interP.begin(), interP.end() );
+    cusp::multiply( plus, fv, P); //interpolate input vector 
+    //gather results from all processes
+    collP_.gather( interP, fplus);
+    //make ghostcells in last plane
+    if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
+    {
+        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View tempPV( fplus.begin() + i0*size, fplus.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite tempP
+        cusp::copy( f0, ghostPV);
+        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::axpby( 2., right_, -1, ghostP);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::pointwiseDot( right_, hp, ghostM);
+            dg::blas1::axpby( 1., ghostM, 1., ghostP);
+        }
+        cusp::blas::axpby(  ghostPV,  tempPV, ghostPV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
+        cusp::blas::axpby(  ghostPV,  tempPV, tempPV, 1.,1.);
+    }
+
+}
+
+void DZ<MPI_Matrix, MPI_Vector>::einsMinus( const MPI_Vector& f, thrust::host_vector<double>& fminus ) 
+{
+    const thrust::host_vector<double>& in = f.data();
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    cView fv( in.cbegin(), in.cend());
+
+    View M( interM.begin(), interM.end() );
+    cusp::multiply( minus, fv, M);
+    //gather results from all processes
+    collM_.gather( interM, fminus); 
+    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
+    {
+        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View tempMV( fminus.begin() + i0*size, fminus.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite tempM
+        cusp::copy( f0, ghostMV);
+        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::axpby( 2., left_, -1, ghostM);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::pointwiseDot( left_, hm, ghostP);
+            dg::blas1::axpby( -1, ghostP, 1., ghostM);
+        }
+        cusp::blas::axpby(  ghostMV,  tempMV, ghostMV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
+        cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
+    }
+}
 }//namespace dg
 

@@ -50,9 +50,9 @@ double func2d(double R, double Z)
 }
 double func(double R, double Z, double phi)
 {
-    return func2d(R,Z)*sin(phi);
+    return -func2d(R,Z)*cos(phi);
 }
-double sine( double R, double Z, double phi) {return sin(phi);}
+double modulate( double R, double Z, double phi) {return -cos(phi);}
 double deri2d(double R, double Z)
 {
     return 0;
@@ -60,7 +60,7 @@ double deri2d(double R, double Z)
 double deri(double R, double Z, double phi)
 {
     //double r2 = (R-R_0)*(R-R_0)+Z*Z;
-    return cos(phi)/R;
+    return sin(phi)/R;
 }
 double deri2(double R, double Z, double phi)
 {
@@ -68,7 +68,7 @@ double deri2(double R, double Z, double phi)
     double B = sqrt(I_0*I_0+r2)/R;
     double bphi = I_0/R/R/B;
     double bR = Z/R/B;
-    return -bphi/R*sin(phi) - bR*cos(phi)/R/R ;
+    return bphi/R*cos(phi) - bR*sin(phi)/R/R ;
 }
 
 int main()
@@ -84,7 +84,9 @@ int main()
     dg::Grid2d<double> g2d( R_0 - 1, R_0+1, -1, 1,  n, Nx, Ny);
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, 1e-9, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-9, dg::DefaultLimiter(), dg::NEU);
+    dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
+    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-9, dg::DefaultLimiter(), dg::NEU);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     dz.set_boundaries( dg::PER, 0, 0);
     //dz.set_boundaries( dg::DIR, 0., -0.);
@@ -93,7 +95,7 @@ int main()
     dg::DVec function = dg::evaluate( func, g3d), derivative(function), 
              dzz(dg::evaluate(deri2, g3d));
     dg::DVec function2d = dg::evaluate( func2d, g2d), derivative2d( function2d) ;
-    dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( sine, g3d));
+    dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( modulate, g3d));
     dg::blas1::pointwiseDot( follow, sinz, follow);
     dg::blas1::axpby( 1., function, -1., follow);
     double diff = dg::blas2::dot( w3d, follow);
@@ -102,7 +104,7 @@ int main()
     const dg::DVec solution2 = dg::evaluate( deri2, g3d);
     const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
     dz( function, derivative);
-    dz.dz2d( function2d, derivative2d);
+    dz2d( function2d, derivative2d);
     dz.dzz( function, dzz);
     //dz( derivative, dzz);
     double norm = dg::blas2::dot( w3d, solution);
@@ -116,7 +118,6 @@ int main()
     norm = dg::blas2::dot( w3d, solution2);
     std::cout << "Relative Difference in DZZ is "<< sqrt( dg::blas2::dot( w3d, dzz)/norm )<<"\n";    
     dg::blas1::axpby( 1., solution2d, -1., derivative2d);
-    norm = dg::blas2::dot( w2d, solution2d);
     std::cout << "Difference in DZ2d is "<< sqrt( dg::blas2::dot( w2d, derivative2d) )<<"\n";    
     return 0;
 }

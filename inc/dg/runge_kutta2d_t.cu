@@ -68,12 +68,12 @@ int main()
 
     RHS<dg::DVec> rhs( grid);
 
-    integrateRK4( rhs, y0, y1, T, 1e-10);
-    std::vector<DVec> error(2, solution);
-    double norm_sol = blas2::dot( w2d, solution);
-    blas1::axpby( -1., y1, 1., error);
-    double norm_error = blas2::dot( w2d, error);
-    cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" \n";
+    //integrateRK4( rhs, y0, y1, T, 1e-10);
+    //std::vector<DVec> error(2, solution);
+    //double norm_sol = blas2::dot( w2d, solution);
+    //blas1::axpby( -1., y1, 1., error);
+    //double norm_error = blas2::dot( w2d, error);
+    //cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" \n";
     
     RK<k, std::vector<dg::DVec> >  rk( y0);
     for( unsigned i=0; i<NT; i++)

@@ -163,7 +163,7 @@ int main( int argc, char* argv[])
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
-                dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d,gp.rk4eps,solovev::PsiLimiter(gp), g3d.bcx()); //choose bc of grid
+                dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d,g3d.hz(),gp.rk4eps,solovev::PsiLimiter(gp), g3d.bcx()); //choose bc of grid
                 t.toc();
                 std::cout << "-----> Creation of parallel Derivative took "<<t.diff()<<"s\n";
 
