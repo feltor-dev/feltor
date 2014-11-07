@@ -57,10 +57,10 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
 
-    double Rmin=gp.R_0-p.boxscale*gp.a;
-    double Zmin=-p.boxscale*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscale*gp.a; 
-    double Zmax=p.boxscale*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
