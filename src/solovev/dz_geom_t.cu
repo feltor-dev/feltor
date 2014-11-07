@@ -38,7 +38,6 @@ struct InvNormR
 
 int main( int argc, char* argv[])
 {
-    double Rmin,Zmin,Rmax,Zmax;
 //     double A,R_0,a, elongation;
 //     double psipmin,psipmax;
     unsigned n, Nx, Ny, Nz;
@@ -72,10 +71,10 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     gp.display( std::cout);
 
-    Rmin=gp.R_0-(p.boxscale)*gp.a;
-    Zmin=-(p.boxscale)*gp.a*gp.elongation;
-    Rmax=gp.R_0+(p.boxscale)*gp.a; 
-    Zmax=(p.boxscale)*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     std::cout << "The grid parameters" <<"\n";
     std::cout  << Rmin<<" rho_s " << Rmax <<" rho_s " << Zmin <<" rho_s " <<Zmax <<" rho_s " <<"\n";
     std::cout << "Type n, Nx, Ny, Nz\n";

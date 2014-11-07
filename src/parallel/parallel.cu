@@ -10,10 +10,10 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
+#include "solovev/geometry.h"
 
 #include "parallel.cuh"
-#include "parameters.h"
-#include "geometry.h"
+#include "feltor/parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -25,77 +25,97 @@
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
-    std::vector<double> v, v2,v3;
+     std::vector<double> v,v2,v3;
     std::stringstream title;
     if( argc == 1)
     {
         try{
-        v = file::read_input("input.txt");
-        }catch( toefl::Message& m){m.display();}
+            v = file::read_input("input.txt");
+            v3 = file::read_input( "geometry_params.txt"); 
+        }catch( toefl::Message& m){
+            m.display();
+            return -1;
+        }
     }
-    else if( argc == 2)
+    else if( argc == 3)
     {
-        v = file::read_input( argv[1]);
+        try{
+            v = file::read_input(argv[1]);
+            v3 = file::read_input( argv[2]); 
+        }catch( toefl::Message& m){
+            m.display();
+            return -1;
+        }
     }
     else
     {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-
-    /////////////////////////////////////////////////////////////////////////
     const eule::Parameters p( v);
     p.display( std::cout);
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( p.Nz/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], p.Nz/v2[2]);
-
-    //////////////////////////////////////////////////////////////////////////
-    try{ v3 = file::read_input( "geometry_params.txt"); }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-        return -1;}
-
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    double Rmin=gp.R_0-(gp.boxscale)*gp.a;
-    double Zmin=-(gp.boxscale)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(gp.boxscale)*gp.a; 
-    double Zmax=(gp.boxscale)*gp.a*gp.elongation;
+    v2 = file::read_input( "window_params.txt");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
+    draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
+    
+    //////////////////////////////////////////////////////////////////////////
+    
+    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
-    eule::ParallelFeltor<dg::DMatrix, dg::DVec, dg::DVec > parallel( grid, p,gp); //initialize before rolkar!
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > parallel( grid, p,gp); //initialize before rolkar!
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
-    //Monopole
-    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, 0.9*M_PI, p.sigma, p.sigma, 0.1*p.sigma, p.amp);
+ //initial perturbation
+    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+    dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(gp,p.amp);
-    solovev::Nprofile grad(gp); //initial profile
-    std::vector<dg::DVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
-    //field aligned blob (gpu only)
-    dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::GaussianZ gaussianZ( M_PI, M_PI, 1);
-    y1[1] = parallel.dz().evaluate( gaussian);
-    y1[2] = dg::evaluate( gaussianZ, grid);
-    dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
-    //damp the bath on psi boundaries 
-    //y1[1] = dg::evaluate( init0, grid);
-    dg::blas1::pointwiseDot(rolkar.dampin(),y1[1], y1[1]); //is damping on bath    
+//     solovev::ZonalFlow init0(p, gp);
+//     dg::CONSTANT init0( 0.);
+
+    
+    //background profile
+    solovev::Nprofile prof(p, gp); //initial background profile
+    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
+    
+    //field aligning
+//     dg::CONSTANT gaussianZ( 1.);
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    y1[1] = parallel.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+//     y1[2] = dg::evaluate( gaussianZ, grid);
+//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
+    //no field aligning
+//     y1[1] = dg::evaluate( init0, grid);
+    
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
-    parallel.initializene(y0[1],y0[0]);    
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
+    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    std::cout << "intiialize ne" << std::endl;
+    parallel.initializene( y0[1], y0[0]);    
+    std::cout << "Done!\n";
     dg::blas1::axpby( 0., y1[1], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     //////////////////////////////////////////////////////////////////////////////////
 
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
-    ab.init( parallel, rolkar, y0, p.dt);
+    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    std::cout << "intiialize karniadakis" << std::endl;
+    karniadakis.init( parallel, rolkar, y0, p.dt);
+    std::cout << "Done!\n";
+    //std::cout << "first karniadakis" << std::endl;
+
+    //karniadakis( parallel, rolkar, y0);     
+    //std::cout << "Done!\n";
+    parallel.energies( y0);//now energies and potential are at time 0
 
     dg::DVec dvisual( grid.size(), 0.);
-    dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
+    dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
 
@@ -111,76 +131,109 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
 
-        hvisual = y0[0];
+        hvisual = karniadakis.last()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 1.0;
+        colors.scalemin() = -colors.scalemax();        
+        //colors.scalemin() = 1.0;
+        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+
         title << std::setprecision(2) << std::scientific;
-        title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
+        //title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
+        title <<"ne-1 / " << colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
-
-        hvisual = y0[1];
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        //draw ions
+        //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
+        hvisual = karniadakis.last()[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = 1.0;        
+        //colors.scalemin() = 1.0;        
+        colors.scalemin() = -colors.scalemax();        
+        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+
         title << std::setprecision(2) << std::scientific;
-        title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
+        //title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
+        title <<"ni-1 / " << colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
+        //draw potential
+        //transform to Vor
+        dvisual=parallel.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        hvisual = y1[1];
+        //hvisual = feltor.potential()[0];
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
+//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemin() = -colors.scalemax();
+        //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"Omega / "<< colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        {
+            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
+            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
-
-        hvisual = parallel.potential()[0];
+        //draw U_e
+        hvisual = karniadakis.last()[2];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
-        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        //title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"Ue / " << colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
-        //draw U_e
-        hvisual = y0[2];
-        dg::blas2::gemv( equi, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
-        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        colors.scalemin() =  -colors.scalemax();
-        title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
-        {
-            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        }
-
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw U_i
-        hvisual = y0[3];
+        hvisual = karniadakis.last()[3];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        colors.scalemin() =  -colors.scalemax();
-        title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
+        colors.scalemin() = -colors.scalemax();
+        //title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
+        title <<"Ui / " << colors.scalemax()<<"\t";
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-
-
+        dg::blas1::scal(avisual,1./p.Nz);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
         title << std::fixed; 
         title << " &&   time = "<<time;
         glfwSetWindowTitle(w,title.str().c_str());
@@ -192,20 +245,19 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
-        //double x;
-        //std::cin >> x;
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
+            parallel.energies( y0); //update energetics
             std::cout << "(m_tot-m_0)/m_0: "<< (parallel.mass()-mass0)/mass_blob0<<"\t";
-            E0 = E1;
             E1 = parallel.energy();
-            diff = (E1 - E0)/p.dt;
+            diff = (E1 - E0)/p.dt; //
             double diss = parallel.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
+            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
+            E0 = E1;
 
-            try{ ab( parallel, rolkar, y0);}
+            try{ karniadakis( parallel, rolkar, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

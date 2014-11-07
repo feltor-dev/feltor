@@ -44,10 +44,10 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     gp.display( std::cout);
     n = p.n, Nx = p.Nx, Ny = p.Ny;
-    double Rmin=gp.R_0-p.boxscale*gp.a;
-    double Zmin=-p.boxscale*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscale*gp.a; 
-    double Zmax=p.boxscale*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
  
     //construct all geometry quantities

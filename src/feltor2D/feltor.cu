@@ -63,10 +63,10 @@ int main( int argc, char* argv[])
 
 
     //////////////////////////////////////////////////////////////////////////
-    double Rmin=gp.R_0-p.boxscale*gp.a;
-    double Zmin=-p.boxscale*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscale*gp.a; 
-    double Zmax=p.boxscale*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
      dg::Grid3d<double > gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
@@ -174,10 +174,11 @@ int main( int argc, char* argv[])
         hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
-//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        colors.scalemin() = -colors.scalemax();
-        //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
-        title <<"phi / "<< colors.scalemax()<<"\t";
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+//         colors.scalemin() = -colors.scalemax();
+//         colors.scalemax() = -colors.scalemin();
+        title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+//         title <<"phi / "<< colors.scalemax()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw U_e
