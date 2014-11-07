@@ -18,7 +18,7 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
     int np[2];
     if( rank == 0)
     {
-        std::cout << "Type npx and npy\n";
+        //std::cout << "Type npx and npy\n";
         std::cin >> np[0] >> np[1];
         std::cout<< "Computing with "<<np[0] <<" x "<<np[1]<<" = "<<size<<" processes! ";//<<std::endl;
         assert( size == np[0]*np[1]);
@@ -27,7 +27,7 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     if( rank == 0)
     {
-        std::cout << "Type n, Nx and Ny\n";
+        //std::cout << "Type n, Nx and Ny\n";
         std::cin >> n >> Nx >> Ny;
         std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<std::endl;
     }
