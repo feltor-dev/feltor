@@ -128,7 +128,7 @@ int main( int argc, char* argv[])
     thrust::host_vector<double>  out(3);
     in[0]=gp.R_0+gp.a; 
     in[1]=0.0;
-    in[2]=0.;
+    in[2]=0.0;
     dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps);
     
     std::cout <<"Rin =  "<< in[0] <<" Zin =  "<<in[1] <<" sin  = "<<in[2]<<"\n";
@@ -152,7 +152,7 @@ int main( int argc, char* argv[])
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 //Similar to feltor grid
-                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
+                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
                 const dg::DVec w3d = dg::create::weights( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
@@ -327,7 +327,7 @@ int main( int argc, char* argv[])
                 dzerrfile1 << pow(2,zz)*Nz <<" " << reldiff << std::endl;
                 dzerrfile2 << pow(2,zz)*Nz <<" " << reldiff2 << std::endl;
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
-                std::cout <<"----(4) test div(B) != 0 "<<"\n";
+                std::cout <<"----(4) test div(B) != 0 (works for NEU)"<<"\n";
                 dg::DVec bRongrid = dg::evaluate( fieldR, grid);
                 dg::DVec bZongrid = dg::evaluate( fieldZ, grid);
                 dg::DVec dRbR(g3d.size());
@@ -350,7 +350,13 @@ int main( int argc, char* argv[])
 
                 double normdivB2= dg::blas2::dot( w3d, divB); 
                 std::cout << "divB = "<<sqrt( normdivB2)<<"\n";
-                
+                std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
+                std::cout <<"----(5) test grad_par (psi_p) != 0 (works for NEU)"<<"\n";
+                dg::DVec dzpsi(g3d.size());
+                dz( psipongrid, dzpsi);
+                double normdzpsi = dg::blas2::dot( w3d, dzpsi);
+                std::cout << "Norm grad_par (psi_p)  = "<<sqrt( normdzpsi)<<"\n";
+       
              }
             dzerrfile1.close();
             dzerrfile2.close();

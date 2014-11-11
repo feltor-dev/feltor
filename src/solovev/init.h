@@ -247,7 +247,7 @@ struct TestFunction
         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
         double kZ = 1.*M_PI/(Zmax - Zmin);
         double kP = 1.;
-        return sin(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
+        return sin(phi*kP)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
 //         return cos(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ);
 //         return sin(phi*kP); //DIR
 //         return cos(phi*kP); //NEU

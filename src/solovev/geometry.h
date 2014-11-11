@@ -904,7 +904,7 @@ struct FluxSurfaceAverage
       double psipRmin = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
       double psipZmax = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
       double psipZmin = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
-      double deltapsi = abs(psipZmin/g2d_.Nx()/g2d_.n() +psipRmin/g2d_.Ny()/g2d_.n());
+      double deltapsi = fabs(psipZmin/g2d_.Ny()/g2d_.n() +psipRmin/g2d_.Nx()/g2d_.n());
       deltaf_.setepsilon(deltapsi/4.);
     }
     /**
@@ -963,7 +963,7 @@ struct SafetyFactor
       double psipRmin = (float)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
       double psipZmax = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
       double psipZmin = (float)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
-      double deltapsi = abs(psipZmin/g2d_.Nx()/g2d_.n() +psipRmin/g2d_.Ny()/g2d_.n());
+      double deltapsi = fabs(psipZmin/g2d_.Ny()/g2d_.n() +psipRmin/g2d_.Nx()/g2d_.n());
       deltaf_.setepsilon(deltapsi/4.);
     }
     /**
@@ -1005,7 +1005,7 @@ struct Alpha
     }
     double operator()( double R, double Z, double phi)
     {
-        return  (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+                return  (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
     }
     private:
     PsipR  psipR_;

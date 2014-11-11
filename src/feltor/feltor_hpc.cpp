@@ -82,35 +82,38 @@ int main( int argc, char* argv[])
      dg::Grid3d<double> grid_out = dg::create::ghostless_grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, comm);  
      
     //create RHS 
-    eule::Feltor< dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p,gp); 
-    eule::Rolkar< dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p,gp);
+    eule::Feltor< dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p, gp); 
+    eule::Rolkar< dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p, gp);
 
     /////////////////////The initial field////////////////////////////////////////////
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
+    dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
     //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
     //solovev::ZonalFlow init0(p, gp);
-    solovev::Nprofile grad(p, gp); //initial background profile
-    
-    std::vector<dg::MVec> y0(4, dg::evaluate( grad, grid)), y1(y0); 
 
-    //field aligned blob 
-    dg::Gaussian gaussian( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+    //background profile
+    solovev::Nprofile prof(p, gp); //initial background profile
+    std::vector<dg::MVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
+
+    //field aligning
+    //dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluate( gaussian, gaussianZ, (unsigned)p.Nz/2, 3);
+    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
 
+    //no field aligning (use 2D Feltor instead!!)
     //y1[1] = dg::evaluate( init0, grid);
-    //damp the bath on psi boundaries 
-    //dg::blas1::pointwiseDot(rolkar.damping(), y1[1], y1[1]); 
+    //
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1));
-    feltor.initializene(y0[1],y0[0]);    
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
+    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    feltor.initializene( y0[1], y0[0]);    
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::MVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
-    karniadakis( feltor, rolkar, y0); //now energies and potential are at time 0
+    feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -184,7 +187,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "First write ...\n";
     for( unsigned i=0; i<4; i++)
     {
-        dg::blas2::symv( interpolate, karniadakis.last()[i].data(), transferH);
+        dg::blas2::symv( interpolate, y0[i].data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transferD = feltor.potential()[0];
@@ -232,6 +235,7 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
+            feltor.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
@@ -263,7 +267,7 @@ int main( int argc, char* argv[])
         start[0] = i;
         for( unsigned j=0; j<4; j++)
         {
-            dg::blas2::symv( interpolate, karniadakis.last()[j].data(), transferH);
+            dg::blas2::symv( interpolate, y0[j].data(), transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transferD = feltor.potential()[0];

@@ -5,18 +5,18 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   80 (192)
-3)  ny (grid points in y)                =   80 (192) 
-4)  nz (grid points in z)                =   26 (1)
+2)  nx (grid points in x)                =   60 (192)
+3)  ny (grid points in y)                =   60 (192) 
+4)  nz (grid points in z)                =   13 (1)
 5)  dt (time step in units c_s/rho_s)    =   1e-2(0.01)
 
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  80 
-8)  ny_out (# grid points in output field)  =  80
-9)  nz_out (# grid points in output field)  =  26
-10) itstp  (steps between outputs)          =  500  (5)
+7)  nx_out (# grid points in output field)  =  60 
+8)  ny_out (# grid points in output field)  =  60 
+9)  nz_out (# grid points in output field)  =  13
+10) itstp  (steps between outputs)          =  500 (5)
 11) total # of outputs (excluding first)    =  10000
 
 -------------------------Algorithmic parameters------------------------
@@ -25,19 +25,19 @@
 14)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
 15)  eps_time ( stop for time inversion )   =   1e-12 
 -------------------------Physical parameters----------------------------
-16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
+16) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-3 
 20) nu_parallel  (viscosity)                =  0e-2    (0.001)
-21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-3   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.1    (1.0)
 23) sigma (blob variance in units of rho_s) =  2.0     (10)
-24) x-position ( in units of a)             =  0.2   (0.4)
+24) x-position ( in units of a)             =  1.0   (0.4)
 25) y-position ( in units of a)             =  0.00   (0.5)
-26) sigma_z (variance in units of R_0)      =  0.5       (12.5 for oo)
+26) sigma_z (variance in units of R_0)      =  0.25       (12.5 for oo)
 27) k_psi (zonal modes)                     =  1.0   
 28) Profile amplitude                       =  2.5  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)

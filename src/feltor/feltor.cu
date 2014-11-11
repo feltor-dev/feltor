@@ -71,9 +71,9 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -112,10 +112,6 @@ int main( int argc, char* argv[])
     std::cout << "intiialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     std::cout << "Done!\n";
-    //std::cout << "first karniadakis" << std::endl;
-
-    //karniadakis( feltor, rolkar, y0);     
-    //std::cout << "Done!\n";
     feltor.energies( y0);//now energies and potential are at time 0
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -136,7 +132,7 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
 
-        hvisual = karniadakis.last()[0];
+        hvisual = y0[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();        
@@ -158,7 +154,7 @@ int main( int argc, char* argv[])
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
-        hvisual = karniadakis.last()[1];
+        hvisual = y0[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         //colors.scalemin() = 1.0;        
@@ -203,7 +199,7 @@ int main( int argc, char* argv[])
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw U_e
-        hvisual = karniadakis.last()[2];
+        hvisual = y0[2];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -221,7 +217,7 @@ int main( int argc, char* argv[])
         dg::blas1::scal(avisual,1./p.Nz);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw U_i
-        hvisual = karniadakis.last()[3];
+        hvisual = y0[3];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -252,6 +248,13 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
+            try{ karniadakis( feltor, rolkar, y0);}
+            catch( dg::Fail& fail) { 
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                glfwSetWindowShouldClose( w, GL_TRUE);
+                break;
+            }
             step++;
             feltor.energies( y0); //update energetics
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
@@ -262,13 +265,6 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
             E0 = E1;
 
-            try{ karniadakis( feltor, rolkar, y0);}
-            catch( dg::Fail& fail) { 
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose( w, GL_TRUE);
-                break;
-            }
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

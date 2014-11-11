@@ -1,7 +1,8 @@
+system = home
+device = omp
+
 INCLUDE = -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
-device = gpu
-system = home
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
@@ -78,7 +79,7 @@ com: com.cu
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 ncdiag: ncdiag.cpp
-	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 
 imp: imp.cu
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)

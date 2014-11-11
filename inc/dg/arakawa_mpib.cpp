@@ -66,18 +66,18 @@ int main(int argc, char* argv[])
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    if(rank==0) std::cout << "\nArakawa took "<<t.diff()*1000/(double)multi<<"ms\n\n";
+    if(rank==0) std::cout << "Arakawa took "<<t.diff()*1000/(double)multi<<"ms\n\n";
 
-    double result = dg::blas2::dot( eins, w2d, jac);
-    std::cout << std::scientific;
-    if(rank==0) std::cout << "Mean     Jacobian is "<<result<<"\n";
-    result = dg::blas2::dot( rhs,  w2d, jac);
-    if(rank==0) std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
-    result = dg::blas2::dot( lhs,  w2d, jac);
-    if(rank==0) std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
-    dg::blas1::axpby( 1., sol, -1., jac);
-    result = sqrt( dg::blas2::dot( w2d, jac));
-    if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; 
+    //double result = dg::blas2::dot( eins, w2d, jac);
+    //std::cout << std::scientific;
+    //if(rank==0) std::cout << "Mean     Jacobian is "<<result<<"\n";
+    //result = dg::blas2::dot( rhs,  w2d, jac);
+    //if(rank==0) std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
+    //result = dg::blas2::dot( lhs,  w2d, jac);
+    //if(rank==0) std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
+    //dg::blas1::axpby( 1., sol, -1., jac);
+    //result = sqrt( dg::blas2::dot( w2d, jac));
+    //if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; 
 
 
     MPI_Finalize();

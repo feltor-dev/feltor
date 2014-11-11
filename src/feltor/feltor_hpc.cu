@@ -77,7 +77,7 @@ int main( int argc, char* argv[])
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //      dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 
-   dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
     
     //background profile
@@ -88,9 +88,8 @@ int main( int argc, char* argv[])
     //dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
     y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->3*2-1
-//     y1[2] = dg::evaluate( gaussianZ, grid);
-//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
-    //no field aligning
+
+    //no field aligning (use 2D Feltor instead!!)
     //y1[1] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
@@ -102,7 +101,7 @@ int main( int argc, char* argv[])
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
-    karniadakis( feltor, rolkar, y0); //now energies and potential are at time 0
+    feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -156,7 +155,7 @@ int main( int argc, char* argv[])
     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<4; i++)
     {
-        dg::blas2::symv( interpolate, karniadakis.last()[i], transferD);
+        dg::blas2::symv( interpolate, y0[i], transferD);
         transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
@@ -207,6 +206,7 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
+            feltor.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
@@ -240,7 +240,7 @@ int main( int argc, char* argv[])
         err = nc_open(argv[3], NC_WRITE, &ncid);
         for( unsigned j=0; j<4; j++)
         {
-            dg::blas2::symv( interpolate, karniadakis.last()[j], transferD);
+            dg::blas2::symv( interpolate, y0[j], transferD);
             transferH = transferD;//transfer to host
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
