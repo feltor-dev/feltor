@@ -152,12 +152,12 @@ int main( int argc, char* argv[])
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 //Similar to feltor grid
-                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
+                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
                 const dg::DVec w3d = dg::create::weights( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
-                std::cout <<"-----(1a) test with testfunction" << "\n";
+                std::cout <<"-----(1a) test with testfunction  (works for DIR)" << "\n";
                 solovev::TestFunction func(p,gp);
                 solovev::DeriTestFunction derifunc(p,gp);
                 std::cout << "Construct parallel  derivative\n";
@@ -165,7 +165,7 @@ int main( int argc, char* argv[])
                 t.tic();
                 dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d,g3d.hz(),gp.rk4eps,solovev::PsiLimiter(gp), g3d.bcx()); //choose bc of grid
                 t.toc();
-                std::cout << "-----> Creation of parallel Derivative took "<<t.diff()<<"s\n";
+                std::cout << "-----> Creation of parallel Derivative took"<<t.diff()<<"s\n";
 
                 dg::DVec function = dg::evaluate( func, g3d),dzfunc(function);
                 dg::DVec diff(g3d.size());
@@ -184,7 +184,7 @@ int main( int argc, char* argv[])
                 double normdiff = dg::blas2::dot( w3d, diff);
                 double reldiff=sqrt( normdiff/normsol );
                 std::cout << "Rel Diff = "<< reldiff<<"\n";
-                  std::cout <<"-----(1b) test parallel derivative created brackets with testfunction" << "\n";
+                  std::cout <<"-----(1b) test parallel derivative created brackets with testfunction  (works for DIR/NEU)" << "\n";
 //                 solovev::TestFunction func(psip);
 //                 solovev::DeriTestFunction derifunc(gp,psip,psipR,psipZ,ipol,invB);
                 std::cout << "-----> Construct parallel  derivative\n";

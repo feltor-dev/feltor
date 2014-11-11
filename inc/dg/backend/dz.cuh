@@ -63,7 +63,7 @@ void boxintegrator( Field& field, Grid& g_, const thrust::host_vector<double>& c
             if( phi1 > 0)
             {
                 double dPhiMin = 0, dPhiMax = phi1;
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
+                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle 
                 phi1 = (dPhiMin+dPhiMax)/2.;
                 dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus
             }

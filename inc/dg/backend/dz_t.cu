@@ -20,7 +20,6 @@ struct Field
             double gradpsi = ((y[0][i]-R_0)*(y[0][i]-R_0) + y[1][i]*y[1][i])/I_0/I_0;
             yp[2][i] = y[0][i]*sqrt(1 + gradpsi);
             yp[0][i] = y[0][i]*y[1][i]/I_0;
-            //yp[1][i] = -y[0][i]*y[0][i]/I_0 + R_0/I_0*y[0][i] ;
             yp[1][i] = y[0][i]/I_0*(R_0-y[0][i]) ;
         }
     }
@@ -39,7 +38,7 @@ struct Field
 //b_phi = I_0/R/sqrt(I_0*I_0+r2) = I_0/R/B
 //b_R =   Z/R/B
 double R_0 = 10;
-double I_0 = 10; //großes I macht gerade Feldlinie
+double I_0 = 1; //großes I macht gerade Feldlinie
 
 double func2d(double R, double Z)
 {
@@ -50,7 +49,11 @@ double func2d(double R, double Z)
 }
 double func(double R, double Z, double phi)
 {
-    return -func2d(R,Z)*cos(phi);
+    return -func2d(R,Z)*cos(phi); //NEU
+}
+double funcDIR(double R, double Z, double phi)
+{
+    return sin(M_PI*(Z))*sin(M_PI*(R-R_0))*sin(phi); //DIR
 }
 double modulate( double R, double Z, double phi) {return -cos(phi);}
 double deri2d(double R, double Z)
@@ -60,7 +63,18 @@ double deri2d(double R, double Z)
 double deri(double R, double Z, double phi)
 {
     //double r2 = (R-R_0)*(R-R_0)+Z*Z;
-    return sin(phi)/R;
+    return sin(phi)/R; //NEU
+}
+double deriDIR(double R, double Z, double phi)
+{
+    double dpsi2 = (R-R_0)*(R-R_0)+Z*Z;
+    double B = R_0*sqrt(I_0*I_0+dpsi2)/R;
+    double bRh = R_0*Z/B/R;
+    double bZh = -R_0*(R-R_0)/B/R;
+    double bPh = R_0*I_0/R/R/B;
+    return M_PI*bRh*sin(M_PI*(Z))*cos(M_PI*(R-R_0))*sin(phi)
+           +M_PI*bZh*cos(M_PI*(Z))*sin(M_PI*(R-R_0))*sin(phi)+
+           bPh*sin(M_PI*(Z))*sin(M_PI*(R-R_0))*cos(phi);
 }
 double deri2(double R, double Z, double phi)
 {
@@ -80,19 +94,23 @@ int main()
     std::cin >> n>> Nx>>Ny>>Nz;
     double z0 = 0, z1 = 2.*M_PI;
     //double z0 = M_PI/2., z1 = 3./2.*M_PI;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz);
+    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
     dg::Grid2d<double> g2d( R_0 - 1, R_0+1, -1, 1,  n, Nx, Ny);
+    
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-9, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::DIR);
+    
     dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
-    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-9, dg::DefaultLimiter(), dg::NEU);
+    
+    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::DIR);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
+    
     dz.set_boundaries( dg::PER, 0, 0);
     //dz.set_boundaries( dg::DIR, 0., -0.);
     //dz.set_boundaries( dg::DIR, boundary, 1, 1);
 
-    dg::DVec function = dg::evaluate( func, g3d), derivative(function), 
+    dg::DVec function = dg::evaluate( funcDIR, g3d), derivative(function), 
              dzz(dg::evaluate(deri2, g3d));
     dg::DVec function2d = dg::evaluate( func2d, g2d), derivative2d( function2d) ;
     dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( modulate, g3d));
@@ -100,7 +118,7 @@ int main()
     dg::blas1::axpby( 1., function, -1., follow);
     double diff = dg::blas2::dot( w3d, follow);
     std::cout << "Difference between function and followed evaluation: "<<diff<<"\n";
-    const dg::DVec solution = dg::evaluate( deri, g3d);
+    const dg::DVec solution = dg::evaluate( deriDIR, g3d);
     const dg::DVec solution2 = dg::evaluate( deri2, g3d);
     const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
     dz( function, derivative);

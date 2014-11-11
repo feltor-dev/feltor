@@ -112,7 +112,6 @@ int main( int argc, char* argv[])
     err1d = nc_close(ncid1d);
     double time=0.;
 
-
 //     double energy_0 =0.,U_i_0=0.,U_e_0=0.,U_phi_0=0.,U_pare_0=0.,U_pari_0=0.,mass_0=0.;
 //     os << "#Time(1) mass(2) Ue(3) Ui(4) Uphi(5) Upare(6) Upari(7) Utot(8) EDiff(9)\n";
         std::cout << "Compute safety factor   "<< "\n";
@@ -121,9 +120,6 @@ int main( int argc, char* argv[])
         dg::HVec abs = dg::evaluate( dg::coo1, grid1d_out);
         solovev::SafetyFactor<dg::HVec> qprofile(grid2d_out, gp, alphaog2d );
         dg::HVec sf = dg::evaluate(qprofile, grid1d_out);
-//             for (unsigned i=0; i<grid1d_out.size() ;i++) {
-//                 std::cout <<"psip = " << abs[i] << "  q = " << sf[i]<<std::endl;
-//             }
 
         
         
@@ -137,7 +133,7 @@ int main( int argc, char* argv[])
         err1d = nc_open(argv[2], NC_WRITE, &ncid1d);
 
         std::cout << "Timestep = " << i << "at time = " << time << "\n";
-        std::cout << "Extract 2d planes for avg 2d field and fluc at midplane and computing fsa of Phi_Avg quantities"<< "\n";
+        std::cout << "Extract 2d planes for avg 2d field and phi_fluc at midplane and computing fsa of Phi_Avg quantities"<< "\n";
      
 
         //Compute toroidal average and fluctuation at midplane for every timestep
@@ -158,27 +154,23 @@ int main( int argc, char* argv[])
                 err = nc_close(ncid);  //close 3d file
                 //Sum up avg
                 if (k==grid_out.Nz()/2) dg::blas1::axpby(1.0,data2d ,1.0,data2dflucmid );
-                dg::blas1::axpby(1.0,data2d,1.0,data2davg); //data2davg+=data2d;;
+                dg::blas1::axpby(1.0,data2d,1.0,data2davg); 
             }
 
             //Scale avg
             dg::blas1::scal(data2davg,1./grid_out.Nz());
-            dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); //data2davg+=data2d;
+            dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); 
   
             //write avg  and fluc of midplane into 2d netcdf file
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i],   start2d, count2d, data2davg.data());
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
-
     
             solovev::FluxSurfaceAverage<dg::HVec> fsa(grid2d_out,gp, data2davg );
             dg::HVec fsaofdata2davg = dg::evaluate(fsa,grid1d_out);
-
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[i], start1d, count1d,  fsaofdata2davg.data());
 
         }
-
-            err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  sf.data());
-
+        err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  sf.data());
         err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);
         err1d = nc_close(ncid1d);
         err2d = nc_put_vara_double( ncid2d, tvarID, start2d, count2d, &time);
@@ -195,7 +187,8 @@ int main( int argc, char* argv[])
         
     } //end timestepping
     //cross correleation between phi and ne
-    //relative fluctuation amplitude(psi) = delta n/n0
+    
+    //relative fluctuation amplitude(R,Z,phi) = delta n(R,Z,phi)/n0(psi)
    
     
     //Compute energys
