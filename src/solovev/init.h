@@ -236,7 +236,10 @@ struct TestFunction
 {
     TestFunction( eule::Parameters p,GeomParameters gp) :  
         p_(p),
-        gp_(gp){}
+        gp_(gp),
+        bhatR_(gp),
+        bhatZ_(gp),
+        bhatP_(gp) {}
     double operator()( double R, double Z, double phi)
     {
 //         return psip_(R,Z,phi)*sin(phi);
@@ -247,15 +250,19 @@ struct TestFunction
         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
         double kZ = 1.*M_PI/(Zmax - Zmin);
         double kP = 1.;
-        return sin(phi*kP)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
+//         return sin(phi*kP)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
 //         return cos(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ);
 //         return sin(phi*kP); //DIR
 //         return cos(phi*kP); //NEU
+                return -cos(phi*kP)/bhatP_(R,Z,phi)/R; //NEU 2
 
     }
     private:
     eule::Parameters p_;
     GeomParameters gp_;
+    BHatR bhatR_;
+    BHatZ bhatZ_;
+    BHatP bhatP_;
 };
 /**
  * @brief analyitcal solution of the parallel derivative of the testfunction
@@ -278,14 +285,16 @@ struct DeriTestFunction
         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
         double kZ = 1.*M_PI/(Zmax - Zmin);
         double kP = 1.;
-         return (bhatR_(R,Z,phi)*sin(phi)*sin((Z-Zmin)*kZ)*cos((R-Rmin)*kR)*kR+
-                bhatZ_(R,Z,phi)*sin(phi)*sin((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kZ+
-                bhatP_(R,Z,phi)*cos(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kP); //DIR
+//          return (bhatR_(R,Z,phi)*sin(phi)*sin((Z-Zmin)*kZ)*cos((R-Rmin)*kR)*kR+
+//                 bhatZ_(R,Z,phi)*sin(phi)*sin((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kZ+
+//                 bhatP_(R,Z,phi)*cos(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kP); //DIR
 //         return -bhatR_(R,Z,phi)*cos(phi)*cos((Z-Zmin)*kZ)*sin((R-Rmin)*kR)*kR-
 //                bhatZ_(R,Z,phi)*cos(phi)*cos((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kZ-
 //                bhatP_(R,Z,phi)*sin(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kP;
 //         return  bhatP_(R,Z,phi)*cos(phi*kP)*kP; //DIR
 //         return  -bhatP_(R,Z,phi)*sin(phi*kP)*kP; //NEU
+                return sin(phi*kP)*kP/R; //NEU 2
+
     }
     private:
     eule::Parameters p_;
