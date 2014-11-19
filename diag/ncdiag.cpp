@@ -5,31 +5,23 @@
 #include <string>
 
 #include "dg/backend/xspacelib.cuh"
-#include "dg/arakawa.h"
 #include "dg/functors.h"
-#include "dg/elliptic.h"
-#include "solovev/geometry.h"
-
-#include "solovev/geom_parameters.h"
-#include "feltor/parameters.h"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
+#include "solovev/geometry.h"
+#include "solovev/init.h"
 
-//read and evaluate FELTOR nc files
-
-double X( double x, double y) {return x;}
-double Y( double x, double y) {return y;}
 
 
 int main( int argc, char* argv[])
 {
     if( argc != 4)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [input.nc] [output.dat] [output2d.nc]\n";
+        std::cerr << "Usage: "<<argv[0]<<" [input.nc] [outputfsa.nc] [output2d.nc]\n";
         return -1;
     }
-    std::ofstream os( argv[2]);
+//     std::ofstream os( argv[2]);
     std::cout << argv[1]<< " -> "<<argv[2]<<" & "<<argv[3]<<std::endl;
 
     //////////////////////////////open nc file//////////////////////////////////
@@ -51,17 +43,34 @@ int main( int argc, char* argv[])
     p.display();
     gp.display();
     ///////////////////////////////////////////////////////////////////////////
-    double Rmin=gp.R_0-(p.boxscale)*gp.a;
-    double Zmin=-(p.boxscale)*gp.a*gp.elongation;
-    double Rmax=gp.R_0+(p.boxscale)*gp.a; 
-    double Zmax=(p.boxscale)*gp.a*gp.elongation;
-    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
-    dg::Grid2d<double> grid2d_out( grid_out.x0(), grid_out.x1(), grid_out.y0(), grid_out.y1(), grid_out.n(), grid_out.Nx(), grid_out.Ny());
 
+//     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+//     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+//     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+//     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    //old boxscale
+    double Rmin=gp.R_0-p.boxscaleRp*gp.a;
+    double Zmin=-p.boxscaleRp*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Zmax=p.boxscaleRp*gp.a*gp.elongation;
+
+    //3d grid
+    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+    //2d grid
+    dg::Grid2d<double>  grid2d_out( Rmin,Rmax, Zmin,Zmax,p.n_out, p.Nx_out, p.Ny_out,dg::PER,dg::PER);
+    //1d grid
+    solovev::Psip psip(gp);
+    dg::HVec psipog2d   = dg::evaluate( psip, grid2d_out);    
+    double psipmin = (float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
+    
+    unsigned Npsi = 50;//set number of psivalues
+    std::cout << "psipmin =" << psipmin << " Npsi =" << Npsi  <<std::endl;
+    dg::Grid1d<double>  grid1d_out(psipmin ,0.0, 1, Npsi,dg::DIR); //one dimensional sipgrid
+//     
     //read in midplane of electrons, ions Ue, Ui, and potential, and energy
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
     int dataIDs[5];
-    std::string names2d[10] = {"electrons_mp", "ions_mp", "Ue_mp", "Ui_mp", "potential_mp","electrons_avg", "ions_avg", "Ue_avg", "Ui_avg", "potential_avg"}; 
+    std::string names2d[10] = {"Ne_avg", "Ni_avg", "Ue_avg", "Ui_avg", "phi_avg","dNe_mp", "dNi_mp", "dUe_mp", "dUi_mp", "dphi_mp"}; 
     int dataIDs2d[10];
      //generate 2d nc file for one time step
     file::NC_Error_Handle err2d; 
@@ -75,85 +84,67 @@ int main( int argc, char* argv[])
         err2d = nc_def_var( ncid2d, names2d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs2d[i]);
     }   
     //midplane 2d fields
-    size_t count2d[3] = {1., grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    size_t count2d[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start2d[3] = {0, 0, 0};
-    size_t count[4] = {1., 1., grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    size_t count[4] = {1, 1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[4] = {0, 0, 0, 0};
     dg::HVec data2d = dg::evaluate( dg::one, grid2d_out);
     err2d = nc_close(ncid2d);
     err = nc_close(ncid); 
-    double time=0.;
-    dg::HVec one3d    = dg::evaluate( dg::one,  grid_out);
-    dg::HVec omega    = dg::evaluate( dg::one,  grid_out);
-    dg::HVec chi    = dg::evaluate( dg::one,  grid_out);
-    dg::HVec lambda    = dg::evaluate( dg::one,  grid_out);
-    dg::HVec w3d    = dg::create::weights(  grid_out);
-    dg::HVec binv    = dg::evaluate(solovev::Field(gp) , grid_out);
-    dg::ArakawaX<dg::HMatrix, dg::HVec >           arakawa (grid_out); 
-    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> lapperp(grid_out, dg::not_normed, dg::symmetric);
-
-    double energy_0 =0.,U_i_0=0.,U_e_0=0.,U_phi_0=0.,U_pare_0=0.,U_pari_0=0.,mass_0=0.;
-    os << "#Time(1) mass(2) Ue(3) Ui(4) Uphi(5) Upare(6) Upari(7) Utot(8) EDiff(9)\n";
     
+     //generate 1d nc file for one time step for the f(psi) quantities
+    std::string names1d[6] = {"Ne_fsa", "Ni_fsa", "Ue_Fsa", "Ui_fsa", "phi_fsa","q"}; 
+    int dataIDs1d[6];
+    file::NC_Error_Handle err1d; 
+    int ncid1d; 
+    err1d = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid1d);
+    err1d = nc_put_att_text( ncid1d, NC_GLOBAL, "inputfile", input.size(), input.data());
+    err1d = nc_put_att_text( ncid1d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
+    int dim_ids1d[2], tvarID1d;
+    err1d = file::define_dimensions( ncid1d, dim_ids1d, &tvarID1d, grid1d_out);
+    for( unsigned i=0; i<6; i++){
+        err1d = nc_def_var( ncid1d, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
+    }   
+//     midplane 2d fields
+    size_t count1d[2] = {1, grid1d_out.n()*grid1d_out.N()};
+    size_t start1d[2] = {0, 0};
+
+    err1d = nc_close(ncid1d);
+    double time=0.;
+
+//     double energy_0 =0.,U_i_0=0.,U_e_0=0.,U_phi_0=0.,U_pare_0=0.,U_pari_0=0.,mass_0=0.;
+//     os << "#Time(1) mass(2) Ue(3) Ui(4) Uphi(5) Upare(6) Upari(7) Utot(8) EDiff(9)\n";
+        std::cout << "Compute safety factor   "<< "\n";
+        solovev::Alpha alpha(gp); 
+        dg::HVec alphaog2d   = dg::evaluate( alpha, grid2d_out);      
+        dg::HVec abs = dg::evaluate( dg::coo1, grid1d_out);
+        solovev::SafetyFactor<dg::HVec> qprofile(grid2d_out, gp, alphaog2d );
+        dg::HVec sf = dg::evaluate(qprofile, grid1d_out);
+
+        
+        
     for( unsigned i=0; i<p.maxout; i++)//timestepping
     {
         start[0] = i; //set specific time  
         start2d[0] = i;
-        std::cout << "Timestep = " << i << "\n";
+        start1d[0] = i;
         time += p.itstp*p.dt;
         err2d = nc_open(argv[3], NC_WRITE, &ncid2d);
-        //3d macroscopic fields
-        dg::HVec ne    = dg::evaluate( dg::one,  grid_out);
-        dg::HVec ni    = dg::evaluate( dg::one,  grid_out);
-        dg::HVec logni = dg::evaluate( dg::one,  grid_out);
-        dg::HVec logne = dg::evaluate( dg::one,  grid_out);
-        dg::HVec ue    = dg::evaluate( dg::one,  grid_out);
-        dg::HVec ui    = dg::evaluate( dg::one,  grid_out);
-        dg::HVec phi    = dg::evaluate( dg::one,  grid_out);
-        
-        std::cout << "Extract midplane 2d field"<< "\n";
-        for( unsigned i=0; i<5; i++)
-        {
-            err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-                start[1] = grid_out.Nz()/2; count[1] =1.;//set midplane
-                err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
-                err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
-            err = nc_close(ncid);  //close 3d file
-            err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-                start[1] = 0; count[1] = grid_out.Nz(); //3d fields
-                err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
-                if (i==0) {
-                    err = nc_get_vara_double( ncid, dataIDs[0], start, count, ne.data()); 
-                    dg::blas1::transform( ne, ne, dg::PLUS<>(+1)); 
-                    dg::blas1::transform( ne, logne, dg::LN<double>());                
-                }
-                if (i==1) {
-                    err = nc_get_vara_double( ncid, dataIDs[i], start, count, ni.data()); 
-                    dg::blas1::transform( ni, ni, dg::PLUS<>(+1)); 
-                    dg::blas1::transform( ni, logni, dg::LN<double>());                
-                }
-                if (i==2) {
-                    err = nc_get_vara_double( ncid, dataIDs[i], start, count, ue.data()); 
-                }
-                if (i==3) {
-                    err = nc_get_vara_double( ncid, dataIDs[i], start, count, ui.data()); 
-                }
-                if (i==4) {
-                    err = nc_get_vara_double( ncid, dataIDs[i], start, count, phi.data()); 
-                }
+        err1d = nc_open(argv[2], NC_WRITE, &ncid1d);
 
-            err = nc_close(ncid); //close 3d file
-            //write midplane into 2d netcdf file
-            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i], start2d, count2d, data2d.data());
-        }
+        std::cout << "Timestep = " << i << "at time = " << time << "\n";
+        std::cout << "Extract 2d planes for avg 2d field and phi_fluc at midplane and computing fsa of Phi_Avg quantities"<< "\n";
+     
 
-        //Compute toroidal average
-        dg::HVec data2davg = dg::evaluate( dg::one, grid2d_out);    
-        std::cout << "Extract 2d planes for avg 2d field"<< "\n";
+        //Compute toroidal average and fluctuation at midplane for every timestep
+        dg::HVec data2davg = dg::evaluate( dg::one, grid2d_out);   
+        dg::HVec data2dflucmid = dg::evaluate( dg::one, grid2d_out);    
         for( unsigned i=0; i<5; i++)
         {
             dg::blas1::axpby(0.0,data2d,   0.0,data2d); //data2d=0;
             dg::blas1::axpby(0.0,data2davg,0.0,data2davg);  //data2davg=0;
+            dg::blas1::axpby(0.0,data2dflucmid ,0.0,data2dflucmid );  //data2davg=0;
+            //sum up planes
             for( unsigned k=0; k<grid_out.Nz(); k++)
             {
                 err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
@@ -162,54 +153,43 @@ int main( int argc, char* argv[])
                 err = nc_get_vara_double( ncid, dataIDs[i], start, count, data2d.data());
                 err = nc_close(ncid);  //close 3d file
                 //Sum up avg
-                dg::blas1::axpby(1.0,data2d,1.0,data2davg); //data2davg+=data2d;;
+                if (k==grid_out.Nz()/2) dg::blas1::axpby(1.0,data2d ,1.0,data2dflucmid );
+                dg::blas1::axpby(1.0,data2d,1.0,data2davg); 
             }
 
             //Scale avg
             dg::blas1::scal(data2davg,1./grid_out.Nz());
-            //write avg into 2d netcdf file
-            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2davg.data());
+            dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); 
+  
+            //write avg  and fluc of midplane into 2d netcdf file
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i],   start2d, count2d, data2davg.data());
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
+    
+            solovev::FluxSurfaceAverage<dg::HVec> fsa(grid2d_out,gp, data2davg );
+            dg::HVec fsaofdata2davg = dg::evaluate(fsa,grid1d_out);
+            err1d = nc_put_vara_double( ncid1d, dataIDs1d[i], start1d, count1d,  fsaofdata2davg.data());
 
         }
-
+        err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  sf.data());
+        err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);
+        err1d = nc_close(ncid1d);
         err2d = nc_put_vara_double( ncid2d, tvarID, start2d, count2d, &time);
         err2d = nc_close(ncid2d); //close 2d netcdf files
       
         // ---- Compute energies ----
-        std::cout << "Compute macroscopic timedependent quantities"<< "\n";
-        
+//         std::cout << "Compute macroscopic timedependent quantities"<< "\n";
+
+    
+
         //write macroscopic timedependent quantities into output.dat file
 //         os << time << " " << mass_norm << " " <<  U_e_norm <<" " <<  U_i_norm <<" " << U_phi_norm <<" " << U_pare_norm <<" " << U_pari_norm <<" "  << energy_norm <<" " << energy_diff<<std::endl;
         
         
     } //end timestepping
     //cross correleation between phi and ne
-    //relative fluctuation amplitude(psi) = delta n/n0
-    //Compute flux average
-//     std::cout << "Compute flux average of psi   "<< "\n";
-//     dg::DVec psipongrid   = dg::evaluate( psip, grid2d_out);
-//     dg::DVec psipRongrid  = dg::evaluate( psipR, grid2d_out);
-//     dg::DVec psipZongrid  = dg::evaluate( psipZ, grid2d_out);
-//     dg::DVec oneongrid    = dg::evaluate( dg::one, grid2d_out);
-//     
-//     double psipRmax = (float)thrust::reduce( psipRongrid .begin(), psipRongrid .end(),  0.,     thrust::maximum<double>()  );    
-//     double psipRmin = (float)thrust::reduce( psipRongrid .begin(), psipRongrid .end(),  psipRmax,thrust::minimum<double>()  );
-//     double psipZmax = (float)thrust::reduce( psipZongrid .begin(), psipZongrid  .end(), 0.,     thrust::maximum<double>()  );    
-//     double psipZmin = (float)thrust::reduce( psipZongrid .begin(), psipZongrid  .end(), psipZmax,thrust::minimum<double>()  );
-//     double deltapsi = abs(psipZmin/Nx/n +psipRmin/Ny/n);
-//     std::cout << "deltapsi = " << deltapsi << "\n";
-//     deltaf.setepsilon(deltapsi/4. );
-// 
-//     for (unsigned i=0;i<10;i++)
-//     {
-//         deltaf.setpsi( (double)i/(-10.));
-//         dg::DVec deltafongrid = dg::evaluate( deltaf, grid);
-//         const dg::DVec w2d = dg::create::weights( grid);
-//         double psipcut = dg::blas2::dot( psipongrid,w2d,deltafongrid); //int deltaf psip
-//         double vol     = dg::blas2::dot( oneongrid , w2d,deltafongrid); //int deltaf
-//         double psipflavg = psipcut/vol;
-//         std::cout << "psi = " << (double)i/(-10.)<< " psipflavg  = "<< psipflavg << " diff = "<< psipflavg-(double)i/(-10.)<<"\n";
-//     }
+    
+    //relative fluctuation amplitude(R,Z,phi) = delta n(R,Z,phi)/n0(psi)
+   
     
     //Compute energys
     

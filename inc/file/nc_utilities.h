@@ -122,6 +122,14 @@ int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d<d
     thrust::host_vector<double> points = dg::create::abscissas( g);
     return define_dimension( ncid, name, dimID, points.data(), points.size());
 }
+int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d<double>& g)
+{
+    int retval;    
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[1], g)));
+    if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
+
+    return retval;
+}
 /**
  * @brief Define dimensions and associate values in NetCDF-file
  *
