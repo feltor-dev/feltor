@@ -48,13 +48,11 @@ int main()
 {
     Timer t;
     unsigned n, Nx, Ny;
-    cout << "Type n, Nx and Ny! \n";
+    //cout << "Type n, Nx and Ny! \n";
     cin >> n >> Nx >> Ny;
     Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    //S2D<double > s2d( grid);
     DVec w2d = create::weights( grid);
-    cout << "# of 2d cells                     " << Nx*Ny <<endl;
-    cout << "# of Legendre nodes per dimension "<< n <<endl;
+    cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<endl;
     DVec lhs = evaluate ( left, grid), jac(lhs);
     DVec rhs = evaluate ( right,grid);
     const DVec sol = evaluate( jacobian, grid );
@@ -68,14 +66,14 @@ int main()
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    cout << "\nArakawa took "<<t.diff()*1000/(double)multi<<"ms\n\n";
+    cout << "Arakawa took "<<t.diff()*1000/(double)multi<<"ms\n";
 
-    cout << scientific;
-    cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs, w2d, jac)<<"\n";
-    cout << "Mean   n*Jacobian is "<<blas2::dot( lhs, w2d, jac)<<"\n";
-    blas1::axpby( 1., sol, -1., jac);
-    cout << "Distance to solution "<<sqrt(blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
+    //cout << scientific;
+    //cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
+    //cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs, w2d, jac)<<"\n";
+    //cout << "Mean   n*Jacobian is "<<blas2::dot( lhs, w2d, jac)<<"\n";
+    //blas1::axpby( 1., sol, -1., jac);
+    //cout << "Distance to solution "<<sqrt(blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
 
     //periocid bc       |  dirichlet in x per in y
     //n = 1 -> p = 2    |        1.5
