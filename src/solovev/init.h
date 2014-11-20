@@ -17,7 +17,7 @@ struct Iris
 {
     Iris( GeomParameters gp ): 
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -40,7 +40,7 @@ struct Pupil
 {
     Pupil( GeomParameters gp): 
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -66,7 +66,7 @@ struct PsiLimiter
 {
     PsiLimiter( GeomParameters gp): 
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
 
     double operator( )(double R, double Z)
@@ -83,31 +83,7 @@ struct PsiLimiter
     Psip psip_;
 };
 
-struct BoxLimiter
-{
-    BoxLimiter(eule::Parameters p, GeomParameters gp): 
-        p_(p),
-        gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
-        }
 
-    double operator( )(double R, double Z)
-    {
-        if      (R < gp_.R_0 - p_.boxlimscale*gp_.a)  { return 1.; }
-        else if (R > gp_.R_0 + p_.boxlimscale*gp_.a)  { return 1.; }
-        else if (Z < -p_.boxlimscale*gp_.a*gp_.elongation)  { return 1.; }
-        else if (Z >  p_.boxlimscale*gp_.a*gp_.elongation)  { return 1.; }
-        else     { return 0.;}
-    }
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
-    private:
-    eule::Parameters p_;
-    GeomParameters gp_;
-    Psip psip_;
-};
 
 /**
  * @brief Damps the outer boundary in a zone 
@@ -124,7 +100,7 @@ struct GaussianDamping
 {
     GaussianDamping( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -155,11 +131,11 @@ struct GaussianProfDamping
 {
     GaussianProfDamping( GeomParameters gp):
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmax) return 0.;
+        if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
         if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
         return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }
@@ -182,7 +158,7 @@ struct TanhSource
         TanhSource( eule::Parameters p, GeomParameters gp):
         p_(p),
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
     double operator( )(double R, double Z)
     {
@@ -210,7 +186,7 @@ struct Nprofile
      Nprofile( eule::Parameters p, GeomParameters gp):
         p_(p),
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
         }
    double operator( )(double R, double Z)
     {
@@ -235,7 +211,7 @@ struct ZonalFlow
     ZonalFlow(  eule::Parameters p,GeomParameters gp):
         p_(p),
         gp_(gp),
-        psip_(Psip(gp.R_0,gp.A,gp.c)) {
+        psip_(gp) {
     }
     double operator() (double R, double Z)
     {
@@ -248,8 +224,8 @@ struct ZonalFlow
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
     eule::Parameters p_;
+    GeomParameters gp_;
     Psip psip_;
 };
 
@@ -258,13 +234,28 @@ struct ZonalFlow
  */ 
 struct TestFunction
 {
-    TestFunction(Psip psip) : psip_(psip){}
+    TestFunction( eule::Parameters p,GeomParameters gp) :  
+        p_(p),
+        gp_(gp){}
     double operator()( double R, double Z, double phi)
     {
-        return psip_(R,Z,phi)*sin(phi);
+//         return psip_(R,Z,phi)*sin(phi);
+        double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
+        double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
+        double kR = 1.*M_PI/(Rmax - Rmin);
+        double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
+        double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
+        double kZ = 1.*M_PI/(Zmax - Zmin);
+        double kP = 1.;
+        return sin(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
+//         return cos(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ);
+//         return sin(phi*kP); //DIR
+//         return cos(phi*kP); //NEU
+
     }
     private:
-    Psip psip_;
+    eule::Parameters p_;
+    GeomParameters gp_;
 };
 /**
  * @brief analyitcal solution of the parallel derivative of the testfunction
@@ -272,18 +263,36 @@ struct TestFunction
  */ 
 struct DeriTestFunction
 {
-    DeriTestFunction(GeomParameters gp, Psip psip,PsipR psipR, PsipZ psipZ, Ipol ipol, InvB invB) :gp_(gp), psip_(psip), psipR_(psipR), psipZ_(psipZ),ipol_(ipol), invB_(invB) {}
+    DeriTestFunction( eule::Parameters p, GeomParameters gp) :
+        p_(p),
+        gp_(gp),
+        bhatR_(gp),
+        bhatZ_(gp),
+        bhatP_(gp) {}
     double operator()( double R, double Z, double phi)
     {
-        return  gp_.R_0*psip_(R,Z,phi)*ipol_(R,Z,phi)*cos(phi)*invB_(R,Z,phi)/R/R;
+        double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
+        double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
+        double kR = 1.*M_PI/(Rmax - Rmin);
+        double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
+        double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
+        double kZ = 1.*M_PI/(Zmax - Zmin);
+        double kP = 1.;
+         return bhatR_(R,Z,phi)*sin(phi)*sin((Z-Zmin)*kZ)*cos((R-Rmin)*kR)*kR+
+                bhatZ_(R,Z,phi)*sin(phi)*sin((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kZ+
+                bhatP_(R,Z,phi)*cos(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kP; //DIR
+//         return -bhatR_(R,Z,phi)*cos(phi)*cos((Z-Zmin)*kZ)*sin((R-Rmin)*kR)*kR-
+//                bhatZ_(R,Z,phi)*cos(phi)*cos((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kZ-
+//                bhatP_(R,Z,phi)*sin(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kP;
+//         return  bhatP_(R,Z,phi)*cos(phi*kP)*kP; //DIR
+//         return  -bhatP_(R,Z,phi)*sin(phi*kP)*kP; //NEU
     }
     private:
+    eule::Parameters p_;
     GeomParameters gp_;
-    Psip psip_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    Ipol ipol_;
-    InvB invB_;
+    BHatR bhatR_;
+    BHatZ bhatZ_;
+    BHatP bhatP_;
 };
 
 

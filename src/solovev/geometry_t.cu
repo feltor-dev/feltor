@@ -44,29 +44,31 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     gp.display( std::cout);
     n = p.n, Nx = p.Nx, Ny = p.Ny;
-    double Rmin=gp.R_0-p.boxscale*gp.a;
-    double Zmin=-p.boxscale*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscale*gp.a; 
-    double Zmax=p.boxscale*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
  
     //construct all geometry quantities
-    solovev::Psip psip(gp.R_0,gp.A,gp.c);
-    solovev::PsipR psipR(gp.R_0,gp.A,gp.c);
-    solovev::PsipRR psipRR(gp.R_0,gp.A,gp.c);  
-    solovev::PsipZ psipZ(gp.R_0,gp.A,gp.c);  
-    solovev::PsipZZ psipZZ(gp.R_0,gp.A,gp.c);   
-    solovev::PsipRZ psipRZ(gp.R_0,gp.A,gp.c);  
-    solovev::Ipol ipol(gp.R_0,gp.A,psip);
-    solovev::InvB invB(gp.R_0,ipol,psipR,psipZ);
-    solovev::BR bR(gp.R_0,gp.A,psipR,psipRR,psipZ,psipRZ,invB);
-    solovev::BZ bZ(gp.R_0,gp.A,psipR,psipZ,psipZZ,psipRZ,invB);
+    solovev::Psip psip(gp);
+    solovev::PsipR psipR(gp);
+    solovev::PsipRR psipRR(gp);  
+    solovev::PsipZ psipZ(gp);  
+    solovev::PsipZZ psipZZ(gp);   
+    solovev::PsipRZ psipRZ(gp);  
+    solovev::Ipol ipol(gp);
+    solovev::InvB invB(gp);
+    solovev::BR bR(gp);
+    solovev::BZ bZ(gp);
 
     //Feltor quantities
     solovev::CurvatureR curvatureR(gp);
     solovev::CurvatureZ curvatureZ(gp);
     solovev::GradLnB gradLnB(gp);
     solovev::Field field(gp);
+    solovev::FieldR fieldR(gp);
+    solovev::FieldZ fieldZ(gp);
     solovev::Iris iris(gp);
     solovev::Pupil pupil(gp);
     solovev::GaussianDamping dampgauss(gp);
@@ -169,7 +171,6 @@ for (unsigned i=0;i<g1d.size() ;i++) {
     {
         for(unsigned i=1; i<=20; i++)
         {
-
 
             colors.scalemax() = (float)thrust::reduce( visual[i].begin(), visual[i].end(), -100., thrust::maximum<double>()   );
             colors.scalemin() =  (float)thrust::reduce( visual[i].begin(), visual[i].end(), colors.scalemax() ,thrust::minimum<double>() );
