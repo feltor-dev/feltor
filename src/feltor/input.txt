@@ -8,16 +8,16 @@
 1)  n  (# of x,y-polynomials)            =   3      (3)
 2)  nx (grid points in x)                =   60 (192)
 3)  ny (grid points in y)                =   60 (192) 
-4)  nz (grid points in z)                =   11(>16)
-5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
+4)  nz (grid points in z)                =   13(>16)
+5)  dt (time step in units c_s/rho_s)    =   5e-3 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  40 
-8)  ny_out (# grid points in output field)  =  50
-9)  nz_out (# grid points in output field)  =  11
-10) itstp  (steps between outputs)          =  5  (5)
-11) total # of outputs (excluding first)    =  4000 
+7)  nx_out (# grid points in output field)  =  60 
+8)  ny_out (# grid points in output field)  =  60
+9)  nz_out (# grid points in output field)  =  13
+10) itstp  (steps between outputs)          =  1000  (5)
+11) total # of outputs (excluding first)    =  5000 
 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
@@ -44,9 +44,9 @@
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
-31) boxscale R+                             =  1.2 (a little larger than 1)
-32) boxscale R-                             =  1.2 (a little larger than 1)
-33) boxscale Z+                             =  1.2 (a little larger than 1)
-34) boxscale Z-                             =  1.2 (a little larger than 1)
+31) boxscale R+                             =  1.3 (a little larger than 1)
+32) boxscale R-                             =  1.3 (a little larger than 1)
+33) boxscale Z+                             =  1.3 (a little larger than 1)
+34) boxscale Z-                             =  1.3 (a little larger than 1)
 
 @ ------------------------------------------------------------
