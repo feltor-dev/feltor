@@ -430,9 +430,12 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
         dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);       //U K(phi)
         dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);               //dtU = dtU -0.5 U K(psi)
+    }
 
-        //parallel dynamics
-        add_parallel_dynamics( y, yp);
+    //parallel dynamics
+    add_parallel_dynamics( y, yp);
+    for( unsigned i=0; i<2; i++)
+    {
         //damping 
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
         dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 

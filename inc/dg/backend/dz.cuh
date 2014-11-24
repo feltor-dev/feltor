@@ -1,6 +1,7 @@
 
 
 #pragma once
+#include <cusp/transpose.h>
 #include "grid.h"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
@@ -23,10 +24,17 @@ struct NoLimiter
         return 0.;
     }
 };
-template < class Field>
+
+/**
+ * @brief Integrate a field line 
+ *
+ * @tparam Field Must be usable in the integrateRK4 function
+ * @tparam Grid must provide 2d boundaries x0(), x1(), y0(), and y1()
+ */
+template < class Field, class Grid>
 struct BoxIntegrator
 {
-    BoxIntegrator( Field field, const Grid2d<double>& g, double eps): field_(field), g_(g), coords_(3), coordsp_(3), eps_(eps) {}
+    BoxIntegrator( Field field, const Grid& g, double eps): field_(field), g_(g), coords_(3), coordsp_(3), eps_(eps) {}
     void set_coords( const thrust::host_vector<double>& coords){ coords_ = coords;}
     double operator()( double deltaPhi)
     {
@@ -44,28 +52,41 @@ struct BoxIntegrator
     }
     private:
     Field field_;
-    Grid2d<double> g_;
+    Grid g_;
     thrust::host_vector<double> coords_, coordsp_;
     double eps_;
 };
 
+/**
+ * @brief Integrate one field line in a given box, Result is guaranteed to lie inside the box
+ *
+ * @tparam Field Must be usable in the integrateRK4 function
+ * @tparam Grid must provide 2d boundaries x0(), x1(), y0(), and y1()
+ * @param field The field to use
+ * @param grid instance of the Grid class 
+ * @param coords0 The initial condition
+ * @param coords1 The resulting points (write only) guaranteed to lie inside the grid
+ * @param phi1 The angle (read/write) contains maximum phi on input and resulting phi on output
+ * @param eps error
+ * @param globalbcz boundary condition  (DIR or NEU)
+ */
 template< class Field, class Grid>
-void boxintegrator( Field& field, Grid& g_, const thrust::host_vector<double>& coords0, thrust::host_vector<double>& coords1, double& phi1, double eps, dg::bc globalbcz)
+void boxintegrator( Field& field, const Grid& grid, const thrust::host_vector<double>& coords0, thrust::host_vector<double>& coords1, double& phi1, double eps, dg::bc globalbcz)
 {
     dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
-    if (    !(coords1[0] >= g_.x0() && coords1[0] <= g_.x1())
-         || !(coords1[1] >= g_.y0() && coords1[1] <= g_.y1()))
+    if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())
+         || !(coords1[1] >= grid.y0() && coords1[1] <= grid.y1()))
     {
         if( globalbcz == dg::DIR)
         {
-            BoxIntegrator<Field> boxy( field, g_, eps);
+            BoxIntegrator<Field, Grid> boxy( field, grid, eps);
             boxy.set_coords( coords0); //nimm alte koordinaten
             if( phi1 > 0)
             {
                 double dPhiMin = 0, dPhiMax = phi1;
                 dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle 
                 phi1 = (dPhiMin+dPhiMax)/2.;
-                dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus
+                dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
             }
             else
             {
@@ -74,10 +95,10 @@ void boxintegrator( Field& field, Grid& g_, const thrust::host_vector<double>& c
                 phi1 = (dPhiMin+dPhiMax)/2.;
                 dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
             }
-            if (coords1[0] <= g_.x0()) { coords1[0]=g_.x0();}
-            if (coords1[0] >= g_.x1()) { coords1[0]=g_.x1();}
-            if (coords1[1] <= g_.y0()) { coords1[1]=g_.y0();}
-            if (coords1[1] >= g_.y1()) { coords1[1]=g_.y1();}
+            if (coords1[0] <= grid.x0()) { coords1[0]=grid.x0();}
+            if (coords1[0] >= grid.x1()) { coords1[0]=grid.x1();}
+            if (coords1[1] <= grid.y0()) { coords1[1]=grid.y0();}
+            if (coords1[1] >= grid.y1()) { coords1[1]=grid.y1();}
         }
         else if (globalbcz == dg::NEU )
         {
@@ -121,6 +142,8 @@ struct DZ
     * @param dzf contains result on output (write only)
     */
     void operator()( const container& f, container& dzf);
+    void forward( const container& f, container& dzf);
+    void backward( const container& f, container& dzf);
     //void dz2d( const container& f, container& dzf);
     //void dzz2d( const container& f, container& dzzf);
     /**
@@ -211,7 +234,7 @@ struct DZ
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
-    Matrix plus, minus; //interpolation matrices
+    Matrix plus, minus, plusT, minusT; //interpolation matrices
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
@@ -256,6 +279,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     }
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+    cusp::transpose( plus, plusT);
+    cusp::transpose( minus, minusT);
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
@@ -292,6 +317,22 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
+}
+template<class M, class container>
+void DZ<M,container>::forward( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    einsPlus( f, tempP);
+    dg::blas1::axpby( 1., tempP, -1., f, tempP);
+    dg::blas1::pointwiseDivide( tempP, hp, dzf);
+}
+template<class M, class container>
+void DZ<M,container>::backward( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    einsMinus( f, tempM);
+    dg::blas1::axpby( 1., tempM, -1., f, tempM);
+    dg::blas1::pointwiseDivide( tempM, hm, dzf);
 }
 
 template< class M, class container >
