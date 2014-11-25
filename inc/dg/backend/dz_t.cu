@@ -54,12 +54,12 @@ double funcNEU(double R, double Z, double phi)
 
 double funcDIR(double R, double Z, double phi)
 {
-    return sin(M_PI*(Z))*sin(M_PI*(R-R_0))*sin(phi); //DIR
+    return sin(M_PI*(Z))*sin(M_PI*(R-R_0))*sin(phi); //DIR 
 //         double dpsi2 = (R-R_0)*(R-R_0)+Z*Z;
 //     double B = R_0*sqrt(I_0*I_0+dpsi2)/R;
 //     double bPh = R_0*I_0/R/R/B;
 // 
-//     return sin(phi)/bPh/R; //DI
+//     return sin(phi)/bPh/R; //(2)
 }
 double modulate( double R, double Z, double phi) {return -cos(phi);}
 double deri2d(double R, double Z)
@@ -76,14 +76,15 @@ double deriDIR(double R, double Z, double phi)
     double bPh = R_0*I_0/R/R/B;
     return M_PI*bRh*sin(M_PI*(Z))*cos(M_PI*(R-R_0))*sin(phi)
            +M_PI*bZh*cos(M_PI*(Z))*sin(M_PI*(R-R_0))*sin(phi)+
-           bPh*sin(M_PI*(Z))*sin(M_PI*(R-R_0))*cos(phi);
-//     return cos(phi)/R;
+           bPh*sin(M_PI*(Z))*sin(M_PI*(R-R_0))*cos(phi);   //(1) 
+//     return cos(phi)/R; //(2)
 }
 double deriDIR2(double R, double Z, double phi)
 {
     double dpsi2 = (R-R_0)*(R-R_0)+Z*Z;
     double B = R_0*sqrt(I_0*I_0+dpsi2)/R;
-    return Z*R_0*sin(phi)/B/R/R/R - R_0*cos(phi)/B/R/R/R ;
+    //(1) too complicated term
+    return Z*R_0*sin(phi)/B/R/R/R - R_0*cos(phi)/B/R/R/R ; //(2)
 }
 double deriNEU(double R, double Z, double phi)
 {

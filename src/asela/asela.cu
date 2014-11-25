@@ -70,7 +70,7 @@ int main( int argc, char* argv[])
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
+    std::cout << "Constructing feltor...\n";
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
@@ -92,8 +92,7 @@ int main( int argc, char* argv[])
     //dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
     y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-    y1[2] = dg::evaluate( gaussianZ, grid);
-    dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
+
     //no field aligning
 //     y1[1] = dg::evaluate( init0, grid);
     
@@ -101,8 +100,8 @@ int main( int argc, char* argv[])
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
     feltor.initializene( y0[1], y0[0]);    
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
-    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
+    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set we = 0
+    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set wi = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
@@ -246,7 +245,15 @@ int main( int argc, char* argv[])
         //std::cin >> x;
         for( unsigned i=0; i<p.itstp; i++)
         {
+            try{ karniadakis( feltor, rolkar, y0);}
+            catch( dg::Fail& fail) { 
+                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                std::cerr << "Does Simulation respect CFL condition?\n";
+                glfwSetWindowShouldClose( w, GL_TRUE);
+                break;
+            }
             step++;
+            feltor.energies( y0); //update energetics
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //
@@ -255,13 +262,6 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
             E0 = E1;
 
-            try{ karniadakis( feltor, rolkar, y0);}
-            catch( dg::Fail& fail) { 
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                std::cerr << "Does Simulation respect CFL condition?\n";
-                glfwSetWindowShouldClose( w, GL_TRUE);
-                break;
-            }
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

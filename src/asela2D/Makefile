@@ -58,18 +58,18 @@ LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
 
-all: feltor feltor_hpc
+all: asela asela_hpc
 
-feltor: feltor.cu ../feltor/feltor.cuh
+asela: asela.cu ../asela/asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
 	
 ifeq ($(strip $(device)),mpi)
-feltor_hpc: feltor_hpc.cpp ../feltor/feltor.cuh 
+asela_hpc: asela_hpc.cpp ../asela/asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 else
-feltor_hpc: feltor_hpc.cu ../feltor/feltor.cuh 
+asela_hpc: asela_hpc.cu ../asela/asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
 endif
@@ -90,4 +90,4 @@ doc:
 	doxygen Doxyfile
 	
 clean:
-	rm -f feltor feltor_hpc geometry_t dz_geom_t
+	rm -f asela asela_hpc geometry_t dz_geom_t
