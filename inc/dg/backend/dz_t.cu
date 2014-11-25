@@ -126,7 +126,9 @@ int main()
     //dz.set_boundaries( dg::DIR, 0., -0.);
     //dz.set_boundaries( dg::DIR, boundary, 1, 1);
 
-    dg::DVec function = dg::evaluate( funcNEU, g3d), derivative(function), 
+    dg::DVec function = dg::evaluate( funcNEU, g3d), 
+             derivative(function), 
+             derivativeT(function), 
              dzz(dg::evaluate(deriNEU2, g3d));
     dg::DVec function2d = dg::evaluate( func2d, g2d), derivative2d( function2d) ;
     dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( modulate, g3d));
@@ -138,8 +140,11 @@ int main()
     const dg::DVec solution2 = dg::evaluate( deriNEU2, g3d);
     const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
     dz( function, derivative);
+    dz.centeredT( function, derivativeT);
     dz2d( function2d, derivative2d);
     dz.dzz( function, dzz);
+    double left = dg::blas2::dot( function, w3d, derivative);
+    double right = dg::blas2::dot( function, w3d, derivativeT);
     //dz( derivative, dzz);
     double norm = dg::blas2::dot( w3d, solution);
     std::cout << "Norm Solution  "<<sqrt( norm)<<"\n";
@@ -157,5 +162,6 @@ int main()
     dz.einsMinus( derivative, dzz);
     dg::blas1::axpby( 1., function, -1., dzz );
     std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" (should be zero!)\n";    
+    std::cout << "Difference in adjoint scalar product is "<< left<< " "<<right<<" "<<left+right<<"\n";    
     return 0;
 }

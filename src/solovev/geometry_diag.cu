@@ -125,9 +125,10 @@ int main( int argc, char* argv[])
     dg::DVec alphaog2d  = dg::evaluate( alpha, grid2d); 
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned npsi = 3, Npsi = 50;//set number of psivalues
-    dg::Grid1d<double> grid1d(psipmin ,0.0, npsi ,Npsi,dg::DIR);
+    dg::Grid1d<double> grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
     solovev::SafetyFactor<dg::HVec>       qprof(grid2d, gp, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof, grid1d);
+    dg::HVec abs        = dg::evaluate( dg::coo1, grid1d);
 
     
     std::string names[] = { "", "psip", "ipol", "invB","invbf", "KR", 
@@ -148,10 +149,12 @@ int main( int argc, char* argv[])
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2]; 
 
     //write 1d vectors
-    int avgID[1];
+    int avgID[2];
     err = nc_def_var( ncid, "q-profile", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[0]);
+    err = nc_def_var( ncid, "psip1d", NC_DOUBLE, 1, &dim1d_ids[0], &avgID[1]);
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, avgID[0], sf.data());
+    err = nc_put_var_double( ncid, avgID[1], abs.data());
     err = nc_redef(ncid);
 
     //write 2d vectors

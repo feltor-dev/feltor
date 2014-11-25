@@ -26,7 +26,7 @@
 18) alpha (Damping thickness)=  0.02
 19) RK4 epsilon              =  1e-5
 20) psip_min                 = -6.
-21) psip_max                 =  0.0 (> -7.4)
+21) psip_max                 =  0.3 (> -7.4)
 22) psip_max_cut             =  1e10
 23) psip_max_lim             =  1e10
 
