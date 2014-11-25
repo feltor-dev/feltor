@@ -153,5 +153,9 @@ int main()
     std::cout << "Relative Difference in DZZ is "<< sqrt( dg::blas2::dot( w3d, dzz)/norm )<<"\n";    
     dg::blas1::axpby( 1., solution2d, -1., derivative2d);
     std::cout << "Difference in DZ2d is "<< sqrt( dg::blas2::dot( w2d, derivative2d) )<<"\n";    
+    dz.einsPlus( function, derivative);
+    dz.einsMinus( derivative, dzz);
+    dg::blas1::axpby( 1., function, -1., dzz );
+    std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" (should be zero!)\n";    
     return 0;
 }

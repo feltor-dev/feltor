@@ -142,11 +142,17 @@ DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double d
     hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()), dz_(field, grid.global(), deltaPhi, eps, limit, globalbcz)
 {
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
+    //2D local grid with ghostcells
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    dg::Grid3d<double> global( grid.global()); 
+    dg::Grid3d<double> globalWG( global.x0() - global.hx(), global.x1() + global.hx(),
+                                 global.y0() - global.hy(), global.y1() + global.hy(),
+                                 global.z0(), global.z1(), 
+                                 global.n(), global.Nx(), global.Ny(), global.Nz()); 
     limiter_ = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
     ghostM.resize( g2d.size()); ghostP.resize( g2d.size());
-    //set up grid points as start for fieldline integrations
+    //set up grid points as start for fieldline integrations (but not the ghostcells)
     std::vector<dg::HVec> y( 3);
     y[0] = dg::evaluate( dg::coo1, grid.local());
     y[1] = dg::evaluate( dg::coo2, grid.local());
@@ -154,13 +160,13 @@ DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double d
     //integrate to next z-planes
     std::vector<dg::HVec> yp(y), ym(y); 
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
-    for( unsigned i=0; i<grid.local().size(); i++)
+    for( unsigned i=0; i<grid.size(); i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
         double phi1 = deltaPhi;
-        boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
+        boxintegrator( field, globalWG, coords, coordsP, phi1, eps, globalbcz);
         phi1 = -deltaPhi;
-        boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
+        boxintegrator( field, globalWG, coords, coordsM, phi1, eps, globalbcz);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }

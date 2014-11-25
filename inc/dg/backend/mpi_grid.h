@@ -143,9 +143,11 @@ struct MPI_Grid2d
  * @brief 3D MPI Grid class 
  *
  * Represents the local grid coordinates and the process topology. 
- * It just divides the given box into equal subboxes that are attributed to each process
+ * It just divides the given box into overlapping subboxes that are attributed to each process
+ * @attention
+ * The boundaries in the constructors are global boundaries, the boundaries given in the access functions are local boundaries, this is because the grid represents the information given to one process
  *
- * Note
+ * @note Note
  * that the grids of different processes overlap in the x- and y- coordinate but 
  * not in the z-coordinate.
  * Also note that a single cell is never divided across processes.
@@ -400,6 +402,28 @@ struct MPI_Grid3d
      */
     Grid3d<double> global() const {return g;}
     /**
+     * @brief Return a grid local to the calling process without ghostcells
+     *
+     * The local grid returns the unshifted values for x0(), x1(), ...
+     * @return Grid object
+     */
+    Grid3d<double> ghostless( ) const
+    {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        return Grid3d<double>( 
+                g.x0() + (g.x1()-g.x0())/(double)dims[0]*(double)coords[0], 
+                g.x0() + (g.x1()-g.x0())/(double)dims[0]*(double)(coords[0]+1), 
+                g.y0() + (g.y1()-g.y0())/(double)dims[1]*(double)coords[1], 
+                g.y0() + (g.y1()-g.y0())/(double)dims[1]*(double)(coords[1]+1), 
+                g.z0() + (g.z1()-g.z0())/(double)dims[2]*(double)coords[2], 
+                g.z0() + (g.z1()-g.z0())/(double)dims[2]*(double)(coords[2]+1), 
+                g.n(),
+                g.Nx()/dims[0],
+                g.Ny()/dims[1], 
+                g.Nz()/dims[2]);
+    }
+    /**
      * @brief Returns the pid of the process that holds the local grid surrounding a given point
      *
      * local means that there is a margin of hx, hy around the x-y planes
@@ -420,13 +444,17 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
     //points in the (outer) ghost cells layer? (note the global grid used)
-    if( x < g.x0() && x > g.x0() - g.hx()) x += g.hx();
-    if( x > g.x1() && x < g.x1() + g.hx()) x -= g.hx();
-    if( y < g.y0() && y > g.y0() - g.hy()) y += g.hy();
-    if( y > g.y1() && y < g.y1() + g.hy()) y -= g.hy();
+    if( x < g.x0() && x >= g.x0() - g.hx()) x += g.hx();
+    if( x > g.x1() && x <= g.x1() + g.hx()) x -= g.hx();
+    if( y < g.y0() && y >= g.y0() - g.hy()) y += g.hy();
+    if( y > g.y1() && y <= g.y1() + g.hy()) y -= g.hy();
     coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
     coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
     coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );
+    //if point lies on boundary of last cell ... (not so good for periodic boundaries)
+    coords[0]=(coords[0]==dims[0]) ? coords[0]-1 :coords[0];
+    coords[1]=(coords[1]==dims[1]) ? coords[1]-1 :coords[1];
+    coords[2]=(coords[2]==dims[2]) ? coords[2]-1 :coords[2];
     int rank;
     if( MPI_Cart_rank( comm, coords, &rank) == MPI_SUCCESS ) 
         return rank;

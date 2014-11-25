@@ -14,10 +14,10 @@
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
 
-const double lx = M_PI;
-const double ly = M_PI;
-dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::DIR;
+const double lx = M_PI/2.;
+const double ly = M_PI/2.;
+dg::bc bcx = dg::DIR_NEU;
+dg::bc bcy = dg::DIR_NEU;
 //const double eps = 1e-3; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
@@ -69,7 +69,7 @@ int main()
     t.tic();
     std::cout << " "<< invert( pol, x, b);
     t.toc();
-    std::cout << "Took "<<t.diff()<<"s\n";
+    //std::cout << "Took "<<t.diff()<<"s\n";
     }
 
     //compute error
