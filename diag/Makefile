@@ -56,7 +56,7 @@ LIBS 	+= -L/opt/sw/netcdf/4.3/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
-TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial feltor_video 
+TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial feltor_video ncdiag
 
 all: $(TARGETS)
 
@@ -79,7 +79,7 @@ com: com.cu
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 ncdiag: ncdiag.cpp
-	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 
 imp: imp.cu
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)

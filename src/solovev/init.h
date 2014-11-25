@@ -56,6 +56,30 @@ struct Pupil
     Psip psip_;
 };
 /**
+ * @brief Returns psi inside psipmax and psipmax outside psipmax
+ */ 
+struct PsiPupil
+{
+    PsiPupil( GeomParameters gp, double psipmax): 
+        gp_(gp),
+        psipmax_(psipmax),
+        psip_(gp) {
+        }
+    double operator( )(double R, double Z)
+    {
+        if( psip_(R,Z) > psipmax_) return psipmax_;
+        return  psip_(R,Z);
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        return (*this)(R,Z);
+    }
+    private:
+    GeomParameters gp_;
+    double psipmax_;
+    Psip psip_;
+};
+/**
  * @brief Sets values to one outside psipmaxcut, zero else
  *
  * \f$ 1 \f$, if \f$ \psi_p(R,Z) > \psi_{p,maxcut}\f$

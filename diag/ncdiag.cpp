@@ -5,7 +5,7 @@
 #include <string>
 
 #include "dg/algorithm.h"
-
+#include "dg/backend/interpolation.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
 #include "file/read_input.h"
@@ -62,12 +62,16 @@ int main( int argc, char* argv[])
     dg::Grid2d<double>  grid2d_out( Rmin,Rmax, Zmin,Zmax,p.n_out, p.Nx_out, p.Ny_out,dg::PER,dg::PER);
     //1d grid
     solovev::Psip psip(gp);
+    
     dg::HVec psipog2d   = dg::evaluate( psip, grid2d_out);    
     double psipmin = (float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
-    
+    double psipmax = 0.1;
+    solovev::PsiPupil psipupil(gp,psipmax);
+    dg::HVec psipupilog2d   = dg::evaluate( psipupil, grid2d_out);    
+
     unsigned Npsi = 50;//set number of psivalues
     std::cout << "psipmin =" << psipmin << " Npsi =" << Npsi  <<std::endl;
-    dg::Grid1d<double>  grid1d_out(psipmin ,0.0, 1, Npsi,dg::DIR); //one dimensional sipgrid
+    dg::Grid1d<double>  grid1d_out(psipmin ,psipmax, 3, Npsi,dg::DIR); //one dimensional sipgrid
 //     
     //read in midplane of electrons, ions Ue, Ui, and potential, and energy
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
@@ -123,10 +127,14 @@ int main( int argc, char* argv[])
         dg::HVec abs = dg::evaluate( dg::coo1, grid1d_out);
         solovev::SafetyFactor<dg::HVec> qprofile(grid2d_out, gp, alphaog2d );
         dg::HVec sf = dg::evaluate(qprofile, grid1d_out);
-    //perp laplacian
-    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacian(grid2d_out,dg::DIR, dg::DIR, dg::normed, dg::centered);     
-//     dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacian(grid2d_out,dg::DIR, dg::DIR, dg::normed, dg::forward);
-        
+
+    //perp laplacian for computation of vorticity
+    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacian(grid2d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::HMatrix fsaonrzmatrix;     
+    std::cout << "make fsa interpolation matrix" << std::endl;
+    fsaonrzmatrix =  dg::create::interpolation(psipupilog2d ,grid1d_out);    
+                            std::cout << "Compute safety factor   "<< "\n";
+
     for( unsigned i=0; i<p.maxout; i++)//timestepping
     {
         start[0] = i; //set specific time  
@@ -143,6 +151,7 @@ int main( int argc, char* argv[])
         //Compute toroidal average and fluctuation at midplane for every timestep
         dg::HVec data2davg = dg::evaluate( dg::one, grid2d_out);   
         dg::HVec data2dflucmid = dg::evaluate( dg::one, grid2d_out);    
+        dg::HVec data2dfsa = dg::evaluate( dg::one, grid2d_out);    
         for( unsigned i=0; i<5; i++)
         {
             dg::blas1::axpby(0.0,data2d,   0.0,data2d); //data2d=0;
@@ -163,26 +172,40 @@ int main( int argc, char* argv[])
 
             //Scale avg
             dg::blas1::scal(data2davg,1./grid_out.Nz());
-            dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); 
+            //compute z fluctuation
+//             dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); 
   
             //write avg  and fluc of midplane into 2d netcdf file
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i],   start2d, count2d, data2davg.data());
-            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
+            //write z fluctuation
+//             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
             if (i==4) {
+                //compute avg vorticity
                 dg::blas2::gemv( laplacian,data2davg,vorticity);
                 err2d = nc_put_vara_double( ncid2d, dataIDs2d[10],   start2d, count2d, vorticity.data());
+                //computa fsa of vorticity
                 solovev::FluxSurfaceAverage<dg::HVec> fsavor(grid2d_out,gp, vorticity );
                 dg::HVec fsaofvoravg = dg::evaluate(fsavor,grid1d_out);
                 err1d = nc_put_vara_double( ncid1d, dataIDs1d[6], start1d, count1d,  fsaofvoravg.data());
             }
+            //computa fsa of quantities
             solovev::FluxSurfaceAverage<dg::HVec> fsa(grid2d_out,gp, data2davg );
             dg::HVec fsaofdata2davg = dg::evaluate(fsa,grid1d_out);
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[i], start1d, count1d,  fsaofdata2davg.data());
+            
+            //compute delta f on midplane : df = f_mp - <f>
+
+            dg::blas2::gemv(fsaonrzmatrix, fsaofdata2davg, data2dfsa); //fsa on RZ grid
+            dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2dfsa,data2dflucmid); 
+
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
 
         }
+        //put safety factor into file
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  sf.data());
+        //write time data
         err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);
-        err1d = nc_close(ncid1d);
+        err1d = nc_close(ncid1d);  //close 1d netcdf files
         err2d = nc_put_vara_double( ncid2d, tvarID, start2d, count2d, &time);
         err2d = nc_close(ncid2d); //close 2d netcdf files
       

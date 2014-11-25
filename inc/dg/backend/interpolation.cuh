@@ -61,7 +61,7 @@ std::vector<double> coefficients( double xn, unsigned n)
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const Grid1d<double>& g)
 {
-    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
 
     int number = 0;
     for( unsigned i=0; i<x.size(); i++)
@@ -88,7 +88,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     dg::Operator<double> forward( g.dlt().forward());
     Matrix transformX = dg::tensor( g.N(), forward);
 
-    Matrix B;
+    Matrix B( A);
     cusp::multiply( A, transformX, B);
     B.sort_by_row_and_column();
     return B;
