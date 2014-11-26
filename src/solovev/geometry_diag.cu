@@ -16,17 +16,40 @@
 int main( int argc, char* argv[])
 {
     std::vector<double> v, v2;
-    std::string input, geom;
-    if( argc != 4)
+    std::string input, geom, newfilename;
+    if( !(argc == 4 || argc == 3))
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
+        std::cerr << "Or \n Usage: "<< argv[0]<<" [file.nc] [outputfile.nc]\n";
         return -1;
     }
     try{ 
-        input = file::read_file( argv[1]);
-        geom = file::read_file( argv[2]);
-        v = file::read_input( argv[1]); 
-        v2 = file::read_input( argv[2]);
+        if( argc == 4) 
+        {
+            newfilename = argv[3];
+            std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
+            input = file::read_file( argv[1]);
+            geom = file::read_file( argv[2]);
+        }
+        else
+        {
+            newfilename = argv[2];
+            std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
+            //////////////////////////open nc file//////////////////////////////////
+            file::NC_Error_Handle err;
+            int ncid;
+            err = nc_open( argv[1], NC_NOWRITE, &ncid);
+            ///////////////read in and show inputfile und geomfile//////////////////
+            size_t length;
+            err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
+            input.resize( length, 'x');
+            err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
+            err = nc_inq_attlen( ncid, NC_GLOBAL, "geomfile", &length);
+            geom.resize( length, 'x');
+            err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
+            nc_close( ncid);
+        }
+
     }
     catch (toefl::Message& m) {  
         m.display(); 
@@ -36,8 +59,8 @@ int main( int argc, char* argv[])
         return -1;
     }
     //write parameters from file into variables
-    const eule::Parameters p(v);
-    const solovev::GeomParameters gp(v2);
+    const eule::Parameters p(file::read_input( input));
+    const solovev::GeomParameters gp(file::read_input( geom));
     p.display( std::cout);
     gp.display( std::cout);
     unsigned n, Nx, Ny, Nz;
@@ -126,7 +149,7 @@ int main( int argc, char* argv[])
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned npsi = 3, Npsi = 50;//set number of psivalues
     dg::Grid1d<double> grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
-    solovev::SafetyFactor<dg::HVec>       qprof(grid2d, gp, alphaog2d );
+    solovev::SafetyFactor<dg::HVec>     qprof(grid2d, gp, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof, grid1d);
     dg::HVec abs        = dg::evaluate( dg::coo1, grid1d);
 
@@ -139,7 +162,7 @@ int main( int argc, char* argv[])
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
-    err = nc_create( argv[3], NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( newfilename.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
