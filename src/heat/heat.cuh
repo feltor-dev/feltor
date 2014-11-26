@@ -149,6 +149,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     double Dpar[1] = {0.0};
     double Dperp[1] = {0.0};
     S[0]    = dg::blas2::dot( one, w3d, y[0]);
+    mass_ = S[0];
     energy_ = S[0]; 
     evec[0] = S[0]; 
     dg::blas2::gemv( lapperp, y[0], lambda);

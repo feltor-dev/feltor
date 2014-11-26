@@ -56,7 +56,7 @@ struct FieldDIR
     double R_0, I_0;
 };
 double R_0 = 10;
-double I_0 = 50; //I0=20 and R=10 means q=2
+double I_0 = 20; //I0=20 and R=10 means q=2
 
 double func2d(double R, double Z)
 {
@@ -113,10 +113,10 @@ double deriNEU(double R, double Z, double phi)
 }
 double deriTNEU(double R, double Z, double phi)
 {
-    double dpsi2 = (R-R_0)*(R-R_0)+Z*Z;
-    double B = R_0*sqrt(I_0*I_0+dpsi2)/R;
-    double bPh = R_0*I_0/R/R/B;
-    double divb = Z/sqrt(I_0*I_0+dpsi2)/R;
+//     double dpsi2 = (R-R_0)*(R-R_0)+Z*Z;
+//     double B = R_0*sqrt(I_0*I_0+dpsi2)/R;
+//     double bPh = R_0*I_0/R/R/B;
+//     double divb = Z/sqrt(I_0*I_0+dpsi2)/R;
 //     return (sin(phi)/R-divb*(cos(phi)/bPh/R));
     return (I_0*sin(phi)-Z*cos(phi))/I_0/R;
 }
@@ -128,7 +128,17 @@ double deriNEU2(double R, double Z, double phi)
     double bR = Z/R/B;
     return bphi/R*cos(phi) - bR*sin(phi)/R/R ;
 }
-
+double divb(double R, double Z, double phi)
+{
+    double dpsi2 = (R-R_0)*(R-R_0)+Z*Z;
+    return Z/sqrt(I_0*I_0+dpsi2)/R;
+}
+double cut(double R, double Z, double phi)
+{
+    double psip = 0.5*((R-R_0)*(R-R_0)+Z*Z);
+    if (psip >0.5*((10.9-R_0)*(10.9-R_0)+0.9*0.9)) return 0.;
+    return 1.;
+}
 
 int main()
 {
@@ -159,8 +169,13 @@ int main()
     dg::DVec function = dg::evaluate( funcNEU, g3d), 
              derivative(function), 
              derivativeT(function), 
+             derivativeTone(function), 
              dzTdz(function), 
              dzz(dg::evaluate(deriNEU2, g3d));
+    dg::DVec ones = dg::evaluate( dg::one, g3d);
+    dg::DVec divbongrid = dg::evaluate( divb, g3d);
+    dg::DVec cutongrid = dg::evaluate( cut, g3d);
+
     dg::DVec function2d = dg::evaluate( func2d, g2d), derivative2d( function2d) ;
     dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( modulate, g3d));
     dg::blas1::pointwiseDot( follow, sinz, follow);
@@ -168,21 +183,24 @@ int main()
     double diff = dg::blas2::dot( w3d, follow);
     std::cout << "Difference between function and followed evaluation: "<<diff<<"\n";
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
-    const dg::DVec solutionT = dg::evaluate( deriTNEU, g3d);
+    dg::DVec solutionT = dg::evaluate( deriTNEU, g3d);
     const dg::DVec solution2 = dg::evaluate( deriNEU2, g3d);
     const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
     dz( function, derivative); //dz(f)
     dz.centeredT( function, derivativeT); //dzT(f)
+    dz.centeredT( ones, derivativeTone); //dzT(1)
     dz.centeredT( derivative, dzTdz);       //dzT(dz(f))
     dz2d( function2d, derivative2d);
     dz.dzz( function, dzz);
     double fdzf = dg::blas2::dot( function, w3d, derivative);
     double dzTff = dg::blas2::dot( function, w3d, derivativeT);
     double dzfdzf = dg::blas2::dot( derivative, w3d, derivative);
-    dg::DVec ones = dg::evaluate( dg::one, g3d);
-    double dzTdzf =  dg::blas2::dot( ones, w3d, dzTdz);
-    double dzzf =  dg::blas2::dot( ones, w3d, dzz);
+    double dzTdzf =  dg::blas2::dot( w3d, dzTdz);
+    double dzzf =  dg::blas2::dot( w3d, dzz);
     double fdzTdzf = dg::blas2::dot( function, w3d, dzTdz);
+    
+    dg::blas1::pointwiseDot(cutongrid,solutionT,solutionT);
+    dg::blas1::pointwiseDot(cutongrid,derivativeT,derivativeT);
     //-------------------------------------------- dz
     std::cout << "--------------------testing dz" << std::endl;
     double norm = dg::blas2::dot( w3d, solution);
@@ -202,6 +220,13 @@ int main()
     dg::blas1::axpby( 1., solutionT, -1., derivativeT);
     errT =dg::blas2::dot( w3d, derivativeT);
     std::cout << "Relative Difference in DZT is "<< sqrt( errT/normT )<<"\n";    
+    double normdivb =  dg::blas2::dot( w3d, divbongrid);  
+    std::cout << "Norm divb    "<<sqrt( normdivb)<<"\n";
+    double errTdivb =dg::blas2::dot( w3d, derivativeTone);
+    std::cout << "Norm DerivativeTone  "<<sqrt( errTdivb)<<"\n";
+    dg::blas1::axpby( 1., divbongrid, -1., derivativeTone);
+    errTdivb =dg::blas2::dot( w3d, derivativeTone);
+    std::cout << "Relative Difference in DZT is "<< sqrt( errTdivb/normdivb )<<"\n";    
     
      //-------------------------------------------- dzz
     std::cout << "--------------------testing dzz" << std::endl;   
@@ -213,10 +238,11 @@ int main()
     dz.einsPlus( function, derivative);
     dz.einsMinus( derivative, dzz);
     dg::blas1::axpby( 1., function, -1., dzz );
-    std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" (should be zero!)\n";
-    std::cout << "f DZ(f)     = "<< fdzf<< " DZT(f) f = "<<dzTff<<" diff = "<<fdzf-dzTff<<"\n";
-    std::cout << "fDZT(DZ(f)) = "<< fdzTdzf<< " DZ(f)DZ(f) = "<<-dzfdzf<<" diff = "<<fdzTdzf+dzfdzf<<"\n";        
-    std::cout << "dzz(f) = "<< dzzf<< " dzT(dz(f)) = "<< dzTdzf<<" diff = "<< dzTdzf-dzzf<<"\n";        
+    std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" !=0!\n";
+    std::cout << "--------------------testing adjoint property of dz" << std::endl;   
+    std::cout << "f DZ(f)     = "<< fdzf<< " DZT(f) f = "<<dzTff<<" diff = "<<fdzf-dzTff<<" !=0\n";
+    std::cout << "fDZT(DZ(f)) = "<< fdzTdzf<< " -DZ(f)DZ(f) = "<<-dzfdzf<<" diff = "<<fdzTdzf+dzfdzf<<" !=0\n";        
+//     std::cout << "dzz(f) = "<< dzzf<< " dzT(dz(f)) = "<< dzTdzf<<" diff = "<< dzTdzf-dzzf<<"\n";        
     
     return 0;
 }
