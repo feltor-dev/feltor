@@ -327,8 +327,8 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
     assert( &f != &dzf);
     einsPlusT( f, tempP);
     einsMinusT( f, tempM);
-    dg::blas1::axpby( 1., tempP, -1., f, tempP);
-    dg::blas1::pointwiseDivide( tempP, hp, dzf);
+    dg::blas1::axpby( 1., tempM, -1.,  tempP);
+    dg::blas1::pointwiseDivide( tempP, hz, dzf);
 }
 template<class M, class container>
 void DZ<M,container>::forward( const container& f, container& dzf)

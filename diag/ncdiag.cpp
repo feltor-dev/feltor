@@ -178,7 +178,7 @@ int main( int argc, char* argv[])
             //write avg  and fluc of midplane into 2d netcdf file
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i],   start2d, count2d, data2davg.data());
             //write z fluctuation
-//             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
+            //             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
             if (i==4) {
                 //compute avg vorticity
                 dg::blas2::gemv( laplacian,data2davg,vorticity);
