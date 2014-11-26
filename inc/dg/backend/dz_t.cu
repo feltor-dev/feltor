@@ -33,7 +33,28 @@ struct Field
     private:
     double R_0, I_0;
 };
-
+//psi = cos(0.5*pi*(R-R_0))*cos(0.5*pi*Z)
+struct FieldDIR
+{
+    FieldDIR( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp)
+    {
+        for( unsigned i=0; i<y[0].size(); i++)
+        {
+            yp[2][i] = y[0][i]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/2./sqrt(2)/I_0;            
+            yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2)/2./I_0;
+            yp[1][i] =  M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2)/2./I_0 ;
+        }
+    }
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+            yp[2] = y[0]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/2./sqrt(2.)/I_0;            
+            yp[0] = -M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2)/2./I_0;
+            yp[1] =  M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2)/2./I_0 ;
+    }
+    private:
+    double R_0, I_0;
+};
 double R_0 = 10;
 double I_0 = 50; //I0=20 and R=10 means q=2
 
@@ -90,6 +111,15 @@ double deriNEU(double R, double Z, double phi)
 {
     return sin(phi)/R;
 }
+double deriTNEU(double R, double Z, double phi)
+{
+    double dpsi2 = (R-R_0)*(R-R_0)+Z*Z;
+    double B = R_0*sqrt(I_0*I_0+dpsi2)/R;
+    double bPh = R_0*I_0/R/R/B;
+    double divb = Z/sqrt(I_0*I_0+dpsi2)/R;
+//     return (sin(phi)/R-divb*(cos(phi)/bPh/R));
+    return (I_0*sin(phi)-Z*cos(phi))/I_0/R;
+}
 double deriNEU2(double R, double Z, double phi)
 {
     double r2 = (R-R_0)*(R-R_0)+Z*Z;
@@ -138,6 +168,7 @@ int main()
     double diff = dg::blas2::dot( w3d, follow);
     std::cout << "Difference between function and followed evaluation: "<<diff<<"\n";
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
+    const dg::DVec solutionT = dg::evaluate( deriTNEU, g3d);
     const dg::DVec solution2 = dg::evaluate( deriNEU2, g3d);
     const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
     dz( function, derivative); //dz(f)
@@ -152,16 +183,30 @@ int main()
     double dzTdzf =  dg::blas2::dot( ones, w3d, dzTdz);
     double dzzf =  dg::blas2::dot( ones, w3d, dzz);
     double fdzTdzf = dg::blas2::dot( function, w3d, dzTdz);
-    //dz( derivative, dzz);
+    //-------------------------------------------- dz
+    std::cout << "--------------------testing dz" << std::endl;
     double norm = dg::blas2::dot( w3d, solution);
-    std::cout << "Norm Solution  "<<sqrt( norm)<<"\n";
+    std::cout << "Norm Solution    "<<sqrt( norm)<<"\n";
     double err =dg::blas2::dot( w3d, derivative);
-    std::cout << "Norm Derivative"<<sqrt( err)<<"\n";
+    std::cout << "Norm Derivative  "<<sqrt( err)<<"\n";
     dg::blas1::axpby( 1., solution, -1., derivative);
     err =dg::blas2::dot( w3d, derivative);
     std::cout << "Relative Difference in DZ is "<< sqrt( err/norm )<<"\n";    
+
+    //-------------------------------------------- dzT
+    std::cout << "--------------------testing dzT" << std::endl;
+    double normT = dg::blas2::dot( w3d, solutionT);
+    std::cout << "Norm SolutionT    "<<sqrt( normT)<<"\n";
+    double errT =dg::blas2::dot( w3d, derivativeT);
+    std::cout << "Norm DerivativeT  "<<sqrt( errT)<<"\n";
+    dg::blas1::axpby( 1., solutionT, -1., derivativeT);
+    errT =dg::blas2::dot( w3d, derivativeT);
+    std::cout << "Relative Difference in DZT is "<< sqrt( errT/normT )<<"\n";    
+    
+     //-------------------------------------------- dzz
+    std::cout << "--------------------testing dzz" << std::endl;   
     dg::blas1::axpby( 1., solution2, -1., dzz);
-    norm = dg::blas2::dot( w3d, solution2);
+    norm = dg::blas2::dot( w3d, solution2);  
     std::cout << "Relative Difference in DZZ is "<< sqrt( dg::blas2::dot( w3d, dzz)/norm )<<"\n";    
     dg::blas1::axpby( 1., solution2d, -1., derivative2d);
     std::cout << "Difference in DZ2d is "<< sqrt( dg::blas2::dot( w2d, derivative2d) )<<"\n";    

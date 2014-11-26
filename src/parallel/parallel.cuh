@@ -252,6 +252,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         //Compute parallel dissipative energy for N/////////////////////////////
         if( p.nu_parallel != 0)
         {
+            /*
     //         dzNEU_.set_boundaries( dg::NEU, 0, 0);
             dzNU_.dzz(y[i],omega);                                            //dz^2 N 
             dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 N 
@@ -260,7 +261,10 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
             dzNU_(y[i], dzy[i]);       
             dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
             dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N
-
+            */
+            dzNU_( y[i], omega); 
+            dzNU_.centeredT(omega,lambda);
+            dg::blas1::scal(lambda,  p.nu_parallel); 
         }
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
@@ -281,7 +285,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     //         dzNEU_.set_boundaries( dg::NEU, 0, 0);
         if( p.nu_parallel !=0)
         {
-
+/*
             dzNU_.dzz(y[i+2],omega);                                          //dz^2 U 
             dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 U 
             //gradlnBcorrection
@@ -290,6 +294,10 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
             dzNU_(y[i+2], dzy[i+2]);                                               //dz U
             dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);               // dz lnB dz U
             dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N     
+            */
+            dzNU_(y[i+2], omega); 
+            dzNU_.centeredT(omega,lambda);
+            dg::blas1::scal( lambda,  p.nu_parallel); 
         }
         dg::blas1::pointwiseDot( npe[i], y[i+2], omega); //N U   
         if( p.nu_parallel !=0)
@@ -405,13 +413,12 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
     }
 
-    for( unsigned i=0; i<2; i++)
-    {
-
 
         //parallel dynamics
         add_parallel_dynamics( y, yp);
-        energies(y);
+    for( unsigned i=0; i<2; i++)
+    {
+
         //damping 
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
         dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
