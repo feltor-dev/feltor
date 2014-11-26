@@ -59,6 +59,8 @@ int main( int argc, char* argv[])
         return -1;
     }
     //write parameters from file into variables
+    std::cout << input << std::endl;
+    std::cout << geom << std::endl;
     const eule::Parameters p(file::read_input( input));
     const solovev::GeomParameters gp(file::read_input( geom));
     p.display( std::cout);

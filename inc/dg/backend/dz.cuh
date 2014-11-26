@@ -244,6 +244,7 @@ struct DZ
     dg::bc bcz_;
     container left_, right_;
     container limiter;
+    container w3d, v3d;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -251,7 +252,7 @@ template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
-        g_(grid), bcz_(grid.bcz())
+        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
 {
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
     if( deltaPhi != grid.hz())
@@ -325,10 +326,12 @@ template<class M, class container>
 void DZ<M,container>::centeredT( const container& f, container& dzf)
 {
     assert( &f != &dzf);
-    einsPlusT( f, tempP);
-    einsMinusT( f, tempM);
-    dg::blas1::axpby( 1., tempP, -1., f, tempP);
-    dg::blas1::pointwiseDivide( tempP, hp, dzf);
+    dg::blas1::pointwiseDot( w3d, f, dzf);
+    dg::blas1::pointwiseDivide( dzf, hp, dzf);
+    einsPlusT( dzf, tempP);
+    einsMinusT( dzf, tempM);
+    dg::blas1::axpby( 1., tempP, -1., tempM);
+    dg::blas1::pointwiseDot( v3d, tempM, dzf);
 }
 template<class M, class container>
 void DZ<M,container>::forward( const container& f, container& dzf)
