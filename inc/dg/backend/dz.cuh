@@ -328,11 +328,11 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
 {
     assert( &f != &dzf);
     dg::blas1::pointwiseDot( w3d, f, dzf);
-    dg::blas1::pointwiseDivide( dzf, hp, dzf);
+    dg::blas1::pointwiseDivide( dzf, hz, dzf);
     einsPlusT( dzf, tempP);
     einsMinusT( dzf, tempM);
-    dg::blas1::axpby( 1., tempP, -1., tempM);
-    dg::blas1::pointwiseDot( v3d, tempM, dzf);
+    dg::blas1::axpby( 1., tempM, -1., tempP);
+    dg::blas1::pointwiseDot( v3d, tempP, dzf);
 }
 template<class M, class container>
 void DZ<M,container>::forward( const container& f, container& dzf)
