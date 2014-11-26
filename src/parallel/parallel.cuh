@@ -169,8 +169,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi), expy(phi), npe(phi), logn(phi),ush(phi),
     dzy( 4, chi),curvy(dzy), 
-    dzDIR_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
-    dzNU_(solovev::Field(gp), g, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+    dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
+    dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
     poisson(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
@@ -260,6 +260,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
             dzNU_(y[i], dzy[i]);       
             dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
             dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N
+
         }
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
@@ -344,6 +345,7 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
         //Parallel dissipation
         if( p.nu_parallel != 0)
         {
+            /*
     //         dzNEU_.set_boundaries( dg::NEU, 0, 0);
             dzNU_.dzz(y[i],omega);                                          //dz^2 N 
             dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
@@ -365,6 +367,16 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
             dzNU_(y[i+2], dzy[i+2]);                                   //dz U
             dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);           // dz lnB dz U
             dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
+            */
+            //TEstst
+                        
+            //testtest
+            dzNU_( y[i], omega); 
+            dzNU_.centeredT(omega,lambda);
+            dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[i]);  
+            dzNU_( y[i+2], omega); 
+            dzNU_.centeredT(omega,lambda);
+            dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[i+2]); 
         }
     }
 }

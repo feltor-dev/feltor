@@ -129,6 +129,7 @@ int main()
     dg::DVec function = dg::evaluate( funcNEU, g3d), 
              derivative(function), 
              derivativeT(function), 
+             dzTdz(function), 
              dzz(dg::evaluate(deriNEU2, g3d));
     dg::DVec function2d = dg::evaluate( func2d, g2d), derivative2d( function2d) ;
     dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( modulate, g3d));
@@ -139,12 +140,18 @@ int main()
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
     const dg::DVec solution2 = dg::evaluate( deriNEU2, g3d);
     const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
-    dz( function, derivative);
-    dz.centeredT( function, derivativeT);
+    dz( function, derivative); //dz(f)
+    dz.centeredT( function, derivativeT); //dzT(f)
+    dz.centeredT( derivative, dzTdz);       //dzT(dz(f))
     dz2d( function2d, derivative2d);
     dz.dzz( function, dzz);
-    double left = dg::blas2::dot( function, w3d, derivative);
-    double right = dg::blas2::dot( function, w3d, derivativeT);
+    double fdzf = dg::blas2::dot( function, w3d, derivative);
+    double dzTff = dg::blas2::dot( function, w3d, derivativeT);
+    double dzfdzf = dg::blas2::dot( derivative, w3d, derivative);
+    dg::DVec ones = dg::evaluate( dg::one, g3d);
+    double dzTdzf =  dg::blas2::dot( ones, w3d, dzTdz);
+    double dzzf =  dg::blas2::dot( ones, w3d, dzz);
+    double fdzTdzf = dg::blas2::dot( function, w3d, dzTdz);
     //dz( derivative, dzz);
     double norm = dg::blas2::dot( w3d, solution);
     std::cout << "Norm Solution  "<<sqrt( norm)<<"\n";
@@ -161,7 +168,10 @@ int main()
     dz.einsPlus( function, derivative);
     dz.einsMinus( derivative, dzz);
     dg::blas1::axpby( 1., function, -1., dzz );
-    std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" (should be zero!)\n";    
-    std::cout << "Difference in adjoint scalar product is "<< left<< " "<<right<<" "<<left+right<<"\n";    
+    std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" (should be zero!)\n";
+    std::cout << "f DZ(f)     = "<< fdzf<< " DZT(f) f = "<<dzTff<<" diff = "<<fdzf-dzTff<<"\n";
+    std::cout << "fDZT(DZ(f)) = "<< fdzTdzf<< " DZ(f)DZ(f) = "<<-dzfdzf<<" diff = "<<fdzTdzf+dzfdzf<<"\n";        
+    std::cout << "dzz(f) = "<< dzzf<< " dzT(dz(f)) = "<< dzTdzf<<" diff = "<< dzTdzf-dzzf<<"\n";        
+    
     return 0;
 }

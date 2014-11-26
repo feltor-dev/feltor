@@ -8,7 +8,7 @@
 2)  nx (grid points in x)                =   50 (192)
 3)  ny (grid points in y)                =   50 (192) 
 4)  nz (grid points in z)                =   15 (1)
-5)  dt (time step in units c_s/rho_s)    =   1e-2(0.01)
+5)  dt (time step in units c_s/rho_s)    =   3e-2(0.01)
 
 
 ----------------------------------Output parameters--------------------
@@ -29,8 +29,8 @@
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-3 
-20) nu_parallel  (viscosity)                =  1e-2    (0.001)
-21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
+20) nu_parallel  (viscosity)                =  100    (0.001)
+21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.1    (1.0)
