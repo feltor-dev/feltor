@@ -69,7 +69,7 @@ geometry_t: geometry_t.cu geometry.h
 	echo "Attention: No compiler warnings are issued!" 
 	
 geometry_diag: geometry_diag.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) -g
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 .PHONY: clean doc
 

@@ -9,6 +9,17 @@
 #include "../functors.h"
 #include "interpolation.cuh"
 
+struct InvB
+{
+    InvB( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    double operator()( double x, double y, double z)
+    {
+        double gradpsi = ((x-R_0)*(x-R_0) + y*y)/I_0/I_0;
+        return  x/sqrt( 1 + gradpsi)/R_0/I_0;
+    }
+    private:
+    double R_0, I_0;
+};
 //magnetic field with circular cross section and constant I
 struct Field
 {
@@ -27,6 +38,7 @@ struct Field
     {
         double gradpsi = ((y[0]-R_0)*(y[0]-R_0) + y[1]*y[1])/I_0/I_0;
         yp[2] = y[0]*sqrt(1 + gradpsi);
+        //yp[2] = y[0]*y[0]/I_0/R_0; //now we integrate B\cdot\nabla
         yp[0] = y[0]*y[1]/I_0;
         yp[1] = y[0]/I_0*(R_0-y[0]) ;
     }
@@ -143,6 +155,7 @@ double cut(double R, double Z, double phi)
 int main()
 {
     Field field( R_0, I_0);
+    InvB invb(R_0, I_0);
     std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n, Nx, Ny, Nz;
@@ -167,11 +180,15 @@ int main()
     //dz.set_boundaries( dg::DIR, boundary, 1, 1);
 
     dg::DVec function = dg::evaluate( funcNEU, g3d), 
+             temp( function),
              derivative(function), 
              derivativeT(function), 
              derivativeTone(function), 
+             inverseB( dg::evaluate(invb, g3d)),
              dzTdz(function), 
              dzz(dg::evaluate(deriNEU2, g3d));
+
+        
     dg::DVec ones = dg::evaluate( dg::one, g3d);
     dg::DVec divbongrid = dg::evaluate( divb, g3d);
     dg::DVec cutongrid = dg::evaluate( cut, g3d);
@@ -187,9 +204,17 @@ int main()
     const dg::DVec solution2 = dg::evaluate( deriNEU2, g3d);
     const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
     dz( function, derivative); //dz(f)
-    dz.centeredT( function, derivativeT); //dzT(f)
-    dz.centeredT( ones, derivativeTone); //dzT(1)
-    dz.centeredT( derivative, dzTdz);       //dzT(dz(f))
+    //dz.centeredT( function, derivative); //dz(f)
+    //dz.centeredT( ones, derivativeTone); //dzT(1)
+    //dz.centeredT( derivative, dzTdz);       //dzT(dz(f))
+    dg::blas1::pointwiseDot( inverseB, function, temp);
+    dz( temp, derivativeT); //dzT(f)
+    dg::blas1::pointwiseDivide( derivativeT, inverseB, derivativeT);
+    dz( inverseB, derivativeTone); //dzT(1)
+    dg::blas1::pointwiseDivide( derivativeTone, inverseB, derivativeTone);
+    dg::blas1::pointwiseDot( inverseB, derivative, temp);
+    dz( temp, dzTdz);       //dzT(dz(f))
+    dg::blas1::pointwiseDivide( dzTdz, inverseB, dzTdz);
     dz2d( function2d, derivative2d);
     dz.dzz( function, dzz);
     double fdzf = dg::blas2::dot( function, w3d, derivative);
@@ -201,6 +226,8 @@ int main()
     
     dg::blas1::pointwiseDot(cutongrid,solutionT,solutionT);
     dg::blas1::pointwiseDot(cutongrid,derivativeT,derivativeT);
+    //dg::blas1::pointwiseDot(cutongrid,derivativeTone,derivativeTone);
+    //dg::blas1::pointwiseDot(cutongrid,divbongrid,divbongrid);
     //-------------------------------------------- dz
     std::cout << "--------------------testing dz" << std::endl;
     double norm = dg::blas2::dot( w3d, solution);
@@ -236,7 +263,8 @@ int main()
     dg::blas1::axpby( 1., solution2d, -1., derivative2d);
     std::cout << "Difference in DZ2d is "<< sqrt( dg::blas2::dot( w2d, derivative2d) )<<"\n";    
     dz.einsPlus( function, derivative);
-    dz.einsMinus( derivative, dzz);
+    //dz.einsMinus( derivative, dzz);
+    dz.einsPlusT( derivative, dzz);
     dg::blas1::axpby( 1., function, -1., dzz );
     std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" !=0!\n";
     std::cout << "--------------------testing adjoint property of dz" << std::endl;   

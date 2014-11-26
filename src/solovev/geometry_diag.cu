@@ -150,9 +150,10 @@ int main( int argc, char* argv[])
     dg::DVec alphaog2d  = dg::evaluate( alpha, grid2d); 
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned npsi = 3, Npsi = 50;//set number of psivalues
+    psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d<double> grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
     solovev::SafetyFactor<dg::HVec>     qprof(grid2d, gp, alphaog2d );
-    dg::HVec sf         = dg::evaluate( qprof, grid1d);
+    dg::HVec sf         = dg::evaluate( qprof,    grid1d);
     dg::HVec abs        = dg::evaluate( dg::coo1, grid1d);
 
     
