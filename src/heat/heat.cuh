@@ -144,14 +144,28 @@ template<class M, class V, class P>
 void Feltor<M, V, P>::energies( std::vector<V>& y)
 {
 
-    double z[2]    = {-1.0,1.0};
+    
     double S[1]    = {0.0};    
     double Dpar[1] = {0.0};
     double Dperp[1] = {0.0};
-    double Tperp= 0.0;
-    double Dres = 0.0;
-    energy_ = S[0] ; 
-    evec[0] = S[0];  
+    S[0]    = dg::blas2::dot( one, w3d, y[0]);
+    energy_ = S[0]; 
+    evec[0] = S[0]; 
+    dg::blas2::gemv( lapperp, y[0], lambda);
+    dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
+    Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, omega);  
+    //new
+    dzNU_( y[0], omega); 
+    dzNU_.centeredT(omega,lambda);
+    Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
+    //old
+/*    dzNU_.dzz(y[0],omega);                                          //dz^2 N 
+    dzNU_(y[0],lambda);       
+    dg::blas1::pointwiseDot(gradlnB, lambda, lambda);            // dz lnB dz N
+    dg::blas1::axpby( 1., omega, -1., lambda);       
+    Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);*/  
+   
+
     //Compute rhs of energy theorem
     ediff_= Dpar[0]+Dperp[0];
 
