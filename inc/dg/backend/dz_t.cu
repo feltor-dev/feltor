@@ -192,7 +192,7 @@ int main()
     dg::DVec ones = dg::evaluate( dg::one, g3d);
     dg::DVec divbongrid = dg::evaluate( divb, g3d);
     dg::DVec cutongrid = dg::evaluate( cut, g3d);
-
+    std::cout << "--------------------testing field aligning" << std::endl;
     dg::DVec function2d = dg::evaluate( func2d, g2d), derivative2d( function2d) ;
     dg::DVec follow = dz.evaluate( func2d, 0), sinz(dg::evaluate( modulate, g3d));
     dg::blas1::pointwiseDot( follow, sinz, follow);

@@ -155,16 +155,25 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     dg::blas2::gemv( lapperp, y[0], lambda);
     dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
     Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, omega);  
-    //new
+    //adjoint operator
     dzNU_( y[0], omega); 
     dzNU_.centeredT(omega,lambda);
     Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
+    //adjoint but using old dz
+/*    dzNU_( binv, lambda); //gradpar 1/B
+    dg::blas1::pointwiseDivide(lambda,  binv, lambda); //dz lnB
+    dzNU_(y[0],omega); //dz T
+    dg::blas1::pointwiseDot(omega, lambda, omega);            // dz lnB dz N
+    dzNU_.dzz(y[0],lambda);                                          //dz^2 T 
+    dg::blas1::axpby( 1., omega,  1.,lambda );    
+    Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda); */ 
+
     //old
-/*    dzNU_.dzz(y[0],omega);                                          //dz^2 N 
-    dzNU_(y[0],lambda);       
-    dg::blas1::pointwiseDot(gradlnB, lambda, lambda);            // dz lnB dz N
-    dg::blas1::axpby( 1., omega, -1., lambda);       
-    Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);*/  
+//     dzNU_.dzz(y[0],omega);                                          //dz^2 N 
+//     dzNU_(y[0],lambda);       
+//     dg::blas1::pointwiseDot(gradlnB, lambda, lambda);            // dz lnB dz N
+//     dg::blas1::axpby( 1., omega, -1., lambda);       
+//     Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
    
 
     //Compute rhs of energy theorem
@@ -186,19 +195,28 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //compute phi via polarisation
 
     //parallel dynamics
-    //new laplace
+    //adjoint operator
     dzNU_( y[0], omega); 
     dzNU_.centeredT(omega,lambda);
     dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 
+    //adjoint but using old dz
+//     dzNU_( binv, lambda); //gradpar 1/B
+//     dg::blas1::pointwiseDivide(lambda,  binv, lambda); //dz lnB
+//     dzNU_(y[0],omega); //dz T
+//     dg::blas1::pointwiseDot(omega, lambda, omega);            // dz lnB dz N
+//     dg::blas1::axpby(p.nu_parallel, omega, 1., yp[0]);    
+//     dzNU_.dzz(y[0],omega);                                          //dz^2 T 
+//     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[0]);
+    
     //old laplace
-//     dzNU_.dzz(y[0],omega);                                          //dz^2 N 
+//     dzNU_.dzz(y[0],omega);                                          //dz^2 T 
 //     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[0]);       
 //     //gradlnBcorrection
 //     dzNU_(y[0],lambda);       
-//     dg::blas1::pointwiseDot(gradlnB, lambda, omega);            // dz lnB dz N
+//     dg::blas1::pointwiseDot(gradlnB, lambda, omega);            // dz lnB dz T
 //     dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[0]);    
-//     
+    
     //damping 
     dg::blas1::pointwiseDot( damping, yp[0], yp[0]);
 

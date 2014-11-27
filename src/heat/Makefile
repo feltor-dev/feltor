@@ -64,7 +64,11 @@ all: heat
 heat: heat.cu heat.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
-
+	
+heat_hpc: heat_hpc.cu heat.cuh 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+	echo "Attention: No compiler warnings are issued!" 
+	
 .PHONY: clean
 	
 clean:
