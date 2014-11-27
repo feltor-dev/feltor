@@ -368,11 +368,11 @@ void DZ<M,container>::backward( const container& f, container& dzf)
 }
 
 template< class M, class container >
-void symv( const container& f, container& dzTdzf)
+void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
     this->operator()( f, tempP);
     centeredT( tempP, dzTdzf);
-    dg::blas1::pointwiseDot( w3d, f, dzf); //make it symmetric
+    dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
