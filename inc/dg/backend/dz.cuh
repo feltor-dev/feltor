@@ -234,6 +234,22 @@ struct DZ
     void einsPlusT( const container& n, container& npe);
     void einsMinusT( const container& n, container& nme);
     void centeredT( const container& f, container& dzf);
+    void symv( const container& f, container& dzTdzf);
+    /**
+     * @brief Returns the weights used to make the matrix symmetric 
+     *
+     * needed by invert class
+     * @return weights
+     */
+    const container& weights()const {return w3d;}
+    /**
+     * @brief Returns the preconditioner to use in conjugate gradient
+     *
+     * needed by invert class
+     * In this case inverse weights are the best choice
+     * @return inverse weights
+     */
+    const container& precond()const {return v3d;}
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
@@ -351,6 +367,13 @@ void DZ<M,container>::backward( const container& f, container& dzf)
     dg::blas1::pointwiseDivide( tempM, hm, dzf);
 }
 
+template< class M, class container >
+void symv( const container& f, container& dzTdzf)
+{
+    this->operator()( f, tempP);
+    centeredT( tempP, dzTdzf);
+    dg::blas1::pointwiseDot( w3d, f, dzf); //make it symmetric
+}
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
 {
@@ -640,6 +663,16 @@ void DZ<M, container>::einsPlusT( const container& f, container& fme)
         }
     }
 }
+
+//enables the use of the dg::blas2::symv function 
+template< class M, class V>
+struct MatrixTraits< DZ<M, V> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+
+
 }//namespace dg
 
 

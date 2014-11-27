@@ -271,6 +271,12 @@ int main()
     std::cout << "f DZ(f)     = "<< fdzf<< " DZT(f) f = "<<dzTff<<" diff = "<<fdzf-dzTff<<" !=0\n";
     std::cout << "fDZT(DZ(f)) = "<< fdzTdzf<< " -DZ(f)DZ(f) = "<<-dzfdzf<<" diff = "<<fdzTdzf+dzfdzf<<" !=0\n";        
 //     std::cout << "dzz(f) = "<< dzzf<< " dzT(dz(f)) = "<< dzTdzf<<" diff = "<< dzTdzf-dzzf<<"\n";        
+    //---------------------------------------------------solve Matrix equation
+    double eps =1e-6;
+    dg::Invert< dg::DVec> invert( initial_guess, w3d.size(), eps );
+
+    std::cout << " # of iterations "<< invert( dz , solution  , rho ) << std::endl;
+
     
     return 0;
 }
