@@ -1,7 +1,6 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
 #include "feltor/parameters.h"
 // #include "geometry_circ.h"
 #include "solovev/geometry.h"
@@ -36,7 +35,7 @@ struct Rolkar
         temp( dg::evaluate(dg::zero, g)), chi(temp), omega(chi),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::forward)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -80,7 +79,7 @@ struct Feltor
     template<class Grid3d>
     Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
 
-    dg::DZ<Matrix, container> dz(){return dzDIR_;}
+    dg::DZ<Matrix, container> dz(){return dzNU_;}
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
 
@@ -97,14 +96,12 @@ struct Feltor
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
-    const container binv, curvR, curvZ, gradlnB;
+    const container binv, gradlnB;
     const container source, damping, one;
     const Preconditioner w3d, v3d;
 
     //matrices and solvers
-    dg::DZ<Matrix, container> dzDIR_;
     dg::DZ<Matrix, container> dzNU_;
-    dg::Poisson< Matrix, container> poisson; 
 
     dg::Elliptic< Matrix, container, Preconditioner > lapperp; 
 
@@ -122,16 +119,12 @@ template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
     binv( dg::evaluate(solovev::Field(gp) , g) ),
-    curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
-    curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
     source( dg::evaluate(solovev::TanhSource(p, gp), g)),
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
-    dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
     dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
-    poisson(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     p(p),
     gp(gp),
@@ -153,13 +146,13 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     energy_ = S[0]; 
     evec[0] = S[0]; 
     dg::blas2::gemv( lapperp, y[0], lambda);
-    dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
-    Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, omega);  
+    Dperp[0] = p.nu_perp*dg::blas2::dot(one, w3d, lambda);  
     //adjoint operator
     dzNU_( y[0], omega); 
     dzNU_.centeredT(omega,lambda);
     Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
-    //adjoint but using old dz
+//     
+//     adjoint but using old dz
 //     dzNU_( binv, lambda); //gradpar 1/B
 //     dg::blas1::pointwiseDivide(lambda,  binv, lambda); //dz lnB
 //     dzNU_(y[0],omega); //dz T
@@ -182,7 +175,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 }
 
 
-
+//do not overwrite y
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
@@ -194,6 +187,12 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     assert( y.size() == yp.size());
     //compute phi via polarisation
 
+    //perp laplacian
+//         dg::blas1::axpby( 0., x, 0, y);
+    //not linear any more (cannot be written as y = Ax)
+    dg::blas2::gemv( lapperp, y[0], omega);
+    dg::blas1::axpby( p.nu_perp, omega, 0., yp[0]);   
+    
     //parallel dynamics
     //adjoint operator
     dzNU_( y[0], omega); 
