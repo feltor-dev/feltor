@@ -3,9 +3,11 @@
 #pragma once
 #include <cusp/transpose.h>
 #include "grid.h"
+#include "blas.h"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
 #include "functions.h"
+#include "derivatives.cuh"
 #include "../functors.h"
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
@@ -254,6 +256,7 @@ struct DZ
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
+    Matrix jump;
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
@@ -267,6 +270,7 @@ struct DZ
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
+        jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
 {
@@ -373,6 +377,16 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     this->operator()( f, tempP);
     centeredT( tempP, dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
+    //dg::blas2::symv( jump, f, tempP);
+    //dg::blas1::axpby( 1., tempP, 1., dzTdzf);
+    //add jump term
+    einsPlus( f, tempP); 
+    dg::blas1::axpby( -1., tempP, 2., f, tempP);
+    einsPlusT( f, tempM); 
+    dg::blas1::axpby( -1., tempM, 1., tempP);
+    //dg::blas1::pointwiseDivide(tempP, hz, tempP);
+    //dg::blas1::pointwiseDot( w3d, tempP, tempP); //make it symmetric
+    dg::blas1::axpby( 1., tempP, 1., dzTdzf);
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
