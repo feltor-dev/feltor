@@ -127,7 +127,8 @@ template< class Functor>
 void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
 {
     assert( &u0 != &u1);
-    f(u0, u_[0]);
+    u1 = u0;
+    f(u1, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
     for( unsigned i=1; i<k-1; i++)
     {

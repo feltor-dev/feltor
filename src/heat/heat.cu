@@ -11,6 +11,7 @@
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
 #include "solovev/geometry.h"
+#include "dg/runge_kutta.h"
 
 #include "heat.cuh"
 #include "feltor/parameters.h"
@@ -57,9 +58,11 @@ int main( int argc, char* argv[])
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
-    
+//     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
+//     draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
+    //draw only average
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( (1)/v2[2]*v2[3], v2[1]*v2[4], "");
+    draw::RenderHostData render(v2[1], (1)/v2[2]); 
     //////////////////////////////////////////////////////////////////////////
     
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -94,8 +97,7 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
     y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-//     y1[2] = dg::evaluate( gaussianZ, grid);
-//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
+
     //no field aligning
 //     y1[1] = dg::evaluate( init0, grid);
     
@@ -106,15 +108,8 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
     //////////////////////////////////////////////////////////////////////////////////
-
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    std::cout << "intiialize karniadakis" << std::endl;
-    karniadakis.init( feltor, rolkar, y0, p.dt);
-    std::cout << "Done!\n";
-    //std::cout << "first karniadakis" << std::endl;
-
-    //karniadakis( feltor, rolkar, y0);     
-    //std::cout << "Done!\n";
+    //RK solver
+    dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     feltor.energies( y0);//now energies and potential are at time 0
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -131,28 +126,30 @@ int main( int argc, char* argv[])
     double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
+    dg::DVec T0 = dg::evaluate( dg::one, grid);  
+    dg::DVec T1 = dg::evaluate( dg::one, grid);  
+
+    dg::blas1::axpby( 1., y0[0], 0., T0); //initialize ni
+    dg::DVec w3d =  dg::create::weights(grid);
+    double normT0 = dg::blas2::dot(  w3d, T0);
     while ( !glfwWindowShouldClose( w ))
     {
 
-        hvisual = karniadakis.last()[0];
+        hvisual = y0[0];
         dg::blas2::gemv( equi, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
-        colors.scalemin() = -colors.scalemax();        
-        //colors.scalemin() = 1.0;
-        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-
-        title << std::setprecision(2) << std::scientific;
-        //title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"T-1 / " << colors.scalemax()<<"\t";
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
             dg::blas1::axpby(1.0,part,1.0,avisual);
-            render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+//             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::scal(avisual,1./p.Nz);
+        colors.scalemax() = (float)thrust::reduce( avisual.begin(), avisual.end(), 0., thrust::maximum<double>() );
+        colors.scalemin() = -colors.scalemax();        
+        title << std::setprecision(2) << std::scientific;
+        title <<"T-1 / " << colors.scalemax()<<"\t";
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);   
         
         title << std::fixed; 
@@ -174,17 +171,21 @@ int main( int argc, char* argv[])
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
+            dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
+            double err = sqrt(dg::blas2::dot( w3d, T1)/normT0);
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
+            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << " err =" << err << "\n";
             E0 = E1;
-
-            try{ karniadakis( feltor, rolkar, y0);}
-            catch( dg::Fail& fail) { 
+            try{
+                rk( feltor, y0, y1, p.dt);
+                y0.swap( y1);}
+              catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);
-                break;
-            }
+                break;}
+
+
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

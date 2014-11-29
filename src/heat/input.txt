@@ -15,9 +15,9 @@
 6)  n_out (# of x-y polynomials in output)  =  3
 7)  nx_out (# grid points in output field)  =  60 
 8)  ny_out (# grid points in output field)  =  60
-9)  nz_out (# grid points in output field)  =  20
+9)  nz_out (# grid points in output field)  =  1
 10) itstp  (steps between outputs)          =  50  (5)
-11) total # of outputs (excluding first)    =  5000
+11) total # of outputs (excluding first)    =  1000
 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
@@ -28,7 +28,7 @@
 16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
-19) nu_perp                                 =  0e-3 
+19) nu_perp                                 =  0e-1 
 20) nu_parallel  (viscosity)                =  1000    (0.001)
 21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
 
