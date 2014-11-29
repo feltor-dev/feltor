@@ -236,6 +236,7 @@ struct DZ
     void einsPlusT( const container& n, container& npe);
     void einsMinusT( const container& n, container& nme);
     void centeredT( const container& f, container& dzf);
+    void forwardT( const container& f, container& dzf);
     void symv( const container& f, container& dzTdzf);
     /**
      * @brief Returns the weights used to make the matrix symmetric 
@@ -363,6 +364,16 @@ void DZ<M,container>::forward( const container& f, container& dzf)
     dg::blas1::pointwiseDivide( tempP, hp, dzf);
 }
 template<class M, class container>
+void DZ<M,container>::forwardT( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    dg::blas1::pointwiseDot( w3d, f, dzf);
+    dg::blas1::pointwiseDivide( dzf, hp, dzf);
+    einsPlusT( dzf, tempP);
+    dg::blas1::axpby( 1., tempP, -1., dzf, dzf);
+    dg::blas1::pointwiseDot( v3d, dzf, dzf);
+}
+template<class M, class container>
 void DZ<M,container>::backward( const container& f, container& dzf)
 {
     assert( &f != &dzf);
@@ -374,19 +385,24 @@ void DZ<M,container>::backward( const container& f, container& dzf)
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
-    this->operator()( f, tempP);
-    centeredT( tempP, dzTdzf);
+    //this->operator()( f, tempP);
+    //centeredT( tempP, dzTdzf);
+    forward( f, tempP);
+    forwardT( tempP, dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
     //dg::blas2::symv( jump, f, tempP);
     //dg::blas1::axpby( 1., tempP, 1., dzTdzf);
-    //add jump term
+    //add jump term (unstable without it)
     einsPlus( f, tempP); 
     dg::blas1::axpby( -1., tempP, 2., f, tempP);
     einsPlusT( f, tempM); 
     dg::blas1::axpby( -1., tempM, 1., tempP);
-    //dg::blas1::pointwiseDivide(tempP, hz, tempP);
-    //dg::blas1::pointwiseDot( w3d, tempP, tempP); //make it symmetric
-    dg::blas1::axpby( 1., tempP, 1., dzTdzf);
+    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
+    einsMinusT( f, tempP); 
+    dg::blas1::axpby( -1., tempP, 2., f, tempP);
+    einsMinus( f, tempM); 
+    dg::blas1::axpby( -1., tempM, 1., tempP);
+    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)

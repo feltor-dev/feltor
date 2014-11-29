@@ -288,15 +288,17 @@ int main()
     double eps =1e-6;
     
     dg::Invert< dg::DVec> invert(dg::evaluate(dg::zero,g3d), w3d.size(), eps );
+    //dg::blas1::pointwiseDot( cutongrid, solution2T, derivative);
+    //dg::blas1::pointwiseDot( cutongrid, function, function);
     
-    std::cout << " # of iterations "<< invert( dz , temp  , solution2T ) << std::endl; //is dzTdz
+    std::cout << " # of iterations "<< invert( dz, temp, solutionT ) << std::endl; //is dzTdz
     double normf = dg::blas2::dot( w3d, function);
-    std::cout << "Norm Solution    "<<sqrt( normf)<<"\n";
+    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
     double err2T =dg::blas2::dot( w3d, temp);
-    std::cout << "Norm Derivative  "<<sqrt( err2T)<<"\n";
+    std::cout << "Norm numerical Solution "<<sqrt( err2T)<<"\n";
     dg::blas1::axpby( 1., function, -1.,temp);
     err2T =dg::blas2::dot( w3d, temp);
-    std::cout << "Relative Difference in DZ is "<< sqrt( err2T/normf )<<"\n";    
+    std::cout << "Relative Difference is  "<< sqrt( err2T/normf )<<"\n";    
 
     
     return 0;
