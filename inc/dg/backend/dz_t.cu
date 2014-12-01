@@ -217,17 +217,20 @@ int main()
     const dg::DVec solution2T = dg::evaluate( deriNEUT2, g3d);
     const dg::DVec solution2d = dg::evaluate( deri2d, g2d);
     dz( function, derivative); //dz(f)
-    //dz.centeredT( function, derivative); //dz(f)
-    //dz.centeredT( ones, derivativeTone); //dzT(1)
-    //dz.centeredT( derivative, dzTdz);       //dzT(dz(f))
-    dg::blas1::pointwiseDot( inverseB, function, temp);
-    dz( temp, derivativeT); //dzT(f)
-    dg::blas1::pointwiseDivide( derivativeT, inverseB, derivativeT);
-    dz( inverseB, derivativeTone); //dzT(1)
-    dg::blas1::pointwiseDivide( derivativeTone, inverseB, derivativeTone);
-    dg::blas1::pointwiseDot( inverseB, derivative, temp);
-    dz( temp, dzTdz);       //dzT(dz(f))
-    dg::blas1::pointwiseDivide( dzTdz, inverseB, dzTdz);
+    //adjoint
+    dz.centeredT( function, derivativeT); //dz(f)
+    dz.centeredT( ones, derivativeTone); //dzT(1)
+    dz.centeredT( derivative, dzTdz);       //dzT(dz(f))
+    //not really adjoint
+//     dg::blas1::pointwiseDot( inverseB, function, temp);
+//     dz( temp, derivativeT); //dzT(f)
+//     dg::blas1::pointwiseDivide( derivativeT, inverseB, derivativeT);
+//     dz( inverseB, derivativeTone); //dzT(1)
+//     dg::blas1::pointwiseDivide( derivativeTone, inverseB, derivativeTone);
+//     dg::blas1::pointwiseDot( inverseB, derivative, temp);
+//     dz( temp, dzTdz);       //dzT(dz(f))
+//     dg::blas1::pointwiseDivide( dzTdz, inverseB, dzTdz);
+    
     dz2d( function2d, derivative2d);
     dz.dzz( function, dzz);
     double fdzf = dg::blas2::dot( function, w3d, derivative);

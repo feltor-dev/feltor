@@ -5,15 +5,15 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   120 (192)
-3)  ny (grid points in y)                =   120 (192) 
+2)  nx (grid points in x)                =   60 (192)
+3)  ny (grid points in y)                =   60 (192) 
 4)  nz (grid points in z)                =   20 (1)
-5)  dt (time step in units c_s/rho_s)    =   1e-1(0.01)
+5)  dt (time step in units c_s/rho_s)    =   5(0.01)
 
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  120 
+7)  nx_out (# grid points in output field)  =  80 
 8)  ny_out (# grid points in output field)  =  120
 9)  nz_out (# grid points in output field)  =  1
 10) itstp  (steps between outputs)          =  50  (5)
@@ -28,14 +28,14 @@
 16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
-19) nu_perp                                 =  0e-1 
-20) nu_parallel  (viscosity)                =  1000    (0.001)
+19) nu_perp                                 =  1e-3 
+20) nu_parallel  (viscosity)                =  0   (0.001)
 21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.1    (1.0)
 23) sigma (blob variance in units of rho_s) =  2.0     (10)
-24) x-position ( in units of a)             =  0.8   (0.4)
+24) x-position ( in units of a)             =  0.6   (0.4)
 25) y-position ( in units of a)             =  0.00   (0.5)
 26) sigma_z (variance in units of R_0)      =  1.0       (12.5 for oo)
 27) k_psi (zonal modes)                     =  1.0   

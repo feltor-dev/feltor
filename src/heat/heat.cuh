@@ -146,7 +146,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     energy_ = S[0]; 
     evec[0] = S[0]; 
     dg::blas2::gemv( lapperp, y[0], lambda);
-    Dperp[0] = p.nu_perp*dg::blas2::dot(one, w3d, lambda);  
+    Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda);  
     //adjoint operator
     dzNU_( y[0], omega); 
     dzNU_.centeredT(omega,lambda);
@@ -190,10 +190,15 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //perp laplacian
 //         dg::blas1::axpby( 0., x, 0, y);
     //not linear any more (cannot be written as y = Ax)
-    dg::blas2::gemv( lapperp, y[0], omega);
-    dg::blas1::axpby( p.nu_perp, omega, 0., yp[0]);   
-    
-    //parallel dynamics
+    dg::blas2::gemv( lapperp, y[0], omega); //lap is negative
+    dg::blas1::axpby( -p.nu_perp, omega, 0., yp[0]);   
+   
+    //parallel adv
+    dzNU_.forwardT(y[0],omega);
+    dg::blas1::axpby( 1.0, omega, 1., yp[0]); 
+
+
+    //parallel dissi
     //adjoint operator
     dzNU_( y[0], omega); 
     dzNU_.centeredT(omega,lambda);

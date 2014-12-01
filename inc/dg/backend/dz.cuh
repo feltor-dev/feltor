@@ -3,7 +3,7 @@
 #pragma once
 #include <cusp/transpose.h>
 #include "grid.h"
-#include "blas.h"
+#include "../blas.h"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
 #include "functions.h"
@@ -344,17 +344,23 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
 }
+
 template<class M, class container>
 void DZ<M,container>::centeredT( const container& f, container& dzf)
 {
-    assert( &f != &dzf);
+    assert( &f != &dzf);    
     dg::blas1::pointwiseDot( w3d, f, dzf);
     dg::blas1::pointwiseDivide( dzf, hz, dzf);
     einsPlusT( dzf, tempP);
     einsMinusT( dzf, tempM);
     dg::blas1::axpby( 1., tempM, -1., tempP);
     dg::blas1::pointwiseDot( v3d, tempP, dzf);
+//   einsPlusT( f, tempP);
+//   einsMinusT( f, tempM);
+//   dg::blas1::axpby( 1., tempM, -1., tempP);
+//   dg::blas1::pointwiseDivide( tempP, hz, dzf);
 }
+
 template<class M, class container>
 void DZ<M,container>::forward( const container& f, container& dzf)
 {

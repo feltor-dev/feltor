@@ -146,11 +146,13 @@ int main()
     
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::DIR);
+    const dg::DVec v3d = dg::create::inv_weights( g3d);
+
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
     
     dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
     
-    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::DIR);
+    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
 
@@ -167,13 +169,18 @@ int main()
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
     const dg::DVec solutionT = dg::evaluate( deriNEUT, g3d);
     const dg::DVec solutiondzTdz = dg::evaluate( deriNEUT2, g3d);
+    dz.set_boundaries( dg::PER, 0, 0);
 
     dz( function, derivative); //dz(f)
     dz.centeredT( function, derivativeT); //dz(f)
     dg::blas1::pointwiseDot( inverseB, function, temp);
     dz( temp, derivativeTdz);
     dg::blas1::pointwiseDivide( derivativeTdz, inverseB, derivativeTdz);
-    dz.centeredT( derivative, dzTdz); //dz(f)
+    dz.centeredT( derivative, dzTdz); //dzT(dz(f))
+    double normdzdz =dg::blas2::dot(derivative, w3d,derivative);
+    double normdzTf = dg::blas2::dot(derivativeT, w3d, function);
+    double normfdz = dg::blas2::dot(function, w3d, derivative);
+    double normfdzTdz = dg::blas2::dot(function, w3d, dzTdz);
 
     
     std::cout << "--------------------testing dz" << std::endl;
@@ -191,7 +198,7 @@ int main()
     double errT =dg::blas2::dot( w3d, derivativeT);
     std::cout << "Norm DerivativeT  "<<sqrt( errT)<<"\n";
     dg::blas1::axpby( 1., solutionT, -1., derivativeT);
-    err =dg::blas2::dot( w3d, derivativeT);
+    errT =dg::blas2::dot( w3d, derivativeT);
     std::cout << "Relative Difference in DZT is "<< sqrt( errT/normT )<<"\n"; 
     
     std::cout << "--------------------testing dzT with dz" << std::endl;
@@ -210,6 +217,17 @@ int main()
     dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdz);
     errdzTdz =dg::blas2::dot( w3d, dzTdz);
     std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdz/normdzTdz )<<"\n"; 
+    
+    
+    dz( function, derivative); //dz(f)
+    std::cout << "--------------------testing adjointness " << std::endl;
+    std::cout << "Norm f(dz(f))    "<< normfdz<<"\n";
+    std::cout << "Norm (dzT(f))f  "<< normdzTf<<"\n";
+    std::cout << "Difference is "<< normfdz-normdzTf<<"\n";     
+ 
+    std::cout << "Norm f(dzT(dz(f)))    "<< normfdzTdz<<"\n";
+    std::cout << "Norm -dz(f)dz(f)  "<< -normdzdz<<"\n";
+    std::cout << "Difference is "<< normfdzTdz+normdzdz<<"\n";     
     
     std::cout << "--------------------testing dzT with inversion " << std::endl;
 
