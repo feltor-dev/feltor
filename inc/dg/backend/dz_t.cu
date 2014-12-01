@@ -237,8 +237,9 @@ int main()
     double dzzf =  dg::blas2::dot( w3d, dzz);
     double fdzTdzf = dg::blas2::dot( function, w3d, dzTdz);
     
-    dg::blas1::pointwiseDot(cutongrid,solutionT,solutionT);
-    dg::blas1::pointwiseDot(cutongrid,derivativeT,derivativeT);
+//     dg::blas1::pointwiseDot(cutongrid,solutionT,solutionT);
+//     dg::blas1::pointwiseDot(cutongrid,derivativeT,derivativeT);
+//     dg::blas1::pointwiseDot(cutongrid,function,function);
     //dg::blas1::pointwiseDot(cutongrid,derivativeTone,derivativeTone);
     //dg::blas1::pointwiseDot(cutongrid,divbongrid,divbongrid);
     //-------------------------------------------- dz

@@ -116,7 +116,7 @@ double deriNEUT2(double R, double Z, double phi)
                 M_PI*R*sin(M_PI*0.5*(R-R_0));
     double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
     double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
-    double func = -psi*cos(phi);
+//     double func = -psi*cos(phi);
     double deri = psi*sin(phi)/dldp;
     double fac2 = R*(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
     double fac3 = 4*I_0*cos(phi)*fac2/R;
@@ -161,6 +161,7 @@ int main()
                         inverseB( dg::evaluate(invb, g3d)),
                         derivativeT(function),
                         derivativeTdz(function),
+                        functionTinv(function),
                         dzTdz(function);
 
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
@@ -209,5 +210,19 @@ int main()
     dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdz);
     errdzTdz =dg::blas2::dot( w3d, dzTdz);
     std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdz/normdzTdz )<<"\n"; 
+    
+    std::cout << "--------------------testing dzT with inversion " << std::endl;
+
+    double eps =1e-6;    
+    dg::Invert< dg::DVec> invert(dg::evaluate(dg::zero,g3d), w3d.size(), eps );   
+    std::cout << " # of iterations "<< invert( dz, functionTinv, solutionT ) << std::endl; //is dzTdz
+    double normf = dg::blas2::dot( w3d, function);
+    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+    double errinvT =dg::blas2::dot( w3d, functionTinv);
+    std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+    dg::blas1::axpby( 1., function, -1.,functionTinv);
+    errinvT =dg::blas2::dot( w3d, functionTinv);
+    std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
     return 0;
+
 }
