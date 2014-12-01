@@ -3,9 +3,11 @@
 #pragma once
 #include <cusp/transpose.h>
 #include "grid.h"
+#include "blas.h"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
 #include "functions.h"
+#include "derivatives.cuh"
 #include "../functors.h"
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
@@ -234,6 +236,7 @@ struct DZ
     void einsPlusT( const container& n, container& npe);
     void einsMinusT( const container& n, container& nme);
     void centeredT( const container& f, container& dzf);
+    void forwardT( const container& f, container& dzf);
     void symv( const container& f, container& dzTdzf);
     /**
      * @brief Returns the weights used to make the matrix symmetric 
@@ -254,6 +257,7 @@ struct DZ
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
+    Matrix jump;
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
@@ -267,6 +271,7 @@ struct DZ
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
+        jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
 {
@@ -359,6 +364,16 @@ void DZ<M,container>::forward( const container& f, container& dzf)
     dg::blas1::pointwiseDivide( tempP, hp, dzf);
 }
 template<class M, class container>
+void DZ<M,container>::forwardT( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    dg::blas1::pointwiseDot( w3d, f, dzf);
+    dg::blas1::pointwiseDivide( dzf, hp, dzf);
+    einsPlusT( dzf, tempP);
+    dg::blas1::axpby( 1., tempP, -1., dzf, dzf);
+    dg::blas1::pointwiseDot( v3d, dzf, dzf);
+}
+template<class M, class container>
 void DZ<M,container>::backward( const container& f, container& dzf)
 {
     assert( &f != &dzf);
@@ -370,9 +385,24 @@ void DZ<M,container>::backward( const container& f, container& dzf)
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
-    this->operator()( f, tempP);
-    centeredT( tempP, dzTdzf);
+    //this->operator()( f, tempP);
+    //centeredT( tempP, dzTdzf);
+    forward( f, tempP);
+    forwardT( tempP, dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
+    //dg::blas2::symv( jump, f, tempP);
+    //dg::blas1::axpby( 1., tempP, 1., dzTdzf);
+    //add jump term (unstable without it)
+    einsPlus( f, tempP); 
+    dg::blas1::axpby( -1., tempP, 2., f, tempP);
+    einsPlusT( f, tempM); 
+    dg::blas1::axpby( -1., tempM, 1., tempP);
+    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
+    einsMinusT( f, tempP); 
+    dg::blas1::axpby( -1., tempP, 2., f, tempP);
+    einsMinus( f, tempM); 
+    dg::blas1::axpby( -1., tempM, 1., tempP);
+    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)

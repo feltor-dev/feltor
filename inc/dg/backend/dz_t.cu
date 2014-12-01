@@ -175,16 +175,16 @@ int main()
     std::cout << "q = " << I_0/R_0 << std::endl;
     double z0 = 0, z1 = 2.*M_PI;
     //double z0 = M_PI/2., z1 = 3./2.*M_PI;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz,dg::NEU, dg::NEU, dg::PER,dg::cylindrical);
     dg::Grid2d<double> g2d( R_0 - 1, R_0+1, -1, 1,  n, Nx, Ny);
     
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::DIR);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::NEU);
     
     dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
     
-    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::DIR);
+    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::NEU);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
     dz.set_boundaries( dg::PER, 0, 0);
@@ -288,15 +288,17 @@ int main()
     double eps =1e-6;
     
     dg::Invert< dg::DVec> invert(dg::evaluate(dg::zero,g3d), w3d.size(), eps );
+    //dg::blas1::pointwiseDot( cutongrid, solution2T, derivative);
+    //dg::blas1::pointwiseDot( cutongrid, function, function);
     
-    std::cout << " # of iterations "<< invert( dz , temp  , solution2T ) << std::endl; //is dzTdz
+    std::cout << " # of iterations "<< invert( dz, temp, solutionT ) << std::endl; //is dzTdz
     double normf = dg::blas2::dot( w3d, function);
-    std::cout << "Norm Solution    "<<sqrt( normf)<<"\n";
+    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
     double err2T =dg::blas2::dot( w3d, temp);
-    std::cout << "Norm Derivative  "<<sqrt( err2T)<<"\n";
+    std::cout << "Norm numerical Solution "<<sqrt( err2T)<<"\n";
     dg::blas1::axpby( 1., function, -1.,temp);
     err2T =dg::blas2::dot( w3d, temp);
-    std::cout << "Relative Difference in DZ is "<< sqrt( err2T/normf )<<"\n";    
+    std::cout << "Relative Difference is  "<< sqrt( err2T/normf )<<"\n";    
 
     
     return 0;
