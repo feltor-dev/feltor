@@ -40,16 +40,16 @@ struct Rolkar
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
-        /* x[0] := T - 1
-        */
-        dg::blas1::axpby( 0., x, 0, y);
-        //not linear any more (cannot be written as y = Ax)
-        dg::blas2::gemv( LaplacianM_perp, x[0], temp);
-        dg::blas2::gemv( LaplacianM_perp, temp, y[0]);
-        dg::blas1::scal( y[0], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
-
-        //damping
-        dg::blas1::pointwiseDot( dampgauss_, y[0], y[0]);
+//         /* x[0] := T - 1
+//         */
+//         dg::blas1::axpby( 0., x, 0, y);
+//         //not linear any more (cannot be written as y = Ax)
+//         dg::blas2::gemv( LaplacianM_perp, x[0], temp);
+//         dg::blas2::gemv( LaplacianM_perp, temp, y[0]);
+//         dg::blas1::scal( y[0], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
+// 
+//         //damping
+//         dg::blas1::pointwiseDot( dampgauss_, y[0], y[0]);
 
     }
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
