@@ -126,7 +126,7 @@ int main( int argc, char* argv[])
     std::cout << "-----(0) Check single field by integrating from 0 to 2pi (psi=0 surface)" << "\n";
     thrust::host_vector<double>  in(3);
     thrust::host_vector<double>  out(3);
-    in[0]=gp.R_0+gp.a; 
+    in[0]=gp.R_0+gp.a*0.6; 
     in[1]=0.0;
     in[2]=0.0;
     dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps);

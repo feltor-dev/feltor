@@ -73,14 +73,14 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
     //create RHS 
     
-    std::cout << "intiialize feltor" << std::endl;
+    std::cout << "initialize feltor" << std::endl;
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
-    std::cout << "intiialize rolkar" << std::endl;
+    std::cout << "initialize rolkar" << std::endl;
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
-    std::cout << "intiialize delta T" << std::endl;
+    std::cout << "initialize delta T" << std::endl;
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
@@ -99,7 +99,7 @@ int main( int argc, char* argv[])
     y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 
     //no field aligning
-//     y1[1] = dg::evaluate( init0, grid);
+//     y1[0] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
     dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
