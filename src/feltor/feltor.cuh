@@ -404,32 +404,32 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         
         //Curvature dynamics: 
 
-//         curveNU( y[i], curvy[i]);                                     //K(N) = K(N-1)
-//         curveNU( y[i+2], curvy[2+i]);                                 //K(U) 
-//         curveDIR( phi[i], curvphi[i]);                                 //K(phi) 
-//         
-//         dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega);             //U K(U) 
-//         dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K(U)
-//         dg::blas1::pointwiseDot( npe[i], omega, omega);                 //N U K(U)
-//         
-//         dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);    //dtN = dtN - (hat(mu)) N U K(U)
-//         dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[2+i]);//dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
-// 
-//         curveNU( logn[i], omega);                           //K(ln N) 
-//         dg::blas1::pointwiseDot(y[i+2], omega, omega);       //U K(ln N)
-//         dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);    //dtU = dtU - tau U K(lnN)
-//         
-//         dg::blas1::pointwiseDot( y[i+2], curvy[i], omega);   //U K( N)
-//         dg::blas1::pointwiseDot( y[i+2], omega, chi);        //U^2K( N)
-//         dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[i]);     //dtN = dtN - 0.5 mu U^2 K(N)
-// 
-//         dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);         //dtN = dtN - tau K(N)
-//         dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);  //dtU = dtU - 2 tau K(U)
-//         dg::blas1::pointwiseDot(npe[i],curvphi[i], omega);         //N K(psi)
-//         dg::blas1::axpby( -1., omega, 1., yp[i]);                  //dtN= dtN - N K(psi)
-// 
-//         dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);       //U K(phi)
-//         dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);               //dtU = dtU -0.5 U K(psi)
+        curveNU( y[i], curvy[i]);                                     //K(N) = K(N-1)
+        curveNU( y[i+2], curvy[2+i]);                                 //K(U) 
+        curveDIR( phi[i], curvphi[i]);                                 //K(phi) 
+        
+        dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega);             //U K(U) 
+        dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K(U)
+        dg::blas1::pointwiseDot( npe[i], omega, omega);                 //N U K(U)
+        
+        dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);    //dtN = dtN - (hat(mu)) N U K(U)
+        dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[2+i]);//dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
+
+        curveNU( logn[i], omega);                           //K(ln N) 
+        dg::blas1::pointwiseDot(y[i+2], omega, omega);       //U K(ln N)
+        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);    //dtU = dtU - tau U K(lnN)
+        
+        dg::blas1::pointwiseDot( y[i+2], curvy[i], omega);   //U K( N)
+        dg::blas1::pointwiseDot( y[i+2], omega, chi);        //U^2K( N)
+        dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[i]);     //dtN = dtN - 0.5 mu U^2 K(N)
+
+        dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);         //dtN = dtN - tau K(N)
+        dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);  //dtU = dtU - 2 tau K(U)
+        dg::blas1::pointwiseDot(npe[i],curvphi[i], omega);         //N K(psi)
+        dg::blas1::axpby( -1., omega, 1., yp[i]);                  //dtN= dtN - N K(psi)
+
+        dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);       //U K(phi)
+        dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);               //dtU = dtU -0.5 U K(psi)
     }
 
     //parallel dynamics
