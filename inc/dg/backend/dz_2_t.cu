@@ -51,6 +51,11 @@ double funcNEU(double R, double Z, double phi)
     double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     return -psi*cos(phi);
 }
+double funcNEU2(double R, double Z, double phi)
+{
+    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
+    return -psi*cos(phi)+0.5*(R-R_0)*0.5*(R-R_0) +Z*0.5*0.5*(R-R_0) ;
+}
 double deriNEU(double R, double Z, double phi)
 {
     double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
@@ -160,29 +165,51 @@ int main()
     dg::DVec function = dg::evaluate( funcNEU, g3d) ,
                         temp( function),
                         derivative(function),
+                        derivativeones(function),
+                        derivative2(function),
                         inverseB( dg::evaluate(invb, g3d)),
                         derivativeT(function),
+                        derivativeT2(function),
+                        derivativeTones(function),
                         derivativeTdz(function),
                         functionTinv(function),
-                        dzTdz(function);
+                        dzTdz(function),
+                        dzTdz2(function);
 
+
+    dg::DVec ones = dg::evaluate( dg::one, g3d);
+    const dg::DVec function2 = dg::evaluate( funcNEU2, g3d);
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
     const dg::DVec solutionT = dg::evaluate( deriNEUT, g3d);
     const dg::DVec solutiondzTdz = dg::evaluate( deriNEUT2, g3d);
     dz.set_boundaries( dg::PER, 0, 0);
 
     dz( function, derivative); //dz(f)
+    dz( ones, derivativeones); //dz(f)
+    dz( function2, derivative2); //dz(f)
+
     dz.centeredT( function, derivativeT); //dz(f)
+    dz.centeredT( function2, derivativeT2); //dz(f)
+    dz.centeredT( ones, derivativeTones); //dz(f)
     dg::blas1::pointwiseDot( inverseB, function, temp);
     dz( temp, derivativeTdz);
     dg::blas1::pointwiseDivide( derivativeTdz, inverseB, derivativeTdz);
     dz.centeredT( derivative, dzTdz); //dzT(dz(f))
-    double normdzdz =dg::blas2::dot(derivative, w3d,derivative);
-    double normdzTf = dg::blas2::dot(derivativeT, w3d, function);
-    double normfdz = dg::blas2::dot(function, w3d, derivative);
-    double normfdzTdz = dg::blas2::dot(function, w3d, dzTdz);
+    dz.centeredT( derivative2, dzTdz2); //dzT(dz(f))
 
+    double normdzdz =dg::blas2::dot(derivative2, w3d,derivative2);
+    double normdz1dz =dg::blas2::dot(derivativeones, w3d,derivative2);
+
+    double normdzTf = dg::blas2::dot(derivativeT2, w3d, function2);
+    double normdzT1 = dg::blas2::dot(derivativeTones, w3d, function2);
+    double normfdz = dg::blas2::dot(function2, w3d, derivative2);
+    double norm1dz = dg::blas2::dot(ones, w3d, derivative2);
+    double normfdzTdz = dg::blas2::dot(function2, w3d, dzTdz2);
+    double norm1dzTdz = dg::blas2::dot(ones, w3d, dzTdz2);
+  
     
+       
+ 
     std::cout << "--------------------testing dz" << std::endl;
     double norm = dg::blas2::dot( w3d, solution);
     std::cout << "Norm Solution    "<<sqrt( norm)<<"\n";
@@ -192,7 +219,7 @@ int main()
     err =dg::blas2::dot( w3d, derivative);
     std::cout << "Relative Difference in DZ is "<< sqrt( err/norm )<<"\n"; 
 
-     std::cout << "--------------------testing dzT" << std::endl;
+    std::cout << "--------------------testing dzT" << std::endl;
     double normT = dg::blas2::dot( w3d, solutionT);
     std::cout << "Norm SolutionT    "<<sqrt( normT)<<"\n";
     double errT =dg::blas2::dot( w3d, derivativeT);
@@ -216,19 +243,24 @@ int main()
     std::cout << "Norm DerivativeTdz  "<<sqrt( errTdz)<<"\n";
     dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdz);
     errdzTdz =dg::blas2::dot( w3d, dzTdz);
-    std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdz/normdzTdz )<<"\n"; 
+    std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdz/normdzTdz )<<"\n";     
     
-    
-    dz( function, derivative); //dz(f)
     std::cout << "--------------------testing adjointness " << std::endl;
-    std::cout << "Norm f(dz(f))    "<< normfdz<<"\n";
-    std::cout << "Norm (dzT(f))f  "<< normdzTf<<"\n";
-    std::cout << "Difference is "<< normfdz-normdzTf<<"\n";     
+    std::cout << "<f,dz(f)>   = "<< normfdz<<"\n";
+    std::cout << "-<dzT(f),f> = "<< -normdzTf<<"\n";
+    std::cout << "Diff        = "<< normfdz+normdzTf<<"\n";     
  
-    std::cout << "Norm f(dzT(dz(f)))    "<< normfdzTdz<<"\n";
-    std::cout << "Norm -dz(f)dz(f)  "<< -normdzdz<<"\n";
-    std::cout << "Difference is "<< normfdzTdz+normdzdz<<"\n";     
+    std::cout << "<1,dz(f)>   = "<< norm1dz<<"\n";
+    std::cout << "-<dzT(1),f> = "<< -normdzT1<<"\n";
+    std::cout << "Diff        = "<< norm1dz+normdzT1<<"\n";   
     
+    std::cout << "<f,dzT(dz(f))> = "<< normfdzTdz<<"\n";
+    std::cout << "-<dz(f),dz(f)> = "<< -normdzdz<<"\n";
+    std::cout << "Diff           = "<< normfdzTdz+normdzdz<<"\n";     
+   
+    std::cout << "<1,dzT(dz(f))> = "<< norm1dzTdz<<"\n";
+    std::cout << "-<dz(1),dz(f)> = "<< -normdz1dz<<"\n";
+    std::cout << "Diff           = "<< norm1dzTdz+normdz1dz<<"\n";    
     std::cout << "--------------------testing dzT with inversion " << std::endl;
 
     double eps =1e-6;    

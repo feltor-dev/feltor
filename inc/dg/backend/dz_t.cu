@@ -199,7 +199,6 @@ int main()
              inverseB( dg::evaluate(invb, g3d)),
              dzTdz(function), 
              dzz(dg::evaluate(deriNEU2, g3d));
-
         
     dg::DVec ones = dg::evaluate( dg::one, g3d);
     dg::DVec divbongrid = dg::evaluate( divb, g3d);

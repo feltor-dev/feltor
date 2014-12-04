@@ -81,8 +81,8 @@ int main( int argc, char* argv[])
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
     std::cout << "initialize delta T" << std::endl;
-    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+    dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
+//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
@@ -93,18 +93,20 @@ int main( int argc, char* argv[])
     solovev::Nprofile prof(p, gp); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     //field aligning
-    std::cout << "T aligning" << std::endl;  
+//     std::cout << "T aligning" << std::endl;  
 //     dg::CONSTANT gaussianZ( 1.);
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+//     y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 
     //no field aligning
-//     y1[0] = dg::evaluate( init0, grid);
+    std::cout << "No T aligning" << std::endl;  
+    
+    y1[0] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
-    dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
+//     dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
 
-    dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
+//     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     std::cout << "Done!\n";
 
     //////////////////////////////////////////////////////////////////////////////////
@@ -134,8 +136,8 @@ int main( int argc, char* argv[])
     double normT0 = dg::blas2::dot(  w3d, T0);
     while ( !glfwWindowShouldClose( w ))
     {
-
         hvisual = y0[0];
+        dg::blas1::transform(hvisual,hvisual , dg::PLUS<>(-1)); //npe = N+1
         dg::blas2::gemv( equi, hvisual, visual);
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz;k++)
@@ -148,6 +150,7 @@ int main( int argc, char* argv[])
         dg::blas1::scal(avisual,1./p.Nz);
         colors.scalemax() = (float)thrust::reduce( avisual.begin(), avisual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();        
+//                 colors.scalemin() =  (float)thrust::reduce( avisual.begin(), avisual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
         title <<"T-1 / " << colors.scalemax()<<"\t";
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);   
