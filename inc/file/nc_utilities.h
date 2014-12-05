@@ -85,7 +85,7 @@ int define_time( int ncid, const char* name, int* dimID, int* tvarID)
 }
 
 /**
- * @brief Define a dimension variable together with its data points
+ * @brief Define a 1d dimension variable together with its data points
  *
  * @param ncid file ID
  * @param name Name of dimension
@@ -108,7 +108,7 @@ int define_dimension( int ncid, const char* name, int* dimID, const double * poi
 }
 
 /**
- * @brief Define a dimension variable together with its data points
+ * @brief Define a 1d dimension variable together with its data points
  *
  * @param ncid file ID
  * @param name Name of dimension
@@ -122,17 +122,74 @@ int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d<d
     thrust::host_vector<double> points = dg::create::abscissas( g);
     return define_dimension( ncid, name, dimID, points.data(), points.size());
 }
+
+/**
+ * @brief Define a 1d time-dependent dimension variable together with its data points
+ *
+ * Dimensions are named x, and time
+ * @param ncid file ID
+ * @param dimIDs dimension ID
+ * @param tvarID time ID
+ * @param g The 1d DG grid from which data points are generated
+ *
+ * @return netcdf error code if any
+ */
 int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d<double>& g)
 {
     int retval;    
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[1], g)));
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[1], g))){ return retval;}
     if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
 
     return retval;
 }
 /**
- * @brief Define dimensions and associate values in NetCDF-file
+ * @brief Define 2d dimensions and associate values in NetCDF-file
  *
+ * Dimensions are named x, y
+ * @param ncid file ID 
+ * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x) 
+ * @param g The 2d grid from which to derive the dimensions
+ *
+ * @return if anything goes wrong it returns the netcdf code, else SUCCESS
+ * @note File stays in define mode
+ */
+int define_dimensions( int ncid, int* dimsIDs, const dg::Grid2d<double>& g)
+{
+    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    int retval;
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
+
+    return retval;
+}
+/**
+ * @brief Define 2d time-dependent dimensions and associate values in NetCDF-file
+ *
+ * Dimensions are named x, y, and time
+ * @param ncid file ID 
+ * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x) 
+ * @param tvarID (write - only) The ID of the time variable
+ * @param g The 2d grid from which to derive the dimensions
+ *
+ * @return if anything goes wrong it returns the netcdf code, else SUCCESS
+ * @note File stays in define mode
+ */
+int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<double>& g)
+{
+    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    int retval;
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
+    if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
+
+    return retval;
+}
+/**
+ * @brief Define 3d dimensions and associate values in NetCDF-file
+ *
+ * Dimensions are named x, y, z
  * @param ncid file ID 
  * @param dimsIDs (write - only) 3D array of dimension IDs (z,y,x) 
  * @param g The grid from which to derive the dimensions
@@ -153,8 +210,9 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::Grid3d<double>& g)
 }
 
 /**
- * @brief Define dimensions and associate values in NetCDF-file
+ * @brief Define 3d time-dependent dimensions and associate values in NetCDF-file
  *
+ * Dimensions are named x, y, z, and time
  * @param ncid file ID 
  * @param dimsIDs (write - only) 4D array of dimension IDs (time, z,y,x) 
  * @param tvarID (write - only) The ID of the time variable
@@ -171,28 +229,6 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid3d<dou
     return retval;
 }
 
-/**
- * @brief Define dimensions and associate values in NetCDF-file
- *
- * @param ncid file ID 
- * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x) 
- * @param tvarID (write - only) The ID of the time variable
- * @param g The 2d grid from which to derive the dimensions
- *
- * @return if anything goes wrong it returns the netcdf code, else SUCCESS
- * @note File stays in define mode
- */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<double>& g)
-{
-    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
-    int retval;
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx)));
-    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy)));
-    if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
-
-    return retval;
-}
 
 
 } //namespace file

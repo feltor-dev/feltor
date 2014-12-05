@@ -69,9 +69,19 @@ struct Parameters
             bgprofamp = v[29];
             amp_source = v[30];
             boxscaleRp = v[31];
-            boxscaleRm = v[32];
-            boxscaleZp = v[33];
-            boxscaleZm = v[34];
+            if( v.size() > 32)
+            {
+                boxscaleRm = v[32];
+                boxscaleZp = v[33];
+                boxscaleZm = v[34];
+            }
+            else //old files don't have boxscales
+            {
+                boxscaleRm = v[31];
+                boxscaleZp = v[31];
+                boxscaleZm = v[31];
+            }
+
         }
     }
     /**

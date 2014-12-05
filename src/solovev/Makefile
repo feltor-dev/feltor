@@ -58,16 +58,20 @@ LIBS    += -L/opt/sw/netcdf/4.0.1/intel-hdf5/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
-all: dz_geom_t geometry_t
+all: dz_geom_t geometry_t geometry_diag
 
 dz_geom_t: dz_geom_t.cu geometry.h 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)  -DDGDEBUG -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
+
 	
 geometry_t: geometry_t.cu geometry.h 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 	
+geometry_diag: geometry_diag.cu geometry.h 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) 
+	echo "Attention: No compiler warnings are issued!" 
 .PHONY: clean doc
 
 doc: 

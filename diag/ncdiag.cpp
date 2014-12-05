@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 
+#include "dg/algorithm.h"
+#include "dg/backend/interpolation.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
 #include "file/read_input.h"
@@ -44,34 +46,38 @@ int main( int argc, char* argv[])
     gp.display();
     ///////////////////////////////////////////////////////////////////////////
 
-//     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-//     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-//     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
-//     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-    //old boxscale
-    double Rmin=gp.R_0-p.boxscaleRp*gp.a;
-    double Zmin=-p.boxscaleRp*gp.a*gp.elongation;
+    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
-    double Zmax=p.boxscaleRp*gp.a*gp.elongation;
+    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    //old boxscale
+//     double Rmin=gp.R_0-p.boxscaleRp*gp.a;
+//     double Zmin=-p.boxscaleRp*gp.a*gp.elongation;
+//     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+//     double Zmax=p.boxscaleRp*gp.a*gp.elongation;
 
     //3d grid
-    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1., dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //2d grid
     dg::Grid2d<double>  grid2d_out( Rmin,Rmax, Zmin,Zmax,p.n_out, p.Nx_out, p.Ny_out,dg::PER,dg::PER);
     //1d grid
     solovev::Psip psip(gp);
+    
     dg::HVec psipog2d   = dg::evaluate( psip, grid2d_out);    
     double psipmin = (float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
-    
+    double psipmax = 0.1;
+    solovev::PsiPupil psipupil(gp,psipmax);
+    dg::HVec psipupilog2d   = dg::evaluate( psipupil, grid2d_out);    
+
     unsigned Npsi = 50;//set number of psivalues
     std::cout << "psipmin =" << psipmin << " Npsi =" << Npsi  <<std::endl;
-    dg::Grid1d<double>  grid1d_out(psipmin ,0.0, 1, Npsi,dg::DIR); //one dimensional sipgrid
+    dg::Grid1d<double>  grid1d_out(psipmin ,psipmax, 3, Npsi,dg::DIR); //one dimensional sipgrid
 //     
     //read in midplane of electrons, ions Ue, Ui, and potential, and energy
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
     int dataIDs[5];
-    std::string names2d[10] = {"Ne_avg", "Ni_avg", "Ue_avg", "Ui_avg", "phi_avg","dNe_mp", "dNi_mp", "dUe_mp", "dUi_mp", "dphi_mp"}; 
-    int dataIDs2d[10];
+    std::string names2d[11] = {"Ne_avg", "Ni_avg", "Ue_avg", "Ui_avg", "phi_avg","dNe_mp", "dNi_mp", "dUe_mp", "dUi_mp", "dphi_mp","vor_avg"}; 
+    int dataIDs2d[11];
      //generate 2d nc file for one time step
     file::NC_Error_Handle err2d; 
     int ncid2d; 
@@ -80,7 +86,7 @@ int main( int argc, char* argv[])
     err2d = nc_put_att_text( ncid2d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[3], tvarID;
     err2d = file::define_dimensions( ncid2d, dim_ids, &tvarID, grid2d_out);
-    for( unsigned i=0; i<10; i++){
+    for( unsigned i=0; i<11; i++){
         err2d = nc_def_var( ncid2d, names2d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs2d[i]);
     }   
     //midplane 2d fields
@@ -89,12 +95,13 @@ int main( int argc, char* argv[])
     size_t count[4] = {1, 1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[4] = {0, 0, 0, 0};
     dg::HVec data2d = dg::evaluate( dg::one, grid2d_out);
+    dg::HVec vorticity = dg::evaluate( dg::one, grid2d_out);
     err2d = nc_close(ncid2d);
     err = nc_close(ncid); 
     
      //generate 1d nc file for one time step for the f(psi) quantities
-    std::string names1d[6] = {"Ne_fsa", "Ni_fsa", "Ue_Fsa", "Ui_fsa", "phi_fsa","q"}; 
-    int dataIDs1d[6];
+    std::string names1d[7] = {"Ne_fsa", "Ni_fsa", "Ue_Fsa", "Ui_fsa", "phi_fsa","q","vor_fsa"}; 
+    int dataIDs1d[7];
     file::NC_Error_Handle err1d; 
     int ncid1d; 
     err1d = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid1d);
@@ -102,7 +109,7 @@ int main( int argc, char* argv[])
     err1d = nc_put_att_text( ncid1d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids1d[2], tvarID1d;
     err1d = file::define_dimensions( ncid1d, dim_ids1d, &tvarID1d, grid1d_out);
-    for( unsigned i=0; i<6; i++){
+    for( unsigned i=0; i<7; i++){
         err1d = nc_def_var( ncid1d, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
 //     midplane 2d fields
@@ -121,8 +128,13 @@ int main( int argc, char* argv[])
         solovev::SafetyFactor<dg::HVec> qprofile(grid2d_out, gp, alphaog2d );
         dg::HVec sf = dg::evaluate(qprofile, grid1d_out);
 
-        
-        
+    //perp laplacian for computation of vorticity
+    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacian(grid2d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::HMatrix fsaonrzmatrix;     
+    std::cout << "make fsa interpolation matrix" << std::endl;
+    fsaonrzmatrix =  dg::create::interpolation(psipupilog2d ,grid1d_out);    
+                            std::cout << "Compute safety factor   "<< "\n";
+
     for( unsigned i=0; i<p.maxout; i++)//timestepping
     {
         start[0] = i; //set specific time  
@@ -139,6 +151,7 @@ int main( int argc, char* argv[])
         //Compute toroidal average and fluctuation at midplane for every timestep
         dg::HVec data2davg = dg::evaluate( dg::one, grid2d_out);   
         dg::HVec data2dflucmid = dg::evaluate( dg::one, grid2d_out);    
+        dg::HVec data2dfsa = dg::evaluate( dg::one, grid2d_out);    
         for( unsigned i=0; i<5; i++)
         {
             dg::blas1::axpby(0.0,data2d,   0.0,data2d); //data2d=0;
@@ -159,20 +172,40 @@ int main( int argc, char* argv[])
 
             //Scale avg
             dg::blas1::scal(data2davg,1./grid_out.Nz());
-            dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); 
+            //compute z fluctuation
+//             dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); 
   
             //write avg  and fluc of midplane into 2d netcdf file
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i],   start2d, count2d, data2davg.data());
-            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
-    
+            //write z fluctuation
+            //             err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
+            if (i==4) {
+                //compute avg vorticity
+                dg::blas2::gemv( laplacian,data2davg,vorticity);
+                err2d = nc_put_vara_double( ncid2d, dataIDs2d[10],   start2d, count2d, vorticity.data());
+                //computa fsa of vorticity
+                solovev::FluxSurfaceAverage<dg::HVec> fsavor(grid2d_out,gp, vorticity );
+                dg::HVec fsaofvoravg = dg::evaluate(fsavor,grid1d_out);
+                err1d = nc_put_vara_double( ncid1d, dataIDs1d[6], start1d, count1d,  fsaofvoravg.data());
+            }
+            //computa fsa of quantities
             solovev::FluxSurfaceAverage<dg::HVec> fsa(grid2d_out,gp, data2davg );
             dg::HVec fsaofdata2davg = dg::evaluate(fsa,grid1d_out);
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[i], start1d, count1d,  fsaofdata2davg.data());
+            
+            //compute delta f on midplane : df = f_mp - <f>
+
+            dg::blas2::gemv(fsaonrzmatrix, fsaofdata2davg, data2dfsa); //fsa on RZ grid
+            dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2dfsa,data2dflucmid); 
+
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
 
         }
+        //put safety factor into file
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  sf.data());
+        //write time data
         err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);
-        err1d = nc_close(ncid1d);
+        err1d = nc_close(ncid1d);  //close 1d netcdf files
         err2d = nc_put_vara_double( ncid2d, tvarID, start2d, count2d, &time);
         err2d = nc_close(ncid2d); //close 2d netcdf files
       

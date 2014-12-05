@@ -1,8 +1,11 @@
 #pragma once
+#include <cusp/transpose.h>
 #include "grid.h"
+#include "../blas.h"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
 #include "functions.h"
+#include "derivatives.cuh"
 #include "../functors.h"
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
@@ -22,10 +25,16 @@ return 0.;
 }
 };
 
-template < class Field>
+/**
+ * @brief Integrate a field line 
+ *
+ * @tparam Field Must be usable in the integrateRK4 function
+ * @tparam Grid must provide 2d boundaries x0(), x1(), y0(), and y1()
+ */
+template < class Field, class Grid>
 struct BoxIntegrator
 {
-    BoxIntegrator( Field field, const Grid2d<double>& g, double eps): field_(field), g_(g), coords_(3), coordsp_(3), eps_(eps) {}
+    BoxIntegrator( Field field, const Grid& g, double eps): field_(field), g_(g), coords_(3), coordsp_(3), eps_(eps) {}
     void set_coords( const thrust::host_vector<double>& coords){ coords_ = coords;}
     double operator()( double deltaPhi)
     {
@@ -43,28 +52,41 @@ struct BoxIntegrator
     }
     private:
     Field field_;
-    Grid2d<double> g_;
+    Grid g_;
     thrust::host_vector<double> coords_, coordsp_;
     double eps_;
 };
 
+/**
+ * @brief Integrate one field line in a given box, Result is guaranteed to lie inside the box
+ *
+ * @tparam Field Must be usable in the integrateRK4 function
+ * @tparam Grid must provide 2d boundaries x0(), x1(), y0(), and y1()
+ * @param field The field to use
+ * @param grid instance of the Grid class 
+ * @param coords0 The initial condition
+ * @param coords1 The resulting points (write only) guaranteed to lie inside the grid
+ * @param phi1 The angle (read/write) contains maximum phi on input and resulting phi on output
+ * @param eps error
+ * @param globalbcz boundary condition  (DIR or NEU)
+ */
 template< class Field, class Grid>
-void boxintegrator( Field& field, Grid& g_, const thrust::host_vector<double>& coords0, thrust::host_vector<double>& coords1, double& phi1, double eps, dg::bc globalbcz)
+void boxintegrator( Field& field, const Grid& grid, const thrust::host_vector<double>& coords0, thrust::host_vector<double>& coords1, double& phi1, double eps, dg::bc globalbcz)
 {
     dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
-    if (    !(coords1[0] >= g_.x0() && coords1[0] <= g_.x1())
-         || !(coords1[1] >= g_.y0() && coords1[1] <= g_.y1()))
+    if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())
+         || !(coords1[1] >= grid.y0() && coords1[1] <= grid.y1()))
     {
         if( globalbcz == dg::DIR)
         {
-            BoxIntegrator<Field> boxy( field, g_, eps);
+            BoxIntegrator<Field, Grid> boxy( field, grid, eps);
             boxy.set_coords( coords0); //nimm alte koordinaten
             if( phi1 > 0)
             {
                 double dPhiMin = 0, dPhiMax = phi1;
                 dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle 
                 phi1 = (dPhiMin+dPhiMax)/2.;
-                dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus
+                dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
             }
             else
             {
@@ -73,10 +95,10 @@ void boxintegrator( Field& field, Grid& g_, const thrust::host_vector<double>& c
                 phi1 = (dPhiMin+dPhiMax)/2.;
                 dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
             }
-            if (coords1[0] <= g_.x0()) { coords1[0]=g_.x0();}
-            if (coords1[0] >= g_.x1()) { coords1[0]=g_.x1();}
-            if (coords1[1] <= g_.y0()) { coords1[1]=g_.y0();}
-            if (coords1[1] >= g_.y1()) { coords1[1]=g_.y1();}
+            if (coords1[0] <= grid.x0()) { coords1[0]=grid.x0();}
+            if (coords1[0] >= grid.x1()) { coords1[0]=grid.x1();}
+            if (coords1[1] <= grid.y0()) { coords1[1]=grid.y0();}
+            if (coords1[1] >= grid.y1()) { coords1[1]=grid.y1();}
         }
         else if (globalbcz == dg::NEU )
         {
@@ -121,6 +143,8 @@ struct DZ
     * @param dzf contains result on output (write only)
     */
     void operator()( const container& f, container& dzf);
+    void forward( const container& f, container& dzf);
+    void backward( const container& f, container& dzf);
     //void dz2d( const container& f, container& dzf);
     //void dzz2d( const container& f, container& dzzf);
     /**
@@ -208,24 +232,47 @@ struct DZ
     container evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
     void einsPlus( const container& n, container& npe);
     void einsMinus( const container& n, container& nme);
+    void einsPlusT( const container& n, container& npe);
+    void einsMinusT( const container& n, container& nme);
+    void centeredT( const container& f, container& dzf);
+    void forwardT( const container& f, container& dzf);
+    void symv( const container& f, container& dzTdzf);
+    /**
+     * @brief Returns the weights used to make the matrix symmetric 
+     *
+     * needed by invert class
+     * @return weights
+     */
+    const container& weights()const {return w3d;}
+    /**
+     * @brief Returns the preconditioner to use in conjugate gradient
+     *
+     * needed by invert class
+     * In this case inverse weights are the best choice
+     * @return inverse weights
+     */
+    const container& precond()const {return v3d;}
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
-    Matrix plus, minus; //interpolation matrices
-    container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
+    Matrix plus, minus, plusT, minusT; //interpolation matrices
+    Matrix jump;
+    container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP,dzfp,dzfm;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
     container left_, right_;
     container limiter;
+    container w3d, v3d;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
-        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
-        g_(grid), bcz_(grid.bcz())
+        jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
+        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), dzfp( hz),dzfm( hz),
+        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -257,6 +304,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     }
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+    cusp::transpose( plus, plusT);
+    cusp::transpose( minus, minusT);
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
@@ -265,6 +314,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);
+
 
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
@@ -293,6 +343,69 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
+}
+
+
+template<class M, class container>
+void DZ<M,container>::centeredT( const container& f, container& dzf)
+{
+    assert( &f != &dzf);    
+    dg::blas1::pointwiseDot( w3d, f, dzf);
+    dg::blas1::pointwiseDivide( dzf, hz, dzf);
+    einsPlusT( dzf, tempP);
+    einsMinusT( dzf, tempM);
+    dg::blas1::axpby( 1., tempM, -1., tempP);
+    dg::blas1::pointwiseDot( v3d, tempP, dzf);
+}
+
+template<class M, class container>
+void DZ<M,container>::forward( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    einsPlus( f, tempP);
+    dg::blas1::axpby( 1., tempP, -1., f, tempP);
+    dg::blas1::pointwiseDivide( tempP, hp, dzf);
+}
+template<class M, class container>
+void DZ<M,container>::forwardT( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    dg::blas1::pointwiseDot( w3d, f, dzf);
+    dg::blas1::pointwiseDivide( dzf, hp, dzf);
+    einsPlusT( dzf, tempP);
+    dg::blas1::axpby( 1., tempP, -1., dzf, dzf);
+    dg::blas1::pointwiseDot( v3d, dzf, dzf);
+}
+template<class M, class container>
+void DZ<M,container>::backward( const container& f, container& dzf)
+{
+    assert( &f != &dzf);
+    einsMinus( f, tempM);
+    dg::blas1::axpby( 1., tempM, -1., f, tempM);
+    dg::blas1::pointwiseDivide( tempM, hm, dzf);
+}
+
+template< class M, class container >
+void DZ<M,container>::symv( const container& f, container& dzTdzf)
+{
+    //this->operator()( f, tempP);
+    //centeredT( tempP, dzTdzf);
+    forward( f, tempP);
+    forwardT( tempP, dzTdzf);
+    dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
+    //dg::blas2::symv( jump, f, tempP);
+    //dg::blas1::axpby( 1., tempP, 1., dzTdzf);
+    //add jump term (unstable without it)
+    einsPlus( f, tempP); 
+    dg::blas1::axpby( -1., tempP, 2., f, tempP);
+    einsPlusT( f, tempM); 
+    dg::blas1::axpby( -1., tempM, 1., tempP);
+    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
+    einsMinusT( f, tempP); 
+    dg::blas1::axpby( -1., tempP, 2., f, tempP);
+    einsMinus( f, tempM); 
+    dg::blas1::axpby( -1., tempM, 1., tempP);
+    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
@@ -514,5 +627,85 @@ void DZ<M, container>::einsMinus( const container& f, container& fme)
         }
     }
 }
+template< class M, class container>
+void DZ<M, container>::einsMinusT( const container& f, container& fpe)
+{
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView rightV( right_.begin(), right_.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
+
+        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fP( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
+        cusp::multiply( minusT, fp, fP );
+        //make ghostcells i.e. modify fpe in the limiter region
+        if( i0==g_.Nz()-1 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+            {
+                cusp::blas::axpby( rightV, f0, ghostPV, 2., -1.);
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+            {
+                thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+                cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
+            }
+            //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
+            cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
+            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+            cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
+        }
+
+    }
+}
+template< class M, class container>
+void DZ<M, container>::einsPlusT( const container& f, container& fme)
+{
+    //note that thrust functions don't work on views
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView leftV( left_.begin(), left_.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
+        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fM( fme.begin() + i0*size, fme.begin() + (i0+1)*size);
+        cusp::multiply( plusT, fm, fM );
+        //make ghostcells
+        if( i0==0 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+            {
+                cusp::blas::axpby( leftV,  f0, ghostMV, 2., -1.);
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+            {
+                thrust::transform( left_.begin(), left_.end(),  hm.begin(), ghostP.begin(), thrust::multiplies<double>());
+                cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
+            }
+            //interlay ghostcells with periodic cells: L*g + (1-L)*fme
+            cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
+            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+            cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
+
+        }
+    }
+}
+
+//enables the use of the dg::blas2::symv function 
+template< class M, class V>
+struct MatrixTraits< DZ<M, V> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+
+
 }//namespace dg
 

@@ -75,7 +75,8 @@ int main( int argc, char* argv[])
     solovev::GaussianProfDamping dampprof(gp);
     solovev::ZonalFlow zonalflow(p, gp);
     solovev::PsiLimiter psilimiter(gp);
-    solovev::Nprofile prof(p, gp);
+//     solovev::Nprofile prof(p, gp);
+    solovev::Gradient prof(p, gp);
 
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);

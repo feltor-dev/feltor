@@ -56,6 +56,30 @@ struct Pupil
     Psip psip_;
 };
 /**
+ * @brief Returns psi inside psipmax and psipmax outside psipmax
+ */ 
+struct PsiPupil
+{
+    PsiPupil( GeomParameters gp, double psipmax): 
+        gp_(gp),
+        psipmax_(psipmax),
+        psip_(gp) {
+        }
+    double operator( )(double R, double Z)
+    {
+        if( psip_(R,Z) > psipmax_) return psipmax_;
+        return  psip_(R,Z);
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        return (*this)(R,Z);
+    }
+    private:
+    GeomParameters gp_;
+    double psipmax_;
+    Psip psip_;
+};
+/**
  * @brief Sets values to one outside psipmaxcut, zero else
  *
  * \f$ 1 \f$, if \f$ \psi_p(R,Z) > \psi_{p,maxcut}\f$
@@ -173,7 +197,30 @@ struct TanhSource
     GeomParameters gp_;
     Psip psip_;
 };
-
+// struct Gradient
+// {
+//     Gradient(  eule::Parameters p, GeomParameters gp):
+//         p_(p),
+//         gp_(gp),
+//         psip_(gp) {
+//     }
+//     double operator( )(double R, double Z)
+//     {
+//         if( psip_(R,Z) < (gp_.psipmin)) return exp(gp_.nprofileamp*log(10));
+//         if( psip_(R,Z) < 0.) return -1./gp_.psipmin*(psip_(R,Z) -gp_.psipmin +exp(gp_.nprofileamp*log(10))*(- psip_(R,Z)));
+//         return p_.bgprofamp;
+//     }
+//     double operator( )(double R, double Z, double phi)
+//     {
+//         if( psip_(R,Z,phi) < (gp_.psipmin)) return exp(gp_.nprofileamp*log(10));
+//         if( psip_(R,Z,phi) < 0.) return -1./gp_.psipmin*(psip_(R,Z,phi) -gp_.psipmin +exp(gp_.nprofileamp*log(10))*(- psip_(R,Z,phi)));
+//         return p_.bgprofamp;
+//     }
+//     private:
+//     eule::Parameters p_;
+//     GeomParameters gp_;
+//     Psip psip_;
+// };
 /**
  * @brief Returns density profile with variable peak amplitude and background amplitude 
  *
