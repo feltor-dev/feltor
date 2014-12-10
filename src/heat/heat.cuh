@@ -101,7 +101,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), tmo(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
-    pupil(dg::evaluate( solovev::GaussianProfDamping( gp), g)),
+//     pupil(dg::evaluate( solovev::Pupil( gp), g)),
+    pupil(dg::evaluate( solovev::GaussianProfDamping(gp ), g)),    
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
     dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
@@ -187,13 +188,50 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
     //U=1.  
     //centered
-    dg::blas1::pointwiseDot(y[0],pupil,lambda);    
-    dzNU_.centeredT(lambda,omega);    
-    dg::blas1::axpby( -1.0, omega, 1., yp[0]); 
+//     dg::blas1::pointwiseDivide(y[0],binv,lambda); //U=B
+//     dg::blas1::pointwiseDot(y[0],pupil,lambda);    //U T
+// //       dg::blas1::pointwiseDot(binv,omega,lambda);    //U T/B
+//   
+// 
+//     dzNU_.centeredT(lambda,omega);    // dzT UT
+//     dg::blas1::axpby( -1.0, omega, 1., yp[0]); //dzT (UT)
+    //1st support UT/B divB
+
+//     dg::blas1::pointwiseDivide(pupil,binv,omega); //= U B
+//     dg::blas1::pointwiseDivide(one,binv,omega); //=  B
+//         dg::blas1::transform( omega, omega, dg::LN<value_type>()); //logB
+//     dg::blas1::pointwiseDot(pupil,omega,omega); //= U log(B)
+
+//     dg::blas1::pointwiseDivide(omega,y[0],omega); //=B
+// 
+// //     dg::blas1::pointwiseDivide(one,binv,omega); //=B
+//     dzNU_.centeredT(omega,lambda);     //divB
+// //     dg::blas1::pointwiseDot(y[0],binv,omega); //T/B
+// //     dg::blas1::pointwiseDot(omega,pupil,omega); //- U T/B
+// //     dg::blas1::pointwiseDot(omega,lambda,omega); //- UT/B divB
+// //         dg::blas1::pointwiseDot(binv,lambda,omega); //- 1/B divBUT
+
+//   dg::blas1::pointwiseDot(lambda,pupil,lambda);    
+// //     dg::blas1::axpby( 1.0, omega, 1., yp[0]); 
+//         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); 
+
+    //2nd support BdzTU
+//     dg::blas1::pointwiseDot(y[0],pupil,omega); //T U
+//     dg::blas1::pointwiseDot(omega,binv,omega); //T U/B
+// 
+//     dzNU_(omega,lambda);     //dz T U/B
+//     dg::blas1::pointwiseDivide(one,binv,omega); //=B
+//     dg::blas1::pointwiseDot(omega,lambda,omega); // B dz TU/B
+// 
+//     dg::blas1::axpby( -1.0, omega, 1., yp[0]); 
+
+  
+    //correction
+    
     //forward
-//     dg::blas1::pointwiseDot(y[0],pupil,lambda);    
-//     dzNU_.forwardT(lambda,omega);    
-//     dg::blas1::axpby( 1.0, omega, 1., yp[0]); 
+    dg::blas1::pointwiseDot(y[0],pupil,lambda);    
+    dzNU_.forwardT(lambda,omega);    
+    dg::blas1::axpby( 1.0, omega, 1., yp[0]); 
 
     //nonadjoint U=1
 //     dg::blas1::pointwiseDot(y[0],pupil,lambda);    

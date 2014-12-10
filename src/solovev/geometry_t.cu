@@ -75,8 +75,8 @@ int main( int argc, char* argv[])
     solovev::GaussianProfDamping dampprof(gp);
     solovev::ZonalFlow zonalflow(p, gp);
     solovev::PsiLimiter psilimiter(gp);
-//     solovev::Nprofile prof(p, gp);
-    solovev::Gradient prof(p, gp);
+    solovev::Nprofile prof(p, gp);
+//     solovev::Gradient prof(p, gp);
 
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
@@ -133,6 +133,8 @@ int main( int argc, char* argv[])
     
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned Npsi = 100;//set number of psivalues
+        std::cout << "psipmin =" << psipmin << " Npsi =" << Npsi  <<std::endl;
+
     dg::Grid1d<double> g1d(psipmin ,0.0, 1,Npsi,dg::DIR);
     
     solovev::FluxSurfaceAverage<dg::HVec> fsa1(grid,gp,psipog2d );
