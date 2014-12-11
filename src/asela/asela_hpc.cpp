@@ -98,11 +98,12 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT init0( 0.);
 
     //averaged field aligned initializer
-    //dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    //y1[1] = feltor.dz().evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->3*2-1
+
 
     //no field aligning
-    y1[1] = dg::evaluate( init0, grid);
+//     y1[1] = dg::evaluate( init0, grid);
 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1

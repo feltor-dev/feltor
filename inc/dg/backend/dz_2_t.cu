@@ -158,22 +158,20 @@ int main()
     std::cout << "q = " << I_0/R_0 << std::endl;
     double z0 = 0, z1 = 2.*M_PI;
     //double z0 = M_PI/2., z1 = 3./2.*M_PI;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz,dg::NEU, dg::NEU, dg::PER,dg::cylindrical);
     dg::Grid2d<double> g2d( R_0 - 1, R_0+1, -1, 1,  n, Nx, Ny);
     
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::DIR);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
     
     dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
     
-    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::DIR);
+    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
-
-
     dg::DVec function = dg::evaluate( funcNEU, g3d) ,
                         temp( function),
                         temp2( function),
@@ -210,11 +208,9 @@ int main()
     //B corrections
     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
     dz.centeredT(temp2, divBT); // dzT B
-    dg::blas1::pointwiseDot(divBT,function,temp2);
-    dg::blas1::pointwiseDot(temp2,inverseB,temp3);
-    dg::blas1::axpby(1.0,derivativeT,-1.0,temp3,derivativeT);
-
-
+//     dg::blas1::pointwiseDot(divBT,function,temp2); //f dzTB
+//     dg::blas1::pointwiseDot(temp2,inverseB,temp3); //f/B dzTB
+//     dg::blas1::axpby(1.0,derivativeT,-1.0,divBT,derivativeT); //... - f/B dzTB
     
     dz.centeredT( function2, derivativeT2); //dz(f)
     dz.centeredT( ones, derivativeTones); //dz(f)
@@ -255,8 +251,7 @@ int main()
     std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
 
     
-        std::cout << "-------------------- " << std::endl;
-
+    std::cout << "-------------------- " << std::endl;
     double normT = dg::blas2::dot( w3d, solutionT);
     std::cout << "|| SolutionT  ||  "<<sqrt( normT)<<"\n";
     double errT =dg::blas2::dot( w3d, derivativeT);
