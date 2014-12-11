@@ -906,7 +906,26 @@ struct PLUS
     private:
     T x_;
 };
+/**
+ * @brief returns modulo 
+ *
+ * @tparam T value type
+ */
+template <class T= double>
+struct MOD
+{
+    MOD( T value): x_(value){}
 
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+        T operator()(const T& x){
+            return (fmod(x,x_) < 0 ) ? (x_ + fmod(x,x_)) : fmod(x,x_);
+        }
+    private:
+    T x_;
+
+};
 /**
  * @brief absolute value
  *
