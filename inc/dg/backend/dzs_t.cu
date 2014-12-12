@@ -84,20 +84,23 @@ double divb(double R, double Z, double phi)
     double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
     return divb;
 }
+double funcadj(double R, double Z, double phi)
+{
+    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
+    return psi*(R*R*sin(Z*Z)+Z*Z*cos(R*Z*phi));
+}
 double funcNEU(double R, double Z, double phi)
 {
     double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-//     return -psi*cos(phi);
-    return -psi;
+    return -psi*cos(phi);
+
 }
 double deriNEU(double R, double Z, double phi)
 {
     double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
     double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-//     return psi*sin(phi)/dldp; //b
-//     return psi*sin(phi)/dldp/invB;
-    return 0.;
+    return psi*sin(phi)/dldp/invB;
 }
 double cut(double R, double Z, double phi)
 {
@@ -132,12 +135,15 @@ int main()
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
-//     double hs = g3d.hz()*(R_0-1)/R_0/I_0;
-    double hs = 10.*g3d.hz()*(R_0+1)*2.*sqrt(2.)*1/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(1-R_0))*cos(M_PI*1))/R_0;
+
+
+    double hs = g3d.hz()*(R_0+1)*(sqrt(2)/I_0/2);
+
     std::cout << "hz = " <<  g3d.hz() << std::endl;
     std::cout << "hs = " << hs << std::endl;
-    dg::DZ<dg::DMatrix, dg::DVec> dzs( field, g3d, hs, 1e-12, dg::DefaultLimiter(), dg::NEU);
-    dg::DVec func = dg::evaluate(funcNEU, g3d),dzsf(func);
+    dg::DZ<dg::DMatrix, dg::DVec> dzs( field, g3d, hs, 1e-4, dg::DefaultLimiter(), dg::NEU);
+    dg::DVec func = dg::evaluate(funcNEU, g3d),dzsf(func),dzsfa(func);
+    const dg::DVec funca = dg::evaluate(funcadj, g3d);
     const dg::DVec soldzsf = dg::evaluate(deriNEU, g3d);
     const dg::DVec Bfeld = dg::evaluate(Bfield, g3d);
     dg::DVec one = dg::evaluate( dg::one, g3d),dzsone(one),dzsTone(one),dzsTB(one);
@@ -145,6 +151,7 @@ int main()
 
     dzs( one, dzsone); //dz(f)
     dzs( func, dzsf); //dz(f)
+    dzs( funca, dzsfa); //dz(f)
     dzs.centeredT( one, dzsTone); //dz(f)
     dzs.centeredT( Bfeld, dzsTB); //dz(f)
     //cut
@@ -156,9 +163,9 @@ int main()
     double normdzsone  =dg::blas2::dot(dzsone, w3d,dzsone);
     double normdzsTone =dg::blas2::dot(dzsTone, w3d,dzsTone);
     double normdzsTB =dg::blas2::dot(dzsTB, w3d,dzsTB);
-    double normonedzsf = dg::blas2::dot(one, w3d,dzsf);
-    double normfdzsone = dg::blas2::dot(func, w3d,dzsone);
-    double normfdzsTone = dg::blas2::dot(func, w3d,dzsTone);
+    double normonedzsf = dg::blas2::dot(one, w3d,dzsfa);
+    double normfdzsone = dg::blas2::dot(funca, w3d,dzsone);
+    double normfdzsTone = dg::blas2::dot(funca, w3d,dzsTone);
     
     std::cout << "--------------------testing dzs" << std::endl;
     double normsoldzsf = dg::blas2::dot( w3d, soldzsf);

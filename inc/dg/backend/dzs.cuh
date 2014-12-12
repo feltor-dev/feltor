@@ -318,9 +318,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltas, 
     minus = dg::create::interpolation( rm, zm, phim, grid, globalbcz); 
     //Transpose matrices for adjoint operator
     cusp::transpose( plus, plusT);
-    cusp::transpose( minus, minusT);
-
-    
+    cusp::transpose( minus, minusT);    
 
 }
 template<class M, class container>
