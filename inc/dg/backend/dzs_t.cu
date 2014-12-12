@@ -20,6 +20,16 @@ struct InvB
     private:
     double R_0, I_0;
 };
+struct B
+{
+    B( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    double operator()( double R, double Z, double phi)
+    {
+        return R_0*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/R;
+    }
+    private:
+    double R_0, I_0;
+};
 struct LnB
 {
     LnB( double R_0, double I_0):R_0(R_0), I_0(I_0){}
@@ -39,20 +49,20 @@ struct Field
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {
-            double fac =sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]));         
-            
-            yp[2][i] = I_0/y[0][i]/fac;            //dp/dl
-            yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2)/2./fac; //dR/dl
-            yp[1][i] =  M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2)/2./fac ; //dZ/dl
+        double B = R_0*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/2./sqrt(2.)/y[0][i];
+        double dldp=y[0][i]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/2./sqrt(2)/I_0;
+        yp[2][i] = B/dldp;            
+        yp[0][i] = -B*M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2)/2./I_0/dldp;
+        yp[1][i] =  B*M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2)/2./I_0/dldp ;
         }
     }
     void operator()( const dg::HVec& y, dg::HVec& yp)
     {
-            double fac =sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]));           
-            
-            yp[2] = I_0/y[0]/fac;            
-            yp[0] = -M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2)/2./fac;
-            yp[1] =  M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2)/2./fac;
+        double B = R_0*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/2./sqrt(2.)/y[0];
+        double dldp = y[0]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/2./sqrt(2.)/I_0;
+        yp[2] = B/dldp;            
+        yp[0] = -B*M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2)/2./I_0/dldp;
+        yp[1] =  B*M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2)/2./I_0/dldp ;
     }
     private:
     double R_0, I_0;
@@ -77,7 +87,17 @@ double divb(double R, double Z, double phi)
 double funcNEU(double R, double Z, double phi)
 {
     double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-    return -psi*cos(phi)*R*R*R*R*R;
+//     return -psi*cos(phi);
+    return -psi;
+}
+double deriNEU(double R, double Z, double phi)
+{
+    double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
+    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
+    double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+//     return psi*sin(phi)/dldp; //b
+//     return psi*sin(phi)/dldp/invB;
+    return 0.;
 }
 double cut(double R, double Z, double phi)
 {
@@ -90,6 +110,7 @@ int main()
 {
     Field field( R_0, I_0);
     InvB invb(R_0, I_0);
+    B Bfield(R_0, I_0);
     LnB lnB(R_0, I_0);
 
     std::cout << "Type n, Nx, Ny, Nz\n";
@@ -99,25 +120,33 @@ int main()
     std::cout << "q = " << I_0/R_0 << std::endl;
     double z0 = 0, z1 = 2.*M_PI;
     //double z0 = M_PI/2., z1 = 3./2.*M_PI;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz,dg::NEU, dg::NEU, dg::PER,dg::cylindrical);
-    dg::Grid2d<double> g2d( R_0 - 1, R_0+1, -1, 1,  n, Nx, Ny);
-        dg::DVec cutongrid = dg::evaluate( cut, g3d);
+    double bscale=5.0;
+    double Rmin=R_0 - bscale;
+    double Rmax=R_0 + bscale;
+    double Zmin= - bscale;
+    double Zmax= +bscale;
+    dg::Grid3d<double> g3d( Rmin,Rmax, Zmin, Zmax, z0, z1,  n, Nx, Ny, Nz,dg::NEU, dg::NEU, dg::PER,dg::cylindrical);
+    
+    dg::DVec cutongrid = dg::evaluate( cut, g3d);
 
     const dg::DVec w3d = dg::create::weights( g3d);
-    const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
-    double hs = g3d.hz()*(R_0-1);
+//     double hs = g3d.hz()*(R_0-1)/R_0/I_0;
+    double hs = 10.*g3d.hz()*(R_0+1)*2.*sqrt(2.)*1/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(1-R_0))*cos(M_PI*1))/R_0;
     std::cout << "hz = " <<  g3d.hz() << std::endl;
     std::cout << "hs = " << hs << std::endl;
-    dg::DZ<dg::DMatrix, dg::DVec> dzs( field, g3d, hs, 1e-4, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dzs( field, g3d, hs, 1e-12, dg::DefaultLimiter(), dg::NEU);
     dg::DVec func = dg::evaluate(funcNEU, g3d),dzsf(func);
-    dg::DVec one = dg::evaluate( dg::one, g3d),dzsone(one),dzsTone(one);
+    const dg::DVec soldzsf = dg::evaluate(deriNEU, g3d);
+    const dg::DVec Bfeld = dg::evaluate(Bfield, g3d);
+    dg::DVec one = dg::evaluate( dg::one, g3d),dzsone(one),dzsTone(one),dzsTB(one);
     dzs.set_boundaries( dg::PER, 0, 0);
 
     dzs( one, dzsone); //dz(f)
     dzs( func, dzsf); //dz(f)
     dzs.centeredT( one, dzsTone); //dz(f)
+    dzs.centeredT( Bfeld, dzsTB); //dz(f)
     //cut
 //     dg::blas1::pointwiseDot(cutongrid,dzsone,dzsone);
 //     dg::blas1::pointwiseDot(cutongrid,dzsf,dzsf);
@@ -126,17 +155,32 @@ int main()
 
     double normdzsone  =dg::blas2::dot(dzsone, w3d,dzsone);
     double normdzsTone =dg::blas2::dot(dzsTone, w3d,dzsTone);
+    double normdzsTB =dg::blas2::dot(dzsTB, w3d,dzsTB);
     double normonedzsf = dg::blas2::dot(one, w3d,dzsf);
+    double normfdzsone = dg::blas2::dot(func, w3d,dzsone);
     double normfdzsTone = dg::blas2::dot(func, w3d,dzsTone);
+    
+    std::cout << "--------------------testing dzs" << std::endl;
+    double normsoldzsf = dg::blas2::dot( w3d, soldzsf);
+    std::cout << "|| Solution ||   "<<sqrt( normsoldzsf)<<"\n";
+    double errdzsf =dg::blas2::dot( w3d, dzsf);
+    std::cout << "|| Derivative || "<<sqrt( errdzsf)<<"\n";
+    dg::blas1::axpby( 1.,soldzsf, -1.,dzsf);
+    errdzsf=dg::blas2::dot( w3d,dzsf);
+    std::cout << "Relative Difference in dzs is "<< sqrt( errdzsf/normsoldzsf )<<"\n"; 
     
     std::cout << "--------------------testing dzs and dzsT " << std::endl;
     std::cout << "|| dzs(1) ||      "<<sqrt( normdzsone)<<"\n";
     std::cout << "|| dzsT(1) ||      "<<sqrt( normdzsTone)<<"\n";
+    std::cout << "|| dzsT(B) ||      "<<sqrt( normdzsTB)<<"\n";
+    
     std::cout << "--------------------testing adjointness " << std::endl;
     std::cout << "<1,dzs(f)>   = "<< normonedzsf <<"\n";
+    std::cout << "<f,dzs(1)>   = "<< normfdzsone <<"\n";
     std::cout << "-<dzsT(1),f> = "<< -normfdzsTone<<"\n";
-    std::cout << "Diff        = "<< normonedzsf+normfdzsTone<<"\n";   
+    std::cout << "Diff         = "<< normonedzsf+normfdzsTone<<"\n";   
     std::cout << "-------------------- " << std::endl;
+    
     return 0;
 
 }

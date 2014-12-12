@@ -104,7 +104,8 @@ void boxintegrator( Field& field, const Grid& grid, const thrust::host_vector<do
         }
         else if (globalbcz == dg::NEU )
         {
-             coords1[0] = coords0[0]; coords1[1] = coords0[1];  
+             coords1[0] = coords0[0]; 
+             coords1[1] = coords0[1];  
              coords1[2] = coords0[2]; //added
         }
         else if (globalbcz == DIR_NEU )std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
@@ -308,13 +309,14 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltas, 
     }
     container phibias( dg::evaluate(dg::coo3,grid));
     dg::blas1::axpby(1.0,phibias,1.0,phip);
-    dg::blas1::transform(phip, phip, dg::MOD<>(2.*M_PI));
+    dg::blas1::transform(phip, phip, dg::MOD<>(2.*M_PI)); 
 
-    dg::blas1::axpby(1.0,phibias,1.0,phim); //-?
+    dg::blas1::axpby(1.0,phibias,1.0,phim); 
     dg::blas1::transform(phim, phim, dg::MOD<>(2.*M_PI));
-
-    plus  = dg::create::interpolation( rp, zp, phip, grid, globalbcz); //now 3d  interpolation+
-    minus = dg::create::interpolation( rm, zm, phim, grid, globalbcz);  //now 3d interpolation-
+    //3D interpolation of in + and -
+    plus  = dg::create::interpolation( rp, zp, phip, grid, globalbcz); 
+    minus = dg::create::interpolation( rm, zm, phim, grid, globalbcz); 
+    //Transpose matrices for adjoint operator
     cusp::transpose( plus, plusT);
     cusp::transpose( minus, minusT);
 
@@ -342,9 +344,8 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
     assert( &f != &dzf);
     einsPlus( f, tempP);
     einsMinus( f, tempM);
-
     dg::blas1::axpby( 1., tempP, -1., tempM,dzf);
-    dg::blas1::scal(dzf,1./(dsc));
+    dg::blas1::scal(dzf,1./dsc);
     
 }
 
@@ -386,141 +387,26 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
 template< class M, class container>
 void DZ<M, container>::einsPlus( const container& f, container& fpe)
 {
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView rightV( right_.begin(), right_.end());
-    for( unsigned i0=0; i0<g_.Nz(); i0++)
-    {
-        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
 
-        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
-        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-        View fP( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
-        cusp::multiply( plus, fp, fP);
-        //make ghostcells i.e. modify fpe in the limiter region
-        if( i0==g_.Nz()-1 && bcz_ != dg::PER)
-        {
-            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-            {
-                cusp::blas::axpby( rightV, f0, ghostPV, 2., -1.);
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-            {
-                thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
-                cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
-            }
-            //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
-            cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
-            cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
-        }
-    }
+    dg::blas2::symv( plus, f, fpe);
+
 }
 template< class M, class container>
 void DZ<M, container>::einsMinus( const container& f, container& fme)
 {
     //note that thrust functions don't work on views
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView leftV( left_.begin(), left_.end());
-    for( unsigned i0=0; i0<g_.Nz(); i0++)
-    {
-        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
-        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
-        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-        View fM( fme.begin() + i0*size, fme.begin() + (i0+1)*size);
-        cusp::multiply( minus, fm, fM );
-        //make ghostcells
-        if( i0==0 && bcz_ != dg::PER)
-        {
-            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-            {
-                cusp::blas::axpby( leftV,  f0, ghostMV, 2., -1.);
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-            {
-                thrust::transform( left_.begin(), left_.end(),  hm.begin(), ghostP.begin(), thrust::multiplies<double>());
-                cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
-            }
-            //interlay ghostcells with periodic cells: L*g + (1-L)*fme
-            cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
-            cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
+   dg::blas2::symv( minus, f, fme );
 
-        }
-    }
 }
 template< class M, class container>
 void DZ<M, container>::einsMinusT( const container& f, container& fpe)
 {
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView rightV( right_.begin(), right_.end());
-    for( unsigned i0=0; i0<g_.Nz(); i0++)
-    {
-        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
-
-        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
-        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-        View fP( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
-        cusp::multiply( minusT, fp, fP );
-        //make ghostcells i.e. modify fpe in the limiter region
-        if( i0==g_.Nz()-1 && bcz_ != dg::PER)
-        {
-            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-            {
-                cusp::blas::axpby( rightV, f0, ghostPV, 2., -1.);
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-            {
-                thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
-                cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
-            }
-            //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
-            cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
-            cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
-        }
-
-    }
+    dg::blas2::symv( minusT, f, fpe );
 }
 template< class M, class container>
 void DZ<M, container>::einsPlusT( const container& f, container& fme)
 {
-    //note that thrust functions don't work on views
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView leftV( left_.begin(), left_.end());
-    for( unsigned i0=0; i0<g_.Nz(); i0++)
-    {
-        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
-        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
-        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-        View fM( fme.begin() + i0*size, fme.begin() + (i0+1)*size);
-        cusp::multiply( plusT, fm, fM );
-        //make ghostcells
-        if( i0==0 && bcz_ != dg::PER)
-        {
-            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-            {
-                cusp::blas::axpby( leftV,  f0, ghostMV, 2., -1.);
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-            {
-                thrust::transform( left_.begin(), left_.end(),  hm.begin(), ghostP.begin(), thrust::multiplies<double>());
-                cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
-            }
-            //interlay ghostcells with periodic cells: L*g + (1-L)*fme
-            cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
-            cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
-
-        }
-    }
+    dg::blas2::symv( plusT, f, fme );
 }
 
 //enables the use of the dg::blas2::symv function 
