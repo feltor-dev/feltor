@@ -40,7 +40,7 @@
 25) y-position ( in units of a)             =  0.00   (0.5)
 26) sigma_z (variance in units of R_0)      =  0.5       (12.5 for oo)
 27) k_psi (zonal modes)                     =  1.0   
-28) Profile amplitude                       =  2.5  (peak amplitude)
+28) Profile amplitude                       =  0.5  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) particle source amplitude               =  0.0
