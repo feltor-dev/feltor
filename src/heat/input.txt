@@ -4,7 +4,7 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =   4   (3)
+1)  n  (# of x,y-polynomials)            =   3   (3)
 2)  nx (grid points in x)                =   50 (192)
 3)  ny (grid points in y)                =   86 (192) 
 4)  nz (grid points in z)                =   20 (1)
@@ -12,7 +12,7 @@
 
 
 ----------------------------------Output parameters--------------------
-6)  n_out (# of x-y polynomials in output)  =  4
+6)  n_out (# of x-y polynomials in output)  =  3
 7)  nx_out (# grid points in output field)  =  50 
 8)  ny_out (# grid points in output field)  =  86
 9)  nz_out (# grid points in output field)  =  1
