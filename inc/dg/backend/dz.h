@@ -144,11 +144,12 @@ DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double d
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
     //2D local grid with ghostcells
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    dg::Grid3d<double> global( grid.global()); 
-    dg::Grid3d<double> globalWG( global.x0() - global.hx(), global.x1() + global.hx(),
-                                 global.y0() - global.hy(), global.y1() + global.hy(),
+    dg::Grid3d<double> global( grid.global()); //global without ghostcells
+    dg::Grid3d<double> globalWG( global.x0() - global.hx()*(1-1e-14), global.x1() + global.hx()*(1-1e-14),
+                                 global.y0() - global.hy()*(1-1e-14), global.y1() + global.hy()*(1-1e-14),
                                  global.z0(), global.z1(), 
-                                 global.n(), global.Nx(), global.Ny(), global.Nz()); 
+                                 global.n(), global.Nx()+2, global.Ny()+2, global.Nz()); 
+    //global with ghost-boundary for boxintegrator
     limiter_ = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
     ghostM.resize( g2d.size()); ghostP.resize( g2d.size());
