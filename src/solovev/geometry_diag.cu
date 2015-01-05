@@ -71,7 +71,11 @@ int main( int argc, char* argv[])
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-
+    //old boxscale
+//     double Rmin=gp.R_0-p.boxscaleRp*gp.a;
+//     double Zmin=-p.boxscaleRp*gp.a*gp.elongation;
+//     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+//     double Zmax=p.boxscaleRp*gp.a*gp.elongation;
  
     //construct all geometry quantities
     solovev::Psip psip(gp);

@@ -1,5 +1,5 @@
-#ifndef _POISSON_
-#define _POISSON_
+#ifndef _DG_POISSON_CUH
+#define _DG_POISSON_CUH
 
 #include "blas.h"
 #include "enums.h"
@@ -188,4 +188,4 @@ void Poisson< Matrix, container>::operator()( container& lhs, container& rhs, co
 
 }//namespace dg
 
-#endif //_DG_ARAKAWA_CUH
+#endif //_DG_POISSON_CUH

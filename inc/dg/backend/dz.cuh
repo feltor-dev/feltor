@@ -265,6 +265,7 @@ struct DZ
     container left_, right_;
     container limiter;
     container w3d, v3d;
+    container invB;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -273,8 +274,9 @@ template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), dzfp( hz),dzfm( hz),
-        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
+        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)), invB(dg::evaluate(field,grid))
 {
+
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
     if( deltaPhi != grid.hz())
         std::cout << "Computing in 2D mode!\n";
@@ -343,6 +345,15 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
+//with B
+//     assert( &f != &dzf);
+//    dg::blas1::pointwiseDot( f, invB, dzf);//divide through B here
+//     einsPlus( dzf, tempP);
+//     einsMinus( dzf, tempM);
+//     dg::blas1::axpby( 1., tempP, -1., tempM);
+//     dg::blas1::pointwiseDivide( tempM, hz, dzf);
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);//Multiply with B here
+
 }
 
 template<class M, class container>
@@ -351,10 +362,22 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
     assert( &f != &dzf);    
     dg::blas1::pointwiseDot( w3d, f, dzf);
     dg::blas1::pointwiseDivide( dzf, hz, dzf);
+
     einsPlusT( dzf, tempP);
     einsMinusT( dzf, tempM);
     dg::blas1::axpby( 1., tempM, -1., tempP);
     dg::blas1::pointwiseDot( v3d, tempP, dzf);
+//with B
+//     assert( &f != &dzf);    
+//     dg::blas1::pointwiseDot( w3d, f, dzf);
+//     dg::blas1::pointwiseDivide( dzf, hz, dzf);
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);    //Multiply through B here
+//     einsPlusT( dzf, tempP);
+//     einsMinusT( dzf, tempM);
+//     dg::blas1::axpby( 1., tempM, -1., tempP);
+//     dg::blas1::pointwiseDot( v3d, tempP, dzf);
+//     dg::blas1::pointwiseDot( dzf, invB, dzf);    //divide with B here
+
 }
 
 template<class M, class container>

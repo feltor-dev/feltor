@@ -530,7 +530,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 }
 
 //Computes curvature operator
-//Computes curvature operator
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::curveNU( container& src, container& target)
 {

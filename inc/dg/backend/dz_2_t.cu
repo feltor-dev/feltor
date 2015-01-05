@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <cusp/print.h>
+#include "dg/backend/xspacelib.cuh"
 
 #include "evaluation.cuh"
 #include "dz.cuh"
@@ -9,6 +10,7 @@
 #include "../functors.h"
 #include "../cg.h"
 #include "interpolation.cuh"
+#include "draw/host_window.h"
 
 struct InvB
 {
@@ -51,6 +53,14 @@ struct Field
             yp[2] = y[0]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/2./sqrt(2.)/I_0;            
             yp[0] = -M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2)/2./I_0;
             yp[1] =  M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2)/2./I_0 ;
+    }
+    double operator()( double R, double Z)
+    {
+        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+    }
+    double operator()( double R, double Z, double phi)
+    {
+        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
     }
     private:
     double R_0, I_0;
@@ -207,12 +217,23 @@ int main()
     dz( function2, derivative2); //dz(f)
 
     dz.centeredT(function, derivativeT); //dz(f)
-    //B corrections
+    //divB
     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
     dz.centeredT(temp2, divBT); // dzT B
+    
+    //full correction
 //     dg::blas1::pointwiseDot(divBT,function,temp2); //f dzTB
 //     dg::blas1::pointwiseDot(temp2,inverseB,temp3); //f/B dzTB
-//     dg::blas1::axpby(1.0,derivativeT,-1.0,divBT,derivativeT); //... - f/B dzTB
+//     dg::blas1::axpby(1.0,derivativeT,-1.0,temp3,derivativeT); //... - f/B dzTB
+    //divB correction
+//     dg::blas1::axpby(1.0,derivativeT,-1.0,divBT,derivativeT); //... - f/B dzTB 
+      //1/B divB correction
+/*    dg::blas1::pointwiseDot(divBT,inverseB,temp2); //f dzTB
+    dg::blas1::axpby(1.0,derivativeT,-1.0,temp2,derivativeT); //... - f/B dzTB*/ 
+          //f divB correction
+//     dg::blas1::pointwiseDot(divBT,function,temp2); //f dzTB
+//     dg::blas1::axpby(1.0,derivativeT,-1.0,temp2,derivativeT); //... - f/B dzTB 
+    
     
     dz.centeredT( function2, derivativeT2); //dz(f)
     dz.centeredT( ones, derivativeTones); //dz(f)
@@ -221,6 +242,7 @@ int main()
     dg::blas1::pointwiseDivide( derivativeTdz, inverseB, derivativeTdz);
     dz.centeredT( derivative, dzTdz); //dzT(dz(f))
     dz.centeredT( derivative2, dzTdz2); //dzT(dz(f))
+    dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
 
     double normdzdz =dg::blas2::dot(derivative2, w3d,derivative2);
     double normdz1dz =dg::blas2::dot(derivativeones, w3d,derivative2);
@@ -233,7 +255,9 @@ int main()
     double norm1dz = dg::blas2::dot(ones, w3d, derivative2);
     double normfdzTdz = dg::blas2::dot(function2, w3d, dzTdz2);
     double norm1dzTdz = dg::blas2::dot(ones, w3d, dzTdz2);       
- 
+    double norm1dzTB = dg::blas2::dot(ones, w3d, divBT);
+    double normBdz1 = dg::blas2::dot(temp2, w3d, derivativeones);
+
     std::cout << "--------------------testing dz" << std::endl;
     double norm = dg::blas2::dot( w3d, solution);
     std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
@@ -285,6 +309,11 @@ int main()
     std::cout << "Diff        = "<< normfdz+normdzTf<<"\n";     
     std::cout << "-------------------- " << std::endl;
 
+    std::cout << "<B,dz(1)>   = "<< normBdz1<<"\n";
+    std::cout << "-<dzT(B),1> = "<< -norm1dzTB<<"\n";
+    std::cout << "Diff        = "<< normBdz1+norm1dzTB<<"\n";     
+    std::cout << "-------------------- " << std::endl;
+    
     std::cout << "<1,dz(f)>   = "<< norm1dz<<"\n";
     std::cout << "-<dzT(1),f> = "<< -normdzT1<<"\n";
     std::cout << "Diff        = "<< norm1dz+normdzT1<<"\n";   
@@ -298,18 +327,98 @@ int main()
     std::cout << "<1,dzT(dz(f))> = "<< norm1dzTdz<<"\n";
     std::cout << "-<dz(1),dz(f)> = "<< -normdz1dz<<"\n";
     std::cout << "Diff           = "<< norm1dzTdz+normdz1dz<<"\n";    
-    std::cout << "--------------------testing dzT with inversion " << std::endl;
+    
+//     std::cout << "--------------------testing dzT with inversion " << std::endl;
+//     double eps =1e-6;    
+//     dg::Invert< dg::DVec> invert(dg::evaluate(dg::zero,g3d), w3d.size(), eps );   
+//     std::cout << " # of iterations "<< invert( dz, functionTinv, solutionT ) << std::endl; //is dzTdz
+//     double normf = dg::blas2::dot( w3d, function);
+//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+//     double errinvT =dg::blas2::dot( w3d, functionTinv);
+//     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+//     dg::blas1::axpby( 1., function, -1.,functionTinv);
+//     errinvT =dg::blas2::dot( w3d, functionTinv);
+//     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
+    
+    
+    //draw divB
+    std::cout << "make Plot" << std::endl;
+    
+    //make equidistant grid from dggrid
+    dg::HVec hvisual;
+    //allocate mem for visual
+    dg::HVec visual;
+    dg::HMatrix equigrid = dg::create::backscatter(g3d);               
 
-    double eps =1e-6;    
-    dg::Invert< dg::DVec> invert(dg::evaluate(dg::zero,g3d), w3d.size(), eps );   
-    std::cout << " # of iterations "<< invert( dz, functionTinv, solutionT ) << std::endl; //is dzTdz
-    double normf = dg::blas2::dot( w3d, function);
-    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-    double errinvT =dg::blas2::dot( w3d, functionTinv);
-    std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
-    dg::blas1::axpby( 1., function, -1.,functionTinv);
-    errinvT =dg::blas2::dot( w3d, functionTinv);
-    std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
+    //evaluate on valzues from devicevector on equidistant visual hvisual vector
+    
+    visual = dg::evaluate( dg::one, g3d);
+
+    
+    //Create Window and set window title
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 200*Nz, 800, "");
+    draw::RenderHostData render(4 , 1*Nz);  
+    //create a colormap
+    draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
+
+
+    std::stringstream title;
+    title << std::setprecision(10) << std::scientific;
+    while (!glfwWindowShouldClose( w ))
+    {
+        hvisual = divBT;
+        dg::blas2::gemv( equigrid, hvisual, visual);        
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"divB"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        for( unsigned k=0; k<Nz;k++)
+        {
+            unsigned size=g3d.n()*g3d.n()*g3d.Nx()*g3d.Ny();            
+            dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
+            render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
+
+        }
+        hvisual = derivativeT;         
+        dg::blas2::gemv( equigrid, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"dzT(f)"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        for( unsigned k=0; k<Nz;k++)
+        {
+            unsigned size=g3d.n()*g3d.n()*g3d.Nx()*g3d.Ny();            
+            dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
+            render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
+        }
+        hvisual = derivative;
+        dg::blas2::gemv( equigrid, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"dz(f)"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        for( unsigned k=0; k<Nz;k++)
+        {            
+            unsigned size=g3d.n()*g3d.n()*g3d.Nx()*g3d.Ny();            
+            dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
+            render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
+        }
+        hvisual = derivativeTdz;
+        dg::blas2::gemv( equigrid, hvisual, visual);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"B dz(f/B)"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        for( unsigned k=0; k<Nz;k++)
+        {            
+            unsigned size=g3d.n()*g3d.n()*g3d.Nx()*g3d.Ny();            
+            dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
+            render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
+        }
+        title << std::fixed; 
+        glfwSetWindowTitle(w,title.str().c_str());
+        title.str("");
+        glfwSwapBuffers(w);
+        glfwWaitEvents();
+    }
+
+    glfwTerminate();
     return 0;
 
 }
