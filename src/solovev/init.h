@@ -159,8 +159,8 @@ struct GaussianProfDamping
         }
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
-//                 if( psip_(R,Z) > gp_.psipmax ) return 0.;
+//      if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
+        if( psip_(R,Z) > gp_.psipmax ) return 0.;
         if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
         return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }

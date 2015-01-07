@@ -102,7 +102,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
 //     pupil(dg::evaluate( solovev::Pupil( gp), g)),
-    pupil(dg::evaluate( solovev::GaussianProfDamping(gp ), g)),    
+    pupil(dg::evaluate( solovev::GaussianProfDamping(gp ), g)),    //be aware of actual function!
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
     dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
@@ -133,12 +133,12 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda); 
 
 //     Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda);  
-    //adjoint operator
-//     dzNU_( y[0], omega); 
-//     dzNU_.centeredT(omega,lambda);
-//     Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
+//     (A) adjoint
+/*    dzNU_( y[0], omega); 
+    dzNU_.centeredT(omega,lambda);
+    Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);*/  
 //     
-//     adjoint but using old dz
+    // (B) nonadjoint
     dzNU_( binv, lambda); //gradpar 1/B
     dg::blas1::pointwiseDivide(lambda,  binv, lambda); //-dz lnB
     dzNU_(y[0],omega); //dz T
@@ -147,7 +147,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     dg::blas1::axpby( 1., omega,  1.,lambda );    
     Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
 
-    //old
+    // (C) oldnonadjoint
 //     dzNU_.dzz(y[0],omega);                                          //dz^2 N 
 //     dzNU_(y[0],lambda);       
 //     dg::blas1::pointwiseDot(gradlnB, lambda, lambda);            // dz lnB dz N
@@ -180,83 +180,66 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //     dg::blas1::axpby( -p.nu_perp, lambda, 0., yp[0]);  //hyper 
     dg::blas1::axpby( -p.nu_perp, omega, 0., yp[0]);  
     
-    //------------------parallel adv
+//-----------------------parallel adv------------------------
+    // (A) adjoint
     //U=v_parallel gradlnB
 //     dg::blas1::pointwiseDot(y[0], gradlnB, lambda);
 //     dzNU_.centeredT(lambda,omega);    
 //     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[0]); 
 
     //U=1.  
-//     centered
-//     dg::blas1::pointwiseDivide(y[0],binv,lambda); //U=B
-//     dg::blas1::pointwiseDot(y[0],pupil,lambda);    //U T
-// //       dg::blas1::pointwiseDot(binv,omega,lambda);    //U T/B
-//   
-// 
+    //centered
+//     dg::blas1::pointwiseDot(y[0],pupil,lambda);    //U*T  
 //     dzNU_.centeredT(lambda,omega);    // dzT UT
 //     dg::blas1::axpby( -1.0, omega, 1., yp[0]); //dzT (UT)
-//     //1st support UT/B divB
-// 
+
+    //corr(1): div(UB) 
 //     dg::blas1::pointwiseDivide(pupil,binv,omega); //= U B
-// //     dg::blas1::pointwiseDivide(one,binv,omega); //=  B
-// //         dg::blas1::transform( omega, omega, dg::LN<value_type>()); //logB
-// //     dg::blas1::pointwiseDot(pupil,omega,omega); //= U log(B)
-// 
-// //     dg::blas1::pointwiseDivide(omega,y[0],omega); //=B
-// // 
-// //     dg::blas1::pointwiseDivide(one,binv,omega); //=B
 //     dzNU_.centeredT(omega,lambda);     //div UB
-// // //     dg::blas1::pointwiseDot(y[0],binv,omega); //T/B
-// // //     dg::blas1::pointwiseDot(omega,pupil,omega); //- U T/B
-// // //     dg::blas1::pointwiseDot(omega,lambda,omega); //- UT/B divB
-// // //         dg::blas1::pointwiseDot(binv,lambda,omega); //- 1/B divBUT
-// 
-// //   dg::blas1::pointwiseDot(lambda,pupil,lambda);    
-// // //     dg::blas1::axpby( 1.0, omega, 1., yp[0]); 
-//         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
-
-    //2nd support BdzTU
-//     dg::blas1::pointwiseDot(y[0],pupil,omega); //T U
-//     dg::blas1::pointwiseDot(omega,binv,omega); //T U/B
-// 
-//     dzNU_(omega,lambda);     //dz T U/B
-//     dg::blas1::pointwiseDivide(one,binv,omega); //=B
-//     dg::blas1::pointwiseDot(omega,lambda,omega); // B dz TU/B
-// 
-//     dg::blas1::axpby( -1.0, omega, 1., yp[0]); 
-
-  
-    //correction
+//     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
     
-    //forward
-//     dg::blas1::pointwiseDot(y[0],pupil,lambda);    
-//     dzNU_.forwardT(lambda,omega);    
-//     dg::blas1::axpby( 1.0, omega, 1., yp[0]); 
+    //corr(2): div(B) 
+//     dg::blas1::pointwiseDivide(one,binv,omega); //= U B
+//     dzNU_.centeredT(omega,lambda);     //div UB
+//     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
+    
+    //corr(3): UT/B divB 
+//     dg::blas1::pointwiseDivide(one,binv,omega); //=  B
+//     dzNU_.centeredT(omega,lambda);     //div B
+//     dg::blas1::pointwiseDot(y[0],binv,omega); //T/B
+//     dg::blas1::pointwiseDot(omega,pupil,omega); // U T/B
+//     dg::blas1::pointwiseDot(omega,lambda,lambda); //  UT/B divB
+//     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ UT/B div UB
 
-    //nonadjoint U=1
-    dg::blas1::pointwiseDot(y[0],pupil,lambda);    
-
-    dzNU_(lambda,omega);    
-    dg::blas1::axpby( -1.0, omega, 1., yp[0]); //- U dz T
+    //corr(4): U  divB
+//     dg::blas1::pointwiseDivide(one,binv,omega); //=  B
+//     dzNU_.centeredT(omega,lambda);     //div B
+//     dg::blas1::pointwiseDot(pupil,lambda,lambda); //  U divB
+//     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ U div UB
+    
+    
+    // (B) nonadjoint U=1
+    dg::blas1::pointwiseDot(y[0],pupil,lambda);    //UT
+    dzNU_(lambda,omega);    //Dz UT
+    dg::blas1::axpby( -1.0, omega, 1., yp[0]); //-  dz U T
     dzNU_( binv, lambda); //gradpar 1/B
     dg::blas1::pointwiseDivide(lambda,  binv, lambda); //-dz lnB  
-    dg::blas1::pointwiseDot(y[0],pupil,omega);    
-
-    dg::blas1::pointwiseDot(omega,  lambda, omega); //-T dz lnB  
+    dg::blas1::pointwiseDot(y[0],pupil,omega);    //=  U T  
+    dg::blas1::pointwiseDot(omega,  lambda, omega); //-U T dz lnB  
     dg::blas1::axpby( -1.0, omega, 1., yp[0]); //UT dzlnB
 
-      //old U=1
-//     dzNU_(y[0],omega);    
-//     dg::blas1::axpby( -1.0, omega, 1., yp[0]); //- U dz T
-//     dg::blas1::pointwiseDot(y[0],  gradlnB, omega); //T dz lnB  
+    // (C) oldnonadjoint U=1
+//     dg::blas1::pointwiseDot(y[0],pupil,lambda);    // UT
+//     dzNU_(lambda,omega);    //  dz U T
+//     dg::blas1::axpby( -1.0, omega, 1., yp[0]); //-  dz U T
+//     dg::blas1::pointwiseDot(lambda,  gradlnB, omega); //U T dz lnB  
 //     dg::blas1::axpby( 1.0, omega, 1., yp[0]); //UT dzlnB
     
-    //-----------------------parallel dissi
-    //adjoint operator
+//-----------------------parallel dissi------------------------
+    // (A) adjoint
     //centered
 //     dzNU_( y[0], omega); 
 //     dzNU_.centeredT(omega,lambda);
-// 
 //     dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 
     //forward, backward
@@ -264,7 +247,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //     dzNU_.forwardT(omega,lambda);
 //     dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 
-    //adjoint but using old dz
+    // (B) nonadjoint
     dzNU_( binv, lambda); //gradpar 1/B
     dg::blas1::pointwiseDivide(lambda,  binv, lambda); //-dz lnB
     dzNU_(y[0],omega); //dz T
@@ -273,10 +256,9 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     dzNU_.dzz(y[0],omega);                                          //dz^2 T 
     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[0]);
     
-    //old laplace
+    // (C) oldnonadjoint
 //     dzNU_.dzz(y[0],omega);                                          //dz^2 T 
 //     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[0]);       
-//     //gradlnBcorrection
 //     dzNU_(y[0],lambda);       
 //     dg::blas1::pointwiseDot(gradlnB, lambda, omega);            // dz lnB dz T
 //     dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[0]);    

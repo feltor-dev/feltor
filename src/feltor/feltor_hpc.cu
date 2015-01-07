@@ -63,7 +63,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-    dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
+    dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
      
     //create RHS 
@@ -88,7 +88,7 @@ int main( int argc, char* argv[])
     //field aligning
     //dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->3*2-1
+    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =3 ->3*2-1
 
     //no field aligning (use 2D Feltor instead!!)
     //y1[1] = dg::evaluate( init0, grid);

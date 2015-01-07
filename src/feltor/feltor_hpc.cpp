@@ -189,11 +189,11 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "First write ...\n";
     for( unsigned i=0; i<4; i++)
     {
-        dg::blas2::symv( interpolate, y0[i].data(), transferH);
+        dg::blas2::gemv( interpolate, y0[i].data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transferD = feltor.potential()[0];
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
+    dg::blas2::gemv( interpolate, transferD.data(), transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data());
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -269,11 +269,11 @@ int main( int argc, char* argv[])
         start[0] = i;
         for( unsigned j=0; j<4; j++)
         {
-            dg::blas2::symv( interpolate, y0[j].data(), transferH);
+            dg::blas2::gemv( interpolate, y0[j].data(), transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transferD = feltor.potential()[0];
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
+        dg::blas2::gemv( interpolate, transferD.data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 

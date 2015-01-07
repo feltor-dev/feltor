@@ -257,8 +257,8 @@ struct DZ
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
-    Matrix jump;
-    container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP,dzfp,dzfm;
+//     Matrix jump;
+    container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
@@ -272,8 +272,8 @@ struct DZ
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
-        jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
-        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), dzfp( hz),dzfm( hz),
+//         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
+        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)), invB(dg::evaluate(field,grid))
 {
 
