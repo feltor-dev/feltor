@@ -35,7 +35,7 @@ struct Rolkar
         gp(gp),
         temp( dg::evaluate(dg::zero, g)), chi(temp), omega(chi),
         expy(2, temp),
-        dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
+        dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
     {
@@ -126,7 +126,8 @@ struct Feltor
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
 
-    const container binv, curvR, curvZ, gradlnB;
+    const container binv, curvR, curvZ;
+    container gradlnB;
     const container source, damping, one;
     const Preconditioner w3d, v3d;
 
@@ -258,8 +259,14 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
             //gradlnBcorrection
     //         dzNEU_.set_boundaries( dg::NEU, 0, 0);                                  //dz N = 0 on limiter
             dzNU_(y[i], dzy[i]);       
+            //compute gradlnb with dz
+//                 dzNU_( binv, gradlnB); //gradpar 1/B
+//                 dg::blas1::pointwiseDivide(gradlnB, binv, gradlnB); //-dz lnB      
+//                 dg::blas1::scal(gradlnB,-1.0);
             dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
             dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N
+            
+            //compute gradlnbcorrection with dz
         }
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)

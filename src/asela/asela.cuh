@@ -23,7 +23,7 @@ struct Rolkar
         p(p),
         gp(gp),
         temp( dg::evaluate(dg::zero, g)),
-        dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
+        dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
     {

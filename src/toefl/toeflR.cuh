@@ -25,7 +25,7 @@ struct Diffusion
         nu_(nu), global(global), 
         w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
         temp( dg::evaluate(dg::zero, g)), expx(temp),
-        LaplacianM_perp( g, dg::normed, dg::symmetric){
+        LaplacianM_perp( g, dg::normed, dg::centered){
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
@@ -182,11 +182,11 @@ ToeflR< M, container,P>::ToeflR( const Grid2d<double>& grid, double kappa, doubl
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
     gamma1(  grid, -0.5*tau),
     arakawa( grid), 
-    pol(     grid, not_normed, dg::symmetric), 
+    pol(     grid, not_normed, dg::centered), 
     pcg( omega, omega.size()), 
     w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( dg::evaluate( dg::one, grid)), 
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global),
-    laplaceM( grid, normed, dg::symmetric)
+    laplaceM( grid, normed, dg::centered)
     //A( grid, not_normed)
 {
 }

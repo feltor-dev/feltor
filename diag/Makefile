@@ -80,7 +80,8 @@ com: com.cu
 
 ncdiag: ncdiag.cpp
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
-
+histdiag: histdiag.cpp
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 imp: imp.cu
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 

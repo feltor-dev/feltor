@@ -159,7 +159,6 @@ struct GaussianProfDamping
         }
     double operator( )(double R, double Z)
     {
-//      if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
         if( psip_(R,Z) > gp_.psipmax ) return 0.;
         if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
         return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
@@ -172,7 +171,38 @@ struct GaussianProfDamping
     GeomParameters gp_;
     Psip psip_;
 };
-
+/**
+ * @brief Damps the inner boundary in a zone 
+ * from psipmax to psipmax+ 4*alpha with a normal distribution
+ * Returns 1 inside, zero outside and a gaussian within
+ * Additionaly cuts if Z < Z_xpoint
+ *
+ * \f$ 0 \f$, if \f$ \psi_p(R,Z) > \psi_{p,max} + 4\alpha \f$
+ *
+ * \f$ 1 \f$, if \f$ \psi_p(R,Z) < \psi_{p,max}\f$
+ *
+ * \f$ \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right)\f$, else
+ */ 
+struct GaussianProfXDamping
+{
+    GaussianProfXDamping( GeomParameters gp):
+        gp_(gp),
+        psip_(gp) {
+        }
+    double operator( )(double R, double Z)
+    {
+     if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
+        if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
+        return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
+    }
+    double operator( )(double R, double Z, double phi)
+    {
+        return (*this)(R,Z);
+    }
+    private:
+    GeomParameters gp_;
+    Psip psip_;
+};
 
 /**
  * @brief source for quantities N ... dtlnN = ...+ source/N
