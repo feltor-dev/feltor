@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <vector>
 #include <string>
+#include <algorithm> 
 
 #include "dg/algorithm.h"
 #include "dg/backend/interpolation.cuh"
@@ -10,8 +11,7 @@
 #include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-// #include <thrust/random/linear_congruential_engine.h>
-// #include <thrust/random/normal_distribution.h>
+
 
 /**
  * @brief returns histogram 
@@ -23,7 +23,7 @@ struct Histogram
      /**
      * @brief Construct from number of bins and input vector
      * @param g1d   grid of output vector
-     * @param input input vector
+     * @param in input vector
      */
     Histogram(const dg::Grid1d<double>& g1d, const std::vector<double>& in) :
     g1d_(g1d),
@@ -33,12 +33,10 @@ struct Histogram
     {
         for (unsigned j=0;j<in_.size();j++)
         {            
-            unsigned bin =(unsigned) ((in_[j]-1e-14-g1d_.x0())/binwidth_) ;
+            unsigned bin =floor( (in_[j]-g1d_.x0())/binwidth_ );
+            bin = std::max(bin,(unsigned) 0);
+            bin = std::min(bin,(unsigned)(g1d_.size()-1));
             count_[bin ]+=1.;
-//             #ifdef DGDEBUG
-            std::cout << "input[" << j << "] = " << in_[j] << 
-                         " bin = " << bin << " bincount = " << count_[bin ]<<std::endl;     
-//             #endif
         }
         //Normalize
         unsigned Ampmax = (unsigned)thrust::reduce( count_.begin(), count_.end(),0.,   thrust::maximum<double>()  );
@@ -48,8 +46,9 @@ struct Histogram
     double binwidth() {return binwidth_;}
     double operator()(double x)
     {    
-        double bin = (unsigned) ((x-1e-14-g1d_.x0())/binwidth_+0.5);
-        std::cout <<"x ="<<  x +0.5*binwidth_<< " bin=" <<bin << " count=" << count_[bin] <<std::endl;
+        unsigned bin = floor((x-g1d_.x0())/binwidth_+0.5);
+        bin = std::max(bin,(unsigned) 0);
+        bin = std::min(bin,(unsigned)(g1d_.size()-1));
         return count_[bin];
     }
 
@@ -64,8 +63,9 @@ struct Histogram2D
 {
      /**
      * @brief Construct from number of bins and input vector
-     * @param g1d   grid of output vector
-     * @param input input vector
+     * @param g2d   grid of output vector
+     * @param inx input vector in x direction
+     * @param iny input vector in y direction
      */
     Histogram2D(const dg::Grid2d<double>& g2d, const std::vector<double>& inx,const std::vector<double>& iny) :
     g2d_(g2d),
@@ -73,66 +73,48 @@ struct Histogram2D
     iny_(iny),
     binwidthx_(g2d_.hx()),
     binwidthy_(g2d_.hy()),
-    g1dx_(g2d_.x0(),g2d_.x1(), g2d_.n(), g2d_.Nx(),dg::DIR),
-    g1dy_(g2d_.y0(),g2d_.y1(), g2d_.n(), g2d_.Ny(),dg::DIR),
-    countx_(dg::evaluate(dg::zero,g1dx_)),
-    county_(dg::evaluate(dg::zero,g1dy_)),
     count_(dg::evaluate(dg::zero,g2d_))
     {
-        for (unsigned j=0;j<inx_.size();j++)
-        {            
-            unsigned binx =(unsigned) ((inx_[j]-1e-14-g2d_.x0())/binwidthx_) ;
-            countx_[binx ]+=1.;
-        }
-
-         for (unsigned j=0;j<iny_.size();j++)
-        {
-            unsigned biny =(unsigned) ((iny_[j]-1e-14-g2d_.y0())/binwidthy_) ;
-            county_[biny ]+=1.;  
-        }
 
         for (unsigned j=0;j<iny_.size();j++)
         {
-            unsigned biny =(unsigned) ((iny_[j]-1e-14-g2d_.y0())/binwidthy_) ;
-            for (unsigned i=0;i<inx_.size();i++)
-            {  
-                unsigned binx =(unsigned) ((inx_[i]-1e-14-g2d_.x0())/binwidthx_) ;
-//                 std::cout << "x = " << x << " y =" << y << " binx =" << binx <<" biny =" << biny<< std::endl;
-//                 if (abs(countx_[binx ] - county_[biny ])<2)  count_[biny*g2d_.Nx()+binx ]=countx_[binx ] + county_[biny ];                
+            unsigned biny =floor((iny_[j]-g2d_.y0())/binwidthy_) ;
+            biny = std::max(biny,(unsigned) 0);
+            biny = std::min(biny,(unsigned)(g2d_.Ny()-1));
 
-//                 if (abs(countx_[binx ] - county_[biny ])<10)  count_[biny*g2d_.Nx()+binx ]+=1.;                
-                 count_[biny*g2d_.Nx()+binx ]+=1.;
-            }
+                unsigned binx =floor((inx_[j]-g2d_.x0())/binwidthx_) ;
+                binx = std::max(binx,(unsigned) 0);
+                binx = std::min(binx,(unsigned)(g2d_.Nx()-1));
+                count_[biny*g2d_.Nx()+binx ]+=1.;
+            
         }
         //Normalize
-        unsigned Ampmaxx = (unsigned)thrust::reduce( countx_.begin(), countx_.end(),0.,thrust::maximum<double>()  );
-        unsigned Ampmaxy = (unsigned)thrust::reduce( county_.begin(), county_.end(),0.,thrust::maximum<double>()  ); 
         unsigned Ampmax =  (unsigned)thrust::reduce( count_.begin(),   count_.end(),0.,thrust::maximum<double>()  );   
-        dg::blas1::scal(countx_, 1./Ampmaxx);
-        dg::blas1::scal(county_, 1./Ampmaxy);
         dg::blas1::scal(count_,  1./Ampmax);
 
     }
 
     double operator()(double x, double y)
     {
-        unsigned binx = (unsigned) ((x-1e-14-g2d_.x0())/binwidthx_+0.5) ;
-        unsigned biny = (unsigned) ((y-1e-14-g2d_.y0())/binwidthy_+0.5) ;
-//         std::cout << "x = " << x << " y =" << y << " binx =" << binx <<" biny =" << biny<< std::endl;
-
-//         return countx_[binxmom]+county_[binymom];
-        return count_[biny*g2d_.Nx()+binx ]; ///(county_[biny ]*countx_[binx ]+1);
+        unsigned binx = floor((x-g2d_.x0())/binwidthx_+0.5) ;
+        binx = std::max(binx,(unsigned) 0);
+        binx = std::min(binx,(unsigned)(g2d_.Nx()-1));
+        unsigned biny = floor((y-g2d_.y0())/binwidthy_+0.5) ;
+        biny = std::max(biny,(unsigned) 0);
+        biny = std::min(biny,(unsigned)(g2d_.Ny()-1));
+        return count_[biny*g2d_.Nx()+binx ]; 
 
     }
     private:
     dg::Grid2d<double> g2d_;
     const std::vector<double> inx_,iny_;
-    dg::Grid1d<double> g1dx_,g1dy_;
     double binwidthx_,binwidthy_;
-    container countx_,county_;
     container count_;
 };
-double NormalizeToFluc(std::vector<double>& in) {
+/**
+ * @brief normalizes input vector 
+ */ 
+void NormalizeToFluc(std::vector<double>& in) {
     double ex= 0.;
     double exx= 0.;
     double ex2= 0.;
@@ -151,7 +133,6 @@ double NormalizeToFluc(std::vector<double>& in) {
         in[j] = (in[j]-  ex)/sigma; 
     }
     std::cout << "Sigma = " <<sigma << " Meanvalue = " << ex << std::endl;
-    return sigma;
 }
 
 int main( int argc, char* argv[])
@@ -164,29 +145,43 @@ int main( int argc, char* argv[])
     }
     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;   
     //----------------
-    const unsigned Nhist = 30; 
+    const unsigned Nhist = 100; 
     const unsigned nhist = 1;
-    const unsigned Ninput =1000;
+    const unsigned Ninput =50000;
+    const double Nsigma =4.;
     std::vector<double> input1(Ninput,0.);    
     std::vector<double> input2(Ninput,0.);    
 
     thrust::random::minstd_rand generator;
     thrust::random::normal_distribution<double> d1;
     thrust::random::normal_distribution<double> d2;
+    std::vector<double> rand1(Ninput,0.);    
+    std::vector<double> rand2(Ninput,0.);    
+    for (unsigned i=0;i<rand1.size();i++)  {  rand1[i] = d1(generator); }
+    for (unsigned i=0;i<rand2.size();i++)  {  rand2[i] = d2(generator); }
 
-    for (unsigned i=0;i<input1.size();i++)  {  input1[i] = d1(generator); }
-//     for (unsigned i=0;i<input1.size();i++)  {  input1[i] = d1(generator)*cos(100.*M_PI*i/input1.size()); }
+    for (unsigned i=0;i<input1.size();i++)  {
+        double t = (double)(i/(input1.size()-1));
+        double omega1 =2.*M_PI* 20.;
+        input1[i] = (rand1[i]*0.1*cos( omega1*t)+1.); 
+    }
+    for (unsigned i=0;i<input2.size();i++)  {
+        double t = (double)(i/(input2.size()-1));
+        double omega1 = 2.*M_PI*20.;
+        double omega2= 2.*M_PI*30.;
+        double phase = 0.5*M_PI;
+//         input2[i] =input1[i];  //perfectly correlated
+        input2[i] = (-rand1[i]*0.1*cos(omega1*t)+1.);//perfectly anticorrelated
+//         input2[i] = (rand2[i]*0.001*cos(omega2*t)+3.);//perfectly uncorrelated
+//         input2[i] = (rand2[i]*0.001*cos(omega2*t)+3.);//uncorrelated
+    } 
 
-//     for (unsigned i=0;i<input2.size();i++)  {  input2[i] =input1[i]; }
-    for (unsigned i=0;i<input2.size();i++)  {  input2[i] =(d2(generator)-3.)*0.001; }
-
-//         (3.*(input1[i]-2.))*cos(100.*M_PI*i/input2.size());}// d2(generator); }
     //normalize grid and compute sigma
-    double sigma_1 = NormalizeToFluc(input1);
-    double sigma_2 = NormalizeToFluc(input2);
-    dg::Grid1d<double>  g1d1(-4.,4., nhist, Nhist,dg::DIR);
-    dg::Grid1d<double>  g1d2(-4.,4., nhist, Nhist,dg::DIR); 
-    dg::Grid2d<double>  g2d( -4.,4.,-4.,4., nhist, Nhist,Nhist,dg::DIR,dg::DIR); 
+    NormalizeToFluc(input1);
+    NormalizeToFluc(input2);
+    dg::Grid1d<double>  g1d1(-Nsigma,Nsigma, nhist, Nhist,dg::DIR);
+    dg::Grid1d<double>  g1d2(-Nsigma,Nsigma, nhist, Nhist,dg::DIR); 
+    dg::Grid2d<double>  g2d( -Nsigma,Nsigma,-Nsigma,Nsigma, nhist, Nhist,Nhist,dg::DIR,dg::DIR); 
     Histogram<dg::HVec> hist1(g1d1,input1);  
     Histogram<dg::HVec> hist2(g1d2,input2);    
     Histogram2D<dg::HVec> hist12(g2d,input1,input2);    
@@ -230,30 +225,8 @@ int main( int argc, char* argv[])
     err = nc_enddef( ncid);
     err = nc_put_var_double( ncid, dataIDs12[0], PA1A2.data() );
     err = nc_redef(ncid);
-  /*  err = file::define_dimensions( ncid, &dim_ids2[0],  g1d2);
-    err = nc_def_var( ncid, names[1].data(), NC_DOUBLE, 1,&dim_ids2[0], &dataIDs[1]);
-    err = nc_put_vara_double( ncid, dataIDs[1], hist2g1d2.data());    */    
-            nc_close( ncid);
+    nc_close( ncid);
 
-//     size_t count[2] = {1, Nhist};
-//     size_t start[2] = {0, 0};
-   //-----------------NC end
-//     dg::HVec hist12g2d = dg::evaluate(hist12,g2d);
-//     for (unsigned j=0; j < g1d1.size();j++)
-//     {
-//         std::cout << "PA1[" << j << "] = " << PA1[j] << std::endl;      
-//     }
-//     for (unsigned j=0; j < g1d2.size();j++)
-//     {
-//         std::cout << "PA2[" << j << "] = " << PA2[j] << std::endl;      
-//     }
-//     for (unsigned j=0; j < g1d1.size();j++)
-//     {
-//         for (unsigned i=0; i < g1d2.size();i++)
-//         {
-//         std::cout << "hist12g1d2[" << j << i << "] = " << hist12g2d[j+i*Nhist] << std::endl;    
-//         }
-//     }
     return 0;
 }
 
