@@ -322,12 +322,12 @@ struct TestFunction
     double operator()( double R, double Z, double phi)
     {
 //         return psip_(R,Z,phi)*sin(phi);
-        double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
-        double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
-        double kR = 1.*M_PI/(Rmax - Rmin);
-        double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
-        double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
-        double kZ = 1.*M_PI/(Zmax - Zmin);
+//         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
+//         double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
+//         double kR = 1.*M_PI/(Rmax - Rmin);
+//         double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
+//         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
+//         double kZ = 1.*M_PI/(Zmax - Zmin);
         double kP = 1.;
 //         return sin(phi*kP)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
 //         return cos(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ);
@@ -357,12 +357,12 @@ struct DeriTestFunction
         bhatP_(gp) {}
     double operator()( double R, double Z, double phi)
     {
-        double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
-        double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
-        double kR = 1.*M_PI/(Rmax - Rmin);
-        double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
-        double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
-        double kZ = 1.*M_PI/(Zmax - Zmin);
+//         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
+//         double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
+//         double kR = 1.*M_PI/(Rmax - Rmin);
+//         double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
+//         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
+//         double kZ = 1.*M_PI/(Zmax - Zmin);
         double kP = 1.;
 //          return (bhatR_(R,Z,phi)*sin(phi)*sin((Z-Zmin)*kZ)*cos((R-Rmin)*kR)*kR+
 //                 bhatZ_(R,Z,phi)*sin(phi)*sin((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kZ+

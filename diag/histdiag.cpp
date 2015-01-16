@@ -171,9 +171,9 @@ int main( int argc, char* argv[])
         double omega2= 2.*M_PI*30.;
         double phase = 0.5*M_PI;
 //         input2[i] =input1[i];  //perfectly correlated
-        input2[i] = (-rand1[i]*0.1*cos(omega1*t)+1.);//perfectly anticorrelated
+//         input2[i] = (-rand1[i]*0.1*cos(omega1*t)+1.);//perfectly anticorrelated
 //         input2[i] = (rand2[i]*0.001*cos(omega2*t)+3.);//perfectly uncorrelated
-//         input2[i] = (rand2[i]*0.001*cos(omega2*t)+3.);//uncorrelated
+        input2[i] = (rand2[i]*0.001*cos(omega2*t)+3.);//uncorrelated
     } 
 
     //normalize grid and compute sigma
