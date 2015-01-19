@@ -72,12 +72,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         assert(x[i] >= g.x0() && x[i] <= g.x1());
 
         //determine which cell (x) lies in 
-        double xnn = (x[i]-g.x0())/g.hx();
+        double xnn = (x[i]-g.x0())/g.h();
         unsigned n = (unsigned)floor(xnn);
         //determine normalized coordinates
         double xn = 2.*xnn - (double)(2*n+1); 
         //intervall correction
-        if (n==g.Nx()) {
+        if (n==g.N()) {
             n-=1;
             xn = 1.;
         }

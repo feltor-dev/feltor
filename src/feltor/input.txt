@@ -5,15 +5,15 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   55 (192)
-3)  ny (grid points in y)                =   55 (192) 
+2)  nx (grid points in x)                =   45 (192)
+3)  ny (grid points in y)                =   45 (192) 
 4)  nz (grid points in z)                =   13(>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  55 
-8)  ny_out (# grid points in output field)  =  55
+7)  nx_out (# grid points in output field)  =  45 
+8)  ny_out (# grid points in output field)  =  45
 9)  nz_out (# grid points in output field)  =  13
 10) itstp  (steps between outputs)          =  10 (5)
 11) total # of outputs (excluding first)    =  10000 
