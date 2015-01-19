@@ -68,7 +68,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
@@ -83,7 +83,6 @@ int main( int argc, char* argv[])
     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
-
     
     //background profile
     solovev::Nprofile prof(p, gp); //initial background profile

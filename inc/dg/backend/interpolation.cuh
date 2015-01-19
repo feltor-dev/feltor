@@ -72,10 +72,15 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         assert(x[i] >= g.x0() && x[i] <= g.x1());
 
         //determine which cell (x) lies in 
-        unsigned n = (unsigned)floor((x[i]-g.x0())/g.h());
-        n=(n==g.N()) ? n-1 :n;
+        double xnn = (x[i]-g.x0())/g.hx();
+        unsigned n = (unsigned)floor(xnn);
         //determine normalized coordinates
-        double xn = 2.*(x[i]-g.x0())/g.h() - (double)(2*n+1); 
+        double xn = 2.*xnn - (double)(2*n+1); 
+        //intervall correction
+        if (n==g.Nx()) {
+            n-=1;
+            xn = 1.;
+        }
         //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n());
         //...these are the matrix coefficients with which to multiply 
@@ -124,13 +129,32 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         assert( y[i] >= g.y0() && y[i] <= g.y1());
 
         //determine which cell (x,y) lies in 
-        unsigned n =(unsigned)floor((x[i]-g.x0())/g.hx());
-        unsigned m = (unsigned)floor((y[i]-g.y0())/g.hy());
-        n=(n==g.Nx()) ? n-1 :n;
-        m=(m==g.Ny()) ? m-1 :m;
+
+        double xnn = (x[i]-g.x0())/g.hx();
+        double ynn = (y[i]-g.y0())/g.hy();
+        unsigned n = (unsigned)floor(xnn);
+        unsigned m = (unsigned)floor(ynn);
         //determine normalized coordinates
-        double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*(n)+1); 
-        double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*(m)+1); 
+
+        double xn =  2.*xnn - (double)(2*(n)+1); 
+        double yn =  2.*ynn - (double)(2*(m)+1); 
+        //interval correction
+        if (n==g.Nx()) {
+            n-=1;
+            xn = 1.;
+        }
+        if (m==g.Ny()) {
+            m-=1;
+            yn =1.;
+        }
+       
+
+std::cout << std::setprecision (16) << " xn = " << xn
+          << " yn = " << yn
+            << " n = " << n
+            << " m = " << m 
+            << " x[i] = " << x[i] 
+            << " y[i] = " << y[i] << std::endl;
 
         //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n()), 
@@ -206,18 +230,32 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         assert( z[i] >= g.z0() && z[i] <= g.z1());
 
         //determine which cell (x,y) lies in 
-        unsigned n = (unsigned)floor((x[i]-g.x0())/g.hx());
-        unsigned m = (unsigned)floor((y[i]-g.y0())/g.hy());
-        unsigned l = (unsigned)floor((z[i]-g.z0())/g.hz());
+        double xnn = (x[i]-g.x0())/g.hx();
+        double ynn = (y[i]-g.y0())/g.hy();
+        double znn = (z[i]-g.z0())/g.hz();
+        unsigned n = (unsigned)floor(xnn);
+        unsigned m = (unsigned)floor(ynn);
+        unsigned l = (unsigned)floor(znn);
         n=(n==g.Nx()) ? n-1 :n;
         m=(m==g.Ny()) ? m-1 :m;
         l=(l==g.Nz()) ? l-1 :l;
 
         //determine normalized coordinates
-        double xn = 2.*(x[i]-g.x0())/g.hx() - (double)(2*n+1); 
-        double yn = 2.*(y[i]-g.y0())/g.hy() - (double)(2*m+1); 
-        double zn = 2.*(z[i]-g.z0())/g.hz() - (double)(2*l+1); 
-
+        double xn = 2.*xnn - (double)(2*n+1); 
+        double yn = 2.*ynn - (double)(2*m+1); 
+        double zn = 2.*znn - (double)(2*l+1); 
+        if (n==g.Nx()) {
+            n-=1;
+            xn = 1.;
+        }
+        if (m==g.Ny()) {
+            m-=1;
+            yn =1.;
+        }
+         if (l==g.Nz()) {
+            l-=1;
+            zn =1.;
+        }
         //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n()), 
                             py = detail::coefficients( yn, g.n()),

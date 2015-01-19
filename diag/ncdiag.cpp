@@ -9,6 +9,7 @@
 
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/xspacelib.cuh"
+#include "dg/backend/average.cuh"
 #include "dg/functors.h"
 
 #include "file/read_input.h"
@@ -17,8 +18,11 @@
 #include "solovev/geometry.h"
 #include "solovev/init.h"
 
-#define RADIALDIFFUSIONCOEFF
+#define RADIALELECTRONDENSITYFLUX
 #define GRADIENTLENGTH
+
+
+
 int main( int argc, char* argv[])
 {
     if( argc != 4)
@@ -121,7 +125,7 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<10; i++){
         err1d = nc_def_var( ncid1d, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
-//     midplane 2d fields
+//  midplane 2d fields
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
     size_t start1d[2] = {0, 0};
 
@@ -155,7 +159,7 @@ int main( int argc, char* argv[])
     dg::HVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
     dg::HVec temp2 = dg::evaluate(dg::zero , g3d_out) ;
     dg::HVec temp3 = dg::evaluate(dg::zero , g3d_out) ;
-    #ifdef RADIALDIFFUSIONCOEFF
+    #ifdef RADIALELECTRONDENSITYFLUX
     const dg::HVec psipR =  dg::evaluate( solovev::PsipR(gp), g3d_out);
     const dg::HVec psipRR = dg::evaluate( solovev::PsipRR(gp), g3d_out);
     const dg::HVec psipZ =  dg::evaluate( solovev::PsipZ(gp), g3d_out);
@@ -170,6 +174,7 @@ int main( int argc, char* argv[])
 #endif
     std::vector<dg::HVec> fields3d(5,dg::evaluate(dg::zero,g3d_out));
     std::vector<dg::HVec> fields2d(5,dg::evaluate(dg::zero,g3d_out));
+    dg::ToroidalAverage<dg::HVec> toravg(g3d_out);
     for( unsigned i=0; i<p.maxout; i++)//timestepping
     {
         start3dp[0] = i; //set specific time  
@@ -181,7 +186,6 @@ int main( int argc, char* argv[])
         err1d = nc_open(argv[2], NC_WRITE, &ncid1d);
 
         std::cout << "Timestep = " << i << "  time = " << time << "\n";
-//         std::cout << "Extract 2d planes for avg 2d field and phi_fluc at midplane and computing fsa of Phi_Avg quantities"<< "\n";     
 
         //Compute toroidal average and fluctuation at midplane for every timestep
         dg::HVec data2davg = dg::evaluate( dg::zero, g2d_out);   
@@ -193,10 +197,8 @@ int main( int argc, char* argv[])
         dg::HVec Depsip2davg =  dg::evaluate(dg::zero , g2d_out); 
         dg::HVec Depsip3dfluc =  dg::evaluate(dg::zero , g3d_out);
         dg::HVec Depsip2dflucavg =  dg::evaluate(dg::zero , g2d_out);  
-        dg::HVec Lperpinv2davg =  dg::evaluate(dg::zero , g2d_out);  
-
-        
-        
+        dg::HVec Lperpinv2davg =  dg::evaluate(dg::zero , g2d_out);          
+        //Ne,Ni,Ue,Ui,Phi
         for( unsigned i=0; i<5; i++)
         {
             //set quantities to zero
@@ -210,15 +212,11 @@ int main( int argc, char* argv[])
             err = nc_close(ncid);  //close 3d file
     
             //get 2d data and sum up for avg
-            for( unsigned k=0; k<g3d_out.Nz(); k++)
-            {
-                dg::HVec data2d(fields3d[i].begin() + k*g2d_out.size(),fields3d[i].begin() + (k+1)*g2d_out.size());
-                dg::blas1::axpby(1.0,data2d,1.0,data2davg); 
-            }
+            toravg(fields3d[i],data2davg);
+
             //get 2d data of MidPlane
             unsigned kmp = (g3d_out.Nz()/2);
             dg::HVec data2dflucmid(fields3d[i].begin() + kmp*g2d_out.size(),fields3d[i].begin() + (kmp+1)*g2d_out.size());
-            dg::blas1::scal(data2davg,1./g3d_out.Nz()); //scale avg
             
             //for fluctuations to be  f_varphi
 //             dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); //Compute z fluctuation
@@ -241,18 +239,13 @@ int main( int argc, char* argv[])
         }
         //----------------Start vorticity computation
         dg::blas2::gemv( laplacian,fields3d[4],vor3d);
-        for( unsigned k=0; k<g3d_out.Nz(); k++)
-        {
-            dg::HVec data2d(vor3d.begin() + k*g2d_out.size(),vor3d.begin() + (k+1)*g2d_out.size());
-            dg::blas1::axpby(1.0,data2d,1.0,vor2davg); 
-        }
-        dg::blas1::scal(vor2davg,1./g3d_out.Nz()); //scale avg
+        toravg(vor3d,vor2davg);
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[10],   start2d, count2d, vor2davg.data());
         solovev::FluxSurfaceAverage<dg::HVec> fsavor(g2d_out,gp,vor2davg );
         dg::HVec vor1dfsa = dg::evaluate(fsavor,g1d_out);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[6], start1d, count1d,  vor1dfsa.data()); 
         //----------------Stop vorticity computation
-        //----------------Start Perpendicular DiffusionCoefficient computation
+        //----------------Start Perpendicular ELECTRONDENSITYFLUX computation
         //poissonpart
         dg::blas1::transform(fields3d[0], temp3, dg::PLUS<>(+1)); //Ne +1
         poisson( fields3d[4], fields3d[0], Deperp3d); //D_perp,e = [phi,N_e]_RZ
@@ -268,22 +261,16 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( -1.0, temp2,1.0,  Deperp3d );  //D_perp,e = 1/B*[phi,N_e]_RZ - 1*K(N_e) 
         dg::blas1::axpby(  0.5*p.mu[0], temp1,1.0,  Deperp3d);  //D_perp,e = 1/B*[phi,N_e]_RZ - 1*K(N_e) + 0.5*nu_e*U_e^2*K(N_e)
         dg::blas1::pointwiseDot( Deperp3d, temp3, Deperp3d); //D_perp,e = N_e*(1/B*[phi,N_e]_RZ - 0.5*K(N_e))
-        //(nabla_perp Ne)^2 part
-//         poisson.variationRHS(fields3d[0],temp2);
-//         dg::blas1::pointwiseDivide( Deperp3d, temp2, Deperp3d); 
-        for( unsigned k=0; k<g3d_out.Nz(); k++)
-        {
-            dg::HVec data2d(Deperp3d.begin() + k*g2d_out.size(),Deperp3d.begin() + (k+1)*g2d_out.size());
-            dg::blas1::axpby(1.0,data2d,1.0,Deperp2davg); 
-        }
-        dg::blas1::scal(Deperp2davg,1./g3d_out.Nz()); //scale avg
+
+        toravg(Deperp3d,Deperp2davg);
+
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[11],   start2d, count2d, Deperp2davg.data());
         solovev::FluxSurfaceAverage<dg::HVec> fsaDeperp(g2d_out,gp, Deperp2davg );
         dg::HVec  Deperp1Dfsa = dg::evaluate(fsaDeperp,g1d_out);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[7], start1d, count1d,   Deperp1Dfsa.data()); 
-        //--------------- Stop Perpendicular DiffusionCoefficient computation
-        //--------------- Start Radial DiffusionCoefficient computation
-        #ifdef RADIALDIFFUSIONCOEFF
+        //--------------- Stop Perpendicular ELECTRONDENSITYFLUX computation
+        //--------------- Start RADIALELECTRONDENSITYFLUX computation
+        #ifdef RADIALELECTRONDENSITYFLUX
         //ExB term  =  1/B[phi,psi_p] term
         dg::blas2::gemv( poisson.dxlhs(), fields3d[4], temp1); //temp1 = d_R phi
         dg::blas2::gemv( poisson.dylhs(), fields3d[4], temp2);  //temp2 = d_Z phi
@@ -300,50 +287,29 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( -1.0, temp2,1.0,  Depsip3d );  //Depsip3d = 1/B*[phi,psi_p]_RZ - K(psi_p) 
         dg::blas1::axpby(  0.5*p.mu[0], temp1, 1.0,  Depsip3d);  //Depsip3d = 1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p)
         dg::blas1::pointwiseDot( Depsip3d, temp3, Depsip3d); //Depsip3d = N_e*(1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p))
-        //Background gradient Term = d_R psi_p d_R N_e + d_Z psi_p d_Z N_e term
-//         dg::blas2::gemv( poisson.dxrhs(), fields3d[0], temp1); //temp1 =  d_R (N_e -1)
-//         dg::blas2::gemv( poisson.dyrhs(), fields3d[0], temp2);  //temp2 = d_Z (N_e -1)
-//         dg::blas1::pointwiseDot( psipR, temp1, temp1); //temp1 =  d_R psi_p d_R (N_e -1)
-//         dg::blas1::pointwiseDot( psipZ, temp2, temp2); //temp2 =  d_Z psi_p d_Z (N_e -1)
-//         dg::blas1::axpby( 1.0, temp1, 1.0,temp2,temp2);  //temp2 =  d_R psi_p d_R (N_e -1) + d_Z psi_p d_Z (N_e -1)
-//         dg::blas1::pointwiseDivide( Depsip3d, temp2,Depsip3d); 
-        for( unsigned k=0; k<g3d_out.Nz(); k++)
-        {
-            dg::HVec data2d(Depsip3d.begin() + k*g2d_out.size(),Depsip3d.begin() + (k+1)*g2d_out.size());
-            dg::blas1::axpby(1.0,data2d,1.0,Depsip2davg); 
-        }
-        dg::blas1::scal(Depsip2davg,1./g3d_out.Nz()); //scale avg
+        toravg(Depsip3d,Depsip2davg);
+
         solovev::FluxSurfaceAverage<dg::HVec> fsaDepsip(g2d_out,gp, Depsip2davg );
         dg::HVec  Depsip1Dfsa = dg::evaluate(fsaDepsip,g1d_out);
         //compute delta f on midplane : d Depsip2d = Depsip - <Depsip>       
         dg::blas2::gemv(fsaonrzphimatrix, Depsip1Dfsa , Depsip3dfluc ); //fsa on RZ grid
         dg::blas1::axpby(1.0,Depsip3d,-1.0, Depsip3dfluc, Depsip3dfluc); 
         //Same procedure for fluc
-        for( unsigned k=0; k<g3d_out.Nz(); k++)
-        {
-            dg::HVec data2d( Depsip3dfluc.begin() + k*g2d_out.size(), Depsip3dfluc.begin() + (k+1)*g2d_out.size());
-            dg::blas1::axpby(1.0,data2d,1.0, Depsip2dflucavg); 
-        }
-        dg::blas1::scal(Depsip2dflucavg,1./g3d_out.Nz()); //scale avg
+        toravg(Depsip3dfluc,Depsip2dflucavg);
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, Depsip2dflucavg.data());
         solovev::FluxSurfaceAverage<dg::HVec> fsaDepsipfluc(g2d_out,gp,  Depsip2dflucavg );
         dg::HVec  Depsip1Dflucfsa = dg::evaluate(fsaDepsipfluc,g1d_out);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[8], start1d, count1d,   Depsip1Dflucfsa.data()); 
         std::cout << "Depsip =" << dg::blas2::dot(psipupilog3d,w3d, Depsip3dfluc) << std::endl;
         #endif
+        //STOP RADIALELECTRONDENSITYFLUX
         #ifdef GRADIENTLENGTH
         dg::blas1::transform(temp3, temp1, dg::LN<double>());
         poisson.variationRHS(temp1,temp2);
         dg::blas1::transform(temp2, Lperpinv3d, dg::SQRT<double>());
 
 //         dg::blas1::pointwiseDivide( one3d, Lperpinv3d,Lperpinv3d); //Ln = ( d_R psi_p d_R (N_e -1) + d_Z psi_p d_Z (N_e -1) )/N_e
-        for( unsigned k=0; k<g3d_out.Nz(); k++)
-        {
-            dg::HVec data2d(Lperpinv3d.begin() + k*g2d_out.size(),Lperpinv3d.begin() + (k+1)*g2d_out.size());
-            dg::blas1::axpby(1.0,data2d,1.0,Lperpinv2davg); 
-        } 
-        
-        dg::blas1::scal(Lperpinv2davg,1./g3d_out.Nz()); //scale avg
+        toravg(Lperpinv3d,Lperpinv2davg);
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[13],   start2d, count2d, Lperpinv2davg.data());
         solovev::FluxSurfaceAverage<dg::HVec> fsaLperpinv(g2d_out,gp,Lperpinv2davg );
         dg::HVec  Lperpinv1Dfsa = dg::evaluate(fsaLperpinv,g1d_out);
@@ -361,30 +327,13 @@ int main( int argc, char* argv[])
         err2d = nc_close(ncid2d); //close 2d netcdf files
       
         //Probe 
-        const double Rprobe = gp.R_0+p.boxscaleRm*gp.a*0.8;
-        const double Zprobe = 0.0;
-        const double Phiprobe = M_PI;
-//         dg::HMatrix probeinterp  = dg::create::interpolation( Rprobe,  Zprobe, Phiprobe, g3d_out, dg::NEU);
-
-//         double probevalue = fields3d[0](Rprobe,Zprobe,Phiprobe);
-        
-////////////////////////////////transport coefficient
-// D_perp,e = N_e u_perp,e . nabla_perp N_e/(nabla_perp N_e)^2
-        //[phi-beta_e0Apar,Ne]
-        //Curv(N_e)
-
-        
-        //compute D_e
-
-//         
-
-        
-        
-        
-        
-        
-        
-        
+        const dg::HVec Rprobe(1,gp.R_0+p.boxscaleRm*gp.a*0.8);
+        const dg::HVec Zprobe(1,0.0);
+        const dg::HVec Phiprobe(1,M_PI);
+        dg::HMatrix probeinterp  = dg::create::interpolation( Rprobe,  Zprobe, Phiprobe, g3d_out, dg::NEU);
+        dg::HVec probevalue(1,0.0);
+        dg::blas2::gemv(probeinterp,fields3d[0],probevalue);
+        std::cout << probevalue[0]<< std::endl;
         // ---- Compute energies ----
 //         std::cout << "Compute macroscopic timedependent quantities"<< "\n";
 
@@ -395,7 +344,7 @@ int main( int argc, char* argv[])
         
         
     } //end timestepping
-    //cross correleation between phi and ne
+    //cross coherence between phi and ne
     
     //relative fluctuation amplitude(R,Z,phi) = delta n(R,Z,phi)/n0(psi)
    

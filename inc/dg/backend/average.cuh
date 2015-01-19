@@ -100,4 +100,42 @@ struct PoloidalAverage
     container w2d, v1d;
     double ly_;
 };
+/**
+ * @brief Class for phi average computations
+ *
+ * The problem is the dg format of the vector
+ * @tparam container Vector class to be used
+ */
+template< class container = thrust::host_vector<double> >
+struct ToroidalAverage
+{
+    /**
+     * @brief Construct from grid object
+     *
+     * @param g3d 3d Grid
+     */
+    ToroidalAverage(const dg::Grid3d<double>& g3d):
+        g3d_(g3d),
+        sizeg2d_(g3d_.size()/g3d_.Nz())
+    {        
+    }
+    /**
+     * @brief Compute the average in phi-direction
+     *
+     * @param src 3d Source vector 
+     * @param res contains the 2d result on output (may not equal src)
+     */
+    void operator()(const container& src, container& res)
+    {
+        for( unsigned k=0; k<g3d_.Nz(); k++)
+        {
+            container data2d(src.begin() + k*sizeg2d_,src.begin() + (k+1)*sizeg2d_);
+            dg::blas1::axpby(1.0,data2d,1.0,res); 
+        }
+        dg::blas1::scal(res,1./g3d_.Nz()); //scale avg
+    }
+    private:
+    const dg::Grid3d<double>& g3d_;
+    unsigned sizeg2d_;
+};
 }//namespace dg
