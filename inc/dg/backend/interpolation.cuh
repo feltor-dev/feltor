@@ -147,14 +147,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
             m-=1;
             yn =1.;
         }
-       
 
-std::cout << std::setprecision (16) << " xn = " << xn
-          << " yn = " << yn
-            << " n = " << n
-            << " m = " << m 
-            << " x[i] = " << x[i] 
-            << " y[i] = " << y[i] << std::endl;
 
         //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n()), 
