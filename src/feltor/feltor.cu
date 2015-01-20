@@ -9,12 +9,15 @@
 //#include "draw/device_window.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
+#include "dg/backend/average.cuh"
 #include "file/read_input.h"
 #include "solovev/geometry.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
 
+#define TORLIM //for toroidal limiter setup
+// #define TORSHEATHLIM //for toroidal sheath limiter setup (under construction)
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the Feltor - functor and 
@@ -117,7 +120,7 @@ int main( int argc, char* argv[])
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
-
+    dg::ToroidalAverage<dg::HVec> toravg(grid);
     //create timer
     dg::Timer t;
     double time = 0;
@@ -141,15 +144,14 @@ int main( int argc, char* argv[])
         title << std::setprecision(2) << std::scientific;
         //title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         title <<"ne-1 / " << colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
+            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);   
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
@@ -163,15 +165,14 @@ int main( int argc, char* argv[])
         title << std::setprecision(2) << std::scientific;
         //title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         title <<"ni-1 / " << colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw potential
@@ -186,17 +187,16 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();
         //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         title <<"Omega / "<< colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-
+        
         //draw U_e
         hvisual = y0[2];
         dg::blas2::gemv( equi, hvisual, visual);
@@ -205,16 +205,16 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();
         //title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         title <<"Ue / " << colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+                for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
-        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
+        render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);      
+        
         //draw U_i
         hvisual = y0[3];
         dg::blas2::gemv( equi, hvisual, visual);
@@ -223,15 +223,14 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();
         //title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
         title <<"Ui / " << colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         title << std::fixed; 

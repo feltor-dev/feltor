@@ -71,16 +71,16 @@ int main( int argc, char* argv[])
     dg::HVec w3d = dg::create::weights( g3d_out);   
     
     dg::HVec psipog2d   = dg::evaluate( psip, g2d_out);    
-    double psipmin = (float)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
-    double psipmax = (float)thrust::reduce( psipog2d.begin(), psipog2d.end(),psipmin,thrust::maximum<double>()  );
+    double psipmin = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
+    double psipmax = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(),psipmin,thrust::maximum<double>()  );
 //     double psipmax = 0.0;
     solovev::PsiPupil psipupil(gp,psipmax);
     dg::HVec psipupilog2d   = dg::evaluate( psipupil, g2d_out);    
     dg::HVec psipupilog3d   = dg::evaluate( psipupil, g3d_out);    
 
-    unsigned Npsi = 25;//set number of psivalues
+    unsigned Npsi = 50;//set number of psivalues
     std::cout << "psipmin =" << psipmin << " psipmax =" << psipmax << " Npsi =" << Npsi  <<std::endl;
-    dg::Grid1d<double>  g1d_out(psipmin ,psipmax, 3, Npsi,dg::DIR); //one dimensional sipgrid
+    dg::Grid1d<double>  g1d_out(psipmin  ,psipmax ,3, Npsi,dg::NEU); //one dimensional sipgrid
     dg::HVec w1d = dg::create::weights( g1d_out);   
     //read in midplane of electrons, ions Ue, Ui, and potential, and energy
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
@@ -148,7 +148,6 @@ int main( int argc, char* argv[])
     dg::HMatrix fsaonrzmatrix,fsaonrzphimatrix;     
     fsaonrzmatrix    =  dg::create::interpolation(psipupilog2d ,g1d_out);    
     fsaonrzphimatrix =  dg::create::interpolation(psipupilog3d ,g1d_out);    
-    std::cout << "Compute safety factor   "<< "\n";
     
     //Vectors and Matrices for Diffusion coefficient
     const dg::HVec curvR = dg::evaluate( solovev::CurvatureR(gp), g3d_out);

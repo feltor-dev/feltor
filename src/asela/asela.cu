@@ -9,11 +9,14 @@
 //#include "draw/device_window.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
+#include "dg/backend/average.cuh"
 #include "file/read_input.h"
 #include "solovev/geometry.h"
 
 #include "asela.cuh"
 #include "feltor/parameters.h"
+
+#define TORLIM //for toroidal limiter setup
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -111,6 +114,8 @@ int main( int argc, char* argv[])
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
+    dg::ToroidalAverage<dg::HVec> toravg(grid);
+
     //create timer
     dg::Timer t;
     double time = 0;
@@ -131,15 +136,14 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();   
         title << std::setprecision(2) << std::scientific;
         title <<"ne-1 / " << colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         hvisual =  karniadakis.last()[1];
@@ -148,15 +152,14 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();   
         title << std::setprecision(2) << std::scientific;
         title <<"ni-1 / " << colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw Potential
         hvisual = feltor.potential()[0];
@@ -169,16 +172,16 @@ int main( int argc, char* argv[])
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
         title <<"Phi / " << colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
 
         //draw U_e
         hvisual = feltor.uparallel()[0]; //=U_parallel_e
@@ -186,15 +189,14 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
         title <<"Ue / " << colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw U_i
         hvisual =feltor.uparallel()[1];
@@ -202,15 +204,14 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
         title <<"Ui / "<< colors.scalemax()<<"\t";
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw a parallel
         hvisual = feltor.aparallel();
@@ -222,11 +223,10 @@ int main( int argc, char* argv[])
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
             dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
-
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas1::axpby(0.0,avisual,0.0,avisual);
+        toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
  
         
