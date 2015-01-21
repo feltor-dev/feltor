@@ -9,8 +9,6 @@
 3)  ny (grid points in y)                =   172 (192) 
 4)  nz (grid points in z)                =   20 (1)
 5)  dt (time step in units c_s/rho_s)    =   1(0.01)
-
-
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
 7)  nx_out (# grid points in output field)  =  100 
@@ -18,34 +16,25 @@
 9)  nz_out (# grid points in output field)  =  1
 10) itstp  (steps between outputs)          =  10  (5)
 11) total # of outputs (excluding first)    =  100
-
--------------------------Algorithmic parameters------------------------
-12)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
-13)  eps_max (stop for induction)           =   0.0 (1e-6)
-14)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
-15)  eps_time ( stop for time inversion )   =   1e-12 
 -------------------------Physical parameters----------------------------
-16) mu_e (-m_e/m_i)                         = -0.000544617 (-0.000544617,-0.000272121,-0.000181372 )
-17) tau (Ti/Te)                             =  0.0    (0.0)
-18) beta_e0                                 =  0.0  (1e-4)
-19) nu_perp                                 =  1e-3 
-20) nu_parallel  (viscosity)                =  10   (0.001)
-21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
-
+12) nu_perp                                 =  1e-3 
+13) nu_parallel  (viscosity)                =  10   (0.001)
 ------------------------Initial perturbation parameters---------------------
-22) amp (blob amplitude)                    =  1.0    (1.0)
-23) sigma (blob variance in units of rho_s) =  2.0     (10)
-24) x-position ( in units of a)             =  0.9   (0.4)
-25) y-position ( in units of a)             =  0.00   (0.5)
-26) sigma_z (variance in units of R_0)      =  1.0       (12.5 for oo)
-27) k_psi (zonal modes)                     =  1.0   
-28) Profile amplitude                       =  0.0  (peak amplitude)
-29) Background Prof amplitude               =  1.   (density on the boundary)
+14) amp (blob amplitude)                    =  1.0    (1.0)
+15) sigma (blob variance in units of rho_s) =  2.0     (10)
+16) x-position ( in units of a)             =  0.9   (0.4)
+17) y-position ( in units of a)             =  0.00   (0.5)
+18) sigma_z (variance in units of R_0)      =  1.0       (12.5 for oo)
+19) k_psi (zonal modes)                     =  1.0   
+20) Profile amplitude                       =  0.0  (peak amplitude)
+21) Background Prof amplitude               =  1.   (density on the boundary)
+----------------------------------Boundary condition----------------------------
+22) GLOBAL BC (1 DIR/ 4 NEU)                =  4
 ----------------------------------Miscellaneous----------------------------
-30) particle source amplitude               =  0.0
-31) boxscale R+                             =  1.2 (a little larger than 1)
-32) boxscale R-                             =  1.2 (a little larger than 1)
-33) boxscale Z+                             =  1.2 (a little larger than 1)
-34) boxscale Z-                             =  1.2 (a little larger than 1)
-
+23) boxscale R+                             =  1.2 (a little larger than 1)
+24) boxscale R-                             =  1.2 (a little larger than 1)
+25) boxscale Z+                             =  1.2 (a little larger than 1)
+26) boxscale Z-                             =  1.2 (a little larger than 1)
+27) adv (adj(0), nadj(1), onadj(2),no(3))   =  0
+27) adv (adj(0), nadj(1), onadj(2),no(3)))  =  0
 @ ------------------------------------------------------------
