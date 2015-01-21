@@ -176,6 +176,12 @@ int main( int argc, char* argv[])
     err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
     err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
     err = nc_var_par_access( ncid, accuracyID, NC_COLLECTIVE);
+    int NepID,phipID;
+    err = nc_def_var( ncid, "Ne_p",     NC_DOUBLE, 1, &EtimeID, &NepID);
+    err = nc_var_par_access( ncid, NepID, NC_COLLECTIVE);
+    err = nc_def_var( ncid, "phi_p",    NC_DOUBLE, 1, &EtimeID, &phipID);  
+    err = nc_var_par_access( ncid, phipID, NC_COLLECTIVE);
+
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////////////
     int dims[3],  coords[3];
@@ -202,6 +208,8 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+    double Nep=feltor.probe_vector()[0][0];
+    double phip=feltor.probe_vector()[1][0];
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -210,6 +218,8 @@ int main( int argc, char* argv[])
 
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+    err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+    err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     if(rank==0)std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -244,6 +254,8 @@ int main( int argc, char* argv[])
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
+            Nep =feltor.probe_vector()[0][0];
+            phip=feltor.probe_vector()[1][0];
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
@@ -253,6 +265,8 @@ int main( int argc, char* argv[])
             }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);     
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
             if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             if(rank==0)std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";

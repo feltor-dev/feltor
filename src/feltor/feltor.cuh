@@ -109,7 +109,10 @@ struct Feltor
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
     double energy( ) {return energy_;}
+
     std::vector<double> energy_vector( ) {return evec;}
+    std::vector<container>& probe_vector( ) {return probevec;}
+
     double energy_diffusion( ){ return ediff_;}
 
     void energies( std::vector<container>& y);
@@ -126,6 +129,7 @@ struct Feltor
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
 
+    
     const container binv, curvR, curvZ;
     container gradlnB;
     const container source, damping, one;
@@ -136,8 +140,8 @@ struct Feltor
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
-    dg::DZ<Matrix, container> dzNU_;
     dg::DZ<Matrix, container> dzDIR_;
+    dg::DZ<Matrix, container> dzNU_;
     dg::Poisson< Matrix, container> poisson; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
@@ -153,6 +157,11 @@ struct Feltor
 
     double mass_, energy_, diff_, ediff_;
     std::vector<double> evec;
+        //probe
+    std::vector<container> probevec;
+    const container Rprobe,Zprobe,Phiprobe;
+    Matrix probeinterp;
+    container probevalue;
 
 };
 
@@ -181,7 +190,14 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     invert_invgamma( omega, omega.size(), p.eps_gamma),
     p(p),
     gp(gp),
-    evec(5)
+    evec(5),
+    //probe
+    probevec(2),
+    Rprobe(1,gp.R_0+gp.a*p.posX), //use blob position
+    Zprobe(1,gp.a*p.posY),//use blob position
+    Phiprobe(1,M_PI),//use blob position
+    probeinterp(dg::create::interpolation( Rprobe,  Zprobe, Phiprobe,g, dg::NEU)),
+    probevalue(1,0.0)
 { }
 
 template<class Matrix, class container, class P>
@@ -193,12 +209,11 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
 
-    unsigned numberg    =  invert_invgamma(invgammaNU,chi,y[1]); //omega= Gamma (Ni-1)
+    invert_invgamma(invgammaNU,chi,y[1]); //omega= Gamma (Ni-1)    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
-
-    if( number == invert_pol.get_max())
-        throw dg::Fail( p.eps_pol);
+        if(  number == invert_pol.get_max())
+            throw dg::Fail( p.eps_pol);
     return phi[0];
 }
 
@@ -316,6 +331,12 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     }
     //Compute rhs of energy theorem
     ediff_= Dpar[0]+Dperp[0]+Dpar[1]+Dperp[1]+Dpar[2]+Dperp[2]+Dpar[3]+Dperp[3] + Dres;
+    
+//     compute probevalues on R,Z,Phi of probe
+    dg::blas2::gemv(probeinterp,y[0],probevalue);
+    probevec[0]=probevalue;
+    dg::blas2::gemv(probeinterp,phi[0],probevalue);
+    probevec[1]=probevalue;
 
 }
 template<class M, class V, class P>

@@ -97,7 +97,6 @@ int main( int argc, char* argv[])
     int dim_ids[3], tvarID;
     err2d = file::define_dimensions( ncid2d, dim_ids, &tvarID, g2d_out);
     for( unsigned i=0; i<14; i++){
-//         for( unsigned i=0; i<10; i++){
         err2d = nc_def_var( ncid2d, names2d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs2d[i]);
     }   
     //midplane 2d fields
@@ -306,8 +305,6 @@ int main( int argc, char* argv[])
         dg::blas1::transform(temp3, temp1, dg::LN<double>());
         poisson.variationRHS(temp1,temp2);
         dg::blas1::transform(temp2, Lperpinv3d, dg::SQRT<double>());
-
-//         dg::blas1::pointwiseDivide( one3d, Lperpinv3d,Lperpinv3d); //Ln = ( d_R psi_p d_R (N_e -1) + d_Z psi_p d_Z (N_e -1) )/N_e
         toravg(Lperpinv3d,Lperpinv2davg);
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[13],   start2d, count2d, Lperpinv2davg.data());
         solovev::FluxSurfaceAverage<dg::HVec> fsaLperpinv(g2d_out,gp,Lperpinv2davg );
@@ -315,7 +312,6 @@ int main( int argc, char* argv[])
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[9], start1d, count1d,   Lperpinv1Dfsa .data()); 
         std::cout << "Lperpinv=" <<dg::blas2::dot(psipupilog3d,w3d, Lperpinv3d) << std::endl;
         #endif
-        //--------------- Stop Radial DiffusionCoefficient computation
         
         //put safety factor into file
 //         err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  sf.data());
