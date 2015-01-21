@@ -219,14 +219,14 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     
     
     // (B) nonadjoint U=1
-    dg::blas1::pointwiseDot(y[0],pupil,lambda);    //UT
-    dzNU_(lambda,omega);    //Dz UT
-    dg::blas1::axpby( -1.0, omega, 1., yp[0]); //-  dz U T
-    dzNU_( binv, lambda); //gradpar 1/B
-    dg::blas1::pointwiseDivide(lambda,  binv, lambda); //-dz lnB  
-    dg::blas1::pointwiseDot(y[0],pupil,omega);    //=  U T  
-    dg::blas1::pointwiseDot(omega,  lambda, omega); //-U T dz lnB  
-    dg::blas1::axpby( -1.0, omega, 1., yp[0]); //UT dzlnB
+//    dg::blas1::pointwiseDot(y[0],pupil,lambda);    //UT
+//    dzNU_(lambda,omega);    //Dz UT
+//    dg::blas1::axpby( -1.0, omega, 1., yp[0]); //-  dz U T
+//    dzNU_( binv, lambda); //gradpar 1/B
+//    dg::blas1::pointwiseDivide(lambda,  binv, lambda); //-dz lnB  
+//    dg::blas1::pointwiseDot(y[0],pupil,omega);    //=  U T  
+//    dg::blas1::pointwiseDot(omega,  lambda, omega); //-U T dz lnB  
+//    dg::blas1::axpby( -1.0, omega, 1., yp[0]); //UT dzlnB
 
     // (C) oldnonadjoint U=1
 //     dg::blas1::pointwiseDot(y[0],pupil,lambda);    // UT
