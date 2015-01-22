@@ -1,5 +1,5 @@
 system=home # Use as Makefile parameter!
-device=gpu
+device=omp
 
 INCLUDE = -I../../inc  # other project libraries
 INCLUDE+= -I../ # geometry library

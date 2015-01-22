@@ -14,7 +14,7 @@
 #include "dg/runge_kutta.h"
 
 #include "heat.cuh"
-#include "feltor/parameters.h"
+#include "parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -70,7 +70,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
     
     std::cout << "initialize feltor" << std::endl;
@@ -93,18 +93,20 @@ int main( int argc, char* argv[])
     solovev::Nprofile prof(p, gp); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     //field aligning
-     std::cout << "T aligning" << std::endl;  
+    std::cout << "T aligning" << std::endl;  
 //     dg::CONSTANT gaussianZ( 1.);
-     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-     y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
 
     //no field aligning
-    //std::cout << "No T aligning" << std::endl;  
+//     std::cout << "No T aligning" << std::endl;  
     
-    //y1[0] = dg::evaluate( init0, grid);
+//     y1[0] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
-//     dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
+    if (p.bc ==dg::DIR)    {
+    dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
+    }
 
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     std::cout << "Done!\n";
@@ -136,8 +138,10 @@ int main( int argc, char* argv[])
     double normT0 = dg::blas2::dot(  w3d, T0);
     while ( !glfwWindowShouldClose( w ))
     {
-        hvisual = y0[0];
+        hvisual = y0[0];  
+        if (p.bc ==dg::NEU)    {
         dg::blas1::transform(hvisual,hvisual , dg::PLUS<>(-1)); //npe = N+1
+        }
         dg::blas2::gemv( equi, hvisual, visual);
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
         for( unsigned k=0; k<p.Nz;k++)

@@ -11,22 +11,16 @@ struct Parameters
     double dt; 
     unsigned n_out, Nx_out, Ny_out, Nz_out; 
     unsigned itstp, maxout;
-
-    double eps_pol, eps_maxwell, eps_gamma, eps_time;
-    double eps_hat;
-
-    double mu[2];
-    double tau[2];
-    double beta;
-
-    double nu_perp, nu_parallel, c;
+    unsigned p_adv,p_diff,p_diffperp,p_torlim;
+    
+    double nu_perp, nu_parallel;
     
     double amp, sigma, posX, posY, sigma_z;
     double k_psi; 
 
-    double amp_source, nprofileamp, bgprofamp;
-    double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
+    double nprofileamp, bgprofamp;
     enum dg::bc bc;
+    double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
 
     /**
      * @brief constructor to make a const object
@@ -47,33 +41,25 @@ struct Parameters
             Nz_out = v[9];
             itstp = v[10];
             maxout = v[11];
-            eps_pol = v[12];
-            eps_maxwell = v[13];
-            eps_gamma = v[14];
-            eps_time = v[15];
-            eps_hat = 1.;
-            mu[0] = v[16];
-            mu[1] = 1.;
-            tau[0] = -1.;
-            tau[1] = v[17];
-            beta = v[18];
-            nu_perp = v[19];
-            nu_parallel = v[20];
-            c = v[21];            
-            amp = v[22];
-            sigma = v[23];
-            posX = v[24];
-            posY = v[25];
-            sigma_z = v[26];
-            k_psi = v[27];
-            nprofileamp = v[28];
-            bgprofamp = v[29];
-            amp_source = v[30];
-            boxscaleRp = v[31];
-            boxscaleRm = v[32];
-            boxscaleZp = v[33];
-            boxscaleZm = v[34];
-            bc = map((int)v[35]);
+            nu_perp = v[12];
+            nu_parallel = v[13];
+            amp = v[14];
+            sigma = v[15];
+            posX = v[16];
+            posY = v[17];
+            sigma_z = v[18];
+            k_psi = v[19];
+            nprofileamp = v[20];
+            bgprofamp = v[21];
+            bc = map((int)v[22]);
+            boxscaleRp = v[23];
+            boxscaleRm = v[24];
+            boxscaleZp = v[25];
+            boxscaleZm = v[26];
+            p_adv       =(unsigned) v[27];
+            p_diff      =(unsigned) v[28];
+            p_diffperp  =(unsigned) v[29];
+            p_torlim    =(unsigned) v[30];
 
         }
     }
@@ -85,13 +71,7 @@ struct Parameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
-            <<"     mu_e              = "<<mu[0]<<"\n"
-            <<"     mu_i              = "<<mu[1]<<"\n"
-            <<"     beta              = "<<beta<<"\n"
-            <<"     El.-temperature:  = "<<tau[0]<<"\n"
-            <<"     Ion-temperature:  = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
-            <<"     par. Resistivity: = "<<c<<"\n"
             <<"     par. Viscosity:   = "<<nu_parallel<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
@@ -100,7 +80,6 @@ struct Parameters
             << "    posY:         "<<posY<<"\n"
             << "    sigma_z:      "<<sigma_z<<"\n";
         os << "Profile parameters are: \n"
-            <<"     Source strength:              "<<amp_source<<"\n"
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
             <<"     background profile amplitude: "<<bgprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
@@ -113,10 +92,6 @@ struct Parameters
             <<"     Ny = "<<Ny<<"\n"
             <<"     Nz = "<<Nz<<"\n"
             <<"     dt = "<<dt<<"\n";
-        os << "     Stopping for Polar CG:   "<<eps_pol<<"\n"
-            <<"     Stopping for Maxwell CG: "<<eps_maxwell<<"\n"
-            <<"     Stopping for Gamma CG:   "<<eps_gamma<<"\n"
-            <<"     Stopping for Time  CG:   "<<eps_time<<"\n";
         os << "Output parameters are: \n"
             <<"     n_out  =              "<<n_out<<"\n"
             <<"     Nx_out =              "<<Nx_out<<"\n"
@@ -124,6 +99,11 @@ struct Parameters
             <<"     Nz_out =              "<<Nz_out<<"\n"
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
+        os << "Operator parameters are: \n"
+            <<"     p_adv  =              "<<p_adv<<"\n"
+            <<"     p_diff =              "<<p_diff<<"\n"            
+            <<"     p_diffperp =          "<<p_diffperp<<"\n"
+            <<"     p_torlim =          "<<p_torlim<<"\n";           
         os << "Boundary condition is: \n"
             <<"     global BC  =              "<<bc<<"\n";
         os << std::flush;//the endl is for the implicit flush 

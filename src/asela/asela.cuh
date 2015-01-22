@@ -69,7 +69,7 @@ struct Feltor
     template<class Grid3d>
 
     Feltor( const Grid3d& g,  eule::Parameters,solovev::GeomParameters gp);
-    dg::DZ<Matrix, container> dz(){return dzDIR_;}
+    dg::DZ<Matrix, container> dz(){return dzNU_;}
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -270,7 +270,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         if( p.nu_parallel != 0)
         {
             #ifdef TORLIM
-                dzNU_.set_boundaries( dg::NEU, 0, 0); //dz N and dzU on limiter
+                dzNU_.set_boundaries( p.bc, 0, 0); //dz N and dzU on limiter
             #endif
 
             dzNU_.dzz(y[i],omega);                                            //dz^2 N 
@@ -299,7 +299,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         if( p.nu_parallel !=0)
         {
             #ifdef TORLIM
-                dzNU_.set_boundaries( dg::NEU, 0, 0); //dz N and dzw on limiter
+                dzNU_.set_boundaries( p.bc, 0, 0); //dz N and dzw on limiter
             #endif
             dzNU_.dzz(y[i+2],omega);                                          //dz^2 w 
             dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 U 
@@ -348,7 +348,7 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
 
         //Parallel dynamics
         #ifdef TORLIM
-            dzNU_.set_boundaries( dg::NEU, 0, 0); //dz UN = 0 , dz lnN = 0 and dz U^2 = 0  on limiter
+            dzNU_.set_boundaries( p.bc, 0, 0); //dz UN = 0 , dz lnN = 0 and dz U^2 = 0  on limiter
         #endif
         dzNU_(un[i], dzun[i]);                                                 // dz UN
         dzNU_(logn[i], dzlogn[i]);                                             // dz lnN
@@ -375,7 +375,7 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
         if( p.nu_parallel != 0)
         {
             #ifdef TORLIM
-                dzNU_.set_boundaries( dg::NEU, 0, 0); //dz N = 0 and dz w = 0  on limiter
+                dzNU_.set_boundaries( p.bc, 0, 0); //dz N = 0 and dz w = 0  on limiter
             #endif
             dzNU_.dzz(y[i],omega);                                          //dz^2 N 
             dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       

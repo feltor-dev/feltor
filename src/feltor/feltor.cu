@@ -71,7 +71,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
+     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
@@ -128,6 +128,7 @@ int main( int argc, char* argv[])
     
     const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = feltor.energy(), energy0 = E0, E1 = 0., diff = 0.;
+    
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     
@@ -136,13 +137,13 @@ int main( int argc, char* argv[])
 
         hvisual = y0[0];
         dg::blas2::gemv( equi, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();        
         //colors.scalemin() = 1.0;
-        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
 
         title << std::setprecision(2) << std::scientific;
-        //title <<"ne / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
+        //title <<"ne / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         title <<"ne-1 / " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
@@ -157,13 +158,13 @@ int main( int argc, char* argv[])
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
         hvisual = y0[1];
         dg::blas2::gemv( equi, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         //colors.scalemin() = 1.0;        
         colors.scalemin() = -colors.scalemax();        
-        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
 
         title << std::setprecision(2) << std::scientific;
-        //title <<"ni / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
+        //title <<"ni / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         title <<"ni-1 / " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<p.Nz/v2[2];k++)
         {
@@ -182,8 +183,8 @@ int main( int argc, char* argv[])
         hvisual = y1[1];
 //         hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
-//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
+//         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
         //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         title <<"Omega / "<< colors.scalemax()<<"\t";
@@ -200,8 +201,8 @@ int main( int argc, char* argv[])
         //draw U_e
         hvisual = y0[2];
         dg::blas2::gemv( equi, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
-        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
+        //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
         //title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         title <<"Ue / " << colors.scalemax()<<"\t";
@@ -218,8 +219,8 @@ int main( int argc, char* argv[])
         //draw U_i
         hvisual = y0[3];
         dg::blas2::gemv( equi, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
-        //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
+        //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
         //title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
         title <<"Ui / " << colors.scalemax()<<"\t";
@@ -260,7 +261,10 @@ int main( int argc, char* argv[])
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout << " Ne_p  =" << feltor.probe_vector()[0][0] << 
+                         " Phi_p =" << feltor.probe_vector()[1][0] << std::endl;
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
+            
             E0 = E1;
 
         }
