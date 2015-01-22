@@ -21,7 +21,7 @@
 13) nu_parallel  (viscosity)                =  1  (0.001)
 ------------------------Initial perturbation parameters---------------------
 14) amp (blob amplitude)                    =  1.0    (1.0)
-15) sigma (blob variance in units of rho_s) =  1.0     (10)
+15) sigma (blob variance in units of rho_s) =  4.0     (10)
 16) x-position ( in units of a)             =  1.0   (0.4)
 17) y-position ( in units of a)             =  0.00   (0.5)
 18) sigma_z (variance in units of R_0)      =  2.0       (12.5 for oo)
@@ -38,5 +38,5 @@
 27) adv (adj(0), nadj(1), onadj(2),no(3))   =  3
 27) diff (adj(0), nadj(1), onadj(2),no(3))) =  1
 28) diffperp (lap(0), lap2(1) )             =  0
-29) toroidal limiter (0/1)                  =  0                        
+29) toroidal limiter (0/1)                  =  0                       
 @ ------------------------------------------------------------

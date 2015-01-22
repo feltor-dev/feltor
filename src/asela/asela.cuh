@@ -69,7 +69,7 @@ struct Feltor
     template<class Grid3d>
 
     Feltor( const Grid3d& g,  eule::Parameters,solovev::GeomParameters gp);
-    dg::DZ<Matrix, container> dz(){return dzDIR_;}
+    dg::DZ<Matrix, container> dz(){return dzNU_;}
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
