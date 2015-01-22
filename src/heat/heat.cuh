@@ -127,12 +127,18 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 //             dg::blas1::transform( y[0],tmo, dg::PLUS<>(-1)); //npe = N+1
 
     //perp energy
-    dg::blas2::gemv( lapperp, y[0], lambda);
-//     dg::blas2::gemv( lapperp, lambda, omega); //hyper
-//     Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, omega); //hyper 
-    Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda); 
-
-//     Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda);  
+    if (p.p_diffperp==0)    {
+        dg::blas2::gemv( lapperp, y[0], lambda);
+        Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda); 
+    }
+    if (p.p_diffperp==1)    {
+        dg::blas2::gemv( lapperp, y[0], lambda);
+        dg::blas2::gemv( lapperp, lambda, omega); //hyper
+        Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, omega); //hyper 
+    }
+    if (p.p_torlim == 1)  {
+         dzNU_.set_boundaries( p.bc, 0, 0); 
+    }
     if (p.p_diff ==0)    {
     //     (A) adjoint
         dzNU_( y[0], omega); 
@@ -173,16 +179,19 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     assert( y.size() == 1);
     assert( y.size() == yp.size());
     //compute phi via polarisation
-//         dg::blas1::transform( y[0],tmo, dg::PLUS<>(-1)); //npe = N+1
+    if (p.p_diffperp==0) {
+        dg::blas2::gemv( lapperp, y[0], omega); //lap is negative
+        dg::blas1::axpby( -p.nu_perp, omega, 0., yp[0]);  
+    }
+    if (p.p_diffperp==1) {
+        dg::blas2::gemv( lapperp, y[0], omega); //lap is negative
+        dg::blas2::gemv( lapperp, omega, lambda); //hyper
+        dg::blas1::axpby( -p.nu_perp, lambda, 0., yp[0]);  //hyper 
+    }   
 
-    //perp laplacian
-//         dg::blas1::axpby( 0., x, 0, y);
-    //not linear any more (cannot be written as y = Ax)
-    dg::blas2::gemv( lapperp, y[0], omega); //lap is negative
-//     dg::blas2::gemv( lapperp, omega, lambda); //hyper
-//     dg::blas1::axpby( -p.nu_perp, lambda, 0., yp[0]);  //hyper 
-    dg::blas1::axpby( -p.nu_perp, omega, 0., yp[0]);  
-    
+    if (p.p_torlim == 1)  {
+         dzNU_.set_boundaries( p.bc, 0, 0); 
+    }   
 //-----------------------parallel adv------------------------
     if (p.p_adv ==0)  {
         // (A) adjoint
@@ -242,15 +251,15 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     }
 //-----------------------parallel dissi------------------------
     if (p.p_diff ==0)    {
-        //centered
+//         centered
         dzNU_( y[0], omega); 
         dzNU_.centeredT(omega,lambda);
         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 
         //forward, backward
-    //     dzNU_.forward( y[0], omega); 
-    //     dzNU_.forwardT(omega,lambda);
-    //     dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+//         dzNU_.forward( y[0], omega); 
+//         dzNU_.forwardT(omega,lambda);
+//         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
     }
     if (p.p_diff ==1)    {
         // (B) nonadjoint

@@ -11,7 +11,7 @@ struct Parameters
     double dt; 
     unsigned n_out, Nx_out, Ny_out, Nz_out; 
     unsigned itstp, maxout;
-    unsigned p_adv,p_diff;
+    unsigned p_adv,p_diff,p_diffperp,p_torlim;
     
     double nu_perp, nu_parallel;
     
@@ -58,6 +58,8 @@ struct Parameters
             boxscaleZm = v[26];
             p_adv       =(unsigned) v[27];
             p_diff      =(unsigned) v[28];
+            p_diffperp  =(unsigned) v[29];
+            p_torlim    =(unsigned) v[30];
 
         }
     }
@@ -99,7 +101,11 @@ struct Parameters
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Operator parameters are: \n"
             <<"     p_adv  =              "<<p_adv<<"\n"
-            <<"     p_diff =              "<<p_diff<<"\n";            
+            <<"     p_diff =              "<<p_diff<<"\n"            
+            <<"     p_diffperp =          "<<p_diffperp<<"\n"
+            <<"     p_torlim =          "<<p_torlim<<"\n";           
+        os << "Boundary condition is: \n"
+            <<"     global BC  =              "<<bc<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:

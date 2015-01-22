@@ -8,7 +8,7 @@
 2)  nx (grid points in x)                =   40 (192)
 3)  ny (grid points in y)                =   40 (192) 
 4)  nz (grid points in z)                =   5(>16)
-5)  dt (time step in units c_s/rho_s)    =   1e-1 (0.01)
+5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
@@ -16,7 +16,7 @@
 8)  ny_out (# grid points in output field)  =  40
 9)  nz_out (# grid points in output field)  =  5
 10) itstp  (steps between outputs)          =  10(5)
-11) total # of outputs (excluding first)    =  100 
+11) total # of outputs (excluding first)    =  3 
 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
@@ -46,4 +46,6 @@
 32) boxscale R-                             =  1.1 (a little larger than 1)
 33) boxscale Z+                             =  1.1 (a little larger than 1)
 34) boxscale Z-                             =  1.1 (a little larger than 1)
+---------------------------------global boundary condition----------------
+35) global bc (DIR (1), NEU DIR(4)  )        =  4
 @ ------------------------------------------------------------

@@ -26,6 +26,7 @@ struct Parameters
 
     double amp_source, nprofileamp, bgprofamp;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
+    enum dg::bc bc;
 
     /**
      * @brief constructor to make a const object
@@ -69,18 +70,10 @@ struct Parameters
             bgprofamp = v[29];
             amp_source = v[30];
             boxscaleRp = v[31];
-            if( v.size() > 32)
-            {
-                boxscaleRm = v[32];
-                boxscaleZp = v[33];
-                boxscaleZm = v[34];
-            }
-            else //old files don't have boxscales
-            {
-                boxscaleRm = v[31];
-                boxscaleZp = v[31];
-                boxscaleZm = v[31];
-            }
+            boxscaleRm = v[32];
+            boxscaleZp = v[33];
+            boxscaleZm = v[34];
+            bc = map((int)v[35]);
 
         }
     }
@@ -131,6 +124,8 @@ struct Parameters
             <<"     Nz_out =              "<<Nz_out<<"\n"
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
+        os << "Boundary condition is: \n"
+            <<"     global BC  =              "<<bc<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:
@@ -147,10 +142,10 @@ struct Parameters
             default: return dg::PER;
         }
     }
-    void displayBC( std::ostream& os, dg::bc bcx, dg::bc bcy) const
+    void displayBC( std::ostream& os, dg::bc bc) const
     {
-        os << "Boundary conditions in x are: \n";
-        switch( bcx)
+        os << "Boundary conditions  are: \n";
+        switch( bc)
         {
             case(0): os << "    PERIODIC";
                      break;
@@ -163,20 +158,7 @@ struct Parameters
             case(4): os << "    NEUMANN";
                      break;
         }
-        os << "\nBoundary conditions in y are: \n";
-        switch( bcy)
-        {
-            case(0): os << "    PERIODIC";
-                     break;
-            case(1): os << "    DIRICHLET";
-                     break;
-            case(2): os << "    DIR_NEU";
-                     break;
-            case(3): os << "    NEU_DIR";
-                     break;
-            case(4): os << "    NEUMANN";
-                     break;
-        }
+
         os <<"\n";
     }
 };

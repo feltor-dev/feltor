@@ -93,7 +93,7 @@ struct Feltor
     template<class Grid3d>
     Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
 
-    dg::DZ<Matrix, container> dz(){return dzDIR_;}
+    dg::DZ<Matrix, container> dz(){return dzNU_;}
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -306,7 +306,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
                   dzNU_.set_boundaries( dg::DIR,ush[i],-1.0,1.0);  
             #endif 
             #ifdef TORLIM
-                dzNU_.set_boundaries( dg::NEU, 0, 0); //dz U = 0 on limiter
+                dzNU_.set_boundaries( p.bc, 0, 0); //dz U = 0 on limiter
             #endif
             dzNU_.dzz(y[i+2],omega);                                          //dz^2 U 
             dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 U 
@@ -358,7 +358,7 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
             dzNU_.set_boundaries( dg::DIR, omega, -1.0,1.0);            // dz U N = {ne/sqrt(-2.*M_PI*mu[0])*EXP(-phi),ne}  on limiter
         #endif
         #ifdef TORLIM
-            dzNU_.set_boundaries( dg::NEU, 0, 0);  //dz UN , dz U^2 and dz lnN on limiter
+            dzNU_.set_boundaries( p.bc, 0, 0);  //dz UN , dz U^2 and dz lnN on limiter
         #endif
         dg::blas1::pointwiseDot(npe[i], y[i+2], omega);     // U N
         dzNU_(omega, chi);                                 // dz UN
@@ -394,7 +394,7 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
                 dzNU_.set_boundaries( dg::DIR,y[i],1.0,1.0);  //dz psi
             #endif
             #ifdef TORLIM
-                dzNU_.set_boundaries( dg::NEU, 0, 0); //dzN and dzU on limiter
+                dzNU_.set_boundaries( p.bc, 0, 0); //dzN and dzU on limiter
             #endif 
             dzNU_.dzz(y[i],omega);                                          //dz^2 N 
             dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
