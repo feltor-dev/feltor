@@ -55,8 +55,8 @@ int main( int argc, char* argv[])
     p.display( std::cout);
 
     v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (1)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (1)/v2[2]);
+    GLFWwindow* w = draw::glfwInitAndCreateWindow(  v2[2]*v2[3]*p.lx/p.ly, v2[1]*v2[4], "");
+    draw::RenderHostData render( v2[1], v2[2]);
 
 
 
@@ -134,7 +134,7 @@ int main( int argc, char* argv[])
 
         title << std::setprecision(2) << std::scientific;
         //title <<"ne / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"ne-1 / " << colors.scalemax()<<"\t";
+        title <<"ne-1 / " << colors.scalemin()<<"\t";
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
@@ -149,22 +149,36 @@ int main( int argc, char* argv[])
 
         title << std::setprecision(2) << std::scientific;
         //title <<"ni / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"ni-1 / " << colors.scalemax()<<"\t";
+        title <<"ni-1 / " << colors.scalemin()<<"\t";
 
         render.renderQuad(visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         
         //draw potential
         //transform to Vor
-        dvisual=feltor.potential()[0];
-        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        hvisual = y1[1];
-//         hvisual = feltor.potential()[0];
+//        dvisual=feltor.potential()[0];
+//        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+//        hvisual = y1[1];
+         hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         //colors.scalemin() = 1.0;        
-//         colors.scalemin() = -colors.scalemax();        
-        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+         colors.scalemin() = -colors.scalemax();        
+        //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        title <<"Potential / "<< colors.scalemax()<<"\t";
+
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        //draw potential
+        //transform to Vor
+        dvisual=feltor.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        hvisual = y1[1];
+         //hvisual = feltor.potential()[0];
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
+        //colors.scalemin() = 1.0;        
+         colors.scalemin() = -colors.scalemax();        
+        //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title <<"Omega / "<< colors.scalemax()<<"\t";
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);

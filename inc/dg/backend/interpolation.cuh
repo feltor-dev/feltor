@@ -159,7 +159,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
                 pxy[k*px.size()+l]= py[k]*px[l];
         if (globalbcz == dg::DIR)
         {
-            if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
+            //if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
+            if ( fabs(x[i]-g.x0())<1e-10 || fabs(x[i]-g.x1())<1e-10  || fabs(y[i]-g.y0())<1e-10  || fabs(y[i]-g.y1())<1e-10)
             {
                 //zeroe boundary values 
                 for(unsigned k=0; k<py.size(); k++)
