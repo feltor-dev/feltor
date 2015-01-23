@@ -1,0 +1,42 @@
+
+                * Input-File for "FELTOR" *
+                ---------------------------
+
+
+@-----------------------------Space and Time discretization------------
+1)  n  (# of x,y-polynomials)            =   3      (3)
+2)  nx (grid points in x)                =   64 (192)
+3)  ny (grid points in y)                =   32 (192) 
+4)  dt (time step in units c_s/rho_s)    =   0.1  (0.01)
+
+----------------------------------Output parameters--------------------
+5)  n_out (# of x-y polynomials in output)  =  3
+6)  nx_out (# grid points in output field)  =  64 
+7)  ny_out (# grid points in output field)  =  32
+8)  itstp  (steps between outputs)           =  1(5)
+9) total # of outputs (excluding first)    =  3 
+
+-------------------------Algorithmic parameters------------------------
+10)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
+11)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
+12)  eps_time ( stop for time inversion )   =   1e-12 
+-------------------------Physical parameters----------------------------
+13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
+14) tau (Ti/Te)                             =  0.0    (0.0)
+15) mcv (curvature)                         =  0.0    (1e-4)
+16) nu_perp                                 =  1e-3 
+17) D  (coupling)                           =  1e-8     (0.001)
+18) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
+------------------------Initial perturbation parameters---------------------
+19) amp (blob amplitude)                    =  0.05    (1.0)
+20) sigma (blob variance in units of rho_s) =  2.0     (10)
+21) x-position ( in units of lx)            =  0.5   (0.4)
+22) y-position ( in units of ly)            =  0.5   (0.5)
+23) Profile amplitude                       =  0.9  (peak amplitude)
+24) Background Prof amplitude               =  0.1   (density on the boundary)
+---------------------------------box setup----------------
+25) lx (in rho_s)                           =  64
+26) ly (in rho_s)                           =  32
+27) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   2      (1.0)
+28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
+@ ------------------------------------------------------------
