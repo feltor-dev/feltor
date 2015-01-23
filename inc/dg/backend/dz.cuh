@@ -321,11 +321,11 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
-    std::cout << std::setprecision( 16);
-    std::cout << " Min hp "<<(double)thrust::reduce( hp.begin(), hp.end(), 1000., thrust::minimum<double>())<< std::endl;
-    std::cout << " Min hm "<<(double)thrust::reduce( hm.begin(), hm.end(), 1000., thrust::minimum<double>())<< std::endl;
-    double x; 
-    std::cin >> x;
+//     std::cout << std::setprecision( 16);
+//     std::cout << " Min hp "<<(double)thrust::reduce( hp.begin(), hp.end(), 1000., thrust::minimum<double>())<< std::endl;
+//     std::cout << " Min hm "<<(double)thrust::reduce( hm.begin(), hm.end(), 1000., thrust::minimum<double>())<< std::endl;
+//     double x; 
+//     std::cin >> x;
 
 }
 template<class M, class container>
