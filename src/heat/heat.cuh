@@ -172,13 +172,12 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
-    /* y[0] := N_e - 1
+    /* y[0] := T - 1 or T
     */
     dg::Timer t;
     t.tic();
     assert( y.size() == 1);
     assert( y.size() == yp.size());
-    //compute phi via polarisation
     if (p.p_diffperp==0) {
         dg::blas2::gemv( lapperp, y[0], omega); //lap is negative
         dg::blas1::axpby( -p.nu_perp, omega, 0., yp[0]);  
@@ -212,9 +211,9 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
         
         //corr(2): div(B) 
-    //     dg::blas1::pointwiseDivide(one,binv,omega); //= U B
-    //     dzNU_.centeredT(omega,lambda);     //div UB
-    //     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
+//         dg::blas1::pointwiseDivide(one,binv,omega); //= U B
+//         dzNU_.centeredT(omega,lambda);     //div UB
+//         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
         
         //corr(3): UT/B divB 
     //     dg::blas1::pointwiseDivide(one,binv,omega); //=  B
@@ -225,10 +224,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ UT/B div UB
 
         //corr(4): U  divB
-    //     dg::blas1::pointwiseDivide(one,binv,omega); //=  B
-    //     dzNU_.centeredT(omega,lambda);     //div B
-    //     dg::blas1::pointwiseDot(pupil,lambda,lambda); //  U divB
-    //     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ U div UB
+//         dg::blas1::pointwiseDivide(one,binv,omega); //=  B
+//         dzNU_.centeredT(omega,lambda);     //div B
+//         dg::blas1::pointwiseDot(pupil,lambda,lambda); //  U divB
+//         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ U div UB
     }
     if (p.p_adv ==1)    {
         // (B) nonadjoint U=1

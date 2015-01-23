@@ -319,7 +319,33 @@ struct GaussianZ
 
 };
 
-
+/**
+ * @brief Functor for a linear polynomial in x-direction
+ * 
+ * \f[ f(x,y) = a*x+b \f]
+ */
+struct SinProfX
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     */
+    SinProfX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return result
+     */
+    double operator()( double x, double y){ return bamp_+amp_*(1.-sin(x*kx_));}
+  private:
+    double amp_,bamp_,kx_;
+};
 /**
  * @brief Functor for a linear polynomial in x-direction
  * 
