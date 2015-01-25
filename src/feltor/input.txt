@@ -13,9 +13,9 @@
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  60 
-8)  ny_out (# grid points in output field)  =  60
-9)  nz_out (# grid points in output field)  =  15
+7)  nx_out (# grid points in output field)  =  50 
+8)  ny_out (# grid points in output field)  =  70
+9)  nz_out (# grid points in output field)  =  20
 10) itstp  (steps between outputs)          =  500 (5)
 11) total # of outputs (excluding first)    =  10000 
 

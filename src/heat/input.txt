@@ -16,7 +16,7 @@
 7)  nx_out (# grid points in output field)  =  50 
 8)  ny_out (# grid points in output field)  =  86
 9)  nz_out (# grid points in output field)  =  1
-10) itstp  (steps between outputs)          =  10  (5)
+10) itstp  (steps between outputs)          =  5  (5)
 11) total # of outputs (excluding first)    =  50
 
 -------------------------Algorithmic parameters------------------------
@@ -29,13 +29,13 @@
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  1e-3 
-20) nu_parallel  (viscosity)                =  1   (0.001)
+20) nu_parallel  (viscosity)                =  10   (0.001)
 21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  1.0    (1.0)
 23) sigma (blob variance in units of rho_s) =  2.0     (10)
-24) x-position ( in units of a)             =  0.6   (0.4)
+24) x-position ( in units of a)             =  0.9   (0.4)
 25) y-position ( in units of a)             =  0.00   (0.5)
 26) sigma_z (variance in units of R_0)      =  1.0       (12.5 for oo)
 27) k_psi (zonal modes)                     =  1.0   

@@ -20,6 +20,7 @@ struct InvB
     private:
     double R_0, I_0;
 };
+
 struct LnB
 {
     LnB( double R_0, double I_0):R_0(R_0), I_0(I_0){}
@@ -41,8 +42,8 @@ struct Field
         {
          
             
-            yp[2][i] = y[0][i]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/2./sqrt(2)/I_0;            
-            yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2)/2./I_0;
+            yp[2][i] = y[0][i]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/2./sqrt(2)/I_0;   //=dldphi = 1/bphi          
+            yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2)/2./I_0; //=dR/dphi = b^R/b^phi
             yp[1][i] =  M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2)/2./I_0 ;
         }
     }
@@ -59,6 +60,18 @@ struct Field
 double R_0 = 10;
 double I_0 = 20; //I0=20 and R=10 means q=2
 
+double BR(double R, double Z, double phi)
+{
+    double dldphi = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2)/I_0;
+    double brbphi= -M_PI*R*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2)/2./I_0;
+    double br =  brbphi/dldphi;
+    double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+    return br/invB;
+}
+double InvR(double R, double Z, double phi)
+{
+    return 1/R;
+}
 double funcNEU(double R, double Z, double phi)
 {
     double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
@@ -167,11 +180,11 @@ int main()
     const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::NEU);
     
     dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
     
-    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-4, dg::DefaultLimiter(), dg::NEU);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
     dg::DVec function = dg::evaluate( funcNEU, g3d) ,
@@ -200,6 +213,9 @@ int main()
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
     const dg::DVec solutionT = dg::evaluate( deriNEUT, g3d);
     const dg::DVec solutiondzTdz = dg::evaluate( deriNEUT2, g3d);
+    dg::DVec magBR = dg::evaluate( BR, g3d);
+    const dg::DVec invR = dg::evaluate( InvR, g3d);
+    
     dz.set_boundaries( dg::PER, 0, 0);
 
     dz( function, derivative); //dz(f)
@@ -210,6 +226,8 @@ int main()
     //B corrections
     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
     dz.centeredT(temp2, divBT); // dzT B
+
+
 //     dg::blas1::pointwiseDot(divBT,function,temp2); //f dzTB
 //     dg::blas1::pointwiseDot(temp2,inverseB,temp3); //f/B dzTB
 //     dg::blas1::axpby(1.0,derivativeT,-1.0,divBT,derivativeT); //... - f/B dzTB
@@ -311,5 +329,4 @@ int main()
     errinvT =dg::blas2::dot( w3d, functionTinv);
     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
     return 0;
-
 }

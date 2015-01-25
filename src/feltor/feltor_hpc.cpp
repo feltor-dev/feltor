@@ -5,7 +5,7 @@
 #include <cmath>
 
 #include <mpi.h> //activate mpi
-#include <netcdf_par.h>
+#include "file/netcdf_par.h"
 
 #include "dg/algorithm.h"
 #include "dg/backend/timer.cuh"
@@ -15,7 +15,6 @@
 #include "file/nc_utilities.h"
 
 #include "solovev/geometry.h"
-
 #include "feltor.cuh"
 #include "parameters.h"
 
@@ -115,16 +114,16 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, rolkar, y0, p.dt);
     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
-    file::NC_Error_Handle err;
+//     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);
-    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());
+//     err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);
+//     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+//     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());
     int dimids[4], tvarID;
     {
         dg::Grid3d<double> global_grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out);  
-        err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
+//         err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
 
 
         solovev::FieldR fieldR(gp);
@@ -134,14 +133,14 @@ int main( int argc, char* argv[])
         dg::HVec vecZ = dg::evaluate( fieldZ, global_grid_out);
         dg::HVec vecP = dg::evaluate( fieldP, global_grid_out);
         int vecID[3];
-        err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dimids[1], &vecID[0]);
-        err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dimids[1], &vecID[1]);
-        err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dimids[1], &vecID[2]);
-        err = nc_enddef( ncid);
-        err = nc_put_var_double( ncid, vecID[0], vecR.data());
-        err = nc_put_var_double( ncid, vecID[1], vecZ.data());
-        err = nc_put_var_double( ncid, vecID[2], vecP.data());
-        err = nc_redef(ncid);
+//         err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dimids[1], &vecID[0]);
+//         err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dimids[1], &vecID[1]);
+//         err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dimids[1], &vecID[2]);
+//         err = nc_enddef( ncid);
+//         err = nc_put_var_double( ncid, vecID[0], vecR.data());
+//         err = nc_put_var_double( ncid, vecID[1], vecZ.data());
+//         err = nc_put_var_double( ncid, vecID[2], vecP.data());
+//         err = nc_redef(ncid);
     }
 
     //field IDs 
@@ -150,36 +149,36 @@ int main( int argc, char* argv[])
     //use global dimensionality
     for( unsigned i=0; i<5; i++)
     {
-        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dimids, &dataIDs[i]);
-        err = nc_var_par_access( ncid, dataIDs[i], NC_COLLECTIVE);
+//         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dimids, &dataIDs[i]);
+//         err = nc_var_par_access( ncid, dataIDs[i], NC_COLLECTIVE);
     }
-    err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
+//     err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
     //energy IDs 
     int EtimeID, EtimevarID;
-    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
+//     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+//     err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
     int energyID, massID, energyIDs[5], dissID, dEdtID, accuracyID;
-    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
-    err = nc_var_par_access( ncid, energyID, NC_COLLECTIVE);
-    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
-    err = nc_var_par_access( ncid, massID, NC_COLLECTIVE);
-    std::string energies[5] = {"Se", "Si", "Uperp", "Upare", "Upari"}; 
-    for( unsigned i=0; i<5; i++){
-        err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);
-        err = nc_var_par_access( ncid, energyIDs[i], NC_COLLECTIVE);
-    }
-    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
-    err = nc_var_par_access( ncid, dissID, NC_COLLECTIVE);
-    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
-    err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
-    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
-    err = nc_var_par_access( ncid, accuracyID, NC_COLLECTIVE);
-    err = nc_enddef(ncid);
+//     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
+//     err = nc_var_par_access( ncid, energyID, NC_COLLECTIVE);
+//     err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
+//     err = nc_var_par_access( ncid, massID, NC_COLLECTIVE);
+//     std::string energies[5] = {"Se", "Si", "Uperp", "Upare", "Upari"}; 
+//     for( unsigned i=0; i<5; i++){
+//         err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);
+//         err = nc_var_par_access( ncid, energyIDs[i], NC_COLLECTIVE);
+//     }
+//     err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
+//     err = nc_var_par_access( ncid, dissID, NC_COLLECTIVE);
+//     err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
+//     err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
+//     err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
+//     err = nc_var_par_access( ncid, accuracyID, NC_COLLECTIVE);
+//     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////////////
     int dims[3],  coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
-    size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
+//     size_t count[4] = {1., grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
+//     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
     dg::MVec transferD( dg::evaluate(dg::zero, grid));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     //create local interpolation matrix
@@ -188,27 +187,27 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::symv( interpolate, y0[i].data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
+//         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transferD = feltor.potential()[0];
     dg::blas2::symv( interpolate, transferD.data(), transferH);
-    err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data());
+//     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data());
     double time = 0;
-    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-    err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
+//     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+//     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
     std::vector<double> evec = feltor.energy_vector();
-    err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
-    err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
-    for( unsigned i=0; i<5; i++)
-        err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
-
-    err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
-    err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-    err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+//     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
+//     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
+//     for( unsigned i=0; i<5; i++)
+//         err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
+// 
+//     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+//     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+//     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     if(rank==0)std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
@@ -229,7 +228,7 @@ int main( int argc, char* argv[])
             catch( dg::Fail& fail) { 
                 if(rank==0)std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 if(rank==0)std::cerr << "Does Simulation respect CFL condition?\n";
-                err = nc_close(ncid);
+//                 err = nc_close(ncid);
                 MPI_Finalize();
                 return -1;
             }
@@ -242,16 +241,16 @@ int main( int argc, char* argv[])
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
-            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
-            err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
-            err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
-            for( unsigned i=0; i<5; i++)
-            {
-                err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
-            }
-            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
-            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+//             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
+//             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
+//             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
+//             for( unsigned i=0; i<5; i++)
+//             {
+//                 err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
+//             }
+//             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+//             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+//             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
             if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             if(rank==0)std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             if(rank==0)std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
@@ -264,16 +263,16 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         //err = nc_open_par( argv[3], NC_WRITE|NC_MPIIO, comm, info, &ncid);
         //////////////////////////write fields////////////////////////
-        start[0] = i;
+//         start[0] = i;
         for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j].data(), transferH);
-            err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
+//             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transferD = feltor.potential()[0];
         dg::blas2::symv( interpolate, transferD.data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+//         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+//         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 
         //err = nc_close(ncid); DONT DO IT!
 #ifdef DG_BENCHMARK
@@ -288,7 +287,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     if(rank==0)std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     if(rank==0)std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-    err = nc_close(ncid);
+//     err = nc_close(ncid);
     MPI_Finalize();
 
     return 0;

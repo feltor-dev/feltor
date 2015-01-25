@@ -1,5 +1,5 @@
 system=home # Use as Makefile parameter!
-device=omp
+device=mpi
 
 INCLUDE = -I../../inc  # other project libraries
 INCLUDE+= -I../ # geometry library
@@ -30,7 +30,7 @@ INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
 GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr -lXcursor
-LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
+LIBS 	 = -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
 ifeq ($(strip $(system)),leo3)
