@@ -162,10 +162,13 @@ int main( int argc, char* argv[])
          hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
-        //colors.scalemin() = 1.0;        
-         colors.scalemin() = -colors.scalemax();        
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+
+//         //colors.scalemin() = 1.0;        
+//          colors.scalemin() = -colors.scalemax();        
+//          colors.scalemin() = -colors.scalemax();        
         //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        title <<"Potential / "<< colors.scalemax()<<"\t";
+        title <<"Potential / "<< colors.scalemax() << colors.scalemin()<<"\t";
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw potential

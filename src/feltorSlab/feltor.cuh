@@ -252,7 +252,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( yp[i], binv, yp[i]);                        // dtN =1/B [N,phi]_RZ
         
     }
-    //+D/C (phi+ nu_e*ne)(1+ne)
+    //+D/C (phi+ nu_e*ne)(ne)
     dg::blas1::axpby(1.,phi[0],p.tau[0],logn[0],omega); //omega = phi - lnNe
     dg::blas1::pointwiseDot(omega,npe[0],omega); //(phi - lnNe)*Ne
     dg::blas1::axpby(-p.d/p.c,omega,1.0,yp[0]);
