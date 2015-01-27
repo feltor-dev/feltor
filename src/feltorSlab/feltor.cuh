@@ -278,10 +278,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         
     }
     //+D/C (phi+ nu_e*ne)(ne)
-   dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - lnNe
+   dg::blas1::axpby(1.,dphi[0],p.tau[0],lambda,omega); //omega = phi - lnNe
     //dg::blas1::axpby(1.,omega,p.tau[0],lambda,omega); //omega = (phi -<phi> ) - ln(Ne/<Ne>)
-//     dg::blas1::pointwiseDot(omega,tilden[0],lambda); //(phi - lnNe)*dN
-//     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
+    //dg::blas1::pointwiseDot(omega,tilden[0],lambda); //(phi - lnNe)*dN
+    dg::blas1::pointwiseDot(omega,dn[0],lambda); //(phi - lnNe)*dN
+    dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
     dg::blas1::pointwiseDot(omega,npe[0],lambda); //(phi - lnNe)*Ne
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
 
