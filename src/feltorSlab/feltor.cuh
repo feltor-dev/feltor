@@ -4,6 +4,7 @@
 #include "dg/poisson.h"
 #include "parameters.h"
 // #include "geometry_circ.h"
+#include "dg/backend/average.cuh"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -41,7 +42,7 @@ struct Rolkar
 
         */
         dg::blas1::axpby( 0., x, 0, y);
-        for( unsigned i=0; i<1; i++)
+        for( unsigned i=0; i<2; i++)
         {
             //not linear any more (cannot be written as y = Ax)
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
@@ -108,8 +109,8 @@ struct Feltor
     const container one;
     const Preconditioner w3d, v3d;
 
-    std::vector<container> phi, curvphi;
-    std::vector<container> expy, npe, logn, ush; 
+    std::vector<container> phi, nx;
+    std::vector<container> phix, npe, logn, ush,dn,dphi; 
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
@@ -122,6 +123,7 @@ struct Feltor
     dg::Helmholtz< Matrix, container, Preconditioner > invgammaNU;
 
     dg::Invert<container> invert_pol,invert_invgamma;
+    dg::PoloidalAverage<container, thrust::host_vector<int> > polavg;
 
     const eule::Parameters p;
 
@@ -138,7 +140,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     binv( dg::evaluate(dg::one, g) ),
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
-    phi( 2, chi), curvphi( phi), expy(phi), npe(phi), logn(phi),
+    phi( 2, chi), nx( phi), phix(phi), npe(phi), logn(phi),dn(phi),dphi(phi),
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
     pol(    g, g.bcx(), g.bcy(), dg::not_normed,          dg::centered), 
     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
@@ -146,6 +148,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     invgammaNU(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(      omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
+    polavg(g),
     p(p),
     evec(3)
 { }
@@ -208,15 +211,26 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 
     for( unsigned i=0; i<2;i++)
     {
+        dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN)
+        dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN)+phi)
+        dg::blas1::axpby(0.5*p.mu[i], omega,1., chi);
 
         //Compute perp dissipation 
         dg::blas2::gemv( lapperp, y[i], lambda);
         dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w3d, omega);  
+     
+    }   
+    dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
+    dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)
+    dg::blas1::axpby(0.5*p.mu[0], omega,1., chi);
+    dg::blas1::axpby(1.,phi[0],p.tau[0],logn[0],omega); //omega = phi - lnNe
+    dg::blas1::pointwiseDot(omega,npe[0],omega); //(phi - lnNe)*Ne
 
-    }
+    double Dres =  -z[0]*p.d/p.c* p.nu_perp*dg::blas2::dot(chi, w3d, omega);
+    std::cout << "dres = " << Dres << std::endl;
     //Compute rhs of energy theorem
-    ediff_= Dperp[0]+Dperp[1];
+    ediff_= Dperp[0]+Dperp[1]+Dres;
 
 
 }
@@ -244,7 +258,18 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
         dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
     }
-    
+
+    polavg(npe[0],nx[0]);
+    polavg(phi[0],phix[0]);
+    dg::blas1::pointwiseDivide(npe[0],nx[0],lambda); //lambda = N/<N> = 1+ dN/<N>
+    dg::blas1::axpby(1.,npe[0],-1.,nx[0],dn[0]); // dN = N-<N>
+
+    dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
+    dg::blas1::axpby(1.,phi[0],-1.,phix[0],dphi[0]); // dphi = phi - <phi>
+    dg::blas1::pointwiseDivide(phi[0],phix[0],omega); //omega = phi/ <phi> = 1+ dphi/<phi>
+    dg::blas1::transform(omega, omega, dg::PLUS<>(-1.)); //omega = dphi/<phi> )
+
+
     for( unsigned i=0; i<2; i++)
     {
         //ExB dynamics
@@ -253,9 +278,13 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         
     }
     //+D/C (phi+ nu_e*ne)(ne)
-    dg::blas1::axpby(1.,phi[0],p.tau[0],logn[0],omega); //omega = phi - lnNe
-    dg::blas1::pointwiseDot(omega,npe[0],omega); //(phi - lnNe)*Ne
-    dg::blas1::axpby(-p.d/p.c,omega,1.0,yp[0]);
+//  dg::blas1::axpby(1.,phi[0],p.tau[0],logn[0],omega); //omega = phi - lnNe
+    dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = (phi -<phi> ) - ln(Ne/<Ne>)
+//     dg::blas1::pointwiseDot(omega,tilden[0],lambda); //(phi - lnNe)*dN
+//     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
+    dg::blas1::pointwiseDot(omega,npe[0],lambda); //(phi - lnNe)*Ne
+    dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
+
     t.toc();
 #ifdef MPI_VERSION
     int rank;

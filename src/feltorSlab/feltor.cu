@@ -168,7 +168,7 @@ int main( int argc, char* argv[])
 //          colors.scalemin() = -colors.scalemax();        
 //          colors.scalemin() = -colors.scalemax();        
         //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        title <<"Potential / "<< colors.scalemax() << colors.scalemin()<<"\t";
+        title <<"Potential / "<< colors.scalemax() << " " << colors.scalemin()<<"\t";
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw potential
