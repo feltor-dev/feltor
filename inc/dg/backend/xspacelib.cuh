@@ -217,7 +217,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g)
 thrust::host_vector<int> scatterMapInvertxy( unsigned n, unsigned Nx, unsigned Ny)
 {
     unsigned Nx_ = n*Nx, Ny_ = n*Ny;
-    thrust::host_vector<int> reorder = scatterMap( n, Nx, Ny);
+    //thrust::host_vector<int> reorder = scatterMap( n, Nx, Ny);
     thrust::host_vector<int> map( n*n*Nx*Ny);
     thrust::host_vector<int> map2( map);
     for( unsigned i=0; i<map.size(); i++)
@@ -227,9 +227,10 @@ thrust::host_vector<int> scatterMapInvertxy( unsigned n, unsigned Nx, unsigned N
 
         map[i] =  col*Ny_+row;
     }
-    for( unsigned i=0; i<map.size(); i++)
-        map2[i] = map[reorder[i]];
-    return map2;
+    //for( unsigned i=0; i<map.size(); i++)
+        //map2[i] = map[reorder[i]];
+    //return map2;
+    return map;
 }
 
 /**
