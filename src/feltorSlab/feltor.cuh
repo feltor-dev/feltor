@@ -267,7 +267,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
     dg::blas1::axpby(1.,phi[0],-1.,phix[0],dphi[0]); // dphi = phi - <phi>
     dg::blas1::pointwiseDivide(phi[0],phix[0],omega); //omega = phi/ <phi> = 1+ dphi/<phi>
-    dg::blas1::transform(omega, omega, dg::PLUS<>(-1.)); //omega = dphi/<phi> )
+    //dg::blas1::transform(omega, omega, dg::PLUS<>(-1.)); //omega = dphi/<phi> )
 
 
     for( unsigned i=0; i<2; i++)
@@ -278,8 +278,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         
     }
     //+D/C (phi+ nu_e*ne)(ne)
-//  dg::blas1::axpby(1.,phi[0],p.tau[0],logn[0],omega); //omega = phi - lnNe
-    dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = (phi -<phi> ) - ln(Ne/<Ne>)
+   dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - lnNe
+    //dg::blas1::axpby(1.,omega,p.tau[0],lambda,omega); //omega = (phi -<phi> ) - ln(Ne/<Ne>)
 //     dg::blas1::pointwiseDot(omega,tilden[0],lambda); //(phi - lnNe)*dN
 //     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
     dg::blas1::pointwiseDot(omega,npe[0],lambda); //(phi - lnNe)*Ne
