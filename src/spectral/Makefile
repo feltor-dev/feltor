@@ -3,8 +3,9 @@ INCLUDE = -I../../inc
 INCLUDE += -I$(HOME)/include
 
 CFLAGS = -Wall -std=c++0x -fopenmp
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 GLFLAGS= -lfftw3 -lm -lGL -lglfw3 -lrt -lX11 -lXxf86vm -lXi -lXrandr
-LIBS = -lfftw3 -lhdf5 -lhdf5_hl
+LIBS = -lfftw3 -lhdf5 -lnetcdf
 
 ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(UIBK_HDF5_INC)
@@ -30,7 +31,7 @@ innblobs: innblobs.cpp dft_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 
 innto_hpc: innto_hpc.cpp dft_dft_solver.h blueprint.h equations.h
-	$(CXX) -O3 $< $(CFLAGS) -o $@ $(INCLUDE) $(LIBS) 
+	$(CXX) -O3 $< $(CFLAGS) -o $@ $(INCLUDE) $(LIBS) -g
 
 innto_hw: innto_hw.cpp dft_dft_solver.h blueprint.h equations.h energetics.h
 	$(CXX) -O2 $< $(CFLAGS) $(INCLUDE) $(LIBS) -o $@

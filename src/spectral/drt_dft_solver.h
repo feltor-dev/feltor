@@ -39,7 +39,21 @@ class DRT_DFT_Solver
      * @param t which Matrix is missing?
      */
     void init( std::array< Matrix<double,TL_DRT_DFT>, n>& v, enum target t);
-    /*! @brief Perform a step by the 3 step Karniadakis scheme*/
+    /**
+     * @brief Perform first initializing step
+     *
+     */
+    void first_step(); 
+    /**
+     * @brief Perform second initializing step
+     *
+     * After that the step function can be used
+     */
+    void second_step(); 
+    /*! @brief Perform a step by the 3 step Karniadakis scheme
+     *
+     * @attention At least one call of first_step() and second_step() is necessary
+     * */
     void step(){ step_<TL_ORDER3>();}
     /*! @brief Get the result
         
@@ -76,7 +90,7 @@ class DRT_DFT_Solver
     //methods
     void init_coefficients( const Boundary& bound, const Physical& phys);
     void compute_cphi();//multiply cphi
-    void first_steps(); 
+    //void first_steps(); 
     template< enum stepper S>
     void step_();
     //members
@@ -248,7 +262,7 @@ void DRT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DRT_DFT>,n>& v, enum
         drt_dft.c_T2r( cphi[k], phi[k]);
     }
     //now the density and the potential is given in x-space
-    first_steps();
+    //first_steps();
 }
 
 template< size_t n>
@@ -270,7 +284,7 @@ void DRT_DFT_Solver<n>::getField( Matrix<double, TL_DRT_DFT>& m, enum target t)
 template< size_t n>
 const Matrix<double, TL_DRT_DFT>& DRT_DFT_Solver<n>::getField( enum target t) const
 {
-    Matrix<double, TL_DRT_DFT> const * m;
+    Matrix<double, TL_DRT_DFT> const * m = 0;
     switch( t)
     {
         case( TL_ELECTRONS):    m = &dens[0]; break;
@@ -283,14 +297,18 @@ const Matrix<double, TL_DRT_DFT>& DRT_DFT_Solver<n>::getField( enum target t) co
 }
 
 template< size_t n>
-void DRT_DFT_Solver<n>::first_steps()
+void DRT_DFT_Solver<n>::first_step()
 {
     karniadakis.template invert_coeff<TL_EULER>( );
     step_<TL_EULER>();
+}
+
+template< size_t n>
+void DRT_DFT_Solver<n>::second_step()
+{
     karniadakis.template invert_coeff<TL_ORDER2>();
     step_<TL_ORDER2>();
     karniadakis.template invert_coeff<TL_ORDER3>();
-    step_<TL_ORDER3>();
 }
 
 template< size_t n>

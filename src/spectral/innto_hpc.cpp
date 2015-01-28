@@ -2,17 +2,20 @@
 #include <iomanip>
 #include <sstream>
 #include <omp.h>
+#include <netcdf.h>
 
 #include "toefl/toefl.h"
 #include "file/read_input.h"
 #include "file/file.h"
-//#include "utility.h"
+#include "dg/backend/grid.h"
+#include "file/nc_utilities.h"
+
 #include "particle_density.h"
 #include "dft_dft_solver.h"
-//#include "drt_dft_solver.h"
+#include "drt_dft_solver.h"
 #include "blueprint.h"
 /*
- * Same as innblobs but outputs results in hdf5 - file
+ * Same as innblobs but outputs results in netcdf - file
  */
 
 using namespace std;
@@ -123,7 +126,24 @@ int main( int argc, char* argv[])
     //Energetics<n> energetics( bp);
 
     /////////////////////////////////////////////////////////////////////////
-    file::T5trunc t5file( argv[2], input);
+    int ncid;
+    file::NC_Error_Handle err;
+    err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "input", input.size(), input.data());
+    int dim_ids[3], tvarID;
+    dg::Grid1d<double> gx( 0, bound.lx, 1, alg.nx/reduction);
+    dg::Grid1d<double> gy( 0, bound.ly, 1, alg.ny/reduction);
+    dg::Grid2d<double> g2d( gx, gy);
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, g2d);
+    int id_ne, id_ni, id_phi;
+    err = nc_def_var( ncid, "n_e", NC_DOUBLE, 3, dim_ids, &id_ne);
+    err = nc_def_var( ncid, "n_i", NC_DOUBLE, 3, dim_ids, &id_ni);
+    err = nc_def_var( ncid, "phi", NC_DOUBLE, 3, dim_ids, &id_phi);
+    err = nc_enddef( ncid);
+    size_t count[3] = {1, alg.ny/reduction, alg.nx/reduction};
+    size_t start[3] = {0, 0, 0};
+
+    //file::T5trunc t5file( argv[2], input);
     double time = 0.0;
     std::vector<double> out( alg.nx/reduction*alg.ny/reduction);
     std::vector<double> output[3] = {out, out, out};
@@ -134,7 +154,13 @@ int main( int argc, char* argv[])
         xpa( output[0], meanMassE); //mean mass gets lost through the timestep
         copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
         copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
-        t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
+        //t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
+        start[0] = i;
+        err = nc_put_vara_double( ncid, id_ne, start, count, output[0].data());
+        err = nc_put_vara_double( ncid, id_ni, start, count, output[1].data());
+        err = nc_put_vara_double( ncid, id_phi, start, count, output[2].data());
+        const size_t Tcount = 1, Tstart = i;
+        err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
         //std::vector<double> exb = energetics.exb_energies( solver.getField(TL_POTENTIAL));
         //std::vector<double> thermal = energetics.thermal_energies( solver.getDensity());
         //std::cout<< thermal[0] << " "<< thermal[1]<<" "<<exb[0]<<"\n";
@@ -155,7 +181,14 @@ int main( int argc, char* argv[])
     xpa( output[0], meanMassE);
     copyAndReduceMatrix( solver.getField( TL_IONS), output[1]);
     copyAndReduceMatrix( solver.getField( TL_POTENTIAL), output[2]);
-    t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
+    //t5file.write( output[0], output[1], output[2], time, alg.nx/reduction, alg.ny/reduction);
+    start[0] = max_out;
+    err = nc_put_vara_double( ncid, id_ne, start, count, output[0].data());
+    err = nc_put_vara_double( ncid, id_ni, start, count, output[1].data());
+    err = nc_put_vara_double( ncid, id_phi, start, count, output[2].data());
+    const size_t Tcount = 1, Tstart = max_out;
+    err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
+    err = nc_close( ncid);
     //////////////////////////////////////////////////////////////////
     fftw_cleanup();
     return 0;
