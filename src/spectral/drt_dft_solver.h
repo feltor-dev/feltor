@@ -298,25 +298,25 @@ void DRT_DFT_Solver<n>::compute_cphi()
 {
     if( n==2)
     {
-#pragma omp for
+#pragma omp parallel for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j);
-#pragma omp for
+#pragma omp parallel for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[1](i,j) = gamma_coeff[0](i,j)*cphi[0](i,j);
     }
     else if( n==3)
     {
-#pragma omp for
+#pragma omp parallel for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
                 cphi[0](i,j) = phi_coeff(i,j)[0]*cdens[0](i,j) 
                              + phi_coeff(i,j)[1]*cdens[1](i,j) 
                              + phi_coeff(i,j)[2]*cdens[2](i,j);
-#pragma omp for
+#pragma omp parallel for
         for( size_t i = 0; i < crows; i++)
             for( size_t j = 0; j < ccols; j++)
             {
@@ -331,14 +331,12 @@ template< size_t n>
 template< enum stepper S>
 void DRT_DFT_Solver<n>::step_()
 {
-    //is false-sharing an issue here?
-#pragma omp parallel 
-    {
     //1. Compute nonlinearity
-#pragma omp for
+#pragma omp parallel for 
     for( unsigned k=0; k<n; k++)
     {
-        GhostMatrix<double, TL_DRT_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x, TL_VOID}, ghostphi{ ghostdens};
+        GhostMatrix<double, TL_DRT_DFT> ghostphi{ rows, cols, TL_PERIODIC, blue.boundary().bc_x};
+        GhostMatrix<double, TL_DRT_DFT> ghostdens{ rows, cols, TL_PERIODIC, blue.boundary().bc_x};
         swap_fields( dens[k], ghostdens); //now dens[j] is void
         swap_fields( phi[k], ghostphi); //now phi[j] is void
         ghostdens.initGhostCells( );
@@ -351,19 +349,18 @@ void DRT_DFT_Solver<n>::step_()
     karniadakis.template step_i<S>( dens, nonlinear);
     //3. solve linear equation
     //3.1. transform v_hut
-#pragma omp for
+#pragma omp parallel for
     for( unsigned k=0; k<n; k++)
         drt_dft.r2c_T( dens[k], cdens[k]);
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
     compute_cphi();
     //3.3. backtransform
-#pragma omp for
+#pragma omp parallel for
     for( unsigned k=0; k<n; k++)
     {
         drt_dft.c_T2r( cdens[k], dens[k]);
         drt_dft.c_T2r( cphi[k],  phi[k]);
-    }
     }
 }
 }//namespace toefl

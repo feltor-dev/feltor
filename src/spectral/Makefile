@@ -26,14 +26,10 @@ innto: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
 innto_per: innto_per.cpp dft_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 
-innblobs: innblobs.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
+innblobs: innblobs.cpp dft_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
 
-innto_t: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
-	$(CXX) -DTL_DEBUG $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
-	./$@
-
-innto_hpc: innto_hpc.cpp drt_dft_solver.h blueprint.h equations.h
+innto_hpc: innto_hpc.cpp dft_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) -o $@ $(INCLUDE) $(LIBS) 
 
 innto_hw: innto_hw.cpp dft_dft_solver.h blueprint.h equations.h energetics.h
