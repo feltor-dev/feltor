@@ -3,6 +3,8 @@
 #include <sstream>
 #include <omp.h>
 
+#include "opencv2/opencv.hpp"
+
 #include "toefl/toefl.h"
 #include "file/read_input.h"
 
@@ -15,8 +17,6 @@
  * Inititalizes the correct solver 
  * visualizes results directly on the screen
  */
-using namespace std;
-using namespace toefl;
     
 unsigned N; //initialized by init function
 double amp, imp_amp; //
@@ -39,17 +39,17 @@ void WindowResize( GLFWwindow* win, int w, int h)
     height = h;
 }
 
-Blueprint read( char const * file)
+toefl::Blueprint read( char const * file)
 {
     std::cout << "Reading from "<<file<<"\n";
     std::vector<double> para;
     try{ para = file::read_input( file); }
-    catch (Message& m) 
+    catch (toefl::Message& m) 
     {  
         m.display(); 
         throw m;
     }
-    Blueprint bp( para);
+    toefl::Blueprint bp( para);
     amp = para[10];
     imp_amp = para[14];
     N = para[19];
@@ -71,25 +71,25 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
     const typename Solver::Matrix_Type * field;
     
     { //draw electrons
-    field = &solver.getField( TL_ELECTRONS);
+    field = &solver.getField( toefl::TL_ELECTRONS);
     visual = field->copy(); 
     map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
     rend.renderQuad( visual, field->cols(), field->rows(), map);
-    window_str << scientific;
+    window_str << std::scientific;
     window_str <<"ne / "<<map.scale()<<"\t";
     }
 
     { //draw Ions
-    field = &solver.getField( TL_IONS);
+    field = &solver.getField( toefl::TL_IONS);
     visual = field->copy();
     //upper right
     rend.renderQuad( visual, field->cols(), field->rows(), map);
     window_str <<" ni / "<<map.scale()<<"\t";
     }
 
-    if( solver.blueprint().isEnabled( TL_IMPURITY))
+    if( solver.blueprint().isEnabled( toefl::TL_IMPURITY))
     {
-        field = &solver.getField( TL_IMPURITIES); 
+        field = &solver.getField( toefl::TL_IMPURITIES); 
         visual = field->copy();
         map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
         //lower left
@@ -100,7 +100,7 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
         rend.renderEmptyQuad( );
 
     { //draw potential
-    field = &solver.getField( TL_POTENTIAL); 
+    field = &solver.getField( toefl::TL_POTENTIAL); 
     visual = field->copy(); 
     map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
     rend.renderQuad( visual, field->cols(), field->rows(), map);
@@ -112,7 +112,7 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
-    Blueprint bp_mod;
+    toefl::Blueprint bp_mod;
     if( argc == 1)
     {
         bp_mod = read("input.txt");
@@ -123,46 +123,55 @@ int main( int argc, char* argv[])
     }
     else
     {
-        cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const Blueprint bp = bp_mod;
-    if( bp.boundary().bc_x != TL_PERIODIC)
+    const toefl::Blueprint bp = bp_mod;
+    if( bp.boundary().bc_x != toefl::TL_PERIODIC)
     {
-        cerr << "Only periodic boundaries allowed!\n";
+        std::cerr << "Only periodic boundaries allowed!\n";
         return -1;
     }
     
-    bp.display(cout);
+    bp.display(std::cout);
     //construct solvers 
-    DFT_DFT_Solver<2> solver2( bp);
-    DFT_DFT_Solver<3> solver3( bp);
+    toefl::DFT_DFT_Solver<2> solver2( bp);
+    toefl::DFT_DFT_Solver<3> solver3( bp);
 
-    const Algorithmic& alg = bp.algorithmic();
-    const Boundary& bound = bp.boundary();
+    const toefl::Algorithmic& alg = bp.algorithmic();
+    const toefl::Boundary& bound = bp.boundary();
     // place some gaussian blobs in the field
     try{
-        Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
+        toefl::Matrix<double, toefl::TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
         init_gaussian( ne, posX, posY, blob_width/bound.lx, blob_width/bound.ly, amp);
-        if( bp.isEnabled( TL_IMPURITY))
+        if( bp.isEnabled( toefl::TL_IMPURITY))
         {
             //init_gaussian( nz, 0.8,0.4, 0.05/field_ratio, 0.05, -imp_amp);
             init_gaussian_column( nz, 0.6, 0.05/field_ratio, imp_amp);
         }
-        std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, phi}};
-        std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, nz, phi}};
+        std::array< toefl::Matrix<double, toefl::TL_DFT>,2> arr2{{ ne, phi}};
+        std::array< toefl::Matrix<double, toefl::TL_DFT>,3> arr3{{ ne, nz, phi}};
         //now set the field to be computed
-        if( !bp.isEnabled( TL_IMPURITY))
+        if( !bp.isEnabled( toefl::TL_IMPURITY))
         {
-            solver2.init( arr2, TL_IONS);
+            solver2.init( arr2, toefl::TL_IONS);
         }
         else
         {
-            solver3.init( arr3, TL_IONS);
+            solver3.init( arr3, toefl::TL_IONS);
         }
-    }catch( Message& m){m.display();}
+    }catch( toefl::Message& m){m.display();}
 
-    ////////////////////////////////glfw//////////////////////////////
+    ////////////////////////////////glfw and opencv//////////////////////////////
+    cv::VideoCapture cap(0);
+    if( !cap.isOpened())
+    {
+        std::cerr << "Camera not found\n";
+        return -1;
+    }
+    cv::namedWindow( "Camera", cv::WINDOW_NORMAL);
+    //draw opencv frame
+    cv::Mat frame;
     {
 
     height = width/field_ratio;
@@ -171,14 +180,18 @@ int main( int argc, char* argv[])
 
     glfwSetWindowSizeCallback( w, WindowResize);
     glfwSetInputMode(w, GLFW_STICKY_KEYS, GL_TRUE);
+    //for(;;)
+    //{
+    //        if(cv::waitKey(30) >= 0) break;
+    //}
 
     double t = 0.;
-    Timer timer;
-    Timer overhead;
-    cout<< "HIT ESC to terminate program \n"
+    toefl::Timer timer;
+    toefl::Timer overhead;
+    std::cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
-    if( !bp.isEnabled( TL_IMPURITY))
+    if( !bp.isEnabled( toefl::TL_IMPURITY))
     {
         solver2.first_step();
         solver2.second_step();
@@ -191,6 +204,7 @@ int main( int argc, char* argv[])
     t+= 2*alg.dt;
     while( !glfwWindowShouldClose(w))
     {
+        cap >> frame; // get a new frame from camera
         overhead.tic();
         //ask if simulation shall be stopped
         glfwPollEvents();
@@ -204,7 +218,7 @@ int main( int argc, char* argv[])
         }
         
         //draw scene
-        if( !bp.isEnabled( TL_IMPURITY))
+        if( !bp.isEnabled( toefl::TL_IMPURITY))
         {
             drawScene( solver2, render);
         }
@@ -212,7 +226,7 @@ int main( int argc, char* argv[])
         {
             drawScene( solver3, render);
         }
-        window_str << setprecision(2) << fixed;
+        window_str << std::setprecision(2) << std::fixed;
         window_str << " &&   time = "<<t;
         glfwSetWindowTitle(w, (window_str.str()).c_str() );
         window_str.str("");
@@ -225,28 +239,28 @@ int main( int argc, char* argv[])
         timer.tic();
         for(unsigned i=0; i<N; i++)
         {
-            if( !bp.isEnabled( TL_IMPURITY))
+            if( !bp.isEnabled( toefl::TL_IMPURITY))
             {
-                Matrix<double, TL_DFT> voidmatrix( 2,2,(bool)TL_VOID);
+                toefl::Matrix<double, toefl::TL_DFT> voidmatrix( 2,2,(bool)toefl::TL_VOID);
                 solver2.step(voidmatrix);
             }
             else
             {
-                Matrix<double, TL_DFT> voidmatrix( 2,2,(bool)TL_VOID);
+                toefl::Matrix<double, toefl::TL_DFT> voidmatrix( 2,2,(bool)toefl::TL_VOID);
                 solver3.step(voidmatrix );
             }
             t+= alg.dt;
         }
         timer.toc();
 #ifdef TL_DEBUG
-            cout << "Next "<<N<<" Steps\n";
+        std::cout << "Next "<<N<<" Steps\n";
         }
 #endif
         overhead.toc();
     }
     glfwTerminate();
-    cout << "Average time for one step =                 "<<timer.diff()/(double)N<<"s\n";
-    cout << "Overhead for visualisation, etc. per step = "<<(overhead.diff()-timer.diff())/(double)N<<"s\n";
+    std::cout << "Average time for one step =                 "<<timer.diff()/(double)N<<"s\n";
+    std::cout << "Overhead for visualisation, etc. per step = "<<(overhead.diff()-timer.diff())/(double)N<<"s\n";
     }
     //////////////////////////////////////////////////////////////////
     fftw_cleanup();

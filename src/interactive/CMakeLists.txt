@@ -8,6 +8,7 @@ cmake_minimum_required( VERSION 2.8) # require minimum cmake version
 project( Interactive)  # sets project variables
 ###############Add executable###################
 add_executable( interactive interactive.cpp) # adds dependencies to interactive target
+add_executable( opencv_t opencv_t.cpp) # adds dependencies to interactive target
 ##############FIND LIBRARIES###################
 find_package( OpenCV REQUIRED)  # find well-known library for which cmake has config files for many platforms
 find_library( FFTW3 fftw3) # find system library
@@ -22,6 +23,7 @@ include_directories( $(interactive_SOURCE_DIR)../../inc )
 
 
 ##############Add libs###################
+target_link_libraries( opencv_t ${OpenCV_LIBS})
 target_link_libraries( interactive ${OpenCV_LIBS})
 target_link_libraries( interactive ${GLFW_STATIC_LIBRARIES})
 target_link_libraries( interactive ${FFTW3})
