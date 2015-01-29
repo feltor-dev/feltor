@@ -84,7 +84,8 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT prof(p.bgprofamp );
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-    dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
+//     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
+    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
@@ -216,6 +217,9 @@ int main( int argc, char* argv[])
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout << " Ne_p  = " << feltor.probe_vector()[0][0] << 
+                         " Phi_p = " << feltor.probe_vector()[1][0] << 
+                         " Ga_nex= " << feltor.radial_transport() <<std::endl;
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<
             " d E/dt = " << diff <<" Lambda =" << diss << "\n";
             

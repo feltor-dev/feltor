@@ -19,11 +19,14 @@ struct Parameters
     double tau[2];
     double mcv;
     double lx,ly;
+    double ln;
+    double dlocal;
     double nu_perp, d, c;
     
     double amp, sigma, posX, posY;
 
     double  nprofileamp, bgprofamp;
+    unsigned zf;
     enum dg::bc bc_x,bc_y;
 
     /**
@@ -65,7 +68,9 @@ struct Parameters
             ly = v[26];
             bc_x = map((int)v[27]);
             bc_y =map((int)v[28]);
-
+            zf = (unsigned)v[29];
+            ln = v[30];
+            dlocal = (double)(lx*d/c);
         }
     }
     /**
@@ -83,7 +88,8 @@ struct Parameters
             <<"     Ion-temperature:  = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
             <<"     par. Resistivity: = "<<c<<"\n"
-            <<"     D:                = "<<d<<"\n";
+            <<"     D:                = "<<d<<"\n"
+            <<"     dlocal:           = "<<dlocal<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    width:        "<<sigma<<"\n"
@@ -111,6 +117,9 @@ struct Parameters
             <<"     ly  =              "<<ly<<"\n"
             <<"     bcx =              "<<bc_x<<"\n"
             <<"     bcy =              "<<bc_y<<"\n";
+        os << "modified/ordinary \n"
+            <<"     zf =              "<<zf<<"\n"
+            <<"     ln =              "<<ln<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:
