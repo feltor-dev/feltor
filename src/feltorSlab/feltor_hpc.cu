@@ -131,7 +131,7 @@ int main( int argc, char* argv[])
     int NepID,phipID,radtransID;
     err = nc_def_var( ncid, "Ne_p",     NC_DOUBLE, 1, &EtimeID, &NepID);
     err = nc_def_var( ncid, "phi_p",    NC_DOUBLE, 1, &EtimeID, &phipID);  
-    err = nc_def_var( ncid, "G_nex",    NC_DOUBLE, 1, &EtimeID, &phipID);  
+    err = nc_def_var( ncid, "G_nex",    NC_DOUBLE, 1, &EtimeID, &radtransID);  
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
