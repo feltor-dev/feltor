@@ -265,7 +265,7 @@ struct DZ
     container left_, right_;
     container limiter;
     container w3d, v3d;
-    container invB;
+    //container invB;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -274,7 +274,7 @@ template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
 //         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
-        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)), invB(dg::evaluate(field,grid))
+        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))//, invB(dg::evaluate(field,grid))
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);

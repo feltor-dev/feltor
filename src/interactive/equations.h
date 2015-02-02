@@ -21,7 +21,7 @@ class Poisson
      *
      * @param phys Set the species parameters
      */
-    Poisson(const Physical& phys):a_i(phys.a[0]), mu_i(phys.mu[0]), tau_i(phys.tau[0]),
+    Poisson(const Parameters& phys):a_i(phys.a[0]), mu_i(phys.mu[0]), tau_i(phys.tau[0]),
                                   a_z(phys.a[1]), mu_z(phys.mu[1]), tau_z(phys.tau[1]) 
                                       {}
     /*! @brief Compute prefactors for ne and ni in local poisson equation
@@ -99,8 +99,8 @@ class Equations
      *  Specify if coupling should be modified, i.e. subtract zonal
      *  averages
      */
-    Equations( const Physical& phys, bool mhw = false):
-        p( phys), mhw( mhw),
+    Equations( const Parameters& phys):
+        p( phys), mhw( phys.mhw),
         dd(phys.d), nu(phys.nu), 
         g_e(phys.g_e), g_i(phys.g[0]), g_z(phys.g[1]),
         kappa_y(phys.kappa),

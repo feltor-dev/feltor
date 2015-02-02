@@ -7,8 +7,8 @@ The parameters in brackets lead to drift wave turbulence with
 zonal flows.
 
 ---------------------Algorithmic parameters-------------------
-1) nx (grid points in x)                =   256     (256.)
-2) ny (grid points in y)                =   256     (256.)
+1) nx (grid points in x)                =   160    (256.)
+2) ny (grid points in y)                =   120    (256.)
 3) dt (time step in units c_s/L_p)      =   0.01    (0.01)
 ---------------------Boundary conditions----------------------
 4) ly (length of y in units of rho_s)         =   64   (64.)
@@ -31,7 +31,7 @@ quasineutrality condition)
 17) mu_z (mz/mi*Z)(mass)                =   3.0    (large)
 18) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
 ---------------------Miscellaneous----------------------------
-19) itstp (steps between output)        =   10     (5)
+19) itstp (steps between output)        =   50     (5)
 20) OMP_NUM_THREADS                     =   4      (4)
 21) blob_width ( sigma)                 =   5    (10)
 22) # of outputs ( excluding first)     =   1000

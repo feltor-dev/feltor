@@ -30,6 +30,7 @@ target_link_libraries( interactive ${FFTW3})
 #############Set optimization flags#################
 #set is used to set environment variables 
 set(CMAKE_BUILD_TYPE Release) # sets -O3 -DNDEBUG flags, can also be Debug
+#set(CMAKE_BUILD_TYPE Debug) # sets -O3 -DNDEBUG flags, can also be Debug
 set(CMAKE_CXX_FLAGS "-std=c++0x")
 ###############Set compiler flags for OpenMP support##############
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")

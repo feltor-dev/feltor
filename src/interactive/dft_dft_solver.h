@@ -26,7 +26,7 @@ class DFT_DFT_Solver
      * @param blueprint Contains all the necessary parameters.
      * @throw Message If your parameters are inconsistent.
      */
-    DFT_DFT_Solver( const Blueprint& blueprint);
+    DFT_DFT_Solver( const Parameters& blueprint);
     /*! @brief Prepare Solver for execution
      *
      * This function takes the fields and computes the missing 
@@ -82,11 +82,11 @@ class DFT_DFT_Solver
         @return The parameters in use. 
         @note You cannot change parameters once constructed.
      */
-    const Blueprint& blueprint() const { return blue;}
+    const Parameters& blueprint() const { return blue;}
   private:
     typedef std::complex<double> complex;
     //methods
-    void init_coefficients( const Boundary& bound, const Physical& phys);
+    void init_coefficients( const Parameters& p);
     void compute_cphi();//multiply cphi
     double dot( const Matrix_Type& m1, const Matrix_Type& m2);
     template< enum stepper S>
@@ -94,7 +94,7 @@ class DFT_DFT_Solver
     //members
     const size_t rows, cols;
     const size_t crows, ccols;
-    const Blueprint blue;
+    const Parameters blue;
     /////////////////fields//////////////////////////////////
     //GhostMatrix<double, TL_DFT> ghostdens, ghostphi;
     std::array< Matrix<double, TL_DFT>, n> dens, phi, nonlinear;
@@ -110,8 +110,8 @@ class DFT_DFT_Solver
 };
 
 template< size_t n>
-DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
-    rows( bp.algorithmic().ny ), cols( bp.algorithmic().nx ),
+DFT_DFT_Solver<n>::DFT_DFT_Solver( const Parameters& bp):
+    rows( bp.ny ), cols( bp.nx ),
     crows( rows), ccols( cols/2+1),
     blue( bp),
     //fields
@@ -120,33 +120,33 @@ DFT_DFT_Solver<n>::DFT_DFT_Solver( const Blueprint& bp):
     cdens( MatrixArray<complex, TL_NONE, n>::construct( crows, ccols)), 
     cphi(cdens), 
     //Solvers
-    arakawa( bp.algorithmic().h),
-    karniadakis(rows, cols, crows, ccols, bp.algorithmic().dt),
+    arakawa( bp.h),
+    karniadakis(rows, cols, crows, ccols, bp.dt),
     dft_dft( rows, cols, FFTW_MEASURE),
     //Coefficients
     phi_coeff( crows, ccols),
     gamma_coeff( MatrixArray< double, TL_NONE, n-1>::construct( crows, ccols))
 {
     bp.consistencyCheck();
-    if( bp.isEnabled( TL_GLOBAL))
+    if( bp.global)
     {
         std::cerr << "WARNING: GLOBAL solver not implemented yet! \n\
              Switch to local solver...\n";
     }
-    init_coefficients( bp.boundary(), bp.physical());
+    init_coefficients( bp);
 }
 
 template< size_t n>
-void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical& phys)
+void DFT_DFT_Solver<n>::init_coefficients( const Parameters& p)
 {
     Matrix< QuadMat< complex, n> > coeff( crows, ccols);
     double laplace;
     int ik;
-    const complex dymin( 0, 2.*M_PI/bound.ly);
-    const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(bound.lx*bound.lx),
-                 kymin2 = 2.*2.*M_PI*M_PI/(double)(bound.ly*bound.ly);
-    Equations e( phys, blue.isEnabled( TL_MHW));
-    Poisson p( phys);
+    const complex dymin( 0, 2.*M_PI/p.ly);
+    const double kxmin2 = 2.*2.*M_PI*M_PI/(double)(p.lx*p.lx),
+                 kymin2 = 2.*2.*M_PI*M_PI/(double)(p.ly*p.ly);
+    Equations e( p);
+    Poisson poisson( p);
     // dft_dft is not transposing so i is the y index by default
     for( unsigned i = 0; i<crows; i++)
         for( unsigned j = 0; j<ccols; j++)
@@ -155,17 +155,17 @@ void DFT_DFT_Solver<n>::init_coefficients( const Boundary& bound, const Physical
             laplace = - kxmin2*(double)(j*j) - kymin2*(double)(ik*ik);
             if( n == 2)
             {
-                gamma_coeff[0](i,j) = p.gamma1_i( laplace);
+                gamma_coeff[0](i,j) = poisson.gamma1_i( laplace);
             }
             else if( n == 3)
             {
-                gamma_coeff[0](i,j) = p.gamma1_i( laplace);
-                gamma_coeff[1](i,j) = p.gamma1_z( laplace);
+                gamma_coeff[0](i,j) = poisson.gamma1_i( laplace);
+                gamma_coeff[1](i,j) = poisson.gamma1_z( laplace);
             }
             if( rows%2 == 0 && i == rows/2) ik = 0;
             e( coeff( i,j), laplace, (double)ik*dymin);
             if( laplace == 0) continue;
-            p( phi_coeff(i,j), laplace);  
+            poisson( phi_coeff(i,j), laplace);  
         }
         //for periodic bc the constant is undefined
     for( unsigned k=0; k<n; k++)
@@ -191,7 +191,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
                 cdens[k](i,j) /= (double)(rows*cols);
     switch( t) //which field must be computed?
     {
-        case( TL_ELECTRONS): 
+        case( ELECTRONS): 
             //bring cdens and cphi in the right order
             swap_fields( cphi[0], cdens[n-1]);
             for( unsigned k=n-1; k>0; k--)
@@ -205,7 +205,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
                         cdens[0](i,j) -= cdens[k](i,j)*phi_coeff(i,j)[k]/phi_coeff(i,j)[0];
                 }
             break;
-        case( TL_IONS):
+        case( IONS):
             //bring cdens and cphi in the right order
             swap_fields( cphi[0], cdens[n-1]);
             for( unsigned k=n-1; k>1; k--)
@@ -219,7 +219,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
                         cdens[1](i,j) -= cdens[k](i,j)*phi_coeff(i,j)[k]/phi_coeff(i,j)[1];
                 }
             break;
-        case( TL_IMPURITIES):
+        case( IMPURITIES):
             //bring cdens and cphi in the right order
             swap_fields( cphi[0], cdens[n-1]);
             for( unsigned k=n-1; k>2; k--) //i.e. never for n = 3
@@ -233,7 +233,7 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
                         cdens[2](i,j) -= cdens[k](i,j)*phi_coeff(i,j)[k]/phi_coeff(i,j)[2];
                 }
             break;
-        case( TL_POTENTIAL):
+        case( POTENTIAL):
             //solve for cphi
             for( unsigned i=0; i<crows; i++)
                 for( unsigned j=0; j<ccols; j++)
@@ -243,8 +243,8 @@ void DFT_DFT_Solver<n>::init( std::array< Matrix<double, TL_DFT>,n>& v, enum tar
                         cphi[0](i,j) += cdens[k](i,j)*phi_coeff(i,j)[k];
                 }
             break;
-        case( TL_ALL):
-            throw Message( "TL_ALL not treated yet!", _ping_);
+        case( ALL):
+            throw Message( "toefl::ALL not treated yet!", _ping_);
     }
     //compute the rest cphi[k]
     for( unsigned k=0; k<n-1; k++)
@@ -274,11 +274,11 @@ void DFT_DFT_Solver<n>::getField( Matrix<double, TL_DFT>& m, enum target t)
 #endif
     switch( t)
     {
-        case( TL_ELECTRONS):    swap_fields( m, nonlinear[0]); break;
-        case( TL_IONS):         swap_fields( m, nonlinear[1]); break;
-        case( TL_IMPURITIES):   swap_fields( m, nonlinear[2]); break;
-        case( TL_POTENTIAL):    swap_fields( m, cphi[0]); break;
-        case( TL_ALL):          throw Message( "TL_ALL not allowed here", _ping_);
+        case( ELECTRONS):    swap_fields( m, nonlinear[0]); break;
+        case( IONS):         swap_fields( m, nonlinear[1]); break;
+        case( IMPURITIES):   swap_fields( m, nonlinear[2]); break;
+        case( POTENTIAL):    swap_fields( m, cphi[0]); break;
+        case( ALL):          throw Message( "toefl::ALL not allowed here", _ping_);
     }
 }
 template< size_t n>
@@ -287,11 +287,11 @@ const Matrix<double, TL_DFT>& DFT_DFT_Solver<n>::getField( enum target t) const
     Matrix<double, TL_DFT> const * m = 0;
     switch( t)
     {
-        case( TL_ELECTRONS):    m = &dens[0]; break;
-        case( TL_IONS):         m = &dens[1]; break;
-        case( TL_IMPURITIES):   m = &dens[2]; break;
-        case( TL_POTENTIAL):    m = &phi[0]; break;
-        case( TL_ALL):          throw Message( "TL_ALL not allowed here", _ping_);
+        case( ELECTRONS):    m = &dens[0]; break;
+        case( IONS):         m = &dens[1]; break;
+        case( IMPURITIES):   m = &dens[2]; break;
+        case( POTENTIAL):    m = &phi[0]; break;
+        case( ALL):          throw Message( "toefl::ALL not allowed here", _ping_);
     }
     return *m;
 }

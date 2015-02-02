@@ -18,9 +18,6 @@
  * visualizes results directly on the screen
  */
     
-unsigned N; //initialized by init function
-double amp, imp_amp; //
-double blob_width, posX, posY;
 const double slit = 2./500.; //half distance between pictures in units of width
 double field_ratio;
 unsigned width = 960, height = 1080; //initial window width & height
@@ -39,30 +36,7 @@ void WindowResize( GLFWwindow* win, int w, int h)
     height = h;
 }
 
-toefl::Blueprint read( char const * file)
-{
-    std::cout << "Reading from "<<file<<"\n";
-    std::vector<double> para;
-    try{ para = file::read_input( file); }
-    catch (toefl::Message& m) 
-    {  
-        m.display(); 
-        throw m;
-    }
-    toefl::Blueprint bp( para);
-    amp = para[10];
-    imp_amp = para[14];
-    N = para[19];
-    field_ratio = bp.boundary().lx/bp.boundary().ly;
-    omp_set_num_threads( para[20]);
-    blob_width = para[21];
-    posX = para[23];
-    posY = para[24];
-    std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
-    return bp;
-}
     
-
 // The solver has to have the getField( target) function returing M
 // and the blueprint() function
 template<class Solver>
@@ -71,7 +45,7 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
     const typename Solver::Matrix_Type * field;
     
     { //draw electrons
-    field = &solver.getField( toefl::TL_ELECTRONS);
+    field = &solver.getField( toefl::ELECTRONS);
     visual = field->copy(); 
     map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
     rend.renderQuad( visual, field->cols(), field->rows(), map);
@@ -80,16 +54,16 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
     }
 
     { //draw Ions
-    field = &solver.getField( toefl::TL_IONS);
+    field = &solver.getField( toefl::IONS);
     visual = field->copy();
     //upper right
     rend.renderQuad( visual, field->cols(), field->rows(), map);
     window_str <<" ni / "<<map.scale()<<"\t";
     }
 
-    if( solver.blueprint().isEnabled( toefl::TL_IMPURITY))
+    if( solver.blueprint().imp)
     {
-        field = &solver.getField( toefl::TL_IMPURITIES); 
+        field = &solver.getField( toefl::IMPURITIES); 
         visual = field->copy();
         map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
         //lower left
@@ -100,7 +74,7 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
         rend.renderEmptyQuad( );
 
     { //draw potential
-    field = &solver.getField( toefl::TL_POTENTIAL); 
+    field = &solver.getField( toefl::POTENTIAL); 
     visual = field->copy(); 
     map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
     rend.renderQuad( visual, field->cols(), field->rows(), map);
@@ -112,54 +86,56 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
-    toefl::Blueprint bp_mod;
+    std::vector<double> para;
     if( argc == 1)
     {
-        bp_mod = read("input.txt");
+        std::cout << "Reading from input.txt\n";
+        try{ para = file::read_input( "input.txt"); }
+        catch (toefl::Message& m) 
+        {  
+            m.display(); 
+            throw m;
+        }
     }
     else if( argc == 2)
     {
-        bp_mod = read( argv[1]);
+        std::cout << "Reading from "<<argv[1]<<"\n";
+        try{ para = file::read_input( argv[1]); }
+        catch (toefl::Message& m) 
+        {  
+            m.display(); 
+            throw m;
+        }
     }
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const toefl::Blueprint bp = bp_mod;
-    if( bp.boundary().bc_x != toefl::TL_PERIODIC)
+    omp_set_num_threads( para[20]);
+    std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
+    const toefl::Parameters p(para);
+    field_ratio = p.lx/p.ly;
+    if( p.bc_x != toefl::TL_PERIODIC)
     {
         std::cerr << "Only periodic boundaries allowed!\n";
         return -1;
     }
     
-    bp.display(std::cout);
+    try{p.consistencyCheck();}
+    catch( toefl::Message& m){m.display();throw m;}
+    p.display(std::cout);
     //construct solvers 
-    toefl::DFT_DFT_Solver<2> solver2( bp);
-    toefl::DFT_DFT_Solver<3> solver3( bp);
+    toefl::DFT_DFT_Solver<3> solver( p);
 
-    const toefl::Algorithmic& alg = bp.algorithmic();
-    const toefl::Boundary& bound = bp.boundary();
     // place some gaussian blobs in the field
     try{
-        toefl::Matrix<double, toefl::TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
-        init_gaussian( ne, posX, posY, blob_width/bound.lx, blob_width/bound.ly, amp);
-        if( bp.isEnabled( toefl::TL_IMPURITY))
-        {
-            //init_gaussian( nz, 0.8,0.4, 0.05/field_ratio, 0.05, -imp_amp);
-            init_gaussian_column( nz, 0.6, 0.05/field_ratio, imp_amp);
-        }
-        std::array< toefl::Matrix<double, toefl::TL_DFT>,2> arr2{{ ne, phi}};
+        toefl::Matrix<double, toefl::TL_DFT> ne{ p.ny, p.nx, 0.}, nz{ ne}, phi{ ne};
+        init_gaussian( ne, p.posX, p.posY, p.blob_width/p.lx, p.blob_width/p.ly, p.amp);
+        init_gaussian_column( nz, 0.6, 0.05/field_ratio, p.imp_amp);
         std::array< toefl::Matrix<double, toefl::TL_DFT>,3> arr3{{ ne, nz, phi}};
         //now set the field to be computed
-        if( !bp.isEnabled( toefl::TL_IMPURITY))
-        {
-            solver2.init( arr2, toefl::TL_IONS);
-        }
-        else
-        {
-            solver3.init( arr3, toefl::TL_IONS);
-        }
+        solver.init( arr3, toefl::IONS);
     }catch( toefl::Message& m){m.display();}
 
     ////////////////////////////////glfw and opencv//////////////////////////////
@@ -169,21 +145,23 @@ int main( int argc, char* argv[])
         std::cerr << "Camera not found\n";
         return -1;
     }
-    cv::namedWindow( "Camera", cv::WINDOW_NORMAL);
-    //draw opencv frame
-    cv::Mat frame;
+    cap.set( CV_CAP_PROP_FRAME_WIDTH,  p.nx);
+    cap.set( CV_CAP_PROP_FRAME_HEIGHT, p.ny);
+    cv::Mat last, current, flow, vel( p.ny, p.nx, CV_32F);
+    std::vector<cv::Mat> v;
+    cap >> last;
+    cv::cvtColor( last, last, CV_BGR2GRAY); //convert colors
+
     {
 
-    height = width/field_ratio;
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( width, height, "");
-    draw::RenderHostData render( 2,2);
 
-    glfwSetWindowSizeCallback( w, WindowResize);
-    glfwSetInputMode(w, GLFW_STICKY_KEYS, GL_TRUE);
-    //for(;;)
-    //{
-    //        if(cv::waitKey(30) >= 0) break;
-    //}
+    cv::namedWindow("Current",cv::WINDOW_NORMAL);
+    //height = width/field_ratio;
+    //GLFWwindow* w = draw::glfwInitAndCreateWindow( width, height, "");
+    //draw::RenderHostData render( 2,2);
+
+    //glfwSetWindowSizeCallback( w, WindowResize);
+    //glfwSetInputMode( w, GLFW_STICKY_KEYS, GL_TRUE);
 
     double t = 0.;
     toefl::Timer timer;
@@ -191,76 +169,99 @@ int main( int argc, char* argv[])
     std::cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
-    if( !bp.isEnabled( toefl::TL_IMPURITY))
+    solver.first_step();
+    solver.second_step();
+    t+= 2*p.dt;
+    toefl::Matrix<double, toefl::TL_DFT> src( p.ny, p.nx, 0.);
+    cv::Mat frame;
+    cv::Mat grey, colored;
+    while( true)
     {
-        solver2.first_step();
-        solver2.second_step();
-    }
-    else
-    {
-        solver3.first_step();
-        solver3.second_step();
-    }
-    t+= 2*alg.dt;
-    while( !glfwWindowShouldClose(w))
-    {
-        cap >> frame; // get a new frame from camera
+        cap >> current; // get a new frame from camera
+        cv::cvtColor(current, current, CV_BGR2GRAY); //convert colors
+        cv::GaussianBlur(current, current, cv::Size(21,21), 0, 0); //Kernel size, sigma_x, sigma_y
+        calcOpticalFlowFarneback(last, current, flow, 0.5, 1, 5, 3,  5, 1.2, 0);
+        cv::split( flow, v);
+        //erster index y, zweiter index x
+        for( unsigned i=0; i<v[0].rows; i++)
+            for( unsigned j=0; j<v[0].cols; j++)
+                vel.at<float>( i,j) = sqrt( v[0].at<float>(i,j)*v[0].at<float>(i,j) + v[1].at<float>(i,j)*v[1].at<float>(i,j) );
+        for( unsigned i=0; i<vel.rows; i++)
+            for( unsigned j=0; j<vel.cols; j++)
+                if( vel.at<float>(i,j) < 1) vel.at<float>(i,j) = 0;
+        //scale velocity to 1 in order to account for distance from camera
+        double min, max;
+        cv::minMaxLoc( vel, &min, &max);
+        if( max > 1) // if someone is there
+            for( unsigned i=0; i<vel.rows; i++)
+                for( unsigned j=0; j<vel.cols; j++)
+                    vel.at<float>( i,j) /= max;
+        for( unsigned i=0; i<src.rows(); i++)
+            for( unsigned j=0; j<src.cols(); j++)
+                src(i,j) = current.at<double>(i,j);
         overhead.tic();
         //ask if simulation shall be stopped
-        glfwPollEvents();
-        if( glfwGetKey( w, 'S')) 
-        {
-            do
-            {
-                glfwWaitEvents();
-            } while( !glfwGetKey(w,  'R') && 
-                     !glfwGetKey(w,  GLFW_KEY_ESCAPE));
-        }
+        //glfwPollEvents();
+        //if( glfwGetKey( w, 'S')) 
+        //{
+        //    do
+        //    {
+        //        glfwWaitEvents();
+        //    } while( !glfwGetKey(w,  'R') && 
+        //             !glfwGetKey(w,  GLFW_KEY_ESCAPE));
+        //}
         
         //draw scene
-        if( !bp.isEnabled( toefl::TL_IMPURITY))
-        {
-            drawScene( solver2, render);
-        }
-        else
-        {
-            drawScene( solver3, render);
-        }
+        //drawScene( solver, render);
+        const toefl::Matrix<double, toefl::TL_DFT>& field = solver.getField( toefl::ELECTRONS); 
+        for( unsigned i=0; i<p.ny; i++)
+            for( unsigned j=0; j<p.nx; j++)
+                vel.at<float>(i,j) = (float)field(i,j);
+        cv::minMaxLoc( vel, &min, &max);
+        vel.convertTo(grey, CV_8U, 255.0/(2.*max), 255.0/2.);
+        cv::minMaxLoc( grey, &min, &max);
+
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_BONE);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_COOL);
+        cv::applyColorMap( grey, colored, cv::COLORMAP_HOT);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_HSV);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_JET);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_OCEAN);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_PINK);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_RAINBOW);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_SPRING);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_SUMMER);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_AUTUMN);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_WINTER);
         window_str << std::setprecision(2) << std::fixed;
-        window_str << " &&   time = "<<t;
-        glfwSetWindowTitle(w, (window_str.str()).c_str() );
-        window_str.str("");
-        glfwSwapBuffers( w );
-#ifdef TL_DEBUG
-        glfwWaitEvents();
-        if( glfwGetKey( w,'N'))
-        {
-#endif
+        window_str << "time = "<<t;
+        cv::addText( colored, window_str.str(), cv::Point(50,50));
+        window_str.str(""); 
+        cv::imshow("Current", colored);
+
+//#ifdef TL_DEBUG
+//        glfwWaitEvents();
+//        if( glfwGetKey( w,'N'))
+//        {
+//#endif
         timer.tic();
-        for(unsigned i=0; i<N; i++)
+        for(unsigned i=0; i<p.itstp; i++)
         {
-            if( !bp.isEnabled( toefl::TL_IMPURITY))
-            {
-                toefl::Matrix<double, toefl::TL_DFT> voidmatrix( 2,2,(bool)toefl::TL_VOID);
-                solver2.step(voidmatrix);
-            }
-            else
-            {
-                toefl::Matrix<double, toefl::TL_DFT> voidmatrix( 2,2,(bool)toefl::TL_VOID);
-                solver3.step(voidmatrix );
-            }
-            t+= alg.dt;
+            toefl::Matrix<double, toefl::TL_DFT> voidmatrix( 2,2,(bool)toefl::TL_VOID);
+            solver.step(voidmatrix );
+            t+= p.dt;
         }
         timer.toc();
-#ifdef TL_DEBUG
-        std::cout << "Next "<<N<<" Steps\n";
-        }
-#endif
+//#ifdef TL_DEBUG
+//        std::cout << "Next "<<p.itstp<<" Steps\n";
+//        }
+//#endif
         overhead.toc();
+        if(cv::waitKey(30) >= 0) break;
     }
-    glfwTerminate();
-    std::cout << "Average time for one step =                 "<<timer.diff()/(double)N<<"s\n";
-    std::cout << "Overhead for visualisation, etc. per step = "<<(overhead.diff()-timer.diff())/(double)N<<"s\n";
+    //glfwTerminate();
+    std::cout << "Average time for one step =                 "<<timer.diff()/(double)p.itstp<<"s\n";
+    std::cout << "Overhead for visualisation, etc. per step = "<<(overhead.diff()-timer.diff())/(double)p.itstp<<"s\n";
     }
     //////////////////////////////////////////////////////////////////
     fftw_cleanup();
