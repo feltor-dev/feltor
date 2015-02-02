@@ -241,26 +241,26 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     for( unsigned i=0; i<2;i++)
     {
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN)
-        dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN)+phi)
-//         dg::blas1::axpby(0.5*p.mu[i], omega,1., chi);
+        dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_z(1+lnN)+phi)
 
-        //Compute perp dissipation 
+        //---------- perp dissipation 
         dg::blas2::gemv( lapperp, y[i], lambda);
         dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
-        Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_e(1+lnN)+phi) nabla_RZ^4 N_e
+        Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 N_e
         
-        //ExB surface terms 
-        dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //dy psi
-        dg::blas1::pointwiseDot( omega, binv, omega);   //dy psi / B
-        dg::blas1::pointwiseDot( npe[i],omega, omega);   //N dy psi / B  
-        dg::blas1::pointwiseDot( omega, chi,  omega); // tau_e(1+lnN)+phi) N dy psi / B
-        dg::blas2::gemv(interpx0, omega,chi);//tau_e(1+lnN)+phi) N dy psi / B <-x=x0
-        dg::blas2::gemv(interpxlx,omega,lambda);// tau_e(1+lnN)+phi) N dy psi / B <-x=xlx
+        //----------ExB surface terms 
+        dg::blas1::axpby(1.,phi[i],p.tau[i], logn[i],chi);   // chi    = (tau_z(lnN)+phi)
+        dg::blas2::gemv( poisson.dyrhs(), phi[i], omega);    // omega  = dy psi
+        dg::blas1::pointwiseDot( omega, binv, omega);        // omega  = dy psi / B
+        dg::blas1::pointwiseDot( npe[i],omega, omega);       // omega  = N dy psi / B  
+        dg::blas1::pointwiseDot( omega, chi,  omega);        // omega  = (tau (lnN)+phi)   N dy psi / B
+        dg::blas2::gemv(interpx0, omega,chi);                // chi    = (tau_z(lnN)+phi) N dy psi / B <-x=x0
+        dg::blas2::gemv(interpxlx,omega,lambda);             // lambda = (tau_z(lnN)+phi) N dy psi / B <-x=xlx
 
-        dg::blas1::axpby(1.,chi,-1.,lambda,lambda);
-        Dperpsurf[i] = z[i]* dg::blas2::dot(oney, w1d, lambda);    
+//         dg::blas1::axpby(-1.,chi,1.,lambda,lambda);
+        Dperpsurf[i] = z[i]* dg::blas2::dot(oney, w1d, lambda);    //int (tau_z(lnN)+phi) N dy psi
     }   
-    //Compute coupling energy
+    //---------- coupling 
     dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
     dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
     if (p.zf==0) {
