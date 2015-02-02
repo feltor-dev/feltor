@@ -94,6 +94,7 @@ struct Feltor
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
     double energy( ) {return energy_;}
+    double coupling( ) {return coupling_;}
 
     std::vector<double> energy_vector( ) {return evec;}
     std::vector<container>& probe_vector( ) {return probevec;}
@@ -131,7 +132,7 @@ struct Feltor
 
     const eule::Parameters p;
 
-    double mass_, energy_, diff_, ediff_,gammanex_;
+    double mass_, energy_, diff_, ediff_,gammanex_,coupling_;
     std::vector<double> evec;
     //probe
     std::vector<container> probevec;
@@ -249,14 +250,13 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 N_e
         
         //----------ExB surface terms 
-        dg::blas1::axpby(1.,phi[i],p.tau[i], logn[i],chi);   // chi    = (tau_z(lnN)+phi)
+        dg::blas1::axpby(1.,phi[i] , p.tau[i],logn[i],chi);   // chi    = (tau_z(lnN)+phi)
         dg::blas2::gemv( poisson.dyrhs(), phi[i], omega);    // omega  = dy psi
         dg::blas1::pointwiseDot( omega, binv, omega);        // omega  = dy psi / B
         dg::blas1::pointwiseDot( npe[i],omega, omega);       // omega  = N dy psi / B  
         dg::blas1::pointwiseDot( omega, chi,  omega);        // omega  = (tau (lnN)+phi)   N dy psi / B
         dg::blas2::gemv(interpx0, omega,chi);                // chi    = (tau_z(lnN)+phi) N dy psi / B <-x=x0
         dg::blas2::gemv(interpxlx,omega,lambda);             // lambda = (tau_z(lnN)+phi) N dy psi / B <-x=xlx
-
         dg::blas1::axpby(-1.,chi,1.,lambda,lambda);
         Dperpsurf[i] = z[i]* dg::blas2::dot(oney, w1d, lambda);    //int (tau_z(lnN)+phi) N dy psi
     }   
@@ -289,10 +289,9 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     dg::blas1::pointwiseDot(omega,npe[0],omega);  // omega   = (coupling)*Ne
     dg::blas1::axpby(1.0,lambda,1.0,omega,omega); // omega   = (coupling)*(Ne + <ne>tilde(ne))
 
-    double Dcoupling =  z[0]*p.d/p.c* p.nu_perp*dg::blas2::dot(chi, w2d, omega);
-
+    coupling_ =  z[0]*p.d/p.c* dg::blas2::dot(chi, w2d, omega);
     //Compute rhs of energy theorem
-    ediff_= Dperp[0]+Dperp[1]+Dcoupling + Dperpsurf[0] + Dperpsurf[1];
+    ediff_= Dperp[0]+Dperp[1]+ coupling_ + Dperpsurf[0] + Dperpsurf[1];
     
     // compute probevalues on R,Z,Phi of probe
     dg::blas2::gemv(probeinterp,npe[0],probevalue);
