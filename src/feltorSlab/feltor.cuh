@@ -257,7 +257,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         dg::blas2::gemv(interpx0, omega,chi);                // chi    = (tau_z(lnN)+phi) N dy psi / B <-x=x0
         dg::blas2::gemv(interpxlx,omega,lambda);             // lambda = (tau_z(lnN)+phi) N dy psi / B <-x=xlx
 
-//         dg::blas1::axpby(-1.,chi,1.,lambda,lambda);
+        dg::blas1::axpby(-1.,chi,1.,lambda,lambda);
         Dperpsurf[i] = z[i]* dg::blas2::dot(oney, w1d, lambda);    //int (tau_z(lnN)+phi) N dy psi
     }   
     //---------- coupling 
