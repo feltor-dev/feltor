@@ -127,7 +127,7 @@ struct Feltor
     dg::Helmholtz< Matrix, container, Preconditioner > invgammaNU;
 
     dg::Invert<container> invert_pol,invert_invgamma;
-    dg::PoloidalAverage<container, thrust::host_vector<int> > polavg;
+    dg::PoloidalAverage<container, container > polavg;
 
     const eule::Parameters p;
 
