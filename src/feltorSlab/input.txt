@@ -5,21 +5,21 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =  70(192)
-3)  ny (grid points in y)                =  70(192) 
-4)  dt (time step in units c_s/rho_s)    =  0.5  (0.01)
+2)  nx (grid points in x)                =  100(192)
+3)  ny (grid points in y)                =  100(192) 
+4)  dt (time step in units c_s/rho_s)    =  0.1  (0.01)
 
 ----------------------------------Output parameters--------------------
-5)  n_out (# of x-y polynomials in output)  =  1
-6)  nx_out (# grid points in output field)  =  300 
-7)  ny_out (# grid points in output field)  =  300
-8)  itstp  (steps between outputs)          =  5(5)
-9) total # of outputs (excluding first)     =  5000 
+5)  n_out (# of x-y polynomials in output)  =  3
+6)  nx_out (# grid points in output field)  =  100
+7)  ny_out (# grid points in output field)  =  100
+8)  itstp  (steps between outputs)          =  10(5)
+9) total # of outputs (excluding first)     =  1000
 
 -------------------------Algorithmic parameters------------------------
-10)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
-11)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
-12)  eps_time ( stop for time inversion )   =   1e-10 
+10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
+11)  eps_gamma (stop for Gamma CG)          =   1e-6 (1e-8)
+12)  eps_time ( stop for time inversion )   =   1e-12 
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  0.0    (0.0)
@@ -40,6 +40,6 @@
 27) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   2      (1.0)
 28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------
-29) ordinary/modified HW (0/1)              =  1
-30) ln (in rho_s)                           =  64
+29) ordinary/modified HW (0/1)              =  0
+30) ln (in rho_s)                           =  10
 @ ------------------------------------------------------------
