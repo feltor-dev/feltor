@@ -138,7 +138,6 @@ int main( int argc, char* argv[])
         solver.init( arr3, toefl::IONS);
     }catch( toefl::Message& m){m.display();}
 
-    ////////////////////////////////glfw and opencv//////////////////////////////
     cv::VideoCapture cap(0);
     if( !cap.isOpened())
     {
@@ -147,34 +146,22 @@ int main( int argc, char* argv[])
     }
     cap.set( CV_CAP_PROP_FRAME_WIDTH,  p.nx);
     cap.set( CV_CAP_PROP_FRAME_HEIGHT, p.ny);
-    cv::Mat last, current, flow, vel( p.ny, p.nx, CV_32F);
+    cv::Mat last, current, flow, vel(p.ny, p.nx, CV_32F);
     std::vector<cv::Mat> v;
-    cap >> last;
-    cv::cvtColor( last, last, CV_BGR2GRAY); //convert colors
-
-    {
-
 
     cv::namedWindow("Current",cv::WINDOW_NORMAL);
-    //height = width/field_ratio;
-    //GLFWwindow* w = draw::glfwInitAndCreateWindow( width, height, "");
-    //draw::RenderHostData render( 2,2);
-
-    //glfwSetWindowSizeCallback( w, WindowResize);
-    //glfwSetInputMode( w, GLFW_STICKY_KEYS, GL_TRUE);
-
+    cv::namedWindow("Velocity",cv::WINDOW_NORMAL);
     double t = 0.;
     toefl::Timer timer;
     toefl::Timer overhead;
-    std::cout<< "HIT ESC to terminate program \n"
-        << "HIT S   to stop simulation \n"
-        << "HIT R   to continue simulation!\n";
     solver.first_step();
     solver.second_step();
     t+= 2*p.dt;
     toefl::Matrix<double, toefl::TL_DFT> src( p.ny, p.nx, 0.);
-    cv::Mat frame;
-    cv::Mat grey, colored;
+    cv::Mat grey, colored, show( p.ny, p.nx, CV_32F);
+    cap >> last;
+    cv::cvtColor( last, last, CV_BGR2GRAY); //convert colors
+
     while( true)
     {
         cap >> current; // get a new frame from camera
@@ -192,77 +179,64 @@ int main( int argc, char* argv[])
         //scale velocity to 1 in order to account for distance from camera
         double min, max;
         cv::minMaxLoc( vel, &min, &max);
+        std::cout << min <<" "<<max<<std::endl;
         if( max > 1) // if someone is there
             for( unsigned i=0; i<vel.rows; i++)
                 for( unsigned j=0; j<vel.cols; j++)
                     vel.at<float>( i,j) /= max;
+        cv::flip( vel, vel, +1);
         for( unsigned i=0; i<src.rows(); i++)
             for( unsigned j=0; j<src.cols(); j++)
-                src(i,j) = current.at<double>(i,j);
+                src(i,j) = 10*vel.at<double>(i,j);
         overhead.tic();
-        //ask if simulation shall be stopped
-        //glfwPollEvents();
-        //if( glfwGetKey( w, 'S')) 
-        //{
-        //    do
-        //    {
-        //        glfwWaitEvents();
-        //    } while( !glfwGetKey(w,  'R') && 
-        //             !glfwGetKey(w,  GLFW_KEY_ESCAPE));
-        //}
-        
-        //draw scene
-        //drawScene( solver, render);
-        const toefl::Matrix<double, toefl::TL_DFT>& field = solver.getField( toefl::ELECTRONS); 
+        const toefl::Matrix<double, toefl::TL_DFT>& field = solver.getField( toefl::IMPURITIES); 
         for( unsigned i=0; i<p.ny; i++)
             for( unsigned j=0; j<p.nx; j++)
-                vel.at<float>(i,j) = (float)field(i,j);
-        cv::minMaxLoc( vel, &min, &max);
-        vel.convertTo(grey, CV_8U, 255.0/(2.*max), 255.0/2.);
+                show.at<float>(i,j) = (float)field(i,j);
+        cv::minMaxLoc( show, &min, &max);
+        show.convertTo(grey, CV_8U, 255.0/(2.*max), 255.0/2.);
         cv::minMaxLoc( grey, &min, &max);
 
         //cv::applyColorMap( grey, colored, cv::COLORMAP_BONE);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_COOL);
-        cv::applyColorMap( grey, colored, cv::COLORMAP_HOT);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_HOT);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_HSV);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_JET);
-        //cv::applyColorMap( grey, colored, cv::COLORMAP_OCEAN);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_OCEAN); 
         //cv::applyColorMap( grey, colored, cv::COLORMAP_PINK);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_RAINBOW);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_SPRING);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_SUMMER);
-        //cv::applyColorMap( grey, colored, cv::COLORMAP_AUTUMN);
-        //cv::applyColorMap( grey, colored, cv::COLORMAP_WINTER);
+        cv::applyColorMap( grey, colored, cv::COLORMAP_AUTUMN);
+        cv::applyColorMap( grey, colored, cv::COLORMAP_WINTER);
         window_str << std::setprecision(2) << std::fixed;
         window_str << "time = "<<t;
-        cv::addText( colored, window_str.str(), cv::Point(50,50));
+        //cv::addText( colored, window_str.str(), cv::Point(50,50));
         window_str.str(""); 
+        std::cout << colored.rows << " " << colored.cols<<"\n";
+        std::cout << vel.rows << " " << vel.cols<<"\n";
         cv::imshow("Current", colored);
+        cv::imshow("Velocity", vel);
 
-//#ifdef TL_DEBUG
-//        glfwWaitEvents();
-//        if( glfwGetKey( w,'N'))
-//        {
-//#endif
         timer.tic();
         for(unsigned i=0; i<p.itstp; i++)
         {
             toefl::Matrix<double, toefl::TL_DFT> voidmatrix( 2,2,(bool)toefl::TL_VOID);
-            solver.step(voidmatrix );
+            solver.step(src );
             t+= p.dt;
         }
         timer.toc();
-//#ifdef TL_DEBUG
-//        std::cout << "Next "<<p.itstp<<" Steps\n";
-//        }
-//#endif
         overhead.toc();
+
+        //swap fields
+        cv::Mat temp = last;
+        last = current;
+        current = temp;
         if(cv::waitKey(30) >= 0) break;
     }
-    //glfwTerminate();
+    ////////////////////////////////glfw and opencv//////////////////////////////
     std::cout << "Average time for one step =                 "<<timer.diff()/(double)p.itstp<<"s\n";
     std::cout << "Overhead for visualisation, etc. per step = "<<(overhead.diff()-timer.diff())/(double)p.itstp<<"s\n";
-    }
     //////////////////////////////////////////////////////////////////
     fftw_cleanup();
     return 0;

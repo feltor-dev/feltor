@@ -360,7 +360,7 @@ template< size_t n>
 template< enum stepper S>
 void DFT_DFT_Solver<n>::step_(const Matrix<double, TL_DFT>& src)
 {
-    //1. Compute nonlinearity
+    //1.0 Compute nonlinearity
 #pragma omp parallel for 
     for( unsigned k=0; k<n; k++)
     {
@@ -374,6 +374,11 @@ void DFT_DFT_Solver<n>::step_(const Matrix<double, TL_DFT>& src)
         swap_fields( dens[k], ghostdens); //now ghostdens is void
         swap_fields( phi[k], ghostphi); //now ghostphi is void
     }
+    //1.1. Add source term
+    if( !src.isVoid())
+        for( unsigned i=0; i<rows; i++)
+            for( unsigned j=0; j<cols; j++)
+                dens[2](i,j) += src(i,j);
     //2. perform karniadakis step
     karniadakis.template step_i<S>( dens, nonlinear);
     //3. solve linear equation
@@ -391,11 +396,6 @@ void DFT_DFT_Solver<n>::step_(const Matrix<double, TL_DFT>& src)
         dft_dft.c2r( cdens[k], dens[k]);
         dft_dft.c2r( cphi[k],  phi[k]);
     }
-    //3.4. Add source term
-    if( !src.isVoid())
-        for( unsigned i=0; i<rows; i++)
-            for( unsigned j=0; j<cols; j++)
-                dens[0](i,j) += src(i,j);
 
 }
 

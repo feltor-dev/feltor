@@ -27,11 +27,11 @@ quasineutrality condition)
 13) impurities yes(1) / no(0)           =   1       (0)
 14) nd0 (impurity amplitude)            =   1     (0.1)
 15) g_z (impurity gradient)             =   1.0     (0.0)
-16) a_z (Z*nz/ne) (density)             =   0.00010   (small)
+16) a_z (Z*nz/ne) (density)             =   0.00000   (small)
 17) mu_z (mz/mi*Z)(mass)                =   3.0    (large)
 18) tau_z (Tz/Te*Z)                     =   0.0     (0.0)
 ---------------------Miscellaneous----------------------------
-19) itstp (steps between output)        =   50     (5)
+19) itstp (steps between output)        =   1     (5)
 20) OMP_NUM_THREADS                     =   4      (4)
 21) blob_width ( sigma)                 =   5    (10)
 22) # of outputs ( excluding first)     =   1000
