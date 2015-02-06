@@ -4,31 +4,31 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =  100(192)
-3)  ny (grid points in y)                =  100(192) 
-4)  dt (time step in units c_s/rho_s)    =  0.1  (0.01)
+1)  n  (# of x,y-polynomials)            =   1      (3)
+2)  nx (grid points in x)                =  200(192)
+3)  ny (grid points in y)                =  200(192) 
+4)  dt (time step in units c_s/rho_s)    =  0.1 (0.01)
 
 ----------------------------------Output parameters--------------------
-5)  n_out (# of x-y polynomials in output)  =  3
-6)  nx_out (# grid points in output field)  =  100
-7)  ny_out (# grid points in output field)  =  100
-8)  itstp  (steps between outputs)          =  10(5)
-9) total # of outputs (excluding first)     =  1000
+5)  n_out (# of x-y polynomials in output)  =  1
+6)  nx_out (# grid points in output field)  =  200
+7)  ny_out (# grid points in output field)  =  200
+8)  itstp  (steps between outputs)          = 10(5)
+9) total # of outputs (excluding first)     =  2000
 
 -------------------------Algorithmic parameters------------------------
-10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
-11)  eps_gamma (stop for Gamma CG)          =   1e-6 (1e-8)
+10)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
+11)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
 12)  eps_time ( stop for time inversion )   =   1e-12 
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  0.0    (0.0)
 15) mcv (curvature)                         =  0.000    (1e-4)
 16) nu_perp                                 =  1e-4
-17) D  (coupling)                           =  1e-7   (0.001)
+17) D  (coupling)                           =  5e-7   (0.001)
 18) para resistivity (c)                    =  64e-7   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
-19) amp (blob amplitude)                    =  0.01    (1.0)
+19) amp (blob amplitude)                    =  0.015625    (1.0)
 20) sigma (blob variance in units of rho_s) =  2.5     (10)
 21) x-position ( in units of lx)            =  0.5   (0.4)
 22) y-position ( in units of ly)            =  0.5   (0.5)
@@ -41,5 +41,5 @@
 28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------
 29) ordinary/modified HW (0/1)              =  0
-30) ln (in rho_s)                           =  10
+30) ln (in rho_s)                           = 16
 @ ------------------------------------------------------------

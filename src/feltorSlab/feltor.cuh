@@ -265,7 +265,6 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
     if (p.zf==0) {
         polavg(npe[0],neavg);
-        polavg(phi[0],phiavg);
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
         dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
@@ -350,7 +349,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //Coupling term for the electrons
     if (p.zf==0) {
         polavg(npe[0],neavg);
-        polavg(phi[0],phiavg);
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
         dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )

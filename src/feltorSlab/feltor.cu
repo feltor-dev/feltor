@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
-    
+//      dg::Vortex init0(  p.posX*p.lx, p.posY*p.ly, 0, p.sigma, p.amp);   
     //background profile
 //     solovev::Nprofile prof(p, gp); //initial background profile
 //     dg::CONSTANT prof(p.bgprofamp );
@@ -93,6 +93,7 @@ int main( int argc, char* argv[])
 
     //no field aligning
     y1[1] = dg::evaluate( init0, grid);
+    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]);
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
