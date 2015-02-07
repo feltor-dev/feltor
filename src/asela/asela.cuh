@@ -23,7 +23,7 @@ struct Rolkar
         p(p),
         gp(gp),
         temp( dg::evaluate(dg::zero, g)),
-        dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
+        dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
     {
@@ -69,7 +69,7 @@ struct Feltor
     template<class Grid3d>
 
     Feltor( const Grid3d& g,  eule::Parameters,solovev::GeomParameters gp);
-    dg::DZ<Matrix, container> dz(){return dzDIR_;}
+    dg::DZ<Matrix, container> dz(){return dzNU_;}
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -269,11 +269,13 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         //Compute parallel dissipative energy for N/////////////////////////////
         if( p.nu_parallel != 0)
         {
-    //         dzNEU_.set_boundaries( dg::NEU, 0, 0);
+            #ifdef TORLIM
+                dzNU_.set_boundaries( p.bc, 0, 0); //dz N and dzU on limiter
+            #endif
+
             dzNU_.dzz(y[i],omega);                                            //dz^2 N 
             dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 N 
             //gradlnBcorrection
-    //         dzNEU_.set_boundaries( dg::NEU, 0, 0);                                  //dz N = 0 on limiter
             dzNU_(y[i], dzy[i]);       
             dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
             dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N
@@ -294,15 +296,15 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 
         //Compute parallel dissipative energy for U/////////////////////////////
     //         dz_.set_boundaries( dg::DIR,ush[i],-1.0,1.0);  
-    //         dzNEU_.set_boundaries( dg::NEU, 0, 0);
         if( p.nu_parallel !=0)
         {
-
+            #ifdef TORLIM
+                dzNU_.set_boundaries( p.bc, 0, 0); //dz N and dzw on limiter
+            #endif
             dzNU_.dzz(y[i+2],omega);                                          //dz^2 w 
             dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 U 
             //gradlnBcorrection
     //         dz_.set_boundaries( dg::DIR,  ush[i],-1.0,1.0);                      //dz U = {1./sqrt(-2.*M_PI*mu[0])*EXP(-phi),1} on limiter
-    //         dzNEU_.set_boundaries( dg::NEU, 0, 0);                                  //dz U = 0 on limiter
             dzNU_(y[i+2], dzy[i+2]);                                               //dz U
             dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);               // dz lnB dz U
             dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N     
@@ -345,15 +347,16 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
         dg::blas1::pointwiseDot(poissonu2[i],binv,poissonu2[i]);       //1/B [A_parallel,U^2]_RZ
 
         //Parallel dynamics
-
-//         dzNU_.set_boundaries( dg::NEU, 0, 0);                                  // dz UN = 0 on limiter  
+        #ifdef TORLIM
+            dzNU_.set_boundaries( p.bc, 0, 0); //dz UN = 0 , dz lnN = 0 and dz U^2 = 0  on limiter
+        #endif
         dzNU_(un[i], dzun[i]);                                                 // dz UN
-//         dzNU_.set_boundaries( dg::NEU, 0, 0);                                  // dz lnN = 0 on Limiter
         dzNU_(logn[i], dzlogn[i]);                                             // dz lnN
-//         dzDIR_.set_boundaries( dg::DIR, 0, 0);                                  // psi=0 on limiter
-        dzDIR_(phi[i], dzphi[i]);                                                // dz psi
-//         dzNU_.set_boundaries( dg::NEU, 0, 0);                                  // dz U^2 = 0 on limiter  
         dzNU_(u2[i],dzu2[i]);                                                  // dz U^2
+        #ifdef TORLIM
+            dzDIR_.set_boundaries( dg::DIR, 0, 0);                                  // psi=0 on limiter
+        #endif
+        dzDIR_(phi[i], dzphi[i]);                                                // dz psi
         
         //add A_parallel terms to the parallel derivatives to obtain dz^b
         dg::blas1::axpby(p.beta,poissonlogn[i],1.,dzlogn[i]);// dz^b logN = dz logN   -beta/B [A_parallel,logN ]
@@ -371,12 +374,13 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
         //Parallel dissipation
         if( p.nu_parallel != 0)
         {
-//             dzNEU_.set_boundaries( dg::NEU, 0, 0);
+            #ifdef TORLIM
+                dzNU_.set_boundaries( p.bc, 0, 0); //dz N = 0 and dz w = 0  on limiter
+            #endif
             dzNU_.dzz(y[i],omega);                                          //dz^2 N 
             dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
 
             //gradlnBcorrection
-//             dzNU_.set_boundaries( dg::NEU, 0, 0);                                  // dz N = 0 on limiter
             dzNU_(y[i], dzy[i]);                                                   // dz N   (for dissi)
             dg::blas1::axpby(p.beta,poissonn[i]   ,1.,dzy[i]);     // dz^b N    = dz N -beta/B [A_parallel,N ] //enters dissi
 
@@ -384,13 +388,11 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
             dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
             
 //             dz_.set_boundaries( dg::DIR,ush[i],-1.0,1.0);  
-//             dzNEU_.set_boundaries( dg::NEU, 0, 0);
-            dzNU_.dzz(y[i+2],omega);                                   //dz^2 U 
+            dzNU_.dzz(y[i+2],omega);                                   //dz^2 w 
             dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);      
 
             //gradlnBcorrection
 //             dz_.set_boundaries( dg::DIR,  ush[i],-1.0,1.0);                  //dz U = {1./sqrt(-2.*M_PI*mu[0])*EXP(-phi),1} on limiter
-//         dzNU_.set_boundaries( dg::NEU, 0, 0);                                  // dz w = 0 on limiter
             dzNU_(y[i+2], dzy[i+2]);                                               // dz w  (for dissi)                         //dz U
             dg::blas1::axpby(p.beta,poissonw[i]   ,1., dzy[i+2]);   // dz^b w    = dz w -beta/B [A_parallel,w ] //enters dissi
             dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);           // dz lnB dz U
@@ -529,7 +531,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
 }
 
-//Computes curvature operator
 //Computes curvature operator
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::curveNU( container& src, container& target)

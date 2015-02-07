@@ -35,7 +35,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @param limit Instance of the Limiter class
      */
     template <class Field, class Limiter>
-    DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps = 1e-3, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
+    DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
 
     /**
      * @brief Apply the derivative on a 3d vector
@@ -139,7 +139,8 @@ struct DZ< MPI_Matrix, MPI_Vector>
 template <class Field, class Limiter>
 DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz ): 
     eps_(eps),
-    hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()), dz_(field, grid.global(), deltaPhi, eps, limit, globalbcz)
+    hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()), 
+    dz_(field, grid.global(), deltaPhi, eps, limit, globalbcz)
 {
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
     //2D local grid with ghostcells

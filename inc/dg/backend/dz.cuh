@@ -256,23 +256,24 @@ struct DZ
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
-    Matrix jump;
-    container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP,dzfp,dzfm;
+//     Matrix jump;
+    container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
     container left_, right_;
     container limiter;
     container w3d, v3d;
+    container invB;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
-        jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
-        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), dzfp( hz),dzfm( hz),
-        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
+//         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
+        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
+        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)), invB(dg::evaluate(field,grid))
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -319,6 +320,12 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
+//     std::cout << std::setprecision( 16);
+//     std::cout << " Min hp "<<(double)thrust::reduce( hp.begin(), hp.end(), 1000., thrust::minimum<double>())<< std::endl;
+//     std::cout << " Min hm "<<(double)thrust::reduce( hm.begin(), hm.end(), 1000., thrust::minimum<double>())<< std::endl;
+//     double x; 
+//     std::cin >> x;
+
 }
 template<class M, class container>
 void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
@@ -343,6 +350,15 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
+//with B
+//     assert( &f != &dzf);
+//    dg::blas1::pointwiseDot( f, invB, dzf);//divide through B here
+//     einsPlus( dzf, tempP);
+//     einsMinus( dzf, tempM);
+//     dg::blas1::axpby( 1., tempP, -1., tempM);
+//     dg::blas1::pointwiseDivide( tempM, hz, dzf);
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);//Multiply with B here
+
 }
 
 
@@ -352,11 +368,23 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
     assert( &f != &dzf);    
     dg::blas1::pointwiseDot( w3d, f, dzf);
     dg::blas1::pointwiseDivide( dzf, hz, dzf);
-    einsPlusT(  dzf, tempP);
+
+
+    einsPlusT( dzf, tempP);
     einsMinusT( dzf, tempM);
     dg::blas1::axpby( 1., tempM, -1., tempP);
     dg::blas1::pointwiseDot( v3d, tempP, dzf);
-    
+//with B
+//     assert( &f != &dzf);    
+//     dg::blas1::pointwiseDot( w3d, f, dzf);
+//     dg::blas1::pointwiseDivide( dzf, hz, dzf);
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);    //Multiply through B here
+//     einsPlusT( dzf, tempP);
+//     einsMinusT( dzf, tempM);
+//     dg::blas1::axpby( 1., tempM, -1., tempP);
+//     dg::blas1::pointwiseDot( v3d, tempP, dzf);
+//     dg::blas1::pointwiseDot( dzf, invB, dzf);    //divide with B here
+
 }
 
 template<class M, class container>

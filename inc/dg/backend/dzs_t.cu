@@ -68,6 +68,31 @@ struct Field
     double R_0, I_0;
 };
 
+struct FieldP
+{
+    FieldP( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp)
+    {
+        for( unsigned i=0; i<y[0].size(); i++)
+        {
+        double B = R_0*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/2./sqrt(2.)/y[0][i];
+        double dldp=y[0][i]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/2./sqrt(2)/I_0;
+        yp[2][i] = B*dldp;            
+        yp[0][i] = -B*M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2)/2./I_0;
+        yp[1][i] =  B*M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2)/2./I_0 ;
+        }
+    }
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+        double B = R_0*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/2./sqrt(2.)/y[0];
+        double dldp = y[0]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/2./sqrt(2.)/I_0;
+        yp[2] = B*dldp;            
+        yp[0] = -B*M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2)/2./I_0;
+        yp[1] =  B*M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2)/2./I_0 ;
+    }
+    private:
+    double R_0, I_0;
+};
 double R_0 = 10;
 double I_0 = 20; //I0=20 and R=10 means q=2
 
@@ -101,6 +126,7 @@ double deriNEU(double R, double Z, double phi)
     double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
     return psi*sin(phi)/dldp/invB;
+    
 }
 double cut(double R, double Z, double phi)
 {
@@ -136,7 +162,7 @@ int main()
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
 
-
+// double hs = g3d.hz();
     double hs = g3d.hz()*(R_0+1)*(sqrt(2)/I_0/2);
 
     std::cout << "hz = " <<  g3d.hz() << std::endl;

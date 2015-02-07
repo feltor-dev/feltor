@@ -82,9 +82,11 @@ int main( int argc, char* argv[])
     dg::Grid3d<double> grid_out = dg::create::ghostless_grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, comm);  
      
     //create RHS 
+    std::cout << "Constructing Feltor...\n";
     eule::Feltor< dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p, gp); 
+    std::cout << "Constructing Rolkar...\n";
     eule::Rolkar< dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p, gp);
-
+    std::cout << "Done!\n";
     /////////////////////The initial field////////////////////////////////////////////
     //background profile
     solovev::Nprofile prof(p, gp); //initial background profile

@@ -319,7 +319,33 @@ struct GaussianZ
 
 };
 
-
+/**
+ * @brief Functor for a linear polynomial in x-direction
+ * 
+ * \f[ f(x,y) = a*x+b \f]
+ */
+struct SinProfX
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     */
+    SinProfX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return result
+     */
+    double operator()( double x, double y){ return bamp_+amp_*(1.-sin(x*kx_));}
+  private:
+    double amp_,bamp_,kx_;
+};
 /**
  * @brief Functor for a linear polynomial in x-direction
  * 
@@ -955,6 +981,104 @@ struct CONSTANT
     double operator()(double x, double y, double z){return value_;}
     private:
     double value_;
+};
+/**
+ * @brief returns histogram 
+ * @tparam container 
+ */ 
+template <class container = thrust::host_vector<double> >
+struct Histogram
+{
+     /**
+     * @brief Construct from number of bins and input vector
+     * @param g1d   grid of output vector
+     * @param in input vector
+     */
+    Histogram(const dg::Grid1d<double>& g1d, const std::vector<double>& in) :
+    g1d_(g1d),
+    in_(in),
+    binwidth_(g1d_.h()),
+    count_(dg::evaluate(dg::zero,g1d_))
+    {
+        for (unsigned j=0;j<in_.size();j++)
+        {            
+            unsigned bin =floor( (in_[j]-g1d_.x0())/binwidth_ );
+            bin = std::max(bin,(unsigned) 0);
+            bin = std::min(bin,(unsigned)(g1d_.size()-1));
+            count_[bin ]+=1.;
+        }
+        //Normalize
+        unsigned Ampmax = (unsigned)thrust::reduce( count_.begin(), count_.end(),0.,   thrust::maximum<double>()  );
+        dg::blas1::scal(count_,1./Ampmax);
+        
+    }
+    double binwidth() {return binwidth_;}
+    double operator()(double x)
+    {    
+        unsigned bin = floor((x-g1d_.x0())/binwidth_+0.5);
+        bin = std::max(bin,(unsigned) 0);
+        bin = std::min(bin,(unsigned)(g1d_.size()-1));
+        return count_[bin];
+    }
+
+    private:
+    dg::Grid1d<double> g1d_;
+    const std::vector<double> in_;
+    double binwidth_;
+    container  count_;
+};
+template <class container = thrust::host_vector<double> >
+struct Histogram2D
+{
+     /**
+     * @brief Construct from number of bins and input vector
+     * @param g2d   grid of output vector
+     * @param inx input vector in x direction
+     * @param iny input vector in y direction
+     */
+    Histogram2D(const dg::Grid2d<double>& g2d, const std::vector<double>& inx,const std::vector<double>& iny) :
+    g2d_(g2d),
+    inx_(inx),
+    iny_(iny),
+    binwidthx_(g2d_.hx()),
+    binwidthy_(g2d_.hy()),
+    count_(dg::evaluate(dg::zero,g2d_))
+    {
+
+        for (unsigned j=0;j<iny_.size();j++)
+        {
+            unsigned biny =floor((iny_[j]-g2d_.y0())/binwidthy_) ;
+            biny = std::max(biny,(unsigned) 0);
+            biny = std::min(biny,(unsigned)(g2d_.Ny()-1));
+
+                unsigned binx =floor((inx_[j]-g2d_.x0())/binwidthx_) ;
+                binx = std::max(binx,(unsigned) 0);
+                binx = std::min(binx,(unsigned)(g2d_.Nx()-1));
+                count_[biny*g2d_.Nx()+binx ]+=1.;
+            
+        }
+        //Normalize
+        unsigned Ampmax =  (unsigned)thrust::reduce( count_.begin(),   count_.end(),0.,thrust::maximum<double>()  );   
+        dg::blas1::scal(count_,  1./Ampmax);
+
+    }
+
+    double operator()(double x, double y)
+    {
+        unsigned binx = floor((x-g2d_.x0())/binwidthx_+0.5) ;
+        binx = std::max(binx,(unsigned) 0);
+        binx = std::min(binx,(unsigned)(g2d_.Nx()-1));
+        unsigned biny = floor((y-g2d_.y0())/binwidthy_+0.5) ;
+        biny = std::max(biny,(unsigned) 0);
+        biny = std::min(biny,(unsigned)(g2d_.Ny()-1));
+        return count_[biny*g2d_.Nx()+binx ]; 
+
+    }
+    private:
+    dg::Grid2d<double> g2d_;
+    const std::vector<double> inx_,iny_;
+    double binwidthx_,binwidthy_;
+    container count_;
 };
 ///@}
 } //namespace dg

@@ -248,7 +248,7 @@ struct DZ
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
-    Matrix jump;
+//     Matrix jump;
     container rp,zp,phip,rm,zm,phim;
     container hz, hp,hm;
     container tempP, temp0, tempM, ghostM, ghostP,dzfp,dzfm;
@@ -265,7 +265,7 @@ struct DZ
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltas, double eps, Limiter limit, dg::bc globalbcz):
-        jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
+//         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         rp( dg::evaluate( dg::zero, grid)), zp( rp), phip( rp), rm(rp),zm(rp),phim(phip),
         hz(rp), hp( rp), hm( rp), tempP( rp), temp0( rp), tempM( rp), dzfp( rp),dzfm( rp),
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),dsc(deltas),dsp(deltas*0.5),dsm(deltas*0.5)
