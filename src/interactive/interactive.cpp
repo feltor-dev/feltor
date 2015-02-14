@@ -132,7 +132,7 @@ int main( int argc, char* argv[])
     try{
         toefl::Matrix<double, toefl::TL_DFT> ne{ p.ny, p.nx, 0.}, nz{ ne}, phi{ ne};
         init_gaussian( ne, p.posX, p.posY, p.blob_width/p.lx, p.blob_width/p.ly, p.amp);
-        init_gaussian_column( nz, 0.6, 0.05/field_ratio, p.imp_amp);
+        //init_gaussian_column( nz, 0.6, 0.05/field_ratio, p.imp_amp);
         std::array< toefl::Matrix<double, toefl::TL_DFT>,3> arr3{{ ne, nz, phi}};
         //now set the field to be computed
         solver.init( arr3, toefl::IONS);
@@ -164,6 +164,7 @@ int main( int argc, char* argv[])
 
     while( true)
     {
+        init_gaussian( src, 0.5+0.25*sin(t), 0.75, p.blob_width/p.lx, p.blob_width/p.ly, p.amp);
         cap >> current; // get a new frame from camera
         cv::cvtColor(current, current, CV_BGR2GRAY); //convert colors
         cv::GaussianBlur(current, current, cv::Size(21,21), 0, 0); //Kernel size, sigma_x, sigma_y
@@ -185,11 +186,12 @@ int main( int argc, char* argv[])
                 for( unsigned j=0; j<vel.cols; j++)
                     vel.at<float>( i,j) /= max;
         cv::flip( vel, vel, +1);
-        for( unsigned i=0; i<src.rows(); i++)
-            for( unsigned j=0; j<src.cols(); j++)
-                src(i,j) = 10*vel.at<double>(i,j);
+        //for( unsigned i=0; i<src.rows(); i++)
+        //    for( unsigned j=0; j<src.cols(); j++)
+        //        src(i,j) = 0.5*vel.at<double>(i,j);
         overhead.tic();
-        const toefl::Matrix<double, toefl::TL_DFT>& field = solver.getField( toefl::IMPURITIES); 
+        //const toefl::Matrix<double, toefl::TL_DFT>& field = solver.getField( toefl::IMPURITIES); 
+        const toefl::Matrix<double, toefl::TL_DFT>& field = solver.getField( toefl::ELECTRONS); 
         for( unsigned i=0; i<p.ny; i++)
             for( unsigned j=0; j<p.nx; j++)
                 show.at<float>(i,j) = (float)field(i,j);
@@ -202,21 +204,27 @@ int main( int argc, char* argv[])
         //cv::applyColorMap( grey, colored, cv::COLORMAP_HOT);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_HSV);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_JET);
-        //cv::applyColorMap( grey, colored, cv::COLORMAP_OCEAN); 
+        cv::applyColorMap( grey, colored, cv::COLORMAP_OCEAN); 
         //cv::applyColorMap( grey, colored, cv::COLORMAP_PINK);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_RAINBOW);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_SPRING);
         //cv::applyColorMap( grey, colored, cv::COLORMAP_SUMMER);
-        cv::applyColorMap( grey, colored, cv::COLORMAP_AUTUMN);
-        cv::applyColorMap( grey, colored, cv::COLORMAP_WINTER);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_AUTUMN);
+        //cv::applyColorMap( grey, colored, cv::COLORMAP_WINTER);
         window_str << std::setprecision(2) << std::fixed;
         window_str << "time = "<<t;
         //cv::addText( colored, window_str.str(), cv::Point(50,50));
         window_str.str(""); 
         std::cout << colored.rows << " " << colored.cols<<"\n";
         std::cout << vel.rows << " " << vel.cols<<"\n";
+        std::cout << show.rows << " " << show.cols<<"\n";
+        std::cout << src.rows() << " " << src.cols()<<"\n";
         cv::imshow("Current", colored);
+        //for( unsigned i=0; i<src.rows(); i++)
+            //for( unsigned j=0; j<src.cols(); j++)
+                //show.at<double>(i,j) = src(i,j);
         cv::imshow("Velocity", vel);
+
 
         timer.tic();
         for(unsigned i=0; i<p.itstp; i++)

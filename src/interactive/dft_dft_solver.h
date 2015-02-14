@@ -378,7 +378,7 @@ void DFT_DFT_Solver<n>::step_(const Matrix<double, TL_DFT>& src)
     if( !src.isVoid())
         for( unsigned i=0; i<rows; i++)
             for( unsigned j=0; j<cols; j++)
-                dens[2](i,j) += src(i,j);
+                nonlinear[0](i,j) += src(i,j);
     //2. perform karniadakis step
     karniadakis.template step_i<S>( dens, nonlinear);
     //3. solve linear equation
