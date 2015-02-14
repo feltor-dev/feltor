@@ -77,7 +77,9 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT prof(p.bgprofamp );
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-    dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
+//     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
+        dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
@@ -85,7 +87,8 @@ int main( int argc, char* argv[])
 
     //no field aligning
     y1[1] = dg::evaluate( init0, grid);
-    
+    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]);
+
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
@@ -125,7 +128,12 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
     err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
     err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
-
+    //probe vars definition
+    int NepID,phipID,radtransID,couplingID;
+    err = nc_def_var( ncid, "Ne_p",     NC_DOUBLE, 1, &EtimeID, &NepID);
+    err = nc_def_var( ncid, "phi_p",    NC_DOUBLE, 1, &EtimeID, &phipID);  
+    err = nc_def_var( ncid, "G_nex",    NC_DOUBLE, 1, &EtimeID, &radtransID);
+    err = nc_def_var( ncid, "Coupling",    NC_DOUBLE, 1, &EtimeID, &couplingID);  
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
@@ -161,7 +169,10 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-
+    double Nep=feltor.probe_vector()[0][0];
+    double phip=feltor.probe_vector()[1][0];
+    double radtrans = feltor.radial_transport();
+    double coupling = feltor.coupling();
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -170,8 +181,13 @@ int main( int argc, char* argv[])
 
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-
+    //probe
+    err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+    err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
+    err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
+    err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+    
 
     
     err = nc_close(ncid);
@@ -208,7 +224,10 @@ int main( int argc, char* argv[])
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
-
+            Nep =feltor.probe_vector()[0][0];
+            phip=feltor.probe_vector()[1][0];
+            radtrans = feltor.radial_transport();
+            coupling= feltor.coupling();
             err = nc_open(argv[2], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
@@ -220,7 +239,10 @@ int main( int argc, char* argv[])
             }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-                
+            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);          
+            err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
+            err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";

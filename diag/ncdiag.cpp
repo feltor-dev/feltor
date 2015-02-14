@@ -197,7 +197,7 @@ int main( int argc, char* argv[])
         dg::HVec Depsip2dflucavg =  dg::evaluate(dg::zero , g2d_out);  
         dg::HVec Lperpinv2davg =  dg::evaluate(dg::zero , g2d_out);          
         //Ne,Ni,Ue,Ui,Phi
-        for( unsigned i=0; i<5; i++)
+        for( unsigned j=0;j<5; j++)
         {
             //set quantities to zero
             data2davg = dg::evaluate( dg::zero, g2d_out);   
@@ -205,34 +205,34 @@ int main( int argc, char* argv[])
 
             //get 3d data
             err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
-            err = nc_inq_varid(ncid, names[i].data(), &dataIDs[i]);
-            err = nc_get_vara_double( ncid, dataIDs[i], start3d, count3d, fields3d[i].data());
+            err = nc_inq_varid(ncid, names[j].data(), &dataIDs[j]);
+            err = nc_get_vara_double( ncid, dataIDs[j], start3d, count3d, fields3d[j].data());
             err = nc_close(ncid);  //close 3d file
     
             //get 2d data and sum up for avg
-            toravg(fields3d[i],data2davg);
+            toravg(fields3d[j],data2davg);
 
             //get 2d data of MidPlane
             unsigned kmp = (g3d_out.Nz()/2);
-            dg::HVec data2dflucmid(fields3d[i].begin() + kmp*g2d_out.size(),fields3d[i].begin() + (kmp+1)*g2d_out.size());
+            dg::HVec data2dflucmid(fields3d[j].begin() + kmp*g2d_out.size(),fields3d[j].begin() + (kmp+1)*g2d_out.size());
             
             //for fluctuations to be  f_varphi
 //             dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); //Compute z fluctuation
 
   
-            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i],   start2d, count2d, data2davg.data()); //write avg
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[j],   start2d, count2d, data2davg.data()); //write avg
 
 
             //computa fsa of quantities
             solovev::FluxSurfaceAverage<dg::HVec> fsadata(g2d_out,gp, data2davg );
             dg::HVec data1dfsa = dg::evaluate(fsadata,g1d_out);
-            err1d = nc_put_vara_double( ncid1d, dataIDs1d[i], start1d, count1d,  data1dfsa.data());
+            err1d = nc_put_vara_double( ncid1d, dataIDs1d[j], start1d, count1d,  data1dfsa.data());
             
             //compute delta f on midplane : df = f_mp - <f>
             dg::blas2::gemv(fsaonrzmatrix, data1dfsa, data2dfsa); //fsa on RZ grid
             dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2dfsa,data2dflucmid); 
 
-            err2d = nc_put_vara_double( ncid2d, dataIDs2d[i+5], start2d, count2d, data2dflucmid.data());
+            err2d = nc_put_vara_double( ncid2d, dataIDs2d[j+5], start2d, count2d, data2dflucmid.data());
 
         }
         //----------------Start vorticity computation

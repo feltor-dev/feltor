@@ -78,13 +78,14 @@ int main( int argc, char* argv[])
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
-    
+//      dg::Vortex init0(  p.posX*p.lx, p.posY*p.ly, 0, p.sigma, p.amp);   
     //background profile
 //     solovev::Nprofile prof(p, gp); //initial background profile
 //     dg::CONSTANT prof(p.bgprofamp );
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-    dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
+//     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
+    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
@@ -92,6 +93,7 @@ int main( int argc, char* argv[])
 
     //no field aligning
     y1[1] = dg::evaluate( init0, grid);
+    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]);
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
@@ -215,9 +217,16 @@ int main( int argc, char* argv[])
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
+            double coupling = feltor.coupling();
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<
-            " d E/dt = " << diff <<" Lambda =" << diss << "\n";
+            std::cout << " Ne_p  = " << feltor.probe_vector()[0][0] << 
+                         " Phi_p = " << feltor.probe_vector()[1][0] << 
+                         " Ga_nex= " << feltor.radial_transport() <<
+                         " Coupling= " << coupling <<
+                         " Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<
+                         " d E/dt = " << diff <<
+                         " Lambda =" << diss <<  std::endl;
+ 
             
             E0 = E1;
 

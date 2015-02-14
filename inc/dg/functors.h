@@ -320,7 +320,7 @@ struct GaussianZ
 };
 
 /**
- * @brief Functor for a linear polynomial in x-direction
+ * @brief Functor for a sin prof in x-direction
  * 
  * \f[ f(x,y) = a*x+b \f]
  */
@@ -345,6 +345,33 @@ struct SinProfX
     double operator()( double x, double y){ return bamp_+amp_*(1.-sin(x*kx_));}
   private:
     double amp_,bamp_,kx_;
+};
+/**
+ * @brief Functor for a sin prof in x-direction
+ * 
+ * \f[ f(x,y) = a*x+b \f]
+ */
+struct ExpProfX
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp(choose zero for constant gradient length
+     * @param ln  ln
+     */
+    ExpProfX( double amp, double bamp, double ln):amp_(amp), bamp_(bamp),ln_(ln){}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return result
+     */
+    double operator()( double x, double y){ return bamp_+amp_*exp(-x/ln_);}
+  private:
+    double amp_,bamp_,ln_;
 };
 /**
  * @brief Functor for a linear polynomial in x-direction
@@ -976,11 +1003,27 @@ struct ABS
 struct CONSTANT
 {
     CONSTANT( double value): value_(value){}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
     double operator()(double x){return value_;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
     double operator()(double x, double y){return value_;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
     double operator()(double x, double y, double z){return value_;}
     private:
     double value_;
+};
+struct FLOOR
+{
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    int operator()(double x){return floor(x);}
 };
 /**
  * @brief returns histogram 
