@@ -13,7 +13,7 @@ int main()
 
     {
     dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
-    dg::DMatrix A = dg::create::backscatter( g);
+    dg::Matrix A = dg::create::backscatter( g);
     A.sort_by_row_and_column();
 
     std::vector<double> x( g.size()), y(x);
@@ -25,7 +25,9 @@ int main()
             y[i*g.Nx()*g.n() + j] = 
                     g.y0() + (i+0.5)*g.hy()/(double)(g.n());
         }
-    dg::DMatrix B = dg::create::interpolation( x, y, g);
+    thrust::device_vector<double> xd(x), yd(y);
+    dg::DMatrix dB = dg::create::ell_interpolation( xd,yd, g);
+    dg::Matrix B = dB;
     bool passed = true;
     for( unsigned i=0; i<A.values.size(); i++)
     {
