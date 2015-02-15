@@ -22,7 +22,7 @@ void __host__ __device__ legendre( double* pxn, const double xn, const unsigned 
         pxn[1] = xn;
         for( unsigned i=1; i<n-1; i++)
             pxn[i+1] = ((double)(2*i+1)*xn*pxn[i]-(double)i*pxn[i-1])/(double)(i+1);
-        double temp[4];
+        double temp[4]; //it's a bit faster with less elements
         for( unsigned k=0; k<n; k++)
         {
             temp[k] = 0;
@@ -90,10 +90,8 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
             for( int l=0; l<n; l++)
             {
                 Aj[offset] = col_begin + k*n*Nx + l;
-                //Aj[offset] = k*n+l;
                 Av[offset] = py[k]*px[l];
                 offset +=pitch;
-                //offset += n*n;
             }
     }
 
@@ -120,10 +118,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
             {
                 Aj[offset] = col_begin + k*n*Nx + l;
                 Av[offset] = py[k]*px[l];
-                //std::cout << pitch <<" "<<offset<<"\n";
-                std::cout << row << " "<<Aj[offset] <<" "<<Av[offset]<<" "<<px[k]*px[l]<<"\n";
                 offset +=pitch;
-               // offset += num_rows;
             }
     }
 
@@ -131,8 +126,19 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
 
 } //namespace detail 
 
+/**
+ * @brief Create an interpolation matrix on the device
+ *
+ * @param x Vector of x-values
+ * @param g Grid on which to interpolate 
+ *
+ * @return interpolation matrix
+ * @note n must be smaller than 5
+ * @attention no range check is performed on the input vectors
+ */
 cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const Grid1d<double>& g  )
 {
+    assert( g.n()<=4);
     //allocate ell matrix storage
     cusp::ell_matrix<int, double, cusp::device_memory> A( x.size(), g.size(), x.size()*g.n(), g.n());
 
@@ -161,17 +167,27 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
     const thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double* forward_ptr = thrust::raw_pointer_cast( &forward[0]);
     dg::blas1::axpby( 2., xn, -2., cellnh, xn);
-    detail::interpolation_kernel1d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE, 0, 0>>> ( A.num_rows, g.n(), celln_ptr, xn_ptr, pitch, Aj, Av, forward_ptr);
+    detail::interpolation_kernel1d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), celln_ptr, xn_ptr, pitch, Aj, Av, forward_ptr);
     return A;
 
 }
 
-cusp::ell_matrix<int, double, cusp::host_memory> ell_interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d<double>& g  )
+/**
+ * @brief Create an interpolation matrix on the device
+ *
+ * @param x Vector of x-values
+ * @param y Vector of y-values
+ * @param g 2D Grid on which to interpolate 
+ *
+ * @return interpolation matrix
+ * @note n must be smaller than 5
+ * @attention no range check is performed on the input vectors
+ */
+cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const Grid2d<double>& g  )
 {
     assert( x.size() == y.size());
     //allocate ell matrix storage
-    cusp::ell_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n(), g.n()*g.n());
-    std::cout << A.num_rows << " "<<A.num_cols<<" "<<A.num_entries<< " "<<A.column_indices.pitch<<"\n";
+    cusp::ell_matrix<int, double, cusp::device_memory> A( x.size(), g.size(), x.size()*g.n()*g.n(), g.n()*g.n());
 
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256;
@@ -185,13 +201,13 @@ cusp::ell_matrix<int, double, cusp::host_memory> ell_interpolation( const thrust
     double * Av = thrust::raw_pointer_cast(&A.values(0,0));
 
     //compute normalized x and y values and cell numbers
-    thrust::host_vector<double> xn(x.size()), yn(y.size()), cellnh(x.size()), cellmh(x.size());
+    thrust::device_vector<double> xn(x.size()), yn(y.size()), cellnh(x.size()), cellmh(x.size());
     dg::blas1::transform( x, xn, dg::PLUS<double>( -g.x0()));
     dg::blas1::transform( y, yn, dg::PLUS<double>( -g.y0()));
     dg::blas1::scal( xn, 1./g.hx());
     dg::blas1::scal( yn, 1./g.hy());
-    thrust::host_vector<int> cellX( x.size());
-    thrust::host_vector<int> cellY( y.size());
+    thrust::device_vector<int> cellX( x.size());
+    thrust::device_vector<int> cellY( y.size());
     thrust::transform( xn.begin(), xn.end(), cellX.begin(), dg::FLOOR());
     thrust::transform( yn.begin(), yn.end(), cellY.begin(), dg::FLOOR());
     thrust::transform( cellX.begin(), cellX.end(),cellnh.begin(), dg::PLUS<double>(0.5));
@@ -203,10 +219,10 @@ cusp::ell_matrix<int, double, cusp::host_memory> ell_interpolation( const thrust
     //xn = 2*xn - 2*(celln+0.5)
     dg::blas1::axpby( 2., xn, -2., cellnh, xn);
     dg::blas1::axpby( 2., yn, -2., cellmh, yn);
-    thrust::host_vector<double> forward(std::vector<double> ( g.dlt().forward()));
+    thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
-    detail::interpolation_kernel2dcpu( A.num_rows, g.n(), g.Nx(), 
-    //detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE, 0>>> ( A.num_rows, g.n(), g.Nx(), 
+    //detail::interpolation_kernel2dcpu( A.num_rows, g.n(), g.Nx(), 
+    detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), 
             cellX_ptr, cellY_ptr, 
             xn_ptr, yn_ptr, pitch, Aj, Av, forward_ptr);
     return A;
