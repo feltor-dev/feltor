@@ -1,9 +1,9 @@
 #include <cusp/print.h>
+#include "timer.cuh"
 #include "xspacelib.cuh"
 #include "ell_interpolation.cuh"
 #include "interpolation.cuh"
 #include "typedefs.cuh"
-#include "timer.cuh"
 
 double sinus( double x, double y) {return sin(x)*sin(y);}
 

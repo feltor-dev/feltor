@@ -13,6 +13,32 @@ namespace create
 {
 namespace detail
 {
+
+struct FindCell 
+{
+    FindCell( double x0, double h):x0_(x0), h_(h){}
+    __host__ __device__
+        int operator()( double x)
+        {
+            return floor( (x - x0_)/h_);
+        }
+    private:
+    double x0_, h_;
+
+};
+struct Normalize
+{
+    Normalize( double x0, double h):x0_(x0), h_(h){}
+    __host__ __device__
+        double operator()( double x)
+        {
+            return 2*((x-x0_)/h_) - 2*(floor( (x - x0_)/h_)+1);
+        }
+    private:
+    double x0_, h_;
+
+};
+
 void __host__ __device__ legendre( double* pxn, const double xn, const unsigned n, const double* forward)
 
 {
@@ -54,7 +80,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
         int offset = row;
         for(int k=0; k<n; k++)
         {
-            Aj[offset] = cellx[row]*n + k
+            Aj[offset] = cellx[row]*n + k;
             Av[offset] = px[k];
             offset +=pitch;
         }
@@ -88,7 +114,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
             for( int l=0; l<n; l++)
             {
                 //Aj[offset] = col_begin + k*n*Nx + l;
-                Aj[offset] = (celly[row]*n+k)*n*Nx + cellx[row]*n+l
+                Aj[offset] = (celly[row]*n+k)*n*Nx + cellx[row]*n+l;
                 Av[offset] = py[k]*px[l];
                 offset +=pitch;
             }
@@ -120,7 +146,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
             for( int k=0; k<n; k++)
                 for( int l=0; l<n; l++)
                 {
-                    Aj[offset] = ((cellz[row] +m)%Nz)*n*n*Nx*Ny  (celly[row]*n+k)*n*Nx + (cellx[row]*n + l);
+                    Aj[offset] = ((cellz[row] +m)%Nz)*n*n*Nx*Ny  + (celly[row]*n+k)*n*Nx + (cellx[row]*n + l);
 
                     Av[offset] = pz[m]*py[k]*px[l];
                     offset +=pitch;
@@ -176,7 +202,7 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
     cusp::ell_matrix<int, double, cusp::device_memory> A( x.size(), g.size(), x.size()*g.n(), g.n());
 
     //set up kernel parameters
-    const size_t BLOCK_SIZE = 256;
+    const size_t BLOCK_SIZE = 256/4;
     const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( 
             detail::interpolation_kernel1d<BLOCK_SIZE>, 
             BLOCK_SIZE, (size_t) 0  );
@@ -189,17 +215,19 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
 
     //compute normalized x values and cell numbers
     thrust::device_vector<double> xn(x.size()), cellxh(x.size());
-    dg::blas1::transform( x, xn, dg::PLUS<double>( -g.x0()));
-    dg::blas1::scal( xn, 1./g.h());
+    
+    //dg::blas1::transform( x, xn, dg::PLUS<double>( -g.x0()));
+    //dg::blas1::scal( xn, 1./g.h());
     thrust::device_vector<int> cellx( x.size());
-    thrust::transform( xn.begin(), xn.end(), cellx.begin(), dg::FLOOR());
-    thrust::transform( cellx.begin(), cellx.end(),cellxh.begin(), dg::PLUS<double>(0.5));
+    thrust::transform( x.begin(), x.end(), cellx.begin(), detail::FindCell( g.x0(), g.h()));
+    thrust::transform( x.begin(), x.end(), xn.begin(), detail::Normalize( g.x0(), g.h()));
+    //thrust::transform( cellx.begin(), cellx.end(),cellxh.begin(), dg::PLUS<double>(0.5));
+    //dg::blas1::axpby( 2., xn, -2., cellxh, xn);
     const int* cellx_ptr = thrust::raw_pointer_cast( &cellx[0]);
     const double* xn_ptr = thrust::raw_pointer_cast( &xn[0]);
     //xn = 2*xn - 2*(cellx+0.5)
     const thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double* forward_ptr = thrust::raw_pointer_cast( &forward[0]);
-    dg::blas1::axpby( 2., xn, -2., cellxh, xn);
     detail::interpolation_kernel1d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), cellx_ptr, xn_ptr, pitch, Aj, Av, forward_ptr);
     return A;
 
@@ -218,14 +246,14 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
  */
 cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const Grid2d<double>& g  )
 {
-    Timer t;
-    t.tic();
+    //dg::Timer t;
     assert( x.size() == y.size());
     //allocate ell matrix storage
     cusp::ell_matrix<int, double, cusp::device_memory> A( x.size(), g.size(), x.size()*g.n()*g.n(), g.n()*g.n());
+    //t.tic();
 
     //set up kernel parameters
-    const size_t BLOCK_SIZE = 256;
+    const size_t BLOCK_SIZE = 256/4;
     const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( detail::interpolation_kernel2d<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
     const size_t NUM_BLOCKS = std::min<size_t>( 
             MAX_BLOCKS, 
@@ -236,41 +264,34 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     double * Av = thrust::raw_pointer_cast(&A.values(0,0));
 
     //compute normalized x and y values and cell numbers
-    thrust::device_vector<double> xn(x.size()), yn(y.size()), cellxh(x.size()), cellyh(x.size());
-    dg::blas1::transform( x, xn, dg::PLUS<double>( -g.x0()));
-    dg::blas1::transform( y, yn, dg::PLUS<double>( -g.y0()));
-    dg::blas1::scal( xn, 1./g.hx());
-    dg::blas1::scal( yn, 1./g.hy());
-    thrust::device_vector<int> cellX( x.size());
-    thrust::device_vector<int> cellY( y.size());
-    thrust::transform( xn.begin(), xn.end(), cellX.begin(), dg::FLOOR());
-    thrust::transform( yn.begin(), yn.end(), cellY.begin(), dg::FLOOR());
-    thrust::transform( cellX.begin(), cellX.end(),cellxh.begin(), dg::PLUS<double>(0.5));
-    thrust::transform( cellY.begin(), cellY.end(),cellyh.begin(), dg::PLUS<double>(0.5));
+    thrust::device_vector<int> cellX( x.size()), cellY(x.size());
+    thrust::device_vector<double> xn(x.size()), yn(y.size());
+    thrust::transform( x.begin(), x.end(), cellX.begin(), detail::FindCell( g.x0(), g.hx()));
+    thrust::transform( x.begin(), x.end(), xn.begin(), detail::Normalize( g.x0(), g.hx()));
+    thrust::transform( y.begin(), y.end(), cellY.begin(), detail::FindCell( g.y0(), g.hy()));
+    thrust::transform( y.begin(), y.end(), yn.begin(), detail::Normalize( g.y0(), g.hy()));
     const int* cellX_ptr = thrust::raw_pointer_cast( &cellX[0]);
     const int* cellY_ptr = thrust::raw_pointer_cast( &cellY[0]);
     const double* xn_ptr = thrust::raw_pointer_cast( &xn[0]);
     const double* yn_ptr = thrust::raw_pointer_cast( &yn[0]);
-    //xn = 2*xn - 2*(cellx+0.5)
-    dg::blas1::axpby( 2., xn, -2., cellxh, xn);
-    dg::blas1::axpby( 2., yn, -2., cellyh, yn);
     thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
+    //t.toc();
+    //std::cout << "Prekernel took "<<t.diff()<<"s\n";
+    //t.tic();
     //detail::interpolation_kernel2dcpu( A.num_rows, g.n(), g.Nx(), 
-    t.toc();
-    std::cout << "Prekernel took "<<t.diff()<<"s\n";
-    t.tic();
     detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), 
             cellX_ptr, cellY_ptr, 
             xn_ptr, yn_ptr, pitch, Aj, Av, forward_ptr);
-    t.toc();
-    std::cout << "   kernel took "<<t.diff()<<"s\n";
+    //t.toc();
+    //std::cout << "   kernel took "<<t.diff()<<"s\n";
     return A;
 
 }
 /**
  * @brief Create an interpolation matrix on the device
  *
+ * uses dG interpolation in x and y and linear interpolation in z
  * @param x Vector of x-values
  * @param y Vector of y-values
  * @param z Vector of z-values
@@ -280,7 +301,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
  * @note n must be smaller than or equal to 4
  * @attention no range check is performed on the input vectors
  */
-cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const thrust::device_vector<double>& z, const Grid3d<double>& g  )
+cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const thrust::device_vector<double>& z, const Grid3d<double>& g )
 {
     assert( x.size() == y.size());
     assert( x.size() == z.size());
@@ -288,8 +309,8 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     cusp::ell_matrix<int, double, cusp::device_memory> A( x.size(), g.size(), x.size()*2*g.n()*g.n(), 2*g.n()*g.n());
 
     //set up kernel parameters
-    const size_t BLOCK_SIZE = 256;
-    const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( detail::interpolation_kernel2d<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
+    const size_t BLOCK_SIZE = 256/4;
+    const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( detail::interpolation_kernel3d<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
     const size_t NUM_BLOCKS = std::min<size_t>( 
             MAX_BLOCKS, 
             cusp::system::cuda::DIVIDE_INTO( A.num_rows, BLOCK_SIZE));
@@ -299,30 +320,27 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     double * Av = thrust::raw_pointer_cast(&A.values(0,0));
 
     //compute normalized x and y values and cell numbers
-    thrust::device_vector<double> xn(x.size()), yn(y.size()), zn(z.size()), cellxh(x.size()), cellyh(x.size());
-    dg::blas1::transform( x, xn, dg::PLUS<double>( -g.x0()));
-    dg::blas1::transform( y, yn, dg::PLUS<double>( -g.y0()));
-    dg::blas1::scal( xn, 1./g.hx());
-    dg::blas1::scal( yn, 1./g.hy());
-    thrust::device_vector<int> cellX( x.size());
-    thrust::device_vector<int> cellY( y.size());
-    thrust::transform( xn.begin(), xn.end(), cellX.begin(), dg::FLOOR());
-    thrust::transform( yn.begin(), yn.end(), cellY.begin(), dg::FLOOR());
-    thrust::transform( cellX.begin(), cellX.end(),cellxh.begin(), dg::PLUS<double>(0.5));
-    thrust::transform( cellY.begin(), cellY.end(),cellyh.begin(), dg::PLUS<double>(0.5));
+    thrust::device_vector<int> cellX( x.size()), cellY(x.size()), cellZ(x.size());
+    thrust::device_vector<double> xn(x.size()), yn(y.size()), zn(z.size());
+    thrust::transform( x.begin(), x.end(), cellX.begin(), detail::FindCell( g.x0(), g.hx()));
+    thrust::transform( x.begin(), x.end(), xn.begin(), detail::Normalize( g.x0(), g.hx()));
+    thrust::transform( y.begin(), y.end(), cellY.begin(), detail::FindCell( g.y0(), g.hy()));
+    thrust::transform( y.begin(), y.end(), yn.begin(), detail::Normalize( g.y0(), g.hy()));
+    //z-planes are not cell-centered
+    thrust::transform( z.begin(), z.end(), cellZ.begin(), detail::FindCell( g.z0()+g.hz()/2., g.hz()));
+    thrust::transform( z.begin(), z.end(), zn.begin(), detail::Normalize( g.z0()+g.hz()/2., g.hz()));
     const int* cellX_ptr = thrust::raw_pointer_cast( &cellX[0]);
     const int* cellY_ptr = thrust::raw_pointer_cast( &cellY[0]);
+    const int* cellZ_ptr = thrust::raw_pointer_cast( &cellZ[0]);
     const double* xn_ptr = thrust::raw_pointer_cast( &xn[0]);
     const double* yn_ptr = thrust::raw_pointer_cast( &yn[0]);
-    //xn = 2*xn - 2*(cellx+0.5)
-    dg::blas1::axpby( 2., xn, -2., cellxh, xn);
-    dg::blas1::axpby( 2., yn, -2., cellyh, yn);
+    const double* zn_ptr = thrust::raw_pointer_cast( &zn[0]);
     thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
     //detail::interpolation_kernel2dcpu( A.num_rows, g.n(), g.Nx(), 
-    detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), 
-            cellX_ptr, cellY_ptr, 
-            xn_ptr, yn_ptr, pitch, Aj, Av, forward_ptr);
+    detail::interpolation_kernel3d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), g.Ny(), g.Nz(), 
+            cellX_ptr, cellY_ptr, cellZ_ptr,
+            xn_ptr, yn_ptr, zn_ptr, pitch, Aj, Av, forward_ptr);
     return A;
 
 }
