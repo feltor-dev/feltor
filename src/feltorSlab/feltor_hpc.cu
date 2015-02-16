@@ -41,7 +41,6 @@ int main( int argc, char* argv[])
     }
     else 
     {
-
         try{
             input = file::read_file( argv[1]);
             v = file::read_input( argv[1]);

@@ -425,7 +425,26 @@ struct LinearY
   private:
     double a_,b_;
 };
-
+struct LHalf {
+    LHalf (double xb) : xb_(xb) {}
+    double operator() (double x, double y)
+    {
+        if (x<=xb_) return 1.;
+        return 0.;
+    }
+    private:
+     double xb_;
+};
+struct RHalf {
+    RHalf  (double xb) : xb_(xb)  {}
+    double operator() (double x, double y)
+    {
+        if (x>xb_) return 1.;
+        return 0.;
+    }
+    private:
+     double xb_;
+};
 /**
  * @brief Functor returning a Lamb dipole
  */

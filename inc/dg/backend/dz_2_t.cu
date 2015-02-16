@@ -178,6 +178,7 @@ int main()
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
     dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
+//     dg::DZ<dg::DMatrix, dg::DVec> dzDIR( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::DIR);
     
     dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
     
@@ -189,6 +190,8 @@ int main()
                         temp2( function),
                         temp3( function),
                         derivative(function),
+                        derivativef(function),
+                        derivativeb(function),
                         derivativeones(function),
                         derivative2(function),
                         inverseB( dg::evaluate(invb, g3d)),
@@ -199,9 +202,15 @@ int main()
                         derivativeTdz(function),
                         functionTinv(function),
                         dzTdz(function),
+                        dzTdzb(function),
+                        dzTdzf(function),
+                        dzTdzfb(function),
+                        dzz(function),
                         divbsol(dg::evaluate(divb, g3d)),
                         divbT(function),
                         divBT(function),
+                        lambda(function),
+                        omega(function),
                         dzTdz2(function);
 
 
@@ -213,9 +222,20 @@ int main()
     dz.set_boundaries( dg::PER, 0, 0);
 
     dz( function, derivative); //dz(f)
+    dz.forward( function, derivativef); //dz(f)
+    dz.backward( function, derivativeb); //dz(f)
     dz( ones, derivativeones); //dz(f)
     dz( function2, derivative2); //dz(f)
-
+    //compute dzz
+    dz( inverseB, lambda); //gradpar 1/B
+    dg::blas1::pointwiseDivide(lambda,  inverseB, lambda); //-dz lnB
+    dz(function,omega); //dz T
+    dg::blas1::pointwiseDot(omega, lambda, omega);            //- dz lnB dz T
+    dg::blas1::axpby(1.0, omega, 0., dzz,dzz);    
+    dz.dzz(function,omega);                                          //dz^2 T 
+    dg::blas1::axpby( 1.0, omega, 1., dzz);
+    
+    
     dz.centeredT(function, derivativeT); //dz(f)
     //divB
     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
@@ -240,7 +260,11 @@ int main()
     dg::blas1::pointwiseDot( inverseB, function, temp);
     dz( temp, derivativeTdz);
     dg::blas1::pointwiseDivide( derivativeTdz, inverseB, derivativeTdz);
+    
     dz.centeredT( derivative, dzTdz); //dzT(dz(f))
+    dz.forwardT( derivativef, dzTdzf); //dzT(dz(f))
+    dz.backwardT( derivativeb, dzTdzb); //dzT(dz(f))
+    dg::blas1::axpby(0.5,dzTdzb,0.5,dzTdzf,dzTdzfb);
     dz.centeredT( derivative2, dzTdz2); //dzT(dz(f))
     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
 
@@ -250,13 +274,16 @@ int main()
     double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
     double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
     double normdzTf = dg::blas2::dot(derivativeT2, w3d, function2);
+    double normdzT_1 = dg::blas2::dot(derivativeT2, w3d, ones);
     double normdzT1 = dg::blas2::dot(derivativeTones, w3d, function2);
     double normfdz = dg::blas2::dot(function2, w3d, derivative2);
     double norm1dz = dg::blas2::dot(ones, w3d, derivative2);
     double normfdzTdz = dg::blas2::dot(function2, w3d, dzTdz2);
-    double norm1dzTdz = dg::blas2::dot(ones, w3d, dzTdz2);       
+    double norm1dzTdz = dg::blas2::dot(ones, w3d, dzTdz2);
+    
     double norm1dzTB = dg::blas2::dot(ones, w3d, divBT);
     double normBdz1 = dg::blas2::dot(temp2, w3d, derivativeones);
+    double normfdz1 = dg::blas2::dot(function2, w3d, derivativeones);
 
     std::cout << "--------------------testing dz" << std::endl;
     double norm = dg::blas2::dot( w3d, solution);
@@ -298,10 +325,26 @@ int main()
     double normdzTdz = dg::blas2::dot( w3d, solutiondzTdz);
     std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
     double errdzTdz =dg::blas2::dot( w3d,dzTdz);
-    std::cout << "|| DerivativeTdz ||  "<<sqrt( errTdz)<<"\n";
+    std::cout << "|| DerivativeTdz ||  "<<sqrt( errdzTdz)<<"\n";
     dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdz);
     errdzTdz =dg::blas2::dot( w3d, dzTdz);
-    std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdz/normdzTdz )<<"\n";     
+    std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdz/normdzTdz )<<"\n";   
+    
+     std::cout << "--------------------testing dzTdzfb " << std::endl;
+    std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
+    double errdzTdzfb =dg::blas2::dot( w3d,dzTdzfb);
+    std::cout << "|| DerivativeTdz ||  "<<sqrt( errdzTdzfb)<<"\n";
+    dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdzfb);
+    errdzTdzfb =dg::blas2::dot( w3d, dzTdzfb);
+    std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdzfb/normdzTdz )<<"\n";
+    
+    std::cout << "--------------------testing dzTdz with dzz" << std::endl;
+    std::cout << "|| Solution ||      "<<sqrt( normdzTdz)<<"\n";
+    double errdzz =dg::blas2::dot( w3d,dzz);
+    std::cout << "|| dzz ||  "<<sqrt( errdzz)<<"\n";
+    dg::blas1::axpby( 1., solutiondzTdz, -1., dzz);
+    errdzz =dg::blas2::dot( w3d, dzz);
+    std::cout << "Relative Difference in DZT is "<< sqrt( errdzz/normdzTdz )<<"\n";   
     
     std::cout << "--------------------testing adjointness " << std::endl;
     std::cout << "<f,dz(f)>   = "<< normfdz<<"\n";
@@ -312,6 +355,11 @@ int main()
     std::cout << "<B,dz(1)>   = "<< normBdz1<<"\n";
     std::cout << "-<dzT(B),1> = "<< -norm1dzTB<<"\n";
     std::cout << "Diff        = "<< normBdz1+norm1dzTB<<"\n";     
+    std::cout << "-------------------- " << std::endl;
+    
+    std::cout << "<f,dz(1)>   = "<< normfdz1<<"\n";
+    std::cout << "-<dzT(f),1> = "<< -normdzT_1<<"\n";
+    std::cout << "Diff        = "<< normfdz1+normdzT_1<<"\n";   
     std::cout << "-------------------- " << std::endl;
     
     std::cout << "<1,dz(f)>   = "<< norm1dz<<"\n";
@@ -353,11 +401,22 @@ int main()
     //evaluate on valzues from devicevector on equidistant visual hvisual vector
     
     visual = dg::evaluate( dg::one, g3d);
-
+    
+/*    double eps =1e-6;
+    dg::Invert< dg::DVec> invert(function, w3d.size(), eps );   
+    std::cout << " # of iterations "<< invert( dz, functionTinv , solutiondzTdz) << std::endl; //is dzTdz
+    std::cout << "--------------------testing dzTdz with CG" << std::endl;
+    double normf = dg::blas2::dot( w3d, function);
+    std::cout << "||f||  "<<sqrt( normf)<<"\n";
+    double errf =dg::blas2::dot( w3d,functionTinv);
+    std::cout << "|| derived f ||  "<<sqrt( errf)<<"\n";
+    dg::blas1::axpby( 1.,  function, -1., functionTinv);
+    errf =dg::blas2::dot( w3d, functionTinv);
+    std::cout << "Relative Difference in DZT is "<< sqrt( errf/ normf )<<"\n";   */    
     
     //Create Window and set window title
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( 200*Nz, 800, "");
-    draw::RenderHostData render(4 , 1*Nz);  
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( 200*Nz, 1200, "");
+    draw::RenderHostData render(6 , 1*Nz);  
     //create a colormap
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
 
@@ -368,8 +427,8 @@ int main()
     {
         hvisual = divBT;
         dg::blas2::gemv( equigrid, hvisual, visual);        
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"divB"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<Nz;k++)
         {
@@ -380,8 +439,8 @@ int main()
         }
         hvisual = derivativeT;         
         dg::blas2::gemv( equigrid, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"dzT(f)"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<Nz;k++)
         {
@@ -391,8 +450,8 @@ int main()
         }
         hvisual = derivative;
         dg::blas2::gemv( equigrid, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"dz(f)"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<Nz;k++)
         {            
@@ -402,9 +461,31 @@ int main()
         }
         hvisual = derivativeTdz;
         dg::blas2::gemv( equigrid, hvisual, visual);
-        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
-        colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"B dz(f/B)"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        for( unsigned k=0; k<Nz;k++)
+        {            
+            unsigned size=g3d.n()*g3d.n()*g3d.Nx()*g3d.Ny();            
+            dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
+            render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
+        }
+        hvisual = dzTdzfb;
+        dg::blas2::gemv( equigrid, hvisual, visual);
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"dzTdz"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        for( unsigned k=0; k<Nz;k++)
+        {            
+            unsigned size=g3d.n()*g3d.n()*g3d.Nx()*g3d.Ny();            
+            dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
+            render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
+        }
+        hvisual = dzz;
+        dg::blas2::gemv( equigrid, hvisual, visual);
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
+        title <<"dzz"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<Nz;k++)
         {            
             unsigned size=g3d.n()*g3d.n()*g3d.Nx()*g3d.Ny();            

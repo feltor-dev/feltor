@@ -412,7 +412,24 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
             //gradlnBcorrection
             dzNU_(y[i+2], dzy[i+2]);                                   //dz U
             dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);           // dz lnB dz U
-            dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]);    
+            dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]); 
+            
+            //for self adjoint parallel laplacian
+//                 dzNU_.forward(y[i], omega); 
+//                 dzNU_.forwardT(omega,lambda);
+//                 dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
+// 
+//                 dzNU_.backward( y[i], omega); 
+//                 dzNU_.backwardT(omega,lambda);
+//                 dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
+//                 
+//                 dzNU_.forward(y[i+2], omega); 
+//                 dzNU_.forwardT(omega,lambda);
+//                 dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
+// 
+//                 dzNU_.backward( y[i+2], omega); 
+//                 dzNU_.backwardT(omega,lambda);
+//                 dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
         }
     }
 }
