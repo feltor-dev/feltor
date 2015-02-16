@@ -14,6 +14,7 @@ namespace create
 namespace detail
 {
 
+//find cell number of given x
 struct FindCell 
 {
     FindCell( double x0, double h):x0_(x0), h_(h){}
@@ -26,17 +27,31 @@ struct FindCell
     double x0_, h_;
 
 };
+
+//normalize given x to interval [-1,1[
 struct Normalize
 {
     Normalize( double x0, double h):x0_(x0), h_(h){}
     __host__ __device__
         double operator()( double x)
         {
-            return 2*((x-x0_)/h_) - 2*(floor( (x - x0_)/h_)+1);
+            return 2*((x-x0_)/h_) - 2*floor( (x - x0_)/h_) - 1;
         }
     private:
     double x0_, h_;
+};
 
+//normalize given x to interval [0, 1[
+struct NormalizeZ
+{
+    NormalizeZ( double x0, double h): x0_(x0), h_(h){}
+    __host__ __device__
+        double operator()( double x)
+        {
+            return (x-x0_) - h_*floor( (x - x0_)/h_);
+        }
+    private:
+    double x0_, h_;
 };
 
 void __host__ __device__ legendre( double* pxn, const double xn, const unsigned n, const double* forward)
@@ -137,7 +152,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
     for( int row = thread_id; row<num_rows; row += grid_size)
     {
         //evaluate 2d Legendre polynomials at (xn, yn)...
-        double px[4], py[4], pz[2] = {zn[row], 1-zn[row]};
+        double px[4], py[4], pz[2] = {1-zn[row], zn[row]};
         detail::legendre( px, xn[row], n, forward); 
         detail::legendre( py, yn[row], n, forward);
         
@@ -146,6 +161,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
             for( int k=0; k<n; k++)
                 for( int l=0; l<n; l++)
                 {
+                    //cellz is from -1 to Nz-1
                     Aj[offset] = ((cellz[row] +m)%Nz)*n*n*Nx*Ny  + (celly[row]*n+k)*n*Nx + (cellx[row]*n + l);
 
                     Av[offset] = pz[m]*py[k]*px[l];
@@ -326,9 +342,9 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     thrust::transform( x.begin(), x.end(), xn.begin(), detail::Normalize( g.x0(), g.hx()));
     thrust::transform( y.begin(), y.end(), cellY.begin(), detail::FindCell( g.y0(), g.hy()));
     thrust::transform( y.begin(), y.end(), yn.begin(), detail::Normalize( g.y0(), g.hy()));
-    //z-planes are not cell-centered
+    //z-planes are not cell-centered so shift cells by h/2
     thrust::transform( z.begin(), z.end(), cellZ.begin(), detail::FindCell( g.z0()+g.hz()/2., g.hz()));
-    thrust::transform( z.begin(), z.end(), zn.begin(), detail::Normalize( g.z0()+g.hz()/2., g.hz()));
+    thrust::transform( z.begin(), z.end(), zn.begin(), detail::NormalizeZ( g.z0()+g.hz()/2., g.hz()));
     const int* cellX_ptr = thrust::raw_pointer_cast( &cellX[0]);
     const int* cellY_ptr = thrust::raw_pointer_cast( &cellY[0]);
     const int* cellZ_ptr = thrust::raw_pointer_cast( &cellZ[0]);

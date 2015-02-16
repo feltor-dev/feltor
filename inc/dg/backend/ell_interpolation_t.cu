@@ -2,16 +2,19 @@
 #include "xspacelib.cuh"
 #include "ell_interpolation.cuh"
 #include "typedefs.cuh"
+
 const unsigned n = 3;
 const unsigned Nx = 5; 
 const unsigned Ny = 7; 
-//const unsigned Nz = 2; 
+const unsigned Nz = 5; 
 
 double sinus( double x, double y) {return sin(x)*sin(y);}
+double sinus( double x, double y, double z) {return sin(x)*sin(y)*sin(z);}
 
 int main()
 {
 
+    {
     dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
     thrust::host_vector<double> vector = dg::evaluate( sinus, g);
     dg::Matrix A = dg::create::backscatter( g);
@@ -54,7 +57,35 @@ int main()
     dg::blas2::symv( dB, dv, w2);
     dg::blas2::symv( A, vector, w);
     dg::blas1::axpby( 1., (dg::DVec)w, -1., w2, w2);
-    std::cout << "Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
+    std::cout << "2D Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
+    }
+    {
+    dg::Grid3d<double> g( -10, 10, -5, 5, -M_PI, M_PI, n, Nx, Ny, Nz);
+    dg::Matrix A = dg::create::backscatter( g);
+    A.sort_by_row_and_column();
+
+    thrust::host_vector<double> x( g.size()), y(x), z(x);
+    for( unsigned k=0; k<g.Nz(); k++)
+        for( unsigned i=0; i<g.Ny()*g.n(); i++)
+            for( unsigned j=0; j<g.Nx()*g.n(); j++)
+            {
+                x[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                        g.x0() + (j+0.5)*g.hx()/(double)(g.n());
+                y[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                        g.y0() + (i+0.5)*g.hy()/(double)(g.n());
+                z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                        g.z0() + (k+0.5)*g.hz();
+            }
+    dg::DVec xd(x), yd(y), zd(z);
+    dg::DMatrix dB = dg::create::ell_interpolation( xd, yd, zd, g);
+    dg::HVec vector = dg::evaluate( sinus, g);
+    dg::DVec dv( vector), w2( vector);
+    dg::HVec w(vector);
+    dg::blas2::symv( dB, dv, w2);
+    dg::blas2::symv( A, vector, w);
+    dg::blas1::axpby( 1., (dg::DVec)w, -1., w2, w2);
+    std::cout << "3D Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
+    }
     
     return 0;
 }

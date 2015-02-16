@@ -62,7 +62,7 @@ blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ 
 
 %_t: %_t.cu
-	$(CC) $(INCLUDE)  $(CFLAGS) $< -o $@ $(GLFLAGS) -pg
+	$(CC) $(INCLUDE)  $(CFLAGS) $< -o $@ $(GLFLAGS) -g
 
 #%2d_t: %2d_t.cu ../%.cuh 
 #	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
