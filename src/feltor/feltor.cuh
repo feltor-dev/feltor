@@ -390,46 +390,46 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
         //Parallel dissipation
         if( p.nu_parallel != 0)
         {
-//             #ifdef TORSHEATHLIM
-//                 dzNU_.set_boundaries( dg::DIR,y[i],1.0,1.0);  //dz psi
-//             #endif
-//             #ifdef TORLIM
-//                 dzNU_.set_boundaries( p.bc, 0, 0); //dzN and dzU on limiter
-//             #endif 
-//             dzNU_.dzz(y[i],omega);                                          //dz^2 N 
-//             dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
-// 
-//             //gradlnBcorrection
-//             dzNU_(y[i], dzy[i]);       
-//             dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);            // dz lnB dz N
-//             dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
-//             #ifdef TORSHEATHLIM
-//                   dzNU_.set_boundaries( dg::DIR,ush[i],-1.0,1.0);  
-//             #endif            
-//             dzNU_.dzz(y[i+2],omega);                                   //dz U = {1./sqrt(-2.*M_PI*mu[0])*EXP(-phi),1} on limiter
-//             dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);      
-// 
-//             //gradlnBcorrection
-//             dzNU_(y[i+2], dzy[i+2]);                                   //dz U
-//             dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);           // dz lnB dz U
-//             dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]); 
+            #ifdef TORSHEATHLIM
+                dzNU_.set_boundaries( dg::DIR,y[i],1.0,1.0);  //dz psi
+            #endif
+            #ifdef TORLIM
+                dzNU_.set_boundaries( p.bc, 0, 0); //dzN and dzU on limiter
+            #endif 
+            dzNU_.dzz(y[i],omega);                                          //dz^2 N 
+            dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
+
+            //gradlnBcorrection
+            dzNU_(y[i], dzy[i]);       
+            dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);            // dz lnB dz N
+            dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
+            #ifdef TORSHEATHLIM
+                  dzNU_.set_boundaries( dg::DIR,ush[i],-1.0,1.0);  
+            #endif            
+            dzNU_.dzz(y[i+2],omega);                                   //dz U = {1./sqrt(-2.*M_PI*mu[0])*EXP(-phi),1} on limiter
+            dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);      
+
+            //gradlnBcorrection
+            dzNU_(y[i+2], dzy[i+2]);                                   //dz U
+            dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);           // dz lnB dz U
+            dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]); 
             
             //for self adjoint parallel laplacian
-                dzNU_.forward(y[i], omega); 
-                dzNU_.forwardT(omega,lambda);
-                dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
-
-                dzNU_.backward( y[i], omega); 
-                dzNU_.backwardT(omega,lambda);
-                dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
-                
-                dzNU_.forward(y[i+2], omega); 
-                dzNU_.forwardT(omega,lambda);
-                dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
-
-                dzNU_.backward( y[i+2], omega); 
-                dzNU_.backwardT(omega,lambda);
-                dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
+//                 dzNU_.forward(y[i], omega); 
+//                 dzNU_.forwardT(omega,lambda);
+//                 dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
+// 
+//                 dzNU_.backward( y[i], omega); 
+//                 dzNU_.backwardT(omega,lambda);
+//                 dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
+//                 
+//                 dzNU_.forward(y[i+2], omega); 
+//                 dzNU_.forwardT(omega,lambda);
+//                 dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
+// 
+//                 dzNU_.backward( y[i+2], omega); 
+//                 dzNU_.backwardT(omega,lambda);
+//                 dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
         }
     }
 }
