@@ -61,7 +61,7 @@ endif
 all: feltor feltor_hpc
 
 feltor: feltor.cu ../feltor/feltor.cuh
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK -g
 	echo "Attention: No compiler warnings are issued!" 
 
 	

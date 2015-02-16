@@ -101,11 +101,11 @@ int main( int argc, char* argv[])
     }
     const Blueprint bp = bp_mod;
     bp.display( );
-    if( bp.boundary().bc_x != TL_PERIODIC)
-    {
-        cerr << "Only periodic boundaries allowed!\n";
-        return -1;
-    }
+//     if( bp.boundary().bc_x != TL_PERIODIC)
+//     {
+//         cerr << "Only periodic boundaries allowed!\n";
+//         return -1;
+//     }
     //construct solvers 
     try{
     Sol solver( bp);
@@ -165,7 +165,7 @@ int main( int argc, char* argv[])
         //std::vector<double> thermal = energetics.thermal_energies( solver.getDensity());
         //std::cout<< thermal[0] << " "<< thermal[1]<<" "<<exb[0]<<"\n";
         //t5file.append( meanMassE, 0, exb[0]+thermal[0]+thermal[1], 0);
-
+        std::cout << "time = " << time << std::endl;
         for( unsigned j=0; j<itstp; j++)
         {
             if( i==0 && j==0)

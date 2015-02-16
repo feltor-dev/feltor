@@ -113,7 +113,6 @@ struct Feltor
     const container binv;
     const container one;
     const Preconditioner w2d, v2d;
-
     std::vector<container> phi, nx;
     std::vector<container> phix, npe, logn, ush,dn,dphi; 
     std::vector<container> dzy, curvy; 
@@ -139,12 +138,14 @@ struct Feltor
     const container Xprobe,Yprobe;
     Matrix probeinterp;
     container probevalue;
-
+    
     dg::Grid1d<double> gy;
     const container w1d;
     const container oney;
     const container coox0,cooxlx,cooy;
     Matrix interpx0,interpxlx;
+        container lh,rh;
+
 };
 
 template<class Matrix, class container, class P>
@@ -172,6 +173,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     Yprobe(1,p.ly*p.posY),//use blob position
     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
     probevalue(1,0.0),
+    lh( dg::evaluate(dg::LHalf(p.lx*0.5),g)),rh( dg::evaluate(dg::RHalf(p.lx*0.5),g)), 
+
     //boundary integral terms
     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
     w1d( dg::create::weights(gy)),
@@ -265,11 +268,14 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
     if (p.zf==0) {
         polavg(npe[0],neavg);
+        polavg(phi[0],phiavg);        //<phi>
+        dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
+
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
         dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
-        
-        dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi -  ln(N/<N> 
+        dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
+
     }
     
     if (p.zf==1) {
@@ -279,8 +285,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
         dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)> 
-        
-        dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
+        dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - <phi>  - lnNe
     }
        //correction for high amplitudes
     dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
@@ -349,11 +354,14 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //Coupling term for the electrons
     if (p.zf==0) {
         polavg(npe[0],neavg);
+//         polavg(phi[0],phiavg);        //<phi>
+//         dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
+
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
         dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
-        
-        dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi -  ln(N/<N> 
+        dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
+//         dg::blas1::pointwiseDot(omega,rh,chi);
     }
     if (p.zf==1) {
         polavg(logn[0],lambda);       //<ln(ne)> 
@@ -361,9 +369,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         polavg(npe[0],neavg);         //<ne>
         dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
-        dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)> 
-        
+        dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
+//         dg::blas1::pointwiseDot(omega,lh,omega);
+//         dg::blas1::axpby(1.,omega,1.,chi,omega); 
     }
     //correction for high amplitudes
     dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
