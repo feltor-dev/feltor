@@ -1022,11 +1022,27 @@ struct ABS
 struct CONSTANT
 {
     CONSTANT( double value): value_(value){}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
     double operator()(double x){return value_;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
     double operator()(double x, double y){return value_;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
     double operator()(double x, double y, double z){return value_;}
     private:
     double value_;
+};
+struct FLOOR
+{
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    int operator()(double x){return floor(x);}
 };
 /**
  * @brief returns histogram 

@@ -22,7 +22,8 @@ endif
 all: innto innblobs innto_hpc innto_hw
 
 innto: innto.cpp dft_dft_solver.h drt_dft_solver.h blueprint.h equations.h
-	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
+	#$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
+	$(CXX) -O3 $< 'pkg-config --static --libs glfw3' -lfftw3 $(INCLUDE) $(GLFLAGS) -o $@
 
 innto_per: innto_per.cpp dft_dft_solver.h blueprint.h equations.h
 	$(CXX) -O3 $< $(CFLAGS) $(INCLUDE) $(GLFLAGS) -o $@
