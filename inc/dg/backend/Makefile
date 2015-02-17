@@ -1,5 +1,5 @@
 system=home
-device=omp
+device=gpu
 
 INCLUDE = -I../../ # other project libraries
 INCLUDE+= -I../
@@ -28,8 +28,8 @@ endif
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 
-CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+#CFLAGS+= -Xcompiler -fopenmp 
+#CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 endif
 ifeq ($(strip $(device)),omp)
 CC = g++
