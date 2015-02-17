@@ -1,3 +1,4 @@
+#include <cusp/coo_matrix.h>
 #include <cusp/print.h>
 #include "xspacelib.cuh"
 #include "ell_interpolation.cuh"
@@ -13,6 +14,7 @@ double sinus( double x, double y, double z) {return sin(x)*sin(y)*sin(z);}
 
 int main()
 {
+
 
     {
     dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
