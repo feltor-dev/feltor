@@ -117,7 +117,7 @@ void boxintegrator( Field& field, const Grid& grid, const thrust::host_vector<do
 *
 * @ingroup dz
 * @tparam Matrix The matrix class of the interpolation matrix
-* @tparam container The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
+* @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
 template< class Matrix = dg::DMatrix, class container=thrust::device_vector<double> >
 struct DZ
@@ -130,6 +130,7 @@ struct DZ
     is a limiter and 0 if there isn't
     * @param field The field to integrate
     * @param grid The grid on which to operate
+    * @param hz 
     * @param eps Desired accuracy of runge kutta
     * @param limit Instance of the limiter class (Default is a limiter everywhere)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
@@ -137,18 +138,22 @@ struct DZ
     */
     template <class Field, class Limiter>
     DZ(Field field, const dg::Grid3d<double>& grid, double hz, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+    void forward( const container& f, container& dzf);
+    void backward( const container& f, container& dzf);
+    void centered( const container& f, container& dzf);
+    void forwardT( const container& f, container& dzf);
+    void backwardT( const container& f, container& dzf);
+    void centeredT( const container& f, container& dzf);
     /**
     * @brief Apply the derivative on a 3d vector
     *
+    * centered derivative 
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
     void operator()( const container& f, container& dzf);
-    void forward( const container& f, container& dzf);
-    void backward( const container& f, container& dzf);
+    void symv( const container& f, container& dzTdzf);
 
-    //void dz2d( const container& f, container& dzf);
-    //void dzz2d( const container& f, container& dzzf);
     /**
     * @brief Set boundary conditions in the limiter region
     *
@@ -232,16 +237,14 @@ struct DZ
     container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
     template< class BinaryOp, class UnaryOp>
     container evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+
     void eins(const Matrix& interp, const container& n, container& npe);
     void einsPlus( const container& n, container& npe);
     void einsMinus( const container& n, container& nme);
     void einsPlusT( const container& n, container& npe);
     void einsMinusT( const container& n, container& nme);
-    void centeredT( const container& f, container& dzf);
-    void forwardT( const container& f, container& dzf);
-    void backwardT( const container& f, container& dzf);
 
-    void symv( const container& f, container& dzTdzf);
+
     /**
      * @brief Returns the weights used to make the matrix symmetric 
      *
@@ -484,43 +487,6 @@ void DZ<M,container>::dzz( const container& f, container& dzzf)
     dg::blas1::axpby( -2., temp0, +1., tempM, dzzf); 
 }
 
-/*
-template<class M, class container>
-void DZ<M,container>::dz2d( const container& f, container& dzf)
-{
-    assert( &f != &dzf);
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView fp( f.cbegin(), f.cend());
-    cView fm( f.cbegin(), f.cend());
-
-    cusp::multiply( plus, fp, ghostPV);
-    cusp::multiply( minus, fm, ghostMV );
-    dg::blas1::axpby( 1., ghostP, -1., ghostM);
-    dg::blas1::pointwiseDivide( ghostM, hz_plane, dzf);
-}
-template< class M, class container >
-void DZ<M,container>::dzz2d( const container& f, container& dzzf)
-{
-    assert( &f != &dzzf);
-
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView fp( f.cbegin() , f.cend());
-    cView fm( f.cbegin() , f.cend());
-
-    cusp::multiply( plus, fp, ghostPV);
-    cusp::multiply( minus, fm, ghostMV );
-    dg::blas1::pointwiseDivide( ghostP, hp_plane, ghostP);
-    dg::blas1::pointwiseDivide( ghostP, hz_plane, ghostP);
-    dg::blas1::pointwiseDivide( f,      hp_plane, dzzf);
-    dg::blas1::pointwiseDivide( dzzf,   hm_plane, dzzf);
-    dg::blas1::pointwiseDivide( ghostM, hm_plane, ghostM);
-    dg::blas1::pointwiseDivide( ghostM, hz_plane, ghostM);
-    dg::blas1::axpby( 2., ghostP, +2., ghostM); //fp+fm
-    dg::blas1::axpby( -2., dzzf, +1., ghostM, dzzf);
-}
-*/
 
 template< class M, class container>
 template< class BinaryOp>
