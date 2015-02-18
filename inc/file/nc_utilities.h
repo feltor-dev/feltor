@@ -31,7 +31,7 @@ struct NC_Error : public std::exception
     /**
      * @brief What string
      *
-     * @return string netcdf error message
+     * @return string netcdf error message generated from error code
      */
     char const* what() const throw(){ 
         return nc_strerror(error_);}
@@ -40,11 +40,19 @@ struct NC_Error : public std::exception
 };
 
 /**
- * @brief Utitlity class that handles return values of netcdf
+ * @brief Empty utitlity class that handles return values of netcdf
  * functions and throws NC_Error if something goes wrong
  */
 struct NC_Error_Handle
 {
+    /**
+     * @brief Construct from error code
+     *
+     * throws an NC_Error if err is not a success
+     * @param err netcdf error code
+     *
+     * @return Newly instantiated object
+     */
     NC_Error_Handle operator=( int err)
     {
         NC_Error_Handle h;
@@ -53,9 +61,10 @@ struct NC_Error_Handle
     /**
      * @brief Construct from error code
      *
+     * throws an NC_Error if err is not a success
      * @param err netcdf error code
      *
-     * @return 
+     * @return Newly instantiated object
      */
     NC_Error_Handle operator()( int err)
     {
