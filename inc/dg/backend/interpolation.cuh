@@ -136,8 +136,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         unsigned m = (unsigned)floor(ynn);
         //determine normalized coordinates
 
-        double xn =  2.*xnn - (double)(2*(n)+1); 
-        double yn =  2.*ynn - (double)(2*(m)+1); 
+        double xn =  2.*xnn - (double)(2*n+1); 
+        double yn =  2.*ynn - (double)(2*m+1); 
         //interval correction
         if (n==g.Nx()) {
             n-=1;
