@@ -149,6 +149,9 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
     }
 }
 
+/**
+ * @brief Thrown by the integrateRK4 function if the rhs is badly conditioned
+ */
 struct NotANumber : public std::exception
 {
     /**

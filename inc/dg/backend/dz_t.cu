@@ -278,11 +278,11 @@ int main()
     std::cout << "Relative Difference in DZZ is "<< sqrt( dg::blas2::dot( w3d, dzz)/norm )<<"\n";    
     dg::blas1::axpby( 1., solution2d, -1., derivative2d);
     std::cout << "Difference in DZ2d is "<< sqrt( dg::blas2::dot( w2d, derivative2d) )<<"\n";    
-    dz.einsPlus( function, derivative);
+    //dz.einsPlus( function, derivative);
     //dz.einsMinus( derivative, dzz);
-    dz.einsPlusT( derivative, dzz);
-    dg::blas1::axpby( 1., function, -1., dzz );
-    std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" !=0!\n";
+    //dz.einsPlusT( derivative, dzz);
+    //dg::blas1::axpby( 1., function, -1., dzz );
+    //std::cout << "Difference in EinsPlusMinus is "<< sqrt( dg::blas2::dot( w3d, dzz) )<<" !=0!\n";
     std::cout << "--------------------testing adjoint property of dz" << std::endl;   
     std::cout << "f DZ(f)     = "<< fdzf<< " DZT(f) f = "<<dzTff<<" diff = "<<fdzf-dzTff<<" !=0\n";
     std::cout << "fDZT(DZ(f)) = "<< fdzTdzf<< " -DZ(f)DZ(f) = "<<-dzfdzf<<" diff = "<<fdzTdzf+dzfdzf<<" !=0\n";        

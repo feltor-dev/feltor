@@ -17,6 +17,7 @@ namespace dg
 {
 namespace blas1
 {
+    ///@cond
 namespace detail
 {
 
@@ -136,6 +137,7 @@ inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, Th
 
 
 } //namespace detail
+///@endcond
 } //namespace blas1
 } //namespace dg
 

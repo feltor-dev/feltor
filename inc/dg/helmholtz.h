@@ -12,12 +12,12 @@
  */
 namespace dg{
 
-///@addtogroup operators
+///@addtogroup matrixoperators
 ///@{
 /**
  * @brief Matrix class that represents a Helmholtz-type operator
  *
- * @ingroup operators
+ * @ingroup matrixoperators
  *
  * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
@@ -30,11 +30,11 @@ namespace dg{
 template< class Matrix, class Vector, class Preconditioner> 
 struct Helmholtz
 {
-    /**\
+    /**
      * @brief Construct Helmholtz operator
      *
      * @tparam Grid The Grid class
-     * @param grid The grid to use
+     * @param g The grid to use
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
@@ -45,11 +45,11 @@ struct Helmholtz
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
         alpha_(alpha), isSet(false)
     { }
-    /**\
+    /**
      * @brief Construct Helmholtz operator
      *
      * @tparam Grid The Grid class
-     * @param grid The grid to use
+     * @param g The grid to use
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param alpha Scalar in the above formula

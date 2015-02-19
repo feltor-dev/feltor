@@ -12,15 +12,38 @@
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
 namespace dg{
+
+/**
+ * @brief Default Limiter means there is a limiter everywhere
+ */
 struct DefaultLimiter
 {
+    /**
+     * @brief return 1
+     *
+     * @param x x value
+     * @param y y value
+     *
+     * @return 1
+     */
     double operator()(double x, double y)
     {
         return 1;
     }
 };
+/**
+ * @brief No Limiter 
+ */
 struct NoLimiter
 {
+    /**
+     * @brief return 0
+     *
+     * @param x x value
+     * @param y y value
+     *
+     * @return 0
+     */
     double operator()(double x, double y)
     {
         return 0.;
@@ -28,7 +51,7 @@ struct NoLimiter
 };
 
 /**
- * @brief Integrate a field line 
+ * @brief Integrate a field line to find whether the result lies inside or outside of the box
  *
  * @tparam Field Must be usable in the integrateRK4 function
  * @tparam Grid must provide 2d boundaries x0(), x1(), y0(), and y1()
@@ -36,8 +59,27 @@ struct NoLimiter
 template < class Field, class Grid>
 struct BoxIntegrator
 {
+    /**
+     * @brief Construct from a given Field and Grid and accuracy
+     *
+     * @param field field must overload operator() with dg::HVecfor three entries
+     * @param g The 2d or 3d grid
+     * @param eps the accuracy of the runge kutta integrator
+     */
     BoxIntegrator( Field field, const Grid& g, double eps): field_(field), g_(g), coords_(3), coordsp_(3), eps_(eps) {}
+    /**
+     * @brief Set the starting coordinates for next field line integration
+     *
+     * @param coords the new coords (must have size = 3)
+     */
     void set_coords( const thrust::host_vector<double>& coords){ coords_ = coords;}
+    /**
+     * @brief Integrate from 0 to deltaPhi
+     *
+     * @param deltaPhi upper integration boundary
+     *
+     * @return 1 if point is inside the box, -1 else
+     */
     double operator()( double deltaPhi)
     {
         try{
@@ -73,7 +115,10 @@ struct BoxIntegrator
  * @param globalbcz boundary condition  (DIR or NEU)
  */
 template< class Field, class Grid>
-void boxintegrator( Field& field, const Grid& grid, const thrust::host_vector<double>& coords0, thrust::host_vector<double>& coords1, double& phi1, double eps, dg::bc globalbcz)
+void boxintegrator( Field& field, const Grid& grid, 
+        const thrust::host_vector<double>& coords0, 
+        thrust::host_vector<double>& coords1, 
+        double& phi1, double eps, dg::bc globalbcz)
 {
     dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
     if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())
@@ -115,6 +160,9 @@ void boxintegrator( Field& field, const Grid& grid, const thrust::host_vector<do
 /**
 * @brief Class for the evaluation of a parallel derivative
 *
+* This class discretizes the operators \f$ \nabla_\parallel = 
+\mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
+cylindrical coordinates
 * @ingroup dz
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
@@ -127,31 +175,85 @@ struct DZ
     *
     * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-    is a limiter and 0 if there isn't
+    is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param field The field to integrate
     * @param grid The grid on which to operate
-    * @param hz 
+    * @param deltaPhi Must either equal the hz() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
     * @param eps Desired accuracy of runge kutta
-    * @param limit Instance of the limiter class (Default is a limiter everywhere)
+    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    DZ(Field field, const dg::Grid3d<double>& grid, double hz, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+    DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
     void forward( const container& f, container& dzf);
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
     void backward( const container& f, container& dzf);
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
     void centered( const container& f, container& dzf);
+
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
     void forwardT( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
     void backwardT( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
     void centeredT( const container& f, container& dzf);
     /**
     * @brief Apply the derivative on a 3d vector
     *
-    * centered derivative 
+    * redirects to centered
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
     void operator()( const container& f, container& dzf);
+
+
+
+    /**
+     * @brief Discretizes the parallel Laplacian as a symmetric matrix
+     *
+     * forward followed by forwardT and adding jump terms
+     * @param f The vector to derive
+     * @param dzTdzf contains result on output (write only)
+     */
     void symv( const container& f, container& dzTdzf);
 
     /**
@@ -200,6 +302,7 @@ struct DZ
     /**
      * @brief Compute the second derivative using finite differences
      *
+     * discretizes \f$ \nabla_\parallel\cdot \nabla_\parallel\f$
      * @param f input function
      * @param dzzf output (write-only)
      */
@@ -228,21 +331,32 @@ struct DZ
      * @tparam UnaryOp Unary Functor
      * @param f Functor to evaluate in x-y
      * @param g Functor to evaluate in z
-     * @param plane The number of the plane to start
+     * @param p0 The number of the plane to start
      * @param rounds The number of rounds to follow a fieldline
      *
      * @return Returns an instance of container
      */
     template< class BinaryOp, class UnaryOp>
     container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    /**
+     * @brief Evaluate a 2d functor and toroidally avarage over all planes 
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * The second functor is used to scale the values along the fieldlines.
+     * The fieldlines are assumed to be periodic.
+     * @tparam BinaryOp Binary Functor
+     * @tparam UnaryOp Unary Functor
+     * @param f Functor to evaluate in x-y
+     * @param g Functor to evaluate in z
+     * @param p0 The number of the plane to start
+     * @param rounds The number of rounds to follow a fieldline
+     *
+     * @return Returns an instance of container
+     */
     template< class BinaryOp, class UnaryOp>
     container evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
-    void eins(const Matrix& interp, const container& n, container& npe);
-    void einsPlus( const container& n, container& npe);
-    void einsMinus( const container& n, container& nme);
-    void einsPlusT( const container& n, container& npe);
-    void einsMinusT( const container& n, container& nme);
 
 
     /**
@@ -261,6 +375,11 @@ struct DZ
      */
     const container& precond()const {return v3d;}
     private:
+    void eins(const Matrix& interp, const container& n, container& npe);
+    void einsPlus( const container& n, container& npe);
+    void einsMinus( const container& n, container& nme);
+    void einsPlusT( const container& n, container& npe);
+    void einsMinusT( const container& n, container& nme);
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
@@ -276,6 +395,7 @@ struct DZ
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
+///@cond
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
@@ -349,7 +469,10 @@ void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, doubl
 }
 
 template<class M, class container>
-void DZ<M,container>::operator()( const container& f, container& dzf)
+inline void DZ<M,container>::operator()( const container& f, container& dzf) { return centered(f, dzf);}
+
+template<class M, class container>
+void DZ<M,container>::centered()( const container& f, container& dzf)
 {
     //direct discretisation
     assert( &f != &dzf);
@@ -744,6 +867,7 @@ struct MatrixTraits< DZ<M, V> >
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
+///@endcond
 
 
 }//namespace dg

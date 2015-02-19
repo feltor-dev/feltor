@@ -113,7 +113,7 @@ struct Gaussian
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
-     * @param y z - coordinate
+     * @param z z - coordinate
      *
      * @return gaussian
      */
@@ -425,8 +425,27 @@ struct LinearY
   private:
     double a_,b_;
 };
+
+/**
+ * @brief Functor for a left side step function using tanh
+ * 
+ * \f[ f(x,y) = 0.5(1-\tanh(x-x_b)) \f]
+ */
 struct LHalf {
-    LHalf (double xb) : xb_(xb) {}
+    /**
+     * @brief Construct with given boundary value
+     *
+     * @param xb boundary value
+     */
+    LHalf(double xb) : xb_(xb) {}
+    /**
+     * @brief Return left side step function
+     *
+     * @param x x - coordianate
+     * @param y y - coordianate
+     
+     * @return result
+     */
     double operator() (double x, double y)
     {
         return 0.5*(1.-tanh(x-xb_));
@@ -434,8 +453,27 @@ struct LHalf {
     private:
      double xb_;
 };
+
+/**
+ * @brief Functor for a right step function using tanh
+ * 
+ * \f[ f(x,y) = 0.5(1+\tanh(x-x_b)) \f]
+ */
 struct RHalf {
-    RHalf  (double xb) : xb_(xb)  {}
+    /**
+     * @brief Construct with boundary value
+     *
+     * @param xb boundary value
+     */
+    RHalf(double xb) : xb_(xb)  {}
+    /**
+     * @brief Return left side step function
+     *
+     * @param x x - coordianate
+     * @param y y - coordianate
+     
+     * @return result
+     */
     double operator() (double x, double y)
     {
         return 0.5*(1.+tanh(x-xb_)); 
@@ -594,6 +632,9 @@ double bessk1(double x)
     return ans; 
 }
 
+/**
+ * @brief Return a 2d vortex function 
+ */
 struct Vortex
 {
     /**
@@ -616,6 +657,22 @@ struct Vortex
         b_[1] = 0.07071067810 ;
         b_[2] = 0.07071067810 ;
     }
+    /**
+     * @brief Evaluate the vortex
+     *
+      \f[\begin{cases}
+       \frac{1}{1.2965125} u_d(
+       r(1+\frac{\beta_i^2}{g_i^2}) 
+       - R \frac{\beta_i^2}{g_i^2} J_1(g_i) \frac{r}{RJ_1(g_i)})\cos(\Theta) \text{ if } r/R < 1 \\
+      \frac{1}{1.2965125} u_dR \frac{K_1(\beta_i \frac{r}{R})}{K_1(\beta)} \cos(\Theta) \text{ else }
+      \end{cases}
+      \f]
+     * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
+     * @param x value
+     * @param y value
+     *
+     * @return the above function value
+     */
     double operator()( double x, double y)
     {
         double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
@@ -630,6 +687,22 @@ struct Vortex
                     )*cos(theta)/norm;
         return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
     }
+    /**
+     * @brief Evaluate the vortex modulated by a sine wave in z
+     *
+      \f[ \cos(k_z z)\begin{cases}
+       \frac{1}{1.2965125} u_d(
+       r(1+\frac{\beta_i^2}{g_i^2}) 
+       - R \frac{\beta_i^2}{g_i^2} J_1(g_i) \frac{r}{RJ_1(g_i)})\cos(\Theta) \text{ if } r/R < 1 \\
+      \frac{1}{1.2965125} u_dR \frac{K_1(\beta_i \frac{r}{R})}{K_1(\beta)} \cos(\Theta) \text{ else }
+      \end{cases}
+      \f]
+     * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
+     * @param x value
+     * @param y value
+     *
+     * @return the above function value
+     */
     double operator()( double x, double y, double z)
     {
         return this->operator()(x,y)*cos(kz_*z);
@@ -977,15 +1050,27 @@ struct PLUS
     T x_;
 };
 /**
- * @brief returns modulo 
+ * @brief returns (positive) modulo 
  *
  * @tparam T value type
  */
 template <class T= double>
 struct MOD
 {
+    /**
+     * @brief Construct from modulo 
+     *
+     * @param 
+     */
     MOD( T value): x_(value){}
 
+        /**
+         * @brief Compute mod(x, value), positively defined
+         *
+         * @param x
+         *
+         * @return 
+         */
 #ifdef __CUDACC__
     __host__ __device__
 #endif
@@ -1017,17 +1102,52 @@ struct ABS
         T operator()(const T& x){ return fabs(x);}
 };
 
+/**
+ * @brief Return a constant
+ *
+ */
 struct CONSTANT
 {
+    /**
+     * @brief Construct with a value
+     *
+     * @param value the constant value
+     *
+     */
     CONSTANT( double value): value_(value){}
+
+    /**
+     * @brief constant
+     *
+     * @param x
+     *
+     * @return 
+     */
 #ifdef __CUDACC__
     __host__ __device__
 #endif
     double operator()(double x){return value_;}
+    /**
+     * @brief constant
+     *
+     * @param x
+     * @param y
+     *
+     * @return 
+     */
 #ifdef __CUDACC__
     __host__ __device__
 #endif
     double operator()(double x, double y){return value_;}
+    /**
+     * @brief constant
+     *
+     * @param x
+     * @param y
+     * @param z
+     *
+     * @return 
+     */
 #ifdef __CUDACC__
     __host__ __device__
 #endif
@@ -1035,24 +1155,18 @@ struct CONSTANT
     private:
     double value_;
 };
-struct FLOOR
-{
-#ifdef __CUDACC__
-    __host__ __device__
-#endif
-    int operator()(double x){return floor(x);}
-};
+
 /**
- * @brief returns histogram 
+ * @brief Compute a histogram on a 1D grid
  * @tparam container 
  */ 
 template <class container = thrust::host_vector<double> >
 struct Histogram
 {
      /**
-     * @brief Construct from number of bins and input vector
-     * @param g1d   grid of output vector
-     * @param in input vector
+     * @brief Construct a histogram from number of bins and an input vector
+     * @param g1d grid on which to compute the histogram ( grid.h() is the binwidth)
+     * @param in input vector (if grid.x0() < in[i] <grid.x1() it falls in a bin)
      */
     Histogram(const dg::Grid1d<double>& g1d, const std::vector<double>& in) :
     g1d_(g1d),
@@ -1072,7 +1186,20 @@ struct Histogram
         dg::blas1::scal(count_,1./Ampmax);
         
     }
+
+    /**
+     * @brief get binwidth
+     *
+     * @return 
+     */
     double binwidth() {return binwidth_;}
+    /**
+     * @brief Access computed histogram
+     *
+     * @param x
+     *
+     * @return 
+     */
     double operator()(double x)
     {    
         unsigned bin = floor((x-g1d_.x0())/binwidth_+0.5);
@@ -1087,14 +1214,19 @@ struct Histogram
     double binwidth_;
     container  count_;
 };
+
+/**
+ * @brief Compute a histogram on a 2D grid
+ * @tparam container 
+ */ 
 template <class container = thrust::host_vector<double> >
 struct Histogram2D
 {
      /**
-     * @brief Construct from number of bins and input vector
-     * @param g2d   grid of output vector
-     * @param inx input vector in x direction
-     * @param iny input vector in y direction
+     * @brief Construct a histogram from number of bins and an input vector
+     * @param g1d grid on which to compute the histogram ( grid.h() is the binwidth)
+     * @param inx input vector in x - direction (if grid.x0() < in[i] <grid.x1() it falls in a bin)
+     * @param iny input vector in y - direction (if grid.y0() < in[i] <grid.y1() it falls in a bin)
      */
     Histogram2D(const dg::Grid2d<double>& g2d, const std::vector<double>& inx,const std::vector<double>& iny) :
     g2d_(g2d),
@@ -1111,10 +1243,10 @@ struct Histogram2D
             biny = std::max(biny,(unsigned) 0);
             biny = std::min(biny,(unsigned)(g2d_.Ny()-1));
 
-                unsigned binx =floor((inx_[j]-g2d_.x0())/binwidthx_) ;
-                binx = std::max(binx,(unsigned) 0);
-                binx = std::min(binx,(unsigned)(g2d_.Nx()-1));
-                count_[biny*g2d_.Nx()+binx ]+=1.;
+            unsigned binx =floor((inx_[j]-g2d_.x0())/binwidthx_) ;
+            binx = std::max(binx,(unsigned) 0);
+            binx = std::min(binx,(unsigned)(g2d_.Nx()-1));
+            count_[biny*g2d_.Nx()+binx ]+=1.;
             
         }
         //Normalize
@@ -1123,6 +1255,14 @@ struct Histogram2D
 
     }
 
+    /**
+     * @brief Access computed histogram
+     *
+     * @param x
+     * @param y
+     *
+     * @return 
+     */
     double operator()(double x, double y)
     {
         unsigned binx = floor((x-g2d_.x0())/binwidthx_+0.5) ;

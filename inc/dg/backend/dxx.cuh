@@ -20,6 +20,7 @@ namespace dg
 {
 
 namespace create{
+///@cond
 namespace detail{
 
 bc inverse( bc bound)
@@ -31,7 +32,6 @@ bc inverse( bc bound)
     return PER;
 }
 }//namespace detail
-///@cond
 
 /**
  * @brief Function for the creation of a 1d laplacian in XSPACE

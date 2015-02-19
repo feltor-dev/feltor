@@ -11,6 +11,7 @@ namespace dg
 
 namespace create
 {
+    ///@cond
 namespace detail
 {
 
@@ -200,6 +201,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
 }
 
 } //namespace detail 
+///@endcond
 
 /**
  * @brief Create an interpolation matrix on the device

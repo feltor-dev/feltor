@@ -15,12 +15,13 @@
 namespace dg{
 
 //TODO Throw messages instead of assertions because origin of message can 
-// be better followed
+// be better followed ?
 //
 // eigentlich dürften die blas routinen nicht im dg namensraum liegen, denn damit 
 // haben sie erst mal nichts zu tun. Wenn man nun als Außenstehender seine eigene 
 // Vektorklasse hat und die blas spezialisieren will?
 // Synchronize ist niemals nötig mit thrust!!
+// Vermutlich wäre function overloading die bessere design - Wahl für blas
 /*! @brief BLAS Level 1 routines 
  *
  * @ingroup blas1
@@ -95,7 +96,8 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
  * This routine computes \f[ y_i = f(x_i) \f] 
  * This is actually not a BLAS routine since f can be a nonlinear function.
  * It is rather the first step towards a more general library conception.
- * @param x Vector x may equal result
+ * @param x Vector x may equal y
+ * @param y Vector y contains result, may equal x
  * @param op Operator to use on every element
  * @note In an implementation you may want to check for alpha == 0
  */
@@ -136,7 +138,7 @@ inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
 }
 /**
 * @brief A 'new' BLAS 1 routine. 
-*
+*y
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]
 * @param x1 Vector x1  
 * @param x2 Vector x2 may equal x1

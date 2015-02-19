@@ -20,7 +20,7 @@ namespace dg
 /**
  * @brief Operator that acts as a 2d negative elliptic differential operator
  *
- * @ingroup operators
+ * @ingroup matrixoperators
  *
  * The term discretized is \f[ -\nabla \cdot ( \chi \nabla_\perp ) \f]
  * where \f$ \nabla_\perp \f$ is the perpendicular gradient. In cartesian 

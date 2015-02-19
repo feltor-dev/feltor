@@ -15,6 +15,7 @@
 
 namespace dg{
 namespace blas2{
+    ///@cond
 namespace detail{
 
 //thrust vector preconditioner
@@ -118,6 +119,7 @@ inline void doSymv(
 
 
 }//namespace detail
+    ///@endcond
 } //namespace blas2
 } //namespace dg
 #endif //_DG_BLAS_PRECONDITIONER_

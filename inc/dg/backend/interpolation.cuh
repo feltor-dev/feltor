@@ -195,6 +195,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
+ * @param globalbcz determines what to do if values lie exactly on the boundary
  *
  * @return interpolation matrix
  * @note The values of x, y and z must lie within the boundaries of g

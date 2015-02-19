@@ -272,6 +272,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_minus_normed( unsigned n, unsigne
 * @tparam T value type
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
+* @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
 *
 * @return Host Matrix in coordinate form 

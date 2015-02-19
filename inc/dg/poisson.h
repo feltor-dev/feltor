@@ -20,6 +20,7 @@ namespace dg
 /**
  * @brief Poisson bracket scheme
  *
+ * Equal to the Arakawa class except for the possitility to use mixed boundary conditions
  * @ingroup poisson
  * @tparam Matrix The Matrix class to use
  * @tparam container The vector class on which to operate on. The blas2 function symv( m, x, y) must be callable and may not change x. 
@@ -37,7 +38,7 @@ struct Poisson
     template< class Grid>
     Poisson( const Grid& g);
     /**
-     * @brief Create Arakawa on a grid using different boundary conditions
+     * @brief Create Poisson on a grid using different boundary conditions
      *
      * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
      * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
@@ -48,13 +49,15 @@ struct Poisson
     template< class Grid>
     Poisson( const Grid& g, bc bcx, bc bcy);
     /**
-     * @brief Create Arakawa on a grid using different boundary conditions
+     * @brief Create Poisson on a grid using different boundary conditions
      *
      * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
      * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
-     * @param bcx The boundary condition in x
-     * @param bcy The boundary condition in y
+     * @param bcxlhs The lhs boundary condition in x
+     * @param bcxrhs The rhs boundary condition in x
+     * @param bcylhs The lhs boundary condition in y
+     * @param bcyrhs The rhs boundary condition in y
      */
     template< class Grid>
     Poisson( const Grid& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs );
