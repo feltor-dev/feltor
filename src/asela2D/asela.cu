@@ -78,9 +78,9 @@ int main( int argc, char* argv[])
     //initial perturbation
 //     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
+    dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
-    dg::CONSTANT init0( 0.);
+//     dg::CONSTANT init0( 0.);
 
     
     //background profile
@@ -182,7 +182,7 @@ int main( int argc, char* argv[])
 
         //draw U_e
         //hvisual = karniadakis.last()[2];
-        hvisual = y0[2];
+        hvisual = feltor.uparallel()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -193,7 +193,7 @@ int main( int argc, char* argv[])
 
         //draw U_i
         //hvisual = karniadakis.last()[3];
-        hvisual = y0[3];
+        hvisual = feltor.uparallel()[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -204,7 +204,6 @@ int main( int argc, char* argv[])
 
       
         //draw A_parallel
-        //transform to Vor
         hvisual = feltor.aparallel();
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );

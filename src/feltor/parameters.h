@@ -27,6 +27,7 @@ struct Parameters
     double amp_source, nprofileamp, bgprofamp;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
     enum dg::bc bc;
+    unsigned pollim,pardiss;
 
     /**
      * @brief constructor to make a const object
@@ -74,7 +75,8 @@ struct Parameters
             boxscaleZp = v[33];
             boxscaleZm = v[34];
             bc = map((int)v[35]);
-
+            pollim = (unsigned)v[36];
+            pardiss = (unsigned)v[37];
         }
     }
     /**
@@ -125,7 +127,9 @@ struct Parameters
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Boundary condition is: \n"
-            <<"     global BC  =              "<<bc<<"\n";
+            <<"     global BC             =              "<<bc<<"\n"
+            <<"     Poloidal limiter      =              "<<pollim<<"\n"
+            <<"     Parallel dissipation  =              "<<pardiss<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:

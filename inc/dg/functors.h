@@ -429,8 +429,7 @@ struct LHalf {
     LHalf (double xb) : xb_(xb) {}
     double operator() (double x, double y)
     {
-        if (x<=xb_) return 1.;
-        return 0.;
+        return 0.5*(1.-tanh(x-xb_));
     }
     private:
      double xb_;
@@ -439,8 +438,7 @@ struct RHalf {
     RHalf  (double xb) : xb_(xb)  {}
     double operator() (double x, double y)
     {
-        if (x>xb_) return 1.;
-        return 0.;
+        return 0.5*(1.+tanh(x-xb_)); 
     }
     private:
      double xb_;

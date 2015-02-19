@@ -183,6 +183,12 @@ int main( int argc, char* argv[])
     err = nc_var_par_access( ncid, phipID, NC_COLLECTIVE);
 
     err = nc_enddef(ncid);
+    ///////////////////////////////////PROBE//////////////////////////////
+//     const dg::MVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
+//     const dg::MVec Zprobe(1,0.);
+//     const dg::MVec Phiprobe(1,M_PI);
+//     dg::MMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
+//     dg::MVec probevalue(1,0.);  
     ///////////////////////////////////first output/////////////////////////////////
     int dims[3],  coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
@@ -208,8 +214,12 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-    double Nep=feltor.probe_vector()[0][0];
-    double phip=feltor.probe_vector()[1][0];
+//     dg::blas2::gemv(probeinterp,y0[0],probevalue);
+//     double Nep= probevalue[0] ;
+//     dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+//     double phip=probevalue[0] ;
+    double phip = 0.;
+    double Nep = 0.;
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -254,8 +264,10 @@ int main( int argc, char* argv[])
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
-            Nep =feltor.probe_vector()[0][0];
-            phip=feltor.probe_vector()[1][0];
+//             dg::blas2::gemv(probeinterp,y0[0],probevalue);
+//             Nep= probevalue[0] ;
+//             dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+//             phip=probevalue[0] ;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);

@@ -167,6 +167,9 @@ int main()
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
+//     double rk4eps;
+//     std::cout << "Type RK4 eps (1e-8)\n";
+//     std::cin >> rk4eps;
     std::cout << "q = " << I_0/R_0 << std::endl;
     double z0 = 0, z1 = 2.*M_PI;
     //double z0 = M_PI/2., z1 = 3./2.*M_PI;
@@ -177,12 +180,12 @@ int main()
     const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-5, dg::DefaultLimiter(), dg::NEU);
 //     dg::DZ<dg::DMatrix, dg::DVec> dzDIR( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::DIR);
     
     dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
     
-    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-5, dg::DefaultLimiter(), dg::NEU);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
     dg::DVec function = dg::evaluate( funcNEU, g3d) ,
