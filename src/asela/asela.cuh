@@ -111,7 +111,7 @@ struct Feltor
     container& induct(const std::vector<container>& y);//solves induction equation
 
     container chi, omega,lambda;//1d container
-    container apar,rho;//1d container
+    container apar;//1d container
 
     const container binv, curvR, curvZ, gradlnB;
     const container source, damping, one;
@@ -141,7 +141,7 @@ template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, Parameters p, solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::one, g)), omega(chi),lambda(chi),  //1d container
-    rho( chi), apar(chi), curvapar(chi),
+    apar(chi), curvapar(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),

@@ -35,7 +35,7 @@
 24) boxscale R-                             =  1.2 (a little larger than 1)
 25) boxscale Z+                             =  1.2 (a little larger than 1)
 26) boxscale Z-                             =  1.0 (a little larger than 1)
-27) adv (adj(0), nadj(1), onadj(2),no(3))   = 3
+27) adv (adj(0), nadj(1), onadj(2),no(3))   =  3
 27) diff (adj(0), nadj(1), onadj(2),no(3))) =  0
 28) diffperp (lap(0), lap2(1) )             =  1
 29) toroidal limiter (0/1)                  =  0                       
