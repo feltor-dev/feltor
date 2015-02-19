@@ -18,8 +18,7 @@
 #include "feltor.cuh"
 #include "parameters.h"
 
-#define TORLIM //for toroidal limiter setup
-// #define TORSHEATHLIM //for toroidal sheath limiter setup (under construction)
+
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the ToeflR - functor and 
@@ -151,6 +150,13 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "Ne_p",     NC_DOUBLE, 1, &EtimeID, &NepID);
     err = nc_def_var( ncid, "phi_p",    NC_DOUBLE, 1, &EtimeID, &phipID);  
     err = nc_enddef(ncid);
+
+    ///////////////////////////////////PROBE//////////////////////////////
+    const dg::DVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
+    const dg::DVec Zprobe(1,0.);
+    const dg::DVec Phiprobe(1,M_PI);
+    dg::DMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
+    dg::DVec probevalue(1,0.);  
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
     size_t start[4] = {0, 0, 0, 0};
@@ -176,8 +182,10 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-    double Nep=feltor.probe_vector()[0][0];
-    double phip=feltor.probe_vector()[1][0];
+    dg::blas2::gemv(probeinterp,y0[0],probevalue);
+    double Nep= probevalue[0] ;
+    dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+    double phip=probevalue[0] ;
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -226,8 +234,10 @@ int main( int argc, char* argv[])
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
-            Nep =feltor.probe_vector()[0][0];
-            phip=feltor.probe_vector()[1][0];
+            dg::blas2::gemv(probeinterp,y0[0],probevalue);
+            Nep= probevalue[0] ;
+            dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+            phip=probevalue[0] ;
             err = nc_open(argv[3], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
