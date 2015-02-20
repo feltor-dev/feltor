@@ -22,12 +22,13 @@ struct Pattern
     /**
      * @brief Construct from a map: PID -> howmanyToSend
      *
-     * The number of points in sendTo must match the number of processes inthe communicator
+     * The size of sendTo must match the number of processes in the communicator
      * @param sendTo howmany points to send 
      * @param comm Communicator
      */
     Pattern( const thrust::host_vector<int>& sendTo, MPI_Comm comm) { 
         construct( sendTo, comm);}
+
     void construct( const thrust::host_vector<int>& map, MPI_Comm comm){
         sendTo_=map, recvFrom_=sendTo_, comm_=comm;
         accS_ = sendTo_, accR_ = recvFrom_;
@@ -53,6 +54,7 @@ struct Pattern
      */
     unsigned size() const {return sendTo_.size();}
     MPI_Comm comm() const {return comm_;}
+
     /**
      * @brief Number of elements to send to process pid 
      *
@@ -61,6 +63,7 @@ struct Pattern
      * @return Number
      */
     unsigned sendTo( unsigned pid) const {return sendTo_[pid];}
+
     /**
      * @brief Number of elements received from process pid
      *
@@ -69,12 +72,14 @@ struct Pattern
      * @return Number
      */
     unsigned recvFrom( unsigned pid) const {return recvFrom_[pid];}
+
     /**
      * @brief swaps the send and receive maps 
      *
      * Now the pattern works backwards
      */
     void transpose(){ sendTo_.swap( recvFrom_);}
+
     thrust::host_vector<double> scatter( const thrust::host_vector<double>& values);
     void gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values);
     unsigned recv_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
@@ -103,10 +108,25 @@ void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::hos
 ///@endcond
 //
 /**
- * @brief Struct that performs collective scatter and gather operations
+ * @ingroup mpi_structures
+ * @brief Struct that performs collective scatter and gather operations across processes
+ * on distributed vectors using mpi
+ * @code
+
+ int i = myrank;
+ double values[10] = {i,0,i,0,i, 0,i,0,i,0};
+ thrust::host_vector<double> hvalues( values, values+10);
+ int pids[10] = {1,2,3,4,5, 1, 2, 3, 4, 5};
+ thrust::host_vector<int> hpids( pids, pids+10);
+ Collective coll( hpids, MPI_Comm_world);
+ thrust::host_vector<double> hrecv = coll.scatter( hvalues);
+ //hrecv is now {}
  */
 struct Collective
 {
+    /**
+     * @brief Construct empty class
+     */
     Collective( ){}
     /**
      * @brief Construct from a given map 
@@ -135,6 +155,7 @@ struct Collective
             sendTo[keys[i]] = number[i];
         p_.construct( sendTo, comm);
     }
+
     /**
      * @brief Scatters data according to the map given in the Constructor
      *
@@ -152,6 +173,7 @@ struct Collective
         thrust::host_vector<double> received = p_.scatter( values_);
         return received;
     }
+
     /**
      * @brief Gather data according to the map given in the constructor
      *

@@ -11,6 +11,8 @@
 
 namespace dg
 {
+///@addtogroup mpi_structures
+///@{
 struct BoundaryTerms
 {
     std::vector<std::vector<double> > data_;
@@ -249,7 +251,9 @@ void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
     return;
 }
 
+///@}
 
+///@cond
 template <>
 struct MatrixTraits<MPI_Matrix>
 {
@@ -263,5 +267,6 @@ struct MatrixTraits<const MPI_Matrix>
     typedef MPIMatrixTag matrix_category;
 };
 
+///@endcond
 
 } //namespace dg
