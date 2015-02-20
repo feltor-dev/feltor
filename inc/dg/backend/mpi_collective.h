@@ -111,16 +111,20 @@ void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::hos
  * @ingroup mpi_structures
  * @brief Struct that performs collective scatter and gather operations across processes
  * on distributed vectors using mpi
+ *
  * @code
-
  int i = myrank;
- double values[10] = {i,0,i,0,i, 0,i,0,i,0};
+ double values[10] = {i,i,i,i, 9,9,9,9};
  thrust::host_vector<double> hvalues( values, values+10);
- int pids[10] = {1,2,3,4,5, 1, 2, 3, 4, 5};
+ int pids[10] =      {0,1,2,3, 0,1,2,3};
  thrust::host_vector<int> hpids( pids, pids+10);
  Collective coll( hpids, MPI_Comm_world);
  thrust::host_vector<double> hrecv = coll.scatter( hvalues);
- //hrecv is now {}
+ //hrecv is now {0,9,1,9,2,9,3,9} e.g. for process 0 
+ thrust::host_vector<double> hrecv2( coll.send_size());
+ coll.gather( hrecv, hrecv2);
+ //hrecv2 now equals hvalues independent of process rank
+ @endcode
  */
 struct Collective
 {
@@ -131,7 +135,7 @@ struct Collective
     /**
      * @brief Construct from a given map 
      *
-     * @param ranks Gives to every point of the values array the pid to which to send this data element. The pid needs to be element of the given communicator.
+     * @param pids Gives to every point of the values array the rank to which to send this data element. The rank needs to be element of the given communicator.
      * @param comm An MPI Communicator that contains the participants of the scatter/gather
      */
     Collective( thrust::host_vector<int> pids, MPI_Comm comm): idx_(pids)
@@ -140,7 +144,7 @@ struct Collective
         MPI_Comm_size( comm, &size);
         MPI_Comm_rank( comm, &rank);
         for( unsigned i=0; i<pids.size(); i++)
-            assert( 0 <= pids[i] && pids[i] <= size);
+            assert( 0 <= pids[i] && pids[i] < size);
         thrust::sequence( idx_.begin(), idx_.end());
         thrust::host_vector<int> one( pids.size(), 1), keys(one), number(one);
         thrust::stable_sort_by_key( pids.begin(), pids.end(), idx_.begin());
@@ -159,6 +163,7 @@ struct Collective
     /**
      * @brief Scatters data according to the map given in the Constructor
      *
+     * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values of rank 1)
      * @param values data to send (must have the size given 
      * by the map in the constructor)
      *
@@ -175,8 +180,9 @@ struct Collective
     }
 
     /**
-     * @brief Gather data according to the map given in the constructor
+     * @brief Gather data according to the map given in the constructor 
      *
+     * This method is the inverse of scatter 
      * @param gatherFrom other processes collect data from this vector (has to be of size given by recv_size())
      * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor)
      * @note a scatter followed by a gather of the received values restores the original array
@@ -187,7 +193,18 @@ struct Collective
         p_.gather( gatherFrom, values_);
         thrust::scatter( values_.begin(), values_.end(), idx_.begin(), values.begin());
     }
+
+    /**
+     * @brief compute receive size which must not equal the send size in each process
+     *
+     * @return 
+     */
     unsigned recv_size() const {return p_.recv_size();}
+    /**
+     * @brief compute send size
+     *
+     * @return 
+     */
     unsigned send_size() const {return p_.send_size();}
     private:
     thrust::host_vector<int> idx_;
