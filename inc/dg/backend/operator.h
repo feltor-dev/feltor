@@ -17,6 +17,7 @@ namespace dg{
 *
 * @ingroup lowlevel
 * In principle it's an enhanced quadratic dynamic matrix
+* for which arithmetic operators are overloaded
 * but it's not meant for performance critical code. 
 * @tparam T value type
 */
@@ -29,6 +30,11 @@ class Operator
     * @brief Construct empty Operator
     */
     Operator(){}
+    /**
+     * @brief allocate storage for nxn matrix
+     *
+     * @param n
+     */
     Operator( const unsigned n): n_(n), data_(n_*n_){}
     /**
     * @brief Initialize elements.
@@ -37,6 +43,13 @@ class Operator
     * @param value Every element is initialized to.
     */
     Operator( const unsigned n, const T& value): n_(n), data_(n_*n_, value) {}
+    /**
+     * @brief Construct from iterators
+     *
+     * @tparam InputIterator
+     * @param first
+     * @param last
+     */
     template< class InputIterator>
     Operator( InputIterator first, InputIterator last): data_(first, last)
     {
@@ -81,9 +94,24 @@ class Operator
         return data_[ i*n_+j];
     }
 
+    /**
+     * @brief Size of the Operator
+     *
+     * @return 
+     */
     unsigned size() const { return n_;}
+    /**
+     * @brief Resize 
+     *
+     * @param m new size
+     */
     void resize( unsigned m) { data_.resize( m*m);}
 
+    /**
+     * @brief access underlying data
+     *
+     * @return 
+     */
     const std::vector<double>& data() const {return data_;}
 
     /**
@@ -105,6 +133,11 @@ class Operator
         return o;
     }
 
+    /**
+     * @brief subtract
+     *
+     * @return 
+     */
     Operator operator-() const
     {
         Operator temp(n_, 0.);
@@ -112,6 +145,13 @@ class Operator
             temp.data_[i] = -data_[i];
         return temp;
     } 
+    /**
+     * @brief add
+     *
+     * @param op
+     *
+     * @return 
+     */
     Operator& operator+=( const Operator& op)
     {
 #ifdef DG_DEBUG
@@ -121,6 +161,13 @@ class Operator
             data_[i] += op.data_[i];
         return *this;
     }
+    /**
+     * @brief subtract
+     *
+     * @param op
+     *
+     * @return 
+     */
     Operator& operator-=( const Operator& op)
     {
 #ifdef DG_DEBUG
@@ -130,34 +177,83 @@ class Operator
             data_[i] -= op.data_[i];
         return *this;
     }
+    /**
+     * @brief scalar multiply 
+     *
+     * @param value
+     *
+     * @return 
+     */
     Operator& operator*=( const T& value )
     {
         for( unsigned i=0; i<n_*n_; i++)
             data_[i] *= value;
         return *this;
     }
+    /**
+     * @brief add
+     *
+     * @param lhs
+     * @param rhs
+     *
+     * @return 
+     */
     friend Operator operator+( const Operator& lhs, const Operator& rhs) 
     {
         Operator temp(lhs); 
         temp+=rhs;
         return temp;
     }
+    /**
+     * @brief subtract
+     *
+     * @param lhs
+     * @param rhs
+     *
+     * @return 
+     */
     friend Operator operator-( const Operator& lhs, const Operator& rhs)
     {
         Operator temp(lhs); 
         temp-=rhs;
         return temp;
     }
+    /**
+     * @brief scalar multiplication
+     *
+     * @param value
+     * @param rhs
+     *
+     * @return 
+     */
     friend Operator operator*( const T& value, const Operator& rhs )
     {
         Operator temp(rhs); 
         temp*=value;
         return temp;
     }
+
+    /**
+     * @brief scalar multiplication
+     *
+     * @param lhs
+     * @param value
+     *
+     * @return 
+     */
     friend Operator operator*( const Operator& lhs, const T& value)
     {
         return  value*lhs;
     }
+
+    /**
+     * @brief matrix multiplication
+     *
+     * @param lhs
+     * @param rhs
+     *
+     * @return 
+     */
     friend Operator operator*( const Operator& lhs, const Operator& rhs)
     {
         unsigned n_ = lhs.n_;
@@ -174,6 +270,7 @@ class Operator
             }
         return temp;
     }
+
     /*! @brief puts a matrix linewise in output stream
      *
      * @tparam Ostream The stream e.g. std::cout
@@ -193,6 +290,7 @@ class Operator
         }
         return os;
     }
+
     /*! @brief Read values into a Matrix from given istream
      *
      * The values are filled linewise into the matrix. Values are seperated by 
@@ -336,6 +434,13 @@ Operator<double> lilj( unsigned n)
 }
 
 
+/**
+ * @brief Construct a diagonal operator with weights
+ *
+ * @param dlt 
+ *
+ * @return new operator
+ */
 Operator<double> weights( const DLT<double>& dlt)
 {
     unsigned n = dlt.weights().size();
@@ -344,6 +449,13 @@ Operator<double> weights( const DLT<double>& dlt)
         op(i,i) = dlt.weights()[i];
     return op;
 }
+/**
+ * @brief Construct a diagonal operator with inverse weights
+ *
+ * @param dlt 
+ *
+ * @return new operator
+ */
 Operator<double> precond( const DLT<double>& dlt)
 {
     unsigned n = dlt.weights().size();

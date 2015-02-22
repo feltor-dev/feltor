@@ -61,7 +61,7 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T>
     unsigned number =0;
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
-            if( op(i,j) != 0)
+            //if( op(i,j) != 0)
                 number++;
     // allocate output matrix
     cusp::coo_matrix<int, T, cusp::host_memory> A(n*N, n*N, N*number);
@@ -69,7 +69,7 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T>
     for( unsigned k=0; k<N; k++)
         for( unsigned i=0; i<n; i++)
             for( unsigned j=0; j<n; j++)
-                if( op(i,j) != 0)
+                //if( op(i,j) != 0)
                 {
                     A.row_indices[number]      = k*n+i;
                     A.column_indices[number]   = k*n+j;

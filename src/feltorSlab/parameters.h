@@ -27,6 +27,7 @@ struct Parameters
 
     double  nprofileamp, bgprofamp;
     unsigned zf;
+    double solb;
     enum dg::bc bc_x,bc_y;
 
     /**
@@ -71,6 +72,8 @@ struct Parameters
             zf = (unsigned)v[29];
             ln = v[30];
             dlocal = (double)(lx*d/c);
+            solb = v[31];
+            
         }
     }
     /**
@@ -120,6 +123,8 @@ struct Parameters
         os << "modified/ordinary \n"
             <<"     zf =              "<<zf<<"\n"
             <<"     ln =              "<<ln<<"\n";
+        os << "modified/ordinary \n"
+            <<"     sol boundary =    "<<solb<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:

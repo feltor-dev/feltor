@@ -35,7 +35,7 @@
  *          @defgroup highlevel Matrix creation functions and classes
  *              High level matrix creation functions
  *          @defgroup arakawa Arakawas scheme
- *          @defgroup operators Classes that act as matrices in blas2 routines
+ *          @defgroup matrixoperators Classes that act as matrices in blas2 routines
  *      @}
  *      @defgroup blas Basic Linear Algebra Subprograms
  *
@@ -55,8 +55,8 @@
  *          Utilities that might come in handy at some place or the other.
  *      @{
  *          @defgroup scatter Utility functions for reorder operations on DG-formatted vectors
- *          @defgroup operators Utility classes for the use in the Invert class
  *          @defgroup polarization Utility functions for C-style bindings of polarization solver
+ *      @defgroup mpi_structures MPI backend 
  *
  To use these funcions use code like:
 @code

@@ -92,16 +92,17 @@ int main( int argc, char* argv[])
     std::cout << "T background" << std::endl;
     solovev::Nprofile prof(p, gp); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
-    //field aligning
-    std::cout << "T aligning" << std::endl;  
-//     dg::CONSTANT gaussianZ( 1.);
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
+    
+//     //field aligning
+//     std::cout << "T aligning" << std::endl;  
+// //     dg::CONSTANT gaussianZ( 1.);
+//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+//     y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
 
     //no field aligning
-//     std::cout << "No T aligning" << std::endl;  
+    std::cout << "No T aligning" << std::endl;  
     
-//     y1[0] = dg::evaluate( init0, grid);
+    y1[0] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
     if (p.bc ==dg::DIR)    {
@@ -152,9 +153,9 @@ int main( int argc, char* argv[])
 //             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::scal(avisual,1./p.Nz);
-        colors.scalemax() = (float)thrust::reduce( avisual.begin(), avisual.end(), 0., thrust::maximum<double>() );
+        colors.scalemax() = (double)thrust::reduce( avisual.begin(), avisual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();        
-//                 colors.scalemin() =  (float)thrust::reduce( avisual.begin(), avisual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+//                 colors.scalemin() =  (double)thrust::reduce( avisual.begin(), avisual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
         title <<"T-1 / " << colors.scalemax()<<"\t";
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);   

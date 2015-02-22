@@ -5,9 +5,9 @@
 #include "interpolation.cuh"
 #include "typedefs.cuh"
 
-const unsigned n = 2;
-const unsigned Nx = 2; 
-const unsigned Ny = 2; 
+const unsigned n = 3;
+const unsigned Nx = 3; 
+const unsigned Ny = 5; 
 const unsigned Nz = 2; 
 
 
@@ -30,6 +30,9 @@ int main()
         }
     dg::Matrix B = dg::create::interpolation( x, y, g);
     bool passed = true;
+    //cusp::print(A);
+    //cusp::print(B);
+    //ATTENTION: backscatter might delete zeroes in matrices
     for( unsigned i=0; i<A.values.size(); i++)
     {
         if( (A.values[i] - B.values[i]) > 1e-14)
@@ -37,6 +40,11 @@ int main()
             std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.row_indices[i]<<" "<<B.column_indices[i]<<" "<<B.values[i]<<"\n";
             passed = false;
         }
+    }
+    if( A.num_entries != B.num_entries)
+    {
+        std::cerr << "Number of entries not equal!\n";
+        passed = false;
     }
     if( passed)
         std::cout << "2D TEST PASSED!\n";

@@ -66,6 +66,22 @@ int main( int argc, char * argv[])
 
     //if( equal) 
     //    if(rank==0)std::cout <<"TEST PASSED\n";
+    int r = rank;
+    double values[8] = {r,0,r,0,r, 0,r,0};
+    thrust::host_vector<double> hvalues( values, values+8);
+    int pids[10] = {1,2,3,4, 1, 2, 3, 4};
+    thrust::host_vector<int> hpids( pids, pids+8);
+    Collective coll( hpids, MPI_Comm_world);
+    thrust::host_vector<double> hrecv = coll.scatter( hvalues);
+    if( r == 0);
+    {
+        for( unsigned i=0; i<hrecv.size(); i++)
+            std::cout << hrecv[i] << " ";
+        std::cout << std::endl;
+    }
+
+
+    //hrecv is now {}
 
 
     MPI_Finalize();

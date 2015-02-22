@@ -205,12 +205,14 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //centered
         dg::blas1::pointwiseDot(y[0],pupil,lambda);    //U*T  
         dzNU_.centeredT(lambda,omega);    // dzT UT
+//         dzNU_.backwardT(lambda,omega);
+//         dzNU_.forwardT(lambda,omega);   
         dg::blas1::axpby( -1.0, omega, 1., yp[0]); //dzT (UT)
 
         //corr(1): div(UB) 
-        dg::blas1::pointwiseDivide(pupil,binv,omega); //= U B
-        dzNU_.centeredT(omega,lambda);     //div UB
-        dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
+//         dg::blas1::pointwiseDivide(pupil,binv,omega); //= U B
+//         dzNU_.centeredT(omega,lambda);     //div UB
+//         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
         
         //corr(2): div(B) 
 //         dg::blas1::pointwiseDivide(one,binv,omega); //= U B
@@ -253,14 +255,25 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //-----------------------parallel dissi------------------------
     if (p.p_diff ==0)    {
 //         centered
-        dzNU_( y[0], omega); 
-        dzNU_.centeredT(omega,lambda);
-        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
-
-        //forward, backward
-//         dzNU_.forward( y[0], omega); 
-//         dzNU_.forwardT(omega,lambda);
+//         dzNU_( y[0], omega); 
+//         dzNU_.centeredT(omega,lambda);
 //         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+
+        //forward, backward (stegi)
+        dzNU_.forward( y[0], omega); 
+        dzNU_.forwardT(omega,lambda);
+        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+
+        dzNU_.backward( y[0], omega); 
+        dzNU_.backwardT(omega,lambda);
+        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+//         dzNU_.forwardh( y[0], omega); 
+//         dzNU_.forwardTh(omega,lambda);
+//         dg::blas1::axpby(  0.5*p.nu_parallel, lambda, 1., yp[0]); 
+// 
+//         dzNU_.backwardh( y[0], omega); 
+//         dzNU_.backwardTh(omega,lambda);
+//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
     }
     if (p.p_diff ==1)    {
         // (B) nonadjoint

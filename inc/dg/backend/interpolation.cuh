@@ -136,8 +136,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         unsigned m = (unsigned)floor(ynn);
         //determine normalized coordinates
 
-        double xn =  2.*xnn - (double)(2*(n)+1); 
-        double yn =  2.*ynn - (double)(2*(m)+1); 
+        double xn =  2.*xnn - (double)(2*n+1); 
+        double yn =  2.*ynn - (double)(2*m+1); 
         //interval correction
         if (n==g.Nx()) {
             n-=1;
@@ -195,6 +195,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
+ * @param globalbcz determines what to do if values lie exactly on the boundary
  *
  * @return interpolation matrix
  * @note The values of x, y and z must lie within the boundaries of g

@@ -113,17 +113,14 @@ struct Feltor
     const container binv;
     const container one;
     const Preconditioner w2d, v2d;
-
     std::vector<container> phi, nx;
-    std::vector<container> phix, npe, logn, ush,dn,dphi; 
-    std::vector<container> dzy, curvy; 
+    std::vector<container> npe, logn; 
 
     //matrices and solvers
     dg::Poisson< Matrix, container> poisson; 
     //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
     dg::Elliptic< Matrix, container, Preconditioner > pol,lapperp; 
-//     dg::Helmholtz< Matrix, container, Preconditioner > invgamma;
     dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR;
     dg::Helmholtz< Matrix, container, Preconditioner > invgammaNU;
 
@@ -139,12 +136,14 @@ struct Feltor
     const container Xprobe,Yprobe;
     Matrix probeinterp;
     container probevalue;
-
+    
     dg::Grid1d<double> gy;
     const container w1d;
     const container oney;
     const container coox0,cooxlx,cooy;
     Matrix interpx0,interpxlx;
+    container lh,rh;
+
 };
 
 template<class Matrix, class container, class P>
@@ -155,7 +154,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
-    phi( 2, chi), nx( phi), phix(phi), npe(phi), logn(phi),dn(phi),dphi(phi),
+    phi( 2, chi), nx( phi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
     pol(    g, g.bcx(), g.bcy(), dg::not_normed,          dg::centered), 
     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
@@ -172,6 +171,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     Yprobe(1,p.ly*p.posY),//use blob position
     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
     probevalue(1,0.0),
+    lh( dg::evaluate(dg::LHalf(p.lx*p.solb),g)),rh( dg::evaluate(dg::RHalf(p.lx*p.solb),g)), 
+
     //boundary integral terms
     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
     w1d( dg::create::weights(gy)),
@@ -265,26 +266,27 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     //---------- coupling 
     dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
     dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
+    polavg(npe[0],neavg);
+    dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
+    dg::blas1::scal(omega,0.0);
     if (p.zf==0) {
-        polavg(npe[0],neavg);
+
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
-        dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
-        
-        dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi -  ln(N/<N> 
+        dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
+
     }
     
     if (p.zf==1) {
         polavg(logn[0],lambda);       //<ln(ne)> 
         polavg(phi[0],phiavg);        //<phi>
-        polavg(npe[0],neavg);         //<ne>
-        dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
         dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)> 
-        
-        dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
+        dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - <phi>  - lnNe
     }
-       //correction for high amplitudes
+    //sol boundary
+    if (p.solb*p.lx<p.lx) dg::blas1::pointwiseDot(omega,lh,omega);
+    //correction for high amplitudes
     dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
     //general term
     dg::blas1::pointwiseDot(omega,npe[0],omega);  // omega   = (coupling)*Ne
@@ -349,25 +351,24 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         } 
     }
     //Coupling term for the electrons
+    polavg(npe[0],neavg);
+    dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
+    dg::blas1::scal(omega,0.0);
     if (p.zf==0) {
-        polavg(npe[0],neavg);
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
-        dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
-        
-        dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi -  ln(N/<N> 
+        dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
     }
 
     if (p.zf==1) {
         polavg(logn[0],lambda);       //<ln(ne)> 
         polavg(phi[0],phiavg);        //<phi>
-        polavg(npe[0],neavg);         //<ne>
-        dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
-        dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)> 
-        
+        dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
     }
+    //sol boundary
+    if (p.solb*p.lx<p.lx) dg::blas1::pointwiseDot(omega,lh,omega);
     //correction for high amplitudes
     dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);

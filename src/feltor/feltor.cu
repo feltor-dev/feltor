@@ -16,8 +16,6 @@
 #include "feltor.cuh"
 #include "parameters.h"
 
-#define TORLIM //for toroidal limiter setup
-// #define TORSHEATHLIM //for toroidal sheath limiter setup (under construction)
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the Feltor - functor and 
@@ -131,7 +129,12 @@ int main( int argc, char* argv[])
     
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    
+     //probe
+    const dg::DVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
+    const dg::DVec Zprobe(1,0.);
+    const dg::DVec Phiprobe(1,M_PI);
+    dg::DMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
+    dg::DVec probevalue(1,0.);   
     while ( !glfwWindowShouldClose( w ))
     {
 
@@ -256,13 +259,16 @@ int main( int argc, char* argv[])
             }
             step++;
             feltor.energies( y0); //update energetics
+            //Compute probe values
+            dg::blas2::gemv(probeinterp,y0[0],probevalue);
+            std::cout << " Ne_p - 1  = " << probevalue[0] <<"\t";
+            dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+            std::cout << " Phi_p = " << probevalue[0] <<"\t";
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << " Ne_p  = " << feltor.probe_vector()[0][0] << 
-                         " Phi_p = " << feltor.probe_vector()[1][0] << std::endl;
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
             
             E0 = E1;

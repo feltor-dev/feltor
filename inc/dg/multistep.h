@@ -343,4 +343,116 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
 }
 ///@endcond
 
+
+/**
+ * @brief Semi implicit Runge Kutta method after Yoh and Zhong (AIAA 42, 2004)
+ *
+ * @tparam Vector Vector class to use
+ */
+template <class Vector>
+struct SIRK
+{
+    /**
+     * @brief Construct from copyable Vector
+     *
+     * @param copyable Vector of right size
+     * @param max_iter maximum iterations for conjugate gradient
+     * @param eps error for conjugate gradient
+     */
+    SIRK(const Vector& copyable, unsigned max_iter, double eps): k_(3, copyable), f_(copyable), g_(copyable), rhs( f_), pcg( copyable, max_iter), eps_(eps)
+    {
+        w[0] = 1./8., w[1] = 1./8., w[2] = 3./4.;
+        b[1][0] = 8./7., b[2][0] = 71./252., b[2][1] = 7./36.;
+        d[0] = 3./4., d[1] = 75./233., d[2] = 65./168.;
+        c[1][0] = 5589./6524., c[2][0] = 7691./26096., c[2][1] = -26335/78288;
+    }
+    /**
+     * @brief integrate one step
+     *
+     * @tparam Explicit Object containing explicit part 
+     * @tparam Imp Object containing implicit part ( must return precond() and weights())
+     * @param f explicit part of the equations
+     * @param g implicit part of the equations
+     * @param u0 start point
+     * @param u1 end point (write only)
+     * @param dt timestep
+     */
+    template <class Explicit, class Imp>
+    void operator()( Explicit& f, Imp& g, const Vector& u0, Vector& u1, double dt)
+    {
+        Vector u0_ = u0;
+        detail::Implicit<Imp, Vector> implicit( -dt*d[0], g, f_);
+        f(u0_, f_);
+        u0_ = u0;
+        g(u0_, g_);
+        dg::blas1::axpby( dt, f_, dt, g_, rhs);
+        blas2::symv( g.weights(), rhs, rhs);
+        implicit.alpha() = -dt*d[0];
+        pcg( implicit, k_[0], rhs, g.precond(), eps_);
+
+        dg::blas1::axpby( 1., u0_, b[1][0], k_[0], u1);
+        f(u1, f_);
+        dg::blas1::axpby( 1., u0_, c[1][0], k_[0], u1);
+        g(u1, g_);
+        dg::blas1::axpby( dt, f_, dt, g_, rhs);
+        blas2::symv( g.weights(), rhs, rhs);
+        implicit.alpha() = -dt*d[1];
+        pcg( implicit, k_[1], rhs, g.precond(), eps_);
+
+        dg::blas1::axpby( 1., u0_, b[2][0], k_[0], u1);
+        dg::blas1::axpby( b[2][1], k_[1], 1., u1);
+        f(u1, f_);
+        dg::blas1::axpby( 1., u0_, c[2][0], k_[0], u1);
+        dg::blas1::axpby( c[2][1], k_[1], 1., u1);
+        g(u1, g_);
+        dg::blas1::axpby( dt, f_, dt, g_, rhs);
+        blas2::symv( g.weights(), rhs, rhs);
+        implicit.alpha() = -dt*d[2];
+        pcg( implicit, k_[2], rhs, g.precond(), eps_);
+        //sum up results
+        dg::blas1::axpby( 1., u0_, w[0], k_[0], u1);
+        dg::blas1::axpby( w[1], k_[1], 1., u1);
+        dg::blas1::axpby( w[2], k_[2], 1., u1);
+    }
+
+    /**
+     * @brief adapt timestep
+     *
+     * Make same timestep twice, once with half timestep. The resulting error should be smaller than some given tolerance
+     *
+     * @tparam Explicit Object containing explicit part 
+     * @tparam Imp Object containing implicit part ( must return precond() and weights())
+     * @param f explicit part of the equations
+     * @param g implicit part of the equations
+     * @param u0 start point
+     * @param u1 end point (write only)
+     * @param dt timestep ( read and write) contains new recommended timestep afterwards
+     * @param tolerance tolerable error
+     */
+    template <class Explicit, class Imp>
+    void adaptive_step( Explicit& f, Imp& g, const Vector& u0, Vector& u1, double& dt, double tolerance)
+    {
+        Vector temp = u0;
+        this->operator()( f, g, u0, u1, dt/2.);
+        this->operator()( f, g, u1, temp, dt/2.);
+        this->operator()( f, g, u0, u1, dt);
+        dg::blas1::axpby( 1., u1, -1., temp);
+        double error = dg::blas1::dot( temp, temp);
+        std::cout << "ERROR " << error<< std::endl;
+        double dt_old = dt;
+        dt = 0.9*dt_old*sqrt(tolerance/error);
+        if( dt > 1.5*dt_old) dt = 1.5*dt_old;
+        if( dt < 0.75*dt_old) dt = 0.75*dt_old;
+    }
+    private:
+    std::vector<Vector> k_;
+    Vector f_, g_, rhs;
+    double w[3];
+    double b[3][3];
+    double d[3];
+    double c[3][3];
+    CG<Vector> pcg; 
+    double eps_;
+};
+
 } //namespace dg

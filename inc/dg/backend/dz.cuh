@@ -10,23 +10,50 @@
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
 namespace dg{
+
+/**
+ * @brief Default Limiter means there is a limiter everywhere
+ */
 struct DefaultLimiter
 {
-double operator()(double x, double y)
-{
-return 1;
-}
+
+    /**
+     * @brief return 1
+     *
+     * @param x x value
+     * @param y y value
+     *
+     * @return 1
+     */
+    double operator()(double x, double y)
+    {
+        return 1;
+    }
+
 };
+/**
+ * @brief No Limiter 
+ */
 struct NoLimiter
 {
-double operator()(double x, double y)
-{
-return 0.;
-}
+
+    /**
+     * @brief return 0
+     *
+     * @param x x value
+     * @param y y value
+     *
+     * @return 0
+     */
+    double operator()(double x, double y)
+    {
+        return 0.;
+    }
+
 };
 
 /**
- * @brief Integrate a field line 
+ * @brief Integrate a field line to find whether the result lies inside or outside of the box
  *
  * @tparam Field Must be usable in the integrateRK4 function
  * @tparam Grid must provide 2d boundaries x0(), x1(), y0(), and y1()
@@ -34,8 +61,27 @@ return 0.;
 template < class Field, class Grid>
 struct BoxIntegrator
 {
+    /**
+     * @brief Construct from a given Field and Grid and accuracy
+     *
+     * @param field field must overload operator() with dg::HVecfor three entries
+     * @param g The 2d or 3d grid
+     * @param eps the accuracy of the runge kutta integrator
+     */
     BoxIntegrator( Field field, const Grid& g, double eps): field_(field), g_(g), coords_(3), coordsp_(3), eps_(eps) {}
+    /**
+     * @brief Set the starting coordinates for next field line integration
+     *
+     * @param coords the new coords (must have size = 3)
+     */
     void set_coords( const thrust::host_vector<double>& coords){ coords_ = coords;}
+    /**
+     * @brief Integrate from 0 to deltaPhi
+     *
+     * @param deltaPhi upper integration boundary
+     *
+     * @return 1 if point is inside the box, -1 else
+     */
     double operator()( double deltaPhi)
     {
         try{
@@ -71,7 +117,10 @@ struct BoxIntegrator
  * @param globalbcz boundary condition  (DIR or NEU)
  */
 template< class Field, class Grid>
-void boxintegrator( Field& field, const Grid& grid, const thrust::host_vector<double>& coords0, thrust::host_vector<double>& coords1, double& phi1, double eps, dg::bc globalbcz)
+void boxintegrator( Field& field, const Grid& grid, 
+        const thrust::host_vector<double>& coords0, 
+        thrust::host_vector<double>& coords1, 
+        double& phi1, double eps, dg::bc globalbcz)
 {
     dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
     if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())
@@ -113,9 +162,12 @@ void boxintegrator( Field& field, const Grid& grid, const thrust::host_vector<do
 /**
 * @brief Class for the evaluation of a parallel derivative
 *
+* This class discretizes the operators \f$ \nabla_\parallel = 
+\mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
+cylindrical coordinates
 * @ingroup dz
 * @tparam Matrix The matrix class of the interpolation matrix
-* @tparam container The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
+* @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
 template< class Matrix = dg::DMatrix, class container=thrust::device_vector<double> >
 struct DZ
@@ -126,27 +178,87 @@ struct DZ
     *
     * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-    is a limiter and 0 if there isn't
+    is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param field The field to integrate
     * @param grid The grid on which to operate
+    * @param deltaPhi Must either equal the hz() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
     * @param eps Desired accuracy of runge kutta
-    * @param limit Instance of the limiter class (Default is a limiter everywhere)
+    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    DZ(Field field, const dg::Grid3d<double>& grid, double hz, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+    DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+
     /**
     * @brief Apply the derivative on a 3d vector
     *
+    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void forward( const container& f, container& dzf);
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void backward( const container& f, container& dzf);
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void centered( const container& f, container& dzf);
+
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void forwardT( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void backwardT( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void centeredT( const container& f, container& dzf);
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * redirects to centered
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
     void operator()( const container& f, container& dzf);
-    void forward( const container& f, container& dzf);
-    void backward( const container& f, container& dzf);
-    //void dz2d( const container& f, container& dzf);
-    //void dzz2d( const container& f, container& dzzf);
+
+
+
+    /**
+     * @brief Discretizes the parallel Laplacian as a symmetric matrix
+     *
+     * forward followed by forwardT and adding jump terms
+     * @param f The vector to derive
+     * @param dzTdzf contains result on output (write only)
+     */
+    void symv( const container& f, container& dzTdzf);
+
     /**
     * @brief Set boundary conditions in the limiter region
     *
@@ -193,6 +305,7 @@ struct DZ
     /**
      * @brief Compute the second derivative using finite differences
      *
+     * discretizes \f$ \nabla_\parallel\cdot \nabla_\parallel\f$
      * @param f input function
      * @param dzzf output (write-only)
      */
@@ -221,22 +334,34 @@ struct DZ
      * @tparam UnaryOp Unary Functor
      * @param f Functor to evaluate in x-y
      * @param g Functor to evaluate in z
-     * @param plane The number of the plane to start
+     * @param p0 The number of the plane to start
      * @param rounds The number of rounds to follow a fieldline
      *
      * @return Returns an instance of container
      */
     template< class BinaryOp, class UnaryOp>
     container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    /**
+     * @brief Evaluate a 2d functor and toroidally avarage over all planes 
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * The second functor is used to scale the values along the fieldlines.
+     * The fieldlines are assumed to be periodic.
+     * @tparam BinaryOp Binary Functor
+     * @tparam UnaryOp Unary Functor
+     * @param f Functor to evaluate in x-y
+     * @param g Functor to evaluate in z
+     * @param p0 The number of the plane to start
+     * @param rounds The number of rounds to follow a fieldline
+     *
+     * @return Returns an instance of container
+     */
     template< class BinaryOp, class UnaryOp>
     container evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
-    void einsPlus( const container& n, container& npe);
-    void einsMinus( const container& n, container& nme);
-    void einsPlusT( const container& n, container& npe);
-    void einsMinusT( const container& n, container& nme);
-    void centeredT( const container& f, container& dzf);
-    void forwardT( const container& f, container& dzf);
-    void symv( const container& f, container& dzTdzf);
+
+
+
     /**
      * @brief Returns the weights used to make the matrix symmetric 
      *
@@ -253,10 +378,15 @@ struct DZ
      */
     const container& precond()const {return v3d;}
     private:
+    void eins(const Matrix& interp, const container& n, container& npe);
+    void einsPlus( const container& n, container& npe);
+    void einsMinus( const container& n, container& nme);
+    void einsPlusT( const container& n, container& npe);
+    void einsMinusT( const container& n, container& nme);
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
-//     Matrix jump;
+    Matrix jump;
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
@@ -269,12 +399,15 @@ struct DZ
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
+///@cond
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
-//         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
-        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
-        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)), invB(dg::evaluate(field,grid)),Vw3d( hz), Vv3d(hz)
+        jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
+
+        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz),
+        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
+        , invB(dg::evaluate(field,grid))
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -299,15 +432,17 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
 
         double phi1 = deltaPhi;
         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
-        phi1 = -deltaPhi;
+        phi1 =  - deltaPhi;
         boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
-    plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-    minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-    cusp::transpose( plus, plusT);
-    cusp::transpose( minus, minusT);
+    cusp::coo_matrix<int, double, cusp::host_memory> plusH, minusH, plusHT, minusHT;
+    plusH  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+    minusH = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+    cusp::transpose( plusH, plusHT);
+    cusp::transpose( minusH, minusHT);
+    plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT; 
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
@@ -316,39 +451,12 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);
-
-
+    //
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
-   
-   for( unsigned i=0; i<size; i++)
-    {
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
 
-        double phi1 = deltaPhi/2;
-        boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
-        phi1 = -deltaPhi/2;
-        boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
-        yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-        ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
-    }
-    dg::blas1::axpby(1.0,yp[2],-1.,ym[2],yp[2]);
-    container Rcoord(dg::evaluate( dg::coo1, g2d));
-    container w2d(dg::create::weights( g2d));
-    dg::blas1::pointwiseDot(Rcoord,w2d,w2d); //R dR dZ
-    dg::blas1::pointwiseDot((container)yp[2],w2d,w2d); //R dR Dz int 1/B^phi dphi
-    for( unsigned i=0; i<grid.Nz(); i++) {
-       thrust::copy( w2d.begin(), w2d.end(), Vw3d.begin() + i*g2d.size());}
-//        dg::blas1::pointwiseDivide(Vw3d,invB,Vw3d);
     
-    
-//     std::cout << std::setprecision( 16);
-//     std::cout << " Min hp "<<(double)thrust::reduce( hp.begin(), hp.end(), 1000., thrust::minimum<double>())<< std::endl;
-//     std::cout << " Min hm "<<(double)thrust::reduce( hm.begin(), hm.end(), 1000., thrust::minimum<double>())<< std::endl;
-//     double x; 
-//     std::cin >> x;
-
 }
 template<class M, class container>
 void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
@@ -366,55 +474,52 @@ void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, doubl
 }
 
 template<class M, class container>
-void DZ<M,container>::operator()( const container& f, container& dzf)
+inline void DZ<M,container>::operator()( const container& f, container& dzf) { return centered(f, dzf);}
+
+template<class M, class container>
+void DZ<M,container>::centered( const container& f, container& dzf)
 {
+    //direct discretisation
     assert( &f != &dzf);
     einsPlus( f, tempP);
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
-    dg::blas1::pointwiseDot( dzf, invB, dzf);
-//with B
-//     assert( &f != &dzf);
-//    dg::blas1::pointwiseDot( f, invB, dzf);//divide through B here
-//     einsPlus( dzf, tempP);
-//     einsMinus( dzf, tempM);
-//     dg::blas1::axpby( 1., tempP, -1., tempM);
-//     dg::blas1::pointwiseDivide( tempM, hz, dzf);
-//     dg::blas1::pointwiseDivide( dzf, invB, dzf);//Multiply with B here
-
-}
-
-
-template<class M, class container>
-void DZ<M,container>::centeredT( const container& f, container& dzf)
-{
-    assert( &f != &dzf);    
-    dg::blas1::pointwiseDot( w3d, f, dzf);
-// //     dg::blas1::pointwiseDot( Vw3d, f, dzf);
-       dg::blas1::pointwiseDot( dzf, invB, dzf);
-//     dg::blas1::pointwiseDivide( f, Vw3d, dzf);
-    dg::blas1::pointwiseDivide( dzf, hz, dzf);
-    einsPlusT( dzf, tempP);
-    einsMinusT( dzf, tempM);
-    dg::blas1::axpby( 1., tempM, -1., tempP);
-    dg::blas1::pointwiseDot( v3d, tempP, dzf);
-//     dg::blas1::pointwiseDivide( tempP,  Vw3d,dzf);
-//     dg::blas1::pointwiseDot( Vw3d, tempP,dzf);
-//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
-//     dg::blas1::pointwiseDot( dzf, invB, dzf);
-
-//with B
+    ////adjoint discretisation
 //     assert( &f != &dzf);    
 //     dg::blas1::pointwiseDot( w3d, f, dzf);
 //     dg::blas1::pointwiseDivide( dzf, hz, dzf);
-//     dg::blas1::pointwiseDivide( dzf, invB, dzf);    //Multiply through B here
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
+// 
 //     einsPlusT( dzf, tempP);
 //     einsMinusT( dzf, tempM);
 //     dg::blas1::axpby( 1., tempM, -1., tempP);
 //     dg::blas1::pointwiseDot( v3d, tempP, dzf);
-//     dg::blas1::pointwiseDot( dzf, invB, dzf);    //divide with B here
+//     dg::blas1::pointwiseDot( dzf, invB, dzf);
 
+}
+
+template<class M, class container>
+void DZ<M,container>::centeredT( const container& f, container& dzf)
+{       
+    //Direct discretisation
+//        assert( &f != &dzf);    
+//         dg::blas1::pointwiseDot( f, invB, dzf);
+//         einsPlus( dzf, tempP);
+//         einsMinus( dzf, tempM);
+//         dg::blas1::axpby( 1., tempP, -1., tempM);
+//         dg::blas1::pointwiseDivide( tempM, hz, dzf);        
+//         dg::blas1::pointwiseDivide( dzf, invB, dzf);
+        
+    //adjoint discretisation
+        assert( &f != &dzf);    
+        dg::blas1::pointwiseDot( w3d, f, dzf);
+        dg::blas1::pointwiseDivide( dzf, hz, dzf);
+        einsPlusT( dzf, tempP);
+        einsMinusT( dzf, tempM);
+        dg::blas1::axpby( 1., tempM, -1., tempP);
+        dg::blas1::pointwiseDot( v3d, tempP, dzf);
+      
 }
 
 template<class M, class container>
@@ -428,12 +533,22 @@ void DZ<M,container>::forward( const container& f, container& dzf)
 template<class M, class container>
 void DZ<M,container>::forwardT( const container& f, container& dzf)
 {
+        //direct discretisation
+//        assert( &f != &dzf);    
+//     dg::blas1::pointwiseDot( f, invB, dzf);
+//     einsMinus( dzf, tempM);
+//     dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
+//     dg::blas1::pointwiseDivide( dzf, hm, dzf);        
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
+    
+    //adjoint discretisation
     assert( &f != &dzf);
     dg::blas1::pointwiseDot( w3d, f, dzf);
     dg::blas1::pointwiseDivide( dzf, hp, dzf);
     einsPlusT( dzf, tempP);
-    dg::blas1::axpby( 1., tempP, -1., dzf, dzf);
+    dg::blas1::axpby( -1., tempP, 1., dzf, dzf);
     dg::blas1::pointwiseDot( v3d, dzf, dzf);
+
 }
 template<class M, class container>
 void DZ<M,container>::backward( const container& f, container& dzf)
@@ -443,7 +558,26 @@ void DZ<M,container>::backward( const container& f, container& dzf)
     dg::blas1::axpby( 1., tempM, -1., f, tempM);
     dg::blas1::pointwiseDivide( tempM, hm, dzf);
 }
+template<class M, class container>
+void DZ<M,container>::backwardT( const container& f, container& dzf)
+{
+        //direct
+//     assert( &f != &dzf);    
+//     dg::blas1::pointwiseDot( f, invB, dzf);
+//     einsPlus( dzf, tempP);
+//     dg::blas1::axpby( -1., tempP, 1., dzf, dzf);
+//     dg::blas1::pointwiseDivide( dzf, hp, dzf);        
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
+    
+    //adjoint discretisation
+    assert( &f != &dzf);
+    dg::blas1::pointwiseDot( w3d, f, dzf);
+    dg::blas1::pointwiseDivide( dzf, hm, dzf);
+    einsMinusT( dzf, tempM);
+    dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
+    dg::blas1::pointwiseDot( v3d, dzf, dzf);
 
+}
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
@@ -451,20 +585,23 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     //centeredT( tempP, dzTdzf);
     forward( f, tempP);
     forwardT( tempP, dzTdzf);
+    backward( f, tempM);
+    backwardT( tempM, temp0);
+    dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
-    //dg::blas2::symv( jump, f, tempP);
-    //dg::blas1::axpby( 1., tempP, 1., dzTdzf);
+    dg::blas2::symv( jump, f, tempP);
+    dg::blas1::axpby( 1., tempP, 1., dzTdzf);
     //add jump term (unstable without it)
-    einsPlus( f, tempP); 
-    dg::blas1::axpby( -1., tempP, 2., f, tempP);
-    einsPlusT( f, tempM); 
-    dg::blas1::axpby( -1., tempM, 1., tempP);
-    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
-    einsMinusT( f, tempP); 
-    dg::blas1::axpby( -1., tempP, 2., f, tempP);
-    einsMinus( f, tempM); 
-    dg::blas1::axpby( -1., tempM, 1., tempP);
-    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
+//     einsPlus( f, tempP); 
+//     dg::blas1::axpby( -1., tempP, 2., f, tempP); //-fp+2f
+//     einsPlusT( f, tempM); 
+//     dg::blas1::axpby( -1., tempM, 1., tempP);  //-fp +2f -fpT
+//     dg::blas1::axpby( 0.5, tempP, 1., dzTdzf); //dzTdzf + 0.5(-fp +2f -fpT)
+//     einsMinusT( f, tempP); 
+//     dg::blas1::axpby( -1., tempP, 2., f, tempP);
+//     einsMinus( f, tempM); 
+//     dg::blas1::axpby( -1., tempM, 1., tempP); //-fm +2f -fmT
+//     dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);//dzTdzf + 0.5(-fp +2f -fpT)+0.5(-fm +2f -fmT)
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
@@ -483,43 +620,6 @@ void DZ<M,container>::dzz( const container& f, container& dzzf)
     dg::blas1::axpby( -2., temp0, +1., tempM, dzzf); 
 }
 
-/*
-template<class M, class container>
-void DZ<M,container>::dz2d( const container& f, container& dzf)
-{
-    assert( &f != &dzf);
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView fp( f.cbegin(), f.cend());
-    cView fm( f.cbegin(), f.cend());
-
-    cusp::multiply( plus, fp, ghostPV);
-    cusp::multiply( minus, fm, ghostMV );
-    dg::blas1::axpby( 1., ghostP, -1., ghostM);
-    dg::blas1::pointwiseDivide( ghostM, hz_plane, dzf);
-}
-template< class M, class container >
-void DZ<M,container>::dzz2d( const container& f, container& dzzf)
-{
-    assert( &f != &dzzf);
-
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView fp( f.cbegin() , f.cend());
-    cView fm( f.cbegin() , f.cend());
-
-    cusp::multiply( plus, fp, ghostPV);
-    cusp::multiply( minus, fm, ghostMV );
-    dg::blas1::pointwiseDivide( ghostP, hp_plane, ghostP);
-    dg::blas1::pointwiseDivide( ghostP, hz_plane, ghostP);
-    dg::blas1::pointwiseDivide( f,      hp_plane, dzzf);
-    dg::blas1::pointwiseDivide( dzzf,   hm_plane, dzzf);
-    dg::blas1::pointwiseDivide( ghostM, hm_plane, ghostM);
-    dg::blas1::pointwiseDivide( ghostM, hz_plane, ghostM);
-    dg::blas1::axpby( 2., ghostP, +2., ghostM); //fp+fm
-    dg::blas1::axpby( -2., dzzf, +1., ghostM, dzzf);
-}
-*/
 template< class M, class container>
 template< class BinaryOp>
 container DZ<M,container>::evaluate( BinaryOp binary, unsigned p0)
@@ -616,6 +716,18 @@ container DZ<M,container>::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsi
     return vec2d;
 }
 
+template< class M, class container>
+void DZ<M, container>::eins(const M& m, const container& f, container& fpe)
+{
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fpe0( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
+        cusp::multiply( m, f0, fpe0);       
+    }
+}
 template< class M, class container>
 void DZ<M, container>::einsPlus( const container& f, container& fpe)
 {
@@ -764,6 +876,7 @@ struct MatrixTraits< DZ<M, V> >
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
+///@endcond
 
 
 }//namespace dg

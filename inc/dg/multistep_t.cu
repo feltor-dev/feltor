@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include <cusp/ell_matrix.h>
-#include <cusp/blas.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
@@ -92,11 +91,14 @@ int main()
     Diffusion<DVec> diffusion( grid, nu);
     dg::Karniadakis< std::vector<DVec> > tvb( y0, y0[0].size(), eps);
     tvb.init( rhs, diffusion, y0, dt);
+    dg::SIRK< std::vector<dg::DVec> > sirk( y0, y0[0].size(), eps);
 
     //thrust::swap(y0, y1);
     for( unsigned i=0; i<NT; i++)
     {
-        tvb( rhs, diffusion, y0);
+        //tvb( rhs, diffusion, y0);
+        sirk( rhs, diffusion, y0, y1, dt);
+        y0.swap(y1);
     }
     double norm_y0 = blas2::dot( w2d, y0[0]);
     cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << endl;

@@ -187,7 +187,7 @@ int main( int argc, char* argv[])
             glfwGetWindowSize( w, &width, &height); //origin top left, yaxis down
             double x0 = xpos/(double)width;
             double y0 = (1.-ypos/(double)height);
-            solver.setHeat(x0, y0, 5./128./field_ratio, 5./128., amp/10.);
+            solver.setHeat(x0, y0, 10./128./field_ratio, 10./128., amp);
         }
         else if ( glfwGetMouseButton( w, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS )
         {
@@ -197,7 +197,7 @@ int main( int argc, char* argv[])
             glfwGetWindowSize(w, &width, &height); //origin top left, yaxis down
             double x0 = xpos/(double)width;
             double y0 = (1.-ypos/(double)height);
-            solver.setHeat(x0, y0, 5./128./field_ratio, 5./128., -amp/10.);
+            solver.setHeat(x0, y0, 10./128./field_ratio, 10./128., -amp);
         }
         else
         {

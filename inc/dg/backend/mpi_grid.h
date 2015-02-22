@@ -11,7 +11,7 @@
 
 namespace dg
 {
-///@addtogroup grid
+///@addtogroup mpi_structures
 ///@{
 
 /**

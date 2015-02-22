@@ -670,9 +670,13 @@ struct Field
         invB_(gp) {
     }
     /**
- * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
- \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
- \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}}  \f]
+ * @brief \f[ 
+ \begin{align}
+ \frac{d \hat{R} }{ d \varphi}  &= \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}\\
+ \frac{d \hat{Z} }{ d \varphi}  &=- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}}\\
+ \frac{d \hat{l} }{ d \varphi}  &=\frac{\hat{R}^2 \hat{B}}{\hat{I}}  
+ \end{align}
+ \f]
  */ 
     void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp)
     {
