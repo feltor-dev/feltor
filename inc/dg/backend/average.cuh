@@ -22,7 +22,7 @@ struct PoloidalAverage
     PoloidalAverage( const Grid2d<double>& g):dummy( g.n()*g.Nx()), helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
     {
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
-        reorder = create::scatterMap( g.n(), g.Nx(), g.Ny());
+        //reorder = create::scatterMap( g.n(), g.Nx(), g.Ny());
         lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());
         w2d = create::weights( g);
         Grid1d<double> g1x( 0, g.lx(), g.n(), g.Nx());
@@ -85,7 +85,8 @@ struct PoloidalAverage
         //}
 
         //invert average vector
-        thrust::gather( reorder.begin(), reorder.end(), helper.begin(), res.begin());
+        //thrust::gather( reorder.begin(), reorder.end(), helper.begin(), res.begin());
+        thrust::copy( helper.begin(), helper.end(), res.begin());
         //for( unsigned i=0; i<9; i++)
         //{
         //    for( unsigned j=0; j<6; j++)

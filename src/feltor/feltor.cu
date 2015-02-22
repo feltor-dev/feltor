@@ -261,8 +261,8 @@ int main( int argc, char* argv[])
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << " Ne_p  =" << feltor.probe_vector()[0][0] << 
-                         " Phi_p =" << feltor.probe_vector()[1][0] << std::endl;
+            std::cout << " Ne_p  = " << feltor.probe_vector()[0][0] << 
+                         " Phi_p = " << feltor.probe_vector()[1][0] << std::endl;
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
             
             E0 = E1;

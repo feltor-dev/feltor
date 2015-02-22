@@ -199,13 +199,16 @@ int main( int argc, char* argv[])
 
     glfwSetInputMode( w, GLFW_STICKY_KEYS, GL_TRUE);
 
-    double t = 3*alg.dt;
+    double t = 0;
     Timer timer;
     Timer overhead;
     cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
     target targ = TL_ALL;
+    solver.first_step();
+    solver.second_step();
+    t+= 2*alg.dt;
     while( !glfwWindowShouldClose(w))
     {
         overhead.tic();

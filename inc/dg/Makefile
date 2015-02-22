@@ -1,5 +1,5 @@
 system=home
-device=gpu
+device=omp
 
 INCLUDE = -I../ # other project libraries
 

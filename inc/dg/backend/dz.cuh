@@ -265,6 +265,7 @@ struct DZ
     container limiter;
     container w3d, v3d;
     container invB;
+    container Vw3d,Vv3d;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -273,7 +274,7 @@ template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
 //         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
-        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)), invB(dg::evaluate(field,grid))
+        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)), invB(dg::evaluate(field,grid)),Vw3d( hz), Vv3d(hz)
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -320,6 +321,28 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
+   
+   for( unsigned i=0; i<size; i++)
+    {
+        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+
+        double phi1 = deltaPhi/2;
+        boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
+        phi1 = -deltaPhi/2;
+        boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
+        yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+        ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+    }
+    dg::blas1::axpby(1.0,yp[2],-1.,ym[2],yp[2]);
+    container Rcoord(dg::evaluate( dg::coo1, g2d));
+    container w2d(dg::create::weights( g2d));
+    dg::blas1::pointwiseDot(Rcoord,w2d,w2d); //R dR dZ
+    dg::blas1::pointwiseDot((container)yp[2],w2d,w2d); //R dR Dz int 1/B^phi dphi
+    for( unsigned i=0; i<grid.Nz(); i++) {
+       thrust::copy( w2d.begin(), w2d.end(), Vw3d.begin() + i*g2d.size());}
+//        dg::blas1::pointwiseDivide(Vw3d,invB,Vw3d);
+    
+    
 //     std::cout << std::setprecision( 16);
 //     std::cout << " Min hp "<<(double)thrust::reduce( hp.begin(), hp.end(), 1000., thrust::minimum<double>())<< std::endl;
 //     std::cout << " Min hm "<<(double)thrust::reduce( hm.begin(), hm.end(), 1000., thrust::minimum<double>())<< std::endl;
@@ -350,6 +373,7 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
+    dg::blas1::pointwiseDot( dzf, invB, dzf);
 //with B
 //     assert( &f != &dzf);
 //    dg::blas1::pointwiseDot( f, invB, dzf);//divide through B here
@@ -367,13 +391,19 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
 {
     assert( &f != &dzf);    
     dg::blas1::pointwiseDot( w3d, f, dzf);
+// //     dg::blas1::pointwiseDot( Vw3d, f, dzf);
+       dg::blas1::pointwiseDot( dzf, invB, dzf);
+//     dg::blas1::pointwiseDivide( f, Vw3d, dzf);
     dg::blas1::pointwiseDivide( dzf, hz, dzf);
-
-
     einsPlusT( dzf, tempP);
     einsMinusT( dzf, tempM);
     dg::blas1::axpby( 1., tempM, -1., tempP);
     dg::blas1::pointwiseDot( v3d, tempP, dzf);
+//     dg::blas1::pointwiseDivide( tempP,  Vw3d,dzf);
+//     dg::blas1::pointwiseDot( Vw3d, tempP,dzf);
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
+//     dg::blas1::pointwiseDot( dzf, invB, dzf);
+
 //with B
 //     assert( &f != &dzf);    
 //     dg::blas1::pointwiseDot( w3d, f, dzf);

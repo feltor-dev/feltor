@@ -26,7 +26,7 @@ CXXFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
-LIBS 	 = -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
+LIBS 	 = -lfftw3 -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
 ifeq ($(strip $(system)),leo3)
@@ -56,7 +56,7 @@ LIBS 	+= -L/opt/sw/netcdf/4.3/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
-TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial feltor_video ncdiag
+TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial feltor_video ncdiag fftwdiag crosscoherencdiag
 
 all: $(TARGETS)
 
@@ -80,7 +80,11 @@ com: com.cu
 
 ncdiag: ncdiag.cpp
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
+fftwdiag: fftwdiag.cpp
+	$(CXX) -O2 $(CXXFLAGS) -std=c++0x $< -o $@ $(INCLUDE) $(LIBS)  
 histdiag: histdiag.cpp
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
+crosscoherencdiag: crosscoherencdiag.cpp
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 imp: imp.cu
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
