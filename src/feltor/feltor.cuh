@@ -143,7 +143,6 @@ struct Feltor
     dg::DZ<Matrix, container> dzDIR_;
     dg::DZ<Matrix, container> dzN_;
     dg::Poisson< Matrix, container> poissonN,poissonDIR; 
-    //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
     dg::Elliptic< Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR; 
     dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR;

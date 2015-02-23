@@ -124,7 +124,6 @@ struct Feltor
     //matrices and solvers
     dg::DZ<Matrix, container> dzDIR_,dzN_;
     dg::Poisson< Matrix, container> poissonN,poissonDIR; 
-    //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     dg::Elliptic<  Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR; //note the host vector
     dg::Helmholtz< Matrix, container, Preconditioner > maxwell,invgammaDIR,invgammaN;
     dg::Invert<container> invert_maxwell, invert_pol, invert_invgamma;
