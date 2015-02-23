@@ -24,6 +24,7 @@ MPI_Precon pure_weights( const MPI_Grid2d& g)
     p.norm = g.hx()*g.hy()/4.;
     return p;
 }
+
 //create a normed 2d X-derivative
 MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
 {
@@ -255,6 +256,7 @@ MPI_Matrix dy( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
 
 namespace detail
 {
+
 MPI_Matrix jump( const Grid1d<double>& g, bc bcx, MPI_Comm comm)
 {
     unsigned n = g.n();
@@ -279,6 +281,7 @@ MPI_Matrix jump( const Grid1d<double>& g, bc bcx, MPI_Comm comm)
     m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
     return m;
 }
+
 BoundaryTerms boundaryJump( const Grid1d<double>& g, bc bcx, int coords, int dims)
 {
     //only implement symmetric laplacian
@@ -333,6 +336,7 @@ BoundaryTerms boundaryJump( const Grid1d<double>& g, bc bcx, int coords, int dim
     return xterm;
 }
 }//namespace detail
+
 MPI_Matrix jump2d( const MPI_Grid2d& g, bc bcx, bc bcy, norm no)
 {
     MPI_Comm comm = g.communicator();

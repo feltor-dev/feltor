@@ -31,9 +31,7 @@ int main(int argc, char* argv[])
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    if(rank==0)std::cout <<"Nx " <<Nx << " and Ny "<<Ny<<std::endl;
     dg::MPI_Grid2d g( 0, lx, 0, lx, n, Nx, Ny, bcx, bcy, comm);
-
 
     dg::MMatrix dx = dg::create::dx( g, bcx, dg::normed, dg::forward);
     dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> lap( g, bcx, bcy, dg::normed);
@@ -46,12 +44,12 @@ int main(int argc, char* argv[])
 
     dg::blas1::axpby( 1., deriv, -1., result);
     double error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
-    if(rank==0) std::cout << "Distance to true solution: "<<error<<"\n";
+    if(rank==0) std::cout << "DX: Distance to true solution: "<<error<<"\n";
     dg::blas2::symv( lap, func, result);
 
     dg::blas1::axpby( 1., func, -1., result);
     error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
-    if(rank==0) std::cout << "Distance to true solution: "<<error<<" (Note the supraconvergence!)\n";
+    if(rank==0) std::cout << "DXX: Distance to true solution: "<<error<<" (Note the supraconvergence!)\n";
 ;
 
     MPI_Finalize();

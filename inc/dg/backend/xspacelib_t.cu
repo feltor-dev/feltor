@@ -23,7 +23,6 @@ int main()
     DVec w2d = create::weights( grid);
     DVec v2d = create::inv_weights( grid);
 
-    Polarisation2dX<DVec> polarisation ( grid);
     DMatrix laplace = create::laplacianM( grid, not_normed);
 
     CG<DVec > cg( x, x.size());

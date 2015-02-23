@@ -50,6 +50,8 @@ std::vector<double> coefficients( double xn, unsigned n)
 
 }//namespace detail
 ///@endcond
+///@addtogroup utilities
+///@{
 /**
  * @brief Create interpolation matrix
  *
@@ -362,5 +364,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
+///@}
 }//namespace create
 } //namespace dg
