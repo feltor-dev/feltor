@@ -1,6 +1,7 @@
 #pragma once
 
 #include "xspacelib.cuh"
+#include "../blas1.h"
 
 namespace dg{
 

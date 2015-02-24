@@ -4,6 +4,7 @@
 #include "draw/host_window.h"
 #include "xspacelib.cuh"
 #include "../functors.h"
+#include "../blas2.h"
 
 
 const unsigned n = 3;

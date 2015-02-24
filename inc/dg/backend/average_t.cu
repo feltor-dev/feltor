@@ -1,5 +1,6 @@
 #include <iostream>
 #include "average.cuh"
+#include "../blas2.h"
 
 
 const double lx = 2.*M_PI;

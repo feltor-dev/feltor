@@ -15,7 +15,6 @@
 
 //creational functions
 #include "derivatives.cuh"
-#include "polarisation.cuh"
 #include "weights.cuh"
 #include "interpolation.cuh"
 

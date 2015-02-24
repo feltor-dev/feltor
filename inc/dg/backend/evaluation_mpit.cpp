@@ -62,7 +62,7 @@ int main(int argc, char** argv)
         solution = (3*exp(4.)+1.)/4.;
     double solution3 = solution2*solution;
     if(rank==0)cout << "Correct square norm is      "<<solution3<<endl;
-    if(rank==0)cout << "Relative 3d error is        "<<(norm3X-solution3)/solution3<<"\n";
+    if(rank==0)cout << "Relative 3d error is        "<<(norm3d-solution3)/solution3<<"\n";
     MPI_Finalize();
     return 0;
 } 

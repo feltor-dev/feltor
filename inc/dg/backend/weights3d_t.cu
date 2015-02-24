@@ -4,6 +4,8 @@
 
 #include "file/read_input.h"
 #include "xspacelib.cuh"
+#include "../blas2.h"
+
 double R_0 = 4.*M_PI;
 
 

@@ -472,7 +472,7 @@ template<class M, class container>
 inline void DZ<M,container>::operator()( const container& f, container& dzf) { return centered(f, dzf);}
 
 template<class M, class container>
-void DZ<M,container>::centered()( const container& f, container& dzf)
+void DZ<M,container>::centered( const container& f, container& dzf)
 {
     //direct discretisation
     assert( &f != &dzf);

@@ -4,6 +4,8 @@
 #include "grid.h"
 #include "xspacelib.cuh"
 #include "matrix_traits_thrust.h"
+#include "../blas2.h"
+
 /*!@file 
   
   contains the Difference Norm class that computes differences between vectors on different grids

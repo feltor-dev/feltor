@@ -33,6 +33,8 @@ struct Field
         yp[0] = y[0]*y[1]/I_0;
         yp[1] = y[0]/I_0*(R_0-y[0]) ;
     }
+    double operator()( double R, double Z) {return 1;}
+    double operator()( double R, double Z, double phi) {return 1;}
     private:
     double R_0, I_0;
 };

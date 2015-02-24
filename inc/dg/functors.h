@@ -6,6 +6,7 @@
 #include <thrust/random/linear_congruential_engine.h>
 #include <thrust/random/uniform_real_distribution.h>
 #include <thrust/random/normal_distribution.h>
+#include "blas1.h"
 /*!@file
  * Functors to use in dg::evaluate or dg::blas1::transform functions
  */
