@@ -229,6 +229,11 @@ struct Grid2d
      * @return 
      */
     bc bcy() const {return bcy_;}
+    /**
+     * @brief Return a copy
+     *
+     * @return 
+     */
     Grid2d<double> local_grid() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
     /**
      * @brief discrete legendre trafo

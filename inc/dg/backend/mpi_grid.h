@@ -300,9 +300,6 @@ struct MPI_Grid3d
      * @param Nx # of points in x 
      * @param Ny # of points in y
      * @param Nz # of points in z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
      * @param comm mpi communicator
      * @note in the cylindrical coordinate system x, y and z are used to denote R, Z and the angle phi
      * @attention # of polynomial coefficients in z direction is always 1

@@ -363,6 +363,9 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
 
 }
 
+///@cond
+//This code is a "proof of principle implementation for a block matrix format
+//matrix -vector multiplication
 template<size_t BLOCK_SIZE>
 __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
  __global__ void forward_trafo(
@@ -401,5 +404,6 @@ void forward_transform( thrust::device_vector<double>& x, thrust::device_vector<
     forward_trafo<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( g.n(), x.size(), forward_ptr, x_ptr, y_ptr);
 }
 
+///@endcond
 } //namespace create
 } //namespace dg

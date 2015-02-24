@@ -10,7 +10,7 @@ namespace dg
     /**
      * @brief mpi Vector class 
      *
-     *
+     * Holds ghostcells in every process to facilitate matrix vector multiplication. 
      *
      */
 struct MPI_Vector
@@ -25,9 +25,28 @@ struct MPI_Vector
      */
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(1), data_( n*n*Nx*Ny), comm_(comm) {}
+    /**
+     * @brief construct a vector
+     *
+     * @param n polynomial coefficients
+     * @param Nx local # of cells in x 
+     * @param Ny local # of cells in y
+     * @param Nz local # of cells in z
+     * @param comm MPI communicator
+     */
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), data_( n*n*Nx*Ny*Nz), comm_(comm) {}
+    /**
+     * @brief Set underlying data
+     *
+     * @return 
+     */
     thrust::host_vector<double>& data() {return data_;}
+    /**
+     * @brief Get underlying data
+     *
+     * @return 
+     */
     const thrust::host_vector<double>& data() const {return data_;}
     /**
      * @brief Cut the ghostcells and leave interior
@@ -42,9 +61,29 @@ struct MPI_Vector
      * @param src The source values
      */
     void copy_into_interior( const thrust::host_vector<double>& src);
+    /**
+     * @brief return local number of polynomial coefficients
+     *
+     * @return 
+     */
     unsigned n() const {return n_;}
+    /**
+     * @brief return local number of cells in x
+     *
+     * @return 
+     */
     unsigned Nx()const {return Nx_;}
+    /**
+     * @brief return local number of cells in y
+     *
+     * @return 
+     */
     unsigned Ny()const {return Ny_;}
+    /**
+     * @brief return local number of cells in z
+     *
+     * @return 
+     */
     unsigned Nz()const {return Nz_;}
     /**
      * @brief Return local size
@@ -52,6 +91,13 @@ struct MPI_Vector
      * @return local size
      */
     unsigned size() const{return n_*n_*Nx_*Ny_*Nz_;}
+    /**
+     * @brief Access operator
+     *
+     * @param idx linear local index
+     *
+     * @return 
+     */
     double operator[]( unsigned idx) const {return data_[idx];}
     /**
      * @brief exchanged data of overlapping rows

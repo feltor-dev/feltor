@@ -24,16 +24,19 @@ template< >
 struct DZ< MPI_Matrix, MPI_Vector> 
 {
     /**
-     * @brief Construct from a field and a grid
-     *
-     * @tparam Field The Fieldlines to be integrated: Has to provide void  operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
-     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there 
-     is a limiter and 0 if there isn't
-     * @param field The field to integrate
-     * @param grid The grid on which to operate
-     * @param eps Desired accuracy of fieldline integration
-     * @param limit Instance of the Limiter class
-     */
+    * @brief Construct from a field and a grid
+    *
+    * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
+    * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
+    is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
+    * @param field The field to integrate
+    * @param grid The grid on which to operate
+    * @param deltaPhi Must either equal the hz() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
+    * @param eps Desired accuracy of runge kutta
+    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
+    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
+    * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
+    */
     template <class Field, class Limiter>
     DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
 
@@ -110,7 +113,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @tparam UnaryOp Unary Functor 
      * @param f Functor to evaluate in x-y
      * @param g Functor to evaluate in z
-     * @param plane The number of the plane to start
+     * @param p0 The number of the plane to start
      * @param rounds The number of rounds to follow a fieldline
      *
      * @return Returns an instance of container

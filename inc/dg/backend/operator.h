@@ -59,6 +59,11 @@ class Operator
         assert( n_*n_ == n);
 #endif
     }
+    /**
+     * @brief Copy from existing data
+     *
+     * @param src size must be a square number 
+     */
     Operator( const std::vector<T>& src): data_(src)
     {
         unsigned n = src.size();

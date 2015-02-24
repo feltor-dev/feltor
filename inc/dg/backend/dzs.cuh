@@ -11,6 +11,7 @@
 #include "../functors.h"
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
+///@cond
 namespace dg{
 struct DefaultLimiter
 {
@@ -417,6 +418,7 @@ struct MatrixTraits< DZ<M, V> >
 
 
 }//namespace dg
+///@endcond
 
 
 

@@ -18,12 +18,9 @@ namespace dg
  */
 struct BoundaryTerms
 {
-    /**
-     * @brief blocks
-     */
-    std::vector<std::vector<double> > data_;
-    std::vector<int> row_; //row of data in 1D without block
-    std::vector<int> col_;
+    std::vector<std::vector<double> > data_;//!<  blocks of data
+    std::vector<int> row_; //!<row of data in 1D without block
+    std::vector<int> col_; //!<col of data in 1D without block
     /**
      * @brief Apply the boundary terms in X
      *
@@ -215,7 +212,7 @@ struct MPI_Matrix
 };
 
 
-typedef MPI_Matrix MMatrix;
+typedef MPI_Matrix MMatrix; //!< mpi matrix type
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
     int rank;

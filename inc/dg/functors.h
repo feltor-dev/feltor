@@ -701,6 +701,7 @@ struct Vortex
      * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
+     * @param z value
      *
      * @return the above function value
      */
@@ -1061,7 +1062,7 @@ struct MOD
     /**
      * @brief Construct from modulo 
      *
-     * @param 
+     * @param value modulo basis
      */
     MOD( T value): x_(value){}
 
@@ -1225,7 +1226,7 @@ struct Histogram2D
 {
      /**
      * @brief Construct a histogram from number of bins and an input vector
-     * @param g1d grid on which to compute the histogram ( grid.h() is the binwidth)
+     * @param g2d grid on which to compute the histogram ( grid.h() is the binwidth)
      * @param inx input vector in x - direction (if grid.x0() < in[i] <grid.x1() it falls in a bin)
      * @param iny input vector in y - direction (if grid.y0() < in[i] <grid.y1() it falls in a bin)
      */
