@@ -3,6 +3,7 @@
 
 #include "std_vector.cuh"
 #include "matrix_categories.h"
+///@cond
 namespace dg
 {
 namespace blas2
@@ -88,3 +89,4 @@ inline typename VectorTraits<Vector>::value_type  doDot(
 } //namespace detail
 } //namespace blas1
 } //namespace dg
+///@endcond

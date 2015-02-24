@@ -7,6 +7,12 @@
 namespace dg
 {
 
+    /**
+     * @brief mpi Vector class 
+     *
+     *
+     *
+     */
 struct MPI_Vector
 {
     /**
@@ -59,6 +65,12 @@ struct MPI_Vector
      * @param comm Communicator
      */
     void x_col( MPI_Comm comm);
+
+    /**
+     * @brief Display local data
+     *
+     * @param os outstream
+     */
     void display( std::ostream& os) const
     {
         for( unsigned s=0; s<Nz_; s++)
@@ -69,6 +81,14 @@ struct MPI_Vector
                 os << "\n";
             }
     }
+    /**
+     * @brief Disply local data
+     *
+     * @param os outstream
+     * @param v a vector
+     *
+     * @return  the outsream
+     */
     friend std::ostream& operator<<( std::ostream& os, const MPI_Vector& v)
     {
         os << "Vector with Nz = "<<v.Nz_<<", Ny = "<<v.Ny_
@@ -76,6 +96,11 @@ struct MPI_Vector
         v.display(os);
         return os;
     }
+    /**
+     * @brief Swap data 
+     *
+     * @param that must have equal sizes and communicator
+     */
     void swap( MPI_Vector& that){ 
 #ifdef DG_DEBUG
         assert( n_ == that.n_);
@@ -92,6 +117,7 @@ struct MPI_Vector
     MPI_Comm comm_;
 };
 
+///@cond
 typedef MPI_Vector MVec;
 template<> 
 struct VectorTraits<MPI_Vector> {
@@ -217,4 +243,5 @@ void MPI_Vector::copy_into_interior( const thrust::host_vector<double>& src)
                     src[ j-n_ + (Nx_-2)*n_*( i-n_ + (Ny_-2)*n_*s)];
 }
 
+///@endcond
 }//namespace dg

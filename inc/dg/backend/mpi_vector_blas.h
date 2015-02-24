@@ -6,6 +6,7 @@
 #include <cassert>
 #endif //DG_DEBUG
 
+///@cond
 namespace dg
 {
 
@@ -130,3 +131,4 @@ inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, MP
 } //namespace blas1
 
 } //namespace dg
+///@endcond

@@ -6,13 +6,21 @@
 namespace dg
 {
  
+///@addtogroup mpi_structures
+///@{
+//
+/**
+ * @brief The Preconditioner structures for weights in mpi
+ */
 struct MPI_Precon
 {
-    double norm;
-    std::vector<double> data;
-    thrust::host_vector<double> vec;
+    double norm; //!< norm
+    std::vector<double> data; //!< n weight coefficients
+    thrust::host_vector<double> vec; //!< 1d weights for 3d cylindrical COS (may be empty)
 };
+///@}
 
+///@cond
 typedef MPI_Precon MPrecon;
 template <>
 struct MatrixTraits<MPI_Precon>
@@ -26,9 +34,12 @@ struct MatrixTraits<const MPI_Precon>
     typedef double value_type;
     typedef MPIPreconTag matrix_category;
 };
+///@endcond
 namespace create
 {
 
+///@addtogroup highlevel
+///@{
 
 /**
 * @brief create Preconditioner containing 2d X-space weight coefficients
@@ -99,5 +110,7 @@ MPI_Precon inv_weights( const MPI_Grid3d& g)
     return v;
 }
 
+///@}
 }//namespace create
+
 }//namespace dg

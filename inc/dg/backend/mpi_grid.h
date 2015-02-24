@@ -85,9 +85,10 @@ struct MPI_Grid2d
     }
 
     /**
-     * @brief local x0 
+     * @brief Return local x0
      *
-     * @return 
+     * The local value is shifted by hx 
+     * @return local left boundary
      */
     double x0() const {
         int dims[2], periods[2], coords[2];
@@ -96,9 +97,10 @@ struct MPI_Grid2d
     }
 
     /**
-     * @brief 
+     * @brief Return local x1
      *
-     * @return 
+     * The local value is shifted by hx 
+     * @return local right boundary
      */
     double x1() const {
         int dims[2], periods[2], coords[2];
@@ -107,9 +109,10 @@ struct MPI_Grid2d
     }
 
     /**
-     * @brief 
+     * @brief Return local y0
      *
-     * @return 
+     * The local value is shifted by hy 
+     * @return local left boundary
      */
     double y0() const {
         int dims[2], periods[2], coords[2];
@@ -118,9 +121,10 @@ struct MPI_Grid2d
     }
 
     /**
-     * @brief 
+     * @brief Return local y1
      *
-     * @return 
+     * The local value is shifted by hy 
+     * @return local right boundary
      */
     double y1() const {
         int dims[2], periods[2], coords[2];
@@ -129,37 +133,37 @@ struct MPI_Grid2d
     }
 
     /**
-     * @brief 
+     * @brief Return local lx
      *
-     * @return 
+     * @return local length
      */
     double lx() const {return x1()-x0();}
 
     /**
-     * @brief 
+     * @brief Return local ly
      *
-     * @return 
+     * @return local length
      */
     double ly() const {return y1()-y0();}
 
     /**
-     * @brief 
+     * @brief Return local hx
      *
-     * @return 
+     * @return local grid constant
      */
     double hx() const {return g.hx();}
 
     /**
-     * @brief 
+     * @brief Return local hy
      *
-     * @return 
+     * @return local grid constant
      */
     double hy() const {return g.hy();}
 
     /**
-     * @brief 
+     * @brief Return n
      *
-     * @return 
+     * @return number of polynomial coefficients
      */
     unsigned n() const {return g.n();}
 
@@ -188,37 +192,38 @@ struct MPI_Grid2d
     }
 
     /**
-     * @brief 
+     * @brief global x boundary
      *
-     * @return 
+     * @return boundary condition
      */
     bc bcx() const {return g.bcx();}
 
     /**
-     * @brief 
+     * @brief global y boundary
      *
-     * @return 
+     * @return boundary condition
      */
     bc bcy() const {return g.bcy();}
 
     /**
-     * @brief 
+     * @brief Return mpi cartesian communicator that is used in this grid
      *
-     * @return 
+     * @return Communicator
      */
     MPI_Comm communicator() const{return comm;}
 
     /**
-     * @brief 
+     * @brief The data of dlt
      *
      * @return 
      */
     const DLT<double>& dlt() const{return g.dlt();}
 
     /**
-     * @brief 
+     * @brief Return cartesian
      *
-     * @return 
+     * No other is implemented yet
+     * @return coordinate system
      */
     dg::system system() const{return dg::cartesian;}
     /**
@@ -245,16 +250,19 @@ struct MPI_Grid2d
     }
 
     /**
-     * @brief Return grid with local boundaries
+     * @brief Return a grid local for the calling process
      *
-     * @return 
+     * The local grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
+     * class itself
+     * @return Grid object
      */
     Grid2d<double> local() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
 
     /**
-     * @brief Return global boundardies
+     * @brief Return a grid global for the calling process
      *
-     * @return 2D grid 
+     * The global grid contains the global boundaries
+     * @return Grid object
      */
     Grid2d<double> global() const {return g;}
 
@@ -525,6 +533,11 @@ struct MPI_Grid3d
      * @return Communicator
      */
     MPI_Comm communicator() const{return comm;}
+    /**
+     * @brief The data of dlt
+     *
+     * @return 
+     */
     const DLT<double>& dlt() const{return g.dlt();}
     /**
      * @brief Return cartesian or cylindrical
