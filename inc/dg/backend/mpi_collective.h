@@ -118,7 +118,7 @@ void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::hos
  thrust::host_vector<double> hvalues( values, values+10);
  int pids[10] =      {0,1,2,3, 0,1,2,3};
  thrust::host_vector<int> hpids( pids, pids+10);
- Collective coll( hpids, MPI_Comm_world);
+ Collective coll( hpids, MPI_COMM_WORLD);
  thrust::host_vector<double> hrecv = coll.scatter( hvalues);
  //hrecv is now {0,9,1,9,2,9,3,9} e.g. for process 0 
  thrust::host_vector<double> hrecv2( coll.send_size());
@@ -163,11 +163,11 @@ struct Collective
     /**
      * @brief Scatters data according to the map given in the Constructor
      *
-     * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values of rank 1)
+     * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
      * @param values data to send (must have the size given 
-     * by the map in the constructor)
+     * by the map in the constructor, s.a. send_size())
      *
-     * @return received data from other processes 
+     * @return received data from other processes of size recv_size()
      * @note a scatter followed by a gather of the received values restores the original array
      */
     thrust::host_vector<double> scatter( const thrust::host_vector<double>& values)
@@ -184,7 +184,7 @@ struct Collective
      *
      * This method is the inverse of scatter 
      * @param gatherFrom other processes collect data from this vector (has to be of size given by recv_size())
-     * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor)
+     * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
      * @note a scatter followed by a gather of the received values restores the original array
      */
     void gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
@@ -195,15 +195,18 @@ struct Collective
     }
 
     /**
-     * @brief compute receive size which must not equal the send size in each process
+     * @brief compute total # of elements the calling process receives in the scatter process (or sends in the gather process)
      *
-     * @return 
+     * (which might not equal the send size in each process)
+     *
+     * @return # of elements to receive
      */
     unsigned recv_size() const {return p_.recv_size();}
     /**
-     * @brief compute send size
+     * @brief return # of elements the calling process has to send in a scatter process (or receive in the gather process)
      *
-     * @return 
+     * equals the size of the map given in the constructor
+     * @return # of elements to send
      */
     unsigned send_size() const {return p_.send_size();}
     private:

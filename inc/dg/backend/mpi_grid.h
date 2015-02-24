@@ -16,11 +16,13 @@ namespace dg
 /**
  * @brief 2D MPI Grid class 
  *
- * Represents the local grid coordinates and the process topology. 
+ * Represents the local grid coordinates including overlap. 
  * The grids of different processes overlap in the x- and y- coordinate. 
  * This helps when computing derivatives, but introduces additional 
  * bookkeeping in everything else. Recommended to change in future 
  * releases. 
+ *
+ * For now one is faced with three grids in mpi computations: The global grid, which holds the global boundaries and number of grid cells, the local grid (with overlap) which is the global grid divided by the # of processes plus the ghostcells, and the local grid without ghostcells.
  */
 struct MPI_Grid2d
 {

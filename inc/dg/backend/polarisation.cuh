@@ -36,7 +36,7 @@ namespace dg
  * @ingroup highlevel
  * The term discretized is \f[ -\nabla ( \chi \nabla ) \f]
  * @tparam container The vector class on which to operate on
- * @deprecated
+ * @deprecated Use Elliptic class instead
  */
 template< class container = thrust::host_vector<double> , class Matrix = cusp::csr_matrix<int, double, cusp::host_memory> >
 struct Polarisation2dX

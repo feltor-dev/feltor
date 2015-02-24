@@ -21,7 +21,7 @@ namespace dg
  * @brief Poisson bracket scheme
  *
  * Equal to the Arakawa class except for the possitility to use mixed boundary conditions
- * @ingroup poisson
+ * @ingroup arakawa
  * @tparam Matrix The Matrix class to use
  * @tparam container The vector class on which to operate on. The blas2 function symv( m, x, y) must be callable and may not change x. 
  */

@@ -98,7 +98,7 @@ struct BoundaryTerms
  * @brief Matrix class for block matrices for 2D and 3D derivatives in X and Y direction
  *
  * Stores only one line of blocks and takes care of updating
- * ghost cells before being applied to vectors. This has a huge advantage in memory consumption.
+ * ghost cells before being applied to vectors. This has a huge advantage in memory consumption over other sparse matrix formats.
  */
 struct MPI_Matrix
 {

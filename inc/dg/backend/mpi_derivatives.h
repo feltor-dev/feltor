@@ -431,7 +431,7 @@ BoundaryTerms boundaryJump( const Grid1d<double>& g, bc bcx, int coords, int dim
 }//namespace detail
 ///@endcond
 
-///@addtogroup mpi_structures
+///@addtogroup highlevel
 ///@{
 
 /**
