@@ -425,8 +425,26 @@ struct LinearY
   private:
     double a_,b_;
 };
+/**
+ * @brief Functor smooth cutting, leaving the left side untouched
+ * 
+ * \f[ f(x,y) = 0.5*(1.-tanh(x-xb_))\f]
+ */
 struct LHalf {
+        /**
+     * @brief Construct with xb
+     *
+     * @param xb cut boundary in units of lx
+     */
     LHalf (double xb) : xb_(xb) {}
+            /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordianate
+     * @param y y - coordianate
+     
+     * @return  \f[ 0.5*(1.-tanh(x-xb_)); \f]
+     */
     double operator() (double x, double y)
     {
         return 0.5*(1.-tanh(x-xb_));
@@ -434,8 +452,26 @@ struct LHalf {
     private:
      double xb_;
 };
+/**
+ * @brief Functor smooth cutting, leaving the right side untouched
+ * 
+ * \f[ f(x,y) =0.5*(1.+tanh(x-xb_)); \f]
+ */
 struct RHalf {
+        /**
+     * @brief Construct with xb
+     *
+     * @param xb cut boundary in units of lx
+     */
     RHalf  (double xb) : xb_(xb)  {}
+        /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordianate
+     * @param y y - coordianate
+     
+     * @return  \f[ 0.5*(1.+tanh(x-xb_)); \f]
+     */
     double operator() (double x, double y)
     {
         return 0.5*(1.+tanh(x-xb_)); 

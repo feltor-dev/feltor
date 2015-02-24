@@ -4,16 +4,16 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =  3     (3)
-2)  nx (grid points in x)                = 60(192)
-3)  ny (grid points in y)                =  60(192) 
-4)  dt (time step in units c_s/rho_s)    =  0.5 (0.01)
+1)  n  (# of x,y-polynomials)            =  1     (3)
+2)  nx (grid points in x)                = 150(192)
+3)  ny (grid points in y)                =  100(192) 
+4)  dt (time step in units c_s/rho_s)    =  0.4(0.01)
 
 ----------------------------------Output parameters--------------------
 5)  n_out (# of x-y polynomials in output)  =  3
 6)  nx_out (# grid points in output field)  =  64
 7)  ny_out (# grid points in output field)  =  64
-8)  itstp  (steps between outputs)          =  10(5)
+8)  itstp  (steps between outputs)          =  5(5)
 9) total # of outputs (excluding first)     =  2000
 
 -------------------------Algorithmic parameters------------------------
@@ -22,9 +22,9 @@
 12)  eps_time ( stop for time inversion )   =   1e-12 
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
-14) tau (Ti/Te)                             =  1.0    (0.0)
+14) tau (Ti/Te)                             =  0.0   (0.0)
 15) mcv (curvature)                         =  0.01    (0.001)
-16) nu_perp                                 =  5e-4
+16) nu_perp                                 =  1e-3
 17) D  (coupling)                           =  1e-7  (0.001)
 18) para resistivity (c)                    =  64e-7   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
@@ -35,7 +35,7 @@
 23) Profile amplitude                       =  1.0  (peak amplitude)
 24) Background Prof amplitude               =  0.0   (density on the boundary)
 ---------------------------------box setup----------------
-25) lx (in rho_s)                           =  64
+25) lx (in rho_s)                           =  90
 26) ly (in rho_s)                           =  64
 27) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   2      (1.0)
 28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
