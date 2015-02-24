@@ -7,6 +7,7 @@
 #include <cusp/hyb_matrix.h>
 
 #include "xspacelib.cuh"
+#include "polarisation.cuh"
 #include "cg.h"
 
 
