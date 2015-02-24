@@ -1,11 +1,10 @@
 #ifndef _DG_MATRIX_TRAITS_
 #define _DG_MATRIX_TRAITS_
 
-//#include <vector>
 #include "matrix_categories.h"
 namespace dg{
 
-    ///@cond
+///@cond
 template< class Matrix>
 struct MatrixTraits {
     typedef typename Matrix::value_type value_type;//!< default value type

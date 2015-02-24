@@ -7,8 +7,9 @@
 
 int main()
 {
+    //Test if forward * backwards gives a Delta function and print abscissas and weights
     unsigned n;
-    std::cout << "Type n! \n";
+    std::cout << "Type # of polynomial coefficients n! \n";
     std::cin >> n;
     dg::DLT<double> dlt( n);
 

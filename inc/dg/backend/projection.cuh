@@ -9,6 +9,8 @@
   contains the Difference Norm class that computes differences between vectors on different grids
  */
 namespace dg{
+///@addtogroup utilities
+///@{
 /**
  * @brief Greatest common divisor
  *
@@ -28,6 +30,7 @@ unsigned gcd( unsigned a, unsigned b)
     }
     return r2;
 }
+
 /**
  * @brief Least common multiple
  *
@@ -41,6 +44,7 @@ unsigned lcm( unsigned a, unsigned b)
     unsigned g = gcd( a,b);
     return a/g*b;
 }
+
 namespace create{
 
 /**
@@ -59,6 +63,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d<doubl
     assert( g2.N() % g1.N() == 0);
     return dg::create::interpolation( g2, g1);
 }
+
 /**
  * @brief Create a 2D projection matrix onto a finer grid
  *
@@ -88,7 +93,6 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d<doubl
  * @brief Class to perform comparison of dG vectors on different grids
  *
  * it basically interpolates values from the rougher grid to values on the finer grid and then uses the existing methods to compute the norm
- *@ingroup utilities
  * @tparam container
  */
 template <typename container>
@@ -163,6 +167,7 @@ struct DifferenceNorm
     container v11, v22;
     Matrix p1, p2;
 };
+///@}
 
 
 

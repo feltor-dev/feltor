@@ -5,8 +5,6 @@ namespace dg{
 
 struct AnyMatrixTag{};
 
-struct StdMatrixTag{}; //DEPRECATED
-
 //normal matrices
 struct CuspMatrixTag: public AnyMatrixTag {};
 

@@ -24,7 +24,6 @@ struct ToeflI
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
-    //typedef in ArakawaX ??
 
     /**
      * @brief Construct a ToeflI solver object
@@ -126,11 +125,10 @@ struct ToeflI
     std::vector<container> gamma_n, gamma_old;
 
     //matrices and solvers
-    Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
     Helmholtz< Matrix, container, container > gamma1;
     ArakawaX< Matrix, container> arakawa; 
-    Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
+    dg::Elliptic< Matrix, container, container > pol; 
     CG<container > pcg;
 
     const container w2d, v2d, one;
@@ -168,7 +166,6 @@ ToeflI< container>::ToeflI( const Grid2d<value_type>& grid, double kappa, double
     //std::cin >> tau_z;
     //create derivatives
     laplaceM = create::laplacianM( grid, normed, dg::symmetric); //doesn't hurt to be symmetric but doesn't solve pb
-    A = create::laplacianM( grid, not_normed, dg::symmetric);
 
 }
 
@@ -235,7 +232,7 @@ const container& ToeflI< container>::polarization( const std::vector<container>&
     blas1::axpby( a_[2]*mu_[2], expy[2], 1., chi);
     blas1::pointwiseDot( binv, chi, chi); 
     blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-    A = pol.create( chi);
+    pol.set_chi( chi);
 #ifdef DG_BENCHMARK
     t.toc();
     std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
@@ -263,7 +260,7 @@ const container& ToeflI< container>::polarization( const std::vector<container>&
     blas1::axpby( -1., omega, a_[1], gamma_n[0], omega); //omega = a_i\Gamma n_i - n_e
     blas1::axpby( a_[2], gamma_n[1], 1, omega); //omega += a_z \Gamma n_z
     blas2::symv( w2d, omega, omega);
-    unsigned number = pcg( A, phi[0], omega, v2d, eps_pol);
+    unsigned number = pcg( pol, phi[0], omega, v2d, eps_pol);
     if( number == pcg.get_max())
         throw Fail( eps_pol);
 #ifdef DG_BENCHMARK

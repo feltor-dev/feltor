@@ -136,7 +136,6 @@ struct HW
     Matrix A; //contains unnormalized laplacian if local
     Matrix laplaceM; //contains normalized laplacian
     ArakawaX< Matrix, container> arakawa; 
-    //Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
 

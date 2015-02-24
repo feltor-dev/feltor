@@ -56,7 +56,7 @@
  *      @{
  *          @defgroup scatter Utility functions for reorder operations on DG-formatted vectors
  *          @defgroup polarization Utility functions for C-style bindings of polarization solver
- *      @defgroup mpi_structures MPI backend 
+ *      @defgroup mpi_structures MPI backend functions
  *
  To use these funcions use code like:
 @code

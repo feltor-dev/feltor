@@ -25,14 +25,14 @@ namespace dg
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x) on the intervall (a,b)
- * @tparam Function Model of Unary Function
+ * @tparam UnaryOp Model of Unary Function
  * @param f The function to evaluate
  * @param g The grid on which to evaluate f
  *
  * @return  A DG Host Vector with values
  */
 template< class Function>
-thrust::host_vector<double> evaluate( Function f, const Grid1d<double>& g)
+thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d<double>& g)
 {
     thrust::host_vector<double> abs = create::abscissas( g);
     for( unsigned i=0; i<g.size(); i++)
@@ -52,11 +52,11 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d<double>& 
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x) on the given grid
- * @tparam Function Model of Binary Function
+ * @tparam BinaryOp Model of Binary Function
  * @param f The function to evaluate: f = f(x,y)
  * @param g The 2d grid on which to evaluate f
  *
- * @return  A DG Host Vector with values
+ * @return  A dG Host Vector with values
  * @note Copies the binary Operator. This function is meant for small function objects, that
             may be constructed during function call.
  */
@@ -92,11 +92,11 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d<do
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x,y,z) on the given grid
- * @tparam Function Model of Ternary Function
+ * @tparam TernaryOp Model of Ternary Function
  * @param f The function to evaluate: f = f(x,y,z)
  * @param g The 3d grid on which to evaluate f
  *
- * @return  A DG Host Vector with values
+ * @return  A dG Host Vector with values
  * @note Copies the ternary Operator. This function is meant for small function objects, that
             may be constructed during function call.
  */
@@ -129,105 +129,6 @@ thrust::host_vector<double> evaluate( double(f)(double, double, double), const G
     return evaluate<double(double, double, double)>( f, g);
 };
 ///@endcond
-
-
-///@cond
-/**
- * @brief Evaluate and dlt transform a function 
- *
- * Evaluates f(x) on the given grid
- * @tparam Function Model of Unary Function
- * @param f The function to evaluate: f = f(x)
- * @param g The grid on which to evaluate f
- *
- * @return  A DG Host Vector with dlt transformed values
- * @deprecated
- */
-template< class Function>
-thrust::host_vector<double> expand( Function f, const Grid1d<double>& g)
-{
- //deprecated
-    thrust::host_vector<double> v = evaluate( f, g);
-    Operator<double> forward( g.dlt().forward());
-    double temp[g.n()];
-    for( unsigned k=0; k<g.N(); k++)
-    {
-        for(unsigned i=0; i<g.n(); i++)
-        {
-            temp[i] = 0;
-            for( unsigned j=0; j<g.n(); j++)
-                temp[i] += forward(i,j)*v[k*g.n()+j];
-        }
-        for( unsigned j=0; j<g.n(); j++)
-            v[k*g.n()+j] = temp[j];
-    }
-    return v;
-};
-thrust::host_vector<double> expand( double(f)(double), const Grid1d<double>& g)
-{
-    return expand<double(double)>( f, g);
-};
-
-///@endcond
-
-
-
-///@cond
-/**
- * @brief Evaluate and dlt transform a function
- *
- * Evaluates and dlt-transforms f(x) on the given grid
- * @tparam Function Model of Binary Function
- * @param f The function to evaluate: f = f(x,y)
- * @param g The 2d grid on which to evaluate f
- *
- * @return  A DG Host Vector with values
- * @note Copies the binary Operator. This function is meant for small function objects.
- * @deprecated
- */
-template< class BinaryOp>
-thrust::host_vector<double> expand( BinaryOp f, const Grid2d<double>& g)
-{
- //deprecated
-    thrust::host_vector<double> v = evaluate( f, g);
-    unsigned n = g.n();
-    Operator<double> forward( g.dlt().forward());
-    double temp[n][n];
-    //DLT each dg-Box 
-    for( unsigned i=0; i<g.Ny(); i++)
-        for( unsigned j=0; j<g.Nx(); j++)
-        {
-            //first transform each row
-            for( unsigned k=0; k<n; k++) 
-                for( unsigned l=0; l<n; l++)
-                {
-                    //multiply forward-matrix with each row k
-                    temp[k][l] = 0;
-                    for(  unsigned ll=0; ll<n; ll++)
-                        temp[k][l] += forward(l,ll)*v[ i*n*n*g.Nx() + j*n*n + k*n + ll];
-                }
-            //then transform each col
-            for( unsigned k=0; k<n; k++) 
-                for( unsigned l=0; l<n; l++)
-                {
-                    //multiply forward-matrix with each col 
-                    v[i*n*n*g.Nx() + j*n*n + k*n + l] = 0;
-                    for(  unsigned kk=0; kk<n; kk++)
-                        v[i*n*n*g.Nx() + j*n*n + k*n + l] += forward(k,kk)*temp[kk][l];
-                }
-        }
-
-    return v;
-};
-
-thrust::host_vector<double> expand( double(f)(double, double), const Grid2d<double>& g)
-{
- //deprecated
-    return expand<double(double, double)>( f, g);
-};
-
-///@endcond
-
 
 ///@}
 }//namespace dg

@@ -9,8 +9,6 @@
 const unsigned n = 3;
 const unsigned Nx = 40, Ny = 40;
 
-using namespace std;
-
 int main()
 {
     //Create Window and set window title

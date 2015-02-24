@@ -1,5 +1,10 @@
 #pragma once
 
+/*! @file 
+  
+  enums
+  */
+
 namespace dg
 {
 /**

@@ -8,7 +8,7 @@
 namespace dg{
 
 /**
- * @brief Struct holding coefficients for DLT related operations
+ * @brief Struct holding coefficients for Discrete Legendre Transformation (DLT) related operations
  *
  * @tparam T value type
  */

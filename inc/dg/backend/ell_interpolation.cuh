@@ -362,5 +362,44 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     return A;
 
 }
+
+template<size_t BLOCK_SIZE>
+__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
+ __global__ void forward_trafo(
+         const int n, 
+         const int Nx, 
+         const double* forward, const double* x, double *y)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int row = thread_id; row<Nx; row += grid_size)
+    {
+        //for( unsigned j=0; j<n; j++)
+        int i=row/n, j=row%n;
+        {
+            y[i*n+j]=0;
+            for( int k=0; k<n; k++)
+                y[i*n+j] += forward[ j*n+k]*x[i*n+k];
+        }
+    }
+
+}
+
+void forward_transform( thrust::device_vector<double>& x, thrust::device_vector<double>& y, thrust::device_vector<double>& forward, const Grid2d<double>& g)
+{
+    assert( x.size() == y.size());
+    //set up kernel parameters
+    const size_t BLOCK_SIZE = 256;
+    const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( forward_trafo<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
+    const size_t NUM_BLOCKS = std::min<size_t>( 
+            MAX_BLOCKS, 
+            cusp::system::cuda::DIVIDE_INTO( x.size(), BLOCK_SIZE));
+    const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
+    double* y_ptr = thrust::raw_pointer_cast( &y[0]);
+    const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
+    forward_trafo<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( g.n(), x.size(), forward_ptr, x_ptr, y_ptr);
+}
+
 } //namespace create
 } //namespace dg

@@ -301,7 +301,6 @@ struct Grid3d
     /**
      * @brief Construct a 3D grid
      *
-     * 
      * @param x0 left boundary in x
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
