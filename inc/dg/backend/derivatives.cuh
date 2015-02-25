@@ -165,7 +165,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, norm no = no
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
- * @deprecated
+ * @deprecated Use Elliptic class instead
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc bcx, bc bcy, norm no = normed, direction dir = forward)
@@ -199,7 +199,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
- * @deprecated
+ * @deprecated Use Elliptic class instead
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm no = normed, direction dir = forward)
@@ -416,7 +416,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( 
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
- * @deprecated
+ * @deprecated use Elliptic class instead
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, bc bcx, bc bcy, norm no = normed, direction dir = forward)
@@ -442,7 +442,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g,
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
- * @deprecated
+ * @deprecated Use Elliptic class instead
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, norm no = normed, direction dir = forward)
