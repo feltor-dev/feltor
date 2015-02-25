@@ -22,7 +22,7 @@ namespace dg{
  * consider 
  * \f[ y = Bhk = (B-D)hk + Dhk = (B-D)B^{-1}y + Dhk 
  *       = ( 1- DB^{-1})y + Dhk = \alpha y + \beta h k\f]
- *  where \f[ B\f] is the butcher tableau of order k+1 and \f[ D\f] its
+ *  where \f$ B\f$ is the butcher tableau of order k+1 and \f$ D\f$ its
  *  diagonal part. 
  * @tparam k Order of the method. Currently 2,3 and 4 are available
  */
@@ -175,7 +175,7 @@ struct NotANumber : public std::exception
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
  * @param rhs The right-hand-side
- * @param begin initial condition
+ * @param begin initial condition (size 3)
  * @param end (write-only) contains solution on output
  * @param T_max final time
  * @param eps_abs desired absolute accuracy

@@ -53,6 +53,7 @@ namespace create{
  * @param Ny # of points in y
  *
  * @return map of indices
+ * @deprecated memory layout has been changed 
  */
 thrust::host_vector<int> scatterMap(unsigned nx, unsigned ny, unsigned Nx, unsigned Ny )
 {
@@ -88,6 +89,7 @@ thrust::host_vector<int> scatterMap( unsigned n, unsigned Nx, unsigned Ny)
  * @param Ny # of points in y
  *
  * @return map of indices
+ * @deprecated memory layout has been changed
  */
 thrust::host_vector<int> gatherMap( unsigned n, unsigned Nx, unsigned Ny )
 {

@@ -33,6 +33,7 @@ typedef thrust::host_vector< double>     HVec;
 using namespace std;
 int main()
 {
+    //This file tests not only the evaluation functions but also the weights
     unsigned n;
     cout << "Type # of polynomial coefficients ( 1, 2,...,20)!\n";
     cin >> n;

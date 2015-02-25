@@ -306,6 +306,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     return A;
 
 }
+
 /**
  * @brief Create an interpolation matrix on the device
  *
