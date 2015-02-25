@@ -1,6 +1,10 @@
 #ifndef _DG_TYPEDEFS_CUH_
 #define _DG_TYPEDEFS_CUH_
 
+/*! @file
+
+  This file contains useful typedefs of commonly used types.
+  */
 namespace dg{
 typedef thrust::device_vector<double> DVec; //!< Device Vector
 typedef thrust::host_vector<double> HVec; //!< Host Vector

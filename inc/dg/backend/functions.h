@@ -1,5 +1,9 @@
 
 #pragma once
+/*! @file
+ *
+ * Contains some utility functions for the evaluation() routines
+ */
 
 namespace dg{
 ///@cond

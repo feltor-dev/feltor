@@ -3,6 +3,11 @@
 #include "xspacelib.cuh"
 #include "../blas1.h"
 
+/*! @file 
+
+  Contains classes for poloidal and toroidal average computations.
+
+  */
 namespace dg{
 
 /**

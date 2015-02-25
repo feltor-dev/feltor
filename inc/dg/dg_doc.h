@@ -45,8 +45,14 @@
  *      @{
  *          @defgroup blas1 BLAS level 1 routines
  *              This group contains Vector-Vector operations.
+ *              Successive calls to blas routines are executed sequentially.
+ *              A manual synchronization of threads or devices is never needed in an application 
+ *              using these functions. All functions returning a value block until the value is ready.
  *          @defgroup blas2 BLAS level 2 routines
  *              This group contains Matrix-Vector operations.
+ *              Successive calls to blas routines are executed sequentially.
+ *              A manual synchronization of threads or devices is never needed in an application 
+ *              using these functions. All functions returning a value block until the value is ready.
  *      @}
  *      @defgroup algorithms Numerical schemes
  *          Numerical time integration and a conjugate gradient method based

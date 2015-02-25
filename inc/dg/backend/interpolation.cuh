@@ -7,6 +7,11 @@
 #include "tensor.cuh"
 #include "operator_tensor.cuh"
 
+/*! @file
+
+  Contains 1D, 2D and 3D matrix creation functions
+  */
+
 namespace dg{
 
 namespace create{
@@ -55,7 +60,7 @@ std::vector<double> coefficients( double xn, unsigned n)
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector given in XSPACE to the points in XSPACE
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param g The Grid on which to operate
  *
@@ -103,7 +108,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector given in XSPACE to the points in XSPACE
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param g The Grid on which to operate
@@ -192,7 +197,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector defined on the grid to the given points 
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
