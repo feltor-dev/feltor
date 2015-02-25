@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     dg::MPrecon w2d = dg::create::weights( grid);
-    std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
+    if(rank==0)std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
     dg::MVec lhs = dg::evaluate( left, grid), jac(lhs);
     dg::MVec rhs = dg::evaluate( right, grid);
     const dg::MVec sol = dg::evaluate ( jacobian, grid);
@@ -83,15 +83,15 @@ int main(int argc, char* argv[])
 
 
     double result = dg::blas2::dot( eins, w2d, jac);
-    std::cout << std::scientific;
-    if(rank==0) std::cout << "Mean     Jacobian is "<<result<<"\n";
+    if(rank==0)std::cout << std::scientific;
+    if(rank==0)std::cout << "Mean     Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( rhs,  w2d, jac);
-    if(rank==0) std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
+    if(rank==0)std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( lhs,  w2d, jac);
-    if(rank==0) std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
+    if(rank==0)std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     result = sqrt( dg::blas2::dot( w2d, jac));
-    if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; //don't forget sqrt when comuting errors
+    if(rank==0)std::cout << "Distance to solution "<<result<<std::endl; //don't forget sqrt when comuting errors
     MPI_Finalize();
     return 0;
 }

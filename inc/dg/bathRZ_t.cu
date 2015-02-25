@@ -43,7 +43,7 @@ int main()
     //make equidistant trafo matrix from dggrid
     dg::HMatrix equigrid_old = dg::create::backscatter(grid_old);
     dg::HMatrix equigrid_new = dg::create::backscatter(grid_new);
-    //evaluate on valzues from devicevector on equidistant visual hvisual vector
+    //evaluate on values from devicevector on equidistant visual hvisual vector
     dg::blas2::gemv( equigrid_old, hvisual_old, visual_old);
     dg::blas2::gemv( equigrid_new, hvisual_new, visual_new);
 

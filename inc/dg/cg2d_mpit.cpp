@@ -12,19 +12,18 @@
 
 #include "cg.h"
 
-//leo3 can do 350 x 350 but not 375 x 375
 const double ly = 2.*M_PI;
+const double lx = 2.*M_PI;
 
 const double eps = 1e-6; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
-const double lx = 2.*M_PI;
 double fct(double x, double y){ return sin(y)*sin(x);}
 double derivative( double x, double y){return cos(x)*sin(y);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
-dg::bc bcx = dg::DIR;
 double initial( double x, double y) {return sin(0);}
 
+dg::bc bcx = dg::PER;
 
 int main( int argc, char* argv[])
 {
@@ -42,11 +41,7 @@ int main( int argc, char* argv[])
     dg::MVec x = dg::evaluate( initial, grid);
 
     if( rank == 0) std::cout << "Create symmetric Laplacian\n";
-    dg::Timer t;
-    t.tic();
     dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> A ( grid, dg::not_normed); 
-    t.toc();
-    if( rank == 0) std::cout<< "Creation took "<<t.diff()<<"s\n";
 
     dg::CG< dg::MVec > pcg( x, n*n*Nx*Ny);
     if( rank == 0) std::cout<<"Expand right hand side\n";
@@ -57,14 +52,11 @@ int main( int argc, char* argv[])
     dg::blas2::symv( w2d, b, b);
     //////////////////////////////////////////////////////////////////////
     
-    t.tic();
     int number = pcg( A, x, b, v2d, eps);
-    t.toc();
     if( rank == 0)
     {
         std::cout << "# of pcg itersations   "<<number<<std::endl;
         std::cout << "... for a precision of "<< eps<<std::endl;
-        std::cout << "...               took "<< t.diff()<<"s\n";
     }
 
     dg::MVec  error(  solution);
