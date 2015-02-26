@@ -79,9 +79,9 @@ void legendre( double* pxn, const double xn, const unsigned n, const double* for
          const int pitch, int* Aj, double* Av, 
          const double * forward)
 {
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+//#ifdef _OPENMP
+//#pragma omp parallel for
+//#endif
     for( int row = 0; row<num_rows; row ++ )
     {
         //evaluate 2d Legendre polynomials at (xn, yn)...
@@ -108,9 +108,9 @@ void interpolation_kernel3dcpu(
          const int pitch, int* Aj, double* Av, 
          const double * forward)
 {
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+//#ifdef _OPENMP
+//#pragma omp parallel for
+//#endif
     for( int row = 0; row<num_rows; row ++ )
     {
         //evaluate 2d Legendre polynomials at (xn, yn)...

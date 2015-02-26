@@ -114,7 +114,7 @@ struct Psip
     double alpha_;
 };
 /**
- * @brief  * \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} =
+ * @brief  \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} =
       \Bigg\{ 2 c_2 \bar{R} +(\bar{R}^3 )/2+2 c_9 \bar{R}  \bar{Z}
       +c_4 (4 \bar{R}^3 -8 \bar{R}  \bar{Z}^2)+c_{11} 
       (12 \bar{R}^3  \bar{Z}-8 \bar{R}  \bar{Z}^3 
@@ -127,6 +127,7 @@ struct Psip
       +c_7 (-15 \bar{R}^5 +480 \bar{R}^3  \bar{Z}^2-400 \bar{R}  \bar{Z}^4-90 \bar{R}^5  
       \ln{(\bar{R}   )}+720 \bar{R}^3  \bar{Z}^2 \ln{(\bar{R}   )}-240 \bar{R}  \bar{Z}^4
       \ln{(\bar{R}   )})\Bigg\} \f]
+      with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  */ 
 struct PsipR
 {
@@ -141,23 +142,28 @@ struct PsipR
 
       @param R radius (cylindrical coordinates)
       @param Z height (cylindrical coordinates)
-    * @return \f$ \frac{\partial  \hat{\psi}_p(R,Z) }{ \partial \hat{R}}  \f$
+    * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z)  \f$
  */ 
     double operator()(double R, double Z)
     {    
         return psipR_alt( R, Z);
     }
     /**
-     * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}  \f]
+     * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z,\phi) \equiv \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)\f]
       @param R radius (cylindrical coordinates)
       @param Z height (cylindrical coordinates)
       @param phi angle (cylindrical coordinates)
-    * @return \f$ \frac{\partial  \hat{\psi}_p(R,Z) }{ \partial \hat{R}}  \f$
+    * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z,\phi)  \f$
  */ 
     double operator()(double R, double Z, double phi)
     {    
         return operator()(R,Z);
     }
+
+
+    /**
+     * @brief Print parameters to std::cout
+     */
     void display()
     {
       std::cout << R_0_ <<"  " <<A_ <<"\n";
