@@ -1,5 +1,5 @@
-#include <cusp/coo_matrix.h>
-#include <cusp/print.h>
+//#include <cusp/coo_matrix.h>
+//#include <cusp/print.h>
 #include "xspacelib.cuh"
 #include "ell_interpolation.h"
 #include "typedefs.cuh"
@@ -79,7 +79,7 @@ int main()
                         g.z0() + (k+0.5)*g.hz();
             }
     dg::DVec xd(x), yd(y), zd(z);
-    dg::DMatrix dB = dg::create::ell_interpolation( xd, yd, zd, g);
+    cusp::ell_matrix<int, double, cusp::device_memory> dB = dg::create::ell_interpolation( xd, yd, zd, g);
     dg::HVec vector = dg::evaluate( sinus, g);
     dg::DVec dv( vector), w2( vector);
     dg::HVec w(vector);
