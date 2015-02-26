@@ -172,33 +172,6 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
 
 }
 
- void interpolation_kernel2dcpu( 
-         const int num_rows, const int n, const int Nx, 
-         const int* cellx, const int* celly, 
-         const double* xn, const double * yn, 
-         const int pitch, int* Aj, double* Av, 
-         const double * forward)
-{
-    for( int row = 0; row<num_rows; row ++)
-    {
-        //evaluate 2d Legendre polynomials at (xn, yn)...
-        double px[4], py[4];
-        detail::legendre( px, xn[row], n, forward); 
-        detail::legendre( py, yn[row], n, forward);
-        
-        int offset = row;
-        int col_begin = celly[row]*Nx*n*n + cellx[row]*n;
-        //evaluate 2d Legendre polynomials at (xn)...
-        for( int k=0; k<n; k++)
-            for( int l=0; l<n; l++)
-            {
-                Aj[offset] = col_begin + k*n*Nx + l;
-                Av[offset] = py[k]*px[l];
-                offset +=pitch;
-            }
-    }
-
-}
 
 } //namespace detail 
 ///@endcond
@@ -297,7 +270,6 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     //t.toc();
     //std::cout << "Prekernel took "<<t.diff()<<"s\n";
     //t.tic();
-    //detail::interpolation_kernel2dcpu( A.num_rows, g.n(), g.Nx(), 
     detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), 
             cellX_ptr, cellY_ptr, 
             xn_ptr, yn_ptr, pitch, Aj, Av, forward_ptr);
@@ -356,11 +328,59 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     const double* zn_ptr = thrust::raw_pointer_cast( &zn[0]);
     thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
-    //detail::interpolation_kernel2dcpu( A.num_rows, g.n(), g.Nx(), 
     detail::interpolation_kernel3d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), g.Ny(), g.Nz(), 
             cellX_ptr, cellY_ptr, cellZ_ptr,
             xn_ptr, yn_ptr, zn_ptr, pitch, Aj, Av, forward_ptr);
     return A;
+
+}
+/**
+ * @brief Create interpolation between two grids
+ *
+ * This matrix can be applied to vectors defined on the old grid to obtain
+ * its values on the new grid.
+ * 
+ * @param g_new The new points 
+ * @param g_old The old grid
+ *
+ * @return Interpolation matrix
+ * @note The boundaries of the old brid must lie within the boundaries of the new grid
+ */
+cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid3d<double>& g_new, const Grid3d<double>& g_old)
+{
+    assert( g_new.x0() >= g_old.x0());
+    assert( g_new.x1() <= g_old.x1());
+    assert( g_new.y0() >= g_old.y0());
+    assert( g_new.y1() <= g_old.y1());
+    assert( g_new.z0() >= g_old.z0());
+    assert( g_new.z1() <= g_old.z1());
+    thrust::device_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
+    thrust::device_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
+    thrust::device_vector<double> pointsZ = dg::evaluate( dg::coo3, g_new);
+    return ell_interpolation( pointsX, pointsY, pointsZ, g_old);
+}
+/**
+ * @brief Create interpolation between two grids
+ *
+ * This matrix can be applied to vectors defined on the old grid to obtain
+ * its values on the new grid.
+ * 
+ * @param g_new The new points 
+ * @param g_old The old grid
+ *
+ * @return Interpolation matrix
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ */
+cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid2d<double>& g_new, const Grid2d<double>& g_old)
+{
+    //assert both grids are on the same box
+    assert( g_new.x0() >= g_old.x0());
+    assert( g_new.x1() <= g_old.x1());
+    assert( g_new.y0() >= g_old.y0());
+    assert( g_new.y1() <= g_old.y1());
+    thrust::device_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
+    thrust::device_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
+    return ell_interpolation( pointsX, pointsY, g_old);
 
 }
 
