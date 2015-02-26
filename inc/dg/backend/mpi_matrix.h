@@ -247,9 +247,9 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
             updateX = true;
     }
     if( updateX )
-        x.x_col(x.communicator()); 
+        x.x_col(); 
     if( updateY) 
-        x.x_row(x.communicator());
+        x.x_row();
     // Apply internal data
     unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
     for( unsigned i=0; i<y.data().size(); i++)
