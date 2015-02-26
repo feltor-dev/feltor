@@ -20,7 +20,7 @@ namespace eule
 ///@addtogroup solver
 ///@{
 /**
- * @brief Diffusive terms for Feltor solver
+ * @brief Implicit (perpendicular diffusive) terms for Feltor solver
  *
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
@@ -29,6 +29,15 @@ namespace eule
 template<class Matrix, class container, class Preconditioner>
 struct Rolkar
 {
+
+    /**
+     * @brief 
+     *
+     * @tparam Grid3d
+     * @param g
+     * @param p
+     * @param gp
+     */
     template<class Grid3d>
     Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp):
         p(p),
@@ -40,6 +49,13 @@ struct Rolkar
         LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered)
     {
     }
+
+    /**
+     * @brief Return implicit terms
+     *
+     * @param x input vector
+     * @param y output vector
+     */
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
@@ -68,7 +84,9 @@ struct Rolkar
            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
         }
     }
+
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perpDIR;}
+
     const Preconditioner& weights(){return LaplacianM_perpDIR.weights();}
     const Preconditioner& precond(){return LaplacianM_perpDIR.precond();}
     const container& damping(){return dampprof_;}
@@ -83,15 +101,16 @@ struct Rolkar
 
 };
 
+/**
+ * @brief compute explicit terms
+ *
+ * @tparam Matrix matrix class to use
+ * @tparam container main container to hold the vectors
+ * @tparam Preconditioner class of the weights
+ */
 template< class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
 struct Feltor
 {
-    //typedef std::vector<container> Vector;
-    typedef typename dg::VectorTraits<container>::value_type value_type;
-    //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
-
     template<class Grid3d>
     Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
 
@@ -116,7 +135,6 @@ struct Feltor
     double energy_diffusion( ){ return ediff_;}
 
     void energies( std::vector<container>& y);
-    void add_parallel_dynamics( std::vector<container>& y, std::vector<container>& yp);
 
   private:
 //     void curve( container& y, container& target);
@@ -125,11 +143,10 @@ struct Feltor
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
+    void add_parallel_dynamics( std::vector<container>& y, std::vector<container>& yp);
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
-
-    
     const container binv, curvR, curvZ;
     container gradlnB;
     const container source, damping, one;
@@ -235,7 +252,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     for(unsigned i=0; i<2; i++)
     {
         dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1)); //npe = N+1
-        dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
+        dg::blas1::transform( npe[i], logn[i], dg::LN<double>());
         S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w3d, npe[i]);
         dg::blas1::pointwiseDot( y[i+2], y[i+2], chi); 
         Tpar[i] = z[i]*0.5*p.mu[i]*dg::blas2::dot( npe[i], w3d, chi);
@@ -425,7 +442,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     for(unsigned i=0; i<2; i++)
     {
         dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1)); //npe = N+1
-        dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
+        dg::blas1::transform( npe[i], logn[i], dg::LN<double>());
     }
 
     for( unsigned i=0; i<2; i++)

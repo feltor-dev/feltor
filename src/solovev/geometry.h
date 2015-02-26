@@ -4,7 +4,13 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+
+#include "dg/blas.h"
+
 #include "geom_parameters.h"
+
+
+
 /*!@file
  *
  * Geometry objects (6 analytical quantities)
