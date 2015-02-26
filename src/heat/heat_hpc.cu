@@ -11,7 +11,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
-#include "dg/backend/ell_interpolation.cuh"
+#include "dg/backend/ell_interpolation.h"
 
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
@@ -209,7 +209,7 @@ int main( int argc, char* argv[])
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::HVec avisual( grid_out.size(), 0.);
 
-    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
+    dg::DMatrix interpolate = dg::create::ell_interpolation( grid_out, grid); 
     dg::blas2::symv( interpolate, y0[0], transferD);
     err = nc_open(argv[3], NC_WRITE, &ncid);
     transferH =transferD;

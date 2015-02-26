@@ -7,7 +7,7 @@
 1)  n  (# of x,y-polynomials)            =   3   (3)
 2)  nx (grid points in x)                =   100 (192)
 3)  ny (grid points in y)                =   100 (192) 
-4)  nz (grid points in z)                =   15 (1)
+4)  nz (grid points in z)                =   20 (1)
 5)  dt (time step in units c_s/rho_s)    =   0.1(0.01)
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
