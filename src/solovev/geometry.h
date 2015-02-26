@@ -114,7 +114,9 @@ struct Psip
     double alpha_;
 };
 /**
- * @brief  \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} =
+ * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} \f]
+ *
+ * \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} =
       \Bigg\{ 2 c_2 \bar{R} +(\bar{R}^3 )/2+2 c_9 \bar{R}  \bar{Z}
       +c_4 (4 \bar{R}^3 -8 \bar{R}  \bar{Z}^2)+c_{11} 
       (12 \bar{R}^3  \bar{Z}-8 \bar{R}  \bar{Z}^3 
@@ -138,7 +140,7 @@ struct PsipR
      */
     PsipR( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp) {}
 /**
- * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)  \f]
+ * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)  \f$
 
       @param R radius (cylindrical coordinates)
       @param Z height (cylindrical coordinates)
@@ -149,7 +151,7 @@ struct PsipR
         return psipR_alt( R, Z);
     }
     /**
-     * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z,\phi) \equiv \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)\f]
+     * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z,\phi) \equiv \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)\f$
       @param R radius (cylindrical coordinates)
       @param Z height (cylindrical coordinates)
       @param phi angle (cylindrical coordinates)

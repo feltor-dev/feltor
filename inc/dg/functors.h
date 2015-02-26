@@ -18,6 +18,7 @@ namespace dg
 
 /**
  * @brief Functor for the absolute maximum
+ * \f[ f(x,y) = \max(|x|,|y|)\f]
  *
  * @tparam T value-type
  */
@@ -44,6 +45,7 @@ struct AbsMax
 };
 /**
  * @brief Functor for the absolute maximum
+ * \f[ f(x,y) = \min(|x|,|y|)\f]
  *
  * @tparam T value-type
  */
@@ -107,8 +109,7 @@ struct Gaussian
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
     /**
-     * @brief Return the value of the gaussian modulated by 
-     *
+     * @brief Return the value of the gaussian modulated by a cosine
      * \f[
        f(x,y,z) = A\cos(kz)e^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
        \f]
@@ -132,7 +133,7 @@ struct Gaussian
 /**
 * @brief The 3d gaussian
 * \f[
-f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)} 
+f(x,y,z) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)} 
 \f]
 */
 struct Gaussian3d
@@ -199,7 +200,7 @@ struct Gaussian3d
 /**
  * @brief Functor returning a gaussian in x-direction
  * \f[
-   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2}) } 
+   f(x,y) = Ae^{-\frac{(x-x_0)^2}{2\sigma_x^2} } 
    \f]
  */
 struct GaussianX
@@ -322,8 +323,7 @@ struct GaussianZ
 
 /**
  * @brief Functor for a sin prof in x-direction
- * 
- * \f[ f(x,y) = a*x+b \f]
+ * \f[ f(x,y) = B + A(1-\sin(k_xx )) \f]
  */
 struct SinProfX
 {
@@ -336,21 +336,20 @@ struct SinProfX
      */
     SinProfX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
     /**
-     * @brief Return linear polynomial in x 
+     * @brief Return profile
      *
      * @param x x - coordinate
      * @param y y - coordinate
      
-     * @return result
+     * @return \f$ f(x,y)\f$
      */
     double operator()( double x, double y){ return bamp_+amp_*(1.-sin(x*kx_));}
   private:
     double amp_,bamp_,kx_;
 };
 /**
- * @brief Functor for a sin prof in x-direction
- * 
- * \f[ f(x,y) = a*x+b \f]
+ * @brief Functor for a exp prof in x-direction
+ * \f[ f(x,y) = B + A\exp(-x/L_n) \f]
  */
 struct ExpProfX
 {
@@ -376,8 +375,7 @@ struct ExpProfX
 };
 /**
  * @brief Functor for a linear polynomial in x-direction
- * 
- * \f[ f(x,y) = a*x+b \f]
+ * \f[ f(x,y) = ax+b \f]
  */
 struct LinearX
 {
@@ -402,8 +400,7 @@ struct LinearX
 };
 /**
  * @brief Functor for a linear polynomial in y-direction
- * 
- * \f[ f(x,y) = a*y+b) \f]
+ * \f[ f(x,y) = ay+b \f]
  */
 struct LinearY
 {
@@ -429,7 +426,6 @@ struct LinearY
 
 /**
  * @brief Functor for a left side step function using tanh
- * 
  * \f[ f(x,y) = 0.5(1-\tanh(x-x_b)) \f]
  */
 struct LHalf {
@@ -457,7 +453,6 @@ struct LHalf {
 
 /**
  * @brief Functor for a right step function using tanh
- * 
  * \f[ f(x,y) = 0.5(1+\tanh(x-x_b)) \f]
  */
 struct RHalf {
@@ -893,6 +888,7 @@ struct BathRZ{
 };
 /**
  * @brief Exponential
+ * \f[ f(x) = \exp(x)\f]
  *
  * @tparam T value-type
  */
@@ -925,6 +921,7 @@ struct EXP
 };
 /**
  * @brief natural logarithm
+ * \f[ f(x) = \ln(x)\f]
  *
  * @tparam T value-type
  */
@@ -949,6 +946,7 @@ struct LN
 };
 /**
  * @brief Square root 
+ * \f[ f(x) = \sqrt{x}\f]
  *
  * @tparam T value-type
  */
@@ -1025,6 +1023,7 @@ struct MinMod
 
 /**
  * @brief Add a constant value
+ * \f[ f(x) = x + c\f]
  *
  * @tparam T value type
  */
@@ -1051,8 +1050,10 @@ struct PLUS
     private:
     T x_;
 };
+
 /**
  * @brief returns (positive) modulo 
+ * \f[ f(x) = x\mod m\f]
  *
  * @tparam T value type
  */
@@ -1062,9 +1063,9 @@ struct MOD
     /**
      * @brief Construct from modulo 
      *
-     * @param value modulo basis
+     * @param m modulo basis
      */
-    MOD( T value): x_(value){}
+    MOD( T m): x_(m){}
 
         /**
          * @brief Compute mod(x, value), positively defined
@@ -1085,6 +1086,7 @@ struct MOD
 };
 /**
  * @brief absolute value
+ * \f[ f(x) = |x|\f]
  *
  * @tparam T value type
  */
@@ -1106,6 +1108,7 @@ struct ABS
 
 /**
  * @brief Return a constant
+ * \f[ f(x) = c\f]
  *
  */
 struct CONSTANT
@@ -1113,10 +1116,10 @@ struct CONSTANT
     /**
      * @brief Construct with a value
      *
-     * @param value the constant value
+     * @param cte the constant value
      *
      */
-    CONSTANT( double value): value_(value){}
+    CONSTANT( double cte): value_(cte){}
 
     /**
      * @brief constant
