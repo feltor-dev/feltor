@@ -29,6 +29,7 @@ namespace dg
  The corresponding row/col pairs read \f$ (0,0)\f$, \f$ (0,1)\f$, ..., \f$ (N_x-1,N_x-1)\f$.
  For processes, that do not hold any boundary terms the matrix can be left entirely empty
  This format is sufficient for simple dG derivatives in x and y.
+ @note not all processes need boundary terms, only those which have a boundary
  *
  */
 struct BoundaryTerms
@@ -148,20 +149,11 @@ struct MPI_Matrix
      * @brief Construct from boundary condition and number of blocks
      *
      * @param bcx boundary condition in x
-     * @param comm Communicator
      * @param number # of blocks
      */
-    MPI_Matrix( MPI_Comm comm, unsigned number): 
-        dataY_(number), dataX_(number), offset_(number, 0), 
-        comm_(comm){ }
-
-    /**
-     * @brief Get Communicator
-     *
-     * @return the communicator in which the symv() function takes place
-     */
-    MPI_Comm communicator()const{return comm_;}
-
+    MPI_Matrix( unsigned number): 
+        dataY_(number), dataX_(number), offset_(number, 0)
+       { }
 
     /**
      * @brief Set blocks in Y
@@ -228,8 +220,6 @@ struct MPI_Matrix
     std::vector<int> offset_;
     BoundaryTerms xterm_;
     BoundaryTerms yterm_;
-    //bc bcx_, bcy_;
-    MPI_Comm comm_;
 };
 
 
@@ -237,9 +227,17 @@ typedef MPI_Matrix MMatrix; //!< mpi matrix type
 
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
+#ifdef DG_DEBUG
+    assert( x.data().size() == y.data().size() );
+    assert( x.n() == y.n());
+    assert( x.Nx() == y.Nx());
+    assert( x.Ny() == y.Ny());
+    assert( x.Nz() == y.Nz());
+    assert( x.communicator() == y.communicator());
+#endif //DG_DEBUG
     // update boundary layer if necessary
     int rank;
-    MPI_Comm_rank(comm_, &rank);
+    MPI_Comm_rank(x.communicator(), &rank);
     bool updateX = false, updateY = false;
     for( unsigned k=0; k<dataX_.size(); k++)
     {
@@ -249,13 +247,10 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
             updateX = true;
     }
     if( updateX )
-        x.x_col(comm_); 
+        x.x_col(x.communicator()); 
     if( updateY) 
-        x.x_row(comm_);
+        x.x_row(x.communicator());
     // Apply internal data
-#ifdef DG_DEBUG
-    assert( x.data().size() == y.data().size() );
-#endif //DG_DEBUG
     unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
     for( unsigned i=0; i<y.data().size(); i++)
         y.data()[i] = 0;
