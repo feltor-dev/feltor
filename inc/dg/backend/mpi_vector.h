@@ -7,6 +7,12 @@
 namespace dg
 {
 
+    /**
+     * @brief mpi Vector class 
+     *
+     * Holds ghostcells in every process to facilitate matrix vector multiplication. 
+     *
+     */
 struct MPI_Vector
 {
     /**
@@ -19,9 +25,28 @@ struct MPI_Vector
      */
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(1), data_( n*n*Nx*Ny), comm_(comm) {}
+    /**
+     * @brief construct a vector
+     *
+     * @param n polynomial coefficients
+     * @param Nx local # of cells in x 
+     * @param Ny local # of cells in y
+     * @param Nz local # of cells in z
+     * @param comm MPI communicator
+     */
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), data_( n*n*Nx*Ny*Nz), comm_(comm) {}
+    /**
+     * @brief Set underlying data
+     *
+     * @return 
+     */
     thrust::host_vector<double>& data() {return data_;}
+    /**
+     * @brief Get underlying data
+     *
+     * @return 
+     */
     const thrust::host_vector<double>& data() const {return data_;}
     /**
      * @brief Cut the ghostcells and leave interior
@@ -36,9 +61,29 @@ struct MPI_Vector
      * @param src The source values
      */
     void copy_into_interior( const thrust::host_vector<double>& src);
+    /**
+     * @brief return local number of polynomial coefficients
+     *
+     * @return 
+     */
     unsigned n() const {return n_;}
+    /**
+     * @brief return local number of cells in x
+     *
+     * @return 
+     */
     unsigned Nx()const {return Nx_;}
+    /**
+     * @brief return local number of cells in y
+     *
+     * @return 
+     */
     unsigned Ny()const {return Ny_;}
+    /**
+     * @brief return local number of cells in z
+     *
+     * @return 
+     */
     unsigned Nz()const {return Nz_;}
     /**
      * @brief Return local size
@@ -46,6 +91,13 @@ struct MPI_Vector
      * @return local size
      */
     unsigned size() const{return n_*n_*Nx_*Ny_*Nz_;}
+    /**
+     * @brief Access operator
+     *
+     * @param idx linear local index
+     *
+     * @return 
+     */
     double operator[]( unsigned idx) const {return data_[idx];}
     /**
      * @brief exchanged data of overlapping rows
@@ -59,6 +111,12 @@ struct MPI_Vector
      * @param comm Communicator
      */
     void x_col( MPI_Comm comm);
+
+    /**
+     * @brief Display local data
+     *
+     * @param os outstream
+     */
     void display( std::ostream& os) const
     {
         for( unsigned s=0; s<Nz_; s++)
@@ -69,6 +127,14 @@ struct MPI_Vector
                 os << "\n";
             }
     }
+    /**
+     * @brief Disply local data
+     *
+     * @param os outstream
+     * @param v a vector
+     *
+     * @return  the outsream
+     */
     friend std::ostream& operator<<( std::ostream& os, const MPI_Vector& v)
     {
         os << "Vector with Nz = "<<v.Nz_<<", Ny = "<<v.Ny_
@@ -76,6 +142,11 @@ struct MPI_Vector
         v.display(os);
         return os;
     }
+    /**
+     * @brief Swap data 
+     *
+     * @param that must have equal sizes and communicator
+     */
     void swap( MPI_Vector& that){ 
 #ifdef DG_DEBUG
         assert( n_ == that.n_);
@@ -92,6 +163,7 @@ struct MPI_Vector
     MPI_Comm comm_;
 };
 
+///@cond
 typedef MPI_Vector MVec;
 template<> 
 struct VectorTraits<MPI_Vector> {
@@ -217,4 +289,5 @@ void MPI_Vector::copy_into_interior( const thrust::host_vector<double>& src)
                     src[ j-n_ + (Nx_-2)*n_*( i-n_ + (Ny_-2)*n_*s)];
 }
 
+///@endcond
 }//namespace dg

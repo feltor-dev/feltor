@@ -9,16 +9,11 @@
 #include "backend/dxx.cuh"
 #include "backend/typedefs.cuh"
 
-unsigned n = 3; //global relative error in L2 norm is O(h^P)
-unsigned N = 200;  //more N means less iterations for same error
 
 const double lx = 2.*M_PI;
 
 const double eps = 1e-7; //# of pcg iterations increases very much if 
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
-
-
-
 
 double sine(double x){ return sin( x);}
 double sol(double x){ return sin(x);}
@@ -34,6 +29,8 @@ double initial( double x) {return sin(0);}
 using namespace std;
 int main()
 {
+    unsigned n; //global relative error in L2 norm is O(h^P)
+    unsigned N;  //more N means less iterations for same error
     cout << "Type n and N\n";
     cin >> n >> N;
     dg::Grid1d<double > g( 0, lx, n, N, bcx);
@@ -48,29 +45,20 @@ int main()
     const dg::DVec solution = dg::evaluate( sol, g);
 
     //copy data to device memory
-    cout << "# of polynomial coefficients: "<< n <<endl;
-    cout << "# of intervals                "<< N <<endl;
-    //compute S b
+    std::cout << "# of polynomial coefficients: "<< n <<std::endl;
+    std::cout << "# of intervals                "<< N <<std::endl;
+    //compute W b
     dg::blas2::symv( w1d, b, b);
-    std::cout << "Number of pcg iterations "<< cg( A, x, b, v1d, eps)<<endl;
-    cout << "For a precision of "<< eps<<endl;
+    std::cout << "Number of pcg iterations "<< cg( A, x, b, v1d, eps)<<std::endl;
+    std::cout << "For a precision of "<< eps<<std::endl;
     //compute error
     dg::blas1::axpby( 1.,x,-1., solution, error);
-    /*
-    //and Ax
-    DArrVec dbx(dx);
-    dg::blas2::symv(  A, dx.data(), dbx.data());
-
-    cout<< dx <<endl;
-    */
 
     double eps = dg::blas2::dot(w1d, error);
-    cout << "L2 Norm2 of Error is " << eps << endl;
+    std::cout << "L2 Norm of Error is " << sqrt(eps) << std::endl;
     double norm = dg::blas2::dot( w1d, solution);
     std::cout << "L2 Norm of relative error is "<<sqrt( eps/norm)<<std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
-
-
 
     return 0;
 }

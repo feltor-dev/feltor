@@ -4,7 +4,6 @@
 #include "parameters.h"
 
 #include "dg/backend/xspacelib.cuh"
-#include "dg/backend/polarisation.cuh"
 #include "dg/cg.h"
 #include "dg/algorithm.h"
 
@@ -114,14 +113,13 @@ struct Asela
     std::vector<container> expy;
 
     //matrices and solvers
-    Matrix A; //contains polarisation matrix
     Matrix laplaceM; //contains negative normalized laplacian
 
     dg::ArakawaX<Matrix, container> arakawa; 
-    dg::Invert<container> invert_A, invert_maxwell; 
+    dg::Invert<container> invert_pol, invert_maxwell; 
     dg::Helmholtz<Matrix, container, container> maxwell;
 
-    dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
+    dg::Elliptic< Matrix, container, container > pol; 
 
     Parameters p;
 
@@ -138,14 +136,11 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     laplaceM (dg::create::laplacianM( grid, dg::normed, dg::symmetric)),
     arakawa( grid), 
     maxwell( grid),
-    invert_A( rho, rho.size(), p.eps_pol),
+    invert_pol( rho, rho.size(), p.eps_pol),
     invert_maxwell( rho, rho.size(), p.eps_maxwell),
     pol(     grid), 
     p(p)
-{
-
-
-}
+{ }
 
 template< class container>
 void Asela< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
@@ -156,9 +151,9 @@ void Asela< container>::operator()( std::vector<container>& y, std::vector<conta
     //solve polarisation equation
     exp( y, expy, 2);
     dg::blas1::axpby( p.dhat[1]*p.dhat[1], expy[1], 0., omega);
-    A = pol.create( omega);
+    pol.set_chi(omega);
     dg::blas1::axpby( -p.dhat[0], expy[0], p.dhat[1], expy[1], rho);
-    invert_A( A, phi[0], rho, w2d, v2d);
+    invert_pol( pol, phi[0], rho, w2d, v2d);
     //compute phi[1]
     arakawa.bracketS( phi[0], phi[0], phi[1]);
     dg::blas1::axpby( 1., phi[0], -0.5*p.dhat[1], phi[1]);////////////////////

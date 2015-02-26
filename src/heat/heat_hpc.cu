@@ -5,10 +5,14 @@
 #include <cmath>
 // #define DG_DEBUG
 
+#include <cusp/coo_matrix.h>
+#include <cusp/print.h>
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
+#include "dg/backend/ell_interpolation.cuh"
+
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "solovev/geometry.h"

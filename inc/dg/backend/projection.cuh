@@ -4,11 +4,15 @@
 #include "grid.h"
 #include "xspacelib.cuh"
 #include "matrix_traits_thrust.h"
+#include "../blas2.h"
+
 /*!@file 
   
   contains the Difference Norm class that computes differences between vectors on different grids
  */
 namespace dg{
+///@addtogroup utilities
+///@{
 /**
  * @brief Greatest common divisor
  *
@@ -28,6 +32,7 @@ unsigned gcd( unsigned a, unsigned b)
     }
     return r2;
 }
+
 /**
  * @brief Least common multiple
  *
@@ -41,6 +46,7 @@ unsigned lcm( unsigned a, unsigned b)
     unsigned g = gcd( a,b);
     return a/g*b;
 }
+
 namespace create{
 
 /**
@@ -59,6 +65,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d<doubl
     assert( g2.N() % g1.N() == 0);
     return dg::create::interpolation( g2, g1);
 }
+
 /**
  * @brief Create a 2D projection matrix onto a finer grid
  *
@@ -84,12 +91,21 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d<doubl
 
 
 //eventuell könnte man zwei Projektionsmatrizen malnehmen um eine kleinere zu erhalten
+/**
+ * @brief Class to perform comparison of dG vectors on different grids
+ *
+ * it basically interpolates values from the rougher grid to values on the finer grid and then uses the existing methods to compute the norm
+ * @tparam container
+ */
 template <typename container>
 struct DifferenceNorm
 {
-    typedef typename container::value_type value_type;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    typedef cusp::csr_matrix<int, double, MemorySpace> Matrix;
+    /**
+     * @brief Construct from two different grids
+     *
+     * @param g1 first grid
+     * @param g2 second grid
+     */
     DifferenceNorm( const Grid2d<double>& g1, const Grid2d<double>& g2)
     {
         //find common grid
@@ -103,6 +119,15 @@ struct DifferenceNorm
         wg1 = dg::create::weights( g1); 
         wg2 = dg::create::weights( g2); 
     }
+    /**
+     * @brief Compute difference of two vectors
+     *
+     * \f[ ||v_1 - v_2|| = \sqrt{ \int (v_1-v_2)^2 dV} \f]
+     * @param v1
+     * @param v2
+     *
+     * @return 
+     */
     double operator()( const container& v1, const container& v2)
     {
         double f2, g2, fg;
@@ -114,6 +139,16 @@ struct DifferenceNorm
         fg = blas2::dot( v11, w2d, v22);
         return sqrt( f2 - 2.*fg + g2);
     }
+
+    /**
+     * @brief Compute the sum of two vectors
+     *
+     * \f[ ||v_1 + v_2|| = \sqrt{ \int (v_1+v_2)^2 dV} \f]
+     * @param v1
+     * @param v2
+     *
+     * @return 
+     */
     double sum( const container& v1, const container& v2)
     {
         double f2, g2, fg;
@@ -126,10 +161,15 @@ struct DifferenceNorm
         return sqrt( f2 + 2.*fg + g2);
     }
   private:
+    typedef typename container::value_type value_type;
+    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
+    typedef cusp::csr_matrix<int, double, MemorySpace> Matrix;
+
     container wg1, wg2, w2d;
     container v11, v22;
     Matrix p1, p2;
 };
+///@}
 
 
 

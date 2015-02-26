@@ -9,11 +9,7 @@
 #include "backend/typedefs.cuh"
 
 using namespace std;
-using namespace dg;
 
-const unsigned n = 3;
-const unsigned Nx = 50;
-const unsigned Ny = 50;
 //const double lx = 2.*M_PI;
 //const double ly = 2.*M_PI;
 
@@ -66,31 +62,27 @@ double jacobian( double x, double y)
 
 int main()
 {
-    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    DVec w2d = create::weights( grid);
-    cout << "# of 2d cells                     " << Nx*Ny <<endl;
-    cout << "# of Legendre nodes per dimension "<< n <<endl;
+    unsigned n, Nx, Ny;
+    cout << "Type n, Nx and Ny! \n";
+    cin >> n >> Nx >> Ny;
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    dg::DVec w2d = dg::create::weights( grid);
+    cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<endl;
     cout <<fixed<< setprecision(2)<<endl;
-    DVec lhs = evaluate( left, grid), jac(lhs);
-    DVec rhs = evaluate( right, grid);
-    const DVec sol = evaluate ( jacobian, grid);
-    DVec eins = evaluate( one, grid);
+    dg::DVec lhs = dg::evaluate( left, grid), jac(lhs);
+    dg::DVec rhs = dg::evaluate( right, grid);
+    const dg::DVec sol = dg::evaluate ( jacobian, grid);
+    dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    ArakawaX<DMatrix, DVec> arakawa( grid);
+    dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
-    //arakawa( lhs, rhs1, jac1);
-    //blas1::pointwiseDot( rhs2, jac1, jac1);
-    //arakawa( lhs, rhs2, jac2);
-    //blas1::pointwiseDot( rhs1, jac2, jac2);
-    //blas1::axpby( 1., jac1, 1., jac2, jac2);
-
     cout << scientific;
-    cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs,  w2d, jac)<<"\n";
-    cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs,  w2d, jac)<<"\n";
-    blas1::axpby( 1., sol, -1., jac);
-    cout << "Distance to solution "<<sqrt( blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
+    cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
+    cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
+    cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
+    dg::blas1::axpby( 1., sol, -1., jac);
+    cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |     
     //n = 2 -> p = 1    |

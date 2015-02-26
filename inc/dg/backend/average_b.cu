@@ -31,7 +31,7 @@ int main()
     t.toc();
     std::cout << "Assembly of average vector on device took:    "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., vector, -1., vector_y, vector);
-    std::cout << "Result of integration on host is:     "<<dg::blas1::dot( vector, w2d)<<std::endl;
+    std::cout << "Result of integration on host is:     "<<dg::blas1::dot( vector, w2d)<<std::endl; //should be zero
     dg::blas1::axpby( 1., dvector, -1., dvector_y, dvector);
     std::cout << "Result of integration on device is:   "<<dg::blas1::dot( dvector, w2d_device)<<std::endl;
 

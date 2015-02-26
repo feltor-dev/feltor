@@ -9,6 +9,7 @@
 namespace dg
 {
 
+///@cond
 //Garcia equations with switched x <-> y  and phi -> -phi
 template<class Matrix, class container, class Preconditioner >
 struct Toefl
@@ -66,6 +67,7 @@ void Toefl< Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
 
 }
+///@endcond
 
 }//namespace dg
 

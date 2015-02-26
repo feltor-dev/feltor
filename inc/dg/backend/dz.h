@@ -14,7 +14,7 @@ namespace dg{
 
 
 /**
- * @brief Class for the evaluation of a parallel derivative
+ * @brief Class for the evaluation of a parallel derivative (MPI Version)
  *
  * @ingroup dz
  * @tparam Matrix The matrix class of the interpolation matrix
@@ -24,16 +24,19 @@ template< >
 struct DZ< MPI_Matrix, MPI_Vector> 
 {
     /**
-     * @brief Construct from a field and a grid
-     *
-     * @tparam Field The Fieldlines to be integrated: Has to provide void  operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
-     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there 
-     is a limiter and 0 if there isn't
-     * @param field The field to integrate
-     * @param grid The grid on which to operate
-     * @param eps Desired accuracy of fieldline integration
-     * @param limit Instance of the Limiter class
-     */
+    * @brief Construct from a field and a grid
+    *
+    * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
+    * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
+    is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
+    * @param field The field to integrate
+    * @param grid The grid on which to operate
+    * @param deltaPhi Must either equal the hz() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
+    * @param eps Desired accuracy of runge kutta
+    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
+    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
+    * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
+    */
     template <class Field, class Limiter>
     DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
 
@@ -110,7 +113,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
      * @tparam UnaryOp Unary Functor 
      * @param f Functor to evaluate in x-y
      * @param g Functor to evaluate in z
-     * @param plane The number of the plane to start
+     * @param p0 The number of the plane to start
      * @param rounds The number of rounds to follow a fieldline
      *
      * @return Returns an instance of container
@@ -118,9 +121,9 @@ struct DZ< MPI_Matrix, MPI_Vector>
     template< class BinaryOp, class UnaryOp>
     MPI_Vector evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
+  private:
     void einsPlus( const MPI_Vector& n, thrust::host_vector<double>& npe);
     void einsMinus( const MPI_Vector& n, thrust::host_vector<double>& nme);
-  private:
     typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
     typedef cusp::array1d_view< thrust::host_vector<double>::const_iterator> cView;
     double eps_;
@@ -135,6 +138,8 @@ struct DZ< MPI_Matrix, MPI_Vector>
 
     dg::DZ<cusp::csr_matrix<int, double, cusp::host_memory>, thrust::host_vector<double> > dz_;
 };
+//////////////////////////////////////DEFINITIONS/////////////////////////////////////
+///@cond
 
 template <class Field, class Limiter>
 DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz ): 
@@ -288,23 +293,6 @@ MPI_Vector DZ<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, UnaryOp g, unsigned 
     return mpi_vec;
 }
 
-/*
-template< class BinaryOp, class UnaryOp>
-MPI_Vector DZ<MPI_Matrix, MPI_Vector>::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
-{
-    MPI_Vector vec3d = evaluate( f, g, p0, rounds);
-    MPI_Vector vec2d(g_.size()/g_.Nz());
-
-    for (unsigned i = 0; i<g_.Nz(); i++)
-    {
-        part( vec3d.begin() + i* (g_.size()/g_.Nz()), vec3d.begin()+(i+1)*(g_.size()/g_.Nz()));
-        dg::blas1::axpby(1.0,part,1.0,vec2d);
-    }
-    dg::blas1::scal(vec2d,1./g_.Nz());
-    return vec2d;
-}
-*/
-
 void DZ<MPI_Matrix, MPI_Vector>::einsPlus( const MPI_Vector& f, thrust::host_vector<double>& fplus ) 
 {
     const thrust::host_vector<double>& in = f.data();
@@ -378,5 +366,6 @@ void DZ<MPI_Matrix, MPI_Vector>::einsMinus( const MPI_Vector& f, thrust::host_ve
         cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
     }
 }
+///@endcond
 }//namespace dg
 

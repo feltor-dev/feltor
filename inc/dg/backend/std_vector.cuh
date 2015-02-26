@@ -16,6 +16,7 @@
 
 //assume that each element of a std::vector is a vector itself
 
+///@cond
 namespace dg
 {
 namespace blas1
@@ -110,5 +111,6 @@ inline typename VectorTraits<Vector>::value_type doDot( const std::vector<Vector
 } //namespace detail
 } //namespace blas1
 } //namespace dg
+///@endcond
 
 #endif //_DG_BLAS_STD_VECTOR_

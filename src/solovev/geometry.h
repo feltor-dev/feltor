@@ -4,10 +4,15 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+
+#include "dg/blas.h"
+
 #include "geom_parameters.h"
+
+
 /*!@file
  *
- * Geometry objects (6 analytical quantities)
+ * Geometry objects 
  */
 namespace solovev
 {
@@ -19,9 +24,14 @@ namespace solovev
  */    
 struct Psip
 {
+    /**
+     * @brief Construct from given geometric parameters
+     *
+     * @param gp useful geometric parameters
+     */
     Psip( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psi_0(gp.psipmaxcut), alpha_( gp.alpha) {}
 /**
- * @brief \f[ \hat{\psi}_p = 
+ * @brief \f[ \hat{\psi}_p(R,Z) = 
       \hat{R}_0\Bigg\{A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
       + \sum_{i=1}^{12} c_i\bar \psi_{pi}(\bar R, \bar Z) \Bigg\}
       =
@@ -42,6 +52,10 @@ struct Psip
       \ln{(\bar{R}   )}+8  \bar{Z}^6 \right] +
       +c_8  \bar{Z}+c_9 \bar{R}^2  \bar{Z}+(\bar{R}^4 )/8 \Bigg\} \f]
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
+
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @return \f$ \hat \psi_p(R,Z) \f$
  */
     double operator()(double R, double Z)
     {    
@@ -74,6 +88,15 @@ struct Psip
             return -1./2./alpha_* sin( (psi-psi_0)/alpha_) ;
         return 0.;
     }
+    /**
+     * @brief 
+     *
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @param phi angle (cylindrical coordinates)
+     *
+     * @return 
+     */
     double operator()(double R, double Z, double phi)
     {    
         return operator()(R,Z);
@@ -844,6 +867,9 @@ struct BHatP
     InvB   invB_;
   
 }; 
+///@} 
+///@addtogroup profiles
+///@{
 
 /**
  * @brief Delta function for poloidal flux \f$ B_Z\f$

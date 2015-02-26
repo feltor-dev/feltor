@@ -4,7 +4,6 @@
 #include "mpi_collective.h"
 
 
-
 int main( int argc, char * argv[])
 {
     MPI_Init( &argc, &argv);
@@ -17,6 +16,7 @@ int main( int argc, char * argv[])
     if(rank==0)std::cout <<"Size =  " <<size <<std::endl;
     if(size!=4 && rank == 0){std::cerr <<"You run with "<<size<<" processes. Run with 4 processes!\n"; MPI_Finalize(); return -1;}
 
+    if(rank==0)std::cout << "Test if scatter followed by gather leaves the input vector intact\n";
     thrust::host_vector<double> v( Nx*Ny, 3*rank);
     thrust::host_vector<double> m( Nx*Ny);
     for( int i=0; i<m.size(); i++)
@@ -48,29 +48,15 @@ int main( int argc, char * argv[])
         }
         //if( rank==0) std::cout << i << " "<<v[i]<<" "<<w[i]<<"\n";
     }
-    if( equal) 
-        std::cout <<"TEST PASSED\n";
-    else
-        std::cerr << "TEST FAILED\n";
-
-    //dg::Sender s(m, MPI_COMM_WORLD);
-    //receive = s.scatter( v);
-    //s.gather( receive, v);
-    //equal = true;
-    //for( unsigned i=0; i<m.size(); i++)
-    //    if( v[i] != w[i])
-    //    {
-    //        equal = false;
-    //        if(rank==0) std::cerr << v[i] << " vs "<<w[i]<<"\n";
-    //    }
-
-    //if( equal) 
-    //    if(rank==0)std::cout <<"TEST PASSED\n";
-
+    if( rank==0)
+    {
+        if( equal) 
+            std::cout <<"TEST PASSED\n";
+        else
+            std::cerr << "TEST FAILED\n";
+    }
 
     MPI_Finalize();
-
-
 
     return 0;
 }

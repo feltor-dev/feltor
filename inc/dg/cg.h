@@ -107,8 +107,15 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank==0)
+#endif //MPI
+    {
     std::cout << "Norm of b "<<nrmb <<"\n";
     std::cout << "Residual errors: \n";
+    }
 #endif //DG_DEBUG
     if( nrmb == 0)
     {
@@ -132,9 +139,14 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
         blas1::axpby( -alpha, ap, 1., r);
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
+#ifdef MPI_VERSION
+    if(rank==0)
+#endif //MPI
+    {
         std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
         std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
         std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+    }
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction)) 
             return i;
@@ -166,8 +178,15 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
     typedef typename VectorTraits<Vector>::value_type value_type;
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank==0)
+#endif //MPI
+    {
     std::cout << "Norm of b "<<nrmb <<"\n";
     std::cout << "Residual errors: \n";
+    }
 #endif //DG_DEBUG
     if( nrmb == 0)
     {
@@ -192,9 +211,14 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
         blas1::axpby( -alpha, ap, 1., r);
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif //MPI
+        {
         std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
         std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
         std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
+        }
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*nrmb + eps) 
             return i;

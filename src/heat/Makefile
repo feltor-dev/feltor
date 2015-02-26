@@ -1,5 +1,5 @@
 system=home
-device=omp
+device=gpu
 
 INCLUDE = -I../../inc # other project libraries
 INCLUDE+= -I../ # geometry library

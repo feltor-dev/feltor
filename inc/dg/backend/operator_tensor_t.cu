@@ -26,6 +26,6 @@ int main()
     cusp::print(test1);
     cusp::print(test2);
     cusp::print(test3);
-    cout << "You should see the above tensor product in the sparse matrix!\n";
+    cout << "You should see the above tensor product twice in the sparse matrix!\n";
     return 0;
 }

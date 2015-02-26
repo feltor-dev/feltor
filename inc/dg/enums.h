@@ -1,5 +1,10 @@
 #pragma once
 
+/*! @file 
+  
+  enums
+  */
+
 namespace dg
 {
 /**
@@ -42,15 +47,4 @@ enum system{
     cartesian, //!< cartesian coordinate system
     cylindrical //!< cylindrical coordinate system
 };
-///@addtogroup creation
-///@{
-/**
- * @brief Switch between x-space and l-space
- * DEPRECATED
- */
-enum space {
-    XSPACE, //!< indicates, that the given matrix operates on x-space values
-    LSPACE  //!< indicates, that the given matrix operates on l-space values
-};
-///@}
 }//namespace dg

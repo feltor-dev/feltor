@@ -6,7 +6,7 @@
 namespace dg{
 namespace create
 {
-
+///@cond
 namespace detail
 {
 //these are to prevent metric coefficients in the normal weight functions
@@ -24,6 +24,7 @@ MPI_Precon pure_weights( const MPI_Grid2d& g)
     p.norm = g.hx()*g.hy()/4.;
     return p;
 }
+
 //create a normed 2d X-derivative
 MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
 {
@@ -173,7 +174,22 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir, int co
 }
 
 } //namespace detail
+///@endcond
 
+///@addtogroup highlevel
+///@{
+
+/**
+ * @brief Create 2d derivative in x-direction
+ *
+ * @param g The grid on which to create dx
+ * @param bcx The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = centered)
 {
     MPI_Comm comm = g.communicator();
@@ -188,11 +204,32 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = ce
     return dx;
 }
 
+/**
+ * @brief Create 2d derivative in x-direction
+ *
+ * @param g The grid on which to create dx (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dx( const MPI_Grid2d& g, norm no = normed, direction dir = centered)
 {
     return dx( g, g.bcx(), no, dir);
 }
 
+/**
+ * @brief Create 2d derivative in y-direction
+ *
+ * @param g The grid on which to create dy
+ * @param bcy The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = centered)
 {
     MPI_Comm comm = g.communicator();
@@ -209,10 +246,33 @@ MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = ce
     m.yterm() = detail::boundaryDX( g1d, bcy, dir, coords[1], dims[1]);
     return m;
 }
+
+/**
+ * @brief Create 2d derivative in y-direction
+ *
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dy( const MPI_Grid2d& g, norm no = normed, direction dir = centered)
 {
     return dy( g, g.bcy(), no, dir);
 }
+
+/**
+ * @brief Create 3d derivative in x-direction
+ *
+ * @param g The grid on which to create dx
+ * @param bcx The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dx( const MPI_Grid3d& g, bc bcx, norm no = normed, direction dir = centered)
 {
     MPI_Comm comm = g.communicator();
@@ -227,11 +287,32 @@ MPI_Matrix dx( const MPI_Grid3d& g, bc bcx, norm no = normed, direction dir = ce
     return dx;
 }
 
+/**
+ * @brief Create 3d derivative in x-direction
+ *
+ * @param g The grid on which to create dx (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dx( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
 {
     return dx( g, g.bcx(), no, dir);
 }
 
+/**
+ * @brief Create 3d derivative in y-direction
+ *
+ * @param g The grid on which to create dy
+ * @param bcy The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = centered)
 {
     MPI_Comm comm = g.communicator();
@@ -248,13 +329,27 @@ MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = ce
     m.yterm() = detail::boundaryDX( g1d, bcy, dir, coords[1], dims[1]);
     return m;
 }
+
+/**
+ * @brief Create 3d derivative in y-direction
+ *
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dy( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
 {
     return dy( g, g.bcy(), no, dir);
 }
+///@}
 
+///@cond
 namespace detail
 {
+
 MPI_Matrix jump( const Grid1d<double>& g, bc bcx, MPI_Comm comm)
 {
     unsigned n = g.n();
@@ -279,6 +374,7 @@ MPI_Matrix jump( const Grid1d<double>& g, bc bcx, MPI_Comm comm)
     m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
     return m;
 }
+
 BoundaryTerms boundaryJump( const Grid1d<double>& g, bc bcx, int coords, int dims)
 {
     //only implement symmetric laplacian
@@ -333,6 +429,21 @@ BoundaryTerms boundaryJump( const Grid1d<double>& g, bc bcx, int coords, int dim
     return xterm;
 }
 }//namespace detail
+///@endcond
+
+///@addtogroup highlevel
+///@{
+
+/**
+ * @brief Matrix that contains 2d jump terms
+ *
+ * @param g grid
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ * @param no the norm
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix jump2d( const MPI_Grid2d& g, bc bcx, bc bcy, norm no)
 {
     MPI_Comm comm = g.communicator();
@@ -359,11 +470,29 @@ MPI_Matrix jump2d( const MPI_Grid2d& g, bc bcx, bc bcy, norm no)
     return lapx;
 }
 
+/**
+ * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
+ *
+ * @param g grid
+ * @param no the norm
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix jump2d( const MPI_Grid2d& g, norm no)
 {
     return jump2d( g, g.bcx(), g.bcy(), no);
 }
 
+/**
+ * @brief Matrix that contains 2d jump terms
+ *
+ * @param g grid
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ * @param no the norm
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix jump2d( const MPI_Grid3d& g, bc bcx, bc bcy, norm no)
 {
     MPI_Comm comm = g.communicator();
@@ -390,10 +519,19 @@ MPI_Matrix jump2d( const MPI_Grid3d& g, bc bcx, bc bcy, norm no)
     return lapx;
 }
 
+/**
+ * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
+ *
+ * @param g grid
+ * @param no the norm
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix jump2d( const MPI_Grid3d& g, norm no)
 {
     return jump2d( g, g.bcx(), g.bcy(), no);
 }
 
+///@}
 } //namespace create
 } //namespace dg

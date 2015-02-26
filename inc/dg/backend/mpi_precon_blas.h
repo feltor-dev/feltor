@@ -2,6 +2,7 @@
 #include "mpi_vector_blas.h"
 #include "mpi_precon.h"
 
+///@cond
 namespace dg
 {
 namespace blas2
@@ -118,3 +119,4 @@ inline void doSymv( const Matrix& m, const Vector&x, Vector& y, MPIPreconTag, MP
 } //namespace detail
 } //namespace blas2
 } //namespace dg
+///@endcond

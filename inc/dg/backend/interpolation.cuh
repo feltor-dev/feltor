@@ -7,6 +7,11 @@
 #include "tensor.cuh"
 #include "operator_tensor.cuh"
 
+/*! @file
+
+  Contains 1D, 2D and 3D matrix creation functions
+  */
+
 namespace dg{
 
 namespace create{
@@ -50,10 +55,12 @@ std::vector<double> coefficients( double xn, unsigned n)
 
 }//namespace detail
 ///@endcond
+///@addtogroup utilities
+///@{
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector given in XSPACE to the points in XSPACE
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param g The Grid on which to operate
  *
@@ -101,7 +108,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector given in XSPACE to the points in XSPACE
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param g The Grid on which to operate
@@ -190,11 +197,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector defined on the grid to the given points 
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
+ * @param globalbcz determines what to do if values lie exactly on the boundary
  *
  * @return interpolation matrix
  * @note The values of x, y and z must lie within the boundaries of g
@@ -344,7 +352,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d<dou
  * @param g_old The old grid
  *
  * @return Interpolation matrix
- * @note The boundaries of the old brid must lie within the boundaries of the new grid
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<double>& g_new, const Grid3d<double>& g_old)
 {
@@ -361,5 +369,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
+///@}
 }//namespace create
 } //namespace dg

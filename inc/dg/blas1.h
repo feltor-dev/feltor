@@ -15,18 +15,21 @@
 namespace dg{
 
 //TODO Throw messages instead of assertions because origin of message can 
-// be better followed
+// be better followed ?
 //
 // eigentlich dürften die blas routinen nicht im dg namensraum liegen, denn damit 
 // haben sie erst mal nichts zu tun. Wenn man nun als Außenstehender seine eigene 
 // Vektorklasse hat und die blas spezialisieren will?
 // Synchronize ist niemals nötig mit thrust!!
+// Vielleicht wäre function overloading die bessere design - Wahl für blas
 /*! @brief BLAS Level 1 routines 
  *
  * @ingroup blas1
  * Only those routines that are actually called need to be implemented.
  * Don't forget to specialize in the dg namespace.
  * @note successive calls to blas routines are executed sequentially 
+ * @note A manual synchronization of threads or devices is never needed in an application 
+ * using these functions. All functions returning a value block until the value is ready.
  */
 namespace blas1
 {
@@ -53,11 +56,7 @@ inline typename VectorTraits<Vector>::value_type dot( const Vector& x, const Vec
 
 /*! @brief Modified BLAS 1 routine axpy
  *
- * This routine computes \f[ y =  \alpha x + \beta y \f] 
- * Q: Isn't it better to implement daxpy and daypx? \n
- * A: unlikely, because in all three cases all elements of x and y have to be loaded
- * and daxpy is memory bound. (Is there no original daxpby routine because 
- * the name is too long??)
+ * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f] 
  * @param alpha Scalar  
  * @param x Vector x may equal y 
  * @param beta Scalar
@@ -74,7 +73,7 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
 
 /*! @brief Modified BLAS 1 routine axpy
  *
- * This routine computes \f[ z =  \alpha x + \beta y \f] 
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f] 
  * @param alpha Scalar  
  * @param x Vector x may equal result
  * @param beta Scalar
@@ -95,8 +94,9 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
  * This routine computes \f[ y_i = f(x_i) \f] 
  * This is actually not a BLAS routine since f can be a nonlinear function.
  * It is rather the first step towards a more general library conception.
- * @param x Vector x may equal result
- * @param op Operator to use on every element
+ * @param x Vector x may equal y
+ * @param y Vector y contains result, may equal x
+ * @param op unary Operator to use on every element
  * @note In an implementation you may want to check for alpha == 0
  */
 template< class Vector, class UnaryOp>
@@ -108,7 +108,7 @@ inline void transform( const Vector& x, Vector& y, UnaryOp op)
 
 /*! @brief BLAS 1 routine scal
  *
- * This routine computes \f[ x \leftarrow  \alpha x \f] 
+ * This routine computes \f[ \alpha x_i \f] 
  * @param alpha Scalar  
  * @param x Vector x 
  */

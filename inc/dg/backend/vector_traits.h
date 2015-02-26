@@ -6,6 +6,7 @@
 
 namespace dg{
 
+    ///@cond
 template< class Vector>
 struct VectorTraits {
     typedef typename Vector::value_type value_type;
@@ -17,11 +18,7 @@ struct VectorTraits<std::vector<Vector> >{
     typedef typename VectorTraits<Vector>::value_type value_type;
     typedef StdVectorTag vector_category;
 };
-//template< class Vector>
-//struct VectorTraits<std::vector<Vector*> >{
-//    typedef typename Vector::value_type value_type;
-//    typedef StdVectorPointerTag vector_category;
-//};
+///@endcond
 
 }//namespace dg
 

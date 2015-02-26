@@ -161,7 +161,6 @@ struct ToeflR
     Helmholtz< Matrix, container, container > gamma1;
     ArakawaX< Matrix, container> arakawa; 
     Elliptic<Matrix, container, Preconditioner> pol;
-    //Polarisation2dX< thrust::host_vector<double>, dg::HMatrix > pol; //note the host vector
     CG<container > pcg;
 
     const Preconditioner w2d, v2d;

@@ -25,6 +25,7 @@
 /*! @file 
 
   Contains object for the polarisation matrix creation
+  @deprecated
   */
 namespace dg
 {
@@ -35,6 +36,7 @@ namespace dg
  * @ingroup highlevel
  * The term discretized is \f[ -\nabla ( \chi \nabla ) \f]
  * @tparam container The vector class on which to operate on
+ * @deprecated Use Elliptic class instead
  */
 template< class container = thrust::host_vector<double> , class Matrix = cusp::csr_matrix<int, double, cusp::host_memory> >
 struct Polarisation2dX
@@ -93,6 +95,7 @@ struct Polarisation2dX
     typename Array::view I_view, J_view;
 };
 
+///@cond
 template< class container, class Matrix>
 Matrix Polarisation2dX<container, Matrix>::create( const container& chi)
 {
@@ -187,6 +190,7 @@ Polarisation2dX<container, Matrix>::Polarisation2dX( const Grid3d<value_type>& g
 }
 
 
+///@endcond
 
 } //namespace dg
 

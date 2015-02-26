@@ -22,6 +22,7 @@ namespace dg{
  * @brief Contains functions used for matrix creation
  */
 namespace create{
+///@cond
 namespace detail{
 
 template< class T>
@@ -56,6 +57,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> renorm( const cusp::coo_matrix<int, 
 
 }
 
+///@endcond
+
 ///@addtogroup highlevel
 ///@{
 
@@ -89,6 +92,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm
         return detail::renorm( bdxf, g);
     return bdxf;
 }
+
 /**
  * @brief Create 2d derivative in x-direction
  *
@@ -132,6 +136,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, bc bcy, norm
         return detail::renorm( bdyf,g);
     return bdyf;
 }
+
 /**
  * @brief Create 2d derivative in y-direction
  *
@@ -160,6 +165,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid2d<T>& g, norm no = no
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
+ * @deprecated Use Elliptic class instead
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc bcx, bc bcy, norm no = normed, direction dir = forward)
@@ -193,6 +199,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, bc b
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
+ * @deprecated Use Elliptic class instead
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm no = normed, direction dir = forward)
@@ -200,6 +207,17 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM( const Grid2d<T>& g, norm
     return laplacianM( g, g.bcx(), g.bcy(), no, dir);
 }
 
+/**
+ * @brief Matrix that contains 2d jump terms
+ *
+ * @tparam T value type
+ * @param g grid
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ * @param no the norm
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, bc bcx, bc bcy, norm no)
 {
@@ -216,6 +234,16 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, bc bcx, 
         return detail::renorm( jump, g);
     return jump;
 }
+
+/**
+ * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
+ *
+ * @tparam T value type
+ * @param g grid
+ * @param no the norm
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, norm no)
 {
@@ -223,6 +251,17 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid2d<T>& g, norm no)
 }
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
+/**
+ * @brief Matrix that contains 2d jump terms
+ *
+ * @tparam T value type
+ * @param g grid
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ * @param no the norm
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, bc bcx, bc bcy, norm no)
 {
@@ -234,11 +273,22 @@ cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, bc bcx, 
     else 
         return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)), jump_); //w*hz/2 = hz
 }
+
+/**
+ * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
+ *
+ * @tparam T value type
+ * @param g grid
+ * @param no the norm
+ *
+ * @return A host matrix in coordinate format
+ */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> jump2d( const Grid3d<T>& g, norm no)
 {
     return jump( g, g.bcx(), g.bcy(), no);
 }
+
 /**
  * @brief Create 3d derivative in x-direction
  *
@@ -302,6 +352,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, bc bcy, norm
     else 
         return dgtensor<T>( 1, tensor<T>( g.Nz(), g.hz()*delta(1)) , dy); //w*hz/2 = hz
 }
+
 /**
  * @brief Create 3d derivative in y-direction
  *
@@ -340,6 +391,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, bc bcz, dire
         dz = create::dx_symm_normed<T>(1, g.Nz(), g.hz(), bcz);
     return dgtensor<T>( 1, dz,  tensor<T>( g.Nx()*g.Ny(), delta(g.n()*g.n()) ));
 }
+
 /**
  * @brief Create 3d derivative in z-direction
  *
@@ -364,6 +416,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( 
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
+ * @deprecated use Elliptic class instead
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, bc bcx, bc bcy, norm no = normed, direction dir = forward)
@@ -389,6 +442,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g,
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
+ * @deprecated Use Elliptic class instead
  */
 template< class T>
 cusp::coo_matrix<int, T, cusp::host_memory> laplacianM_perp( const Grid3d<T>& g, norm no = normed, direction dir = forward)
