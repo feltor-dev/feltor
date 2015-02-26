@@ -1,7 +1,7 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/print.h>
 #include "xspacelib.cuh"
-#include "ell_interpolation.cuh"
+#include "ell_interpolation.h"
 #include "typedefs.cuh"
 
 const unsigned n = 3;
