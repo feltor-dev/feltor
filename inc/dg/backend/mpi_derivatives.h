@@ -43,7 +43,7 @@ MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
     Operator<double> a(n), b(n), bt(n);
     if( dir == dg::centered)
     {
-        MPI_Matrix m(bcx, comm,  3);
+        MPI_Matrix m( comm,  3);
         m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
         
         bt = backward*t*(-0.5*lr )*forward; 
@@ -55,7 +55,7 @@ MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
     }
     if( dir == dg::forward)
     {
-        MPI_Matrix m(bcx, comm,  2);
+        MPI_Matrix m(comm,  2);
         m.offset()[0] = 0, m.offset()[1] = n;
 
         a = backward*t*(-d.transpose()-l)*forward; 
@@ -64,7 +64,7 @@ MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
         return m;
     }
     //if dir == dg::backward
-    MPI_Matrix m(bcx, comm,  2);
+    MPI_Matrix m(comm,  2);
     m.offset()[0] = -n, m.offset()[1] = 0;
     bt = backward*t*(-lr)*forward; 
     a  = backward*t*(d+l)*forward;
@@ -369,7 +369,7 @@ MPI_Matrix jump( const Grid1d<double>& g, bc bcx, MPI_Comm comm)
     bt = -lr;
     a = backward*t*a*forward, bt = backward*t*bt*forward, b = backward*t*b*forward;
 
-    MPI_Matrix m(bcx, comm,  3);
+    MPI_Matrix m(comm,  3);
     m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
     m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
     return m;
@@ -455,7 +455,6 @@ MPI_Matrix jump2d( const MPI_Grid2d& g, bc bcx, bc bcy, norm no)
     for( unsigned i=0; i<lapy.offset().size(); i++)
         lapy.offset()[i] *= g.Nx()*g.n();
     //append elements
-    lapx.bcy() = bcy;
     lapx.dataX().insert( lapx.dataX().end(), lapy.dataX().begin(), lapy.dataX().end());
     lapx.dataY().insert( lapx.dataY().end(), lapy.dataY().begin(), lapy.dataY().end());
     lapx.offset().insert( lapx.offset().end(), lapy.offset().begin(), lapy.offset().end());
@@ -504,7 +503,6 @@ MPI_Matrix jump2d( const MPI_Grid3d& g, bc bcx, bc bcy, norm no)
     for( unsigned i=0; i<lapy.offset().size(); i++)
         lapy.offset()[i] *= g.Nx()*g.n();
     //append elements
-    lapx.bcy() = bcy;
     lapx.dataX().insert( lapx.dataX().end(), lapy.dataX().begin(), lapy.dataX().end());
     lapx.dataY().insert( lapx.dataY().end(), lapy.dataY().begin(), lapy.dataY().end());
     lapx.offset().insert( lapx.offset().end(), lapy.offset().begin(), lapy.offset().end());
