@@ -239,11 +239,11 @@ struct DZ
     container evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
     void eins(const Matrix& interp, const container& n, container& npe);
+    void einshalf(const Matrix& interp, const container& n, container& npe);
     void einsPlus( const container& n, container& npe);
     void einsMinus( const container& n, container& nme);
     void einsPlusT( const container& n, container& npe);
     void einsMinusT( const container& n, container& nme);
-
 
     /**
      * @brief Returns the weights used to make the matrix symmetric 
@@ -331,6 +331,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
     
+
 }
 template<class M, class container>
 void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
@@ -356,7 +357,7 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
-
+    
     ////adjoint discretisation
 //     assert( &f != &dzf);    
 //     dg::blas1::pointwiseDot( w3d, f, dzf);
@@ -368,6 +369,8 @@ void DZ<M,container>::operator()( const container& f, container& dzf)
 //     dg::blas1::axpby( 1., tempM, -1., tempP);
 //     dg::blas1::pointwiseDot( v3d, tempP, dzf);
 //     dg::blas1::pointwiseDot( dzf, invB, dzf);
+    
+    
 
 }
 
@@ -389,13 +392,10 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
         dg::blas1::pointwiseDivide( dzf, hz, dzf);
         einsPlusT( dzf, tempP);
         einsMinusT( dzf, tempM);
-        dg::blas1::axpby( 1., tempM, -1., tempP);
+        dg::blas1::axpby( 1., tempM, -1., tempP);        
         dg::blas1::pointwiseDot( v3d, tempP, dzf);
-   
-//         //jump
-//         dg::blas2::symv( jump, f, tempP);
-//         dg::blas1::pointwiseDot( v3d,  tempP,  tempP);
-//         dg::blas1::axpby( 1., tempP, 1., dzf);
+        
+
 }
 
 template<class M, class container>
@@ -411,7 +411,6 @@ void DZ<M,container>::forward( const container& f, container& dzf)
 //     dg::blas1::pointwiseDot( w3d, f, dzf);
 //     dg::blas1::pointwiseDivide( dzf, hp, dzf);
 //     dg::blas1::pointwiseDivide( dzf, invB, dzf);
-// 
 //     einsPlusT( dzf, tempP);
 //     dg::blas1::axpby( -1., tempP, 1.,dzf,dzf);
 //     dg::blas1::pointwiseDot( v3d, dzf, dzf);
@@ -436,10 +435,6 @@ void DZ<M,container>::forwardT( const container& f, container& dzf)
     dg::blas1::axpby( -1., tempP, 1., dzf, dzf);
     dg::blas1::pointwiseDot( v3d, dzf, dzf);
 
-//         //jump
-//     dg::blas2::symv( jump, f, tempP);
-//     dg::blas1::pointwiseDot( v3d,  tempP,  tempP);
-//     dg::blas1::axpby( 1., tempP, 1., dzf);
 }
 template<class M, class container>
 void DZ<M,container>::backward( const container& f, container& dzf)
@@ -478,11 +473,7 @@ void DZ<M,container>::backwardT( const container& f, container& dzf)
     einsMinusT( dzf, tempM);
     dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
     dg::blas1::pointwiseDot( v3d, dzf, dzf);
-    
-//     //jump
-//     dg::blas2::symv( jump, f, tempP);
-//     dg::blas1::pointwiseDot( v3d,  tempP,  tempP);
-//     dg::blas1::axpby( 1., tempP, 1., dzf);
+
 
 }
 template< class M, class container >
@@ -496,27 +487,9 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     backwardT( tempM, temp0);
     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
-//     dg::blas2::symv( jump, f, tempP);
-//     dg::blas1::axpby( 1., tempP, 1., dzTdzf);
+    dg::blas2::symv( jump, f, tempP);
+    dg::blas1::axpby( 1., tempP, 1., dzTdzf);
 //     add jump term (unstable without it)
-    //nonadjoint jump
-    einsPlus( f, tempP);
-    einsMinus( f, tempM);
-    dg::blas1::axpby( -1., tempP,2., f, tempP);
-    dg::blas1::axpby( -1., tempM, 1., tempP, tempM);
-    dg::blas1::axpby( 0.5, tempM,  1., dzTdzf);   
-//     //adjoint jump
-//     dg::blas1::pointwiseDot( w3d, f,temp0);
-//     dg::blas1::pointwiseDivide(f,hp,temp0);
-//     einsPlusT(temp0, tempP);
-// //     dg::blas1::pointwiseDot( w3d, f,temp0);
-//     dg::blas1::pointwiseDivide(f,hm,temp0);
-//     einsMinusT( temp0, tempM);
-// //     dg::blas1::pointwiseDot( v3d, tempP,tempP);
-// //     dg::blas1::pointwiseDot( v3d, tempM,tempM);
-//     dg::blas1::axpby( -1., tempP, 2., f, tempP);
-//     dg::blas1::axpby( -1., tempM, 1., tempP, tempM);
-//     dg::blas1::axpby( -0.5, tempM,  1., dzTdzf);
 
 }
 template< class M, class container >

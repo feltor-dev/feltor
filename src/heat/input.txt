@@ -5,20 +5,20 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3   (3)
-2)  nx (grid points in x)                =   30 (192)
-3)  ny (grid points in y)                =   30 (192) 
-4)  nz (grid points in z)                =   20 (1)
-5)  dt (time step in units c_s/rho_s)    =   0.01(0.01)
+2)  nx (grid points in x)                =   100 (192)
+3)  ny (grid points in y)                =   100 (192) 
+4)  nz (grid points in z)                =   15 (1)
+5)  dt (time step in units c_s/rho_s)    =   0.1(0.01)
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  50
-8)  ny_out (# grid points in output field)  =  50
-9)  nz_out (# grid points in output field)  =  1
+7)  nx_out (# grid points in output field)  =  100
+8)  ny_out (# grid points in output field)  =  100
+9)  nz_out (# grid points in output field)  =  40
 10) itstp  (steps between outputs)          =  1  (5)
-11) total # of outputs (excluding first)    =  1
+11) total # of outputs (excluding first)    =  10
 -------------------------Physical parameters----------------------------
-12) nu_perp                                 =  1e-5
-13) nu_parallel  (viscosity)                =100  (0.001)
+12) nu_perp                                 =  0e-5
+13) nu_parallel  (viscosity)                =  100  (0.001)
 ------------------------Initial perturbation parameters---------------------
 14) amp (blob amplitude)                    =  .1    (1.0)
 15) sigma (blob variance in units of rho_s) =  2.0    (10)
@@ -29,7 +29,7 @@
 20) Profile amplitude                       =  0.0  (peak amplitude)
 21) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Boundary condition----------------------------
-22) GLOBAL BC (1 DIR/ 4 NEU)                =  1
+22) GLOBAL BC (1 DIR/ 4 NEU)                =  4
 ----------------------------------Miscellaneous----------------------------
 23) boxscale R+                             =  1.2 (a little larger than 1)
 24) boxscale R-                             =  1.2 (a little larger than 1)

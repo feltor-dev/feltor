@@ -12,6 +12,8 @@
 #include "interpolation.cuh"
 #include "draw/host_window.h"
 
+double R_0 = 10;
+double I_0 = 20; //I0=20 and R=10 means q=2
 struct InvB
 {
     InvB( double R_0, double I_0):R_0(R_0), I_0(I_0){}
@@ -65,8 +67,6 @@ struct Field
     double R_0, I_0;
 };
 
-double R_0 = 10;
-double I_0 = 20; //I0=20 and R=10 means q=2
 
 double funcNEU(double R, double Z, double phi)
 {
@@ -101,17 +101,19 @@ double divb(double R, double Z, double phi)
 
 double deriNEUT(double R, double Z, double phi)
 {
-    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
+    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
+    //for divb
     double fac1 = sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
     double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
-                M_PI*M_PI*( cos(M_PI*3.*(R-R_0)/2.)+
-                            M_PI*R*sin(M_PI*3.*(R-R_0)/2.)) ;
+                M_PI*M_PI* cos(M_PI*3.*(R-R_0)/2.)+
+                M_PI*R*sin(M_PI*3.*(R-R_0)/2.) ;
     double z2 = cos(M_PI*0.5*(R-R_0)) + 
                 cos(M_PI*3*(R-R_0)/2) + 
                 M_PI*R*sin(M_PI*0.5*(R-R_0));
     double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
     double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
+    
     double func = -psi*cos(phi);
     double deri = psi*sin(phi)/dldp;
     return divb*func + deri;
@@ -317,7 +319,9 @@ int main()
     dg::blas1::axpby( 1., solutionT, -1., derivativeT);
     errT =dg::blas2::dot( w3d, derivativeT);
     std::cout << "Relative Difference in DZT is "<< sqrt( errT/normT )<<"\n"; 
-    
+    dg::blas1::axpby( 1., derivative, -1., derivativeT,omega);
+    double errTdiffdzdzT =dg::blas2::dot( w3d, omega);
+    std::cout << "Relative Difference in DZT to DZ is "<< sqrt( errTdiffdzdzT/norm )<<"\n";   
     std::cout << "--------------------testing dzT with dz" << std::endl;
     std::cout << "|| SolutionT ||     "<<sqrt( normT)<<"\n";
     double errTdz =dg::blas2::dot( w3d, derivativeTdz);
@@ -382,10 +386,10 @@ int main()
     std::cout << "Diff           = "<< norm1dzTdz+normdz1dz<<"\n";    
     
     std::cout << "--------------------testing dzT with inversion " << std::endl;
-    double eps =1e-4;   
+    double eps =1e-5;   
     dg::Invert< dg::DVec> invert(
-//       dg::evaluate(dg::zero,g3d)
-      function
+      dg::evaluate(dg::zero,g3d)
+//       function
       , w3d.size(), eps );  
     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
     std::cout << " # of iterations "<< invert( dz, functionTinv,solutiondzTdz ) << std::endl; //is dzTdz
@@ -428,7 +432,8 @@ int main()
     draw::RenderHostData render(7 , 1*Nz);  
     //create a colormap
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
-
+    dg::DMatrix jump( dg::create::jump2d( g3d, g3d.bcx(), g3d.bcy(), dg::not_normed));
+    dg::blas2::symv( jump, ones, lambda);
 
     std::stringstream title;
     title << std::setprecision(10) << std::scientific;
@@ -468,11 +473,12 @@ int main()
             dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
             render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
         }
-        hvisual = derivativeTdz;
+        dg::blas1::axpby(1.0,derivative,-1.0,derivativeT,omega);
+        hvisual = omega;
         dg::blas2::gemv( equigrid, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
-        title <<"B dz(f/B)"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
+        title <<"diff"<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         for( unsigned k=0; k<Nz;k++)
         {            
             unsigned size=g3d.n()*g3d.n()*g3d.Nx()*g3d.Ny();            
@@ -501,7 +507,7 @@ int main()
             dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
             render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
         }
-        hvisual = dzz;
+        hvisual = lambda;
         dg::blas2::gemv( equigrid, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );

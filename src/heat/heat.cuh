@@ -141,9 +141,16 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     }
     if (p.p_diff ==0)    {
     //     (A) adjoint
-        dzNU_( y[0], omega); 
-        dzNU_.centeredT(omega,lambda);
-        Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);
+//         dzNU_( y[0], omega); 
+//         dzNU_.centeredT(omega,lambda);
+        dzNU_.forward( y[0], omega); 
+        dzNU_.forwardT(omega,lambda);
+        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 0.,chi); 
+
+        dzNU_.backward( y[0], omega); 
+        dzNU_.backwardT(omega,lambda);
+        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., chi); 
+        Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi);
     }  
     if (p.p_diff ==1)    {
         // (B) nonadjoint

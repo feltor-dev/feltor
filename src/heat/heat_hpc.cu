@@ -30,9 +30,10 @@ int main( int argc, char* argv[])
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
     std::string input, geom;
-    if( argc != 4)
+    if(!(( argc == 4) || ( argc == 5)) )
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [output.nc] [input.nc]\n";
+        std::cerr << "OR "<< argv[0]<<" [inputfile] [geomfile] [output.nc] \n";
         return -1;
     }
     else 
@@ -54,17 +55,60 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
+    //////////////////////////////open nc file//////////////////////////////////
+    
+    ///////////////////////////////////////////////////////////////////////////
     ////////////////////////////////set up computations///////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+
     //Make grids
     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
-    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1.0,p.bc, p.bc, dg::PER, dg::cylindrical);  
-  
-    //create RHS 
+/*    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1.0,p.bc, p.bc, dg::PER, dg::cylindrical); */ 
+    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,p.Nz_out,p.bc, p.bc, dg::PER, dg::cylindrical); 
+    dg::DVec w3d =  dg::create::weights(grid);
+    dg::DVec w3dout =  dg::create::weights(grid_out);
+
+    // /////////////////////get last temperature field of sim
+    double normTend=0.;
+    dg::HVec Tend(dg::evaluate(dg::zero,grid_out));
+    int  tvarID;
+    if (argc == 5)
+    {
+        file::NC_Error_Handle errin;
+        int ncidin;
+        errin = nc_open( argv[4], NC_NOWRITE, &ncidin);
+        ///////////////////read in and show inputfile und geomfile//////////////////
+        size_t length;
+        errin = nc_inq_attlen( ncidin, NC_GLOBAL, "inputfile", &length);
+        std::string inputin( length, 'x');
+        errin = nc_get_att_text( ncidin, NC_GLOBAL, "inputfile", &inputin[0]);
+        errin = nc_inq_attlen( ncidin, NC_GLOBAL, "geomfile", &length);
+        std::string geomin( length, 'x');
+        errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
+        std::cout << "input in"<<inputin<<std::endl;
+        std::cout << "geome in"<<geomin <<std::endl;
+        const eule::Parameters pin(file::read_input( inputin));
+        const solovev::GeomParameters gpin(file::read_input( geomin));
+        double Rminin=gpin.R_0-pin.boxscaleRm*gpin.a;
+        double Zminin=-pin.boxscaleZm*gpin.a*gpin.elongation;
+        double Rmaxin=gpin.R_0+pin.boxscaleRp*gpin.a; 
+        double Zmaxin=pin.boxscaleZp*gpin.a*gpin.elongation;
+        dg::Grid3d<double > grid_in( Rminin,Rmaxin, Zminin,Zmaxin, 0, 2.*M_PI, pin.n, pin.Nx, pin.Ny, pin.Nz, pin.bc, pin.bc, dg::PER, dg::cylindrical);
+        size_t start3din[4]  = {pin.maxout, 0, 0, 0};
+        size_t count3din[4]  = {1, grid_in.Nz(), grid_in.n()*grid_in.Ny(), grid_in.n()*grid_in.Nx()};
+        std::string namesin[1] = {"T"}; 
+        int dataIDsin[1]; 
+        int dim_idsin[4];
+        errin = nc_inq_varid(ncidin, namesin[0].data(), &dataIDsin[0]);      
+        errin = nc_get_vara_double( ncidin, dataIDsin[0], start3din, count3din, Tend.data());
+        errin = nc_close(ncidin);     
+        normTend = dg::blas2::dot( w3dout, Tend);
+    }
+    // /////////////////////create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
     std::cout << "Constructing Rolkar...\n";
@@ -106,16 +150,15 @@ int main( int argc, char* argv[])
     dg::DVec T1 = dg::evaluate( dg::one, grid);  
 
     dg::blas1::axpby( 1., y0[0], 0., T0); //initialize ni
-    dg::DVec w3d =  dg::create::weights(grid);
     double normT0 = dg::blas2::dot(  w3d, T0);
-    double error = 0.;
-    /////////////////////////////set up netcdf/////////////////////////////////////
+    double error = 0.,relerror=0.;
+    /////////////////////////////set up netcdf for output/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
-    int dim_ids[4], tvarID;
+    int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     solovev::FieldR fieldR(gp);
     solovev::FieldZ fieldZ(gp);
@@ -141,7 +184,7 @@ int main( int argc, char* argv[])
     //energy IDs
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    int energyID, massID, energyIDs[1], dissID, dEdtID, accuracyID,errorID;
+    int energyID, massID, energyIDs[1], dissID, dEdtID, accuracyID,errorID,relerrorID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
     std::string energies[1] = {"Se"}; 
@@ -150,33 +193,23 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
     err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
     err = nc_def_var( ncid, "error", NC_DOUBLE, 1, &EtimeID, &errorID);
+    err = nc_def_var( ncid, "relerror", NC_DOUBLE, 1, &EtimeID, &relerrorID);
 
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
     size_t start[4] = {0, 0, 0, 0};
-    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::HVec avisual( grid_out.size(), 0.);
 
-//     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
-//     dg::blas2::symv( interpolate, y0[0], transferD);
-//     transferH =  y0[0];//transfer to host
-//     err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data() );
-     dg::blas1::axpby(0.0,avisual,0.0,avisual);
-
-        for( unsigned k=0; k<grid.Nz(); k++)
-        {
-            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( y0[0].begin() + k*size, y0[0].begin()+(k+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
-        }
-        dg::blas1::scal(avisual,1./p.Nz);
-        err = nc_open(argv[3], NC_WRITE, &ncid);
-        transferH = avisual;
-        err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
+    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
+    dg::blas2::symv( interpolate, y0[0], transferD);
+    err = nc_open(argv[3], NC_WRITE, &ncid);
+    transferH =transferD;
+    err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
         
         
     double time = 0;
@@ -186,14 +219,28 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+    dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
+    error = sqrt(dg::blas2::dot( w3d, T1)/normT0);
+    if (argc==5)
+    {
+        //if in is finer
+        dg::blas1::axpby( 1., transferH, -1.,Tend,transferH);
+        relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);  
+        //if out is finer
+    }
     std::vector<double> evec = feltor.energy_vector();
+    double Se0 = evec[0];
+    double senorm = evec[0]/Se0;
+    double dEdtnorm = dEdt/Se0;
+    double dissnorm = diss/Se0;
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
-    err = nc_put_vara_double( ncid, energyIDs[0], Estart, Ecount, &evec[0]);
-    err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
-    err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+    err = nc_put_vara_double( ncid, energyIDs[0], Estart, Ecount, &senorm);
+    err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&dissnorm);
+    err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdtnorm);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     err = nc_put_vara_double( ncid, errorID, Estart, Ecount,&error);
+    err = nc_put_vara_double( ncid, relerrorID, Estart, Ecount,&relerror);
 
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
@@ -230,17 +277,28 @@ int main( int argc, char* argv[])
             E0 = E1;
             dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
             error = sqrt(dg::blas2::dot( w3d, T1)/normT0);
+            if (argc==5)
+            {
+                dg::blas2::symv( interpolate, y0[0], transferD);
+                transferH =transferD;
+                dg::blas1::axpby( 1., transferH, -1.,Tend, transferH);
+                relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);
+            }
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
+            senorm = evec[0]/Se0;
+            dEdtnorm = dEdt/Se0;
+            dissnorm = diss/Se0;
             err = nc_open(argv[3], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
-            err = nc_put_vara_double( ncid, energyIDs[0], Estart, Ecount, &evec[0]);
-            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
-            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+            err = nc_put_vara_double( ncid, energyIDs[0], Estart, Ecount, &senorm);
+            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&dissnorm);
+            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdtnorm);
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
             err = nc_put_vara_double( ncid, errorID, Estart, Ecount,&error);
+            err = nc_put_vara_double( ncid, relerrorID, Estart, Ecount,&relerror);
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
@@ -255,17 +313,11 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         //////////////////////////write fields////////////////////////
         start[0] = i;
-        dg::blas1::axpby(0.0,avisual,0.0,avisual);
 
-        for( unsigned k=0; k<grid.Nz(); k++)
-        {
-            unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( y0[0].begin() + k*size, y0[0].begin()+(k+1)*size);
-            dg::blas1::axpby(1.0,part,1.0,avisual);
-        }
-        dg::blas1::scal(avisual,1./p.Nz);
+        dg::blas2::symv( interpolate, y0[0], transferD);
+        transferH =transferD;
         err = nc_open(argv[3], NC_WRITE, &ncid);
-        transferH = avisual;
+//         transferH = avisual;
         err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
         
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
