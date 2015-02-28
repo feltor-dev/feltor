@@ -65,11 +65,9 @@ blas%_t: blas%_t.cu ../blas%.h
 
 %_b: %_b.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 
 dg_t: dg_t.cpp dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
-	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 
 include ../mpi.mk
 
