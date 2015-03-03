@@ -35,6 +35,43 @@ struct LnB
     private:
     double R_0, I_0;
 };
+
+struct bR
+{
+    bR( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    double operator()( double R, double Z, double phi)
+    {
+        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return -invB*M_PI*R_0*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2)/2./R;
+    }
+    private:
+    double R_0, I_0;
+};
+
+struct bZ
+{
+    bZ( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    double operator()( double R, double Z, double phi)
+    {
+        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return invB*M_PI*R_0*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2)/2./R;
+
+    }
+    private:
+    double R_0, I_0;
+};
+
+struct bPhi
+{
+    bPhi( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    double operator()( double R, double Z, double phi)
+    {
+        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return invB*I_0*R_0/R/R;
+    }
+    private:
+    double R_0, I_0;
+};
 //psi = cos(0.5*pi*(R-R_0))*cos(0.5*pi*Z)
 struct Field
 {
@@ -66,7 +103,6 @@ struct Field
     private:
     double R_0, I_0;
 };
-
 
 double funcNEU(double R, double Z, double phi)
 {
@@ -229,6 +265,9 @@ int main()
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
     const dg::DVec solutionT = dg::evaluate( deriNEUT, g3d);
     const dg::DVec solutiondzTdz = dg::evaluate( deriNEUT2, g3d);
+    const dg::DVec bR_ = dg::evaluate( bR, g3d);
+    const dg::DVec bZ_ = dg::evaluate( bZ, g3d);
+    const dg::DVec bPhi_ = dg::evaluate(bPhi, g3d);
     dz.set_boundaries( dg::PER, 0, 0);
 
     dz( function, derivative); //dz(f)
