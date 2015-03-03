@@ -4,11 +4,11 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "backend/timer.cuh"
-#include "backend/evaluation.cuh"
-#include "backend/derivatives.cuh"
-#include "backend/typedefs.cuh"
 #include "blas.h"
+#include "backend/derivatives.cuh"
+#include "backend/evaluation.cuh"
+#include "backend/typedefs.cuh"
+#include "backend/timer.cuh"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

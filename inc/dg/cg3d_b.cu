@@ -3,6 +3,7 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <cusp/print.h>
 
 #include "backend/timer.cuh"
 #include "backend/evaluation.cuh"

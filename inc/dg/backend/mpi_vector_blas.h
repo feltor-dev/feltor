@@ -7,6 +7,7 @@
 #endif //DG_DEBUG
 
 ///@cond
+//TODO place more asserts for debugging
 namespace dg
 {
 
@@ -22,6 +23,7 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     assert( x.Nx() == y.Nx());
     assert( x.Ny() == y.Ny());
     assert( x.Nz() == y.Nz());
+    assert( x.communicator() == y.communicator());
 #endif //DG_DEBUG
     typename VectorTraits<Vector>::value_type temp=0, sum=0;
     const unsigned n = x.n();
@@ -30,8 +32,8 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
             for( unsigned j=n; j<(x.Nx()-1)*n; j++)
                     temp+=x.data()[(k*x.Ny()*n + i)*x.Nx()*n + j ]*
                           y.data()[(k*x.Ny()*n + i)*x.Nx()*n + j ];
-    MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, x.communicator());
+    MPI_Barrier(x.communicator());
 
     return sum;
 }

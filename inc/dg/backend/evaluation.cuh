@@ -4,9 +4,7 @@
 #include <cassert> 
 #include <thrust/host_vector.h>
 #include "grid.h"
-#include "matrix_traits_thrust.h"
 #include "weights.cuh"
-#include "operator.h"
 
 /*! @file 
   

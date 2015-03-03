@@ -43,7 +43,7 @@ struct MPI_Grid2d
     {
         int rank, dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_rank( comm, &rank);
         if( rank == 0)
         {
             if(Nx%dims[0]!=0)
@@ -74,7 +74,7 @@ struct MPI_Grid2d
     {
         int rank, dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_rank( comm, &rank);
         if( rank == 0)
         {
             if(Nx%dims[0]!=0)
@@ -311,7 +311,7 @@ struct MPI_Grid3d
     {
         int rank, dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_rank( comm, &rank);
         if( rank == 0)
         {
             if(!(Nx%dims[0]==0))
@@ -352,7 +352,7 @@ struct MPI_Grid3d
     {
         int rank, dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_rank( comm, &rank);
         if( rank == 0)
         {
             if(!(Nx%dims[0]==0))
