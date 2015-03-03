@@ -23,7 +23,7 @@
 16) elongation               =  1.0
 17) triangularity            =  0.0
 ----------------------Miscellaneous----------------------
-18) alpha (Damping thickness)=  0.02
+18) alpha (Damping thickness)=  0.1
 19) RK4 epsilon              =  1e-4
 20) psip_min                 = -6.
 21) psip_max                 =  1e10(> -7.4)

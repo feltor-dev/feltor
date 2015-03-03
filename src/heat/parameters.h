@@ -82,6 +82,7 @@ struct Parameters
         os << "Profile parameters are: \n"
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
             <<"     background profile amplitude: "<<bgprofamp<<"\n"
+            <<"     zonal modes                   "<<k_psi<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
             <<"     boxscale Z+:                  "<<boxscaleZp<<"\n"

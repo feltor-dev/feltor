@@ -10,11 +10,12 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
-#include "solovev/geometry.h"
+// #include "solovev/geometry.h"
+#include "geometry_g.h"
 #include "dg/runge_kutta.h"
+#include "parameters.h"
 
 #include "heat.cuh"
-#include "parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -32,7 +33,7 @@ int main( int argc, char* argv[])
     {
         try{
             v = file::read_input("input.txt");
-            v3 = file::read_input( "geometry_params.txt"); 
+            v3 = file::read_input( "geometry_params_g.txt"); 
         }catch( toefl::Message& m){
             m.display();
             return -1;
@@ -103,7 +104,8 @@ int main( int argc, char* argv[])
     std::cout << "No T aligning" << std::endl;  
     
     y1[0] = dg::evaluate( init0, grid);
-    
+//        dg::blas1::pointwiseDot(rolkar.damping(),y1[0], y1[0]); //damp with gaussprofdamp
+ 
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
     if (p.bc ==dg::DIR)    {
     dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1

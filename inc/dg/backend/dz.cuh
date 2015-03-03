@@ -235,6 +235,30 @@ struct DZ
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
+    void centeredTD( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
+    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void forwardTD( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
+    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void backwardTD( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
     void centeredT( const container& f, container& dzf);
     /**
     * @brief Apply the derivative on a 3d vector
@@ -243,6 +267,7 @@ struct DZ
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
+    
     void operator()( const container& f, container& dzf);
 
 
@@ -499,28 +524,30 @@ void DZ<M,container>::centered( const container& f, container& dzf)
 
 template<class M, class container>
 void DZ<M,container>::centeredT( const container& f, container& dzf)
-{       
-    //Direct discretisation
-//        assert( &f != &dzf);    
-//         dg::blas1::pointwiseDot( f, invB, dzf);
-//         einsPlus( dzf, tempP);
-//         einsMinus( dzf, tempM);
-//         dg::blas1::axpby( 1., tempP, -1., tempM);
-//         dg::blas1::pointwiseDivide( tempM, hz, dzf);        
-//         dg::blas1::pointwiseDivide( dzf, invB, dzf);
-        
+{               
     //adjoint discretisation
         assert( &f != &dzf);    
         dg::blas1::pointwiseDot( w3d, f, dzf);
-        dg::blas1::pointwiseDivide( dzf, hz, dzf);
+        dg::blas1::pointwiseDot( dzf, Rcoo, dzf);
         einsPlusT( dzf, tempP);
         einsMinusT( dzf, tempM);
         dg::blas1::axpby( 1., tempM, -1., tempP);        
         dg::blas1::pointwiseDot( v3d, tempP, dzf);
-        
 
 }
+template<class M, class container>
+void DZ<M,container>::centeredTD( const container& f, container& dzf)
+{       
+//     Direct discretisation
+       assert( &f != &dzf);    
+        dg::blas1::pointwiseDot( f, invB, dzf);
+        einsPlus( dzf, tempP);
+        einsMinus( dzf, tempM);
+        dg::blas1::axpby( 1., tempP, -1., tempM);
+        dg::blas1::pointwiseDivide( tempM, hz, dzf);        
+        dg::blas1::pointwiseDivide( dzf, invB, dzf);
 
+}
 template<class M, class container>
 void DZ<M,container>::forward( const container& f, container& dzf)
 {
@@ -532,23 +559,17 @@ void DZ<M,container>::forward( const container& f, container& dzf)
     //adjoint discretisation
 //     assert( &f != &dzf);    
 //     dg::blas1::pointwiseDot( w3d, f, dzf);
-//     dg::blas1::pointwiseDivide( dzf, hp, dzf);
+//     dg::blas1::pointwiseDivide( dzf, hm, dzf);
 //     dg::blas1::pointwiseDivide( dzf, invB, dzf);
-//     einsPlusT( dzf, tempP);
-//     dg::blas1::axpby( -1., tempP, 1.,dzf,dzf);
+//     einsMinusT( dzf, tempP);
+//     dg::blas1::axpby( 1., tempP,-1.,dzf,dzf);
 //     dg::blas1::pointwiseDot( v3d, dzf, dzf);
 //     dg::blas1::pointwiseDot( dzf, invB, dzf);
 }
 template<class M, class container>
 void DZ<M,container>::forwardT( const container& f, container& dzf)
 {
-    //direct discretisation
-//     assert( &f != &dzf);    
-//     dg::blas1::pointwiseDot( f, invB, dzf);
-//     einsPlus( dzf, tempP);
-//     dg::blas1::axpby( 1., tempP, -1., dzf, dzf);
-//     dg::blas1::pointwiseDivide( dzf, hp, dzf);        
-//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
+
     
     //adjoint discretisation
     assert( &f != &dzf);
@@ -557,6 +578,19 @@ void DZ<M,container>::forwardT( const container& f, container& dzf)
     einsPlusT( dzf, tempP);
     dg::blas1::axpby( -1., tempP, 1., dzf, dzf);
     dg::blas1::pointwiseDot( v3d, dzf, dzf);
+
+}
+template<class M, class container>
+void DZ<M,container>::forwardTD( const container& f, container& dzf)
+{
+    //direct discretisation
+    assert( &f != &dzf);    
+    dg::blas1::pointwiseDot( f, invB, dzf);
+    einsMinus( dzf, tempP);
+    dg::blas1::axpby( -1., tempP, 1., dzf, dzf);
+    dg::blas1::pointwiseDivide( dzf, hm, dzf);        
+    dg::blas1::pointwiseDivide( dzf, invB, dzf);
+
 
 }
 template<class M, class container>
@@ -571,24 +605,16 @@ void DZ<M,container>::backward( const container& f, container& dzf)
     //adjoint discretisation
 //     assert( &f != &dzf);    
 //     dg::blas1::pointwiseDot( w3d, f, dzf);
-//     dg::blas1::pointwiseDivide( dzf, hm, dzf);
+//     dg::blas1::pointwiseDivide( dzf, hp, dzf);
 //     dg::blas1::pointwiseDivide( dzf, invB, dzf);
-//     einsMinusT( dzf, tempM);
+//     einsPlusT( dzf, tempM);
 //     dg::blas1::axpby( 1., tempM, -1.,dzf,dzf);
 //     dg::blas1::pointwiseDot( v3d,dzf, dzf);
 //     dg::blas1::pointwiseDot( dzf, invB, dzf);
 }
 template<class M, class container>
 void DZ<M,container>::backwardT( const container& f, container& dzf)
-{
-    //direct
-//     assert( &f != &dzf);    
-//     dg::blas1::pointwiseDot( f, invB, dzf);
-//     einsMinus( dzf, tempM);
-//     dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
-//     dg::blas1::pointwiseDivide( dzf, hm, dzf);        
-//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
-    
+{    
     //adjoint discretisation
     assert( &f != &dzf);
     dg::blas1::pointwiseDot( w3d, f, dzf);
@@ -596,9 +622,21 @@ void DZ<M,container>::backwardT( const container& f, container& dzf)
     einsMinusT( dzf, tempM);
     dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
     dg::blas1::pointwiseDot( v3d, dzf, dzf);
-
-
+    
 }
+
+template<class M, class container>
+void DZ<M,container>::backwardTD( const container& f, container& dzf)
+{
+    //direct
+    assert( &f != &dzf);    
+    dg::blas1::pointwiseDot( f, invB, dzf);
+    einsPlus( dzf, tempM);
+    dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
+    dg::blas1::pointwiseDivide( dzf, hp, dzf);        
+    dg::blas1::pointwiseDivide( dzf, invB, dzf);
+}
+
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
@@ -611,7 +649,7 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
     dg::blas2::symv( jump, f, tempP);
-    dg::blas1::axpby( 1., tempP, 1., dzTdzf);
+    dg::blas1::axpby(1., tempP, 1., dzTdzf);
 //     add jump term (unstable without it)
 
 }

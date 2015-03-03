@@ -15,7 +15,8 @@
 
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "solovev/geometry.h"
+// #include "solovev/geometry.h"
+#include "geometry_g.h"
 
 #include "heat.cuh"
 #include "parameters.h"
@@ -77,8 +78,9 @@ int main( int argc, char* argv[])
     dg::DVec w3dout =  dg::create::weights(grid_out);
 
     // /////////////////////get last temperature field of sim
-    double normTend=0.;
+    double normTend=0.,normTendc=1e-14;
     dg::HVec Tend(dg::evaluate(dg::zero,grid_out));
+    dg::HVec Tendc(dg::evaluate(dg::zero,grid));
     int  tvarID;
     if (argc == 5)
     {
@@ -164,22 +166,21 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-    solovev::FieldR fieldR(gp);
-    solovev::FieldZ fieldZ(gp);
-    solovev::FieldP fieldP(gp);
-    dg::HVec vecR = dg::evaluate( fieldR, grid_out);
-    dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
-    dg::HVec vecP = dg::evaluate( fieldP, grid_out);
-    int vecID[3];
-    err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim_ids[1], &vecID[0]);
-    err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim_ids[1], &vecID[1]);
-    err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim_ids[1], &vecID[2]);
-    err = nc_enddef( ncid);
-    err = nc_put_var_double( ncid, vecID[0], vecR.data());
-    err = nc_put_var_double( ncid, vecID[1], vecZ.data());
-    err = nc_put_var_double( ncid, vecID[2], vecP.data());
-    err = nc_redef(ncid);
-
+//     solovev::FieldR fieldR(gp);
+//     solovev::FieldZ fieldZ(gp);
+//     solovev::FieldP fieldP(gp);
+//     dg::HVec vecR = dg::evaluate( fieldR, grid_out);
+//     dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
+//     dg::HVec vecP = dg::evaluate( fieldP, grid_out);
+//     int vecID[3];
+//     err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim_ids[1], &vecID[0]);
+//     err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim_ids[1], &vecID[1]);
+//     err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim_ids[1], &vecID[2]);
+//     err = nc_enddef( ncid);
+//     err = nc_put_var_double( ncid, vecID[0], vecR.data());
+//     err = nc_put_var_double( ncid, vecID[1], vecZ.data());
+//     err = nc_put_var_double( ncid, vecID[2], vecP.data());
+//     err = nc_redef(ncid);
     //field IDs
     std::string names[1] = {"T"}; 
     int dataIDs[1]; 
@@ -207,12 +208,20 @@ int main( int argc, char* argv[])
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferHc( dg::evaluate(dg::zero, grid));
     dg::HVec avisual( grid_out.size(), 0.);
 
-    dg::DMatrix interpolate = dg::create::ell_interpolation( grid_out, grid); 
+    //interpolate coarse grid on fine grid
+    dg::HMatrix interpolate = dg::create::interpolation( grid_out, grid);
+//     cusp::ell_matrix<int, double, cusp::device_memory> interpolate = dg::create::ell_interpolation( grid_out, grid);
+    //interpolate fine grid on coarse grid
+    dg::HMatrix interpolatec = dg::create::interpolation( grid, grid_out);
+//     cusp::ell_matrix<int, double, cusp::device_memory> interpolatec = dg::create::ell_interpolation( grid, grid_out); 
+    
     dg::blas2::symv( interpolate, y0[0], transferD);
     err = nc_open(argv[3], NC_WRITE, &ncid);
-    transferH =transferD;
+//     transferH =transferD;
+    transferH =y0[0];
     err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
         
         
@@ -227,10 +236,20 @@ int main( int argc, char* argv[])
     error = sqrt(dg::blas2::dot( w3d, T1)/normT0);
     if (argc==5)
     {
+        //interpolate fine grid one coarse grid
+//         dg::blas2::symv( interpolatec, Tend, Tendc);
+//         normTendc=dg::blas2::dot(w3d,Tendc);
+        Tendc=Tend;
+        normTendc=dg::blas2::dot(w3d,Tendc);
+
+        transferHc = (dg::HVec) y0[0];
+        dg::blas1::axpby( 1., transferHc, -1.,Tendc,transferHc);
+        relerror = sqrt(dg::blas2::dot( w3d, transferHc)/normTendc);  
         //if in is finer
-        dg::blas1::axpby( 1., transferH, -1.,Tend,transferH);
-        relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);  
-        //if out is finer
+//         dg::blas1::axpby( 1., transferH, -1.,Tend,transferH);
+//         relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);  
+        
+        
     }
     std::vector<double> evec = feltor.energy_vector();
     double Se0 = evec[0];
@@ -283,10 +302,20 @@ int main( int argc, char* argv[])
             error = sqrt(dg::blas2::dot( w3d, T1)/normT0);
             if (argc==5)
             {
-                dg::blas2::symv( interpolate, y0[0], transferD);
-                transferH =transferD;
-                dg::blas1::axpby( 1., transferH, -1.,Tend, transferH);
-                relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);
+//                 dg::blas2::symv( interpolate, y0[0], transferD);
+//                 transferH =transferD;
+//                 dg::blas1::axpby( 1., transferH, -1.,Tend, transferH);
+//                 relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);
+//                         dg::blas2::symv( interpolatec, Tend, Tendc);
+//         normTendc=dg::blas2::dot(w3d,Tendc);
+//                 dg::blas2::symv( interpolatec, Tend, Tendc);
+//                 normTendc=dg::blas2::dot(w3d,Tendc);
+                Tendc=Tend;
+                                normTendc=dg::blas2::dot(w3d,Tendc);
+
+                transferHc =(dg::HVec) y0[0];
+                dg::blas1::axpby( 1., transferHc, -1.,Tendc,transferHc);
+                relerror = sqrt(dg::blas2::dot( w3d, transferHc)/normTendc);  
             }
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
@@ -306,7 +335,7 @@ int main( int argc, char* argv[])
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << " -> Error: "<< error <<"\n";
+            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << " -> Error: "<< error <<" -> Error2: "<< relerror <<"\n";
             err = nc_close(ncid);
 
         }
@@ -319,7 +348,8 @@ int main( int argc, char* argv[])
         start[0] = i;
 
         dg::blas2::symv( interpolate, y0[0], transferD);
-        transferH =transferD;
+//         transferH =transferD;
+        transferH =y0[0];
         err = nc_open(argv[3], NC_WRITE, &ncid);
 //         transferH = avisual;
         err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());

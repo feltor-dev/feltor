@@ -3,7 +3,8 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 // #include "geometry_circ.h"
-#include "solovev/geometry.h"
+// #include "solovev/geometry.h"
+#include "geometry_g.h"
 #include "init.h"
 
 #ifdef DG_BENCHMARK
@@ -145,11 +146,11 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 //         dzNU_.centeredT(omega,lambda);
         dzNU_.forward( y[0], omega); 
         dzNU_.forwardT(omega,lambda);
-        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 0.,chi); 
+        dg::blas1::axpby( 0.5, lambda, 0.,chi,chi); 
 
         dzNU_.backward( y[0], omega); 
         dzNU_.backwardT(omega,lambda);
-        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., chi); 
+        dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi);
     }  
     if (p.p_diff ==1)    {
@@ -169,6 +170,17 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         dg::blas1::pointwiseDot(gradlnB, lambda, lambda);            // dz lnB dz N
         dg::blas1::axpby( 1., omega, -1., lambda);       
         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
+    }
+    if (p.p_diff ==3)    {
+        // (D) nonadjoint with direct method
+        dzNU_.forward( y[0], omega); 
+        dzNU_.forwardTD(omega,lambda);
+        dg::blas1::axpby( 0.5, lambda, 0.,chi,chi); 
+
+        dzNU_.backward( y[0], omega); 
+        dzNU_.backwardTD(omega,lambda);
+        dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
+        Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi); 
     }
     //Compute rhs of energy theorem
     ediff_= Dpar[0]+Dperp[0];
@@ -272,13 +284,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dzNU_.backward( y[0], omega); 
         dzNU_.backwardT(omega,lambda);
         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
-//         dzNU_.forwardh( y[0], omega); 
-//         dzNU_.forwardTh(omega,lambda);
-//         dg::blas1::axpby(  0.5*p.nu_parallel, lambda, 1., yp[0]); 
-// 
-//         dzNU_.backwardh( y[0], omega); 
-//         dzNU_.backwardTh(omega,lambda);
-//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+        //with jump
+//        dzNU_.symv(y[0],lambda);
+//        dg::blas1::pointwiseDot(v3d,lambda,lambda);
+//        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+
     }
     if (p.p_diff ==1)    {
         // (B) nonadjoint
@@ -298,7 +308,16 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(gradlnB, lambda, omega);            // dz lnB dz T
         dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[0]);    
     }
+    if (p.p_diff ==3)    {
+        // (D) nonadjoint with direct method
+        dzNU_.forward( y[0], omega); 
+        dzNU_.forwardTD(omega,lambda);
+        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
 
+        dzNU_.backward( y[0], omega); 
+        dzNU_.backwardTD(omega,lambda);
+        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+    }
 
     t.toc();
 #ifdef MPI_VERSION
