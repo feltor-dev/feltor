@@ -12,7 +12,7 @@
 #include "backend/cusp_thrust_backend.h"
 
 #include "cg.h"
-#include "general_elliptic.h"
+#include "elliptic.h"
 
 
 const double R_0 = 10;

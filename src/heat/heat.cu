@@ -13,7 +13,7 @@
 // #include "solovev/geometry.h"
 #include "geometry_g.h"
 #include "dg/runge_kutta.h"
-#include "dg/general_elliptic.h"
+#include "dg/elliptic.h"
 #include "dg/cg.h"
 #include "parameters.h"
 
