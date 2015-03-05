@@ -91,7 +91,7 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
 }
 /*! @brief "new" BLAS 1 routine transform
  *
- * This routine computes \f[ y_i = f(x_i) \f] 
+ * This routine computes \f[ y_i = op(x_i) \f] 
  * This is actually not a BLAS routine since f can be a nonlinear function.
  * It is rather the first step towards a more general library conception.
  * @param x Vector x may equal y

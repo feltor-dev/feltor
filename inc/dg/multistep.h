@@ -27,6 +27,7 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 
 /**
 * @brief Struct for Adams-Bashforth explicit multistep time-integration
+* \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^k b_j f\left(u^{n-j}\right) \f]
 *
 * @ingroup algorithms
 *
@@ -178,14 +179,16 @@ struct MatrixTraits< detail::Implicit<M, V> >
 /**
 * @brief Struct for Karniadakis semi-implicit multistep time-integration
 * \f[
-    {\bar v}^n = \frac{1}{\gamma_0}\left(\sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  N( v^{n-q})\right) \f]
-    \f[
-    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat L\right)  v^{n+1} = {\bar v}^n  
+* \begin{align}
+    {\bar v}^n &= \frac{1}{\gamma_0}\left(\sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  N( v^{n-q})\right) \\
+    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat L\right)  v^{n+1} &= {\bar v}^n  
+    \end{align}
     \f]
-* @ingroup algorithms
+*
 * Uses blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step. 
 * Uses a conjugate gradient method for the implicit operator  
+* @ingroup algorithms
 * @tparam Vector The Argument type used in the Functor class
 */
 template<class Vector>
@@ -347,6 +350,7 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
 /**
  * @brief Semi implicit Runge Kutta method after Yoh and Zhong (AIAA 42, 2004)
  *
+ * @ingroup algorithms
  * @tparam Vector Vector class to use
  */
 template <class Vector>

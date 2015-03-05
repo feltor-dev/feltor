@@ -1,5 +1,5 @@
 system=home
-device=openmp
+device=gpu
 
 INCLUDE = -I../ # other project libraries
 
