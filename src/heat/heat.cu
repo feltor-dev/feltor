@@ -13,7 +13,7 @@
 // #include "solovev/geometry.h"
 #include "geometry_g.h"
 #include "dg/runge_kutta.h"
-#include "dg/backend/general_elliptic.cuh"
+#include "dg/general_elliptic.h"
 #include "dg/cg.h"
 #include "parameters.h"
 
@@ -67,28 +67,39 @@ int main( int argc, char* argv[])
     draw::RenderHostData render(v2[1], (1)/v2[2]); 
     //////////////////////////////////////////////////////////////////////////
     
-    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
-    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-    //Make grid
+    //double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    //double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    //double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    //double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    //Make cylindrical grid
+    double Rmin=gp.R_0-1;
+    double Zmin=-1.;
+    double Rmax=gp.R_0+1.;
+    double Zmax=1.;
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
 
     dg::DVec w3d_ = dg::create::weights( grid);
     dg::DVec v3d_ = dg::create::inv_weights( grid);
     dg::DVec x = dg::evaluate( dg::zero, grid);
-    dg::GeneralElliptic<dg::DMatrix, dg::DVec, dg::DVec> elliptic( grid, dg::not_normed, dg::forward);
+    //set up the parallel diffusion
+    dg::GeneralElliptic<dg::DMatrix, dg::DVec, dg::DVec> elliptic( grid, dg::not_normed, dg::centered);
+    dg::DVec bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),grid);
+    elliptic.set_x( bfield);
+    bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),grid);
+    elliptic.set_y( bfield);
+    bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),grid);
+    elliptic.set_z( bfield);
     double eps =1e-5;   
     dg::Invert< dg::DVec> invert( x, w3d_.size(), eps );  
     std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
     const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), grid);
     std::cout << " # of iterations "<< invert( elliptic, x, rhs ) << std::endl; //is dzTdz
-    dg::DVec function = dg::evaluate( solovev::FuncNeu(gp.R_0, gp.I_0),grid);
-    double normf = dg::blas2::dot( w3d_, function);
+    dg::DVec solution = dg::evaluate( solovev::FuncNeu(gp.R_0, gp.I_0),grid);
+    double normf = dg::blas2::dot( w3d_, solution);
     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
     double errinvT =dg::blas2::dot( w3d_, x);
     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
-    dg::blas1::axpby( 1., function, -1.,x);
+    dg::blas1::axpby( 1., solution, +1.,x);
     errinvT =dg::blas2::dot( w3d_, x);
     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
 
@@ -243,9 +254,9 @@ int main( int argc, char* argv[])
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #endif//DG_BENCHMARK
     }
+    */
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////
-    */
 
     return 0;
 

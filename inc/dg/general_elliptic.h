@@ -8,12 +8,58 @@
 
 
 
+/*! @file 
+
+  Contains the general negative elliptic operator
+  */
 namespace dg{
 
 
+/**
+ * @brief Operator that acts as a 2d negative elliptic differential operator
+ *
+ * @ingroup matrixoperators
+ *
+ * The term discretized is 
+ * \f[ -\nabla \cdot ( \mathbf \chi  \mathbf \chi \cdot \nabla ) \f]
+  In cartesian 
+ * coordinates that means 
+ * \f[ 
+ * \begin{align}
+ * g = \chi_x \partial_x f + \chi_y\partial_y f + \chi_z \partial_z f \\
+ * -\partial_x(\chi_x g ) - \partial_y(\chi_y g) - \partial_z( \chi_z g)
+ *  \end{align}
+ *  \f] 
+ * is discretized while in cylindrical coordinates
+ * \f[ 
+ * \begin{align}
+ * g = \chi_R \partial_R f + \chi_Z\partial_Z f + \chi_\phi \partial_\phi f \\
+ * -\frac{1}{R}\partial_R(R\chi_R g ) - \partial_Z(\chi_Z g) - \partial_\phi( \chi_\phi g)
+ *  \end{align}
+ *  \f] 
+ * is discretized.
+ * @tparam Matrix The Matrix class to use
+ * @tparam Vector The Vector class to use
+ * @tparam Preconditioner The Preconditioner class to use
+ * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
+ * and thus in a conjugate gradient solver. 
+ * @note The constructors initialize \f$ \chi_x = \chi_y = \chi_z=1\f$ 
+ * @attention Pay attention to the negative sign 
+ */
 template<class Matrix, class Vector, class Preconditioner> 
 struct GeneralElliptic
 {
+    /**
+     * @brief Construct from Grid
+     *
+     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
+     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
+     * must return instances of the Preconditioner class and 
+     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
+     * @param g The Grid, boundary conditions are taken from here
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative
+     */
     template< class Grid>
     GeneralElliptic( const Grid& g, norm no = not_normed, direction dir = forward): 
         leftx ( dg::create::dx( g, inverse( g.bcx()), no, inverse(dir))),
@@ -34,27 +80,46 @@ struct GeneralElliptic
         }
     }
 
+    /**
+     * @brief Set x-component of \f$ chi\f$
+     *
+     * @param chi new x-component
+     */
     void set_x( const Vector& chi)
     {
         xchi = chi;
     }
+    /**
+     * @brief Set y-component of \f$ chi\f$
+     *
+     * @param chi new y-component
+     */
     void set_y( const Vector& chi)
     {
         ychi = chi;
     }
+    /**
+     * @brief Set z-component of \f$ chi\f$
+     *
+     * @param chi new z-component
+     */
     void set_z( const Vector& chi)
     {
         zchi = chi;
     }
+
+    /**
+     * @brief Set new components for \f$ chi\f$
+     *
+     * @param chi chi[0] is new x-component, chi[1] the new y-component, chi[2] z-component
+     */
     void set( const std::vector<Vector>& chi)
     {
         xchi = chi[0];
         ychi = chi[1];
         zchi = chi[2];
-        dg::blas1::pointwiseDot( R, xchi, xchi); 
-        dg::blas1::pointwiseDot( R, ychi, ychi); 
-        dg::blas1::pointwiseDot( R, zchi, zchi); 
     }
+
     /**
      * @brief Returns the weights used to make the matrix symmetric 
      *
@@ -126,9 +191,8 @@ struct GeneralElliptic
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
     Vector xchi, ychi, zchi, xx, yy, zz, temp0, temp1,  R;
     norm no_;
-
-
 };
+
 ///@cond
 template< class M, class V, class P>
 struct MatrixTraits< GeneralElliptic<M, V, P> >

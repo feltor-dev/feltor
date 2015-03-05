@@ -7,7 +7,7 @@
 1)  n  (# of x,y-polynomials)            =   3   (3)
 2)  nx (grid points in x)                =   10 (192)
 3)  ny (grid points in y)                =   10 (192) 
-4)  nz (grid points in z)                =   10(1)
+4)  nz (grid points in z)                =   40 (1)
 5)  dt (time step in units c_s/rho_s)    =   0.01(0.01)
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
@@ -29,7 +29,7 @@
 20) Profile amplitude                       =  0.0  (peak amplitude)
 21) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Boundary condition----------------------------
-22) GLOBAL BC (1 DIR/ 4 NEU)                =  4
+22) GLOBAL BC (1 DIR/ 4 NEU)                =  1
 ----------------------------------Miscellaneous----------------------------
 23) boxscale R+                             =  1.0 (a little larger than 1)
 24) boxscale R-                             =  1.0 (a little larger than 1)
