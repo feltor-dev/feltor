@@ -139,12 +139,12 @@ class Elliptic
         dg::blas2::gemv( righty, x, temp);
         dg::blas1::pointwiseDot( xchi, temp, temp);
         dg::blas2::gemv( lefty, temp, y);
+        dg::blas1::axpby( -1., xx, -1., y, y); //-D_xx - D_yy 
         
         dg::blas2::symv( jump, x, temp);
-        dg::blas1::axpby( -1., xx, -1., y, xx); //-D_xx - D_yy 
         if(no_==normed) //if cartesian then R = 1
-            dg::blas1::pointwiseDivide( xx, R, xx);
-        dg::blas1::axpby( +1., temp, 1., xx, y); 
+            dg::blas1::pointwiseDivide( y, R, y);
+        dg::blas1::axpby( +1., temp, 1., y, y); 
     }
     private:
     bc inverse( bc bound)

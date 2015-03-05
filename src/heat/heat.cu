@@ -13,6 +13,8 @@
 // #include "solovev/geometry.h"
 #include "geometry_g.h"
 #include "dg/runge_kutta.h"
+#include "dg/backend/general_elliptic.cuh"
+#include "dg/cg.h"
 #include "parameters.h"
 
 #include "heat.cuh"
@@ -22,7 +24,6 @@
    - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-
 
 int main( int argc, char* argv[])
 {
@@ -72,6 +73,44 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
+
+    dg::DVec w3d_ = dg::create::weights( grid);
+    dg::DVec v3d_ = dg::create::inv_weights( grid);
+    dg::DVec x = dg::evaluate( dg::zero, grid);
+    dg::GeneralElliptic<dg::DMatrix, dg::DVec, dg::DVec> elliptic( grid, dg::not_normed, dg::forward);
+    double eps =1e-5;   
+    dg::Invert< dg::DVec> invert( x, w3d_.size(), eps );  
+    std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
+    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), grid);
+    std::cout << " # of iterations "<< invert( elliptic, x, rhs ) << std::endl; //is dzTdz
+    dg::DVec function = dg::evaluate( solovev::FuncNeu(gp.R_0, gp.I_0),grid);
+    double normf = dg::blas2::dot( w3d_, function);
+    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+    double errinvT =dg::blas2::dot( w3d_, x);
+    std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+    dg::blas1::axpby( 1., function, -1.,x);
+    errinvT =dg::blas2::dot( w3d_, x);
+    std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
     //create RHS 
     
     std::cout << "initialize feltor" << std::endl;
@@ -206,6 +245,7 @@ int main( int argc, char* argv[])
     }
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////
+    */
 
     return 0;
 
