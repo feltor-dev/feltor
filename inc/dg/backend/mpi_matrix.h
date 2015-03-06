@@ -224,7 +224,9 @@ struct MPI_Matrix
 
 
 typedef MPI_Matrix MMatrix; //!< mpi matrix type
+///@}
 
+///@cond
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
 #ifdef DG_DEBUG
@@ -289,9 +291,7 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 
 }
 
-///@}
 
-///@cond
 template <>
 struct MatrixTraits<MPI_Matrix>
 {

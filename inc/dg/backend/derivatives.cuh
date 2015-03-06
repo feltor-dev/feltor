@@ -373,23 +373,42 @@ cusp::coo_matrix<int, T, cusp::host_memory> dy( const Grid3d<T>& g, norm no = no
  * @tparam T value-type
  * @param g The grid on which to create dz
  * @param bcz The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
  * @param dir The direction of the stencil
  *
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, bc bcz, direction dir)
+cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, bc bcz, norm no = normed, direction dir = centered)
 {
     //dasselbe wie dy in 2D: 
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    Matrix deltaXY = dg::tensor<T>( g.Nx()*g.Ny(), dg::create::delta( g.n()*g.n() )); 
     Matrix dz; 
-    if( dir == forward) 
-        dz = create::dx_plus_normed<T>(1, g.Nz(), g.hz(), bcz);
-    else if( dir == backward) 
-        dz = create::dx_minus_normed<T>(1, g.Nz(), g.hz(), bcz);
+    if( no == normed)
+    {
+        if( dir == forward) 
+            dz = create::dx_plus_normed<T>(1, g.Nz(), g.hz(), bcz);
+        else if( dir == backward) 
+            dz = create::dx_minus_normed<T>(1, g.Nz(), g.hz(), bcz);
+        else
+            dz = create::dx_symm_normed<T>(1, g.Nz(), g.hz(), bcz);
+        return dgtensor<T>( 1, dz, deltaXY); 
+    }
     else
-        dz = create::dx_symm_normed<T>(1, g.Nz(), g.hz(), bcz);
-    return dgtensor<T>( 1, dz,  tensor<T>( g.Nx()*g.Ny(), delta(g.n()*g.n()) ));
+    {
+        if( dir == forward) 
+            dz = create::dx_plus_normed<T>(1, g.Nz(), 1., bcz);
+        else if( dir == backward) 
+            dz = create::dx_minus_normed<T>(1, g.Nz(), 1., bcz);
+        else
+            dz = create::dx_symm_normed<T>(1, g.Nz(), 1., bcz);
+        Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny());
+        Matrix renormed = detail::renorm( deltaXY, g2d);
+        return dgtensor<T>( 1, dz, renormed); 
+    }
+
 }
 
 /**
@@ -397,11 +416,14 @@ cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, bc bcz, dire
  *
  * @tparam T value-type
  * @param g The grid on which to create dy (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the stencil
  *
  * @return A host matrix in coordinate format
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g){ return dz( g, g.bcz(), centered);}
+cusp::coo_matrix<int, T, cusp::host_memory> dz( const Grid3d<T>& g, norm no = normed, direction dir = centered){ return dz( g, g.bcz(), no, dir);}
 
 /**
  * @brief Create 3d negative laplacian_perp

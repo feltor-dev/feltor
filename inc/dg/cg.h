@@ -18,17 +18,18 @@ namespace dg{
 //// TO DO: check for better stopping criteria using condition number estimates
 
 /**
-* @brief Functor class for the preconditioned conjugate gradient method
+* @brief Functor class for the preconditioned conjugate gradient method to solve
+* \f[ Ax=b\f]
 *
  @ingroup algorithms
  @tparam Vector The Vector class: needs to model Assignable 
 
  The following 3 pseudo - BLAS routines need to be callable 
- \li double dot = blas1::dot( v1, v2); 
- \li blas1::axpby( alpha, x, beta, y);  
- \li blas2::symv( m, x, y);     
- \li double dot = blas2::dot( P, v); 
- \li blas2::symv( alpha, P, x, beta, y);
+ \li value_type dot = dg::blas1::dot( const Vector&, const Vector&); 
+ \li dg::blas1::axpby();  with the Vector type
+ \li dg::blas2::symv(Matrix& m, Vector1& x, Vector2& y ); with the Matrix type
+ \li value_type dot = dg::blas2::dot( );  with the Preconditioner type
+ \li dg::blas2::symv( ); with the Preconditioner type
 
  @note Conjugate gradients might become unstable for positive semidefinite
  matrices arising e.g. in the discretization of the periodic laplacian

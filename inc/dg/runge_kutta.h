@@ -81,10 +81,16 @@ const double rk_coeff<4>::beta[4] = {
 
 /**
 * @brief Struct for Runge-Kutta explicit time-integration
+* \f[
+ \begin{align}
+    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
+    k_j = f\left( u^n + \Delta t \sum_{l=1}^j a_{jl} k_l\right)
+ \end{align}
+\f]
 *
 * @ingroup algorithms
 *
-* Uses only blas1::axpby routines to integrate one step.
+* Uses only dg::blas1::axpby() routines to integrate one step.
 * The coefficients are chosen in a form that require a minimum of 
 * axpby function calls (check for alpha==0, beta==1) and else 
 * assumes that most of the work is done in the computation of the rhs.

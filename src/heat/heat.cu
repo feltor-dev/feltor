@@ -13,6 +13,9 @@
 // #include "solovev/geometry.h"
 #include "geometry_g.h"
 #include "dg/runge_kutta.h"
+#include "dg/multistep.h"
+#include "dg/elliptic.h"
+#include "dg/cg.h"
 #include "parameters.h"
 
 #include "heat.cuh"
@@ -22,7 +25,6 @@
    - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-
 
 int main( int argc, char* argv[])
 {
@@ -70,8 +72,57 @@ int main( int argc, char* argv[])
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-    //Make grid
+    //Make cylindrical grid
+//     double Rmin=gp.R_0-1;
+//     double Zmin=-1.;
+//     double Rmax=gp.R_0+1.;
+//     double Zmax=1.;
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
+
+//     dg::DVec w3d_ = dg::create::weights( grid);
+//     dg::DVec v3d_ = dg::create::inv_weights( grid);
+//     dg::DVec x = dg::evaluate( dg::zero, grid);
+//     //set up the parallel diffusion
+//     dg::GeneralElliptic<dg::DMatrix, dg::DVec, dg::DVec> elliptic( grid, dg::not_normed, dg::centered);
+//     dg::DVec bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),grid);
+//     elliptic.set_x( bfield);
+//     bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),grid);
+//     elliptic.set_y( bfield);
+//     bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),grid);
+//     elliptic.set_z( bfield);
+//     double eps =1e-5;   
+//     dg::Invert< dg::DVec> invert( x, w3d_.size(), eps );  
+//     std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
+//     const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), grid);
+//     std::cout << " # of iterations "<< invert( elliptic, x, rhs ) << std::endl; //is dzTdz
+//     dg::DVec solution = dg::evaluate( solovev::FuncNeu(gp.R_0, gp.I_0),grid);
+//     double normf = dg::blas2::dot( w3d_, solution);
+//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+//     double errinvT =dg::blas2::dot( w3d_, x);
+//     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+//     dg::blas1::axpby( 1., solution, +1.,x);
+//     errinvT =dg::blas2::dot( w3d_, x);
+//     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     //create RHS 
     
     std::cout << "initialize feltor" << std::endl;
@@ -116,9 +167,13 @@ int main( int argc, char* argv[])
 
     //////////////////////////////////////////////////////////////////////////////////
     //RK solver
-    dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     feltor.energies( y0);//now energies and potential are at time 0
-
+    //SIRK solver
+    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+//     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
+//     karniadakis.init( feltor, rolkar, y0, p.dt);
+    
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::HMatrix equi = dg::create::backscatter( grid);
@@ -187,7 +242,9 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << " err =" << err << "\n";
             E0 = E1;
             try{
-                rk( feltor, y0, y1, p.dt);
+//                 rk( feltor, y0, y1, p.dt);
+                 sirk(feltor,rolkar,y0,y1,p.dt);
+//                 karniadakis( feltor, rolkar, y0);
                 y0.swap( y1);}
               catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -204,6 +261,7 @@ int main( int argc, char* argv[])
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
 #endif//DG_BENCHMARK
     }
+    
     glfwTerminate();
     ////////////////////////////////////////////////////////////////////
 

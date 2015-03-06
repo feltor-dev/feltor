@@ -466,16 +466,9 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     cusp::coo_matrix<int, double, cusp::host_memory> plusH, minusH, plusHT, minusHT;
     plusH  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minusH = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-        plusH.sort_by_row_and_column();
- minusH.sort_by_row_and_column();
-
-        
     cusp::transpose( plusH, plusHT);
     cusp::transpose( minusH, minusHT);
-    
-    cusp::print(plusH);
-    cusp::print(plusH);
-    cusp::print(plusHT);
+
    /* std::vector<unsigned> pcounter(size,0);
     std::vector<unsigned> mcounter(size,0);
 
@@ -493,9 +486,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         plusHT.values[i]  /=double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n();
         minusHT.values[i] /=double(mcounter[minusHT.row_indices[i]])/g_.n()/g_.n();
     } */  
-  
-//     cusp::print(plusHT);
-//     cusp::print(minusHT);
+
     plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT; 
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
@@ -604,9 +595,7 @@ void DZ<M,container>::forward( const container& f, container& dzf)
 }
 template<class M, class container>
 void DZ<M,container>::forwardT( const container& f, container& dzf)
-{
-
-    
+{    
     //adjoint discretisation
     assert( &f != &dzf);
     dg::blas1::pointwiseDot( w3d, f, dzf);

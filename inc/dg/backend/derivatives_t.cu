@@ -13,6 +13,8 @@ dg::bc bcz = dg::DIR_NEU;
 */
 double function(   double x, double y, double z) { return sin(x);}
 double derivative( double x, double y, double z) { return cos(x);}
+double sinz(   double x, double y, double z) { return sin(z);}
+double cosz(   double x, double y, double z) { return cos(z);}
 dg::bc bcx = dg::DIR;
 
 
@@ -48,5 +50,22 @@ int main()
     //n = 3 -> p = 3      3
     //n = 4 -> p = 3      3
     //n = 5 -> p = 5      5
+
+    std::cout << "TEST DZ\n";
+    dg::DVec func = dg::evaluate( sinz, g);
+    dg::DVec deri = dg::evaluate( cosz, g);
+
+
+    dg::DMatrix dz = dg::create::dz( g); 
+    dg::DVec temp( func);
+    dg::blas2::gemv( dz, func, temp);
+    dg::blas1::axpby( 1., deri, -1., temp);
+    std::cout << "DZ(1):           Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
+    dg::DMatrix dz_not_normed = dg::create::dz( g, dg::PER, dg::not_normed, dg::centered); 
+    dg::blas2::gemv( dz_not_normed, func, temp);
+    const dg::DVec v3d = dg::create::inv_weights( g);
+    dg::blas1::pointwiseDot( v3d, temp, temp);
+    dg::blas1::axpby( 1., deri, -1., temp);
+    std::cout << "DZ_NotNormed(1): Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
     return 0;
 }
