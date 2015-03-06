@@ -13,7 +13,7 @@
 #include "draw/host_window.h"
 
 double R_0 = 10;
-double I_0 = 20; //I0=20 and R=10 means q=2
+double I_0 = 40; //I0=20 and R=10 means q=2
 struct InvB
 {
     InvB( double R_0, double I_0):R_0(R_0), I_0(I_0){}
@@ -94,11 +94,16 @@ struct Field
     }
     double operator()( double R, double Z)
     {
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0; //1/B
+//         double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+//         return invB*I_0*R_0/R; //b_t
     }
     double operator()( double R, double Z, double phi)
     {
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;  //1/B
+//         double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+//         return invB*I_0*R_0/R; //b_t
+        
     }
     private:
     double R_0, I_0;
@@ -201,14 +206,18 @@ int main()
     Field field( R_0, I_0);
     InvB invb(R_0, I_0);
     LnB lnB(R_0, I_0);
-
+    bR bR_(R_0, I_0);
+    bZ bZ_(R_0, I_0);
+    bPhi bPhi_(R_0, I_0);
+    
+    
     std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-//     double rk4eps;
-//     std::cout << "Type RK4 eps (1e-8)\n";
-//     std::cin >> rk4eps;
+    double rk4eps;
+    std::cout << "Type RK4 eps (1e-8)\n";
+    std::cin >> rk4eps;
     std::cout << "q = " << I_0/R_0 << std::endl;
     double z0 = 0, z1 = 2.*M_PI;
     
@@ -220,12 +229,12 @@ int main()
     const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
 //     dg::DZ<dg::DMatrix, dg::DVec> dzDIR( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::DIR);
     
     dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
     
-    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::NEU);
+    dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
     dg::DVec function = dg::evaluate( funcNEU, g3d) ,
@@ -233,6 +242,8 @@ int main()
                         temp2( function),
                         temp3( function),
                         derivative(function),
+                        derivativeRZPhi(function),
+                        diffRZPhi(function),
                         derivativef(function),
                         derivativeb(function),
                         derivativeones(function),
@@ -265,11 +276,27 @@ int main()
     const dg::DVec solution = dg::evaluate( deriNEU, g3d);
     const dg::DVec solutionT = dg::evaluate( deriNEUT, g3d);
     const dg::DVec solutiondzTdz = dg::evaluate( deriNEUT2, g3d);
-    const dg::DVec bR_ = dg::evaluate( bR, g3d);
-    const dg::DVec bZ_ = dg::evaluate( bZ, g3d);
-    const dg::DVec bPhi_ = dg::evaluate(bPhi, g3d);
+    const dg::DVec bhatR = dg::evaluate( bR_, g3d);
+    const dg::DVec bhatZ = dg::evaluate( bZ_, g3d);
+    const dg::DVec bhatPhi = dg::evaluate(bPhi_, g3d);
+    dg::DMatrix dR(dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::centered));
+    dg::DMatrix dZ(dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::centered));
+    dg::DMatrix dphi(dg::create::dz( g3d, g3d.bcz(), dg::centered));
+    
     dz.set_boundaries( dg::PER, 0, 0);
-
+    //direct gradpar method
+    dg::blas2::gemv( dR, function, temp); //d_R src
+    dg::blas2::gemv( dZ, function, temp2);  //d_Z src
+    dg::blas2::gemv( dphi, function, temp3);  //d_phi src
+    dg::blas1::pointwiseDot( bhatR, temp, temp); // b^R d_R src
+    dg::blas1::pointwiseDot( bhatZ, temp2, temp2); // b^Z d_Z src
+    dg::blas1::pointwiseDot( bhatPhi, temp3, temp3); // b^phi d_phi src
+    dg::blas1::axpby( 1., temp, 1., temp2 ); // b^R d_R src +  b^Z d_Z src
+    dg::blas1::axpby( 1., temp3, 1., temp2,derivativeRZPhi ); // b^R d_R src +  b^Z d_Z src + b^phi d_phi src
+//     dg::blas1::axpby( 1., bhatR, 1., bhatZ,temp2 ); // b^R d_R src +  b^Z d_Z src
+//     dg::blas1::axpby( 1.,  bhatPhi, 1., temp2,temp2 ); // 
+//        dg::blas1::pointwiseDot( derivativeRZPhi , temp2, derivativeRZPhi ); // b^phi d_phi src
+ 
     dz( function, derivative); //dz(f)
     dz.forward( function, derivativef); //dz(f)
     dz.backward( function, derivativeb); //dz(f)
@@ -286,6 +313,9 @@ int main()
     
     
     dz.centeredT(function, derivativeT); //dz(f)
+    //testing average d
+//         dg::blas1::axpby(1.0,derivativeT,-1.,derivativeRZPhi,diffRZPhi);
+
     //divB
     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
     dz.centeredT(temp2, divBT); // dzT B
@@ -354,7 +384,15 @@ int main()
     dg::blas1::axpby( 1., solution, -1., derivative);
     err =dg::blas2::dot( w3d, derivative);
     std::cout << "Relative Difference in DZ is "<< sqrt( err/norm )<<"\n"; 
-
+    
+    std::cout << "--------------------testing dz with RZPhi method" << std::endl;
+    std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
+    double errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);
+    std::cout << "|| Derivative || "<<sqrt( errRZPhi)<<"\n";
+    dg::blas1::axpby( 1., solution, -1., derivativeRZPhi);
+    errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);    
+    std::cout << "Relative Difference in DZ is "<< sqrt( errRZPhi/norm )<<"\n"; 
+    
     std::cout << "--------------------testing dzT" << std::endl;
     std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
     std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
@@ -449,19 +487,19 @@ int main()
     
     std::cout << "--------------------testing dzT with inversion " << std::endl;
     double eps =1e-5;   
-    dg::Invert< dg::DVec> invert(
-      dg::evaluate(dg::zero,g3d)
-//       function
-      , w3d.size(), eps );  
-    std::cout << "MAX # iterations = " << w3d.size() << std::endl;
-    std::cout << " # of iterations "<< invert( dz, functionTinv,solutiondzTdz ) << std::endl; //is dzTdz
-    double normf = dg::blas2::dot( w3d, function);
-    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-    double errinvT =dg::blas2::dot( w3d, functionTinv);
-    std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
-    dg::blas1::axpby( 1., function, -1.,functionTinv);
-    errinvT =dg::blas2::dot( w3d, functionTinv);
-    std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
+//     dg::Invert< dg::DVec> invert(
+//       dg::evaluate(dg::zero,g3d)
+// //       function
+//       , w3d.size(), eps );  
+//     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+//     std::cout << " # of iterations "<< invert( dz, functionTinv,solutiondzTdz ) << std::endl; //is dzTdz
+//     double normf = dg::blas2::dot( w3d, function);
+//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+//     double errinvT =dg::blas2::dot( w3d, functionTinv);
+//     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+//     dg::blas1::axpby( 1., function, -1.,functionTinv);
+//     errinvT =dg::blas2::dot( w3d, functionTinv);
+//     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
     
     
     //draw divB
@@ -569,7 +607,7 @@ int main()
             dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
             render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
         }
-        hvisual = dzz;
+        hvisual = functionTinv;
         dg::blas2::gemv( equigrid, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );

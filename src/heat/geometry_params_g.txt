@@ -4,7 +4,7 @@
 ----------------------geometric coefficients----------------------
 1)  A                        =  20.0     
 14) R0 (in units of rhos)    =  10.
-15) inv aspect ratio (a/R0)  =  0.01
+15) inv aspect ratio (a/R0)  =  0.1
 16) elongation               =  1.0
 17) triangularity            =  0.0
 ----------------------Miscellaneous----------------------

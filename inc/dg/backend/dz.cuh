@@ -11,6 +11,7 @@
 #include "../functors.h"
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
+#include <cusp/print.h>
 namespace dg{
 
 /**
@@ -417,6 +418,8 @@ struct DZ
     container limiter;
     container w3d, v3d;
     container invB;
+    
+    container w2d;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -427,7 +430,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
-        , invB(dg::evaluate(field,grid))
+        , invB(dg::evaluate(field,grid)),
+        w2d(w3d)
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -435,6 +439,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         std::cout << "Computing in 2D mode!\n";
     //Resize vectors to 2D grid size
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    container w2d_( dg::create::weights( g2d));
+    
     unsigned size = g2d.size();
     limiter = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
@@ -460,14 +466,44 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     cusp::coo_matrix<int, double, cusp::host_memory> plusH, minusH, plusHT, minusHT;
     plusH  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minusH = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+        plusH.sort_by_row_and_column();
+ minusH.sort_by_row_and_column();
+
+        
     cusp::transpose( plusH, plusHT);
     cusp::transpose( minusH, minusHT);
+    
+    cusp::print(plusH);
+    cusp::print(plusH);
+    cusp::print(plusHT);
+   /* std::vector<unsigned> pcounter(size,0);
+    std::vector<unsigned> mcounter(size,0);
+
+    //compute counts
+    for(unsigned i=0;i<size;i++)    {
+ 
+        pcounter[ plusHT.row_indices[i]] +=1;
+        mcounter[minusHT.row_indices[i]] +=1;
+    }
+    //normalize
+     for(unsigned i=0;i<size;i++)  {
+//         std::cout << "c " << "[" <<plusHT.row_indices[i]<<"]" 
+//                                 << pcounter[plusHT.row_indices[i]] << " " <<
+//                                 double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n() <<std::endl;
+        plusHT.values[i]  /=double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n();
+        minusHT.values[i] /=double(mcounter[minusHT.row_indices[i]])/g_.n()/g_.n();
+    } */  
+  
+//     cusp::print(plusHT);
+//     cusp::print(minusHT);
     plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT; 
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());
+        
+        thrust::copy( w2d_.begin(), w2d_.end(), w2d.begin() + i*g2d.size());
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);
@@ -475,7 +511,6 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
-    
 
 }
 template<class M, class container>
@@ -533,6 +568,8 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
         einsMinusT( dzf, tempM);
         dg::blas1::axpby( 1., tempM, -1., tempP);        
         dg::blas1::pointwiseDot( v3d, tempP, dzf);
+      
+        
 }
 template<class M, class container>
 void DZ<M,container>::centeredTD( const container& f, container& dzf)
@@ -639,17 +676,18 @@ void DZ<M,container>::backwardTD( const container& f, container& dzf)
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
-    //this->operator()( f, tempP);
-    //centeredT( tempP, dzTdzf);
+//     this->operator()( f, tempP);
+//     centeredT( tempP, dzTdzf);
     forward( f, tempP);
     forwardT( tempP, dzTdzf);
     backward( f, tempM);
     backwardT( tempM, temp0);
     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
-    dg::blas2::symv( jump, f, tempP);
-    dg::blas1::axpby(1., tempP, 1., dzTdzf);
-//     add jump term (unstable without it)
+
+//     add jump term 
+//     dg::blas2::symv( jump, f, tempP);
+//     dg::blas1::axpby(1., tempP, 1., dzTdzf);
 
 }
 template< class M, class container >

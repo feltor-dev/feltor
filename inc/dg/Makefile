@@ -1,5 +1,5 @@
 system=home
-device=openmp
+device=omp
 
 INCLUDE = -I../ # other project libraries
 
