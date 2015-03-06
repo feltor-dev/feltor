@@ -34,7 +34,7 @@ struct Rolkar
         p(p),
         gp(gp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
-        elliptic( g, dg::normed, dg::forward)
+        elliptic( g, dg::normed, dg::centered)
 
     {
         container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
@@ -302,17 +302,17 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 
         //forward, backward (stegi)
-        dzNU_.forward( y[0], omega); 
-        dzNU_.forwardT(omega,lambda);
-        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
-
-        dzNU_.backward( y[0], omega); 
-        dzNU_.backwardT(omega,lambda);
-        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+//         dzNU_.forward( y[0], omega); 
+//         dzNU_.forwardT(omega,lambda);
+//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+// 
+//         dzNU_.backward( y[0], omega); 
+//         dzNU_.backwardT(omega,lambda);
+//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
         //with jump
-//        dzNU_.symv(y[0],lambda);
-//        dg::blas1::pointwiseDot(v3d,lambda,lambda);
-//        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+       dzNU_.symv(y[0],lambda);
+       dg::blas1::pointwiseDot(v3d,lambda,lambda);
+       dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 
     }
     if (p.p_diff ==1)    {

@@ -2,214 +2,58 @@
 
 #include <cusp/print.h>
 #include "dg/backend/xspacelib.cuh"
+#include "file/read_input.h"
 
 #include "evaluation.cuh"
 #include "dz.cuh"
 #include "functions.h"
 #include "../blas2.h"
 #include "../functors.h"
+#include "dg/elliptic.h"
 #include "../cg.h"
 #include "interpolation.cuh"
 #include "draw/host_window.h"
+#include "../../../src/heat/geometry_g.h"
+#include "../../../src/heat/parameters.h"
 
-double R_0 = 10;
-double I_0 = 40; //I0=20 and R=10 means q=2
-struct InvB
+int main( )
 {
-    InvB( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi)
-    {
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-    }
-    private:
-    double R_0, I_0;
-};
-struct LnB
-{
-    LnB( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi)
-    {
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return log(1./invB);
-    }
-    private:
-    double R_0, I_0;
-};
+    /////////////////initialize params////////////////////////////////
+     std::vector<double> v,v2,v3;
 
-struct bR
-{
-    bR( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi)
-    {
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return -invB*M_PI*R_0*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2)/2./R;
-    }
-    private:
-    double R_0, I_0;
-};
-
-struct bZ
-{
-    bZ( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi)
-    {
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return invB*M_PI*R_0*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2)/2./R;
-
-    }
-    private:
-    double R_0, I_0;
-};
-
-struct bPhi
-{
-    bPhi( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi)
-    {
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return invB*I_0*R_0/R/R;
-    }
-    private:
-    double R_0, I_0;
-};
-//psi = cos(0.5*pi*(R-R_0))*cos(0.5*pi*Z)
-struct Field
-{
-    Field( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp)
-    {
-        for( unsigned i=0; i<y[0].size(); i++)
-        {        
-            
-            yp[2][i] = y[0][i]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/2./sqrt(2)/I_0;            
-            yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2)/2./I_0;
-            yp[1][i] =  M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2)/2./I_0 ;
+        try{
+            v = file::read_input("../../../src/heat/input.txt");
+            v3 = file::read_input( "../../../src/heat/geometry_params_g.txt"); 
+        }catch( toefl::Message& m){
+            m.display();
+            return -1;
         }
-    }
-    void operator()( const dg::HVec& y, dg::HVec& yp)
-    {
-            yp[2] = y[0]*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/2./sqrt(2.)/I_0;            
-            yp[0] = -M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2)/2./I_0;
-            yp[1] =  M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2)/2./I_0 ;
-    }
-    double operator()( double R, double Z)
-    {
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0; //1/B
-//         double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-//         return invB*I_0*R_0/R; //b_t
-    }
-    double operator()( double R, double Z, double phi)
-    {
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;  //1/B
-//         double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-//         return invB*I_0*R_0/R; //b_t
-        
-    }
-    private:
-    double R_0, I_0;
-};
 
-double funcNEU(double R, double Z, double phi)
-{
-    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-    return -psi*cos(phi);
-//     return -psi;
-}
-double funcNEU2(double R, double Z, double phi)
-{
-    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-    return -psi*cos(phi)+0.5*(R-R_0)*0.5*(R-R_0) +Z*0.5*0.5*(R-R_0) ;
-}
-double deriNEU(double R, double Z, double phi)
-{
-    double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
-    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-    return psi*sin(phi)/dldp;
-//     return psi/dldp;
-}
+    const eule::Parameters p( v);
+//     p.display( std::cout);
+    const solovev::GeomParameters gp(v3);
+//     gp.display( std::cout);
 
-double divb(double R, double Z, double phi)
-{
-    double fac1 = sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-    double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
-                M_PI*M_PI* cos(M_PI*3.*(R-R_0)/2.)+
-                M_PI*R*sin(M_PI*3.*(R-R_0)/2.) ;
-    double z2 = cos(M_PI*0.5*(R-R_0)) + 
-                cos(M_PI*3*(R-R_0)/2) + 
-                M_PI*R*sin(M_PI*0.5*(R-R_0));
-    double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
-    double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
-    return divb;
-}
-
-double deriNEUT(double R, double Z, double phi)
-{
-    double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
-    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-    //for divb
-    double fac1 = sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-    double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
-                M_PI*M_PI* cos(M_PI*3.*(R-R_0)/2.)+
-                M_PI*R*sin(M_PI*3.*(R-R_0)/2.) ;
-    double z2 = cos(M_PI*0.5*(R-R_0)) + 
-                cos(M_PI*3*(R-R_0)/2) + 
-                M_PI*R*sin(M_PI*0.5*(R-R_0));
-    double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
-    double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
+    //////////////////////////////////////////////////////////////////////////
     
-    double func = -psi*cos(phi);
-    double deri = psi*sin(phi)/dldp;
-    return divb*func + deri;
-}
-double deriNEU2(double R, double Z, double phi)
-{
-    double psi  = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-    double fac2 = R*(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-    double fac3 = 4*I_0*cos(phi)*fac2/R;
-    double fac4 = 16.*I_0*I_0*cos(M_PI*0.5*(R-R_0))+
-                  M_PI*M_PI*sin(M_PI*0.5*(R-R_0))*
-                  (-M_PI*R*cos(M_PI*(R-R_0))+cos(M_PI*Z))+
-                  sin(M_PI*(R-R_0))*(1+cos(M_PI*Z))
-                  +4*M_PI*M_PI*cos(M_PI*0.5*(R-R_0))*cos(M_PI*0.5*(R-R_0))*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5)*sin(M_PI*Z*0.5);
-    double fac5 = M_PI*sin(phi)*sin(0.5*Z*M_PI)*fac4;
-    double dz2 = 2.*I_0*psi*(fac3+fac5)/fac2/fac2;
-    return dz2 ;
-}
-double deriNEUT2(double R, double Z, double phi)
-{
-    double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-    double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
-    double fac1 = sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-    double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
-                M_PI*M_PI*( cos(M_PI*3.*(R-R_0)/2.)+
-                            M_PI*R*sin(M_PI*3.*(R-R_0)/2.)) ;
-    double z2 = cos(M_PI*0.5*(R-R_0)) + 
-                cos(M_PI*3*(R-R_0)/2) + 
-                M_PI*R*sin(M_PI*0.5*(R-R_0));
-    double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
-    double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
-//     double func = -psi*cos(phi);
-    double deri = psi*sin(phi)/dldp;
-    double fac2 = R*(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-    double fac3 = 4*I_0*cos(phi)*fac2/R;
-    double fac4 = 16.*I_0*I_0*cos(M_PI*0.5*(R-R_0))+
-                  M_PI*M_PI*sin(M_PI*0.5*(R-R_0))*
-                  (-M_PI*R*cos(M_PI*(R-R_0))+cos(M_PI*Z))+
-                  sin(M_PI*(R-R_0))*(1+cos(M_PI*Z))
-                  +4*M_PI*M_PI*cos(M_PI*0.5*(R-R_0))*cos(M_PI*0.5*(R-R_0))*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5)*sin(M_PI*Z*0.5);
-    double fac5 = M_PI*sin(phi)*sin(0.5*Z*M_PI)*fac4;
-    double dz2 = 2.*I_0*psi*(fac3+fac5)/fac2/fac2;
-    return divb*deri + dz2;
-}
-int main()
-{
-    Field field( R_0, I_0);
-    InvB invb(R_0, I_0);
-    LnB lnB(R_0, I_0);
-    bR bR_(R_0, I_0);
-    bZ bZ_(R_0, I_0);
-    bPhi bPhi_(R_0, I_0);
+    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
+    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    /////////////////////////////////////////////initialze fields /////////////////////
     
+    solovev::Field field(gp);
+    solovev::InvB invb(gp);
+    solovev::LnB lnB(gp);
+    solovev::bR bR_(gp.R_0,gp.I_0);
+    solovev::bZ bZ_(gp.R_0,gp.I_0);
+    solovev::bPhi bPhi_(gp.R_0,gp.I_0);
+    solovev::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    solovev::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    solovev::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    solovev::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    solovev::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    solovev::Divb divb(gp.R_0,gp.I_0);
     
     std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
@@ -218,21 +62,18 @@ int main()
     double rk4eps;
     std::cout << "Type RK4 eps (1e-8)\n";
     std::cin >> rk4eps;
-    std::cout << "q = " << I_0/R_0 << std::endl;
     double z0 = 0, z1 = 2.*M_PI;
     
-    //double z0 = M_PI/2., z1 = 3./2.*M_PI;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, Nz,dg::NEU, dg::NEU, dg::PER,dg::cylindrical);
-    dg::Grid2d<double> g2d( R_0 - 1, R_0+1, -1, 1,  n, Nx, Ny);
+    dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz,dg::NEU, dg::NEU, dg::PER,dg::cylindrical);
+    dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny);
     
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
     dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
-//     dg::DZ<dg::DMatrix, dg::DVec> dzDIR( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter(), dg::DIR);
     
-    dg::Grid3d<double> g3dp( R_0 - 1, R_0+1, -1, 1, z0, z1,  n, Nx, Ny, 1);
+    dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
     
     dg::DZ<dg::DMatrix, dg::DVec> dz2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     dg::DVec boundary=dg::evaluate( dg::zero, g3d);
@@ -254,7 +95,8 @@ int main()
                         derivativeT2(function),
                         derivativeTones(function),
                         derivativeTdz(function),
-                        functionTinv(function),
+                        functionTinv(dg::evaluate( dg::zero, g3d)),
+                        functionTinv2(dg::evaluate( dg::zero, g3d)),
                         dzTdz(function),
                         dzTdzb(function),
                         dzTdzf(function),
@@ -281,7 +123,7 @@ int main()
     const dg::DVec bhatPhi = dg::evaluate(bPhi_, g3d);
     dg::DMatrix dR(dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::centered));
     dg::DMatrix dZ(dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::centered));
-    dg::DMatrix dphi(dg::create::dz( g3d, g3d.bcz(), dg::centered));
+    dg::DMatrix dphi(dg::create::dz( g3d, g3d.bcz(), dg::normed,dg::centered));
     
     dz.set_boundaries( dg::PER, 0, 0);
     //direct gradpar method
@@ -293,9 +135,7 @@ int main()
     dg::blas1::pointwiseDot( bhatPhi, temp3, temp3); // b^phi d_phi src
     dg::blas1::axpby( 1., temp, 1., temp2 ); // b^R d_R src +  b^Z d_Z src
     dg::blas1::axpby( 1., temp3, 1., temp2,derivativeRZPhi ); // b^R d_R src +  b^Z d_Z src + b^phi d_phi src
-//     dg::blas1::axpby( 1., bhatR, 1., bhatZ,temp2 ); // b^R d_R src +  b^Z d_Z src
-//     dg::blas1::axpby( 1.,  bhatPhi, 1., temp2,temp2 ); // 
-//        dg::blas1::pointwiseDot( derivativeRZPhi , temp2, derivativeRZPhi ); // b^phi d_phi src
+
  
     dz( function, derivative); //dz(f)
     dz.forward( function, derivativef); //dz(f)
@@ -313,26 +153,10 @@ int main()
     
     
     dz.centeredT(function, derivativeT); //dz(f)
-    //testing average d
-//         dg::blas1::axpby(1.0,derivativeT,-1.,derivativeRZPhi,diffRZPhi);
 
     //divB
     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
     dz.centeredT(temp2, divBT); // dzT B
-    
-    //full correction
-//     dg::blas1::pointwiseDot(divBT,function,temp2); //f dzTB
-//     dg::blas1::pointwiseDot(temp2,inverseB,temp3); //f/B dzTB
-//     dg::blas1::axpby(1.0,derivativeT,-1.0,temp3,derivativeT); //... - f/B dzTB
-    //divB correction
-//     dg::blas1::axpby(1.0,derivativeT,-1.0,divBT,derivativeT); //... - f/B dzTB 
-      //1/B divB correction
-/*    dg::blas1::pointwiseDot(divBT,inverseB,temp2); //f dzTB
-    dg::blas1::axpby(1.0,derivativeT,-1.0,temp2,derivativeT); //... - f/B dzTB*/ 
-          //f divB correction
-//     dg::blas1::pointwiseDot(divBT,function,temp2); //f dzTB
-//     dg::blas1::axpby(1.0,derivativeT,-1.0,temp2,derivativeT); //... - f/B dzTB 
-    
     
     dz.centeredT( function2, derivativeT2); //dz(f)
     dz.centeredT( ones, derivativeTones); //dz(f)
@@ -349,11 +173,6 @@ int main()
     //arithmetic average
     dg::blas1::axpby(0.5,dzTdzb,0.5,dzTdzf,dzTdzfb);
     dg::blas1::axpby(0.5,dzTdzbd,0.5,dzTdzfd,dzTdzfbd); 
-    //harmonic average
-//     dg::blas1::axpby(2.,dzTdzb,2.,dzTdzf,dzTdzfb); 
-//     dg::blas1::pointwiseDot(dzTdzb,dzTdzf,temp2); //forward*backward
-//     dg::blas1::pointwiseDivide(temp2,dzTdzfb,dzTdzfb);
-    
 //     dz.symv(function,dzTdzfb);
 //     dg::blas1::pointwiseDot(v3d,dzTdzfb,dzTdzfb);
     dz.centeredT( derivative2, dzTdz2); //dzT(dz(f))
@@ -485,26 +304,36 @@ int main()
     std::cout << "-<dz(1),dz(f)> = "<< -normdz1dz<<"\n";
     std::cout << "Diff           = "<< norm1dzTdz+normdz1dz<<"\n";    
     
-    std::cout << "--------------------testing dzT with inversion " << std::endl;
-    double eps =1e-5;   
-//     dg::Invert< dg::DVec> invert(
-//       dg::evaluate(dg::zero,g3d)
-// //       function
-//       , w3d.size(), eps );  
-//     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
-//     std::cout << " # of iterations "<< invert( dz, functionTinv,solutiondzTdz ) << std::endl; //is dzTdz
-//     double normf = dg::blas2::dot( w3d, function);
-//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-//     double errinvT =dg::blas2::dot( w3d, functionTinv);
-//     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
-//     dg::blas1::axpby( 1., function, -1.,functionTinv);
-//     errinvT =dg::blas2::dot( w3d, functionTinv);
-//     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
+    std::cout << "--------------------testing GeneralElliptic with inversion " << std::endl; 
+   //set up the parallel diffusion
+    dg::GeneralElliptic<dg::DMatrix, dg::DVec, dg::DVec> elliptic( g3d, dg::not_normed, dg::centered);
+    elliptic.set_x(bhatR);
+    elliptic.set_y(bhatZ );
+    elliptic.set_z(bhatPhi);
+    double eps =1e-7;   
+    dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
+    std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
+
+    std::cout << " # of iterations "<< invert( elliptic, functionTinv, rhs ) << std::endl; //is dzTdz
+    double normf = dg::blas2::dot( w3d, function);
+    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+    double errinvT =dg::blas2::dot( w3d, functionTinv);
+    std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+    dg::blas1::axpby( 1., function, +1.,functionTinv);
+    errinvT =dg::blas2::dot( w3d, functionTinv);
+    std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
     
+    std::cout << "--------------------testing dzT" << std::endl; 
+    std::cout << " # of iterations "<< invert( dz, functionTinv2,solutiondzTdz ) << std::endl; //is dzTdz
+    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+    double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
+    std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+    dg::blas1::axpby( 1., function, -1.,functionTinv2);
+    errinvT2 =dg::blas2::dot( w3d, functionTinv2);
+    std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
     
-    //draw divB
     std::cout << "make Plot" << std::endl;
-    
     //make equidistant grid from dggrid
     dg::HVec hvisual;
     //allocate mem for visual
@@ -512,21 +341,7 @@ int main()
     dg::HMatrix equigrid = dg::create::backscatter(g3d);               
 
     //evaluate on valzues from devicevector on equidistant visual hvisual vector
-    
     visual = dg::evaluate( dg::one, g3d);
-    
-/*    double eps =1e-6;
-    dg::Invert< dg::DVec> invert(function, w3d.size(), eps );   
-    std::cout << " # of iterations "<< invert( dz, functionTinv , solutiondzTdz) << std::endl; //is dzTdz
-    std::cout << "--------------------testing dzTdz with CG" << std::endl;
-    double normf = dg::blas2::dot( w3d, function);
-    std::cout << "||f||  "<<sqrt( normf)<<"\n";
-    double errf =dg::blas2::dot( w3d,functionTinv);
-    std::cout << "|| derived f ||  "<<sqrt( errf)<<"\n";
-    dg::blas1::axpby( 1.,  function, -1., functionTinv);
-    errf =dg::blas2::dot( w3d, functionTinv);
-    std::cout << "Relative Difference in DZT is "<< sqrt( errf/ normf )<<"\n";   */    
-    
     //Create Window and set window title
     GLFWwindow* w = draw::glfwInitAndCreateWindow( 100*Nz, 700, "");
     draw::RenderHostData render(7 , 1*Nz);  

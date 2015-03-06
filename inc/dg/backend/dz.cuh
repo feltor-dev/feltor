@@ -411,6 +411,7 @@ struct DZ
     Matrix plus, minus, plusT, minusT; //interpolation matrices
     Matrix jump;
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
+    container hzh, hph,hmh;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
@@ -431,7 +432,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
         , invB(dg::evaluate(field,grid)),
-        w2d(w3d)
+        w2d(w3d),
+        hzh( dg::evaluate( dg::zero, grid)), hph( hz), hmh( hz)                                     
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -469,23 +471,23 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     cusp::transpose( plusH, plusHT);
     cusp::transpose( minusH, minusHT);
 
-   /* std::vector<unsigned> pcounter(size,0);
-    std::vector<unsigned> mcounter(size,0);
-
-    //compute counts
-    for(unsigned i=0;i<size;i++)    {
- 
-        pcounter[ plusHT.row_indices[i]] +=1;
-        mcounter[minusHT.row_indices[i]] +=1;
-    }
-    //normalize
-     for(unsigned i=0;i<size;i++)  {
-//         std::cout << "c " << "[" <<plusHT.row_indices[i]<<"]" 
-//                                 << pcounter[plusHT.row_indices[i]] << " " <<
-//                                 double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n() <<std::endl;
-        plusHT.values[i]  /=double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n();
-        minusHT.values[i] /=double(mcounter[minusHT.row_indices[i]])/g_.n()/g_.n();
-    } */  
+//     std::vector<unsigned> pcounter(size,0);
+//     std::vector<unsigned> mcounter(size,0);
+// 
+//     //compute counts
+//     for(unsigned i=0;i<size;i++)    {
+//  
+//         pcounter[ plusHT.row_indices[i]] +=1;
+//         mcounter[minusHT.row_indices[i]] +=1;
+//     }
+//     //normalize
+//      for(unsigned i=0;i<size;i++)  {
+// //         std::cout << "c " << "[" <<plusHT.row_indices[i]<<"]" 
+// //                                 << pcounter[plusHT.row_indices[i]] << " " <<
+// //                                 double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n() <<std::endl;
+//         plusHT.values[i]  /=double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n();
+//         minusHT.values[i] /=double(mcounter[minusHT.row_indices[i]])/g_.n()/g_.n();
+//     }   
 
     plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT; 
     //copy into h vectors
@@ -501,8 +503,27 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     //
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
-    dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
-
+    dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);    
+    
+//     for( unsigned i=0; i<size; i++)
+//     {
+//         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+//         double phi1 = deltaPhi/2.;
+//         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
+//         phi1 =  - deltaPhi/2.;
+//         boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
+//         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+//         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+//     }
+//     //copy into h vectors
+//     for( unsigned i=0; i<grid.Nz(); i++)
+//     {
+//         thrust::copy( yp[2].begin(), yp[2].end(), hph.begin() + i*g2d.size());
+//         thrust::copy( ym[2].begin(), ym[2].end(), hmh.begin() + i*g2d.size());
+//         
+//     }
+//     dg::blas1::scal( hmh, -1.);
+//     dg::blas1::axpby(  1., hph, +1., hmh, hzh);
 }
 template<class M, class container>
 void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
@@ -559,7 +580,15 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
         einsMinusT( dzf, tempM);
         dg::blas1::axpby( 1., tempM, -1., tempP);        
         dg::blas1::pointwiseDot( v3d, tempP, dzf);
-      
+        
+//         dg::blas1::pointwiseDot( hzh, f, dzf);
+//         dg::blas1::pointwiseDot( invB, dzf, dzf);
+//         dg::blas1::pointwiseDot( w2d, dzf, dzf);
+//         dg::blas1::pointwiseDivide( dzf, hz, dzf);
+//         einsPlusT( dzf, tempP);
+//         einsMinusT( dzf, tempM);
+//         dg::blas1::axpby( 1., tempM, -1., tempP);        
+//         dg::blas1::pointwiseDot( v3d, tempP, dzf);
         
 }
 template<class M, class container>
@@ -675,8 +704,8 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
 
 //     add jump term 
-//     dg::blas2::symv( jump, f, tempP);
-//     dg::blas1::axpby(1., tempP, 1., dzTdzf);
+    dg::blas2::symv( jump, f, tempP);
+    dg::blas1::axpby(1., tempP, 1., dzTdzf);
 
 }
 template< class M, class container >
