@@ -7,6 +7,12 @@
 namespace dg
 {
 
+    /**
+     * @brief mpi Vector class 
+     *
+     * Holds ghostcells in every process to facilitate matrix vector multiplication. 
+     *
+     */
 struct MPI_Vector
 {
     /**
@@ -19,9 +25,28 @@ struct MPI_Vector
      */
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(1), data_( n*n*Nx*Ny), comm_(comm) {}
+    /**
+     * @brief construct a vector
+     *
+     * @param n polynomial coefficients
+     * @param Nx local # of cells in x 
+     * @param Ny local # of cells in y
+     * @param Nz local # of cells in z
+     * @param comm MPI communicator
+     */
     MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), data_( n*n*Nx*Ny*Nz), comm_(comm) {}
+    /**
+     * @brief Set underlying data
+     *
+     * @return 
+     */
     thrust::host_vector<double>& data() {return data_;}
+    /**
+     * @brief Get underlying data
+     *
+     * @return 
+     */
     const thrust::host_vector<double>& data() const {return data_;}
     /**
      * @brief Cut the ghostcells and leave interior
@@ -36,9 +61,29 @@ struct MPI_Vector
      * @param src The source values
      */
     void copy_into_interior( const thrust::host_vector<double>& src);
+    /**
+     * @brief return local number of polynomial coefficients
+     *
+     * @return 
+     */
     unsigned n() const {return n_;}
+    /**
+     * @brief return local number of cells in x
+     *
+     * @return 
+     */
     unsigned Nx()const {return Nx_;}
+    /**
+     * @brief return local number of cells in y
+     *
+     * @return 
+     */
     unsigned Ny()const {return Ny_;}
+    /**
+     * @brief return local number of cells in z
+     *
+     * @return 
+     */
     unsigned Nz()const {return Nz_;}
     /**
      * @brief Return local size
@@ -46,19 +91,35 @@ struct MPI_Vector
      * @return local size
      */
     unsigned size() const{return n_*n_*Nx_*Ny_*Nz_;}
+    /**
+     * @brief Access operator
+     *
+     * @param idx linear local index
+     *
+     * @return 
+     */
     double operator[]( unsigned idx) const {return data_[idx];}
     /**
-     * @brief exchanged data of overlapping rows
-     *
-     * @param comm Communicator
+     * @brief exchange data of overlapping rows
      */
-    void x_row( MPI_Comm comm);
+    void x_row( );
     /**
      * @brief exchange data of overlapping columns
-     *
-     * @param comm Communicator
      */
-    void x_col( MPI_Comm comm);
+    void x_col( );
+
+    /**
+     * @brief The communicator to which this vector belongs
+     *
+     * @return MPI communicator
+     */
+    MPI_Comm communicator() const{return comm_;}
+
+    /**
+     * @brief Display local data
+     *
+     * @param os outstream
+     */
     void display( std::ostream& os) const
     {
         for( unsigned s=0; s<Nz_; s++)
@@ -69,6 +130,14 @@ struct MPI_Vector
                 os << "\n";
             }
     }
+    /**
+     * @brief Disply local data
+     *
+     * @param os outstream
+     * @param v a vector
+     *
+     * @return  the outsream
+     */
     friend std::ostream& operator<<( std::ostream& os, const MPI_Vector& v)
     {
         os << "Vector with Nz = "<<v.Nz_<<", Ny = "<<v.Ny_
@@ -76,6 +145,11 @@ struct MPI_Vector
         v.display(os);
         return os;
     }
+    /**
+     * @brief Swap data 
+     *
+     * @param that must have equal sizes and communicator
+     */
     void swap( MPI_Vector& that){ 
 #ifdef DG_DEBUG
         assert( n_ == that.n_);
@@ -92,6 +166,7 @@ struct MPI_Vector
     MPI_Comm comm_;
 };
 
+///@cond
 typedef MPI_Vector MVec;
 template<> 
 struct VectorTraits<MPI_Vector> {
@@ -105,7 +180,7 @@ struct VectorTraits<const MPI_Vector> {
 };
 
 
-void MPI_Vector::x_col( MPI_Comm comm)
+void MPI_Vector::x_col( )
 {
     //shift data in zero-th dimension
     MPI_Status status;
@@ -125,18 +200,18 @@ void MPI_Vector::x_col( MPI_Comm comm)
             sendbuffer2[i*n+j] = data_[(i*cols + cols - 2)*n+j];
         }
     int source, dest;
-    MPI_Cart_shift( comm, 0, -1, &source, &dest);
+    MPI_Cart_shift( comm_, 0, -1, &source, &dest);
     MPI_Sendrecv(   sendbuffer1.data(), rows*n, MPI_DOUBLE,  //sender
                     dest, 3,  //destination
                     recvbuffer2.data(), rows*n, MPI_DOUBLE, //receiver
                     source, 3, //source
-                    MPI_COMM_WORLD, &status);
-    MPI_Cart_shift( comm, 0, +1, &source, &dest);
+                    comm_, &status);
+    MPI_Cart_shift( comm_, 0, +1, &source, &dest);
     MPI_Sendrecv(   sendbuffer2.data(), rows*n, MPI_DOUBLE,  //sender
                     dest, 9,  //destination
                     recvbuffer1.data(), rows*n, MPI_DOUBLE, //receiver
                     source, 9, //source
-                    MPI_COMM_WORLD, &status);
+                    comm_, &status);
     //copy back into vector
     for( int i=0; i<rows; i++)
         for( int j=0; j<n; j++)
@@ -146,7 +221,7 @@ void MPI_Vector::x_col( MPI_Comm comm)
         }
 }
 
-void MPI_Vector::x_row( MPI_Comm comm)
+void MPI_Vector::x_row( )
 {
     //shift data in first dimension
     MPI_Status status;
@@ -169,20 +244,20 @@ void MPI_Vector::x_row( MPI_Comm comm)
                     data_[((s*Ny_ + Ny_ - 2)*n + k)*cols + j];
             }
     int source, dest;
-    MPI_Cart_shift( comm, 1, -1, &source, &dest);
+    MPI_Cart_shift( comm_, 1, -1, &source, &dest);
     //MPI_Sendrecv is good for sending in a "chain"
     MPI_Sendrecv(   sendbuffer1.data(), n*number, MPI_DOUBLE,  //sender
                     dest, 7,  //destination
                     recvbuffer2.data(), n*number, MPI_DOUBLE, //receiver
                     source, 7, //source
-                    comm, &status);
+                    comm_, &status);
 
-    MPI_Cart_shift( comm, 1, +1, &source, &dest);
+    MPI_Cart_shift( comm_, 1, +1, &source, &dest);
     MPI_Sendrecv(   sendbuffer2.data(), n*number, MPI_DOUBLE,  //sender
                     dest, 1,  //destination
                     recvbuffer1.data(), n*number, MPI_DOUBLE, //receiver
                     source, 1, //source
-                    comm, &status);
+                    comm_, &status);
     //copy back into vector
     for( unsigned s=0; s<Nz_; s++)
         for( unsigned k=0; k<n; k++)
@@ -217,4 +292,5 @@ void MPI_Vector::copy_into_interior( const thrust::host_vector<double>& src)
                     src[ j-n_ + (Nx_-2)*n_*( i-n_ + (Ny_-2)*n_*s)];
 }
 
+///@endcond
 }//namespace dg

@@ -27,22 +27,9 @@ int main()
     std::cout << "Projected vector "<<dg::blas2::dot( onen, w1dn, w) << "\n";
     std::cout << "Difference       "<<dg::blas2::dot( oneo, w1do, v) - dg::blas2::dot( onen, w1dn, w) << "\n"<<std::endl;
 
-    /*
-    std::cout << "TEST KRONECKER PRODUCT\n";
-    dg::create::detail::HelperMatrix<double> m1(2,2), m2(2,2);
-    for( unsigned i=0; i<2;i++)
-        for( unsigned j=0; j<2;j++)
-            m1(i,j) = 2*i+j+1;
-    m2(0,0) = 0; m2( 0, 1) = 5; m2( 1,0) = 6, m2( 1,1) = 7;
-    std::cout << "M1 \n"<<m1 << "Times\n"<<m2;
-    std::cout << "Is \n"<<dg::create::detail::kronecker( m1, m2);
-    std::cout << "(Compare Wikipedia for correctness!)\n"<<std::endl;
-    */
-    /*
     std::cout << "TEST GCD AND LCM\n";
     std::cout << "gcd of 1071 and 462 is "<<dg::gcd( 1071, 462)<<" (21)\n";
     std::cout << "lcm of 1071 and 462 is "<<dg::lcm( 1071, 462)<<" (23562)\n"<<std::endl;
-    */
 
     std::cout << "TEST 2D\n";
     n_old = 7, n_new = 3, N = 4, Nf = 3;

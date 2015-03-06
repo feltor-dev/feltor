@@ -45,8 +45,16 @@ int main()
     std::cout << "Application of interpolation matrix took: "<<t.diff()<<"s\n";
 
     dg::blas2::symv( A, vector, w);
+    t.tic();
     dg::blas1::axpby( 1., w, -1., w2, w2);
+    t.toc();
+    std::cout << "Axpby took "<<t.diff()<<"s\n";
     std::cout << "Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
+    thrust::device_vector<double> forward(std::vector<double>( g.dlt().forward()));
+    t.tic();
+    dg::create::forward_transform( vector, w, forward, g);
+    t.toc();
+    std::cout << "Application of forward trafo matrix took: "<<t.diff()<<"s\n";
     }
     {
     unsigned n, Nx, Ny, Nz;

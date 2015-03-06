@@ -56,7 +56,7 @@ LIBS 	+= -L/opt/sw/netcdf/4.3/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
-TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial feltor_video ncdiag fftwdiag crosscoherencdiag
+TARGETS =  toefl_video toefl_analytics toefl_compare show com imp vmax toefl_radial feltor_video ncdiag fftwdiag crosscoherencdiag feltorSlabdiag
 
 all: $(TARGETS)
 
@@ -85,6 +85,8 @@ fftwdiag: fftwdiag.cpp
 histdiag: histdiag.cpp
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 crosscoherencdiag: crosscoherencdiag.cpp
+	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
+feltorSlabdiag: feltorSlabdiag.cpp
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 imp: imp.cu
 	$(CXX) -O2 $(CXXFLAGS) $< -o $@ $(INCLUDE) $(LIBS)

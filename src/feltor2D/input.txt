@@ -4,8 +4,8 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   45 (192)
-3)  ny (grid points in y)                =   45 (192)
+2)  nx (grid points in x)                =   50 (192)
+3)  ny (grid points in y)                =   50 (192)
 4)  nz (grid points in z)                =   30(>16)
 5)  dt (time step in units c_s/rho_s)    =   4e-2  (0.01)
 
@@ -28,7 +28,7 @@
 18) beta_e0                                 =  0.0  (1e-4)
 19) nu_perp                                 =  5e-4
 20) nu_parallel  (viscosity)                =  1    (0.001)
-21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.01    (1.0)
@@ -48,5 +48,5 @@
 ---------------------------------global boundary and sim parameters----------------
 35) global bc (DIR (1), NEU DIR(4) )        =  4
 36) poloidal limiter (No (0),Yes (1))       =  0
-37) Parallel dissipation(adj (0), nadj(1))  =  0
+37) Parallel dissipation(adj (0), nadj(1))  =  1
 @ ------------------------------------------------------------

@@ -33,7 +33,7 @@ struct Ooops : public std::exception
   private:
     const char* c_;
 };
-/*! @brief Fehlerklasse, die Grenzen für 1D Nullstellensuche sichert
+/*! @brief Exception class, that stores boundaries for 1D root finding 
  *
  * @ingroup utilities
  */

@@ -13,7 +13,7 @@ namespace solovev
  */    
 struct GeomParameters
 {
-    double A, //!< A
+    double I_0, //!< A
            R_0, //!< central tokamak radius
            a,  //!<  little tokamak radius
            elongation, //!< elongation of the magnetic surfaces
@@ -32,19 +32,17 @@ struct GeomParameters
      * @param v Vector from read_input function
      */   
     GeomParameters( const std::vector< double>& v) {
-        A=v[1];
-        c.resize(13);
-        for (unsigned i=0;i<12;i++) c[i]=v[i+2];
-        R_0 = v[14];
-        a=R_0*v[15];
-        elongation=v[16];
-        triangularity=v[17];
-        alpha=v[18];
-        rk4eps=v[19];
-        psipmin= v[20];
-        psipmax= v[21];
-        psipmaxcut = v[22];
-        psipmaxlim = v[23];
+        I_0=v[1];
+        R_0 = v[2];
+        a=R_0*v[3];
+        elongation=v[4];
+        triangularity=v[5];
+        alpha=v[6];
+        rk4eps=v[7];
+        psipmin= v[8];
+        psipmax= v[9];
+        psipmaxcut = v[10];
+        psipmaxlim = v[11];
     }
     /**
      * @brief Display parameters
@@ -54,11 +52,8 @@ struct GeomParameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"
-            <<" A             = "<<A<<"\n";
-        for( unsigned i=0; i<12; i++)
-            os<<" c"<<i+1<<"\t\t = "<<c[i]<<"\n";
-
-        os  <<" R0            = "<<R_0<<"\n"
+            <<" I0             = "<<I_0<<"\n"
+            <<" R0            = "<<R_0<<"\n"
             <<" epsilon_a     = "<<a/R_0<<"\n"
             <<" elongation    = "<<elongation<<"\n"
             <<" triangularity = "<<triangularity<<"\n"

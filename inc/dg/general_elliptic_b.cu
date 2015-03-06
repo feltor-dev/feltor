@@ -15,16 +15,17 @@
 #include "elliptic.h"
 
 
-const double R_0 = 1000;
+const double R_0 = 10;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double lz = 2.*M_PI;
-double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
-double derivative( double x, double y, double z){return cos(x-R_0)*sin(y);}
-double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
+double fct(double x, double y, double z){ return sin(x-R_0)*sin(z);}
+double derivative( double x, double y, double z){return cos(x-R_0)*sin(z);}
+double laplace_fct( double x, double y, double z) { 
+    return -1./x*cos(x-R_0)*sin(z) + 2.*sin(x-R_0)*sin(z) 
+           -1./x*sin(x-R_0)*cos(z) - 2.*cos(x-R_0)*cos(z);}
 dg::bc bcx = dg::DIR;
 double initial( double x, double y, double z) {return sin(0);}
-
 
 int main()
 {
@@ -42,7 +43,7 @@ int main()
 
     std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::GeneralElliptic<dg::DMatrix, dg::DVec, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
     dg::DMatrix DX = dg::create::dx( grid);
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";

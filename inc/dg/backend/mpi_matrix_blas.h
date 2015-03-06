@@ -2,6 +2,7 @@
 
 #include "mpi_matrix.h"
 
+///@cond
 namespace dg
 {
 namespace blas2
@@ -24,3 +25,4 @@ inline void doGemv( Matrix& m, Vector1&x, Vector2& y, MPIMatrixTag, MPIVectorTag
 } //namespace detail
 } //namespace blas2
 } //namespace dg
+///@endcond

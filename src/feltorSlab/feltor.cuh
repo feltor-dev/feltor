@@ -113,16 +113,14 @@ struct Feltor
     const container binv;
     const container one;
     const Preconditioner w2d, v2d;
-    std::vector<container> phi, nx;
+    std::vector<container> phi;
     std::vector<container> npe, logn; 
 
     //matrices and solvers
     dg::Poisson< Matrix, container> poisson; 
-    //dg::Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
 
     dg::Elliptic< Matrix, container, Preconditioner > pol,lapperp; 
-    dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR;
-    dg::Helmholtz< Matrix, container, Preconditioner > invgammaNU;
+    dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR,invgammaNU;
 
     dg::Invert<container> invert_pol,invert_invgamma;
     dg::PoloidalAverage<container, container > polavg;
@@ -154,7 +152,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
-    phi( 2, chi), nx( phi), npe(phi), logn(phi),
+    phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
     pol(    g, g.bcx(), g.bcy(), dg::not_normed,          dg::centered), 
     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
@@ -368,7 +366,17 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
     }
     //sol boundary
-    if (p.solb*p.lx<p.lx) dg::blas1::pointwiseDot(omega,lh,omega);
+    if (p.solb*p.lx<p.lx) 
+    {
+        dg::blas1::pointwiseDot(omega,lh,omega);
+        dg::blas1::axpby(-1.,phi[0],0.,lambda,lambda); 
+        dg::blas1::transform(lambda, lambda, dg::EXP<value_type>());
+        polavg(lambda,chi);
+        dg::blas1::axpby(1.0,lambda,-0.0,chi,chi);
+        dg::blas1::pointwiseDot(chi,rh,chi);
+        dg::blas1::axpby(1.0,omega,-sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),chi,omega);
+        
+    }
     //correction for high amplitudes
     dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);

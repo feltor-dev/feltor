@@ -4,12 +4,11 @@
 #include "draw/host_window.h"
 #include "xspacelib.cuh"
 #include "../functors.h"
+#include "../blas2.h"
 
 
 const unsigned n = 3;
 const unsigned Nx = 40, Ny = 40;
-
-using namespace std;
 
 int main()
 {

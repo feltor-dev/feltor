@@ -11,18 +11,15 @@
 #include "cg.h"
 #include "backend/mpi_init.h"
 
-//leo3 can do 350 x 350 but not 375 x 375
-const double ly = 2.*M_PI;
-
-const double eps = 1e-6; //# of pcg iterations increases very much if 
- // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 const double lx = 2.*M_PI;
+const double ly = 2.*M_PI;
 const double lz = 1.;
-double fct(double x, double y, double z){ return sin(y)*sin(x);}
-double laplace_fct( double x, double y, double z) { return 2*sin(y)*sin(x);}
+
 dg::bc bcx = dg::DIR;
 double initial( double x, double y, double z) {return sin(0);}
+double fct(double x, double y, double z){ return sin(y)*sin(x)*sin(2.*M_PI*z);}
+double laplace_fct( double x, double y, double z) { return 2*sin(y)*sin(x)*sin(2.*M_PI*z);}
 
 
 int main( int argc, char* argv[])
@@ -31,24 +28,28 @@ int main( int argc, char* argv[])
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
     mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    double eps;
+    if(rank==0)std::cout << "Type epsilon! \n";
+    if(rank==0)std::cin >> eps;
+    MPI_Bcast(  &eps,1 , MPI_DOUBLE, 0, comm);
 
     dg::MPI_Grid3d grid( 0., lx, 0, ly, 0, lz, n, Nx, Ny,Nz, bcx, dg::PER,dg::PER, dg::cartesian, comm);
     const dg::MPrecon w3d = dg::create::weights( grid);
     const dg::MPrecon v3d = dg::create::inv_weights( grid);
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( rank == 0) std::cout<<"Expand initial condition\n";
+    if(rank==0)std::cout<<"Expand initial condition\n";
     dg::MVec x = dg::evaluate( initial, grid);
 
-    if( rank == 0) std::cout << "Create symmetric Laplacian\n";
+    if(rank==0)std::cout << "Create Laplacian\n";
     dg::Timer t;
     t.tic();
     dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> A ( grid, dg::not_normed); 
     t.toc();
-    if( rank == 0) std::cout<< "Creation took "<<t.diff()<<"s\n";
+    if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 
     dg::CG< dg::MVec > pcg( x, n*n*Nx*Ny*Nz);
-    if( rank == 0) std::cout<<"Expand right hand side\n";
+    if(rank==0)std::cout<<"Evaluate right hand side\n";
     const dg::MVec solution = dg::evaluate ( fct, grid);
     dg::MVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b

@@ -4,6 +4,7 @@
 #include <cusp/print.h>
 
 #include "xspacelib.cuh"
+#include "polarisation.cuh"
 #include "cg.h"
 
 unsigned n = 3; //global relative error in L2 norm is O(h^P)

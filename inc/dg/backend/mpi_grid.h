@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include "../enums.h"
-//#include "mpi_config.h"
 #include "grid.h"
 /*! @file 
   
@@ -17,34 +16,34 @@ namespace dg
 /**
  * @brief 2D MPI Grid class 
  *
- * Represents the local grid coordinates and the process topology. 
- * The 
- * grids of different processes overlap in the x- and y- coordinate. 
+ * Represents the local grid coordinates including overlap. 
+ * The grids of different processes overlap in the x- and y- coordinate. 
+ * This helps when computing derivatives, but introduces additional 
+ * bookkeeping in everything else. Recommended to change in future 
+ * releases. 
+ *
+ * For now one is faced with three grids in mpi computations: The global grid, which holds the global boundaries and number of grid cells, the local grid (with overlap) which is the global grid divided by the # of processes plus the ghostcells, and the local grid without ghostcells.
  */
 struct MPI_Grid2d
 {
+    /**
+     * @brief Construct mpi grid
+     *
+     * @param x0
+     * @param x1
+     * @param y0
+     * @param y1
+     * @param n
+     * @param Nx
+     * @param Ny
+     * @param comm
+     */
     MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny), comm( comm)
     {
         int rank, dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        if( rank == 0)
-        {
-            if(Nx%dims[0]!=0)
-                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
-            assert( Nx%dims[0] == 0);
-            if(Ny%dims[1]!=0)
-                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
-            assert( Ny%dims[1] == 0);
-        }
-    }
-    MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
-        g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
-    {
-        int rank, dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_rank( comm, &rank);
         if( rank == 0)
         {
             if(Nx%dims[0]!=0)
@@ -56,31 +55,120 @@ struct MPI_Grid2d
         }
     }
 
+    /**
+     * @brief Construct mpi grid
+     *
+     * @param x0
+     * @param x1
+     * @param y0
+     * @param y1
+     * @param n
+     * @param Nx
+     * @param Ny
+     * @param bcx
+     * @param bcy
+     * @param comm
+     */
+    MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+        g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
+    {
+        int rank, dims[2], periods[2], coords[2];
+        MPI_Cart_get( comm, 2, dims, periods, coords);
+        MPI_Comm_rank( comm, &rank);
+        if( rank == 0)
+        {
+            if(Nx%dims[0]!=0)
+                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
+            assert( Nx%dims[0] == 0);
+            if(Ny%dims[1]!=0)
+                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
+            assert( Ny%dims[1] == 0);
+        }
+    }
+
+    /**
+     * @brief Return local x0
+     *
+     * The local value is shifted by hx 
+     * @return local left boundary
+     */
     double x0() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
         return g.x0() - g.hx() + g.lx()/(double)dims[0]*(double)coords[0]; 
     }
+
+    /**
+     * @brief Return local x1
+     *
+     * The local value is shifted by hx 
+     * @return local right boundary
+     */
     double x1() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
         return g.x0() + g.hx() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
     }
+
+    /**
+     * @brief Return local y0
+     *
+     * The local value is shifted by hy 
+     * @return local left boundary
+     */
     double y0() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
         return g.y0() - g.hy() + g.ly()/(double)dims[1]*(double)coords[1]; 
     }
+
+    /**
+     * @brief Return local y1
+     *
+     * The local value is shifted by hy 
+     * @return local right boundary
+     */
     double y1() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
         return g.y0() + g.hy() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
     }
+
+    /**
+     * @brief Return local lx
+     *
+     * @return local length
+     */
     double lx() const {return x1()-x0();}
+
+    /**
+     * @brief Return local ly
+     *
+     * @return local length
+     */
     double ly() const {return y1()-y0();}
+
+    /**
+     * @brief Return local hx
+     *
+     * @return local grid constant
+     */
     double hx() const {return g.hx();}
+
+    /**
+     * @brief Return local hy
+     *
+     * @return local grid constant
+     */
     double hy() const {return g.hy();}
+
+    /**
+     * @brief Return n
+     *
+     * @return number of polynomial coefficients
+     */
     unsigned n() const {return g.n();}
+
     /**
      * @brief Return the local number of cells 
      *
@@ -92,6 +180,7 @@ struct MPI_Grid2d
         MPI_Cart_get( comm, 2, dims, periods, coords);
         return g.Nx()/dims[0]+2;
     }
+
     /**
      * @brief Return the local number of cells 
      *
@@ -103,10 +192,41 @@ struct MPI_Grid2d
         MPI_Cart_get( comm, 2, dims, periods, coords);
         return g.Ny()/dims[1]+2;
     }
+
+    /**
+     * @brief global x boundary
+     *
+     * @return boundary condition
+     */
     bc bcx() const {return g.bcx();}
+
+    /**
+     * @brief global y boundary
+     *
+     * @return boundary condition
+     */
     bc bcy() const {return g.bcy();}
+
+    /**
+     * @brief Return mpi cartesian communicator that is used in this grid
+     *
+     * @return Communicator
+     */
     MPI_Comm communicator() const{return comm;}
+
+    /**
+     * @brief The data of dlt
+     *
+     * @return 
+     */
     const DLT<double>& dlt() const{return g.dlt();}
+
+    /**
+     * @brief Return cartesian
+     *
+     * No other is implemented yet
+     * @return coordinate system
+     */
     dg::system system() const{return dg::cartesian;}
     /**
      * @brief The total number of points
@@ -114,6 +234,7 @@ struct MPI_Grid2d
      * @return n*n*Nx*Ny
      */
     unsigned size() const { return n()*n()*Nx()*Ny();}
+
     /**
      * @brief Display 
      *
@@ -129,9 +250,23 @@ struct MPI_Grid2d
         grid.display();
 
     }
-    Grid2d<double> local() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
-    Grid2d<double> global() const {return g;}
 
+    /**
+     * @brief Return a grid local for the calling process
+     *
+     * The local grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
+     * class itself
+     * @return Grid object
+     */
+    Grid2d<double> local() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
+
+    /**
+     * @brief Return a grid global for the calling process
+     *
+     * The global grid contains the global boundaries
+     * @return Grid object
+     */
+    Grid2d<double> global() const {return g;}
 
     private:
     Grid2d<double> g; //global grid
@@ -154,12 +289,29 @@ struct MPI_Grid2d
  */
 struct MPI_Grid3d
 {
+    /**
+     * @brief Construct a 3D grid
+     *
+     * @param x0 left boundary in x
+     * @param x1 right boundary in x 
+     * @param y0 lower boundary in y
+     * @param y1 upper boundary in y 
+     * @param z0 lower boundary in z
+     * @param z1 upper boundary in z 
+     * @param n  # of polynomial coefficients per (x-,y-) dimension
+     * @param Nx # of points in x 
+     * @param Ny # of points in y
+     * @param Nz # of points in z
+     * @param comm mpi communicator
+     * @note in the cylindrical coordinate system x, y and z are used to denote R, Z and the angle phi
+     * @attention # of polynomial coefficients in z direction is always 1
+     */
     MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_rank( comm, &rank);
         if( rank == 0)
         {
             if(!(Nx%dims[0]==0))
@@ -173,12 +325,34 @@ struct MPI_Grid3d
             assert( Nz%dims[2] == 0);
         }
     }
+
+    /**
+     * @brief Construct a 3D grid
+     *
+     * @param x0 left boundary in x
+     * @param x1 right boundary in x 
+     * @param y0 lower boundary in y
+     * @param y1 upper boundary in y 
+     * @param z0 lower boundary in z
+     * @param z1 upper boundary in z 
+     * @param n  # of polynomial coefficients per (x-,y-) dimension
+     * @param Nx # of points in x 
+     * @param Ny # of points in y
+     * @param Nz # of points in z
+     * @param bcx boundary condition in x
+     * @param bcy boundary condition in y
+     * @param bcz boundary condition in z
+     * @param sys cartesian or cylindrical
+     * @param comm mpi communicator
+     * @note in the cylindrical coordinate system x, y and z are used to denote R, Z and the angle phi
+     * @attention # of polynomial coefficients in z direction is always 1
+     */
     MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz,dg::system sys, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, sys), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_rank( comm, &rank);
         if( rank == 0)
         {
             if(!(Nx%dims[0]==0))
@@ -358,6 +532,11 @@ struct MPI_Grid3d
      * @return Communicator
      */
     MPI_Comm communicator() const{return comm;}
+    /**
+     * @brief The data of dlt
+     *
+     * @return 
+     */
     const DLT<double>& dlt() const{return g.dlt();}
     /**
      * @brief Return cartesian or cylindrical

@@ -2,7 +2,6 @@
 
 #include <vector>
 
-//#include "derivatives.cuh"
 #include "mpi_grid.h"
 #include "mpi_vector.h"
 #include "mpi_precon_blas.h"
@@ -13,11 +12,53 @@ namespace dg
 {
 ///@addtogroup mpi_structures
 ///@{
+//
+/**
+ * @brief Struct holding the boundary blocks either for the x- or y-direction
+ *
+ * Think of this as a block sparse matrix for just one dimension holding only boundary terms
+ * which can be applied either to the x- or y-direction, i.e. it is of the form
+ * \f[
+ \begin{pmatrix}
+ B_0 & B_1 & ... &  \\
+ 0 & 0 & ... &  \\
+ & & ... & \\
+ &... & & B_{n-1}
+ \end{pmatrix}
+ \f]
+ The corresponding row/col pairs read \f$ (0,0)\f$, \f$ (0,1)\f$, ..., \f$ (N_x-1,N_x-1)\f$.
+ For processes, that do not hold any boundary terms the matrix can be left entirely empty
+ This format is sufficient for simple dG derivatives in x and y.
+ @note not all processes need boundary terms, only those which have a boundary
+ *
+ */
 struct BoundaryTerms
 {
+    /**
+     * @brief blocks of data \f$ B_i \f$
+     *
+     * each element is a nxn block of data
+     */
     std::vector<std::vector<double> > data_;
-    std::vector<int> row_; //row of data in 1D without block
-    std::vector<int> col_;
+    /**
+     * @brief 1D cell numbers of corresponding data_ block
+     *
+     * Has to be of equal size as data_.
+     */
+    std::vector<int> row_; 
+    /**
+     * @brief 1D cell numbers of corresponding data_ block
+     *
+     * Has to be of equal size as data_.
+     */
+    std::vector<int> col_; 
+    /**
+     * @brief Apply the boundary terms in X
+     *
+     * If data_ is empty the function will return immediately
+     * @param x input vector
+     * @param y output vector
+     */
     void applyX( const MPI_Vector& x, MPI_Vector& y) const
     {
         if(data_.empty()) return;
@@ -48,6 +89,13 @@ struct BoundaryTerms
         }
     }
 
+    /**
+     * @brief Apply the boundary terms in Y
+     *
+     * If data_ is empty the function will return immediately
+     * @param x input vector
+     * @param y output vector
+     */
     void applyY( const MPI_Vector& x, MPI_Vector& y) const
     {
         if(data_.empty()) return;
@@ -83,37 +131,87 @@ struct BoundaryTerms
  * @brief Matrix class for block matrices for 2D and 3D derivatives in X and Y direction
  *
  * Stores only one line of blocks and takes care of updating
- * ghost cells before being applied to vectors.
+ * ghost cells before being applied to vectors. 
+ * This has a huge advantage in memory consumption over other sparse matrix formats.
+ * The format is that of a sparse block matrix with equal blocks in each line
+ \f[
+ \begin{pmatrix}
+ A & B & C &  & & \\
+   & A & B & C & & \\
+   ...\\
+   &   &   & A & B & C
+   \end{pmatrix}
+   \f]
  */
 struct MPI_Matrix
 {
-    MPI_Matrix( bc bcx, MPI_Comm comm, unsigned number): 
-        dataY_(number), dataX_(number), offset_(number, 0), 
-        bcx_( bcx), bcy_( dg::PER), comm_(comm){ }
-    MPI_Matrix( bc bcx, bc bcy, MPI_Comm comm, unsigned number): 
-        dataY_(number), dataX_(number), offset_(number, 0), 
-        bcx_( bcx), bcy_( bcy), comm_(comm){ }
-    bc& bcx(){return bcx_;}
-    bc& bcy(){return bcy_;}
-    const bc& bcx()const{return bcx_;}
-    const bc& bcy()const{return bcy_;}
+    /**
+     * @brief Construct from boundary condition and number of blocks
+     *
+     * @param bcx boundary condition in x
+     * @param number # of blocks
+     */
+    MPI_Matrix( unsigned number): 
+        dataY_(number), dataX_(number), offset_(number, 0)
+       { }
 
-    MPI_Comm communicator()const{return comm_;}
-
-    void update_boundaryX( MPI_Vector& v) const;
-    void update_boundaryY( MPI_Vector& v) const;
-
+    /**
+     * @brief Set blocks in Y
+     *
+     * May be left empty.
+     * If set, these will be applied in the symv() function
+     * @return a reference to the internal data
+     */
     std::vector<std::vector<double> >& dataY()    {return dataY_;}
+    /**
+     * @brief Set blocks in X
+     *
+     * May be left empty.
+     * If set, these will be applied in the symv() function
+     * @return a reference to the internal data
+     */
     std::vector<std::vector<double> >& dataX()    {return dataX_;}
+    /**
+     * @brief Set offset
+     *
+     * Has to be of equal size than either dataY_ or dataX_
+     * The offsets are the col numbers counting from the diagonal 
+     * e.g. for a simple centered X-derivative they are -n, 0, n
+     * while for the Y-derivative they are -n*n*Nx, 0, n*n*Nx
+     * @return a reference to the internal data
+     */
     std::vector<int>&                  offset()  {return offset_;}
+    /**
+     * @brief Set boundary terms in x
+     *
+     * May be left empty.
+     * If set, these will be applied in the symv() function
+     * @return a reference to the internal data
+     */
     BoundaryTerms& xterm() {return xterm_;}
+    /**
+     * @brief Set boundary terms in y
+     *
+     * May be left empty.
+     * If set, these will be applied in the symv() function
+     * @return a reference to the internal data
+     */
     BoundaryTerms& yterm() {return yterm_;}
+    /**
+     * @brief Set the normalisation 
+     *
+     * May be left empty.
+     * If set, these weights will be applied in the symv() function
+     * @return a reference to the internal data
+     */
     MPI_Precon& precond() {return p_;}
-    //const std::vector<std::vector<double> >& dataY()const {return dataY_;}
-    //const std::vector<std::vector<double> >& dataX()const {return dataX_;}
-    //const std::vector<int>& offset()const {return offset_;}
-    //const MPI_Precon precond()const {return p_;}
 
+    /**
+     * @brief Apply the matrix to a vector
+     *
+     * @param x input vector, const except for the boundary terms
+     * @param y output vector
+     */
     void symv( MPI_Vector& x, MPI_Vector& y) const;
   private:
     MPI_Precon p_;
@@ -122,16 +220,26 @@ struct MPI_Matrix
     std::vector<int> offset_;
     BoundaryTerms xterm_;
     BoundaryTerms yterm_;
-    bc bcx_, bcy_;
-    MPI_Comm comm_;
 };
 
 
-typedef MPI_Matrix MMatrix;
+typedef MPI_Matrix MMatrix; //!< mpi matrix type
+///@}
+
+///@cond
 void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 {
+#ifdef DG_DEBUG
+    assert( x.data().size() == y.data().size() );
+    assert( x.n() == y.n());
+    assert( x.Nx() == y.Nx());
+    assert( x.Ny() == y.Ny());
+    assert( x.Nz() == y.Nz());
+    assert( x.communicator() == y.communicator());
+#endif //DG_DEBUG
+    // update boundary layer if necessary
     int rank;
-    MPI_Comm_rank(comm_, &rank);
+    MPI_Comm_rank(x.communicator(), &rank);
     bool updateX = false, updateY = false;
     for( unsigned k=0; k<dataX_.size(); k++)
     {
@@ -141,12 +249,10 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
             updateX = true;
     }
     if( updateX )
-        x.x_col(comm_); 
+        x.x_col(); 
     if( updateY) 
-        x.x_row(comm_);
-#ifdef DG_DEBUG
-    assert( x.data().size() == y.data().size() );
-#endif //DG_DEBUG
+        x.x_row();
+    // Apply internal data
     unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
     for( unsigned i=0; i<y.data().size(); i++)
         y.data()[i] = 0;
@@ -177,6 +283,7 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
                     *x.data()[(((s*rows+i)*n+p)*cols + j)*n + l + offset_[m]];
             }
     }
+    //apply boundary terms
     xterm_.applyX( x,y);
     yterm_.applyY( x,y);
     if( !p_.data.empty())
@@ -184,76 +291,7 @@ void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
 
 }
 
-void MPI_Matrix::update_boundaryX( MPI_Vector& v)const
-{
-    v.x_col(comm_); //update data in overlapping cells
-    //int rank;
-    //MPI_Comm_rank(comm_, &rank);
-    if( bcx_ == PER) return;
-    int low_sign(0), upp_sign(0);
-    //if( bcx_ == DIR)
-    //    low_sign=upp_sign=-0;
-    //    //low_sign=upp_sign=-1;
-    //else if( bcx_ == NEU)
-    //    low_sign=upp_sign=+1;
-    //else if( bcx_ == DIR_NEU)
-    //    low_sign=-1, upp_sign=+1;
-    //else if( bcx_ == NEU_DIR)
-    //    low_sign=+1, upp_sign=-1;
-    int ndims;
-    MPI_Cartdim_get( comm_, &ndims);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm_, ndims, dims, periods, coords);
-    unsigned rows = v.Nz()*v.Ny()*v.n(), cols =v.Nx(), n = v.n();
-    if( coords[0] == dims[0]-1)
-        for( unsigned i=0; i<rows; i++)
-            for( unsigned j=0; j<n; j++)
-                v.data()[(i*cols + cols-1)*n+j] = 1e6;
-                    //(double)upp_sign*v.data()[(i*cols + cols-2)*n + n-j-1];
-    if( coords[0] == 0) //both ifs may be true
-        for( unsigned i=0; i<rows; i++)
-            for( unsigned j=0; j<n; j++)
-                v.data()[(i*cols + 0)*n+j] = 1e6;
-                    //(double)low_sign*v.data()[(i*cols+1)*n+ n-j-1];
-    return;
-}
-void MPI_Matrix::update_boundaryY( MPI_Vector& v)const
-{
-    v.x_row(comm_);
-    if( bcy_ == PER) return;
-    int low_sign(0), upp_sign(0);
-    //if( bcy_ == DIR)
-    //    low_sign=upp_sign=-0;
-    //    //low_sign=upp_sign=-1;
-    //else if( bcy_ == NEU)
-    //    low_sign=upp_sign=+1;
-    //else if( bcy_ == DIR_NEU)
-    //    low_sign=-1, upp_sign=+1;
-    //else if( bcy_ == NEU_DIR)
-    //    low_sign=+1, upp_sign=-1;
-    int ndims;
-    MPI_Cartdim_get( comm_, &ndims);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm_, ndims, dims, periods, coords);
-    unsigned cols =v.Nx()*v.n(), n = v.n();
-    if( coords[1] == dims[1]-1)
-        for( unsigned s=0; s<v.Nz(); s++)
-            for( unsigned k=0; k<n; k++)
-                for( unsigned j=0; j<cols; j++)
-                    v.data()[((s*v.Ny() + v.Ny()-1)*n+k)*cols + j] = 1e6;
-                        //upp_sign*v.data()[((s*v.Ny() + v.Ny() -2)*n+n-k-1)*cols + j];
-    if( coords[1] == 0) //both ifs may be true
-        for( unsigned s=0; s<v.Nz(); s++)
-            for( unsigned k=0; k<n; k++)
-                for( unsigned j=0; j<cols; j++)
-                    v.data()[((s*v.Ny() + 0)*n + k)*cols + j] = 1e5;
-                        //low_sign*v.data()[((s*v.Ny() + 1)*n + n-k-1)*cols+j];
-    return;
-}
 
-///@}
-
-///@cond
 template <>
 struct MatrixTraits<MPI_Matrix>
 {

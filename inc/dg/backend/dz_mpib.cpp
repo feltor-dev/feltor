@@ -27,6 +27,15 @@ struct Field
             yp[1][i] = -y[0][i]*y[0][i]/I_0 + R_0/I_0*y[0][i] ;
         }
     }
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+        double gradpsi = ((y[0]-R_0)*(y[0]-R_0) + y[1]*y[1])/I_0/I_0;
+        yp[2] = y[0]*sqrt(1 + gradpsi);
+        yp[0] = y[0]*y[1]/I_0;
+        yp[1] = y[0]/I_0*(R_0-y[0]) ;
+    }
+    double operator()( double R, double Z) {return 1;}
+    double operator()( double R, double Z, double phi) {return 1;}
     private:
     double R_0, I_0;
 };
@@ -59,7 +68,7 @@ int main(int argc, char* argv[])
     const dg::MPI_Precon w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::DZ<dg::MMatrix, dg::MVec> dz( field, g3d, 1e-8, dg::DefaultLimiter());
+    dg::DZ<dg::MMatrix, dg::MVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter());
     t.toc();
     if(rank==0)std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 

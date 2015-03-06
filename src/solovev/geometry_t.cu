@@ -11,7 +11,7 @@
 #include "draw/host_window.h"
 
 #include "geometry.h"
-#include "init.h"
+#include "../heat/init.h"
 
 int main( int argc, char* argv[])
 {
@@ -23,7 +23,7 @@ int main( int argc, char* argv[])
     try{ 
         if( argc==1)
         {
-            v = file::read_input( "../feltor/input.txt");
+            v = file::read_input( "../heat/input.txt");
             v2 = file::read_input( "geometry_params.txt"); 
         }
         else

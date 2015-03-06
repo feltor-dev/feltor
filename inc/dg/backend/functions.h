@@ -1,5 +1,9 @@
 
 #pragma once
+/*! @file
+ *
+ * Contains some utility functions for the evaluation() routines
+ */
 
 namespace dg{
 ///@cond
@@ -133,7 +137,8 @@ inline double lilj( unsigned i, unsigned j)
 ///@{
 
 /**
- * @brief The constant 
+ * @brief 
+ * \f[ f(x) = 1\f]
  *
  * Useful for integration.
  * @param x x-value
@@ -143,7 +148,8 @@ inline double lilj( unsigned i, unsigned j)
 inline double one( double x) {return 1;}
 
 /**
- * @brief The constant 
+ * @brief
+ * \f[ f(x,y) = 1\f]
  *
  * Useful for integration.
  * @param x x-value
@@ -154,7 +160,8 @@ inline double one( double x) {return 1;}
 inline double one( double x, double y) {return 1;}
 
 /**
- * @brief The constant 
+ * @brief
+ * \f[ f(x,y,z) = 1\f]
  *
  * Useful for integration.
  * @param x x-value
@@ -166,40 +173,44 @@ inline double one( double x, double y) {return 1;}
 inline double one( double x, double y, double z) {return 1;}
 
 /**
- * @brief The constant 
+ * @brief 
+ * \f[ f(x) = 0\f]
  *
  * Useful for integration.
  * @param x x-value
  *
- * @return 1
+ * @return 0
  */
 inline double zero( double x) {return 0.;}
 
 /**
- * @brief The constant 
+ * @brief
+ * \f[ f(x,y) = 0\f]
  *
  * Useful for integration.
  * @param x x-value
  * @param y y-value
  *
- * @return 1
+ * @return 0
  */
 inline double zero( double x, double y) {return 0.;}
 
 /**
- * @brief The constant 
+ * @brief
+ * \f[ f(x,y,z) = 0\f]
  *
  * Useful for integration.
  * @param x x-value
  * @param y x-value
  * @param z x-value
  *
- * @return 1
+ * @return 0
  */
 inline double zero( double x, double y, double z) {return 0.;}
 
 /**
- * @brief Return x
+ * @brief
+ * \f[ f(x) = x\f]
  *
  * @param x
  *
@@ -207,7 +218,8 @@ inline double zero( double x, double y, double z) {return 0.;}
  */
 double coo1( double x) {return x;}
 /**
- * @brief Return x
+ * @brief
+ * \f[ f(x,y) = x\f]
  *
  * @param x
  * @param y
@@ -216,7 +228,8 @@ double coo1( double x) {return x;}
  */
 double coo1( double x, double y) {return x;}
 /**
- * @brief Return x
+ * @brief
+ * \f[ f(x,y,z) = x\f]
  *
  * @param x
  * @param y
@@ -227,7 +240,8 @@ double coo1( double x, double y) {return x;}
 double coo1( double x, double y, double z) {return x;}
 
 /**
- * @brief Return y
+ * @brief 
+ * \f[ f(x,y) = y\f]
  *
  * @param x
  * @param y
@@ -236,7 +250,8 @@ double coo1( double x, double y, double z) {return x;}
  */
 double coo2( double x, double y) {return y;}
 /**
- * @brief Return y
+ * @brief
+ * \f[ f(x,y,z) = y\f]
  *
  * @param x
  * @param y
@@ -246,7 +261,8 @@ double coo2( double x, double y) {return y;}
  */
 double coo2( double x, double y, double z) {return y;}
 /**
- * @brief Return z
+ * @brief
+ * \f[ f(x,y,z) = z\f]
  *
  * @param x
  * @param y

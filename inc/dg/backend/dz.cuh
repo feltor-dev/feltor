@@ -9,6 +9,7 @@
 #include "../functors.h"
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
+#include <cusp/print.h>
 namespace dg{
 
 /**
@@ -238,6 +239,30 @@ struct DZ
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
+    void centeredTD( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
+    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void forwardTD( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
+    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void backwardTD( const container& f, container& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
     void centeredT( const container& f, container& dzf);
     /**
     * @brief Apply the derivative on a 3d vector
@@ -246,6 +271,7 @@ struct DZ
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
+    
     void operator()( const container& f, container& dzf);
 
 
@@ -388,14 +414,16 @@ struct DZ
     Matrix plus, minus, plusT, minusT; //interpolation matrices
     Matrix jump;
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
+    container hzh, hph,hmh;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
     container left_, right_;
     container limiter;
     container w3d, v3d;
-    container invB;
-    container Vw3d,Vv3d;
+container invB;
+    container w2d;
+
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -405,9 +433,11 @@ template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
 
-        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz),
+        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
-        , invB(dg::evaluate(field,grid))
+        , invB(dg::evaluate(field,grid)),
+        w2d(w3d),
+        hzh( dg::evaluate( dg::zero, grid)), hph( hz), hmh( hz)                                     
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -415,6 +445,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         std::cout << "Computing in 2D mode!\n";
     //Resize vectors to 2D grid size
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    container w2d_( dg::create::weights( g2d));
+    
     unsigned size = g2d.size();
     limiter = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
@@ -442,21 +474,61 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     minusH = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
     cusp::transpose( plusH, plusHT);
     cusp::transpose( minusH, minusHT);
+
+//     std::vector<unsigned> pcounter(size,0);
+//     std::vector<unsigned> mcounter(size,0);
+// 
+//     //compute counts
+//     for(unsigned i=0;i<size;i++)    {
+//  
+//         pcounter[ plusHT.row_indices[i]] +=1;
+//         mcounter[minusHT.row_indices[i]] +=1;
+//     }
+//     //normalize
+//      for(unsigned i=0;i<size;i++)  {
+// //         std::cout << "c " << "[" <<plusHT.row_indices[i]<<"]" 
+// //                                 << pcounter[plusHT.row_indices[i]] << " " <<
+// //                                 double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n() <<std::endl;
+//         plusHT.values[i]  /=double(pcounter[ plusHT.row_indices[i]])/g_.n()/g_.n();
+//         minusHT.values[i] /=double(mcounter[minusHT.row_indices[i]])/g_.n()/g_.n();
+//     }   
+
     plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT; 
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());
+        
+        thrust::copy( w2d_.begin(), w2d_.end(), w2d.begin() + i*g2d.size());
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);
     //
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
-    dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);
 
+    dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);    
     
+//     for( unsigned i=0; i<size; i++)
+//     {
+//         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+//         double phi1 = deltaPhi/2.;
+//         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
+//         phi1 =  - deltaPhi/2.;
+//         boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
+//         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
+//         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
+//     }
+//     //copy into h vectors
+//     for( unsigned i=0; i<grid.Nz(); i++)
+//     {
+//         thrust::copy( yp[2].begin(), yp[2].end(), hph.begin() + i*g2d.size());
+//         thrust::copy( ym[2].begin(), ym[2].end(), hmh.begin() + i*g2d.size());
+//         
+//     }
+//     dg::blas1::scal( hmh, -1.);
+//     dg::blas1::axpby(  1., hph, +1., hmh, hzh);
 }
 template<class M, class container>
 void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
@@ -485,6 +557,7 @@ void DZ<M,container>::centered( const container& f, container& dzf)
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf);
+    
     ////adjoint discretisation
 //     assert( &f != &dzf);    
 //     dg::blas1::pointwiseDot( w3d, f, dzf);
@@ -496,51 +569,67 @@ void DZ<M,container>::centered( const container& f, container& dzf)
 //     dg::blas1::axpby( 1., tempM, -1., tempP);
 //     dg::blas1::pointwiseDot( v3d, tempP, dzf);
 //     dg::blas1::pointwiseDot( dzf, invB, dzf);
+    
+    
 
 }
 
 template<class M, class container>
 void DZ<M,container>::centeredT( const container& f, container& dzf)
-{       
-    //Direct discretisation
-//        assert( &f != &dzf);    
-//         dg::blas1::pointwiseDot( f, invB, dzf);
-//         einsPlus( dzf, tempP);
-//         einsMinus( dzf, tempM);
-//         dg::blas1::axpby( 1., tempP, -1., tempM);
-//         dg::blas1::pointwiseDivide( tempM, hz, dzf);        
-//         dg::blas1::pointwiseDivide( dzf, invB, dzf);
-        
+{               
     //adjoint discretisation
         assert( &f != &dzf);    
         dg::blas1::pointwiseDot( w3d, f, dzf);
         dg::blas1::pointwiseDivide( dzf, hz, dzf);
         einsPlusT( dzf, tempP);
         einsMinusT( dzf, tempM);
-        dg::blas1::axpby( 1., tempM, -1., tempP);
+        dg::blas1::axpby( 1., tempM, -1., tempP);        
         dg::blas1::pointwiseDot( v3d, tempP, dzf);
-      
+        
+//         dg::blas1::pointwiseDot( hzh, f, dzf);
+//         dg::blas1::pointwiseDot( invB, dzf, dzf);
+//         dg::blas1::pointwiseDot( w2d, dzf, dzf);
+//         dg::blas1::pointwiseDivide( dzf, hz, dzf);
+//         einsPlusT( dzf, tempP);
+//         einsMinusT( dzf, tempM);
+//         dg::blas1::axpby( 1., tempM, -1., tempP);        
+//         dg::blas1::pointwiseDot( v3d, tempP, dzf);
+        
 }
+template<class M, class container>
+void DZ<M,container>::centeredTD( const container& f, container& dzf)
+{       
+//     Direct discretisation
+       assert( &f != &dzf);    
+        dg::blas1::pointwiseDot( f, invB, dzf);
+        einsPlus( dzf, tempP);
+        einsMinus( dzf, tempM);
+        dg::blas1::axpby( 1., tempP, -1., tempM);
+        dg::blas1::pointwiseDivide( tempM, hz, dzf);        
+        dg::blas1::pointwiseDivide( dzf, invB, dzf);
 
+}
 template<class M, class container>
 void DZ<M,container>::forward( const container& f, container& dzf)
 {
+    //direct
     assert( &f != &dzf);
     einsPlus( f, tempP);
     dg::blas1::axpby( 1., tempP, -1., f, tempP);
     dg::blas1::pointwiseDivide( tempP, hp, dzf);
+    //adjoint discretisation
+//     assert( &f != &dzf);    
+//     dg::blas1::pointwiseDot( w3d, f, dzf);
+//     dg::blas1::pointwiseDivide( dzf, hm, dzf);
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
+//     einsMinusT( dzf, tempP);
+//     dg::blas1::axpby( 1., tempP,-1.,dzf,dzf);
+//     dg::blas1::pointwiseDot( v3d, dzf, dzf);
+//     dg::blas1::pointwiseDot( dzf, invB, dzf);
 }
 template<class M, class container>
 void DZ<M,container>::forwardT( const container& f, container& dzf)
-{
-        //direct discretisation
-//        assert( &f != &dzf);    
-//     dg::blas1::pointwiseDot( f, invB, dzf);
-//     einsMinus( dzf, tempM);
-//     dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
-//     dg::blas1::pointwiseDivide( dzf, hm, dzf);        
-//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
-    
+{    
     //adjoint discretisation
     assert( &f != &dzf);
     dg::blas1::pointwiseDot( w3d, f, dzf);
@@ -551,24 +640,40 @@ void DZ<M,container>::forwardT( const container& f, container& dzf)
 
 }
 template<class M, class container>
+void DZ<M,container>::forwardTD( const container& f, container& dzf)
+{
+    //direct discretisation
+    assert( &f != &dzf);    
+    dg::blas1::pointwiseDot( f, invB, dzf);
+    einsMinus( dzf, tempP);
+    dg::blas1::axpby( -1., tempP, 1., dzf, dzf);
+    dg::blas1::pointwiseDivide( dzf, hm, dzf);        
+    dg::blas1::pointwiseDivide( dzf, invB, dzf);
+
+
+}
+template<class M, class container>
 void DZ<M,container>::backward( const container& f, container& dzf)
 {
+    //direct
     assert( &f != &dzf);
     einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempM, -1., f, tempM);
     dg::blas1::pointwiseDivide( tempM, hm, dzf);
+    
+    //adjoint discretisation
+//     assert( &f != &dzf);    
+//     dg::blas1::pointwiseDot( w3d, f, dzf);
+//     dg::blas1::pointwiseDivide( dzf, hp, dzf);
+//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
+//     einsPlusT( dzf, tempM);
+//     dg::blas1::axpby( 1., tempM, -1.,dzf,dzf);
+//     dg::blas1::pointwiseDot( v3d,dzf, dzf);
+//     dg::blas1::pointwiseDot( dzf, invB, dzf);
 }
 template<class M, class container>
 void DZ<M,container>::backwardT( const container& f, container& dzf)
-{
-        //direct
-//     assert( &f != &dzf);    
-//     dg::blas1::pointwiseDot( f, invB, dzf);
-//     einsPlus( dzf, tempP);
-//     dg::blas1::axpby( -1., tempP, 1., dzf, dzf);
-//     dg::blas1::pointwiseDivide( dzf, hp, dzf);        
-//     dg::blas1::pointwiseDivide( dzf, invB, dzf);
-    
+{    
     //adjoint discretisation
     assert( &f != &dzf);
     dg::blas1::pointwiseDot( w3d, f, dzf);
@@ -576,32 +681,40 @@ void DZ<M,container>::backwardT( const container& f, container& dzf)
     einsMinusT( dzf, tempM);
     dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
     dg::blas1::pointwiseDot( v3d, dzf, dzf);
-
+    
 }
+
+template<class M, class container>
+void DZ<M,container>::backwardTD( const container& f, container& dzf)
+{
+    //direct
+    assert( &f != &dzf);    
+    dg::blas1::pointwiseDot( f, invB, dzf);
+    einsPlus( dzf, tempM);
+    dg::blas1::axpby( -1., tempM, 1., dzf, dzf);
+    dg::blas1::pointwiseDivide( dzf, hp, dzf);        
+    dg::blas1::pointwiseDivide( dzf, invB, dzf);
+}
+
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
-    this->operator()( f, tempP);
-    centeredT( tempP, dzTdzf);
-//     forward( f, tempP);
-//     forwardT( tempP, dzTdzf);
-//     backward( f, tempM);
-//     backwardT( tempM, temp0);
-//     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
-    dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
+
+//     this->operator()( f, tempP);
+//     centeredT( tempP, dzTdzf);
+    forward( f, tempP);
+    forwardT( tempP, dzTdzf);
+    backward( f, tempM);
+    backwardT( tempM, temp0);
+    dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+//     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
+
+//     add jump term 
     dg::blas2::symv( jump, f, tempP);
-    dg::blas1::axpby( 1., tempP, 1., dzTdzf);
-    //add jump term (unstable without it)
-//     einsPlus( f, tempP); 
-//     dg::blas1::axpby( -1., tempP, 2., f, tempP); //-fp+2f
-//     einsPlusT( f, tempM); 
-//     dg::blas1::axpby( -1., tempM, 1., tempP);  //-fp +2f -fpT
-//     dg::blas1::axpby( 0.5, tempP, 1., dzTdzf); //dzTdzf + 0.5(-fp +2f -fpT)
-//     einsMinusT( f, tempP); 
-//     dg::blas1::axpby( -1., tempP, 2., f, tempP);
-//     einsMinus( f, tempM); 
-//     dg::blas1::axpby( -1., tempM, 1., tempP); //-fm +2f -fmT
-//     dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);//dzTdzf + 0.5(-fp +2f -fpT)+0.5(-fm +2f -fmT)
+      dg::blas1::pointwiseDot( v3d, tempP,tempP); //make it symmetric
+
+    dg::blas1::axpby(-1., tempP, 1., dzTdzf);
+
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)

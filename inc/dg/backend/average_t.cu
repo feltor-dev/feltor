@@ -1,5 +1,6 @@
 #include <iostream>
 #include "average.cuh"
+#include "../blas2.h"
 
 
 const double lx = 2.*M_PI;
@@ -13,14 +14,13 @@ int main()
     std::cout << "Type n, Nx and Ny!\n";
     std::cin >> n >> Nx >> Ny;
     const dg::Grid2d<double> g( 0, lx, 0, ly, n, Nx, Ny);
+    dg::HVec w2d = dg::create::weights( g);
 
     dg::PoloidalAverage<dg::HVec, thrust::host_vector<int> > pol(g);
 
     dg::HVec vector = dg::evaluate( function ,g), average_y( vector);
     const dg::HVec solution = dg::evaluate( pol_average, g);
-    dg::HVec w2d = dg::create::weights( g);
-    std::cout << "Integration is: "<<dg::blas1::dot( vector, w2d)<<std::endl;
-
+    std::cout << "Averaging ... \n";
     pol( vector, average_y);
     dg::blas1::axpby( 1., solution, -1., average_y, vector);
     std::cout << "Distance to solution is: "<<sqrt(dg::blas2::dot( vector, w2d, vector))<<std::endl;

@@ -47,9 +47,9 @@ int main ()
     std::cout << "# of cells          " << N <<"\n";
     dg::Grid1d<double> g( 0, lx, n, N);
     const double hx = lx/(double)N;
-    //cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_symm_normed<double>( n, N, hx, bcx);
+    cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_symm_normed<double>( n, N, hx, bcx);
     //cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_minus_normed<double>( n, N, hx, bcx);
-    cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_plus_normed<double>( n, N, hx, bcx);
+//     cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_plus_normed<double>( n, N, hx, bcx);
     dg::HVec hv = evaluate( function, g);
     dg::HVec hw = hv;
     const dg::HVec hu = evaluate( derivative, g);

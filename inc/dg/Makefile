@@ -1,5 +1,6 @@
 system=home
-device=omp
+device=gpu
+
 
 INCLUDE = -I../ # other project libraries
 
@@ -27,10 +28,10 @@ endif
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 
-CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
-CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
+#CFLAGS+= -Xcompiler -fopenmp 
+#CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+#CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
+#CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
 endif
 ifeq ($(strip $(device)),omp)
 CC = g++
@@ -58,27 +59,12 @@ toefl_b: toefl_b.cu toefl.cuh
 %_t: %_t.cu
 	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
-#%2d_t: %2d_t.cu ../%.cuh 
-#	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
-#
-#%3d_t: %3d_t.cu ../%.cuh 
-#	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
-
 %_b: %_b.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
 	echo "Attention: No compiler warnings are issued!" 
 
-#%2d_b: %2d_b.cu ../%.h
-#	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
-#	echo "Attention: No compiler warnings are issued!" 
-#
-#%3d_b: %3d_b.cu ../%.h
-#	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
-#	echo "Attention: No compiler warnings are issued!" 
-
 dg_t: dg_t.cpp ../dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
-	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 
 bathRZ_t: bathRZ_t.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 

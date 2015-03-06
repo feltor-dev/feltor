@@ -6,10 +6,10 @@
 namespace dg{
 namespace create
 {
-
+///@cond
 namespace detail
 {
-//these are to prevent metric coefficients in the normal weight functions
+//these are to prevent cylindrical metric coefficients in the normal weight functions
 MPI_Precon pure_weights( const MPI_Grid3d& g)
 {
     MPI_Precon p;
@@ -24,8 +24,9 @@ MPI_Precon pure_weights( const MPI_Grid2d& g)
     p.norm = g.hx()*g.hy()/4.;
     return p;
 }
+
 //create a normed 2d X-derivative
-MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
+MPI_Matrix dx( const Grid1d<double>& g, direction dir)
 {
     unsigned n=g.n();
     double hx = g.h();
@@ -42,7 +43,7 @@ MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
     Operator<double> a(n), b(n), bt(n);
     if( dir == dg::centered)
     {
-        MPI_Matrix m(bcx, comm,  3);
+        MPI_Matrix m( 3);
         m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
         
         bt = backward*t*(-0.5*lr )*forward; 
@@ -54,7 +55,7 @@ MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
     }
     if( dir == dg::forward)
     {
-        MPI_Matrix m(bcx, comm,  2);
+        MPI_Matrix m(2);
         m.offset()[0] = 0, m.offset()[1] = n;
 
         a = backward*t*(-d.transpose()-l)*forward; 
@@ -63,7 +64,7 @@ MPI_Matrix dx( const Grid1d<double>& g, bc bcx, direction dir, MPI_Comm comm)
         return m;
     }
     //if dir == dg::backward
-    MPI_Matrix m(bcx, comm,  2);
+    MPI_Matrix m( 2);
     m.offset()[0] = -n, m.offset()[1] = 0;
     bt = backward*t*(-lr)*forward; 
     a  = backward*t*(d+l)*forward;
@@ -173,13 +174,29 @@ BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir, int co
 }
 
 } //namespace detail
+///@endcond
 
+///@addtogroup highlevel
+///@{
+
+/**
+ * @brief Create 2d derivative in x-direction
+ *
+ * @param g The grid on which to create dx
+ * @param bcx The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = centered)
 {
-    MPI_Comm comm = g.communicator();
     Grid1d<double> g1d( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
-    MPI_Matrix dx = detail::dx( g1d, bcx, dir, comm);
+    MPI_Matrix dx = detail::dx( g1d, dir);
     if( no == not_normed) dx.precond() = detail::pure_weights(g);
+
+    MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     int dims[ndims], periods[ndims], coords[ndims];
@@ -188,20 +205,42 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = ce
     return dx;
 }
 
+/**
+ * @brief Create 2d derivative in x-direction
+ *
+ * @param g The grid on which to create dx (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dx( const MPI_Grid2d& g, norm no = normed, direction dir = centered)
 {
     return dx( g, g.bcx(), no, dir);
 }
 
+/**
+ * @brief Create 2d derivative in y-direction
+ *
+ * @param g The grid on which to create dy
+ * @param bcy The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = centered)
 {
-    MPI_Comm comm = g.communicator();
     Grid1d<double> g1d( g.y0(), g.y1(), g.n(), g.Ny());
-    MPI_Matrix m = detail::dx( g1d, bcy, dir, comm );
+    MPI_Matrix m = detail::dx( g1d, dir );
     m.dataX().swap( m.dataY());
     for( unsigned i=0; i<m.offset().size(); i++)
         m.offset()[i] *= g.Nx()*g.n();
     if( no == not_normed) m.precond() = detail::pure_weights(g);
+
+    MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     int dims[ndims], periods[ndims], coords[ndims];
@@ -209,16 +248,40 @@ MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = ce
     m.yterm() = detail::boundaryDX( g1d, bcy, dir, coords[1], dims[1]);
     return m;
 }
+
+/**
+ * @brief Create 2d derivative in y-direction
+ *
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dy( const MPI_Grid2d& g, norm no = normed, direction dir = centered)
 {
     return dy( g, g.bcy(), no, dir);
 }
+
+/**
+ * @brief Create 3d derivative in x-direction
+ *
+ * @param g The grid on which to create dx
+ * @param bcx The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dx( const MPI_Grid3d& g, bc bcx, norm no = normed, direction dir = centered)
 {
-    MPI_Comm comm = g.communicator();
     Grid1d<double> g1d( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
-    MPI_Matrix dx = detail::dx( g1d, bcx, dir, comm);
+    MPI_Matrix dx = detail::dx( g1d, dir);
     if( no == not_normed) dx.precond() = detail::pure_weights(g);
+
+    MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     int dims[ndims], periods[ndims], coords[ndims];
@@ -227,20 +290,42 @@ MPI_Matrix dx( const MPI_Grid3d& g, bc bcx, norm no = normed, direction dir = ce
     return dx;
 }
 
+/**
+ * @brief Create 3d derivative in x-direction
+ *
+ * @param g The grid on which to create dx (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dx( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
 {
     return dx( g, g.bcx(), no, dir);
 }
 
+/**
+ * @brief Create 3d derivative in y-direction
+ *
+ * @param g The grid on which to create dy
+ * @param bcy The boundary condition
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = centered)
 {
-    MPI_Comm comm = g.communicator();
     Grid1d<double> g1d( g.y0(), g.y1(), g.n(), g.Ny());
-    MPI_Matrix m = detail::dx( g1d, bcy, dir, comm); 
+    MPI_Matrix m = detail::dx( g1d, dir); 
     m.dataX().swap( m.dataY());
     for( unsigned i=0; i<m.offset().size(); i++)
         m.offset()[i] *= g.Nx()*g.n();
     if( no == not_normed) m.precond() = detail::pure_weights(g);
+
+    MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     int dims[ndims], periods[ndims], coords[ndims];
@@ -248,14 +333,28 @@ MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = ce
     m.yterm() = detail::boundaryDX( g1d, bcy, dir, coords[1], dims[1]);
     return m;
 }
+
+/**
+ * @brief Create 3d derivative in y-direction
+ *
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ * @param no use normed normally
+             use not_normed if you know what you're doing
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix dy( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
 {
     return dy( g, g.bcy(), no, dir);
 }
+///@}
 
+///@cond
 namespace detail
 {
-MPI_Matrix jump( const Grid1d<double>& g, bc bcx, MPI_Comm comm)
+
+MPI_Matrix jump( const Grid1d<double>& g)
 {
     unsigned n = g.n();
     Operator<double> l = create::lilj(n);
@@ -274,11 +373,12 @@ MPI_Matrix jump( const Grid1d<double>& g, bc bcx, MPI_Comm comm)
     bt = -lr;
     a = backward*t*a*forward, bt = backward*t*bt*forward, b = backward*t*b*forward;
 
-    MPI_Matrix m(bcx, comm,  3);
+    MPI_Matrix m( 3);
     m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
     m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
     return m;
 }
+
 BoundaryTerms boundaryJump( const Grid1d<double>& g, bc bcx, int coords, int dims)
 {
     //only implement symmetric laplacian
@@ -333,23 +433,38 @@ BoundaryTerms boundaryJump( const Grid1d<double>& g, bc bcx, int coords, int dim
     return xterm;
 }
 }//namespace detail
+///@endcond
+
+///@addtogroup highlevel
+///@{
+
+/**
+ * @brief Matrix that contains 2d jump terms
+ *
+ * @param g grid
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ * @param no the norm
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix jump2d( const MPI_Grid2d& g, bc bcx, bc bcy, norm no)
 {
-    MPI_Comm comm = g.communicator();
     Grid1d<double> g1dX( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
     Grid1d<double> g1dY( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    MPI_Matrix lapx = detail::jump( g1dX, bcx, comm);
-    MPI_Matrix lapy = detail::jump( g1dY, bcy, comm);
+    MPI_Matrix lapx = detail::jump( g1dX);
+    MPI_Matrix lapy = detail::jump( g1dY);
     lapy.dataX().swap( lapy.dataY());
     for( unsigned i=0; i<lapy.offset().size(); i++)
         lapy.offset()[i] *= g.Nx()*g.n();
     //append elements
-    lapx.bcy() = bcy;
     lapx.dataX().insert( lapx.dataX().end(), lapy.dataX().begin(), lapy.dataX().end());
     lapx.dataY().insert( lapx.dataY().end(), lapy.dataY().begin(), lapy.dataY().end());
     lapx.offset().insert( lapx.offset().end(), lapy.offset().begin(), lapy.offset().end());
     if( no == not_normed)
         lapx.precond()= detail::pure_weights(g);
+
+    MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     int dims[ndims], periods[ndims], coords[ndims];
@@ -359,28 +474,46 @@ MPI_Matrix jump2d( const MPI_Grid2d& g, bc bcx, bc bcy, norm no)
     return lapx;
 }
 
+/**
+ * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
+ *
+ * @param g grid
+ * @param no the norm
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix jump2d( const MPI_Grid2d& g, norm no)
 {
     return jump2d( g, g.bcx(), g.bcy(), no);
 }
 
+/**
+ * @brief Matrix that contains 2d jump terms
+ *
+ * @param g grid
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ * @param no the norm
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix jump2d( const MPI_Grid3d& g, bc bcx, bc bcy, norm no)
 {
-    MPI_Comm comm = g.communicator();
     Grid1d<double> g1dX( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
     Grid1d<double> g1dY( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    MPI_Matrix lapx = detail::jump( g1dX, bcx, comm );
-    MPI_Matrix lapy = detail::jump( g1dY, bcy, comm );
+    MPI_Matrix lapx = detail::jump( g1dX );
+    MPI_Matrix lapy = detail::jump( g1dY );
     lapy.dataX().swap( lapy.dataY());
     for( unsigned i=0; i<lapy.offset().size(); i++)
         lapy.offset()[i] *= g.Nx()*g.n();
     //append elements
-    lapx.bcy() = bcy;
     lapx.dataX().insert( lapx.dataX().end(), lapy.dataX().begin(), lapy.dataX().end());
     lapx.dataY().insert( lapx.dataY().end(), lapy.dataY().begin(), lapy.dataY().end());
     lapx.offset().insert( lapx.offset().end(), lapy.offset().begin(), lapy.offset().end());
     if( no == not_normed)
         lapx.precond()= detail::pure_weights(g);
+
+    MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     int dims[ndims], periods[ndims], coords[ndims];
@@ -390,10 +523,19 @@ MPI_Matrix jump2d( const MPI_Grid3d& g, bc bcx, bc bcy, norm no)
     return lapx;
 }
 
+/**
+ * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
+ *
+ * @param g grid
+ * @param no the norm
+ *
+ * @return A mpi matrix in coordinate format
+ */
 MPI_Matrix jump2d( const MPI_Grid3d& g, norm no)
 {
     return jump2d( g, g.bcx(), g.bcy(), no);
 }
 
+///@}
 } //namespace create
 } //namespace dg
