@@ -581,13 +581,13 @@ void DZ<M,container>::backwardT( const container& f, container& dzf)
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
-    //this->operator()( f, tempP);
-    //centeredT( tempP, dzTdzf);
-    forward( f, tempP);
-    forwardT( tempP, dzTdzf);
-    backward( f, tempM);
-    backwardT( tempM, temp0);
-    dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+    this->operator()( f, tempP);
+    centeredT( tempP, dzTdzf);
+//     forward( f, tempP);
+//     forwardT( tempP, dzTdzf);
+//     backward( f, tempM);
+//     backwardT( tempM, temp0);
+//     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
     dg::blas2::symv( jump, f, tempP);
     dg::blas1::axpby( 1., tempP, 1., dzTdzf);

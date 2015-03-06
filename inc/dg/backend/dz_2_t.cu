@@ -510,7 +510,7 @@ int main()
             dg::HVec part( visual.begin() + k*size, visual.begin()+(k+1)*size);
             render.renderQuad( part, g3d.n()*g3d.Nx(), g3d.n()*g3d.Ny(), colors);
         }
-        hvisual = dzz;
+        hvisual = functionTinv;
         dg::blas2::gemv( equigrid, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), -100000000., thrust::maximum<double>()   );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
