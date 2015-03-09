@@ -411,7 +411,7 @@ struct DZ
     Matrix plus, minus, plusT, minusT; //interpolation matrices
     Matrix jump;
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
-    container hzh, hph,hmh;
+//     container hzh, hph,hmh;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
@@ -420,7 +420,7 @@ struct DZ
     container w3d, v3d;
     container invB;
     
-    container w2d;
+//     container w2d;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -431,9 +431,9 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
-        , invB(dg::evaluate(field,grid)),
-        w2d(w3d),
-        hzh( dg::evaluate( dg::zero, grid)), hph( hz), hmh( hz)                                     
+        , invB(dg::evaluate(field,grid))
+//      ,   w2d(w3d),
+//         hzh( dg::evaluate( dg::zero, grid)), hph( hz), hmh( hz)                                     
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -496,7 +496,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());
         
-        thrust::copy( w2d_.begin(), w2d_.end(), w2d.begin() + i*g2d.size());
+//         thrust::copy( w2d_.begin(), w2d_.end(), w2d.begin() + i*g2d.size());
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);
@@ -705,7 +705,7 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
 
 //     add jump term 
     dg::blas2::symv( jump, f, tempP);
-    dg::blas1::axpby(1., tempP, 1., dzTdzf);
+    dg::blas1::axpby(-1., tempP, 1., dzTdzf);
 
 }
 template< class M, class container >

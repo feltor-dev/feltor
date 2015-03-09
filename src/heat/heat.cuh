@@ -311,7 +311,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
         //with jump
        dzNU_.symv(y[0],lambda);
-       dg::blas1::pointwiseDot(v3d,lambda,lambda);
+//        dg::blas1::pointwiseDot(v3d,lambda,lambda);
        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 
     }
