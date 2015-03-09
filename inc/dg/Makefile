@@ -1,6 +1,7 @@
 system=home
 device=gpu
 
+
 INCLUDE = -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)

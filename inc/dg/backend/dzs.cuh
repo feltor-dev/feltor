@@ -4,7 +4,7 @@
 #include <cusp/transpose.h>
 #include "grid.h"
 #include "../blas.h"
-#include "interpolation.cuh"
+#include "ell_interpolation.cuh"
 #include "typedefs.cuh"
 #include "functions.h"
 #include "derivatives.cuh"
@@ -315,13 +315,17 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltas, 
     dg::blas1::axpby(1.0,phibias,1.0,phim); 
     dg::blas1::transform(phim, phim, dg::MOD<>(2.*M_PI));
     //3D interpolation of in + and -
-    plus  = dg::create::interpolation( rp, zp, phip, grid, globalbcz); 
-    minus = dg::create::interpolation( rm, zm, phim, grid, globalbcz); 
+    cusp::ell_matrix<int, double, cusp::device_memory> plusH   = dg::create::ell_interpolation( rp, zp, phip, grid);
+    cusp::ell_matrix<int, double, cusp::device_memory> minusH  = dg::create::ell_interpolation( rm, zm, phim, grid);
+    cusp::ell_matrix<int, double, cusp::device_memory> plusHT,minusHT;
+//     plus  = dg::create::interpolation( rp, zp, phip, grid, globalbcz); 
+//     minus = dg::create::interpolation( rm, zm, phim, grid, globalbcz); 
     //Transpose matrices for adjoint operator
-    cusp::transpose( plus, plusT);
-    cusp::transpose( minus, minusT);    
-
+    cusp::transpose( plusH, plusHT);
+    cusp::transpose( minusH, minusHT);    
+    plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT; 
 }
+
 template<class M, class container>
 void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
 {

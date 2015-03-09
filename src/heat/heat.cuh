@@ -33,19 +33,41 @@ struct Rolkar
     Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
-        dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g))
+        dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
+        dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+        elliptic( g, dg::normed, dg::centered)
+
     {
+        container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
+        elliptic.set_x( bfield);
+        bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),g);
+        elliptic.set_y( bfield);
+        bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
+        elliptic.set_z( bfield);
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
-
+        dg::blas1::axpby( 0., x, 0, y);
+        if (p.p_diff ==4)    {
+        dg::blas2::gemv( elliptic, x[0], y[0]); //lap is negative
+        dg::blas1::scal(y[0], -p.nu_parallel );  
+        }
+        if (p.p_diff ==0)    {
+          dg::blas2::gemv( dzNU_, x[0], y[0]); 
+          dg::blas1::scal(y[0], p.nu_parallel );  
+      }
+//       
     }
     const container& damping(){return dampprof_;}
+    const Preconditioner& weights(){return elliptic.weights();}
+    const Preconditioner& precond(){return elliptic.precond();}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
     const container dampprof_;
-  
+    dg::DZ<Matrix, container> dzNU_;
+
+    dg::GeneralElliptic<Matrix, container, Preconditioner> elliptic;
 
 };
 
@@ -86,7 +108,7 @@ struct Feltor
     dg::DZ<Matrix, container> dzNU_;
 
     dg::Elliptic< Matrix, container, Preconditioner > lapperp; 
-
+//     dg::GeneralElliptic<Matrix, container, Preconditioner> elliptic;
 
     const eule::Parameters p;
     const solovev::GeomParameters gp;
@@ -108,10 +130,19 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
     dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
+//     elliptic( g, dg::not_normed, dg::forward),    
     p(p),
     gp(gp),
     evec(1)
-{ }
+{ 
+//     container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
+//     elliptic.set_x( bfield);
+//     bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),g);
+//     elliptic.set_y( bfield);
+//     bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
+//     elliptic.set_z( bfield);
+    
+}
 
 
 
@@ -128,6 +159,7 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 //             dg::blas1::transform( y[0],tmo, dg::PLUS<>(-1)); //npe = N+1
 
     //perp energy
+
     if (p.p_diffperp==0)    {
         dg::blas2::gemv( lapperp, y[0], lambda);
         Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda); 
@@ -197,6 +229,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     t.tic();
     assert( y.size() == 1);
     assert( y.size() == yp.size());
+
     if (p.p_diffperp==0) {
         dg::blas2::gemv( lapperp, y[0], omega); //lap is negative
         dg::blas1::axpby( -p.nu_perp, omega, 0., yp[0]);  
@@ -271,24 +304,24 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     }
 //-----------------------parallel dissi------------------------
     if (p.p_diff ==0)    {
-//         centered
-//         dzNU_( y[0], omega); 
-//         dzNU_.centeredT(omega,lambda);
-//         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
-
-        //forward, backward (stegi)
-        dzNU_.forward( y[0], omega); 
-        dzNU_.forwardT(omega,lambda);
-        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
-
-        dzNU_.backward( y[0], omega); 
-        dzNU_.backwardT(omega,lambda);
-        dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
-        //with jump
+// //         centered
+// //         dzNU_( y[0], omega); 
+// //         dzNU_.centeredT(omega,lambda);
+// //         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+// 
+//         //forward, backward (stegi)
+// //         dzNU_.forward( y[0], omega); 
+// //         dzNU_.forwardT(omega,lambda);
+// //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+// // 
+// //         dzNU_.backward( y[0], omega); 
+// //         dzNU_.backwardT(omega,lambda);
+// //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+//         //with jump
 //        dzNU_.symv(y[0],lambda);
-//        dg::blas1::pointwiseDot(v3d,lambda,lambda);
+// //        dg::blas1::pointwiseDot(w3d,lambda,lambda);
 //        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
-
+// 
     }
     if (p.p_diff ==1)    {
         // (B) nonadjoint
@@ -318,7 +351,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dzNU_.backwardTD(omega,lambda);
         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
     }
-
+//     if (p.p_diff ==4)    {
+//         dg::blas2::gemv( elliptic, y[0], omega); //lap is negative
+//         dg::blas1::axpby( -p.nu_parallel, omega, 1., yp[0]);  
+//     }
     t.toc();
 #ifdef MPI_VERSION
     int rank;

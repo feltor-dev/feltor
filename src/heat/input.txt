@@ -5,10 +5,11 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3   (3)
-2)  nx (grid points in x)                =   10 (192)
-3)  ny (grid points in y)                =   10 (192) 
-4)  nz (grid points in z)                =   40 (1)
-5)  dt (time step in units c_s/rho_s)    =   0.01(0.01)
+2)  nx (grid points in x)                =   20 (192)
+3)  ny (grid points in y)                =  20 (192) 
+4)  nz (grid points in z)                =   10(1)
+5)  dt (time step in units c_s/rho_s)    = 1.(0.01)
+
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
 7)  nx_out (# grid points in output field)  =  20
@@ -18,10 +19,10 @@
 11) total # of outputs (excluding first)    =  10
 -------------------------Physical parameters----------------------------
 12) nu_perp                                 = 0e-8
-13) nu_parallel  (viscosity)                =  100.  (0.001)
+13) nu_parallel  (viscosity)                = 100  (0.001)
 ------------------------Initial perturbation parameters---------------------
 14) amp (blob amplitude)                    =  0.1   (1.0)
-15) sigma (blob variance in units of rho_s) =  0.01    (10)
+15) sigma (blob variance in units of rho_s) =  0.1    (10)
 16) x-position ( in units of a)             =  0.6    (0.4)
 17) y-position ( in units of a)             =  0.00   (0.5)
 18) sigma_z (variance in units of R_0)      =  2.0    (12.5 for oo)
@@ -29,14 +30,19 @@
 20) Profile amplitude                       =  0.0  (peak amplitude)
 21) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Boundary condition----------------------------
-22) GLOBAL BC (1 DIR/ 4 NEU)                =  1
+22) GLOBAL BC (1 DIR/ 4 NEU)                =  4
 ----------------------------------Miscellaneous----------------------------
 23) boxscale R+                             =  1.0 (a little larger than 1)
 24) boxscale R-                             =  1.0 (a little larger than 1)
 25) boxscale Z+                             =  1.0 (a little larger than 1)
 26) boxscale Z-                             =  1.0 (a little larger than 1)
 27) adv (adj(0), nadj(1), onadj(2),no(3))   =  3
-27) diff (a(0), na(1), ona(2),d(3), no(4))) =  3
+27) diff (a(0), na(1),
+          ona(2),d(3), da(4),no(5)))        = 0
 28) diffperp (lap(0), lap2(1) )             = 1
+----------------------------------Tor limiter------------------------------
 29) toroidal limiter (0/1)                  =  0                       
+----------------------------------Algorithmic parameters---------------------
+31)  eps_time ( stop for time inversion )   =   1e-5
+
 @ ------------------------------------------------------------
