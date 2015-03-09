@@ -148,7 +148,6 @@ struct MPI_Matrix
     /**
      * @brief Construct from boundary condition and number of blocks
      *
-     * @param bcx boundary condition in x
      * @param number # of blocks
      */
     MPI_Matrix( unsigned number): 
