@@ -28,11 +28,9 @@ double fct(double x, double y, double z){ return sin(y)*sin(x);}
 double laplace_fct( double x, double y, double z) { return 2*sin(y)*sin(x);}
 double initial( double x, double y, double z) {return sin(0);}
 
-using namespace std;
-
 int main()
 {
-    cout << "TEST 3D VERSION\n";
+    std::cout << "TEST 3D VERSION\n";
     dg::Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER);
     dg::HVec w3d = dg::create::weights( g3d);
     dg::HVec v3d = dg::create::inv_weights( g3d);
@@ -43,9 +41,9 @@ int main()
     const dg::HVec solution3 = dg::evaluate ( fct, g3d);
     dg::blas2::symv( w3d, b3, b3);
     dg::CG<dg::HVec > pcg3( x3, g3d.size());
-    cout << "Number of pcg iterations "<< pcg3( A3, x3, b3, v3d, eps_)<<endl;
+    std::cout << "Number of pcg iterations "<< pcg3( A3, x3, b3, v3d, eps_)<<std::endl;
     //std::cout << "Number of cg iterations "<< pcg( A, x, b, dg::Identity<double>(), eps)<<endl;
-    cout << "For a precision of "<< eps_<<endl;
+    std::cout << "For a precision of "<< eps_<<std::endl;
     //compute error
     dg::HVec error3( solution3);
     dg::blas1::axpby( 1.,x3,-1.,error3);
@@ -55,14 +53,14 @@ int main()
     dg::blas1::axpby( 1.,Ax3,-1.,res3);
 
     double xnorm3 = dg::blas2::dot( w3d, x3);
-    cout << "L2 Norm2 of x0 is              " << xnorm3 << endl;
+    std::cout << "L2 Norm2 of x0 is              " << xnorm3 <<"\n";
     double eps3 = dg::blas2::dot(w3d , error3);
-    cout << "L2 Norm2 of Error is           " << eps3 << endl;
+    std::cout << "L2 Norm2 of Error is           " << eps3 <<"\n";
     double norm3 = dg::blas2::dot(w3d , solution3);
-    cout << "L2 Norm2 of Solution is        " << norm3 << endl;
+    std::cout << "L2 Norm2 of Solution is        " << norm3 <<"\n";
     double normres3 = dg::blas2::dot( w3d, res3);
-    cout << "L2 Norm2 of Residuum is        " << normres3 << endl;
-    cout << "L2 Norm of relative error is   " <<sqrt( eps3/norm3)<<endl;
+    std::cout << "L2 Norm2 of Residuum is        " << normres3 <<"\n";
+    std::cout << "L2 Norm of relative error is   " <<sqrt( eps3/norm3)<<std::endl;
 
     return 0;
 }

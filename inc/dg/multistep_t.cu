@@ -66,30 +66,27 @@ double sine( double x, double y) {return sin(x)*sin(y);}
 double sol( double x, double y) {return exp( -2.*nu*T)*sine(x, y);}
 
 
-using namespace std;
-using namespace dg;
-
 int main()
 {
     double dt, NT, eps;
     unsigned Nx, Ny;
-    cout << "Type Nx (20), Ny (20) and timestep (0.1) and eps( 1e-8)!\n";
-    cin >> Nx >> Ny >> dt >> eps;
+    std::cout << "Type Nx (20), Ny (20) and timestep (0.1) and eps( 1e-8)!\n";
+    std::cin >> Nx >> Ny >> dt >> eps;
     NT = (unsigned)(T/dt);
 
-    cout << "Test Karniadakis scheme on diffusion equation\n";
-    cout << "RK order K:               "<< k <<endl;
-    cout << "Number of gridpoints:     "<<Nx*Ny<<endl;
-    cout << "# of timesteps:           "<<NT<<endl;
+    std::cout << "Test Karniadakis scheme on diffusion equation\n";
+    std::cout << "RK order K:               "<< k <<std::endl;
+    std::cout << "Number of gridpoints:     "<<Nx*Ny<<std::endl;
+    std::cout << "# of timesteps:           "<<NT<<std::endl;
 
-    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, PER, PER);
-    dg::DVec w2d = create::weights( grid);
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    dg::DVec w2d = dg::create::weights( grid);
 
-    std::vector<DVec> y0(2, evaluate( sine, grid)), y1(y0);
+    std::vector<dg::DVec> y0(2, dg::evaluate( sine, grid)), y1(y0);
 
-    RHS<DVec> rhs( grid, nu);
-    Diffusion<DVec> diffusion( grid, nu);
-    dg::Karniadakis< std::vector<DVec> > tvb( y0, y0[0].size(), eps);
+    RHS<dg::DVec> rhs( grid, nu);
+    Diffusion<dg::DVec> diffusion( grid, nu);
+    dg::Karniadakis< std::vector<dg::DVec> > tvb( y0, y0[0].size(), eps);
     tvb.init( rhs, diffusion, y0, dt);
     dg::SIRK< std::vector<dg::DVec> > sirk( y0, y0[0].size(), eps);
 
@@ -100,14 +97,14 @@ int main()
         sirk( rhs, diffusion, y0, y1, dt);
         y0.swap(y1);
     }
-    double norm_y0 = blas2::dot( w2d, y0[0]);
-    cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << endl;
-    DVec solution = evaluate( sol, grid), error( solution);
-    double norm_sol = blas2::dot( w2d, solution);
-    blas1::axpby( -1., y0[0], 1., error);
-    cout << "Normalized solution is "<<  norm_sol<< endl;
-    double norm_error = blas2::dot( w2d, error);
-    cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000141704)\n";
+    double norm_y0 = dg::blas2::dot( w2d, y0[0]);
+    std::cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << std::endl;
+    dg::DVec solution = dg::evaluate( sol, grid), error( solution);
+    double norm_sol = dg::blas2::dot( w2d, solution);
+    dg::blas1::axpby( -1., y0[0], 1., error);
+    std::cout << "Normalized solution is "<<  norm_sol<< std::endl;
+    double norm_error = dg::blas2::dot( w2d, error);
+    std::cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000141704)\n";
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
     //n = 2 -> p = 2
     //n = 3 -> p = 3

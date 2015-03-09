@@ -9,9 +9,6 @@
 #include "weights.cuh"
 
 
-using namespace std;
-using namespace dg;
-
 unsigned n = 3;
 unsigned N = 40;
 const double lx = 2*M_PI;
@@ -31,7 +28,7 @@ bc bcx = NEU;
 */
 double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
-bc bcx = DIR;
+dg::bc bcx = dg::DIR;
 /*
 double function( double x) { return cos(3./4.*x);}
 double derivative( double x) { return -3./4.*sin(3./4.*x);}
@@ -46,15 +43,15 @@ int main ()
     std::cout << "# of Legendre nodes " << n <<"\n";
     std::cout << "# of cells          " << N <<"\n";
     dg::Grid1d<double> g( 0, lx, n, N);
-    dg::HMatrix hm = dg::create::laplace1d<double>( g, bcx, normed, forward);
-    const dg::HVec hv = evaluate( function, g);
+    dg::HMatrix hm = dg::create::laplace1d<double>( g, bcx, dg::normed, dg::forward);
+    const dg::HVec hv = dg::evaluate( function, g);
     dg::HVec hw = hv;
-    //const dg::HVec hu = evaluate( derivative, g);
+    //const dg::HVec hu = dg::evaluate( derivative, g);
 
     dg::blas2::symv( hm, hv, hw);
     dg::blas1::axpby( 1., hv, -1., hw);
     
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot( create::weights(g), hw) )<<"(Note the supraconvergence)\n";
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot( dg::create::weights(g), hw) )<<"(Note the supraconvergence)\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

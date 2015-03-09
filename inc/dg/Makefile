@@ -60,20 +60,17 @@ toefl_b: toefl_b.cu toefl.cuh
 
 %_b: %_b.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 
 dg_t: dg_t.cpp ../dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
 
 bathRZ_t: bathRZ_t.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 	
 .PHONY: clean doc
 
 dz_geom_t: dz_geom_t.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 
 doc: 
 	doxygen Doxyfile

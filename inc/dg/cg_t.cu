@@ -26,13 +26,12 @@ dg::bc bcx = dg::DIR;
 //dg::bc bcx = dg::NEU_DIR;
 double initial( double x) {return sin(0);}
 
-using namespace std;
 int main()
 {
     unsigned n; //global relative error in L2 norm is O(h^P)
     unsigned N;  //more N means less iterations for same error
-    cout << "Type n and N\n";
-    cin >> n >> N;
+    std::cout << "Type n and N\n";
+    std::cin >> n >> N;
     dg::Grid1d<double > g( 0, lx, n, N, bcx);
     dg::DVec x = dg::evaluate( initial, g);
     dg::DVec w1d = dg::create::weights( g);
