@@ -11,15 +11,16 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
-#include "dg/backend/ell_interpolation.h"
-
+// #include "dg/backend/ell_interpolation.h"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
+#include "dg/runge_kutta.h"
+
 // #include "solovev/geometry.h"
 #include "geometry_g.h"
+#include "parameters.h"
 
 #include "heat.cuh"
-#include "parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 

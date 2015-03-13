@@ -1,5 +1,3 @@
-
-
 #pragma once
 #include <cusp/transpose.h>
 #include "grid.h"
@@ -19,6 +17,7 @@ namespace dg{
  */
 struct DefaultLimiter
 {
+
     /**
      * @brief return 1
      *
@@ -31,12 +30,14 @@ struct DefaultLimiter
     {
         return 1;
     }
+
 };
 /**
  * @brief No Limiter 
  */
 struct NoLimiter
 {
+
     /**
      * @brief return 0
      *
@@ -49,6 +50,7 @@ struct NoLimiter
     {
         return 0.;
     }
+
 };
 
 /**
@@ -171,6 +173,7 @@ cylindrical coordinates
 template< class Matrix = dg::DMatrix, class container=thrust::device_vector<double> >
 struct DZ
 {
+
     /**
     * @brief Construct from a field and a grid
     *
@@ -421,6 +424,7 @@ struct DZ
     container invB;
     
 //     container w2d;
+
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -429,6 +433,7 @@ template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
+
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
         , invB(dg::evaluate(field,grid))
@@ -441,7 +446,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         std::cout << "Computing in 2D mode!\n";
     //Resize vectors to 2D grid size
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    container w2d_( dg::create::weights( g2d));
+//     container w2d_( dg::create::weights( g2d));
     
     unsigned size = g2d.size();
     limiter = dg::evaluate( limit, g2d);
@@ -489,7 +494,10 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
 //         minusHT.values[i] /=double(mcounter[minusHT.row_indices[i]])/g_.n()/g_.n();
 //     }   
 
+    
     plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT; 
+    
+
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
@@ -503,6 +511,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     //
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
+
     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);    
     
 //     for( unsigned i=0; i<size; i++)
@@ -565,6 +574,7 @@ void DZ<M,container>::centered( const container& f, container& dzf)
 //     dg::blas1::pointwiseDot( v3d, tempP, dzf);
 //     dg::blas1::pointwiseDot( dzf, invB, dzf);
     
+
     
 
 }
@@ -590,6 +600,8 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
 //         dg::blas1::axpby( 1., tempM, -1., tempP);        
 //         dg::blas1::pointwiseDot( v3d, tempP, dzf);
         
+
+
 }
 template<class M, class container>
 void DZ<M,container>::centeredTD( const container& f, container& dzf)
@@ -694,23 +706,28 @@ void DZ<M,container>::backwardTD( const container& f, container& dzf)
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
-//     this->operator()( f, tempP);
-//     centeredT( tempP, dzTdzf);
-    forward( f, tempP);
-    forwardT( tempP, dzTdzf);
-    backward( f, tempM);
-    backwardT( tempM, temp0);
-    dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+
+    centered( f, tempP);
+    centeredT( tempP, dzTdzf);
+//     forward( f, tempP);
+//     forwardT( tempP, dzTdzf);
+//     backward( f, tempM);
+//     backwardT( tempM, temp0);
+//     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
 
 //     add jump term 
     dg::blas2::symv( jump, f, tempP);
+
+//       dg::blas1::pointwiseDot( v3d, tempP,tempP); //make it symmetric
+
     dg::blas1::axpby(-1., tempP, 1., dzTdzf);
 
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
 {
+
     assert( &f != &dzzf);
     einsPlus( f, tempP);
     einsMinus( f, tempM);
@@ -724,11 +741,11 @@ void DZ<M,container>::dzz( const container& f, container& dzzf)
     dg::blas1::axpby( -2., temp0, +1., tempM, dzzf); 
 }
 
-
 template< class M, class container>
 template< class BinaryOp>
 container DZ<M,container>::evaluate( BinaryOp binary, unsigned p0)
 {
+
     assert( p0 < g_.Nz() && g_.Nz() > 1);
     const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
     container vec2d = dg::evaluate( binary, g2d);
@@ -753,11 +770,11 @@ container DZ<M,container>::evaluate( BinaryOp binary, unsigned p0)
     }
     return vec3d;
 }
-
 template< class M, class container>
 template< class BinaryOp, class UnaryOp>
 container DZ<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds)
 {
+
     assert( g_.Nz() > 1);
     container vec3d = evaluate( binary, p0);
     const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
@@ -984,6 +1001,4 @@ struct MatrixTraits< DZ<M, V> >
 
 
 }//namespace dg
-
-
 

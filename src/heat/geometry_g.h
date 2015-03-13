@@ -276,29 +276,11 @@ struct DeriNeuT2
     DeriNeuT2( double R_0, double I_0):R_0(R_0), I_0(I_0){}
     double operator()(double R, double Z, double phi)
     {
-        double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
-        double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
-        double fac1 = sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-        double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
-                    M_PI*M_PI*( cos(M_PI*3.*(R-R_0)/2.)+
-                                M_PI*R*sin(M_PI*3.*(R-R_0)/2.)) ;
-        double z2 = cos(M_PI*0.5*(R-R_0)) + 
-                    cos(M_PI*3*(R-R_0)/2) + 
-                    M_PI*R*sin(M_PI*0.5*(R-R_0));
-        double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
-        double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
-    //     double func = -psi*cos(phi);
-        double deri = psi*sin(phi)/dldp;
-        double fac2 = R*(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-        double fac3 = 4*I_0*cos(phi)*fac2/R;
-        double fac4 = 16.*I_0*I_0*cos(M_PI*0.5*(R-R_0))+
-                      M_PI*M_PI*sin(M_PI*0.5*(R-R_0))*
-                      (-M_PI*R*cos(M_PI*(R-R_0))+cos(M_PI*Z))+
-                      sin(M_PI*(R-R_0))*(1+cos(M_PI*Z))
-                      +4*M_PI*M_PI*cos(M_PI*0.5*(R-R_0))*cos(M_PI*0.5*(R-R_0))*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5)*sin(M_PI*Z*0.5);
-        double fac5 = M_PI*sin(phi)*sin(0.5*Z*M_PI)*fac4;
-        double dz2 = 2.*I_0*psi*(fac3+fac5)/fac2/fac2;
-        return divb*deri + dz2;
+        double fac1 = 4.*I_0*cos(0.5*M_PI*(R-R_0))*cos(0.5*M_PI*Z);
+        double fac2 = 8.*I_0*I_0+M_PI*M_PI - M_PI*M_PI*cos(M_PI*(R-R_0))*cos(M_PI*Z);
+        double fac3 = (cos(M_PI*Z)-cos(M_PI*(R-R_0)))*sin(phi)*sin(0.5*M_PI*(R-R_0))*sin(0.5*M_PI*Z);
+        double nenner = R*R*(8.*I_0*I_0+M_PI*M_PI - M_PI*M_PI*cos(M_PI*(R-R_0))*cos(M_PI*Z))*(8.*I_0*I_0+M_PI*M_PI - M_PI*M_PI*cos(M_PI*(R-R_0))*cos(M_PI*Z));
+        return fac1*(2.*I_0*cos(phi)*fac2 + M_PI*M_PI*R*fac3)/nenner;
     }
     private:
     double R_0, I_0;

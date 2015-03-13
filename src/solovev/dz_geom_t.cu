@@ -253,7 +253,7 @@ int main( int argc, char* argv[])
                 double normdiff2=dg::blas2::dot( w3d, diff2); //=  Integral ((gradlnB - dz(ln(B)))^2)
                 double reldiff2 =sqrt( normdiff2/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff2 <<"\n";
-                       std::cout <<"-----(2b) test with gradlnb" << "\n";    
+                std::cout <<"-----(2b) test with gradlnb" << "\n";    
                 dg::DVec dzRlnB(g3d.size());
                 dg::DVec dzZlnB(g3d.size());
                 dg::DVec dzPHIlnB(g3d.size());

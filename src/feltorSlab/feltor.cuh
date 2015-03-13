@@ -203,7 +203,7 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
 template< class Matrix, class container, class P>
 container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    invert_invgamma(invgammaDIR,chi,potential);                    //chi  Gamma phi
+    invert_invgamma(invgammaDIR,chi,potential);                 //chi  = Gamma phi
     poisson.variationRHS(potential, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
@@ -240,10 +240,12 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     //Compute the perp dissipative energy 
     for( unsigned i=0; i<2;i++)
     {
+
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_z(1+lnN)+phi)
 
         //---------- perp dissipation 
+
         dg::blas2::gemv( lapperp, y[i], lambda);
         dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 N_e
@@ -355,6 +357,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
         dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
     }
+
     if (p.zf==1) {
         polavg(logn[0],lambda);       //<ln(ne)> 
         polavg(phi[0],phiavg);        //<phi>

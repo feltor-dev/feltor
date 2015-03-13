@@ -5,16 +5,17 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3   (3)
-2)  nx (grid points in x)                =   20 (192)
-3)  ny (grid points in y)                =  20 (192) 
-4)  nz (grid points in z)                =   10(1)
-5)  dt (time step in units c_s/rho_s)    =  1(0.01)
+2)  nx (grid points in x)                =   51(192)
+3)  ny (grid points in y)                =   51 (192) 
+4)  nz (grid points in z)                =   160 (1)
+
+5)  dt (time step in units c_s/rho_s)    =0.1(0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  20
-8)  ny_out (# grid points in output field)  =  20
-9)  nz_out (# grid points in output field)  =  20
+7)  nx_out (# grid points in output field)  =  5
+8)  ny_out (# grid points in output field)  =  5
+9)  nz_out (# grid points in output field)  =  5
 10) itstp  (steps between outputs)          =  1  (5)
 11) total # of outputs (excluding first)    =  10
 -------------------------Physical parameters----------------------------
@@ -30,7 +31,7 @@
 20) Profile amplitude                       =  0.0  (peak amplitude)
 21) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Boundary condition----------------------------
-22) GLOBAL BC (1 DIR/ 4 NEU)                =  4
+22) GLOBAL BC (1 DIR/ 4 NEU)                = 1
 ----------------------------------Miscellaneous----------------------------
 23) boxscale R+                             =  1.0 (a little larger than 1)
 24) boxscale R-                             =  1.0 (a little larger than 1)
@@ -43,6 +44,6 @@
 ----------------------------------Tor limiter------------------------------
 29) toroidal limiter (0/1)                  =  0                       
 ----------------------------------Algorithmic parameters---------------------
-31)  eps_time ( stop for time inversion )   =   1e-15
+31)  eps_time ( stop for time inversion )   =   1e-5
 
 @ ------------------------------------------------------------

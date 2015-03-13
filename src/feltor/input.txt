@@ -4,6 +4,7 @@
 
 
 @-----------------------------Space and Time discretization------------
+
 1)  n  (# of x,y-polynomials)            =   3      (3)
 2)  nx (grid points in x)                =   20 (192)
 3)  ny (grid points in y)                =   20 (192) 
@@ -30,6 +31,7 @@
 19) nu_perp                                 =  1e-3 
 20) nu_parallel  (viscosity)                =  10      (0.001)
 21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
+
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.025    (1.0)
