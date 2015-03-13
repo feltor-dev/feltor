@@ -8,8 +8,6 @@
 #include "blas.h"
 #include "backend/typedefs.cuh"
 
-using namespace std;
-
 //const double lx = 2.*M_PI;
 //const double ly = 2.*M_PI;
 
@@ -63,12 +61,12 @@ double jacobian( double x, double y)
 int main()
 {
     unsigned n, Nx, Ny;
-    cout << "Type n, Nx and Ny! \n";
-    cin >> n >> Nx >> Ny;
+    std::cout << "Type n, Nx and Ny! \n";
+    std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
-    cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<endl;
-    cout <<fixed<< setprecision(2)<<endl;
+    std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
+    std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
     dg::DVec lhs = dg::evaluate( left, grid), jac(lhs);
     dg::DVec rhs = dg::evaluate( right, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
@@ -77,12 +75,12 @@ int main()
     dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
-    cout << scientific;
-    cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
-    cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
+    std::cout << std::scientific;
+    std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
+    std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
+    std::cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
-    cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
+    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |     
     //n = 2 -> p = 1    |

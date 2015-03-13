@@ -425,6 +425,7 @@ struct DZ
     
 //     container w2d;
 
+
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -439,6 +440,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         , invB(dg::evaluate(field,grid))
 //      ,   w2d(w3d),
 //         hzh( dg::evaluate( dg::zero, grid)), hph( hz), hmh( hz)                                     
+
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);

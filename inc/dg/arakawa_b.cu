@@ -11,8 +11,6 @@
 
 #include "backend/timer.cuh"
 
-using namespace std;
-
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
 //const double lx = 1.;
@@ -48,16 +46,16 @@ int main()
     std::cout << std::fixed<<"\nTEST 2D VERSION!!\n";
     dg::Timer t;
     unsigned n, Nx, Ny;
-    cout << "Type n, Nx and Ny! \n";
-    cin >> n >> Nx >> Ny;
+    std::cout << "Type n, Nx and Ny! \n";
+    std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     dg::DVec w2d = dg::create::weights( grid);
-    cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<endl;
+    std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
     dg::DVec lhs = dg::evaluate ( left, grid), jac(lhs);
     dg::DVec rhs = dg::evaluate ( right,grid);
     const dg::DVec sol = dg::evaluate( jacobian, grid );
     dg::DVec eins = dg::evaluate( dg::one, grid );
-    cout<< setprecision(2);
+    std::cout<< std::setprecision(2);
 
     dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
     unsigned multi=20;
@@ -65,14 +63,14 @@ int main()
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    cout << "Arakawa took "<<t.diff()*1000/(double)multi<<"ms\n";
+    std::cout << "Arakawa took "<<t.diff()*1000/(double)multi<<"ms\n";
 
-    cout << scientific;
-    cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs, w2d, jac)<<"\n";
-    cout << "Mean   n*Jacobian is "<<dg::blas2::dot( lhs, w2d, jac)<<"\n";
+    std::cout << std::scientific;
+    std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
+    std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs, w2d, jac)<<"\n";
+    std::cout << "Mean   n*Jacobian is "<<dg::blas2::dot( lhs, w2d, jac)<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
-    cout << "Distance to solution "<<sqrt(dg::blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
+    std::cout << "Distance to solution "<<sqrt(dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
 
     //periocid bc       |  dirichlet in x per in y
     //n = 1 -> p = 2    |        1.5

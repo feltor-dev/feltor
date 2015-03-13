@@ -240,8 +240,6 @@ int main()
     double fdzf = dg::blas2::dot( function, w3d, derivative);
     double dzTff = dg::blas2::dot( function, w3d, derivativeT);
     double dzfdzf = dg::blas2::dot( derivative, w3d, derivative);
-    double dzTdzf =  dg::blas2::dot( w3d, dzTdz);
-    double dzzf =  dg::blas2::dot( w3d, dzz);
     double fdzTdzf = dg::blas2::dot( function, w3d, dzTdz);
     
 //     dg::blas1::pointwiseDot(cutongrid,solutionT,solutionT);

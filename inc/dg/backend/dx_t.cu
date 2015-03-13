@@ -9,9 +9,6 @@
 #include "weights.cuh"
 
 
-using namespace std;
-using namespace dg;
-
 unsigned n = 3;
 unsigned N = 40;
 const double lx = 2*M_PI;
@@ -31,7 +28,7 @@ bc bcx = NEU;
 */
 double function( double x) { return sin(3./4.*x);}
 double derivative( double x) { return 3./4.*cos(3./4.*x);}
-bc bcx = DIR_NEU;
+dg::bc bcx = dg::DIR_NEU;
 /*
 double function( double x) { return cos(3./4.*x);}
 double derivative( double x) { return -3./4.*sin(3./4.*x);}
@@ -50,14 +47,14 @@ int main ()
     cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_symm_normed<double>( n, N, hx, bcx);
     //cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_minus_normed<double>( n, N, hx, bcx);
 //     cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_plus_normed<double>( n, N, hx, bcx);
-    dg::HVec hv = evaluate( function, g);
+    dg::HVec hv = dg::evaluate( function, g);
     dg::HVec hw = hv;
-    const dg::HVec hu = evaluate( derivative, g);
+    const dg::HVec hu = dg::evaluate( derivative, g);
 
     dg::blas2::symv( hm, hv, hw);
     dg::blas1::axpby( 1., hu, -1., hw);
     
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot( create::weights(g), hw) )<<"\n";
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot( dg::create::weights(g), hw) )<<"\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

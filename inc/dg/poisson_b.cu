@@ -11,8 +11,6 @@
 
 #include "backend/timer.cuh"
 
-using namespace std;
-using namespace dg;
 
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
@@ -46,36 +44,36 @@ double jacobian( double x, double y)
 
 int main()
 {
-    Timer t;
+    dg::Timer t;
     unsigned n, Nx, Ny;
-    cout << "Type n, Nx and Ny! \n";
-    cin >> n >> Nx >> Ny;
-    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    std::cout << "Type n, Nx and Ny! \n";
+    std::cin >> n >> Nx >> Ny;
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     //S2D<double > s2d( grid);
-    DVec w2d = create::weights( grid);
-    cout << "# of 2d cells                     " << Nx*Ny <<endl;
-    cout << "# of Legendre nodes per dimension "<< n <<endl;
-    DVec lhs = evaluate ( left, grid), jac(lhs);
-    DVec rhs = evaluate ( right,grid);
-    const DVec sol = evaluate( jacobian, grid );
-    DVec eins = evaluate( one, grid );
-    cout<< setprecision(2);
+    dg::DVec w2d = dg::create::weights( grid);
+    std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
+    std::cout << "# of Legendre nodes per dimension "<< n <<std::endl;
+    dg::DVec lhs = dg::evaluate ( left, grid), jac(lhs);
+    dg::DVec rhs = dg::evaluate ( right,grid);
+    const dg::DVec sol = dg::evaluate( jacobian, grid );
+    dg::DVec eins = dg::evaluate( dg::one, grid );
+    std::cout<< std::setprecision(2);
 
 
-    Poisson<dg::DMatrix, DVec> poiss( grid);
+    dg::Poisson<dg::DMatrix, dg::DVec> poiss( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)
         poiss( lhs, rhs, jac);
     t.toc();
-    cout << "\nArakawa took "<<t.diff()*1000/(double)multi<<"ms\n\n";
+    std::cout << "\nArakawa took "<<t.diff()*1000/(double)multi<<"ms\n\n";
 
-    cout << scientific;
-    cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs, w2d, jac)<<"\n";
-    cout << "Mean   n*Jacobian is "<<blas2::dot( lhs, w2d, jac)<<"\n";
-    blas1::axpby( 1., sol, -1., jac);
-    cout << "Distance to solution "<<sqrt(blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
+    std::cout << std::scientific;
+    std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
+    std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs, w2d, jac)<<"\n";
+    std::cout << "Mean   n*Jacobian is "<<dg::blas2::dot( lhs, w2d, jac)<<"\n";
+    dg::blas1::axpby( 1., sol, -1., jac);
+    std::cout << "Distance to solution "<<sqrt(dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
 
     //periocid bc       |  dirichlet in x per in y
     //n = 1 -> p = 2    |        1.5

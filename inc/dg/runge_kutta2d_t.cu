@@ -9,12 +9,6 @@
 #include "runge_kutta.h"
 #include "backend/typedefs.cuh"
 
-//#include "cg.cuh"
-//#include "laplace.cuh"
-//#include "tensor.cuh"
-
-using namespace std;
-
 const unsigned n = 3;
 const unsigned Nx = 20;
 const unsigned Ny = 20;
@@ -57,11 +51,11 @@ int main()
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     dg::DVec w2d = dg::create::weights( grid);
     //Also test std::vector<DVec> functionality
-    cout << "# of 2d cells                     " << Nx*Ny <<endl;
-    cout << "# of Legendre nodes per dimension "<< n <<endl;
-    cout << "# of timesteps                    "<< NT <<endl;
+    std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
+    std::cout << "# of Legendre nodes per dimension "<< n <<std::endl;
+    std::cout << "# of timesteps                    "<< NT <<std::endl;
     dg::DVec init = dg::evaluate ( initial, grid );
-    const dg::DVec solution = evaluate ( result, grid);
+    const dg::DVec solution = dg::evaluate ( result, grid);
     std::vector<dg::DVec> y0( 2, init), y1(y0);
 
     RHS<dg::DVec> rhs( grid);
@@ -74,8 +68,8 @@ int main()
     }
 
     dg::blas1::axpby( 1., solution, -1., y0[0]);
-    cout << scientific;
-    cout << "Norm of error is "<<sqrt(dg::blas2::dot( w2d, y0[0]))<<"\n"; //never forget the sqrt when computing errors
+    std::cout << std::scientific;
+    std::cout << "Norm of error is "<<sqrt(dg::blas2::dot( w2d, y0[0]))<<"\n"; //never forget the sqrt when computing errors
     //n = 1 -> p = 2 ( as it should be )
     //n = 2 -> p = 1 (is error dominated by error for dx(phi)?
     //n = 3 -> p = 3 
