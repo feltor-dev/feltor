@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <vector>
 
+#include "dg/blas.h"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/functors.h"
