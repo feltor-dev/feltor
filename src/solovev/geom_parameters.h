@@ -19,7 +19,7 @@ struct GeomParameters
            elongation, //!< elongation of the magnetic surfaces
            triangularity, //!< triangularity of the magnetic surfaces
            alpha, //!< damping width
-           rk4eps,  //!< accuracy for the 
+           rk4eps,  //!< accuracy for the field line integration
            psipmin, //!< for source 
            psipmax, //!< for profile
            psipmaxcut, //!< for cutting
