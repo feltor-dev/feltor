@@ -9,6 +9,8 @@
 
 namespace toefl{
 
+    ///@addtogroup solvers
+    ///@{
 void axpby(double alpha,  const Matrix<double, TL_DFT>& x, double beta, Matrix<double, TL_DFT>& y)
 {
     for( unsigned i=0; i<x.rows(); i++)
@@ -307,4 +309,5 @@ std::vector<double> Energetics<n>::diffusion( const std::array<Matrix<double, TL
     }
     return diffusion_;
 }
+///@}
 } //namespace toefl

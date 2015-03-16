@@ -5,6 +5,8 @@
 #include "equations.h"
 #include "blueprint.h"
 
+///@addtogroup solvers
+///@{
 struct ParticleDensity
 {
     typedef toefl::Matrix<double, toefl::TL_DFT> Matrix_Type;
@@ -136,6 +138,7 @@ void ParticleDensity::laplace( Matrix_Type& phi)
         }
     dft_dft.c2r( cgrad_phi[0], phi);
 }
+///@}
 
 
 #endif //_TL_PARTICLE_DENSITY_

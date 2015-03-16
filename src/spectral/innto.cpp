@@ -5,7 +5,6 @@
 
 #include "toefl/toefl.h"
 #include "file/read_input.h"
-//#include "utility.h"
 #include "draw/host_window.h"
 #include "dft_dft_solver.h"
 #include "drt_dft_solver.h"
