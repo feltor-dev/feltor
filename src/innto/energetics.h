@@ -163,6 +163,7 @@ struct Energetics
     double g_[3]; 
 };
 ///////////////////////////////////////////////////////
+///@cond
 template<size_t n>
 std::vector<double> Energetics<n>::thermal_energies(const std::array<Matrix<double, TL_DFT>, n>& density )
 {
@@ -309,5 +310,6 @@ std::vector<double> Energetics<n>::diffusion( const std::array<Matrix<double, TL
     }
     return diffusion_;
 }
+///@endcond
 ///@}
 } //namespace toefl

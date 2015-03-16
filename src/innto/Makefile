@@ -54,5 +54,10 @@ generator_hw: generator_hw.cpp
 	g++ generator_hw.cpp -o generator_hw -std=c++0x
 	./generator_hw
 
+.PHONY: clean doc
+
 clean:
 	rm -f *_t *_b innto innblobs innto_hpc
+
+doc: 
+	doxygen Doxyfile
