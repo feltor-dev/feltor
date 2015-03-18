@@ -414,7 +414,7 @@ struct DZ
     Matrix plus, minus, plusT, minusT; //interpolation matrices
     Matrix jump;
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
-//     container hzh, hph,hmh;
+    container hzh, hph,hmh;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
@@ -423,7 +423,7 @@ struct DZ
     container w3d, v3d;
     container invB;
     
-//     container w2d;
+    container w2d;
 
 
 };
@@ -438,8 +438,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
         , invB(dg::evaluate(field,grid))
-//      ,   w2d(w3d),
-//         hzh( dg::evaluate( dg::zero, grid)), hph( hz), hmh( hz)                                     
+     ,   w2d(w3d),
+        hzh( dg::evaluate( dg::zero, grid)), hph( hz), hmh( hz)                                     
 
 {
 
@@ -448,7 +448,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         std::cout << "Computing in 2D mode!\n";
     //Resize vectors to 2D grid size
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-//     container w2d_( dg::create::weights( g2d));
+    container w2d_( dg::create::weights( g2d));
     
     unsigned size = g2d.size();
     limiter = dg::evaluate( limit, g2d);
@@ -506,7 +506,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());
         
-//         thrust::copy( w2d_.begin(), w2d_.end(), w2d.begin() + i*g2d.size());
+        thrust::copy( w2d_.begin(), w2d_.end(), w2d.begin() + i*g2d.size());
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);
@@ -518,10 +518,11 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     
 //     for( unsigned i=0; i<size; i++)
 //     {
-//         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+//         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]+deltaPhi/2.;
 //         double phi1 = deltaPhi/2.;
 //         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
 //         phi1 =  - deltaPhi/2.;
+//         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]-deltaPhi/2.;
 //         boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
 //         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
 //         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
@@ -584,15 +585,21 @@ void DZ<M,container>::centered( const container& f, container& dzf)
 template<class M, class container>
 void DZ<M,container>::centeredT( const container& f, container& dzf)
 {               
-    //adjoint discretisation
+//     //adjoint discretisation
         assert( &f != &dzf);    
         dg::blas1::pointwiseDot( w3d, f, dzf);
         dg::blas1::pointwiseDivide( dzf, hz, dzf);
+        
+
+
         einsPlusT( dzf, tempP);
         einsMinusT( dzf, tempM);
         dg::blas1::axpby( 1., tempM, -1., tempP);        
         dg::blas1::pointwiseDot( v3d, tempP, dzf);
-        
+   
+
+//       dg::blas1::pointwiseDot( v3d, tempP,tempP); //make it symmetric
+        //stegmeir weights
 //         dg::blas1::pointwiseDot( hzh, f, dzf);
 //         dg::blas1::pointwiseDot( invB, dzf, dzf);
 //         dg::blas1::pointwiseDot( w2d, dzf, dzf);
@@ -601,7 +608,10 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
 //         einsMinusT( dzf, tempM);
 //         dg::blas1::axpby( 1., tempM, -1., tempP);        
 //         dg::blas1::pointwiseDot( v3d, tempP, dzf);
-        
+//         dg::blas1::scal(dzf,0.5);
+//         dg::blas1::pointwiseDivide( tempP,hzh,  dzf);
+//         dg::blas1::pointwiseDivide(  dzf,invB, dzf);
+//         dg::blas1::pointwiseDivide( dzf,w2d,  dzf);  
 
 
 }
@@ -719,11 +729,11 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
 
 //     add jump term 
-    dg::blas2::symv( jump, f, tempP);
+    dg::blas2::symv( jump, f, temp0);
 
-//       dg::blas1::pointwiseDot( v3d, tempP,tempP); //make it symmetric
+//       dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
 
-    dg::blas1::axpby(-1., tempP, 1., dzTdzf);
+    dg::blas1::axpby(-1., temp0, 1., dzTdzf);
 
 }
 template< class M, class container >

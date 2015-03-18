@@ -5,7 +5,7 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3   (3)
-2)  nx (grid points in x)                =   51(192)
+2)  nx (grid points in x)                =  51(192)
 3)  ny (grid points in y)                =   51 (192) 
 4)  nz (grid points in z)                =   160 (1)
 

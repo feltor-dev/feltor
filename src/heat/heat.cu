@@ -79,28 +79,28 @@ int main( int argc, char* argv[])
     dg::DVec v3d_ = dg::create::inv_weights( grid);
     dg::DVec x = dg::evaluate( dg::zero, grid);
     //set up the parallel diffusion
-    dg::GeneralElliptic<dg::DMatrix, dg::DVec, dg::DVec> elliptic( grid, dg::not_normed, dg::centered);
+//     dg::GeneralElliptic<dg::DMatrix, dg::DVec, dg::DVec> elliptic( grid, dg::not_normed, dg::centered);
     dg::DVec bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),grid);
-    elliptic.set_x( bfield);
-    bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),grid);
-    elliptic.set_y( bfield);
-    bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),grid);
-    elliptic.set_z( bfield);
-//     
-//     dg::GeneralEllipticSym<dg::DMatrix, dg::DVec, dg::DVec> ellipticsym( grid, dg::not_normed, dg::forward);
-//     bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),grid);
-//     ellipticsym.set_x( bfield);
+//     elliptic.set_x( bfield);
 //     bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),grid);
-//     ellipticsym.set_y( bfield);
+//     elliptic.set_y( bfield);
 //     bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),grid);
-//     ellipticsym.set_z( bfield);
+//     elliptic.set_z( bfield);
+//     
+    dg::GeneralEllipticSym<dg::DMatrix, dg::DVec, dg::DVec> ellipticsym( grid, dg::not_normed, dg::forward);
+    bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),grid);
+    ellipticsym.set_x( bfield);
+    bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),grid);
+    ellipticsym.set_y( bfield);
+    bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),grid);
+    ellipticsym.set_z( bfield);
 //     
     
-    double eps =1e-14;   
+    double eps =1e-12;   
     dg::Invert< dg::DVec> invert( x, w3d_.size(), eps );  
     std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
     const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), grid);
-    std::cout << " # of iterations "<< invert( elliptic, x, rhs ) << std::endl; //is dzTdz
+    std::cout << " # of iterations "<< invert( ellipticsym, x, rhs ) << std::endl; //is dzTdz
     dg::DVec solution = dg::evaluate( solovev::FuncNeu(gp.R_0, gp.I_0),grid);
     double normf = dg::blas2::dot( w3d_, solution);
     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
