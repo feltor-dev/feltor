@@ -9,7 +9,7 @@
 3)  ny (grid points in y)                =  20(192) 
 4)  nz (grid points in z)                =  20 (1)
 
-5)  dt (time step in units c_s/rho_s)    =0.01(0.01)
+5)  dt (time step in units c_s/rho_s)    =0.001(0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
@@ -39,7 +39,7 @@
 26) boxscale Z-                             =  1.0 (a little larger than 1)
 27) adv (adj(0), nadj(1), onadj(2),no(3))   =  3
 27) diff (a(0), na(1),
-          ona(2),d(3), da(4),no(5)))        = 4
+          ona(2),d(3), da(4),no(5)))        = 3
 28) diffperp (lap(0), lap2(1) )             = 1
 ----------------------------------Tor limiter------------------------------
 29) toroidal limiter (0/1)                  =  0                       
