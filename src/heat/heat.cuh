@@ -34,40 +34,40 @@ struct Rolkar
         p(p),
         gp(gp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
-        dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx())
-//         ,elliptic( g, dg::normed, dg::centered)
+        dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+        elliptic( g, dg::normed, dg::forward)
 
     {
-//         container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
-//         elliptic.set_x( bfield);
-//         bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),g);
-//         elliptic.set_y( bfield);
-//         bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
-//         elliptic.set_z( bfield);
+        container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
+        elliptic.set_x( bfield);
+        bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),g);
+        elliptic.set_y( bfield);
+        bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
+        elliptic.set_z( bfield);
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
-//         dg::blas1::axpby( 0., x, 0, y);
-//         if (p.p_diff ==4)    {
-//         dg::blas2::gemv( elliptic, x[0], y[0]); //lap is negative
-//         dg::blas1::scal(y[0], -p.nu_parallel );  
-//         }
-//         if (p.p_diff ==0)    {
-//           dg::blas2::gemv( dzNU_, x[0], y[0]); 
-//           dg::blas1::scal(y[0], p.nu_parallel );  
-//       }
+        dg::blas1::axpby( 0., x, 0, y);
+        if (p.p_diff ==4)    {
+            dg::blas2::gemv( elliptic, x[0], y[0]); //lap is negative
+            dg::blas1::scal(y[0], -p.nu_parallel );  
+        }
+        if (p.p_diff ==0)    {
+          dg::blas2::gemv( dzNU_, x[0], y[0]); 
+          dg::blas1::scal(y[0], p.nu_parallel );  
+       }
 //       
     }
     const container& damping(){return dampprof_;}
-//     const Preconditioner& weights(){return elliptic.weights();}
-//     const Preconditioner& precond(){return elliptic.precond();}
+    const Preconditioner& weights(){return elliptic.weights();}
+    const Preconditioner& precond(){return elliptic.precond();}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
     const container dampprof_;
     dg::DZ<Matrix, container> dzNU_;
 
-//     dg::GeneralElliptic<Matrix, container, Preconditioner> elliptic;
+    dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
 
 };
 
@@ -105,10 +105,9 @@ struct Feltor
     const Preconditioner w3d, v3d;
 
     //matrices and solvers
-    dg::DZ<Matrix, container> dzNU_;
+    dg::DZ<Matrix, container> dzNU_,dzDIR_;
 
-    dg::Elliptic< Matrix, container, Preconditioner > lapperp; 
-//     dg::GeneralElliptic<Matrix, container, Preconditioner> elliptic;
+//     dg::Elliptic< Matrix, container, Preconditioner > lapperp; 
 
     const eule::Parameters p;
     const solovev::GeomParameters gp;
@@ -129,19 +128,12 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
     dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
-    lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
-//     elliptic( g, dg::not_normed, dg::forward),    
+    dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
+//     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     p(p),
     gp(gp),
     evec(1)
-{ 
-//     container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
-//     elliptic.set_x( bfield);
-//     bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),g);
-//     elliptic.set_y( bfield);
-//     bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
-//     elliptic.set_z( bfield);
-    
+{  
 }
 
 
@@ -160,15 +152,15 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 
     //perp energy
 
-    if (p.p_diffperp==0)    {
-        dg::blas2::gemv( lapperp, y[0], lambda);
-        Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda); 
-    }
-    if (p.p_diffperp==1)    {
-        dg::blas2::gemv( lapperp, y[0], lambda);
-        dg::blas2::gemv( lapperp, lambda, omega); //hyper
-        Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, omega); //hyper 
-    }
+//     if (p.p_diffperp==0)    {
+//         dg::blas2::gemv( lapperp, y[0], lambda);
+//         Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, lambda); 
+//     }
+//     if (p.p_diffperp==1)    {
+//         dg::blas2::gemv( lapperp, y[0], lambda);
+//         dg::blas2::gemv( lapperp, lambda, omega); //hyper
+//         Dperp[0] = -p.nu_perp*dg::blas2::dot(one, w3d, omega); //hyper 
+//     }
     if (p.p_torlim == 1)  {
          dzNU_.set_boundaries( p.bc, 0, 0); 
     }
@@ -176,14 +168,14 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     //     (A) adjoint
 //         dzNU_( y[0], omega); 
 //         dzNU_.centeredT(omega,lambda);
-        dzNU_.forward( y[0], omega); 
-        dzNU_.forwardT(omega,lambda);
-        dg::blas1::axpby( 0.5, lambda, 0.,chi,chi); 
-
-        dzNU_.backward( y[0], omega); 
-        dzNU_.backwardT(omega,lambda);
-        dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
-        Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi);
+//         dzNU_.forward( y[0], omega); 
+//         dzNU_.forwardT(omega,lambda);
+//         dg::blas1::axpby( 0.5, lambda, 0.,chi,chi); 
+// 
+//         dzNU_.backward( y[0], omega); 
+//         dzNU_.backwardT(omega,lambda);
+//         dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
+//         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi);
     }  
     if (p.p_diff ==1)    {
         // (B) nonadjoint
@@ -206,11 +198,11 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     if (p.p_diff ==3)    {
         // (D) nonadjoint with direct method
         dzNU_.forward( y[0], omega); 
-        dzNU_.forwardTD(omega,lambda);
+        dzDIR_.forwardTD(omega,lambda);
         dg::blas1::axpby( 0.5, lambda, 0.,chi,chi); 
 
         dzNU_.backward( y[0], omega); 
-        dzNU_.backwardTD(omega,lambda);
+        dzDIR_.backwardTD(omega,lambda);
         dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi); 
     }
@@ -229,8 +221,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     t.tic();
     assert( y.size() == 1);
     assert( y.size() == yp.size());
-
-    if (p.p_diffperp==0) {
+    dg::blas1::scal(yp[0],0.0);
+/*    if (p.p_diffperp==0) {
         dg::blas2::gemv( lapperp, y[0], omega); //lap is negative
         dg::blas1::axpby( -p.nu_perp, omega, 0., yp[0]);  
     }
@@ -238,100 +230,100 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas2::gemv( lapperp, y[0], omega); //lap is negative
         dg::blas2::gemv( lapperp, omega, lambda); //hyper
         dg::blas1::axpby( -p.nu_perp, lambda, 0., yp[0]);  //hyper 
-    }   
+    }  */ 
 
-    if (p.p_torlim == 1)  {
-         dzNU_.set_boundaries( p.bc, 0, 0); 
-    }   
-//-----------------------parallel adv------------------------
-    if (p.p_adv ==0)  {
-        // (A) adjoint
-        //U=v_parallel gradlnB
-    //     dg::blas1::pointwiseDot(y[0], gradlnB, lambda);
-    //     dzNU_.centeredT(lambda,omega);    
-    //     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[0]); 
-
-        //U=1.  
-        //centered
-        dg::blas1::pointwiseDot(y[0],pupil,lambda);    //U*T  
-        dzNU_.centeredT(lambda,omega);    // dzT UT
-//         dzNU_.backwardT(lambda,omega);
-//         dzNU_.forwardT(lambda,omega);   
-        dg::blas1::axpby( -1.0, omega, 1., yp[0]); //dzT (UT)
-
-        //corr(1): div(UB) 
-//         dg::blas1::pointwiseDivide(pupil,binv,omega); //= U B
-//         dzNU_.centeredT(omega,lambda);     //div UB
-//         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
-        
-        //corr(2): div(B) 
-//         dg::blas1::pointwiseDivide(one,binv,omega); //= U B
-//         dzNU_.centeredT(omega,lambda);     //div UB
-//         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
-        
-        //corr(3): UT/B divB 
-    //     dg::blas1::pointwiseDivide(one,binv,omega); //=  B
-    //     dzNU_.centeredT(omega,lambda);     //div B
-    //     dg::blas1::pointwiseDot(y[0],binv,omega); //T/B
-    //     dg::blas1::pointwiseDot(omega,pupil,omega); // U T/B
-    //     dg::blas1::pointwiseDot(omega,lambda,lambda); //  UT/B divB
-    //     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ UT/B div UB
-
-        //corr(4): U  divB
-//         dg::blas1::pointwiseDivide(one,binv,omega); //=  B
-//         dzNU_.centeredT(omega,lambda);     //div B
-//         dg::blas1::pointwiseDot(pupil,lambda,lambda); //  U divB
-//         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ U div UB
-    }
-    if (p.p_adv ==1)    {
-        // (B) nonadjoint U=1
-        dg::blas1::pointwiseDot(y[0],pupil,lambda);    //UT
-        dzNU_(lambda,omega);    //Dz UT
-        dg::blas1::axpby( -1.0, omega, 1., yp[0]); //-  dz U T
-        dzNU_( binv, lambda); //gradpar 1/B
-        dg::blas1::pointwiseDivide(lambda,  binv, lambda); //-dz lnB  
-        dg::blas1::pointwiseDot(y[0],pupil,omega);    //=  U T  
-        dg::blas1::pointwiseDot(omega,  lambda, omega); //-U T dz lnB  
-        dg::blas1::axpby( -1.0, omega, 1., yp[0]); //UT dzlnB
-    }
-    if (p.p_adv ==2)    {
-        // (C) oldnonadjoint U=1
-        dg::blas1::pointwiseDot(y[0],pupil,lambda);    // UT
-        dzNU_(lambda,omega);    //  dz U T
-        dg::blas1::axpby( -1.0, omega, 1., yp[0]); //-  dz U T
-        dg::blas1::pointwiseDot(lambda,  gradlnB, omega); //U T dz lnB  
-        dg::blas1::axpby( 1.0, omega, 1., yp[0]); //UT dzlnB
-    }
-//-----------------------parallel dissi------------------------
-    if (p.p_diff ==0)    {
-// //         centered
-// //         dzNU_( y[0], omega); 
-// //         dzNU_.centeredT(omega,lambda);
-// //         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+//     if (p.p_torlim == 1)  {
+//          dzNU_.set_boundaries( p.bc, 0, 0); 
+//     }   
+// //-----------------------parallel adv------------------------
+//     if (p.p_adv ==0)  {
+//         // (A) adjoint
+//         //U=v_parallel gradlnB
+//     //     dg::blas1::pointwiseDot(y[0], gradlnB, lambda);
+//     //     dzNU_.centeredT(lambda,omega);    
+//     //     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[0]); 
 // 
-//         //forward, backward (stegi)
-//         dzNU_.forward( y[0], omega); 
-//         dzNU_.forwardT(omega,lambda);
-//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+//         //U=1.  
+//         //centered
+//         dg::blas1::pointwiseDot(y[0],pupil,lambda);    //U*T  
+//         dzNU_.centeredT(lambda,omega);    // dzT UT
+// //         dzNU_.backwardT(lambda,omega);
+// //         dzNU_.forwardT(lambda,omega);   
+//         dg::blas1::axpby( -1.0, omega, 1., yp[0]); //dzT (UT)
 // 
-//         dzNU_.backward( y[0], omega); 
-//         dzNU_.backwardT(omega,lambda);
-//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+//         //corr(1): div(UB) 
+// //         dg::blas1::pointwiseDivide(pupil,binv,omega); //= U B
+// //         dzNU_.centeredT(omega,lambda);     //div UB
+// //         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
+//         
+//         //corr(2): div(B) 
+// //         dg::blas1::pointwiseDivide(one,binv,omega); //= U B
+// //         dzNU_.centeredT(omega,lambda);     //div UB
+// //         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
+//         
+//         //corr(3): UT/B divB 
+//     //     dg::blas1::pointwiseDivide(one,binv,omega); //=  B
+//     //     dzNU_.centeredT(omega,lambda);     //div B
+//     //     dg::blas1::pointwiseDot(y[0],binv,omega); //T/B
+//     //     dg::blas1::pointwiseDot(omega,pupil,omega); // U T/B
+//     //     dg::blas1::pointwiseDot(omega,lambda,lambda); //  UT/B divB
+//     //     dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ UT/B div UB
+// 
+//         //corr(4): U  divB
+// //         dg::blas1::pointwiseDivide(one,binv,omega); //=  B
+// //         dzNU_.centeredT(omega,lambda);     //div B
+// //         dg::blas1::pointwiseDot(pupil,lambda,lambda); //  U divB
+// //         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ U div UB
+//     }
+//     if (p.p_adv ==1)    {
+//         // (B) nonadjoint U=1
+//         dg::blas1::pointwiseDot(y[0],pupil,lambda);    //UT
+//         dzNU_(lambda,omega);    //Dz UT
+//         dg::blas1::axpby( -1.0, omega, 1., yp[0]); //-  dz U T
+//         dzNU_( binv, lambda); //gradpar 1/B
+//         dg::blas1::pointwiseDivide(lambda,  binv, lambda); //-dz lnB  
+//         dg::blas1::pointwiseDot(y[0],pupil,omega);    //=  U T  
+//         dg::blas1::pointwiseDot(omega,  lambda, omega); //-U T dz lnB  
+//         dg::blas1::axpby( -1.0, omega, 1., yp[0]); //UT dzlnB
+//     }
+//     if (p.p_adv ==2)    {
+//         // (C) oldnonadjoint U=1
+//         dg::blas1::pointwiseDot(y[0],pupil,lambda);    // UT
+//         dzNU_(lambda,omega);    //  dz U T
+//         dg::blas1::axpby( -1.0, omega, 1., yp[0]); //-  dz U T
+//         dg::blas1::pointwiseDot(lambda,  gradlnB, omega); //U T dz lnB  
+//         dg::blas1::axpby( 1.0, omega, 1., yp[0]); //UT dzlnB
+//     }
+// //-----------------------parallel dissi------------------------
+//     if (p.p_diff ==0)    {
+// // //         centered
+// // //         dzNU_( y[0], omega); 
+// // //         dzNU_.centeredT(omega,lambda);
+// // //         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+// // 
+// //         //forward, backward (stegi)
+// //         dzNU_.forward( y[0], omega); 
+// //         dzNU_.forwardT(omega,lambda);
+// //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+// // 
+// //         dzNU_.backward( y[0], omega); 
+// //         dzNU_.backwardT(omega,lambda);
+// //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+// //         //with jump
+// //        dzNU_.symv(y[0],lambda);
+// // //        dg::blas1::pointwiseDot(w3d,lambda,lambda);
+// //        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+// // 
+// //         dzNU_.backward( y[0], omega); 
+// //         dzNU_.backwardT(omega,lambda);
+// //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
 //         //with jump
-//        dzNU_.symv(y[0],lambda);
-// //        dg::blas1::pointwiseDot(w3d,lambda,lambda);
-//        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+// //        dzNU_.symv(y[0],lambda);
+// // //        dg::blas1::pointwiseDot(v3d,lambda,lambda);
+// //        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 // 
-//         dzNU_.backward( y[0], omega); 
-//         dzNU_.backwardT(omega,lambda);
-//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
-        //with jump
-//        dzNU_.symv(y[0],lambda);
-// //        dg::blas1::pointwiseDot(v3d,lambda,lambda);
-//        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
-
-
-    }
+// 
+//     }
     if (p.p_diff ==1)    {
         // (B) nonadjoint
         dzNU_( binv, lambda); //gradpar 1/B

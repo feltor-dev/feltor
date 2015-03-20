@@ -15,7 +15,9 @@
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "dg/runge_kutta.h"
-
+#include "dg/multistep.h"
+#include "dg/elliptic.h"
+#include "dg/cg.h"
 // #include "solovev/geometry.h"
 #include "geometry_g.h"
 #include "parameters.h"
@@ -80,8 +82,12 @@ int main( int argc, char* argv[])
 
     // /////////////////////get last temperature field of sim
     double normTend=0.,normTendc=1e-14;
-    dg::HVec Tend(dg::evaluate(dg::zero,grid_out));
-    dg::HVec Tendc(dg::evaluate(dg::zero,grid));
+    dg::DVec Tend(dg::evaluate(dg::zero,grid_out));
+    dg::DVec Tendc(dg::evaluate(dg::zero,grid));
+        dg::DVec transfer(  dg::evaluate(dg::zero, grid));
+    dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferHc( dg::evaluate(dg::zero, grid));
     int  tvarID;
     if (argc == 5)
     {
@@ -111,7 +117,8 @@ int main( int argc, char* argv[])
         int dataIDsin[1]; 
         int dim_idsin[4];
         errin = nc_inq_varid(ncidin, namesin[0].data(), &dataIDsin[0]);      
-        errin = nc_get_vara_double( ncidin, dataIDsin[0], start3din, count3din, Tend.data());
+        errin = nc_get_vara_double( ncidin, dataIDsin[0], start3din, count3din, transferH.data());
+        Tend=(dg::DVec)transferH;
         errin = nc_close(ncidin);     
         normTend = dg::blas2::dot( w3dout, Tend);
     }
@@ -148,9 +155,12 @@ int main( int argc, char* argv[])
 
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     
-//     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    //RK solver
+//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+    //SIRK solver
+    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+//     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
-        dg::RK<4, std::vector<dg::DVec> >  rk( y0);
 
     feltor.energies( y0);//now energies and potential are at time 0
     dg::DVec T0 = dg::evaluate( dg::one, grid);  
@@ -206,23 +216,20 @@ int main( int argc, char* argv[])
     std::cout << "First output ... \n";
     size_t start[4] = {0, 0, 0, 0};
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
-    dg::DVec transfer(  dg::evaluate(dg::zero, grid));
-    dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
-    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
-    dg::HVec transferHc( dg::evaluate(dg::zero, grid));
+
     dg::HVec avisual( grid_out.size(), 0.);
 
     //interpolate coarse grid on fine grid
-    dg::HMatrix interpolate = dg::create::interpolation( grid_out, grid);
+    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid);
 //     cusp::ell_matrix<int, double, cusp::device_memory> interpolate = dg::create::ell_interpolation( grid_out, grid);
     //interpolate fine grid on coarse grid
-    dg::HMatrix interpolatec = dg::create::interpolation( grid, grid_out);
+//     dg::HMatrix interpolatec = dg::create::interpolation( grid, grid_out);
 //     cusp::ell_matrix<int, double, cusp::device_memory> interpolatec = dg::create::ell_interpolation( grid, grid_out); 
     
     dg::blas2::symv( interpolate, y0[0], transferD);
     err = nc_open(argv[3], NC_WRITE, &ncid);
-//     transferH =transferD;
-    transferH =y0[0];
+    transferH =transferD;
+//     transferH =y0[0]; //without interp
     err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
         
         
@@ -243,9 +250,9 @@ int main( int argc, char* argv[])
         Tendc=Tend;
         normTendc=dg::blas2::dot(w3d,Tendc);
 
-        transferHc = (dg::HVec) y0[0];
-        dg::blas1::axpby( 1., transferHc, -1.,Tendc,transferHc);
-        relerror = sqrt(dg::blas2::dot( w3d, transferHc)/normTendc);  
+//         transferHc = (dg::HVec) y0[0];
+        dg::blas1::axpby( 1., y0[0], -1.,Tendc,transferD);
+        relerror = sqrt(dg::blas2::dot( w3d, transferD)/normTendc);  
         //if in is finer
 //         dg::blas1::axpby( 1., transferH, -1.,Tend,transferH);
 //         relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);  
@@ -285,7 +292,9 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
-                rk( feltor, y0, y1, p.dt);
+//                 rk( feltor, y0, y1, p.dt); //RK stepper
+                sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
+//                 karniadakis( feltor, rolkar, y0);  //Karniadakis stepper
                 y0.swap( y1);}
               catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
@@ -312,11 +321,11 @@ int main( int argc, char* argv[])
 //                 dg::blas2::symv( interpolatec, Tend, Tendc);
 //                 normTendc=dg::blas2::dot(w3d,Tendc);
                 Tendc=Tend;
-                                normTendc=dg::blas2::dot(w3d,Tendc);
+                normTendc=dg::blas2::dot(w3d,Tendc);
 
-                transferHc =(dg::HVec) y0[0];
-                dg::blas1::axpby( 1., transferHc, -1.,Tendc,transferHc);
-                relerror = sqrt(dg::blas2::dot( w3d, transferHc)/normTendc);  
+//                 transferHc =(dg::HVec) y0[0];
+                dg::blas1::axpby( 1., y0[0], -1.,Tendc,transferD);
+                relerror = sqrt(dg::blas2::dot( w3d, transferD)/normTendc);  
             }
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
@@ -349,8 +358,8 @@ int main( int argc, char* argv[])
         start[0] = i;
 
         dg::blas2::symv( interpolate, y0[0], transferD);
-//         transferH =transferD;
-        transferH =y0[0];
+        transferH =transferD;
+//         transferH =y0[0];
         err = nc_open(argv[3], NC_WRITE, &ncid);
 //         transferH = avisual;
         err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());

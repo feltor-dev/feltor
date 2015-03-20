@@ -65,19 +65,28 @@ int main( )
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
+        unsigned Nxn = Nx;
+        unsigned Nyn = Ny;
+        unsigned Nzn = Ny;
 
-//         Nx=
     double rk4eps;
     std::cout << "Type RK4 eps (1e-8)\n";
     std::cin >> rk4eps;
     double z0 = 0, z1 = 2.*M_PI;
     for (unsigned i=0;i<6;i++) { 
-        std::cout << "Nphi = " << Nz*pow(2,i) << std::endl;
-        std::cout << "NR = " << (unsigned)ceil(Nx*pow(2,(double)(i*2./n))) << std::endl;
-        std::cout << "NZ = " <<(unsigned)ceil( Ny*pow(2,(double)(i*2./n))) << std::endl;
+
+       Nzn = unsigned(Nz*pow(2,i));
+
+        
     
-    dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, (unsigned)ceil(Nx*pow(2,(double)(i*2./n))) ,(unsigned)ceil( Ny*pow(2,(double)(i*2./n))), Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
-    dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n,  (unsigned)ceil(Nx*pow(2,(double)(i*2./n))) , (unsigned)ceil( Ny*pow(2,(double)(i*2./n))));
+    dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+    dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
+
+        std::cout << "NR = " << Nxn << std::endl;
+        std::cout << "NZ = " << Nyn<< std::endl;
+        std::cout << "Nphi = " << Nzn << std::endl;
+           Nxn = (unsigned)ceil(Nxn*pow(2,(double)(2./n)));
+    Nyn = (unsigned)ceil( Nyn*pow(2,(double)(2./n)));
 //        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
 //     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
     const dg::DVec w3d = dg::create::weights( g3d);
@@ -87,7 +96,7 @@ int main( )
     std::cout << "computing dzDIR" << std::endl;
     dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dzNEU" << std::endl;
-    dg::DZ<dg::DMatrix, dg::DVec> dzNU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
+//     dg::DZ<dg::DMatrix, dg::DVec> dzNU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
 //     dg::DZ<dg::DMatrix, dg::DVec> dzNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
 //     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
@@ -164,8 +173,8 @@ int main( )
 //     
 //     
     dz( function, derivative); //dz(f)
-    dzNU.forward( function, derivativef); //dz(f)
-    dzNU.backward( function, derivativeb); //dz(f)
+    dz.forward( function, derivativef); //dz(f)
+    dz.backward( function, derivativeb); //dz(f)
 //     dz( ones, derivativeones); //dz(f)
 //     dz( function2, derivative2); //dz(f)
 //     //compute dzz
@@ -365,14 +374,14 @@ int main( )
 //     elliptic.set_z(bhatPhi);
     
     
-    double eps =1e-12;   
-    dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
-    std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+//     double eps =1e-12;   
+//     dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
+//     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
 //    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
 // 
 //     std::cout << " # of iterations "<< invert( elliptic, functionTinv, rhs ) << std::endl; //is dzTdz 
   
-    double normf = dg::blas2::dot( w3d, function);
+//     double normf = dg::blas2::dot( w3d, function);
 //     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
 //     double errinvT =dg::blas2::dot( w3d, functionTinv);
 //     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
@@ -381,14 +390,14 @@ int main( )
 //     errinvT =dg::blas2::dot( w3d, functionTinv);
 //     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
     
-    std::cout << "--------------------testing dzT" << std::endl; 
-    std::cout << " # of iterations "<< invert( dz, functionTinv2,solutiondzTdz ) << std::endl; //is dzTdz
-    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-    double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
-    std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";
-    dg::blas1::axpby( 1., function, -1.,functionTinv2);
-    errinvT2 =dg::blas2::dot( w3d, functionTinv2);
-    std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
+//     std::cout << "--------------------testing dzT" << std::endl; 
+//     std::cout << " # of iterations "<< invert( dz, functionTinv2,solutiondzTdz ) << std::endl; //is dzTdz
+//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+//     double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
+//     std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";
+//     dg::blas1::axpby( 1., function, -1.,functionTinv2);
+//     errinvT2 =dg::blas2::dot( w3d, functionTinv2);
+//     std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
 
     
     }

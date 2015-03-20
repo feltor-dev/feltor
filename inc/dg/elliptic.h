@@ -322,7 +322,7 @@ struct GeneralElliptic
         dg::blas2::symv( jump, x, temp0);
         if(no_==normed) //if cartesian then R = 1
             dg::blas1::pointwiseDivide( y, R, y);
-        dg::blas1::axpby( +1., temp0, 1., y, y); 
+        dg::blas1::axpby( 1., temp0, 1., y, y); 
     }
     private:
     bc inverse( bc bound)
@@ -537,7 +537,7 @@ struct GeneralEllipticSym
         dg::blas2::symv( jump, x, temp0);
         if(no_==normed) //if cartesian then R = 1
             dg::blas1::pointwiseDivide( y, R, y);
-        dg::blas1::axpby( +1., temp0, 1., y, y); 
+        dg::blas1::axpby( 1., temp0, 1., y, y); 
     }
     private:
     bc inverse( bc bound)
