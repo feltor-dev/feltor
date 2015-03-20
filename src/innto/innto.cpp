@@ -5,11 +5,10 @@
 
 #include "toefl/toefl.h"
 #include "file/read_input.h"
-//#include "utility.h"
 #include "draw/host_window.h"
 #include "dft_dft_solver.h"
+#include "drt_dft_solver.h"
 #include "blueprint.h"
-#include "particle_density.h"
 
 /*
  * Reads parameters from given input file
@@ -21,14 +20,13 @@ using namespace toefl;
     
 unsigned N; //initialized by init function
 double amp, imp_amp; //
+double blob_width, posX, posY;
 const double slit = 2./500.; //half distance between pictures in units of width
 double field_ratio;
 unsigned width = 960, height = 1080; //initial window width & height
 std::stringstream window_str;  //window name
 std::vector<double> visual;
 draw::ColorMapRedBlueExt map;
-typedef DFT_DFT_Solver<2> Sol;
-typedef typename Sol::Matrix_Type Mat;
 
 void WindowResize( GLFWwindow* win, int w, int h)
 {
@@ -57,7 +55,9 @@ Blueprint read( char const * file)
     N = para[19];
     field_ratio = bp.boundary().lx/bp.boundary().ly;
     omp_set_num_threads( para[20]);
-    //blob_width = para[21];
+    blob_width = para[21];
+    posX = para[23];
+    posY = para[24];
     std::cout<< "With "<<omp_get_max_threads()<<" threads\n";
     return bp;
 }
@@ -68,7 +68,6 @@ Blueprint read( char const * file)
 template<class Solver>
 void drawScene( const Solver& solver, draw::RenderHostData& rend)
 {
-    ParticleDensity particle( solver.getField( TL_POTENTIAL), solver.blueprint());
     const typename Solver::Matrix_Type * field;
     
     { //draw electrons
@@ -101,9 +100,8 @@ void drawScene( const Solver& solver, draw::RenderHostData& rend)
         rend.renderEmptyQuad( );
 
     { //draw potential
-    typename Solver::Matrix_Type phi = solver.getField( TL_POTENTIAL);
-    particle.laplace( phi );
-    visual = phi.copy(); 
+    field = &solver.getField( TL_POTENTIAL); 
+    visual = field->copy(); 
     map.scale() = fabs(*std::max_element(visual.begin(), visual.end()));
     rend.renderQuad( visual, field->cols(), field->rows(), map);
     window_str <<" phi / "<<map.scale()<<"\t";
@@ -136,16 +134,15 @@ int main( int argc, char* argv[])
     DFT_DFT_Solver<3> solver3( bp);
     if( bp.boundary().bc_x == TL_PERIODIC)
         bp_mod.boundary().bc_x = TL_DST10;
+    DRT_DFT_Solver<2> drt_solver2( bp_mod);
+    DRT_DFT_Solver<3> drt_solver3( bp_mod);
 
     const Algorithmic& alg = bp.algorithmic();
-    Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
+    const Boundary& bound = bp.boundary();
     // place some gaussian blobs in the field
     try{
-        //init_gaussian( ne, 0.1,0.2, 10./128./field_ratio, 10./128., amp);
-        //init_gaussian( ne, 0.1,0.4, 10./128./field_ratio, 10./128., -amp);
-        init_gaussian( ne, 0.5,0.5, 10./128./field_ratio, 10./128., amp);
-        //init_gaussian( ne, 0.1,0.8, 10./128./field_ratio, 10./128., -amp);
-        //init_gaussian( ni, 0.1,0.5, 0.05/field_ratio, 0.05, amp);
+        Matrix<double, TL_DFT> ne{ alg.ny, alg.nx, 0.}, nz{ ne}, phi{ ne};
+        init_gaussian( ne, posX, posY, blob_width/bound.lx, blob_width/bound.ly, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
             //init_gaussian( nz, 0.8,0.4, 0.05/field_ratio, 0.05, -imp_amp);
@@ -154,15 +151,11 @@ int main( int argc, char* argv[])
         std::array< Matrix<double, TL_DFT>,2> arr2{{ ne, phi}};
         std::array< Matrix<double, TL_DFT>,3> arr3{{ ne, nz, phi}};
         Matrix<double, TL_DRT_DFT> ne_{ alg.ny, alg.nx, 0.}, nz_{ ne_}, phi_{ ne_};
-        init_gaussian( ne_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
-        //init_gaussian( ne_, 0.2,0.2, 0.05/field_ratio, 0.05, -amp);
-        //init_gaussian( ne_, 0.6,0.6, 0.05/field_ratio, 0.05, -amp);
-        //init_gaussian( ni_, 0.5,0.5, 0.05/field_ratio, 0.05, amp);
+        init_gaussian( ne_, posX, posY, blob_width/bound.lx, blob_width/bound.ly, amp);
         if( bp.isEnabled( TL_IMPURITY))
         {
-            init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, -imp_amp);
-            //init_gaussian( nz_, 0.2,0.2, 0.05/field_ratio, 0.05, -imp_amp);
-            //init_gaussian( nz_, 0.6,0.6, 0.05/field_ratio, 0.05, -imp_amp);
+            //init_gaussian( nz_, 0.5,0.5, 0.05/field_ratio, 0.05, -imp_amp);
+            init_gaussian_column( nz_, 0.6, 0.05/field_ratio, imp_amp);
         }
         std::array< Matrix<double, TL_DRT_DFT>,2> arr2_{{ ne_, phi_}};
         std::array< Matrix<double, TL_DRT_DFT>,3> arr3_{{ ne_, nz_, phi_}};
@@ -171,11 +164,15 @@ int main( int argc, char* argv[])
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
                 solver2.init( arr2, TL_IONS);
+            else
+                drt_solver2.init( arr2_, TL_IONS);
         }
         else
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
                 solver3.init( arr3, TL_IONS);
+            else
+                drt_solver3.init( arr3_, TL_IONS);
         }
     }catch( Message& m){m.display();}
 
@@ -189,12 +186,27 @@ int main( int argc, char* argv[])
     glfwSetWindowSizeCallback( w, WindowResize);
     glfwSetInputMode(w, GLFW_STICKY_KEYS, GL_TRUE);
 
-    double t = 3*alg.dt;
+    double t = 0.;
     Timer timer;
     Timer overhead;
     cout<< "HIT ESC to terminate program \n"
         << "HIT S   to stop simulation \n"
         << "HIT R   to continue simulation!\n";
+    if( !bp.isEnabled( TL_IMPURITY))
+    {
+        solver2.first_step();
+        solver2.second_step();
+        drt_solver2.first_step();
+        drt_solver2.second_step();
+    }
+    else
+    {
+        solver3.first_step();
+        solver3.second_step();
+        drt_solver3.first_step();
+        drt_solver3.second_step();
+    }
+    t+= 2*alg.dt;
     while( !glfwWindowShouldClose(w))
     {
         overhead.tic();
@@ -214,11 +226,15 @@ int main( int argc, char* argv[])
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
                 drawScene( solver2, render);
+            else
+                drawScene( drt_solver2, render);
         }
         else
         {
             if( bp.boundary().bc_x == TL_PERIODIC)
                 drawScene( solver3, render);
+            else
+                drawScene( drt_solver3, render);
         }
         window_str << setprecision(2) << fixed;
         window_str << " &&   time = "<<t;
@@ -236,12 +252,16 @@ int main( int argc, char* argv[])
             if( !bp.isEnabled( TL_IMPURITY))
             {
                 if( bp.boundary().bc_x == TL_PERIODIC)
-                    solver2.step( );
+                    solver2.step();
+                else
+                    drt_solver2.step();
             }
             else
             {
                 if( bp.boundary().bc_x == TL_PERIODIC)
                     solver3.step( );
+                else
+                    drt_solver3.step( );
             }
             t+= alg.dt;
         }

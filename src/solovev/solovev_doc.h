@@ -16,5 +16,6 @@
  *
  * This library implements a generic equilibrium magnetic field that solves
  * the Grad Shafranov equation. Furthermore, it provides several derived quantities
- * like the curvature and field strength terms. 
+ * like the curvature and field strength terms and a set of predefined parameters
+ * that model various toroidal geometries.
  */

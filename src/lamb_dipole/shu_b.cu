@@ -5,13 +5,13 @@
 #include <thrust/host_vector.h>
 
 #include "dg/backend/timer.cuh"
-#include "dg/functors.h"
 #include "dg/backend/evaluation.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
 #include "dg/helmholtz.h"
 #include "dg/backend/typedefs.cuh"
+#include "dg/functors.h"
 
 #include "draw/host_window.h"
 
@@ -53,8 +53,8 @@ int main()
 
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
 
-    //HVec omega = evaluate ( lamb, grid);
-    HVec omega = evaluate ( shearLayer, grid);
+    HVec omega = evaluate ( lamb, grid);
+    //HVec omega = evaluate ( shearLayer, grid);
     DVec stencil = evaluate( one, grid);
     DVec y0( omega ), y1( y0);
     //subtract mean mass 

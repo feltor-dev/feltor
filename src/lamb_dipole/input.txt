@@ -5,12 +5,12 @@
 
 --------------------Space and Time discretization------------
 
-1)  n  (# of polynomial coefficients)    =   1     (3)
-2)  nx (grid points in x)                =   100  (192)
-3)  ny (grid points in y)                =   100  (192)
+1)  n  (# of polynomial coefficients)    =   3     (3)
+2)  nx (grid points in x)                =   80  (192)
+3)  ny (grid points in y)                =   80  (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   1.25e-3    (0.01)
+5)  dt (time step in units c_s/L_p)      =   0.21e-3    (0.01)
 
 ---------------------Algorithmic parameters-------------------
 
@@ -18,8 +18,8 @@
 
 ---------------------Boundary conditions----------------------
 
-7)  lx (length of x in units of rho_s)   =   6.2831853    (1.)
-8)  ly (length of y in units of rho_s)   =   6.2831853   (1.)
+7)  lx (length of x in units of rho_s)   =   1 6.2831853    (1.)
+8)  ly (length of y in units of rho_s)   =   1 6.2831853   (1.)
 9)  bc_x (0 periodic, 1 Dirichlet )      =   0    (1.0)
 10) bc_y (0 periodic, 1 Dirichlet )      =   0    (1.0)
 
@@ -36,7 +36,7 @@
 
 ---------------------Miscellaneous----------------------------
 
-16) itstp (steps between output)            = 80      (5)
+16) itstp (steps between output)            =  5      (5)
 17) # of outputs (excluding first)          = 80 
 
 @ ------------------------------------------------------------

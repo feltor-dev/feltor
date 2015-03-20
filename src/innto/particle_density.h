@@ -5,6 +5,11 @@
 #include "equations.h"
 #include "blueprint.h"
 
+///@addtogroup solvers
+///@{
+/**
+ * @brief Computes real particle density from ion gyrocenter density
+ */
 struct ParticleDensity
 {
     typedef toefl::Matrix<double, toefl::TL_DFT> Matrix_Type;
@@ -20,6 +25,11 @@ struct ParticleDensity
     {}
     void nonlinear( const Matrix_Type& n, const Matrix_Type& phi, Matrix_Type& dens);
     void linear( const Matrix_Type& n, const Matrix_Type& phi, Matrix_Type& dens, unsigned species);
+    /**
+     * @brief Inplace laplace transformation
+     *
+     * @param phi
+     */
     void laplace( Matrix_Type& phi);
   private:
     void nabla( );
@@ -34,7 +44,9 @@ struct ParticleDensity
     toefl::DFT_DFT dft_dft;
     toefl::Poisson poisson;
 };
+///@}
 
+///@cond
 void ParticleDensity::nabla()
 {
     const toefl::Boundary& bound = bp.boundary();
@@ -136,6 +148,7 @@ void ParticleDensity::laplace( Matrix_Type& phi)
         }
     dft_dft.c2r( cgrad_phi[0], phi);
 }
+///@endcond
 
 
 #endif //_TL_PARTICLE_DENSITY_

@@ -22,6 +22,12 @@ namespace eule
 /**
  * @brief Implicit (perpendicular diffusive) terms for Feltor solver
  *
+ \f[
+    \begin{align}
+     -\nu_\perp\Delta_\perp^2 N \\
+    \frac{C}{\mu} (U_e - U_i) - \nu_\perp\Delta_\perp^2 U   
+    \end{align}
+\f]
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
  * @tparam Preconditioner The Preconditioner class
@@ -31,12 +37,12 @@ struct Rolkar
 {
 
     /**
-     * @brief 
+     * @brief Construct from parameters
      *
-     * @tparam Grid3d
-     * @param g
-     * @param p
-     * @param gp
+     * @tparam Grid3d three-dimensional grid class 
+     * @param g The grid
+     * @param p the physics parameters
+     * @param gp the geometry parameters
      */
     template<class Grid3d>
     Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp):
@@ -53,7 +59,7 @@ struct Rolkar
     /**
      * @brief Return implicit terms
      *
-     * @param x input vector
+     * @param x input vector (x[0] := N_e -1, x[1] := N_i-1, x[2] := U_e, x[3] = U_i)
      * @param y output vector
      */
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -85,10 +91,30 @@ struct Rolkar
         }
     }
 
+    /**
+     * @brief Return the laplacian with dirichlet BC
+     *
+     * @return 
+     */
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perpDIR;}
 
+    /**
+     * @brief Model function for Inversion
+     *
+     * @return weights for the inversion function in
+     */
     const Preconditioner& weights(){return LaplacianM_perpDIR.weights();}
+    /**
+     * @brief Model function for Inversion
+     *
+     * @return preconditioner for the inversion function in
+     */
     const Preconditioner& precond(){return LaplacianM_perpDIR.precond();}
+    /**
+     * @brief Damping used in the diffusion equations
+     *
+     * @return Vector containing damping 
+     */
     const container& damping(){return dampprof_;}
   private:
     const eule::Parameters p;
@@ -111,29 +137,103 @@ struct Rolkar
 template< class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
 struct Feltor
 {
+    /**
+     * @brief Construct from parameters
+     *
+     * @tparam Grid3d three-dimensional grid class 
+     * @param g The grid
+     * @param p the physics parameters
+     * @param gp the geometry parameters
+     */
     template<class Grid3d>
     Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
 
+
+    /**
+     * @brief Return a dz class for evaluation purposes
+     *
+     * @return 
+     */
     dg::DZ<Matrix, container> dz(){return dzN_;}
 
     /**
-     * @brief Returns phi and psi that belong to the last y in operator()
+     * @brief Returns phi and psi that belong to the last solve of the polarization equation
      *
-     * In a multistep scheme this belongs to the point HEAD-1
+     * In a multistep scheme this corresponds to the point HEAD-1
+     * unless energies() is called beforehand, then they always belong to HEAD
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
+    /**
+     * @brief Given N_i-1 initialize N_e -1 such that phi=0
+     *
+     * @param y N_i -1 
+     * @param target N_e -1
+     */
     void initializene( const container& y, container& target);
 
+    /**
+     * @brief Compute explicit rhs of Feltor equations
+     *
+     * @param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := U_e, y[3] := U_i
+     * @param yp Result
+     */
     void operator()( std::vector<container>& y, std::vector<container>& yp);
 
+    /**
+     * @brief \f[ M := \int_V (n_e-1) dV \f]
+     *
+     * @return mass of plasma contained in volume
+     * @note call energies() before use
+     */
     double mass( ) {return mass_;}
+    /**
+     * @brief Do not use! Not implemented yet!
+     *
+     * @return 0
+     */
     double mass_diffusion( ) {return diff_;}
+    /**
+     * @brief 
+     \f[
+\begin{align}
+ E = \partial_t \sum_z \int_V d^3x \left[\frac{1}{2}m NU^2 + \frac{(\nabla_\perp A_\parallel)^2}{2\mu_0} + \frac{1}{2}mN\left(\frac{\nabla_\perp\phi}{B}\right)^2 + T N\ln(N)\right] 
+\end{align}
+\f]
+
+     * @return Total energy contained in volume
+     * @note call energies() before use
+     */
     double energy( ) {return energy_;}
 
+    /**
+     * @brief Individual energies
+     *
+     * @return individual energy terms in total energy
+     E[0]=S_e, E[1] = S_i, E[2] = U_E, E[3] = T_pare, E[4] = T_pari
+     * @note call energies() before use
+     */
     std::vector<double> energy_vector( ) {return evec;}
+    /**
+     * @brief 
+     \f[
+     \begin{align}
+\sum_z \int_V d^3 x \left[ T(1+\ln N)\Lambda_N + q\psi\Lambda_N + N U\Lambda_U + \frac{1}{2}mU^2\Lambda_N \right] , 
+\end{align}
+\f]
+     * @return Total energy diffusion
+     * @note call energies() before use
+     */
     double energy_diffusion( ){ return ediff_;}
 
+    /**
+     * @brief Compute energies given an input vector
+     *
+     * Solves the polarization equation for the input field. 
+     * If called directly after timestep is made, the potential() and energy()
+     * functions are that of the current corresponding fields
+     * @param y y[0] = N_e-1, y[1] = N_i-1, y[2] =U_e, y[3]=U_i
+     */
     void energies( std::vector<container>& y);
 
   private:
@@ -173,7 +273,9 @@ struct Feltor
     double mass_, energy_, diff_, ediff_;
     std::vector<double> evec;
 };
+///@}
 
+///@cond
 template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
@@ -532,7 +634,7 @@ void Feltor<Matrix, container, P>::curveDIR( container& src, container& target)
     dg::blas1::pointwiseDot( curvZ, temp1, temp1);   // C^Z d_Z src
     dg::blas1::axpby( 1., temp1, 1., target ); // (C^R d_R + C^Z d_Z) src
 }
-///@}
 
+///@endcond
 } //namespace eule
 

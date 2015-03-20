@@ -8,7 +8,6 @@
 #include "toefl/timer.h"
 #include "file/read_input.h"
 #include "file/file.h"
-//#include "utility.h"
 #include "particle_density.h"
 #include "dft_dft_solver.h"
 
