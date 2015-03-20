@@ -94,7 +94,7 @@ int main( )
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
     std::cout << "computing dzDIR" << std::endl;
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::DIR);
+//     dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dzNEU" << std::endl;
 //     dg::DZ<dg::DMatrix, dg::DVec> dzNU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
 //     dg::DZ<dg::DMatrix, dg::DVec> dzNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
@@ -146,25 +146,25 @@ int main( )
     const dg::DVec solutiondzz = dg::evaluate( deriNEU2, g3d);
     const dg::DVec solutiondzTdz = dg::evaluate( deriNEUT2, g3d);
 
-    const dg::DVec bhatR = dg::evaluate( bR_, g3d);
-    const dg::DVec bhatZ = dg::evaluate( bZ_, g3d);
-    const dg::DVec bhatPhi = dg::evaluate(bPhi_, g3d);
-    const dg::DVec Bfield_ = dg::evaluate(Bfield, g3d);
-    const dg::DVec gradlnB_ = dg::evaluate(gradlnB, g3d);
-    dg::DMatrix dR(dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::centered));
-    dg::DMatrix dZ(dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::centered));
-    dg::DMatrix dphi(dg::create::dz( g3d, g3d.bcz(), dg::normed,dg::centered));
+//     const dg::DVec bhatR = dg::evaluate( bR_, g3d);
+//     const dg::DVec bhatZ = dg::evaluate( bZ_, g3d);
+//     const dg::DVec bhatPhi = dg::evaluate(bPhi_, g3d);
+//     const dg::DVec Bfield_ = dg::evaluate(Bfield, g3d);
+//     const dg::DVec gradlnB_ = dg::evaluate(gradlnB, g3d);
+//     dg::DMatrix dR(dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::centered));
+//     dg::DMatrix dZ(dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::centered));
+//     dg::DMatrix dphi(dg::create::dz( g3d, g3d.bcz(), dg::normed,dg::centered));
     
-    dz.set_boundaries( dg::PER, 0, 0);
+//     dz.set_boundaries( dg::PER, 0, 0);
     //direct gradpar method
-    dg::blas2::gemv( dR, function, temp); //d_R src
-    dg::blas2::gemv( dZ, function, temp2);  //d_Z src
-    dg::blas2::gemv( dphi, function, temp3);  //d_phi src
-    dg::blas1::pointwiseDot( bhatR, temp, temp); // b^R d_R src
-    dg::blas1::pointwiseDot( bhatZ, temp2, temp2); // b^Z d_Z src
-    dg::blas1::pointwiseDot( bhatPhi, temp3, temp3); // b^phi d_phi src
-    dg::blas1::axpby( 1., temp, 1., temp2 ); // b^R d_R src +  b^Z d_Z src
-    dg::blas1::axpby( 1., temp3, 1., temp2,derivativeRZPhi ); // b^R d_R src +  b^Z d_Z src + b^phi d_phi src
+//     dg::blas2::gemv( dR, function, temp); //d_R src
+//     dg::blas2::gemv( dZ, function, temp2);  //d_Z src
+//     dg::blas2::gemv( dphi, function, temp3);  //d_phi src
+//     dg::blas1::pointwiseDot( bhatR, temp, temp); // b^R d_R src
+//     dg::blas1::pointwiseDot( bhatZ, temp2, temp2); // b^Z d_Z src
+//     dg::blas1::pointwiseDot( bhatPhi, temp3, temp3); // b^phi d_phi src
+//     dg::blas1::axpby( 1., temp, 1., temp2 ); // b^R d_R src +  b^Z d_Z src
+//     dg::blas1::axpby( 1., temp3, 1., temp2,derivativeRZPhi ); // b^R d_R src +  b^Z d_Z src + b^phi d_phi src
 // 
 //     dg::GeneralEllipticSym<dg::DMatrix, dg::DVec, dg::DVec> ellipticsym( g3d, dg::normed, dg::forward);
 //     ellipticsym.set_x(bhatR);
@@ -172,6 +172,7 @@ int main( )
 //     ellipticsym.set_z(bhatPhi);
 //     
 //     
+    /*
     dz( function, derivative); //dz(f)
     dz.forward( function, derivativef); //dz(f)
     dz.backward( function, derivativeb); //dz(f)
@@ -254,22 +255,22 @@ int main( )
 //     double normBdz1 = dg::blas2::dot(temp2, w3d, derivativeones);
 //     double normfdz1 = dg::blas2::dot(function2, w3d, derivativeones);
 // 
-    std::cout << "--------------------testing dz" << std::endl;
-    double norm = dg::blas2::dot( w3d, solution);
-    std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
-    double err =dg::blas2::dot( w3d, derivative);
-    std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    err =dg::blas2::dot( w3d, derivative);
-    std::cout << "Relative Difference in DZ is "<< sqrt( err/norm )<<"\n"; 
-//     
-    std::cout << "--------------------testing dz with RZPhi method" << std::endl;
-    std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
-    double errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);
-    std::cout << "|| Derivative || "<<sqrt( errRZPhi)<<"\n";
-    dg::blas1::axpby( 1., solution, -1., derivativeRZPhi);
-    errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);    
-    std::cout << "Relative Difference in DZ is "<< sqrt( errRZPhi/norm )<<"\n"; 
+//     std::cout << "--------------------testing dz" << std::endl;
+//     double norm = dg::blas2::dot( w3d, solution);
+//     std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
+//     double err =dg::blas2::dot( w3d, derivative);
+//     std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
+//     dg::blas1::axpby( 1., solution, -1., derivative);
+//     err =dg::blas2::dot( w3d, derivative);
+//     std::cout << "Relative Difference in DZ is "<< sqrt( err/norm )<<"\n"; 
+// //     
+//     std::cout << "--------------------testing dz with RZPhi method" << std::endl;
+//     std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
+//     double errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);
+//     std::cout << "|| Derivative || "<<sqrt( errRZPhi)<<"\n";
+//     dg::blas1::axpby( 1., solution, -1., derivativeRZPhi);
+//     errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);    
+//     std::cout << "Relative Difference in DZ is "<< sqrt( errRZPhi/norm )<<"\n"; 
 //     
 //     std::cout << "--------------------testing dzT" << std::endl;
 //     std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
@@ -292,16 +293,26 @@ int main( )
 //     dg::blas1::axpby( 1., derivative, -1., derivativeT,omega);
 //     double errTdiffdzdzT =dg::blas2::dot( w3d, omega);
 //     std::cout << "Relative Difference in DZT to DZ is "<< sqrt( errTdiffdzdzT/norm )<<"\n";   
-    std::cout << "--------------------testing dzT with dz" << std::endl;
-    std::cout << "|| SolutionT ||     "<<sqrt( normT)<<"\n";
-    double errTdz =dg::blas2::dot( w3d, derivativeTdz);
-    std::cout << "|| DerivativeTdz || "<<sqrt( errTdz)<<"\n";
-    dg::blas1::axpby( 1., solutionT, -1., derivativeTdz);
-    errTdz =dg::blas2::dot( w3d, derivativeTdz);
-    std::cout << "Relative Difference in DZT is "<< sqrt( errTdz/normT )<<"\n"; 
+//     std::cout << "--------------------testing dzT with dz" << std::endl;
+//     std::cout << "|| SolutionT ||     "<<sqrt( normT)<<"\n";
+//     double errTdz =dg::blas2::dot( w3d, derivativeTdz);
+//     std::cout << "|| DerivativeTdz || "<<sqrt( errTdz)<<"\n";
+//     dg::blas1::axpby( 1., solutionT, -1., derivativeTdz);
+//     errTdz =dg::blas2::dot( w3d, derivativeTdz);
+//     std::cout << "Relative Difference in DZT is "<< sqrt( errTdz/normT )<<"\n"; 
 //     
 //     std::cout << "--------------------testing dzTdz " << std::endl;
+    
+    */
     double normdzTdz = dg::blas2::dot( w3d, solutiondzTdz);
+    std::cout << std::setprecision(16);
+    std::cout << "is the norm of the testfunction zero ? =       "<<sqrt( normdzTdz)<<"\n";
+//     for (unsigned i=0; i<g3d.size();i++){
+//         std::cout << "solvalue " << solutiondzTdz[i]<< std::endl;
+//     }
+    double normnormdzTdz = dg::blas2::dot(ones, w3d, solutiondzTdz);
+    std::cout << "is the norm of the testfunction zero ? =       "<< normnormdzTdz<<"\n";
+
 //     std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
 //     double errdzTdz =dg::blas2::dot( w3d,dzTdz);
 //     std::cout << "|| DerivativeTdz ||  "<<sqrt( errdzTdz)<<"\n";
@@ -317,23 +328,23 @@ int main( )
 //     errdzTdzfb =dg::blas2::dot( w3d, dzTdzfb);
 //     std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdzfb/normdzTdz )<<"\n";
 //   
-    std::cout << "--------------------testing dzTdzfb with direct method" << std::endl;
-    std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
-    double errdzTdzfbd =dg::blas2::dot( w3d,dzTdzfbd);
-    std::cout << "|| DerivativeTdz ||  "<<sqrt( errdzTdzfbd)<<"\n";
-    dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdzfbd);
-    errdzTdzfbd =dg::blas2::dot( w3d, dzTdzfbd);
-    std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdzfbd/normdzTdz )<<"\n";
+//     std::cout << "--------------------testing dzTdzfb with direct method" << std::endl;
+//     std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
+//     double errdzTdzfbd =dg::blas2::dot( w3d,dzTdzfbd);
+//     std::cout << "|| DerivativeTdz ||  "<<sqrt( errdzTdzfbd)<<"\n";
+//     dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdzfbd);
+//     errdzTdzfbd =dg::blas2::dot( w3d, dzTdzfbd);
+//     std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdzfbd/normdzTdz )<<"\n";
 //     
-    std::cout << "--------------------testing dzTdz with dzz" << std::endl;
-    double normdzz = dg::blas2::dot( w3d, solutiondzz);
-
-    std::cout << "|| Solution ||      "<<sqrt( normdzz)<<"\n";
-    double errdzz =dg::blas2::dot( w3d,dzz);
-    std::cout << "|| dzz ||  "<<sqrt( errdzz)<<"\n";
-    dg::blas1::axpby( 1., solutiondzz, -1., dzz);
-    errdzz =dg::blas2::dot( w3d, dzz);
-    std::cout << "Relative Difference in DZT is "<< sqrt( errdzz/normdzz )<<"\n";   
+//     std::cout << "--------------------testing dzTdz with dzz" << std::endl;
+//     double normdzz = dg::blas2::dot( w3d, solutiondzz);
+// 
+//     std::cout << "|| Solution ||      "<<sqrt( normdzz)<<"\n";
+//     double errdzz =dg::blas2::dot( w3d,dzz);
+//     std::cout << "|| dzz ||  "<<sqrt( errdzz)<<"\n";
+//     dg::blas1::axpby( 1., solutiondzz, -1., dzz);
+//     errdzz =dg::blas2::dot( w3d, dzz);
+//     std::cout << "Relative Difference in DZT is "<< sqrt( errdzz/normdzz )<<"\n";   
 //     
 //     std::cout << "--------------------testing adjointness " << std::endl;
 //     std::cout << "<f,dz(f)>   = "<< normfdz<<"\n";

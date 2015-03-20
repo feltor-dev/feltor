@@ -193,8 +193,8 @@ struct bR
     bR( double R_0, double I_0):R_0(R_0), I_0(I_0){}
     double operator()( double R, double Z, double phi)
     {
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return -invB*M_PI*R_0*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2)/2./R;
+//         double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return -sqrt(2.)*M_PI*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2)/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
     }
     private:
     double R_0, I_0;
@@ -207,8 +207,8 @@ struct bZ
     bZ( double R_0, double I_0):R_0(R_0), I_0(I_0){}
     double operator()( double R, double Z, double phi)
     {
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return invB*M_PI*R_0*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2)/2./R;
+//         double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return sqrt(2.)*M_PI*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2)/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
 
     }
     private:
@@ -222,8 +222,8 @@ struct bPhi
     bPhi( double R_0, double I_0):R_0(R_0), I_0(I_0){}
     double operator()( double R, double Z, double phi)
     {
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return invB*I_0*R_0/R/R;
+//         double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return 2.*sqrt(2.)*I_0/R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
     }
     private:
     double R_0, I_0;
