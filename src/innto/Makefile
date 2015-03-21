@@ -12,9 +12,11 @@ ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(UIBK_HDF5_INC)
 #INCLUDE += -I$(UIBK_OPENMPI_INC)
 INCLUDE += -I$(UIBK_FFTW_INC)
+INCLUDE += -I$(UIBK_NETCDF_4_INC)
 
 LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
 LIBS    += -L$(UIBK_FFTW_LIB) -lfftw3 
+LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
 GLFLAGS  = -lm
 CXX = mpicxx
 endif
