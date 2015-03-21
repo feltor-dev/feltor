@@ -1,9 +1,10 @@
 #!/bin/bash
 
-#this script permanently removes large objects from the git repository
-# that have been accidentally included, 
-# it also alters the history, it's as if the object never existed. 
-# BE VERY CAREFUL WITH THIS SINCE FILES WILL BE REMOVED PERMANENTLY
+#this script is an EMERGENCY script and permanently removes objects from the git repository including the history
+# its intention is to reduce the repo size after a large file (binary etc.) has been accidentally added and pushed
+# BE VERY CAREFUL WITH THIS SINCE FILES WILL BE PERMANENTLY REMOVED
+# ALSO, THE HISTORY WILL BE CHANGED WHICH WILL TOTALLY UPSET EVERYONE WHO EVER CLONED THE REPOSITORY
+# after execution it's as if these objects never existed. 
 BIG_OBJECTS="src/feltor2D/test.nc src/feltor2D/geometry.nc inc/dg/backend/dzs_t src/feltor2D/feltor inc/dg/backend/weights3d_t dg_lib/toefl_hpc src/heat/heat"
 
 echo 'Removing '$BIG_OBJECTS''
@@ -18,5 +19,5 @@ git gc --prune=now
 git gc --aggressive --prune=now
 
 # use git push origin --force --all to tell github that these objects vanished
-# All other teammates should then freshly clone the repository from github since any push will readd the objects again
+# All other teammates should then freshly clone the repository from github or run this script since any push will readd the objects again 
 
