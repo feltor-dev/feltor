@@ -11,6 +11,15 @@ namespace toefl{
 
     ///@addtogroup solvers
     ///@{
+    /**
+     * @brief Blas1 function
+     *
+     * computes \f[ y = \alpha x + \beta y \f]
+     * @param alpha a scalar
+     * @param x Matrix 
+     * @param beta a scalar
+     * @param y Matrix (read & write) containing result on output
+     */
 void axpby(double alpha,  const Matrix<double, TL_DFT>& x, double beta, Matrix<double, TL_DFT>& y)
 {
     for( unsigned i=0; i<x.rows(); i++)
@@ -18,6 +27,15 @@ void axpby(double alpha,  const Matrix<double, TL_DFT>& x, double beta, Matrix<d
             y(i,j) = alpha*x(i,j)+beta*y(i,j);
 }
 
+/**
+ * @brief Blas1 dot product
+ *
+ * Computes \f[\sum_{ij} m_{1ij}m_{2ij}\f]
+ * @param m1 
+ * @param m2
+ *
+ * @return Dot product
+ */
 double dot( const Matrix<double, TL_DFT>& m1, const Matrix<double, TL_DFT>& m2)
 {
     double sum = 0;
@@ -29,6 +47,17 @@ double dot( const Matrix<double, TL_DFT>& m1, const Matrix<double, TL_DFT>& m2)
 
 }
 
+/**
+ * @brief Compute dot product
+ *
+ * Computes \f[\sum_{i} v_{1i}v^*_{2i}\f]
+ * where * is the complex conjugate 
+ *
+ * @param v1
+ * @param v2
+ *
+ * @return 
+ */
 double dot( const std::vector<std::complex<double> >& v1, const std::vector<std::complex<double> >& v2)
 {
     assert( v1.size() == v2.size());
@@ -45,6 +74,16 @@ double dot( const std::vector<std::complex<double> >& v1, const std::vector<std:
     return real( sum);
 }
 
+/**
+ * @brief Compute dot product
+ *
+ * Computes \f[\sum_{i} v_{1i}v^_{2i}\f]
+ *
+ * @param v1 real vector
+ * @param v2 real vector
+ *
+ * @return  dot product
+ */
 double dot( const std::vector<double>& v1, const std::vector<double>& v2)
 {
     assert( v1.size() == v2.size());
@@ -82,6 +121,13 @@ void remove_average_y( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>&
             m(i,j) -= average[j]/in.rows();
 }
 
+/**
+ * @brief Compute y derivative using spectral method
+ *
+ * @param in
+ * @param out
+ * @param h grid constant
+ */
 void dy( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double h)
 {
     assert( &in != &out);
@@ -98,6 +144,11 @@ void dy( const Matrix<double, TL_DFT>& in, Matrix<double, TL_DFT>& out, double h
         out(rows-1,j) = (in(0,j) - in(rows-2, j))/2./h;
 }
 
+/**
+ * @brief Compute Energetics of INNTO code
+ *
+ * @tparam n the number of equations
+ */
 template<size_t n>
 struct Energetics
 {
