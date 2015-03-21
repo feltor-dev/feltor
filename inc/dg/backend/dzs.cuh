@@ -5,6 +5,7 @@
 #include "grid.h"
 #include "../blas.h"
 #include "ell_interpolation.cuh"
+// #include "interpolation.cuh"
 #include "typedefs.cuh"
 #include "functions.h"
 #include "derivatives.cuh"
@@ -249,7 +250,7 @@ struct DZ
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
-//     Matrix jump;
+    Matrix jump;
     container rp,zp,phip,rm,zm,phim;
     container hz, hp,hm;
     container tempP, temp0, tempM, ghostM, ghostP,dzfp,dzfm;
@@ -266,7 +267,7 @@ struct DZ
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltas, double eps, Limiter limit, dg::bc globalbcz):
-//         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
+        jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
         rp( dg::evaluate( dg::zero, grid)), zp( rp), phip( rp), rm(rp),zm(rp),phim(phip),
         hz(rp), hp( rp), hm( rp), tempP( rp), temp0( rp), tempM( rp), dzfp( rp),dzfm( rp),
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),dsc(deltas),dsp(deltas*0.5),dsm(deltas*0.5)
@@ -315,11 +316,14 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltas, 
     dg::blas1::axpby(1.0,phibias,1.0,phim); 
     dg::blas1::transform(phim, phim, dg::MOD<>(2.*M_PI));
     //3D interpolation of in + and -
-    cusp::ell_matrix<int, double, cusp::device_memory> plusH   = dg::create::ell_interpolation( rp, zp, phip, grid);
-    cusp::ell_matrix<int, double, cusp::device_memory> minusH  = dg::create::ell_interpolation( rm, zm, phim, grid);
-    cusp::ell_matrix<int, double, cusp::device_memory> plusHT,minusHT;
-//     plus  = dg::create::interpolation( rp, zp, phip, grid, globalbcz); 
-//     minus = dg::create::interpolation( rm, zm, phim, grid, globalbcz); 
+//     cusp::coo_matrix<int, double, cusp::host_memory> plusH, minusH, plusHT, minusHT;
+//     plusH  = dg::create::interpolation( rp, zp, phip, grid, globalbcz); 
+//     minusH = dg::create::interpolation( rm, zm, phim, grid, globalbcz); 
+    cusp::ell_matrix<int, double, cusp::host_memory> plusH, minusH, plusHT, minusHT;
+    plusH   = dg::create::ell_interpolation( rp, zp, phip, grid);
+    minusH  = dg::create::ell_interpolation( rm, zm, phim, grid);
+
+
     //Transpose matrices for adjoint operator
     cusp::transpose( plusH, plusHT);
     cusp::transpose( minusH, minusHT);    
@@ -371,20 +375,20 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     centeredT( tempP, dzTdzf);
 //     forward( f, tempP);
 //     forwardT( tempP, dzTdzf);
-    dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
-    //dg::blas2::symv( jump, f, tempP);
-    //dg::blas1::axpby( 1., tempP, 1., dzTdzf);
+//     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
+//     dg::blas2::symv( jump, f, tempP);
+//     dg::blas1::axpby( 1., tempP, 1., dzTdzf);
     //add jump term (unstable without it)
-    einsPlus( f, tempP); 
-    dg::blas1::axpby( -1., tempP, 2., f, tempP);
-    einsPlusT( f, tempM); 
-    dg::blas1::axpby( -1., tempM, 1., tempP);
-    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
-    einsMinusT( f, tempP); 
-    dg::blas1::axpby( -1., tempP, 2., f, tempP);
-    einsMinus( f, tempM); 
-    dg::blas1::axpby( -1., tempM, 1., tempP);
-    dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
+//     einsPlus( f, tempP); 
+//     dg::blas1::axpby( -1., tempP, 2., f, tempP);
+//     einsPlusT( f, tempM); 
+//     dg::blas1::axpby( -1., tempM, 1., tempP);
+//     dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
+//     einsMinusT( f, tempP); 
+//     dg::blas1::axpby( -1., tempP, 2., f, tempP);
+//     einsMinus( f, tempM); 
+//     dg::blas1::axpby( -1., tempM, 1., tempP);
+//     dg::blas1::axpby( 0.5, tempP, 1., dzTdzf);
 }
 
 template< class M, class container>

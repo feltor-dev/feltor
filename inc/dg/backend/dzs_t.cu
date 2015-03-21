@@ -8,7 +8,7 @@
 #include "../blas2.h"
 #include "../functors.h"
 #include "../cg.h"
-#include "interpolation.cuh"
+#include "ell_interpolation.cuh"
 
 struct InvB
 {

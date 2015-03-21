@@ -1,5 +1,5 @@
 system=home
-device=gpu
+device=omp
 
 INCLUDE = -I../../ # other project libraries
 INCLUDE+= -I../
@@ -52,7 +52,7 @@ version: version.cu
 	./$@
 
 dz_2_t: dz_2_t.cu dz.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g 
 
 backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
