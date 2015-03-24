@@ -11,12 +11,14 @@
 5)  dt (time step in units c_s/rho_s)    =0.01(0.01)
 
 
+
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
 7)  nx_out (# grid points in output field)  =  20
 8)  ny_out (# grid points in output field)  =  20
 9)  nz_out (# grid points in output field)  =  20
 10) itstp  (steps between outputs)          =  10  (5)
+
 
 11) total # of outputs (excluding first)    =  100
 -------------------------Physical parameters----------------------------
