@@ -78,6 +78,7 @@ int main( )
        Nzn = unsigned(Nz*pow(2,i));
            Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
     Nyn = (unsigned)ceil( Ny*pow(2,(double)(i*2./n)));
+
         
     
     dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
@@ -88,6 +89,7 @@ int main( )
         std::cout << "Nphi = " << Nzn << std::endl;
 //            Nxn = (unsigned)ceil(Nxn*pow(2,(double)(2./n)));
 //     Nyn = (unsigned)ceil( Nyn*pow(2,(double)(2./n)));
+
 //        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
 //     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
     const dg::DVec w3d = dg::create::weights( g3d);
@@ -98,6 +100,7 @@ int main( )
     dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dzNEU" << std::endl;
     dg::DZ<dg::DMatrix, dg::DVec> dzNU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
+
 //     dg::DZ<dg::DMatrix, dg::DVec> dzNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
 //     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
@@ -177,6 +180,7 @@ int main( )
 //     dzNU( function, derivative); //dz(f)
 //     dzNU.forward( function, derivativef); //dz(f)
 //     dzNU.backward( function, derivativeb); //dz(f)
+
 //     dz( ones, derivativeones); //dz(f)
 //     dz( function2, derivative2); //dz(f)
 //     //compute dzz
@@ -193,6 +197,7 @@ int main( )
 //     dzNU.backward(derivativef,omega);
 //     dg::blas1::axpby( -1.0, omega, -0.0, temp,dzz);
 //     dz( derivative, dzz); //dz(dz(f))
+
 //     dz.dzz(function,dzz);                                          //dz^2 T 
 //     dg::blas1::axpby( 1.0, omega, 1., dzz);
 //     
@@ -215,6 +220,7 @@ int main( )
 //     dg::blas1::pointwiseDot(function,gradlnB_,temp);
 //     dg::blas1::axpby(- 1.0, temp, 1., derivativeTdz,derivativeTdz);
 
+
     
     //     dg::blas1::pointwiseDivide( derivativeTdz, inverseB, derivativeTdz);
 //     
@@ -233,6 +239,7 @@ int main( )
 //     //arithmetic average
 //     dg::blas1::axpby(0.5,dzTdzb,0.5,dzTdzf,dzTdzfb);
 //     dg::blas1::axpby(0.5,dzTdzbd,0.5,dzTdzfd,dzTdzfbd); 
+
 // //     dz.symv(function,dzTdzfb);
 // //     dg::blas1::pointwiseDot(w3d,dzTdzfb,dzTdzfb);
 //     dz.centeredT( derivative2, dzTdz2); //dzT(dz(f))
@@ -314,6 +321,7 @@ int main( )
 //     double normnormdzTdz = dg::blas2::dot(ones, w3d, solutiondzTdz);
 //     std::cout << "is the norm of the testfunction zero ? =       "<< normnormdzTdz<<"\n";
 
+
 //     std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
 //     double errdzTdz =dg::blas2::dot( w3d,dzTdz);
 //     std::cout << "|| DerivativeTdz ||  "<<sqrt( errdzTdz)<<"\n";
@@ -337,6 +345,7 @@ int main( )
 //     errdzTdzfbd =dg::blas2::dot( w3d, dzTdzfbd);
 //     std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdzfbd/normdzTdz )<<"\n";
     
+
 //     std::cout << "--------------------testing dzTdz with dzz" << std::endl;
 //     double normdzz = dg::blas2::dot( w3d, solutiondzz);
 // 
@@ -389,11 +398,13 @@ int main( )
     double eps =1e-14;   
     dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+
 //    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
 // 
 //     std::cout << " # of iterations "<< invert( elliptic, functionTinv, rhs ) << std::endl; //is dzTdz 
   
     double normf = dg::blas2::dot( w3d, function);
+
 //     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
 //     double errinvT =dg::blas2::dot( w3d, functionTinv);
 //     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
@@ -410,6 +421,7 @@ int main( )
     dg::blas1::axpby( 1., function, -1.,functionTinv2);
     errinvT2 =dg::blas2::dot( w3d, functionTinv2);
     std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
+
 
     
     }

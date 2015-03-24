@@ -5,7 +5,8 @@
 #include <cmath>
 
 #include <mpi.h> //activate mpi
-#include "file/netcdf_par.h"
+
+#include "netcdf_par.h"
 
 #include "dg/algorithm.h"
 #include "dg/backend/timer.cuh"
@@ -116,7 +117,8 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, rolkar, y0, p.dt);
     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
-//     file::NC_Error_Handle err;
+
+    file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
 //     err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);

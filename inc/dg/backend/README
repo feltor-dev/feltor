@@ -14,6 +14,8 @@ FIRST: (Small things to do)
    - first apply collective.gather()
    - then do a gemv on the buffer 
 
+2. Implement an mpi version of create::dz and the application of it in mpi_matrix.h (if needed in general_elliptic.h)
+
 SECOND: (memory efficient gpu sparse matrix format)
 0. Change gpu matrix format to something self-made like the current mpi_matrix format (i.e. store blocks only once)
     AIM: huge memory advantage, should be at least as fast as the current cusp formats, if not faster

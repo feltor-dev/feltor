@@ -479,6 +479,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     {
         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());        
+
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);    //

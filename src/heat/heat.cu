@@ -104,6 +104,7 @@ int main( int argc, char* argv[])
 //     dg::blas1::axpby( 1., solution, +1.,x);
 //     errinvT =dg::blas2::dot( w3d_, x);
 //     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
+
     
         
 //     std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
@@ -118,6 +119,7 @@ int main( int argc, char* argv[])
 //     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
 // 
    
+
     
     //create RHS     
     std::cout << "initialize feltor" << std::endl;
@@ -132,6 +134,7 @@ int main( int argc, char* argv[])
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
     solovev::ZonalFlow init0(p, gp);
+
 //     dg::CONSTANT init0( 0.);
 
     
@@ -260,6 +263,7 @@ int main( int argc, char* argv[])
     }
     
     glfwTerminate();
+
 
     ////////////////////////////////////////////////////////////////////
 

@@ -11,7 +11,11 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
+<<<<<<< HEAD
 #include "dg/backend/ell_interpolation.h"
+=======
+// #include "dg/backend/ell_interpolation.h"
+>>>>>>> 82d3d41616d4385a281ee196daeb7800c694b7ec
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "dg/runge_kutta.h"
@@ -75,6 +79,7 @@ int main( int argc, char* argv[])
 
     //Make grids
     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
+
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,p.Nz_out,p.bc, p.bc, dg::PER, dg::cylindrical); 
     dg::DVec w3d =  dg::create::weights(grid);
     dg::DVec w3dout =  dg::create::weights(grid_out);
@@ -84,6 +89,7 @@ int main( int argc, char* argv[])
     dg::DVec Tend(dg::evaluate(dg::zero,grid_out));
     dg::DVec Tendc(dg::evaluate(dg::zero,grid));
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
+
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferHc( dg::evaluate(dg::zero, grid));
@@ -135,6 +141,7 @@ int main( int argc, char* argv[])
 
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
     solovev::ZonalFlow init0(p, gp);
+
 //     dg::CONSTANT init0( 0.);
 
     //background profile
@@ -158,6 +165,7 @@ int main( int argc, char* argv[])
     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
 //     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
 
@@ -176,6 +184,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+
 
     //field IDs
     std::string names[1] = {"T"}; 
@@ -210,6 +219,7 @@ int main( int argc, char* argv[])
     //interpolate fine grid on coarse grid
 //     dg::DMatrix interpolatec = dg::create::interpolation( grid, grid_out);
     cusp::ell_matrix<int, double, cusp::device_memory> interpolatec = dg::create::ell_interpolation( grid, grid_out); 
+
     
     dg::blas2::symv( interpolate, y0[0], transferD);
     err = nc_open(argv[3], NC_WRITE, &ncid);
@@ -217,6 +227,7 @@ int main( int argc, char* argv[])
 //     transferH =y0[0]; //without interp
     err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
         
+
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
@@ -238,6 +249,7 @@ int main( int argc, char* argv[])
 //         interpolate coarse on fine grid
 /*        dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
         relerror = sqrt(dg::blas2::dot( w3dout, transferD)/normTend);  */    
+
         
     }
     std::vector<double> evec = feltor.energy_vector();
@@ -275,6 +287,7 @@ int main( int argc, char* argv[])
             try{
                 rk( feltor, y0, y1, p.dt); //RK stepper
 //                 sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
+
 //                 karniadakis( feltor, rolkar, y0);  //Karniadakis stepper
                 y0.swap( y1);}
               catch( dg::Fail& fail) { 
@@ -302,6 +315,7 @@ int main( int argc, char* argv[])
 //                 dg::blas2::symv( interpolate, y0[0], transferD);
 //                 dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
 //                 relerror = sqrt(dg::blas2::dot( w3dout, transferD)/normTend); 
+
             }
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
@@ -336,6 +350,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv( interpolate, y0[0], transferD);
         transferH =transferD;
         err = nc_open(argv[3], NC_WRITE, &ncid);
+
         err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
         
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);

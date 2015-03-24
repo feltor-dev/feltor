@@ -66,6 +66,7 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container dampprof_;
     dg::DZ<Matrix, container> dzNU_;
+
     dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
 
 };
@@ -323,6 +324,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
 
     }
+
     if (p.p_diff ==1)    {
         // (B) nonadjoint
         dzNU_( binv, lambda); //gradpar 1/B
@@ -349,6 +351,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
         dzNU_.backward( y[0], omega); 
         dzDIR_.backwardTD(omega,lambda);
+
         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
     }
 //     if (p.p_diff ==4)    {

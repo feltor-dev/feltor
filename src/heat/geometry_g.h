@@ -77,6 +77,7 @@ struct InvB
     {  
 
         return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+
     }
     void display() { }
   private: 
@@ -94,6 +95,7 @@ struct B
     double operator()(double R, double Z, double phi)
     {    
         return sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))*R_0/ (sqrt(8.)*R);
+
     }
     void display() { }
   private:
@@ -111,6 +113,7 @@ struct LnB
     double operator()(double R, double Z, double phi)
     {    
         double invB = sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+
         return log(1./invB);    }
     void display() { }
   private:
@@ -162,6 +165,7 @@ struct Field
             yp[2][i] = y[0][i]*sqrt(1.+ M_PI*M_PI*(1.- cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/8./I_0/I_0);            
             yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2.)/2./I_0;
             yp[1][i] =  M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2.)/2./I_0 ;
+
         }
     }
     void operator()( const dg::HVec& y, dg::HVec& yp)
@@ -174,6 +178,7 @@ struct Field
     {
 
         return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+
 //                 double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
 //         return invB*I_0*R_0/R;
     }
@@ -181,6 +186,7 @@ struct Field
     {
 
         return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+
 //                 double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
 //         return invB*I_0*R_0/R;
     }
@@ -305,6 +311,7 @@ struct DeriNeuT2
                         sin(phi)*sin(0.5*M_PI*(R-R_0))*sin(0.5*M_PI*Z);
         double nenner = R*R*(8.*I_0*I_0+M_PI*M_PI - M_PI*M_PI*cos(M_PI*(R-R_0))*cos(M_PI*Z))*(8.*I_0*I_0+M_PI*M_PI - M_PI*M_PI*cos(M_PI*(R-R_0))*cos(M_PI*Z));
         return fac1*(2.*I_0*cos(phi)*fac2 + M_PI*M_PI*M_PI*M_PI*R*fac3)/nenner;
+
     }
     private:
     double R_0, I_0;
