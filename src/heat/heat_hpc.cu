@@ -11,11 +11,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
-<<<<<<< HEAD
 #include "dg/backend/ell_interpolation.h"
-=======
-// #include "dg/backend/ell_interpolation.h"
->>>>>>> 82d3d41616d4385a281ee196daeb7800c694b7ec
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "dg/runge_kutta.h"
