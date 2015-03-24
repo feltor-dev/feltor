@@ -66,7 +66,6 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container dampprof_;
     dg::DZ<Matrix, container> dzNU_;
-
     dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
 
 };
@@ -295,35 +294,35 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //         dg::blas1::axpby( 1.0, omega, 1., yp[0]); //UT dzlnB
 //     }
 // //-----------------------parallel dissi------------------------
-//     if (p.p_diff ==0)    {
-// // //         centered
-// // //         dzNU_( y[0], omega); 
-// // //         dzNU_.centeredT(omega,lambda);
-// // //         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
-// // 
-// //         //forward, backward (stegi)
-// //         dzNU_.forward( y[0], omega); 
-// //         dzNU_.forwardT(omega,lambda);
-// //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
-// // 
-// //         dzNU_.backward( y[0], omega); 
-// //         dzNU_.backwardT(omega,lambda);
-// //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
-// //         //with jump
-// //        dzNU_.symv(y[0],lambda);
-// // //        dg::blas1::pointwiseDot(w3d,lambda,lambda);
-// //        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
-// // 
-// //         dzNU_.backward( y[0], omega); 
-// //         dzNU_.backwardT(omega,lambda);
-// //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+    if (p.p_diff ==0)    {
+// //         centered
+// //         dzNU_( y[0], omega); 
+// //         dzNU_.centeredT(omega,lambda);
+// //         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+// 
+        //forward, backward (stegi) without jump
+//         dzNU_.forward( y[0], omega); 
+//         dzNU_.forwardT(omega,lambda);
+//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+// 
+//         dzNU_.backward( y[0], omega); 
+//         dzNU_.backwardT(omega,lambda);
+//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
 //         //with jump
-// //        dzNU_.symv(y[0],lambda);
-// // //        dg::blas1::pointwiseDot(v3d,lambda,lambda);
-// //        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+//        dzNU_.symv(y[0],lambda);
+// //        dg::blas1::pointwiseDot(w3d,lambda,lambda);
+//        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 // 
-// 
-//     }
+//         dzNU_.backward( y[0], omega); 
+//         dzNU_.backwardT(omega,lambda);
+//         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
+        //with jump
+//        dzNU_.symv(y[0],lambda);
+// //        dg::blas1::pointwiseDot(v3d,lambda,lambda);
+//        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
+
+
+    }
     if (p.p_diff ==1)    {
         // (B) nonadjoint
         dzNU_( binv, lambda); //gradpar 1/B
@@ -345,11 +344,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     if (p.p_diff ==3)    {
         // (D) nonadjoint with direct method
         dzNU_.forward( y[0], omega); 
-        dzNU_.forwardTD(omega,lambda);
+        dzDIR_.forwardTD(omega,lambda);
         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
 
         dzNU_.backward( y[0], omega); 
-        dzNU_.backwardTD(omega,lambda);
+        dzDIR_.backwardTD(omega,lambda);
         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
     }
 //     if (p.p_diff ==4)    {

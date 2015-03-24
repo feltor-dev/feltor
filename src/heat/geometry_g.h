@@ -71,11 +71,12 @@ struct InvB
 
     double operator()(double R, double Z)
     {    
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
     }
     double operator()(double R, double Z, double phi)
-    {    
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+    {  
+
+        return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
     }
     void display() { }
   private: 
@@ -88,11 +89,11 @@ struct B
 
     double operator()(double R, double Z)
     {    
-        return sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))*R_0/ (2.*sqrt(2.)*R);
+        return sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))*R_0/ (sqrt(8.)*R);
     }
     double operator()(double R, double Z, double phi)
     {    
-        return sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))*R_0/ (2.*sqrt(2.)*R);
+        return sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))*R_0/ (sqrt(8.)*R);
     }
     void display() { }
   private:
@@ -105,11 +106,11 @@ struct LnB
 
     double operator()(double R, double Z)
     {    
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        double invB = sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
         return log(1./invB);    }
     double operator()(double R, double Z, double phi)
     {    
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+        double invB = sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
         return log(1./invB);    }
     void display() { }
   private:
@@ -157,27 +158,29 @@ struct Field
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {        
-            
+
             yp[2][i] = y[0][i]*sqrt(1.+ M_PI*M_PI*(1.- cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/8./I_0/I_0);            
-            yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2)/2./I_0;
-            yp[1][i] =  M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2)/2./I_0 ;
+            yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2.)/2./I_0;
+            yp[1][i] =  M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2.)/2./I_0 ;
         }
     }
     void operator()( const dg::HVec& y, dg::HVec& yp)
     {
             yp[2] = y[0]*sqrt(1.+ M_PI*M_PI*(1.-cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/8./I_0/I_0);
-            yp[0] = -M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2)/2./I_0;
-            yp[1] =  M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2)/2./I_0 ;
+            yp[0] = -M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2.)/2./I_0;
+            yp[1] =  M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2.)/2./I_0 ;
     }
     double operator()( double R, double Z)
     {
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+
+        return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
 //                 double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
 //         return invB*I_0*R_0/R;
     }
     double operator()( double R, double Z, double phi)
     {
-        return 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
+
+        return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
 //                 double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
 //         return invB*I_0*R_0/R;
     }
@@ -298,9 +301,10 @@ struct DeriNeuT2
     {
         double fac1 = 4.*I_0*cos(0.5*M_PI*(R-R_0))*cos(0.5*M_PI*Z);
         double fac2 = 8.*I_0*I_0+M_PI*M_PI - M_PI*M_PI*cos(M_PI*(R-R_0))*cos(M_PI*Z);
-        double fac3 = (cos(M_PI*Z)-cos(M_PI*(R-R_0)))*sin(phi)*sin(0.5*M_PI*(R-R_0))*sin(0.5*M_PI*Z);
+        double fac3 = (cos(M_PI*Z)-cos(M_PI*(R-R_0)))*
+                        sin(phi)*sin(0.5*M_PI*(R-R_0))*sin(0.5*M_PI*Z);
         double nenner = R*R*(8.*I_0*I_0+M_PI*M_PI - M_PI*M_PI*cos(M_PI*(R-R_0))*cos(M_PI*Z))*(8.*I_0*I_0+M_PI*M_PI - M_PI*M_PI*cos(M_PI*(R-R_0))*cos(M_PI*Z));
-        return fac1*(2.*I_0*cos(phi)*fac2 + M_PI*M_PI*R*fac3)/nenner;
+        return fac1*(2.*I_0*cos(phi)*fac2 + M_PI*M_PI*M_PI*M_PI*R*fac3)/nenner;
     }
     private:
     double R_0, I_0;

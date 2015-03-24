@@ -11,7 +11,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
-// #include "dg/backend/ell_interpolation.h"
+#include "dg/backend/ell_interpolation.h"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "dg/runge_kutta.h"
@@ -75,7 +75,6 @@ int main( int argc, char* argv[])
 
     //Make grids
     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
-/*    dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1.0,p.bc, p.bc, dg::PER, dg::cylindrical); */ 
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,p.Nz_out,p.bc, p.bc, dg::PER, dg::cylindrical); 
     dg::DVec w3d =  dg::create::weights(grid);
     dg::DVec w3dout =  dg::create::weights(grid_out);
@@ -84,7 +83,7 @@ int main( int argc, char* argv[])
     double normTend=0.,normTendc=1e-14;
     dg::DVec Tend(dg::evaluate(dg::zero,grid_out));
     dg::DVec Tendc(dg::evaluate(dg::zero,grid));
-        dg::DVec transfer(  dg::evaluate(dg::zero, grid));
+    dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferHc( dg::evaluate(dg::zero, grid));
@@ -131,11 +130,11 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
-    dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
+//     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
 //      dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(p, gp);
+    solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 
     //background profile
@@ -156,9 +155,9 @@ int main( int argc, char* argv[])
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     
     //RK solver
-//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+    dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
-    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+//     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
 
@@ -177,21 +176,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-//     solovev::FieldR fieldR(gp);
-//     solovev::FieldZ fieldZ(gp);
-//     solovev::FieldP fieldP(gp);
-//     dg::HVec vecR = dg::evaluate( fieldR, grid_out);
-//     dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
-//     dg::HVec vecP = dg::evaluate( fieldP, grid_out);
-//     int vecID[3];
-//     err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim_ids[1], &vecID[0]);
-//     err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim_ids[1], &vecID[1]);
-//     err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim_ids[1], &vecID[2]);
-//     err = nc_enddef( ncid);
-//     err = nc_put_var_double( ncid, vecID[0], vecR.data());
-//     err = nc_put_var_double( ncid, vecID[1], vecZ.data());
-//     err = nc_put_var_double( ncid, vecID[2], vecP.data());
-//     err = nc_redef(ncid);
+
     //field IDs
     std::string names[1] = {"T"}; 
     int dataIDs[1]; 
@@ -223,15 +208,14 @@ int main( int argc, char* argv[])
     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid);
 //     cusp::ell_matrix<int, double, cusp::device_memory> interpolate = dg::create::ell_interpolation( grid_out, grid);
     //interpolate fine grid on coarse grid
-//     dg::HMatrix interpolatec = dg::create::interpolation( grid, grid_out);
-//     cusp::ell_matrix<int, double, cusp::device_memory> interpolatec = dg::create::ell_interpolation( grid, grid_out); 
+//     dg::DMatrix interpolatec = dg::create::interpolation( grid, grid_out);
+    cusp::ell_matrix<int, double, cusp::device_memory> interpolatec = dg::create::ell_interpolation( grid, grid_out); 
     
     dg::blas2::symv( interpolate, y0[0], transferD);
     err = nc_open(argv[3], NC_WRITE, &ncid);
     transferH =transferD;
 //     transferH =y0[0]; //without interp
     err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
-        
         
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -242,21 +226,18 @@ int main( int argc, char* argv[])
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
     dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
     error = sqrt(dg::blas2::dot( w3d, T1)/normT0);
+    
+    //Compute error to reference solution
     if (argc==5)
     {
-        //interpolate fine grid one coarse grid
-//         dg::blas2::symv( interpolatec, Tend, Tendc);
-//         normTendc=dg::blas2::dot(w3d,Tendc);
-        Tendc=Tend;
+//         interpolate fine grid one coarse grid
+        dg::blas2::symv( interpolatec, Tend, Tendc);
         normTendc=dg::blas2::dot(w3d,Tendc);
-
-//         transferHc = (dg::HVec) y0[0];
-        dg::blas1::axpby( 1., y0[0], -1.,Tendc,transferD);
-        relerror = sqrt(dg::blas2::dot( w3d, transferD)/normTendc);  
-        //if in is finer
-//         dg::blas1::axpby( 1., transferH, -1.,Tend,transferH);
-//         relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);  
-        
+        dg::blas1::axpby( 1., y0[0], -1.,Tendc,transfer);
+        relerror = sqrt(dg::blas2::dot( w3d, transfer)/normTend);      
+//         interpolate coarse on fine grid
+/*        dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
+        relerror = sqrt(dg::blas2::dot( w3dout, transferD)/normTend);  */    
         
     }
     std::vector<double> evec = feltor.energy_vector();
@@ -292,8 +273,8 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
-//                 rk( feltor, y0, y1, p.dt); //RK stepper
-                sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
+                rk( feltor, y0, y1, p.dt); //RK stepper
+//                 sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
 //                 karniadakis( feltor, rolkar, y0);  //Karniadakis stepper
                 y0.swap( y1);}
               catch( dg::Fail& fail) { 
@@ -312,20 +293,15 @@ int main( int argc, char* argv[])
             error = sqrt(dg::blas2::dot( w3d, T1)/normT0);
             if (argc==5)
             {
-//                 dg::blas2::symv( interpolate, y0[0], transferD);
-//                 transferH =transferD;
-//                 dg::blas1::axpby( 1., transferH, -1.,Tend, transferH);
-//                 relerror = sqrt(dg::blas2::dot( w3dout, transferH)/normTend);
-//                         dg::blas2::symv( interpolatec, Tend, Tendc);
-//         normTendc=dg::blas2::dot(w3d,Tendc);
-//                 dg::blas2::symv( interpolatec, Tend, Tendc);
-//                 normTendc=dg::blas2::dot(w3d,Tendc);
-                Tendc=Tend;
+//         interpolate fine on coarse grid
+                dg::blas2::symv( interpolatec, Tend, Tendc);
                 normTendc=dg::blas2::dot(w3d,Tendc);
-
-//                 transferHc =(dg::HVec) y0[0];
-                dg::blas1::axpby( 1., y0[0], -1.,Tendc,transferD);
-                relerror = sqrt(dg::blas2::dot( w3d, transferD)/normTendc);  
+                dg::blas1::axpby( 1., y0[0], -1.,Tendc,transfer);
+                relerror = sqrt(dg::blas2::dot( w3d, transfer)/normTend);  
+//         interpolate coarse on fine grid
+//                 dg::blas2::symv( interpolate, y0[0], transferD);
+//                 dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
+//                 relerror = sqrt(dg::blas2::dot( w3dout, transferD)/normTend); 
             }
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
@@ -359,9 +335,7 @@ int main( int argc, char* argv[])
 
         dg::blas2::symv( interpolate, y0[0], transferD);
         transferH =transferD;
-//         transferH =y0[0];
         err = nc_open(argv[3], NC_WRITE, &ncid);
-//         transferH = avisual;
         err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
         
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
