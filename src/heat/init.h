@@ -272,9 +272,10 @@ struct ZonalFlow
     }
     double operator() (double R, double Z)
     {
-      if (psip_(R,Z)<gp_.psipmax) return p_.amp*sin(M_PI*psip_(R,Z)*psip_(R,Z));
-      return 0.;
-
+//       if (psip_(R,Z)<gp_.psipmax) return p_.amp*sin(M_PI*psip_(R,Z)*psip_(R,Z));
+        return p_.amp*psip_(R,Z)*psip_(R,Z);
+//         return p_.amp*(1.+sin(M_PI*psip_(R,Z)-M_PI/2.));
+//         return  p_.amp*exp(-(psip_(R,Z)-0.5)*(psip_(R,Z)-0.5)/0.01);
     }
     double operator() (double R, double Z,double phi)
     {

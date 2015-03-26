@@ -4,32 +4,27 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =   3   (3)
-2)  nx (grid points in x)                =  20(192)
-3)  ny (grid points in y)                = 20(192) 
-4)  nz (grid points in z)                =  20(1)
-5)  dt (time step in units c_s/rho_s)    =0.01(0.01)
-
-
-
+1)  n  (# of x,y-polynomials)            = 3   (3)
+2)  nx (grid points in x)                = 51(192)
+3)  ny (grid points in y)                = 51(192) 
+4)  nz (grid points in z)                = 18(1)
+5)  dt (time step in units c_s/rho_s)    = 0.0001(0.01)
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  20
-8)  ny_out (# grid points in output field)  =  20
-9)  nz_out (# grid points in output field)  =  20
-10) itstp  (steps between outputs)          =  10  (5)
-
-
-11) total # of outputs (excluding first)    =  100
+7)  nx_out (# grid points in output field)  =  51
+8)  ny_out (# grid points in output field)  =  51
+9)  nz_out (# grid points in output field)  =  162
+10) itstp  (steps between outputs)          =  1  (5)
+11) total # of outputs (excluding first)    =  1
 -------------------------Physical parameters----------------------------
-12) nu_perp                                 = 0e-8
+12) nu_perp                                 = 0e-5
 13) nu_parallel  (viscosity)                = 100  (0.001)
 ------------------------Initial perturbation parameters---------------------
 14) amp (blob amplitude)                    =  0.1   (1.0)
 15) sigma (blob variance in units of rho_s) =  0.1    (10)
 16) x-position ( in units of a)             =  0.6    (0.4)
 17) y-position ( in units of a)             =  0.00   (0.5)
-18) sigma_z (variance in units of R_0)      =  2.0    (12.5 for oo)
+18) sigma_z (variance in units of R_0)      =  0.50    (12.5 for oo)
 19) k_psi (zonal modes)                     =  1   
 20) Profile amplitude                       =  0.0  (peak amplitude)
 21) Background Prof amplitude               =  1.   (density on the boundary)
@@ -42,7 +37,7 @@
 26) boxscale Z-                             =  1.0 (a little larger than 1)
 27) adv (adj(0), nadj(1), onadj(2),no(3))   =  3
 27) diff (a(0), na(1),
-          ona(2),d(3), da(4),no(5)))        = 3
+          ona(2),d(3), da(4),no(5)))        = 5
 28) diffperp (lap(0), lap2(1) )             = 1
 ----------------------------------Tor limiter------------------------------
 29) toroidal limiter (0/1)                  =  0                       

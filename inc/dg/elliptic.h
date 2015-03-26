@@ -529,7 +529,6 @@ struct GeneralEllipticSym
         dg::blas1::pointwiseDot( zchi, temp0, temp1); 
         dg::blas2::gemv( leftzinv, temp1, zz); 
 
-//         dg::blas1::axpby( -1., xx, -1., yy, y);
         dg::blas1::axpby( -0.5, xx, +1., y, y);
         dg::blas1::axpby( -0.5, yy, +1., y, y); 
         dg::blas1::axpby( -0.5, zz, +1., y, y); 

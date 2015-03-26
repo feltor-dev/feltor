@@ -11,7 +11,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
-#include "dg/backend/ell_interpolation.h"
+// #include "dg/backend/ell_interpolation.h"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "dg/runge_kutta.h"
@@ -46,7 +46,6 @@ int main( int argc, char* argv[])
     }
     else 
     {
-
         try{
             input = file::read_file( argv[1]);
             geom = file::read_file( argv[2]);
@@ -63,7 +62,6 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    //////////////////////////////open nc file//////////////////////////////////
     
     ///////////////////////////////////////////////////////////////////////////
     ////////////////////////////////set up computations///////////////////////////
@@ -75,13 +73,11 @@ int main( int argc, char* argv[])
 
     //Make grids
     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
-
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,p.Nz_out,p.bc, p.bc, dg::PER, dg::cylindrical); 
     dg::DVec w3d =  dg::create::weights(grid);
     dg::DVec w3dout =  dg::create::weights(grid_out);
 
     // /////////////////////get last temperature field of sim
-    double normTend=0.,normTendc=1e-14;
     dg::DVec Tend(dg::evaluate(dg::zero,grid_out));
     dg::DVec Tendc(dg::evaluate(dg::zero,grid));
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
@@ -90,6 +86,7 @@ int main( int argc, char* argv[])
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferHc( dg::evaluate(dg::zero, grid));
     int  tvarID;
+    //////////////////////////////open nc file//////////////////////////////////
     if (argc == 5)
     {
         file::NC_Error_Handle errin;
@@ -107,21 +104,19 @@ int main( int argc, char* argv[])
         std::cout << "geome in"<<geomin <<std::endl;
         const eule::Parameters pin(file::read_input( inputin));
         const solovev::GeomParameters gpin(file::read_input( geomin));
-        double Rminin=gpin.R_0-pin.boxscaleRm*gpin.a;
-        double Zminin=-pin.boxscaleZm*gpin.a*gpin.elongation;
-        double Rmaxin=gpin.R_0+pin.boxscaleRp*gpin.a; 
-        double Zmaxin=pin.boxscaleZp*gpin.a*gpin.elongation;
+        double Rminin = gpin.R_0 - pin.boxscaleRm*gpin.a;
+        double Zminin =-pin.boxscaleZm*gpin.a*gpin.elongation;
+        double Rmaxin = gpin.R_0 + pin.boxscaleRp*gpin.a; 
+        double Zmaxin = pin.boxscaleZp*gpin.a*gpin.elongation;
         dg::Grid3d<double > grid_in( Rminin,Rmaxin, Zminin,Zmaxin, 0, 2.*M_PI, pin.n, pin.Nx, pin.Ny, pin.Nz, pin.bc, pin.bc, dg::PER, dg::cylindrical);
         size_t start3din[4]  = {pin.maxout, 0, 0, 0};
         size_t count3din[4]  = {1, grid_in.Nz(), grid_in.n()*grid_in.Ny(), grid_in.n()*grid_in.Nx()};
         std::string namesin[1] = {"T"}; 
         int dataIDsin[1]; 
-        int dim_idsin[4];
         errin = nc_inq_varid(ncidin, namesin[0].data(), &dataIDsin[0]);      
         errin = nc_get_vara_double( ncidin, dataIDsin[0], start3din, count3din, transferH.data());
         Tend=(dg::DVec)transferH;
         errin = nc_close(ncidin);     
-        normTend = dg::blas2::dot( w3dout, Tend);
     }
     // /////////////////////create RHS 
     std::cout << "Constructing Feltor...\n";
@@ -132,12 +127,10 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
-//     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
+    dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
 //      dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(p, gp);
-
+//     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 
     //background profile
@@ -153,15 +146,15 @@ int main( int argc, char* argv[])
     y1[0] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
-//     dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
-
+    if (p.bc ==dg::DIR)    {
+            dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
+    }
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
-    
+    ///////////////////TIME STEPPER   
     //RK solver
     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
 //     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
-
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
 
@@ -180,8 +173,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-
-
+    
     //field IDs
     std::string names[1] = {"T"}; 
     int dataIDs[1]; 
@@ -207,22 +199,18 @@ int main( int argc, char* argv[])
     size_t start[4] = {0, 0, 0, 0};
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
 
-    dg::HVec avisual( grid_out.size(), 0.);
-
-    //interpolate coarse grid on fine grid
-    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid);
-//     cusp::ell_matrix<int, double, cusp::device_memory> interpolate = dg::create::ell_interpolation( grid_out, grid);
-    //interpolate fine grid on coarse grid
-//     dg::DMatrix interpolatec = dg::create::interpolation( grid, grid_out);
-    cusp::ell_matrix<int, double, cusp::device_memory> interpolatec = dg::create::ell_interpolation( grid, grid_out); 
-
+    //interpolate coarse 2 fine grid
+    dg::DMatrix interpolatec2f = dg::create::interpolation( grid_out, grid); //c2f
+//     cusp::ell_matrix<int, double, cusp::device_memory> interpolatec2f = dg::create::ell_interpolation( grid_out, grid);
+    //interpolate fine 2 coarse grid
+    dg::DMatrix interpolatef2c = dg::create::interpolation( grid, grid_out);//f2c
+//     cusp::ell_matrix<int, double, cusp::device_memory> interpolatef2c = dg::create::ell_interpolation( grid, grid_out); 
     
-    dg::blas2::symv( interpolate, y0[0], transferD);
+    dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field
+//     transferD =y0[0]; // dont interpolate field
     err = nc_open(argv[3], NC_WRITE, &ncid);
     transferH =transferD;
-//     transferH =y0[0]; //without interp
-    err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
-        
+    err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());        
 
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -238,15 +226,13 @@ int main( int argc, char* argv[])
     if (argc==5)
     {
 //         interpolate fine grid one coarse grid
-        dg::blas2::symv( interpolatec, Tend, Tendc);
-        normTendc=dg::blas2::dot(w3d,Tendc);
+        dg::blas2::gemv( interpolatef2c, Tend, Tendc);
         dg::blas1::axpby( 1., y0[0], -1.,Tendc,transfer);
-        relerror = sqrt(dg::blas2::dot( w3d, transfer)/normTend);      
+        relerror = sqrt(dg::blas2::dot( w3d, transfer)/dg::blas2::dot(w3dout,Tend));      
 //         interpolate coarse on fine grid
-/*        dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
-        relerror = sqrt(dg::blas2::dot( w3dout, transferD)/normTend);  */    
-
-        
+/*        dg::blas2::gemv( interpolatec2f, y0[0], transferD);
+       dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
+        relerror = sqrt(dg::blas2::dot( w3dout, transferD)/dg::blas2::dot( w3dout, Tend));   */           
     }
     std::vector<double> evec = feltor.energy_vector();
     double Se0 = evec[0];
@@ -261,7 +247,6 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     err = nc_put_vara_double( ncid, errorID, Estart, Ecount,&error);
     err = nc_put_vara_double( ncid, relerrorID, Estart, Ecount,&relerror);
-
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
 
@@ -283,7 +268,6 @@ int main( int argc, char* argv[])
             try{
                 rk( feltor, y0, y1, p.dt); //RK stepper
 //                 sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
-
 //                 karniadakis( feltor, rolkar, y0);  //Karniadakis stepper
                 y0.swap( y1);}
               catch( dg::Fail& fail) { 
@@ -303,14 +287,13 @@ int main( int argc, char* argv[])
             if (argc==5)
             {
 //         interpolate fine on coarse grid
-                dg::blas2::symv( interpolatec, Tend, Tendc);
-                normTendc=dg::blas2::dot(w3d,Tendc);
+                dg::blas2::gemv( interpolatef2c, Tend, Tendc);
                 dg::blas1::axpby( 1., y0[0], -1.,Tendc,transfer);
-                relerror = sqrt(dg::blas2::dot( w3d, transfer)/normTend);  
+                relerror = sqrt(dg::blas2::dot(w3d, transfer)/dg::blas2::dot(w3dout,Tend));  
 //         interpolate coarse on fine grid
-//                 dg::blas2::symv( interpolate, y0[0], transferD);
+//                 dg::blas2::gemv( interpolatec2f, y0[0], transferD);
 //                 dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
-//                 relerror = sqrt(dg::blas2::dot( w3dout, transferD)/normTend); 
+//                 relerror = sqrt(dg::blas2::dot( w3dout, transferD)/dg::blas2::dot( w3dout, Tend)); 
 
             }
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
@@ -331,7 +314,7 @@ int main( int argc, char* argv[])
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << " -> Error: "<< error <<" -> Error2: "<< relerror <<"\n";
+            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << " -> error2t0: "<< error <<" -> error2ref: "<< relerror <<"\n";
             err = nc_close(ncid);
 
         }
@@ -343,12 +326,11 @@ int main( int argc, char* argv[])
         //////////////////////////write fields////////////////////////
         start[0] = i;
 
-        dg::blas2::symv( interpolate, y0[0], transferD);
+        dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field
+//         transferD =y0[0]; //dont interpolate field
         transferH =transferD;
         err = nc_open(argv[3], NC_WRITE, &ncid);
-
-        err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
-        
+        err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());        
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);
     }
