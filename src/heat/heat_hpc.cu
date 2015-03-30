@@ -127,10 +127,10 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
-    dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
+//     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
 //      dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(p, gp);
+    solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 
     //background profile
@@ -152,9 +152,9 @@ int main( int argc, char* argv[])
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     ///////////////////TIME STEPPER   
     //RK solver
-    dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
-//     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
 
@@ -166,6 +166,7 @@ int main( int argc, char* argv[])
     double normT0 = dg::blas2::dot(  w3d, T0);
     double error = 0.,relerror=0.;
     /////////////////////////////set up netcdf for output/////////////////////////////////////
+
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -173,7 +174,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-    
+
     //field IDs
     std::string names[1] = {"T"}; 
     int dataIDs[1]; 
@@ -206,8 +207,8 @@ int main( int argc, char* argv[])
     dg::DMatrix interpolatef2c = dg::create::interpolation( grid, grid_out);//f2c
 //     cusp::ell_matrix<int, double, cusp::device_memory> interpolatef2c = dg::create::ell_interpolation( grid, grid_out); 
     
-    dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field
-//     transferD =y0[0]; // dont interpolate field
+//     dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field
+    transferD =y0[0]; // dont interpolate field
     err = nc_open(argv[3], NC_WRITE, &ncid);
     transferH =transferD;
     err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());        
@@ -226,11 +227,11 @@ int main( int argc, char* argv[])
     if (argc==5)
     {
 //         interpolate fine grid one coarse grid
-        dg::blas2::gemv( interpolatef2c, Tend, Tendc);
+        dg::blas2::symv( interpolatef2c, Tend, Tendc);
         dg::blas1::axpby( 1., y0[0], -1.,Tendc,transfer);
         relerror = sqrt(dg::blas2::dot( w3d, transfer)/dg::blas2::dot(w3dout,Tend));      
 //         interpolate coarse on fine grid
-/*        dg::blas2::gemv( interpolatec2f, y0[0], transferD);
+/*        dg::blas2::symv( interpolatec2f, y0[0], transferD);
        dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
         relerror = sqrt(dg::blas2::dot( w3dout, transferD)/dg::blas2::dot( w3dout, Tend));   */           
     }
@@ -266,8 +267,8 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
-                rk( feltor, y0, y1, p.dt); //RK stepper
-//                 sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
+//                 rk( feltor, y0, y1, p.dt); //RK stepper
+                sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
 //                 karniadakis( feltor, rolkar, y0);  //Karniadakis stepper
                 y0.swap( y1);}
               catch( dg::Fail& fail) { 
@@ -287,11 +288,11 @@ int main( int argc, char* argv[])
             if (argc==5)
             {
 //         interpolate fine on coarse grid
-                dg::blas2::gemv( interpolatef2c, Tend, Tendc);
+                dg::blas2::symv( interpolatef2c, Tend, Tendc);
                 dg::blas1::axpby( 1., y0[0], -1.,Tendc,transfer);
                 relerror = sqrt(dg::blas2::dot(w3d, transfer)/dg::blas2::dot(w3dout,Tend));  
 //         interpolate coarse on fine grid
-//                 dg::blas2::gemv( interpolatec2f, y0[0], transferD);
+//                 dg::blas2::symv( interpolatec2f, y0[0], transferD);
 //                 dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
 //                 relerror = sqrt(dg::blas2::dot( w3dout, transferD)/dg::blas2::dot( w3dout, Tend)); 
 
@@ -326,8 +327,8 @@ int main( int argc, char* argv[])
         //////////////////////////write fields////////////////////////
         start[0] = i;
 
-        dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field
-//         transferD =y0[0]; //dont interpolate field
+//         dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field
+        transferD =y0[0]; //dont interpolate field
         transferH =transferD;
         err = nc_open(argv[3], NC_WRITE, &ncid);
         err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());        

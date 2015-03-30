@@ -5,17 +5,17 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            = 3   (3)
-2)  nx (grid points in x)                = 51(192)
-3)  ny (grid points in y)                = 51(192) 
-4)  nz (grid points in z)                = 18(1)
-5)  dt (time step in units c_s/rho_s)    = 0.0001(0.01)
+2)  nx (grid points in x)                = 80(192)
+3)  ny (grid points in y)                = 80(192) 
+4)  nz (grid points in z)                = 10(1)
+5)  dt (time step in units c_s/rho_s)    = 0.001(0.01)
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  51
-8)  ny_out (# grid points in output field)  =  51
-9)  nz_out (# grid points in output field)  =  162
-10) itstp  (steps between outputs)          =  1  (5)
-11) total # of outputs (excluding first)    =  1
+7)  nx_out (# grid points in output field)  = 80
+8)  ny_out (# grid points in output field)  = 80
+9)  nz_out (# grid points in output field)  = 10
+10) itstp  (steps between outputs)          =  1000  (5)
+11) total # of outputs (excluding first)    =  20
 -------------------------Physical parameters----------------------------
 12) nu_perp                                 = 0e-5
 13) nu_parallel  (viscosity)                = 100  (0.001)
@@ -37,7 +37,7 @@
 26) boxscale Z-                             =  1.0 (a little larger than 1)
 27) adv (adj(0), nadj(1), onadj(2),no(3))   =  3
 27) diff (a(0), na(1),
-          ona(2),d(3), da(4),no(5)))        = 5
+          ona(2),d(3), da(4),no(5)))        = 3
 28) diffperp (lap(0), lap2(1) )             = 1
 ----------------------------------Tor limiter------------------------------
 29) toroidal limiter (0/1)                  =  0                       
