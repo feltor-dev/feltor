@@ -34,9 +34,8 @@ struct Rolkar
         p(p),
         gp(gp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
-        dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
-        elliptic( g, dg::normed, dg::forward)
-
+        dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx())
+        ,elliptic( g, dg::normed, dg::forward)
     {
         container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
         elliptic.set_x( bfield);
@@ -48,15 +47,14 @@ struct Rolkar
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
         dg::blas1::axpby( 0., x, 0, y);
-        if (p.p_diff ==4)    {
-            dg::blas2::gemv( elliptic, x[0], y[0]); //lap is negative
-            dg::blas1::scal(y[0], -p.nu_parallel );  
-        }
         if (p.p_diff ==0)    {
           dg::blas2::gemv( dzNU_, x[0], y[0]); 
           dg::blas1::scal(y[0], p.nu_parallel );  
        }
-//       
+        if (p.p_diff ==4)    {
+            dg::blas2::gemv( elliptic, x[0], y[0]); //lapd is negative
+            dg::blas1::scal(y[0], -p.nu_parallel );  
+        }
     }
     const container& damping(){return dampprof_;}
     const Preconditioner& weights(){return elliptic.weights();}
@@ -66,7 +64,6 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container dampprof_;
     dg::DZ<Matrix, container> dzNU_;
-
     dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
 
 };
@@ -108,6 +105,7 @@ struct Feltor
     dg::DZ<Matrix, container> dzNU_,dzDIR_;
 
 //     dg::Elliptic< Matrix, container, Preconditioner > lapperp; 
+//     dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
 
     const eule::Parameters p;
     const solovev::GeomParameters gp;
@@ -129,11 +127,18 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
     dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
     dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
-//     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
+//     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,  dg::centered),
+//         elliptic( g, dg::normed, dg::forward),
     p(p),
     gp(gp),
     evec(1)
-{  
+{
+//         container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
+//         elliptic.set_x( bfield);
+//         bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),g);
+//         elliptic.set_y( bfield);
+//         bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
+//         elliptic.set_z( bfield);
 }
 
 
@@ -198,11 +203,11 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     if (p.p_diff ==3)    {
         // (D) nonadjoint with direct method
         dzNU_.forward( y[0], omega); 
-        dzDIR_.forwardTD(omega,lambda);
+        dzNU_.forwardTD(omega,lambda);
         dg::blas1::axpby( 0.5, lambda, 0.,chi,chi); 
 
         dzNU_.backward( y[0], omega); 
-        dzDIR_.backwardTD(omega,lambda);
+        dzNU_.backwardTD(omega,lambda);
         dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi); 
     }

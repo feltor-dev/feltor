@@ -165,9 +165,9 @@ int main( int argc, char* argv[])
 
     //////////////////////////////////////////////////////////////////////////////////
     //RK solver
-    dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
-//     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
 
@@ -241,8 +241,8 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << " err =" << err << "\n";
             E0 = E1;
             try{
-                rk( feltor, y0, y1, p.dt);
-//                  sirk(feltor,rolkar,y0,y1,p.dt);
+//                 rk( feltor, y0, y1, p.dt);
+                 sirk(feltor,rolkar,y0,y1,p.dt);
 //                 karniadakis( feltor, rolkar, y0);
 
                 y0.swap( y1);}
