@@ -62,8 +62,6 @@ all: asela asela_hpc
 
 asela: asela.cu ../asela/asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
-
 	
 ifeq ($(strip $(device)),mpi)
 asela_hpc: asela_hpc.cpp ../asela/asela.cuh 
@@ -79,15 +77,8 @@ generator: generator.cpp
 
 .PHONY: clean doc
 
-dz_geom_t: dz_geom_t.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lnetcdf -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
-	
-geometry_t: geometry_t.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lnetcdf -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
 doc: 
 	doxygen Doxyfile
 	
 clean:
-	rm -f asela asela_hpc geometry_t dz_geom_t
+	rm -f asela asela_hpc 

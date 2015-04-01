@@ -73,4 +73,4 @@ heat_hpc: heat_hpc.cu heat.cuh
 .PHONY: clean
 	
 clean:
-	rm -f heat heat_hpc geometry_t dz_geom_t
+	rm -f heat heat_hpc 

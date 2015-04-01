@@ -62,4 +62,4 @@ generator: generator.cpp
 .PHONY: clean
 
 clean:
-	rm -f toeflR toefl_hpc
+	rm -f toeflI toefl_hpc
