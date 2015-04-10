@@ -3,7 +3,7 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =   3      (3)
+1)  n  (# of x,y-polynomials)            =   2      (3)
 2)  nx (grid points in x)                =   50 (192)
 3)  ny (grid points in y)                =   50 (192)
 4)  nz (grid points in z)                =   30(>16)
@@ -26,9 +26,9 @@
 16) mu_e (-m_e/m_i)                         = -0.000272121, (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0  (1e-4)
-19) nu_perp                                 =  5e-4
+19) nu_perp                                 =  1e-3
 20) nu_parallel  (viscosity)                =  1    (0.001)
-21) para resistivity (c)                    =  1e-5   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
 
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.01    (1.0)

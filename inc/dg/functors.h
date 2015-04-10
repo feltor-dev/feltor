@@ -437,8 +437,9 @@ struct LHalf {
      * @brief Construct with given boundary value
      *
      * @param xb boundary value
+     * @param width damping width
      */
-    LHalf(double xb) : xb_(xb) {}
+    LHalf(double xb,double width) : xb_(xb),w_(width) {}
     /**
      * @brief Return left side step function
      *
@@ -450,10 +451,11 @@ struct LHalf {
      */
     double operator() (double x, double y)
     {
-        return 0.5*(1.-tanh(x-xb_));
+        return 0.5*(1.-tanh((x-xb_)/w_));
     }
     private:
      double xb_;
+     double w_;
 };
 
 
@@ -466,8 +468,9 @@ struct RHalf {
      * @brief Construct with boundary value
      *
      * @param xb boundary value
+     * @param width damping width
      */
-    RHalf(double xb) : xb_(xb)  {}
+    RHalf(double xb, double width) : xb_(xb),w_(width)   {}
     /**
      * @brief Return left side step function
      *
@@ -479,10 +482,11 @@ struct RHalf {
      */
     double operator() (double x, double y)
     {
-        return 0.5*(1.+tanh(x-xb_)); 
+        return 0.5*(1.+tanh((x-xb_)/w_)); 
     }
     private:
      double xb_;
+    double w_;
 };
 /**
  * @brief Functor returning a Lamb dipole

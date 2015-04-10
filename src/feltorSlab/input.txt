@@ -4,17 +4,17 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =  1     (3)
-2)  nx (grid points in x)                = 150(192)
-3)  ny (grid points in y)                =  100(192) 
-4)  dt (time step in units c_s/rho_s)    =  0.4(0.01)
+1)  n  (# of x,y-polynomials)            = 3     (3)
+2)  nx (grid points in x)                =100(192)
+3)  ny (grid points in y)                =  60(192) 
+4)  dt (time step in units c_s/rho_s)    =  0.05(0.01)
 
 ----------------------------------Output parameters--------------------
 5)  n_out (# of x-y polynomials in output)  =  3
-6)  nx_out (# grid points in output field)  =  64
-7)  ny_out (# grid points in output field)  =  64
-8)  itstp  (steps between outputs)          =  5(5)
-9) total # of outputs (excluding first)     =  2000
+6)  nx_out (# grid points in output field)  =  100
+7)  ny_out (# grid points in output field)  =  60
+8)  itstp  (steps between outputs)          =  500(5)
+9) total # of outputs (excluding first)     =  25000
 
 
 -------------------------Algorithmic parameters------------------------
@@ -25,9 +25,9 @@
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  0.0   (0.0)
 15) mcv (curvature)                         =  0.01    (0.001)
-16) nu_perp                                 =  1e-3
-17) D  (coupling)                           =  1e-7  (0.001)
-18) para resistivity (c)                    =  64e-7   (3e-5 gives a drift wave)
+16) nu_perp                                 =  5e-3
+17) D  (coupling)                           =  0.1e-7  (0.001)
+18) para resistivity (c)                    =  100e-7   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
 19) amp (blob amplitude)                    =  0.015625    (1.0)
 20) sigma (blob variance in units of rho_s) =  2.5     (10)
@@ -36,13 +36,14 @@
 23) Profile amplitude                       =  1.0  (peak amplitude)
 24) Background Prof amplitude               =  0.0   (density on the boundary)
 ---------------------------------box setup----------------
-25) lx (in rho_s)                           =  90
-26) ly (in rho_s)                           =  64
+25) lx (in rho_s)                           =  100
+26) ly (in rho_s)                           =  60
 27) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   2      (1.0)
 28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------
 29) ordinary/modified HW (0/1)              = 1
 30) ln (in rho_s)                           = 32
 ---------------------------------SOL Dynamics-------------------------------------------
-31) SOL boundary in units of lx (>1 noSOL)  =  0.25
+31) SOL boundary in units of lx (>1 no SOL) = 0.25
+32) damping width                           = 0.5
 @ ------------------------------------------------------------

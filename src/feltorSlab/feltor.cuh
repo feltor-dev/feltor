@@ -169,7 +169,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     Yprobe(1,p.ly*p.posY),//use blob position
     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
     probevalue(1,0.0),
-    lh( dg::evaluate(dg::LHalf(p.lx*p.solb),g)),rh( dg::evaluate(dg::RHalf(p.lx*p.solb),g)), 
+    lh( dg::evaluate(dg::LHalf(p.lx*p.solb,p.solw),g)),rh( dg::evaluate(dg::RHalf(p.lx*p.solb,p.solw),g)), 
 
     //boundary integral terms
     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
@@ -365,17 +365,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
     }
-    //sol boundary
+    //edge - sol boundary
     if (p.solb*p.lx<p.lx) 
     {
-        dg::blas1::pointwiseDot(omega,lh,omega);
-        dg::blas1::axpby(-1.,phi[0],0.,lambda,lambda); 
-        dg::blas1::transform(lambda, lambda, dg::EXP<value_type>());
-        polavg(lambda,chi);
-        dg::blas1::axpby(1.0,lambda,-0.0,chi,chi);
-        dg::blas1::pointwiseDot(chi,rh,chi);
-        dg::blas1::axpby(1.0,omega,-sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),chi,omega);
-        
+        dg::blas1::pointwiseDot(omega,lh,omega); //omega = lh*omega
     }
     //correction for high amplitudes
     dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
@@ -383,6 +376,22 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //general term
     dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
+    //edge - sol boundary
+    if (p.solb*p.lx<p.lx) 
+    {   
+        dg::blas1::axpby(-1.,phi[0],0.,omega,omega); //omega = - phi
+        dg::blas1::transform(omega, omega, dg::EXP<value_type>()); //omega = exp(-phi) 
+        dg::blas1::pointwiseDot(omega,npe[0],lambda); //omega = (exp(-phi) )* ne
+        dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
+        dg::blas1::axpby(-2.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]); 
+         //dtN_e = ... -sqrt(D/(2 pi mu_e))rh*(exp(-phi) )* ne
+        dg::blas1::pointwiseDot(npe[1],rh,lambda); //lambda =rh*N_i
+        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* N_i
+        polavg(omega,lambda); //chi = <exp(-phi)>
+        dg::blas1::pointwiseDot(lambda,neavg,lambda); //<exp(-phi)>* <ne>
+        dg::blas1::pointwiseDot(lambda,rh,lambda); //chi =rh*<exp(-phi)>* <ne>
+        dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);
+    }
 
     t.toc();
 #ifdef MPI_VERSION
