@@ -62,7 +62,6 @@ all: asela asela_hpc
 
 asela: asela.cu asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
 
 ifeq ($(strip $(device)),mpi)
 asela_hpc: asela_hpc.cpp asela.cuh 
@@ -82,4 +81,4 @@ doc:
 	doxygen Doxyfile
 	
 clean:
-	rm -f asela asela_hpc geometry_t dz_geom_t
+	rm -f asela asela_hpc 

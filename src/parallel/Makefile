@@ -63,9 +63,8 @@ all: parallel
 
 parallel: parallel.cu parallel.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
 
 .PHONY: clean
 	
 clean:
-	rm -f parallel parallel_hpc geometry_t dz_geom_t
+	rm -f parallel

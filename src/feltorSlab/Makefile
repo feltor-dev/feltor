@@ -62,7 +62,6 @@ all: feltor feltor_hpc
 
 feltor: feltor.cu feltor.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) 
-	echo "Attention: No compiler warnings are issued!" 
 
 	
 ifeq ($(strip $(device)),mpi)
@@ -79,15 +78,8 @@ generator: generator.cpp
 
 .PHONY: clean doc
 
-dz_geom_t: dz_geom_t.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lnetcdf -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
-	
-geometry_t: geometry_t.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lnetcdf -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
 doc: 
 	doxygen Doxyfile
 	
 clean:
-	rm -f feltor feltor_hpc geometry_t dz_geom_t
+	rm -f feltor feltor_hpc 

@@ -78,4 +78,4 @@ doc:
 	doxygen Doxyfile
 	
 clean:
-	rm -f feltor feltor_hpc geometry_t dz_geom_t
+	rm -f geometry_diag geometry_t dz_geom_t
