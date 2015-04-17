@@ -140,7 +140,7 @@ struct Feltor
     const container oney;
     const container coox0,cooxlx,cooy;
     Matrix interpx0,interpxlx;
-    container lh,rh;
+    container lh,rh,profne,profNi;
 
 };
 
@@ -170,7 +170,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
     probevalue(1,0.0),
     lh( dg::evaluate(dg::LHalf(p.lx*p.solb,p.solw),g)),rh( dg::evaluate(dg::RHalf(p.lx*p.solb,p.solw),g)), 
-
+    profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),profNi(profne),
     //boundary integral terms
     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
     w1d( dg::create::weights(gy)),
@@ -180,7 +180,9 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     cooy(dg::evaluate(dg::coo1,gy)),
     interpx0(dg::create::interpolation( coox0,cooy, g )),  
     interpxlx(dg::create::interpolation(cooxlx,cooy, g))
-{ }
+{
+    initializene(profNi,profne); //ne = Gamma N_i
+}
 
 template<class Matrix, class container, class P>
 container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
@@ -392,7 +394,13 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(lambda,rh,lambda); //chi =rh*<exp(-phi)>* <ne>
         dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);
     }
-
+    if (p.tau_prof>0.0) 
+    {
+        dg::blas1::axpby(1.0,neavg,-1.0,profne,lambda);
+        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[0]);
+//         dg::blas1::axpby(1.0,npe[1],-1.0,profNi,lambda);
+        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);
+    }
     t.toc();
 #ifdef MPI_VERSION
     int rank;
