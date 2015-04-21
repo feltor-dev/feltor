@@ -109,7 +109,7 @@ struct Feltor
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
-    container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta; //dont use them as helper
+    container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta,Niavg; //dont use them as helper
     const container binv;
     const container one;
     const Preconditioner w2d, v2d;
@@ -149,6 +149,7 @@ template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p): 
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
     neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),phiavg(chi),phitilde(chi),phidelta(chi),
+    Niavg(chi),
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
@@ -192,7 +193,6 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
-
     invert_invgamma(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
@@ -381,25 +381,42 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //edge - sol boundary
     if (p.solb*p.lx<p.lx) 
     {   
+        //BOHM SHEATH BC closure
         dg::blas1::axpby(-1.,phi[0],0.,omega,omega); //omega = - phi
         dg::blas1::transform(omega, omega, dg::EXP<value_type>()); //omega = exp(-phi) 
         dg::blas1::pointwiseDot(omega,npe[0],lambda); //omega = (exp(-phi) )* ne
         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
         dg::blas1::axpby(-2.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]); 
          //dtN_e = ... -sqrt(D/(2 pi mu_e))rh*(exp(-phi) )* ne
-        dg::blas1::pointwiseDot(npe[1],rh,lambda); //lambda =rh*N_i
-        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* N_i
+        dg::blas1::pointwiseDot(npe[0],rh,lambda); //lambda =rh*n_e
+        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* n_e
+        //FLR correction
+        dg::blas2::gemv( lapperp, lambda, omega);
+        dg::blas1::pointwiseDot(y[0],omega,omega); //lambda =rh*(n_e - fac)
+        dg::blas1::transform( omega, omega, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
+        dg::blas1::axpby(2.*sqrt(p.d)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* N_i
+/*        
         polavg(omega,lambda); //chi = <exp(-phi)>
         dg::blas1::pointwiseDot(lambda,neavg,lambda); //<exp(-phi)>* <ne>
         dg::blas1::pointwiseDot(lambda,rh,lambda); //chi =rh*<exp(-phi)>* <ne>
-        dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);
+        dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);*/
     }
+    //Density source terms
     if (p.tau_prof>0.0) 
     {
+        polavg(npe[1],Niavg);
         dg::blas1::axpby(1.0,neavg,-1.0,profne,lambda);
-        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[0]);
-//         dg::blas1::axpby(1.0,npe[1],-1.0,profNi,lambda);
-        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);
+        dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
+
+        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[0]);// dtne = - tau_prof(ne0 - <ne>) 
+        //dtNi = - tau_prof Gamma_1^(-1)(ne0 - <ne>) = - tau_prof (1-0.5 tau_i mu_i nabla^2)(ne0 - <ne>) 
+        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);     //dtNi = - tau_prof (ne0 - <ne>) 
+        //FLR CORRECTION
+        dg::blas2::gemv( lapperp, lambda, omega);
+        dg::blas1::axpby(+p.tau_prof*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = 0.5 tau_prof tau_i mu_i nabla^2 (ne0 - <ne>) 
+        
+//         dg::blas1::axpby(1.0,Niavg,-1.0,profNi,lambda);// (Ni0 - <Ni>)
+//         dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);
     }
     t.toc();
 #ifdef MPI_VERSION

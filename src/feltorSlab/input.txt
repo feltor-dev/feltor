@@ -25,7 +25,7 @@
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  1.0   (0.0)
 15) mcv (curvature)                         =  0.005    (0.001)
-16) nu_perp                                 =  9e-3
+16) nu_perp                                 =  8e-3
 17) D  (coupling)                           =  0.1e-7  (0.001)
 18) para resistivity (c)                    =  100e-7   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
@@ -42,9 +42,9 @@
 28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------
 29) ordinary/modified HW (0/1)              = 1
-30) ln (in rho_s)                           = 45
+30) ln (in rho_s)                           = 35
 ---------------------------------EDGE/SOL Dynamics-------------------------------------------
-31) SOL boundary in units of lx (>1 no SOL) = 0.5
+31) SOL boundary in units of lx (>1 no SOL) = 0.4
 32) damping width                           = 5.5
 32) tau profile                             = 0.0
 @ ------------------------------------------------------------
