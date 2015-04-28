@@ -2,6 +2,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
+#include "dg/backend/linspace.cuh"
 #include "parameters.h"
 // #include "geometry_circ.h"
 #include "dg/backend/average.cuh"
@@ -97,11 +98,13 @@ struct Feltor
     double coupling( ) {return coupling_;}
 
     std::vector<double> energy_vector( ) {return evec;}
-    std::vector<container>& probe_vector( ) {return probevec;}
+    std::vector<container>& get_probe_vector( ) {return probevec;}
 
-    double energy_diffusion( ){ return ediff_;}
-    double radial_transport( ){ return gammanex_;}
+    double energy_diffusion() { return(ediff_);}
+    double radial_transport() { return(gammanex_);}
     void energies( std::vector<container>& y);
+    void update_probes();
+
 
   private:
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
@@ -109,7 +112,7 @@ struct Feltor
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
-    container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta,Niavg; //dont use them as helper
+    container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta; //dont use them as helper
     const container binv;
     const container one;
     const Preconditioner w2d, v2d;
@@ -127,49 +130,52 @@ struct Feltor
 
     const eule::Parameters p;
 
-    double mass_, energy_, diff_, ediff_,gammanex_,coupling_;
+    double mass_, energy_, diff_, ediff_, gammanex_, coupling_;
     std::vector<double> evec;
     //probe
     std::vector<container> probevec;
-    const container Xprobe,Yprobe;
+    const container probe_coord_X, probe_coord_Y;
     Matrix probeinterp;
-    container probevalue;
+    //container probevalue;
     
     dg::Grid1d<double> gy;
     const container w1d;
     const container oney;
     const container coox0,cooxlx,cooy;
-    Matrix interpx0,interpxlx;
-    container lh,rh,profne,profNi;
+    Matrix interpx0, interpxlx;
+    container lh, rh, profne, profNi;
 
 };
 
 template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p): 
-    chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
-    neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),phiavg(chi),phitilde(chi),phidelta(chi),
-    Niavg(chi),
-    binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
-    one( dg::evaluate( dg::one, g)),    
-    w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
-    phi( 2, chi), npe(phi), logn(phi),
+    chi(dg::evaluate(dg::one, g)), 
+    omega(chi),  
+    lambda(chi), 
+    neavg(chi), netilde(chi), nedelta(chi), 
+    lognedelta(chi), phiavg(chi), phitilde(chi), 
+    phidelta(chi),
+    binv(dg::evaluate(dg::LinearX( p.mcv, 1.), g)),
+    one(dg::evaluate(dg::one, g)),    
+    w2d(dg::create::weights(g)), v2d(dg::create::inv_weights(g)), 
+    phi(2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
-    pol(    g, g.bcx(), g.bcy(), dg::not_normed,          dg::centered), 
-    lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
-    invgammaDIR( g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invgammaNU(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgamma( omega, omega.size(), p.eps_gamma),
+    pol(g, g.bcx(), g.bcy(), dg::not_normed, dg::centered), 
+    lapperp(g,g.bcx(), g.bcy(), dg::normed, dg::centered),
+    invgammaDIR(g,g.bcx(), g.bcy(), -0.5 * p.tau[1] * p.mu[1], dg::centered),
+    invgammaNU(g,g.bcx(), g.bcy(), -0.5 * p.tau[1] * p.mu[1], dg::centered),
+    invert_pol(omega, omega.size(), p.eps_pol),
+    invert_invgamma(omega, omega.size(), p.eps_gamma),
     polavg(g),
     p(p),
     evec(3),
     //probe
-    probevec(2),
-    Xprobe(1,p.lx*p.posX), //use blob position
-    Yprobe(1,p.ly*p.posY),//use blob position
-    probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
-    probevalue(1,0.0),
+    //probevec({container(8, 0.0), container(8, 0.0), container(8, 0.0)}),
+    probe_coord_X(dg::create::linspace(0.0, p.lx, p.lx * 0.125)),
+    probe_coord_Y(8, 0.5 * p.ly), 
+    probeinterp(dg::create::interpolation(probe_coord_X, probe_coord_Y, g, dg::NEU)),
+    //
     lh( dg::evaluate(dg::LHalf(p.lx*p.solb,p.solw),g)),rh( dg::evaluate(dg::RHalf(p.lx*p.solb,p.solw),g)), 
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),profNi(profne),
     //boundary integral terms
@@ -183,6 +189,11 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     interpxlx(dg::create::interpolation(cooxlx,cooy, g))
 {
     initializene(profNi,profne); //ne = Gamma N_i
+    probevec.push_back(container(8, 0.0));
+    probevec.push_back(container(8, 0.0));
+    probevec.push_back(container(8, 0.0));
+
+    container tmp(8, 0.0);
 }
 
 template<class Matrix, class container, class P>
@@ -193,6 +204,7 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
+
     invert_invgamma(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
@@ -297,15 +309,34 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     ediff_= Dperp[0]+Dperp[1]+ coupling_ + Dperpsurf[0] + Dperpsurf[1];
     
     // compute probevalues on R,Z,Phi of probe
-    dg::blas2::gemv(probeinterp,npe[0],probevalue);
-    probevec[0]=probevalue;
-    dg::blas2::gemv(probeinterp,phi[0],probevalue);
-    probevec[1]=probevalue;
+    //dg::blas2::gemv(probeinterp, npe[0], probevalue);
+    //probevec[0]=probevalue;
+    //dg::blas2::gemv(probeinterp, phi[0], probevalue);
+    //probevec[1]=probevalue;
     
     //compute the radial electron density  transport
-    dg::blas2::gemv( poisson.dyrhs(), phi[0], omega); //dy phi
-    dg::blas1::pointwiseDot(omega,binv,omega); //1/B dy phi
-    gammanex_ =-1.* dg::blas2::dot(npe[0],w2d,omega);//int(1/B N dy phi)
+    //dg::blas2::gemv(poisson.dyrhs(), phi[0], omega); //dy phi
+    //dg::blas1::pointwiseDot(omega, binv, omega); //1/B dy phi
+    //gammanex_ = -1.* dg::blas2::dot(npe[0], w2d,omega);
+}
+
+template<class M, class container, class P>
+void Feltor<M, container, P>::update_probes()
+{
+    static container probe_values(8);
+    //Compute probe values at probe coordinates
+    dg::blas2::gemv(probeinterp, npe[0], probe_values);
+    probevec[0] = probe_values;
+    dg::blas2::gemv(probeinterp, phi[0], probe_values);
+    probevec[1] = probe_values;
+
+    //Compute radial transport
+    dg::blas2::gemv(poisson.dyrhs(), phi[0], omega);     // dy phi
+    dg::blas1::pointwiseDot(omega, binv, omega);         // 1/B dy phi
+    dg::blas1::pointwiseDot(npe[0], omega, omega);       // 1/B N dy phi
+    dg::blas2::gemv(probeinterp, omega, probe_values);
+
+    probevec[2] = probe_values;    
 }
 
 
@@ -381,42 +412,25 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //edge - sol boundary
     if (p.solb*p.lx<p.lx) 
     {   
-        //BOHM SHEATH BC closure
         dg::blas1::axpby(-1.,phi[0],0.,omega,omega); //omega = - phi
         dg::blas1::transform(omega, omega, dg::EXP<value_type>()); //omega = exp(-phi) 
         dg::blas1::pointwiseDot(omega,npe[0],lambda); //omega = (exp(-phi) )* ne
         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
         dg::blas1::axpby(-2.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]); 
          //dtN_e = ... -sqrt(D/(2 pi mu_e))rh*(exp(-phi) )* ne
-        dg::blas1::pointwiseDot(npe[0],rh,lambda); //lambda =rh*n_e
-        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* n_e
-        //FLR correction
-        dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::pointwiseDot(y[0],omega,omega); //lambda =rh*(n_e - fac)
-        dg::blas1::transform( omega, omega, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
-        dg::blas1::axpby(2.*sqrt(p.d)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* N_i
-/*        
+        dg::blas1::pointwiseDot(npe[1],rh,lambda); //lambda =rh*N_i
+        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* N_i
         polavg(omega,lambda); //chi = <exp(-phi)>
         dg::blas1::pointwiseDot(lambda,neavg,lambda); //<exp(-phi)>* <ne>
         dg::blas1::pointwiseDot(lambda,rh,lambda); //chi =rh*<exp(-phi)>* <ne>
-        dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);*/
+        dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);
     }
-    //Density source terms
     if (p.tau_prof>0.0) 
     {
-        polavg(npe[1],Niavg);
         dg::blas1::axpby(1.0,neavg,-1.0,profne,lambda);
-        dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
-
-        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[0]);// dtne = - tau_prof(ne0 - <ne>) 
-        //dtNi = - tau_prof Gamma_1^(-1)(ne0 - <ne>) = - tau_prof (1-0.5 tau_i mu_i nabla^2)(ne0 - <ne>) 
-        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);     //dtNi = - tau_prof (ne0 - <ne>) 
-        //FLR CORRECTION
-        dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::axpby(+p.tau_prof*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = 0.5 tau_prof tau_i mu_i nabla^2 (ne0 - <ne>) 
-        
-//         dg::blas1::axpby(1.0,Niavg,-1.0,profNi,lambda);// (Ni0 - <Ni>)
-//         dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);
+        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[0]);
+//         dg::blas1::axpby(1.0,npe[1],-1.0,profNi,lambda);
+        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);
     }
     t.toc();
 #ifdef MPI_VERSION

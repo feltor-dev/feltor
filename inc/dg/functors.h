@@ -350,6 +350,45 @@ struct SinProfX
   private:
     double amp_,bamp_,kx_;
 };
+
+
+/**
+ * @brief Functor for tanh profile in x-direction
+ * \f[ f(x, y) = A / 2 (1 - \tanh((x - x_b) / L) ) + B  \f]
+ */
+
+
+struct TanhProfX
+{
+  public:
+    /*
+     * @brief Construct with three coefficients
+     *
+     * @param A - Amplitude scaling factor
+     * @param x_b - Center
+     * @param L - Width
+     * @param B - y offset
+     */
+    TanhProfX(double A, double xb, double L, double B) : A_(A), xb_(xb), L_(L), B_(B) {}
+
+    /*
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     *
+     * @return \f $f(x, y) \f$
+     */
+    double operator() (double x, double y) { return(0.5 * A_ * (1.0 - tanh((x - xb_) / L_)) + B_);}
+  private:
+    const double A_;
+    const double xb_;
+    const double L_;
+    const double B_;
+};
+
+
+
 /**
  * @brief Functor for a exp prof in x-direction
  * \f[ f(x,y) = B + A\exp(-x/L_n) \f]
@@ -398,9 +437,18 @@ struct LinearX
      * @return result
      */
     double operator()( double x, double y){ return a_*x+b_;}
+    /**
+     * @brief Return linear polynomial in x
+     *
+     * @param x x - coordinate
+     *
+     * @return result
+     */
+    double operator()(double x){ return a_ * x + b_;}
   private:
     double a_,b_;
 };
+
 /**
  * @brief Functor for a linear polynomial in y-direction
  * \f[ f(x,y) = ay+b \f]
