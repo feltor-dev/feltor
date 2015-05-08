@@ -9,8 +9,8 @@ INCLUDE+= -I../ # geometry library
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 -w
-CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+# CFLAGS+= -Xcompiler -fopenmp 
+# CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 GLFLAGS= -lGLEW
 OPT	   = -O2
 endif

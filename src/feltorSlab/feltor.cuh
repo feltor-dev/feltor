@@ -140,7 +140,7 @@ struct Feltor
     const container oney;
     const container coox0,cooxlx,cooy;
     Matrix interpx0,interpxlx;
-    container lh,rh,profne,profNi;
+    container lh,rh,lhs,profne,profNi;
 
 };
 
@@ -170,8 +170,12 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     Yprobe(1,p.ly*p.posY),//use blob position
     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
     probevalue(1,0.0),
-    lh( dg::evaluate(dg::LHalf(p.lx*p.solb,p.solw),g)),rh( dg::evaluate(dg::RHalf(p.lx*p.solb,p.solw),g)), 
-    profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),profNi(profne),
+    lh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,-1.0,0.0,1.0),g)),
+    rh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,1.0,0.0,1.0),g)), 
+    lhs(dg::evaluate(dg::TanhProfX(p.lx*p.solb*0.7,p.solw,-1.0,0.0,1.0),g)),
+//     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
+    profne(dg::evaluate(dg::TanhProfX(p.lx*p.solb*0.7,p.solw,-1.0,p.nprofileamp, p.bgprofamp),g)),
+    profNi(profne),
     //boundary integral terms
     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
     w1d( dg::create::weights(gy)),
@@ -182,7 +186,10 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     interpx0(dg::create::interpolation( coox0,cooy, g )),  
     interpxlx(dg::create::interpolation(cooxlx,cooy, g))
 {
+    dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
     initializene(profNi,profne); //ne = Gamma N_i
+    dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+    dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
 }
 
 template<class Matrix, class container, class P>
@@ -312,8 +319,8 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
-    /* y[0] := N_e - 1
-       y[1] := N_i - 1
+    /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
+       y[1] := N_i - (p.bgprofamp + p.nprofileamp)
        y[2] := U_e
        y[3] := U_i
     */
@@ -395,28 +402,30 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(y[0],omega,omega); //lambda =rh*(n_e - fac)
         dg::blas1::transform( omega, omega, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
         dg::blas1::axpby(2.*sqrt(p.d)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* N_i
-/*        
+        
         polavg(omega,lambda); //chi = <exp(-phi)>
         dg::blas1::pointwiseDot(lambda,neavg,lambda); //<exp(-phi)>* <ne>
         dg::blas1::pointwiseDot(lambda,rh,lambda); //chi =rh*<exp(-phi)>* <ne>
-        dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);*/
+        dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);
     }
     //Density source terms
-    if (p.tau_prof>0.0) 
+    if (p.omega_prof>0.0) 
     {
         polavg(npe[1],Niavg);
-        dg::blas1::axpby(1.0,neavg,-1.0,profne,lambda);
-        dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
+        dg::blas1::axpby(-1.0,neavg,+1.0,profne,lambda);
+        dg::blas1::pointwiseDot(lambda,lhs,lambda); //lambda =lhs*(<ne> - ne0_source)
+        dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>()); //>=0
 
-        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[0]);// dtne = - tau_prof(ne0 - <ne>) 
-        //dtNi = - tau_prof Gamma_1^(-1)(ne0 - <ne>) = - tau_prof (1-0.5 tau_i mu_i nabla^2)(ne0 - <ne>) 
-        dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);     //dtNi = - tau_prof (ne0 - <ne>) 
+
+        dg::blas1::axpby(p.omega_prof,lambda,1.0,yp[0]);// dtne = - omega_prof(ne0 - <ne>) 
+        //dtNi = - omega_prof Gamma_1^(-1)(ne0 - <ne>) = - omega_prof (1-0.5 tau_i mu_i nabla^2)(ne0 - <ne>) 
+        dg::blas1::axpby(p.omega_prof,lambda,1.0,yp[1]);     //dtNi = - omega_prof (ne0 - <ne>) 
         //FLR CORRECTION
         dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::axpby(+p.tau_prof*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = 0.5 tau_prof tau_i mu_i nabla^2 (ne0 - <ne>) 
+        dg::blas1::axpby(-p.omega_prof*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = 0.5 omega_prof tau_i mu_i nabla^2 (ne0 - <ne>) 
         
 //         dg::blas1::axpby(1.0,Niavg,-1.0,profNi,lambda);// (Ni0 - <Ni>)
-//         dg::blas1::axpby(-p.tau_prof,lambda,1.0,yp[1]);
+//         dg::blas1::axpby(-p.omega_prof,lambda,1.0,yp[1]);
     }
     t.toc();
 #ifdef MPI_VERSION

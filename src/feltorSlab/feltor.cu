@@ -86,17 +86,17 @@ int main( int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+//     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-
+    dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
     
 
     //no field aligning
     y1[1] = dg::evaluate( init0, grid);
-    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]);
+    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde
     
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
     std::cout << "intiialize ne" << std::endl;

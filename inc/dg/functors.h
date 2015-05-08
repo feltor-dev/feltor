@@ -429,17 +429,20 @@ struct LinearY
 
 
 /**
- * @brief Functor for a left side step function using tanh
- * \f[ f(x,y) = 0.5(1-\tanh(x-x_b)) \f]
+ * @brief Functor for a step function using tanh
+ * \f[ f(x,y) = 0.5(1+ sign \tanh((x-x_b)/width)) \f]
  */
-struct LHalf {
+struct TanhProfX {
     /**
-     * @brief Construct with given boundary value
+     * @brief Construct with xb, width and sign
      *
      * @param xb boundary value
      * @param width damping width
+     * @param sign sign of the danh, defines the damping direction
+     * @param bgampg background amplitude 
+     * @param profamp profile amplitude
      */
-    LHalf(double xb,double width) : xb_(xb),w_(width) {}
+    TanhProfX(double xb, double width, int sign,double bgamp, double profamp) : xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}
     /**
      * @brief Return left side step function
      *
@@ -451,42 +454,14 @@ struct LHalf {
      */
     double operator() (double x, double y)
     {
-        return 0.5*(1.-tanh((x-xb_)/w_));
+        return profa_*0.5*(1.+s_*tanh((x-xb_)/w_))+bga_; 
     }
     private:
-     double xb_;
-     double w_;
-};
-
-
-/**
- * @brief Functor for a right step function using tanh
- * \f[ f(x,y) = 0.5(1+\tanh(x-x_b)) \f]
- */
-struct RHalf {
-    /**
-     * @brief Construct with boundary value
-     *
-     * @param xb boundary value
-     * @param width damping width
-     */
-    RHalf(double xb, double width) : xb_(xb),w_(width)   {}
-    /**
-     * @brief Return left side step function
-     *
-     * @param x x - coordianate
-     * @param y y - coordianate
-     
-
-     * @return result
-     */
-    double operator() (double x, double y)
-    {
-        return 0.5*(1.+tanh((x-xb_)/w_)); 
-    }
-    private:
-     double xb_;
+    double xb_;
     double w_;
+    int s_;
+    double bga_;
+    double profa_;
 };
 /**
  * @brief Functor returning a Lamb dipole
@@ -1115,6 +1090,30 @@ struct ABS
     __host__ __device__
 #endif
         T operator()(const T& x){ return fabs(x);}
+};
+/**
+ * @brief returns positive values
+ * \f[ f(x) = |x|\f]
+ *
+ * @tparam T value type
+ */
+template <class T>
+struct POSVALUE
+{
+    /**
+     * @brief Returns positive values of x
+     *
+     * @param x of x
+     *
+     * @return  x*0.5*(1+sign(x))
+     */
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+        T operator()(const T& x){
+            if (x >= 0.0) return x;
+            return 0.0;
+            }
 };
 
 /**
