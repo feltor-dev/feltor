@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Gaussian init0(p.posX * p.lx, p.posY * p.ly, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+//     dg::BathRZ init0(16, 16, 1, 2.0, 2.0, 30.0, 5.0, p.amp);
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
     
@@ -82,9 +82,10 @@ int main(int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-        dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+//    dg::TanhProfX prof(p.nprofileamp, p.solb * p.lx, p.ln, p.bgprofamp);
 
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
+    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 
     std::vector<dg::DVec> y0(2, dg::evaluate(prof, grid)), y1(y0); 
 
