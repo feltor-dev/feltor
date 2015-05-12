@@ -389,43 +389,33 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     if (p.solb*p.lx<p.lx) 
     {   
         //BOHM SHEATH BC closure
+        //dt N_e
         dg::blas1::axpby(-1.,phi[0],0.,omega,omega); //omega = - phi
         dg::blas1::transform(omega, omega, dg::EXP<value_type>()); //omega = exp(-phi) 
         dg::blas1::pointwiseDot(omega,npe[0],lambda); //omega = (exp(-phi) )* ne
         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
-        dg::blas1::axpby(-2.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]); 
-         //dtN_e = ... -sqrt(D/(2 pi mu_e))rh*(exp(-phi) )* ne
-        dg::blas1::pointwiseDot(npe[0],rh,lambda); //lambda =rh*n_e
-        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* n_e
-        //FLR correction
-        dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::pointwiseDot(y[0],omega,omega); //lambda =rh*(n_e - fac)
-        dg::blas1::transform( omega, omega, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
-        dg::blas1::axpby(2.*sqrt(p.d)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* N_i
-        
-        polavg(omega,lambda); //chi = <exp(-phi)>
-        dg::blas1::pointwiseDot(lambda,neavg,lambda); //<exp(-phi)>* <ne>
-        dg::blas1::pointwiseDot(lambda,rh,lambda); //chi =rh*<exp(-phi)>* <ne>
-        dg::blas1::axpby(0.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]);
+        dg::blas1::axpby(-2.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]); //dtN_e = ... -sqrt(D/(2 pi mu_e))rh*(exp(-phi) )* ne
+         //dt N_i with FLR correction
+        dg::blas2::gemv( invgammaNU, y[0],lambda);
+        dg::blas1::transform(lambda,lambda, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+        dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*n_e
+        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* Gamma^-1 n_e
+
     }
     //Density source terms
     if (p.omega_prof>0.0) 
     {
         polavg(npe[1],Niavg);
-        dg::blas1::axpby(-1.0,neavg,+1.0,profne,lambda);
-        dg::blas1::pointwiseDot(lambda,lhs,lambda); //lambda =lhs*(<ne> - ne0_source)
-        dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>()); //>=0
-
-
-        dg::blas1::axpby(p.omega_prof,lambda,1.0,yp[0]);// dtne = - omega_prof(ne0 - <ne>) 
-        //dtNi = - omega_prof Gamma_1^(-1)(ne0 - <ne>) = - omega_prof (1-0.5 tau_i mu_i nabla^2)(ne0 - <ne>) 
-        dg::blas1::axpby(p.omega_prof,lambda,1.0,yp[1]);     //dtNi = - omega_prof (ne0 - <ne>) 
-        //FLR CORRECTION
-        dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::axpby(-p.omega_prof*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = 0.5 omega_prof tau_i mu_i nabla^2 (ne0 - <ne>) 
-        
-//         dg::blas1::axpby(1.0,Niavg,-1.0,profNi,lambda);// (Ni0 - <Ni>)
-//         dg::blas1::axpby(-p.omega_prof,lambda,1.0,yp[1]);
+        dg::blas1::axpby(+1.0,profne,-1.0,neavg,lambda); //lambda = ne0_source - <ne>
+        //dtN_e
+        dg::blas1::pointwiseDot(lambda,lhs,omega); //lambda =lhs*(<ne> - ne0_source)
+        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
+        dg::blas1::axpby(p.omega_prof,omega,1.0,yp[0]);// dtne = - omega_prof(e0_source - <ne>) 
+        //dt N_i with FLR correction
+        dg::blas2::gemv( invgammaNU, lambda,omega);
+        dg::blas1::pointwiseDot(omega,lhs,omega); //lambda =lhs*Gamma^(-1)(<ne> - ne0_source)
+        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>());
+        dg::blas1::axpby(p.omega_prof,omega,1.0,yp[1]);     //dtNi = - omega_prof*lhs*Gamma^(-1) (ne0 - <ne>) 
     }
     t.toc();
 #ifdef MPI_VERSION
