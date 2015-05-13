@@ -41,7 +41,7 @@
 27) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   2      (1.0)
 28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------
-29) ordinary/modified HW (0/1)              = 0
+29) ordinary/modified HW (0/1)              = 1
 30) ln (in rho_s)                           = 100
 ---------------------------------EDGE/SOL Dynamics-------------------------------------------
 31) SOL boundary in units of lx (>1 no SOL) = 0.3
