@@ -217,11 +217,11 @@ struct TanhSource
         }
     double operator( )(double R, double Z)
     {
-        return p_.amp_source*0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
     }
     double operator( )(double R, double Z, double phi)
     {
-        return p_.amp_source*0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
     eule::Parameters p_;

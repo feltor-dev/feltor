@@ -15,8 +15,8 @@
 #include "parameters.h"
 #include "probes.h"
 
-#define TORLIM //for toroidal limiter setup
-// #define TORSHEATHLIM //for toroidal sheath limiter setup (under construction)
+
+
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the Feltor - functor and 

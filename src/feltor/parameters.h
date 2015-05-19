@@ -41,7 +41,7 @@ struct Parameters
     double sigma_z; //!< parallel blob width in units of pi
     double k_psi; //!< mode number
 
-    double amp_source; //!< source amplitude 
+    double omega_source; //!< source amplitude 
     double nprofileamp; //!< amplitude of profile
     double bgprofamp; //!< background profile amplitude
     double boxscaleRp; //!< box can be larger
@@ -93,7 +93,7 @@ struct Parameters
             k_psi = v[27];
             nprofileamp = v[28];
             bgprofamp = v[29];
-            amp_source = v[30];
+            omega_source = v[30];
             boxscaleRp = v[31];
             boxscaleRm = v[32];
             boxscaleZp = v[33];
@@ -126,7 +126,7 @@ struct Parameters
             << "    posY:         "<<posY<<"\n"
             << "    sigma_z:      "<<sigma_z<<"\n";
         os << "Profile parameters are: \n"
-            <<"     Source strength:              "<<amp_source<<"\n"
+            <<"     omega_source:              "<<omega_source<<"\n"
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
             <<"     background profile amplitude: "<<bgprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"

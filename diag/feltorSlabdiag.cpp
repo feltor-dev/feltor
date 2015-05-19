@@ -15,6 +15,7 @@
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "feltorSlab/parameters.h"
+#include "probes.h"
 
 int main( int argc, char* argv[])
 {
@@ -90,6 +91,13 @@ int main( int argc, char* argv[])
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
 
+    dg::DVec xprobecoords(7,1.);
+    for (unsigned i=0;i<7; i++) {
+        xprobecoords[i] = p.lx/8.*(1+i) ;
+    }
+    const dg::DVec yprobecoords(7,p.ly/2.);
+    probes<dg::DMatrix, dg::DVec> pro(xprobecoords,yprobecoords,grid);
+    
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
             start2d[0] = i;
@@ -131,8 +139,7 @@ int main( int argc, char* argv[])
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[5],   start1d, count1d, temp1d.data()); 
 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[6],   start1d, count1d, xcoo.data()); 
-            err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);            
-        
+            err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);                    
     }
     err = nc_close(ncid);
     

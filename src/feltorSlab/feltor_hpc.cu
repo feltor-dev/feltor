@@ -18,8 +18,7 @@
 #include "feltor.cuh"
 #include "parameters.h"
 
-#define TORLIM //for toroidal limiter setup
-// #define TORSHEATHLIM //for toroidal sheath limiter setup (under construction)
+
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the ToeflR - functor and 

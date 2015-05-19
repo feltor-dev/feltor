@@ -3,19 +3,19 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =   2      (3)
-2)  nx (grid points in x)                =   50 (192)
-3)  ny (grid points in y)                =   50 (192)
-4)  nz (grid points in z)                =   30(>16)
-5)  dt (time step in units c_s/rho_s)    =   4e-2  (0.01)
+1)  n  (# of x,y-polynomials)            =   3      (3)
+2)  nx (grid points in x)                =   45 (192)
+3)  ny (grid points in y)                =   45 (192)
+4)  nz (grid points in z)                =   20(>16)
+5)  dt (time step in units c_s/rho_s)    =   2e-2  (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  50
-8)  ny_out (# grid points in output field)  =  50
+7)  nx_out (# grid points in output field)  =  45
+8)  ny_out (# grid points in output field)  =  45
 9)  nz_out (# grid points in output field)  =  1
-10) itstp  (steps between outputs)          =  10 (1000)
-11) total # of outputs (excluding first)    =  300 (300)
+10) itstp  (steps between outputs)          =  200 (1000)
+11) total # of outputs (excluding first)    =  10000 (300)
 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
@@ -40,7 +40,7 @@
 28) Profile amplitude                       =  4.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
-30) particle source amplitude               =  0.0
+30) profile source rate in units c_s/rho_s  =  0.05
 31) boxscale R+                             =  1.1 (a little larger than 1)
 32) boxscale R-                             =  1.1 (a little larger than 1)
 33) boxscale Z+                             =  1.1 (a little larger than 1)
@@ -48,5 +48,5 @@
 ---------------------------------global boundary and sim parameters----------------
 35) global bc (DIR (1), NEU DIR(4) )        =  4
 36) poloidal limiter (No (0),Yes (1))       =  0
-37) Parallel dissipation(adj (0), nadj(1))  =  1
+37) Parallel dissipation(adj (0), nadj(1))  =  0
 @ ------------------------------------------------------------
