@@ -250,6 +250,7 @@ struct Feltor
     const container binv, curvR, curvZ;
     container gradlnB;
     const container source, damping, one;
+    container profne,profNi;
     const Preconditioner w3d, v3d;
 
     std::vector<container> phi, curvphi;
@@ -287,6 +288,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     source( dg::evaluate(solovev::TanhSource(p, gp), g)),
     damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
     one( dg::evaluate( dg::one, g)),    
+    profne(dg::evaluate(solovev::Nprofile(p, gp),g)),profNi(profne),
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi),  npe(phi), logn(phi),
     dzy( 4, chi),curvy(dzy), 
@@ -304,7 +306,12 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     p(p),
     gp(gp),
     evec(5)
-{ }
+{
+    dg::blas1::transform(profNi,profNi, dg::PLUS<>(-1)); 
+    initializene(profNi,profne); //ne = Gamma N_i
+    dg::blas1::transform(profne,profne, dg::PLUS<>(+1)); 
+    dg::blas1::transform(profNi,profNi, dg::PLUS<>(+1)); 
+}
 
 template<class Matrix, class container, class P>
 container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
@@ -594,21 +601,28 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
 
     }
+    //add particle source to dtN
+    //dtN_e
+    dg::blas1::axpby(+1.0,profne,-1.0,npe[0],lambda);//lambda = ne0 - ne    
+    dg::blas1::pointwiseDot(source,lambda,omega);//tanhSource on profNe
+    dg::blas1::transform(omega, omega, dg::POSVALUE<double>()); 
+    dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);
+    //dtN_i
+    dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);
+    //add FLR correction
+    dg::blas1::pointwiseDot(source,lambda,lambda);//tanhSource on profNe
+    dg::blas1::transform(lambda, lambda, dg::POSVALUE<double>()); 
+    dg::blas2::gemv( lapperpN, lambda, omega); 
+    dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]);   
+
     t.toc();
-#ifdef MPI_VERSION
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if(rank==0)
-#endif 
+    #ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if(rank==0)
+    #endif 
     std::cout << "One rhs took "<<t.diff()<<"s\n";
 
-
-    //add particle source to dtN
-//     for( unsigned i=0; i<2; i++)
-//     {
-//         dg::blas1::pointwiseDivide( source, expy[i], omega); //source/N
-//         dg::blas1::axpby( 1., omega, 1, yp[i]  );       //dtlnN = dtlnN + source/N
-//     }
 
 }
 

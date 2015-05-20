@@ -479,7 +479,6 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     {
         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());        
-
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);    //
@@ -664,21 +663,21 @@ template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
 //normed
-//     centered( f, tempP);
-//     centeredT( tempP, dzTdzf);
+    centered( f, tempP);
+    centeredT( tempP, dzTdzf);
     forward( f, tempP);
     forwardT( tempP, dzTdzf);
     backward( f, tempM);
     backwardT( tempM, temp0);
     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
 //     add jump term 
-    dg::blas2::symv( jump, f, temp0);
-    dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
-    dg::blas1::axpby(-1., temp0, 1., dzTdzf);
+//     dg::blas2::symv( jump, f, temp0);
+//     dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
+//     dg::blas1::axpby(-1., temp0, 1., dzTdzf);
 
     //not normed
-// //     centered( f, tempP);
-// //     centeredT( tempP, dzTdzf);
+//     centered( f, tempP);
+//     centeredT( tempP, dzTdzf);
 //     forward( f, tempP);
 //     forwardT( tempP, dzTdzf);
 //     backward( f, tempM);

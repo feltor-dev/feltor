@@ -18,8 +18,7 @@
 #include "feltor.cuh"
 #include "parameters.h"
 
-#define TORLIM //for toroidal limiter setup
-// #define TORSHEATHLIM //for toroidal sheath limiter setup (under construction)
+
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the ToeflR - functor and 
@@ -82,10 +81,12 @@ int main(int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-//    dg::TanhProfX prof(p.nprofileamp, p.solb * p.lx, p.ln, p.bgprofamp);
+//         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+//     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
+    dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+    //dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 
     std::vector<dg::DVec> y0(2, dg::evaluate(prof, grid)), y1(y0); 
 

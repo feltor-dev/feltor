@@ -34,8 +34,8 @@ struct Rolkar
         p(p),
         gp(gp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
-        dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx())
-        ,elliptic( g, dg::normed, dg::forward)
+        dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+        elliptic( g, dg::normed, dg::centered)
     {
         container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
         elliptic.set_x( bfield);
@@ -64,7 +64,7 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container dampprof_;
     dg::DZ<Matrix, container> dzNU_;
-    dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
+    dg::GeneralElliptic<Matrix, container, Preconditioner> elliptic;
 
 };
 
@@ -89,15 +89,14 @@ struct Feltor
     double energy( ) {return energy_;}
     std::vector<double> energy_vector( ) {return evec;}
     double energy_diffusion( ){ return ediff_;}
-
     void energies( std::vector<container>& y);
 
   private:
 
 
     container chi, omega, lambda,tmo; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
-
-    const container binv, gradlnB,pupil;
+    const container binv, gradlnB;
+//     ,pupil;
     const container  one;
     const Preconditioner w3d, v3d;
 
@@ -109,9 +108,9 @@ struct Feltor
 
     const eule::Parameters p;
     const solovev::GeomParameters gp;
+    std::vector<double> evec;
 
     double mass_, energy_, diff_, ediff_;
-    std::vector<double> evec;
 
 };
 
@@ -122,10 +121,10 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
 //     pupil(dg::evaluate( solovev::Pupil( gp), g)),
-    pupil(dg::evaluate( solovev::GaussianProfDamping(gp ), g)),    //be aware of actual function!
+//     pupil(dg::evaluate( solovev::GaussianProfDamping(gp ), g)),    //be aware of actual function!
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
-    dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+    dzNU_(solovev::Field(gp), g,  2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
     dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
 //     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,  dg::centered),
 //         elliptic( g, dg::normed, dg::forward),

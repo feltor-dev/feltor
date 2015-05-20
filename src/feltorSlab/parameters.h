@@ -28,7 +28,7 @@ struct Parameters
     double  nprofileamp, bgprofamp;
     unsigned zf;
     double solb,solw;
-    double tau_prof;
+    double omega_source;
     enum dg::bc bc_x,bc_y;
 
     /**
@@ -75,7 +75,7 @@ struct Parameters
             dlocal = (double)(lx*d/c);
             solb = v[31];
             solw = v[32];
-            tau_prof = v[33];
+            omega_source = v[33];
             
         }
     }
@@ -129,7 +129,7 @@ struct Parameters
         os << "SOL/EDGE params \n"
             <<"     sol boundary =    "<<solb<<"\n"
             <<"     damping width =    "<<solw<<"\n"
-            <<"     tau_prof =    "<<tau_prof<<"\n";
+            <<"     omega_source =    "<<omega_source<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:

@@ -3,6 +3,7 @@
 #include <cusp/print.h>
 #include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
+#include "file/nc_utilities.h"
 
 #include "evaluation.cuh"
 #include "dg/backend/timer.cuh"
@@ -76,8 +77,8 @@ int main( )
     for (unsigned i=0;i<6;i++) { 
 
        Nzn = unsigned(Nz*pow(2,i));
-//            Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
-//     Nyn = (unsigned)ceil( Ny*pow(2,(double)(i*2./n)));
+           Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
+    Nyn = (unsigned)ceil( Ny*pow(2,(double)(i*2./n)));
 
         
     
@@ -154,7 +155,7 @@ int main( )
     const dg::DVec bhatZ = dg::evaluate( bZ_, g3d);
     const dg::DVec bhatPhi = dg::evaluate(bPhi_, g3d);
 //     const dg::DVec Bfield_ = dg::evaluate(Bfield, g3d);
-//     const dg::DVec gradlnB_ = dg::evaluate(gradlnB, g3d);
+    const dg::DVec gradlnB_ = dg::evaluate(gradlnB, g3d);
 //     dg::DMatrix dR(dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::centered));
 //     dg::DMatrix dZ(dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::centered));
 //     dg::DMatrix dphi(dg::create::dz( g3d, g3d.bcz(), dg::normed,dg::centered));
@@ -198,8 +199,13 @@ int main( )
 //     dg::blas1::axpby( -1.0, omega, -0.0, temp,dzz);
 //     dz( derivative, dzz); //dz(dz(f))
 
-//     dz.dzz(function,dzz);                                          //dz^2 T 
-//     dg::blas1::axpby( 1.0, omega, 1., dzz);
+//     dz.dzz(function,dzz);       
+//     dzNU( function, derivative); //dz(f)
+//     dg::blas1::pointwiseDot(derivative, gradlnB_, omega);            //- dz lnB dz T
+// 
+//dz^2 T 
+//     dg::blas1::axpby( -1.0, omega, 1.,dzz, dzTdzfbd);
+
 //     
 //     
 //     dz.centeredT(function, derivativeT); //dz(f)
@@ -227,8 +233,8 @@ int main( )
 //     dz.centeredT( derivative, dzTdz); //dzT(dz(f))
 //     
 //     //overwrite with sym from adjoint dg
-    ellipticsym.symv(function,dzTdzfb);
-    dg::blas1::scal(dzTdzfb,-1.0);
+    ellipticsym.symv(function,dzTdz);
+    dg::blas1::scal(dzTdz,-1.0);
 //     dz.centeredT(ones,divbT);
 //     dz.forwardT( derivativef, dzTdzf);  //dzT(dz(f))
 //     dz.backwardT( derivativeb, dzTdzb); //dzT(dz(f))
@@ -240,8 +246,8 @@ int main( )
 //     dg::blas1::axpby(0.5,dzTdzb,0.5,dzTdzf,dzTdzfb);
     dg::blas1::axpby(0.5,dzTdzbd,0.5,dzTdzfd,dzTdzfbd); 
 
-//     dz.symv(function,dzTdzfb);
-    dg::blas1::pointwiseDot(w3d,dzTdzfb,dzTdzfb);
+    dz.symv(function,dzTdzfb);
+//     dg::blas1::pointwiseDot(w3d,dzTdzfb,dzTdzfb);
 //     dz.centeredT( derivative2, dzTdz2); //dzT(dz(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
 //     dz.centeredT( ones, divbT);
@@ -322,12 +328,12 @@ int main( )
 //     std::cout << "is the norm of the testfunction zero ? =       "<< normnormdzTdz<<"\n";
 
 
-//     std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
-//     double errdzTdz =dg::blas2::dot( w3d,dzTdz);
-//     std::cout << "|| DerivativeTdz ||  "<<sqrt( errdzTdz)<<"\n";
-//     dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdz);
-//     errdzTdz =dg::blas2::dot( w3d, dzTdz);
-//     std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdz/normdzTdz )<<"\n";   
+    std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
+    double errdzTdz =dg::blas2::dot( w3d,dzTdz);
+    std::cout << "|| DerivativeTdz ||  "<<sqrt( errdzTdz)<<"\n";
+    dg::blas1::axpby( 1., solutiondzTdz, -1., dzTdz);
+    errdzTdz =dg::blas2::dot( w3d, dzTdz);
+    std::cout << "Relative Difference in DZT is "<< sqrt( errdzTdz/normdzTdz )<<"\n";   
     
      std::cout << "--------------------testing dzTdzfb " << std::endl;
     std::cout << "|| SolutionT ||      "<<sqrt( normdzTdz)<<"\n";
@@ -395,23 +401,23 @@ int main( )
 //     elliptic.set_z(bhatPhi);
     
     
-//     double eps =1e-14;   
+//     double eps =1e-7;   
 //     dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
 //     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
 // 
-// //    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
+//    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
 // // 
-// //     std::cout << " # of iterations "<< invert( elliptic, functionTinv, rhs ) << std::endl; //is dzTdz 
+//     std::cout << " # of iterations "<< invert( elliptic, functionTinv, rhs ) << std::endl; //is dzTdz 
 //   
 //     double normf = dg::blas2::dot( w3d, function);
 // 
-// //     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-// //     double errinvT =dg::blas2::dot( w3d, functionTinv);
-// //     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+//     double errinvT =dg::blas2::dot( w3d, functionTinv);
+//     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
 // 
-// //     dg::blas1::axpby( 1., function, +1.,functionTinv);
-// //     errinvT =dg::blas2::dot( w3d, functionTinv);
-// //     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
+//     dg::blas1::axpby( 1., function, +1.,functionTinv);
+//     errinvT =dg::blas2::dot( w3d, functionTinv);
+//     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
 //     
 //     std::cout << "--------------------testing dzT" << std::endl; 
 //     std::cout << " # of iterations "<< invert( dz, functionTinv2,solutiondzTdz ) << std::endl; //is dzTdz
@@ -422,8 +428,34 @@ int main( )
 //     errinvT2 =dg::blas2::dot( w3d, functionTinv2);
 //     std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
 
+//write netcdf
+    file::NC_Error_Handle err;
+    int ncid,tvarID;
+    err = nc_create( "out3.nc",NC_NETCDF4|NC_CLOBBER, &ncid);
+    dg::DVec transferD( dg::evaluate(dg::zero, g3d));
+    dg::HVec transferH( dg::evaluate(dg::zero, g3d));
 
-    
+    int dim_ids[4];
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, g3d);
+    std::string names[3] = {"TG","TD","TA"}; 
+    int dataIDs[3]; 
+    size_t start[4] = {0, 0, 0, 0};
+    size_t count[4] = {1, g3d.Nz(), g3d.n()*g3d.Ny(), g3d.n()*g3d.Nx()};
+    err = nc_def_var( ncid, names[0].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[0]);  
+    err = nc_def_var( ncid, names[1].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[1]);  
+    err = nc_def_var( ncid, names[2].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[2]);
+    err = nc_enddef( ncid);
+    err = nc_open("out3.nc", NC_WRITE, &ncid);
+    transferD=dzTdz;
+    transferH =transferD;
+    err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());
+    transferD=dzTdzfbd;
+    transferH =transferD;
+    err = nc_put_vara_double( ncid, dataIDs[1], start, count, transferH.data());    
+    transferD=dzTdzfb;
+    transferH =transferD;
+    err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data());    
+     err = nc_close(ncid);
     }
     
 //     std::cout << "make Plot" << std::endl;

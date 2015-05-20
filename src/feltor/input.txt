@@ -9,7 +9,7 @@
 2)  nx (grid points in x)                =   20 (192)
 3)  ny (grid points in y)                =   20 (192) 
 4)  nz (grid points in z)                =   5(>16)
-5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
+5)  dt (time step in units c_s/rho_s)    =   5e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
@@ -43,7 +43,7 @@
 28) Profile amplitude                       =  0.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
-30) particle source amplitude               =  0.0
+30) profile source rate in units c_s/rho_s  =  0.0
 31) boxscale R+                             =  1.1 (a little larger than 1)
 32) boxscale R-                             =  1.1 (a little larger than 1)
 33) boxscale Z+                             =  1.1 (a little larger than 1)

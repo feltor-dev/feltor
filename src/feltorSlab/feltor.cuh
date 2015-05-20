@@ -141,9 +141,8 @@ struct Feltor
     const container w1d;
     const container oney;
     const container coox0,cooxlx,cooy;
-    Matrix interpx0, interpxlx;
-    container lh, rh, profne, profNi;
-    container source_ne, source_Ni;
+    Matrix interpx0,interpxlx;
+    container lh,rh,lhs,profne,profNi;
 };
 
 template<class Matrix, class container, class P>
@@ -174,14 +173,15 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     probe_coord_Y(8, 0.5 * p.ly), 
     probeinterp(dg::create::interpolation(probe_coord_X, probe_coord_Y, g, dg::NEU)),
     // Initial densit profiles
-    lh( dg::evaluate(dg::LHalf(p.lx*p.solb,p.solw),g)),
-    rh( dg::evaluate(dg::RHalf(p.lx*p.solb,p.solw),g)), 
-    profne(dg::evaluate(dg::TanhProfX(p.nprofileamp, p.solb * p.lx, p.ln, p.bgprofamp), g)),
+    lh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,-1.0,0.0,1.0),g)),
+    rh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,1.0,0.0,1.0),g)), 
+    lhs(dg::evaluate(dg::TanhProfX(p.lx*p.solb*0.7,p.solw,-1.0,0.0,1.0),g)),
+    profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
     profNi(profne),
     // Particle source function
     //source_ne(dg::evaluate(dg::ExpProfX(1.0, 0.0, p.ln)), g),
-    source_ne(dg::evaluate(dg::ExpProfX(1.0, 0.0, p.ln), g)),
-    source_Ni(source_ne),
+    //source_ne(dg::evaluate(dg::ExpProfX(1.0, 0.0, p.ln), g)),
+    //source_Ni(source_ne),
     //boundary integral terms
     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
     w1d( dg::create::weights(gy)),
@@ -192,7 +192,10 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     interpx0(dg::create::interpolation( coox0,cooy, g )),  
     interpxlx(dg::create::interpolation(cooxlx,cooy, g))
 {
-    initializene(profNi, profne); //ne = Gamma N_i
+    dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
+    initializene(profNi,profne); //ne = Gamma N_i
+    dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+    dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
     probevec.push_back(container(8, 0.0));
     probevec.push_back(container(8, 0.0));
     probevec.push_back(container(8, 0.0));
@@ -415,47 +418,50 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //edge - sol boundary
     if (p.solb*p.lx<p.lx) 
     {   
-        dg::blas1::axpby(-1., phi[0], 0., omega, omega);               //omega = - phi
-        dg::blas1::transform(omega, omega, dg::EXP<value_type>());    //omega = exp(-phi) 
-        dg::blas1::pointwiseDot(omega, npe[0], lambda);               //omega = (exp(-phi) )* ne
-        dg::blas1::pointwiseDot(lambda, rh, lambda);                  //lambda =rh*(exp(-phi) )* ne
-        dg::blas1::axpby(-2. * sqrt(p.d / (2. * M_PI * abs(p.mu[0]))), lambda, 1.0, yp[0]); 
+        //BOHM SHEATH BC closure
+        //dt N_e
+        dg::blas1::axpby(-1.,phi[0],0.,omega,omega); //omega = - phi
+        dg::blas1::transform(omega, omega, dg::EXP<value_type>()); //omega = exp(-phi) 
+        dg::blas1::pointwiseDot(omega,npe[0],lambda); //omega = (exp(-phi) )* ne
+        dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
+        dg::blas1::axpby(-2.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]); //dtN_e = ... -sqrt(D/(2 pi mu_e))rh*(exp(-phi) )* ne
+         //dt N_i with FLR correction and invgamma operator
+//         dg::blas2::gemv( invgammaNU, y[0],lambda);
+//         dg::blas1::transform(lambda,lambda, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+//         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*n_e
+//         dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* Gamma^-1 n_e
 
-
-        dg::blas1::pointwiseDot(npe[0],rh,lambda); //lambda =rh*n_e
-        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* n_e
-        //FLR correction
-        dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::pointwiseDot(y[0],omega,omega); //lambda =rh*(n_e - fac)
-        dg::blas1::transform( omega, omega, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
-        dg::blas1::axpby(2.*sqrt(p.d)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* N_i
+        //dt Ni without FLR 
+        dg::blas1::pointwiseDot(npe[0],rh,lambda); 
+        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]);
+        //add the FLR term (tanh before lapl seems to work because of cancelation)
+        dg::blas1::pointwiseDot( y[0],rh,lambda); //rh*(ne-1)
+        dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
+        dg::blas1::axpby(sqrt(p.d)*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = ... sqrt(D)*tau_i mue_i * nabla_perp^2 rh*(ne-1)
     }
-
-    if (p.tau_prof > 0.0) 
+    //Density source terms
+    if (p.omega_source>0.0) 
     {
-        polavg(npe[1], Niavg);
-        dg::blas1::axpby(1.0, neavg, -1.0, profne, lambda);
-        dg::blas1::pointwiseDot(lambda, rh, lambda);               //lambda =rh*(exp(-phi) )* ne
-        dg::blas1::axpby(-p.tau_prof, lambda, 1.0, yp[0]);       // dtne = - tau_prof(ne0 - <ne>) 
-        //dtNi = - tau_prof Gamma_1^(-1)(ne0 - <ne>) = - tau_prof (1-0.5 tau_i mu_i nabla^2)(ne0 - <ne>) 
-        dg::blas1::axpby(-p.tau_prof, lambda, 1.0, yp[1]);       //dtNi = - tau_prof (ne0 - <ne>) 
-        //FLR CORRECTION
+        dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0_source - <ne>
+        //dtN_e
+        dg::blas1::pointwiseDot(lambda,lhs,omega); //lambda =lhs*(ne0_source - <ne>)
+        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = - omega_source(ne0_source - <ne>) 
+        //dt N_i with FLR correction and invgamma operator
+//         dg::blas2::gemv( invgammaNU, lambda,omega);
+//         dg::blas1::pointwiseDot(omega,lhs,omega); //lambda =lhs*Gamma^(-1)(<ne> - ne0_source)
+//         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>());
+//         dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);     //dtNi = - omega_source*lhs*Gamma^(-1) (ne0 - <ne>) 
+
+        //dt Ni without FLR
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 
+        //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
+        dg::blas1::pointwiseDot(lambda,lhs,lambda);
+        dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
         dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::axpby(+p.tau_prof * 0.5 * p.tau[1] * p.mu[1], omega, 1.0, yp[1]); //dtNi = 0.5 tau_prof tau_i mu_i nabla^2 (ne0 - <ne>) 
-    } 
-    // Particle source in the ege region
-    else if (p.tau_prof < 0.0)
-    {
-        dg::blas1::axpby(1.0, source_ne, 0.0, lambda, lambda);    // lambda = exp(-x / p.ln)
-        dg::blas1::pointwiseDot(lambda, lh, lambda);              // lambda *= lh
-        dg::blas1::axpby(-p.tau_prof, lambda, 1.0, yp[0]);        // dtne = tau_prof * exp(-x / p.ln)
-
-        // dtNi = tau_prof Gamma_1^(-1)(exp(-x / p.ln)) = tau_prof(1 - 0.5 tau_i mu_i nabla^2)(exp(-x / p.ln))
-        dg::blas1::axpby(-p.tau_prof, lambda, 1.0, yp[1]);
-        // FLR correction
-        dg::blas2::gemv(lapperp, lambda, omega);
-        dg::blas1::axpby(p.tau_prof * 0.5 * p.tau[1] * p.mu[1], omega, 1.0, yp[1]);
-
+//         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); 
+//         dg::blas1::pointwiseDot(omega,lhs,omega);
+        dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     t.toc();
 #ifdef MPI_VERSION

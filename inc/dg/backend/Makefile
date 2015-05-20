@@ -1,5 +1,5 @@
 system=home
-device=gpu
+device=omp
 
 INCLUDE = -I../../ # other project libraries
 INCLUDE+= -I../
@@ -10,6 +10,7 @@ ifeq ($(strip $(system)),home)
 INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
 GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi -lXcursor
+LIBS 	 = -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
 ifeq ($(strip $(device)),gpu)
 GLFLAGS+= -lGLEW
 endif
@@ -52,7 +53,7 @@ version: version.cu
 	./$@
 
 dz_2_t: dz_2_t.cu dz.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)  $(LIBS) -g 
 
 backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g

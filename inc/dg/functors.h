@@ -350,45 +350,6 @@ struct SinProfX
   private:
     double amp_,bamp_,kx_;
 };
-
-
-/**
- * @brief Functor for tanh profile in x-direction
- * \f[ f(x, y) = A / 2 (1 - \tanh((x - x_b) / L) ) + B  \f]
- */
-
-
-struct TanhProfX
-{
-  public:
-    /*
-     * @brief Construct with three coefficients
-     *
-     * @param A - Amplitude scaling factor
-     * @param x_b - Center
-     * @param L - Width
-     * @param B - y offset
-     */
-    TanhProfX(double A, double xb, double L, double B) : A_(A), xb_(xb), L_(L), B_(B) {}
-
-    /*
-     * @brief Return profile
-     *
-     * @param x x - coordinate
-     * @param y y - coordinate
-     *
-     * @return \f $f(x, y) \f$
-     */
-    double operator() (double x, double y) { return(0.5 * A_ * (1.0 - tanh((x - xb_) / L_)) + B_);}
-  private:
-    const double A_;
-    const double xb_;
-    const double L_;
-    const double B_;
-};
-
-
-
 /**
  * @brief Functor for a exp prof in x-direction
  * \f[ f(x,y) = B + A\exp(-x/L_n) \f]
@@ -427,7 +388,7 @@ struct LinearX
      * @param a linear coefficient 
      * @param b constant coefficient
      */
-    LinearX( double a, double b):a_(a), b_(b){}
+     LinearX( double a, double b):a_(a), b_(b){}
     /**
      * @brief Return linear polynomial in x 
      *
@@ -436,19 +397,18 @@ struct LinearX
      
      * @return result
      */
-    double operator()( double x, double y){ return a_*x+b_;}
+   double operator()( double x, double y){ return a_*x+b_;}
     /**
-     * @brief Return linear polynomial in x
+     * @brief Return linear polynomial in x 
      *
      * @param x x - coordinate
-     *
+     
      * @return result
      */
-    double operator()(double x){ return a_ * x + b_;}
-  private:
+   double operator()(double x){ return a_*x+b_;}
+   private:
     double a_,b_;
 };
-
 /**
  * @brief Functor for a linear polynomial in y-direction
  * \f[ f(x,y) = ay+b \f]
@@ -477,17 +437,20 @@ struct LinearY
 
 
 /**
- * @brief Functor for a left side step function using tanh
- * \f[ f(x,y) = 0.5(1-\tanh(x-x_b)) \f]
+ * @brief Functor for a step function using tanh
+ * \f[ f(x,y) = 0.5(1+ sign \tanh((x-x_b)/width)) \f]
  */
-struct LHalf {
+struct TanhProfX {
     /**
-     * @brief Construct with given boundary value
+     * @brief Construct with xb, width and sign
      *
      * @param xb boundary value
      * @param width damping width
+     * @param sign sign of the danh, defines the damping direction
+     * @param bgampg background amplitude 
+     * @param profamp profile amplitude
      */
-    LHalf(double xb,double width) : xb_(xb),w_(width) {}
+    TanhProfX(double xb, double width, int sign,double bgamp, double profamp) : xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}
     /**
      * @brief Return left side step function
      *
@@ -499,42 +462,14 @@ struct LHalf {
      */
     double operator() (double x, double y)
     {
-        return 0.5*(1.-tanh((x-xb_)/w_));
+        return profa_*0.5*(1.+s_*tanh((x-xb_)/w_))+bga_; 
     }
     private:
-     double xb_;
-     double w_;
-};
-
-
-/**
- * @brief Functor for a right step function using tanh
- * \f[ f(x,y) = 0.5(1+\tanh(x-x_b)) \f]
- */
-struct RHalf {
-    /**
-     * @brief Construct with boundary value
-     *
-     * @param xb boundary value
-     * @param width damping width
-     */
-    RHalf(double xb, double width) : xb_(xb),w_(width)   {}
-    /**
-     * @brief Return left side step function
-     *
-     * @param x x - coordianate
-     * @param y y - coordianate
-     
-
-     * @return result
-     */
-    double operator() (double x, double y)
-    {
-        return 0.5*(1.+tanh((x-xb_)/w_)); 
-    }
-    private:
-     double xb_;
+    double xb_;
     double w_;
+    int s_;
+    double bga_;
+    double profa_;
 };
 /**
  * @brief Functor returning a Lamb dipole
@@ -1163,6 +1098,30 @@ struct ABS
     __host__ __device__
 #endif
         T operator()(const T& x){ return fabs(x);}
+};
+/**
+ * @brief returns positive values
+ * \f[ f(x) = |x|\f]
+ *
+ * @tparam T value type
+ */
+template <class T>
+struct POSVALUE
+{
+    /**
+     * @brief Returns positive values of x
+     *
+     * @param x of x
+     *
+     * @return  x*0.5*(1+sign(x))
+     */
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+        T operator()(const T& x){
+            if (x >= 0.0) return x;
+            return 0.0;
+            }
 };
 
 /**
