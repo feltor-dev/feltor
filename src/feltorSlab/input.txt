@@ -5,16 +5,16 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            = 3   (3)
-2)  nx (grid points in x)                = 100(192)
-3)  ny (grid points in y)                = 100(192) 
+2)  nx (grid points in x)                = 200(192)
+3)  ny (grid points in y)                = 200(192) 
 4)  dt (time step in units c_s/rho_s)    = 0.01(0.01)
 
 ----------------------------------Output parameters--------------------
-5)  n_out (# of x-y polynomials in output)  =  1
-6)  nx_out (# grid points in output field)  =  100
-7)  ny_out (# grid points in output field)  =  100
+5)  n_out (# of x-y polynomials in output)  =  3
+6)  nx_out (# grid points in output field)  =  200
+7)  ny_out (# grid points in output field)  =  200
 8)  itstp  (steps between outputs)          =  100
-9) total # of outputs (excluding first)     =  10000
+9) total # of outputs (excluding first)     =  2
 
 -------------------------Algorithmic parameters------------------------
 10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
@@ -48,7 +48,7 @@
 30) ln (in rho_s)                           = 64
 
 ---------------------------------EDGE/SOL Dynamics-------------------------------------
-31) SOL boundary in units of lx (>1 no SOL) = 1.0
+31) SOL boundary in units of lx (>1 no SOL) = 0.5
 32) damping width                           = 2.0
 32) tau profile                             = 0.000
 @ ------------------------------------------------------------
