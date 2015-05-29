@@ -29,6 +29,7 @@ struct Parameters
     unsigned zf;
     double solb,solw;
     double omega_source;
+    double sourceb,sourcew;
     enum dg::bc bc_x,bc_y;
 
     /**
@@ -76,6 +77,8 @@ struct Parameters
             solb = v[31];
             solw = v[32];
             omega_source = v[33];
+            sourceb = v[34];
+            sourcew = v[35];
             
         }
     }
@@ -126,10 +129,12 @@ struct Parameters
         os << "modified/ordinary \n"
             <<"     zf =              "<<zf<<"\n"
             <<"     ln =              "<<ln<<"\n";
-        os << "SOL/EDGE params \n"
+        os << "SOL/EDGE/Source params \n"
             <<"     sol boundary =    "<<solb<<"\n"
-            <<"     damping width =    "<<solw<<"\n"
-            <<"     omega_source =    "<<omega_source<<"\n";
+            <<"     damping width =   "<<solw<<"\n"
+            <<"     source rate  =    "<<omega_source<<"\n"
+            <<"     source boundary = "<<sourceb<<"\n"
+            <<"     source width =    "<<sourcew<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:
