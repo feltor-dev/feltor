@@ -89,17 +89,21 @@ int main( int argc, char* argv[])
 //     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof
+    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
     
+    // test Ti=0.001
 
+    
     y1[1] = dg::evaluate( init0, grid);
     dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
     std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1], y0[0]);    
+//     feltor.initializene( y0[1], y0[0]);    
+    feltor.initializene( y0[1],y0[3], y0[0]);    
     std::cout << "Done!\n";    
-    
+    dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
@@ -152,7 +156,7 @@ int main( int argc, char* argv[])
         title <<"Pot / "<< colors.scalemax() << " " << colors.scalemin()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
-        //draw Ne-1
+        //draw Te-1
         hvisual = y0[2];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
@@ -161,7 +165,7 @@ int main( int argc, char* argv[])
         title <<"Te-1 / " << colors.scalemin()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
-        //draw Ni-1
+        //draw Ti-1
         hvisual = y0[3];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
@@ -208,13 +212,8 @@ int main( int argc, char* argv[])
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
-            double coupling = feltor.coupling();
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << " Ne_p  = " << feltor.probe_vector()[0][0] << 
-                         " Phi_p = " << feltor.probe_vector()[1][0] << 
-                         " Ga_nex= " << feltor.radial_transport() <<
-                         " Coupling= " << coupling <<
-                         " Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<
+            std::cout << " Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
  

@@ -354,7 +354,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
             dg::blas1::axpby(p.mcv,omega,1.0,yp[i]);   // dtN += - mcv* n dy phi
             
             dg::blas2::gemv( poisson.dyrhs(), y[i], omega); //dy (n-amp)
-            dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]);   // dtN += - mcv* n dy phi                
+            dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]);   // dtN += - mcv* //dy (n-amp)               
         } 
     }
     //Coupling term for the electrons
