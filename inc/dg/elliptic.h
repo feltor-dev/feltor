@@ -231,7 +231,39 @@ struct GeneralElliptic
             R = dg::evaluate( dg::coo1, g);
         }
     }
-
+    /**
+     * @brief Construct from Grid and bc 
+     *
+     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
+     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
+     * must return instances of the Preconditioner class and 
+     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
+     * @param g The Grid
+     * @param bcx boundary condition in x
+     * @param bcy boundary contition in y
+     * @param bcz boundary contition in z
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative
+     */
+    template< class Grid>
+    GeneralElliptic( const Grid& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward): 
+        leftx ( dg::create::dx( g, inverse( bcx), no, inverse(dir))),
+        lefty ( dg::create::dy( g, inverse( bcy), no, inverse(dir))),
+        leftz ( dg::create::dz( g, inverse( bcz), no, inverse(dir))),
+        rightx( dg::create::dx( g, bcx, normed, dir)),
+        righty( dg::create::dy( g, bcy, normed, dir)),
+        rightz( dg::create::dz( g, bcz, normed, dir)),
+        jump  ( dg::create::jump2d( g, bcx, bcy, no )),
+        weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
+        xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
+        xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0), R(xchi),
+        no_(no)
+    { 
+        if( g.system() == cylindrical)
+        {
+            R = dg::evaluate( dg::coo1, g);
+        }
+    }
     /**
      * @brief Set x-component of \f$ chi\f$
      *
@@ -416,6 +448,45 @@ struct GeneralEllipticSym
         }
     }
 
+        /**
+     * @brief Construct from Grid and bc
+     *
+     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
+     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
+     * must return instances of the Preconditioner class and 
+     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
+     * @param g The Grid
+     * @param bcx boundary condition in x
+     * @param bcy boundary contition in y
+     * @param bcz boundary contition in z
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative
+     */
+    template< class Grid>
+    GeneralEllipticSym( const Grid& g, bc bcx, bc bcy,bc bcz, norm no = not_normed, direction dir = forward): 
+        leftx ( dg::create::dx( g, inverse( bcx), no, inverse(dir))),
+        lefty ( dg::create::dy( g, inverse( bcy), no, inverse(dir))),
+        leftz ( dg::create::dz( g, inverse( bcz), no, inverse(dir))),
+        rightx( dg::create::dx( g, bcx, normed, dir)),
+        righty( dg::create::dy( g, bcy, normed, dir)),
+        rightz( dg::create::dz( g, bcz, normed, dir)),
+        leftxinv ( dg::create::dx( g, inverse( bcx), no, dir)),
+        leftyinv ( dg::create::dy( g, inverse( bcy), no, dir)),
+        leftzinv ( dg::create::dz( g, inverse( bcz), no, dir)),
+        rightxinv( dg::create::dx( g, bcx, normed, inverse(dir))),
+        rightyinv( dg::create::dy( g, bcy, normed, inverse(dir))),
+        rightzinv( dg::create::dz( g, bcz, normed, inverse(dir))),
+        jump  ( dg::create::jump2d( g, bcx, bcy, no )),
+        weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
+        xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
+        xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0), R(xchi),
+        no_(no)
+    { 
+        if( g.system() == cylindrical)
+        {
+            R = dg::evaluate( dg::coo1, g);
+        }
+    }
     /**
      * @brief Set x-component of \f$ chi\f$
      *

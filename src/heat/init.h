@@ -1,7 +1,7 @@
 #pragma once
 // #include "solovev/geometry.h"
 #include "geometry_g.h"
-#include "parameters.h"
+#include "heat/parameters.h"
 
 /*!@file
  *

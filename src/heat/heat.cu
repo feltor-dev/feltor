@@ -10,13 +10,13 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
-// #include "solovev/geometry.h"
+#include "solovev/geometry.h"
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
-#include "geometry_g.h"
-#include "parameters.h"
+// #include "geometry_g.h"
+#include "heat/parameters.h"
 
 #include "heat.cuh"
 
@@ -35,7 +35,7 @@ int main( int argc, char* argv[])
     {
         try{
             v = file::read_input("input.txt");
-            v3 = file::read_input( "geometry_params_g.txt"); 
+            v3 = file::read_input( "geometry_params.txt"); 
         }catch( toefl::Message& m){
             m.display();
             return -1;
@@ -130,10 +130,10 @@ int main( int argc, char* argv[])
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
 //     std::cout << "initialize delta T" << std::endl;
-//     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
+    dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-    solovev::ZonalFlow init0(p, gp);
+//     solovev::ZonalFlow init0(p, gp);
 
 //     dg::CONSTANT init0( 0.);
 
@@ -165,9 +165,9 @@ int main( int argc, char* argv[])
 
     //////////////////////////////////////////////////////////////////////////////////
     //RK solver
-    dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
-//     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
 
@@ -241,8 +241,8 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << " err =" << err << "\n";
             E0 = E1;
             try{
-                rk( feltor, y0, y1, p.dt);
-//                  sirk(feltor,rolkar,y0,y1,p.dt);
+//                 rk( feltor, y0, y1, p.dt);
+                 sirk(feltor,rolkar,y0,y1,p.dt);
 //                 karniadakis( feltor, rolkar, y0);
 
                 y0.swap( y1);}

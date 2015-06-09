@@ -1,11 +1,11 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "parameters.h"
+// #include "parameters.h"
 // #include "geometry_circ.h"
 // #include "solovev/geometry.h"
-#include "geometry_g.h"
-#include "init.h"
+// #include "geometry_g.h"
+#include "solovev/init.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -37,11 +37,11 @@ struct Rolkar
         dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
         elliptic( g, dg::normed, dg::centered)
     {
-        container bfield = dg::evaluate( solovev::bR( gp.R_0, gp.I_0),g);
+        container bfield = dg::evaluate( solovev::FieldR( gp),g);
         elliptic.set_x( bfield);
-        bfield = dg::evaluate( solovev::bZ( gp.R_0, gp.I_0),g);
+        bfield = dg::evaluate( solovev::FieldZ( gp),g);
         elliptic.set_y( bfield);
-        bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
+        bfield = dg::evaluate( solovev::FieldP( gp),g);
         elliptic.set_z( bfield);
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
