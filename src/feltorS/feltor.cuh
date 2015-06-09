@@ -401,11 +401,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
         //dt Ni without FLR 
         dg::blas1::pointwiseDot(npe[0],rh,lambda); 
-        dg::blas1::axpby(-(1.+p.tau[1])*sqrt(p.d)/M_PI,lambda,1.0,yp[1]);
+        dg::blas1::axpby(-sqrt(1.+p.tau[1])*sqrt(p.d)/M_PI,lambda,1.0,yp[1]);
         //add the FLR term (tanh before lapl seems to work because of cancelation)
         dg::blas1::pointwiseDot( y[0],rh,lambda); //rh*(ne-1)
         dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
-        dg::blas1::axpby((1.+p.tau[1])*sqrt(p.d)/M_PI*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+        dg::blas1::axpby(sqrt(1.+p.tau[1])*sqrt(p.d)/M_PI*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     //Density source terms
     if (p.omega_source>0.0) 

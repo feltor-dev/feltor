@@ -471,8 +471,12 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     plusH  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minusH = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
     cusp::transpose( plusH, plusHT);
-    cusp::transpose( minusH, minusHT);   
-    plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT;     
+    cusp::transpose( minusH, minusHT); 
+
+    plus = plusH, minus = minusH;
+    std::cout << "here" << std::endl;
+//     plusT = plusHT, minusT = minusHT;     
+
 
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)

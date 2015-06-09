@@ -105,6 +105,7 @@ struct Feltor
     container chii; //dont use them as helper
     const container binv;
     const container one;
+    container B2;
     const Preconditioner w2d, v2d;
     std::vector<container> phi; // =(phi,psi_i), (0,chi_i)
     std::vector<container> ype, logype; 
@@ -129,6 +130,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
+    B2( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi),chii(dg::evaluate(dg::CONSTANT(0.0),g)),// (phi,psi), (chi_i)
     ype(4,chi), logype(ype), // y+(bgamp+profamp) , log(ype)
@@ -142,24 +144,10 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     p(p),
     evec(3)
 {
+    dg::blas1::pointwiseDivide(one,binv,B2);
+    dg::blas1::pointwiseDivide(B2,binv,B2);
 }
 
-// template<class Matrix, class container, class P>
-// container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
-// {
-//     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-(bgamp+profamp)) 
-//     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i n_i
-//     dg::blas1::pointwiseDot( chi, binv, chi);
-//     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
-//     pol.set_chi( chi);
-//     invert_invgamma(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
-//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
-//     //= Gamma n_i - n_e
-//     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
-//         if(  number == invert_pol.get_max())
-//             throw dg::Fail( p.eps_pol);
-//     return phi[0];
-// }
 template<class Matrix, class container, class P>
 container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
@@ -169,10 +157,8 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
     
-    dg::blas1::pointwiseDivide(one,binv,lambda);
-    dg::blas1::pointwiseDot(lambda,lambda,lambda);//B^2
     dg::blas1::transform( y[3], chi, dg::PLUS<>( (p.bgprofamp + p.nprofileamp))); //mu_i n_i
-    dg::blas1::pointwiseDivide(lambda,chi,lambda); //B^2/T
+    dg::blas1::pointwiseDivide(B2,chi,lambda); //B^2/T
     invgammaNU.set_chi(lambda);
     invert_invgamma(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
     dg::blas1::pointwiseDot(chi,lambda,chi);
@@ -184,22 +170,11 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
             throw dg::Fail( p.eps_pol);
     return phi[0];
 }
-// template< class Matrix, class container, class P>
-// container& Feltor<Matrix,container, P>::compute_psi( container& potential)
-// {
-//     invert_invgamma(invgammaDIR,chi,potential);                 //chi  = Gamma phi
-//     poisson.variationRHS(potential, omega);
-//     dg::blas1::pointwiseDot( binv, omega, omega);
-//     dg::blas1::pointwiseDot( binv, omega, omega);
-//     dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
-//     return phi[1];    
-// }
+
 template< class Matrix, class container, class P>
 container& Feltor<Matrix,container, P>::compute_psi(const container& ti,container& potential)
 {
-    dg::blas1::pointwiseDivide(one,binv,lambda);
-    dg::blas1::pointwiseDot(lambda,lambda,lambda);//B^2
-    dg::blas1::pointwiseDivide(lambda,ti,lambda); //B^2/T
+    dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
     invgammaDIR.set_chi(lambda);
     dg::blas1::pointwiseDot(lambda,potential,lambda);
     invert_invgamma(invgammaDIR,chi,lambda);                 //chi  = Gamma phi
@@ -213,9 +188,7 @@ container& Feltor<Matrix,container, P>::compute_psi(const container& ti,containe
 template< class Matrix, class container, class P>
 container& Feltor<Matrix,container, P>::compute_chii(const container& ti,container& potential)
 {
-    dg::blas1::pointwiseDivide(one,binv,lambda);
-    dg::blas1::pointwiseDot(lambda,lambda,lambda);//B^2
-    dg::blas1::pointwiseDivide(lambda,ti,lambda); //B^2/T
+    dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
     invgammaDIR.set_chi(lambda);
     dg::blas1::pointwiseDot(lambda,potential,lambda);
     invert_invgamma(invgammaDIR,chi,lambda);                 //chi  = Gamma phi
@@ -229,21 +202,13 @@ container& Feltor<Matrix,container, P>::compute_chii(const container& ti,contain
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::initializene( const container& src, const container& ti,container& target)
 {   
-    dg::blas1::pointwiseDivide(one,binv,lambda);
-    dg::blas1::pointwiseDot(lambda,lambda,lambda);//B^2
-    dg::blas1::pointwiseDivide(lambda,ti,lambda); //B^2/T
-    
+    dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T    
     invgammaNU.set_chi(lambda);
     invert_invgamma(invgammaNU,target,src); //=ne-1 = bar(Gamma)_dagger (ni-1)    
     dg::blas1::pointwiseDot(target,lambda,target);
     invgammaNU.set_chi(one);
-
 }
-// template<class Matrix, class container, class P>
-// void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
-// {   
-//     invert_invgamma(invgammaNU,target,src); //=ne-1 = Gamma_dagger (ni-1)    
-// }
+
 template<class M, class V, class P>
 void Feltor<M, V, P>::energies( std::vector<V>& y)
 {
