@@ -175,7 +175,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     // Initial densit profiles
     lh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,-1.0,0.0,1.0),g)),
     rh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,1.0,0.0,1.0),g)), 
-    lhs(dg::evaluate(dg::TanhProfX(p.lx*p.solb*0.7,p.solw,-1.0,0.0,1.0),g)),
+    lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
     profNi(profne),
     // Particle source function
@@ -383,7 +383,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
             dg::blas1::axpby(p.mcv,omega,1.0,yp[i]);   // dtN += - mcv* n dy phi
             
             dg::blas2::gemv( poisson.dyrhs(), y[i], omega); //dy (n-amp)
-            dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]);   // dtN += - mcv* n dy phi                
+            dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]);   // dtN += - mcv* //dy (n-amp)               
         } 
     }
     //Coupling term for the electrons
@@ -424,20 +424,18 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform(omega, omega, dg::EXP<value_type>()); //omega = exp(-phi) 
         dg::blas1::pointwiseDot(omega,npe[0],lambda); //omega = (exp(-phi) )* ne
         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
-        dg::blas1::axpby(-2.*sqrt(p.d/(2.*M_PI*abs(p.mu[0]))),lambda,1.0,yp[0]); //dtN_e = ... -sqrt(D/(2 pi mu_e))rh*(exp(-phi) )* ne
-         //dt N_i with FLR correction and invgamma operator
-//         dg::blas2::gemv( invgammaNU, y[0],lambda);
-//         dg::blas1::transform(lambda,lambda, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
-//         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*n_e
-//         dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]); //dtNi = ... -sqrt(D)*rh* Gamma^-1 n_e
+        dg::blas1::axpby(-(sqrt(p.d)/M_PI)/sqrt(2.*M_PI*abs(p.mu[0])),lambda,1.0,yp[0]); 
+        //add the FLR term (tanh before lapl seems to work because of cancelation) (LWL vorticity correction)
+//         dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
+//         dg::blas1::axpby((sqrt(p.d)/M_PI)/sqrt(2.*M_PI*abs(p.mu[0]))*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR 
         dg::blas1::pointwiseDot(npe[0],rh,lambda); 
-        dg::blas1::axpby(-2.*sqrt(p.d),lambda,1.0,yp[1]);
+        dg::blas1::axpby(-sqrt(1.+p.tau[1])*sqrt(p.d)/M_PI,lambda,1.0,yp[1]);
         //add the FLR term (tanh before lapl seems to work because of cancelation)
         dg::blas1::pointwiseDot( y[0],rh,lambda); //rh*(ne-1)
         dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
-        dg::blas1::axpby(sqrt(p.d)*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi = ... sqrt(D)*tau_i mue_i * nabla_perp^2 rh*(ne-1)
+        dg::blas1::axpby(sqrt(1.+p.tau[1])*sqrt(p.d)/M_PI*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     //Density source terms
     if (p.omega_source>0.0) 
@@ -447,11 +445,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(lambda,lhs,omega); //lambda =lhs*(ne0_source - <ne>)
         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
         dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = - omega_source(ne0_source - <ne>) 
-        //dt N_i with FLR correction and invgamma operator
-//         dg::blas2::gemv( invgammaNU, lambda,omega);
-//         dg::blas1::pointwiseDot(omega,lhs,omega); //lambda =lhs*Gamma^(-1)(<ne> - ne0_source)
-//         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>());
-//         dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);     //dtNi = - omega_source*lhs*Gamma^(-1) (ne0 - <ne>) 
+        //add the FLR term (tanh and postrans before lapl seems to work because of cancelation) (LWL vorticity correction)
+//         dg::blas1::pointwiseDot(lambda,lhs,lambda);
+//         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());   
+//         dg::blas2::gemv( lapperp, lambda, omega);
+//         dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR
         dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 
@@ -459,8 +457,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(lambda,lhs,lambda);
         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
         dg::blas2::gemv( lapperp, lambda, omega);
-//         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); 
-//         dg::blas1::pointwiseDot(omega,lhs,omega);
         dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     t.toc();

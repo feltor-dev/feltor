@@ -197,9 +197,9 @@ struct Field
 /**
  * @brief \f[ b^R\f]
  */
-struct bR
+struct FieldR
 {
-    bR( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    FieldR( GeomParameters gp):R_0(gp.R_0), I_0(gp.I_0){}
     double operator()( double R, double Z, double phi)
     {
         return -sqrt(2.)*M_PI*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2)/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
@@ -210,9 +210,9 @@ struct bR
 /**
  * @brief \f[ b^Z)\f]
  */
-struct bZ
+struct FieldZ
 {
-    bZ( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    FieldZ( GeomParameters gp):R_0(gp.R_0), I_0(gp.I_0){}
     double operator()( double R, double Z, double phi)
     {
         return sqrt(2.)*M_PI*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2)/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
@@ -224,9 +224,9 @@ struct bZ
 /**
  * @brief \f[ b^\phi\f]
  */
-struct bPhi
+struct FieldP
 {
-    bPhi( double R_0, double I_0):R_0(R_0), I_0(I_0){}
+    FieldP( GeomParameters gp):R_0(gp.R_0), I_0(gp.I_0){}
     double operator()( double R, double Z, double phi)
     {
         return 2.*sqrt(2.)*I_0/R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));

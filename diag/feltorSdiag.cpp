@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
@@ -14,8 +15,8 @@
 
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "feltorSlab/parameters.h"
-#include "probes.h"
+#include "feltorS/parameters.h"
+// #include "probes.h"
 
 int main( int argc, char* argv[])
 {
@@ -53,6 +54,7 @@ int main( int argc, char* argv[])
     dg::HVec vor(dg::evaluate(dg::zero,g2d));
     std::vector<dg::HVec> logn(2,dg::evaluate(dg::zero,g2d));
     dg::HVec temp(dg::evaluate(dg::zero,g2d));
+    dg::HVec one(dg::evaluate(dg::one,g2d));
     dg::HVec temp1d(dg::evaluate(dg::zero,g1d));
     dg::HVec xcoo(dg::evaluate(dg::coo1,g1d));
 //     dg::HVec y0coo(dg::evaluate(1,0.0));
@@ -76,7 +78,6 @@ int main( int argc, char* argv[])
     err1d= file::define_dimensions( ncid1d, dim_ids1d, &tvarID1d, g1d);
 
     for( unsigned i=0; i<7; i++){
-        std::cout << i << std::endl;
         err1d = nc_def_var( ncid1d, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
     err1d = nc_close(ncid1d); 
@@ -91,13 +92,41 @@ int main( int argc, char* argv[])
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
 
-//     dg::DVec xprobecoords(7,1.);
-//     for (unsigned i=0;i<7; i++) {
-//         xprobecoords[i] = p.lx/8.*(1+i) ;
-//     }
-//     const dg::DVec yprobecoords(7,p.ly/2.);
-//     probes<dg::DMatrix, dg::DVec> pro(xprobecoords,yprobecoords,grid);
-    
+    unsigned num_probes = 5;
+    dg::HVec xprobecoords(num_probes,1.);
+    for (unsigned i=0;i<num_probes; i++) {
+        xprobecoords[i] = (1+i)*p.lx/((double)(num_probes+1));
+    }
+    const dg::HVec yprobecoords(num_probes,p.ly/2.);
+    dg::HVec gamma(phi);
+    dg::HVec npe_probes(num_probes);
+    dg::HVec phi_probes(num_probes);
+    dg::HVec gamma_probes(num_probes);
+    dg::HMatrix probe_interp(dg::create::interpolation(xprobecoords, yprobecoords, g2d)) ;
+    dg::HMatrix dy(dg::create::dy(g2d));
+    //probe netcdf file
+    err1d = nc_redef(ncid1d);
+    int npe_probesID[num_probes],phi_probesID[num_probes],gamma_probesID[num_probes];
+    std::string npe_probes_names[num_probes] ;
+    std::string phi_probes_names[num_probes] ;
+    std::string gamma_probes_names[num_probes];
+    int timeID, timevarID;
+    err1d = file::define_time( ncid1d, "ptime", &timeID, &timevarID);
+    for( unsigned i=0; i<num_probes; i++){
+        std::stringstream ss1,ss2,ss3;
+        ss1<<"Ne_p"<<i;
+        npe_probes_names[i] =ss1.str();
+        err1d = nc_def_var( ncid1d, npe_probes_names[i].data(),     NC_DOUBLE, 1, &timeID, &npe_probesID[i]);
+        ss2<<"phi_p"<<i;
+        phi_probes_names[i] =ss2.str();
+        err1d = nc_def_var( ncid1d, phi_probes_names[i].data(),    NC_DOUBLE, 1, &timeID, &phi_probesID[i]);  
+        ss3<<"G_x"<<i;
+        gamma_probes_names[i] =ss3.str();
+        err1d = nc_def_var( ncid1d, gamma_probes_names[i].data(),    NC_DOUBLE, 1, &timeID, &gamma_probesID[i]);
+    }
+    err1d = nc_enddef(ncid1d);   
+    err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
+   
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
             start2d[0] = i;
@@ -119,6 +148,7 @@ int main( int argc, char* argv[])
             dg::blas1::transform( npe[0], logn[0], dg::LN<double>());
             dg::blas1::transform( npe[1], logn[1], dg::LN<double>());
 
+            //Compute avg 2d fields and convert them into 1d field
             polavg(npe[0],temp);
             dg::blas2::gemv(interp,temp,temp1d); 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[0],   start1d, count1d, temp1d.data()); 
@@ -139,6 +169,30 @@ int main( int argc, char* argv[])
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[5],   start1d, count1d, temp1d.data()); 
 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[6],   start1d, count1d, xcoo.data()); 
+            
+            //compute probe values by interpolation
+            //normalize
+                polavg(npe[0],temp);
+                dg::blas1::pointwiseDivide(npe[0],temp,temp);
+                dg::blas1::axpby(1.0,temp,-1.0,one,temp);
+            dg::blas2::gemv(probe_interp, temp, npe_probes);
+                polavg(phi,temp);
+                dg::blas1::pointwiseDivide(phi,temp,temp);
+                dg::blas1::axpby(1.0,temp,-1.0,one,temp);
+            dg::blas2::gemv(probe_interp, temp, phi_probes);
+            dg::blas2::gemv(dy, phi, temp);
+            dg::blas2::gemv(probe_interp, temp, gamma_probes);
+//             dg::blas2::gemv(probe_interp, npe[0], npe_probes);
+//             dg::blas2::gemv(probe_interp, phi, phi_probes);
+//             dg::blas2::gemv(dy, phi, temp);
+//             dg::blas2::gemv(probe_interp, temp, gamma_probes);
+            //write data in netcdf file
+            err1d = nc_put_vara_double( ncid1d, timevarID, start1d, count1d, &time);
+            for( unsigned i=0; i<num_probes; i++){
+                err1d= nc_put_vara_double( ncid1d, npe_probesID[i], start1d, count1d, &npe_probes[i]);
+                err1d= nc_put_vara_double( ncid1d, phi_probesID[i], start1d, count1d, &phi_probes[i]);
+                err1d= nc_put_vara_double( ncid1d, gamma_probesID[i], start1d, count1d, &gamma_probes[i]);
+            }
             err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);                    
     }
     err = nc_close(ncid);

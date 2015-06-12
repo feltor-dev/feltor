@@ -52,8 +52,19 @@ struct Rolkar
         dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perpN ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
-        LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered)
+        LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered),
+        dzTdzN( g,g.bcx(),g.bcy(),g.bcz(), dg::normed, dg::centered),
+        dzTdzDIR( g,dg::DIR, dg::DIR,g.bcz(), dg::normed, dg::centered)
     {
+        container bfield = dg::evaluate( solovev::FieldR( gp),g);
+        dzTdzN.set_x( bfield);
+        dzTdzDIR.set_x( bfield);
+        bfield = dg::evaluate( solovev::FieldZ( gp),g);
+        dzTdzN.set_y( bfield);
+        dzTdzDIR.set_y( bfield);
+        bfield = dg::evaluate( solovev::FieldP( gp),g);
+        dzTdzN.set_z( bfield);
+        dzTdzDIR.set_z( bfield);
     }
 
     /**
@@ -79,7 +90,13 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perpDIR, x[i+2], temp);
             dg::blas2::gemv( LaplacianM_perpDIR, temp, y[i+2]);
             dg::blas1::scal( y[i+2], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
-
+            if (p.pardiss==2)
+            {
+            dg::blas2::gemv( dzTdzN, x[i],temp); //lapd is negative
+            dg::blas1::axpby(  -p.nu_parallel ,temp, 1., y[i]);
+            dg::blas2::gemv( dzTdzDIR, x[i+2],temp); //lapd is negative
+            dg::blas1::axpby(  -p.nu_parallel ,temp, 1., y[i+2]);
+            }
         }
         //Resistivity
         dg::blas1::axpby( 1., x[3], -1, x[2], omega); //U_i - U_e
@@ -124,6 +141,7 @@ struct Rolkar
     const container dampgauss_;
     
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;
+    dg::GeneralElliptic<Matrix, container, Preconditioner> dzTdzN,dzTdzDIR;
 
 };
 

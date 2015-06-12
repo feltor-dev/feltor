@@ -467,13 +467,20 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
-    cusp::coo_matrix<int, double, cusp::host_memory> plusH, minusH, plusHT, minusHT;
-    plusH  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-    minusH = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-    cusp::transpose( plusH, plusHT);
-    cusp::transpose( minusH, minusHT);   
-    plus = plusH, minus = minusH, plusT = plusHT, minusT = minusHT;     
-
+//     cusp::csr_matrix<int, double, cusp::host_memory> plusH, minusH, plusHT, minusHT;
+//     plusH  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+//     minusH = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+//     cusp::transpose( plusH, plusHT);
+//     cusp::transpose( minusH, minusHT); 
+//     plus = plusH, minus = minusH;
+    //Transposed matrices work only for csr_matrix!!!
+//     plusT = plusHT, minusT = minusHT; 
+  
+    plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+    minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+    //Transposed matrices work only for csr_matrix!!!
+//     cusp::transpose( plus, plusT);
+//     cusp::transpose( minus, minusT); 
     //copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
