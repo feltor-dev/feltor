@@ -97,13 +97,17 @@ int main( int argc, char* argv[])
     y1[1] = dg::evaluate( init0, grid);
     dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
+    
+   dg::blas1::axpby( 1., y0[1], 0., y0[3]); //initialize ni = <n> + <n>*ntilde 
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+    //intialize 
+   
     std::cout << "intiialize ne" << std::endl;
 //     feltor.initializene( y0[1], y0[0]);    
     feltor.initializene( y0[1],y0[3], y0[0]);    
     std::cout << "Done!\n";    
-    dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+   dg::blas1::axpby( 1., y0[0], 0., y0[2]); //initialize ni = <n> + <n>*ntilde
+    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize Ti-1
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
@@ -135,7 +139,8 @@ int main( int argc, char* argv[])
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
-        title <<"ne-1 / " << colors.scalemin()<<"\t";
+        title <<"ne-1 / " << colors.scalemax() << " " << colors.scalemin()<<"\t";
+         colors.scalemin() =  -colors.scalemax();
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw Ni-1
@@ -144,7 +149,8 @@ int main( int argc, char* argv[])
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
-        title <<"ni-1 / " << colors.scalemin()<<"\t";
+        title <<"ni-1 / " << colors.scalemax() << " " << colors.scalemin()<<"\t";
+         colors.scalemin() =  -colors.scalemax();
         render.renderQuad(visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         
@@ -154,6 +160,7 @@ int main( int argc, char* argv[])
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
         title <<"Pot / "<< colors.scalemax() << " " << colors.scalemin()<<"\t";
+        colors.scalemin() =  -colors.scalemax();
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw Te-1
@@ -162,7 +169,8 @@ int main( int argc, char* argv[])
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
-        title <<"Te-1 / " << colors.scalemin()<<"\t";
+        title <<"Te-1 / " << colors.scalemax() << " " << colors.scalemin()<<"\t";
+         colors.scalemin() =  -colors.scalemax();
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw Ti-1
@@ -171,7 +179,8 @@ int main( int argc, char* argv[])
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title << std::setprecision(2) << std::scientific;
-        title <<"Ti-1 / " << colors.scalemin()<<"\t";
+        title <<"Ti-1 / " << colors.scalemax() << " " << colors.scalemin()<<"\t";
+         colors.scalemin() =  -colors.scalemax();
         render.renderQuad(visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw vor
@@ -184,6 +193,7 @@ int main( int argc, char* argv[])
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title <<"Omega / "<< colors.scalemax()<< " "<< colors.scalemin()<<"\t";
+        colors.scalemin() =  -colors.scalemax();
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);     
            
         title << std::fixed; 

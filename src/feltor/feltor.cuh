@@ -52,19 +52,19 @@ struct Rolkar
         dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perpN ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
-        LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered),
-        dzTdzN( g,g.bcx(),g.bcy(),g.bcz(), dg::normed, dg::centered),
-        dzTdzDIR( g,dg::DIR, dg::DIR,g.bcz(), dg::normed, dg::centered)
+        LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered)
+//     ,dzTdzN( g, g.bcx(), g.bcy(), g.bcz(), dg::normed, dg::centered),
+//         dzTdzDIR( g, dg::DIR, dg::DIR, g.bcz(), dg::normed, dg::centered)
     {
-        container bfield = dg::evaluate( solovev::FieldR( gp),g);
-        dzTdzN.set_x( bfield);
-        dzTdzDIR.set_x( bfield);
-        bfield = dg::evaluate( solovev::FieldZ( gp),g);
-        dzTdzN.set_y( bfield);
-        dzTdzDIR.set_y( bfield);
-        bfield = dg::evaluate( solovev::FieldP( gp),g);
-        dzTdzN.set_z( bfield);
-        dzTdzDIR.set_z( bfield);
+//         container bfield = dg::evaluate( solovev::FieldR( gp),g);
+//         dzTdzN.set_x( bfield);
+//         dzTdzDIR.set_x( bfield);
+//         bfield = dg::evaluate( solovev::FieldZ( gp),g);
+//         dzTdzN.set_y( bfield);
+//         dzTdzDIR.set_y( bfield);
+//         bfield = dg::evaluate( solovev::FieldP( gp),g);
+//         dzTdzN.set_z( bfield);
+//         dzTdzDIR.set_z( bfield);
     }
 
     /**
@@ -90,13 +90,13 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perpDIR, x[i+2], temp);
             dg::blas2::gemv( LaplacianM_perpDIR, temp, y[i+2]);
             dg::blas1::scal( y[i+2], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
-            if (p.pardiss==2)
-            {
-            dg::blas2::gemv( dzTdzN, x[i],temp); //lapd is negative
-            dg::blas1::axpby(  -p.nu_parallel ,temp, 1., y[i]);
-            dg::blas2::gemv( dzTdzDIR, x[i+2],temp); //lapd is negative
-            dg::blas1::axpby(  -p.nu_parallel ,temp, 1., y[i+2]);
-            }
+//             if (p.pardiss==2)
+//             {
+//             dg::blas2::gemv( dzTdzN, x[i],temp); //lapd is negative
+//             dg::blas1::axpby(  -p.nu_parallel ,temp, 1., y[i]);
+//             dg::blas2::gemv( dzTdzDIR, x[i+2],temp); //lapd is negative
+//             dg::blas1::axpby(  -p.nu_parallel ,temp, 1., y[i+2]);
+//             }
         }
         //Resistivity
         dg::blas1::axpby( 1., x[3], -1, x[2], omega); //U_i - U_e
@@ -141,7 +141,7 @@ struct Rolkar
     const container dampgauss_;
     
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;
-    dg::GeneralElliptic<Matrix, container, Preconditioner> dzTdzN,dzTdzDIR;
+//     dg::GeneralElliptic<Matrix, container, Preconditioner> dzTdzN,dzTdzDIR;
 
 };
 
@@ -412,11 +412,17 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
                 }
                 if (p.pardiss==1)
                 {
-                    dzN_.dzz(y[i],omega);                                            //dz^2 N 
-                    dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 N 
-                    dzN_(y[i], dzy[i]);       
-                    dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
-                    dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N
+//                     dzN_.dzz(y[i],omega);                                            //dz^2 N 
+//                     dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 N 
+//                     dzN_(y[i], dzy[i]);       
+//                     dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
+//                     dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N
+                    dzN_.forward( y[i], omega); 
+                    dzDIR_.forwardTD(omega,lambda);
+                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
+                    dzN_.backward( y[i], omega); 
+                    dzDIR_.backwardTD(omega,lambda);
+                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
                 }           
         }
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
@@ -448,12 +454,18 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
                 }
                 if (p.pardiss==1)
                 {
-                    dzDIR_.dzz(y[i+2],omega);                                          //dz^2 U 
+/*                    dzDIR_.dzz(y[i+2],omega);                                          //dz^2 U 
                     dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 U 
                     //gradlnBcorrection
                     dzDIR_(y[i+2], dzy[i+2]);                                               //dz U
                     dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);               // dz lnB dz U
-                    dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N   
+                    dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N */  
+                    dzDIR_.forward( y[i+2], omega); 
+                    dzN_.forwardTD(omega,lambda);
+                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
+                    dzDIR_.backward( y[i+2], omega); 
+                    dzN_.backwardTD(omega,lambda);
+                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
                 }   
         }
         dg::blas1::pointwiseDot( npe[i], y[i+2], omega); //N U   
@@ -527,22 +539,35 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
                 if (p.pardiss==1)
                 {
                     if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);
-                    dzN_.dzz(y[i],omega);                                          //dz^2 N 
-                    dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
-        
-                    //gradlnBcorrection
-                    dzN_(y[i], dzy[i]);       
-                    dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);            // dz lnB dz N
-                    dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
-                    
+//                     dzN_.dzz(y[i],omega);                                          //dz^2 N 
+//                     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
+//         
+//                     //gradlnBcorrection
+//                     dzN_(y[i], dzy[i]);       
+//                     dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);            // dz lnB dz N
+//                     dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
+
+                    dzN_.forward( y[i], omega); 
+                    dzDIR_.forwardTD(omega,lambda);
+                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
+                    dzN_.backward( y[i], omega); 
+                    dzDIR_.backwardTD(omega,lambda);
+                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
+       
                     if (p.pollim==1) dzDIR_.set_boundaries( dg::DIR, 0, 0);      
-                    dzDIR_.dzz(y[i+2],omega);                                   
-                    dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);      
-        
-                    //gradlnBcorrection
-                    dzDIR_(y[i+2], dzy[i+2]);                                   //dz U
-                    dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);           // dz lnB dz U
-                    dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]); 
+//                     dzDIR_.dzz(y[i+2],omega);                                   
+//                     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);      
+//         
+//                     //gradlnBcorrection
+//                     dzDIR_(y[i+2], dzy[i+2]);                                   //dz U
+//                     dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);           // dz lnB dz U
+//                     dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]); 
+                    dzDIR_.forward( y[i+2], omega); 
+                    dzN_.forwardTD(omega,lambda);
+                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
+                    dzDIR_.backward( y[i+2], omega); 
+                    dzN_.backwardTD(omega,lambda);
+                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
                 }
         }
     }
