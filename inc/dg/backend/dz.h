@@ -193,7 +193,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
 template <class Field, class Limiter>
 DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz ): 
     eps_(eps),
-    hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()),  invB(dg::evaluate(field,grid) ,
+    hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()),  invB(dg::evaluate(field,grid)) ,
     dz_(field, grid.global(), deltaPhi, eps, limit, globalbcz)
 {
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
