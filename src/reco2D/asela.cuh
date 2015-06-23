@@ -133,7 +133,7 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     rho( dg::evaluate( dg::zero, grid)),
     omega(rho), apar(rho),
     phi( 2, rho), expy( phi), arakAN( phi), arakAU( phi), u(phi), 
-    laplaceM (dg::create::laplacianM( grid, dg::normed, dg::symmetric)),
+    laplaceM (dg::create::laplacianM( grid, dg::normed, dg::centered)),
     arakawa( grid), 
     maxwell( grid),
     invert_pol( rho, rho.size(), p.eps_pol),

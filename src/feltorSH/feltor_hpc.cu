@@ -13,7 +13,6 @@
 #include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "solovev/geometry.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
@@ -63,43 +62,46 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
-    //initial perturbation
+       //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
 //     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
-    
+//      dg::Vortex init0(  p.posX*p.lx, p.posY*p.ly, 0, p.sigma, p.amp);   
     //background profile
 //     solovev::Nprofile prof(p, gp); //initial background profile
-//     dg::CONSTANT prof(p.bgprofamp );
+    dg::CONSTANT prof(p.bgprofamp );
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-//         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
-//     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-
+//     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-
-    std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
+//     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
+    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
     
+    // test Ti=0.001
 
-    //no field aligning
-    y1[1] = dg::evaluate( init0, grid);
-    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]);
-
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
+    
+     y1[1] = dg::evaluate( init0, grid);
+    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
+    //intialize n_i and T_i -> Compute ne and then set te=ne
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
+    dg::blas1::axpby( 1., y0[1], 0., y0[3]); //initialize Ti = n_i  
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-//     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    
+   
     std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1], y0[0]);    
-    std::cout << "Done!\n";
+//     feltor.initializene( y0[1], y0[0]);    
+    feltor.initializene( y0[1],y0[3], y0[0]);    
+    std::cout << "Done!\n";    
+   dg::blas1::axpby( 1., y0[0], 0., y0[2]); //initialize t_e = n_e
+    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize Ti-1
+
 
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
-//     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -111,9 +113,9 @@ int main( int argc, char* argv[])
     err = nc_redef(ncid);
 
     //field IDs
-    std::string names[4] = {"electrons", "ions",  "potential","vor"}; 
-    int dataIDs[4]; 
-    for( unsigned i=0; i<4; i++){
+    std::string names[6] = {"electrons", "ions", "Telectrons","Tions", "potential","vor"}; 
+    int dataIDs[6]; 
+    for( unsigned i=0; i<6; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
 
     //energy IDs
@@ -143,7 +145,7 @@ int main( int argc, char* argv[])
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
-    for( unsigned i=0; i<2; i++)
+    for( unsigned i=0; i<4; i++)
     {
         dg::blas2::gemv( interpolate, y0[i], transferD);
         transferH = transferD;//transfer to host
@@ -154,13 +156,13 @@ int main( int argc, char* argv[])
     dg::blas2::symv( interpolate, transfer, transferD);
     transferH = transferD;//transfer to host
 
-    err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+    err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     //Vor
     transfer = feltor.potential()[0];
     dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);            
     dg::blas2::symv( interpolate,y1[1], transferD);
     transferH = transferD;//transfer to host
-    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
+    err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
     double time = 0;
 
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -169,10 +171,8 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-    double Nep=feltor.probe_vector()[0][0];
-    double phip=feltor.probe_vector()[1][0];
-    double radtrans = feltor.radial_transport();
-    double coupling = feltor.coupling();
+
+
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -182,10 +182,6 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
     //probe
-    err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-    err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
-    err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
-    err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     
 
@@ -217,17 +213,13 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
-//             feltor.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
-            Nep =feltor.probe_vector()[0][0];
-            phip=feltor.probe_vector()[1][0];
-            radtrans = feltor.radial_transport();
-            coupling= feltor.coupling();
+
             err = nc_open(argv[2], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
@@ -239,10 +231,7 @@ int main( int argc, char* argv[])
             }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);          
-            err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
-            err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
+           
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
@@ -258,7 +247,7 @@ int main( int argc, char* argv[])
         //////////////////////////write fields////////////////////////
         start[0] = i;
         err = nc_open(argv[2], NC_WRITE, &ncid);
-        for( unsigned j=0; j<2; j++)
+        for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
             transferH = transferD;//transfer to host
@@ -267,12 +256,12 @@ int main( int argc, char* argv[])
         transfer = feltor.potential()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
         transferH = transferD;//transfer to host
-        err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         transfer = feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);            
         dg::blas2::symv( interpolate,y1[1], transferD);
         transferH = transferD;//transfer to host
-        err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
 
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);
