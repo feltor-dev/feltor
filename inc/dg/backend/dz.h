@@ -329,7 +329,7 @@ void DZ<MPI_Matrix, MPI_Vector>::backwardTD( const MPI_Vector& f, MPI_Vector& dz
 {
     //direct
     assert( &f != &dzf);    
-    dg::blas1::pointwiseDot( f.data, invB.data(), dzf.data());
+    dg::blas1::pointwiseDot( f.data(), invB.data(), dzf.data());
     einsPlus(  dzf, tempM);
     dg::blas1::axpby( -1., tempM, 1.,  dzf.data(), tempM);
     dg::blas1::pointwiseDivide(  tempM, hp,  tempM);        
