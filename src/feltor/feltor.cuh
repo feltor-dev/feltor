@@ -392,6 +392,7 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
         //Parallel dissipation
         if( p.nu_parallel != 0)
         {
+                #ifndef MPI_VERSION
                 if (p.pardiss==0)
                 {
                     if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);
@@ -411,6 +412,7 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
                     dzDIR_.backwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
                 }
+                #endif
                 if (p.pardiss==1)
                 {
                     if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);
@@ -500,7 +502,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //Compute parallel dissipative energy for N/////////////////////////////
         if( p.nu_parallel != 0)
         {
-                if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);                
+                if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);             
+                #ifndef MPI_VERSION
                 if (p.pardiss==0)
                 {
                     dzN_.forward(y[i], omega); 
@@ -511,6 +514,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
                     dzN_.backwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda,  1., lambda,lambda); 
                 }
+                #endif
                 if (p.pardiss==1)
                 {
 //                     dzN_.dzz(y[i],omega);                                            //dz^2 N 
@@ -544,6 +548,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         if( p.nu_parallel !=0)
         {
                 if (p.pollim==1) dzDIR_.set_boundaries( dg::DIR, 0, 0);    
+                #ifndef MPI_VERSION
                 if (p.pardiss==0)
                 {
                     dzDIR_.forward(y[i+2], omega); 
@@ -553,6 +558,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
                     dzDIR_.backwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda,  1., lambda,lambda); 
                 }
+                #endif
+
                 if (p.pardiss==1)
                 {
 /*                    dzDIR_.dzz(y[i+2],omega);                                          //dz^2 U 
