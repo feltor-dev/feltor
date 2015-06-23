@@ -277,7 +277,6 @@ DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double d
     interM.resize( collM_.recv_size());
     interP.resize( collP_.recv_size());
 }
-template<class M, class container>
 void DZ<M,container>::centered( const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct discretisation
@@ -287,7 +286,6 @@ void DZ<M,container>::centered( const MPI_Vector& f, MPI_Vector& dzf)
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, hz, dzf.data());
 }
-template<class M, class container>
 void DZ<M,container>::centeredTD(const MPI_Vector& f, MPI_Vector& dzf)
 {       
 //     Direct discretisation
@@ -300,7 +298,6 @@ void DZ<M,container>::centeredTD(const MPI_Vector& f, MPI_Vector& dzf)
         dg::blas1::pointwiseDivide( dzf.data() , invB, dzf.data() );
 
 }
-template<class M, class container>
 void DZ<M,container>::forward( const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct
@@ -310,7 +307,6 @@ void DZ<M,container>::forward( const MPI_Vector& f, MPI_Vector& dzf)
     dg::blas1::pointwiseDivide( tempP, hp, dzf.data() );
 
 }
-template<class M, class container>
 void DZ<M,container>::forwardTD(const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct discretisation
@@ -321,7 +317,6 @@ void DZ<M,container>::forwardTD(const MPI_Vector& f, MPI_Vector& dzf)
     dg::blas1::pointwiseDivide(  dzf.data(), hm,  dzf.data());        
     dg::blas1::pointwiseDivide(  dzf.data(), invB,  dzf.data());
 }
-template<class M, class container>
 void DZ<M,container>::backward( const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct
@@ -331,7 +326,6 @@ void DZ<M,container>::backward( const MPI_Vector& f, MPI_Vector& dzf)
     dg::blas1::pointwiseDivide( tempM, hm, dzf.data());
 }
 
-template<class M, class container>
 void DZ<M,container>::backwardTD( const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct
