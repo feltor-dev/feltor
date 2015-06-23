@@ -698,7 +698,6 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
 {
-
     assert( &f != &dzzf);
     einsPlus( f, tempP);
     einsMinus( f, tempM);
