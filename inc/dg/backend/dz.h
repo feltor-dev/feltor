@@ -290,12 +290,12 @@ void DZ<MPI_Matrix, MPI_Vector>::centeredTD(const MPI_Vector& f, MPI_Vector& dzf
 {       
 //     Direct discretisation
        assert( &f != &dzf);    
-        dg::blas1::pointwiseDot( f, invB, dzf.data() );
-        einsPlus( dzf.data() , tempP);
-        einsMinus( dzf.data() , tempM);
+        dg::blas1::pointwiseDot( f, invB,  temp0);
+        einsPlus(  temp0 , tempP);
+        einsMinus(  temp0 , tempM);
         dg::blas1::axpby( 1., tempP, -1., tempM);
-        dg::blas1::pointwiseDivide( tempM, hz, dzf.data() );        
-        dg::blas1::pointwiseDivide( dzf.data() , invB, dzf.data() );
+        dg::blas1::pointwiseDivide( tempM, hz,  temp0 );        
+        dg::blas1::pointwiseDivide(  temp0, invB, dzf.data() );
 
 }
 void DZ<MPI_Matrix, MPI_Vector>::forward( const MPI_Vector& f, MPI_Vector& dzf)
@@ -311,11 +311,11 @@ void DZ<MPI_Matrix, MPI_Vector>::forwardTD(const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct discretisation
     assert( &f != &dzf);    
-    dg::blas1::pointwiseDot( f, invB,  dzf.data());
-    einsMinus(  dzf.data(), tempP);
-    dg::blas1::axpby( -1., tempP, 1.,  dzf.data(), dzf.data());
-    dg::blas1::pointwiseDivide(  dzf.data(), hm,  dzf.data());        
-    dg::blas1::pointwiseDivide(  dzf.data(), invB,  dzf.data());
+    dg::blas1::pointwiseDot( f, invB,   temp0);
+    einsMinus(  temp0, tempP);
+    dg::blas1::axpby( -1., tempP, 1.,  temp0,  temp0);
+    dg::blas1::pointwiseDivide(  temp0, hm,   temp0);        
+    dg::blas1::pointwiseDivide(  temp0, invB,  dzf.data());
 }
 void DZ<MPI_Matrix, MPI_Vector>::backward( const MPI_Vector& f, MPI_Vector& dzf)
 {
@@ -330,11 +330,11 @@ void DZ<MPI_Matrix, MPI_Vector>::backwardTD( const MPI_Vector& f, MPI_Vector& dz
 {
     //direct
     assert( &f != &dzf);    
-    dg::blas1::pointwiseDot( f, invB, dzf.data());
-    einsPlus( dzf.data(), tempM);
-    dg::blas1::axpby( -1., tempM, 1., dzf.data(), dzf.data());
-    dg::blas1::pointwiseDivide( dzf.data(), hp, dzf.data());        
-    dg::blas1::pointwiseDivide( dzf.data(), invB, dzf.data());
+    dg::blas1::pointwiseDot( f, invB, temp0);
+    einsPlus(  temp0, tempM);
+    dg::blas1::axpby( -1., tempM, 1.,  temp0, temp0);
+    dg::blas1::pointwiseDivide(  temp0, hp,  temp0);        
+    dg::blas1::pointwiseDivide( temp0, invB, dzf.data());
 }
 void DZ<MPI_Matrix, MPI_Vector>::operator()( const MPI_Vector& f, MPI_Vector& dzf)
 {
