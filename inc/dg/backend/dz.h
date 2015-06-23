@@ -47,7 +47,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
-    void forward( const container& f, container& dzf);
+    void forward(  const MPI_Vector& f, MPI_Vector& dzf);
     /**
     * @brief Apply the derivative on a 3d vector
     *
@@ -55,7 +55,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
-    void backward( const container& f, container& dzf);
+    void backward( const MPI_Vector& f, MPI_Vector& dzf);
     /**
     * @brief Apply the derivative on a 3d vector
     *
@@ -63,21 +63,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
-    void centered( const container& f, container& dzf);
-    /**
-     * @brief Apply the derivative on a 3d vector
-     *
-     * @param f The vector to derive
-     * @param dzf contains result on output (write only)
-     */
- /**
-    * @brief Apply the negative adjoint derivative on a 3d vector
-    *
-    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
-    * @param f The vector to derive
-    * @param dzf contains result on output (write only)
-    */
-    void centeredTD( const container& f, container& dzf);
+    void centered( const MPI_Vector& f, MPI_Vector& dzf);
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
     *
@@ -85,7 +71,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
-    void forwardTD( const container& f, container& dzf);
+    void forwardTD( const MPI_Vector& f, MPI_Vector& dzf);
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
     *
@@ -93,7 +79,21 @@ struct DZ< MPI_Matrix, MPI_Vector>
     * @param f The vector to derive
     * @param dzf contains result on output (write only)
     */
-    void backwardTD( const container& f, container& dzf);
+    void backwardTD( const MPI_Vector& f, MPI_Vector& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void centeredTD( const MPI_Vector& f, MPI_Vector& dzf);
+    /**
+     * @brief Apply the derivative on a 3d vector
+     *
+     * @param f The vector to derive
+     * @param dzf contains result on output (write only)
+     */
     void operator()( const MPI_Vector& f, MPI_Vector& dzf);
 
     /**
