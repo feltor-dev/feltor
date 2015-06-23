@@ -177,7 +177,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
     double eps_;
     thrust::host_vector<double> hz, hp, hm, tempP, temp0, tempM, interP, interM;
     thrust::host_vector<double> ghostM, ghostP;
-    thrust::host_vector<double> invB;
+    MPI_Vector invB;
     MPI_Grid3d g_;
     dg::bc bcz_;
     thrust::host_vector<double> left_, right_;
@@ -290,39 +290,38 @@ void DZ<MPI_Matrix, MPI_Vector>::centeredTD(const MPI_Vector& f, MPI_Vector& dzf
 {       
 //     Direct discretisation
        assert( &f != &dzf);    
-        dg::blas1::pointwiseDot( f, invB,  temp0);
-        einsPlus(  temp0 , tempP);
-        einsMinus(  temp0 , tempM);
+        dg::blas1::pointwiseDot( f.data(), invB.data(),  dzf.data());
+        einsPlus(  dzf, tempP);
+        einsMinus(  dzf , tempM);
         dg::blas1::axpby( 1., tempP, -1., tempM);
-        dg::blas1::pointwiseDivide( tempM, hz,  temp0 );        
-        dg::blas1::pointwiseDivide(  temp0, invB, dzf.data() );
-
+        dg::blas1::pointwiseDivide( tempM, hz,  tempM );        
+        dg::blas1::pointwiseDivide(  tempM, invB.data(), dzf.data() );
 }
 void DZ<MPI_Matrix, MPI_Vector>::forward( const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct
     assert( &f != &dzf);
     einsPlus( f, tempP);
-    dg::blas1::axpby( 1., tempP, -1., f, tempP);
+    dg::blas1::axpby( 1., tempP, -1., f.data(), tempP);
     dg::blas1::pointwiseDivide( tempP, hp, dzf.data() );
-
+i
 }
 void DZ<MPI_Matrix, MPI_Vector>::forwardTD(const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct discretisation
     assert( &f != &dzf);    
-    dg::blas1::pointwiseDot( f, invB,   temp0);
-    einsMinus(  temp0, tempP);
-    dg::blas1::axpby( -1., tempP, 1.,  temp0,  temp0);
-    dg::blas1::pointwiseDivide(  temp0, hm,   temp0);        
-    dg::blas1::pointwiseDivide(  temp0, invB,  dzf.data());
+    dg::blas1::pointwiseDot( f.data(), invB.data(),   dzf.data());
+    einsMinus(  dzf, tempP);
+    dg::blas1::axpby( -1., tempP, 1., dzf.data(),tempP);
+    dg::blas1::pointwiseDivide(  tempP, hm,   tempP);        
+    dg::blas1::pointwiseDivide( tempP, invB.data(),  dzf.data());
 }
 void DZ<MPI_Matrix, MPI_Vector>::backward( const MPI_Vector& f, MPI_Vector& dzf)
 {
     //direct
     assert( &f != &dzf);
     einsMinus( f, tempM);
-    dg::blas1::axpby( 1., tempM, -1., f, tempM);
+    dg::blas1::axpby( 1., tempM, -1., f.data(), tempM);
     dg::blas1::pointwiseDivide( tempM, hm, dzf.data());
 }
 
@@ -330,11 +329,11 @@ void DZ<MPI_Matrix, MPI_Vector>::backwardTD( const MPI_Vector& f, MPI_Vector& dz
 {
     //direct
     assert( &f != &dzf);    
-    dg::blas1::pointwiseDot( f, invB, temp0);
-    einsPlus(  temp0, tempM);
-    dg::blas1::axpby( -1., tempM, 1.,  temp0, temp0);
-    dg::blas1::pointwiseDivide(  temp0, hp,  temp0);        
-    dg::blas1::pointwiseDivide( temp0, invB, dzf.data());
+    dg::blas1::pointwiseDot( f.data, invB.data(), dzf.data());
+    einsPlus(  dzf, tempM);
+    dg::blas1::axpby( -1., tempM, 1.,  dzf.data(), tempM);
+    dg::blas1::pointwiseDivide(  tempM, hp,  tempM);        
+    dg::blas1::pointwiseDivide( tempM, invB.data(), dzf.data());
 }
 void DZ<MPI_Matrix, MPI_Vector>::operator()( const MPI_Vector& f, MPI_Vector& dzf)
 {
