@@ -108,7 +108,6 @@ int main( int argc, char* argv[])
     std::cout << "intiialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     std::cout << "Done!\n";
-    feltor.energies( y0);//now energies and potential are at time 0
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::DVec dvisual2( grid.size(), 0.);
@@ -221,7 +220,6 @@ int main( int argc, char* argv[])
                 break;
             }
             step++;
-            feltor.energies( y0); //update energetics
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //

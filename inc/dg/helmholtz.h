@@ -170,7 +170,7 @@ struct Helmholtz2
      * @brief apply operator
      *
      * Computes
-     * \f[ y = W( \chi +2 \alpha\Delta +  \alpha^2\Delta \chi^{-1}\Delta) x \f] to make the matrix symmetric
+     * \f[ y = W\left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] x \f] to make the matrix symmetric
      * @param x lhs (is constant up to changes in ghost cells)
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
@@ -190,7 +190,7 @@ struct Helmholtz2
         {
             //y = W temp - alpha*y = W(chi + alpha nabla_perp^2)x
             blas2::symv( 1., laplaceM_.weights(), temp_, -2.*alpha_, y); 
-            //y = W(chi + alpha nabla_perp^2+  nabla_perp^2 *(chi^-1)*nabla_perp^2 x        )x
+            //y = W(chi + alpha nabla_perp^2+  nabla_perp^2 *(chi^-1)*nabla_perp^2 )x
             blas1::axpby( alpha_*alpha_, temp2_, 1.0, y, y);
         }
         else

@@ -21,10 +21,11 @@ struct Parameters
     double lx,ly;
     double ln;
     double dlocal;
+    double l_para;
     double nu_perp, d, c;
     
     double amp, sigma, posX, posY;
-
+    
     double  nprofileamp, bgprofamp;
     unsigned zf;
     double solb,solw;
@@ -61,24 +62,25 @@ struct Parameters
             nu_perp = v[16];
             d = v[17];
             c = v[18];            
-            amp = v[19];
-            sigma = v[20];
-            posX = v[21];
-            posY = v[22];
-            nprofileamp = v[23];
-            bgprofamp = v[24];
-            lx = v[25];
-            ly = v[26];
-            bc_x = map((int)v[27]);
-            bc_y =map((int)v[28]);
-            zf = (unsigned)v[29];
-            ln = v[30];
+            l_para=v[19];            
+            amp = v[20];
+            sigma = v[21];
+            posX = v[22];
+            posY = v[23];
+            nprofileamp = v[24];
+            bgprofamp = v[25];
+            lx = v[26];
+            ly = v[27];
+            bc_x = map((int)v[28]);
+            bc_y =map((int)v[29]);
+            zf = (unsigned)v[30];
+            ln = v[31];
             dlocal = (double)(lx*d/c);
-            solb = v[31];
-            solw = v[32];
-            omega_source = v[33];
-            sourceb = v[34];
-            sourcew = v[35];
+            solb = v[32];
+            solw = v[33];
+            omega_source = v[34];
+            sourceb = v[35];
+            sourcew = v[36];
             
         }
     }
@@ -98,7 +100,8 @@ struct Parameters
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
             <<"     par. Resistivity: = "<<c<<"\n"
             <<"     D:                = "<<d<<"\n"
-            <<"     dlocal:           = "<<dlocal<<"\n";
+            <<"     dlocal:           = "<<dlocal<<"\n"
+            <<"     L_parallel:       = "<<l_para<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    width:        "<<sigma<<"\n"

@@ -101,7 +101,6 @@ struct Feltor
 
     double energy_diffusion( ){ return ediff_;}
     double radial_transport( ){ return gammanex_;}
-    void energies( std::vector<container>& y);
 
   private:
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
@@ -122,7 +121,7 @@ struct Feltor
     dg::Elliptic< Matrix, container, Preconditioner > pol,lapperp; 
     dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR,invgammaNU;
 
-    dg::Invert<container> invert_pol,invert_invgamma;
+    dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
     dg::PoloidalAverage<container, container > polavg;
 
     const eule::Parameters p;
@@ -160,7 +159,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     invgammaDIR( g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaNU(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgamma( omega, omega.size(), p.eps_gamma),
+    invert_invgammaN( omega, omega.size(), p.eps_gamma),
+    invert_invgammaPhi( omega, omega.size(), p.eps_gamma),
     polavg(g),
     p(p),
     evec(3),
@@ -200,7 +200,7 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
-    invert_invgamma(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
+    invert_invgammaN(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
@@ -212,7 +212,7 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
 template< class Matrix, class container, class P>
 container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 {
-    invert_invgamma(invgammaDIR,chi,potential);                 //chi  = Gamma phi
+    invert_invgammaPhi(invgammaDIR,chi,potential);                 //chi  = Gamma phi
     poisson.variationRHS(potential, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
@@ -223,14 +223,37 @@ container& Feltor<Matrix,container, P>::compute_psi( container& potential)
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
 { 
-    invert_invgamma(invgammaNU,target,src); //=ne-1 = Gamma (ni-1)    
+    invert_invgammaN(invgammaNU,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
-template<class M, class V, class P>
-void Feltor<M, V, P>::energies( std::vector<V>& y)
+
+
+
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
+    /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
+       y[1] := N_i - (p.bgprofamp + p.nprofileamp)
+       y[2] := U_e
+       y[3] := U_i
+    */
+    dg::Timer t;
+    t.tic();
+    assert( y.size() == 2);
+    assert( y.size() == yp.size());
+    //compute phi via polarisation
     phi[0] = polarisation( y);
     phi[1] = compute_psi( phi[0]); //sets omega
+
+    //transform compute n and logn and energies
+    for(unsigned i=0; i<2; i++)
+    {
+        dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
+        dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
+    }
+    
+    
+//computation of energies
     double z[2]    = {-1.0,1.0};
     double S[2]    = {0.0, 0.0};
     double Dperp[2] = {0.0, 0.0};
@@ -238,8 +261,6 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     //transform compute n and logn and energies
     for(unsigned i=0; i<2; i++)
     {
-        dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
-        dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
         S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w2d, npe[i]); // N LN N
     }
     mass_ = dg::blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
@@ -313,31 +334,9 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
     dg::blas2::gemv( poisson.dyrhs(), phi[0], omega); //dy phi
     dg::blas1::pointwiseDot(omega,binv,omega); //1/B dy phi
     gammanex_ =-1.* dg::blas2::dot(npe[0],w2d,omega);//int(1/B N dy phi)
-}
-
-
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
-{
-    /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
-       y[1] := N_i - (p.bgprofamp + p.nprofileamp)
-       y[2] := U_e
-       y[3] := U_i
-    */
-    dg::Timer t;
-    t.tic();
-    assert( y.size() == 2);
-    assert( y.size() == yp.size());
-    //compute phi via polarisation
-    phi[0] = polarisation( y);
-    phi[1] = compute_psi( phi[0]); //sets omega
-
-    //transform compute n and logn and energies
-    for(unsigned i=0; i<2; i++)
-    {
-        dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
-        dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
-    }
+    //end of energy computation
+    
+    
     for( unsigned i=0; i<2; i++)
     {
         //ExB dynamics
@@ -394,18 +393,18 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform(omega, omega, dg::EXP<value_type>()); //omega = exp(-phi) 
         dg::blas1::pointwiseDot(omega,npe[0],lambda); //omega = (exp(-phi) )* ne
         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
-        dg::blas1::axpby(-(sqrt(p.d)/M_PI)/sqrt(2.*M_PI*abs(p.mu[0])),lambda,1.0,yp[0]); 
+        dg::blas1::axpby(-(2./p.l_para)/sqrt(2.*M_PI*abs(p.mu[0])),lambda,1.0,yp[0]); 
         //add the FLR term (tanh before lapl seems to work because of cancelation) (LWL vorticity correction)
 //         dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
 //         dg::blas1::axpby((sqrt(p.d)/M_PI)/sqrt(2.*M_PI*abs(p.mu[0]))*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR 
         dg::blas1::pointwiseDot(npe[0],rh,lambda); 
-        dg::blas1::axpby(-sqrt(1.+p.tau[1])*sqrt(p.d)/M_PI,lambda,1.0,yp[1]);
+        dg::blas1::axpby(-sqrt(1.+p.tau[1])*(2./p.l_para),lambda,1.0,yp[1]);
         //add the FLR term (tanh before lapl seems to work because of cancelation)
         dg::blas1::pointwiseDot( y[0],rh,lambda); //rh*(ne-1)
         dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
-        dg::blas1::axpby(sqrt(1.+p.tau[1])*sqrt(p.d)/M_PI*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+        dg::blas1::axpby(sqrt(1.+p.tau[1])*(2./p.l_para)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     //Density source terms
     if (p.omega_source>0.0) 

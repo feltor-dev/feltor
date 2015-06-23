@@ -430,7 +430,7 @@ struct LinearY
 
 /**
  * @brief Functor for a step function using tanh
- * \f[ f(x,y) = 0.5(1+ sign \tanh((x-x_b)/width)) \f]
+ * \f[ f(x,y) = profamp*0.5(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
  */
 struct TanhProfX {
     /**
@@ -438,7 +438,7 @@ struct TanhProfX {
      *
      * @param xb boundary value
      * @param width damping width
-     * @param sign sign of the danh, defines the damping direction
+     * @param sign sign of the Tanh, defines the damping direction
      * @param bgampg background amplitude 
      * @param profamp profile amplitude
      */

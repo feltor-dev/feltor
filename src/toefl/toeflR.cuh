@@ -179,7 +179,7 @@ ToeflR< M, container,P>::ToeflR( const Grid2d<double>& grid, double kappa, doubl
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  grid, -0.5*tau),
+    gamma1(  grid, -0.5*tau, dg::centered),
     arakawa( grid), 
     pol(     grid, not_normed, dg::centered), 
     pcg( omega, omega.size()), 

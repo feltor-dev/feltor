@@ -112,7 +112,6 @@ int main( int argc, char* argv[])
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
-    feltor.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
     //std::cout << "first karniadakis" << std::endl;
 
@@ -245,7 +244,6 @@ int main( int argc, char* argv[])
                 break;
             }
             step++;
-            feltor.energies(y0);//advance potential and energies
             //Compute probe values
             dg::blas2::gemv(probeinterp,y0[0],probevalue);
             std::cout << " Ne_p - 1  = " << probevalue[0] <<"\t";

@@ -2,8 +2,7 @@ system=home # Use as Makefile parameter!
 device=gpu
 
 INCLUDE = -I../../inc  # other project libraries
-INCLUDE+= -I../../diag  # other project libraries
-INCLUDE+= -I../ # geometry library
+
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
