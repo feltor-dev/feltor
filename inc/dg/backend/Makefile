@@ -1,5 +1,5 @@
 system=home
-device=omp
+device=gpu
 
 INCLUDE = -I../../ # other project libraries
 INCLUDE+= -I../
@@ -29,8 +29,11 @@ endif
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 
-#CFLAGS+= -Xcompiler -fopenmp 
+CFLAGS+= -Xcompiler -fopenmp 
 #CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+# CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+# CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
+#CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
 endif
 ifeq ($(strip $(device)),omp)
 CC = g++
@@ -53,7 +56,7 @@ version: version.cu
 	./$@
 
 dz_2_t: dz_2_t.cu dz.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)  $(LIBS) -g 
+	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE)   -g 
 
 backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g

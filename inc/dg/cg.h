@@ -313,8 +313,8 @@ struct Invert
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho, Weights& w, Preconditioner& p )
     {
         //double alpha[3] = { 3., -3., 1.};
-        double alpha[3] = { 2., -1., 0.};
-//         double alpha[3] = { 1., 0., 0.};
+//         double alpha[3] = { 2., -1., 0.};
+        double alpha[3] = { 1., 0., 0.};
         assert( &rho != &phi);
         blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi); // 1. phi0 + 0.*phi1 = phi
         blas1::axpby( alpha[2], phi2, 1., phi); // 0. phi2 + 1. phi0 + 0.*phi1 = phi
