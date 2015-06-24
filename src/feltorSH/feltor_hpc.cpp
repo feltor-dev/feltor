@@ -5,11 +5,11 @@
 #include <cmath>
 // #define DG_DEBUG
 
+#include <mpi.h> //activate mpi
 
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
-
 #include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"

@@ -267,7 +267,25 @@ struct MPI_Grid2d
      * @return Grid object
      */
     Grid2d<double> global() const {return g;}
-
+    /**
+     * @brief Return a grid local to the calling process without ghostcells
+     *
+     * The local grid returns the unshifted values for x0(), x1(), ...
+     * @return Grid object
+     */
+    Grid2d<double> ghostless( ) const
+    {
+        int dims[2], periods[2], coords[2];
+        MPI_Cart_get( comm, 2, dims, periods, coords);
+        return Grid2d<double>( 
+                g.x0() + (g.x1()-g.x0())/(double)dims[0]*(double)coords[0], 
+                g.x0() + (g.x1()-g.x0())/(double)dims[0]*(double)(coords[0]+1), 
+                g.y0() + (g.y1()-g.y0())/(double)dims[1]*(double)coords[1], 
+                g.y0() + (g.y1()-g.y0())/(double)dims[1]*(double)(coords[1]+1),                
+                g.n(),
+                g.Nx()/dims[0],
+                g.Ny()/dims[1]);
+    }
     private:
     Grid2d<double> g; //global grid
     MPI_Comm comm; //just an integer...
