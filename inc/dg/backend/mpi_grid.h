@@ -705,7 +705,47 @@ Grid3d<double> ghostless_grid( double x0, double x1, double y0, double y1, doubl
             Ny/dims[1], 
             Nz/dims[2]);
 }
-
+/**
+ * @brief Create a local grid without ghostcells (useful for interpolation)
+ *
+ * @brief Create a local grid without ghostcells (useful for interpolation)
+ *
+ * @param x0 global x0
+ * @param x1 global x1
+ * @param y0 global y0
+ * @param y1 global y1
+ * @param z0 global z0
+ * @param z1 global z1
+ * @param n global n
+ * @param Nx global Nx
+ * @param Ny global Ny
+ * @param Nz global Nz
+ * @param comm MPI communicator
+ *
+ * @return local grid without overlapping cells
+ */
+Grid2d<double> ghostless_grid( double x0, double x1, double y0, double y1,unsigned n, unsigned Nx, unsigned Ny,  MPI_Comm comm)
+{
+    int dims[2], periods[2], coords[2];
+    MPI_Cart_get( comm, 2, dims, periods, coords);
+    if( coords[0] == 0 && coords[1] == 0)
+    {
+        if(!(Nx%dims[0]==0))
+            std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
+        assert( Nx%dims[0] == 0);
+        if( !(Ny%dims[1]==0))
+            std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
+        assert( Ny%dims[1] == 0);
+    }
+    return Grid2d<double>( 
+            x0 + (x1-x0)/(double)dims[0]*(double)coords[0], 
+            x0 + (x1-x0)/(double)dims[0]*(double)(coords[0]+1), 
+            y0 + (y1-y0)/(double)dims[1]*(double)coords[1], 
+            y0 + (y1-y0)/(double)dims[1]*(double)(coords[1]+1), 
+            n,
+            Nx/dims[0],
+            Ny/dims[1]);
+}
 } //namespace create
 
 ///@}
