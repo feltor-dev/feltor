@@ -13,7 +13,6 @@
 #include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "solovev/geometry.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
