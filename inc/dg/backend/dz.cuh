@@ -501,7 +501,7 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     //-----------end hp refinement
 
     //-------------- start no hp refinement
-    integrate field lines for all points
+//     integrate field lines for all points
     for( unsigned i=0; i<size; i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
