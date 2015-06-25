@@ -714,12 +714,9 @@ Grid3d<double> ghostless_grid( double x0, double x1, double y0, double y1, doubl
  * @param x1 global x1
  * @param y0 global y0
  * @param y1 global y1
- * @param z0 global z0
- * @param z1 global z1
  * @param n global n
  * @param Nx global Nx
  * @param Ny global Ny
- * @param Nz global Nz
  * @param comm MPI communicator
  *
  * @return local grid without overlapping cells

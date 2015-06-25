@@ -21,7 +21,7 @@
 12)  eps_time ( stop for time inversion )   =   1e-12
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
-14) tau (Ti/Te)                             =  0.0 (0.0)
+14) tau (Ti/Te)                             =  1.0 (0.0)
 15) mcv (curvature)                         =  0.00015    (0.001)
 16) nu_perp                                 =  2e-4
 17) D  (coupling)                           =  0.1e-7  (0.001)

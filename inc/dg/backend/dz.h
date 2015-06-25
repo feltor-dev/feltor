@@ -304,7 +304,6 @@ void DZ<MPI_Matrix, MPI_Vector>::forward( const MPI_Vector& f, MPI_Vector& dzf)
     einsPlus( f, tempP);
     dg::blas1::axpby( 1., tempP, -1., f.data(), tempP);
     dg::blas1::pointwiseDivide( tempP, hp, dzf.data() );
-i
 }
 void DZ<MPI_Matrix, MPI_Vector>::forwardTD(const MPI_Vector& f, MPI_Vector& dzf)
 {

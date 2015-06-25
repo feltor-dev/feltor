@@ -4,7 +4,7 @@
 #include "dg/poisson.h"
 #include "parameters.h"
 // #include "geometry_circ.h"
-#include "dg/backend/average.cuh"
+#include "dg/average.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -97,7 +97,7 @@ struct Feltor
     double coupling( ) {return coupling_;}
 
     std::vector<double> energy_vector( ) {return evec;}
-    std::vector<container>& probe_vector( ) {return probevec;}
+//     std::vector<container>& probe_vector( ) {return probevec;}
 
     double energy_diffusion( ){ return ediff_;}
     double radial_transport( ){ return gammanex_;}
@@ -129,16 +129,16 @@ struct Feltor
     double mass_, energy_, diff_, ediff_,gammanex_,coupling_;
     std::vector<double> evec;
     //probe
-    std::vector<container> probevec;
-    const container Xprobe,Yprobe;
-    Matrix probeinterp;
-    container probevalue;
+//     std::vector<container> probevec;
+//     const container Xprobe,Yprobe;
+//     Matrix probeinterp;
+//     container probevalue;    
+//     dg::Grid1d<double> gy;
+//     const container w1d;
+//     const container oney;
+//     const container coox0,cooxlx,cooy;
+//     Matrix interpx0,interpxlx;
     
-    dg::Grid1d<double> gy;
-    const container w1d;
-    const container oney;
-    const container coox0,cooxlx,cooy;
-    Matrix interpx0,interpxlx;
     container lh,rh,lhs,profne,profNi;
 
 };
@@ -165,26 +165,27 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     p(p),
     evec(3),
     //probe
-    probevec(2),
-    Xprobe(1,p.lx*p.posX), //use blob position
-    Yprobe(1,p.ly*p.posY),//use blob position
-    probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
-    probevalue(1,0.0),
+//     probevec(2),
+//     Xprobe(1,p.lx*p.posX), //use blob position
+//     Yprobe(1,p.ly*p.posY),//use blob position
+//     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
+//     probevalue(1,0.0),
+    //damping and sources
     lh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,-1.0,0.0,1.0),g)),
     rh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,1.0,0.0,1.0),g)), 
     lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
+    profNi(profne)
 //     profne(dg::evaluate(dg::TanhProfX(p.lx*p.solb*0.7,p.solw,-1.0,p.nprofileamp, p.bgprofamp),g)),
-    profNi(profne),
     //boundary integral terms
-    gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
-    w1d( dg::create::weights(gy)),
-    oney( dg::evaluate( dg::one, gy)), 
-    coox0(dg::evaluate(dg::CONSTANT(0.0),gy)),
-    cooxlx(dg::evaluate(dg::CONSTANT(p.lx),gy)),
-    cooy(dg::evaluate(dg::coo1,gy)),
-    interpx0(dg::create::interpolation( coox0,cooy, g )),  
-    interpxlx(dg::create::interpolation(cooxlx,cooy, g))
+//     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
+//     w1d( dg::create::weights(gy)),
+//     oney( dg::evaluate( dg::one, gy)), 
+//     coox0(dg::evaluate(dg::CONSTANT(0.0),gy)),
+//     cooxlx(dg::evaluate(dg::CONSTANT(p.lx),gy)),
+//     cooy(dg::evaluate(dg::coo1,gy)),
+//     interpx0(dg::create::interpolation( coox0,cooy, g )),  
+//     interpxlx(dg::create::interpolation(cooxlx,cooy, g))
 {
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
     initializene(profNi,profne); //ne = Gamma N_i
@@ -281,15 +282,15 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 N_e
         
         //----------ExB surface terms 
-        dg::blas1::axpby(1.,phi[i] , p.tau[i],logn[i],chi);   // chi    = (tau_z(lnN)+phi)
-        dg::blas2::gemv( poisson.dyrhs(), phi[i], omega);    // omega  = dy psi
-        dg::blas1::pointwiseDot( omega, binv, omega);        // omega  = dy psi / B
-        dg::blas1::pointwiseDot( npe[i],omega, omega);       // omega  = N dy psi / B  
-        dg::blas1::pointwiseDot( omega, chi,  omega);        // omega  = (tau (lnN)+phi)   N dy psi / B
-        dg::blas2::gemv(interpx0, omega,chi);                // chi    = (tau_z(lnN)+phi) N dy psi / B <-x=x0
-        dg::blas2::gemv(interpxlx,omega,lambda);             // lambda = (tau_z(lnN)+phi) N dy psi / B <-x=xlx
-        dg::blas1::axpby(-1.,chi,1.,lambda,lambda);
-        Dperpsurf[i] = z[i]* dg::blas2::dot(oney, w1d, lambda);    //int (tau_z(lnN)+phi) N dy psi
+//         dg::blas1::axpby(1.,phi[i] , p.tau[i],logn[i],chi);   // chi    = (tau_z(lnN)+phi)
+//         dg::blas2::gemv( poisson.dyrhs(), phi[i], omega);    // omega  = dy psi
+//         dg::blas1::pointwiseDot( omega, binv, omega);        // omega  = dy psi / B
+//         dg::blas1::pointwiseDot( npe[i],omega, omega);       // omega  = N dy psi / B  
+//         dg::blas1::pointwiseDot( omega, chi,  omega);        // omega  = (tau (lnN)+phi)   N dy psi / B
+//         dg::blas2::gemv(interpx0, omega,chi);                // chi    = (tau_z(lnN)+phi) N dy psi / B <-x=x0
+//         dg::blas2::gemv(interpxlx,omega,lambda);             // lambda = (tau_z(lnN)+phi) N dy psi / B <-x=xlx
+//         dg::blas1::axpby(-1.,chi,1.,lambda,lambda);
+//         Dperpsurf[i] = z[i]* dg::blas2::dot(oney, w1d, lambda);    //int (tau_z(lnN)+phi) N dy psi
     }   
     //---------- coupling 
     dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
@@ -325,10 +326,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     ediff_= Dperp[0]+Dperp[1]+ coupling_ + Dperpsurf[0] + Dperpsurf[1];
     
     // compute probevalues on R,Z,Phi of probe
-    dg::blas2::gemv(probeinterp,npe[0],probevalue);
-    probevec[0]=probevalue;
-    dg::blas2::gemv(probeinterp,phi[0],probevalue);
-    probevec[1]=probevalue;
+//     dg::blas2::gemv(probeinterp,npe[0],probevalue);
+//     probevec[0]=probevalue;
+//     dg::blas2::gemv(probeinterp,phi[0],probevalue);
+//     probevec[1]=probevalue;
     
     //compute the radial electron density  transport
     dg::blas2::gemv( poisson.dyrhs(), phi[0], omega); //dy phi

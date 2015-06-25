@@ -7,7 +7,7 @@
 
 #include <mpi.h> //activate mpi
 
-#include "netcdf_par.h"
+// #include "netcdf_par.h"
 
 #include "dg/algorithm.h"
 #include "dg/backend/xspacelib.cuh"
@@ -122,7 +122,8 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+//     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
     dg::Grid2d<double> global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
@@ -255,7 +256,7 @@ int main( int argc, char* argv[])
             if(rank==0) std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             if(rank==0) std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
 //             err = nc_close(ncid);
-
+ 
         }
 #ifdef DG_BENCHMARK
         ti.toc();
