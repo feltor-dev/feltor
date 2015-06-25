@@ -516,8 +516,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
 //     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
-    cusp::transpose( plus, plusT);
-    cusp::transpose( minus, minusT); 
+//     cusp::transpose( plus, plusT);
+//     cusp::transpose( minus, minusT); 
 //     copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {

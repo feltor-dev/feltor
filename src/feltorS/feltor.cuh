@@ -40,7 +40,6 @@ struct Rolkar
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
-
         */
         dg::blas1::axpby( 0., x, 0, y);
         for( unsigned i=0; i<2; i++)
@@ -49,13 +48,7 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
-
-            //
-//             dg::blas2::gemv( LaplacianM_perp, x[i], temp); //lap is negative
-//             dg::blas1::axpby( -p.nu_perp, temp, 0., y[i]);  
         }
-
-
     }
     dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const Preconditioner& weights(){return LaplacianM_perp.weights();}
@@ -147,8 +140,8 @@ template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p): 
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
-    neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),phiavg(chi),phitilde(chi),phidelta(chi),
-    Niavg(chi),
+    neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),
+    phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 

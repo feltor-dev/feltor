@@ -7,7 +7,7 @@
 
 #include <mpi.h> //activate mpi
 
-// #include "netcdf_par.h"
+#include "netcdf_par.h"
 
 #include "dg/algorithm.h"
 #include "dg/backend/timer.cuh"
