@@ -67,7 +67,7 @@ int main( int argc, char* argv[])
         }
     }
     const eule::Parameters p( v);
-    p.display( std::cout);
+    if(rank==0) p.display( std::cout);
 
       //Make grid
     dg::MPI_Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
@@ -303,9 +303,9 @@ int main( int argc, char* argv[])
     unsigned hour = (unsigned)floor(t.diff()/3600);
     unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
     double second = t.diff() - hour*3600 - minute*60;
-    std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
-    std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
-    std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+    if(rank==0) std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
+    if(rank==0) std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
+    if(rank==0) std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
     err = nc_close(ncid);
     MPI_Finalize();
 
