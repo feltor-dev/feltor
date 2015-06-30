@@ -41,7 +41,7 @@ int main( int argc, char* argv[])
     if(rank==0)
     {
         std::cin>> np[0] >> np[1] ;
-        std::cout << "Computing with "<<np[0]<<" x "<<np[1]<<" x " << " = "<<size<<std::endl;
+        std::cout << "Computing with "<<np[0]<<" x "<<np[1] << " = "<<size<<std::endl;
         assert( size == np[0]*np[1]);
     }
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
@@ -73,11 +73,11 @@ int main( int argc, char* argv[])
     dg::MPI_Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
     dg::Grid2d<double> grid_out = dg::create::ghostless_grid( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, comm);  
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
+    if(rank==0) std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
+    if(rank==0) std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p);
-    std::cout << "Done!\n";
+    if(rank==0) std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
        //initial perturbation
@@ -109,15 +109,17 @@ int main( int argc, char* argv[])
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
     
    
-    std::cout << "intiialize ne" << std::endl;
+    if(rank==0) std::cout << "intiialize ne" << std::endl;
 //     feltor.initializene( y0[1], y0[0]);    
     feltor.initializene( y0[1],y0[3], y0[0]);    
-    std::cout << "Done!\n";    
+    if(rank==0) std::cout << "Done!\n";    
     dg::blas1::axpby( 1., y0[0], 0., y0[2]); //initialize t_e = n_e
     dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize Ti-1
     
     dg::Karniadakis< std::vector<dg::MVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    if(rank==0) std::cout << "intiialize Timestepper" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
+    if(rank==0) std::cout << "Done!\n";    
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
