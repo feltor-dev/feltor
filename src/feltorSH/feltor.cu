@@ -88,21 +88,43 @@ int main( int argc, char* argv[])
 //     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
-   
-    y1[1] = dg::evaluate( init0, grid);
-    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
-    //intialize n_i and T_i -> Compute ne and then set te=ne
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
-    dg::blas1::axpby( 1., y0[1], 0., y0[3]); //initialize Ti = n_i  
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //ni = ni - bg
     
-   
-    std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1],y0[3], y0[0]);    
+    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
+   //initialization via N_i,T_I ->n_e=t_e ,T_i=N_i
+//     y1[1] = dg::evaluate( init0, grid);
+//     dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
+//     //intialize n_i and T_i -> Compute ne and then set te=ne
+// //         dg::blas1::axpby( 1., y0[1], 0., y0[3]); //initialize Ti = 1
+//     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
+//     dg::blas1::axpby( 1., y0[1], 0., y0[3]); //initialize Ti = n_i  
+//     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //ni = ni - bg
+//     std::cout << "intiialize ne" << std::endl;
+//     feltor.initializene( y0[1],y0[3], y0[0]);    
+//     std::cout << "Done!\n";    
+//     dg::blas1::axpby(1.0, y0[0], 0., y0[2]); //initialize t_e = n_e
+// //         dg::blas1::axpby(0.0, y0[0], 0., y0[2]); //initialize t_e -1= 0
+// 
+
+    //initialization via n_e=n_i=t_e=t_i -> T_i, N_i
+    y1[0] = dg::evaluate( init0, grid);
+    dg::blas1::pointwiseDot(y1[0], y0[0],y1[0]); //<n>*ntilde    
+    dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ne = <n> + <n>*ntilde
+    dg::blas1::axpby( 1., y0[0], 0., y0[2]); //initialize t_e=t_i = n_e = n_i  
+    dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //ne = ne - bg
+    dg::blas1::transform(y1[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //te = te - bg
+    std::cout << "intialize Ti" << std::endl;
+    feltor.initializeTi( y0[2],y1[2], y0[3]);    //compute T_i-bg 
     std::cout << "Done!\n";    
-    dg::blas1::axpby(1.0, y0[0], 0., y0[2]); //initialize t_e = n_e
-    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize Ti-1
+    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+    std::cout << "intialize Ni" << std::endl;
+    feltor.initializeNi( y0[0],y0[3], y0[1]);    
+    std::cout << "Done!\n";    
+    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //Ti = Ti - bg
+
+    
+    
+    
+    
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;

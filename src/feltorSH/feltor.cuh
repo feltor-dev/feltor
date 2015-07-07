@@ -85,6 +85,8 @@ struct Feltor
      */
     const std::vector<container>& potential( ) const { return phi;}
     void initializene( const container& y, const container& helper, container& target);
+    void initializeTi( const container& y, const container& helper, container& target);
+    void initializeNi( const container& y, const container& helper, container& target);
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
 
@@ -126,7 +128,7 @@ struct Feltor
 template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p): 
-    chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
+    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
     B2( dg::evaluate( dg::one, g)),    
@@ -205,6 +207,32 @@ void Feltor<Matrix, container, P>::initializene( const container& src, const con
     dg::blas1::pointwiseDot(target,lambda,target);
 }
 
+
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::initializeTi( const container& src, const container& ti,container& target)
+{   
+    //src = t_i
+    //target = T_i
+    dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/t_i   
+    invgamma1.set_chi(lambda);//chi = B^2/t_i
+    invgamma1.alpha() = 0.5*p.tau[1]*p.mu[1]; //change sign of alpha
+    invert_invgammadag(invgamma1,target,src); //=ti-1 =(B^2/t_i + 0.5*p.tau[1]*p.mu[1] \nabla_perp^2) target
+    dg::blas1::pointwiseDot(target,lambda,target);  // target  = target * B^2/t_i   
+    invgamma1.alpha() = -0.5*p.tau[1]*p.mu[1];//reset alpha
+
+}
+
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::initializeNi( const container& src, const container& ti,container& target)
+{   
+    //src = t_i
+    //target = T_i
+    dg::blas1::pointwiseDivide(ti,B2,lambda); //T/B^2
+    dg::blas1::pointwiseDot(lambda,src,lambda); //n_e T/B^2        
+    dg::blas2::gemv(lapperpM,lambda,target); //lambda = - nabla_perp^2 phin_e T/B^2     
+    dg::blas1::axpby(1.0,src,0.5*p.tau[1]*p.mu[1],target,target);  //N_i = ne -0.5*tau_i* nabla_perp^2 phin_e T/B^2    
+    
+}
 
 
 

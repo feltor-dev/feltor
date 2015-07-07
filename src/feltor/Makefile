@@ -58,6 +58,31 @@ LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
 
+ifeq ($(strip $(system)),vsc2)
+INCLUDE += -I$(HOME)/include
+INCLUDE += -I/opt/intel/impi/4.1.0/include64
+INCLUDE += -I/opt/sw/netcdf/4.3.2/include
+INCLUDE += -I/opt/hdf5/1.8.9/intel/include
+CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
+
+LIBS     = -L/opt/hdf5/1.8.9/intel/lib -lhdf5 -lhdf5_hl
+LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
+LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
+LIBS    += -L/opt/sw/netcdf/4.3.2/lib -lnetcdf -lcurl
+GLFLAGS  = -lm
+endif
+
+ifeq ($(strip $(system)),vsc3)
+INCLUDE += -I$(HOME)/include
+INCLUDE += -I$(UIBK_HDF5_INC)
+INCLUDE += -I$(UIBK_OPENMPI_INC)
+INCLUDE += -I$(UIBK_NETCDF_4_INC)
+
+LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
+LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
+GLFLAGS  = -lm
+endif
+
 all: feltor feltor_hpc
 
 feltor: feltor.cu feltor.cuh 
@@ -67,10 +92,10 @@ feltor: feltor.cu feltor.cuh
 	
 ifeq ($(strip $(device)),mpi)
 feltor_hpc: feltor_hpc.cpp feltor.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK -g -DDG_DEBUG
 else
 feltor_hpc: feltor_hpc.cu feltor.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK -g -DDG_DEBUG
 	echo "Attention: No compiler warnings are issued!" 
 endif
 	

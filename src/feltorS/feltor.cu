@@ -226,8 +226,9 @@ int main( int argc, char* argv[])
             double diss = feltor.energy_diffusion( );
             double coupling = feltor.coupling();
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << " Ne_p  = " << feltor.probe_vector()[0][0] << 
-                         " Phi_p = " << feltor.probe_vector()[1][0] << 
+            std::cout << 
+//                          " Ne_p  = " << feltor.probe_vector()[0][0] << 
+//                          " Phi_p = " << feltor.probe_vector()[1][0] << 
                          " Ga_nex= " << feltor.radial_transport() <<
                          " Coupling= " << coupling <<
                          " Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<

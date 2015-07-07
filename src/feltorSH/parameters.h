@@ -93,6 +93,7 @@ struct Parameters
             <<"     El.-temperature:  = "<<tau[0]<<"\n"
             <<"     Ion-temperature:  = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
+            <<"     eff grav./diss f. = "<<(1.+tau[1])*sigma*sigma*sigma*mcv*amp/(nu_perp*nu_perp)<<"\n"
             <<"     par. Resistivity: = "<<c<<"\n"
             <<"     D:                = "<<d<<"\n"
             <<"     dlocal:           = "<<dlocal<<"\n";
