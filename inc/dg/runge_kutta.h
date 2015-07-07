@@ -193,8 +193,8 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     Vector old_end(begin), temp(begin),diffm(begin);
     end = begin;
     if( T_max == 0) return;
-    double dt = T_max/1;
-    int NT = 1;
+    double dt = T_max/10;
+    int NT = 10;
     double error = 1e10;
     //bool flag = false; 
  

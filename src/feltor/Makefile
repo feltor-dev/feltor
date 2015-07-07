@@ -6,7 +6,7 @@ INCLUDE+= -I../ # geometry library
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20 -w
+CFLAGS = --compiler-options -Wall -arch=sm_50 -w
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 GLFLAGS= -lGLEW
@@ -28,11 +28,9 @@ endif
 ifeq ($(strip $(system)),home)
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 
-
-#you might check the libs here, cf your glfw installation or try 
-#pkg-config --static --libs glfw3
-GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr -lXcursor
-LIBS 	 = -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
+#you might check the libs here, cf your glfw installation
+GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr  -lXcursor
+LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
 ifeq ($(strip $(system)),leo3)

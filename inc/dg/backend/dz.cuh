@@ -421,9 +421,6 @@ struct DZ
     container limiter;
     container w3d, v3d;
     container invB;
-    
-
-
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
@@ -432,7 +429,6 @@ template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
-
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
         g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
         , invB(dg::evaluate(field,grid))
@@ -442,9 +438,8 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     if( deltaPhi != grid.hz())
         std::cout << "Computing in 2D mode!\n";
     //Resize vectors to 2D grid size
-    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
     container w2d_( dg::create::weights( g2d));
-    
     unsigned size = g2d.size();
     limiter = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
@@ -455,7 +450,58 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     y[1] = dg::evaluate( dg::coo2, g2d);
     y[2] = dg::evaluate( dg::zero, g2d);
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
-    //integrate field lines for all points
+  
+    //------------------start hp refinenemt on dz 
+// //     //fine grid stuff
+//     unsigned hfac =4; //h refinement factor
+//     unsigned nfac = 2; // p refinement factor
+//     dg::Grid2d<double> g2d_f( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n()*nfac, g_.Nx()*hfac,g_.Ny()*hfac); 
+//     container w2d_f_( dg::create::weights( g2d));
+//     unsigned size_f = g2d_f.size();
+//     std::vector<dg::HVec> y_f( 3, dg::evaluate( dg::coo1, g2d_f)), yp_f(y_f), ym_f(y_f);
+//     y_f[1] = dg::evaluate( dg::coo2, g2d_f);
+//     y_f[2] = dg::evaluate( dg::zero, g2d_f);
+//     thrust::host_vector<double> coords_f(3), coordsP_f(3), coordsM_f(3);     
+//     //integrate field lines for all points on fine grid
+//     for( unsigned i=0; i<size_f; i++)
+//     {
+//         coords_f[0] = y_f[0][i], coords_f[1] = y_f[1][i], coords_f[2] = y_f[2][i];
+// 
+//         double phi1 = deltaPhi;
+//         boxintegrator( field, g2d_f, coords_f, coordsP_f, phi1, eps, globalbcz);
+//         phi1 =  - deltaPhi;
+//         boxintegrator( field, g2d_f, coords_f, coordsM_f, phi1, eps, globalbcz);
+//         yp_f[0][i] = coordsP_f[0], yp_f[1][i] = coordsP_f[1], yp_f[2][i] = coordsP_f[2];
+//         ym_f[0][i] = coordsM_f[0], ym_f[1][i] = coordsM_f[1], ym_f[2][i] = coordsM_f[2];
+//     }
+//     cusp::csr_matrix<int, double, cusp::host_memory> f2c;
+//   //fine to coarse grid interp
+//     f2c  = dg::create::interpolation( g2d, g2d_f );
+//     //apply interp to computed R,z,s points
+//     dg::blas2::gemv(f2c, yp_f[0],yp[0]);
+//     dg::blas2::gemv(f2c, ym_f[0],ym[0]);
+//     dg::blas2::gemv(f2c, yp_f[1],yp[1]);
+//     dg::blas2::gemv(f2c, ym_f[1],ym[1]);
+//     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+//     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+//     cusp::transpose( plus, plusT);
+//     cusp::transpose( minus, minusT); 
+//     dg::blas2::gemv(f2c, yp_f[2],yp[2]);
+//     dg::blas2::gemv(f2c, ym_f[2],ym[2]);
+//     for( unsigned i=0; i<grid.Nz(); i++)
+//     {
+//         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
+//         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());        
+//     }
+//     dg::blas1::scal( hm, -1.);
+//     dg::blas1::axpby(  1., hp, +1., hm, hz);    //
+//     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
+//     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
+//     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);  
+    //-----------end hp refinement
+
+    //-------------- start no hp refinement
+//     integrate field lines for all points
     for( unsigned i=0; i<size; i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
@@ -467,21 +513,12 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
-//     cusp::csr_matrix<int, double, cusp::host_memory> plusH, minusH, plusHT, minusHT;
-//     plusH  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-//     minusH = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-//     cusp::transpose( plusH, plusHT);
-//     cusp::transpose( minusH, minusHT); 
-//     plus = plusH, minus = minusH;
-    //Transposed matrices work only for csr_matrix!!!
-//     plusT = plusHT, minusT = minusHT; 
-  
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-    //Transposed matrices work only for csr_matrix!!!
+//     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
 //     cusp::transpose( plus, plusT);
 //     cusp::transpose( minus, minusT); 
-    //copy into h vectors
+//     copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
@@ -491,8 +528,9 @@ DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi
     dg::blas1::axpby(  1., hp, +1., hm, hz);    //
     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
-    dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);    
-
+    dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);   
+    //--------------end no hp refinement
+ 
 }
 template<class M, class container>
 void DZ<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
@@ -670,6 +708,19 @@ template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
 //normed
+// //     centered( f, tempP);
+// //     centeredT( tempP, dzTdzf);
+//     forward( f, tempP);
+//     forwardT( tempP, dzTdzf);
+//     backward( f, tempM);
+//     backwardT( tempM, temp0);
+//     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+// //     add jump term 
+//     dg::blas2::symv( jump, f, temp0);
+//     dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
+//     dg::blas1::axpby(-1., temp0, 1., dzTdzf);
+
+    //not normed
     centered( f, tempP);
     centeredT( tempP, dzTdzf);
     forward( f, tempP);
@@ -677,28 +728,14 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     backward( f, tempM);
     backwardT( tempM, temp0);
     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+    dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
 //     add jump term 
-//     dg::blas2::symv( jump, f, temp0);
-//     dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
-//     dg::blas1::axpby(-1., temp0, 1., dzTdzf);
-
-    //not normed
-//     centered( f, tempP);
-//     centeredT( tempP, dzTdzf);
-//     forward( f, tempP);
-//     forwardT( tempP, dzTdzf);
-//     backward( f, tempM);
-//     backwardT( tempM, temp0);
-//     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
-//     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
-// //     add jump term 
-//     dg::blas2::symv( jump, f, temp0);
-//     dg::blas1::axpby(-1., temp0, 1., dzTdzf);
+    dg::blas2::symv( jump, f, temp0);
+    dg::blas1::axpby(-1., temp0, 1., dzTdzf);
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)
 {
-
     assert( &f != &dzzf);
     einsPlus( f, tempP);
     einsMinus( f, tempM);

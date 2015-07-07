@@ -177,7 +177,7 @@ template< class Matrix, class Vector, class Preconditioner>
 unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typename VectorTraits<Vector>::value_type eps, unsigned max_iter)
 {
     typedef typename VectorTraits<Vector>::value_type value_type;
-    value_type nrmb = sqrt( blas2::dot( P, b));
+    value_type nrmb = sqrt( blas2::dot( P, b)); //norm of b
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     int rank;
@@ -191,26 +191,28 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
 #endif //DG_DEBUG
     if( nrmb == 0)
     {
-        blas1::axpby( 1., b, 0., x);
+        blas1::axpby( 1., b, 0., x); //x=b
         return 0;
     }
     Vector r(x.size()), p(x.size()), ap(x.size()); //1% time at 20 iterations
     //r = b; blas2::symv( -1., A, x, 1.,r); //compute r_0 
-    blas2::symv( A,x,r);
-    blas1::axpby( 1., b, -1., r);
-    blas2::symv( P, r, p );//<-- compute p_0
+    blas2::symv( A,x,r); //r=A x
+    blas1::axpby( 1., b, -1., r); //r=b-Ax
+    blas2::symv( P, r, p );//<-- compute p_0  //p=P(b-Ax)
     //note that dot does automatically synchronize
-    value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
+    value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it // norm of r^2 = ||r||^2 = r^T P r 
     if( sqrt( nrm2r_old ) < eps*nrmb + eps)
         return 0;
     value_type alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
-        blas2::symv( A, p, ap);
-        alpha = nrm2r_old /blas1::dot( p, ap);
+        blas2::symv( A, p, ap); // ap = A ( P(b-Ax))
+        alpha = nrm2r_old /blas1::dot( p, ap); // alpha = ||r||^2 / ( ((b-Ax)^T P^T) A (P (b-Ax))  )
         blas1::axpby( alpha, p, 1.,x);
-        blas1::axpby( -alpha, ap, 1., r);
-        nrm2r_new = blas2::dot( P, r); 
+        //here one could add a ifstatement to remove accumulated floating point error
+        //(if i modulo sqrt(n)) r=b-Ax else ...
+        blas1::axpby( -alpha, ap, 1., r); // r = r-alpha*A ( P(b-Ax))
+        nrm2r_new = blas2::dot( P, r);  //||r_new||^2 =  r^T P r 
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
         if(rank==0)
@@ -223,11 +225,15 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
 #endif //DG_DEBUG
         if( sqrt( nrm2r_new) < eps*nrmb + eps) 
             return i;
-        blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
+        blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p ); //p= 1*P*r + ||r_new||^2 /||r_old||^2 *p
         nrm2r_old=nrm2r_new;
     }
     return max_iter;
 }
+
+
+
+
 
 /**
  * @brief Smart conjugate gradient solver. 
@@ -307,11 +313,11 @@ struct Invert
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho, Weights& w, Preconditioner& p )
     {
         //double alpha[3] = { 3., -3., 1.};
-        //double alpha[3] = { 2., -1., 0.};
-        double alpha[3] = { 1., 0., 0.};
+        double alpha[3] = { 2., -1., 0.};
+//         double alpha[3] = { 1., 0., 0.};
         assert( &rho != &phi);
-        blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi);
-        blas1::axpby( alpha[2], phi2, 1., phi);
+        blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi); // 1. phi0 + 0.*phi1 = phi
+        blas1::axpby( alpha[2], phi2, 1., phi); // 0. phi2 + 1. phi0 + 0.*phi1 = phi
         //blas1::axpby( 2., phi1, -1.,  phi2, phi);
         dg::blas2::symv( w, rho, phi2);
 #ifdef DG_BENCHMARK

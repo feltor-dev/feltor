@@ -40,6 +40,54 @@ struct DZ< MPI_Matrix, MPI_Vector>
     template <class Field, class Limiter>
     DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
 
+        /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void forward(  const MPI_Vector& f, MPI_Vector& dzf);
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void backward( const MPI_Vector& f, MPI_Vector& dzf);
+    /**
+    * @brief Apply the derivative on a 3d vector
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void centered( const MPI_Vector& f, MPI_Vector& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
+    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void forwardTD( const MPI_Vector& f, MPI_Vector& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
+    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void backwardTD( const MPI_Vector& f, MPI_Vector& dzf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    * @param f The vector to derive
+    * @param dzf contains result on output (write only)
+    */
+    void centeredTD( const MPI_Vector& f, MPI_Vector& dzf);
     /**
      * @brief Apply the derivative on a 3d vector
      *
@@ -129,6 +177,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
     double eps_;
     thrust::host_vector<double> hz, hp, hm, tempP, temp0, tempM, interP, interM;
     thrust::host_vector<double> ghostM, ghostP;
+    MPI_Vector invB;
     MPI_Grid3d g_;
     dg::bc bcz_;
     thrust::host_vector<double> left_, right_;
@@ -144,7 +193,7 @@ struct DZ< MPI_Matrix, MPI_Vector>
 template <class Field, class Limiter>
 DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz ): 
     eps_(eps),
-    hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()), 
+    hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()),  invB(dg::evaluate(field,grid)) ,
     dz_(field, grid.global(), deltaPhi, eps, limit, globalbcz)
 {
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -228,7 +277,63 @@ DZ<MPI_Matrix, MPI_Vector>::DZ(Field field, const dg::MPI_Grid3d& grid, double d
     interM.resize( collM_.recv_size());
     interP.resize( collP_.recv_size());
 }
+void DZ<MPI_Matrix, MPI_Vector>::centered( const MPI_Vector& f, MPI_Vector& dzf)
+{
+    //direct discretisation
+    assert( &f != &dzf);
+    einsPlus( f, tempP);
+    einsMinus( f, tempM);
+    dg::blas1::axpby( 1., tempP, -1., tempM);
+    dg::blas1::pointwiseDivide( tempM, hz, dzf.data());
+}
+void DZ<MPI_Matrix, MPI_Vector>::centeredTD(const MPI_Vector& f, MPI_Vector& dzf)
+{       
+//     Direct discretisation
+       assert( &f != &dzf);    
+        dg::blas1::pointwiseDot( f.data(), invB.data(),  dzf.data());
+        einsPlus(  dzf, tempP);
+        einsMinus(  dzf , tempM);
+        dg::blas1::axpby( 1., tempP, -1., tempM);
+        dg::blas1::pointwiseDivide( tempM, hz,  tempM );        
+        dg::blas1::pointwiseDivide(  tempM, invB.data(), dzf.data() );
+}
+void DZ<MPI_Matrix, MPI_Vector>::forward( const MPI_Vector& f, MPI_Vector& dzf)
+{
+    //direct
+    assert( &f != &dzf);
+    einsPlus( f, tempP);
+    dg::blas1::axpby( 1., tempP, -1., f.data(), tempP);
+    dg::blas1::pointwiseDivide( tempP, hp, dzf.data() );
+}
+void DZ<MPI_Matrix, MPI_Vector>::forwardTD(const MPI_Vector& f, MPI_Vector& dzf)
+{
+    //direct discretisation
+    assert( &f != &dzf);    
+    dg::blas1::pointwiseDot( f.data(), invB.data(),   dzf.data());
+    einsMinus(  dzf, tempP);
+    dg::blas1::axpby( -1., tempP, 1., dzf.data(),tempP);
+    dg::blas1::pointwiseDivide(  tempP, hm,   tempP);        
+    dg::blas1::pointwiseDivide( tempP, invB.data(),  dzf.data());
+}
+void DZ<MPI_Matrix, MPI_Vector>::backward( const MPI_Vector& f, MPI_Vector& dzf)
+{
+    //direct
+    assert( &f != &dzf);
+    einsMinus( f, tempM);
+    dg::blas1::axpby( 1., tempM, -1., f.data(), tempM);
+    dg::blas1::pointwiseDivide( tempM, hm, dzf.data());
+}
 
+void DZ<MPI_Matrix, MPI_Vector>::backwardTD( const MPI_Vector& f, MPI_Vector& dzf)
+{
+    //direct
+    assert( &f != &dzf);    
+    dg::blas1::pointwiseDot( f.data(), invB.data(), dzf.data());
+    einsPlus(  dzf, tempM);
+    dg::blas1::axpby( -1., tempM, 1.,  dzf.data(), tempM);
+    dg::blas1::pointwiseDivide(  tempM, hp,  tempM);        
+    dg::blas1::pointwiseDivide( tempM, invB.data(), dzf.data());
+}
 void DZ<MPI_Matrix, MPI_Vector>::operator()( const MPI_Vector& f, MPI_Vector& dzf)
 {
     assert( &f != &dzf);
