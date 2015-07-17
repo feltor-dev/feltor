@@ -401,7 +401,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(sqrt(1.+p.tau[1])*(2./p.l_para)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     //Density source terms
-    if (p.omega_source>0.0) 
+    if (p.omega_source>1e-14) 
     {
         dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0_source - <ne>
         //dtN_e

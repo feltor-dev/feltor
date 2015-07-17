@@ -74,10 +74,10 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT prof(p.bgprofamp );
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-//     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
+    dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
 //         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
+//     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 
@@ -168,8 +168,10 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-    double Nep=feltor.probe_vector()[0][0];
-    double phip=feltor.probe_vector()[1][0];
+//     double Nep=feltor.probe_vector()[0][0];
+//     double phip=feltor.probe_vector()[1][0];
+    double Nep=0.;
+    double phip=0.;
     double radtrans = feltor.radial_transport();
     double coupling = feltor.coupling();
     std::vector<double> evec = feltor.energy_vector();
@@ -223,8 +225,8 @@ int main( int argc, char* argv[])
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
-            Nep =feltor.probe_vector()[0][0];
-            phip=feltor.probe_vector()[1][0];
+//             Nep =feltor.probe_vector()[0][0];
+//             phip=feltor.probe_vector()[1][0];
             radtrans = feltor.radial_transport();
             coupling= feltor.coupling();
             err = nc_open(argv[2], NC_WRITE, &ncid);

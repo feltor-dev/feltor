@@ -98,28 +98,31 @@ int main( int argc, char* argv[])
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
     std::vector<dg::MVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
     
-    // test Ti=0.001
-
-    
+       //initialization via N_i,T_I ->n_e, t_i=t_e
     y1[1] = dg::evaluate( init0, grid);
     dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
-    //intialize n_i and T_i -> Compute ne and then set te=ne
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
-    dg::blas1::axpby( 1., y0[1], 0., y0[3]); //initialize Ti = n_i  
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize Ni = <n> + <n>*ntilde
+//     dg::blas1::axpby( 1.,y1[2], 0., y0[3]); //initialize Ti = prof
+    dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
+    std::cout << "intiialize ne" << std::endl;
+    feltor.initializene( y0[1],y0[3], y0[0]);    //ne -bg
+    std::cout << "Done!\n";    
     
-   
-    if(rank==0) std::cout << "intiialize ne" << std::endl;
-//     feltor.initializene( y0[1], y0[0]);    
-    feltor.initializene( y0[1],y0[3], y0[0]);    
-    if(rank==0) std::cout << "Done!\n";    
-    dg::blas1::axpby( 1., y0[0], 0., y0[2]); //initialize t_e = n_e
-    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize Ti-1
-    
-    dg::Karniadakis< std::vector<dg::MVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    if(rank==0) std::cout << "intiialize Timestepper" << std::endl;
-    karniadakis.init( feltor, rolkar, y0, p.dt);
-    if(rank==0) std::cout << "Done!\n";    
+    std::cout << "intialize ti=te" << std::endl;
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni
+    dg::blas1::pointwiseDot(y0[1],y0[3],y1[3]); // = Ni Ti
+    dg::blas1::transform(y1[3], y1[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi = Pi - bg^2
+    feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+    //compute ti-bg = ((pi-bg^2) +bg^2)/ne -bg
+    dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));
+    dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //=ne    
+    dg::blas1::pointwiseDivide(y0[2],y0[0],y0[2]);
+    dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
+    dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
+    dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg
+    std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;

@@ -124,7 +124,8 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid); //MPI OFF
+    //     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+    err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
     dg::Grid2d<double> global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
@@ -198,8 +199,8 @@ int main( int argc, char* argv[])
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
 //     double Nep=feltor.probe_vector()[0][0];
 //     double phip=feltor.probe_vector()[1][0];
-//     double radtrans = feltor.radial_transport();
-//     double coupling = feltor.coupling();
+    double radtrans = feltor.radial_transport();
+    double coupling = feltor.coupling();
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -211,8 +212,8 @@ int main( int argc, char* argv[])
     //probe
 //     err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
 //     err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
-//     err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
-//     err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);
+    err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
+    err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);    
 //     err = nc_close(ncid);
     if(rank==0) std::cout << "First write successful!\n";
@@ -252,8 +253,8 @@ int main( int argc, char* argv[])
             evec = feltor.energy_vector();
 //             Nep =feltor.probe_vector()[0][0];
 //             phip=feltor.probe_vector()[1][0];
-//             radtrans = feltor.radial_transport();
-//             coupling= feltor.coupling();
+            radtrans = feltor.radial_transport();
+            coupling= feltor.coupling();
             err = nc_open(argv[2], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
@@ -265,9 +266,9 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
 /*            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);          
+            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);       */   
             err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
-            err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);   */ 
+            err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
             if(rank==0) std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             if(rank==0) std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
