@@ -98,7 +98,7 @@ int main( int argc, char* argv[])
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
     std::vector<dg::MVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
     
-       //initialization via N_i,T_I ->n_e, t_i=t_e
+      //initialization via N_i,T_I ->n_e, t_i=t_e
     y1[1] = dg::evaluate( init0, grid);
     dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize Ni = <n> + <n>*ntilde
@@ -123,6 +123,11 @@ int main( int argc, char* argv[])
     dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg
     std::cout << "Done!\n";
+    
+    dg::Karniadakis< std::vector<dg::MVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    if(rank==0) std::cout << "intiialize Timestepper" << std::endl;
+    karniadakis.init( feltor, rolkar, y0, p.dt);
+    if(rank==0) std::cout << "Done!\n";    
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
