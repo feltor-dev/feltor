@@ -164,6 +164,12 @@ int main( int argc, char* argv[])
     err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
     err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
     err = nc_var_par_access( ncid, accuracyID, NC_COLLECTIVE);
+    //probe vars definition
+    int NepID,phipID,radtransID,couplingID;
+    err = nc_def_var( ncid, "Ne_p",     NC_DOUBLE, 1, &EtimeID, &NepID);
+    err = nc_def_var( ncid, "phi_p",    NC_DOUBLE, 1, &EtimeID, &phipID);  
+    err = nc_def_var( ncid, "G_nex",    NC_DOUBLE, 1, &EtimeID, &radtransID);
+    err = nc_def_var( ncid, "Coupling",    NC_DOUBLE, 1, &EtimeID, &couplingID);  
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     if(rank==0) std::cout << "First output ... \n";
@@ -197,8 +203,8 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-//     double Nep=feltor.probe_vector()[0][0];
-//     double phip=feltor.probe_vector()[1][0];
+    double Nep=0.;
+    double phip=0.;
     double radtrans = feltor.radial_transport();
     double coupling = feltor.coupling();
     std::vector<double> evec = feltor.energy_vector();
@@ -210,8 +216,8 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
     //probe
-//     err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-//     err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
+    err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+    err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
     err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
     err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);    
@@ -265,8 +271,8 @@ int main( int argc, char* argv[])
             }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-/*            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);       */   
+           err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);         
             err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
             err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
