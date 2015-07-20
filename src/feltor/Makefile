@@ -74,12 +74,16 @@ endif
 
 ifeq ($(strip $(system)),vsc3)
 INCLUDE += -I$(HOME)/include
-INCLUDE += -I$(UIBK_HDF5_INC)
-INCLUDE += -I$(UIBK_OPENMPI_INC)
-INCLUDE += -I$(UIBK_NETCDF_4_INC)
 
-LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
-LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
+INCLUDE += -I/cm/shared/apps/intel/impi_5.0.3/intel64/include
+INCLUDE +=-I/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/include
+INCLUDE +=-I/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/include
+CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
+
+LIBS     =-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/lib -lhdf5 -lhdf5_hl
+LIBS    +=-L/cm/shared/apps/intel-cluster-studio/composer_xe_2013_sp1.2.144/compiler/lib/intel64 -lirc -lsvml
+LIBS    += -L/cm/shared/apps/intel/impi_5.0.3/intel64/lib -lmpi
+LIBS    +=-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
 

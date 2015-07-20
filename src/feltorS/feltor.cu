@@ -231,7 +231,7 @@ int main( int argc, char* argv[])
 //                          " Phi_p = " << feltor.probe_vector()[1][0] << 
                          " Ga_nex= " << feltor.radial_transport() <<
                          " Coupling= " << coupling <<
-                         " Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<
+                         " Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
  

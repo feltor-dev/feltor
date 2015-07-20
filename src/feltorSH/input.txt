@@ -23,7 +23,7 @@
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  10.0 (0.0)
 15) mcv (curvature)                         =  0.00015   (0.00015)
-16) nu_perp                                 = 1e-4
+16) nu_perp                                 =  1e-4
 17) D  (coupling)                           =  0.1e-7  (0.001)
 18) para resistivity (c)                    =  80e-7   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------

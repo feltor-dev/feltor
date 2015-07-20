@@ -309,10 +309,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //sol boundary
     if (p.solb*p.lx<p.lx) dg::blas1::pointwiseDot(omega,lh,omega);
     //correction for high amplitudes
-    dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
+//     dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
     //general term
     dg::blas1::pointwiseDot(omega,npe[0],omega);  // omega   = (coupling)*Ne
-    dg::blas1::axpby(1.0,lambda,1.0,omega,omega); // omega   = (coupling)*(Ne + <ne>tilde(ne))
+    dg::blas1::axpby(0.0,lambda,1.0,omega,omega); // omega   = (coupling)*(Ne + <ne>tilde(ne))
 
     coupling_ =  z[0]*p.d/p.c* dg::blas2::dot(chi, w2d, omega);
     //Compute rhs of energy theorem
@@ -373,8 +373,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(omega,lh,omega); //omega = lh*omega
     }
     //correction for high amplitudes
-    dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
-    dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
+//     dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
+//     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
     //general term
     dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);

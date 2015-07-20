@@ -74,8 +74,8 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT prof(p.bgprofamp );
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-    dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-//         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+//     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
+        dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 

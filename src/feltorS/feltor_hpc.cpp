@@ -118,8 +118,6 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << "intialize Timestepper" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     if(rank==0) std::cout << "Done!\n";
-
-//     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
