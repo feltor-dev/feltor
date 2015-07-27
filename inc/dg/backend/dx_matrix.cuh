@@ -99,10 +99,10 @@ dx_matrix_pos& dx_matrix_pos :: operator++()
     static int current_block_idx = 0;
     static int current_col_idx = 0;
 
-    std::cout << "Before: current_block_idx = " << current_block_idx;
-    std::cout << "  current_col_idx = " << current_col_idx;
-    std::cout << "  row_ = " << row_;
-    std::cout << "  col_ = " << col_;
+    //std::cout << "Before: current_block_idx = " << current_block_idx;
+    //std::cout << "  current_col_idx = " << current_col_idx;
+    //std::cout << "  row_ = " << row_;
+    //std::cout << "  col_ = " << col_;
 
     // Traverse 3 * P columns in each row.
     if(current_col_idx < 3 * P_ - 1)
@@ -119,13 +119,13 @@ dx_matrix_pos& dx_matrix_pos :: operator++()
     
     col_ = block_list[current_block_idx] * P_ + current_col_idx % 3;
 
-    std::cout << std::endl;
-    std::cout << "After: current_block_idx = " << current_block_idx;
-    std::cout << "  current_col_idx = " << current_col_idx;
-    std::cout << "  row_ = " << row_;
-    std::cout << "  col_ = " << col_;
-    std::cout << std::endl;
-    std::cout << std::endl;
+    //std::cout << std::endl;
+    //std::cout << "After: current_block_idx = " << current_block_idx;
+    //std::cout << "  current_col_idx = " << current_col_idx;
+    //std::cout << "  row_ = " << row_;
+    //std::cout << "  col_ = " << col_;
+    //std::cout << std::endl;
+    //std::cout << std::endl;
 
     return *this;
 }
@@ -138,7 +138,7 @@ dx_matrix_pos dx_matrix_pos :: operator++(int)
     return (retval);
 }
 
-class dx_matrix_iter;
+//class dx_matrix_iter;
 
 /*******************************************************************
  *
@@ -189,13 +189,13 @@ public:
     double operator() (const unsigned int n, const unsigned int m) const;
     double operator() (const dx_matrix_pos) const;
 
-    friend class dx_matrix_iter;
+    //friend class dx_matrix_iter;
     // Assign values in a given row to the argument vector
     // vector with values in a given row
     void get_row_values(unsigned int, thrust::host_vector<double>&) const;
     
-    dx_matrix_iter begin() const; 
-    dx_matrix_iter end() const; 
+    //dx_matrix_iter begin() const; 
+    //dx_matrix_iter end() const; 
 
     unsigned int get_N() const {return (N_); };
     unsigned int get_P() const {return (P_); };
@@ -227,7 +227,11 @@ private:
     thrust::host_vector<double> upper_diag_data;
     thrust::host_vector<double> lower_diag_data;
 
-    // Values for upper right and lower left data blocks (boundary)
+    // Values for upper left and lower right data blocks (boundary condition)
+    thrust::host_vector<double> bc_ul_data;
+    thrust::host_vector<double> bc_lr_data;
+
+    // Values for upper right and lower left data blocks (only non-zero for periodic BC)
     thrust::host_vector<double> bc_ur_data;
     thrust::host_vector<double> bc_ll_data;
 
@@ -241,16 +245,18 @@ private:
 };
 
 
-dx_matrix :: dx_matrix(const unsigned int N,
-                          const unsigned int P,
+dx_matrix :: dx_matrix(const unsigned int P,
+                          const unsigned int N,
                           double h,
                           const dg::bc bcx,
                           const dg::direction dir) :
     main_diag_data(P * P),
     upper_diag_data(P * P),
     lower_diag_data(P * P),
-    bc_ur_data(P * P),
-    bc_ll_data(P * P),
+    bc_ul_data(P * P),
+    bc_lr_data(P * P),
+    bc_ur_data(P * P, 0.0), // Initialize with zero. Change below if BC are not periodic 
+    bc_ll_data(P * P, 0.0), // Initialize with zero. Change below if BC are not periodic
     row_ABC(3 * P * P),
     row_CAB(3 * P * P),
     row_BCA(3 * P * P),
@@ -312,15 +318,26 @@ dx_matrix :: dx_matrix(const unsigned int N,
     b = backward * b * forward;
     bp = backward * bp * forward;
 
+    //std::cout << "a = " << a << std::endl;
+    //std::cout << "a_bc_left = " << a_bc_left << std::endl;
+    //std::cout << "a_bc_right = " << a_bc_right << std::endl;
+    //std::cout << "b = " << b << std::endl;
+    //std::cout << "bp = " << bp << std::endl;
+
     // Assemble matrix blocks
     switch (dir)
     {
     case dg::centered:
             main_diag_data = a.data();
-            upper_diag_data = bp.data();
-            lower_diag_data = b.data();
-            bc_ur_data = a_bc_left.data();
-            bc_ll_data = a_bc_right.data();
+            upper_diag_data = b.data();
+            lower_diag_data = bp.data();
+            bc_ul_data = a_bc_left.data();
+            bc_lr_data = a_bc_right.data();
+            if (bcx == dg::PER)
+            {
+                bc_ur_data = bp.data();
+                bc_ll_data = b.data();
+            }
             break;
 
         case dg::backward:
@@ -387,7 +404,7 @@ dx_matrix :: dx_matrix(const unsigned int N,
         row_offset = p_row * (3 * P_);
         for(int p_col = 0; p_col < P_; p_col++)
         {
-            row_ABC[row_offset +          p_col] = main_diag_data[p_row * P_ + p_col];
+            row_ABC[row_offset +          p_col] = bc_ul_data[p_row * P_ + p_col];
             row_ABC[row_offset +     P_ + p_col] = upper_diag_data[p_row * P_ + p_col];
             row_ABC[row_offset + 2 * P_ + p_col] = bc_ur_data[p_row * P_+ p_col];
 
@@ -397,9 +414,19 @@ dx_matrix :: dx_matrix(const unsigned int N,
 
             row_BCA[row_offset +          p_col] = bc_ll_data[p_row * P_ + p_col];
             row_BCA[row_offset +     P_ + p_col] = lower_diag_data[p_row * P_ + p_col];
-            row_BCA[row_offset + 2 * P_ + p_col] = main_diag_data[p_row * P_ + p_col];
+            row_BCA[row_offset + 2 * P_ + p_col] = bc_lr_data[p_row * P_ + p_col];
         }
     }
+
+//    for(unsigned int n = 0; n < N * P; n++)
+//    {
+//        for(unsigned int m = 0; m < N * P; m++)
+//        {
+//            std::cout << std::setprecision(5) << (*this)(n, m) << "\t";
+//        }
+//        std::cout << std::endl;
+//    }
+
 }
 
 double dx_matrix :: operator() (const dx_matrix_pos p) const
@@ -421,7 +448,12 @@ double dx_matrix :: operator() (const unsigned int n, const unsigned int m) cons
     //cout << "N = " << N << ", P_ = " << P_ << "\tmapping (" << n << ", " << m << ") -> (" << bidx_row << ", " << bidx_col << ")\n";
 
     if (is_on_main_diagonal(row_block, col_block))
-        return main_diag_data[bidx_row * P_ + bidx_col];
+        if (row_block == 0)
+            return bc_ul_data[bidx_row * P_ + bidx_col];
+        else if (row_block == N_ - 1)
+            return bc_lr_data[bidx_row * P_ + bidx_col];
+        else
+            return main_diag_data[bidx_row * P_ + bidx_col];
 
     else if (is_on_upper_diagonal(row_block, col_block))
         return upper_diag_data[bidx_row * P_ + bidx_col];
@@ -444,23 +476,19 @@ double dx_matrix :: operator() (const unsigned int n, const unsigned int m) cons
 void dx_matrix :: get_row_values(unsigned int row, thrust::host_vector<double>& result) const
 {
     static const int row_size = 3 * P_;
-    std::cout << "Getting values for row " << row << std::endl;
     if(row / P_ == 0)
     {
         row = row % P_;
-        std::cout << "...Using row_ABC, element " << row * row_size << "..." << (row + 1) * row_size << std::endl;
         result.assign(row_ABC.begin() + row * row_size, row_ABC.begin() + (row + 1) * row_size);
     } 
     else if (row / P_ == (N_ - 1))
     {
         row = row % P_;
-        std::cout << "...Using row_BCA, element " << row * row_size << "..." << (row + 1) * row_size << std::endl;
         result.assign(row_BCA.begin() + row * row_size, row_BCA.begin() + (row + 1) * row_size);
     }
     else
     {
         row = row % P_;
-        std::cout << "...Using row_CAB, element " << row * row_size << "..." << (row + 1) * row_size << std::endl;
         result.assign(row_CAB.begin() + row * row_size, row_CAB.begin() + (row + 1) * row_size);
     }
 }
@@ -628,74 +656,74 @@ void dx_matrix_row_idx :: update_row(const dx_matrix& mat, const unsigned int ro
 //
 //////////////////////////////////////////////////////////////////////////
 
-// iterator over all non-zero elements of the matrix
-class dx_matrix_iter
-{
-    public:
-        dx_matrix_iter(const dx_matrix&, dx_matrix_pos); 
-
-        // Comparison operator
-        bool operator== (const dx_matrix_iter& rhs); 
-        bool operator!= (const dx_matrix_iter& rhs);
-        dx_matrix_iter& operator++();
-        dx_matrix_iter operator++(int);
-
-        ///string get_pos();
-
-    private:    
-        const dx_matrix& dx_;
-        dx_matrix_pos pos_;
-};
-
-
-dx_matrix_iter :: dx_matrix_iter(const dx_matrix& dx, dx_matrix_pos pos) 
-    : dx_(dx), pos_(pos)
-{
-}
-
-
-//string dx_matrix_iter :: get_pos()
+//// iterator over all non-zero elements of the matrix
+//class dx_matrix_iter
 //{
-//    stringstream out;
-//    out << "( " << pos_.get_col() << ", " << pos_.get_row() << ")";
-//    return out.str();
+//    public:
+//        dx_matrix_iter(const dx_matrix&, dx_matrix_pos); 
+//
+//        // Comparison operator
+//        bool operator== (const dx_matrix_iter& rhs); 
+//        bool operator!= (const dx_matrix_iter& rhs);
+//        dx_matrix_iter& operator++();
+//        dx_matrix_iter operator++(int);
+//
+//        ///string get_pos();
+//
+//    private:    
+//        const dx_matrix& dx_;
+//        dx_matrix_pos pos_;
+//};
+//
+//
+//dx_matrix_iter :: dx_matrix_iter(const dx_matrix& dx, dx_matrix_pos pos) 
+//    : dx_(dx), pos_(pos)
+//{
 //}
-
-dx_matrix_iter dx_matrix :: begin() const
-{ 
-    return dx_matrix_iter(*this, dx_matrix_pos(N_, P_, 0, 0)); 
-}
-
-dx_matrix_iter dx_matrix :: end() const
-{
-    return dx_matrix_iter(*this, dx_matrix_pos(N_, P_, N_ * P_ - 1, N_ * P_ - 1));
-};
-
-
-bool dx_matrix_iter :: operator==(const dx_matrix_iter &rhs) 
-{
-    return (( &((*this).dx_) == &(rhs.dx_)) && ((*this).pos_ == rhs.pos_));
-}
-
-
-bool dx_matrix_iter :: operator!=(const dx_matrix_iter &rhs)
-{
-    return !(this -> operator==(rhs));
-}
-
-
-dx_matrix_iter& dx_matrix_iter :: operator++()
-{
-    ++pos_;
-    return (*this);
-}
-
-dx_matrix_iter dx_matrix_iter :: operator++(int)
-{
-    dx_matrix_iter retval(*this);
-    pos_++;
-    return (retval); 
-}
+//
+//
+////string dx_matrix_iter :: get_pos()
+////{
+////    stringstream out;
+////    out << "( " << pos_.get_col() << ", " << pos_.get_row() << ")";
+////    return out.str();
+////}
+//
+//dx_matrix_iter dx_matrix :: begin() const
+//{ 
+//    return dx_matrix_iter(*this, dx_matrix_pos(N_, P_, 0, 0)); 
+//}
+//
+//dx_matrix_iter dx_matrix :: end() const
+//{
+//    return dx_matrix_iter(*this, dx_matrix_pos(N_, P_, N_ * P_ - 1, N_ * P_ - 1));
+//};
+//
+//
+//bool dx_matrix_iter :: operator==(const dx_matrix_iter &rhs) 
+//{
+//    return (( &((*this).dx_) == &(rhs.dx_)) && ((*this).pos_ == rhs.pos_));
+//}
+//
+//
+//bool dx_matrix_iter :: operator!=(const dx_matrix_iter &rhs)
+//{
+//    return !(this -> operator==(rhs));
+//}
+//
+//
+//dx_matrix_iter& dx_matrix_iter :: operator++()
+//{
+//    ++pos_;
+//    return (*this);
+//}
+//
+//dx_matrix_iter dx_matrix_iter :: operator++(int)
+//{
+//    dx_matrix_iter retval(*this);
+//    pos_++;
+//    return (retval); 
+//}
 
 
 template <>
@@ -715,62 +743,5 @@ struct MatrixTraits<const dx_matrix>
 
 } //namespace dg
 
-/***********************************************************************************
- *
- * Implementation of matrix vector multiplication of thrust_vectors and dx_matrix
- *
- ***********************************************************************************/
-
-
-namespace dg
-{
-namespace blas2
-{
-namespace detail
-{
-
-
-//    void doSymv(
-//            typename Matrix::value_type alpha,
-//            const Matrix& mat,
-//            const Vector& x,
-//            typename Matrix::value_type beta,
-//            Vector& y,
-//            dx_matrixTag,
-//            ThrustVectorTag)
-
-template < class Matrix, class Vector1, class Vector2>
-void doSymv(Matrix& mat, Vector1& x, Vector2& y, dx_matrixTag, ThrustVectorTag, ThrustVectorTag)
-{
-    typedef thrust::host_vector<double>::iterator ElementIterator;
-    typedef thrust::host_vector<int>::iterator IndexIterator;
-        // Here comes the implementation of the matrix-vector dot product
-    dx_matrix_row_val rowval(mat, 0);
-    dx_matrix_row_idx rowidx(mat, 0);
-    double ip = 0.0;
-
-    std::cerr << "doSymv!\n";
-
-    Vector1 tmp(y);
-    for(int i = 0; i < mat.get_N() * mat.get_P(); i++)
-    {
-        rowval.update_row(mat, i);
-        rowidx.update_row(mat, i);
-
-        // Try out a cool scalar product
-        thrust::permutation_iterator<ElementIterator, IndexIterator> x_iter(x.begin(), rowidx.get_data().begin());
-        thrust::permutation_iterator<ElementIterator, IndexIterator> x_iter_end(x.end(), rowidx.get_data().end());
-       
-        ip = thrust::inner_product(rowval.get_data().begin(), rowval.get_data().end(),
-                                   thrust::make_permutation_iterator(x.begin(), rowidx.get_data().begin()),
-                                   0.0);
-        tmp[i] = ip;
-    }
-    y = tmp;
-}
-
-} //namespace detail
-} //namespace blas2
-} //namespace dg
 
 

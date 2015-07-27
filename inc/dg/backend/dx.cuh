@@ -73,6 +73,14 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm_normed(unsigned n, unsigned 
     a = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
     b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     bp = backward*bp*forward;
+
+    //std::cout << "a = " << a << std::endl;
+    //std::cout << "a_bound_left = " << a_bound_left << std::endl;
+    //std::cout << "a_bound_right = " << a_bound_right << std::endl;
+    //std::cout << "b = " << b << std::endl;
+    //std::cout << "bp = " << bp << std::endl;
+
+
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
@@ -109,6 +117,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm_normed(unsigned n, unsigned 
         for( unsigned l=0; l<n; l++)
             detail::add_index<T>(n, A, number, N-1,N-1,k,l, a_bound_right(k,l));
     }
+    //cusp::print(A);
     return A;
 };
 
