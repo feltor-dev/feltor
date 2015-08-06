@@ -89,49 +89,45 @@ struct MPI_Grid2d
     /**
      * @brief Return local x0
      *
-     * The local value is shifted by hx 
      * @return local left boundary
      */
     double x0() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.x0() - g.hx() + g.lx()/(double)dims[0]*(double)coords[0]; 
+        return g.x0() + g.lx()/(double)dims[0]*(double)coords[0]; 
     }
 
     /**
      * @brief Return local x1
      *
-     * The local value is shifted by hx 
      * @return local right boundary
      */
     double x1() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.x0() + g.hx() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
+        return g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
     }
 
     /**
      * @brief Return local y0
      *
-     * The local value is shifted by hy 
      * @return local left boundary
      */
     double y0() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.y0() - g.hy() + g.ly()/(double)dims[1]*(double)coords[1]; 
+        return g.y0() + g.ly()/(double)dims[1]*(double)coords[1]; 
     }
 
     /**
      * @brief Return local y1
      *
-     * The local value is shifted by hy 
      * @return local right boundary
      */
     double y1() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.y0() + g.hy() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
+        return g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
     }
 
     /**
@@ -172,13 +168,12 @@ struct MPI_Grid2d
     /**
      * @brief Return the local number of cells 
      *
-     * Not the one given in the constructor
      * @return number of cells
      */
     unsigned Nx() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.Nx()/dims[0]+2;
+        return g.Nx()/dims[0];
     }
 
     /**
@@ -190,7 +185,7 @@ struct MPI_Grid2d
     unsigned Ny() const {
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.Ny()/dims[1]+2;
+        return g.Ny()/dims[1];
     }
 
     /**
@@ -267,25 +262,6 @@ struct MPI_Grid2d
      * @return Grid object
      */
     Grid2d<double> global() const {return g;}
-    /**
-     * @brief Return a grid local to the calling process without ghostcells
-     *
-     * The local grid returns the unshifted values for x0(), x1(), ...
-     * @return Grid object
-     */
-    Grid2d<double> ghostless( ) const
-    {
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        return Grid2d<double>( 
-                g.x0() + (g.x1()-g.x0())/(double)dims[0]*(double)coords[0], 
-                g.x0() + (g.x1()-g.x0())/(double)dims[0]*(double)(coords[0]+1), 
-                g.y0() + (g.y1()-g.y0())/(double)dims[1]*(double)coords[1], 
-                g.y0() + (g.y1()-g.y0())/(double)dims[1]*(double)(coords[1]+1),                
-                g.n(),
-                g.Nx()/dims[0],
-                g.Ny()/dims[1]);
-    }
     private:
     Grid2d<double> g; //global grid
     MPI_Comm comm; //just an integer...
@@ -296,14 +272,12 @@ struct MPI_Grid2d
  * @brief 3D MPI Grid class 
  *
  * Represents the local grid coordinates and the process topology. 
- * It just divides the given box into overlapping subboxes that are attributed to each process
+ * It just divides the given box into nonoverlapping subboxes that are attributed to each process
  * @attention
  * The boundaries in the constructors are global boundaries, the boundaries given in the access functions are local boundaries, this is because the grid represents the information given to one process
  *
  * @note Note
- * that the grids of different processes overlap in the x- and y- coordinate but 
- * not in the z-coordinate.
- * Also note that a single cell is never divided across processes.
+ * that a single cell is never divided across processes.
  */
 struct MPI_Grid3d
 {
@@ -388,52 +362,47 @@ struct MPI_Grid3d
     /**
      * @brief Return local x0
      *
-     * The local value is shifted by hx 
      * @return local left boundary
      */
     double x0() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.x0() - g.hx() + g.lx()/(double)dims[0]*(double)coords[0]; 
+        return g.x0() + g.lx()/(double)dims[0]*(double)coords[0]; 
     }
     /**
      * @brief Return local x1
      *
-     * The local value is shifted by hx 
      * @return local right boundary
      */
     double x1() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.x0() + g.hx() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
+        return g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
     }
     /**
      * @brief Return local y0
      *
-     * The local value is shifted by hy 
      * @return local left boundary
      */
     double y0() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.y0() - g.hy() + g.ly()/(double)dims[1]*(double)coords[1]; 
+        return g.y0() + g.ly()/(double)dims[1]*(double)coords[1]; 
     }
     /**
      * @brief Return local y1
      *
-     * The local value is shifted by hy 
      * @return local right boundary
      */
     double y1() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.y0() + g.hy() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
+        return g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
     }
     /**
      * @brief Return local z0
      *
-     * The z - local value is not shifted
-     * @return local right boundary
+     * @return local left boundary
      */
     double z0() const {
         int dims[3], periods[3], coords[3];
@@ -443,7 +412,6 @@ struct MPI_Grid3d
     /**
      * @brief Return local z1
      *
-     * The z - local value is not shifted
      * @return local right boundary
      */
     double z1() const {
@@ -502,7 +470,7 @@ struct MPI_Grid3d
     unsigned Nx() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.Nx()/dims[0]+2;
+        return g.Nx()/dims[0];
     }
     /**
      * @brief Return the local number of cells 
@@ -513,7 +481,7 @@ struct MPI_Grid3d
     unsigned Ny() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.Ny()/dims[1]+2;
+        return g.Ny()/dims[1];
     }
     /**
      * @brief Return the local number of cells 
@@ -599,28 +567,6 @@ struct MPI_Grid3d
      */
     Grid3d<double> global() const {return g;}
     /**
-     * @brief Return a grid local to the calling process without ghostcells
-     *
-     * The local grid returns the unshifted values for x0(), x1(), ...
-     * @return Grid object
-     */
-    Grid3d<double> ghostless( ) const
-    {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        return Grid3d<double>( 
-                g.x0() + (g.x1()-g.x0())/(double)dims[0]*(double)coords[0], 
-                g.x0() + (g.x1()-g.x0())/(double)dims[0]*(double)(coords[0]+1), 
-                g.y0() + (g.y1()-g.y0())/(double)dims[1]*(double)coords[1], 
-                g.y0() + (g.y1()-g.y0())/(double)dims[1]*(double)(coords[1]+1), 
-                g.z0() + (g.z1()-g.z0())/(double)dims[2]*(double)coords[2], 
-                g.z0() + (g.z1()-g.z0())/(double)dims[2]*(double)(coords[2]+1), 
-                g.n(),
-                g.Nx()/dims[0],
-                g.Ny()/dims[1], 
-                g.Nz()/dims[2]);
-    }
-    /**
      * @brief Returns the pid of the process that holds the local grid surrounding a given point
      *
      * local means that there is a margin of hx, hy around the x-y planes
@@ -640,11 +586,6 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    //points in the (outer) ghost cells layer? (note the global grid used)
-    if( x < g.x0() && x >= g.x0() - g.hx()) x += g.hx();
-    if( x > g.x1() && x <= g.x1() + g.hx()) x -= g.hx();
-    if( y < g.y0() && y >= g.y0() - g.hy()) y += g.hy();
-    if( y > g.y1() && y <= g.y1() + g.hy()) y -= g.hy();
     coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
     coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
     coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );
@@ -658,92 +599,6 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
     else
         return -1;
 }
-
-namespace create{
-/**
- * @brief Create a local grid without ghostcells (useful for interpolation)
- *
- * @param x0 global x0
- * @param x1 global x1
- * @param y0 global y0
- * @param y1 global y1
- * @param z0 global z0
- * @param z1 global z1
- * @param n global n
- * @param Nx global Nx
- * @param Ny global Ny
- * @param Nz global Nz
- * @param comm MPI communicator
- *
- * @return local grid without overlapping cells
- */
-Grid3d<double> ghostless_grid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm)
-{
-    int dims[3], periods[3], coords[3];
-    MPI_Cart_get( comm, 3, dims, periods, coords);
-    if( coords[0] == 0 && coords[1] == 0 && coords[2] == 0)
-    {
-        if(!(Nx%dims[0]==0))
-            std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
-        assert( Nx%dims[0] == 0);
-        if( !(Ny%dims[1]==0))
-            std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
-        assert( Ny%dims[1] == 0);
-        if( !(Nz%dims[2]==0))
-            std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
-        assert( Nz%dims[2] == 0);
-    }
-    return Grid3d<double>( 
-            x0 + (x1-x0)/(double)dims[0]*(double)coords[0], 
-            x0 + (x1-x0)/(double)dims[0]*(double)(coords[0]+1), 
-            y0 + (y1-y0)/(double)dims[1]*(double)coords[1], 
-            y0 + (y1-y0)/(double)dims[1]*(double)(coords[1]+1), 
-            z0 + (z1-z0)/(double)dims[2]*(double)coords[2], 
-            z0 + (z1-z0)/(double)dims[2]*(double)(coords[2]+1), 
-            n,
-            Nx/dims[0],
-            Ny/dims[1], 
-            Nz/dims[2]);
-}
-/**
- * @brief Create a local grid without ghostcells (useful for interpolation)
- *
- * @brief Create a local grid without ghostcells (useful for interpolation)
- *
- * @param x0 global x0
- * @param x1 global x1
- * @param y0 global y0
- * @param y1 global y1
- * @param n global n
- * @param Nx global Nx
- * @param Ny global Ny
- * @param comm MPI communicator
- *
- * @return local grid without overlapping cells
- */
-Grid2d<double> ghostless_grid( double x0, double x1, double y0, double y1,unsigned n, unsigned Nx, unsigned Ny,  MPI_Comm comm)
-{
-    int dims[2], periods[2], coords[2];
-    MPI_Cart_get( comm, 2, dims, periods, coords);
-    if( coords[0] == 0 && coords[1] == 0)
-    {
-        if(!(Nx%dims[0]==0))
-            std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
-        assert( Nx%dims[0] == 0);
-        if( !(Ny%dims[1]==0))
-            std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
-        assert( Ny%dims[1] == 0);
-    }
-    return Grid2d<double>( 
-            x0 + (x1-x0)/(double)dims[0]*(double)coords[0], 
-            x0 + (x1-x0)/(double)dims[0]*(double)(coords[0]+1), 
-            y0 + (y1-y0)/(double)dims[1]*(double)coords[1], 
-            y0 + (y1-y0)/(double)dims[1]*(double)(coords[1]+1), 
-            n,
-            Nx/dims[0],
-            Ny/dims[1]);
-}
-} //namespace create
 
 ///@}
 }//namespace dg

@@ -28,14 +28,14 @@ int main( int argc, char* argv[])
     dg::Timer t;
     if(rank==0)std::cout<<"Evaluate a function on the grid\n";
     t.tic();
-    dg::MVec x = dg::evaluate( function, grid);
+    dg::MHVec x = dg::evaluate( function, grid);
     t.toc();
     if(rank==0)std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     t.tic();
     double norm = dg::blas2::dot( w2d, x);
     t.toc();
     if(rank==0)std::cout<<"DOT took                         " <<t.diff()<<"s    result: "<<norm<<"\n";
-    dg::MVec y(x);
+    dg::MHVec y(x);
     dg::MMatrix M = dg::create::dx( grid, dg::normed, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);

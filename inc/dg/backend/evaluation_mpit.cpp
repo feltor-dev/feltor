@@ -26,8 +26,8 @@ const double lx = 2;
 const double ly = 2;
 const double lz = 2;
 
-typedef thrust::device_vector< double>   DVec;
-typedef thrust::host_vector< double>     HVec;
+typedef dg::MPI_Vector<thrust::host_vector<double> > MHVec;
+typedef dg::MPI_Vector<thrust::device_vector<double> > MDVec;
 
 using namespace std;
 int main(int argc, char** argv)
@@ -43,8 +43,8 @@ int main(int argc, char** argv)
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     //test evaluation and expand functions
-    dg::MVec func2d = dg::evaluate( function, g2d);
-    dg::MVec func3d = dg::evaluate( function, g3d);
+    MHVec func2d = dg::evaluate( function, g2d);
+    MHVec func3d = dg::evaluate( function, g3d);
     //test preconditioners
     dg::blas2::symv( 1., dg::create::weights(g2d), func2d, 0., func2d);
     dg::blas2::symv( 1., dg::create::weights(g3d), func3d, 0., func3d);

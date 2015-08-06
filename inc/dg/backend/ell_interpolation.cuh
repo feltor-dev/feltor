@@ -392,7 +392,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
  __global__ void forward_trafo(
          const int n, 
          const int Nx, 
-         const double* forward, const double* x, double *y)
+         const double* forward, const double* x, double *y, const int* ones)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -402,15 +402,15 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
         //for( unsigned j=0; j<n; j++)
         int i=row/n, j=row%n;
         {
-            y[i*n+j]=0;
+            y[row]=0;
             for( int k=0; k<n; k++)
-                y[i*n+j] += forward[ j*n+k]*x[i*n+k];
+                y[row] += forward[ j*n+k]*x[i*n+k];
         }
     }
 
 }
 
-void forward_transform( thrust::device_vector<double>& x, thrust::device_vector<double>& y, thrust::device_vector<double>& forward, const Grid2d<double>& g)
+void forward_transform( thrust::device_vector<double>& x, thrust::device_vector<double>& y, thrust::device_vector<double>& forward, const thrust::device_vector<int>& ones, const Grid2d<double>& g)
 {
     assert( x.size() == y.size());
     //set up kernel parameters
@@ -422,7 +422,8 @@ void forward_transform( thrust::device_vector<double>& x, thrust::device_vector<
     const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
     double* y_ptr = thrust::raw_pointer_cast( &y[0]);
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
-    forward_trafo<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( g.n(), x.size(), forward_ptr, x_ptr, y_ptr);
+    const int * ones_ptr = thrust::raw_pointer_cast( &ones[0]);
+    forward_trafo<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( g.n(), x.size(), forward_ptr, x_ptr, y_ptr, ones_ptr);
 }
 
 ///@endcond

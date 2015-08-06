@@ -10,6 +10,74 @@
 
 namespace dg
 {
+/**
+* @brief Distributed memory matrix class
+*
+* The idea of this mpi matrix is to separate communication and computation in order to resuse existing optimized matrix formats for the computation. 
+*It can be expected that this works particularly well for cases in which the communication to computation ratio is low. 
+* @tparam LocalMatrix The class of the matrix for local computations. 
+ symv needs to be callable on the container class of the MPI_Vector
+* @tparam Collective The Communication class needs to scatter and gather values across processes. Three functions need to be callable
+void gather( const container& input, container& values)
+should gather all values from the input vector that are necessary for the following computation
+void scatter( const container& values, container& output)
+is its inverse. It scatters the result of a computation across the processes and reduces the values on double indices. Strictly speaking it's the inverse of the gather operation only if the gather map is bijectiv (no reduction necessary). 
+int size()
+gives the local size of the values vector.
+*/
+template<class LocalMatrix, class Collective >
+struct RowDistMat
+{
+    /**
+    * @brief Constructor 
+    *
+    * @param m The local matrix
+    * @param c The communication object
+    */
+    RowDistMat( const LocalMatrix& m, const Collective& c):m_(m), c_(c)
+    { }
+    
+    template<class container> 
+    void symv( MPI_Vector<container>& x, MPI_Vector<container>& y)
+    {
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
+        container temp( c_.size());
+        c_.gather( x.data(), temp_);
+        symv( m_, temp_, y);
+    }
+
+        
+    }
+    private:
+    LocalMatrix m_;
+    Collective c_;
+};
+
+template<class LocalMatrix, class Collective >
+struct ColDistMat
+{
+    /**
+    * @brief Constructor 
+    *
+    * @param m The local matrix
+    * @param c The communication object
+    */
+    ColDistMat( const LocalMatrix& m, const Collective& c):m_(m), c_(c)
+    { }
+    
+    template<class container> 
+    void symv( MPI_Vector<container>& x, MPI_Vector<container>& y)
+    {
+        container temp( c_.size());
+        symv( m_, x, temp_);
+        c_.scatter( temp_, y);
+    }
+    private:
+    LocalMatrix m_;
+    Collective c_;
+};
+
 ///@addtogroup mpi_structures
 ///@{
 //
@@ -59,7 +127,7 @@ struct BoundaryTerms
      * @param x input vector
      * @param y output vector
      */
-    void applyX( const MPI_Vector& x, MPI_Vector& y) const
+    void applyX( const MPI_Vector<thrust::host_vector<double> >& x, MPI_Vector<thrust::host_vector<double> >& y) const
     {
         if(data_.empty()) return;
         unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
@@ -96,7 +164,7 @@ struct BoundaryTerms
      * @param x input vector
      * @param y output vector
      */
-    void applyY( const MPI_Vector& x, MPI_Vector& y) const
+    void applyY( const MPI_Vector<thrust::host_vector<double> >& x, MPI_Vector<thrust::host_vector<double> >& y) const
     {
         if(data_.empty()) return;
         unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
@@ -126,6 +194,7 @@ struct BoundaryTerms
         }
     }
 };
+
 
 /**
  * @brief Matrix class for block matrices for 2D and 3D derivatives in X and Y direction
@@ -211,7 +280,7 @@ struct MPI_Matrix
      * @param x input vector, const except for the boundary terms
      * @param y output vector
      */
-    void symv( MPI_Vector& x, MPI_Vector& y) const;
+    void symv( MPI_Vector<thrust::host_vector<double> >& x, MPI_Vector<thrust::host_vector<double> >& y) const;
   private:
     MPI_Precon p_;
     std::vector<std::vector<double> > dataY_;
@@ -226,7 +295,7 @@ typedef MPI_Matrix MMatrix; //!< mpi matrix type
 ///@}
 
 ///@cond
-void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
+void MPI_Matrix::symv( MPI_Vector<thrust::host_vector<double> >& x, MPI_Vector<thrust::host_vector<double> >& y) const
 {
 #ifdef DG_DEBUG
     assert( x.data().size() == y.data().size() );

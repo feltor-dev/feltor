@@ -16,9 +16,9 @@ namespace dg{
 /**
  * @brief Stores the sendTo and the recvFrom maps
  */
-struct Pattern
+struct Collective
 {
-    Pattern(){}
+    Collective(){}
     /**
      * @brief Construct from a map: PID -> howmanyToSend
      *
@@ -26,10 +26,11 @@ struct Pattern
      * @param sendTo howmany points to send 
      * @param comm Communicator
      */
-    Pattern( const thrust::host_vector<int>& sendTo, MPI_Comm comm) { 
+    Collective( const thrust::host_vector<int>& sendTo, MPI_Comm comm) { 
         construct( sendTo, comm);}
 
     void construct( const thrust::host_vector<int>& map, MPI_Comm comm){
+        //sollte schnell sein
         sendTo_=map, recvFrom_=sendTo_, comm_=comm;
         accS_ = sendTo_, accR_ = recvFrom_;
         int rank, size; 
@@ -79,32 +80,52 @@ struct Pattern
      * Now the pattern works backwards
      */
     void transpose(){ sendTo_.swap( recvFrom_);}
+    void invert(){ sendTo_.swap( recvFrom_);}
 
     thrust::host_vector<double> scatter( const thrust::host_vector<double>& values);
-    void gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values);
-    unsigned recv_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
-    unsigned send_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
+    void scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store);
+    void scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store);
+    void gather( const thrust::host_vector<double>& store, thrust::host_vector<double>& values);
+    unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
+    unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
     private:
     unsigned sum;
     thrust::host_vector<int> sendTo_,   accS_;
     thrust::host_vector<int> recvFrom_, accR_;
     MPI_Comm comm_;
 };
-thrust::host_vector<double> Pattern::scatter( const thrust::host_vector<double>& values)
+
+void Collective::scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store)
 {
-    thrust::host_vector<double> received(thrust::reduce( recvFrom_.begin(), recvFrom_.end() ));
+    //transfer to host, then scatter and transfer result to device
+    thrust::host_vector<double> hvalues(values), hstore(store.size());
+    scatter( hvalues, hstore);
+    thrust::copy( hstore.begin(), hstore.end(), store.begin());
+}
+
+void Collective::scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store)
+{
+    assert( store.size() == store_size() );
     MPI_Alltoallv( const_cast<double*>(values.data()), sendTo_.data(), accS_.data(), MPI_DOUBLE,
-                   received.data(), recvFrom_.data(), accR_.data(), MPI_DOUBLE, comm_);
+                   store.data(), recvFrom_.data(), accR_.data(), MPI_DOUBLE, comm_);
+}
+
+thrust::host_vector<double> scatter( const thrust::host_vector<double>& values)
+{
+    thrust::host_vector<double> received( store_size() );
+    scatter( values, received);
     return received;
 }
-void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
+
+void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
 {
-    assert( gatherFrom.size() == (unsigned)thrust::reduce( recvFrom_.begin(), recvFrom_.end()));
-    values.resize( thrust::reduce( sendTo_.begin(), sendTo_.end()) );
+    assert( gatherFrom.size() == store_size() );
+    values.resize( values_size() );
     MPI_Alltoallv( 
             const_cast<double*>(gatherFrom.data()), recvFrom_.data(), accR_.data(), MPI_DOUBLE, 
             values.data(), sendTo_.data(), accS_.data(), MPI_DOUBLE, comm_);
 }
+//Distribute ist der Spezialfall, dass jedes Element nur ein einziges Mal gebraucht wird. 
 ///@endcond
 //
 /**
@@ -118,7 +139,7 @@ void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::hos
  thrust::host_vector<double> hvalues( values, values+10);
  int pids[10] =      {0,1,2,3, 0,1,2,3};
  thrust::host_vector<int> hpids( pids, pids+10);
- Collective coll( hpids, MPI_COMM_WORLD);
+ Distribute coll( hpids, MPI_COMM_WORLD);
  thrust::host_vector<double> hrecv = coll.scatter( hvalues);
  //hrecv is now {0,9,1,9,2,9,3,9} e.g. for process 0 
  thrust::host_vector<double> hrecv2( coll.send_size());
@@ -126,19 +147,19 @@ void Pattern::gather( const thrust::host_vector<double>& gatherFrom, thrust::hos
  //hrecv2 now equals hvalues independent of process rank
  @endcode
  */
-struct Collective
+struct Distribute
 {
     /**
      * @brief Construct empty class
      */
-    Collective( ){}
+    Distribute( ){}
     /**
      * @brief Construct from a given map 
      *
      * @param pids Gives to every point of the values array the rank to which to send this data element. The rank needs to be element of the given communicator.
      * @param comm An MPI Communicator that contains the participants of the scatter/gather
      */
-    Collective( thrust::host_vector<int> pids, MPI_Comm comm): idx_(pids)
+    Distribute( thrust::host_vector<int> pids, MPI_Comm comm): idx_(pids)
     {
         int rank, size; 
         MPI_Comm_size( comm, &size);
@@ -170,13 +191,14 @@ struct Collective
      * @return received data from other processes of size recv_size()
      * @note a scatter followed by a gather of the received values restores the original array
      */
-    thrust::host_vector<double> scatter( const thrust::host_vector<double>& values)
+     void gather( const thrust::host_vector<double>& values, thrust::host_vector<double>& store)
     {
         assert( values.size() == idx_.size());
         thrust::host_vector<double> values_(values);
+        //nach PID ordnen
         thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.begin());
-        thrust::host_vector<double> received = p_.scatter( values_);
-        return received;
+        //senden
+        store = p_.scatter( values_);
     }
 
     /**
@@ -187,10 +209,12 @@ struct Collective
      * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
      * @note a scatter followed by a gather of the received values restores the original array
      */
-    void gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
+    void scatter( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
     {
         thrust::host_vector<double> values_;
+        //sammeln
         p_.gather( gatherFrom, values_);
+        //nach PID geordnete Werte wieder umsortieren
         thrust::scatter( values_.begin(), values_.end(), idx_.begin(), values.begin());
     }
 
@@ -201,17 +225,17 @@ struct Collective
      *
      * @return # of elements to receive
      */
-    unsigned recv_size() const {return p_.recv_size();}
+    unsigned recv_size() const {return p_.store_size();}
     /**
      * @brief return # of elements the calling process has to send in a scatter process (or receive in the gather process)
      *
      * equals the size of the map given in the constructor
      * @return # of elements to send
      */
-    unsigned send_size() const {return p_.send_size();}
+    unsigned send_size() const {return p_.values_size();}
     private:
     thrust::host_vector<int> idx_;
-    Pattern p_;
+    Collective p_;
 };
 
 

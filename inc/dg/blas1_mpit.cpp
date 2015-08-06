@@ -10,6 +10,7 @@
 double two( double x, double y){return 2.;}
 double three( double x, double y){return 3.;}
 
+typedef dg::MPI_Vector<thrust::host_vector<double> > MHVec;
 
 int main( int argc, char* argv[])
 {
@@ -41,9 +42,9 @@ int main( int argc, char* argv[])
     dg::MPI_Grid2d g( 0,1,0,1, 3,12,12, comm);
     if( rank == 0)
         g.display();
-    const dg::MPI_Vector v1 = dg::evaluate( two, g);
-    dg::MPI_Vector v2 = dg::evaluate( three, g); 
-    dg::MPI_Vector v3(v1);
+    const MHVec v1 = dg::evaluate( two, g);
+    MHVec v2 = dg::evaluate( three, g); 
+    MHVec v3(v1);
     unsigned gsize = g.global().n()*g.global().n()*g.global().Nx()*g.global().Ny();
 
     std::cout << gsize*2*3<<" = "<<dg::blas1::dot( v1, v2) << std::endl;
@@ -64,7 +65,7 @@ int main( int argc, char* argv[])
 
 
     std::cout << "Test std::vector \n";
-    std::vector<dg::MPI_Vector > w1( 2, v1), w2(2, v2), w3( w2);
+    std::vector<MHVec > w1( 2, v1), w2(2, v2), w3( w2);
     std::cout << gsize*2*(2*4)<< " = " <<dg::blas1::dot( w1, w2)<<std::endl;
     dg::blas1::axpby( 2., w1, 3., w2, w3);
     std::cout << " 2*2 + 3*4 = " <<w3[0][0] <<std::endl;

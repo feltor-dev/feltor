@@ -1,6 +1,7 @@
 #pragma once
 #include "mpi_vector_blas.h"
 #include "mpi_precon.h"
+#include "thrust_matrix.cuh"
 
 ///@cond
 namespace dg
@@ -12,33 +13,10 @@ namespace detail
 template< class Precon, class Vector>
 inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( x.data().size() == y.data().size() );
-    assert( x.n() == P.data.size() );
-#endif //DG_DEBUG
-    typename MatrixTraits<Precon>::value_type temp=0, sum=0;
-    const unsigned n = x.n();
-    for( unsigned m=0; m<x.Nz(); m++)
-        for( unsigned i=1; i<(x.Ny()-1); i++)
-        for( unsigned k=0; k<n; k++)
-        {
-            if( P.vec.empty() )
-                for( unsigned j=1; j<(x.Nx()-1); j++)
-                for( unsigned l=0; l<n; l++)
-                {
-                    temp+=P.norm*P.data[k]*P.data[l]*
-                      x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ]*
-                      y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
-                }
-            else
-                for( unsigned j=1; j<(x.Nx()-1); j++)
-                for( unsigned l=0; l<n; l++)
-                {
-                    temp+=P.norm*P.data[k]*P.data[l]*P.vec[j*n+l]*
-                      x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ]*
-                      y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
-                }
-        }
+    //computation
+    typename MatrixTraits<Precon>::value_type temp= doDot(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
+    //communication
+    typename MatrixTraits<Precon>::value_type sum=0;
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD); 
 
@@ -60,53 +38,7 @@ inline void doSymv(
               MPIPreconTag,
               MPIVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( x.data().size() == y.data().size() );
-#endif //DG_DEBUG
-    if( alpha == 0)
-    {
-        if( beta == 1) 
-            return;
-        dg::blas1::detail::doAxpby( 0., x, beta, y, dg::MPIVectorTag());
-        return;
-    }
-    const unsigned& size = x.data().size();
-#ifdef DG_DEBUG
-    assert( x.n() >= 1);
-    assert( x.data().size() == y.data().size() );
-    assert( size%x.n() ==0);
-    assert( x.n() == P.data.size());
-#endif //DG_DEBUG
-    const unsigned n = x.n();
-    for( unsigned m=0; m<x.Nz(); m++)
-        for( unsigned i=1; i<(x.Ny()-1); i++)
-        for( unsigned k=0; k<n; k++)
-            if( P.vec.empty())
-            {
-                for( unsigned j=1; j<(x.Nx()-1); j++)
-                for( unsigned l=0; l<n; l++)
-                {
-                      y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] = 
-                          alpha*
-                          P.norm*P.data[k]*P.data[l]*
-                          x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] + 
-                          beta*
-                          y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
-                }
-            }
-            else
-            {
-                for( unsigned j=1; j<(x.Nx()-1); j++)
-                for( unsigned l=0; l<n; l++)
-                {
-                      y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] = 
-                          alpha*
-                          P.norm*P.data[k]*P.data[l]*P.vec[j*n+l]*
-                          x.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ] + 
-                          beta*
-                          y.data()[(((m*x.Ny() + i)*n + k)*x.Nx() + j)*n +l ];
-                }
-            }
+    doSymv( alpha, P.data(), x.data(), beta, y.data(), ThrustMatrixTag(), ThrustVectorTag());
 }
 
 template< class Matrix, class Vector>

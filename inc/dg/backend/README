@@ -44,12 +44,13 @@ to an existing local matrix format.
     column distributed (CD). In the first each node gets the same rows as the vector it holds, in the
     second it gets the same columns as the vector it holds.
     IDEA how to then implement gemv(input, output) algorithm:
-    RD: 1. create a local send buffer and locally gather values from input vector (c) into a send buffer
+    RD: 1. create a local send buffer and locally gather values from input vector (c) into a send buffer (am Besten nach PID geordnet)
         2. globally scatter these values into recv buffer (b) 
         3. then apply the local matrix to that buffer and store result in output vector (a)
+
     CD: 1. apply the local matrix on the input vector and store result in a local send buffer,  (a)
         2. globally scatter the values in this buffer to a recv buffer and  (b)
-        3. then reduce the recv buffer on double indices and store result in output vector (c)
+        3. then permute and reduce the recv buffer on double indices and store result in output vector (c)
     
         Transposition is easy: if a RD matrix is transposed you get a CD matrix, also transpose the Collective object (swap scatter and gather maps)
 
@@ -60,7 +61,7 @@ to an existing local matrix format.
     
     The matrix class needs three private data members for the three steps: 
     a) The local matrix, (using buffer indices, the type should probably be a template parameter)
-    b) A Collective object which holds a communication pattern to take care of the global scatter operations, 
+    b) A Collective object which holds a communication pattern to take care of the global scatter operations,  and the communication between device and host e.g.
     c) A local index map, to map the local buffer indices to local row/col indices
     
     IDEA: how to create such a matrix:
