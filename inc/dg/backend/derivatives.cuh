@@ -81,13 +81,26 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Matrix deltaY = dg::tensor( g.Ny(), dg::create::delta( g.n())); 
     Matrix dx;
+
+    std::cerr << "dxdxdxdxdx\n";
+    std::cerr << "Tensoring: delta_y:\n";
+    cusp::print(deltaY);
+
     if( dir == centered)
         dx = create::dx_symm_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
     else if (dir == forward)
         dx = create::dx_plus_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
     else if (dir == backward)
         dx = create::dx_minus_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
+    std::cerr << "dx = ";
+    cusp::print(dx);
+
     Matrix bdxf = dgtensor( g.n(), deltaY, dx); 
+
+    std::cerr<< "result = ";
+    cusp::print(bdxf);
+
+
     if( no == not_normed)
         return detail::renorm( bdxf, g);
     return bdxf;
