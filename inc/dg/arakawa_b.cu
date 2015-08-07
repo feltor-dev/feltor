@@ -49,15 +49,15 @@ int main()
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    dg::DVec w2d = dg::create::weights( grid);
+    dg::HVec w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
-    dg::DVec lhs = dg::evaluate ( left, grid), jac(lhs);
-    dg::DVec rhs = dg::evaluate ( right,grid);
-    const dg::DVec sol = dg::evaluate( jacobian, grid );
-    dg::DVec eins = dg::evaluate( dg::one, grid );
+    dg::HVec lhs = dg::evaluate ( left, grid), jac(lhs);
+    dg::HVec rhs = dg::evaluate ( right,grid);
+    const dg::HVec sol = dg::evaluate( jacobian, grid );
+    dg::HVec eins = dg::evaluate( dg::one, grid );
     std::cout<< std::setprecision(2);
 
-    dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<dg::HMatrix, dg::HVec> arakawa( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

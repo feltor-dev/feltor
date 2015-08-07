@@ -13,7 +13,8 @@ typedef thrust::host_vector<double> HVec; //!< Host Vector
 //typedef MPI_Vector<thrust::device_vector<double> > MDVec;
 
 typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix; //!< default matrix
-typedef cusp::csr_matrix<int, double, cusp::host_memory> HMatrix; //!< CSR host Matrix
+//typedef cusp::csr_matrix<int, double, cusp::host_memory> HMatrix; //!< CSR host Matrix
+typedef SparseBlockMat HMatrix;
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
 typedef cusp::csr_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for omp
 #else
