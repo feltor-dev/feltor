@@ -2,6 +2,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
+#include "dg/backend/linspace.cuh"
 #include "parameters.h"
 // #include "geometry_circ.h"
 #include "dg/average.h"
@@ -33,7 +34,7 @@ struct Rolkar
     Rolkar( const Grid2d& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp(g, g.bcx(), g.bcy(), dg::normed, dg::centered)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -90,7 +91,9 @@ struct Feltor
     double coupling( ) {return coupling_;}
 
     std::vector<double> energy_vector( ) {return evec;}
-//     std::vector<container>& probe_vector( ) {return probevec;}
+    std::vector<container>& get_probe_vector( ) {return probevec;}
+
+    void update_probes();
 
     double energy_diffusion( ){ return ediff_;}
     double radial_transport( ){ return gammanex_;}
@@ -101,7 +104,7 @@ struct Feltor
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
-    container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta,Niavg; //dont use them as helper
+    container neavg, netilde, nedelta, lognedelta, phiavg, phitilde, phidelta, Niavg; //dont use them as helper
     const container binv;
     const container one;
     const Preconditioner w2d, v2d;
@@ -119,21 +122,13 @@ struct Feltor
 
     const eule::Parameters p;
 
-    double mass_, energy_, diff_, ediff_,gammanex_,coupling_;
+    double mass_, energy_, diff_, ediff_, gammanex_, coupling_;
     std::vector<double> evec;
     //probe
-//     std::vector<container> probevec;
-//     const container Xprobe,Yprobe;
-//     Matrix probeinterp;
-//     container probevalue;    
-//     dg::Grid1d<double> gy;
-//     const container w1d;
-//     const container oney;
-//     const container coox0,cooxlx,cooy;
-//     Matrix interpx0,interpxlx;
-    
+    std::vector<container> probevec;
+    const container probe_coord_X, probe_coord_Y;
+    Matrix probeinterp;
     container lh,rh,lhs,profne,profNi;
-
 };
 
 template<class Matrix, class container, class P>
@@ -158,6 +153,10 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     p(p),
     evec(3),
     //probe
+    probe_coord_X(dg::create::linspace(0.0, p.lx, p.lx * 0.125)),
+    probe_coord_Y(8, 0.5 * p.ly), 
+    probeinterp(dg::create::interpolation(probe_coord_X, probe_coord_Y, g, dg::NEU)),
+    // Initial densit profiles
 //     probevec(2),
 //     Xprobe(1,p.lx*p.posX), //use blob position
 //     Yprobe(1,p.ly*p.posY),//use blob position
@@ -168,6 +167,10 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     rh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,1.0,0.0,1.0),g)), 
     lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
+    // Particle source function
+    //source_ne(dg::evaluate(dg::ExpProfX(1.0, 0.0, p.ln)), g),
+    //source_ne(dg::evaluate(dg::ExpProfX(1.0, 0.0, p.ln), g)),
+    //source_Ni(source_ne),
     profNi(profne)
 //     profne(dg::evaluate(dg::TanhProfX(p.lx*p.solb*0.7,p.solw,-1.0,p.nprofileamp, p.bgprofamp),g)),
     //boundary integral terms
@@ -184,6 +187,11 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     initializene(profNi,profne); //ne = Gamma N_i
     dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+    probevec.push_back(container(8, 0.0));
+    probevec.push_back(container(8, 0.0));
+    probevec.push_back(container(8, 0.0));
+
+    container tmp(8, 0.0);
 }
 
 template<class Matrix, class container, class P>
@@ -307,7 +315,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - <phi>  - lnNe
     }
     //sol boundary
-    if (p.solb*p.lx<p.lx) dg::blas1::pointwiseDot(omega,lh,omega);
+    if (p.solb*p.lx<p.lx) 
+    {
+        dg::blas1::pointwiseDot(omega,lh,omega);
+    }
     //correction for high amplitudes
 //     dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
     //general term
@@ -319,6 +330,58 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     ediff_= Dperp[0]+Dperp[1]+ coupling_ + Dperpsurf[0] + Dperpsurf[1];
     
     // compute probevalues on R,Z,Phi of probe
+    //dg::blas2::gemv(probeinterp, npe[0], probevalue);
+    //probevec[0]=probevalue;
+    //dg::blas2::gemv(probeinterp, phi[0], probevalue);
+    //probevec[1]=probevalue;
+    
+    //compute the radial electron density  transport
+    //dg::blas2::gemv(poisson.dyrhs(), phi[0], omega); //dy phi
+    //dg::blas1::pointwiseDot(omega, binv, omega); //1/B dy phi
+    //gammanex_ = -1.* dg::blas2::dot(npe[0], w2d,omega);
+}
+
+template<class M, class container, class P>
+void Feltor<M, container, P>::update_probes()
+{
+    static container probe_values(8);
+    //Compute probe values at probe coordinates
+    dg::blas2::gemv(probeinterp, npe[0], probe_values);
+    probevec[0] = probe_values;
+    dg::blas2::gemv(probeinterp, phi[0], probe_values);
+    probevec[1] = probe_values;
+
+    //Compute radial transport
+    dg::blas2::gemv(poisson.dyrhs(), phi[0], omega);     // dy phi
+    dg::blas1::pointwiseDot(omega, binv, omega);         // 1/B dy phi
+    dg::blas1::pointwiseDot(npe[0], omega, omega);       // 1/B N dy phi
+    dg::blas2::gemv(probeinterp, omega, probe_values);
+
+    probevec[2] = probe_values;    
+}
+
+
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+{
+    /* y[0] := N_e - 1
+       y[1] := N_i - 1
+    */
+    dg::Timer t;
+    t.tic();
+    assert( y.size() == 2);
+    assert( y.size() == yp.size());
+    //compute phi via polarisation
+    phi[0] = polarisation( y);
+    phi[1] = compute_psi( phi[0]); //sets omega
+
+    //transform compute n and logn and energies
+    for(unsigned i=0; i<2; i++)
+    {
+        dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
+        dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
+    }
+=======
 //     dg::blas2::gemv(probeinterp,npe[0],probevalue);
 //     probevec[0]=probevalue;
 //     dg::blas2::gemv(probeinterp,phi[0],probevalue);
@@ -331,6 +394,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //end of energy computation
     
     
+>>>>>>> upstream/develop
     for( unsigned i=0; i<2; i++)
     {
         //ExB dynamics
@@ -354,13 +418,14 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     polavg(npe[0],neavg);
     dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
     dg::blas1::scal(omega,0.0);
-    if (p.zf==0) {
+    if (p.zf==0) 
+    {
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
         dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
     }
-
-    if (p.zf==1) {
+    else if (p.zf==1) 
+    {
         polavg(logn[0],lambda);       //<ln(ne)> 
         polavg(phi[0],phiavg);        //<phi>
         dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>

@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+//     dg::BathRZ init0(8, 8, 1, 0.0, 0.0, 30., 2., p.amp);
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 //      dg::Vortex init0(  p.posX*p.lx, p.posY*p.ly, 0, p.sigma, p.amp);   
@@ -234,10 +234,7 @@ int main( int argc, char* argv[])
                          " Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
- 
-            
             E0 = E1;
-
         }
         dg::blas1::transform( y0[0], dvisual, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
         dvisual2 = feltor.potential()[0];

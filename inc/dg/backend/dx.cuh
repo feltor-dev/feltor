@@ -73,6 +73,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx_symm_normed(unsigned n, unsigned 
     a = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
     b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     bp = backward*bp*forward;
+
     //assemble the matrix
     int number = 0;
     for( unsigned k=0; k<n; k++)
