@@ -6,7 +6,7 @@
 #include "functions.h"
 #include "operator.h"
 #include "weights.cuh"
-#include "sparsedata_idxmat.h"
+#include "sparseblockmat.h"
 
 /*! @file 
   
@@ -33,7 +33,7 @@ namespace create
 *
 * @return Host Matrix in coordinate form 
 */
-SparseBlockMat dx_symm(unsigned n, unsigned N, double h, bc bcx)
+SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
 {
 
     Operator<double> l = create::lilj(n);
@@ -72,8 +72,8 @@ SparseBlockMat dx_symm(unsigned n, unsigned N, double h, bc bcx)
     if( bcx != PER)
     {
         SparseBlockMat A(N, N, 3, 6, n);
-        for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
+        for( int i=0; i<n; i++)
+        for( int j=0; j<n; j++)
         {
             A.data[(0*n+i)*n+j] = bp(i,j);
             A.data[(1*n+i)*n+j] = a(i,j);
@@ -106,8 +106,8 @@ SparseBlockMat dx_symm(unsigned n, unsigned N, double h, bc bcx)
     else //periodic
     {
         SparseBlockMat A(N, N, 3, 3, n);
-        for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
+        for( int i=0; i<n; i++)
+        for( int j=0; j<n; j++)
         {
             A.data[(0*n+i)*n+j] = bp(i,j);
             A.data[(1*n+i)*n+j] = a(i,j);
@@ -136,7 +136,7 @@ SparseBlockMat dx_symm(unsigned n, unsigned N, double h, bc bcx)
 *
 * @return Host Matrix in coordinate form 
 */
-SparseBlockMat dx_plus( unsigned n, unsigned N, double h, bc bcx )
+SparseBlockMat dx_plus( int n, int N, double h, bc bcx )
 {
 
     Operator<double> l = create::lilj(n);
@@ -165,8 +165,8 @@ SparseBlockMat dx_plus( unsigned n, unsigned N, double h, bc bcx )
     if( bcx != PER)
     {
         SparseBlockMat A(N, N, 2, 5, n);
-        for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
+        for( int i=0; i<n; i++)
+        for( int j=0; j<n; j++)
         {
             A.data[(0*n+i)*n+j] = a(i,j);
             A.data[(1*n+i)*n+j] = b(i,j);
@@ -194,8 +194,8 @@ SparseBlockMat dx_plus( unsigned n, unsigned N, double h, bc bcx )
     else //periodic
     {
         SparseBlockMat A(N, N, 2, 2, n);
-        for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
+        for( int i=0; i<n; i++)
+        for( int j=0; j<n; j++)
         {
             A.data[(0*n+i)*n+j] = a(i,j);
             A.data[(1*n+i)*n+j] = b(i,j);
@@ -223,7 +223,7 @@ SparseBlockMat dx_plus( unsigned n, unsigned N, double h, bc bcx )
 *
 * @return Host Matrix in coordinate form 
 */
-SparseBlockMat dx_minus( unsigned n, unsigned N, double h, bc bcx )
+SparseBlockMat dx_minus( int n, int N, double h, bc bcx )
 {
     Operator<double> l = create::lilj(n);
     Operator<double> r = create::rirj(n);
@@ -252,8 +252,8 @@ SparseBlockMat dx_minus( unsigned n, unsigned N, double h, bc bcx )
     if(bcx != dg::PER)
     {
         SparseBlockMat A(N, N, 2, 5, n);
-        for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
+        for( int i=0; i<n; i++)
+        for( int j=0; j<n; j++)
         {
             A.data[(0*n+i)*n+j] = bp(i,j);
             A.data[(1*n+i)*n+j] = a(i,j);
@@ -277,8 +277,8 @@ SparseBlockMat dx_minus( unsigned n, unsigned N, double h, bc bcx )
     else //periodic
     {
         SparseBlockMat A(N, N, 2, 2, n);
-        for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
+        for( int i=0; i<n; i++)
+        for( int j=0; j<n; j++)
         {
             A.data[(0*n+i)*n+j] = bp(i,j);
             A.data[(1*n+i)*n+j] = a(i,j);
@@ -307,7 +307,7 @@ SparseBlockMat dx_minus( unsigned n, unsigned N, double h, bc bcx )
 *
 * @return Host Matrix in coordinate form 
 */
-SparseBlockMat jump( unsigned n, unsigned N, double h, bc bcx)
+SparseBlockMat jump( int n, int N, double h, bc bcx)
 {
 
     //std::cout << A.row_indices.size(); 
@@ -338,8 +338,8 @@ SparseBlockMat jump( unsigned n, unsigned N, double h, bc bcx)
     if(bcx != dg::PER)
     {
         SparseBlockMat A(N, N, 3, 6, n);
-        for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
+        for( int i=0; i<n; i++)
+        for( int j=0; j<n; j++)
         {
             A.data[(0*n+i)*n+j] = bp(i,j);
             A.data[(1*n+i)*n+j] = a(i,j);
@@ -372,8 +372,8 @@ SparseBlockMat jump( unsigned n, unsigned N, double h, bc bcx)
     else //periodic
     {
         SparseBlockMat A(N, N, 3, 3, n);
-        for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
+        for( int i=0; i<n; i++)
+        for( int j=0; j<n; j++)
         {
             A.data[(0*n+i)*n+j] = bp(i,j);
             A.data[(1*n+i)*n+j] = a(i,j);
@@ -389,7 +389,7 @@ SparseBlockMat jump( unsigned n, unsigned N, double h, bc bcx)
     }
 };
 
-SparseBlockMat dx_normed( unsigned n, unsigned N, double h, bc bcx, direction dir )
+SparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
 {
     if( dir == centered)
         return create::dx_symm(n, N, h, bcx);

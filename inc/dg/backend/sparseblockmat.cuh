@@ -21,6 +21,7 @@ struct SparseBlockMatGPU
     typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
     void symv(const DVec& x, DVec& y) const;
+    void launch_multiply_kernel(const DVec& x, DVec& y) const;
     
     DVec data;
     IVec cols_idx, data_idx; 
@@ -29,6 +30,13 @@ struct SparseBlockMatGPU
     int left, right;
     DVec norm; //the normalization vector
 };
+
+void SparseBlockMatGPU::symv( const DVec& x, DVec& y) const
+{
+    launch_multiply_kernel( x,y);
+    if( !norm.empty())
+        dg::blas1::detail::doPointwiseDot( norm, y, y, ThrustVectorTag());
+}
 
 template <>
 struct MatrixTraits<SparseBlockMatGPU>
@@ -50,14 +58,14 @@ struct MatrixTraits<const SparseBlockMatGPU>
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, 
          const int left, const int right, 
-         const double* x, double *y,
+         const double* x, double *y
          )
 {
     int size = left*num_rows*n*right;
-    const int thread_idx = blockDim.x * blockIdx.x + threadIdx.x;
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_rows/grid_size rows
-    for( int row = thread_idx; idx<size; idx += grid_size)
+    for( int row = thread_id; row<size; row += grid_size)
     {
         int s=row/(n*num_rows*right), 
             i = (row/(right*n))%num_rows, 
@@ -68,12 +76,12 @@ struct MatrixTraits<const SparseBlockMatGPU>
         for( int q=0; q<n; q++) //multiplication-loop
             y[row] += 
                 data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                x[((s*num_cols + col[i*blocks_per_line+d])*n+q)*right+j];
+                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
     }
 
 }
 
-void SparseBlockMatGPU::multiply_launcher( const DVec& x, DVec& y, int m) const
+void SparseBlockMatGPU::launch_multiply_kernel( const DVec& x, DVec& y) const
 {
     assert( x.size() == y.size());
     //set up kernel parameters
@@ -87,7 +95,7 @@ void SparseBlockMatGPU::multiply_launcher( const DVec& x, DVec& y, int m) const
     const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
     double* y_ptr = thrust::raw_pointer_cast( &y[0]);
     ell_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-        data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left, right, x,y);
+        data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left, right, x_ptr,y_ptr);
 }
 
 
