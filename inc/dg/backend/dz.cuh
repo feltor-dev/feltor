@@ -412,7 +412,9 @@ struct DZ
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
+#ifndef MPI_VERSION
     Matrix jump;
+#endif
     container hz, hp,hm, tempP, temp0, tempM, ghostM, ghostP;
     container hz_plane, hp_plane, hm_plane;
     dg::Grid3d<double> g_;
@@ -428,10 +430,12 @@ struct DZ
 template<class M, class container>
 template <class Field, class Limiter>
 DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
+        #ifndef MPI_VERSION
         jump( dg::create::jump2d( grid, grid.bcx(), grid.bcy(), not_normed)),
+        #endif
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), tempP( hz), temp0( hz), tempM( hz), 
-        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid))
-        , invB(dg::evaluate(field,grid))
+        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),
+        invB(dg::evaluate(field,grid))
 {
 
     assert( deltaPhi == grid.hz() || grid.Nz() == 1);
@@ -730,8 +734,10 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
 //     add jump term 
-    dg::blas2::symv( jump, f, temp0);
-    dg::blas1::axpby(-1., temp0, 1., dzTdzf);
+    #ifndef MPI_VERSION
+     dg::blas2::symv( jump, f, temp0);
+     dg::blas1::axpby(-1., temp0, 1., dzTdzf);
+    #endif
 }
 template< class M, class container >
 void DZ<M,container>::dzz( const container& f, container& dzzf)

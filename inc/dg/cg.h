@@ -271,6 +271,11 @@ struct Invert
         eps_(eps), nrmb_correction_(nrmb_correction),
         phi0( copyable), phi1( copyable), phi2(phi1), cg( copyable, max_iter) { }
     /**
+    * @brief Return last solution
+    */
+    const container& get_last() const { return phi0;}
+
+    /**
      * @brief Solve linear problem
      *
      * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 

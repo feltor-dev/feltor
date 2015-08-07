@@ -134,7 +134,7 @@ struct Feltor
 template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p): 
-    chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
+    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),
     phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
@@ -320,10 +320,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(omega,lh,omega);
     }
     //correction for high amplitudes
-    dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
+//     dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
     //general term
     dg::blas1::pointwiseDot(omega,npe[0],omega);  // omega   = (coupling)*Ne
-    dg::blas1::axpby(1.0,lambda,1.0,omega,omega); // omega   = (coupling)*(Ne + <ne>tilde(ne))
+    dg::blas1::axpby(0.0,lambda,1.0,omega,omega); // omega   = (coupling)*(Ne + <ne>tilde(ne))
 
     coupling_ =  z[0]*p.d/p.c* dg::blas2::dot(chi, w2d, omega);
     //Compute rhs of energy theorem
@@ -438,8 +438,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(omega,lh,omega); //omega = lh*omega
     }
     //correction for high amplitudes
-    dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
-    dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
+//     dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
+//     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
     //general term
     dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
@@ -466,7 +466,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(sqrt(1.+p.tau[1])*(2./p.l_para)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     //Density source terms
-    if (p.omega_source>0.0) 
+    if (p.omega_source>1e-14) 
     {
         dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0_source - <ne>
         //dtN_e

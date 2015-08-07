@@ -86,9 +86,9 @@ int main( int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-//     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-    dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
+//     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
     
 
@@ -226,11 +226,12 @@ int main( int argc, char* argv[])
             double diss = feltor.energy_diffusion( );
             double coupling = feltor.coupling();
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << " Ne_p  = " << feltor.probe_vector()[0][0] << 
-                         " Phi_p = " << feltor.probe_vector()[1][0] << 
+            std::cout << 
+//                          " Ne_p  = " << feltor.probe_vector()[0][0] << 
+//                          " Phi_p = " << feltor.probe_vector()[1][0] << 
                          " Ga_nex= " << feltor.radial_transport() <<
                          " Coupling= " << coupling <<
-                         " Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<
+                         " Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
             E0 = E1;

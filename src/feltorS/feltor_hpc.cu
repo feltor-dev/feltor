@@ -77,15 +77,13 @@ int main( int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-//         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+        dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
+//     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-    //dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 
     std::vector<dg::DVec> y0(2, dg::evaluate(prof, grid)), y1(y0); 
-
     //no field aligning
     y1[1] = dg::evaluate( init0, grid);
     dg::blas1::pointwiseDot(y1[1], y0[1], y1[1]);
@@ -97,9 +95,11 @@ int main( int argc, char* argv[])
     feltor.initializene(y0[1], y0[0]);    
     std::cout << "Done!\n";
 
+
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
 //     feltor.energies( y0);//now energies and potential are at time 0
+    /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -114,12 +114,7 @@ int main( int argc, char* argv[])
     varname_fields.push_back("electrons"); varname_fields.push_back("ions"); varname_fields.push_back("potential"); varname_fields.push_back("vor");
     int dataIDs[4]; 
     for(unsigned i = 0; i < varname_fields.size(); i++)
-    {
         err = nc_def_var(ncid, varname_fields[i].data(), NC_DOUBLE, 3, dim_ids_field, &dataIDs[i]);
-    }
-
-    
-
     //energy IDs, used for small time-step diagnostic
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
@@ -197,17 +192,12 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 
     size_t Estart[] = {0};
-    const size_t Ecount[] = {1};
-    const size_t Ecount_probe[] = {8};
-    double energy0 = feltor.energy();
-    double mass0 = feltor.mass();
-    double E0 = energy0;
-    double mass = mass0;
-    double E1 = 0.0;
-    double dEdt = 0.;
-    double diss = 0.;
-    double accuracy=0.;
-
+    size_t Ecount[] = {1};
+    double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+//     double Nep=feltor.probe_vector()[0][0];
+//     double phip=feltor.probe_vector()[1][0];
+    double Nep=0.;
+    double phip=0.;
     double radtrans = feltor.radial_transport();
     double coupling = feltor.coupling();
     std::vector<double> evec = feltor.energy_vector();
@@ -252,7 +242,6 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
-            feltor.energies(y0);//advance potential and energies
             feltor.update_probes();
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
@@ -260,6 +249,9 @@ int main( int argc, char* argv[])
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
+//             Nep =feltor.probe_vector()[0][0];
+//             phip=feltor.probe_vector()[1][0];
+            radtrans = feltor.radial_transport();
             coupling= feltor.coupling();
             err = nc_open(argv[2], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);

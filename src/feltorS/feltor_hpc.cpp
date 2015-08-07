@@ -115,16 +115,15 @@ int main( int argc, char* argv[])
 
     
     dg::Karniadakis< std::vector<dg::MVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    if(rank==0) std::cout << "intiialize Timestepper" << std::endl;
+    if(rank==0) std::cout << "intialize Timestepper" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     if(rank==0) std::cout << "Done!\n";
-
-//     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid); //MPI OFF
+    //     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+    err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
     dg::Grid2d<double> global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
@@ -163,13 +162,19 @@ int main( int argc, char* argv[])
     err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
     err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
     err = nc_var_par_access( ncid, accuracyID, NC_COLLECTIVE);
+    //probe vars definition
+    int NepID,phipID,radtransID,couplingID;
+    err = nc_def_var( ncid, "Ne_p",     NC_DOUBLE, 1, &EtimeID, &NepID);
+    err = nc_def_var( ncid, "phi_p",    NC_DOUBLE, 1, &EtimeID, &phipID);  
+    err = nc_def_var( ncid, "G_nex",    NC_DOUBLE, 1, &EtimeID, &radtransID);
+    err = nc_def_var( ncid, "Coupling",    NC_DOUBLE, 1, &EtimeID, &couplingID);  
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     if(rank==0) std::cout << "First output ... \n";
     int dims[2],  coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
     size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};  
-    size_t start[3] = {0, coords[2]*count[1], coords[1]*count[2]}; //correct?
+    size_t start[3] = {0, coords[1]*count[1],          coords[0]*count[2]}; 
     dg::MVec transferD( dg::evaluate(dg::zero, grid));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     //create local interpolation matrix
@@ -196,10 +201,10 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-//     double Nep=feltor.probe_vector()[0][0];
-//     double phip=feltor.probe_vector()[1][0];
-//     double radtrans = feltor.radial_transport();
-//     double coupling = feltor.coupling();
+    double Nep=0.;
+    double phip=0.;
+    double radtrans = feltor.radial_transport();
+    double coupling = feltor.coupling();
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -209,10 +214,10 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
     //probe
-//     err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-//     err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
-//     err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
-//     err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);
+    err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+    err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
+    err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
+    err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);    
 //     err = nc_close(ncid);
     if(rank==0) std::cout << "First write successful!\n";
@@ -252,8 +257,8 @@ int main( int argc, char* argv[])
             evec = feltor.energy_vector();
 //             Nep =feltor.probe_vector()[0][0];
 //             phip=feltor.probe_vector()[1][0];
-//             radtrans = feltor.radial_transport();
-//             coupling= feltor.coupling();
+            radtrans = feltor.radial_transport();
+            coupling= feltor.coupling();
             err = nc_open(argv[2], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
@@ -264,10 +269,10 @@ int main( int argc, char* argv[])
             }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-/*            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);          
+           err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);         
             err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
-            err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);   */ 
+            err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
             if(rank==0) std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             if(rank==0) std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";

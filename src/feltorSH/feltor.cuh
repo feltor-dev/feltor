@@ -85,6 +85,7 @@ struct Feltor
      */
     const std::vector<container>& potential( ) const { return phi;}
     void initializene( const container& y, const container& helper, container& target);
+    void initializepi( const container& y, const container& helper, container& target);
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
 
@@ -101,7 +102,7 @@ struct Feltor
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
-    container chii; //dont use them as helper
+    container chii,uE2; //dont use them as helper
     const container binv;
     const container one;
     container B2;
@@ -126,12 +127,12 @@ struct Feltor
 template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p): 
-    chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
+    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
     B2( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
-    phi( 2, chi),chii(dg::evaluate(dg::CONSTANT(0.0),g)),// (phi,psi), (chi_i)
+    phi( 2, chi),chii(chi),uE2(chi),// (phi,psi), (chi_i), u_ExB
     ype(4,chi), logype(ype), // y+(bgamp+profamp) , log(ype)
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
     pol(    g, dg::not_normed,          dg::centered), 
@@ -180,8 +181,8 @@ container& Feltor<Matrix,container, P>::compute_psi(const container& ti,containe
     invert_invgamma(invgamma1,chi,lambda);    //(B^2/T - 0.5*tau_i nabla_perp^2) chi  =  B^2/T phi
     poisson.variationRHS(potential, omega); // (nabla_perp phi)^2
     dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);// (nabla_perp phi)^2/B^2
-    dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
+    dg::blas1::pointwiseDot( binv, omega, uE2);// (nabla_perp phi)^2/B^2
+    dg::blas1::axpby( 1., chi, -0.5, uE2,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }
 template< class Matrix, class container, class P>
@@ -205,8 +206,16 @@ void Feltor<Matrix, container, P>::initializene( const container& src, const con
     dg::blas1::pointwiseDot(target,lambda,target);
 }
 
-
-
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P>::initializepi( const container& src, const container& ti,container& target)
+{   
+    //src =Pi-bg = (N_i-bg)*(T_i-bg) + bg(N_i-bg) + bg(T_i-bg)
+    //target =pi-bg =  (n_i-bg)*(t_i-bg) + bg(n_i-bg) + bg(t_i-bg)
+    dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/Ti
+    invgamma2.set_chi(lambda); //(B^2/Ti - tau_i nabla_perp^2 +  0.25*tau_i^2 nabla_perp^2 Ti/B^2  nabla_perp^2)  
+    invert_invgamma2(invgamma2,target,src);
+    dg::blas1::pointwiseDot(target,lambda,target); //target = B^2/Ti target
+}
 
 template<class Matrix, class container, class P>
 void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
@@ -220,19 +229,18 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     t.tic();
     assert( y.size() == 4);
     assert( y.size() == yp.size());
-    //compute phi via polarisation
-    phi[0] = polarisation( y);
-
     //transform compute n and logn and energies
     for(unsigned i=0; i<4; i++)
     {
         dg::blas1::transform( y[i], ype[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //ype = y +p.bgprofamp + p.nprofileamp
         dg::blas1::transform( ype[i], logype[i], dg::LN<value_type>()); //log(ype)
     }
+    //compute phi via polarisation
+    phi[0] = polarisation( y);  
     //compute psi
     phi[1] = compute_psi(ype[3], phi[0]); //sets omega for T_perp
     //compute chii
-    chii   = compute_chii(ype[3], phi[0]); 
+    chii   = compute_chii(ype[3], phi[0]);  
     
     //Compute energies
     double z[2]    = {-1.0,1.0};
@@ -244,7 +252,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         S[i]    = z[i]*p.tau[i]*dg::blas2::dot( ype[i+2], w2d, ype[i]); // N T
     }
     mass_ = dg::blas2::dot( one, w2d, ype[0] ); //take real ion density which is electron density!!
-    double Tperp = 0.5*p.mu[1]*dg::blas2::dot( ype[1], w2d, omega);   //= 0.5 mu_i N_i u_E^2
+    double Tperp = 0.5*p.mu[1]*dg::blas2::dot( ype[1], w2d, uE2);   //= 0.5 mu_i N_i u_E^2
     energy_ = S[0] + S[1]  + Tperp; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp;
     for(unsigned i=0; i<2; i++)
@@ -274,7 +282,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     
     ediff_= Dperp[0]+Dperp[1]+ Dperp[2]+Dperp[3];
     
-    
+
     
     //ExB dynamics
     for(unsigned i=0; i<2; i++)

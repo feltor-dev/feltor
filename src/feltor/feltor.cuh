@@ -273,8 +273,7 @@ struct Feltor
     dg::Poisson< Matrix, container> poissonN,poissonDIR; 
 
     dg::Elliptic< Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR; 
-    dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR;
-    dg::Helmholtz< Matrix, container, Preconditioner > invgammaN;
+    dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR, invgammaN;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
 
@@ -290,7 +289,7 @@ struct Feltor
 template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
-    chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
+    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
     curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
@@ -303,16 +302,16 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     phi( 2, chi), curvphi( phi),  npe(phi), logn(phi),
     dzy( 4, chi),curvy(dzy), 
     dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
-    dzN_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+    dzN_(solovev::Field(gp), g,   2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
-    lapperpN ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
+    lapperpN (   g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     lapperpDIR ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     invgammaDIR( g,dg::DIR, dg::DIR,-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invgammaN(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgammaN( omega, omega.size(), p.eps_gamma),
+    invgammaN(   g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
+    invert_pol(         omega, omega.size(), p.eps_pol),
+    invert_invgammaN(   omega, omega.size(), p.eps_gamma),
     invert_invgammaPhi( omega, omega.size(), p.eps_gamma),
     p(p),
     gp(gp),
