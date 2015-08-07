@@ -32,3 +32,5 @@ namespace dg
         }
     }
 }
+
+// End of file linspace.cuh

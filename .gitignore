@@ -16,3 +16,5 @@ src/feltor/doc/
 *.out
 *.dat
 *.eps
+*.swp
+*.txt

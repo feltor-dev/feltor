@@ -388,7 +388,7 @@ struct LinearX
      * @param a linear coefficient 
      * @param b constant coefficient
      */
-    LinearX( double a, double b):a_(a), b_(b){}
+     LinearX( double a, double b):a_(a), b_(b){}
     /**
      * @brief Return linear polynomial in x 
      *
@@ -397,8 +397,16 @@ struct LinearX
      
      * @return result
      */
-    double operator()( double x, double y){ return a_*x+b_;}
-  private:
+   double operator()( double x, double y){ return a_*x+b_;}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     
+     * @return result
+     */
+   double operator()(double x){ return a_*x+b_;}
+   private:
     double a_,b_;
 };
 /**

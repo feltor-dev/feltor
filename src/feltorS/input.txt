@@ -14,10 +14,12 @@
 7)  ny_out (# grid points in output field)  =  150
 8)  itstp  (steps between outputs)          =  1000(5)
 9) total # of outputs (excluding first)     =  100000
+
 -------------------------Algorithmic parameters------------------------
 10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
 11)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
 12)  eps_time ( stop for time inversion )   =   1e-12 
+
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  0.0   (0.0)

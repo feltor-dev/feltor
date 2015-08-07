@@ -11,7 +11,7 @@
 #include "backend/cusp_matrix.cuh"
 #include "backend/selfmade.cuh"
 #include "backend/std_matrix.cuh"
-
+#include "backend/dx_matrix_blas.cuh"
 
 /*!@file 
  *

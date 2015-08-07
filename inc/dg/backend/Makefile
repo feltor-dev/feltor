@@ -2,7 +2,8 @@ system=home
 device=gpu
 
 INCLUDE = -I../../ # other project libraries
-INCLUDE+= -I../
+INCLUDE = -I../ # other project libraries
+INCLUDE+= -I/Users/ralph/local/cusplibrary/ 
 INCLUDE+= -I./backend # header files
 
 ifeq ($(strip $(system)),home)
@@ -27,10 +28,10 @@ GLFLAGS   = -lm
 endif
 
 ifeq ($(strip $(device)),gpu)
-CC = nvcc
+CC = /Developer/NVIDIA/CUDA-7.0/bin/nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 
-CFLAGS+= -Xcompiler -fopenmp 
-#CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+#CFLAGS+= -Xcompiler -fopenmp 
+CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 # CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 # CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
 #CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
