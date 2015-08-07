@@ -40,8 +40,7 @@ SparseBlockMat dx( const Grid2d<double>& g, bc bcx, norm no = normed, direction 
 {
     SparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    for( unsigned i=0; i<dx.left.size(); i++)
-        dx.left[i] = g.n()*g.Ny();
+    dx.left = g.n()*g.Ny();
     if( no == not_normed)
         dx.norm = dg::create::weights( g);
     return dx;
@@ -76,8 +75,7 @@ SparseBlockMat dy( const Grid2d<double>& g, bc bcy, norm no = normed, direction 
 {
     SparseBlockMat dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    for( unsigned i=0; i<dy.right.size(); i++)
-        dy.right[i] = g.n()*g.Nx();
+    dy.right = g.n()*g.Nx();
     if( no == not_normed)
         dy.norm = dg::create::weights( g);
     return dy;
@@ -167,8 +165,7 @@ SparseBlockMat dx( const Grid3d<double>& g, bc bcx, norm no = normed, direction 
 {
     SparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    for(unsigned i=0; i<dx.right.size();i++)
-        dx.left[i] = g.n()*g.Ny()*g.Nz();
+    dx.left = g.n()*g.Ny()*g.Nz();
     if( no == not_normed)
         dx.norm = dg::create::weights( g);
     return dx;
@@ -203,11 +200,8 @@ SparseBlockMat dy( const Grid3d<double>& g, bc bcy, norm no = normed, direction 
 {
     SparseBlockMat dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    for( unsigned i=0; i<dy.right.size(); i++)
-    {
-        dy.right[i] = g.n()*g.Nx();
-        dy.left[i] = g.Nz();
-    }
+    dy.right = g.n()*g.Nx();
+    dy.left = g.Nz();
     if( no == not_normed)
         dy.norm = dg::create::weights( g);
     return dy;
@@ -242,8 +236,7 @@ SparseBlockMat dz( const Grid3d<double>& g, bc bcz, norm no = normed, direction 
 {
     SparseBlockMat dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
-    for( unsigned i=0; i<dz.right.size(); i++)
-        dz.right[i] = g.n()*g.n()*g.Nx()*g.Ny();
+    dz.right = g.n()*g.n()*g.Nx()*g.Ny();
     if( no == not_normed)
         dz.norm = dg::create::weights( g);
     return dz;

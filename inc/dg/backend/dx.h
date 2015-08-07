@@ -6,7 +6,7 @@
 #include "functions.h"
 #include "operator.h"
 #include "weights.cuh"
-#include "sparseblockmat.h"
+#include "sparsedata_idxmat.h"
 
 /*! @file 
   
@@ -69,76 +69,58 @@ SparseBlockMat dx_symm(unsigned n, unsigned N, double h, bc bcx)
     b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     bp = backward*bp*forward;
     //assemble the matrix
-    SparseBlockMat A(3, N, N);
     if( bcx != PER)
     {
-    A.diag[0].resize( 3*n*n), A.diag[1].resize(n*n), A.diag[2].resize(n*n);
-    A.row[0].resize(   N), A.row[1].resize(N-1), A.row[2].resize(N-1);
-    A.col[0].resize(   N), A.col[1].resize(N-1), A.col[2].resize(N-1);
-    A.block[0].resize(   N), A.block[1].resize(N-1), A.block[2].resize(N-1);
-    A.n[0] = A.n[1] = A.n[2] = n;
-    A.num_blocks[0] = N, A.num_blocks[1] = A.num_blocks[2] = N-1;
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
-    {
-        A.diag[0][(0*n+i)*n+j] = a_bound_left(i,j);
-        A.diag[0][(1*n+i)*n+j] = a(i,j);
-        A.diag[0][(2*n+i)*n+j] = a_bound_right(i,j);
-        A.diag[1][(0*n+i)*n+j] = b(i,j);
-        A.diag[2][(0*n+i)*n+j] = bp(i,j);
-    }
-    A.block[0][0] = 0; //a_bound_left
-    A.row[0][0] = 0;
-    A.col[0][0] = 0;
-    for( unsigned i=1; i<N-1; i++) //a
-    {
-        A.block[0][i] = 1;
-        A.row[0][i] = i;
-        A.col[0][i] = i;
-    }
-    A.block[0][N-1] = 2; //a_bound_right
-    A.row[0][N-1] = N-1;
-    A.col[0][N-1] = N-1;
-    for( unsigned i=0; i<N-1; i++)
-    {
-        A.block[1][i] = 0; //b
-        A.row[1][i] = i;
-        A.col[1][i] = i+1;
-        A.block[2][i] = 0; //bp
-        A.row[2][i] = i+1;
-        A.col[2][i] = i;
-    }
+        SparseBlockMat A(N, N, 3, 6, n);
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            A.data[(0*n+i)*n+j] = bp(i,j);
+            A.data[(1*n+i)*n+j] = a(i,j);
+            A.data[(2*n+i)*n+j] = b(i,j);
+            A.data[(3*n+i)*n+j] = a_bound_left(i,j);
+            A.data[(4*n+i)*n+j] = a_bound_right(i,j);
+            A.data[(5*n+i)*n+j] = 0; //to invalidate periodic entries
+        }
+        A.data_idx[0*3+0] = 3; //a_bound_left
+        A.cols_idx[0*3+0] = 0;
+        A.data_idx[0*3+1] = 2; //b
+        A.cols_idx[0*3+1] = 1;
+        A.data_idx[0*3+2] = 5; //0
+        A.cols_idx[0*3+2] = 1; //prevent unnecessary data fetch
+        for( int i=1; i<N-1; i++) //a
+            for( int d=0; d<3; d++)
+            {
+                A.data_idx[i*3+d] = d; //bp, a, b
+                A.cols_idx[i*3+d] = i+d-1;
+            }
+        A.data_idx[(N-1)*3+0] = 0; //bp
+        A.cols_idx[(N-1)*3+0] = N-2;
+        A.data_idx[(N-1)*3+1] = 1; //a
+        A.cols_idx[(N-1)*3+1] = N-1;
+        A.data_idx[(N-1)*3+2] = 5; //0
+        A.cols_idx[(N-1)*3+2] = N-1; //prevent unnecessary data fetch
+        return A;
 
     }
     else //periodic
     {
-    A.diag[0].resize( n*n), A.diag[1].resize(n*n), A.diag[2].resize(n*n);
-    A.row[0].resize(   N), A.row[1].resize(N), A.row[2].resize(N);
-    A.col[0].resize(   N), A.col[1].resize(N), A.col[2].resize(N);
-    A.block[0].resize(   N), A.block[1].resize(N), A.block[2].resize(N);
-    A.n[0] = A.n[1] = A.n[2] = n;
-    A.num_blocks[0] = A.num_blocks[1] = A.num_blocks[2] = N;
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
-    {
-        A.diag[0][i*n+j] = a(i,j);
-        A.diag[1][i*n+j] = b(i,j);
-        A.diag[2][i*n+j] = bp(i,j);
+        SparseBlockMat A(N, N, 3, 3, n);
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            A.data[(0*n+i)*n+j] = bp(i,j);
+            A.data[(1*n+i)*n+j] = a(i,j);
+            A.data[(2*n+i)*n+j] = b(i,j);
+        }
+        for( int i=0; i<N; i++) 
+            for( int d=0; d<3; d++)
+            {
+                A.data_idx[i*3+d] = d; //bp, a, b
+                A.cols_idx[i*3+d] = (i+d-1+N)%N;
+            }
+        return A;
     }
-    for( unsigned i=0; i<N; i++) 
-    {
-        A.block[0][i] = 0; //a
-        A.row[0][i] = i;
-        A.col[0][i] = i;
-        A.block[1][i] = 0; //b
-        A.row[1][i] = i;
-        A.col[1][i] = (i+1)%N;
-        A.block[2][i] = 0; //bp
-        A.row[2][i] = i;
-        A.col[2][i] = (i-1+N)%N; //make positive number
-    }
-    }
-    return A;
 };
 
 /**
@@ -180,68 +162,52 @@ SparseBlockMat dx_plus( unsigned n, unsigned N, double h, bc bcx )
     a = backward*a*forward, a_bound_left = backward*a_bound_left*forward;
     b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     //assemble the matrix
-    SparseBlockMat A(2, N, N);
     if( bcx != PER)
     {
-    A.diag[0].resize( 3*n*n), A.diag[1].resize(n*n); 
-    A.row[0].resize(  N), A.row[1].resize( N-1);
-    A.col[0].resize(  N), A.col[1].resize( N-1);
-    A.block[0].resize(  N), A.block[1].resize( N-1);
-    A.n[0] = A.n[1] = n;
-    A.num_blocks[0] = N; A.num_blocks[1] = N-1;
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
-    {
-        A.diag[0][(0*n+i)*n+j] = a_bound_left(i,j);
-        A.diag[0][(1*n+i)*n+j] = a(i,j);
-        A.diag[0][(2*n+i)*n+j] = a_bound_right(i,j);
-        A.diag[1][(0*n+i)*n+j] = b(i,j);
-    }
-    A.block[0][0] = 0; //a_bound_left
-    A.row[0][0] = 0;
-    A.col[0][0] = 0;
-    for( unsigned i=1; i<N-1; i++) //a
-    {
-        A.block[0][0*N+i] = 1;
-        A.row[0][0*N+i] = i;
-        A.col[0][0*N+i] = i;
-    }
-    A.block[0][N-1] = 2; //a_bound_right
-    A.row[0][N-1] = N-1;
-    A.col[0][N-1] = N-1;
-    for( unsigned i=0; i<N-1; i++) //b
-    {
-        A.block[1][i] = 0;
-        A.row[1][i] = i;
-        A.col[1][i] = i+1;
-    }
+        SparseBlockMat A(N, N, 2, 5, n);
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            A.data[(0*n+i)*n+j] = a(i,j);
+            A.data[(1*n+i)*n+j] = b(i,j);
+            A.data[(2*n+i)*n+j] = a_bound_left(i,j);
+            A.data[(3*n+i)*n+j] = a_bound_right(i,j);
+            A.data[(4*n+i)*n+j] = 0; //to invalidate periodic entries
+        }
+        A.data_idx[0*2+0] = 2; //a_bound_left
+        A.cols_idx[0*2+0] = 0;
+        A.data_idx[0*2+1] = 1; //b
+        A.cols_idx[0*2+1] = 1;
+        for( int i=1; i<N-1; i++) //a
+            for( int d=0; d<2; d++)
+            {
+                A.data_idx[i*2+d] = d; //a, b
+                A.cols_idx[i*2+d] = i+d; //0,1
+            }
+        A.data_idx[(N-1)*2+0] = 0; //a
+        A.cols_idx[(N-1)*2+0] = N-1;
+        A.data_idx[(N-1)*2+1] = 5; //0
+        A.cols_idx[(N-1)*2+1] = N-1; //prevent unnecessary data fetch
+        return A;
 
     }
     else //periodic
     {
-    A.diag[0].resize( n*n), A.diag[1].resize(n*n);
-    A.row[0].resize(   N), A.row[1].resize(N);
-    A.col[0].resize(   N), A.col[1].resize(N);
-    A.block[0].resize(   N), A.block[1].resize(N);
-    A.n[0] = A.n[1] = n;
-    A.num_blocks[0] = A.num_blocks[1] = N;
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
-    {
-        A.diag[0][i*n+j] = a(i,j);
-        A.diag[1][i*n+j] = b(i,j);
+        SparseBlockMat A(N, N, 2, 2, n);
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            A.data[(0*n+i)*n+j] = a(i,j);
+            A.data[(1*n+i)*n+j] = b(i,j);
+        }
+        for( int i=0; i<N; i++) 
+            for( int d=0; d<2; d++)
+            {
+                A.data_idx[i*2+d] = d; //a, b
+                A.cols_idx[i*2+d] = (i+d+N)%N;
+            }
+        return A;
     }
-    for( unsigned i=0; i<N; i++) 
-    {
-        A.block[0][i] = 0; //a
-        A.row[0][i] = i;
-        A.col[0][i] = i;
-        A.block[1][i] = 0; //b
-        A.row[1][i] = i;
-        A.col[1][i] = (i+1)%N;
-    }
-    }
-    return A;
 };
 
 /**
@@ -283,68 +249,48 @@ SparseBlockMat dx_minus( unsigned n, unsigned N, double h, bc bcx )
     bp = backward*bp*forward, a_bound_right = backward*a_bound_right*forward;
     
     //assemble the matrix
-    SparseBlockMat A(2, N, N);
-    if( bcx != PER)
+    if(bcx != dg::PER)
     {
-    A.diag[0].resize( 3*n*n), A.diag[1].resize(n*n); 
-    A.row[0].resize(  N), A.row[1].resize( N-1);
-    A.col[0].resize(  N), A.col[1].resize( N-1);
-    A.block[0].resize(  N), A.block[1].resize( N-1);
-    A.n[0] = A.n[1] = n;
-    A.num_blocks[0] = N; A.num_blocks[1] = N-1;
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
-    {
-        A.diag[0][(0*n+i)*n+j] = a_bound_left(i,j);
-        A.diag[0][(1*n+i)*n+j] = a(i,j);
-        A.diag[0][(2*n+i)*n+j] = a_bound_right(i,j);
-        A.diag[1][i*n+j] = bp(i,j);
-    }
-    A.block[0][0] = 0; //a_bound_left
-    A.row[0][0] = 0;
-    A.col[0][0] = 0;
-    for( unsigned i=1; i<N-1; i++) //a
-    {
-        A.block[0][i] = 1;
-        A.row[0][i] = i;
-        A.col[0][i] = i;
-    }
-    A.block[0][N-1] = 2; //a_bound_right
-    A.row[0][N-1] = N-1;
-    A.col[0][N-1] = N-1;
-    for( unsigned i=0; i<N-1; i++) // bp
-    {
-        A.block[1][i] = 0;
-        A.row[1][i] = i+1;
-        A.col[1][i] = i;
-    }
+        SparseBlockMat A(N, N, 2, 5, n);
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            A.data[(0*n+i)*n+j] = bp(i,j);
+            A.data[(1*n+i)*n+j] = a(i,j);
+            A.data[(2*n+i)*n+j] = a_bound_left(i,j);
+            A.data[(3*n+i)*n+j] = a_bound_right(i,j);
+            A.data[(4*n+i)*n+j] = 0; //to invalidate periodic entries
+        }
+        A.data_idx[0*2+0] = 2; //a_bound_left
+        A.cols_idx[0*2+0] = 0;
+        A.data_idx[0*2+1] = 4; //0
+        A.cols_idx[0*2+1] = 0; //prevent data fetch
+        for( int i=1; i<N; i++) //a
+            for( int d=0; d<2; d++)
+            {
+                A.data_idx[i*2+d] = d; //bp, a
+                A.cols_idx[i*2+d] = i+d-1;
+            }
+        return A;
 
     }
     else //periodic
     {
-    A.diag[0].resize( n*n), A.diag[1].resize(n*n);
-    A.row[0].resize(   N), A.row[1].resize(N);
-    A.col[0].resize(   N), A.col[1].resize(N);
-    A.block[0].resize(   N), A.block[1].resize(N);
-    A.n[0] = A.n[1] = n;
-    A.num_blocks[0] = A.num_blocks[1] = N;
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
-    {
-        A.diag[0][i*n+j] = a(i,j);
-        A.diag[1][i*n+j] = bp(i,j);
+        SparseBlockMat A(N, N, 2, 2, n);
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            A.data[(0*n+i)*n+j] = bp(i,j);
+            A.data[(1*n+i)*n+j] = a(i,j);
+        }
+        for( int i=0; i<N; i++) 
+            for( int d=0; d<2; d++)
+            {
+                A.data_idx[i*2+d] = d; //bp, a
+                A.cols_idx[i*2+d] = (i+d-1+N)%N;  //-1, 0
+            }
+        return A;
     }
-    for( unsigned i=0; i<N; i++) 
-    {
-        A.block[0][i] = 0; //a
-        A.row[0][i] = i;
-        A.col[0][i] = i;
-        A.block[1][i] = 0; //bp
-        A.row[1][i] = i;
-        A.col[1][i] = (i-1+N)%N;
-    }
-    }
-    return A;
 };
 
 /**
@@ -389,76 +335,58 @@ SparseBlockMat jump( unsigned n, unsigned N, double h, bc bcx)
     b = backward*t*b*forward, a_bound_right = backward*t*a_bound_right*forward;
     bp = backward*t*bp*forward;
     //assemble the matrix
-    SparseBlockMat A(3, N, N);
-    if( bcx != PER)
+    if(bcx != dg::PER)
     {
-    A.diag[0].resize( 3*n*n), A.diag[1].resize(n*n), A.diag[2].resize(n*n);
-    A.row[0].resize(   N), A.row[1].resize(N-1), A.row[2].resize(N-1);
-    A.col[0].resize(   N), A.col[1].resize(N-1), A.col[2].resize(N-1);
-    A.block[0].resize(   N), A.block[1].resize(N-1), A.block[2].resize(N-1);
-    A.n[0] = A.n[1] = A.n[2] = n;
-    A.num_blocks[0] = N, A.num_blocks[1] = A.num_blocks[2] = N-1;
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
-    {
-        A.diag[0][(0*n+i)*n+j] = a_bound_left(i,j);
-        A.diag[0][(1*n+i)*n+j] = a(i,j);
-        A.diag[0][(2*n+i)*n+j] = a_bound_right(i,j);
-        A.diag[1][i*n+j] = b(i,j);
-        A.diag[2][i*n+j] = bp(i,j);
-    }
-    A.block[0][0] = 0; //a_bound_left
-    A.row[0][0] = 0;
-    A.col[0][0] = 0;
-    for( unsigned i=1; i<N-1; i++) //a
-    {
-        A.block[0][0*N+i] = 1;
-        A.row[0][0*N+i] = i;
-        A.col[0][0*N+i] = i;
-    }
-    A.block[0][N-1] = 2; //a_bound_right
-    A.row[0][N-1] = N-1;
-    A.col[0][N-1] = N-1;
-    for( unsigned i=0; i<N-1; i++) //b and bp
-    {
-        A.block[1][i] = 0;
-        A.row[1][i] = i;
-        A.col[1][i] = i+1;
-        A.block[2][i] = 0;
-        A.row[2][i] = i+1;
-        A.col[2][i] = i;
-    }
+        SparseBlockMat A(N, N, 3, 6, n);
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            A.data[(0*n+i)*n+j] = bp(i,j);
+            A.data[(1*n+i)*n+j] = a(i,j);
+            A.data[(2*n+i)*n+j] = b(i,j);
+            A.data[(3*n+i)*n+j] = a_bound_left(i,j);
+            A.data[(4*n+i)*n+j] = a_bound_right(i,j);
+            A.data[(5*n+i)*n+j] = 0; //to invalidate periodic entries
+        }
+        A.data_idx[0*3+0] = 3; //a_bound_left
+        A.cols_idx[0*3+0] = 0;
+        A.data_idx[0*3+1] = 2; //b
+        A.cols_idx[0*3+1] = 1;
+        A.data_idx[0*3+2] = 5; //0
+        A.cols_idx[0*3+2] = 1; //prevent unnecessary data fetch
+        for( int i=1; i<N-1; i++) //a
+            for( int d=0; d<3; d++)
+            {
+                A.data_idx[i*3+d] = d; //bp, a, b
+                A.cols_idx[i*3+d] = i+d-1;
+            }
+        A.data_idx[(N-1)*3+0] = 0; //bp
+        A.cols_idx[(N-1)*3+0] = N-2;
+        A.data_idx[(N-1)*3+1] = 1; //a
+        A.cols_idx[(N-1)*3+1] = N-1;
+        A.data_idx[(N-1)*3+2] = 5; //0
+        A.cols_idx[(N-1)*3+2] = N-1; //prevent unnecessary data fetch
+        return A;
 
     }
     else //periodic
     {
-    A.diag[0].resize( n*n), A.diag[1].resize(n*n), A.diag[2].resize(n*n);
-    A.row[0].resize(   N), A.row[1].resize(N), A.row[2].resize(N);
-    A.col[0].resize(   N), A.col[1].resize(N), A.col[2].resize(N);
-    A.block[0].resize(   N), A.block[1].resize(N), A.block[2].resize(N);
-    A.n[0] = A.n[1] = A.n[2] = n;
-    A.num_blocks[0] = A.num_blocks[1] = A.num_blocks[2] = N;
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
-    {
-        A.diag[0][i*n+j] = a(i,j);
-        A.diag[1][i*n+j] = b(i,j);
-        A.diag[2][i*n+j] = bp(i,j);
+        SparseBlockMat A(N, N, 3, 3, n);
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            A.data[(0*n+i)*n+j] = bp(i,j);
+            A.data[(1*n+i)*n+j] = a(i,j);
+            A.data[(2*n+i)*n+j] = b(i,j);
+        }
+        for( int i=0; i<N; i++) 
+            for( int d=0; d<3; d++)
+            {
+                A.data_idx[i*3+d] = d; //bp, a, b
+                A.cols_idx[i*3+d] = (i+d-1+N)%N;
+            }
+        return A;
     }
-    for( unsigned i=0; i<N; i++) 
-    {
-        A.block[0][i] = 0; //a
-        A.row[0][i] = i;
-        A.col[0][i] = i;
-        A.block[1][i] = 0; //b
-        A.row[1][i] = i;
-        A.col[1][i] = (i+1)%N;
-        A.block[2][i] = 0; //bp
-        A.row[2][i] = i;
-        A.col[2][i] = (i-1+N)%N;
-    }
-    }
-    return A;
 };
 
 SparseBlockMat dx_normed( unsigned n, unsigned N, double h, bc bcx, direction dir )
