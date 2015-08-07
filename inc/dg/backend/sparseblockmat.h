@@ -28,17 +28,37 @@ struct SparseBlockMat
 
 void SparseBlockMat::symv(const HVec& x, HVec& y) const
 {
-    for( int s=0; s<left; s++)
-    for( int i=0; i<num_rows; i++)
-    for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    if( left >10)  //decides which omp pragma to choose
     {
-        y[((s*num_rows + i)*n+k)*right+j] =0;
-        for( int d=0; d<blocks_per_line; d++)
-        for( int q=0; q<n; q++) //multiplication-loop
-            y[((s*num_rows + i)*n+k)*right+j] += 
-                data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+#pragma omp parallel for 
+        for( int s=0; s<left; s++)
+        for( int i=0; i<num_rows; i++)
+        for( int k=0; k<n; k++)
+        for( int j=0; j<right; j++)
+        {
+            y[((s*num_rows + i)*n+k)*right+j] =0;
+            for( int d=0; d<blocks_per_line; d++)
+            for( int q=0; q<n; q++) //multiplication-loop
+                y[((s*num_rows + i)*n+k)*right+j] += 
+                    data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+        }
+    }
+    else
+    for( int s=0; s<left; s++)
+    {
+#pragma omp parallel for 
+        for( int i=0; i<num_rows; i++)
+        for( int k=0; k<n; k++)
+        for( int j=0; j<right; j++)
+        {
+            y[((s*num_rows + i)*n+k)*right+j] =0;
+            for( int d=0; d<blocks_per_line; d++)
+            for( int q=0; q<n; q++) //multiplication-loop
+                y[((s*num_rows + i)*n+k)*right+j] += 
+                    data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+        }
     }
         
     if( !norm.empty())

@@ -22,7 +22,7 @@ dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 dg::bc bcz = dg::PER;
 
-typedef dg::SparseBlockMatGPU Matrix;
+typedef dg::SparseBlockMat Matrix;
 
 int main()
 {
@@ -30,14 +30,14 @@ int main()
     std::cout << "Type in n, Nx and Ny and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, bcy, bcz);
-    const dg::DVec w3d = dg::create::weights( g);
+    const dg::HVec w3d = dg::create::weights( g);
     dg::Timer t;
     std::cout << "TEST DX \n";
     {
     Matrix dx = dg::create::dx( g, bcx, dg::normed, dg::forward);
-    dg::DVec v = dg::evaluate( function, g);
-    dg::DVec w = v;
-    const dg::DVec u = dg::evaluate( derivative, g);
+    dg::HVec v = dg::evaluate( function, g);
+    dg::HVec w = v;
+    const dg::HVec u = dg::evaluate( derivative, g);
 
     t.tic();
     dg::blas2::symv( dx, v, w);
@@ -48,11 +48,11 @@ int main()
     }
     std::cout << "TEST DY \n";
     {
-    const dg::DVec func = dg::evaluate( siny, g);
-    const dg::DVec deri = dg::evaluate( cosy, g);
+    const dg::HVec func = dg::evaluate( siny, g);
+    const dg::HVec deri = dg::evaluate( cosy, g);
 
     Matrix dy = dg::create::dy( g); 
-    dg::DVec temp( func);
+    dg::HVec temp( func);
     t.tic();
     dg::blas2::gemv( dy, func, temp);
     t.toc();
@@ -62,11 +62,11 @@ int main()
     }
     std::cout << "TEST DZ \n";
     {
-    const dg::DVec func = dg::evaluate( sinz, g);
-    const dg::DVec deri = dg::evaluate( cosz, g);
+    const dg::HVec func = dg::evaluate( sinz, g);
+    const dg::HVec deri = dg::evaluate( cosz, g);
 
     Matrix dz = dg::create::dz( g); 
-    dg::DVec temp( func);
+    dg::HVec temp( func);
     t.tic();
     dg::blas2::gemv( dz, func, temp);
     t.toc();
