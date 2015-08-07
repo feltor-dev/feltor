@@ -3,10 +3,10 @@
 #include <cmath>
 
 
-#include "backend/grid.h"
-#include "backend/functions.h"
-#include "backend/operator.h"
-#include "backend/creation.cuh"
+#include "grid.h"
+#include "functions.h"
+#include "operator.h"
+#include "creation.cuh"
 
 #ifdef DG_DEBUG
 #include <cassert>

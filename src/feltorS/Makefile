@@ -3,16 +3,16 @@ device=gpu
 
 INCLUDE = -I../../inc  # other project libraries
 INCLUDE+= -I../../diag  # other project libraries
-INCLUDE+= -I/home/ralph/local/thrust
-INCLUDE+= -I/home/ralph/local/cusplibrary
-INCLUDE+= -I/home/ralph/local/
+INCLUDE+= -I../../../thrust
+INCLUDE+= -I../../../cusplibrary
+INCLUDE+= -I/opt/local/include
 INCLUDE+= -I../ # geometry library
 
 ifeq ($(strip $(device)),gpu)
-CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20 -w
+CC = /Developer/NVIDIA/CUDA-7.0/bin/nvcc
+CFLAGS = --compiler-options -Wall -arch=sm_20 -w 
 CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 GLFLAGS= -lGLEW
 OPT	   = -O2 
 endif

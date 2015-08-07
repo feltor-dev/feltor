@@ -91,7 +91,9 @@ struct Feltor
     double coupling( ) {return coupling_;}
 
     std::vector<double> energy_vector( ) {return evec;}
-//     std::vector<container>& probe_vector( ) {return probevec;}
+    std::vector<container>& get_probe_vector( ) {return probevec;}
+
+    void update_probes();
 
     double energy_diffusion( ){ return ediff_;}
     double radial_transport( ){ return gammanex_;}
@@ -123,47 +125,15 @@ struct Feltor
     double mass_, energy_, diff_, ediff_, gammanex_, coupling_;
     std::vector<double> evec;
     //probe
-<<<<<<< HEAD
     std::vector<container> probevec;
     const container probe_coord_X, probe_coord_Y;
     Matrix probeinterp;
-=======
-//     std::vector<container> probevec;
-//     const container Xprobe,Yprobe;
-//     Matrix probeinterp;
-//     container probevalue;    
-//     dg::Grid1d<double> gy;
-//     const container w1d;
-//     const container oney;
-//     const container coox0,cooxlx,cooy;
-//     Matrix interpx0,interpxlx;
->>>>>>> upstream/develop
-    
     container lh,rh,lhs,profne,profNi;
 };
 
 template<class Matrix, class container, class P>
 template<class Grid>
 Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p): 
-<<<<<<< HEAD
-    chi(dg::evaluate(dg::one, g)), 
-    omega(chi),  
-    lambda(chi), 
-    neavg(chi), netilde(chi), nedelta(chi), lognedelta(chi), 
-    phiavg(chi), phitilde(chi), phidelta(chi),
-    Niavg(chi),
-    binv(dg::evaluate(dg::LinearX( p.mcv, 1.), g)),
-    one(dg::evaluate(dg::one, g)),    
-    w2d(dg::create::weights(g)), v2d(dg::create::inv_weights(g)), 
-    phi(2, chi), npe(phi), logn(phi),
-    poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
-    pol(g, g.bcx(), g.bcy(), dg::not_normed, dg::centered), 
-    lapperp(g,g.bcx(), g.bcy(), dg::normed, dg::centered),
-    invgammaDIR(g,g.bcx(), g.bcy(), -0.5 * p.tau[1] * p.mu[1], dg::centered),
-    invgammaNU(g,g.bcx(), g.bcy(), -0.5 * p.tau[1] * p.mu[1], dg::centered),
-    invert_pol(omega, omega.size(), p.eps_pol),
-    invert_invgamma(omega, omega.size(), p.eps_gamma),
-=======
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), 
     neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),
     phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
@@ -179,38 +149,30 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     invert_pol(      omega, omega.size(), p.eps_pol),
     invert_invgammaN( omega, omega.size(), p.eps_gamma),
     invert_invgammaPhi( omega, omega.size(), p.eps_gamma),
->>>>>>> upstream/develop
     polavg(g),
     p(p),
     evec(3),
     //probe
-<<<<<<< HEAD
     probe_coord_X(dg::create::linspace(0.0, p.lx, p.lx * 0.125)),
     probe_coord_Y(8, 0.5 * p.ly), 
     probeinterp(dg::create::interpolation(probe_coord_X, probe_coord_Y, g, dg::NEU)),
     // Initial densit profiles
-=======
 //     probevec(2),
 //     Xprobe(1,p.lx*p.posX), //use blob position
 //     Yprobe(1,p.ly*p.posY),//use blob position
 //     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
 //     probevalue(1,0.0),
     //damping and sources
->>>>>>> upstream/develop
     lh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,-1.0,0.0,1.0),g)),
     rh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,1.0,0.0,1.0),g)), 
     lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
-<<<<<<< HEAD
-    profNi(profne),
     // Particle source function
     //source_ne(dg::evaluate(dg::ExpProfX(1.0, 0.0, p.ln)), g),
     //source_ne(dg::evaluate(dg::ExpProfX(1.0, 0.0, p.ln), g)),
     //source_Ni(source_ne),
-=======
     profNi(profne)
 //     profne(dg::evaluate(dg::TanhProfX(p.lx*p.solb*0.7,p.solw,-1.0,p.nprofileamp, p.bgprofamp),g)),
->>>>>>> upstream/develop
     //boundary integral terms
 //     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
 //     w1d( dg::create::weights(gy)),
@@ -240,12 +202,7 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
-<<<<<<< HEAD
-
-    invert_invgamma(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
-=======
     invert_invgammaN(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
->>>>>>> upstream/develop
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
@@ -358,7 +315,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - <phi>  - lnNe
     }
     //sol boundary
-    if (p.solb*p.lx<p.lx) dg::blas1::pointwiseDot(omega,lh,omega);
+    if (p.solb*p.lx<p.lx) 
+    {
+        dg::blas1::pointwiseDot(omega,lh,omega);
+    }
     //correction for high amplitudes
     dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
     //general term
@@ -370,7 +330,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     ediff_= Dperp[0]+Dperp[1]+ coupling_ + Dperpsurf[0] + Dperpsurf[1];
     
     // compute probevalues on R,Z,Phi of probe
-<<<<<<< HEAD
     //dg::blas2::gemv(probeinterp, npe[0], probevalue);
     //probevec[0]=probevalue;
     //dg::blas2::gemv(probeinterp, phi[0], probevalue);

@@ -27,10 +27,10 @@
 
 const unsigned k = 3;//!< a change in k needs a recompilation
 
-int main(int argc, char* argv[])
+int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v, v3;
+    std::vector<double> v,v3;
     std::string input, geom;
     if( argc != 3)
     {
@@ -39,31 +39,28 @@ int main(int argc, char* argv[])
     }
     else 
     {
-        try
-        {
+        try{
             input = file::read_file( argv[1]);
             v = file::read_input( argv[1]);
-        }
-        catch( toefl::Message& m)
-        {
+        }catch( toefl::Message& m){
             m.display();
             std::cout << input << std::endl;
             return -1;
         }
     }
-    const eule::Parameters p(v);
-    p.display(std::cout);
+    const eule::Parameters p( v);
+    p.display( std::cout);
 
     //Make grid
-    dg::Grid2d<double> grid(0., p.lx, 0., p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::Grid2d<double> grid_out(0., p.lx, 0., p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
+    dg::Grid2d<double> grid( 0., p.lx, 0., p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double> grid_out( 0., p.lx, 0., p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     // Grid for radial probe location. This is used only in netcdf output, probe positioning is still hard-coded
     dg::Grid1d<double> grid_probe(0, p.lx, 1, 8, p.bc_x);
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec> feltor(grid, p); //initialize before rolkar!
+    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec> rolkar(grid, p);
+    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -103,17 +100,14 @@ int main(int argc, char* argv[])
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
 //     feltor.energies( y0);//now energies and potential are at time 0
->>>>>>> upstream/develop
     file::NC_Error_Handle err;
     int ncid;
-    err = nc_create(argv[2], NC_NETCDF4|NC_CLOBBER, &ncid);
-    err = nc_put_att_text(ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    int dim_ids_field[3];
-    int tvarID_field;
+    err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    int dim_ids_field[3], tvarID_field;
     err = file::define_dimensions(ncid, dim_ids_field, &tvarID_field, grid_out);
     err = nc_enddef(ncid);
     err = nc_redef(ncid);
-
 
     //field IDs
     std::vector<std::string> varname_fields;
@@ -128,14 +122,8 @@ int main(int argc, char* argv[])
 
     //energy IDs, used for small time-step diagnostic
     int EtimeID, EtimevarID;
-    err = file::define_time(ncid, "energy_time", &EtimeID, &EtimevarID);
-    int energyID;
-    int massID;
-    int energyIDs[3];
-    int dissID;
-    int dEdtID;
-    int accuracyID;
-    int couplingID; 
+    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID, couplingID; 
 
     err = nc_def_var(ncid, "energy", NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var(ncid, "mass", NC_DOUBLE, 1, &EtimeID, &massID);
@@ -170,9 +158,9 @@ int main(int argc, char* argv[])
     std::cout << "First output ... \n";
     size_t start[3] = {0, 0, 0};
     size_t count[3] = {1, grid_out.n() * grid_out.Ny(), grid_out.n() * grid_out.Nx()};
-    dg::DVec transfer(dg::evaluate(dg::zero, grid));
-    dg::DVec transferD(dg::evaluate(dg::zero, grid_out));
-    dg::HVec transferH(dg::evaluate(dg::zero, grid_out));
+    dg::DVec transfer( dg::evaluate(dg::zero, grid));
+    dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<2; i++)
     {
@@ -182,7 +170,7 @@ int main(int argc, char* argv[])
     }
     //pot
     transfer = feltor.potential()[0];
-    dg::blas2::symv(interpolate, transfer, transferD);
+    dg::blas2::symv( interpolate, transfer, transferD);
     transferH = transferD;//transfer to host
 
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
@@ -199,14 +187,14 @@ int main(int argc, char* argv[])
     size_t start_probes[2] = {0, 0};
     feltor.update_probes();
     dg::HVec probe_value(feltor.get_probe_vector()[0]);
-    err = nc_put_vara_double(ncid, ID_probes[0], start_probes, count_probes, probe_value.data());
+    err = nc_put_vara_double( ncid, ID_probes[0], start_probes, count_probes, probe_value.data());
     probe_value = feltor.get_probe_vector()[1];
-    err = nc_put_vara_double(ncid, ID_probes[1], start_probes, count_probes, probe_value.data());
+    err = nc_put_vara_double( ncid, ID_probes[1], start_probes, count_probes, probe_value.data());
     probe_value = feltor.get_probe_vector()[2];
     err = nc_put_vara_double(ncid, ID_probes[2], start_probes, count_probes, probe_value.data());
 
-    err = nc_put_vara_double(ncid, tvarID_field, start, count, &time);
-    err = nc_put_vara_double(ncid, EtimevarID, start, count, &time);
+    err = nc_put_vara_double( ncid, tvarID_field, start, count, &time);
+    err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 
     size_t Estart[] = {0};
     const size_t Ecount[] = {1};
@@ -223,19 +211,19 @@ int main(int argc, char* argv[])
     double radtrans = feltor.radial_transport();
     double coupling = feltor.coupling();
     std::vector<double> evec = feltor.energy_vector();
-    err = nc_put_vara_double(ncid, energyID, Estart, Ecount, &energy0);
-    err = nc_put_vara_double(ncid, massID, Estart, Ecount, &mass0);
+    err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
+    err = nc_put_vara_double( ncid, massID, Estart, Ecount, &mass0);
     for( unsigned i=0; i<3; i++)
-        err = nc_put_vara_double(ncid, energyIDs[i], Estart, Ecount, &evec[i]);
+        err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
 
-    err = nc_put_vara_double(ncid, dissID, Estart, Ecount, &diss);
-    err = nc_put_vara_double(ncid, dEdtID, Estart, Ecount, &dEdt);
+    err = nc_put_vara_double( ncid, dissID, Estart, Ecount, &diss);
+    err = nc_put_vara_double( ncid, dEdtID, Estart, Ecount, &dEdt);
     //probe
-    //err = nc_put_vara_double(ncid, ID_probe_Ne, Estart, Ecount_probe, probe_Ne.data());
-    //err = nc_put_vara_double(ncid, ID_probe_phi, Estart, Ecount_probe, probe_phi.data());
-    //err = nc_put_vara_double(ncid, ID_probe_Gamma, Estart, Ecount, probe_Gamma.data());
-    err = nc_put_vara_double(ncid, couplingID, Estart, Ecount, &coupling);
-    err = nc_put_vara_double(ncid, accuracyID, Estart, Ecount, &accuracy);
+    err = nc_put_vara_double(ncid, ID_probe_Ne, Estart, Ecount_probe, probe_Ne.data());
+    err = nc_put_vara_double(ncid, ID_probe_phi, Estart, Ecount_probe, probe_phi.data());
+    err = nc_put_vara_double(ncid, ID_probe_Gamma, Estart, Ecount, probe_Gamma.data());
+    err = nc_put_vara_double( ncid, couplingID, Estart, Ecount, &coupling);
+    err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount, &accuracy);
 
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
@@ -264,12 +252,8 @@ int main(int argc, char* argv[])
             }
             step++;
             time+=p.dt;
-<<<<<<< HEAD
             feltor.energies(y0);//advance potential and energies
             feltor.update_probes();
-=======
-//             feltor.energies(y0);//advance potential and energies
->>>>>>> upstream/develop
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
@@ -278,26 +262,26 @@ int main(int argc, char* argv[])
             evec = feltor.energy_vector();
             coupling= feltor.coupling();
             err = nc_open(argv[2], NC_WRITE, &ncid);
-            err = nc_put_vara_double(ncid, EtimevarID, Estart, Ecount, &time);
-            err = nc_put_vara_double(ncid, energyID, Estart, Ecount, &E1);
-            err = nc_put_vara_double(ncid, massID,   Estart, Ecount, &mass);
+            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
+            err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
+            err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
             for( unsigned i=0; i<3; i++)
             {
                 err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
             }
-            err = nc_put_vara_double(ncid, dissID,     Estart, Ecount,&diss);
-            err = nc_put_vara_double(ncid, dEdtID,     Estart, Ecount,&dEdt);
-            err = nc_put_vara_double(ncid, couplingID, Estart, Ecount,&coupling);    
-            err = nc_put_vara_double(ncid, accuracyID, Estart, Ecount,&accuracy);
+            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+            err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
+            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
 
             start_probes[0] = step;
 
             probe_value = feltor.get_probe_vector()[0];
-            err = nc_put_vara_double(ncid, ID_probes[0], start_probes, count_probes, probe_value.data());
+            err = nc_put_vara_double( ncid, ID_probes[0], start_probes, count_probes, probe_value.data());
             probe_value = feltor.get_probe_vector()[1];
-            err = nc_put_vara_double(ncid, ID_probes[1], start_probes, count_probes, probe_value.data());
+            err = nc_put_vara_double( ncid, ID_probes[1], start_probes, count_probes, probe_value.data());
             probe_value = feltor.get_probe_vector()[2];
-            err = nc_put_vara_double(ncid, ID_probes[2], start_probes, count_probes, probe_value.data());
+            err = nc_put_vara_double( ncid, ID_probes[2], start_probes, count_probes, probe_value.data());
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
@@ -314,19 +298,19 @@ int main(int argc, char* argv[])
         err = nc_open(argv[2], NC_WRITE, &ncid);
         for(unsigned j = 0; j < 2; j++)
         {
-            dg::blas2::symv(interpolate, y0[j], transferD);
+            dg::blas2::symv( interpolate, y0[j], transferD);
             transferH = transferD;//transfer to host
-            err = nc_put_vara_double(ncid, dataIDs[j], start, count, transferH.data());
+            err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = feltor.potential()[0];
-        dg::blas2::symv(interpolate, transfer, transferD);
+        dg::blas2::symv( interpolate, transfer, transferD);
         transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
         transfer = feltor.potential()[0];
-        dg::blas2::gemv(rolkar.laplacianM(), transfer, y1[1]);            
-        dg::blas2::symv(interpolate,y1[1], transferD);
+        dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);            
+        dg::blas2::symv( interpolate,y1[1], transferD);
         transferH = transferD;//transfer to host
-        err = nc_put_vara_double(ncid, dataIDs[3], start, count, transferH.data());
+        err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data());
 
         err = nc_put_vara_double(ncid, tvarID_field, start, count, &time);
         err = nc_close(ncid);
@@ -336,8 +320,8 @@ int main(int argc, char* argv[])
     unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
     double second = t.diff() - hour*3600 - minute*60;
     std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
-    std::cout << "Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
-    std::cout << "which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+    std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
+    std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
 
     return 0;
 }
