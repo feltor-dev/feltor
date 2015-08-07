@@ -4,6 +4,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
+#include "backend/sparseblockmat.cuh"
 #include "arakawa.h"
 #include "blas.h"
 #include "backend/typedefs.cuh"
@@ -72,7 +73,7 @@ int main()
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<dg::SparseBlockMatGPU, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     std::cout << std::scientific;

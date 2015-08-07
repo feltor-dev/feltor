@@ -388,7 +388,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid
 //This code is a "proof of principle implementation for a block matrix format
 //matrix -vector multiplication
 template<size_t BLOCK_SIZE>
-__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
+//__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
  __global__ void forward_trafo(
          const int n, 
          const int Nx, 
@@ -415,10 +415,11 @@ void forward_transform( thrust::device_vector<double>& x, thrust::device_vector<
     assert( x.size() == y.size());
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256;
-    const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( forward_trafo<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
-    const size_t NUM_BLOCKS = std::min<size_t>( 
-            MAX_BLOCKS, 
-            cusp::system::cuda::DIVIDE_INTO( x.size(), BLOCK_SIZE));
+    //const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( forward_trafo<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
+    //const size_t NUM_BLOCKS = std::min<size_t>( 
+            //MAX_BLOCKS, 
+            //cusp::system::cuda::DIVIDE_INTO( x.size(), BLOCK_SIZE));
+    const size_t NUM_BLOCKS = x.size()/BLOCK_SIZE+1;
     const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
     double* y_ptr = thrust::raw_pointer_cast( &y[0]);
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);

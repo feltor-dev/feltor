@@ -3,7 +3,9 @@
 #include <cusp/ell_matrix.h>
 
 #include "blas.h"
+#include "dx.h"
 #include "dx.cuh"
+#include "sparseblockmat.cuh"
 #include "evaluation.cuh"
 #include "typedefs.cuh"
 #include "weights.cuh"
@@ -44,17 +46,20 @@ int main ()
     std::cout << "# of cells          " << N <<"\n";
     dg::Grid1d<double> g( 0, lx, n, N);
     const double hx = lx/(double)N;
-    cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_symm_normed<double>( n, N, hx, bcx);
+
+    dg::SparseBlockMatGPU hm = dg::create::dx_symm( n, N, hx, bcx);
+    //cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_symm_normed<double>( n, N, hx, bcx);
     //cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_minus_normed<double>( n, N, hx, bcx);
 //     cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_plus_normed<double>( n, N, hx, bcx);
-    dg::HVec hv = dg::evaluate( function, g);
-    dg::HVec hw = hv;
-    const dg::HVec hu = dg::evaluate( derivative, g);
+    dg::DVec hv = dg::evaluate( function, g);
+    dg::DVec hw = hv;
+    dg::DVec w1d = dg::create::weights( g);
+    const dg::DVec hu = dg::evaluate( derivative, g);
 
     dg::blas2::symv( hm, hv, hw);
     dg::blas1::axpby( 1., hu, -1., hw);
     
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot( dg::create::weights(g), hw) )<<"\n";
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot( w1d, hw) )<<"\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

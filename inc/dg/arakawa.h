@@ -4,7 +4,7 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/evaluation.cuh"
-#include "backend/derivatives.cuh"
+#include "backend/derivatives.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_evaluation.h"
