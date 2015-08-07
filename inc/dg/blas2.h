@@ -9,6 +9,7 @@
 #include "backend/matrix_traits_thrust.h"
 #include "backend/thrust_matrix.cuh"
 #include "backend/cusp_matrix.cuh"
+#include "backend/sparseblockmat.cuh"
 #include "backend/selfmade.cuh"
 #include "backend/std_matrix.cuh"
 

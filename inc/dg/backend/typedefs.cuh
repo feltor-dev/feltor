@@ -19,7 +19,8 @@ typedef cusp::csr_matrix<int, double, cusp::device_memory> DMatrix; //!< most ef
 #else
 // typedef cusp::csr_matrix<int, double, cusp::device_memory> DMatrix;
 //!< sec efficient matrix format for gpu and only efficient format which can handly plusT, minusT matrices!
-typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for gpu
+//typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for gpu
+typedef SparseBlockMatGPU DMatrix;
 #endif
 
 }//namespace dg
