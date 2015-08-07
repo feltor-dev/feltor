@@ -6,6 +6,7 @@
 
 #include <cusp/coo_matrix.h>
 #include <cusp/ell_matrix.h>
+#include "sparseblockmat.cuh"
 
 //functions for evaluation
 #include "grid.h"

@@ -1,10 +1,10 @@
 #include <iostream>
+#include "timer.cuh"
 #include "blas.h"
 #include "derivatives.h"
 #include "evaluation.cuh"
 #include "typedefs.cuh"
 #include "sparseblockmat.cuh"
-#include "timer.cuh"
 
 const double lx = 2*M_PI;
 /*
