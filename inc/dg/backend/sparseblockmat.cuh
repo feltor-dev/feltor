@@ -15,28 +15,63 @@ struct SparseBlockMatGPU
         cols_idx = src.cols_idx, data_idx = src.data_idx;
         num_rows = src.num_rows, num_cols = src.num_cols, blocks_per_line = src.blocks_per_line;
         n = src.n, left = src.left, right = src.right;
-        norm = src.norm;
     }
     
     typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
     void symv(const DVec& x, DVec& y) const;
+#ifndef _OPENMP
     void launch_multiply_kernel(const DVec& x, DVec& y) const;
+#endif
     
     DVec data;
     IVec cols_idx, data_idx; 
     int num_rows, num_cols, blocks_per_line;
     int n;
     int left, right;
-    DVec norm; //the normalization vector
 };
 
 void SparseBlockMatGPU::symv( const DVec& x, DVec& y) const
 {
+    //if device system = omp
+#ifdef _OPENMP
+    if( left >10)  //decides which omp pragma to choose
+    {
+#pragma omp parallel for 
+        for( int s=0; s<left; s++)
+        for( int i=0; i<num_rows; i++)
+        for( int k=0; k<n; k++)
+        for( int j=0; j<right; j++)
+        {
+            y[((s*num_rows + i)*n+k)*right+j] =0;
+            for( int d=0; d<blocks_per_line; d++)
+            for( int q=0; q<n; q++) //multiplication-loop
+                y[((s*num_rows + i)*n+k)*right+j] += 
+                    data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+        }
+    }
+    else
+    for( int s=0; s<left; s++)
+    {
+#pragma omp parallel for 
+        for( int i=0; i<num_rows; i++)
+        for( int k=0; k<n; k++)
+        for( int j=0; j<right; j++)
+        {
+            y[((s*num_rows + i)*n+k)*right+j] =0;
+            for( int d=0; d<blocks_per_line; d++)
+            for( int q=0; q<n; q++) //multiplication-loop
+                y[((s*num_rows + i)*n+k)*right+j] += 
+                    data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+        }
+    }
+#else
     launch_multiply_kernel( x,y);
-    if( !norm.empty())
-        dg::blas1::detail::doPointwiseDot( norm, y, y, ThrustVectorTag());
+#endif
 }
+
 
 template <>
 struct MatrixTraits<SparseBlockMatGPU>
@@ -52,6 +87,7 @@ struct MatrixTraits<const SparseBlockMatGPU>
 };
 ///@cond
 
+#ifndef _OPENMP
 //dataonal multiply kernel
  __global__ void ell_multiply_kernel(
          const double* data, const int* cols_idx, const int* data_idx, 
@@ -85,9 +121,9 @@ void SparseBlockMatGPU::launch_multiply_kernel( const DVec& x, DVec& y) const
 {
     assert( x.size() == y.size());
     //set up kernel parameters
-    const size_t BLOCK_SIZE = 256; //a multiple of n = 2,3,4,5 
+    const size_t BLOCK_SIZE = 256; 
     const size_t size = left*right*num_rows*n;
-    const size_t NUM_BLOCKS = std::min<size_t>(size/BLOCK_SIZE+1, 65000);
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
     const double* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
@@ -97,6 +133,7 @@ void SparseBlockMatGPU::launch_multiply_kernel( const DVec& x, DVec& y) const
     ell_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
         data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left, right, x_ptr,y_ptr);
 }
+#endif
 
 
 } //namespace dg

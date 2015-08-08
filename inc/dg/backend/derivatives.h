@@ -6,6 +6,9 @@
 #include "grid.h"
 #include "dx.h"
 
+//create mpi derivatives by creating the whole matrix on the global grid
+//then cut out the corresponding rows (depending on process grid structure) and map global indices to local ones 
+//deprecate not_normed
 
 /*! @file 
   
@@ -41,8 +44,6 @@ SparseBlockMat dx( const Grid2d<double>& g, bc bcx, norm no = normed, direction 
     SparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
     dx.left = g.n()*g.Ny();
-    if( no == not_normed)
-        dx.norm = dg::create::weights( g);
     return dx;
 }
 
@@ -76,8 +77,6 @@ SparseBlockMat dy( const Grid2d<double>& g, bc bcy, norm no = normed, direction 
     SparseBlockMat dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
     dy.right = g.n()*g.Nx();
-    if( no == not_normed)
-        dy.norm = dg::create::weights( g);
     return dy;
 }
 
@@ -106,6 +105,7 @@ SparseBlockMat dy( const Grid2d<double>& g, norm no = normed, direction dir = ce
  * @return A host matrix in coordinate format
  */
 SparseBlockMat jump2d( const Grid2d<double>& g, bc bcx, bc bcy, norm no);
+//separate into jumpX and jumpY functions
 
 /**
  * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
@@ -166,8 +166,6 @@ SparseBlockMat dx( const Grid3d<double>& g, bc bcx, norm no = normed, direction 
     SparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
     dx.left = g.n()*g.Ny()*g.Nz();
-    if( no == not_normed)
-        dx.norm = dg::create::weights( g);
     return dx;
 }
 
@@ -202,8 +200,6 @@ SparseBlockMat dy( const Grid3d<double>& g, bc bcy, norm no = normed, direction 
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
     dy.right = g.n()*g.Nx();
     dy.left = g.Nz();
-    if( no == not_normed)
-        dy.norm = dg::create::weights( g);
     return dy;
 }
 
@@ -237,8 +233,6 @@ SparseBlockMat dz( const Grid3d<double>& g, bc bcz, norm no = normed, direction 
     SparseBlockMat dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
     dz.right = g.n()*g.n()*g.Nx()*g.Ny();
-    if( no == not_normed)
-        dz.norm = dg::create::weights( g);
     return dz;
 
 }
@@ -263,4 +257,5 @@ SparseBlockMat dz( const Grid3d<double>& g, norm no = normed, direction dir = ce
 } //namespace create
 
 } //namespace dg
+
 #endif//_DG_DERIVATIVES_CUH_
