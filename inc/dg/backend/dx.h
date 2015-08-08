@@ -404,8 +404,6 @@ SparseBlockMat dx( const Grid1d<double>& g, bc bcx, norm no = normed, direction 
 {
     SparseBlockMat dx;
     dx = dx_normed( g.n(), g.N(), g.h(), bcx, dir);
-    if( no == not_normed)
-        dx.norm = dg::create::weights( g);
     return dx;
 }
 

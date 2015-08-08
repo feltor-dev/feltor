@@ -25,19 +25,19 @@ struct SparseBlockMat
     {
         assert( num_rows == num_cols);
         int chunk_size = num_rows/howmany[1];
-        SparseBlockMat temp(chunk_size, chunk_size+2, num_blocks_per_line, num_different_blocks, n);
+        SparseBlockMat temp(chunk_size, chunk_size+2, blocks_per_line, data.size()/(n*n), n);
         temp.left = left/howmany[0];
         temp.right = right/howmany[2];
         //first copy data elements even though not all might be needed it doesn't slow down things either
-        for( int i=0; i<data.size(); i++)
+        for( unsigned  i=0; i<data.size(); i++)
             temp.data[i] = data[i];
         //now grab the right chunk of cols and data indices
-        for( int i=0; i<temp.cols_idx.size(); i++)
+        for( unsigned i=0; i<temp.cols_idx.size(); i++)
         {
             temp.cols_idx[i] = cols_idx[ coord*temp.num_rows+i];
             temp.data_idx[i] = data_idx[ coord*temp.num_rows+i];
             //data indices are correct but cols are still the global indices
-            temps.cols_idx[i] = temps.cols_idx[i] - coord*chunk_size + n;
+            temp.cols_idx[i] = temp.cols_idx[i] - coord*chunk_size + n;
         }
 
     }
