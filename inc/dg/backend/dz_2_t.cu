@@ -40,10 +40,10 @@ int main( )
 
     //////////////////////////////////////////////////////////////////////////
     
-    double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
-    double Zmax=p.boxscaleZp*gp.a*gp.elongation;
+    double Rmin=gp.R_0-1.0*gp.a;
+    double Zmin=-1.0*gp.a*gp.elongation;
+    double Rmax=gp.R_0+1.0*gp.a; 
+    double Zmax=1.0*gp.a*gp.elongation;
     /////////////////////////////////////////////initialze fields /////////////////////
     
     solovev::Field field(gp);
@@ -66,9 +66,9 @@ int main( )
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-        unsigned Nxn = Nx;
-        unsigned Nyn = Ny;
-        unsigned Nzn = Ny;
+    unsigned Nxn = Nx;
+    unsigned Nyn = Ny;
+    unsigned Nzn = Nz;
 
     double rk4eps;
     std::cout << "Type RK4 eps (1e-8)\n";
@@ -76,14 +76,14 @@ int main( )
     double z0 = 0, z1 = 2.*M_PI;
     for (unsigned i=0;i<6;i++) { 
 
-       Nzn = unsigned(Nz*pow(2,i));
-           Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
-    Nyn = (unsigned)ceil( Ny*pow(2,(double)(i*2./n)));
+        Nzn = unsigned(Nz*pow(2,i));
+        Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
+        Nyn = (unsigned)ceil(Ny*pow(2,(double)(i*2./n)));
 
-        
-    
-    dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
-    dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
+
+
+        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+        dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
         std::cout << "NR = " << Nxn << std::endl;
         std::cout << "NZ = " << Nyn<< std::endl;
@@ -180,8 +180,8 @@ int main( )
   
     dzNU( function, derivative); //dz(f)
 
-    dzNU.forward( function, derivativef); //dz(f)
-    dzNU.backward( function, derivativeb); //dz(f)
+//     dzNU.forward( function, derivativef); //dz(f)
+//     dzNU.backward( function, derivativeb); //dz(f)
 
 //     dz( ones, derivativeones); //dz(f)
 //     dz( function2, derivative2); //dz(f)
@@ -236,9 +236,9 @@ int main( )
 //     //overwrite with sym from adjoint dg
 //     ellipticsym.symv(function,dzTdz);
 //     dg::blas1::scal(dzTdz,-1.0);
-//     dz.centeredT(ones,divbT);
+// //     dz.centeredT(ones,divbT);
     dz.forwardT( derivativef, dzTdzf);  //dzT(dz(f))
-    dz.backwardT( derivativeb, dzTdzb); //dzT(dz(f))
+//     dz.backwardT( derivativeb, dzTdzb); //dzT(dz(f))
 
 //     //centered
 //     dz.centeredTD(derivative,dzTdzfbd);
@@ -246,10 +246,10 @@ int main( )
 //     dz.backwardTD( derivativeb, dzTdzbd); //dzT(dz(f))
 
 //     //arithmetic average
-    dg::blas1::axpby(0.5,dzTdzb,0.5,dzTdzf,dzTdzfb);
+//     dg::blas1::axpby(0.5,dzTdzb,0.5,dzTdzf,dzTdzfb);
 //     dg::blas1::axpby(0.5,dzTdzbd,0.5,dzTdzfd,dzTdzfbd); 
-//     dz.symv(function,dzTdzfb);
-//     dg::blas1::pointwiseDot(w3d,dzTdzfb,dzTdzfb);
+    dz.symv(function,dzTdzfb);
+    dg::blas1::pointwiseDot(v3d,dzTdzfb,dzTdzfb);
 //     dz.centeredT( derivative2, dzTdz2); //dzT(dz(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
 //     dz.centeredT( ones, divbT);
@@ -401,7 +401,7 @@ int main( )
 //     elliptic.set_z(bhatPhi);
     
     
-    double eps =1e-7;   
+    double eps =1e-8;   
     dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
 // 
@@ -411,9 +411,9 @@ int main( )
 //   
     double normf = dg::blas2::dot( w3d, function);
 // 
-    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+//     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
     double errinvT =dg::blas2::dot( w3d, functionTinv);
-    std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
+//     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
 // 
 //     dg::blas1::axpby( 1., function, +1.,functionTinv);
 //     errinvT =dg::blas2::dot( w3d, functionTinv);

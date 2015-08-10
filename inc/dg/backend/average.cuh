@@ -9,7 +9,14 @@
 
   */
 namespace dg{
-
+struct printf_functor
+{
+__host__ __device__
+void operator()(double x)
+{
+printf("%f\n",x);
+}
+};
 /**
  * @brief Class for y average computations
  *
@@ -63,6 +70,8 @@ struct PoloidalAverage
         thrust::copy_n( helper.begin(), helper.size() - pos, helper.begin() + pos);
         //copy to result
         thrust::copy( helper.begin(), helper.end(), res.begin());
+        thrust::for_each(thrust::host,res.begin(), res.end(), printf_functor());
+
 
     }
   private:

@@ -35,15 +35,24 @@ CFLAGS+= -Xcompiler -fopenmp
 # CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
 #CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
 endif
+
 ifeq ($(strip $(device)),omp)
 CC = g++
 CFLAGS = -Wall -fopenmp -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 endif
+
 ifeq ($(strip $(device)),mic)
 CC = icc
 CFLAGS = -openmp -mmic -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+endif
+
+ifeq ($(strip $(device)),mpi)
+CC = mpic++
+CFLAGS = #-Wall -x c++
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+OPT	   = -O3 
 endif
 
 CPPFILES=$(wildcard *.cpp)
@@ -56,7 +65,7 @@ version: version.cu
 	./$@
 
 dz_2_t: dz_2_t.cu dz.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE)   -g 
+	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS)   -g 
 
 backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
@@ -66,7 +75,10 @@ blas%_t: blas%_t.cu ../blas%.h
 
 %_t: %_t.cu
 	$(CC) $(INCLUDE)  $(CFLAGS) $< -o $@ -g
-
+	
+%_mpit: %_mpit.cpp
+	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
+	
 %_b: %_b.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
 

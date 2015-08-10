@@ -19,8 +19,8 @@
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 // #include "solovev/geometry.h"
-#include "geometry_g.h"
-#include "parameters.h"
+// #include "geometry_g.h"
+#include "heat/parameters.h"
 
 #include "heat.cuh"
 
@@ -138,12 +138,12 @@ int main( int argc, char* argv[])
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
-//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-//     y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning
-    y1[0] = dg::evaluate( init0, grid);
+//     y1[0] = dg::evaluate( init0, grid);
     
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni
     if (p.bc ==dg::DIR)    {

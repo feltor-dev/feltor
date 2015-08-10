@@ -45,6 +45,7 @@ LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
 GLFLAGS  = -lm
 endif
 
+
 ifeq ($(strip $(system)),vsc)
 INCLUDE += -I$(HOME)/include
 INCLUDE += -I/opt/intel/impi/4.1.0/include64 
