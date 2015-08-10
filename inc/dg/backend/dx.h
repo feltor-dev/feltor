@@ -88,7 +88,7 @@ SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
         A.cols_idx[0*3+1] = 1;
         A.data_idx[0*3+2] = 5; //0
         A.cols_idx[0*3+2] = 1; //prevent unnecessary data fetch
-        for( int i=1; i<N-1; i++) //a
+        for( int i=1; i<N-1; i++) 
             for( int d=0; d<3; d++)
             {
                 A.data_idx[i*3+d] = d; //bp, a, b
@@ -96,7 +96,7 @@ SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
             }
         A.data_idx[(N-1)*3+0] = 0; //bp
         A.cols_idx[(N-1)*3+0] = N-2;
-        A.data_idx[(N-1)*3+1] = 1; //a
+        A.data_idx[(N-1)*3+1] = 4; //a_bound_right
         A.cols_idx[(N-1)*3+1] = N-1;
         A.data_idx[(N-1)*3+2] = 5; //0
         A.cols_idx[(N-1)*3+2] = N-1; //prevent unnecessary data fetch
@@ -184,9 +184,9 @@ SparseBlockMat dx_plus( int n, int N, double h, bc bcx )
                 A.data_idx[i*2+d] = d; //a, b
                 A.cols_idx[i*2+d] = i+d; //0,1
             }
-        A.data_idx[(N-1)*2+0] = 0; //a
+        A.data_idx[(N-1)*2+0] = 3; //a_bound_right
         A.cols_idx[(N-1)*2+0] = N-1;
-        A.data_idx[(N-1)*2+1] = 5; //0
+        A.data_idx[(N-1)*2+1] = 4; //0
         A.cols_idx[(N-1)*2+1] = N-1; //prevent unnecessary data fetch
         return A;
 
@@ -265,12 +265,16 @@ SparseBlockMat dx_minus( int n, int N, double h, bc bcx )
         A.cols_idx[0*2+0] = 0;
         A.data_idx[0*2+1] = 4; //0
         A.cols_idx[0*2+1] = 0; //prevent data fetch
-        for( int i=1; i<N; i++) //a
+        for( int i=1; i<N-1; i++) //a
             for( int d=0; d<2; d++)
             {
                 A.data_idx[i*2+d] = d; //bp, a
                 A.cols_idx[i*2+d] = i+d-1;
             }
+        A.data_idx[(N-1)*2+0] = 0; //bp
+        A.cols_idx[(N-1)*2+0] = N-2;
+        A.data_idx[(N-1)*2+1] = 3; //a_bound_right
+        A.cols_idx[(N-1)*2+1] = N-1; 
         return A;
 
     }
@@ -362,7 +366,7 @@ SparseBlockMat jump( int n, int N, double h, bc bcx)
             }
         A.data_idx[(N-1)*3+0] = 0; //bp
         A.cols_idx[(N-1)*3+0] = N-2;
-        A.data_idx[(N-1)*3+1] = 1; //a
+        A.data_idx[(N-1)*3+1] = 4; //a_bound_right
         A.cols_idx[(N-1)*3+1] = N-1;
         A.data_idx[(N-1)*3+2] = 5; //0
         A.cols_idx[(N-1)*3+2] = N-1; //prevent unnecessary data fetch

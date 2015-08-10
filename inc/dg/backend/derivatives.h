@@ -83,7 +83,7 @@ SparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return dy( g, g.bcy(), no, dir);}
+SparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Matrix that contains 2d jump terms
@@ -102,7 +102,7 @@ SparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
     jx.left = g.n()*g.Ny();
     return jx;
 }
-SparseBlockMat jumpY( const Grid2d<double>& g, bc bcx, bc bcy)
+SparseBlockMat jumpY( const Grid2d<double>& g, bc bcy)
 {
     SparseBlockMat jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
@@ -120,11 +120,11 @@ SparseBlockMat jumpY( const Grid2d<double>& g, bc bcx, bc bcy)
  */
 SparseBlockMat jumpX( const Grid2d<double>& g)
 {
-    return jumpX( g, g.bcx(), g.bcy());
+    return jumpX( g, g.bcx());
 }
 SparseBlockMat jumpY( const Grid2d<double>& g)
 {
-    return jumpY( g, g.bcx(), g.bcy());
+    return jumpY( g, g.bcy());
 }
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////

@@ -30,7 +30,7 @@ int main()
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, bcy, bcz);
     //dg::Grid2d<double> g( 0, lx, 0, lx, n, Nx, Ny, bcx, dg::PER);
-    dg::SparseBlockMatGPU dx = dg::create::dx( g, bcx, dg::normed, dg::centered);
+    dg::SparseBlockMatGPU dx = dg::create::dx( g, bcx, dg::centered);
     dg::DVec v = dg::evaluate( function, g);
     dg::DVec w = v;
     const dg::DVec u = dg::evaluate( derivative, g);
@@ -38,7 +38,7 @@ int main()
     const dg::DVec w3d = dg::create::weights( g);
     dg::blas2::symv( dx, v, w);
     dg::blas1::axpby( 1., u, -1., w);
-    std::cout << "DX: Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<"\n";
+    std::cout << "DX(symm):  Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<"\n";
     //dg::blas2::symv( lzM, v, w);
     //dg::blas1::axpby( 1., v, -1., w);
     //std::cout << "DXX(1): Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<" (Note the supraconvergence!)\n";
@@ -61,13 +61,7 @@ int main()
     dg::DVec temp( func);
     dg::blas2::gemv( dy, func, temp);
     dg::blas1::axpby( 1., deri, -1., temp);
-    std::cout << "DY(1):           Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
-    dg::SparseBlockMatGPU dy_not_normed = dg::create::dy( g, bcy, dg::not_normed, dg::centered); 
-    dg::blas2::gemv( dy_not_normed, func, temp);
-    const dg::DVec v3d = dg::create::inv_weights( g);
-    dg::blas1::pointwiseDot( v3d, temp, temp);
-    dg::blas1::axpby( 1., deri, -1., temp);
-    std::cout << "DY_NotNormed(1): Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
+    std::cout << "DY(symm):  Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
     }
     {
     const dg::DVec func = dg::evaluate( sinz, g);
@@ -77,13 +71,7 @@ int main()
     dg::DVec temp( func);
     dg::blas2::gemv( dz, func, temp);
     dg::blas1::axpby( 1., deri, -1., temp);
-    std::cout << "DZ(1):           Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
-    dg::SparseBlockMatGPU dz_not_normed = dg::create::dz( g, bcz, dg::not_normed, dg::centered); 
-    dg::blas2::gemv( dz_not_normed, func, temp);
-    const dg::DVec v3d = dg::create::inv_weights( g);
-    dg::blas1::pointwiseDot( v3d, temp, temp);
-    dg::blas1::axpby( 1., deri, -1., temp);
-    std::cout << "DZ_NotNormed(1): Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
+    std::cout << "DZ(symm):  Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
     }
     return 0;
 }
