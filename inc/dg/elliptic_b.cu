@@ -7,7 +7,8 @@
 
 #include "backend/timer.cuh"
 #include "backend/evaluation.cuh"
-#include "backend/derivatives.cuh"
+#include "backend/sparseblockmat.cuh"
+#include "backend/derivatives.h"
 #include "backend/typedefs.cuh"
 #include "backend/cusp_thrust_backend.h"
 

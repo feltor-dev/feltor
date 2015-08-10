@@ -5,7 +5,8 @@
 #include <thrust/device_vector.h>
 
 #include "blas.h"
-#include "backend/derivatives.cuh"
+#include "backend/derivatives.h"
+#include "backend/sparseblockmat.cuh"
 #include "backend/evaluation.cuh"
 #include "backend/typedefs.cuh"
 #include "backend/timer.cuh"
@@ -32,31 +33,31 @@ int main()
     t.toc();
     std::cout<<"DOT took                         " <<t.diff()<<"s   result: "<<norm<<"\n";
     dg::DVec y(x);
-    dg::DMatrix M = dg::create::dx( grid, dg::normed, dg::centered);
+    dg::DMatrix M = dg::create::dx( grid, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"SYMV took                        "<<t.diff()<<"s (centered x derivative!)\n";
-    M = dg::create::dx( grid, dg::normed, dg::forward);
+    M = dg::create::dx( grid, dg::forward);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"SYMV took                        "<<t.diff()<<"s (forward x derivative!)\n";
-    M = dg::create::dy( grid, dg::normed, dg::forward);
+    M = dg::create::dy( grid, dg::forward);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"SYMV took                        "<<t.diff()<<"s (forward y derivative!)\n";
-    M = dg::create::dy( grid, dg::normed, dg::centered);
+    M = dg::create::dy( grid, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"SYMV took                        "<<t.diff()<<"s (centered y derivative!)\n";
-    M = dg::create::jump2d( grid, dg::not_normed);
+    M = dg::create::jumpX( grid);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s (2d jump!)\n";
+    std::cout<<"SYMV took                        "<<t.diff()<<"s (jump X!)\n";
     t.tic();
     dg::blas1::axpby( 1., y, -1., x);
     t.toc();

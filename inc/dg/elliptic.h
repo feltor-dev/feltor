@@ -3,7 +3,7 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/evaluation.cuh"
-#include "backend/derivatives.cuh"
+#include "backend/derivatives.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_evaluation.h"
@@ -55,10 +55,10 @@ class Elliptic
      */
     template< class Grid>
     Elliptic( const Grid& g, norm no = not_normed, direction dir = forward): 
-        leftx ( dg::create::dx( g, inverse( g.bcx()), no, inverse(dir))),
-        lefty ( dg::create::dy( g, inverse( g.bcy()), no, inverse(dir))),
-        rightx( dg::create::dx( g, g.bcx(), normed, dir)),
-        righty( dg::create::dy( g, g.bcy(), normed, dir)),
+        leftx ( dg::create::dx( g, inverse( g.bcx()), inverse(dir))),
+        lefty ( dg::create::dy( g, inverse( g.bcy()), inverse(dir))),
+        rightx( dg::create::dx( g, g.bcx(), dir)),
+        righty( dg::create::dy( g, g.bcy(), dir)),
         jumpX ( dg::create::jumpX( g, g.bcx())),
         jumpY ( dg::create::jumpY( g, g.bcy())),
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 

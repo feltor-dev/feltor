@@ -7,7 +7,8 @@
 
 #include "backend/timer.cuh"
 #include "backend/evaluation.cuh"
-#include "backend/derivatives.cuh"
+#include "backend/sparseblockmat.cuh"
+#include "backend/derivatives.h"
 #include "backend/typedefs.cuh"
 #include "backend/cusp_thrust_backend.h"
 
@@ -42,82 +43,45 @@ int main()
     std::cin >> eps;
 
     dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
-    const dg::HVec w2d_h = dg::create::weights( grid);
-    const dg::DVec w2d_d( w2d_h);
-    const dg::HVec v2d_h = dg::create::inv_weights( grid);
-    const dg::DVec v2d_d( v2d_h);
-    std::cout<<"Evaluate initial condition\n";
-    dg::HVec x = dg::evaluate( initial, grid);
+    const dg::DVec w2d = dg::create::weights( grid);
+    const dg::DVec v2d = dg::create::inv_weights( grid);
+    std::cout<<"Evaluate initial condition...\n";
+    dg::DVec x = dg::evaluate( initial, grid);
 
-    std::cout << "Create symmetric Laplacian\n";
+    std::cout << "Create Laplacian...\n";
     t.tic();
-    //Note that this function is deprecated (use elliptic instead)
-    dg::DMatrix dA = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
     dg::DMatrix DX = dg::create::dx( grid);
-    dg::HMatrix A = dA;
     dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> lap(grid, dg::not_normed, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
     dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny);
-    dg::CG< dg::HVec > pcg_host( x, n*n*Nx*Ny);
 
     std::cout<<"Expand right hand side\n";
-    const dg::HVec solution = dg::evaluate ( fct, grid);
+    const dg::DVec solution = dg::evaluate ( fct, grid);
     const dg::DVec deriv = dg::evaluate( derivative, grid);
-    dg::HVec b = dg::evaluate ( laplace_fct, grid);
+    dg::DVec b = dg::evaluate ( laplace_fct, grid);
     //compute S b
-    dg::blas2::symv( w2d_h, b, b);
-
-    //copy data to device memory
-    t.tic();
-    const dg::DVec dsolution( solution);
-    dg::DVec db( b), dx( x);
-    dg::DVec db_(b), dx_(x);
-    dg::HVec b_(b), x_(x);
-    t.toc();
-    std::cout << "Allocation and copy to device "<<t.diff()<<"s\n";
+    dg::blas2::symv( w2d, b, b);
     //////////////////////////////////////////////////////////////////////
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
     
     std::cout << "... for a precision of "<< eps<<std::endl;
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg( lap, dx, db, v2d_d, eps)<<std::endl;
+    std::cout << "Number of pcg iterations "<< pcg( lap, x, b, v2d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
-    t.tic();
-    dg::cg( dA, dx_, db_, v2d_d, eps, dx_.size());
-    t.toc();
-    std::cout << "... with function took "<< t.diff()<<"s\n";
-    t.tic();
-    std::cout << "Number of pcg iterations "<< pcg_host( A, x, b, v2d_h, eps)<<std::endl;
-    t.toc();
-    std::cout << "... on the host took   "<< t.diff()<<"s\n";
-    t.tic();
-    dg::cg( A, x_, b_, v2d_h, eps, x_.size());
-    t.toc();
-    std::cout << "... with function took "<< t.diff()<<"s\n";
 
-    dg::blas1::scal( dx, 0);
-    t.tic();
-    std::cout << "Number of pcg iterations "<< pcg( dA, dx, db, v2d_d, eps)<<std::endl;
-    t.toc();
-    std::cout << "... on the device took "<< t.diff()<<"s\n";
-    dg::DVec derror( dsolution);
-    dg::HVec  error(  solution);
-    dg::blas1::axpby( 1.,dx,-1.,derror);
+    dg::DVec error( solution);
     dg::blas1::axpby( 1., x,-1., error);
 
-    double normerr = dg::blas2::dot( w2d_d, derror);
-    double norm = dg::blas2::dot( w2d_d, dsolution);
-    std::cout << "L2 Norm of relative error for symmetric is: " <<sqrt( normerr/norm)<<std::endl;
-    double normerr2 = dg::blas2::dot( w2d_h, error);
-    double norm2 = dg::blas2::dot( w2d_h, solution);
-    std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr2/norm2)<<std::endl;
-    dg::blas2::gemv( DX, dx, derror);
-    dg::blas1::axpby( 1., deriv, -1., derror);
-    normerr = dg::blas2::dot( w2d_d, derror); 
-    norm = dg::blas2::dot( w2d_d, deriv);
+    double normerr = dg::blas2::dot( w2d, error);
+    double norm = dg::blas2::dot( w2d, solution);
+    std::cout << "L2 Norm of relative error is: " <<sqrt( normerr/norm)<<std::endl;
+    dg::blas2::gemv( DX, x, error);
+    dg::blas1::axpby( 1., deriv, -1., error);
+    normerr = dg::blas2::dot( w2d, error); 
+    norm = dg::blas2::dot( w2d, deriv);
     std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
     //both functiona and derivative converge with order P 
 
