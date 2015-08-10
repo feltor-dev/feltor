@@ -49,7 +49,7 @@ struct MatrixTraits<const SparseBlockMatGPU>
 };
 ///@cond
 
-//dataonal multiply kernel
+// multiply kernel
  __global__ void ell_multiply_kernel(
          const double* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols, const int blocks_per_line,

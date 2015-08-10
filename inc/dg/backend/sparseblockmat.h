@@ -21,7 +21,7 @@ struct SparseBlockMat
     * @param coord The mpi proces coordinate of the proper dimension
     * @param howmany[3] # of processes 0 is left, 1 is the middle, 2 is right
     */
-    void distribute_rows( int coord, int howmany[3])
+    void distribute_rows( int coord, const int* howmany)
     {
         assert( num_rows == num_cols);
         int chunk_size = num_rows/howmany[1];
@@ -37,7 +37,7 @@ struct SparseBlockMat
             temp.cols_idx[i] = cols_idx[ coord*temp.num_rows+i];
             temp.data_idx[i] = data_idx[ coord*temp.num_rows+i];
             //data indices are correct but cols are still the global indices
-            temp.cols_idx[i] = temp.cols_idx[i] - coord*chunk_size + n;
+            temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size + 1 + num_rows)%num_rows ;
         }
 
     }

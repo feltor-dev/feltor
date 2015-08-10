@@ -1,209 +1,190 @@
 #pragma once
 
 #include "functions.h"
+#include "sparseblockmat.h"
+#include "mpi_vector.h"
 #include "mpi_matrix.h"
 
 namespace dg{
 namespace create
 {
-///@cond
-namespace detail
+
+
+RowDistMat< SparseBlockMat, NearestNeighborComm> dx( MPI_Grid2d& g, bc bcx, direction dir = centered)
 {
-//these are to prevent cylindrical metric coefficients in the normal weight functions
-MPI_Precon pure_weights( const MPI_Grid3d& g)
-{
-    MPI_Precon p;
-    p.data = g.dlt().weights();
-    p.norm = g.hz()*g.hx()*g.hy()/4.;
-    return p;
+    SparseBlockMat dx = dx( g.global(), bcx, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 2);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {dims[1], dims[0], 1};
+    int vector_dimensions[] = {1, g.n()*g.Ny(), g.n()*g.Nx()};
+    dx.distribute_rows( coords[0], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( g.n(), vector_dimensions, comm, 0);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( dx, c);
+    return matrix;
 }
-MPI_Precon pure_weights( const MPI_Grid2d& g)
+RowDistMat< SparseBlockMat, NearestNeighborComm> dy( MPI_Grid2d& g, bc bcy, direction dir = centered)
 {
-    MPI_Precon p;
-    p.data = g.dlt().weights();
-    p.norm = g.hx()*g.hy()/4.;
-    return p;
+    SparseBlockMat dy = dy( g.global(), bcy, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 2);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {1, dims[1], dims[0]};
+    int vector_dimensions[] = {1, g.n()*g.Ny(), g.n()*g.Nx()};
+    dy.distribute_rows( coords[1], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( g.n(), vector_dimensions, comm, 1);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( dx, c);
+    return matrix;
+}
+RowDistMat< SparseBlockMat, NearestNeighborComm> jumpX( MPI_Grid2d& g, bc bcx, direction dir = centered)
+{
+    SparseBlockMat jumpX = jumpX( g.global(), bcx, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 2);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {dims[1], dims[0], 1};
+    int vector_dimensions[] = {1, g.n()*g.Ny(), g.n()*g.Nx()};
+    jumpX.distribute_rows( coords[0], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( g.n(), vector_dimensions, comm, 0);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( jumpX, c);
+    return matrix;
+}
+RowDistMat< SparseBlockMat, NearestNeighborComm> jumpY( MPI_Grid2d& g, bc bcy, direction dir = centered)
+{
+    SparseBlockMat jumpY = jumpY( g.global(), bcy, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 2);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {1, dims[1], dims[0]};
+    int vector_dimensions[] = {1, g.n()*g.Ny(), g.n()*g.Nx()};
+    jumpY.distribute_rows( coords[1], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( g.n(), vector_dimensions, comm, 1);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( dx, c);
+    return matrix;
+}
+RowDistMat< SparseBlockMat, NearestNeighborComm> dx( MPI_Grid3d& g, bc bcx, direction dir = centered)
+{
+    SparseBlockMat dx = dx( g.global(), bcx, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 3);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {dims[2]*dims[1], dims[0], 1};
+    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    dx.distribute_rows( coords[0], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( g.n(), vector_dimensions, comm, 0);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( dx, c);
+    return matrix;
+}
+RowDistMat< SparseBlockMat, NearestNeighborComm> dy( MPI_Grid3d& g, bc bcy, direction dir = centered)
+{
+    SparseBlockMat dy = dy( g.global(), bcy, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 3);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {dims[2], dims[1], dims[0]};
+    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    dy.distribute_rows( coords[1], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( g.n(), vector_dimensions, comm, 1);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( dy, c);
+    return matrix;
+}
+RowDistMat< SparseBlockMat, NearestNeighborComm> dz( MPI_Grid3d& g, bc bcz, direction dir = centered)
+{
+    SparseBlockMat dz = dz( g.global(), bcz, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 3);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {1, dims[2], dims[1]*dims[0]};
+    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    dz.distribute_rows( coords[2], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( 1, vector_dimensions, comm, 2);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( dz, c);
+    return matrix;
+}
+RowDistMat< SparseBlockMat, NearestNeighborComm> jumpX( MPI_Grid3d& g, bc bcx, direction dir = centered)
+{
+    SparseBlockMat jumpX = jumpX( g.global(), bcx, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 3);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {dims[2]*dims[1], dims[0], 1};
+    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    jumpX.distribute_rows( coords[0], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( g.n(), vector_dimensions, comm, 0);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( jumpX, c);
+    return matrix;
+}
+RowDistMat< SparseBlockMat, NearestNeighborComm> jumpY( MPI_Grid3d& g, bc bcy, direction dir = centered)
+{
+    SparseBlockMat jumpY = jumpY( g.global(), bcy, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 3);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {dims[2], dims[1], dims[0]};
+    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    jumpY.distribute_rows( coords[1], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( g.n(), vector_dimensions, comm, 1);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( jumpY, c);
+    return matrix;
+}
+RowDistMat< SparseBlockMat, NearestNeighborComm> jumpZ( MPI_Grid3d& g, bc bcz, direction dir = centered)
+{
+    SparseBlockMat jumpZ = jumpZ( g.global(), bcz, direction);
+    //get cartesian structure of mpi grid
+    MPI_Comm comm = g.communicator();
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( ndims == 3);
+    int dims[ndims], periods[ndims], coords[ndims];
+    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int howmany[] = {1, dims[2], dims[1]*dims[0]};
+    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    jumpZ.distribute_rows( coords[2], dims);
+    NearestNeighborComm<thrust::host_vector<double>, thrust::host_vector<int> > c( 1, vector_dimensions, comm, 2);
+    RowDistMat<SparseBlockMat, NearestNeighborComm> matrix( jumpZ, c);
+    return matrix;
 }
 
-//create a normed 2d X-derivative
-MPI_Matrix dx( const Grid1d<double>& g, direction dir)
-{
-    unsigned n=g.n();
-    double hx = g.h();
-    Operator<double> l = create::lilj(n);
-    Operator<double> r = create::rirj(n);
-    Operator<double> lr = create::lirj(n);
-    Operator<double> rl = create::rilj(n);
-    Operator<double> d = create::pidxpj(n);
-    Operator<double> forward = g.dlt().forward();
-    Operator<double> backward= g.dlt().backward();
-    Operator<double> t = create::pipj_inv(n);
-    t *= 2./hx;
-
-    Operator<double> a(n), b(n), bt(n);
-    if( dir == dg::centered)
-    {
-        MPI_Matrix m( 3);
-        m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
-        
-        bt = backward*t*(-0.5*lr )*forward; 
-        a  = backward*t*( 0.5*(d-d.transpose()) )*forward;
-        b  = backward*t*( 0.5*rl )*forward;
-
-        m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
-        return m;
-    }
-    if( dir == dg::forward)
-    {
-        MPI_Matrix m(2);
-        m.offset()[0] = 0, m.offset()[1] = n;
-
-        a = backward*t*(-d.transpose()-l)*forward; 
-        b = backward*t*(rl)*forward;
-        m.dataX()[0] = a.data(), m.dataX()[1] = b.data();
-        return m;
-    }
-    //if dir == dg::backward
-    MPI_Matrix m( 2);
-    m.offset()[0] = -n, m.offset()[1] = 0;
-    bt = backward*t*(-lr)*forward; 
-    a  = backward*t*(d+l)*forward;
-    m.dataX()[0] = bt.data(), m.dataX()[1] = a.data();
-    return m;
-}
-
-BoundaryTerms boundaryDX( const Grid1d<double>& g, bc bcx, direction dir, int coords, int dims)
-{
-    unsigned n=g.n(), N = g.N()-2;
-    double hx = g.h();
-    Operator<double> l = create::lilj(n);
-    Operator<double> r = create::rirj(n);
-    Operator<double> lr = create::lirj(n);
-    Operator<double> rl = create::rilj(n);
-    Operator<double> d = create::pidxpj(n);
-    Operator<double> forward = g.dlt().forward();
-    Operator<double> backward= g.dlt().backward();
-    Operator<double> t = create::pipj_inv(n);
-    t *= 2./hx;
-    BoundaryTerms xterm;
-    std::vector<int> row_, col_;
-    Operator<double> data_[4];
-    if( bcx != dg::PER)
-    {
-        if( dir == dg::centered)
-        {
-            row_.resize(4), col_.resize(4);
-            row_[0] = 0, col_[0] = 0; 
-            row_[1] = 0, col_[1] = 1;
-            row_[2] = N-1, col_[2] = N-1; 
-            row_[3] = N-1, col_[3] = N-2;
-            data_[1] = 0.5*rl;
-            data_[3] = -0.5*lr;
-            switch( bcx)
-            {
-                case( dg::DIR): data_[0] = 0.5*(d-d.transpose()+l); 
-                                data_[2] = 0.5*(d-d.transpose()-r); 
-                                break;
-                case( dg::NEU): data_[0] = 0.5*(d-d.transpose()-l); 
-                                data_[2] = 0.5*(d-d.transpose()+r);
-                                break;
-                case( dg::DIR_NEU): data_[0] = 0.5*(d-d.transpose()+l); 
-                                    data_[2] = 0.5*(d-d.transpose()+r);
-                                    break;
-                case( dg::NEU_DIR): data_[0] = 0.5*(d-d.transpose()-l); 
-                                    data_[2] = 0.5*(d-d.transpose()-r);
-                                    break;
-            }
-        }
-        else if( dir == dg::forward)
-        {
-            row_.resize(3), col_.resize(3);
-            row_[0] = col_[0] = 0, row_[1] = 0, col_[1] = 1;
-            row_[2] = col_[2] = N-1;
-            data_[1] = rl;
-            switch( bcx)
-            {
-                case( dg::DIR): data_[0] = -d.transpose(); 
-                                data_[2] = -(d+l).transpose(); 
-                                break;
-                case( dg::NEU): data_[0] = -(d+l).transpose(); 
-                                data_[2] = d;
-                                break;
-                case( dg::DIR_NEU): data_[0] = -d.transpose();
-                                    data_[2] = d;
-                                    break;
-                case( dg::NEU_DIR): data_[0] = -(d+l).transpose();
-                                    data_[2] = -(d+l).transpose();
-                                    break;
-            }
-        }
-        else //dir == dg::backward
-        {
-            row_.resize(3), col_.resize(3);
-            row_[0] = col_[0] = 0;
-            row_[2] = col_[2] = N-1, row_[1] = N-1, col_[1] = N-2;
-            data_[1] = -lr;
-            switch( bcx)
-            {
-                case( dg::DIR): data_[2] = -d.transpose(); 
-                                data_[0] = (d+l); 
-                                break;
-                case( dg::NEU): data_[2] = (d+l); 
-                                data_[0] = d;
-                                break;
-                case( dg::DIR_NEU): data_[2] = (d+l);
-                                    data_[0] = (d+l);
-                                    break;
-                case( dg::NEU_DIR): data_[2] = -d.transpose();
-                                    data_[0] = d;
-                                    break;
-            }
-        }
-        for( unsigned i=0; i<row_.size(); i++)
-        {
-            if( (coords == 0 && row_[i] == 0) || (coords == dims-1 && row_[i] == N-1))
-            {
-                data_[i] = backward*t*data_[i]*forward;
-                xterm.data_.push_back( data_[i].data());
-                xterm.row_.push_back( row_[i]);
-                xterm.col_.push_back( col_[i]);
-            }
-        }
-    }
-    return xterm;
-}
-
-} //namespace detail
-///@endcond
 
 ///@addtogroup highlevel
 ///@{
 
-/**
- * @brief Create 2d derivative in x-direction
- *
- * @param g The grid on which to create dx
- * @param bcx The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = centered)
-{
-    Grid1d<double> g1d( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
-    MPI_Matrix dx = detail::dx( g1d, dir);
-    if( no == not_normed) dx.precond() = detail::pure_weights(g);
-
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-    dx.xterm() = detail::boundaryDX( g1d, bcx, dir, coords[0], dims[0]);
-    return dx;
-}
 
 /**
  * @brief Create 2d derivative in x-direction
@@ -215,123 +196,9 @@ MPI_Matrix dx( const MPI_Grid2d& g, bc bcx, norm no = normed, direction dir = ce
  *
  * @return A mpi matrix in coordinate format
  */
-MPI_Matrix dx( const MPI_Grid2d& g, norm no = normed, direction dir = centered)
+RowDistMat<SparseBlockMat, NearestNeighborComm> dx( const MPI_Grid2d& g, direction dir = centered)
 {
-    return dx( g, g.bcx(), no, dir);
-}
-
-/**
- * @brief Create 2d derivative in y-direction
- *
- * @param g The grid on which to create dy
- * @param bcy The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix dy( const MPI_Grid2d& g, bc bcy, norm no = normed, direction dir = centered)
-{
-    Grid1d<double> g1d( g.y0(), g.y1(), g.n(), g.Ny());
-    MPI_Matrix m = detail::dx( g1d, dir );
-    m.dataX().swap( m.dataY());
-    for( unsigned i=0; i<m.offset().size(); i++)
-        m.offset()[i] *= g.Nx()*g.n();
-    if( no == not_normed) m.precond() = detail::pure_weights(g);
-
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-    m.yterm() = detail::boundaryDX( g1d, bcy, dir, coords[1], dims[1]);
-    return m;
-}
-
-/**
- * @brief Create 2d derivative in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param no use normed normally
-             use not_normed if you know what you're doing
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix dy( const MPI_Grid2d& g, norm no = normed, direction dir = centered)
-{
-    return dy( g, g.bcy(), no, dir);
-}
-
-/**
- * @brief Create 3d derivative in x-direction
- *
- * @param g The grid on which to create dx
- * @param bcx The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix dx( const MPI_Grid3d& g, bc bcx, norm no = normed, direction dir = centered)
-{
-    Grid1d<double> g1d( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
-    MPI_Matrix dx = detail::dx( g1d, dir);
-    if( no == not_normed) dx.precond() = detail::pure_weights(g);
-
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-    dx.xterm() = detail::boundaryDX( g1d, bcx, dir, coords[0], dims[0]);
-    return dx;
-}
-
-/**
- * @brief Create 3d derivative in x-direction
- *
- * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param no use normed normally
-             use not_normed if you know what you're doing
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix dx( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
-{
-    return dx( g, g.bcx(), no, dir);
-}
-
-/**
- * @brief Create 3d derivative in y-direction
- *
- * @param g The grid on which to create dy
- * @param bcy The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = centered)
-{
-    Grid1d<double> g1d( g.y0(), g.y1(), g.n(), g.Ny());
-    MPI_Matrix m = detail::dx( g1d, dir); 
-    m.dataX().swap( m.dataY());
-    for( unsigned i=0; i<m.offset().size(); i++)
-        m.offset()[i] *= g.Nx()*g.n();
-    if( no == not_normed) m.precond() = detail::pure_weights(g);
-
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-    m.yterm() = detail::boundaryDX( g1d, bcy, dir, coords[1], dims[1]);
-    return m;
+    return dx( g, g.bcx(), dir);
 }
 
 /**
@@ -344,198 +211,57 @@ MPI_Matrix dy( const MPI_Grid3d& g, bc bcy, norm no = normed, direction dir = ce
  *
  * @return A mpi matrix in coordinate format
  */
-MPI_Matrix dy( const MPI_Grid3d& g, norm no = normed, direction dir = centered)
+RowDistMat<SparseBlockMat, NearestNeighborComm> dx( const MPI_Grid3d& g, direction dir = centered)
 {
-    return dy( g, g.bcy(), no, dir);
+    return dx( g, g.bcx(), dir);
 }
+RowDistMat<SparseBlockMat, NearestNeighborComm> jumpX( const MPI_Grid2d& g, direction dir = centered)
+{
+    return jumpX( g, g.bcx(), dir);
+}
+
+RowDistMat<SparseBlockMat, NearestNeighborComm> jumpX( const MPI_Grid3d& g, direction dir = centered)
+{
+    return jumpX( g, g.bcx(), dir);
+}
+/**
+ * @brief Create 2d derivative in y-direction
+ *
+ * @param g The grid on which to create dx (boundary condition is taken from here)
+ * @param dir The direction of the first derivative
+ *
+ * @return A mpi matrix in coordinate format
+ */
+RowDistMat<SparseBlockMat, NearestNeighborComm> dy( const MPI_Grid2d& g, direction dir = centered)
+{
+    return dy( g, g.bcy(), dir);
+}
+
+RowDistMat<SparseBlockMat, NearestNeighborComm> dy( const MPI_Grid3d& g, direction dir = centered)
+{
+    return dy( g, g.bcy(), dir);
+}
+RowDistMat<SparseBlockMat, NearestNeighborComm> dz( const MPI_Grid3d& g, direction dir = centered)
+{
+    return dz( g, g.bcz(), dir);
+}
+RowDistMat<SparseBlockMat, NearestNeighborComm> jumpY( const MPI_Grid2d& g, direction dir = centered)
+{
+    return jumpY( g, g.bcy(), dir);
+}
+
+RowDistMat<SparseBlockMat, NearestNeighborComm> jumpY( const MPI_Grid3d& g, direction dir = centered)
+{
+    return jumpY( g, g.bcy(), dir);
+}
+RowDistMat<SparseBlockMat, NearestNeighborComm> jumpZ( const MPI_Grid3d& g, direction dir = centered)
+{
+    return jumpZ( g, g.bcz(), dir);
+}
+
+
+
 ///@}
 
-///@cond
-namespace detail
-{
-
-MPI_Matrix jump( const Grid1d<double>& g)
-{
-    unsigned n = g.n();
-    Operator<double> l = create::lilj(n);
-    Operator<double> r = create::rirj(n);
-    Operator<double> lr = create::lirj(n);
-    Operator<double> rl = create::rilj(n);
-    Operator<double> d = create::pidxpj(n);
-    Operator<double> forward = g.dlt().forward();
-    Operator<double> backward= g.dlt().backward();
-    Operator<double> a(n), b(n), bt(n);
-    Operator<double> t = create::pipj_inv(n);
-    t *= 2./g.h();
-
-    a = (l + r);
-    b = -rl;
-    bt = -lr;
-    a = backward*t*a*forward, bt = backward*t*bt*forward, b = backward*t*b*forward;
-
-    MPI_Matrix m( 3);
-    m.offset()[0] = -n, m.offset()[1] = 0, m.offset()[2] = n;
-    m.dataX()[0] = bt.data(), m.dataX()[1] = a.data(), m.dataX()[2] = b.data();
-    return m;
-}
-
-BoundaryTerms boundaryJump( const Grid1d<double>& g, bc bcx, int coords, int dims)
-{
-    //only implement symmetric laplacian
-    unsigned n=g.n(), N = g.N()-2;
-    double hx = g.h();
-    Operator<double> l = create::lilj(n);
-    Operator<double> r = create::rirj(n);
-    Operator<double> lr = create::lirj(n);
-    Operator<double> rl = create::rilj(n);
-    Operator<double> forward = g.dlt().forward();
-    Operator<double> backward= g.dlt().backward();
-    Operator<double> t = create::pipj_inv(n);
-    t *= 2./hx;
-    Operator<double> data_[4];
-    BoundaryTerms xterm;
-    if( bcx != dg::PER)
-    {
-        std::vector<int> row_, col_;
-        row_.resize(4), col_.resize(4);
-        row_[1] = 0, col_[1] = 1, data_[1] = -rl;
-        row_[2] = N-1, col_[2] = N-2, data_[2] = -lr;
-        switch( bcx)
-        {
-            case( dg::DIR): 
-                row_[0] = 0, col_[0] = 0, data_[0] = l+r;
-                row_[3] = N-1, col_[3] = N-1, data_[3] = l+r;
-                break;
-            case( dg::NEU): 
-                row_[0] = 0, col_[0] = 0, data_[0] = r;
-                row_[3] = N-1, col_[3] = N-1, data_[3] = l;
-                break;
-            case( dg::DIR_NEU): 
-                row_[0] = 0, col_[0] = 0, data_[0] = l+r;
-                row_[3] = N-1, col_[3] = N-1, data_[3] = l;
-                break;
-            case( dg::NEU_DIR): 
-                row_[0] = 0, col_[0] = 0, data_[0] = r;
-                row_[3] = N-1, col_[3] = N-1, data_[3] = l+r;
-                break;
-        }
-        for( unsigned i=0; i<row_.size(); i++)
-        {
-            if( (coords == 0 && row_[i] == 0) || (coords == dims-1 && row_[i] == N-1))
-            {
-                data_[i] = backward*t*data_[i]*forward;
-                xterm.data_.push_back( data_[i].data());
-                xterm.row_.push_back( row_[i]);
-                xterm.col_.push_back( col_[i]);
-            }
-        }
-    }
-    return xterm;
-}
-}//namespace detail
-///@endcond
-
-///@addtogroup highlevel
-///@{
-
-/**
- * @brief Matrix that contains 2d jump terms
- *
- * @param g grid
- * @param bcx boundary condition in x
- * @param bcy boundary condition in y
- * @param no the norm
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix jump2d( const MPI_Grid2d& g, bc bcx, bc bcy, norm no)
-{
-    Grid1d<double> g1dX( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
-    Grid1d<double> g1dY( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    MPI_Matrix lapx = detail::jump( g1dX);
-    MPI_Matrix lapy = detail::jump( g1dY);
-    lapy.dataX().swap( lapy.dataY());
-    for( unsigned i=0; i<lapy.offset().size(); i++)
-        lapy.offset()[i] *= g.Nx()*g.n();
-    //append elements
-    lapx.dataX().insert( lapx.dataX().end(), lapy.dataX().begin(), lapy.dataX().end());
-    lapx.dataY().insert( lapx.dataY().end(), lapy.dataY().begin(), lapy.dataY().end());
-    lapx.offset().insert( lapx.offset().end(), lapy.offset().begin(), lapy.offset().end());
-    if( no == not_normed)
-        lapx.precond()= detail::pure_weights(g);
-
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-    lapx.xterm() = detail::boundaryJump( g1dX, bcx, coords[0], dims[0]);
-    lapx.yterm() = detail::boundaryJump( g1dY, bcy, coords[1], dims[1]);
-    return lapx;
-}
-
-/**
- * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
- *
- * @param g grid
- * @param no the norm
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix jump2d( const MPI_Grid2d& g, norm no)
-{
-    return jump2d( g, g.bcx(), g.bcy(), no);
-}
-
-/**
- * @brief Matrix that contains 2d jump terms
- *
- * @param g grid
- * @param bcx boundary condition in x
- * @param bcy boundary condition in y
- * @param no the norm
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix jump2d( const MPI_Grid3d& g, bc bcx, bc bcy, norm no)
-{
-    Grid1d<double> g1dX( g.x0(), g.x1(), g.n(), g.Nx(), bcx);
-    Grid1d<double> g1dY( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    MPI_Matrix lapx = detail::jump( g1dX );
-    MPI_Matrix lapy = detail::jump( g1dY );
-    lapy.dataX().swap( lapy.dataY());
-    for( unsigned i=0; i<lapy.offset().size(); i++)
-        lapy.offset()[i] *= g.Nx()*g.n();
-    //append elements
-    lapx.dataX().insert( lapx.dataX().end(), lapy.dataX().begin(), lapy.dataX().end());
-    lapx.dataY().insert( lapx.dataY().end(), lapy.dataY().begin(), lapy.dataY().end());
-    lapx.offset().insert( lapx.offset().end(), lapy.offset().begin(), lapy.offset().end());
-    if( no == not_normed)
-        lapx.precond()= detail::pure_weights(g);
-
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-    lapx.xterm() = detail::boundaryJump( g1dX, bcx, coords[0], dims[0]);
-    lapx.yterm() = detail::boundaryJump( g1dY, bcy, coords[1], dims[1]);
-    return lapx;
-}
-
-/**
- * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
- *
- * @param g grid
- * @param no the norm
- *
- * @return A mpi matrix in coordinate format
- */
-MPI_Matrix jump2d( const MPI_Grid3d& g, norm no)
-{
-    return jump2d( g, g.bcx(), g.bcy(), no);
-}
-
-///@}
 } //namespace create
 } //namespace dg

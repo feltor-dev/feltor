@@ -120,7 +120,7 @@ struct VectorTraits<const MPI_Vector<container> > {
 template<class container, class IndexMap>
 struct NearestNeighborComm
 {
-    NearestNeighborComm( int n, int dimensions[3], MPI_Comm comm, int direction);
+    NearestNeighborComm( int n, int vector_dimensions[3], MPI_Comm comm, int direction);
     void gather( const container& input, container& values);
     int size(); //size of values is size of input plus ghostcells
     private:
@@ -135,7 +135,7 @@ struct NearestNeighborComm
 template<class C, class I>
 NearestNeighborComm<C,I>::NearestNeighborComm( int n, int dimensions[3], MPI_Comm comm, int direction):n_(n), comm_(comm), direction_(direction){
     dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
-    assert( 0<direction);
+    assert( 0<=direction);
     assert( direction <3);
     thrust::host_vector<int> iscattr(dim_[0]*dim_[1]*dim_[2]), hbgather1(buffer_size()), hbgather2(hbgather1), hbscattr1(buffer_size()), hbscattr2(hbscattr1);
     switch( direction)
