@@ -17,12 +17,12 @@ typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix; //!< default ma
 typedef SparseBlockMat HMatrix;
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
 //typedef cusp::csr_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for omp
-typedef SparseBlockMatGPU DMatrix;
+typedef SparseBlockMatDevice DMatrix;
 #else
 // typedef cusp::csr_matrix<int, double, cusp::device_memory> DMatrix;
 //!< sec efficient matrix format for gpu and only efficient format which can handly plusT, minusT matrices!
 //typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for gpu
-typedef SparseBlockMatGPU DMatrix;
+typedef SparseBlockMatDevice DMatrix;
 #endif
 
 }//namespace dg

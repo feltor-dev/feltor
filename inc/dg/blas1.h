@@ -5,8 +5,8 @@
 #include "backend/mpi_vector.h"
 #include "backend/mpi_vector_blas.h"
 #endif
-#include "backend/thrust_vector.cuh"
-#include "backend/std_vector.cuh"
+#include "backend/thrust_vector_blas.cuh"
+#include "backend/std_vector_blas.cuh"
 
 /*!@file 
  *

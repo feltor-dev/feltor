@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "std_vector.cuh"
+#include "std_vector_blas.cuh"
 #include "matrix_categories.h"
 ///@cond
 namespace dg

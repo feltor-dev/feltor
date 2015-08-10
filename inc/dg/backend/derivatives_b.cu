@@ -1,4 +1,5 @@
 #include <iostream>
+#include <thrust/device_vector.h>
 #include "timer.cuh"
 #include "blas.h"
 #include "derivatives.h"
@@ -22,7 +23,8 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
-typedef dg::SparseBlockMatGPU Matrix;
+typedef dg::SparseBlockMatDevice Matrix;
+typedef dg::DVec Vector;
 
 int main()
 {
@@ -30,14 +32,14 @@ int main()
     std::cout << "Type in n, Nx and Ny and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, bcy, bcz);
-    const dg::DVec w3d = dg::create::weights( g);
+    const Vector w3d = dg::create::weights( g);
     dg::Timer t;
     std::cout << "TEST DX \n";
     {
     Matrix dx = dg::create::dx( g, bcx, dg::forward);
-    dg::DVec v = dg::evaluate( sinx, g);
-    dg::DVec w = v;
-    const dg::DVec u = dg::evaluate( cosx, g);
+    Vector v = dg::evaluate( sinx, g);
+    Vector w = v;
+    const Vector u = dg::evaluate( cosx, g);
 
     t.tic();
     dg::blas2::symv( dx, v, w);
@@ -48,11 +50,11 @@ int main()
     }
     std::cout << "TEST DY \n";
     {
-    const dg::DVec func = dg::evaluate( siny, g);
-    const dg::DVec deri = dg::evaluate( cosy, g);
+    const Vector func = dg::evaluate( siny, g);
+    const Vector deri = dg::evaluate( cosy, g);
 
     Matrix dy = dg::create::dy( g); 
-    dg::DVec temp( func);
+    Vector temp( func);
     t.tic();
     dg::blas2::gemv( dy, func, temp);
     t.toc();
@@ -62,11 +64,11 @@ int main()
     }
     std::cout << "TEST DZ \n";
     {
-    const dg::DVec func = dg::evaluate( sinz, g);
-    const dg::DVec deri = dg::evaluate( cosz, g);
+    const Vector func = dg::evaluate( sinz, g);
+    const Vector deri = dg::evaluate( cosz, g);
 
     Matrix dz = dg::create::dz( g); 
-    dg::DVec temp( func);
+    Vector temp( func);
     t.tic();
     dg::blas2::gemv( dz, func, temp);
     t.toc();
@@ -76,12 +78,12 @@ int main()
     }
     std::cout << "JumpX and JumpY \n";
     {
-    const dg::DVec func = dg::evaluate( sinx, g);
+    const Vector func = dg::evaluate( sinx, g);
 
     Matrix jumpX = dg::create::jumpX( g); 
     Matrix jumpY = dg::create::jumpY( g); 
     Matrix jumpZ = dg::create::jumpZ( g); 
-    dg::DVec temp( func);
+    Vector temp( func);
     t.tic();
     dg::blas2::gemv( jumpX, func, temp);
     t.toc();

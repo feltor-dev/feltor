@@ -1,7 +1,7 @@
 #pragma once
 
 #include <thrust/host_vector.h>
-#include "thrust_vector.cuh"
+#include "thrust_vector_blas.cuh"
 #include "matrix_traits.h"
 
 namespace dg

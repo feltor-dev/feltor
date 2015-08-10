@@ -1,15 +1,15 @@
 #pragma once
 
 #include <thrust/device_vector.h>
-#include <cusp/system/cuda/utils.h>
+//#include <cusp/system/cuda/utils.h>
 #include "sparseblockmat.h"
 
 namespace dg
 {
 //mixed derivatives for jump terms missing
-struct SparseBlockMatGPU
+struct SparseBlockMatDevice
 {
-    SparseBlockMatGPU( const SparseBlockMat& src)
+    SparseBlockMatDevice( const SparseBlockMat& src)
     {
         data = src.data;
         cols_idx = src.cols_idx, data_idx = src.data_idx;
@@ -29,25 +29,44 @@ struct SparseBlockMatGPU
     int left, right;
 };
 
-void SparseBlockMatGPU::symv( const DVec& x, DVec& y) const
+///@cond
+void SparseBlockMatDevice::symv( const DVec& x, DVec& y) const
 {
     launch_multiply_kernel( x,y);
 }
 
 
 template <>
-struct MatrixTraits<SparseBlockMatGPU>
+struct MatrixTraits<SparseBlockMatDevice>
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 template <>
-struct MatrixTraits<const SparseBlockMatGPU>
+struct MatrixTraits<const SparseBlockMatDevice>
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-///@cond
+
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
+{
+#pragma omp parallel for collapse(4)
+    for( int s=0; s<left; s++)
+    for( int i=0; i<num_rows; i++)
+    for( int k=0; k<n; k++)
+    for( int j=0; j<right; j++)
+    {
+        y[((s*num_rows + i)*n+k)*right+j] =0;
+        for( int d=0; d<blocks_per_line; d++)
+        for( int q=0; q<n; q++) //multiplication-loop
+            y[((s*num_rows + i)*n+k)*right+j] += 
+                data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+    }
+}
+#else
 
 // multiply kernel
  __global__ void ell_multiply_kernel(
@@ -78,7 +97,7 @@ struct MatrixTraits<const SparseBlockMatGPU>
 
 }
 
-void SparseBlockMatGPU::launch_multiply_kernel( const DVec& x, DVec& y) const
+void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
 {
     assert( x.size() == y.size());
     //set up kernel parameters
@@ -94,6 +113,8 @@ void SparseBlockMatGPU::launch_multiply_kernel( const DVec& x, DVec& y) const
     ell_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
         data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left, right, x_ptr,y_ptr);
 }
+#endif
+///@endcond
 
 
 } //namespace dg

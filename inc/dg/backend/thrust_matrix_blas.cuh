@@ -10,7 +10,7 @@
 #include <thrust/transform.h>
 #include <thrust/inner_product.h>
 
-#include "thrust_vector.cuh" //load thrust_vector BLAS1 routines
+#include "thrust_vector_blas.cuh" //load thrust_vector BLAS1 routines
 #include "vector_categories.h"
 
 namespace dg{

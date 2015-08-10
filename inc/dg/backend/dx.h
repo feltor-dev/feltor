@@ -8,6 +8,7 @@
 #include "weights.cuh"
 #include "sparseblockmat.h"
 
+//What happens for N=1?
 /*! @file 
   
   Simple 1d derivatives

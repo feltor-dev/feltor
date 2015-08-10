@@ -10,7 +10,7 @@
 #include <thrust/device_vector.h>
 #include <vector>
 
-#include "thrust_vector.cuh"
+#include "thrust_vector_blas.cuh"
 #include "vector_categories.h"
 #include "vector_traits.h"
 

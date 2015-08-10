@@ -1,12 +1,6 @@
 #pragma once
 
-#include <vector>
-
-#include "mpi_grid.h"
 #include "mpi_vector.h"
-#include "mpi_precon_blas.h"
-#include "operator.h"
-
 
 namespace dg
 {
