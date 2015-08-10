@@ -46,8 +46,8 @@ struct RowDistMat
         assert( x.communicator() == y.communicator());
         assert( x.communicator() == c_.communicator());
         container temp( c_.size());
-        c_.gather( x.data(), temp_);
-        symv( m_, temp_, y);
+        c_.gather( x.data(), temp);
+        symv( m_, temp, y);
     }
 
         
@@ -72,8 +72,8 @@ struct ColDistMat
     void symv( MPI_Vector<container>& x, MPI_Vector<container>& y)
     {
         container temp( c_.size());
-        symv( m_, x, temp_);
-        c_.scatter( temp_, y);
+        symv( m_, x, temp);
+        c_.scatter( temp, y);
     }
     private:
     LocalMatrix m_;

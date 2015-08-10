@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mpi_vector.h"
-#include "thrust_vector.cuh"
+#include "thrust_vector_blas.cuh"
 
 #ifdef DG_DEBUG
 #include <cassert>

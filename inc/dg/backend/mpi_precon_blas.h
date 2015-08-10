@@ -1,7 +1,7 @@
 #pragma once
 #include "mpi_vector_blas.h"
 #include "mpi_precon.h"
-#include "thrust_matrix.cuh"
+#include "thrust_matrix_blas.cuh"
 
 ///@cond
 namespace dg

@@ -25,7 +25,7 @@ int main( int argc, char * argv[])
         v[i] = v[i] + (double)(i + 17%(rank+1));
     }
     const thrust::host_vector<double> w(v);
-    dg::Collective c(m, MPI_COMM_WORLD);
+    dg::Distribute c(m, MPI_COMM_WORLD);
     thrust::host_vector<double> receive = c.scatter( v);
     //for( unsigned i=0; i<receive.size(); i++)
     //{

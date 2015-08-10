@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <thrust/host_vector.h>
+#include <thrust/gather.h>
 #include "vector_traits.h"
 
 namespace dg
@@ -152,7 +153,7 @@ NearestNeighborComm<C,I>::NearestNeighborComm( int n, int dimensions[3], MPI_Com
             }
             for( int j=0; j<dim_[0]; i++)
             {
-                iscatter[i*dim_[0] + j] = i*(dim_[0] + 2*n) + n + j;
+                iscattr[i*dim_[0] + j] = i*(dim_[0] + 2*n) + n + j;
             }
         }
         break;
@@ -203,7 +204,7 @@ NearestNeighborComm<C,I>::NearestNeighborComm( int n, int dimensions[3], MPI_Com
 template<class C, class I>
 int NearestNeighborComm<C,I>::size()
 {
-    int origin= dim_[0]*dim_[1]*dim[2];
+    int origin= dim_[0]*dim_[1]*dim_[2];
     return origin + 2*buffer_size();
 }
 
@@ -249,17 +250,17 @@ void NearestNeighborComm<C,I>::gather( const C& input, C& values)
 template<class C, class I>
 void NearestNeighborComm<C,I>::sendrecv( const HVec& sb1, const HVec& sb2 , HVec& rb1, HVec& rb2)
 {
-    int source, dest;
+    int source, dest, status;
     MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
-    MPI_Sendrecv(   sendbuffer1.data(), buffer_size(), MPI_DOUBLE,  //sender
+    MPI_Sendrecv(   sb1.data(), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 3,  //destination
-                    recvbuffer2.data(), buffer_size(), MPI_DOUBLE, //receiver
+                    rb2.data(), buffer_size(), MPI_DOUBLE, //receiver
                     source, 3, //source
                     comm_, &status);
     MPI_Cart_shift( comm_, direction_, +1, &source, &dest);
-    MPI_Sendrecv(   sendbuffer2.data(), buffer_size(), MPI_DOUBLE,  //sender
+    MPI_Sendrecv(   sb2.data(), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 9,  //destination
-                    recvbuffer1.data(), buffer_size(), MPI_DOUBLE, //receiver
+                    rb1.data(), buffer_size(), MPI_DOUBLE, //receiver
                     source, 9, //source
                     comm_, &status);
 }

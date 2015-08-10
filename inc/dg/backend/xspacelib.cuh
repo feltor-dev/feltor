@@ -1,26 +1,26 @@
 #ifndef _DG_XSPACELIB_CUH_
 #define _DG_XSPACELIB_CUH_
 
-#include <thrust/device_vector.h>
+//#include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
 #include <cusp/coo_matrix.h>
 #include <cusp/ell_matrix.h>
-#include "sparseblockmat.cuh"
-
-//functions for evaluation
+//#include "sparseblockmat.cuh"
+//
+////functions for evaluation
 #include "grid.h"
 #include "dlt.h"
-#include "evaluation.cuh"
-
-
-//creational functions
-#include "derivatives.cuh"
-#include "weights.cuh"
-#include "interpolation.cuh"
-
-//integral functions
-#include "typedefs.cuh"
+//#include "evaluation.cuh"
+//
+//
+////creational functions
+//#include "derivatives.cuh"
+//#include "weights.cuh"
+//#include "interpolation.cuh"
+//
+////integral functions
+//#include "typedefs.cuh"
 
 
 /*! @file
