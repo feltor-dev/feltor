@@ -63,12 +63,14 @@ class Elliptic
         jumpY ( dg::create::jumpY( g, g.bcy())),
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx), R(xchi),
+        weights_wo_R(weights_),
         no_(no)
     { 
         if( g.system() == cylindrical)
         {
             R = dg::evaluate( dg::coo1, g);
             dg::blas1::pointwiseDot( R, xchi, xchi); 
+            dg::blas1::pointwiseDivide( weights_,R,weights_wo_R);
         }
     }
     /**
@@ -90,16 +92,18 @@ class Elliptic
         lefty (dg::create::dy( g, inverse(bcy), inverse(dir))),
         rightx(dg::create::dx( g,bcx, dir)),
         righty(dg::create::dy( g,bcy, dir)),
-        jumpX ( dg::create::jumpX( g, g.bcx)),
-        jumpY ( dg::create::jumpY( g, g.bcy)),
+        jumpX ( dg::create::jumpX( g, bcx)),
+        jumpY ( dg::create::jumpY( g, bcy)),
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)),
         xchi( dg::evaluate(one, g)), xx(xchi), temp( xx), R(xchi),
+        weights_wo_R(weights_),
         no_(no)
     { 
         if( g.system() == cylindrical)
         {
             R = dg::evaluate( dg::coo1, g);
             dg::blas1::pointwiseDot( R, xchi, xchi); 
+            dg::blas1::pointwiseDivide( weights_,R,weights_wo_R);
         }
     }
 
@@ -135,8 +139,6 @@ class Elliptic
      */
     void symv( Vector& x, Vector& y) 
     {
-        Timer t;
-        t.tic();
         dg::blas2::gemv( rightx, x, temp); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 
         dg::blas2::gemv( leftx, temp, xx); //L_x*Chi*R_x*x
@@ -152,9 +154,7 @@ class Elliptic
         dg::blas2::symv( jumpY, x, temp);
         dg::blas1::axpby( +1., temp, 1., y, y); 
         if( no_==not_normed)
-            dg::blas2::symv( weights_, y, y);
-        t.toc();
-        std::cout << "1 took "<<t.diff()<<"s\n";
+            dg::blas2::symv( weights_wo_R, y, y);
     }
     private:
     bc inverse( bc bound)
@@ -174,6 +174,7 @@ class Elliptic
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
     Vector xchi, xx, temp, R;
+    Preconditioner weights_wo_R;
     norm no_;
 };
 
@@ -235,11 +236,13 @@ struct GeneralElliptic
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0), R(xchi),
+        weights_wo_R(weights_),
         no_(no)
     { 
         if( g.system() == cylindrical)
         {
             R = dg::evaluate( dg::coo1, g);
+            dg::blas1::pointwiseDivide(weights_, R, weights_wo_R);
         }
     }
     /**
@@ -264,16 +267,18 @@ struct GeneralElliptic
         rightx( dg::create::dx( g, bcx, dir)),
         righty( dg::create::dy( g, bcy, dir)),
         rightz( dg::create::dz( g, bcz, dir)),
-        jumpX ( dg::create::jumpX( g, g.bcx)),
-        jumpY ( dg::create::jumpY( g, g.bcy)),
+        jumpX ( dg::create::jumpX( g, bcx)),
+        jumpY ( dg::create::jumpY( g, bcy)),
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0), R(xchi),
+        weights_wo_R(weights_),
         no_(no)
     { 
         if( g.system() == cylindrical)
         {
             R = dg::evaluate( dg::coo1, g);
+            dg::blas1::pointwiseDivide(weights_, R, weights_wo_R);
         }
     }
     /**
@@ -370,7 +375,7 @@ struct GeneralElliptic
         dg::blas2::symv( jumpY, x, temp0);
         dg::blas1::axpby( +1., temp0, 1., y, y); 
         if( no_==not_normed)
-            dg::blas2::symv( weights_, y, y);
+            dg::blas2::symv( weights_wo_R, y, y);
     }
     private:
     bc inverse( bc bound)
@@ -390,6 +395,7 @@ struct GeneralElliptic
     Matrix leftx, lefty, leftz, rightx, righty, rightz, jumpX, jumpY;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
     Vector xchi, ychi, zchi, xx, yy, zz, temp0, temp1,  R;
+    Preconditioner weights_wo_R;
     norm no_;
 };
 /**
@@ -457,11 +463,13 @@ struct GeneralEllipticSym
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0), R(xchi),
+        weights_wo_R( weights_),
         no_(no)
     { 
         if( g.system() == cylindrical)
         {
             R = dg::evaluate( dg::coo1, g);
+            dg::blas1::pointwiseDivide( weights_, R, weights_wo_R);
         }
     }
 
@@ -498,11 +506,13 @@ struct GeneralEllipticSym
         weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0), R(xchi),
+        weights_wo_R( weights_),
         no_(no)
     { 
         if( g.system() == cylindrical)
         {
             R = dg::evaluate( dg::coo1, g);
+            dg::blas1::pointwiseDivide( weights_, R, weights_wo_R);
         }
     }
     /**
@@ -629,7 +639,7 @@ struct GeneralEllipticSym
         dg::blas2::symv( jumpY, x, temp0);
         dg::blas1::axpby( +1., temp0, 1., y, y); 
         if( no_==not_normed)
-            dg::blas2::symv( weights_, y, y);
+            dg::blas2::symv( weights_wo_R, y, y);
     }
     private:
     bc inverse( bc bound)
@@ -649,6 +659,7 @@ struct GeneralEllipticSym
     Matrix leftx, lefty, leftz, rightx, righty, rightz, leftxinv, leftyinv, leftzinv, rightxinv, rightyinv, rightzinv, jumpX, jumpY;
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
     Vector xchi, ychi, zchi, xx, yy, zz, temp0, temp1,  R;
+    Preconditioner weights_wo_R;
     norm no_;
 };
 ///@cond
