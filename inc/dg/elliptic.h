@@ -135,6 +135,8 @@ class Elliptic
      */
     void symv( Vector& x, Vector& y) 
     {
+        Timer t;
+        t.tic();
         dg::blas2::gemv( rightx, x, temp); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 
         dg::blas2::gemv( leftx, temp, xx); //L_x*Chi*R_x*x
@@ -143,16 +145,16 @@ class Elliptic
         dg::blas1::pointwiseDot( xchi, temp, temp);
         dg::blas2::gemv( lefty, temp, y);
         dg::blas1::axpby( -1., xx, -1., y, y); //-D_xx - D_yy 
-        
         if(no_==normed) //if cartesian then R = 1
             dg::blas1::pointwiseDivide( y, R, y);
-
         dg::blas2::symv( jumpX, x, temp);
         dg::blas1::axpby( +1., temp, 1., y, y); 
         dg::blas2::symv( jumpY, x, temp);
         dg::blas1::axpby( +1., temp, 1., y, y); 
         if( no_==not_normed)
             dg::blas2::symv( weights_, y, y);
+        t.toc();
+        std::cout << "1 took "<<t.diff()<<"s\n";
     }
     private:
     bc inverse( bc bound)
