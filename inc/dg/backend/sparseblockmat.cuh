@@ -20,9 +20,7 @@ struct SparseBlockMatGPU
     typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
     void symv(const DVec& x, DVec& y) const;
-#ifndef _OPENMP
     void launch_multiply_kernel(const DVec& x, DVec& y) const;
-#endif
     
     DVec data;
     IVec cols_idx, data_idx; 
@@ -33,43 +31,7 @@ struct SparseBlockMatGPU
 
 void SparseBlockMatGPU::symv( const DVec& x, DVec& y) const
 {
-    //if device system = omp
-#ifdef _OPENMP
-    if( left >10)  //decides which omp pragma to choose
-    {
-#pragma omp parallel for 
-        for( int s=0; s<left; s++)
-        for( int i=0; i<num_rows; i++)
-        for( int k=0; k<n; k++)
-        for( int j=0; j<right; j++)
-        {
-            y[((s*num_rows + i)*n+k)*right+j] =0;
-            for( int d=0; d<blocks_per_line; d++)
-            for( int q=0; q<n; q++) //multiplication-loop
-                y[((s*num_rows + i)*n+k)*right+j] += 
-                    data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
-        }
-    }
-    else
-    for( int s=0; s<left; s++)
-    {
-#pragma omp parallel for 
-        for( int i=0; i<num_rows; i++)
-        for( int k=0; k<n; k++)
-        for( int j=0; j<right; j++)
-        {
-            y[((s*num_rows + i)*n+k)*right+j] =0;
-            for( int d=0; d<blocks_per_line; d++)
-            for( int q=0; q<n; q++) //multiplication-loop
-                y[((s*num_rows + i)*n+k)*right+j] += 
-                    data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
-        }
-    }
-#else
     launch_multiply_kernel( x,y);
-#endif
 }
 
 
@@ -87,7 +49,6 @@ struct MatrixTraits<const SparseBlockMatGPU>
 };
 ///@cond
 
-#ifndef _OPENMP
 //dataonal multiply kernel
  __global__ void ell_multiply_kernel(
          const double* data, const int* cols_idx, const int* data_idx, 
@@ -133,7 +94,6 @@ void SparseBlockMatGPU::launch_multiply_kernel( const DVec& x, DVec& y) const
     ell_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
         data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left, right, x_ptr,y_ptr);
 }
-#endif
 
 
 } //namespace dg

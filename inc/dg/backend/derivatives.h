@@ -32,14 +32,12 @@ namespace create{
  * @tparam T value-type
  * @param g The grid on which to create dx
  * @param bcx The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
 
-SparseBlockMat dx( const Grid2d<double>& g, bc bcx, norm no = normed, direction dir = centered)
+SparseBlockMat dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
 {
     SparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -52,13 +50,11 @@ SparseBlockMat dx( const Grid2d<double>& g, bc bcx, norm no = normed, direction 
  *
  * @tparam T value-type
  * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dx( const Grid2d<double>& g, norm no = normed, direction dir = centered) { return dx( g, g.bcx(), no, dir);}
+SparseBlockMat dx( const Grid2d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -66,13 +62,11 @@ SparseBlockMat dx( const Grid2d<double>& g, norm no = normed, direction dir = ce
  * @tparam T value-type
  * @param g The grid on which to create dy
  * @param bcy The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dy( const Grid2d<double>& g, bc bcy, norm no = normed, direction dir = centered)
+SparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
 {
     SparseBlockMat dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
@@ -85,13 +79,11 @@ SparseBlockMat dy( const Grid2d<double>& g, bc bcy, norm no = normed, direction 
  *
  * @tparam T value-type
  * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dy( const Grid2d<double>& g, norm no = normed, direction dir = centered){ return dy( g, g.bcy(), no, dir);}
+SparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return dy( g, g.bcy(), no, dir);}
 
 /**
  * @brief Matrix that contains 2d jump terms
@@ -100,26 +92,40 @@ SparseBlockMat dy( const Grid2d<double>& g, norm no = normed, direction dir = ce
  * @param g grid
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
- * @param no the norm
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat jump2d( const Grid2d<double>& g, bc bcx, bc bcy, norm no);
-//separate into jumpX and jumpY functions
+SparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
+{
+    SparseBlockMat jx;
+    jx = jump( g.n(), g.Nx(), g.hx(), bcx);
+    jx.left = g.n()*g.Ny();
+    return jx;
+}
+SparseBlockMat jumpY( const Grid2d<double>& g, bc bcx, bc bcy)
+{
+    SparseBlockMat jy;
+    jy = jump( g.n(), g.Ny(), g.hy(), bcy);
+    jy.right = g.n()*g.Nx();
+    return jy;
+}
 
 /**
  * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
  *
  * @tparam T value type
  * @param g grid
- * @param no the norm
  *
  * @return A host matrix in coordinate format
  */
-//SparseBlockMat jump2d( const Grid2d<double>& g, norm no)
-//{
-//    return jump2d( g, g.bcx(), g.bcy(), no);
-//}
+SparseBlockMat jumpX( const Grid2d<double>& g)
+{
+    return jumpX( g, g.bcx(), g.bcy());
+}
+SparseBlockMat jumpY( const Grid2d<double>& g)
+{
+    return jumpY( g, g.bcx(), g.bcy());
+}
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
 /**
@@ -129,25 +135,53 @@ SparseBlockMat jump2d( const Grid2d<double>& g, bc bcx, bc bcy, norm no);
  * @param g grid
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
- * @param no the norm
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat jump2d( const Grid3d<double>& g, bc bcx, bc bcy, norm no);
+SparseBlockMat jumpX( const Grid3d<double>& g, bc bcx)
+{
+    SparseBlockMat jx;
+    jx = jump( g.n(), g.Nx(), g.hx(), bcx);
+    jx.left = g.n()*g.Ny()*g.Nz();
+    return jx;
+}
+SparseBlockMat jumpY( const Grid3d<double>& g, bc bcy)
+{
+    SparseBlockMat jy;
+    jy = jump( g.n(), g.Ny(), g.hy(), bcy);
+    jy.right = g.n()*g.Nx();
+    jy.left = g.Nz();
+    return jy;
+}
+SparseBlockMat jumpZ( const Grid3d<double>& g, bc bcz)
+{
+    SparseBlockMat jz;
+    jz = jump( 1, g.Nz(), g.hz(), bcz);
+    jz.right = g.n()*g.Nx()*g.n()*g.Ny();
+    return jz;
+}
 
 /**
  * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
  *
  * @tparam T value type
  * @param g grid
- * @param no the norm
  *
  * @return A host matrix in coordinate format
  */
-//SparseBlockMat jump2d( const Grid3d<double>& g, norm no)
-//{
-//    return jump2d( g, g.bcx(), g.bcy(), no);
-//}
+SparseBlockMat jumpX( const Grid3d<double>& g)
+{
+    return jumpX( g, g.bcx());
+}
+SparseBlockMat jumpY( const Grid3d<double>& g)
+{
+    return jumpY( g, g.bcy());
+}
+SparseBlockMat jumpZ( const Grid3d<double>& g)
+{
+    return jumpZ( g, g.bcz());
+}
+
 
 /**
  * @brief Create 3d derivative in x-direction
@@ -155,13 +189,11 @@ SparseBlockMat jump2d( const Grid3d<double>& g, bc bcx, bc bcy, norm no);
  * @tparam T value-type
  * @param g The grid on which to create dx
  * @param bcx The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dx( const Grid3d<double>& g, bc bcx, norm no = normed, direction dir = centered)
+SparseBlockMat dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
 {
     SparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -174,13 +206,11 @@ SparseBlockMat dx( const Grid3d<double>& g, bc bcx, norm no = normed, direction 
  *
  * @tparam T value-type
  * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dx( const Grid3d<double>& g, norm no = normed, direction dir = centered) { return dx( g, g.bcx(), no, dir);}
+SparseBlockMat dx( const Grid3d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
@@ -188,13 +218,11 @@ SparseBlockMat dx( const Grid3d<double>& g, norm no = normed, direction dir = ce
  * @tparam T value-type
  * @param g The grid on which to create dy
  * @param bcy The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dy( const Grid3d<double>& g, bc bcy, norm no = normed, direction dir = centered)
+SparseBlockMat dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
 {
     SparseBlockMat dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
@@ -208,13 +236,11 @@ SparseBlockMat dy( const Grid3d<double>& g, bc bcy, norm no = normed, direction 
  *
  * @tparam T value-type
  * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the first derivative
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dy( const Grid3d<double>& g, norm no = normed, direction dir = centered){ return dy( g, g.bcy(),no, dir);}
+SparseBlockMat dy( const Grid3d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
@@ -222,13 +248,11 @@ SparseBlockMat dy( const Grid3d<double>& g, norm no = normed, direction dir = ce
  * @tparam T value-type
  * @param g The grid on which to create dz
  * @param bcz The boundary condition
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the stencil
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dz( const Grid3d<double>& g, bc bcz, norm no = normed, direction dir = centered)
+SparseBlockMat dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
 {
     SparseBlockMat dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
@@ -242,13 +266,11 @@ SparseBlockMat dz( const Grid3d<double>& g, bc bcz, norm no = normed, direction 
  *
  * @tparam T value-type
  * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param no use normed normally
-             use not_normed if you know what you're doing
  * @param dir The direction of the stencil
  *
  * @return A host matrix in coordinate format
  */
-SparseBlockMat dz( const Grid3d<double>& g, norm no = normed, direction dir = centered){ return dz( g, g.bcz(), no, dir);}
+SparseBlockMat dz( const Grid3d<double>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 
 
 
