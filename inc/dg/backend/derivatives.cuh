@@ -81,6 +81,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> dx( const Grid2d<T>& g, bc bcx, norm
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     Matrix deltaY = dg::tensor( g.Ny(), dg::create::delta( g.n())); 
     Matrix dx;
+
     if( dir == centered)
         dx = create::dx_symm_normed<T>(g.n(), g.Nx(), g.hx(), bcx);
     else if (dir == forward)
