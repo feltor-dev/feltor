@@ -66,6 +66,14 @@ int main()
     dg::blas1::pointwiseDot( y, x, x);
     t.toc();
     std::cout<<"pointwiseDot took                "<<t.diff()<<"s\n";
+    t.tic();
+    norm = dg::blas2::dot( w2d, y);
+    t.toc();
+    std::cout<<"DOT(w,y) took                    " <<t.diff()<<"s   result: "<<norm<<"\n";
+    t.tic();
+    norm = dg::blas2::dot( x, w2d, y);
+    t.toc();
+    std::cout<<"DOT(x,w,y) took                  " <<t.diff()<<"s   result: "<<norm<<"\n";
 
     return 0;
 }
