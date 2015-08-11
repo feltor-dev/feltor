@@ -58,12 +58,16 @@ void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
     for( int k=0; k<n; k++)
     for( int j=0; j<right; j++)
     {
-        y[((s*num_rows + i)*n+k)*right+j] =0;
+        int I = ((s*num_rows+i)*n+k)*right+j;
+        y[I] =0;
         for( int d=0; d<blocks_per_line; d++)
-        for( int q=0; q<n; q++) //multiplication-loop
-            y[((s*num_rows + i)*n+k)*right+j] += 
-                data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+        {
+            int B = data_idx[i*blocks_per_line+d];
+            int J = cols_idx[i*blocks_per_line+d];
+            for( int q=0; q<n; q++) //multiplication-loop
+                y[I] += 
+                    data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
+        }
     }
 }
 #else
@@ -89,10 +93,13 @@ void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
             j=row%right;
         y[row] = 0;
         for( int d=0; d<blocks_per_line; d++)
-        for( int q=0; q<n; q++) //multiplication-loop
-            y[row] += 
-                data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+        {
+            int B = data_idx[i*blocks_per_line+d];
+            int J = cols_idx[i*blocks_per_line+d];
+            for( int q=0; q<n; q++) //multiplication-loop
+                y[row] += 
+                    data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
+        }
     }
 
 }
