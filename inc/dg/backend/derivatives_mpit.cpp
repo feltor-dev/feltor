@@ -2,13 +2,17 @@
 #include <iomanip>
 #include <mpi.h>
 
+#include "sparseblockmat.h"
+#include "vector_traits.h"
+#include "selfmade_blas.cuh"
+#include "thrust_vector_blas.cuh"
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
-#include "blas.h"
 #include "mpi_matrix.h"
 #include "mpi_precon.h"
 #include "mpi_init.h"
-#include "../elliptic.h"
+
+#include "blas.h"
 
 const double lx = 2*M_PI;
 /*
@@ -22,6 +26,9 @@ double derivative( double x, double y) { return cos(x);}
 dg::bc bcx = dg::DIR; 
 dg::bc bcy = dg::PER;
 
+typedef dg::RowDistMat<dg::SparseBlockMat, dg::NNCH> Matrix;
+typedef dg::MPI_Vector<thrust::host_vector<double> > Vector;
+
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
@@ -33,23 +40,19 @@ int main(int argc, char* argv[])
 
     dg::MPI_Grid2d g( 0, lx, 0, lx, n, Nx, Ny, bcx, bcy, comm);
 
-    dg::MMatrix dx = dg::create::dx( g, bcx, dg::normed, dg::forward);
-    dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> lap( g, bcx, bcy, dg::normed);
+    Matrix dx = dg::create::dx( g, bcx, dg::forward);
 
-    dg::MVec func = dg::evaluate( function, g);
-    dg::MVec result( func);
-    dg::MVec deriv = dg::evaluate( derivative, g);
+    Vector func = dg::evaluate( function, g);
+    Vector result( func);
+    Vector deriv = dg::evaluate( derivative, g);
+
+    Vector w2d = dg::create::weights(g);
 
     dg::blas2::symv( dx, func, result);
 
     dg::blas1::axpby( 1., deriv, -1., result);
-    double error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
+    double error = sqrt(dg::blas2::dot(result, w2d, result));
     if(rank==0) std::cout << "DX: Distance to true solution: "<<error<<"\n";
-    dg::blas2::symv( lap, func, result);
-
-    dg::blas1::axpby( 1., func, -1., result);
-    error = sqrt(dg::blas2::dot(result, dg::create::weights(g), result));
-    if(rank==0) std::cout << "DXX: Distance to true solution: "<<error<<" (Note the supraconvergence!)\n";
 ;
 
     MPI_Finalize();

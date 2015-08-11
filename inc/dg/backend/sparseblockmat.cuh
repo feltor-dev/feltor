@@ -9,6 +9,7 @@ namespace dg
 //mixed derivatives for jump terms missing
 struct SparseBlockMatDevice
 {
+    typedef double value_type;
     SparseBlockMatDevice( const SparseBlockMat& src)
     {
         data = src.data;

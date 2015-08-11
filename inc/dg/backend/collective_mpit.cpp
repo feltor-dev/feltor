@@ -25,8 +25,9 @@ int main( int argc, char * argv[])
         v[i] = v[i] + (double)(i + 17%(rank+1));
     }
     const thrust::host_vector<double> w(v);
-    dg::Distribute c(m, MPI_COMM_WORLD);
-    thrust::host_vector<double> receive = c.scatter( v);
+    dg::BijectiveComm<thrust::host_vector<int>, thrust::host_vector<double> > c(m, MPI_COMM_WORLD);
+    thrust::host_vector<double> receive(c.size());
+    c.collect( v, receive);
     //for( unsigned i=0; i<receive.size(); i++)
     //{
     //    if( rank==0)
@@ -38,7 +39,7 @@ int main( int argc, char * argv[])
     //    if( rank==1)
     //        std::cout << receive[i]<<std::endl;
     //}
-    c.gather( receive, v);
+    c.send_and_reduce( receive, v);
     bool equal = true;
     for( unsigned i=0; i<m.size(); i++)
     {

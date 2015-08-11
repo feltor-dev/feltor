@@ -2,6 +2,7 @@
 
 #include "mpi_vector.h"
 
+//the corresponding blas file for the Local matrix must be included before this file
 namespace dg
 {
 
@@ -32,8 +33,8 @@ struct RowDistMat
     * @param m The local matrix
     * @param c The communication object
     */
-    RowDistMat( const LocalMatrix& m, const Collective& c):m_(m), c_(c)
-    { }
+    RowDistMat( const LocalMatrix& m, const Collective& c):m_(m), c_(c) { }
+
     template< class OtherMatrix>
     RowDistMat( const RowDistMat<OtherMatrix, Collective>& src):m_(src.matrix()), c_(src.collective())
     { }
@@ -41,13 +42,16 @@ struct RowDistMat
     const Collective& collective() const{return c_;}
     
     template<class container> 
-    void symv( MPI_Vector<container>& x, MPI_Vector<container>& y)
+    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
     {
         assert( x.communicator() == y.communicator());
         assert( x.communicator() == c_.communicator());
         container temp( c_.size());
-        c_.gather( x.data(), temp);
-        symv( m_, temp, y);
+        c_.collect( x.data(), temp);
+        dg::blas2::detail::doSymv( m_, temp, y.data(), 
+                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
     }
 
         
@@ -69,16 +73,31 @@ struct ColDistMat
     { }
     
     template<class container> 
-    void symv( MPI_Vector<container>& x, MPI_Vector<container>& y)
+    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
     {
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
         container temp( c_.size());
-        symv( m_, x, temp);
-        c_.scatter( temp, y);
+        dg::blas2::detail::doSymv( m_, x.data(), temp, 
+                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+        c_.send_and_reduce( temp, y.data());
     }
     private:
     LocalMatrix m_;
     Collective c_;
 };
+
+///@cond
+template<class L, class C>
+struct MatrixTraits<RowDistMat<L, C> >
+{
+    typedef typename L::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
+};
+///@endcond
+
 
 //
 ///@}

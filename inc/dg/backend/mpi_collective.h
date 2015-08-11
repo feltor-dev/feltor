@@ -6,7 +6,8 @@
 #include <thrust/gather.h>
 #include <thrust/scatter.h>
 
-#include "thrust/host_vector.h"
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
 
 namespace dg{
 
@@ -86,6 +87,7 @@ struct Collective
     void scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store);
     void scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store);
     void gather( const thrust::host_vector<double>& store, thrust::host_vector<double>& values);
+    void gather( const thrust::device_vector<double>& store, thrust::device_vector<double>& values);
     unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
     unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
     private:
@@ -110,11 +112,19 @@ void Collective::scatter( const thrust::host_vector<double>& values, thrust::hos
                    store.data(), recvFrom_.data(), accR_.data(), MPI_DOUBLE, comm_);
 }
 
-thrust::host_vector<double> scatter( const thrust::host_vector<double>& values)
+thrust::host_vector<double> Collective::scatter( const thrust::host_vector<double>& values)
 {
     thrust::host_vector<double> received( store_size() );
     scatter( values, received);
     return received;
+}
+
+void Collective::gather( const thrust::device_vector<double>& gatherFrom, thrust::device_vector<double>& values)
+{
+    //transfer to host, then gather and transfer result to device
+    thrust::host_vector<double> hvalues(values.size()), hgatherFrom(gatherFrom);
+    gather( hgatherFrom, hvalues);
+    thrust::copy( hvalues.begin(), hvalues.end(), values.begin());
 }
 
 void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
@@ -125,7 +135,7 @@ void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::
             const_cast<double*>(gatherFrom.data()), recvFrom_.data(), accR_.data(), MPI_DOUBLE, 
             values.data(), sendTo_.data(), accS_.data(), MPI_DOUBLE, comm_);
 }
-//Distribute ist der Spezialfall, dass jedes Element nur ein einziges Mal gebraucht wird. 
+//BijectiveComm ist der Spezialfall, dass jedes Element nur ein einziges Mal gebraucht wird. 
 ///@endcond
 //
 /**
@@ -139,7 +149,7 @@ void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::
  thrust::host_vector<double> hvalues( values, values+10);
  int pids[10] =      {0,1,2,3, 0,1,2,3};
  thrust::host_vector<int> hpids( pids, pids+10);
- Distribute coll( hpids, MPI_COMM_WORLD);
+ BijectiveComm coll( hpids, MPI_COMM_WORLD);
  thrust::host_vector<double> hrecv = coll.scatter( hvalues);
  //hrecv is now {0,9,1,9,2,9,3,9} e.g. for process 0 
  thrust::host_vector<double> hrecv2( coll.send_size());
@@ -147,28 +157,30 @@ void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::
  //hrecv2 now equals hvalues independent of process rank
  @endcode
  */
-struct Distribute
+template< class Index, class Vector>
+struct BijectiveComm
 {
     /**
      * @brief Construct empty class
      */
-    Distribute( ){}
+    BijectiveComm( ){}
     /**
      * @brief Construct from a given map 
      *
      * @param pids Gives to every point of the values array the rank to which to send this data element. The rank needs to be element of the given communicator.
      * @param comm An MPI Communicator that contains the participants of the scatter/gather
      */
-    Distribute( thrust::host_vector<int> pids, MPI_Comm comm): idx_(pids)
+    BijectiveComm( thrust::host_vector<int> pids, MPI_Comm comm): idx_(pids)
     {
         int rank, size; 
         MPI_Comm_size( comm, &size);
         MPI_Comm_rank( comm, &rank);
         for( unsigned i=0; i<pids.size(); i++)
             assert( 0 <= pids[i] && pids[i] < size);
-        thrust::sequence( idx_.begin(), idx_.end());
+        thrust::host_vector<int> index(pids);
+        thrust::sequence( index.begin(), index.end());
         thrust::host_vector<int> one( pids.size(), 1), keys(one), number(one);
-        thrust::stable_sort_by_key( pids.begin(), pids.end(), idx_.begin());
+        thrust::stable_sort_by_key( pids.begin(), pids.end(), index.begin());
 
         typedef thrust::host_vector<int>::iterator iterator;
         thrust::pair< iterator, iterator> new_end = 
@@ -179,6 +191,7 @@ struct Distribute
         for( unsigned i=0; i<distance; i++)
             sendTo[keys[i]] = number[i];
         p_.construct( sendTo, comm);
+        idx_=index;
     }
 
     /**
@@ -191,10 +204,10 @@ struct Distribute
      * @return received data from other processes of size recv_size()
      * @note a scatter followed by a gather of the received values restores the original array
      */
-     void gather( const thrust::host_vector<double>& values, thrust::host_vector<double>& store)
+     void collect( const Vector& values, Vector& store)
     {
         assert( values.size() == idx_.size());
-        thrust::host_vector<double> values_(values);
+        Vector values_(values);
         //nach PID ordnen
         thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.begin());
         //senden
@@ -209,9 +222,9 @@ struct Distribute
      * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
      * @note a scatter followed by a gather of the received values restores the original array
      */
-    void scatter( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
+    void send_and_reduce( const Vector& gatherFrom, Vector& values)
     {
-        thrust::host_vector<double> values_;
+        Vector values_(values.size());
         //sammeln
         p_.gather( gatherFrom, values_);
         //nach PID geordnete Werte wieder umsortieren
@@ -233,8 +246,9 @@ struct Distribute
      * @return # of elements to send
      */
     unsigned send_size() const {return p_.values_size();}
+    unsigned size() const {return p_.store_size();}
     private:
-    thrust::host_vector<int> idx_;
+    Index idx_;
     Collective p_;
 };
 

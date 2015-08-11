@@ -18,6 +18,7 @@ namespace dg
 template<class container>
 struct MPI_Vector
 {
+    typedef container container_type;
     /**
      * @brief construct a vector
      *
@@ -99,7 +100,7 @@ struct MPI_Vector
         data_.swap(that.data_);
     }
   private:
-    container data_; //!< thrust host vector as data type
+    container data_; 
     MPI_Comm comm_;
 };
 
@@ -118,23 +119,40 @@ struct VectorTraits<const MPI_Vector<container> > {
 
 /////////////////////////////communicator exchanging columns//////////////////
 
-template<class container, class IndexMap>
+template<class Index, class Vector>
 struct NearestNeighborComm
 {
     NearestNeighborComm( int n, int vector_dimensions[3], MPI_Comm comm, int direction);
-    void gather( const container& input, container& values);
+    template< class OtherIndex, class OtherVector>
+    NearestNeighborComm( const NearestNeighborComm& src){
+        construct( src.n(), src.dims(), src.communicator(), src.direction());
+    }
+    void collect( const Vector& input, Vector& values);
     int size(); //size of values is size of input plus ghostcells
+    MPI_Comm communicator() const {return comm_;}
+    int n() const{return n_;}
+    const int* dims() const{return dim_;}
+    int direction() const {return direction_;}
     private:
+    void construct( int n, int vector_dimensions[3], MPI_Comm comm, int direction);
     typedef thrust::host_vector<double> HVec;
     int n_, dim_[3]; //deepness, dimensions
     MPI_Comm comm_;
     int direction_;
-    IndexMap input_scatter, buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
-    void sendrecv( const HVec&, const HVec&, HVec& , HVec&);
+    Index input_scatter, buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
+    void sendrecv( HVec&, HVec&, HVec& , HVec&);
     int buffer_size();
 };
-template<class C, class I>
-NearestNeighborComm<C,I>::NearestNeighborComm( int n, int dimensions[3], MPI_Comm comm, int direction):n_(n), comm_(comm), direction_(direction){
+
+typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH;
+
+template<class I, class V>
+NearestNeighborComm<I,V>::NearestNeighborComm( int n, int dimensions[3], MPI_Comm comm, int direction):n_(n), comm_(comm), direction_(direction){
+    construct( n, dimensions, comm, direction);
+}
+template<class I, class V>
+void NearestNeighborComm<I,V>::construct( int n, int dimensions[3], MPI_Comm comm, int direction)
+{
     dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
     assert( 0<=direction);
     assert( direction <3);
@@ -198,18 +216,17 @@ NearestNeighborComm<C,I>::NearestNeighborComm( int n, int dimensions[3], MPI_Com
     }
     input_scatter=iscattr, buffer_gather1=hbgather1, buffer_gather2 = hbgather2;
     buffer_scatter1=hbscattr1, buffer_scatter2=hbscattr2;
-                
 }
 
-template<class C, class I>
-int NearestNeighborComm<C,I>::size()
+template<class I, class V>
+int NearestNeighborComm<I,V>::size()
 {
     int origin= dim_[0]*dim_[1]*dim_[2];
     return origin + 2*buffer_size();
 }
 
-template<class C, class I>
-int NearestNeighborComm<C,I>::buffer_size()
+template<class I, class V>
+int NearestNeighborComm<I,V>::buffer_size()
 {
     switch( direction_)
     {
@@ -224,14 +241,14 @@ int NearestNeighborComm<C,I>::buffer_size()
     }
 }
 
-template<class C, class I>
-void NearestNeighborComm<C,I>::gather( const C& input, C& values)
+template<class I, class V>
+void NearestNeighborComm<I,V>::collect( const V& input, V& values)
 {
     assert( values.size() == size()); 
-    C sendbuffer1( buffer_size(), 0);
-    C recvbuffer1( buffer_size(), 0);
-    C sendbuffer2( buffer_size(), 0);
-    C recvbuffer2( buffer_size(), 0);
+    V sendbuffer1( buffer_size(), 0);
+    V recvbuffer1( buffer_size(), 0);
+    V sendbuffer2( buffer_size(), 0);
+    V recvbuffer2( buffer_size(), 0);
     //gather values from input into sendbuffer
     thrust::gather( buffer_gather1.begin(), buffer_gather1.end(), input.begin(), sendbuffer1.begin());
     thrust::gather( buffer_gather2.begin(), buffer_gather2.end(), input.begin(), sendbuffer2.begin());
@@ -247,10 +264,11 @@ void NearestNeighborComm<C,I>::gather( const C& input, C& values)
     thrust::scatter( recvbuffer2.begin(), recvbuffer2.end(), buffer_scatter2.begin(), values.begin());
 }
 
-template<class C, class I>
-void NearestNeighborComm<C,I>::sendrecv( const HVec& sb1, const HVec& sb2 , HVec& rb1, HVec& rb2)
+template<class I, class V>
+void NearestNeighborComm<I,V>::sendrecv( HVec& sb1, HVec& sb2 , HVec& rb1, HVec& rb2)
 {
-    int source, dest, status;
+    int source, dest;
+    MPI_Status status;
     MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
     MPI_Sendrecv(   sb1.data(), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 3,  //destination

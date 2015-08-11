@@ -1,7 +1,6 @@
 #pragma once
 
 #include <thrust/host_vector.h>
-#include "thrust_vector_blas.cuh"
 #include "matrix_traits.h"
 
 namespace dg
@@ -9,6 +8,7 @@ namespace dg
 //mixed derivatives for jump terms missing
 struct SparseBlockMat
 {
+    typedef double value_type;
     SparseBlockMat(){}
     SparseBlockMat( int num_block_rows, int num_block_cols, int num_blocks_per_line, int num_different_blocks, int n):
         data(num_different_blocks*n*n), cols_idx( num_block_rows*num_blocks_per_line), data_idx(cols_idx.size()),

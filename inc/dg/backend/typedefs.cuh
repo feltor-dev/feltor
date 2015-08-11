@@ -25,6 +25,8 @@ typedef SparseBlockMatDevice DMatrix;
 typedef SparseBlockMatDevice DMatrix;
 #endif
 
+typedef NearestNeighborComm<thrust::device_vector<int>, thrust::device_vector<double> > NNCD;
+
 }//namespace dg
 
 #endif//_DG_TYPEDEFS_CUH_
