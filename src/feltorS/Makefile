@@ -11,7 +11,7 @@ CFLAGS+= -Xcompiler -fopenmp
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 GLFLAGS= -lGLEW
 OPT	   = -O2 
-endif
+endif:q:
 ifeq ($(strip $(device)),omp)
 CC = g++
 CFLAGS = -Wall -fopenmp -x c++
