@@ -381,7 +381,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
         dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
     }
-=======
 //     dg::blas2::gemv(probeinterp,npe[0],probevalue);
 //     probevec[0]=probevalue;
 //     dg::blas2::gemv(probeinterp,phi[0],probevalue);
@@ -394,7 +393,6 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //end of energy computation
     
     
->>>>>>> upstream/develop
     for( unsigned i=0; i<2; i++)
     {
         //ExB dynamics

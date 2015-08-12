@@ -34,7 +34,7 @@
 23) boxscale R+                             =  1.05 (a little larger than 1)
 24) boxscale R-                             =  1.05(a little larger than 1)
 25) boxscale Z+                             =  1.05 (a little larger than 1)
-26) boxscale Z-                             =  1.05 (a little larger than 1)
+26) boxscale Z-                             =  1.15 (a little larger than 1)
 27) adv (adj(0), nadj(1), onadj(2),no(3))   =  3
 27) diff (a(0), na(1),
           ona(2),d(3), da(4),no(5)))        =4
