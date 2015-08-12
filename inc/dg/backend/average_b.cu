@@ -19,7 +19,7 @@ int main()
     dg::Timer t;
 
     dg::HVec vector = dg::evaluate( function ,g), vector_y( vector);
-    dg::DVec dvector( vector), dvector_y( vector_y);
+    dg::DVec dvector= dg::evaluate( function ,g), dvector_y(dvector);
     dg::HVec w2d = dg::create::weights( g);
     dg::DVec w2d_device( w2d);
     t.tic();
