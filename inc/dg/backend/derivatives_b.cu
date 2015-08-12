@@ -23,8 +23,8 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
-typedef dg::SparseBlockMatDevice Matrix;
-typedef dg::DVec Vector;
+typedef dg::SparseBlockMat Matrix;
+typedef dg::HVec Vector;
 
 int main()
 {

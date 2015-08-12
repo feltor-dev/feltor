@@ -32,7 +32,30 @@ class Timer
   private:
     double start, stop;
 };
-#else //MPI_VERSION
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP //MPI_VERSION
+#include "omp.h"
+class Timer
+{
+  public:
+    /**
+    * @brief Start timer using omp_get_wtime
+    */
+    void tic( ){ start = omp_get_wtime();}
+    /**
+    * @brief Stop timer using MPI_Wtime
+    *
+    * @param comm the communicator 
+    * @note uses MPI_Barrier(comm)
+    */
+    void toc( ){ stop = omp_get_wtime(); }
+    /*! \brief Return time elapsed between tic and toc
+     *
+     * \return Time in seconds between calls of tic and toc*/
+    double diff(){ return stop - start; }
+  private:
+    double start, stop;
+};
+#else
 
 #include <sys/time.h>
 /*! @brief Very simple tool for performance measuring
@@ -50,7 +73,7 @@ class Timer
     /*! \brief Return time elapsed between tic and toc
      *
      * \return Time in seconds between calls of tic and toc*/
-    double diff(){ return (stop.tv_sec - start.tv_sec) + 1e-6*(stop.tv_usec - start.tv_usec);}
+    double diff(){ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
 };
 #endif //MPI_VERSION
 #else //THRUST

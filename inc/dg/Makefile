@@ -60,7 +60,7 @@ toefl_b: toefl_b.cu toefl.cuh
 	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
+	$(CC) -O3 $(CFLAGS) $< -o $@ $(INCLUDE) 
 
 dg_t: dg_t.cpp ../dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm

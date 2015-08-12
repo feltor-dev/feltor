@@ -68,7 +68,7 @@ blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(INCLUDE)  $(CFLAGS) $< -o $@ -g
 
 %_b: %_b.cu 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
+	$(CC) -O3 $(CFLAGS) $< -o $@ $(INCLUDE) 
 
 dg_t: dg_t.cpp dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm

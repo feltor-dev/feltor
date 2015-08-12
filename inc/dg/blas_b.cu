@@ -4,12 +4,12 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
+#include "backend/timer.cuh"
 #include "blas.h"
 #include "backend/derivatives.h"
 #include "backend/sparseblockmat.cuh"
 #include "backend/evaluation.cuh"
 #include "backend/typedefs.cuh"
-#include "backend/timer.cuh"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -74,6 +74,12 @@ int main()
     norm = dg::blas2::dot( x, w2d, y);
     t.toc();
     std::cout<<"DOT(x,w,y) took                  " <<t.diff()<<"s   result: "<<norm<<"\n";
+    t.tic();
+    #pragma omp parallel for
+    for( unsigned i=0; i<y.size(); i++)
+        y[i] = 0;
+    t.toc();
+    std::cout << "Manual set to zero took "<<t.diff()<<"s\n";
 
     return 0;
 }
