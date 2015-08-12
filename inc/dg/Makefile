@@ -4,7 +4,6 @@ device=gpu
 
 INCLUDE = -I../../ # other project libraries
 INCLUDE = -I../ # other project libraries
-INCLUDE+= -I/Users/ralph/local/cusplibrary/ 
 INCLUDE+= -I. # header files
 
 ifeq ($(strip $(system)),home)
@@ -29,7 +28,7 @@ GLFLAGS   = -lm
 endif
 
 ifeq ($(strip $(device)),gpu)
-CC = /Developer/NVIDIA/CUDA-7.0/bin/nvcc
+CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 
 #CFLAGS+= -Xcompiler -fopenmp 
 #CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
