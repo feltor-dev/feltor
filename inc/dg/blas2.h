@@ -2,15 +2,15 @@
 
 #include "backend/vector_traits.h"
 #include "backend/matrix_traits.h"
-#ifdef MPI_VERSION
-#include "backend/mpi_matrix_blas.h"
-#include "backend/mpi_precon_blas.h"
-#endif //MPI_VERSION
 #include "backend/matrix_traits_thrust.h"
 #include "backend/thrust_matrix_blas.cuh"
 #include "backend/cusp_matrix_blas.cuh"
 #include "backend/sparseblockmat.cuh"
 #include "backend/selfmade_blas.cuh"
+#ifdef MPI_VERSION
+#include "backend/mpi_matrix_blas.h"
+#include "backend/mpi_precon_blas.h"
+#endif //MPI_VERSION
 #include "backend/std_matrix_blas.cuh"
 
 

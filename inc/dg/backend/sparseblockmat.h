@@ -18,6 +18,8 @@ struct SparseBlockMat
     /**
     * @brief Reduce a global matrix into equal chunks among mpi processes
     *
+    * copies all data elements. 
+    * grabs the right chunk of column and data indices and remaps the column indices to vector with ghostcells
     * @param coord The mpi proces coordinate of the proper dimension
     * @param howmany[3] # of processes 0 is left, 1 is the middle, 2 is right
     */
@@ -34,11 +36,18 @@ struct SparseBlockMat
         //now grab the right chunk of cols and data indices
         for( unsigned i=0; i<temp.cols_idx.size(); i++)
         {
-            temp.cols_idx[i] = cols_idx[ coord*temp.num_rows+i];
-            temp.data_idx[i] = data_idx[ coord*temp.num_rows+i];
-            //data indices are correct but cols are still the global indices
-            temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size + 1 + num_rows)%num_rows ;
+            temp.data_idx[i] = data_idx[ coord*(chunk_size*blocks_per_line)+i];
+            //data indices are correct but cols are still the global indices (remapping a bit clumsy)
+            temp.cols_idx[i] = cols_idx[ coord*(chunk_size*blocks_per_line)+i];
+            //first in the zeroth line the col idx might be (global)num_cols - 1 -> map that to -1
+            if( i/blocks_per_line == 0 && temp.cols_idx[i] == num_cols-1) temp.cols_idx[i] = -1; 
+            //second in the last line the col idx mighty be 0 -> map to (global)num_cols
+            if( i/blocks_per_line == temp.num_rows-1 && temp.cols_idx[i] == 0) temp.cols_idx[i] = num_cols;  
+            //Elements are now in the range -1, 0, 1,..., (global)num_cols
+            //now shift this range to chunk range 0,..,chunk_size
+            temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size + 1 ); 
         }
+        *this=temp;
 
     }
     
@@ -54,16 +63,18 @@ struct SparseBlockMat
 
 void SparseBlockMat::symv(const HVec& x, HVec& y) const
 {
+    assert( y.size() == num_rows*n*left*right);
+    assert( x.size() == num_cols*n*left*right);
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
     for( int j=0; j<right; j++)
     {
-        y[((s*num_rows + i)*n+k)*right+j] =0;
+        int I = ((s*num_rows + i)*n+k)*right+j;
+        y[I] =0;
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
-            y[((s*num_rows + i)*n+k)*right+j] += 
-                data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+            y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
     }
 }

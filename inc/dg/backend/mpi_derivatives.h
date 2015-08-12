@@ -21,9 +21,9 @@ RowDistMat< SparseBlockMat, NNCH> dx( const MPI_Grid2d& g, bc bcx, direction dir
     assert( ndims == 2);
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
-    int howmany[] = {dims[1], dims[0], 1};
-    int vector_dimensions[] = {1, g.n()*g.Ny(), g.n()*g.Nx()};
-    dx.distribute_rows( coords[0], dims);
+    int howmany[] = {dims[1], dims[0], 1}; //left, middle, right
+    dx.distribute_rows( coords[0], howmany);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), 1}; //x, y, z
     NNCH c( g.n(), vector_dimensions, comm, 0);
     RowDistMat<SparseBlockMat, NNCH> matrix( dx, c);
     return matrix;
@@ -39,8 +39,8 @@ RowDistMat< SparseBlockMat, NNCH> dy( const MPI_Grid2d& g, bc bcy, direction dir
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {1, dims[1], dims[0]};
-    int vector_dimensions[] = {1, g.n()*g.Ny(), g.n()*g.Nx()};
-    dy.distribute_rows( coords[1], dims);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), 1}; //x, y, z
+    dy.distribute_rows( coords[1], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 1);
     RowDistMat<SparseBlockMat, NNCH> matrix( dy, c);
     return matrix;
@@ -56,8 +56,8 @@ RowDistMat< SparseBlockMat, NNCH> jumpX( const MPI_Grid2d& g, bc bcx, direction 
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {dims[1], dims[0], 1};
-    int vector_dimensions[] = {1, g.n()*g.Ny(), g.n()*g.Nx()};
-    jumpX.distribute_rows( coords[0], dims);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), 1}; //x, y, z
+    jumpX.distribute_rows( coords[0], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 0);
     RowDistMat<SparseBlockMat, NNCH> matrix( jumpX, c);
     return matrix;
@@ -73,8 +73,8 @@ RowDistMat< SparseBlockMat, NNCH> jumpY( const MPI_Grid2d& g, bc bcy, direction 
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {1, dims[1], dims[0]};
-    int vector_dimensions[] = {1, g.n()*g.Ny(), g.n()*g.Nx()};
-    jumpY.distribute_rows( coords[1], dims);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), 1}; //x, y, z
+    jumpY.distribute_rows( coords[1], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 1);
     RowDistMat<SparseBlockMat, NNCH> matrix( jumpY, c);
     return matrix;
@@ -90,8 +90,8 @@ RowDistMat< SparseBlockMat, NNCH> dx( const MPI_Grid3d& g, bc bcx, direction dir
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {dims[2]*dims[1], dims[0], 1};
-    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
-    dx.distribute_rows( coords[0], dims);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), g.Nz()}; //x, y, z
+    dx.distribute_rows( coords[0], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 0);
     RowDistMat<SparseBlockMat, NNCH> matrix( dx, c);
     return matrix;
@@ -107,8 +107,8 @@ RowDistMat< SparseBlockMat, NNCH> dy( const MPI_Grid3d& g, bc bcy, direction dir
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {dims[2], dims[1], dims[0]};
-    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
-    dy.distribute_rows( coords[1], dims);
+    dy.distribute_rows( coords[1], howmany);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), g.Nz()}; //x, y, z
     NNCH c( g.n(), vector_dimensions, comm, 1);
     RowDistMat<SparseBlockMat, NNCH> matrix( dy, c);
     return matrix;
@@ -124,13 +124,13 @@ RowDistMat< SparseBlockMat, NNCH> dz( const MPI_Grid3d& g, bc bcz, direction dir
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
-    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
-    dz.distribute_rows( coords[2], dims);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), g.Nz()}; //x, y, z
+    dz.distribute_rows( coords[2], howmany);
     NNCH c( 1, vector_dimensions, comm, 2);
     RowDistMat<SparseBlockMat, NNCH> matrix( dz, c);
     return matrix;
 }
-RowDistMat< SparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g, bc bcx, direction dir = centered)
+RowDistMat< SparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g, bc bcx)
 {
     SparseBlockMat jumpX = dg::create::jumpX( g.global(), bcx);
     //get cartesian structure of mpi grid
@@ -141,13 +141,13 @@ RowDistMat< SparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g, bc bcx, direction 
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {dims[2]*dims[1], dims[0], 1};
-    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
-    jumpX.distribute_rows( coords[0], dims);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), g.Nz()}; //x, y, z
+    jumpX.distribute_rows( coords[0], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 0);
     RowDistMat<SparseBlockMat, NNCH> matrix( jumpX, c);
     return matrix;
 }
-RowDistMat< SparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g, bc bcy, direction dir = centered)
+RowDistMat< SparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g, bc bcy)
 {
     SparseBlockMat jumpY = dg::create::jumpY( g.global(), bcy);
     //get cartesian structure of mpi grid
@@ -158,13 +158,13 @@ RowDistMat< SparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g, bc bcy, direction 
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {dims[2], dims[1], dims[0]};
-    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
-    jumpY.distribute_rows( coords[1], dims);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), g.Nz()}; //x, y, z
+    jumpY.distribute_rows( coords[1], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 1);
     RowDistMat<SparseBlockMat, NNCH> matrix( jumpY, c);
     return matrix;
 }
-RowDistMat< SparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g, bc bcz, direction dir = centered)
+RowDistMat< SparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g, bc bcz)
 {
     SparseBlockMat jumpZ = dg::create::jumpZ( g.global(), bcz);
     //get cartesian structure of mpi grid
@@ -175,8 +175,8 @@ RowDistMat< SparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g, bc bcz, direction 
     int dims[ndims], periods[ndims], coords[ndims];
     MPI_Cart_get( comm, ndims, dims, periods, coords);
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
-    int vector_dimensions[] = {g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
-    jumpZ.distribute_rows( coords[2], dims);
+    int vector_dimensions[] = {g.n()*g.Nx(), g.n()*g.Ny(), g.Nz()}; //x, y, z
+    jumpZ.distribute_rows( coords[2], howmany);
     NNCH c( 1, vector_dimensions, comm, 2);
     RowDistMat<SparseBlockMat, NNCH> matrix( jumpZ, c);
     return matrix;
@@ -207,14 +207,14 @@ RowDistMat<SparseBlockMat, NNCH> dx( const MPI_Grid3d& g, direction dir = center
 {
     return dx( g, g.bcx(), dir);
 }
-RowDistMat<SparseBlockMat, NNCH> jumpX( const MPI_Grid2d& g, direction dir = centered)
+RowDistMat<SparseBlockMat, NNCH> jumpX( const MPI_Grid2d& g)
 {
-    return jumpX( g, g.bcx(), dir);
+    return jumpX( g, g.bcx());
 }
 
-RowDistMat<SparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g, direction dir = centered)
+RowDistMat<SparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g)
 {
-    return jumpX( g, g.bcx(), dir);
+    return jumpX( g, g.bcx());
 }
 /**
  * @brief Create 2d derivative in y-direction
@@ -237,18 +237,18 @@ RowDistMat<SparseBlockMat, NNCH> dz( const MPI_Grid3d& g, direction dir = center
 {
     return dz( g, g.bcz(), dir);
 }
-RowDistMat<SparseBlockMat, NNCH> jumpY( const MPI_Grid2d& g, direction dir = centered)
+RowDistMat<SparseBlockMat, NNCH> jumpY( const MPI_Grid2d& g)
 {
-    return jumpY( g, g.bcy(), dir);
+    return jumpY( g, g.bcy());
 }
 
-RowDistMat<SparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g, direction dir = centered)
+RowDistMat<SparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g)
 {
-    return jumpY( g, g.bcy(), dir);
+    return jumpY( g, g.bcy());
 }
-RowDistMat<SparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g, direction dir = centered)
+RowDistMat<SparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g)
 {
-    return jumpZ( g, g.bcz(), dir);
+    return jumpZ( g, g.bcz());
 }
 
 

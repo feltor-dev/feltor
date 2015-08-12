@@ -25,7 +25,9 @@ typedef SparseBlockMatDevice DMatrix;
 typedef SparseBlockMatDevice DMatrix;
 #endif
 
+#ifdef MPI_VERSION
 typedef NearestNeighborComm<thrust::device_vector<int>, thrust::device_vector<double> > NNCD;
+#endif
 
 }//namespace dg
 

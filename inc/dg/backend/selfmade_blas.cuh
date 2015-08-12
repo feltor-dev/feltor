@@ -14,9 +14,6 @@ inline void doSymv(
               AnyVectorTag,
               AnyVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
     m.symv( x,y);
 }
 template< class Matrix, class Vector1, class Vector2>
@@ -28,9 +25,6 @@ inline void doGemv(
               AnyVectorTag,
               AnyVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
     m.symv( x,y);
 }
 

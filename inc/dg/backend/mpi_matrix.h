@@ -46,12 +46,25 @@ struct RowDistMat
     {
         assert( x.communicator() == y.communicator());
         assert( x.communicator() == c_.communicator());
-        container temp( c_.size());
+        //int rank;
+        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //Timer t;
+        //t.tic();
+        container temp( c_.size()); //only takes time the first time it's called
+        //t.toc();
+        //if(rank==0)std::cout << "allocat took "<<t.diff()<<"s\n";
+
+        //t.tic();
         c_.collect( x.data(), temp);
+        //t.toc();
+        //if(rank==0)std::cout << "collect took "<<t.diff()<<"s\n";
+        //t.tic();
         dg::blas2::detail::doSymv( m_, temp, y.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
+        //t.toc();
+        //if(rank==0)std::cout << "symv    took "<<t.diff()<<"s\n";
     }
 
         

@@ -531,9 +531,9 @@ struct MPI_Grid3d
      */
     dg::system system() const {return g.system();}
     /**
-     * @brief The total number of points
+     * @brief The total local number of points
      *
-     * @return n*n*Nx*Ny
+     * @return n*n*Nx*Ny*Nz
      */
     unsigned size() const { return n()*n()*Nx()*Ny()*Nz();}
     /**

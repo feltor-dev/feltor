@@ -39,12 +39,6 @@ int main()
     dg::blas2::symv( dx, v, w);
     dg::blas1::axpby( 1., u, -1., w);
     std::cout << "DX(symm):  Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<"\n";
-    //dg::blas2::symv( lzM, v, w);
-    //dg::blas1::axpby( 1., v, -1., w);
-    //std::cout << "DXX(1): Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<" (Note the supraconvergence!)\n";
-    //dg::blas2::symv( lap, v, w);
-    //dg::blas1::axpby( 1., v, -1., w);
-    //std::cout << "DXX(2): Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<" (Note the supraconvergence!)\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1
