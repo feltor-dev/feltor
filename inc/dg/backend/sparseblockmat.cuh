@@ -228,7 +228,8 @@ else
 
 void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
 {
-    assert( x.size() == y.size());
+    assert( y.size() == (unsigned)num_rows*n*left*right);
+    assert( x.size() == (unsigned)num_cols*n*left*right);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
     const size_t size = left*right*num_rows*n;

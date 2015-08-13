@@ -3,8 +3,11 @@
 
 #include <mpi.h>
 #include <thrust/host_vector.h>
-#include "backend/timer.cuh"
+#include <thrust/device_vector.h>
 #include "blas.h"
+#include "backend/sparseblockmat.cuh"
+#include "backend/typedefs.cuh"
+#include "backend/timer.cuh"
 #include "backend/mpi_evaluation.h"
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_init.h"
@@ -13,8 +16,8 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double function(double x, double y){ return sin(y)*sin(x);}
 
-typedef dg::RowDistMat<dg::SparseBlockMat, dg::NNCH> Matrix;
-typedef dg::MPI_Vector<thrust::host_vector<double> > Vector;
+typedef dg::RowDistMat<dg::SparseBlockMatDevice, dg::NNCD> Matrix;
+typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);

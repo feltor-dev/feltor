@@ -122,7 +122,10 @@ struct VectorTraits<const MPI_Vector<container> > {
 template<class Index, class Vector>
 struct NearestNeighborComm
 {
-    NearestNeighborComm( int n, const int vector_dimensions[3], MPI_Comm comm, int direction);
+    NearestNeighborComm( int n, const int vector_dimensions[3], MPI_Comm comm, int direction)
+    {
+        construct( n, vector_dimensions, comm, direction);
+    }
     template< class OtherIndex, class OtherVector>
     NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherVector>& src){
         construct( src.n(), src.dims(), src.communicator(), src.direction());
@@ -148,13 +151,12 @@ struct NearestNeighborComm
 typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH;
 
 template<class I, class V>
-NearestNeighborComm<I,V>::NearestNeighborComm( int n, const int dimensions[3], MPI_Comm comm, int direction):n_(n), comm_(comm), direction_(direction){
-    construct( n, dimensions, comm, direction);
-}
-template<class I, class V>
 void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Comm comm, int direction)
 {
+    n_=n;
     dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
+    comm_ = comm;
+    direction_ = direction;
     assert( 0<=direction);
     assert( direction <3);
     thrust::host_vector<int> iscattr(dim_[0]*dim_[1]*dim_[2]), hbgather1(buffer_size()), hbgather2(hbgather1), hbscattr1(buffer_size()), hbscattr2(hbscattr1);
