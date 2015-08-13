@@ -1,8 +1,6 @@
 #ifndef _DG_DERIVATIVES_CUH_
 #define _DG_DERIVATIVES_CUH_
 
-#include <cusp/elementwise.h>
-
 #include "grid.h"
 #include "dx.h"
 

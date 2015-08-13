@@ -1,7 +1,16 @@
 MPICXX=mpic++
-CXXFLAGS=#-Wall
+CXXFLAGS =-Wall
 CXXFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 LIBS = -lnetcdf
+ifeq ($(strip $(device)),omp)
+CXXFLAGS = -fopenmp -Wall
+CXXFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+endif
+ifeq ($(strip $(device)),gpu)
+MPICXX=nvcc --compiler-bindir mpic++
+CXXFLAGS = -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA
+CXXFLAGS+= --compiler-options -Wall -arch=sm_20 
+endif
 
 %_mpit: %_mpit.cpp 
 	$(MPICXX) $(INCLUDE) -DDG_DEBUG $(CXXFLAGS) $< -o $@ -g

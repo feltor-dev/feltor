@@ -12,6 +12,8 @@
 #include "mpi_precon.h"
 #include "mpi_init.h"
 
+#include "sparseblockmat.cuh"
+#include "typedefs.cuh"
 #include "blas.h"
 
 const double lx = 2*M_PI;
@@ -31,8 +33,8 @@ dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 dg::bc bcz = dg::PER;
 
-typedef dg::RowDistMat<dg::SparseBlockMat, dg::NNCH> Matrix;
-typedef dg::MPI_Vector<thrust::host_vector<double> > Vector;
+typedef dg::RowDistMat<dg::SparseBlockMatDevice, dg::NNCD> Matrix;
+typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 
 int main(int argc, char* argv[])
 {

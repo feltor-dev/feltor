@@ -122,9 +122,9 @@ struct VectorTraits<const MPI_Vector<container> > {
 template<class Index, class Vector>
 struct NearestNeighborComm
 {
-    NearestNeighborComm( int n, int vector_dimensions[3], MPI_Comm comm, int direction);
+    NearestNeighborComm( int n, const int vector_dimensions[3], MPI_Comm comm, int direction);
     template< class OtherIndex, class OtherVector>
-    NearestNeighborComm( const NearestNeighborComm& src){
+    NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherVector>& src){
         construct( src.n(), src.dims(), src.communicator(), src.direction());
     }
 
@@ -135,7 +135,7 @@ struct NearestNeighborComm
     const int* dims() const{return dim_;}
     int direction() const {return direction_;}
     private:
-    void construct( int n, int vector_dimensions[3], MPI_Comm comm, int direction);
+    void construct( int n, const int vector_dimensions[3], MPI_Comm comm, int direction);
     typedef thrust::host_vector<double> HVec;
     int n_, dim_[3]; //deepness, dimensions
     MPI_Comm comm_;
@@ -148,11 +148,11 @@ struct NearestNeighborComm
 typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH;
 
 template<class I, class V>
-NearestNeighborComm<I,V>::NearestNeighborComm( int n, int dimensions[3], MPI_Comm comm, int direction):n_(n), comm_(comm), direction_(direction){
+NearestNeighborComm<I,V>::NearestNeighborComm( int n, const int dimensions[3], MPI_Comm comm, int direction):n_(n), comm_(comm), direction_(direction){
     construct( n, dimensions, comm, direction);
 }
 template<class I, class V>
-void NearestNeighborComm<I,V>::construct( int n, int dimensions[3], MPI_Comm comm, int direction)
+void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Comm comm, int direction)
 {
     dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
     assert( 0<=direction);

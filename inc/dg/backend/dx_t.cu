@@ -38,7 +38,7 @@ dg::bc bcx = NEU_DIR;
 */
 
 typedef dg::DVec Vector;
-typedef dg::SparseBlockMatGPU Matrix;
+typedef dg::SparseBlockMatDevice Matrix;
 
 int main ()
 {

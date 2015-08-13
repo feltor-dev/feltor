@@ -42,7 +42,7 @@ struct SparseBlockMat
             //first in the zeroth line the col idx might be (global)num_cols - 1 -> map that to -1
             if( i/blocks_per_line == 0 && temp.cols_idx[i] == num_cols-1) temp.cols_idx[i] = -1; 
             //second in the last line the col idx mighty be 0 -> map to (global)num_cols
-            if( i/blocks_per_line == temp.num_rows-1 && temp.cols_idx[i] == 0) temp.cols_idx[i] = num_cols;  
+            if( (int)i/blocks_per_line == temp.num_rows-1 && temp.cols_idx[i] == 0) temp.cols_idx[i] = num_cols;  
             //Elements are now in the range -1, 0, 1,..., (global)num_cols
             //now shift this range to chunk range 0,..,chunk_size
             temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size + 1 ); 

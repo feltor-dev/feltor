@@ -35,8 +35,8 @@ struct RowDistMat
     */
     RowDistMat( const LocalMatrix& m, const Collective& c):m_(m), c_(c) { }
 
-    template< class OtherMatrix>
-    RowDistMat( const RowDistMat<OtherMatrix, Collective>& src):m_(src.matrix()), c_(src.collective())
+    template< class OtherMatrix, class OtherCollective>
+    RowDistMat( const RowDistMat<OtherMatrix, OtherCollective>& src):m_(src.matrix()), c_(src.collective())
     { }
     const LocalMatrix& matrix() const{return m_;}
     const Collective& collective() const{return c_;}

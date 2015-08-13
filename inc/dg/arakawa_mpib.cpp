@@ -10,6 +10,7 @@
 
 #include "arakawa.h"
 #include "backend/mpi_init.h"
+#include "backend/typedefs.cuh"
 
 
 
@@ -43,8 +44,8 @@ double jacobian( double x, double y)
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
 
-typedef dg::RowDistMat<dg::SparseBlockMat, dg::NNCH> Matrix;
-typedef dg::MPI_Vector<thrust::host_vector<double> > Vector;
+typedef dg::RowDistMat<dg::SparseBlockMatDevice, dg::NNCD> Matrix;
+typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);

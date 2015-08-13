@@ -2,6 +2,7 @@
 #include <vector>
 
 #include <mpi.h>
+#include <thrust/device_vector.h>
 #include "backend/mpi_evaluation.h"
 #include "blas1.h"
 
@@ -10,7 +11,7 @@
 double two( double x, double y){return 2.;}
 double three( double x, double y){return 3.;}
 
-typedef dg::MPI_Vector<thrust::host_vector<double> > MHVec;
+typedef dg::MPI_Vector<thrust::device_vector<double> > MHVec;
 
 int main( int argc, char* argv[])
 {
