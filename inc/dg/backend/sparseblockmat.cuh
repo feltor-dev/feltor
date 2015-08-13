@@ -77,7 +77,7 @@ void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
     //}
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
-//#pragma omp parallel for
+#pragma omp parallel for
     for( unsigned  i=0; i<y.size(); i++)
     {
         y[i] =0;
@@ -86,7 +86,7 @@ void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
     int offset[blocks_per_line];
     for( int d=0; d<blocks_per_line; d++)
         offset[d] = cols_idx[blocks_per_line+d]-1;
-    //#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(4)
     for( int s=0; s<left; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<n; k++)
@@ -105,18 +105,19 @@ void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
     //for( int j=0; j<right; j++)
     //    y[((s*num_rows + i)*n+k)*right+j] =0;
 
-    Timer t;
-    t.tic();
+    //Timer t;
+    //t.tic();
+if(left > 1)
+#pragma omp parallel for 
+    for( int s=0; s<left; s++)
     for( int d=0; d<blocks_per_line; d++)
     {
-    //#pragma omp parallel for collapse(4)
-    for( int s=0; s<left; s++)
     for( int i=1; i<num_rows-1; i++)
     {
+        int J = i+offset[d];
     for( int k=0; k<n; k++)
     for( int j=0; j<right; j++)
     {
-        int J = i+offset[d];
         int I = ((s*num_rows + i)*n+k)*right+j;
         {
             for( int q=0; q<n; q++) //multiplication-loop
@@ -125,9 +126,27 @@ void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
     }
     }
     }
-    t.toc();
+else
+    for( int d=0; d<blocks_per_line; d++)
+    {
+#pragma omp parallel for 
+    for( int i=1; i<num_rows-1; i++)
+    {
+        int J = i+offset[d];
+    for( int k=0; k<n; k++)
+    for( int j=0; j<right; j++)
+    {
+        int I = (i*n+k)*right+j;
+        {
+            for( int q=0; q<n; q++) //multiplication-loop
+                y[I] += data[ (d*n+k)*n+q]*x[(J*n+q)*right+j];
+        }
+    }
+    }
+    }
+    //t.toc();
     //std::cout << "Main loop took "<<t.diff()<<"s\n";
-    //#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(4)
     for( int s=0; s<left; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<n; k++)
@@ -163,16 +182,29 @@ void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
             k = (row/right)%n, 
             j=row%right;
         y[row] = 0;
-        for( int d=0; d<blocks_per_line; d++)
-        {
-            int B = data_idx[i*blocks_per_line+d];
-            int J = cols_idx[i*blocks_per_line+d];
-            //int B = d;
-            //int J = (i+d-1)%num_cols;
-            for( int q=0; q<n; q++) //multiplication-loop
-                y[row] += 
-                    data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
-        }
+        //if( i==0||i==num_rows-1)
+            for( int d=0; d<blocks_per_line; d++)
+            {
+                int B = data_idx[i*blocks_per_line+d];
+                int J = cols_idx[i*blocks_per_line+d];
+                //int B = d;
+                //int J = (i+d-1)%num_cols;
+                for( int q=0; q<n; q++) //multiplication-loop
+                    y[row] += 
+                        data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
+            }
+            //wird nicht schneller!
+        //else
+        //    for( int d=0; d<blocks_per_line; d++)
+        //    {
+        //        int B = data_idx[blocks_per_line+d];
+        //        int J = cols_idx[blocks_per_line+d]+i-1;
+        //        //int B = d;
+        //        //int J = (i+d-1)%num_cols;
+        //        for( int q=0; q<n; q++) //multiplication-loop
+        //            y[row] += 
+        //                data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
+        //    }
     }
 
 }
