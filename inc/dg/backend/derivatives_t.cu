@@ -30,7 +30,7 @@ int main()
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, bcy, bcz);
     //dg::Grid2d<double> g( 0, lx, 0, lx, n, Nx, Ny, bcx, dg::PER);
-    dg::SparseBlockMatGPU dx = dg::create::dx( g, bcx, dg::centered);
+    dg::SparseBlockMatDevice dx = dg::create::dx( g, bcx, dg::centered);
     dg::DVec v = dg::evaluate( function, g);
     dg::DVec w = v;
     const dg::DVec u = dg::evaluate( derivative, g);
@@ -51,7 +51,7 @@ int main()
     const dg::DVec func = dg::evaluate( siny, g);
     const dg::DVec deri = dg::evaluate( cosy, g);
 
-    dg::SparseBlockMatGPU dy = dg::create::dy( g); 
+    dg::SparseBlockMatDevice dy = dg::create::dy( g); 
     dg::DVec temp( func);
     dg::blas2::gemv( dy, func, temp);
     dg::blas1::axpby( 1., deri, -1., temp);
@@ -61,7 +61,7 @@ int main()
     const dg::DVec func = dg::evaluate( sinz, g);
     const dg::DVec deri = dg::evaluate( cosz, g);
 
-    dg::SparseBlockMatGPU dz = dg::create::dz( g); 
+    dg::SparseBlockMatDevice dz = dg::create::dz( g); 
     dg::DVec temp( func);
     dg::blas2::gemv( dz, func, temp);
     dg::blas1::axpby( 1., deri, -1., temp);
