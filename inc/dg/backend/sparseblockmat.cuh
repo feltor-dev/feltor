@@ -147,6 +147,7 @@ if(left > 1)
     }
 }
 else
+{
     for( int d=0; d<blocks_per_line; d++)
     {
 #pragma omp parallel for 
@@ -162,7 +163,7 @@ else
         }
     }
     }
-    //endif
+} //endif
 #pragma omp parallel for collapse(4)
     for( int s=0; s<left; s++)
     for( int i=num_rows-1; i<num_rows; i++)

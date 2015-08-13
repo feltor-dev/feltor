@@ -11,6 +11,8 @@
 ////functions for evaluation
 #include "grid.h"
 #include "dlt.h"
+#include "operator.h"
+#include "tensor.cuh"
 //#include "evaluation.cuh"
 //
 //

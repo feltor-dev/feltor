@@ -1,7 +1,11 @@
 #include <iostream>
 #include <iomanip>
 
-#include "backend/xspacelib.cuh"
+//#include "backend/xspacelib.cuh"
+#include <thrust/device_vector.h>
+#include "blas.h"
+#include "backend/sparseblockmat.cuh"
+#include "backend/typedefs.cuh"
 #include "backend/timer.cuh"
 
 

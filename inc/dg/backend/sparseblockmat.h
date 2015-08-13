@@ -69,6 +69,42 @@ void SparseBlockMat::symv(const HVec& x, HVec& y) const
     int offset[blocks_per_line];
     for( int d=0; d<blocks_per_line; d++)
         offset[d] = cols_idx[blocks_per_line+d]-1;
+if(right==1) //alle dx Ableitungen
+{
+    for( int s=0; s<left; s++)
+    for( int i=0; i<1; i++)
+    for( int k=0; k<n; k++)
+    {
+        double temp=0;
+        for( int d=0; d<blocks_per_line; d++)
+            for( int q=0; q<n; q++) //multiplication-loop
+                temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
+        y[(s*num_rows+i)*n+k]=temp;
+    }
+    for( int s=0; s<left; s++)
+    for( int i=1; i<num_rows-1; i++)
+    for( int k=0; k<n; k++)
+    {
+        double temp=0;
+        for( int d=0; d<blocks_per_line; d++)
+            for( int q=0; q<n; q++) //multiplication-loop
+                temp+=data[(d*n + k)*n+q]*x[((s*num_cols + i+offset[d])*n+q)];
+        y[(s*num_rows+i)*n+k]=temp;
+    }
+    for( int s=0; s<left; s++)
+    for( int i=num_rows-1; i<num_rows; i++)
+    for( int k=0; k<n; k++)
+    {
+        double temp=0;
+        for( int d=0; d<blocks_per_line; d++)
+            for( int q=0; q<n; q++) //multiplication-loop
+                temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
+        y[(s*num_rows+i)*n+k]=temp;
+    }
+    return;
+} //if right==1
     for( int s=0; s<left; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<n; k++)
@@ -116,6 +152,7 @@ void SparseBlockMat::symv(const HVec& x, HVec& y) const
             y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
     }
+    //simplest implementation
     //for( int s=0; s<left; s++)
     //for( int i=0; i<num_rows; i++)
     //for( int k=0; k<n; k++)
