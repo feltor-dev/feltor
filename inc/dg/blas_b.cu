@@ -22,18 +22,18 @@ int main()
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny);
-    const dg::HVec w2d = dg::create::weights( grid);
+    const dg::DVec w2d = dg::create::weights( grid);
     std::cout<<"Evaluate a function on the grid\n";
     t.tic();
-    dg::HVec x = dg::evaluate( function, grid);
+    dg::DVec x = dg::evaluate( function, grid);
     t.toc();
     std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     t.tic();
     double norm = dg::blas2::dot( w2d, x);
     t.toc();
     std::cout<<"DOT took                         " <<t.diff()<<"s   result: "<<norm<<"\n";
-    dg::HVec y(x);
-    dg::HMatrix M = dg::create::dx( grid, dg::centered);
+    dg::DVec y(x);
+    dg::DMatrix M = dg::create::dx( grid, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
@@ -74,12 +74,6 @@ int main()
     norm = dg::blas2::dot( x, w2d, y);
     t.toc();
     std::cout<<"DOT(x,w,y) took                  " <<t.diff()<<"s   result: "<<norm<<"\n";
-    t.tic();
-    #pragma omp parallel for
-    for( unsigned i=0; i<y.size(); i++)
-        y[i] = 0;
-    t.toc();
-    std::cout << "Manual set to zero took "<<t.diff()<<"s\n";
 
     return 0;
 }

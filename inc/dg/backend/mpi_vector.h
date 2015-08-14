@@ -131,7 +131,7 @@ struct NearestNeighborComm
         construct( src.n(), src.dims(), src.communicator(), src.direction());
     }
 
-    void collect( const Vector& input, Vector& values);
+    Vector collect( const Vector& input);
     int size(); //size of values is size of input plus ghostcells
     MPI_Comm communicator() const {return comm_;}
     int n() const{return n_;}
@@ -140,9 +140,12 @@ struct NearestNeighborComm
     private:
     void construct( int n, const int vector_dimensions[3], MPI_Comm comm, int direction);
     typedef thrust::host_vector<double> HVec;
+
     int n_, dim_[3]; //deepness, dimensions
     MPI_Comm comm_;
     int direction_;
+    bool silent_;
+
     Index input_scatter, buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
     void sendrecv( HVec&, HVec&, HVec& , HVec&);
     int buffer_size();
@@ -153,6 +156,12 @@ typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double
 template<class I, class V>
 void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Comm comm, int direction)
 {
+    silent_=false;
+        int ndims;
+        MPI_Cartdim_get( comm, &ndims);
+        int dims[ndims], periods[ndims], coords[ndims];
+        MPI_Cart_get( comm, ndims, dims, periods, coords);
+        if( dims[direction] == 1) silent_ = true;
     n_=n;
     dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
     comm_ = comm;
@@ -220,6 +229,7 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
 template<class I, class V>
 int NearestNeighborComm<I,V>::size()
 {
+    if( silent_) return 0;
     int origin= dim_[0]*dim_[1]*dim_[2];
     return origin + 2*buffer_size();
 }
@@ -241,26 +251,50 @@ int NearestNeighborComm<I,V>::buffer_size()
 }
 
 template<class I, class V>
-void NearestNeighborComm<I,V>::collect( const V& input, V& values)
+V NearestNeighborComm<I,V>::collect( const V& input)
 {
-    assert( values.size() == size()); 
-    V sendbuffer1( buffer_size(), 0);
-    V recvbuffer1( buffer_size(), 0);
-    V sendbuffer2( buffer_size(), 0);
-    V recvbuffer2( buffer_size(), 0);
+    if( silent_) return V();
+        //int rank;
+        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //Timer t;
+        //t.tic();
+    V values( size());
+    //scatter is slow because scales with vector size 
+    thrust::scatter( input.begin(), input.end(), input_scatter.begin(), values.begin());
+    V sendbuffer1( buffer_size());
+    V recvbuffer1( buffer_size());
+    V sendbuffer2( buffer_size());
+    V recvbuffer2( buffer_size());
+        //t.toc(); 
+        //if(rank==0)std::cout << "   alloc  took "<<t.diff()<<"s\n";
+        //t.tic();
     //gather values from input into sendbuffer
     thrust::gather( buffer_gather1.begin(), buffer_gather1.end(), input.begin(), sendbuffer1.begin());
     thrust::gather( buffer_gather2.begin(), buffer_gather2.end(), input.begin(), sendbuffer2.begin());
+        //t.toc();
+        //if(rank==0)std::cout << "   gather took "<<t.diff()<<"s\n";
+        //t.tic();
     //copy to host 
-    HVec sb1(sendbuffer1), sb2(sendbuffer2), rb1(buffer_size(),0), rb2( buffer_size(),0);
+    HVec sb1(sendbuffer1), sb2(sendbuffer2), rb1(buffer_size()), rb2( buffer_size());
+        //t.toc();
+        //if(rank==0)std::cout << "   copy h took "<<t.diff()<<"s\n";
     //mpi sendrecv
+        //t.tic();
     sendrecv( sb1, sb2, rb1, rb2);
+        //t.toc();
+        //if(rank==0)std::cout << "   mpi sr took "<<t.diff()<<"s\n";
+        //t.tic();
     //send data back to device
     recvbuffer1 = rb1, recvbuffer2 = rb2; 
+        //t.toc();
+        //if(rank==0)std::cout << "   copy d took "<<t.diff()<<"s\n";
     //scatter input and received values into output vector
-    thrust::scatter( input.begin(), input.end(), input_scatter.begin(), values.begin());
+        //t.tic();
     thrust::scatter( recvbuffer1.begin(), recvbuffer1.end(), buffer_scatter1.begin(), values.begin());
     thrust::scatter( recvbuffer2.begin(), recvbuffer2.end(), buffer_scatter2.begin(), values.begin());
+        //t.toc();
+        //if(rank==0)std::cout << "   rescat took "<<t.diff()<<"s\n";
+    return values;
 }
 
 template<class I, class V>

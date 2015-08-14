@@ -25,6 +25,12 @@ struct SparseBlockMat
     */
     void distribute_rows( int coord, const int* howmany)
     {
+        if( howmany[1] == 1)
+        {
+            left = left/howmany[0];
+            right = right/howmany[2];
+            return;
+        }
         assert( num_rows == num_cols);
         int chunk_size = num_rows/howmany[1];
         SparseBlockMat temp(chunk_size, chunk_size+2, blocks_per_line, data.size()/(n*n), n);

@@ -46,16 +46,21 @@ struct RowDistMat
     {
         assert( x.communicator() == y.communicator());
         assert( x.communicator() == c_.communicator());
-        //int rank;
-        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        //Timer t;
-        //t.tic();
-        container temp( c_.size()); //only takes time the first time it's called
-        //t.toc();
-        //if(rank==0)std::cout << "allocat took "<<t.diff()<<"s\n";
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //dg::Timer t;
 
         //t.tic();
-        c_.collect( x.data(), temp);
+        if( c_.size() == 0) //no communication needed
+        {
+            dg::blas2::detail::doSymv( m_, x.data(), y.data(), 
+                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+            return;
+
+        }
+        container temp = c_.collect( x.data());
         //t.toc();
         //if(rank==0)std::cout << "collect took "<<t.diff()<<"s\n";
         //t.tic();
@@ -90,6 +95,15 @@ struct ColDistMat
     {
         assert( x.communicator() == y.communicator());
         assert( x.communicator() == c_.communicator());
+        if( c_.size() == 0) //no communication needed
+        {
+            dg::blas2::detail::doSymv( m_, x.data(), y.data(), 
+                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+            return;
+
+        }
         container temp( c_.size());
         dg::blas2::detail::doSymv( m_, x.data(), temp, 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
