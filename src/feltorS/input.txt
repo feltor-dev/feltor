@@ -12,18 +12,20 @@
 5)  n_out (# of x-y polynomials in output)  =  3
 6)  nx_out (# grid points in output field)  =  150
 7)  ny_out (# grid points in output field)  =  150
-8)  itstp  (steps between outputs)          =  1000(5)
+8)  itstp  (steps between outputs)          =  100(5)
 9) total # of outputs (excluding first)     =  100000
+
 -------------------------Algorithmic parameters------------------------
 10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
 11)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
 12)  eps_time ( stop for time inversion )   =   1e-12 
+
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  0.0   (0.0)
 15) mcv (curvature)                         =  1e-14  (0.0003)
 16) nu_perp                                 =  5e-5
-17) D  (coupling ~ mcv^2)                   =  .5e-8  
+17) D  (coupling ~ mcv^2)                   =  20e-8  
 18) para resistivity (C ~ D lx/d)           =  2.5e-6
 19) parallel Length (~ 2 pi q / mcv)        =  1e30   (2000000)
 ------------------------Initial perturbation parameters---------------------
@@ -44,7 +46,7 @@
 ---------------------------------EDGE/SOL Dynamics-------------------------------------------
 32) SOL boundary in units of lx (>1 no SOL)    = 1e13
 33) damping width                              = 0.5
-34) profile source rate in units c_s/rho_s     = 0.05
+34) profile source rate in units c_s/rho_s     = 0.00
 35) source dampingb in u of lx (<1 no Source)  = 0.2
 36) source damping width                       = 0.5
 @ ------------------------------------------------------------

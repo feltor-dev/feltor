@@ -6,17 +6,17 @@
 @-----------------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   140 (192)
-3)  ny (grid points in y)                =   100 (192)
+2)  nx (grid points in x)                =   80 (192)
+3)  ny (grid points in y)                =   120 (192)
 4)  nz (grid points in z)                =   20(>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  140
-8)  ny_out (# grid points in output field)  =  100
+7)  nx_out (# grid points in output field)  =  80
+8)  ny_out (# grid points in output field)  =  120
 9)  nz_out (# grid points in output field)  =  20
-10) itstp  (steps between outputs)          =  250(5)
+10) itstp  (steps between outputs)          =  25(5)
 11) total # of outputs (excluding first)    =  4000
 
 -------------------------Algorithmic parameters------------------------
@@ -29,7 +29,7 @@
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  0.0    (1e-4)
 19) nu_perp                                 =  1e-4
-20) nu_parallel  (viscosity)                =  1      (0.001)
+20) nu_parallel  (viscosity)                =  100      (0.001)
 21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
 22) amp (blob amplitude)                    =  0.01    (1.0)
@@ -42,10 +42,10 @@
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) profile source rate in units c_s/rho_s  =  0.05
-31) boxscale R+                             =  1.1 (a little larger than 1)
-32) boxscale R-                             =  1.1 (a little larger than 1)
-33) boxscale Z+                             =  1.1 (a little larger than 1)
-34) boxscale Z-                             =  1.2 (a little larger than 1)
+31) boxscale R+                             =  1.05 (a little larger than 1)
+32) boxscale R-                             =  1.05(a little larger than 1)
+33) boxscale Z+                             =  1.05 (a little larger than 1)
+34) boxscale Z-                             =  1.15 (a little larger than 1)
 ---------------------------------global boundary condition----------------
 35) global bc (DIR (1), NEU DIR(4)  )                 =  4
 36) poloidal limiter (No (0),Yes (1))                 =  0

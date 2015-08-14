@@ -3,8 +3,6 @@
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
 #include "parameters.h"
-// #include "geometry_circ.h"
-#include "dg/backend/average.cuh"
 #include <cusp/multiply.h>
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"

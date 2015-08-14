@@ -144,15 +144,14 @@ int main( int argc, char* argv[])
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     
 //     //field aligning
-//     std::cout << "T aligning" << std::endl;  
-// //     dg::CONSTANT gaussianZ( 1.);
-//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-//     y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
+    std::cout << "T aligning" << std::endl;  
+//     dg::CONSTANT gaussianZ( 1.);
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
 
     //no field aligning
-    std::cout << "No T aligning" << std::endl;  
-    
-    y1[0] = dg::evaluate( init0, grid);
+//     std::cout << "No T aligning" << std::endl;      
+//     y1[0] = dg::evaluate( init0, grid);
 //        dg::blas1::pointwiseDot(rolkar.damping(),y1[0], y1[0]); //damp with gaussprofdamp
  
     dg::blas1::axpby( 1., y1[0], 1., y0[0]); //initialize ni

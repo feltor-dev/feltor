@@ -35,7 +35,7 @@ struct Rolkar
         gp(gp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
         dzNU_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
-        elliptic( g, dg::normed, dg::centered)
+        elliptic( g, dg::normed, dg::forward)
     {
         container bfield = dg::evaluate( solovev::FieldR( gp),g);
         elliptic.set_x( bfield);
@@ -64,7 +64,7 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container dampprof_;
     dg::DZ<Matrix, container> dzNU_;
-    dg::GeneralElliptic<Matrix, container, Preconditioner> elliptic;
+    dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
 
 };
 

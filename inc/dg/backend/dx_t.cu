@@ -1,24 +1,20 @@
 #include <iostream>
 
-#include <cusp/ell_matrix.h>
 
 #include "blas.h"
 #include "dx.h"
-#include "dx.cuh"
 #include "sparseblockmat.cuh"
 #include "evaluation.cuh"
 #include "typedefs.cuh"
 #include "weights.cuh"
 
-
-unsigned n = 3;
-unsigned N = 40;
 const double lx = 2*M_PI;
+dg::direction dir = dg::centered;
 
-//double function( double x) { return sin(x);}
-//double derivative( double x) { return cos(x);}
-////dg::bc bcx = dg::PER;
-//dg::bc bcx = dg::DIR;
+double function( double x) { return sin(x);}
+double derivative( double x) { return cos(x);}
+//dg::bc bcx = dg::PER;
+dg::bc bcx = dg::DIR;
 
 //double function (double  x) {return x*(x-2*M_PI)*exp(x);}
 //double derivative( double x) { return (2.*x-2*M_PI)*exp(x) + function(x);}
@@ -28,9 +24,13 @@ double function( double x) { return cos(x);}
 double derivative( double x) { return -sin(x);}
 dg::bc bcx = dg::NEU;
 */
+
+/*
 double function( double x) { return sin(3./4.*x);}
-double derivative( double x) { return 3./4.*cos(3./4.*x);}
+double derivative( double x) { return 3./4. * sin(3./4.*x);}
 dg::bc bcx = dg::DIR_NEU;
+*/
+
 /*
 double function( double x) { return cos(3./4.*x);}
 double derivative( double x) { return -3./4.*sin(3./4.*x);}
@@ -42,6 +42,7 @@ typedef dg::SparseBlockMatDevice Matrix;
 
 int main ()
 {
+    unsigned n, N;
     std::cout << "Type in n an Nx!\n";
     std::cin >> n>> N;
     std::cout << "# of Legendre nodes " << n <<"\n";

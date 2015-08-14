@@ -115,7 +115,13 @@ struct Feltor
     dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR,invgammaNU;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
+    
+#ifndef MPI_VERSION
     dg::PoloidalAverage<container, container > polavg;
+#endif //NOT THE MPI_VERSION
+#ifdef MPI_VERSION
+    dg::PoloidalAverage<container, dg::HVec > polavg;
+#endif //MPI_VERSION
 
     const eule::Parameters p;
 

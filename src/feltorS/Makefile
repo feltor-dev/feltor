@@ -2,12 +2,11 @@ system=home # Use as Makefile parameter!
 device=gpu
 
 INCLUDE = -I../../inc  # other project libraries
-INCLUDE+= -I../../diag  # other project libraries
-INCLUDE+= -I../ # geometry library
+
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20 -w
+CFLAGS = --compiler-options -Wall -arch=sm_50 -w
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 GLFLAGS= -lGLEW
@@ -91,7 +90,7 @@ endif
 all: feltor feltor_hpc
 
 feltor: feltor.cu feltor.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 
 	
 ifeq ($(strip $(device)),mpi)
