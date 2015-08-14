@@ -4,8 +4,6 @@ device=gpu
 
 INCLUDE = -I../../ # other project libraries
 INCLUDE = -I../ # other project libraries
-INCLUDE+= -I$(HOME)/include
-INCLUDE+= -I. # header files
 
 ifeq ($(strip $(system)),home)
 

@@ -337,6 +337,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d<dou
     assert( g_new.y0() >= g_old.y0());
     assert( g_new.y1() <= g_old.y1());
     thrust::host_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
+
     thrust::host_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
     return interpolation( pointsX, pointsY, g_old);
 
