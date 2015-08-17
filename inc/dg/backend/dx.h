@@ -22,17 +22,16 @@ namespace create
 
 
 /**
-* @brief Create and assemble a cusp Matrix for the symmetric 1d single derivative in XSPACE
+* @brief Create and assemble a host Matrix for the centered 1d single derivative 
 *
-* Use cusp internal conversion to create e.g. the fast ell_matrix format.
 * The matrix isn't symmetric due to the normalisation T.
-* @tparam T value type
+* @ingroup create
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size (used to compute normalisation)
 * @param bcx boundary condition 
 *
-* @return Host Matrix in coordinate form 
+* @return Host Matrix 
 */
 SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
 {
@@ -125,17 +124,15 @@ SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the 1d single forward derivative in XSPACE
+* @brief Create and assemble a host Matrix for the forward 1d single derivative 
 *
-* Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* Neumann BC means inner value for flux
-* @tparam T value type
+* @ingroup create
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
 *
-* @return Host Matrix in coordinate form 
+* @return Host Matrix 
 */
 SparseBlockMat dx_plus( int n, int N, double h, bc bcx )
 {
@@ -212,17 +209,15 @@ SparseBlockMat dx_plus( int n, int N, double h, bc bcx )
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the 1d single backward derivative in XSPACE
+* @brief Create and assemble a host Matrix for the backward 1d single derivative 
 *
-* Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* Neumann BC means inner value for flux
-* @tparam T value type
+* @ingroup create
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
 *
-* @return Host Matrix in coordinate form 
+* @return Host Matrix 
 */
 SparseBlockMat dx_minus( int n, int N, double h, bc bcx )
 {
@@ -299,24 +294,18 @@ SparseBlockMat dx_minus( int n, int N, double h, bc bcx )
 };
 
 /**
-* @brief Create and assemble a cusp Matrix for the normalised jump in 1d in XSPACE.
+* @brief Create and assemble a host Matrix for the jump terms in 1d
 *
 * @ingroup create
-* Use cusp internal conversion to create e.g. the fast ell_matrix format.
-* The matrix is symmetric. Normalisation is missing
-* @tparam T value type
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
 *
-* @return Host Matrix in coordinate form 
+* @return Host Matrix 
 */
 SparseBlockMat jump( int n, int N, double h, bc bcx)
 {
-
-    //std::cout << A.row_indices.size(); 
-    //std::cout << A.num_cols; //this works!!
     Operator<double> l = create::lilj(n);
     Operator<double> r = create::rirj(n);
     Operator<double> lr = create::lirj(n);
@@ -394,6 +383,18 @@ SparseBlockMat jump( int n, int N, double h, bc bcx)
     }
 };
 
+/**
+* @brief Create and assemble a host Matrix for normed derivative in 1d
+*
+* @ingroup create
+* @param n Number of Legendre nodes per cell
+* @param N Vector size ( number of cells)
+* @param h cell size ( used to compute normalisation)
+* @param bcx boundary condition
+* @param dir The direction of the first derivative
+*
+* @return Host Matrix 
+*/
 SparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
 {
     if( dir == centered)
@@ -405,6 +406,16 @@ SparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
     return SparseBlockMat();
 }
 
+/**
+* @brief Create and assemble a host Matrix for the derivative in 1d
+*
+* @ingroup create
+* @param g 1D grid
+* @param bcx boundary condition
+* @param dir The direction of the first derivative
+*
+* @return Host Matrix 
+*/
 SparseBlockMat dx( const Grid1d<double>& g, bc bcx, norm no = normed, direction dir = centered)
 {
     SparseBlockMat dx;

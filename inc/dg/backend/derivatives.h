@@ -4,10 +4,6 @@
 #include "grid.h"
 #include "dx.h"
 
-//create mpi derivatives by creating the whole matrix on the global grid
-//then cut out the corresponding rows (depending on process grid structure) and map global indices to local ones 
-//deprecate not_normed
-
 /*! @file 
   
   Convenience functions to create 2D derivatives
@@ -27,14 +23,12 @@ namespace create{
 /**
  * @brief Create 2d derivative in x-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dx
  * @param bcx The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
-
 SparseBlockMat dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
 {
     SparseBlockMat dx;
@@ -46,23 +40,21 @@ SparseBlockMat dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
 /**
  * @brief Create 2d derivative in x-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dx (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix
  */
 SparseBlockMat dx( const Grid2d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dy
  * @param bcy The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix
  */
 SparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
 {
@@ -75,23 +67,20 @@ SparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
 /**
  * @brief Create 2d derivative in y-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dy (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
- * @brief Matrix that contains 2d jump terms
+ * @brief Matrix that contains 2d jump terms in X direction
  *
- * @tparam T value type
  * @param g grid
  * @param bcx boundary condition in x
- * @param bcy boundary condition in y
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
 {
@@ -100,6 +89,15 @@ SparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
     jx.left = g.n()*g.Ny();
     return jx;
 }
+
+/**
+ * @brief Matrix that contains 2d jump terms in Y direction
+ *
+ * @param g grid
+ * @param bcy boundary condition in y
+ *
+ * @return A host matrix 
+ */
 SparseBlockMat jumpY( const Grid2d<double>& g, bc bcy)
 {
     SparseBlockMat jy;
@@ -109,17 +107,24 @@ SparseBlockMat jumpY( const Grid2d<double>& g, bc bcy)
 }
 
 /**
- * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
+ * @brief Matrix that contains 2d jump terms in X direction taking boundary conditions from the grid
  *
- * @tparam T value type
  * @param g grid
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat jumpX( const Grid2d<double>& g)
 {
     return jumpX( g, g.bcx());
 }
+
+/**
+ * @brief Matrix that contains 2d jump terms in Y direction taking boundary conditions from the grid
+ *
+ * @param g grid
+ *
+ * @return A host matrix 
+ */
 SparseBlockMat jumpY( const Grid2d<double>& g)
 {
     return jumpY( g, g.bcy());
@@ -127,14 +132,12 @@ SparseBlockMat jumpY( const Grid2d<double>& g)
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
 /**
- * @brief Matrix that contains 2d jump terms
+ * @brief Matrix that contains jump terms in X direction in 3D
  *
- * @tparam T value type
- * @param g grid
+ * @param g The 3D grid
  * @param bcx boundary condition in x
- * @param bcy boundary condition in y
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat jumpX( const Grid3d<double>& g, bc bcx)
 {
@@ -143,6 +146,14 @@ SparseBlockMat jumpX( const Grid3d<double>& g, bc bcx)
     jx.left = g.n()*g.Ny()*g.Nz();
     return jx;
 }
+/**
+ * @brief Matrix that contains jump terms in Y direction in 3D
+ *
+ * @param g The 3D grid
+ * @param bcy boundary condition in y
+ *
+ * @return A host matrix 
+ */
 SparseBlockMat jumpY( const Grid3d<double>& g, bc bcy)
 {
     SparseBlockMat jy;
@@ -151,6 +162,14 @@ SparseBlockMat jumpY( const Grid3d<double>& g, bc bcy)
     jy.left = g.Nz();
     return jy;
 }
+/**
+ * @brief Matrix that contains jump terms in Z direction in 3D
+ *
+ * @param g The 3D grid
+ * @param bcz boundary condition in z
+ *
+ * @return A host matrix 
+ */
 SparseBlockMat jumpZ( const Grid3d<double>& g, bc bcz)
 {
     SparseBlockMat jz;
@@ -160,21 +179,34 @@ SparseBlockMat jumpZ( const Grid3d<double>& g, bc bcz)
 }
 
 /**
- * @brief Matrix that contains 2d jump terms taking boundary conditions from the grid
+ * @brief Matrix that contains 3d jump terms in X direction taking boundary conditions from the grid
  *
- * @tparam T value type
  * @param g grid
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix
  */
 SparseBlockMat jumpX( const Grid3d<double>& g)
 {
     return jumpX( g, g.bcx());
 }
+/**
+ * @brief Matrix that contains 3d jump terms in Y direction taking boundary conditions from the grid
+ *
+ * @param g grid
+ *
+ * @return A host matrix
+ */
 SparseBlockMat jumpY( const Grid3d<double>& g)
 {
     return jumpY( g, g.bcy());
 }
+/**
+ * @brief Matrix that contains 3d jump terms in Z direction taking boundary conditions from the grid
+ *
+ * @param g grid
+ *
+ * @return A host matrix
+ */
 SparseBlockMat jumpZ( const Grid3d<double>& g)
 {
     return jumpZ( g, g.bcz());
@@ -184,12 +216,11 @@ SparseBlockMat jumpZ( const Grid3d<double>& g)
 /**
  * @brief Create 3d derivative in x-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dx
  * @param bcx The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
 {
@@ -202,23 +233,21 @@ SparseBlockMat dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
 /**
  * @brief Create 3d derivative in x-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dx (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat dx( const Grid3d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dy
  * @param bcy The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
 {
@@ -232,23 +261,21 @@ SparseBlockMat dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
 /**
  * @brief Create 3d derivative in y-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dy (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat dy( const Grid3d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
  *
- * @tparam T value-type
  * @param g The grid on which to create dz
  * @param bcz The boundary condition
  * @param dir The direction of the stencil
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
 {
@@ -262,11 +289,10 @@ SparseBlockMat dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
 /**
  * @brief Create 3d derivative in z-direction
  *
- * @tparam T value-type
- * @param g The grid on which to create dy (boundary condition is taken from here)
+ * @param g The grid on which to create dz (boundary condition is taken from here)
  * @param dir The direction of the stencil
  *
- * @return A host matrix in coordinate format
+ * @return A host matrix 
  */
 SparseBlockMat dz( const Grid3d<double>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 

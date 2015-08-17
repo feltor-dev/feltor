@@ -16,6 +16,7 @@ inline void doSymv(
 {
     m.symv( x,y);
 }
+
 template< class Matrix, class Vector1, class Vector2>
 inline void doGemv(  
               Matrix& m, 
@@ -26,6 +27,19 @@ inline void doGemv(
               AnyVectorTag)
 {
     m.symv( x,y);
+}
+
+template< class Matrix, class Vector>
+inline void doSymv(  
+              typename Matrix::value_type alpha, 
+              const Matrix& m,
+              const Vector& x, 
+              typename Matrix::value_type beta, 
+              Vector& y, 
+              SelfMadeMatrixTag,
+              AnyVectorTag)
+{
+    m.symv( alpha, x, beta, y);
 }
 
 } //namespace detail
