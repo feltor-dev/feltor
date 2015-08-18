@@ -145,8 +145,8 @@ struct NearestNeighborComm
     MPI_Comm comm_;
     int direction_;
     bool silent_;
+    Index buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
 
-    Index input_scatter, buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
     void sendrecv( HVec&, HVec&, HVec& , HVec&);
     int buffer_size();
 };
@@ -168,7 +168,7 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
     direction_ = direction;
     assert( 0<=direction);
     assert( direction <3);
-    thrust::host_vector<int> iscattr(dim_[0]*dim_[1]*dim_[2]), hbgather1(buffer_size()), hbgather2(hbgather1), hbscattr1(buffer_size()), hbscattr2(hbscattr1);
+    thrust::host_vector<int> hbgather1(buffer_size()), hbgather2(hbgather1), hbscattr1(buffer_size()), hbscattr2(hbscattr1);
     switch( direction)
     {
         case( 0):
@@ -180,10 +180,6 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
                 hbgather2[i*n+j] = (i*dim_[0] + dim_[0] - n + j);
                 hbscattr1[i*n+j] = (i*(2*n)                      + j);
                 hbscattr2[i*n+j] = (i*(2*n)+ (2*n) - n + j);
-            }
-            for( int j=0; j<dim_[0]; j++)
-            {
-                iscattr[i*dim_[0] + j] = i*(dim_[0] + 2*n) + n + j;
             }
         }
         break;
@@ -202,8 +198,6 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
                     hbscattr2[(i*n+j)*dim_[0]+k] = 
                         (i*(          2*n) + (          2*n) - n + j)*dim_[0] + k;
                 }
-            for( int j=0; j<dim_[1]*dim_[0]; j++)
-                iscattr[i*dim_[0]*dim_[1] + j] = i*dim_[0]*(dim_[1]+2*n) + n*dim_[0] + j;
         }
         break;
         case( 2):
@@ -217,12 +211,9 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
                 hbscattr2[i*dim_[0]*dim_[1]+j] = (i+(  2*n)-n)*dim_[0]*dim_[1] + j;
             }
         }
-        for( int i=0; i<dim_[2]; i++)
-            for( int j=0; j<dim_[0]*dim_[1]; j++)
-                iscattr[i*dim_[0]*dim_[1] + j] = (i+n)*dim_[0]*dim_[1] + j;
         break;
     }
-    input_scatter=iscattr, buffer_gather1=hbgather1, buffer_gather2 = hbgather2;
+    buffer_gather1 =hbgather1, buffer_gather2 =hbgather2;
     buffer_scatter1=hbscattr1, buffer_scatter2=hbscattr2;
 }
 
@@ -230,8 +221,6 @@ template<class I, class V>
 int NearestNeighborComm<I,V>::size()
 {
     if( silent_) return 0;
-    //int origin= dim_[0]*dim_[1]*dim_[2];
-    //return origin + 2*buffer_size();
     return 2*buffer_size();
 }
 
@@ -255,23 +244,44 @@ template<class I, class V>
 V NearestNeighborComm<I,V>::collect( const V& input)
 {
     if( silent_) return V();
+        //int rank;
+        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //dg::Timer t;
+        //t.tic();
     V values( size());
-    V sendbuffer1( buffer_size());
-    V recvbuffer1( buffer_size());
-    V sendbuffer2( buffer_size());
-    V recvbuffer2( buffer_size());
+    V buffer1( buffer_size());
+    V buffer2( buffer_size());
+    //V sendbuffer2( buffer_size());
+    //V recvbuffer2( buffer_size());
+        //t.toc();
+        //if(rank==0)std::cout << "Allocation   took "<<t.diff()<<"s\n";
+        //t.tic();
     //gather values from input into sendbuffer
-    thrust::gather( buffer_gather1.begin(), buffer_gather1.end(), input.begin(), sendbuffer1.begin());
-    thrust::gather( buffer_gather2.begin(), buffer_gather2.end(), input.begin(), sendbuffer2.begin());
+    thrust::gather( buffer_gather1.begin(), buffer_gather1.end(), input.begin(), buffer1.begin());
+    thrust::gather( buffer_gather2.begin(), buffer_gather2.end(), input.begin(), buffer2.begin());
+        //t.toc();
+        //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
+        //t.tic();
     //copy to host 
-    HVec sb1(sendbuffer1), sb2(sendbuffer2), rb1(buffer_size(), 0), rb2( buffer_size(), 0);
+    HVec sb1(buffer1), sb2(buffer2), rb1(buffer_size(), 0), rb2( buffer_size(), 0);
+        //t.toc();
+        //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
+        //t.tic();
     //mpi sendrecv
     sendrecv( sb1, sb2, rb1, rb2);
+        //t.toc();
+        //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
+        //t.tic();
     //send data back to device
-    recvbuffer1 = rb1, recvbuffer2 = rb2; 
+    buffer1 = rb1, buffer2 = rb2; 
+        //t.toc();
+        //if(rank==0)std::cout << "Copy to devi took "<<t.diff()<<"s\n";
+        //t.tic();
     //scatter received values into values array
-    thrust::scatter( recvbuffer1.begin(), recvbuffer1.end(), buffer_scatter1.begin(), values.begin());
-    thrust::scatter( recvbuffer2.begin(), recvbuffer2.end(), buffer_scatter2.begin(), values.begin());
+    thrust::scatter( buffer1.begin(), buffer1.end(), buffer_scatter1.begin(), values.begin());
+    thrust::scatter( buffer2.begin(), buffer2.end(), buffer_scatter2.begin(), values.begin());
+        //t.toc();
+        //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
     return values;
 }
 

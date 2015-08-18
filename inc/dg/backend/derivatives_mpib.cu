@@ -2,12 +2,15 @@
 #include <iomanip>
 #include <mpi.h>
 
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+
+#include "timer.cuh"
 #include "sparseblockmat.h"
 #include "vector_traits.h"
 #include "selfmade_blas.cuh"
 #include "thrust_vector_blas.cuh"
 #include "mpi_evaluation.h"
-#include "timer.cuh"
 #include "mpi_derivatives.h"
 #include "mpi_matrix.h"
 #include "mpi_precon.h"
@@ -18,11 +21,6 @@
 #include "blas.h"
 
 const double lx = 2*M_PI;
-/*
-double function( double x, double y, double z) { return sin(3./4.*z);}
-double derivative( double x, double y, double z) { return 3./4.*cos(3./4.*z);}
-dg::bc bcz = dg::DIR_NEU;
-*/
 double sinx(   double x, double y, double z) { return sin(x);}
 double cosx(   double x, double y, double z) { return cos(x);}
 double siny(   double x, double y, double z) { return sin(y);}
@@ -34,7 +32,7 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
-typedef dg::RowDistMat<dg::SparseBlockMatDevice, dg::NNCD> Matrix;
+typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice, dg::CooSparseBlockMatDevice, dg::NNCD> Matrix;
 typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 
 int main(int argc, char* argv[])

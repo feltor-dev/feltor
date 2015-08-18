@@ -16,7 +16,7 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double function(double x, double y){ return sin(y)*sin(x);}
 
-typedef dg::RowDistMat<dg::SparseBlockMatDevice, dg::NNCD> Matrix;
+typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice, dg::CooSparseBlockMatDevice, dg::NNCD> Matrix;
 typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 int main( int argc, char* argv[])
 {
@@ -74,6 +74,14 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( y, x, x);
     t.toc();
     if(rank==0)std::cout<<"pointwiseDot took                "<<t.diff()<<"s\n";
+    t.tic();
+    norm = dg::blas2::dot( w2d, y);
+    t.toc();
+    if(rank==0)std::cout<<"DOT(w,y) took                    " <<t.diff()<<"s   result: "<<norm<<"\n";
+    t.tic();
+    norm = dg::blas2::dot( x, w2d, y);
+    t.toc();
+    if(rank==0)std::cout<<"DOT(x,w,y) took                  " <<t.diff()<<"s   result: "<<norm<<"\n";
 
     MPI_Finalize();
     return 0;

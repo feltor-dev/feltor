@@ -51,6 +51,9 @@ struct RowColDistMat
     {
         assert( x.communicator() == y.communicator());
         assert( x.communicator() == c_.communicator());
+        //int rank;
+        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //dg::Timer t;
         if( c_.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
@@ -60,17 +63,26 @@ struct RowColDistMat
             return;
 
         }
+        //t.tic();
         //1. compute inner points
         dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
+        //t.toc();
+        //if(rank==0)std::cout << "Inner points took "<<t.diff()<<"s\n";
         //2. communicate outer points
+        //t.tic();
         container temp = c_.collect( x.data());
+        //t.toc();
+        //if(rank==0)std::cout << "Collect      took "<<t.diff()<<"s\n";
         //3. compute and add outer points
+        //t.tic();
         dg::blas2::detail::doSymv(1., m_o, temp, 1., y.data(), 
                        typename dg::MatrixTraits<LocalMatrixOuter>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
+        //t.toc();
+        //if(rank==0)std::cout << "Outer points took "<<t.diff()<<"s\n";
     }
 
         

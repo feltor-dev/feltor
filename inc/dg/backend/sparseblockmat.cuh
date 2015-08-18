@@ -228,10 +228,10 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
     for( int k=0; k<n; k++)
     for( int j=0; j<right; j++)
     {
-        int I = ((s*num_rows + i)*n+k)*right+j;
+        int I = ((s*num_rows + rows_idx[i])*n+k)*right+j;
         double temp=0;
         for( int q=0; q<n; q++) //multiplication-loop
-            temp = data[ (data_idx[i]*n + k)*n+q]*
+            temp+= data[ (data_idx[i]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i])*n+q)*right+j];
         y[I] += alpha*temp;
     }

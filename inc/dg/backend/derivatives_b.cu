@@ -8,11 +8,6 @@
 #include "sparseblockmat.cuh"
 
 const double lx = 2*M_PI;
-/*
-double function( double x, double y, double z) { return sin(3./4.*z);}
-double derivative( double x, double y, double z) { return 3./4.*cos(3./4.*z);}
-dg::bc bcz = dg::DIR_NEU;
-*/
 double sinx(   double x, double y, double z) { return sin(x);}
 double cosx(   double x, double y, double z) { return cos(x);}
 double siny(   double x, double y, double z) { return sin(y);}
@@ -23,7 +18,7 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
-typedef dg::SparseBlockMatDevice Matrix;
+typedef dg::EllSparseBlockMatDevice Matrix;
 typedef dg::DVec Vector;
 
 int main()
