@@ -208,7 +208,8 @@ void Feltor<M, V, P>::energies( std::vector<V>& y)
         dzNU_.backward( y[0], omega); 
         dzNU_.backwardTD(omega,lambda);
         dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
-        Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi); 
+//         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi); 
+        Dpar[0]= p.nu_parallel*dg::blas2::dot(y[0], w3d, chi); 
     }
     //Compute rhs of energy theorem
     ediff_= Dpar[0]+Dperp[0];
