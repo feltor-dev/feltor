@@ -10,17 +10,19 @@ namespace dg{
 
 namespace create{ 
 
+///@cond
 namespace detail{ 
 
 
 /**
 * @brief Iterate through elements of a matrix
 *
-* stores all elements with column -1 or num_rows, if there are no outer values
+* searches and stores all elements with column -1 or num_rows in m, 
+* if there are no outer values
 * returns an empty matrix and leaves m untouched
-* @param m The input matrix
+* @param m The input matrix (contains only inner points on return)
 *
-* @return a newly created Coordinate matrix
+* @return a newly created Coordinate matrix holding the outer points
 */
 CooSparseBlockMat save_outer_values(EllSparseBlockMat& m)
 {
@@ -55,14 +57,15 @@ CooSparseBlockMat save_outer_values(EllSparseBlockMat& m)
         m.data.insert( m.data.end(), zero.begin(), zero.end()); 
     return mat;
 }
-//distribute the inner block to howmany processes
+
 /**
 * @brief Reduce a global matrix into equal chunks among mpi processes
 *
-* copies all data elements. 
 * grabs the right chunk of column and data indices and remaps the column indices to vector with ghostcells
+* copies the whole data array 
 * @param coord The mpi proces coordinate of the proper dimension
 * @param howmany[3] # of processes 0 is left, 1 is the middle, 2 is right
+* @return The reduced matrix
 */
 EllSparseBlockMat distribute_rows( const EllSparseBlockMat& src, int coord, const int* howmany)
 {
@@ -101,6 +104,17 @@ EllSparseBlockMat distribute_rows( const EllSparseBlockMat& src, int coord, cons
 
 } //namespace detail
 
+///@endcond
+
+/**
+* @brief Create a 2d derivative in the x-direction for mpi
+*
+* @param g A 2D mpi grid
+* @param bcx boundary condition
+* @param dir centered, forward or backward
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat matrix = dg::create::dx( g.global(), bcx, dir);
@@ -120,6 +134,16 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d&
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+
+/**
+* @brief Create a 2d derivative in the y-direction for mpi
+*
+* @param g A 2D mpi grid
+* @param bcx boundary condition
+* @param dir centered, forward or backward
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid2d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat matrix = dg::create::dy( g.global(), bcy, dir);
@@ -138,6 +162,15 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid2d&
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+
+/**
+* @brief Create a 2d jump in the x-direction for mpi
+*
+* @param g A 2D mpi grid
+* @param bcx boundary condition
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid2d& g, bc bcx)
 {
     EllSparseBlockMat matrix = dg::create::jumpX( g.global(), bcx);
@@ -156,6 +189,14 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+/**
+* @brief Create a 2d jump in the y-direction for mpi
+*
+* @param g A 2D mpi grid
+* @param bcx boundary condition
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid2d& g, bc bcy)
 {
     EllSparseBlockMat matrix = dg::create::jumpY( g.global(), bcy);
@@ -174,6 +215,16 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+
+/**
+* @brief Create a 3d derivative in the x-direction for mpi
+*
+* @param g A 3D mpi grid
+* @param bcx boundary condition
+* @param dir centered, forward or backward
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid3d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat matrix = dg::create::dx( g.global(), bcx, dir);
@@ -192,6 +243,15 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid3d&
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+/**
+* @brief Create a 3d derivative in the y-direction for mpi
+*
+* @param g A 3D mpi grid
+* @param bcy boundary condition
+* @param dir centered, forward or backward
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid3d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat matrix = dg::create::dy( g.global(), bcy, dir);
@@ -210,6 +270,15 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid3d&
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+/**
+* @brief Create a 3d derivative in the z-direction for mpi
+*
+* @param g A 3D mpi grid
+* @param bcz boundary condition
+* @param dir centered, forward or backward
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dz( const MPI_Grid3d& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat matrix = dg::create::dz( g.global(), bcz, dir);
@@ -228,6 +297,15 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dz( const MPI_Grid3d&
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+
+/**
+* @brief Create a 3d jump in the x-direction for mpi
+*
+* @param g A 3D mpi grid
+* @param bcx boundary condition
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g, bc bcx)
 {
     EllSparseBlockMat matrix = dg::create::jumpX( g.global(), bcx);
@@ -246,6 +324,15 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+
+/**
+* @brief Create a 3d jump in the y-direction for mpi
+*
+* @param g A 3D mpi grid
+* @param bcy boundary condition
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g, bc bcy)
 {
     EllSparseBlockMat matrix = dg::create::jumpY( g.global(), bcy);
@@ -264,6 +351,14 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid
 
     return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
 }
+/**
+* @brief Create a 3d jump in the z-direction for mpi
+*
+* @param g A 3D mpi grid
+* @param bcz boundary condition
+*
+* @return  A mpi matrix
+*/
 RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g, bc bcz)
 {
     EllSparseBlockMat matrix = dg::create::jumpZ( g.global(), bcz);
@@ -308,15 +403,30 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid3d& 
 {
     return dx( g, g.bcx(), dir);
 }
+/**
+ * @brief Create 2d jump in x-direction
+ *
+ * @param g The grid on which to create jump (boundary condition is taken from here)
+ *
+ * @return A mpi matrix 
+ */
 RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid2d& g)
 {
     return jumpX( g, g.bcx());
 }
 
+/**
+ * @brief Create 3d jump in x-direction
+ *
+ * @param g The grid on which to create jump (boundary condition is taken from here)
+ *
+ * @return A mpi matrix 
+ */
 RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g)
 {
     return jumpX( g, g.bcx());
 }
+
 /**
  * @brief Create 2d derivative in y-direction
  *
@@ -342,15 +452,31 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid3d& 
 {
     return dy( g, g.bcy(), dir);
 }
+
+/**
+ * @brief Create 2d jump in y-direction
+ *
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ *
+ * @return A mpi matrix
+ */
 RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid2d& g)
 {
     return jumpY( g, g.bcy());
 }
 
+/**
+ * @brief Create 3d jump in y-direction
+ *
+ * @param g The grid on which to create dy (boundary condition is taken from here)
+ *
+ * @return A mpi matrix 
+ */
 RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g)
 {
     return jumpY( g, g.bcy());
 }
+
 /**
  * @brief Create 3d derivative in z-direction
  *
@@ -363,6 +489,14 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dz( const MPI_Grid3d& 
 {
     return dz( g, g.bcz(), dir);
 }
+
+/**
+ * @brief Create 3d jump in z-direction
+ *
+ * @param g The grid on which to create dz (boundary condition is taken from here)
+ *
+ * @return A mpi matrix 
+ */
 RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g)
 {
     return jumpZ( g, g.bcz());

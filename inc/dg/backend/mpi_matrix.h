@@ -18,9 +18,9 @@ namespace dg
 * The matrix elements are then further separated into columns that are inside the domain and the ones that are outside. 
 * For the computation of the inner points no communication is needed.
 * @tparam LocalMatrixInner The class of the matrix for local computations of the inner points. 
- symv(m,x,y) needs to be callable on the container class of the MPI_Vector
+ doSymv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points. 
- symv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
+ doSymv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
 * @tparam Collective The Communication class needs to gather values across processes. 
 container collect( const container& input);
 Gather points from other processes that are necessary for the outer computations.
@@ -34,18 +34,54 @@ struct RowColDistMat
     /**
     * @brief Constructor 
     *
-    * @param m The local matrix
+    * @param m_inside The local matrix for the inner elements
+    * @param m_outside A local matrix for the elements from other processes
     * @param c The communication object
     */
     RowColDistMat( const LocalMatrixInner& m_inside, const LocalMatrixOuter& m_outside, const Collective& c):m_i(m_inside), m_o(m_outside), c_(c) { }
 
+    /**
+    * @brief Copy constructor 
+
+    * The idea is that a device matrix can be constructed by copying a host matrix.
+    *
+    * @tparam OtherMatrixInner
+    * @tparam OtherMatrixOuter
+    * @tparam OtherCollective
+    * @param src another Matrix
+    */
     template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
     RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):m_i(src.inner_matrix()), m_o( src.outer_matrix()), c_(src.collective())
     { }
+    /**
+    * @brief Read access to the inner matrix
+    *
+    * @return 
+    */
     const LocalMatrixInner& inner_matrix() const{return m_i;}
+    /**
+    * @brief Read access to the outer matrix
+    *
+    * @return 
+    */
     const LocalMatrixOuter& outer_matrix() const{return m_o;}
+    /**
+    * @brief Read access to the communication object
+    *
+    * @return 
+    */
     const Collective& collective() const{return c_;}
     
+    /**
+    * @brief Matrix Vector product
+    *
+    * First the inner elements are computed with a call to doSymv then 
+    * the collect function of the communication object is called. 
+    * Finally the outer elements are added with a call to doSymv for the outer matrix
+    * @tparam container container class of the vector elements
+    * @param x input
+    * @param y output
+    */
     template<class container> 
     void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
     {
@@ -213,6 +249,18 @@ struct ColDistMat
     */
     ColDistMat( const LocalMatrix& m, const Collective& c):m_(m), c_(c)
     { }
+    /**
+    * @brief Access to the local matrix
+    *
+    * @return Reference to the local matrix
+    */
+    const LocalMatrix& matrix() const{return m_;}
+    /**
+    * @brief Access to the communication object
+    *
+    * @return Reference to the collective object
+    */
+    const Collective& collective() const{return c_;}
     
     /**
     * @brief Apply the matrix to an MPI_Vector
