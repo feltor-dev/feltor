@@ -255,46 +255,23 @@ template<class I, class V>
 V NearestNeighborComm<I,V>::collect( const V& input)
 {
     if( silent_) return V();
-        //int rank;
-        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        //Timer t;
-        //t.tic();
     V values( size());
-    //scatter is slow because scales with vector size 
-    //thrust::scatter( input.begin(), input.end(), input_scatter.begin(), values.begin());
     V sendbuffer1( buffer_size());
     V recvbuffer1( buffer_size());
     V sendbuffer2( buffer_size());
     V recvbuffer2( buffer_size());
-        //t.toc(); 
-        //if(rank==0)std::cout << "   alloc  took "<<t.diff()<<"s\n";
-        //t.tic();
     //gather values from input into sendbuffer
     thrust::gather( buffer_gather1.begin(), buffer_gather1.end(), input.begin(), sendbuffer1.begin());
     thrust::gather( buffer_gather2.begin(), buffer_gather2.end(), input.begin(), sendbuffer2.begin());
-        //t.toc();
-        //if(rank==0)std::cout << "   gather took "<<t.diff()<<"s\n";
-        //t.tic();
     //copy to host 
-    HVec sb1(sendbuffer1), sb2(sendbuffer2), rb1(buffer_size()), rb2( buffer_size());
-        //t.toc();
-        //if(rank==0)std::cout << "   copy h took "<<t.diff()<<"s\n";
+    HVec sb1(sendbuffer1), sb2(sendbuffer2), rb1(buffer_size(), 0), rb2( buffer_size(), 0);
     //mpi sendrecv
-        //t.tic();
     sendrecv( sb1, sb2, rb1, rb2);
-        //t.toc();
-        //if(rank==0)std::cout << "   mpi sr took "<<t.diff()<<"s\n";
-        //t.tic();
     //send data back to device
     recvbuffer1 = rb1, recvbuffer2 = rb2; 
-        //t.toc();
-        //if(rank==0)std::cout << "   copy d took "<<t.diff()<<"s\n";
-    //scatter input and received values into output vector
-        //t.tic();
+    //scatter received values into values array
     thrust::scatter( recvbuffer1.begin(), recvbuffer1.end(), buffer_scatter1.begin(), values.begin());
     thrust::scatter( recvbuffer2.begin(), recvbuffer2.end(), buffer_scatter2.begin(), values.begin());
-        //t.toc();
-        //if(rank==0)std::cout << "   rescat took "<<t.diff()<<"s\n";
     return values;
 }
 
@@ -303,6 +280,7 @@ void NearestNeighborComm<I,V>::sendrecv( HVec& sb1, HVec& sb2 , HVec& rb1, HVec&
 {
     int source, dest;
     MPI_Status status;
+    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified 
     MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
     MPI_Sendrecv(   sb1.data(), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 3,  //destination

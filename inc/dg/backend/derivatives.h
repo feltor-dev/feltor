@@ -19,6 +19,7 @@ namespace create{
 ///@addtogroup highlevel
 ///@{
 
+//dx, dy, jumpX, jumpY
 
 /**
  * @brief Create 2d derivative in x-direction
@@ -29,9 +30,9 @@ namespace create{
  *
  * @return A host matrix 
  */
-SparseBlockMat dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
 {
-    SparseBlockMat dx;
+    EllSparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
     dx.left = g.n()*g.Ny();
     return dx;
@@ -45,7 +46,7 @@ SparseBlockMat dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
  *
  * @return A host matrix
  */
-SparseBlockMat dx( const Grid2d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+EllSparseBlockMat dx( const Grid2d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -56,9 +57,9 @@ SparseBlockMat dx( const Grid2d<double>& g, direction dir = centered) { return d
  *
  * @return A host matrix
  */
-SparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
+EllSparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
 {
-    SparseBlockMat dy;
+    EllSparseBlockMat dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
     dy.right = g.n()*g.Nx();
     return dy;
@@ -72,7 +73,7 @@ SparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
  *
  * @return A host matrix 
  */
-SparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+EllSparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Matrix that contains 2d jump terms in X direction
@@ -82,9 +83,9 @@ SparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return dy
  *
  * @return A host matrix 
  */
-SparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
+EllSparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
 {
-    SparseBlockMat jx;
+    EllSparseBlockMat jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
     jx.left = g.n()*g.Ny();
     return jx;
@@ -98,9 +99,9 @@ SparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
  *
  * @return A host matrix 
  */
-SparseBlockMat jumpY( const Grid2d<double>& g, bc bcy)
+EllSparseBlockMat jumpY( const Grid2d<double>& g, bc bcy)
 {
-    SparseBlockMat jy;
+    EllSparseBlockMat jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
     jy.right = g.n()*g.Nx();
     return jy;
@@ -113,7 +114,7 @@ SparseBlockMat jumpY( const Grid2d<double>& g, bc bcy)
  *
  * @return A host matrix 
  */
-SparseBlockMat jumpX( const Grid2d<double>& g)
+EllSparseBlockMat jumpX( const Grid2d<double>& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -125,12 +126,13 @@ SparseBlockMat jumpX( const Grid2d<double>& g)
  *
  * @return A host matrix 
  */
-SparseBlockMat jumpY( const Grid2d<double>& g)
+EllSparseBlockMat jumpY( const Grid2d<double>& g)
 {
     return jumpY( g, g.bcy());
 }
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
+//jumpX, jumpY, jumpZ, dx, dy, dz
 /**
  * @brief Matrix that contains jump terms in X direction in 3D
  *
@@ -139,13 +141,14 @@ SparseBlockMat jumpY( const Grid2d<double>& g)
  *
  * @return A host matrix 
  */
-SparseBlockMat jumpX( const Grid3d<double>& g, bc bcx)
+EllSparseBlockMat jumpX( const Grid3d<double>& g, bc bcx)
 {
-    SparseBlockMat jx;
+    EllSparseBlockMat jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
     jx.left = g.n()*g.Ny()*g.Nz();
     return jx;
 }
+
 /**
  * @brief Matrix that contains jump terms in Y direction in 3D
  *
@@ -154,14 +157,15 @@ SparseBlockMat jumpX( const Grid3d<double>& g, bc bcx)
  *
  * @return A host matrix 
  */
-SparseBlockMat jumpY( const Grid3d<double>& g, bc bcy)
+EllSparseBlockMat jumpY( const Grid3d<double>& g, bc bcy)
 {
-    SparseBlockMat jy;
+    EllSparseBlockMat jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
     jy.right = g.n()*g.Nx();
     jy.left = g.Nz();
     return jy;
 }
+
 /**
  * @brief Matrix that contains jump terms in Z direction in 3D
  *
@@ -170,9 +174,9 @@ SparseBlockMat jumpY( const Grid3d<double>& g, bc bcy)
  *
  * @return A host matrix 
  */
-SparseBlockMat jumpZ( const Grid3d<double>& g, bc bcz)
+EllSparseBlockMat jumpZ( const Grid3d<double>& g, bc bcz)
 {
-    SparseBlockMat jz;
+    EllSparseBlockMat jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
     jz.right = g.n()*g.Nx()*g.n()*g.Ny();
     return jz;
@@ -185,10 +189,11 @@ SparseBlockMat jumpZ( const Grid3d<double>& g, bc bcz)
  *
  * @return A host matrix
  */
-SparseBlockMat jumpX( const Grid3d<double>& g)
+EllSparseBlockMat jumpX( const Grid3d<double>& g)
 {
     return jumpX( g, g.bcx());
 }
+
 /**
  * @brief Matrix that contains 3d jump terms in Y direction taking boundary conditions from the grid
  *
@@ -196,10 +201,11 @@ SparseBlockMat jumpX( const Grid3d<double>& g)
  *
  * @return A host matrix
  */
-SparseBlockMat jumpY( const Grid3d<double>& g)
+EllSparseBlockMat jumpY( const Grid3d<double>& g)
 {
     return jumpY( g, g.bcy());
 }
+
 /**
  * @brief Matrix that contains 3d jump terms in Z direction taking boundary conditions from the grid
  *
@@ -207,7 +213,7 @@ SparseBlockMat jumpY( const Grid3d<double>& g)
  *
  * @return A host matrix
  */
-SparseBlockMat jumpZ( const Grid3d<double>& g)
+EllSparseBlockMat jumpZ( const Grid3d<double>& g)
 {
     return jumpZ( g, g.bcz());
 }
@@ -222,9 +228,9 @@ SparseBlockMat jumpZ( const Grid3d<double>& g)
  *
  * @return A host matrix 
  */
-SparseBlockMat dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
 {
-    SparseBlockMat dx;
+    EllSparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
     dx.left = g.n()*g.Ny()*g.Nz();
     return dx;
@@ -238,7 +244,7 @@ SparseBlockMat dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
  *
  * @return A host matrix 
  */
-SparseBlockMat dx( const Grid3d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+EllSparseBlockMat dx( const Grid3d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
@@ -249,9 +255,9 @@ SparseBlockMat dx( const Grid3d<double>& g, direction dir = centered) { return d
  *
  * @return A host matrix 
  */
-SparseBlockMat dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
+EllSparseBlockMat dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
 {
-    SparseBlockMat dy;
+    EllSparseBlockMat dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
     dy.right = g.n()*g.Nx();
     dy.left = g.Nz();
@@ -266,7 +272,7 @@ SparseBlockMat dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
  *
  * @return A host matrix 
  */
-SparseBlockMat dy( const Grid3d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+EllSparseBlockMat dy( const Grid3d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
@@ -277,9 +283,9 @@ SparseBlockMat dy( const Grid3d<double>& g, direction dir = centered){ return dy
  *
  * @return A host matrix 
  */
-SparseBlockMat dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
+EllSparseBlockMat dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
 {
-    SparseBlockMat dz;
+    EllSparseBlockMat dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
     dz.right = g.n()*g.n()*g.Nx()*g.Ny();
     return dz;
@@ -294,7 +300,7 @@ SparseBlockMat dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
  *
  * @return A host matrix 
  */
-SparseBlockMat dz( const Grid3d<double>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
+EllSparseBlockMat dz( const Grid3d<double>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 
 
 

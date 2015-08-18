@@ -39,7 +39,7 @@ struct CooSparseBlockMat
     {
         assert( (int)element.size() == n*n);
         int index = data.size()/n/n;
-        data.insert( data.begin(), element.begin(), element.end());
+        data.insert( data.end(), element.begin(), element.end());
         rows_idx.push_back(row);
         cols_idx.push_back(col);
         data_idx.push_back( index );
@@ -176,7 +176,7 @@ void CooSparseBlockMat::symv( double alpha, const HVec& x, double beta, HVec& y)
     for( int k=0; k<n; k++)
     for( int j=0; j<right; j++)
     {
-        int I = ((s*num_rows + i)*n+k)*right+j;
+        int I = ((s*num_rows + rows_idx[i])*n+k)*right+j;
         for( int q=0; q<n; q++) //multiplication-loop
             y[I] += alpha*data[ (data_idx[i]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i])*n+q)*right+j];

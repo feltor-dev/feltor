@@ -28,7 +28,7 @@ int size();
 should give the size of the vector that collect returns. If size()==0 the collect() function won't be called and
 only the inner matrix is applied.
 */
-template<class LocalMatrixInner, class LocalMatrixOuter class Collective >
+template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
 struct RowColDistMat
 {
     /**
@@ -37,13 +37,13 @@ struct RowColDistMat
     * @param m The local matrix
     * @param c The communication object
     */
-    RowDistMat( const LocalMatrixInner& m_inside, const LocalMatrixOuter& m_outside, const Collective& c):m_i(m_inside), m_o(m_outside), c_(c) { }
+    RowColDistMat( const LocalMatrixInner& m_inside, const LocalMatrixOuter& m_outside, const Collective& c):m_i(m_inside), m_o(m_outside), c_(c) { }
 
     template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
-    RowDistMat( const RowDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):m_i(src.inner_matrix()), m_o( src.outer_matrix()), c_(src.collective())
+    RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):m_i(src.inner_matrix()), m_o( src.outer_matrix()), c_(src.collective())
     { }
-    const LocalMatrixInner& matrix_inner() const{return m_i;}
-    const LocalMatrixOuter& matrix_outer() const{return m_o;}
+    const LocalMatrixInner& inner_matrix() const{return m_i;}
+    const LocalMatrixOuter& outer_matrix() const{return m_o;}
     const Collective& collective() const{return c_;}
     
     template<class container> 
@@ -54,7 +54,7 @@ struct RowColDistMat
         if( c_.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
-                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
             return;
@@ -70,7 +70,6 @@ struct RowColDistMat
         //3. compute and add outer points
         dg::blas2::detail::doSymv(1., m_o, temp, 1., y.data(), 
                        typename dg::MatrixTraits<LocalMatrixOuter>::matrix_category(), 
-                       typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
     }
 
