@@ -30,7 +30,7 @@ int main()
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, bcy, bcz);
     //dg::Grid2d<double> g( 0, lx, 0, lx, n, Nx, Ny, bcx, dg::PER);
-    dg::SparseBlockMatDevice dx = dg::create::dx( g, bcx, dg::centered);
+    dg::EllSparseBlockMatDevice dx = dg::create::dx( g, bcx, dg::centered);
     dg::DVec v = dg::evaluate( function, g);
     dg::DVec w = v;
     const dg::DVec u = dg::evaluate( derivative, g);

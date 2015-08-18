@@ -6,11 +6,11 @@
 namespace dg
 {
 
-struct SparseBlockMat
+struct EllSparseBlockMat
 {
     typedef double value_type;
-    SparseBlockMat(){}
-    SparseBlockMat( int num_block_rows, int num_block_cols, int num_blocks_per_line, int num_different_blocks, int n):
+    EllSparseBlockMat(){}
+    EllSparseBlockMat( int num_block_rows, int num_block_cols, int num_blocks_per_line, int num_different_blocks, int n):
         data(num_different_blocks*n*n), cols_idx( num_block_rows*num_blocks_per_line), data_idx(cols_idx.size()),
         num_rows(num_block_rows), num_cols(num_block_cols), blocks_per_line(num_blocks_per_line),
         n(n),left(1), right(1){}
@@ -24,9 +24,41 @@ struct SparseBlockMat
     int num_rows, num_cols, blocks_per_line;
     int n, left, right;
 };
+
+
+//only one block per line assumed
+struct CooSparseBlockMat
+{
+    typedef double value_type;
+    CooSparseBlockMat(){}
+    CooSparseBlockMat( int num_block_rows, int num_block_cols, int n, int left, int right):
+        num_rows(num_block_rows), num_cols(num_block_cols), num_entries(0),
+        n(n),left(left), right(right){}
+
+    void add_value( int row, int col, const thrust::host_vector<double>& element)
+    {
+        assert( (int)element.size() == n*n);
+        int index = data.size()/n/n;
+        data.insert( data.begin(), element.begin(), element.end());
+        rows_idx.push_back(row);
+        cols_idx.push_back(col);
+        data_idx.push_back( index );
+
+        num_entries++;
+    }
+    
+    typedef thrust::host_vector<double> HVec;
+    typedef thrust::host_vector<int> IVec;
+    void symv(double alpha, const HVec& x, double beta, HVec& y) const;
+    
+    HVec data;
+    IVec cols_idx, rows_idx, data_idx; 
+    int num_rows, num_cols, num_entries;
+    int n, left, right;
+};
 ///@cond
 
-void SparseBlockMat::symv(const HVec& x, HVec& y) const
+void EllSparseBlockMat::symv(const HVec& x, HVec& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -132,14 +164,45 @@ if(right==1) //alle dx Ableitungen
     //}
 }
 
+void CooSparseBlockMat::symv( double alpha, const HVec& x, double beta, HVec& y) const
+{
+    assert( y.size() == (unsigned)num_rows*n*left*right);
+    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( beta == 1);
+
+    //simplest implementation
+    for( int s=0; s<left; s++)
+    for( int i=0; i<num_entries; i++)
+    for( int k=0; k<n; k++)
+    for( int j=0; j<right; j++)
+    {
+        int I = ((s*num_rows + i)*n+k)*right+j;
+        for( int q=0; q<n; q++) //multiplication-loop
+            y[I] += alpha*data[ (data_idx[i]*n + k)*n+q]*
+                x[((s*num_cols + cols_idx[i])*n+q)*right+j];
+    }
+}
+
 template <>
-struct MatrixTraits<SparseBlockMat>
+struct MatrixTraits<EllSparseBlockMat>
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 template <>
-struct MatrixTraits<const SparseBlockMat>
+struct MatrixTraits<const EllSparseBlockMat>
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template <>
+struct MatrixTraits<CooSparseBlockMat>
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template <>
+struct MatrixTraits<const CooSparseBlockMat>
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;

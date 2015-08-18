@@ -178,8 +178,8 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
             {
                 hbgather1[i*n+j] = (i*dim_[0]               + j);
                 hbgather2[i*n+j] = (i*dim_[0] + dim_[0] - n + j);
-                hbscattr1[i*n+j] = (i*(dim_[0] + 2*n)                      + j);
-                hbscattr2[i*n+j] = (i*(dim_[0] + 2*n)+ (dim_[0] + 2*n) - n + j);
+                hbscattr1[i*n+j] = (i*(2*n)                      + j);
+                hbscattr2[i*n+j] = (i*(2*n)+ (2*n) - n + j);
             }
             for( int j=0; j<dim_[0]; j++)
             {
@@ -198,9 +198,9 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
                     hbgather2[(i*n+j)*dim_[0]+k] = 
                         (i*dim_[1] + dim_[1] - n + j)*dim_[0] + k;
                     hbscattr1[(i*n+j)*dim_[0]+k] = 
-                        (i*(dim_[1] + 2*n) +                       j)*dim_[0] + k;
+                        (i*(          2*n) +                       j)*dim_[0] + k;
                     hbscattr2[(i*n+j)*dim_[0]+k] = 
-                        (i*(dim_[1] + 2*n) + (dim_[1] + 2*n) - n + j)*dim_[0] + k;
+                        (i*(          2*n) + (          2*n) - n + j)*dim_[0] + k;
                 }
             for( int j=0; j<dim_[1]*dim_[0]; j++)
                 iscattr[i*dim_[0]*dim_[1] + j] = i*dim_[0]*(dim_[1]+2*n) + n*dim_[0] + j;
@@ -214,7 +214,7 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
                 hbgather1[i*dim_[0]*dim_[1]+j] =  i*dim_[0]*dim_[1]            + j;
                 hbgather2[i*dim_[0]*dim_[1]+j] = (i+dim_[2]-n)*dim_[0]*dim_[1] + j;
                 hbscattr1[i*dim_[0]*dim_[1]+j] =  i*dim_[0]*dim_[1]            + j;
-                hbscattr2[i*dim_[0]*dim_[1]+j] = (i+(dim_[2]+2*n)-n)*dim_[0]*dim_[1] + j;
+                hbscattr2[i*dim_[0]*dim_[1]+j] = (i+(  2*n)-n)*dim_[0]*dim_[1] + j;
             }
         }
         for( int i=0; i<dim_[2]; i++)
@@ -230,8 +230,9 @@ template<class I, class V>
 int NearestNeighborComm<I,V>::size()
 {
     if( silent_) return 0;
-    int origin= dim_[0]*dim_[1]*dim_[2];
-    return origin + 2*buffer_size();
+    //int origin= dim_[0]*dim_[1]*dim_[2];
+    //return origin + 2*buffer_size();
+    return 2*buffer_size();
 }
 
 template<class I, class V>
@@ -260,7 +261,7 @@ V NearestNeighborComm<I,V>::collect( const V& input)
         //t.tic();
     V values( size());
     //scatter is slow because scales with vector size 
-    thrust::scatter( input.begin(), input.end(), input_scatter.begin(), values.begin());
+    //thrust::scatter( input.begin(), input.end(), input_scatter.begin(), values.begin());
     V sendbuffer1( buffer_size());
     V recvbuffer1( buffer_size());
     V sendbuffer2( buffer_size());

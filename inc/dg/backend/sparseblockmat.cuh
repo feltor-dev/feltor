@@ -7,10 +7,10 @@
 namespace dg
 {
 //mixed derivatives for jump terms missing
-struct SparseBlockMatDevice
+struct EllSparseBlockMatDevice
 {
     typedef double value_type;
-    SparseBlockMatDevice( const SparseBlockMat& src)
+    EllSparseBlockMatDevice( const EllSparseBlockMat& src)
     {
         data = src.data;
         cols_idx = src.cols_idx, data_idx = src.data_idx;
@@ -30,28 +30,67 @@ struct SparseBlockMatDevice
     int left, right;
 };
 
+//assume max one entry per line
+struct CooSparseBlockMatDevice
+{
+    typedef double value_type;
+    CooSparseBlockMatDevice( const CooSparseBlockMat& src)
+    {
+        data = src.data;
+        rows_idx = src.rows_idx, cols_idx = src.cols_idx, data_idx = src.data_idx;
+        num_rows = src.num_rows, num_cols = src.num_cols, num_entries = src.num_entries;
+        n = src.n, left = src.left, right = src.right;
+    }
+    
+    typedef thrust::device_vector<double> DVec;
+    typedef thrust::device_vector<int> IVec;
+    void symv(double alpha, const DVec& x, double beta, DVec& y) const;
+    void launch_multiply_kernel(double alpha, const DVec& x, double beta, DVec& y) const;
+    
+    DVec data;
+    IVec cols_idx, rows_idx, data_idx; 
+    int num_rows, num_cols, num_entries;
+    int n, left, right;
+};
+
 ///@cond
-inline void SparseBlockMatDevice::symv( const DVec& x, DVec& y) const
+inline void EllSparseBlockMatDevice::symv( const DVec& x, DVec& y) const
 {
     launch_multiply_kernel( x,y);
+}
+inline void CooSparseBlockMatDevice::symv( double alpha, const DVec& x, double beta, DVec& y) const
+{
+    launch_multiply_kernel(alpha, x, beta, y);
 }
 
 
 template <>
-struct MatrixTraits<SparseBlockMatDevice>
+struct MatrixTraits<EllSparseBlockMatDevice>
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 template <>
-struct MatrixTraits<const SparseBlockMatDevice>
+struct MatrixTraits<const EllSparseBlockMatDevice>
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template <>
+struct MatrixTraits<CooSparseBlockMatDevice>
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template <>
+struct MatrixTraits<const CooSparseBlockMatDevice>
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
+void EllSparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -177,6 +216,26 @@ else
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
     }
 }
+void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& x, double beta, DVec& y) const
+{
+    assert( y.size() == (unsigned)num_rows*n*left*right);
+    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( beta == 1);
+
+#pragma omp parallel for collapse(4)
+    for( int s=0; s<left; s++)
+    for( int i=0; i<num_entries; i++)
+    for( int k=0; k<n; k++)
+    for( int j=0; j<right; j++)
+    {
+        int I = ((s*num_rows + i)*n+k)*right+j;
+        double temp=0;
+        for( int q=0; q<n; q++) //multiplication-loop
+            temp = data[ (data_idx[i]*n + k)*n+q]*
+                x[((s*num_cols + cols_idx[i])*n+q)*right+j];
+        y[I] += alpha*temp;
+    }
+}
 #else
 
 // multiply kernel
@@ -225,8 +284,37 @@ else
     }
 
 }
+// multiply kernel
+ __global__ void coo_multiply_kernel(
+         const double* data, const int* rows_idx, const int* cols_idx, const int* data_idx, 
+         const int num_rows, const int num_cols, const int num_entries,
+         const int n, 
+         const int left, const int right, 
+         double alpha, const double* x, double *y
+         )
+{
+    int size = left*num_entries*n*right;
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int idx = thread_id; idx<size; idx += grid_size)
+    {
+        int s=idx/(n*num_entries*right), 
+            i = (idx/(right*n))%num_entries, 
+            k = (idx/right)%n, 
+            j=idx%right;
+        int I = ((s*num_rows+rows_idx[i])*n+k)*right+j;
+        double temp = 0;
+        int B = data_idx[i];
+        int J = cols_idx[i];
+        for( int q=0; q<n; q++) //multiplication-loop
+            temp += data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
+        y[I] += alpha*temp;
+    }
 
-void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
+}
+
+void EllSparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -242,6 +330,25 @@ void SparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
     double* y_ptr = thrust::raw_pointer_cast( &y[0]);
     ell_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
         data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left, right, x_ptr,y_ptr);
+}
+void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& x, double beta, DVec& y) const
+{
+    assert( y.size() == (unsigned)num_rows*n*left*right);
+    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( beta == 1);
+    //set up kernel parameters
+    const size_t BLOCK_SIZE = 256; 
+    const size_t size = left*right*num_entries*n;
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+
+    const double* data_ptr = thrust::raw_pointer_cast( &data[0]);
+    const int* rows_ptr = thrust::raw_pointer_cast( &rows_idx[0]);
+    const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
+    const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
+    const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
+    double* y_ptr = thrust::raw_pointer_cast( &y[0]);
+    coo_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
+        data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, n, left, right, alpha, x_ptr,y_ptr);
 }
 #endif
 ///@endcond

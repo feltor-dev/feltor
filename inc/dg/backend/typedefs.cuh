@@ -14,14 +14,14 @@ typedef thrust::host_vector<double> HVec; //!< Host Vector
 
 //typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix; //!< default matrix
 //typedef cusp::csr_matrix<int, double, cusp::host_memory> HMatrix; //!< CSR host Matrix
-typedef SparseBlockMat HMatrix;
+typedef EllSparseBlockMat HMatrix;
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
 //typedef cusp::csr_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for omp
-typedef SparseBlockMatDevice DMatrix;
+typedef EllSparseBlockMatDevice DMatrix;
 #else
 //!< sec efficient matrix format for gpu and only efficient format which can handly plusT, minusT matrices!
 //typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for gpu
-typedef SparseBlockMatDevice DMatrix;
+typedef EllSparseBlockMatDevice DMatrix;
 #endif
 
 #ifdef MPI_VERSION

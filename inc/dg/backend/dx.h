@@ -33,7 +33,7 @@ namespace create
 *
 * @return Host Matrix 
 */
-SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
+EllSparseBlockMat dx_symm(int n, int N, double h, bc bcx)
 {
 
     Operator<double> l = create::lilj(n);
@@ -71,7 +71,7 @@ SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
     //assemble the matrix
     if( bcx != PER)
     {
-        SparseBlockMat A(N, N, 3, 6, n);
+        EllSparseBlockMat A(N, N, 3, 6, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -105,7 +105,7 @@ SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
     }
     else //periodic
     {
-        SparseBlockMat A(N, N, 3, 3, n);
+        EllSparseBlockMat A(N, N, 3, 3, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -134,7 +134,7 @@ SparseBlockMat dx_symm(int n, int N, double h, bc bcx)
 *
 * @return Host Matrix 
 */
-SparseBlockMat dx_plus( int n, int N, double h, bc bcx )
+EllSparseBlockMat dx_plus( int n, int N, double h, bc bcx )
 {
 
     Operator<double> l = create::lilj(n);
@@ -162,7 +162,7 @@ SparseBlockMat dx_plus( int n, int N, double h, bc bcx )
     //assemble the matrix
     if( bcx != PER)
     {
-        SparseBlockMat A(N, N, 2, 5, n);
+        EllSparseBlockMat A(N, N, 2, 5, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -191,7 +191,7 @@ SparseBlockMat dx_plus( int n, int N, double h, bc bcx )
     }
     else //periodic
     {
-        SparseBlockMat A(N, N, 2, 2, n);
+        EllSparseBlockMat A(N, N, 2, 2, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -219,7 +219,7 @@ SparseBlockMat dx_plus( int n, int N, double h, bc bcx )
 *
 * @return Host Matrix 
 */
-SparseBlockMat dx_minus( int n, int N, double h, bc bcx )
+EllSparseBlockMat dx_minus( int n, int N, double h, bc bcx )
 {
     Operator<double> l = create::lilj(n);
     Operator<double> r = create::rirj(n);
@@ -247,7 +247,7 @@ SparseBlockMat dx_minus( int n, int N, double h, bc bcx )
     //assemble the matrix
     if(bcx != dg::PER)
     {
-        SparseBlockMat A(N, N, 2, 5, n);
+        EllSparseBlockMat A(N, N, 2, 5, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -276,7 +276,7 @@ SparseBlockMat dx_minus( int n, int N, double h, bc bcx )
     }
     else //periodic
     {
-        SparseBlockMat A(N, N, 2, 2, n);
+        EllSparseBlockMat A(N, N, 2, 2, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -304,7 +304,7 @@ SparseBlockMat dx_minus( int n, int N, double h, bc bcx )
 *
 * @return Host Matrix 
 */
-SparseBlockMat jump( int n, int N, double h, bc bcx)
+EllSparseBlockMat jump( int n, int N, double h, bc bcx)
 {
     Operator<double> l = create::lilj(n);
     Operator<double> r = create::rirj(n);
@@ -331,7 +331,7 @@ SparseBlockMat jump( int n, int N, double h, bc bcx)
     //assemble the matrix
     if(bcx != dg::PER)
     {
-        SparseBlockMat A(N, N, 3, 6, n);
+        EllSparseBlockMat A(N, N, 3, 6, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -365,7 +365,7 @@ SparseBlockMat jump( int n, int N, double h, bc bcx)
     }
     else //periodic
     {
-        SparseBlockMat A(N, N, 3, 3, n);
+        EllSparseBlockMat A(N, N, 3, 3, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -395,7 +395,7 @@ SparseBlockMat jump( int n, int N, double h, bc bcx)
 *
 * @return Host Matrix 
 */
-SparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
+EllSparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
 {
     if( dir == centered)
         return create::dx_symm(n, N, h, bcx);
@@ -403,7 +403,7 @@ SparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
         return create::dx_plus(n, N, h, bcx);
     else if (dir == backward)
         return create::dx_minus(n, N, h, bcx);
-    return SparseBlockMat();
+    return EllSparseBlockMat();
 }
 
 /**
@@ -416,11 +416,13 @@ SparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
 *
 * @return Host Matrix 
 */
-SparseBlockMat dx( const Grid1d<double>& g, bc bcx, norm no = normed, direction dir = centered)
+EllSparseBlockMat dx( const Grid1d<double>& g, bc bcx, direction dir = centered)
 {
-    SparseBlockMat dx;
-    dx = dx_normed( g.n(), g.N(), g.h(), bcx, dir);
-    return dx;
+    return dx_normed( g.n(), g.N(), g.h(), bcx, dir);
+}
+EllSparseBlockMat dx( const Grid1d<double>& g, direction dir = centered)
+{
+    return dx( g, g.bcx(), dir);
 }
 
 ///@}

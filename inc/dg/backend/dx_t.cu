@@ -8,37 +8,13 @@
 #include "typedefs.cuh"
 #include "weights.cuh"
 
-const double lx = 2*M_PI;
-dg::direction dir = dg::centered;
 
 double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
-//dg::bc bcx = dg::PER;
-dg::bc bcx = dg::DIR;
+double zero( double x) { return 0;}
 
-//double function (double  x) {return x*(x-2*M_PI)*exp(x);}
-//double derivative( double x) { return (2.*x-2*M_PI)*exp(x) + function(x);}
-//dg::bc bcx = dg::DIR;
-/*
-double function( double x) { return cos(x);}
-double derivative( double x) { return -sin(x);}
-dg::bc bcx = dg::NEU;
-*/
-
-/*
-double function( double x) { return sin(3./4.*x);}
-double derivative( double x) { return 3./4. * sin(3./4.*x);}
-dg::bc bcx = dg::DIR_NEU;
-*/
-
-/*
-double function( double x) { return cos(3./4.*x);}
-double derivative( double x) { return -3./4.*sin(3./4.*x);}
-dg::bc bcx = NEU_DIR;
-*/
-
-typedef dg::DVec Vector;
-typedef dg::SparseBlockMatDevice Matrix;
+typedef dg::HVec Vector;
+typedef dg::EllSparseBlockMat Matrix;
 
 int main ()
 {
@@ -47,26 +23,39 @@ int main ()
     std::cin >> n>> N;
     std::cout << "# of Legendre nodes " << n <<"\n";
     std::cout << "# of cells          " << N <<"\n";
-    dg::Grid1d<double> g( 0, lx, n, N);
-    const double hx = lx/(double)N;
+    dg::Grid1d<double> gPER( 0, 2*M_PI, n, N, dg::PER);
+    dg::Grid1d<double> gDIR( 0, M_PI, n, N, dg::DIR);
+    dg::Grid1d<double> gNEU( M_PI/2., 3*M_PI/2., n, N, dg::NEU);
+    dg::Grid1d<double> gDIR_NEU( 0, M_PI/2., n, N, dg::DIR_NEU);
+    dg::Grid1d<double> gNEU_DIR( M_PI/2., M_PI, n, N, dg::NEU_DIR);
+    dg::Grid1d<double> g[] = {gPER, gDIR, gNEU, gDIR_NEU,gNEU_DIR};
 
-    Matrix hs = dg::create::dx_symm( n, N, hx, bcx);
-    Matrix hf = dg::create::dx_plus( n, N, hx, bcx);
-    Matrix hb = dg::create::dx_minus( n, N, hx, bcx);
-    const Vector hv = dg::evaluate( function, g);
-    Vector hw = hv;
-    Vector w1d = dg::create::weights( g);
-    const Vector hu = dg::evaluate( derivative, g);
+    std::cout << "YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
+    for( unsigned i=0; i<5; i++)
+    {
+        Matrix hs = dg::create::dx( g[i], dg::centered);
+        Matrix hf = dg::create::dx( g[i], dg::forward);
+        Matrix hb = dg::create::dx( g[i], dg::backward);
+        Matrix js = dg::create::jump( g[i].n(), g[i].N(), g[i].h(), g[i].bcx());
+        const Vector func = dg::evaluate( function, g[i]);
+        Vector error = func;
+        const Vector w1d = dg::create::weights( g[i]);
+        const Vector deri = dg::evaluate( derivative, g[i]);
+        const Vector null = dg::evaluate( zero, g[i]);
 
-    dg::blas2::symv( hs, hv, hw);
-    dg::blas1::axpby( 1., hu, -1., hw);
-    std::cout << "Distance to true solution (symmetric): "<<sqrt(dg::blas2::dot( w1d, hw) )<<"\n";
-    dg::blas2::symv( hf, hv, hw);
-    dg::blas1::axpby( 1., hu, -1., hw);
-    std::cout << "Distance to true solution (forward  ): "<<sqrt(dg::blas2::dot( w1d, hw) )<<"\n";
-    dg::blas2::symv( hb, hv, hw);
-    dg::blas1::axpby( 1., hu, -1., hw);
-    std::cout << "Distance to true solution (backward ): "<<sqrt(dg::blas2::dot( w1d, hw) )<<"\n";
+        dg::blas2::symv( hs, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (symmetric): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( hf, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (forward  ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( hb, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (backward ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( js, func, error);
+        dg::blas1::axpby( 1., null , -1., error);
+        std::cout << "Distance to true solution (jump     ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n\n";
+    }
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1
