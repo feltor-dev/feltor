@@ -22,7 +22,7 @@ cylindrical coordinates
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class Matrix = dg::DMatrix, class container=thrust::device_vector<double> >
+template< class FieldAligned, class Matix, class container=thrust::device_vector<double> >
 struct DZ
 {
 
@@ -40,8 +40,8 @@ struct DZ
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
-    template <class FieldAligned>
-    DZ(FieldAligned field, const dg::Grid3d<double>& grid);
+    template<class InvB>
+    DZ(const FieldAligned& field, InvB invB, const dg::Grid3d<double>& grid);
 
     /**
     * @brief Apply the derivative on a 3d vector
@@ -211,24 +211,23 @@ struct DZ
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 ///@cond
-template<class M, class container>
-template <class Field, class Limiter>
-DZ<M,container>::DZ(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
+template<class F, class M, class container>
+template <class Field>
+DZ<F, M,container>::DZ(const FieldAligned& field, Field inverseB, const dg::Grid3d<double>& grid):
         jumpX( dg::create::jumpX( grid, grid.bcx()),
         jumpY( dg::create::jumpY( grid, grid.bcy()),
-        tempP( dg::evaluate( dg::zero, grid)), temp0( f_.hz()), tempM( f_.hz()), 
-        g_(grid), bcz_(grid.bcz()), w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),
-        invB(dg::evaluate(field,grid))
+        tempP( dg::evaluate( dg::zero, grid)), temp0( tempP), tempM( tempP), 
+        w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),
+        invB(dg::evaluate(inverseB,grid))
 {
-
- 
+    assert( grid == field.grid());
 }
 
-template<class M, class container>
-inline void DZ<M,container>::operator()( const container& f, container& dzf) { return centered(f, dzf);}
+template<class F, class M, class container>
+inline void DZ<F,M,container>::operator()( const container& f, container& dzf) { return centered(f, dzf);}
 
-template<class M, class container>
-void DZ<M,container>::centered( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::centered( const container& f, container& dzf)
 {
     //direct discretisation
     assert( &f != &dzf);
@@ -251,8 +250,8 @@ void DZ<M,container>::centered( const container& f, container& dzf)
 
 }
 
-template<class M, class container>
-void DZ<M,container>::centeredT( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::centeredT( const container& f, container& dzf)
 {               
 //     //adjoint discretisation
         assert( &f != &dzf);    
@@ -280,8 +279,8 @@ void DZ<M,container>::centeredT( const container& f, container& dzf)
 //         dg::blas1::pointwiseDivide( dzf,w2d,  dzf);  
 }
 
-template<class M, class container>
-void DZ<M,container>::centeredTD( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::centeredTD( const container& f, container& dzf)
 {       
 //     Direct discretisation
        assert( &f != &dzf);    
@@ -293,8 +292,8 @@ void DZ<M,container>::centeredTD( const container& f, container& dzf)
         dg::blas1::pointwiseDivide( dzf, invB, dzf);
 
 }
-template<class M, class container>
-void DZ<M,container>::forward( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::forward( const container& f, container& dzf)
 {
     //direct
     assert( &f != &dzf);
@@ -311,8 +310,8 @@ void DZ<M,container>::forward( const container& f, container& dzf)
 //     dg::blas1::pointwiseDot( v3d, dzf, dzf);
 //     dg::blas1::pointwiseDot( dzf, invB, dzf);
 }
-template<class M, class container>
-void DZ<M,container>::forwardT( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::forwardT( const container& f, container& dzf)
 {    
     //adjoint discretisation
     assert( &f != &dzf);
@@ -323,8 +322,8 @@ void DZ<M,container>::forwardT( const container& f, container& dzf)
     dg::blas1::pointwiseDot( v3d, dzf, dzf);
     
 }
-template<class M, class container>
-void DZ<M,container>::forwardTD( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::forwardTD( const container& f, container& dzf)
 {
     //direct discretisation
     assert( &f != &dzf);    
@@ -336,8 +335,8 @@ void DZ<M,container>::forwardTD( const container& f, container& dzf)
 
 
 }
-template<class M, class container>
-void DZ<M,container>::backward( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::backward( const container& f, container& dzf)
 {
     //direct
     assert( &f != &dzf);
@@ -355,8 +354,8 @@ void DZ<M,container>::backward( const container& f, container& dzf)
 //     dg::blas1::pointwiseDot( v3d,dzf, dzf);
 //     dg::blas1::pointwiseDot( dzf, invB, dzf);
 }
-template<class M, class container>
-void DZ<M,container>::backwardT( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::backwardT( const container& f, container& dzf)
 {    
     //adjoint discretisation
     assert( &f != &dzf);
@@ -367,8 +366,8 @@ void DZ<M,container>::backwardT( const container& f, container& dzf)
     dg::blas1::pointwiseDot( v3d, dzf, dzf);   
 }
 
-template<class M, class container>
-void DZ<M,container>::backwardTD( const container& f, container& dzf)
+template<class F, class M, class container>
+void DZ<F,M,container>::backwardTD( const container& f, container& dzf)
 {
     //direct
     assert( &f != &dzf);    
@@ -379,8 +378,8 @@ void DZ<M,container>::backwardTD( const container& f, container& dzf)
     dg::blas1::pointwiseDivide( dzf, invB, dzf);
 }
 
-template< class M, class container >
-void DZ<M,container>::symv( const container& f, container& dzTdzf)
+template< class F, class M, class container >
+void DZ<F,M,container>::symv( const container& f, container& dzTdzf)
 {
 // normed
 //     centered( f, tempP);
@@ -416,8 +415,8 @@ void DZ<M,container>::symv( const container& f, container& dzTdzf)
 //     #endif
 
 }
-template< class M, class container >
-void DZ<M,container>::dzz( const container& f, container& dzzf)
+template< class F, class M, class container >
+void DZ<F,M,container>::dzz( const container& f, container& dzzf)
 {
     assert( &f != &dzzf);
     f_.einsPlus( f, tempP);
@@ -434,8 +433,8 @@ void DZ<M,container>::dzz( const container& f, container& dzzf)
 
 
 //enables the use of the dg::blas2::symv function 
-template< class M, class V>
-struct MatrixTraits< DZ<M, V> >
+template< class F, class M, class V>
+struct MatrixTraits< DZ<F,M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;

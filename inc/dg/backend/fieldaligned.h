@@ -17,40 +17,29 @@ namespace dg{
  */
 struct DefaultLimiter
 {
-
     /**
      * @brief return 1
      *
      * @param x x value
      * @param y y value
-     *
      * @return 1
      */
-    double operator()(double x, double y)
-    {
-        return 1;
-    }
-
+    double operator()(double x, double y) { return 1; }
 };
+
 /**
  * @brief No Limiter 
  */
 struct NoLimiter
 {
-
     /**
      * @brief return 0
      *
      * @param x x value
      * @param y y value
-     *
      * @return 0
      */
-    double operator()(double x, double y)
-    {
-        return 0.;
-    }
-
+    double operator()(double x, double y) { return 0.; }
 };
 
 /**
@@ -177,19 +166,24 @@ struct FieldAligned
     /**
     * @brief Construct from a field and a grid
     *
-    * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
+    * @tparam Field The Fieldlines to be integrated: 
+        Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) 
+        where the first index is R, the second Z and the last s (the length of the field line)
     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-    is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
+        is a limiter and 0 if there isn't. 
+        If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param field The field to integrate
     * @param grid The grid on which to operate
-    * @param deltaPhi Must either equal the hz() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
     * @param eps Desired accuracy of runge kutta
-    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
-    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
-    * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
+    * @param limit Instance of the limiter class (Default is a limiter everywhere, 
+        note that if bcz is periodic it doesn't matter if there is a limiter or not)
+    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on bounding box
+    * @note If there is a limiter, the boundary condition on the first/last plane is set 
+        by the bcz variable from the grid and can be changed by the set_boundaries function. 
+        If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    FieldAligned(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+    FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
 
 
     /**
@@ -203,12 +197,12 @@ struct FieldAligned
     */
     void set_boundaries( dg::bc bcz, double left, double right)
     {
-
         bcz_ = bcz;
         const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
         left_ = dg::evaluate( dg::CONSTANT(left), g2d);
         right_ = dg::evaluate( dg::CONSTANT(right),g2d);
     }
+
     /**
      * @brief Set boundary conditions in the limiter region
      *
@@ -224,6 +218,7 @@ struct FieldAligned
         left_ = left;
         right_ = right;
     }
+
     /**
      * @brief Set boundary conditions in the limiter region
      *
@@ -235,14 +230,7 @@ struct FieldAligned
      * @param scal_right right scaling factor
      */
     void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right);
-    /**
-     * @brief Compute the second derivative using finite differences
-     *
-     * discretizes \f$ \nabla_\parallel\cdot \nabla_\parallel\f$
-     * @param f input function
-     * @param dzzf output (write-only)
-     */
-    void dzz( const container& f, container& dzzf);
+
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
      *
@@ -274,31 +262,12 @@ struct FieldAligned
      */
     template< class BinaryOp, class UnaryOp>
     container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
-    /**
-     * @brief Evaluate a 2d functor and toroidally avarage over all planes 
-     *
-     * Evaluates the given functor on a 2d plane and then follows fieldlines to
-     * get the values in the 3rd dimension. Uses the grid given in the constructor.
-     * The second functor is used to scale the values along the fieldlines.
-     * The fieldlines are assumed to be periodic.
-     * @tparam BinaryOp Binary Functor
-     * @tparam UnaryOp Unary Functor
-     * @param f Functor to evaluate in x-y
-     * @param g Functor to evaluate in z
-     * @param p0 The number of the plane to start
-     * @param rounds The number of rounds to follow a fieldline
-     *
-     * @return Returns an instance of container
-     */
-    template< class BinaryOp, class UnaryOp>
-    container evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
-    private:
-    void eins(const Matrix& interp, const container& n, container& npe);
     void einsPlus( const container& n, container& npe);
     void einsMinus( const container& n, container& nme);
     void einsPlusT( const container& n, container& npe);
     void einsMinusT( const container& n, container& nme);
+    private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
@@ -306,27 +275,22 @@ struct FieldAligned
     dg::Grid3d<double> g_;
     dg::bc bcz_;
     container left_, right_;
-    container limiter;
+    container limiter_;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 ///@cond
 template<class M, class container>
 template <class Field, class Limiter>
-FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
+FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz):
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), 
         g_(grid), bcz_(grid.bcz())
 {
-
-    assert( deltaPhi == grid.hz() || grid.Nz() == 1);
-    if( deltaPhi != grid.hz())
-        std::cout << "Computing in 2D mode!\n";
-    //Resize vectors to 2D grid size
+    //Resize vector to 2D grid size
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
     unsigned size = g2d.size();
-    limiter = dg::evaluate( limit, g2d);
+    limiter_ = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
-    hz_plane.resize( size); hp_plane.resize( size); hm_plane.resize( size);
     ghostM.resize( size); ghostP.resize( size);
     //Set starting points
     std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
@@ -508,6 +472,7 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0)
     }
     return vec3d;
 }
+
 template< class M, class container>
 template< class BinaryOp, class UnaryOp>
 container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds)
@@ -558,35 +523,7 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, u
     return vec3d;
 }
 
-template< class M, class container>
-template< class BinaryOp, class UnaryOp>
-container FieldAligned<M,container>::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
-{
-    assert( g_.Nz() > 1);
-    container vec3d = evaluate( f, g, p0, rounds);
-    container vec2d(g_.size()/g_.Nz());
 
-    for (unsigned i = 0; i<g_.Nz(); i++)
-    {
-        container part( vec3d.begin() + i* (g_.size()/g_.Nz()), vec3d.begin()+(i+1)*(g_.size()/g_.Nz()));
-        dg::blas1::axpby(1.0,part,1.0,vec2d);
-    }
-    dg::blas1::scal(vec2d,1./g_.Nz());
-    return vec2d;
-}
-
-template< class M, class container>
-void FieldAligned<M, container>::eins(const M& m, const container& f, container& fpe)
-{
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-
-    for( unsigned i0=0; i0<g_.Nz(); i0++)
-    {
-        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
-        View fpe0( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
-        cusp::multiply( m, f0, fpe0);       
-    }
-}
 template< class M, class container>
 void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
 {
@@ -616,7 +553,7 @@ void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
             }
             //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
             cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+            dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
             cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
         }
     }
@@ -651,7 +588,7 @@ void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
             }
             //interlay ghostcells with periodic cells: L*g + (1-L)*fme
             cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+            dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
             cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
 
         }
@@ -686,7 +623,7 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
             }
             //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
             cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+            dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
             cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
         }
 
@@ -721,14 +658,13 @@ void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
             }
             //interlay ghostcells with periodic cells: L*g + (1-L)*fme
             cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+            dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
             cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
 
         }
     }
 }
 
-//enables the use of the dg::blas2::symv function 
 ///@endcond
 
 

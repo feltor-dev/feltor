@@ -3,10 +3,10 @@
 #include "fieldaligned.h"
 #include "grid.h"
 #include "mpi_matrix.h"
+#include "mpi_matrix_blas.h"
 #include "mpi_collective.h"
 #include "mpi_grid.h"
 #include "interpolation.cuh"
-#include "typedefs.cuh"
 #include "functions.h"
 #include "../runge_kutta.h"
 
@@ -20,7 +20,7 @@ namespace dg{
  * @tparam Matrix The matrix class of the interpolation matrix
  * @tparam container The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
  */
- template <class LocalMatrix, class container>
+template <class LocalMatrix, class LocalContainer>
 struct MPI_FieldAligned
 {
     /**
@@ -38,7 +38,7 @@ struct MPI_FieldAligned
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
+    MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
 
     /**
      * @brief Set boundary conditions
@@ -74,12 +74,16 @@ struct MPI_FieldAligned
     }
 
     /**
-     * @brief Compute the second derivative using finite differences
+     * @brief Set boundary conditions in the limiter region
      *
-     * @param f input function
-     * @param dzzf output (write-only)
+     * if Dirichlet boundaries are used the left value is the left function
+     value, if Neumann boundaries are used the left value is the left derivative value
+     * @param bcz boundary condition
+     * @param global 3D vector containing boundary values
+     * @param scal_left left scaling factor
+     * @param scal_right right scaling factor
      */
-    void dzz( const MPI_Vector& f, MPI_Vector& dzzf);
+    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right);
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
@@ -93,7 +97,8 @@ struct MPI_FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp>
-    MPI_Vector evaluate( BinaryOp f, unsigned plane=0);
+    MPI_Vector<LocalContainer> evaluate( BinaryOp f, unsigned plane=0);
+
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
      *
@@ -111,54 +116,50 @@ struct MPI_FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp, class UnaryOp>
-    MPI_Vector evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    MPI_Vector<LocalContainer> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
+    void einsPlus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& npe);
+    void einsMinus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
+    void einsPlusT( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& npe);
+    void einsMinusT( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
   private:
-    void einsPlus( const MPI_Vector& n, thrust::host_vector<double>& npe);
-    void einsMinus( const MPI_Vector& n, thrust::host_vector<double>& nme);
-    typedef cusp::array1d_view< thrust::host_vector<double>::iterator> View;
-    typedef cusp::array1d_view< thrust::host_vector<double>::const_iterator> cView;
-    double eps_;
-    thrust::host_vector<double> hz, hp, hm, tempP, temp0, tempM, interP, interM;
-    thrust::host_vector<double> ghostM, ghostP;
-    MPI_Vector invB;
+    typedef cusp::array1d_view< typename LocalContainer::iterator> View;
+    typedef cusp::array1d_view< typename LocalContainer::const_iterator> cView;
+    MPI_Vector<LocalContainer> hz, hp, hm; 
+    LocalContainer ghostM, ghostP;
     MPI_Grid3d g_;
     dg::bc bcz_;
-    thrust::host_vector<double> left_, right_;
-    thrust::host_vector<double> limiter_;
-    cusp::csr_matrix<int, double, cusp::host_memory> plus, minus; //interpolation matrices
-    Collective collM_, collP_;
+    LocalContainer left_, right_;
+    LocalContainer limiter_;
+    RowDistMat<LocalMatrix, Collective> plus, minus; //interpolation matrices
+    ColDistMat<LocalMatrix, Collective> plusT, minusT; //interpolation matrices
+    //Collective collM_, collP_;
 
-    dg::MPI_FieldAligned<cusp::csr_matrix<int, double, cusp::host_memory>, thrust::host_vector<double> > dz_;
+    dg::FieldAligned<LocalMatrix, LocalContainer > dz_;
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 ///@cond
 
+template<class LocalMatrix, class LocalContainer>
 template <class Field, class Limiter>
-MPI_FieldAligned<MPI_Matrix, MPI_Vector>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz ): 
-    eps_(eps),
-    hz( grid.size()), hp(hz), hm(hz), tempP( grid.size()), temp0(tempP), tempM( tempP), interP(tempP), interM(tempP), g_(grid), bcz_(grid.bcz()),  invB(dg::evaluate(field,grid)) ,
-    dz_(field, grid.global(), deltaPhi, eps, limit, globalbcz)
+MPI_FieldAligned<LocalMatrix, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz ): 
+    hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), 
+    g_(grid), bcz_(grid.bcz()),  
+    dz_(field, grid.global(), eps, limit, globalbcz)
 {
-    assert( deltaPhi == grid.hz() || grid.Nz() == 1);
-    //2D local grid with ghostcells
-    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    dg::Grid3d<double> global( grid.global()); //global without ghostcells
-    dg::Grid3d<double> globalWG( global.x0() - global.hx()*(1-1e-14), global.x1() + global.hx()*(1-1e-14),
-                                 global.y0() - global.hy()*(1-1e-14), global.y1() + global.hy()*(1-1e-14),
-                                 global.z0(), global.z1(), 
-                                 global.n(), global.Nx()+2, global.Ny()+2, global.Nz()); 
-    //global with ghost-boundary for boxintegrator
+    //Resize vector to local 2D grid size
+    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
+    unsigned size = g2d.size();
     limiter_ = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
-    ghostM.resize( g2d.size()); ghostP.resize( g2d.size());
-    //set up grid points as start for fieldline integrations (but not the ghostcells)
-    std::vector<dg::HVec> y( 3);
+    ghostM.resize( size); ghostP.resize( size);
+    //set up grid points as start for fieldline integrations 
+    std::vector<thrust::host_vector<double> > y( 3);
     y[0] = dg::evaluate( dg::coo1, grid.local());
     y[1] = dg::evaluate( dg::coo2, grid.local());
     y[2] = dg::evaluate( dg::zero, grid.local());//distance (not angle)
     //integrate to next z-planes
-    std::vector<dg::HVec> yp(y), ym(y); 
+    std::vector<thrust::host_vector<double> > yp(y), ym(y); 
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
     for( unsigned i=0; i<grid.size(); i++)
     {
@@ -188,12 +189,16 @@ MPI_FieldAligned<MPI_Matrix, MPI_Vector>::MPI_FieldAligned(Field field, const dg
     }
     //construct scatter operation from pids
     Collective cp( pids, grid.communicator());
-    collP_ = cp;
     thrust::host_vector<double> pX = collP_.scatter( yp[0]),
                                 pY = collP_.scatter( yp[1]),
                                 pZ = collP_.scatter( angle);
     //construt interpolation matrix
-    plus  = dg::create::interpolation( pX, pY, pZ, grid.local());
+    LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local());
+    plus = RowDistMat<LocalMatrix, LocalContainer>(inter, cp);
+    LocalMatrix interT;
+    cusp::transpose( inter, interT);
+    plusT = ColDistMat<LocalMatrix, LocalContainer( interT, cp);
+
     
 
     //do the same for the minus z-plane
@@ -209,79 +214,75 @@ MPI_FieldAligned<MPI_Matrix, MPI_Vector>::MPI_FieldAligned(Field field, const dg
         }
     }
     Collective cm( pids, grid.communicator());
-    collM_ = cm;
     pX = collM_.scatter( ym[0]),
     pY = collM_.scatter( ym[1]),
     pZ = collM_.scatter( angle);
-    minus = dg::create::interpolation( pX, pY, pZ, grid.local());
-    dg::blas1::axpby(  1., yp[2], 0, hp);
-    dg::blas1::axpby( -1., ym[2], 0, hm);
+    inter = dg::create::interpolation( pX, pY, pZ, grid.local());
+    minus = RowDistMat<LocalMatrix, LocalContainer>(inter, cm);
+    LocalMatrix interT;
+    cusp::transpose( inter, interT);
+    minusT = ColDistMat<LocalMatrix, LocalContainer( interT, cm);
+    dg::blas1::axpby(  1., yp[2], 0, hp.data());
+    dg::blas1::axpby( -1., ym[2], 0, hm.data());
     dg::blas1::axpby(  1., hp, +1., hm, hz);
-
-    interM.resize( collM_.recv_size());
-    interP.resize( collP_.recv_size());
 }
+
+template<class M, class container>
 template< class BinaryOp>
-MPI_Vector MPI_FieldAligned<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, unsigned p0)
+MPI_Vector<container> MPI_FieldAligned<M,container>::evaluate( BinaryOp f, unsigned p0)
 {
-    //let all processes integrate the fieldlines
-    thrust::host_vector<double> global_vec = dz_.evaluate( f, p0);
-    MPI_Vector mpi_vec( g_.n(), g_.Nx(), g_.Ny(), g_.Nz(), g_.communicator());
-    thrust::host_vector<double> vec = mpi_vec.cut_overlap();
+    container global_vec = dz_.evaluate( f, p0);
+    container vec = dg::evaluate( dg::zero, g_.local());
     //now take the relevant part 
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
-    unsigned Nx = (g_.Nx()-2)*g_.n(), Ny = (g_.Ny()-2)*g_.n(), Nz = g_.Nz();
+    unsigned Nx = g_.Nx()*g_.n(), Ny = g_.Ny()*g_.n(), Nz = g_.Nz();
     for( unsigned s=0; s<Nz; s++)
         for( unsigned i=0; i<Ny; i++)
             for( unsigned j=0; j<Nx; j++)
                 vec[ (s*Ny+i)*Nx + j ] 
                     = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
-    mpi_vec.copy_into_interior( vec);
-    return mpi_vec;
+                   
+    return MPI_Vector<container>( vec, g_.communicator());
 }
 
+template<class M, class container>
 template< class BinaryOp, class UnaryOp>
-MPI_Vector MPI_FieldAligned<MPI_Matrix,MPI_Vector>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
+MPI_Vector<container> MPI_FieldAligned<M, container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
 {
     //let all processes integrate the fieldlines
-    thrust::host_vector<double> global_vec = dz_.evaluate( f, g,p0, rounds);
-    MPI_Vector mpi_vec( g_.n(), g_.Nx(), g_.Ny(), g_.Nz(), g_.communicator());
-    thrust::host_vector<double> vec = mpi_vec.cut_overlap();
+    container global_vec = dz_.evaluate( f, g,p0, rounds);
+    container vec = dg::evaluate( dg::zero, g_.local());
     //now take the relevant part 
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
-    unsigned Nx = (g_.Nx()-2)*g_.n(), Ny = (g_.Ny()-2)*g_.n(), Nz = g_.Nz();
+    unsigned Nx = g_.Nx()*g_.n(), Ny = g_.Ny()*g_.n(), Nz = g_.Nz();
     for( unsigned s=0; s<Nz; s++)
         for( unsigned i=0; i<Ny; i++)
             for( unsigned j=0; j<Nx; j++)
                 vec[ (s*Ny+i)*Nx + j ] 
                     = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
-    mpi_vec.copy_into_interior( vec);
-    return mpi_vec;
+    return MPI_Vector<container>( vec, g_.communicator());
 }
 
-void MPI_FieldAligned<MPI_Matrix, MPI_Vector>::einsPlus( const MPI_Vector& f, thrust::host_vector<double>& fplus ) 
+template<class M, class container>
+void MPI_FieldAligned<M,container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
 {
-    const thrust::host_vector<double>& in = f.data();
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    cView fv( in.cbegin(), in.cend());
-
-    View P( interP.begin(), interP.end() );
-    cusp::multiply( plus, fv, P); //interpolate input vector 
-    //gather results from all processes
-    collP_.gather( interP, fplus);
+    dg::blas2::detail::doSymv( plus, f, fplus);
     //make ghostcells in last plane
+    const container& in = f.data();
+    const container& out = fplus.data();
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
     {
         unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
         cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
         cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
         cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View tempPV( fplus.begin() + i0*size, fplus.begin() + (i0+1)*size);
+        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
         View ghostPV( ghostP.begin(), ghostP.end());
         View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite tempP
+        //overwrite out
         cusp::copy( f0, ghostPV);
         if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
         {
@@ -289,36 +290,35 @@ void MPI_FieldAligned<MPI_Matrix, MPI_Vector>::einsPlus( const MPI_Vector& f, th
         }
         if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
         {
-            dg::blas1::pointwiseDot( right_, hp, ghostM);
+            //note that hp is 3d and the rest 2d
+            thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
             dg::blas1::axpby( 1., ghostM, 1., ghostP);
         }
-        cusp::blas::axpby(  ghostPV,  tempPV, ghostPV, 1.,-1.);
+        cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
         dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-        cusp::blas::axpby(  ghostPV,  tempPV, tempPV, 1.,1.);
+        cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
     }
 
 }
 
-void MPI_FieldAligned<MPI_Matrix, MPI_Vector>::einsMinus( const MPI_Vector& f, thrust::host_vector<double>& fminus ) 
+template<class M, class container>
+void MPI_FieldAligned<M, container>::einsMinus( const MPI_Vector<container>& f, thrust::host_vector<double>& fminus ) 
 {
-    const thrust::host_vector<double>& in = f.data();
+    dg::blas2::detail::doSymv( minus, f, fminus);
+    //make ghostcells in first plane
+    const container& in = f.data();
+    const container& out = fminus.data();
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    cView fv( in.cbegin(), in.cend());
-
-    View M( interM.begin(), interM.end() );
-    cusp::multiply( minus, fv, M);
-    //gather results from all processes
-    collM_.gather( interM, fminus); 
     if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
     {
         unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
         cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
         cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
         cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View tempMV( fminus.begin() + i0*size, fminus.begin() + (i0+1)*size);
+        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
         View ghostPV( ghostP.begin(), ghostP.end());
         View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite tempM
+        //overwrite out
         cusp::copy( f0, ghostMV);
         if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
         {
@@ -326,12 +326,80 @@ void MPI_FieldAligned<MPI_Matrix, MPI_Vector>::einsMinus( const MPI_Vector& f, t
         }
         if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
         {
-            dg::blas1::pointwiseDot( left_, hm, ghostP);
+            thrust::transform( left_.begin(), left_.end(), hm.begin(), ghostP.begin());
             dg::blas1::axpby( -1, ghostP, 1., ghostM);
         }
-        cusp::blas::axpby(  ghostMV,  tempMV, ghostMV, 1.,-1.);
+        cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
         dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-        cusp::blas::axpby(  ghostMV,  tempMV, tempMV, 1.,1.);
+        cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
+    }
+}
+template< class M, class container>
+void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
+{
+    dg::blas2::detail::doSymv( minusT, f, fpe);
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    //make ghostcells in last plane
+    const container& in = f.data();
+    const container& out = fpe.data();
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
+    {
+        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite out
+        cusp::copy( f0, ghostPV);
+        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::axpby( 2., right_, -1, ghostP);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+        {
+            //note that hp is 3d and the rest 2d
+            thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+            dg::blas1::axpby( 1., ghostM, 1., ghostP);
+        }
+        cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
+        cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
+    }
+}
+template< class M, class container>
+void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
+{
+    dg::blas2::detail::doSymv( plusT, f, fme);
+    //make ghostcells in first plane
+    const container& in = f.data();
+    const container& out = fme.data();
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
+    {
+        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite out
+        cusp::copy( f0, ghostMV);
+        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::axpby( 2., left_, -1, ghostM);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+        {
+            thrust::transform( left_.begin(), left_.end(), hm.begin(), ghostP.begin());
+            dg::blas1::axpby( -1, ghostP, 1., ghostM);
+        }
+        cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
+        cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
     }
 }
 
