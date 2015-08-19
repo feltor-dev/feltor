@@ -1,17 +1,61 @@
 #pragma once
+#include <cusp/transpose.h>
 #include "grid.h"
+#include "../blas.h"
 #include "interpolation.cuh"
+#include "typedefs.cuh"
 #include "functions.h"
 #include "derivatives.cuh"
+#include "../functors.h"
 #include "../nullstelle.h"
-
-//Question: How to generalize einsPlus and einsMinus for device and mpi for given FieldAligned object
+#include "../runge_kutta.h"
+#include <cusp/print.h>
 namespace dg{
 
 /**
- * @brief Integrate a single field line to find whether the result lies inside or outside of the box
+ * @brief Default Limiter means there is a limiter everywhere
+ */
+struct DefaultLimiter
+{
+
+    /**
+     * @brief return 1
+     *
+     * @param x x value
+     * @param y y value
+     *
+     * @return 1
+     */
+    double operator()(double x, double y)
+    {
+        return 1;
+    }
+
+};
+/**
+ * @brief No Limiter 
+ */
+struct NoLimiter
+{
+
+    /**
+     * @brief return 0
+     *
+     * @param x x value
+     * @param y y value
+     *
+     * @return 0
+     */
+    double operator()(double x, double y)
+    {
+        return 0.;
+    }
+
+};
+
+/**
+ * @brief Integrate a field line to find whether the result lies inside or outside of the box
  *
- * returns -1 if the field line crosses the simulation box, +1 else
  * @tparam Field Must be usable in the integrateRK4 function
  * @tparam Grid must provide 2d boundaries x0(), x1(), y0(), and y1()
  */
@@ -21,7 +65,7 @@ struct BoxIntegrator
     /**
      * @brief Construct from a given Field and Grid and accuracy
      *
-     * @param field field must overload operator() with dg::HVec for three entries
+     * @param field field must overload operator() with dg::HVecfor three entries
      * @param g The 2d or 3d grid
      * @param eps the accuracy of the runge kutta integrator
      */
@@ -61,13 +105,13 @@ struct BoxIntegrator
 };
 
 /**
- * @brief Integrate a single field line in a given box, Result is guaranteed to lie inside the box
+ * @brief Integrate one field line in a given box, Result is guaranteed to lie inside the box
  *
  * @tparam Field Must be usable in the integrateRK4 function
  * @tparam Grid must provide 2d boundaries x0(), x1(), y0(), and y1()
  * @param field The field to use
  * @param grid instance of the Grid class 
- * @param coords0 The initial condition (size 3)
+ * @param coords0 The initial condition
  * @param coords1 The resulting points (write only) guaranteed to lie inside the grid
  * @param phi1 The angle (read/write) contains maximum phi on input and resulting phi on output
  * @param eps error
@@ -115,13 +159,21 @@ void boxintegrator( Field& field, const Grid& grid,
         else if (globalbcz == dg::PER )std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
     }
 }
-
-
+////////////////////////////////////FieldAlignedCLASS////////////////////////////////////////////
 /**
-* @brief Store a list of points 
+* @brief Class for the evaluation of a parallel derivative
+*
+* This class discretizes the operators \f$ \nabla_\parallel = 
+\mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
+cylindrical coordinates
+* @ingroup dz
+* @tparam Matrix The matrix class of the interpolation matrix
+* @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
+template< class Matrix = cusp::csr_matrix<int, double, cusp::device_memory>, class container=thrust::device_vector<double> >
 struct FieldAligned
 {
+
     /**
     * @brief Construct from a field and a grid
     *
@@ -130,12 +182,67 @@ struct FieldAligned
     is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param field The field to integrate
     * @param grid The grid on which to operate
+    * @param deltaPhi Must either equal the hz() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
     * @param eps Desired accuracy of runge kutta
+    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, dg::bc globalbcz = dg::DIR);
+    FieldAligned(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+
+
+    /**
+    * @brief Set boundary conditions in the limiter region
+    *
+    * if Dirichlet boundaries are used the left value is the left function
+    value, if Neumann boundaries are used the left value is the left derivative value
+    * @param bcz boundary condition
+    * @param left left boundary value
+    * @param right right boundary value
+    */
+    void set_boundaries( dg::bc bcz, double left, double right)
+    {
+
+        bcz_ = bcz;
+        const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        left_ = dg::evaluate( dg::CONSTANT(left), g2d);
+        right_ = dg::evaluate( dg::CONSTANT(right),g2d);
+    }
+    /**
+     * @brief Set boundary conditions in the limiter region
+     *
+     * if Dirichlet boundaries are used the left value is the left function
+     value, if Neumann boundaries are used the left value is the left derivative value
+     * @param bcz boundary condition
+     * @param left left boundary value
+     * @param right right boundary value
+    */
+    void set_boundaries( dg::bc bcz, const container& left, const container& right)
+    {
+        bcz_ = bcz;
+        left_ = left;
+        right_ = right;
+    }
+    /**
+     * @brief Set boundary conditions in the limiter region
+     *
+     * if Dirichlet boundaries are used the left value is the left function
+     value, if Neumann boundaries are used the left value is the left derivative value
+     * @param bcz boundary condition
+     * @param global 3D vector containing boundary values
+     * @param scal_left left scaling factor
+     * @param scal_right right scaling factor
+     */
+    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right);
+    /**
+     * @brief Compute the second derivative using finite differences
+     *
+     * discretizes \f$ \nabla_\parallel\cdot \nabla_\parallel\f$
+     * @param f input function
+     * @param dzzf output (write-only)
+     */
+    void dzz( const container& f, container& dzzf);
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
      *
@@ -148,7 +255,7 @@ struct FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp>
-    thrust::host_vector<double> evaluate( BinaryOp f, unsigned plane=0);
+    container evaluate( BinaryOp f, unsigned plane=0);
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
      *
@@ -166,39 +273,153 @@ struct FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp, class UnaryOp>
-    thrust::host_vector<double> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    /**
+     * @brief Evaluate a 2d functor and toroidally avarage over all planes 
+     *
+     * Evaluates the given functor on a 2d plane and then follows fieldlines to
+     * get the values in the 3rd dimension. Uses the grid given in the constructor.
+     * The second functor is used to scale the values along the fieldlines.
+     * The fieldlines are assumed to be periodic.
+     * @tparam BinaryOp Binary Functor
+     * @tparam UnaryOp Unary Functor
+     * @param f Functor to evaluate in x-y
+     * @param g Functor to evaluate in z
+     * @param p0 The number of the plane to start
+     * @param rounds The number of rounds to follow a fieldline
+     *
+     * @return Returns an instance of container
+     */
+    template< class BinaryOp, class UnaryOp>
+    container evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
     private:
-    typedef thrust::host_vector<double> container;
+    void eins(const Matrix& interp, const container& n, container& npe);
+    void einsPlus( const container& n, container& npe);
+    void einsMinus( const container& n, container& nme);
+    void einsPlusT( const container& n, container& npe);
+    void einsMinusT( const container& n, container& nme);
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
-    dg::Grid3d<double> g3d_;
-    dg::Grid2d<double> g2d_;
-    dg::HVec hz, hp, hm; //3d vectors
-    std::vector<dg::HVec> y, yp, ym; //2d vectors
+    Matrix plus, minus, plusT, minusT; //interpolation matrices
+    container hz, hp,hm, ghostM, ghostP;
+    dg::Grid3d<double> g_;
+    dg::bc bcz_;
+    container left_, right_;
+    container limiter;
 };
 
+////////////////////////////////////DEFINITIONS////////////////////////////////////////
+///@cond
+template<class M, class container>
 template <class Field, class Limiter>
-FieldAligned::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz):
-        g3d_(grid), 
-        g2d_( g3d_.x0(), g3d_.x1(), g3d_.y0(), g3d_.y1(), g3d_.n(), g3d_.Nx(), g3d_.Ny()),  
+FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), 
-        y( 3, dg::evaluate( dg::coo1, g2d_)), yp(y), ym(y),
+        g_(grid), bcz_(grid.bcz())
 {
 
-    //set limiter and ghostcells
+    assert( deltaPhi == grid.hz() || grid.Nz() == 1);
+    if( deltaPhi != grid.hz())
+        std::cout << "Computing in 2D mode!\n";
+    //Resize vectors to 2D grid size
+    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
     unsigned size = g2d.size();
     limiter = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
+    hz_plane.resize( size); hp_plane.resize( size); hm_plane.resize( size);
     ghostM.resize( size); ghostP.resize( size);
     //Set starting points
-    std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d_)), yp(y), ym(y);
+    std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
     y[1] = dg::evaluate( dg::coo2, g2d);
     y[2] = dg::evaluate( dg::zero, g2d);
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
   
+    //------------------start hp refinenemt on dz 
+//     //fine grid stuff
+//     unsigned hfac =1; //h refinement factor
+//     unsigned nfac = 1; // p refinement factor
+//     std::cin >> hfac >> nfac;
+// //     unsigned Nxf =g_.Nx(); //h refinement factor
+// //     unsigned nf =g_.n(); // p refinement factor
+// //     std::cin >>Nxf >> nf;
+// //     dg::Grid2d<double> g2d_f(  g_.x0(), g_.x1(), g_.y0(), g_.y1(), nf, Nxf,Nxf); 
+//     dg::Grid2d<double> g2d_f( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n()*nfac, g_.Nx()*hfac, g_.Ny()*hfac);  
+//     unsigned size_f = g2d_f.size();
+//     //set fine starting points
+//     std::vector<dg::HVec> y_f( 3, dg::evaluate( dg::coo1, g2d_f)), yp_f(y_f), ym_f(y_f);
+//     y_f[1] = dg::evaluate( dg::coo2, g2d_f);
+//     y_f[2] = dg::evaluate( dg::zero, g2d_f);
+//     thrust::host_vector<double> coords_f(3), coordsP_f(3), coordsM_f(3);     
+//     //integrate field lines for all points on fine grid
+//     for( unsigned i=0; i<size_f; i++)
+//     {
+//         coords_f[0] = y_f[0][i], coords_f[1] = y_f[1][i], coords_f[2] = y_f[2][i];
+//         double phi1 = deltaPhi;
+//         boxintegrator( field, g2d_f, coords_f, coordsP_f, phi1, eps, globalbcz);
+//         phi1 =  - deltaPhi;
+//         boxintegrator( field, g2d_f, coords_f, coordsM_f, phi1, eps, globalbcz);
+//         yp_f[0][i] = coordsP_f[0], yp_f[1][i] = coordsP_f[1], yp_f[2][i] = coordsP_f[2];
+//         ym_f[0][i] = coordsM_f[0], ym_f[1][i] = coordsM_f[1], ym_f[2][i] = coordsM_f[2];       
+//     }
+//     //Taking fine cell average
+// //     unsigned  bias = g2d_f.n()*g2d_f.Nx();
+// //     unsigned  bias2 =hfac*nfac;
+// //     double avgn = hfac*nfac*hfac*nfac;
+// //                 
+// //     for( unsigned i=0; i<g2d.n()*g2d.Nx(); i++) {
+// //     for( unsigned j=0; j<g2d.n()*g2d.Ny(); j++) {
+// //         unsigned ii = j+ i*(g2d.n()*g2d.Ny());
+// //         yp[0][ii] =  yp[1][ii] = yp[2][ii] = ym[0][ii] = ym[1][ii] =  ym[2][ii] =0.;
+// //         for( unsigned k=0; k<hfac*nfac; k++) {
+// //             for( unsigned m=0; m<hfac*nfac;m++) {
+// //                 unsigned iter = m+k*bias+(j+ i*(bias2*g2d.n()*g2d.Ny()))*bias2;
+// //                 yp[0][ii] +=yp_f[0][iter];
+// //                 yp[1][ii] +=yp_f[1][iter];
+// //                 yp[2][ii] +=yp_f[2][iter];
+// //                 ym[0][ii] +=ym_f[0][iter];
+// //                 ym[1][ii] +=ym_f[1][iter];
+// //                 ym[2][ii] +=ym_f[2][iter];
+// // //                 std::cout << " "<<ii<< " " << iter<< " "<<std::endl;
+// //         }}
+// //         yp[0][ii]/=avgn;
+// //         yp[1][ii]/=avgn;
+// //         yp[2][ii]/=avgn;
+// //         ym[0][ii]/=avgn;
+// //         ym[1][ii]/=avgn;
+// //         ym[2][ii]/=avgn;
+// //     }}          
+// 
+//     cusp::csr_matrix<int, double, cusp::host_memory> f2c;
+// //   fine to coarse grid interp
+//     f2c  = dg::create::interpolation( g2d, g2d_f );
+// //     apply interp to computed R,z,s points
+//     dg::blas2::gemv(f2c, yp_f[0],yp[0]);
+//     dg::blas2::gemv(f2c, ym_f[0],ym[0]);
+//     dg::blas2::gemv(f2c, yp_f[1],yp[1]);
+//     dg::blas2::gemv(f2c, ym_f[1],ym[1]);
+//     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+//     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+//     cusp::transpose( plus, plusT);
+//     cusp::transpose( minus, minusT); 
+//     dg::blas2::gemv(f2c, yp_f[2],yp[2]);
+//     dg::blas2::gemv(f2c, ym_f[2],ym[2]);
+// 
+// 
+//     for( unsigned i=0; i<grid.Nz(); i++)
+//     {
+//         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
+//         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());        
+//     }
+//     dg::blas1::scal( hm, -1.);
+//     dg::blas1::axpby(  1., hp, +1., hm, hz);    //
+//     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
+//     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
+//     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);  
+//     -----------end hp refinement
+
+    //-------------- start no hp refinement
 //     integrate field lines for all points
-    for( unsigned i=0; i<g2d_.size; i++)
+    for( unsigned i=0; i<size; i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
 
@@ -212,6 +433,7 @@ FieldAligned::FieldAligned(Field field, const dg::Grid3d<double>& grid, double e
     }
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+// //     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
     cusp::transpose( plus, plusT);
     cusp::transpose( minus, minusT);     
 //     copy into h vectors
@@ -222,10 +444,139 @@ FieldAligned::FieldAligned(Field field, const dg::Grid3d<double>& grid, double e
     }
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);    //
+    dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
+    dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
+    dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);   
+//     //--------------end no hp refinement
+//     
+// //     interpolate fine to coarse
+//     cusp::csr_matrix<int, double, cusp::host_memory> f2c;
+// //   fine to coarse grid interp
+//     f2c  = dg::create::interpolation( g2d, g2d_f );
+// //     apply interp to computed R,z,s points
+//     dg::blas2::gemv(f2c, yp_f[0],yp[0]);
+//     dg::blas2::gemv(f2c, ym_f[0],ym[0]);
+//     dg::blas2::gemv(f2c, yp_f[1],yp[1]);
+//     dg::blas2::gemv(f2c, ym_f[1],ym[1]);
+//     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+//     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+//     cusp::transpose( plus, plusT);
+//     cusp::transpose( minus, minusT); 
  
 }
+template<class M, class container>
+void FieldAligned<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
+{
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    cView left( global.cbegin(), global.cbegin() + size);
+    cView right( global.cbegin()+(g_.Nz()-1)*size, global.cbegin() + g_.Nz()*size);
+    View leftView( left_.begin(), left_.end());
+    View rightView( right_.begin(), right_.end());
+    cusp::copy( left, leftView);
+    cusp::copy( right, rightView);
+    dg::blas1::scal( left_, scal_left);
+    dg::blas1::scal( right_, scal_right);
+    bcz_ = bcz;
+}
+
 template< class M, class container>
-void DZ<M, container>::eins(const M& m, const container& f, container& fpe)
+template< class BinaryOp>
+container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0)
+{
+
+    assert( p0 < g_.Nz() && g_.Nz() > 1);
+    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    container vec2d = dg::evaluate( binary, g2d);
+    View g0( vec2d.begin(), vec2d.end());
+    container vec3d( g_.size());
+    View f0( vec3d.begin() + p0*g2d.size(), vec3d.begin() + (p0+1)*g2d.size());
+    //copy 2d function into given plane and then follow fieldline in both directions
+    cusp::copy( g0, f0);
+    for( unsigned i0=p0+1; i0<g_.Nz(); i0++)
+    {
+        unsigned im = i0-1;
+        View fm( vec3d.begin() + im*g2d.size(), vec3d.begin() + (im+1)*g2d.size());
+        View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
+        cusp::multiply( minus, fm, f0 );
+    }
+    for( int i0=p0-1; i0>=0; i0--)
+    {
+        unsigned ip = i0+1;
+        View fp( vec3d.begin() + ip*g2d.size(), vec3d.begin() + (ip+1)*g2d.size());
+        View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
+        cusp::multiply( plus, fp, f0 );
+    }
+    return vec3d;
+}
+template< class M, class container>
+template< class BinaryOp, class UnaryOp>
+container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds)
+{
+
+    assert( g_.Nz() > 1);
+    container vec3d = evaluate( binary, p0);
+    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    //scal
+    for( unsigned i=0; i<g_.Nz(); i++)
+    {
+        View f0( vec3d.begin() + i*g2d.size(), vec3d.begin() + (i+1)*g2d.size());
+        cusp::blas::scal(f0, unary( g_.z0() + (double)(i+0.5)*g_.hz() ));
+    }
+    //make room for plus and minus continuation
+    std::vector<container > vec4dP( rounds, vec3d);
+    std::vector<container > vec4dM( rounds, vec3d);
+    //now follow field lines back and forth
+    for( unsigned k=1; k<rounds; k++)
+    {
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+        int im = i0==0?g_.Nz()-1:i0-1;
+        int k0 = k;
+        int km = i0==0?k-1:k;
+        View fm( vec4dP[km].begin() + im*g2d.size(), vec4dP[km].begin() + (im+1)*g2d.size());
+        View f0( vec4dP[k0].begin() + i0*g2d.size(), vec4dP[k0].begin() + (i0+1)*g2d.size());
+        cusp::multiply( minus, fm, f0 );
+        cusp::blas::scal( f0, unary( g_.z0() + (double)(k*g_.Nz()+i0+0.5)*g_.hz() ) );
+        }
+        for( int i0=g_.Nz()-1; i0>=0; i0--)
+        {
+        int ip = i0==g_.Nz()-1?0:i0+1;
+        int k0 = k;
+        int km = i0==g_.Nz()-1?k-1:k;
+        View fp( vec4dM[km].begin() + ip*g2d.size(), vec4dM[km].begin() + (ip+1)*g2d.size());
+        View f0( vec4dM[k0].begin() + i0*g2d.size(), vec4dM[k0].begin() + (i0+1)*g2d.size());
+        cusp::multiply( plus, fp, f0 );
+        cusp::blas::scal( f0, unary( g_.z0() - (double)(k*g_.Nz()-0.5-i0)*g_.hz() ) );
+        }
+    }
+    //sum up results
+    for( unsigned i=1; i<rounds; i++)
+    {
+        dg::blas1::axpby( 1., vec4dP[i], 1., vec3d);
+        dg::blas1::axpby( 1., vec4dM[i], 1., vec3d);
+    }
+    return vec3d;
+}
+
+template< class M, class container>
+template< class BinaryOp, class UnaryOp>
+container FieldAligned<M,container>::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
+{
+    assert( g_.Nz() > 1);
+    container vec3d = evaluate( f, g, p0, rounds);
+    container vec2d(g_.size()/g_.Nz());
+
+    for (unsigned i = 0; i<g_.Nz(); i++)
+    {
+        container part( vec3d.begin() + i* (g_.size()/g_.Nz()), vec3d.begin()+(i+1)*(g_.size()/g_.Nz()));
+        dg::blas1::axpby(1.0,part,1.0,vec2d);
+    }
+    dg::blas1::scal(vec2d,1./g_.Nz());
+    return vec2d;
+}
+
+template< class M, class container>
+void FieldAligned<M, container>::eins(const M& m, const container& f, container& fpe)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
 
@@ -237,7 +588,7 @@ void DZ<M, container>::eins(const M& m, const container& f, container& fpe)
     }
 }
 template< class M, class container>
-void DZ<M, container>::einsPlus( const container& f, container& fpe)
+void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     View ghostPV( ghostP.begin(), ghostP.end());
@@ -272,7 +623,7 @@ void DZ<M, container>::einsPlus( const container& f, container& fpe)
 }
 
 template< class M, class container>
-void DZ<M, container>::einsMinus( const container& f, container& fme)
+void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
 {
     //note that thrust functions don't work on views
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
@@ -307,7 +658,7 @@ void DZ<M, container>::einsMinus( const container& f, container& fme)
     }
 }
 template< class M, class container>
-void DZ<M, container>::einsMinusT( const container& f, container& fpe)
+void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     View ghostPV( ghostP.begin(), ghostP.end());
@@ -342,7 +693,7 @@ void DZ<M, container>::einsMinusT( const container& f, container& fpe)
     }
 }
 template< class M, class container>
-void DZ<M, container>::einsPlusT( const container& f, container& fme)
+void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
 {
     //note that thrust functions don't work on views
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
@@ -377,85 +728,9 @@ void DZ<M, container>::einsPlusT( const container& f, container& fme)
     }
 }
 
-template< class BinaryOp>
-thrust::host_vector<double> FieldAligned::evaluate( BinaryOp binary, unsigned p0)
-{
-
-    cusp::coo_matrix<int, double, cusp::host_memory> plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-    cusp::coo_matrix<int, double, cusp::host_memory> minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-    assert( p0 < g3d_.Nz() && g3d_.Nz() > 1);
-    container vec2d = dg::evaluate( binary, g2d_);
-    View g0( vec2d.begin(), vec2d.end());
-    container vec3d( g3d_.size());
-    View f0( vec3d.begin() + p0*g2d_.size(), vec3d.begin() + (p0+1)*g2d_.size());
-    //copy 2d function into given plane and then follow fieldline in both directions
-    cusp::copy( g0, f0);
-    for( unsigned i0=p0+1; i0<g_.Nz(); i0++)
-    {
-        unsigned im = i0-1;
-        View fm( vec3d.begin() + im*g2d_.size(), vec3d.begin() + (im+1)*g2d_.size());
-        View f0( vec3d.begin() + i0*g2d_.size(), vec3d.begin() + (i0+1)*g2d_.size());
-        cusp::multiply( minus, fm, f0 );
-    }
-    for( int i0=p0-1; i0>=0; i0--)
-    {
-        unsigned ip = i0+1;
-        View fp( vec3d.begin() + ip*g2d_.size(), vec3d.begin() + (ip+1)*g2d_.size());
-        View f0( vec3d.begin() + i0*g2d_.size(), vec3d.begin() + (i0+1)*g2d_.size());
-        cusp::multiply( plus, fp, f0 );
-    }
-    return vec3d;
-}
-
-template< class BinaryOp, class UnaryOp>
-thrust::host_vector<double> FieldAligned::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds)
-{
-
-    assert( g_.Nz() > 1);
-    cusp::coo_matrix<int, double, cusp::host_memory> plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-    cusp::coo_matrix<int, double, cusp::host_memory> minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-    container vec3d = evaluate( binary, p0);
-    //scal
-    for( unsigned i=0; i<g3d_.Nz(); i++)
-    {
-        View f0( vec3d.begin() + i*g2d_.size(), vec3d.begin() + (i+1)*g2d_.size());
-        cusp::blas::scal(f0, unary( g3d_.z0() + (double)(i+0.5)*g3d_.hz() ));
-    }
-    //make room for plus and minus continuation
-    std::vector<container > vec4dP( rounds, vec3d);
-    std::vector<container > vec4dM( rounds, vec3d);
-    //now follow field lines back and forth
-    for( unsigned k=1; k<rounds; k++)
-    {
-        for( unsigned i0=0; i0<g3d_.Nz(); i0++)
-        {
-        int im = i0==0?g3d_.Nz()-1:i0-1;
-        int k0 = k;
-        int km = i0==0?k-1:k;
-        View fm( vec4dP[km].begin() + im*g2d_.size(), vec4dP[km].begin() + (im+1)*g2d_.size());
-        View f0( vec4dP[k0].begin() + i0*g2d_.size(), vec4dP[k0].begin() + (i0+1)*g2d_.size());
-        cusp::multiply( minus, fm, f0 );
-        cusp::blas::scal( f0, unary( g3d_.z0() + (double)(k*g3d_.Nz()+i0+0.5)*g3d_.hz() ) );
-        }
-        for( int i0=g3d_.Nz()-1; i0>=0; i0--)
-        {
-        int ip = i0==g3d_.Nz()-1?0:i0+1;
-        int k0 = k;
-        int km = i0==g3d_.Nz()-1?k-1:k;
-        View fp( vec4dM[km].begin() + ip*g2d_.size(), vec4dM[km].begin() + (ip+1)*g2d_.size());
-        View f0( vec4dM[k0].begin() + i0*g2d_.size(), vec4dM[k0].begin() + (i0+1)*g2d_.size());
-        cusp::multiply( plus, fp, f0 );
-        cusp::blas::scal( f0, unary( g3d_.z0() - (double)(k*g3d_.Nz()-0.5-i0)*g3d_.hz() ) );
-        }
-    }
-    //sum up results
-    for( unsigned i=1; i<rounds; i++)
-    {
-        dg::blas1::axpby( 1., vec4dP[i], 1., vec3d);
-        dg::blas1::axpby( 1., vec4dM[i], 1., vec3d);
-    }
-    return vec3d;
-}
+//enables the use of the dg::blas2::symv function 
+///@endcond
 
 
 }//namespace dg
+
