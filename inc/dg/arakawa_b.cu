@@ -11,6 +11,7 @@
 #include "backend/typedefs.cuh"
 
 
+
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
 //const double lx = 1.;

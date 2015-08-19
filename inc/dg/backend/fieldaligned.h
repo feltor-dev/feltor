@@ -130,14 +130,12 @@ struct FieldAligned
     is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param field The field to integrate
     * @param grid The grid on which to operate
-    * @param deltaPhi Must either equal the hz() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
     * @param eps Desired accuracy of runge kutta
-    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    FieldAligned(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+    FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, dg::bc globalbcz = dg::DIR);
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
      *
@@ -169,24 +167,6 @@ struct FieldAligned
      */
     template< class BinaryOp, class UnaryOp>
     thrust::host_vector<double> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
-    /**
-     * @brief Evaluate a 2d functor and toroidally avarage over all planes 
-     *
-     * Evaluates the given functor on a 2d plane and then follows fieldlines to
-     * get the values in the 3rd dimension. Uses the grid given in the constructor.
-     * The second functor is used to scale the values along the fieldlines.
-     * The fieldlines are assumed to be periodic.
-     * @tparam BinaryOp Binary Functor
-     * @tparam UnaryOp Unary Functor
-     * @param f Functor to evaluate in x-y
-     * @param g Functor to evaluate in z
-     * @param p0 The number of the plane to start
-     * @param rounds The number of rounds to follow a fieldline
-     *
-     * @return Returns an instance of container
-     */
-    template< class BinaryOp, class UnaryOp>
-    thrust::host_vector<double> evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
 
     private:
     typedef thrust::host_vector<double> container;
@@ -199,16 +179,18 @@ struct FieldAligned
 };
 
 template <class Field, class Limiter>
-FieldAligned::FieldAligned(Field field, const dg::Grid3d<double>& grid, double deltaPhi, double eps, Limiter limit, dg::bc globalbcz):
+FieldAligned::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz):
         g3d_(grid), 
         g2d_( g3d_.x0(), g3d_.x1(), g3d_.y0(), g3d_.y1(), g3d_.n(), g3d_.Nx(), g3d_.Ny()),  
         hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), 
         y( 3, dg::evaluate( dg::coo1, g2d_)), yp(y), ym(y),
 {
 
-    assert( deltaPhi == grid.hz() || grid.Nz() == 1);
-    if( deltaPhi != grid.hz())
-        std::cout << "Computing in 2D mode!\n";
+    //set limiter and ghostcells
+    unsigned size = g2d.size();
+    limiter = dg::evaluate( limit, g2d);
+    right_ = left_ = dg::evaluate( zero, g2d);
+    ghostM.resize( size); ghostP.resize( size);
     //Set starting points
     std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d_)), yp(y), ym(y);
     y[1] = dg::evaluate( dg::coo2, g2d);
@@ -228,6 +210,10 @@ FieldAligned::FieldAligned(Field field, const dg::Grid3d<double>& grid, double d
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
 
     }
+    plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+    minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+    cusp::transpose( plus, plusT);
+    cusp::transpose( minus, minusT);     
 //     copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
@@ -237,6 +223,158 @@ FieldAligned::FieldAligned(Field field, const dg::Grid3d<double>& grid, double d
     dg::blas1::scal( hm, -1.);
     dg::blas1::axpby(  1., hp, +1., hm, hz);    //
  
+}
+template< class M, class container>
+void DZ<M, container>::eins(const M& m, const container& f, container& fpe)
+{
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fpe0( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
+        cusp::multiply( m, f0, fpe0);       
+    }
+}
+template< class M, class container>
+void DZ<M, container>::einsPlus( const container& f, container& fpe)
+{
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView rightV( right_.begin(), right_.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
+
+        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fP( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
+        cusp::multiply( plus, fp, fP);
+        //make ghostcells i.e. modify fpe in the limiter region
+        if( i0==g_.Nz()-1 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+            {
+                cusp::blas::axpby( rightV, f0, ghostPV, 2., -1.);
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+            {
+                thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+                cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
+            }
+            //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
+            cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
+            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+            cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
+        }
+    }
+}
+
+template< class M, class container>
+void DZ<M, container>::einsMinus( const container& f, container& fme)
+{
+    //note that thrust functions don't work on views
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView leftV( left_.begin(), left_.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
+        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fM( fme.begin() + i0*size, fme.begin() + (i0+1)*size);
+        cusp::multiply( minus, fm, fM );
+        //make ghostcells
+        if( i0==0 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+            {
+                cusp::blas::axpby( leftV,  f0, ghostMV, 2., -1.);
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+            {
+                thrust::transform( left_.begin(), left_.end(),  hm.begin(), ghostP.begin(), thrust::multiplies<double>());
+                cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
+            }
+            //interlay ghostcells with periodic cells: L*g + (1-L)*fme
+            cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
+            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+            cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
+
+        }
+    }
+}
+template< class M, class container>
+void DZ<M, container>::einsMinusT( const container& f, container& fpe)
+{
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView rightV( right_.begin(), right_.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
+
+        cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fP( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
+        cusp::multiply( minusT, fp, fP );
+        //make ghostcells i.e. modify fpe in the limiter region
+        if( i0==g_.Nz()-1 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+            {
+                cusp::blas::axpby( rightV, f0, ghostPV, 2., -1.);
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+            {
+                thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+                cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
+            }
+            //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
+            cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
+            dg::blas1::pointwiseDot( limiter, ghostP, ghostP);
+            cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
+        }
+
+    }
+}
+template< class M, class container>
+void DZ<M, container>::einsPlusT( const container& f, container& fme)
+{
+    //note that thrust functions don't work on views
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    View ghostPV( ghostP.begin(), ghostP.end());
+    View ghostMV( ghostM.begin(), ghostM.end());
+    cView leftV( left_.begin(), left_.end());
+    for( unsigned i0=0; i0<g_.Nz(); i0++)
+    {
+        unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
+        cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
+        cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
+        View fM( fme.begin() + i0*size, fme.begin() + (i0+1)*size);
+        cusp::multiply( plusT, fm, fM );
+        //make ghostcells
+        if( i0==0 && bcz_ != dg::PER)
+        {
+            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+            {
+                cusp::blas::axpby( leftV,  f0, ghostMV, 2., -1.);
+            }
+            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+            {
+                thrust::transform( left_.begin(), left_.end(),  hm.begin(), ghostP.begin(), thrust::multiplies<double>());
+                cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
+            }
+            //interlay ghostcells with periodic cells: L*g + (1-L)*fme
+            cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
+            dg::blas1::pointwiseDot( limiter, ghostM, ghostM);
+            cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
+
+        }
+    }
 }
 
 template< class BinaryOp>
@@ -319,20 +457,5 @@ thrust::host_vector<double> FieldAligned::evaluate( BinaryOp binary, UnaryOp una
     return vec3d;
 }
 
-template< class BinaryOp, class UnaryOp>
-thrust::host_vector<double> FieldAligned::evaluateAvg( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
-{
-    assert( g3d_.Nz() > 1);
-    container vec3d = evaluate( f, g, p0, rounds);
-    container vec2d(g3d_.size()/g3d_.Nz());
-
-    for (unsigned i = 0; i<g3d_.Nz(); i++)
-    {
-        container part( vec3d.begin() + i* (g3d_.size()/g3d_.Nz()), vec3d.begin()+(i+1)*(g3d_.size()/g3d_.Nz()));
-        dg::blas1::axpby(1.0,part,1.0,vec2d);
-    }
-    dg::blas1::scal(vec2d,1./g3d_.Nz());
-    return vec2d;
-}
 
 }//namespace dg
