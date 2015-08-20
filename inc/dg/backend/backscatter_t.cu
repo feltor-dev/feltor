@@ -6,6 +6,10 @@
 #include "../functors.h"
 #include "../blas2.h"
 
+namespace dg{
+typedef thrust::host_vector<double> HVec;
+typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
+}
 
 const unsigned n = 3;
 const unsigned Nx = 40, Ny = 40;

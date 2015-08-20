@@ -5,30 +5,18 @@
 #include <thrust/host_vector.h>
 
 #include <cusp/coo_matrix.h>
-#include <cusp/ell_matrix.h>
-//#include "sparseblockmat.cuh"
 //
 ////functions for evaluation
 #include "grid.h"
 #include "dlt.h"
 #include "operator.h"
+#include "operator_tensor.cuh"
 #include "tensor.cuh"
-//#include "evaluation.cuh"
-//
-//
-////creational functions
-//#include "derivatives.cuh"
-//#include "weights.cuh"
-//#include "interpolation.cuh"
-//
-////integral functions
-//#include "typedefs.cuh"
 
 
 /*! @file
 
-  * includes all relevant dg lib files for matrix creation and function evaluation
-  * and provides some utility functions
+  * provides some utility functions
   */
 
 namespace dg{
