@@ -760,37 +760,37 @@ void DZ<M,container>::backwardTD( const container& f, container& dzf)
 template< class M, class container >
 void DZ<M,container>::symv( const container& f, container& dzTdzf)
 {
-// normed
-//     centered( f, tempP);
-//     centeredT( tempP, dzTdzf);
-    forward( f, tempP);
-    forwardT( tempP, dzTdzf);
-    backward( f, tempM);
-    backwardT( tempM, temp0);
-    dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
-//     add jump term 
-    #ifndef MPI_VERSION
+//// normed
+////     centered( f, tempP);
+////     centeredT( tempP, dzTdzf);
+//    forward( f, tempP);
+//    forwardT( tempP, dzTdzf);
+//    backward( f, tempM);
+//    backwardT( tempM, temp0);
+//    dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+////     add jump term 
+//    #ifndef MPI_VERSION
+//
+//    dg::blas2::symv( jump, f, temp0);
+//    dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
+//    dg::blas1::axpby(-1., temp0, 1., dzTdzf);
+//    #endif
 
-    dg::blas2::symv( jump, f, temp0);
-    dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
-    dg::blas1::axpby(-1., temp0, 1., dzTdzf);
-    #endif
-
-//     //not normed
-//     centered( f, tempP);
-//     centeredT( tempP, dzTdzf);
-// //     forward( f, tempP);
-// //     forwardT( tempP, dzTdzf);
-// //     backward( f, tempM);
-// //     backwardT( tempM, temp0);
-// //     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
-//     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
-//     
-//     #ifndef MPI_VERSION
-//         
-//      dg::blas2::symv( jump, f, temp0);
-//      dg::blas1::axpby(-1., temp0, 1., dzTdzf,dzTdzf);
-//     #endif
+     //not normed
+     centered( f, tempP);
+     centeredT( tempP, dzTdzf);
+ //     forward( f, tempP);
+ //     forwardT( tempP, dzTdzf);
+ //     backward( f, tempM);
+ //     backwardT( tempM, temp0);
+ //     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
+     
+     #ifndef MPI_VERSION
+         
+      dg::blas2::symv( jump, f, temp0);
+      dg::blas1::axpby(-1., temp0, 1., dzTdzf,dzTdzf);
+     #endif
 
 }
 template< class M, class container >
