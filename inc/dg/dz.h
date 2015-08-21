@@ -1,5 +1,7 @@
 #pragma once
 
+#include "blas.h"
+#include "backend/derivatives.h"
 #include "backend/fieldaligned.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_fieldaligned.h"
@@ -19,10 +21,11 @@ namespace dg{
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 cylindrical coordinates
 * @ingroup dz
-* @tparam Matrix The matrix class of the interpolation matrix
+* @tparam FieldAligned Engine class for interpolation
+* @tparam Matrix The matrix class of the jump matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class FieldAligned, class Matix, class container=thrust::device_vector<double> >
+template< class FieldAligned, class Matrix, class container=thrust::device_vector<double> >
 struct DZ
 {
 
@@ -211,16 +214,17 @@ struct DZ
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 ///@cond
-template<class F, class M, class container>
+template<class FA, class M, class container>
 template <class Field>
-DZ<F, M,container>::DZ(const FieldAligned& field, Field inverseB, const dg::Grid3d<double>& grid):
-        jumpX( dg::create::jumpX( grid, grid.bcx()),
-        jumpY( dg::create::jumpY( grid, grid.bcy()),
+DZ<FA, M,container>::DZ(const FA& field, Field inverseB, const dg::Grid3d<double>& grid):
+        f_(field),
+        jumpX( dg::create::jumpX( grid, grid.bcx())),
+        jumpY( dg::create::jumpY( grid, grid.bcy())),
         tempP( dg::evaluate( dg::zero, grid)), temp0( tempP), tempM( tempP), 
         w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),
         invB(dg::evaluate(inverseB,grid))
 {
-    assert( grid == field.grid());
+    //assert( grid == field.grid());
 }
 
 template<class F, class M, class container>

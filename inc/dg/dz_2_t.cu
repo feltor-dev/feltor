@@ -1,23 +1,30 @@
 #include <iostream>
 
 #include <cusp/print.h>
+#include <cusp/csr_matrix.h>
 #include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
 // #include "file/nc_utilities.h"
 
-#include "evaluation.cuh"
-#include "dg/backend/timer.cuh"
-#include "dz.cuh"
-#include "functions.h"
-#include "../blas2.h"
-#include "../functors.h"
-#include "dg/elliptic.h"
-#include "../cg.h"
-#include "interpolation.cuh"
+#include "backend/evaluation.cuh"
+#include "backend/timer.cuh"
+#include "blas.h"
+#include "dz.h"
+#include "backend/functions.h"
+#include "functors.h"
+#include "elliptic.h"
+#include "cg.h"
+#include "backend/interpolation.cuh"
+#include "backend/sparseblockmat.cuh"
+#include "backend/typedefs.cuh"
 // #include "draw/host_window.h"
-#include "../../../src/heat/geometry_g.h"
-#include "../../../src/heat/parameters.h"
+#include "../../src/heat/geometry_g.h"
+#include "../../src/heat/parameters.h"
 
+namespace dg {
+typedef cusp::csr_matrix<int, double, cusp::host_memory> IMatrix;
+typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix;
+}
 
 int main( )
 {
@@ -26,8 +33,8 @@ int main( )
      std::vector<double> v,v2,v3;
 
         try{
-            v = file::read_input("../../../src/heat/input.txt");
-            v3 = file::read_input( "../../../src/heat/geometry_params_g.txt"); 
+            v = file::read_input("../../src/heat/input.txt");
+            v3 = file::read_input( "../../src/heat/geometry_params_g.txt"); 
         }catch( toefl::Message& m){
             m.display();
             return -1;
@@ -98,9 +105,11 @@ int main( )
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
     std::cout << "computing dzDIR" << std::endl;
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::DIR);
+    dg::FieldAligned<dg::IDMatrix, dg::DVec> dzFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dzNEU" << std::endl;
-    dg::DZ<dg::DMatrix, dg::DVec> dzNU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
+    dg::FieldAligned<dg::IDMatrix, dg::DVec> dzNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
+
+    dg::DZ< dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> dz ( dzFA, field, g3d), dzNU ( dzNUFA, field, g3d);
 
 //     dg::DZ<dg::DMatrix, dg::DVec> dzNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     

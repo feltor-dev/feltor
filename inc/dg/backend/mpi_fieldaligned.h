@@ -31,7 +31,7 @@ struct MPI_FieldAligned
     is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param field The field to integrate
     * @param grid The grid on which to operate
-    * @param deltaPhi Must either equal the hz() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
+    * @param deltaPhi Must either equal the hz_() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
     * @param eps Desired accuracy of runge kutta
     * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
@@ -122,10 +122,14 @@ struct MPI_FieldAligned
     void einsMinus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
     void einsPlusT( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& npe);
     void einsMinusT( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
+    const MPI_Vector<LocalContainer>& hz()const {return hz_;}
+    const MPI_Vector<LocalContainer>& hp()const {return hp_;}
+    const MPI_Vector<LocalContainer>& hm()const {return hm_;}
+    const MPI_Grid3d& grid() const{return g_;}
   private:
     typedef cusp::array1d_view< typename LocalContainer::iterator> View;
     typedef cusp::array1d_view< typename LocalContainer::const_iterator> cView;
-    MPI_Vector<LocalContainer> hz, hp, hm; 
+    MPI_Vector<LocalContainer> hz_, hp_, hm_; 
     LocalContainer ghostM, ghostP;
     MPI_Grid3d g_;
     dg::bc bcz_;
@@ -143,7 +147,7 @@ struct MPI_FieldAligned
 template<class LocalMatrix, class LocalContainer>
 template <class Field, class Limiter>
 MPI_FieldAligned<LocalMatrix, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz ): 
-    hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), 
+    hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()),  
     dz_(field, grid.global(), eps, limit, globalbcz)
 {
@@ -222,9 +226,9 @@ MPI_FieldAligned<LocalMatrix, LocalContainer>::MPI_FieldAligned(Field field, con
     LocalMatrix interT;
     cusp::transpose( inter, interT);
     minusT = ColDistMat<LocalMatrix, LocalContainer( interT, cm);
-    dg::blas1::axpby(  1., yp[2], 0, hp.data());
-    dg::blas1::axpby( -1., ym[2], 0, hm.data());
-    dg::blas1::axpby(  1., hp, +1., hm, hz);
+    dg::blas1::axpby(  1., yp[2], 0, hp_.data());
+    dg::blas1::axpby( -1., ym[2], 0, hm_.data());
+    dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
 }
 
 template<class M, class container>
@@ -290,8 +294,8 @@ void MPI_FieldAligned<M,container>::einsPlus( const MPI_Vector<container>& f, MP
         }
         if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
         {
-            //note that hp is 3d and the rest 2d
-            thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+            //note that hp_ is 3d and the rest 2d
+            thrust::transform( right_.begin(), right_.end(),  hp_.begin(), ghostM.begin(), thrust::multiplies<double>());
             dg::blas1::axpby( 1., ghostM, 1., ghostP);
         }
         cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
@@ -326,7 +330,7 @@ void MPI_FieldAligned<M, container>::einsMinus( const MPI_Vector<container>& f, 
         }
         if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
         {
-            thrust::transform( left_.begin(), left_.end(), hm.begin(), ghostP.begin());
+            thrust::transform( left_.begin(), left_.end(), hm_.begin(), ghostP.begin());
             dg::blas1::axpby( -1, ghostP, 1., ghostM);
         }
         cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
@@ -360,8 +364,8 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
         }
         if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
         {
-            //note that hp is 3d and the rest 2d
-            thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+            //note that hp_ is 3d and the rest 2d
+            thrust::transform( right_.begin(), right_.end(),  hp_.begin(), ghostM.begin(), thrust::multiplies<double>());
             dg::blas1::axpby( 1., ghostM, 1., ghostP);
         }
         cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
@@ -394,7 +398,7 @@ void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
         }
         if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
         {
-            thrust::transform( left_.begin(), left_.end(), hm.begin(), ghostP.begin());
+            thrust::transform( left_.begin(), left_.end(), hm_.begin(), ghostP.begin());
             dg::blas1::axpby( -1, ghostP, 1., ghostM);
         }
         cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);

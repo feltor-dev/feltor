@@ -57,6 +57,9 @@ toefl_t: toefl_t.cu toefl.cuh
 toefl_b: toefl_b.cu toefl.cuh
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
+dz_2_t: dz_2_t.cu dz.h
+	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS)   -g 
+
 %_t: %_t.cu
 	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 

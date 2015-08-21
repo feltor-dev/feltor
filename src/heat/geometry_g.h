@@ -157,7 +157,7 @@ struct GradLnB
 struct Field
 {
      Field( GeomParameters gp ):  R_0(gp.R_0), I_0(gp.I_0){}
-    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp)
+    void operator()( const std::vector<thrust::host_vector<double> >& y, std::vector<thrust::host_vector<double> >& yp)
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {        
@@ -168,7 +168,7 @@ struct Field
 
         }
     }
-    void operator()( const dg::HVec& y, dg::HVec& yp)
+    void operator()( const thrust::host_vector<double> & y, thrust::host_vector<double> & yp)
     {
             yp[2] = y[0]*sqrt(1.+ M_PI*M_PI*(1.-cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/8./I_0/I_0);
             yp[0] = -M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2.)/2./I_0;

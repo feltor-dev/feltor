@@ -1,15 +1,17 @@
 #pragma once
 #include <cusp/transpose.h>
+//#include <cusp/blas/blas.h>
 #include "grid.h"
 #include "../blas.h"
 #include "interpolation.cuh"
-#include "typedefs.cuh"
+//#include "typedefs.cuh"
 #include "functions.h"
-#include "derivatives.cuh"
+//#include "derivatives.cuh"
 #include "../functors.h"
+
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
-#include <cusp/print.h>
+
 namespace dg{
 
 /**
@@ -54,7 +56,7 @@ struct BoxIntegrator
     /**
      * @brief Construct from a given Field and Grid and accuracy
      *
-     * @param field field must overload operator() with dg::HVecfor three entries
+     * @param field field must overload operator() with dg::HVec for three entries
      * @param g The 2d or 3d grid
      * @param eps the accuracy of the runge kutta integrator
      */
@@ -267,11 +269,15 @@ struct FieldAligned
     void einsMinus( const container& n, container& nme);
     void einsPlusT( const container& n, container& npe);
     void einsMinusT( const container& n, container& nme);
+    const container& hz()const {return hz_;}
+    const container& hp()const {return hp_;}
+    const container& hm()const {return hm_;}
+    const Grid3d<double>& grid() const{return g_;}
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
-    container hz, hp,hm, ghostM, ghostP;
+    container hz_, hp_,hm_, ghostM, ghostP;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
     container left_, right_;
@@ -283,7 +289,7 @@ struct FieldAligned
 template<class M, class container>
 template <class Field, class Limiter>
 FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz):
-        hz( dg::evaluate( dg::zero, grid)), hp( hz), hm( hz), 
+        hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         g_(grid), bcz_(grid.bcz())
 {
     //Resize vector to 2D grid size
@@ -293,96 +299,13 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
     right_ = left_ = dg::evaluate( zero, g2d);
     ghostM.resize( size); ghostP.resize( size);
     //Set starting points
-    std::vector<dg::HVec> y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
+    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
     y[1] = dg::evaluate( dg::coo2, g2d);
     y[2] = dg::evaluate( dg::zero, g2d);
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
   
-    //------------------start hp refinenemt on dz 
-//     //fine grid stuff
-//     unsigned hfac =1; //h refinement factor
-//     unsigned nfac = 1; // p refinement factor
-//     std::cin >> hfac >> nfac;
-// //     unsigned Nxf =g_.Nx(); //h refinement factor
-// //     unsigned nf =g_.n(); // p refinement factor
-// //     std::cin >>Nxf >> nf;
-// //     dg::Grid2d<double> g2d_f(  g_.x0(), g_.x1(), g_.y0(), g_.y1(), nf, Nxf,Nxf); 
-//     dg::Grid2d<double> g2d_f( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n()*nfac, g_.Nx()*hfac, g_.Ny()*hfac);  
-//     unsigned size_f = g2d_f.size();
-//     //set fine starting points
-//     std::vector<dg::HVec> y_f( 3, dg::evaluate( dg::coo1, g2d_f)), yp_f(y_f), ym_f(y_f);
-//     y_f[1] = dg::evaluate( dg::coo2, g2d_f);
-//     y_f[2] = dg::evaluate( dg::zero, g2d_f);
-//     thrust::host_vector<double> coords_f(3), coordsP_f(3), coordsM_f(3);     
-//     //integrate field lines for all points on fine grid
-//     for( unsigned i=0; i<size_f; i++)
-//     {
-//         coords_f[0] = y_f[0][i], coords_f[1] = y_f[1][i], coords_f[2] = y_f[2][i];
-//         double phi1 = deltaPhi;
-//         boxintegrator( field, g2d_f, coords_f, coordsP_f, phi1, eps, globalbcz);
-//         phi1 =  - deltaPhi;
-//         boxintegrator( field, g2d_f, coords_f, coordsM_f, phi1, eps, globalbcz);
-//         yp_f[0][i] = coordsP_f[0], yp_f[1][i] = coordsP_f[1], yp_f[2][i] = coordsP_f[2];
-//         ym_f[0][i] = coordsM_f[0], ym_f[1][i] = coordsM_f[1], ym_f[2][i] = coordsM_f[2];       
-//     }
-//     //Taking fine cell average
-// //     unsigned  bias = g2d_f.n()*g2d_f.Nx();
-// //     unsigned  bias2 =hfac*nfac;
-// //     double avgn = hfac*nfac*hfac*nfac;
-// //                 
-// //     for( unsigned i=0; i<g2d.n()*g2d.Nx(); i++) {
-// //     for( unsigned j=0; j<g2d.n()*g2d.Ny(); j++) {
-// //         unsigned ii = j+ i*(g2d.n()*g2d.Ny());
-// //         yp[0][ii] =  yp[1][ii] = yp[2][ii] = ym[0][ii] = ym[1][ii] =  ym[2][ii] =0.;
-// //         for( unsigned k=0; k<hfac*nfac; k++) {
-// //             for( unsigned m=0; m<hfac*nfac;m++) {
-// //                 unsigned iter = m+k*bias+(j+ i*(bias2*g2d.n()*g2d.Ny()))*bias2;
-// //                 yp[0][ii] +=yp_f[0][iter];
-// //                 yp[1][ii] +=yp_f[1][iter];
-// //                 yp[2][ii] +=yp_f[2][iter];
-// //                 ym[0][ii] +=ym_f[0][iter];
-// //                 ym[1][ii] +=ym_f[1][iter];
-// //                 ym[2][ii] +=ym_f[2][iter];
-// // //                 std::cout << " "<<ii<< " " << iter<< " "<<std::endl;
-// //         }}
-// //         yp[0][ii]/=avgn;
-// //         yp[1][ii]/=avgn;
-// //         yp[2][ii]/=avgn;
-// //         ym[0][ii]/=avgn;
-// //         ym[1][ii]/=avgn;
-// //         ym[2][ii]/=avgn;
-// //     }}          
-// 
-//     cusp::csr_matrix<int, double, cusp::host_memory> f2c;
-// //   fine to coarse grid interp
-//     f2c  = dg::create::interpolation( g2d, g2d_f );
-// //     apply interp to computed R,z,s points
-//     dg::blas2::gemv(f2c, yp_f[0],yp[0]);
-//     dg::blas2::gemv(f2c, ym_f[0],ym[0]);
-//     dg::blas2::gemv(f2c, yp_f[1],yp[1]);
-//     dg::blas2::gemv(f2c, ym_f[1],ym[1]);
-//     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-//     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-//     cusp::transpose( plus, plusT);
-//     cusp::transpose( minus, minusT); 
-//     dg::blas2::gemv(f2c, yp_f[2],yp[2]);
-//     dg::blas2::gemv(f2c, ym_f[2],ym[2]);
-// 
-// 
-//     for( unsigned i=0; i<grid.Nz(); i++)
-//     {
-//         thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
-//         thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());        
-//     }
-//     dg::blas1::scal( hm, -1.);
-//     dg::blas1::axpby(  1., hp, +1., hm, hz);    //
-//     dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
-//     dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
-//     dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);  
-//     -----------end hp refinement
-
-    //-------------- start no hp refinement
 //     integrate field lines for all points
+    double deltaPhi = g_.hz();
     for( unsigned i=0; i<size; i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
@@ -403,31 +326,14 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
 //     copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
-        thrust::copy( yp[2].begin(), yp[2].end(), hp.begin() + i*g2d.size());
-        thrust::copy( ym[2].begin(), ym[2].end(), hm.begin() + i*g2d.size());        
+        thrust::copy( yp[2].begin(), yp[2].end(), hp_.begin() + i*g2d.size());
+        thrust::copy( ym[2].begin(), ym[2].end(), hm_.begin() + i*g2d.size());        
     }
-    dg::blas1::scal( hm, -1.);
-    dg::blas1::axpby(  1., hp, +1., hm, hz);    //
-    dg::blas1::axpby(  1., (container)yp[2], 0, hp_plane);
-    dg::blas1::axpby( -1., (container)ym[2], 0, hm_plane);
-    dg::blas1::axpby(  1., hp_plane, +1., hm_plane, hz_plane);   
-//     //--------------end no hp refinement
-//     
-// //     interpolate fine to coarse
-//     cusp::csr_matrix<int, double, cusp::host_memory> f2c;
-// //   fine to coarse grid interp
-//     f2c  = dg::create::interpolation( g2d, g2d_f );
-// //     apply interp to computed R,z,s points
-//     dg::blas2::gemv(f2c, yp_f[0],yp[0]);
-//     dg::blas2::gemv(f2c, ym_f[0],ym[0]);
-//     dg::blas2::gemv(f2c, yp_f[1],yp[1]);
-//     dg::blas2::gemv(f2c, ym_f[1],ym[1]);
-//     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-//     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-//     cusp::transpose( plus, plusT);
-//     cusp::transpose( minus, minusT); 
+    dg::blas1::scal( hm_, -1.);
+    dg::blas1::axpby(  1., hp_, +1., hm_, hz_);    //
  
 }
+
 template<class M, class container>
 void FieldAligned<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
 {
@@ -548,7 +454,7 @@ void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
             }
             if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
             {
-                thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+                thrust::transform( right_.begin(), right_.end(),  hp_.begin(), ghostM.begin(), thrust::multiplies<double>());
                 cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
             }
             //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
@@ -583,7 +489,7 @@ void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
             }
             if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
             {
-                thrust::transform( left_.begin(), left_.end(),  hm.begin(), ghostP.begin(), thrust::multiplies<double>());
+                thrust::transform( left_.begin(), left_.end(),  hm_.begin(), ghostP.begin(), thrust::multiplies<double>());
                 cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
             }
             //interlay ghostcells with periodic cells: L*g + (1-L)*fme
@@ -594,6 +500,7 @@ void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
         }
     }
 }
+
 template< class M, class container>
 void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
 {
@@ -618,7 +525,7 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
             }
             if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
             {
-                thrust::transform( right_.begin(), right_.end(),  hp.begin(), ghostM.begin(), thrust::multiplies<double>());
+                thrust::transform( right_.begin(), right_.end(),  hp_.begin(), ghostM.begin(), thrust::multiplies<double>());
                 cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
             }
             //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
@@ -629,6 +536,7 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
 
     }
 }
+
 template< class M, class container>
 void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
 {
@@ -653,7 +561,7 @@ void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
             }
             if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
             {
-                thrust::transform( left_.begin(), left_.end(),  hm.begin(), ghostP.begin(), thrust::multiplies<double>());
+                thrust::transform( left_.begin(), left_.end(),  hm_.begin(), ghostP.begin(), thrust::multiplies<double>());
                 cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
             }
             //interlay ghostcells with periodic cells: L*g + (1-L)*fme

@@ -63,9 +63,6 @@ version: version.cu
 	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
 	./$@
 
-dz_2_t: dz_2_t.cu dz.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS)   -g 
-
 backscatter_t: backscatter_t.cu xspacelib.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
 
