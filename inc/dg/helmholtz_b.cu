@@ -8,10 +8,12 @@
 #include "blas.h"
 
 #include "backend/timer.cuh"
+#include "backend/sparseblockmat.cuh"
+#include "backend/typedefs.cuh"
 #include "helmholtz.h"
-#include "backend/xspacelib.cuh"
 
 #include "cg.h"
+
 
 
 const double eps = 1e-2;

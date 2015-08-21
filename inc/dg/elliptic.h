@@ -9,8 +9,6 @@
 #include "backend/mpi_evaluation.h"
 #endif
 
-//always norm derivatives!!
-
 /*! @file 
 
   Contains the general negative elliptic operator

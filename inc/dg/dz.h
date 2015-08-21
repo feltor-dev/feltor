@@ -210,6 +210,7 @@ struct DZ
     container tempP, temp0, tempM;
     container w3d, v3d;
     container invB;
+    container R_;
     dg::norm no_;
     dg::direction dir_;
 };
@@ -224,9 +225,10 @@ DZ<FA, M,container>::DZ(const FA& field, Field inverseB, const dg::Grid3d<double
         jumpY( dg::create::jumpY( grid)),
         tempP( dg::evaluate( dg::zero, grid)), temp0( tempP), tempM( tempP), 
         w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),
-        invB(dg::evaluate(inverseB,grid)), no_(no), dir_(dir)
+        invB(dg::evaluate(inverseB,grid)), R_(dg::evaluate(dg::coo1,grid)), 
+        no_(no), dir_(dir)
 {
-    //assert( grid == field.grid());
+    assert( grid.system() == dg::cylindrical);
 }
 
 template<class F, class M, class container>
@@ -411,8 +413,10 @@ void DZ<F,M,container>::symv( const container& f, container& dzTdzf)
 //     add jump term 
 
     dg::blas2::symv( jumpX, f, temp0);
+    dg::blas1::pointwiseDivide( temp0, R_, temp0); //there is an R in the weights
     dg::blas1::axpby(-1., temp0, 1., dzTdzf, dzTdzf);
     dg::blas2::symv( jumpY, f, temp0);
+    dg::blas1::pointwiseDivide( temp0, R_, temp0);
     dg::blas1::axpby(-1., temp0, 1., dzTdzf, dzTdzf);
     if( no_ == not_normed)
     {

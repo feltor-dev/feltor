@@ -47,7 +47,13 @@ int main()
         dg::blas1::axpby( 1., sol2[i], -1., error);
         std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(error, w2d, error))<<"\n";
     }
-    dg::Grid3d<double> g3d( 0,M_PI, M_PI/2.,M_PI, 0, 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
+    Vector tempX = f2d, tempY(tempX);
+    dg::blas2::symv( m2[2], f2d, tempX);
+    dg::blas2::symv( m2[3], f2d, tempY);
+    dg::blas1::axpby( 1., tempX, 1., tempY, tempY);
+    dg::blas1::axpby( 1., null2, -1., tempY);
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tempY, w2d, tempY))<<"\n";
+    dg::Grid3d<double> g3d( 0,M_PI, M_PI/2.,M_PI, 0, 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cylindrical);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);
@@ -71,6 +77,12 @@ int main()
         dg::blas1::axpby( 1., sol3[i], -1., error);
         std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(error, w3d, error))<<"\n";
     }
+    Vector tX = f3d, tY(tX);
+    dg::blas2::symv( m3[3], f3d, tX);
+    dg::blas2::symv( m3[4], f3d, tY);
+    dg::blas1::axpby( 1., tX, 1., tY, tY);
+    dg::blas1::axpby( 1., null3, -1., tY);
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tY, w3d, tY))<<"\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

@@ -24,6 +24,7 @@ double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
 double derivative( double x, double y, double z){return cos(x-R_0)*sin(y);}
 double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
 dg::bc bcx = dg::DIR;
+dg::bc bcy = dg::DIR;
 double initial( double x, double y, double z) {return sin(0);}
 
 
@@ -36,7 +37,7 @@ int main()
     double eps;
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
-    dg::Grid3d<double> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
+    dg::Grid3d<double> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER, dg::cylindrical);
     dg::DVec w3d = dg::create::weights( grid);
     dg::DVec v3d = dg::create::inv_weights( grid);
     dg::DVec x = dg::evaluate( initial, grid);
