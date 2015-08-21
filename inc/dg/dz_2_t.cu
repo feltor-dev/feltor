@@ -105,11 +105,15 @@ int main( )
     const dg::DVec v3d = dg::create::inv_weights( g3d);
 
     std::cout << "computing dzDIR" << std::endl;
-    dg::FieldAligned<dg::IDMatrix, dg::DVec> dzFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
+    dg::FieldAligned<dg::IDMatrix, dg::DVec>    
+        dzFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dzNEU" << std::endl;
-    dg::FieldAligned<dg::IDMatrix, dg::DVec> dzNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
+    dg::FieldAligned<dg::IDMatrix, dg::DVec> 
+        dzNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
 
-    dg::DZ< dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> dz ( dzFA, field, g3d), dzNU ( dzNUFA, field, g3d);
+    dg::DZ< dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> 
+        dz ( dzFA, field, g3d, dg::not_normed, dg::centered), 
+        dzNU ( dzNUFA, field, g3d, dg::not_normed, dg::centered);
 
 //     dg::DZ<dg::DMatrix, dg::DVec> dzNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     

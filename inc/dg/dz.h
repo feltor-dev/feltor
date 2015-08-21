@@ -44,7 +44,7 @@ struct DZ
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template<class InvB>
-    DZ(const FieldAligned& field, InvB invB, const dg::Grid3d<double>& grid);
+    DZ(const FieldAligned& field, InvB invB, const dg::Grid3d<double>& grid, dg::norm no=dg::normed, dg::direction dir = dg::centered);
 
     /**
     * @brief Apply the derivative on a 3d vector
@@ -210,25 +210,35 @@ struct DZ
     container tempP, temp0, tempM;
     container w3d, v3d;
     container invB;
+    dg::norm no_;
+    dg::direction dir_;
 };
 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 ///@cond
 template<class FA, class M, class container>
 template <class Field>
-DZ<FA, M,container>::DZ(const FA& field, Field inverseB, const dg::Grid3d<double>& grid):
+DZ<FA, M,container>::DZ(const FA& field, Field inverseB, const dg::Grid3d<double>& grid, dg::norm no, dg::direction dir):
         f_(field),
-        jumpX( dg::create::jumpX( grid, grid.bcx())),
-        jumpY( dg::create::jumpY( grid, grid.bcy())),
+        jumpX( dg::create::jumpX( grid)),
+        jumpY( dg::create::jumpY( grid)),
         tempP( dg::evaluate( dg::zero, grid)), temp0( tempP), tempM( tempP), 
         w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),
-        invB(dg::evaluate(inverseB,grid))
+        invB(dg::evaluate(inverseB,grid)), no_(no), dir_(dir)
 {
     //assert( grid == field.grid());
 }
 
 template<class F, class M, class container>
-inline void DZ<F,M,container>::operator()( const container& f, container& dzf) { return centered(f, dzf);}
+inline void DZ<F,M,container>::operator()( const container& f, container& dzf) { 
+    if( dir_ == dg::centered)
+        return centered( f, dzf);
+    else if( dir_ == dg::forward)
+        return forward( f, dzf);
+    else
+        return backward( f, dzf);
+}
+
 
 template<class F, class M, class container>
 void DZ<F,M,container>::centered( const container& f, container& dzf)
@@ -385,40 +395,32 @@ void DZ<F,M,container>::backwardTD( const container& f, container& dzf)
 template< class F, class M, class container >
 void DZ<F,M,container>::symv( const container& f, container& dzTdzf)
 {
-// normed
-//     centered( f, tempP);
-//     centeredT( tempP, dzTdzf);
-    forward( f, tempP);
-    forwardT( tempP, dzTdzf);
-    backward( f, tempM);
-    backwardT( tempM, temp0);
-    dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+    if(dir_ == dg::centered)
+    {
+        centered( f, tempP);
+        centeredT( tempP, dzTdzf);
+    }
+    else 
+    {
+        forward( f, tempP);
+        forwardT( tempP, dzTdzf);
+        backward( f, tempM);
+        backwardT( tempM, temp0);
+        dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
+    }
 //     add jump term 
 
     dg::blas2::symv( jumpX, f, temp0);
-    dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
-    dg::blas1::axpby(-1., temp0, 1., dzTdzf);
+    dg::blas1::axpby(-1., temp0, 1., dzTdzf, dzTdzf);
     dg::blas2::symv( jumpY, f, temp0);
-    dg::blas1::pointwiseDot( v3d, temp0,temp0); //make it symmetric
-    dg::blas1::axpby(-1., temp0, 1., dzTdzf);
-
-//     //not normed
-//     centered( f, tempP);
-//     centeredT( tempP, dzTdzf);
-// //     forward( f, tempP);
-// //     forwardT( tempP, dzTdzf);
-// //     backward( f, tempM);
-// //     backwardT( tempM, temp0);
-// //     dg::blas1::axpby(0.5,temp0,0.5,dzTdzf,dzTdzf);
-//     dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
-//     
-//     #ifndef MPI_VERSION
-//         
-//      dg::blas2::symv( jump, f, temp0);
-//      dg::blas1::axpby(-1., temp0, 1., dzTdzf,dzTdzf);
-//     #endif
+    dg::blas1::axpby(-1., temp0, 1., dzTdzf, dzTdzf);
+    if( no_ == not_normed)
+    {
+        dg::blas1::pointwiseDot( w3d, dzTdzf, dzTdzf); //make it symmetric
+    }
 
 }
+
 template< class F, class M, class container >
 void DZ<F,M,container>::dzz( const container& f, container& dzzf)
 {
