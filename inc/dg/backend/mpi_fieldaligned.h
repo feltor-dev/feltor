@@ -2,6 +2,7 @@
 
 #include "fieldaligned.h"
 #include "grid.h"
+#include "mpi_evaluation.h"
 #include "mpi_matrix.h"
 #include "mpi_matrix_blas.h"
 #include "mpi_collective.h"
@@ -20,7 +21,7 @@ namespace dg{
  * @tparam Matrix The matrix class of the interpolation matrix
  * @tparam container The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
  */
-template <class LocalMatrix, class LocalContainer>
+template <class LocalMatrix, class Communicator, class LocalContainer>
 struct MPI_FieldAligned
 {
     /**
@@ -66,7 +67,7 @@ struct MPI_FieldAligned
      * @param left left boundary value 
      * @param right right boundary value
      */
-    void set_boundaries( dg::bc bcz, const thrust::host_vector<double>& left, const thrust::host_vector<double>& right)
+    void set_boundaries( dg::bc bcz, const LocalContainer& left, const LocalContainer& right)
     {
         bcz_ = bcz; 
         left_ = left;
@@ -83,7 +84,7 @@ struct MPI_FieldAligned
      * @param scal_left left scaling factor
      * @param scal_right right scaling factor
      */
-    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right);
+    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right);
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
@@ -135,18 +136,18 @@ struct MPI_FieldAligned
     dg::bc bcz_;
     LocalContainer left_, right_;
     LocalContainer limiter_;
-    RowDistMat<LocalMatrix, Collective> plus, minus; //interpolation matrices
-    ColDistMat<LocalMatrix, Collective> plusT, minusT; //interpolation matrices
-    //Collective collM_, collP_;
+    ColDistMat<LocalMatrix, Communicator> plus, minus; //interpolation matrices
+    RowDistMat<LocalMatrix, Communicator> plusT, minusT; //interpolation matrices
+    //Communicator collM_, collP_;
 
     dg::FieldAligned<LocalMatrix, LocalContainer > dz_;
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 ///@cond
 
-template<class LocalMatrix, class LocalContainer>
+template<class LocalMatrix, class Communicator, class LocalContainer>
 template <class Field, class Limiter>
-MPI_FieldAligned<LocalMatrix, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz ): 
+MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()),  
     dz_(field, grid.global(), eps, limit, globalbcz)
@@ -165,13 +166,14 @@ MPI_FieldAligned<LocalMatrix, LocalContainer>::MPI_FieldAligned(Field field, con
     //integrate to next z-planes
     std::vector<thrust::host_vector<double> > yp(y), ym(y); 
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
+    double deltaPhi = g_.hz();
     for( unsigned i=0; i<grid.size(); i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
         double phi1 = deltaPhi;
-        boxintegrator( field, globalWG, coords, coordsP, phi1, eps, globalbcz);
+        boxintegrator( field, g_.global(), coords, coordsP, phi1, eps, globalbcz);
         phi1 = -deltaPhi;
-        boxintegrator( field, globalWG, coords, coordsM, phi1, eps, globalbcz);
+        boxintegrator( field, g_.global(), coords, coordsM, phi1, eps, globalbcz);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
@@ -192,16 +194,16 @@ MPI_FieldAligned<LocalMatrix, LocalContainer>::MPI_FieldAligned(Field field, con
         }
     }
     //construct scatter operation from pids
-    Collective cp( pids, grid.communicator());
-    thrust::host_vector<double> pX = collP_.scatter( yp[0]),
-                                pY = collP_.scatter( yp[1]),
-                                pZ = collP_.scatter( angle);
+    Communicator cp( pids, grid.communicator());
+    thrust::host_vector<double> pX = cp.collect( yp[0]),
+                                pY = cp.collect( yp[1]),
+                                pZ = cp.collect( angle);
     //construt interpolation matrix
     LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local());
-    plus = RowDistMat<LocalMatrix, LocalContainer>(inter, cp);
+    plus = ColDistMat<LocalMatrix, Communicator>(inter, cp);
     LocalMatrix interT;
     cusp::transpose( inter, interT);
-    plusT = ColDistMat<LocalMatrix, LocalContainer( interT, cp);
+    plusT = RowDistMat<LocalMatrix, Communicator>( interT, cp);
 
     
 
@@ -217,23 +219,24 @@ MPI_FieldAligned<LocalMatrix, LocalContainer>::MPI_FieldAligned(Field field, con
             return;
         }
     }
-    Collective cm( pids, grid.communicator());
-    pX = collM_.scatter( ym[0]),
-    pY = collM_.scatter( ym[1]),
-    pZ = collM_.scatter( angle);
+    Communicator cm( pids, grid.communicator());
+    pX = cm.collect( ym[0]),
+    pY = cm.collect( ym[1]),
+    pZ = cm.collect( angle);
     inter = dg::create::interpolation( pX, pY, pZ, grid.local());
-    minus = RowDistMat<LocalMatrix, LocalContainer>(inter, cm);
-    LocalMatrix interT;
+    minus = ColDistMat<LocalMatrix, Communicator>(inter, cm);
     cusp::transpose( inter, interT);
-    minusT = ColDistMat<LocalMatrix, LocalContainer( interT, cm);
-    dg::blas1::axpby(  1., yp[2], 0, hp_.data());
-    dg::blas1::axpby( -1., ym[2], 0, hm_.data());
+    minusT = RowDistMat<LocalMatrix, Communicator>( interT, cm);
+    //copy to device
+    thrust::copy( yp[2].begin(), yp[2].end(), hp_.data().begin());
+    thrust::copy( ym[2].begin(), ym[2].end(), hm_.data().begin());
+    dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
 }
 
-template<class M, class container>
+template<class M, class C, class container>
 template< class BinaryOp>
-MPI_Vector<container> MPI_FieldAligned<M,container>::evaluate( BinaryOp f, unsigned p0)
+MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, unsigned p0)
 {
     container global_vec = dz_.evaluate( f, p0);
     container vec = dg::evaluate( dg::zero, g_.local());
@@ -250,9 +253,9 @@ MPI_Vector<container> MPI_FieldAligned<M,container>::evaluate( BinaryOp f, unsig
     return MPI_Vector<container>( vec, g_.communicator());
 }
 
-template<class M, class container>
+template<class M, class C, class container>
 template< class BinaryOp, class UnaryOp>
-MPI_Vector<container> MPI_FieldAligned<M, container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
+MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
 {
     //let all processes integrate the fieldlines
     container global_vec = dz_.evaluate( f, g,p0, rounds);
@@ -269,13 +272,13 @@ MPI_Vector<container> MPI_FieldAligned<M, container>::evaluate( BinaryOp f, Unar
     return MPI_Vector<container>( vec, g_.communicator());
 }
 
-template<class M, class container>
-void MPI_FieldAligned<M,container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
+template<class M, class C, class container>
+void MPI_FieldAligned<M,C,container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
 {
-    dg::blas2::detail::doSymv( plus, f, fplus);
+    dg::blas2::detail::doSymv( plus, f, fplus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     //make ghostcells in last plane
     const container& in = f.data();
-    const container& out = fplus.data();
+    container& out = fplus.data();
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
     {
@@ -295,7 +298,7 @@ void MPI_FieldAligned<M,container>::einsPlus( const MPI_Vector<container>& f, MP
         if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
         {
             //note that hp_ is 3d and the rest 2d
-            thrust::transform( right_.begin(), right_.end(),  hp_.begin(), ghostM.begin(), thrust::multiplies<double>());
+            thrust::transform( right_.begin(), right_.end(),  hp_.data().begin(), ghostM.begin(), thrust::multiplies<double>());
             dg::blas1::axpby( 1., ghostM, 1., ghostP);
         }
         cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
@@ -305,13 +308,13 @@ void MPI_FieldAligned<M,container>::einsPlus( const MPI_Vector<container>& f, MP
 
 }
 
-template<class M, class container>
-void MPI_FieldAligned<M, container>::einsMinus( const MPI_Vector<container>& f, thrust::host_vector<double>& fminus ) 
+template<class M, class C, class container>
+void MPI_FieldAligned<M,C,container>::einsMinus( const MPI_Vector<container>& f, MPI_Vector<container>& fminus ) 
 {
-    dg::blas2::detail::doSymv( minus, f, fminus);
+    dg::blas2::detail::doSymv( minus, f, fminus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     //make ghostcells in first plane
     const container& in = f.data();
-    const container& out = fminus.data();
+    container& out = fminus.data();
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
     {
@@ -330,7 +333,7 @@ void MPI_FieldAligned<M, container>::einsMinus( const MPI_Vector<container>& f, 
         }
         if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
         {
-            thrust::transform( left_.begin(), left_.end(), hm_.begin(), ghostP.begin());
+            thrust::transform( left_.begin(), left_.end(), hm_.data().begin(), ghostP.begin(), thrust::multiplies<double>());
             dg::blas1::axpby( -1, ghostP, 1., ghostM);
         }
         cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
@@ -338,14 +341,13 @@ void MPI_FieldAligned<M, container>::einsMinus( const MPI_Vector<container>& f, 
         cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
     }
 }
-template< class M, class container>
-void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
+template< class M, class C, class container>
+void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f, MPI_Vector<container>& fpe)
 {
-    dg::blas2::detail::doSymv( minusT, f, fpe);
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    dg::blas2::detail::doSymv( minusT, f, fpe, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     //make ghostcells in last plane
     const container& in = f.data();
-    const container& out = fpe.data();
+    container& out = fpe.data();
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
     {
@@ -365,7 +367,7 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
         if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
         {
             //note that hp_ is 3d and the rest 2d
-            thrust::transform( right_.begin(), right_.end(),  hp_.begin(), ghostM.begin(), thrust::multiplies<double>());
+            thrust::transform( right_.begin(), right_.end(),  hp_.data().begin(), ghostM.begin(), thrust::multiplies<double>());
             dg::blas1::axpby( 1., ghostM, 1., ghostP);
         }
         cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
@@ -373,13 +375,13 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
         cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
     }
 }
-template< class M, class container>
-void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
+template< class M, class C, class container>
+void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f, MPI_Vector<container>& fme)
 {
-    dg::blas2::detail::doSymv( plusT, f, fme);
+    dg::blas2::detail::doSymv( plusT, f, fme, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     //make ghostcells in first plane
     const container& in = f.data();
-    const container& out = fme.data();
+    container& out = fme.data();
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
     {
@@ -398,7 +400,7 @@ void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
         }
         if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
         {
-            thrust::transform( left_.begin(), left_.end(), hm_.begin(), ghostP.begin());
+            thrust::transform( left_.begin(), left_.end(), hm_.data().begin(), ghostP.begin(), thrust::multiplies<double>());
             dg::blas1::axpby( -1, ghostP, 1., ghostM);
         }
         cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);

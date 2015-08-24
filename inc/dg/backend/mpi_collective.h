@@ -90,6 +90,7 @@ struct Collective
     void gather( const thrust::device_vector<double>& store, thrust::device_vector<double>& values);
     unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
     unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
+    MPI_Comm communicator() const{return comm_;}
     private:
     unsigned sum;
     thrust::host_vector<int> sendTo_,   accS_;
@@ -204,14 +205,15 @@ struct BijectiveComm
      * @return received data from other processes of size recv_size()
      * @note a scatter followed by a gather of the received values restores the original array
      */
-     void collect( const Vector& values, Vector& store)
+     Vector collect( const Vector& values)
     {
         assert( values.size() == idx_.size());
         Vector values_(values);
         //nach PID ordnen
         thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.begin());
         //senden
-        store = p_.scatter( values_);
+        Vector store = p_.scatter( values_);
+        return store;
     }
 
     /**
@@ -247,6 +249,7 @@ struct BijectiveComm
      */
     unsigned send_size() const {return p_.values_size();}
     unsigned size() const {return p_.store_size();}
+    MPI_Comm communicator() const {return p_.communicator();}
     private:
     Index idx_;
     Collective p_;

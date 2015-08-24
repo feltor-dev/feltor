@@ -1,6 +1,6 @@
 #pragma once
 #include <cusp/transpose.h>
-//#include <cusp/blas/blas.h>
+#include <cusp/csr_matrix.h>
 #include "grid.h"
 #include "../blas.h"
 #include "interpolation.cuh"

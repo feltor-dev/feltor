@@ -5,8 +5,8 @@
 #include <thrust/host_vector.h>
 #include <mpi.h>
 
-#include "backend/mpi_evaluation.h"
 #include "arakawa.h"
+#include "backend/typedefs.cuh"
 #include "backend/mpi_init.h"
 
 
@@ -68,14 +68,14 @@ int main(int argc, char* argv[])
     dg::MPI_Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    dg::MPrecon w2d = dg::create::weights( grid);
+    dg::MHVec w2d = dg::create::weights( grid);
     if(rank==0)std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
-    dg::MVec lhs = dg::evaluate( left, grid), jac(lhs);
-    dg::MVec rhs = dg::evaluate( right, grid);
-    const dg::MVec sol = dg::evaluate ( jacobian, grid);
-    dg::MVec eins = dg::evaluate( dg::one, grid);
+    dg::MHVec lhs = dg::evaluate( left, grid), jac(lhs);
+    dg::MHVec rhs = dg::evaluate( right, grid);
+    const dg::MHVec sol = dg::evaluate ( jacobian, grid);
+    dg::MHVec eins = dg::evaluate( dg::one, grid);
 
-    dg::ArakawaX<dg::MMatrix, dg::MVec> arakawa( grid);
+    dg::ArakawaX<dg::MHMatrix, dg::MHVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
     //if(rank==0) std::cout << lhs<<"\n";
     //if(rank==0) std::cout << rhs<<"\n";

@@ -46,8 +46,8 @@ double jacobian( double x, double y, double z)
     return jacobian(x,y)*z*z;
 }
 
-typedef dg::RowDistMat<dg::SparseBlockMatDevice, dg::NNCD> Matrix;
-typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
+typedef dg::MDMatrix Matrix;
+typedef dg::MDVec Vector;
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);

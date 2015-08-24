@@ -4,6 +4,7 @@
 #include "backend/derivatives.h"
 #include "backend/fieldaligned.h"
 #ifdef MPI_VERSION
+#include "backend/mpi_derivatives.h"
 #include "backend/mpi_fieldaligned.h"
 #endif //MPI_VERSION
 
@@ -13,6 +14,9 @@
  */
 
 namespace dg{
+//interpolation matrices
+typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
+typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 
 /**
 * @brief Class for the evaluation of a parallel derivative
@@ -43,8 +47,8 @@ struct DZ
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
-    template<class InvB>
-    DZ(const FieldAligned& field, InvB invB, const dg::Grid3d<double>& grid, dg::norm no=dg::normed, dg::direction dir = dg::centered);
+    template<class InvB, class Grid>
+    DZ(const FieldAligned& field, InvB invB, const Grid& grid, dg::norm no=dg::normed, dg::direction dir = dg::centered);
 
     /**
     * @brief Apply the derivative on a 3d vector
@@ -218,8 +222,8 @@ struct DZ
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 ///@cond
 template<class FA, class M, class container>
-template <class Field>
-DZ<FA, M,container>::DZ(const FA& field, Field inverseB, const dg::Grid3d<double>& grid, dg::norm no, dg::direction dir):
+template <class Field, class Grid>
+DZ<FA, M,container>::DZ(const FA& field, Field inverseB, const Grid& grid, dg::norm no, dg::direction dir):
         f_(field),
         jumpX( dg::create::jumpX( grid)),
         jumpY( dg::create::jumpY( grid)),

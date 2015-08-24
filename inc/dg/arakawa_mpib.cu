@@ -6,7 +6,6 @@
 #include <mpi.h>
 
 #include "backend/timer.cuh"
-#include "backend/mpi_evaluation.h"
 
 #include "arakawa.h"
 #include "backend/mpi_init.h"
@@ -44,8 +43,6 @@ double jacobian( double x, double y)
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
 
-typedef dg::RowDistMat<dg::SparseBlockMatDevice, dg::NNCD> Matrix;
-typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
@@ -56,14 +53,14 @@ int main(int argc, char* argv[])
     dg::MPI_Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::Timer t;
-    Vector w2d = dg::create::weights( grid);
-    Vector lhs = dg::evaluate ( left, grid), jac(lhs);
-    Vector rhs = dg::evaluate ( right,grid);
-    const Vector sol = dg::evaluate( jacobian, grid );
-    Vector eins = dg::evaluate( dg::one, grid );
+    dg::MDVec w2d = dg::create::weights( grid);
+    dg::MDVec lhs = dg::evaluate ( left, grid), jac(lhs);
+    dg::MDVec rhs = dg::evaluate ( right,grid);
+    const dg::MDVec sol = dg::evaluate( jacobian, grid );
+    dg::MDVec eins = dg::evaluate( dg::one, grid );
     std::cout<< std::setprecision(3);
 
-    dg::ArakawaX<Matrix, Vector> arakawa( grid);
+    dg::ArakawaX<dg::MDMatrix, dg::MDVec> arakawa( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

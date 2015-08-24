@@ -147,6 +147,7 @@ only the inner matrix is applied.
 template<class LocalMatrix, class Collective >
 struct RowDistMat
 {
+    RowDistMat( ) { }
     /**
     * @brief Constructor 
     *
@@ -241,6 +242,7 @@ only the inner matrix is applied.
 template<class LocalMatrix, class Collective >
 struct ColDistMat
 {
+    ColDistMat( ){}
     /**
     * @brief Constructor 
     *

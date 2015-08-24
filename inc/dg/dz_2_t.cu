@@ -21,10 +21,6 @@
 #include "../../src/heat/geometry_g.h"
 #include "../../src/heat/parameters.h"
 
-namespace dg {
-typedef cusp::csr_matrix<int, double, cusp::host_memory> IMatrix;
-typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix;
-}
 
 int main( )
 {
