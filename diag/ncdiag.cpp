@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
     dg::HVec psipupilog2d   = dg::evaluate( psipupil, g2d_out);    
     dg::HVec psipupilog3d   = dg::evaluate( psipupil, g3d_out);    
 
-    unsigned Npsi = 50;//set number of psivalues
+    unsigned Npsi = 2;//set number of psivalues
     std::cout << "psipmin =" << psipmin << " psipmax =" << psipmax << " Npsi =" << Npsi  <<std::endl;
     dg::Grid1d<double>  g1d_out(psipmin  ,psipmax ,3, Npsi,dg::NEU); //one dimensional sipgrid
     dg::HVec w1d = dg::create::weights( g1d_out);   
@@ -173,6 +173,9 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> fields3d(5,dg::evaluate(dg::zero,g3d_out));
     std::vector<dg::HVec> fields2d(5,dg::evaluate(dg::zero,g3d_out));
     dg::ToroidalAverage<dg::HVec> toravg(g3d_out);
+    unsigned outlim = p.maxout;
+    std::cout << "number of outputs ? : " << std::endl;
+    std::cin>>outlim;
     for( unsigned i=0; i<p.maxout; i++)//timestepping
     {
         start3dp[0] = i; //set specific time  
