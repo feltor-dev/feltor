@@ -1,14 +1,13 @@
 #pragma once
 #include <cusp/transpose.h>
 #include <cusp/csr_matrix.h>
+
 #include "grid.h"
 #include "../blas.h"
 #include "interpolation.cuh"
-//#include "typedefs.cuh"
 #include "functions.h"
-//#include "derivatives.cuh"
-#include "../functors.h"
 
+#include "../functors.h"
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
 

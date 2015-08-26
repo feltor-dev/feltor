@@ -2,14 +2,12 @@
 
 #include <cusp/print.h>
 
-#include "timer.cuh"
-#include "evaluation.cuh"
-#include "dz.cuh"
-#include "functions.h"
-#include "../functors.h"
-#include "../blas.h"
-#include "interpolation.cuh"
+#include "blas.h"
+#include "dz.h"
+#include "functors.h"
 
+#include "backend/functions.h"
+#include "backend/timer.cuh"
 
 struct Field
 {
@@ -66,7 +64,12 @@ int main()
     const dg::DVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::FieldAligned<dg::IDMatrix, dg::DVec> 
+        dzFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+
+    dg::DZ< dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> 
+        dz ( dzFA, field, g3d, dg::not_normed, dg::centered);
+    //dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-10, dg::DefaultLimiter(), dg::NEU);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 

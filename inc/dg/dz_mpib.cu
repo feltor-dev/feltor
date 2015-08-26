@@ -3,16 +3,12 @@
 #include <cusp/print.h>
 #include <mpi.h>
 
-#include "mpi_evaluation.h"
-#include "mpi_precon.h"
 #include "dz.h"
-#include "functions.h"
-#include "../blas2.h"
-#include "../functors.h"
-#include "interpolation.cuh"
 
-#include "mpi_init.h"
-#include "timer.cuh"
+#include "backend/mpi_evaluation.h"
+#include "backend/mpi_init.h"
+#include "backend/functions.h"
+#include "backend/timer.cuh"
 
 struct Field
 {
@@ -65,15 +61,20 @@ int main(int argc, char* argv[])
 
     Field field( R_0, I_0);
     dg::MPI_Grid3d g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, comm);
-    const dg::MPI_Precon w3d = dg::create::weights( g3d);
+    const dg::MDVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::DZ<dg::MMatrix, dg::MVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter());
+    dg::MPI_FieldAligned<dg::IDMatrix, dg::BijectiveComm< thrust::device_vector<int>, dg::DVec >, dg::DVec>    
+        dzFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+
+    dg::DZ< dg::MPI_FieldAligned<dg::IDMatrix, dg::BijectiveComm< thrust::device_vector<int>, dg::DVec >,  dg::DVec>, dg::MDMatrix, dg::MDVec > 
+        dz ( dzFA, field, g3d, dg::not_normed, dg::centered); 
+    //dg::DZ<dg::MMatrix, dg::MDVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter());
     t.toc();
     if(rank==0)std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
-    dg::MVec function = dg::evaluate( func, g3d), derivative(function);
-    const dg::MVec solution = dg::evaluate( deri, g3d);
+    dg::MDVec function = dg::evaluate( func, g3d), derivative(function);
+    const dg::MDVec solution = dg::evaluate( deri, g3d);
     t.tic();
     dz( function, derivative);
     t.toc();
