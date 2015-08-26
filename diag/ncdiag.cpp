@@ -45,6 +45,8 @@ int main( int argc, char* argv[])
     err = nc_inq_attlen( ncid, NC_GLOBAL, "geomfile", &length);
     std::string geom( length, 'x');
     err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
+    err = nc_close(ncid); 
+
     std::cout << "input "<<input<<std::endl;
     std::cout << "geome "<<geom <<std::endl;
     const eule::Parameters p(file::read_input( input));
@@ -96,9 +98,12 @@ int main( int argc, char* argv[])
     err2d = nc_put_att_text( ncid2d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[3], tvarID;
     err2d = file::define_dimensions( ncid2d, dim_ids, &tvarID, g2d_out);
+
     for( unsigned i=0; i<14; i++){
         err2d = nc_def_var( ncid2d, names2d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs2d[i]);
     }   
+    err2d = nc_close(ncid2d);
+
     //midplane 2d fields
     size_t count2d[3]  = {1, g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start2d[3]  = {0, 0, 0};
@@ -107,15 +112,15 @@ int main( int argc, char* argv[])
     size_t count3dp[4] = {1, 1, g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start3dp[4] = {0, 0, 0, 0};
 
-    err2d = nc_close(ncid2d);
-    err = nc_close(ncid); 
-    
+
+
      //generate 1d nc file for one time step for the f(psi) quantities
 
     std::string names1d[10] = {"Ne_fsa", "Ni_fsa", "Ue_Fsa", "Ui_fsa", "phi_fsa","q","vor_fsa","Deperp_fsa","Depsi_fsa","Lperpinv_fsa"}; 
     int dataIDs1d[10];
     file::NC_Error_Handle err1d; 
     int ncid1d; 
+
     err1d = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid1d);
     err1d = nc_put_att_text( ncid1d, NC_GLOBAL, "inputfile", input.size(), input.data());
     err1d = nc_put_att_text( ncid1d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
@@ -176,7 +181,7 @@ int main( int argc, char* argv[])
     unsigned outlim = p.maxout;
     std::cout << "number of outputs ? : " << std::endl;
     std::cin>>outlim;
-    for( unsigned i=0; i<p.maxout; i++)//timestepping
+    for( unsigned i=0; i<outlim; i++)//timestepping
     {
         start3dp[0] = i; //set specific time  
         start3d[0] = i; //set specific time  

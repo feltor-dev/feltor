@@ -272,7 +272,7 @@ struct Feltor
     dg::DZ<Matrix, container> dzN_;
     dg::Poisson< Matrix, container> poissonN,poissonDIR; 
 
-    dg::Elliptic< Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR; 
+    dg::Elliptic< Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR,lapperpDIRnn; 
     dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR, invgammaN;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
@@ -307,7 +307,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
     lapperpN (   g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
-    lapperpDIR ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
+    lapperpDIR ( g,dg::DIR, dg::DIR,     dg::normed,         dg::centered),
+    lapperpDIRnn ( g,dg::DIR, dg::DIR,     dg::not_normed,         dg::centered),
     invgammaDIR( g,dg::DIR, dg::DIR,-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaN(   g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(         omega, omega.size(), p.eps_pol),
@@ -326,15 +327,28 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
 template<class Matrix, class container, class P>
 container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
+//     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
+//     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
+//     dg::blas1::pointwiseDot( chi, binv, chi);
+//     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
+//     pol.set_chi( chi);
+// 
+//     invert_invgammaN(invgammaN,chi,y[1]); //omega= Gamma (Ni-1)    
+//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
+//     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+//         if(  number == invert_pol.get_max())
+//             throw dg::Fail( p.eps_pol);
+//     return phi[0];
+//non bousinesqu
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
     dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
-    pol.set_chi( chi);
+    dg::blas1::pointwiseDot( chi, binv, omega);       //(\mu_i n_i ) /B^2
 
     invert_invgammaN(invgammaN,chi,y[1]); //omega= Gamma (Ni-1)    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+    dg::blas1::pointwiseDivide(chi,omega,chi);
+    unsigned number = invert_pol( lapperpDIRnn, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
     return phi[0];

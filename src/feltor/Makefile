@@ -6,7 +6,7 @@ INCLUDE+= -I../ # geometry library
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_50 -w
+CFLAGS = --compiler-options -Wall -arch=sm_52 -w
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 GLFLAGS= -lGLEW
@@ -96,10 +96,10 @@ feltor: feltor.cu feltor.cuh
 	
 ifeq ($(strip $(device)),mpi)
 feltor_hpc: feltor_hpc.cpp feltor.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK -g -DDG_DEBUG
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK 
 else
 feltor_hpc: feltor_hpc.cu feltor.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK -g -DDG_DEBUG
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 endif
 	
