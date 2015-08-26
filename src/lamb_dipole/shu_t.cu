@@ -12,7 +12,6 @@
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
 #include "dg/helmholtz.h"
-#include "dg/backend/typedefs.cuh"
 
 #include "shu.cuh"
 
@@ -58,8 +57,8 @@ int main()
     HVec omega = evaluate ( lamb, grid);
     DVec stencil = evaluate( one, grid);
     DVec y0( omega);
-    Shu<DVec> test( grid, eps);
-    Diffusion<DVec> diffusion( grid, D);
+    Shu<dg::DMatrix, dg::DVec> test( grid, eps);
+    Diffusion<DMatrix, DVec> diffusion( grid, D);
     Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
 
     ////////////////////////////////glfw//////////////////////////////
@@ -67,7 +66,7 @@ int main()
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
-    dg::DMatrix equidistant = dg::create::backscatter( grid );
+    dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( test, diffusion, y0, dt);
     while (!glfwWindowShouldClose(w))

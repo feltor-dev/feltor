@@ -64,8 +64,8 @@ int main()
         dg::blas1::axpby( -meanMass, stencil, 1., y0);
     }
     //make solver and stepper
-    Shu<DVec> shu( grid, p.eps);
-    Diffusion<DVec> diffusion( grid, p.D);
+    Shu<DMatrix, DVec> shu( grid, p.eps);
+    Diffusion<DMatrix, DVec> diffusion( grid, p.D);
     Karniadakis< DVec > ab( y0, y0.size(), 1e-9);
 
     t.tic();
@@ -86,7 +86,7 @@ int main()
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
-    dg::DMatrix equidistant = dg::create::backscatter( grid );
+    dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
     ab.init( shu, diffusion, y0, p.dt);
     ab( shu, diffusion, y0); //make potential ready

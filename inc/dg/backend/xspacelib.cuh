@@ -12,6 +12,7 @@
 #include "operator.h"
 #include "operator_tensor.cuh"
 #include "tensor.cuh"
+#include "interpolation.cuh" //makes typedefs available
 
 
 /*! @file
