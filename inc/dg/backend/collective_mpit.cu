@@ -19,7 +19,7 @@ int main( int argc, char * argv[])
     if(rank==0)std::cout << "Test if scatter followed by gather leaves the input vector intact\n";
     thrust::host_vector<double> v( Nx*Ny, 3*rank);
     thrust::host_vector<double> m( Nx*Ny);
-    for( int i=0; i<m.size(); i++)
+    for( unsigned i=0; i<m.size(); i++)
     {
         m[i] = i%3 + rank/2;
         v[i] = v[i] + (double)(i + 17%(rank+1));
@@ -27,7 +27,7 @@ int main( int argc, char * argv[])
     const thrust::host_vector<double> w(v);
     dg::BijectiveComm<thrust::host_vector<int>, thrust::host_vector<double> > c(m, MPI_COMM_WORLD);
     thrust::host_vector<double> receive(c.size());
-    c.collect( v, receive);
+    receive = c.collect( v);
     //for( unsigned i=0; i<receive.size(); i++)
     //{
     //    if( rank==0)

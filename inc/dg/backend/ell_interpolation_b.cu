@@ -49,12 +49,6 @@ int main()
     t.toc();
     std::cout << "Axpby took "<<t.diff()<<"s\n";
     std::cout << "Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
-    thrust::device_vector<double> forward(std::vector<double>( g.dlt().forward()));
-    thrust::device_vector<int> ones( g.size(), 1);
-    t.tic();
-    dg::create::forward_transform( vector, w, forward, ones, g);
-    t.toc();
-    std::cout << "Application of forward trafo matrix took: "<<t.diff()<<"s\n";
     }
     {
     unsigned n, Nx, Ny, Nz;

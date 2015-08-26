@@ -2,6 +2,11 @@
 #include "timer.cuh"
 #include "average.cuh"
 
+namespace dg
+{
+typedef thrust::host_vector<double> HVec;
+typedef thrust::device_vector<double> DVec;
+}
 
 const double lx = M_PI;
 const double ly = M_PI;

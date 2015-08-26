@@ -15,7 +15,7 @@ struct printf_functor
 __host__ __device__
 void operator()(double x)
 {
-printf("%f\n",x);
+    printf("%f\n",x);
 }
 };
 /**

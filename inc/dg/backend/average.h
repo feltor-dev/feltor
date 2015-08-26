@@ -29,7 +29,7 @@ struct PoloidalAverage
      */
     template<class Grid2d>
     PoloidalAverage( const Grid2d& g) : 
-        g2d(g.ghostless()),
+        g2d(g.local()),
         g1d( g2d.x0(),g2d.x1(),g2d.n(),g2d.Nx(),g2d.bcx()),
         dummy( g2d.n()*g2d.Nx()),
         helper1d(  g2d.n()*g2d.Nx()),
@@ -51,7 +51,7 @@ struct PoloidalAverage
     void operator() (const container& src, container& res)
     {
         assert( &src != &res);
-        const thrust::host_vector<double>& in = src.cut_overlap(); // src.without ghost
+        const thrust::host_vector<double>& in = src.data(); // src.without ghost
         //weight to ensure correct integration
         blas1::pointwiseDot( in, w2d, helper);      
         thrust::scatter( helper.begin(), helper.end(), invertxy.begin(), helper2.begin());
@@ -71,7 +71,7 @@ struct PoloidalAverage
         }
         thrust::copy_n( helper.begin(), helper.size() - pos, helper.begin() + pos);
         //copy to result
-        res.copy_into_interior(helper);
+        res.data() = helper;
     }
   private:
     IndexContainer dummy, invertxy, lines;
