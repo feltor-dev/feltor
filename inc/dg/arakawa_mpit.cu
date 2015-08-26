@@ -1,12 +1,9 @@
 #include <iostream>
 #include <iomanip>
 
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
 #include <mpi.h>
 
 #include "arakawa.h"
-#include "backend/typedefs.cuh"
 #include "backend/mpi_init.h"
 
 

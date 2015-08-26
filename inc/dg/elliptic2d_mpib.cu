@@ -2,13 +2,12 @@
 #include <iomanip>
 #include <mpi.h>
 
-#include "backend/xspacelib.cuh"
-#include "backend/timer.cuh"
-#include "backend/mpi_init.h"
 
 #include "elliptic.h"
 #include "cg.h"
 
+#include "backend/timer.cuh"
+#include "backend/mpi_init.h"
 
 //NOTE: IF DEVICE=CPU THEN THE POLARISATION ASSEMBLY IS NOT PARALLEL AS IT IS NOW 
 
@@ -52,21 +51,21 @@ int main(int argc, char* argv[] )
     //////////////////////begin program///////////////////////
     //create functions A(chi) x = b
     dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
-    const dg::MPrecon w2d = dg::create::weights( grid);
-    const dg::MPrecon v2d = dg::create::inv_weights( grid);
-    dg::MVec x =    dg::evaluate( initial, grid);
-    dg::MVec b =    dg::evaluate( rhs, grid);
-    dg::MVec chi =  dg::evaluate( pol, grid);
+    const dg::MDVec w2d = dg::create::weights( grid);
+    const dg::MDVec v2d = dg::create::inv_weights( grid);
+    dg::MDVec x =    dg::evaluate( initial, grid);
+    dg::MDVec b =    dg::evaluate( rhs, grid);
+    dg::MDVec chi =  dg::evaluate( pol, grid);
 
 
     //if(rank==0)std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
-    dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> pol( grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::MDMatrix, dg::MDVec, dg::MDVec> pol( grid, dg::not_normed, dg::centered);
     pol.set_chi( chi);
     t.toc();
     //if(rank==0)std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
-    dg::Invert<dg::MVec > invert( x, n*n*Nx*Ny, eps);
+    dg::Invert<dg::MDVec > invert( x, n*n*Nx*Ny, eps);
     t.tic();
     unsigned number = invert( pol, x, b);
     t.toc();
@@ -75,16 +74,16 @@ int main(int argc, char* argv[] )
     if(rank==0)std::cout << " took "<<t.diff()<<"s\n";
 
     //compute error
-    const dg::MVec solution = dg::evaluate( sol, grid);
-    const dg::MVec derivati = dg::evaluate( der, grid);
-    dg::MVec error( solution);
+    const dg::MDVec solution = dg::evaluate( sol, grid);
+    const dg::MDVec derivati = dg::evaluate( der, grid);
+    dg::MDVec error( solution);
     dg::blas1::axpby( 1.,x,-1., error);
 
     double err = dg::blas2::dot( w2d, error);
     //if(rank==0)std::cout << "L2 Norm2 of Error is " << err << std::endl;
     double norm = dg::blas2::dot( w2d, solution);
     //if(rank==0)std::cout << "L2 Norm of relative error is               "<<sqrt( err/norm)<<std::endl;
-    dg::MMatrix DX = dg::create::dx( grid);
+    dg::MDMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);

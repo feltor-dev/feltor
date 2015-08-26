@@ -591,5 +591,6 @@ int main( int argc, char* argv[])
 //     }
 // 
 //     glfwTerminate();
+    MPI_Finalize();
     return 0;
 }

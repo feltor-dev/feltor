@@ -4,14 +4,11 @@
 //#include "backend/xspacelib.cuh"
 #include <thrust/device_vector.h>
 #include "blas.h"
-#include "backend/sparseblockmat.cuh"
-#include "backend/typedefs.cuh"
-#include "backend/timer.cuh"
 
 
 #include "elliptic.h"
 #include "cg.h"
-
+#include "backend/timer.cuh"
 
 //NOTE: IF DEVICE=CPU THEN THE POLARISATION ASSEMBLY IS NOT PARALLEL AS IT IS NOW 
 

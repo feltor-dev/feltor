@@ -28,7 +28,7 @@ int main()
             y[i*g.Nx()*g.n() + j] = 
                     g.y0() + (i+0.5)*g.hy()/(double)(g.n());
         }
-    dg::Matrix B = dg::create::interpolation( x, y, g);
+    dg::IHMatrix B = dg::create::interpolation( x, y, g);
     bool passed = true;
     //cusp::print(A);
     //cusp::print(B);

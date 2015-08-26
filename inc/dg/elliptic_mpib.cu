@@ -3,16 +3,11 @@
 
 #include <mpi.h>
 
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
-
-#include "backend/timer.cuh"
-#include "backend/mpi_evaluation.h"
-#include "backend/mpi_derivatives.h"
-#include "backend/mpi_init.h"
-
 #include "cg.h"
 #include "elliptic.h"
+
+#include "backend/timer.cuh"
+#include "backend/mpi_init.h"
 
 
 const double R_0 = 1000;
@@ -34,8 +29,8 @@ int main( int argc, char* argv[])
     mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
 
     dg::MPI_Grid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical, comm);
-    const dg::MPrecon w3d = dg::create::weights( grid);
-    const dg::MPrecon v3d = dg::create::inv_weights( grid);
+    const dg::MDVec w3d = dg::create::weights( grid);
+    const dg::MDVec v3d = dg::create::inv_weights( grid);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     double eps=1e-6;
@@ -45,21 +40,21 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////
     //if(rank==0)std::cout<<"TEST CYLINDRIAL LAPLACIAN!\n";
     dg::Timer t;
-    dg::MVec x = dg::evaluate( initial, grid);
+    dg::MDVec x = dg::evaluate( initial, grid);
 
     //if(rank==0)std::cout << "Create Laplacian\n";
     //t.tic();
-    dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> laplace(grid);
-    dg::MMatrix DX = dg::create::dx( grid);
+    dg::Elliptic<dg::MDMatrix, dg::MDVec, dg::MDVec> laplace(grid);
+    dg::MDMatrix DX = dg::create::dx( grid);
     //t.toc();
     //if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::CG< dg::MVec > pcg( x, n*n*Nx*Ny);
+    dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny);
 
     //if(rank==0)std::cout<<"Expand right hand side\n";
-    const dg::MVec solution = dg::evaluate ( fct, grid);
-    const dg::MVec deriv = dg::evaluate( derivative, grid);
-    dg::MVec b = dg::evaluate ( laplace_fct, grid);
+    const dg::MDVec solution = dg::evaluate ( fct, grid);
+    const dg::MDVec deriv = dg::evaluate( derivative, grid);
+    dg::MDVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
     
@@ -69,7 +64,7 @@ int main( int argc, char* argv[])
     //if(rank==0)std::cout << "Number of pcg iterations "<< number<<std::endl;
     t.toc();
     if(rank==0)std::cout << " took "<< t.diff()<<"s\n";
-    dg::MVec  error(  solution);
+    dg::MDVec  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 
     double normerr = dg::blas2::dot( w3d, error);

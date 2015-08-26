@@ -3,7 +3,6 @@
 #include "blas.h"
 
 #include "helmholtz.h"
-#include "backend/xspacelib.cuh"
 #include "backend/typedefs.cuh"
 #include "multistep.h"
 

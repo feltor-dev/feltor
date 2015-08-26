@@ -2,7 +2,6 @@
 
 #include <cassert>
 
-#include "backend/matrix_traits.h"
 #include "blas.h"
 #include "elliptic.h"
 

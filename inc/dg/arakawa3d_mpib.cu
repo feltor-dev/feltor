@@ -2,12 +2,9 @@
 #include <iomanip>
 
 #include <mpi.h>
-
-
-#include "backend/mpi_evaluation.h"
 #include "arakawa.h"
+
 #include "backend/mpi_init.h"
-#include "backend/typedefs.cuh"
 #include "backend/timer.cuh"
 
 

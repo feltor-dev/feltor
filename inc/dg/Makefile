@@ -10,7 +10,8 @@ ifeq ($(strip $(system)),home)
 INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
-GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
+#GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
+GLFLAGS =$$(pkg-config --static --libs glfw3)
 ifeq ($(strip $(device)),gpu)
 GLFLAGS+= -lGLEW
 endif
@@ -64,7 +65,7 @@ dz_2_t: dz_2_t.cu dz.h
 	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu 
-	$(CC) -O3 -lineinfo $(CFLAGS) $< -o $@ $(INCLUDE) #lineinfo is for cuda profiler
+	$(CC) -O3 $(CFLAGS) $< -o $@ $(INCLUDE) 
 
 dg_t: dg_t.cpp ../dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm

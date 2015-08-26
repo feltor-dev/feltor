@@ -1,5 +1,6 @@
 #pragma once
 
+#include "evaluation.cuh"
 #include "xspacelib.cuh"
 #include "../blas1.h"
 
@@ -36,9 +37,9 @@ struct PoloidalAverage
     {
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
         lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());
-        w2d = create::weights( g);
+        w2d = dg::create::weights( g);
         Grid1d<double> g1x( 0, g.lx(), g.n(), g.Nx());
-        v1d = create::inv_weights( g1x);
+        v1d = dg::create::inv_weights( g1x);
 
     }
     /**

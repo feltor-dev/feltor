@@ -7,6 +7,7 @@
 
 #include "dg/blas.h"
 
+#include "dg/backend/functions.h"
 #include "geom_parameters.h"
 
 

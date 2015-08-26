@@ -7,9 +7,7 @@
 #include "backend/timer.cuh"
 #include "blas.h"
 #include "backend/derivatives.h"
-#include "backend/sparseblockmat.cuh"
 #include "backend/evaluation.cuh"
-#include "backend/typedefs.cuh"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

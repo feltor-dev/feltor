@@ -135,7 +135,7 @@ class Elliptic
      * @param x left-hand-side
      * @param y result
      */
-    void symv( Vector& x, Vector& y) 
+    void symv( const Vector& x, Vector& y) 
     {
         dg::blas2::gemv( rightx, x, temp); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp, temp); //Chi*R_x*x 

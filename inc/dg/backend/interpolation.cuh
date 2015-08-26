@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cusp/coo_matrix.h>
+#include <cusp/csr_matrix.h>
 #include "grid.h"
 #include "evaluation.cuh"
 #include "functions.h"
@@ -13,6 +15,9 @@
   */
 
 namespace dg{
+//interpolation matrices
+typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
+typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 
 namespace create{
     ///@cond

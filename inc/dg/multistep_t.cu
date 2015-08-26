@@ -1,40 +1,30 @@
 #include <iostream>
 
-#include <cusp/ell_matrix.h>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-
 #include "multistep.h"
-#include "backend/grid.h"
-#include "backend/evaluation.cuh"
-#include "backend/derivatives.cuh"
-#include "backend/typedefs.cuh"
+#include "elliptic.h"
 
-template < class container = thrust::device_vector<double> >
+template < class Matrix, class container = thrust::device_vector<double> >
 struct RHS
 {
     typedef container Vector;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    RHS( const dg::Grid2d<double>& g, double D): D_(D) 
-    {
-        laplaceM = dg::create::laplacianM( g, dg::normed);
-    }
+    RHS( const dg::Grid2d<double>& g, double D): D_(D), laplaceM(g, dg::normed)
+    { }
     void operator()( const std::vector<container>& y, std::vector<container>& yp)
     {
         dg::blas1::axpby( 0., y, 0., yp);
     }
   private:
     double D_;
-    cusp::ell_matrix<int, double, MemorySpace> laplaceM;
+    dg::Elliptic<Matrix, container, container> laplaceM;
 };
 
-template< class container>
+template< class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
-        w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)) { 
-        LaplacianM = dg::create::laplacianM( g, dg::normed); 
-        }
+        w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)),
+        LaplacianM( g, dg::normed) 
+        { }
 
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -49,7 +39,7 @@ struct Diffusion
   private:
     double nu_;
     const container w2d, v2d;
-    dg::DMatrix LaplacianM;
+    dg::Elliptic<Matrix, container, container> LaplacianM;
 };
 
 
@@ -84,8 +74,8 @@ int main()
 
     std::vector<dg::DVec> y0(2, dg::evaluate( sine, grid)), y1(y0);
 
-    RHS<dg::DVec> rhs( grid, nu);
-    Diffusion<dg::DVec> diffusion( grid, nu);
+    RHS<dg::DMatrix, dg::DVec> rhs( grid, nu);
+    Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, nu);
     dg::Karniadakis< std::vector<dg::DVec> > tvb( y0, y0[0].size(), eps);
     tvb.init( rhs, diffusion, y0, dt);
     dg::SIRK< std::vector<dg::DVec> > sirk( y0, y0[0].size(), eps);

@@ -3,12 +3,10 @@
 
 #include <thrust/host_vector.h>
 #include <mpi.h>
-#include "backend/timer.cuh"
-#include "backend/mpi_evaluation.h"
-#include "backend/mpi_derivatives.h"
 
 #include "elliptic.h"
 #include "cg.h"
+#include "backend/timer.cuh"
 #include "backend/mpi_init.h"
 
 
@@ -36,22 +34,22 @@ int main( int argc, char* argv[])
     MPI_Bcast(  &eps,1 , MPI_DOUBLE, 0, comm);
 
     dg::MPI_Grid3d grid( 0., lx, 0, ly, 0, lz, n, Nx, Ny,Nz, bcx, dg::PER,dg::PER, dg::cartesian, comm);
-    const dg::MPrecon w3d = dg::create::weights( grid);
-    const dg::MPrecon v3d = dg::create::inv_weights( grid);
+    const dg::MDVec w3d = dg::create::weights( grid);
+    const dg::MDVec v3d = dg::create::inv_weights( grid);
     if(rank==0)std::cout<<"Expand initial condition\n";
-    dg::MVec x = dg::evaluate( initial, grid);
+    dg::MDVec x = dg::evaluate( initial, grid);
 
     if(rank==0)std::cout << "Create Laplacian\n";
     dg::Timer t;
     t.tic();
-    dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> A ( grid, dg::not_normed); 
+    dg::Elliptic<dg::MDMatrix, dg::MDVec, dg::MDVec> A ( grid, dg::not_normed); 
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::CG< dg::MVec > pcg( x, n*n*Nx*Ny*Nz);
+    dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny*Nz);
     if(rank==0)std::cout<<"Evaluate right hand side\n";
-    const dg::MVec solution = dg::evaluate ( fct, grid);
-    dg::MVec b = dg::evaluate ( laplace_fct, grid);
+    const dg::MDVec solution = dg::evaluate ( fct, grid);
+    dg::MDVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
     
@@ -65,7 +63,7 @@ int main( int argc, char* argv[])
         std::cout << "...               took "<< t.diff()<<"s\n";
     }
 
-    dg::MVec  error(  solution);
+    dg::MDVec  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 
     double normerr = dg::blas2::dot( w3d, error);

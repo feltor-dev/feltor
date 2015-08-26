@@ -2,15 +2,10 @@
 #include <iomanip>
 #include "mpi.h"
 
-#include <thrust/host_vector.h>
-
-#include "backend/timer.cuh"
-#include "backend/mpi_evaluation.h"
-#include "backend/mpi_derivatives.h"
-#include "backend/mpi_init.h"
 #include "elliptic.h"
-
 #include "cg.h"
+
+#include "backend/mpi_init.h"
 
 const double ly = 2.*M_PI;
 const double lx = 2.*M_PI;
@@ -33,21 +28,21 @@ int main( int argc, char* argv[])
     mpi_init2d( bcx, dg::PER, n, Nx, Ny, comm);
 
     dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER, comm);
-    const dg::MPrecon w2d = dg::create::weights( grid);
-    const dg::MPrecon v2d = dg::create::inv_weights( grid);
+    const dg::MDVec w2d = dg::create::weights( grid);
+    const dg::MDVec v2d = dg::create::inv_weights( grid);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if( rank == 0) std::cout<<"Expand initial condition\n";
-    dg::MVec x = dg::evaluate( initial, grid);
+    dg::MDVec x = dg::evaluate( initial, grid);
 
     if( rank == 0) std::cout << "Create symmetric Laplacian\n";
-    dg::Elliptic<dg::MMatrix, dg::MVec, dg::MPrecon> A ( grid, dg::not_normed); 
+    dg::Elliptic<dg::MDMatrix, dg::MDVec, dg::MDVec> A ( grid, dg::not_normed); 
 
-    dg::CG< dg::MVec > pcg( x, n*n*Nx*Ny);
+    dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny);
     if( rank == 0) std::cout<<"Expand right hand side\n";
-    const dg::MVec solution = dg::evaluate ( fct, grid);
-    const dg::MVec deriv = dg::evaluate( derivative, grid);
-    dg::MVec b = dg::evaluate ( laplace_fct, grid);
+    const dg::MDVec solution = dg::evaluate ( fct, grid);
+    const dg::MDVec deriv = dg::evaluate( derivative, grid);
+    dg::MDVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w2d, b, b);
     //////////////////////////////////////////////////////////////////////
@@ -59,13 +54,13 @@ int main( int argc, char* argv[])
         std::cout << "... for a precision of "<< eps<<std::endl;
     }
 
-    dg::MVec  error(  solution);
+    dg::MDVec  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 
     double normerr = dg::blas2::dot( w2d, error);
     double norm = dg::blas2::dot( w2d, solution);
     if( rank == 0) std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
-    dg::MMatrix DX = dg::create::dx( grid);
+    dg::MDMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w2d, error); 

@@ -1,18 +1,9 @@
 #include <iostream>
 #include <iomanip>
 
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
-#include <cusp/print.h>
-
 #include "backend/timer.cuh"
-#include "backend/evaluation.cuh"
-#include "backend/derivatives.h"
-#include "blas.h"
 #include "cg.h"
 #include "elliptic.h"
-
-#include "backend/typedefs.cuh"
 
 
 const double lx = 2.*M_PI;

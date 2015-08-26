@@ -14,9 +14,6 @@
  */
 
 namespace dg{
-//interpolation matrices
-typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
-typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 
 /**
 * @brief Class for the evaluation of a parallel derivative

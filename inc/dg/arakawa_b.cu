@@ -5,10 +5,8 @@
 #include <thrust/host_vector.h>
 
 #include "backend/timer.cuh"
-#include "backend/evaluation.cuh"
 #include "arakawa.h"
 #include "blas.h"
-#include "backend/typedefs.cuh"
 
 
 

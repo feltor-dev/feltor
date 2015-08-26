@@ -152,7 +152,7 @@ struct Rolkar
  * @tparam container main container to hold the vectors
  * @tparam Preconditioner class of the weights
  */
-template< class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
+template< class DZ, class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
 struct Feltor
 {
     /**
@@ -164,7 +164,7 @@ struct Feltor
      * @param gp the geometry parameters
      */
     template<class Grid3d>
-    Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
+    Feltor( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp, const DZ& dz);
 
 
     /**
@@ -172,7 +172,7 @@ struct Feltor
      *
      * @return 
      */
-    dg::DZ<Matrix, container> dz(){return dzN_;}
+    DZ dz(){return dzN_;}
 
     /**
      * @brief Returns phi and psi that belong to the last solve of the polarization equation
@@ -268,8 +268,8 @@ struct Feltor
     std::vector<container> dzy, curvy; 
 
     //matrices and solvers
-    dg::DZ<Matrix, container> dzDIR_;
-    dg::DZ<Matrix, container> dzN_;
+    DZ dzDIR_;
+    DZ dzN_;
     dg::Poisson< Matrix, container> poissonN,poissonDIR; 
 
     dg::Elliptic< Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR; 
@@ -286,9 +286,9 @@ struct Feltor
 ///@}
 
 ///@cond
-template<class Matrix, class container, class P>
+template<class DZ, class Matrix, class container, class P>
 template<class Grid>
-Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
+Feltor<DZ, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp, const DZ& dz): 
     chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
@@ -301,8 +301,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi),  npe(phi), logn(phi),
     dzy( 4, chi),curvy(dzy), 
-    dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
-    dzN_(solovev::Field(gp), g,   2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+    dzDIR_(dz),
+    dzN_(dz),
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
@@ -323,8 +323,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+1)); 
 }
 
-template<class Matrix, class container, class P>
-container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
+template<class DZ, class Matrix, class container, class P>
+container& Feltor<DZ, Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
@@ -340,8 +340,8 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     return phi[0];
 }
 
-template< class Matrix, class container, class P>
-container& Feltor<Matrix,container, P>::compute_psi( container& potential)
+template< class DZ, class Matrix, class container, class P>
+container& Feltor<DZ, Matrix,container, P>::compute_psi( container& potential)
 {
     invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
     poissonN.variationRHS(potential, omega);
@@ -351,15 +351,15 @@ container& Feltor<Matrix,container, P>::compute_psi( container& potential)
     return phi[1];    
 }
 
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
+template<class DZ, class Matrix, class container, class P>
+void Feltor<DZ, Matrix, container, P>::initializene( const container& src, container& target)
 { 
     invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
 
-template<class M, class V, class P>
-void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
+template<class DZ, class M, class V, class P>
+void Feltor<DZ, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
 {
     for(unsigned i=0; i<2; i++)
     {
@@ -450,8 +450,8 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
 }
 
 
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class DZ, class Matrix, class container, class P>
+void Feltor<DZ, Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - 1
        y[1] := N_i - 1
@@ -666,8 +666,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
 
 //Computes curvature operator
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::curveN( container& src, container& target)
+template<class DZ, class Matrix, class container, class P>
+void Feltor<DZ, Matrix, container, P>::curveN( container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxlhs(), src, target); //d_R src
@@ -676,8 +676,8 @@ void Feltor<Matrix, container, P>::curveN( container& src, container& target)
     dg::blas1::pointwiseDot( curvZ, temp1, temp1);   // C^Z d_Z src
     dg::blas1::axpby( 1., temp1, 1., target ); // (C^R d_R + C^Z d_Z) src
 }
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::curveDIR( container& src, container& target)
+template<class DZ, class Matrix, class container, class P>
+void Feltor<DZ, Matrix, container, P>::curveDIR( container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxrhs(), src, target); //d_R src

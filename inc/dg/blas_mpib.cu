@@ -6,7 +6,6 @@
 #include <thrust/device_vector.h>
 #include "backend/timer.cuh"
 #include "blas.h"
-#include "backend/typedefs.cuh"
 #include "backend/mpi_evaluation.h"
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_init.h"
