@@ -259,7 +259,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
             MAX_BLOCKS, 
             cusp::system::cuda::DIVIDE_INTO( A.num_rows, BLOCK_SIZE));
     const int pitch = A.column_indices.pitch; //# of cols in memory
-    assert( pitch == A.values.pitch);
+    assert( pitch == (int)A.values.pitch);
     int* Aj = thrust::raw_pointer_cast(&A.column_indices(0,0));
     double * Av = thrust::raw_pointer_cast(&A.values(0,0));
 
@@ -310,7 +310,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
             MAX_BLOCKS, 
             cusp::system::cuda::DIVIDE_INTO( A.num_rows, BLOCK_SIZE));
     const int pitch = A.column_indices.pitch; //# of cols in memory
-    assert( pitch == A.values.pitch);
+    assert( pitch == (int)A.values.pitch);
     int* Aj = thrust::raw_pointer_cast(&A.column_indices(0,0));
     double * Av = thrust::raw_pointer_cast(&A.values(0,0));
 

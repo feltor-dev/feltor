@@ -64,13 +64,6 @@ struct ToeflI
     const std::vector<container>& potential( ) const { return phi;}
 
     /**
-     * @brief Return the normalized negative laplacian used by this object
-     *
-     * @return cusp matrix
-     */
-    const Matrix& laplacianM( ) const { return laplaceM;}
-
-    /**
      * @brief Return the Gamma operator used by this object
      *
      * @return Gamma operator
@@ -125,10 +118,10 @@ struct ToeflI
     std::vector<container> gamma_n, gamma_old;
 
     //matrices and solvers
-    Matrix laplaceM; //contains normalized laplacian
     Helmholtz< Matrix, container, container > gamma1;
     ArakawaX< Matrix, container> arakawa; 
     dg::Elliptic< Matrix, container, container > pol; 
+    dg::Elliptic< Matrix, container, container > laplaceM;
     CG<container > pcg;
 
     const container w2d, v2d, one;
@@ -150,6 +143,7 @@ ToeflI< container>::ToeflI( const Grid2d<value_type>& grid, double kappa, double
     gamma1(  grid, -0.5*tau_i),
     arakawa( grid), 
     pol(     grid), 
+    laplaceM( grid, normed, centered),
     pcg( omega, omega.size()), 
     w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu)
@@ -165,7 +159,6 @@ ToeflI< container>::ToeflI( const Grid2d<value_type>& grid, double kappa, double
     //std::cout << tau_[0]<<" "<<tau_[1]<<" "<<tau_[2]<<"\n";
     //std::cin >> tau_z;
     //create derivatives
-    laplaceM = create::laplacianM( grid, normed, dg::symmetric); //doesn't hurt to be symmetric but doesn't solve pb
 
 }
 

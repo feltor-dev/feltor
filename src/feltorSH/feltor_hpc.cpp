@@ -74,9 +74,9 @@ int main( int argc, char* argv[])
     dg::Grid2d<double> grid_out = dg::create::ghostless_grid( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::MHMatrix, dg::MHVec, dg::MHVec > feltor( grid, p); //initialize before rolkar!
     if(rank==0) std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p);
+    eule::Rolkar<dg::MHMatrix, dg::MHVec, dg::MHVec > rolkar( grid, p);
     if(rank==0) std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
 //     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    std::vector<dg::MVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
+    std::vector<dg::MHVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
     
       //initialization via N_i,T_I ->n_e, t_i=t_e
     y1[1] = dg::evaluate( init0, grid);
@@ -124,7 +124,7 @@ int main( int argc, char* argv[])
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg
     std::cout << "Done!\n";
     
-    dg::Karniadakis< std::vector<dg::MVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::MHVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     if(rank==0) std::cout << "intiialize Timestepper" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     if(rank==0) std::cout << "Done!\n";    
@@ -178,8 +178,8 @@ int main( int argc, char* argv[])
     MPI_Cart_get( comm, 2, dims, periods, coords);
     size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};  
     size_t start[3] = {0, coords[1]*count[1],          coords[0]*count[2]}; 
-    dg::MVec transferD( dg::evaluate(dg::zero, grid));
-    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::MHVec transferD( dg::evaluate(dg::zero, grid));
+    dg::HHVec transferH( dg::evaluate(dg::zero, grid_out));
     //create local interpolation matrix
     cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out, grid.local()); 
     for( unsigned i=0; i<4; i++)

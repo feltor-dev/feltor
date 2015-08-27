@@ -6,10 +6,9 @@
 
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
-//#include "mpi_matrix.h"
 #include "mpi_precon.h"
 #include "mpi_init.h"
-#include "../average.h"
+#include "average.h"
 #include "timer.cuh"
 
 const double lx = 2.*M_PI;
@@ -35,19 +34,21 @@ int main(int argc, char* argv[])
     dg::Timer t;
  
 
-    std::cout << "constructing polavg" << std::endl;
-    dg::PoloidalAverage<dg::MHVec,dg::HVec > pol(g);
-    std::cout << "constructing polavg end" << std::endl;
+    if(rank==0)std::cout << "constructing polavg" << std::endl;
+    dg::PoloidalAverage<dg::HVec,dg::HVec > pol(g);
+    if(rank==0)std::cout << "constructing polavg end" << std::endl;
     dg::MHVec vector = dg::evaluate( function ,g), average_y( vector);
     const dg::MHVec solution = dg::evaluate( pol_average, g);
-    std::cout << "Averaging ... \n";
+    if(rank==0)std::cout << "Averaging ... \n";
     t.tic();
     pol( vector, average_y);
     t.toc();
-    std::cout << "Assembly of average vector took:      "<<t.diff()<<"s\n";
+    if(rank==0)std::cout << "Assembly of average vector took:      "<<t.diff()<<"s\n";
 
     dg::blas1::axpby( 1., solution, -1., average_y, vector);
-    std::cout << "Distance to solution is: "<<        sqrt(dg::blas2::dot( vector, dg::create::weights( g), vector))<<std::endl;
+    dg::MHVec w2d = dg::create::weights(g);
+    double norm = dg::blas2::dot(vector, w2d, vector);
+    if(rank==0)std::cout << "Distance to solution is: "<<        sqrt(norm)<<std::endl;
 
     MPI_Finalize();
     return 0;

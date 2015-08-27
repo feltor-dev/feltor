@@ -3,7 +3,7 @@
 #include <cusp/print.h>
 
 #include "blas.h"
-#include "dz.h"
+#include "ds.h"
 #include "functors.h"
 
 #include "backend/functions.h"
@@ -60,23 +60,21 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "Yout typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz);
+    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
     const dg::DVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::FieldAligned<dg::IDMatrix, dg::DVec> 
-        dzFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
 
-    dg::DZ< dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> 
-        dz ( dzFA, field, g3d, dg::not_normed, dg::centered);
-    //dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d, g3d.hz(), 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::DDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
+    //dg::DS<dg::DMatrix, dg::DVec> ds( field, g3d, g3d.hz(), 1e-10, dg::DefaultLimiter(), dg::NEU);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::DVec solution = dg::evaluate( deri, g3d);
     t.tic();
-    dz( function, derivative);
+    ds( function, derivative);
     t.toc();
     std::cout << "Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., solution, -1., derivative);

@@ -8,13 +8,15 @@
 namespace dg{
 //vectors
 typedef thrust::device_vector<double> DVec; //!< Device Vector
-typedef thrust::host_vector<double> HVec; //!< Host Vector
+typedef thrust::host_vector<double>   HVec; //!< Host Vector
+typedef thrust::device_vector<int> IDVec; //!< Device index Vector
+typedef thrust::host_vector<int>   IHVec; //!< Host index Vector
 //derivative matrices
 typedef EllSparseBlockMatDevice DMatrix;
 typedef EllSparseBlockMat HMatrix;
 
 #ifdef MPI_VERSION
-typedef MPI_Vector<thrust::device_vector<double> > MDVec;
+typedef MPI_Vector<thrust::device_vector<double> >  MDVec;
 typedef MPI_Vector<thrust::host_vector<double>  >   MHVec;
 
 typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH;

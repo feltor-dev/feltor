@@ -83,11 +83,11 @@ struct Collective
     void transpose(){ sendTo_.swap( recvFrom_);}
     void invert(){ sendTo_.swap( recvFrom_);}
 
-    thrust::host_vector<double> scatter( const thrust::host_vector<double>& values);
-    void scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store);
-    void scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store);
-    void gather( const thrust::host_vector<double>& store, thrust::host_vector<double>& values);
-    void gather( const thrust::device_vector<double>& store, thrust::device_vector<double>& values);
+    thrust::host_vector<double> scatter( const thrust::host_vector<double>& values)const;
+    void scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store) const;
+    void scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store) const;
+    void gather( const thrust::host_vector<double>& store, thrust::host_vector<double>& values) const;
+    void gather( const thrust::device_vector<double>& store, thrust::device_vector<double>& values) const;
     unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
     unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
     MPI_Comm communicator() const{return comm_;}
@@ -98,7 +98,7 @@ struct Collective
     MPI_Comm comm_;
 };
 
-void Collective::scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store)
+void Collective::scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store) const
 {
     //transfer to host, then scatter and transfer result to device
     thrust::host_vector<double> hvalues(values), hstore(store.size());
@@ -106,21 +106,26 @@ void Collective::scatter( const thrust::device_vector<double>& values, thrust::d
     thrust::copy( hstore.begin(), hstore.end(), store.begin());
 }
 
-void Collective::scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store)
+void Collective::scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store) const
 {
     assert( store.size() == store_size() );
-    MPI_Alltoallv( const_cast<double*>(values.data()), sendTo_.data(), accS_.data(), MPI_DOUBLE,
-                   store.data(), recvFrom_.data(), accR_.data(), MPI_DOUBLE, comm_);
+    MPI_Alltoallv( const_cast<double*>(values.data()), 
+                   const_cast<int*>(sendTo_.data()), 
+                   const_cast<int*>(accS_.data()), MPI_DOUBLE,
+                   store.data(), 
+                   const_cast<int*>(recvFrom_.data()), 
+                   const_cast<int*>(accR_.data()), MPI_DOUBLE, comm_);
+                   //the const_cast shouldn't be necessary any more in MPI-3 standard
 }
 
-thrust::host_vector<double> Collective::scatter( const thrust::host_vector<double>& values)
+thrust::host_vector<double> Collective::scatter( const thrust::host_vector<double>& values) const 
 {
     thrust::host_vector<double> received( store_size() );
     scatter( values, received);
     return received;
 }
 
-void Collective::gather( const thrust::device_vector<double>& gatherFrom, thrust::device_vector<double>& values)
+void Collective::gather( const thrust::device_vector<double>& gatherFrom, thrust::device_vector<double>& values) const 
 {
     //transfer to host, then gather and transfer result to device
     thrust::host_vector<double> hvalues(values.size()), hgatherFrom(gatherFrom);
@@ -128,13 +133,17 @@ void Collective::gather( const thrust::device_vector<double>& gatherFrom, thrust
     thrust::copy( hvalues.begin(), hvalues.end(), values.begin());
 }
 
-void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values)
+void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values) const 
 {
     assert( gatherFrom.size() == store_size() );
     values.resize( values_size() );
     MPI_Alltoallv( 
-            const_cast<double*>(gatherFrom.data()), recvFrom_.data(), accR_.data(), MPI_DOUBLE, 
-            values.data(), sendTo_.data(), accS_.data(), MPI_DOUBLE, comm_);
+            const_cast<double*>(gatherFrom.data()), 
+            const_cast<int*>(recvFrom_.data()),
+            const_cast<int*>(accR_.data()), MPI_DOUBLE, 
+            values.data(), 
+            const_cast<int*>(sendTo_.data()), 
+            const_cast<int*>(accS_.data()), MPI_DOUBLE, comm_);
 }
 //BijectiveComm ist der Spezialfall, dass jedes Element nur ein einziges Mal gebraucht wird. 
 ///@endcond
@@ -205,7 +214,7 @@ struct BijectiveComm
      * @return received data from other processes of size recv_size()
      * @note a scatter followed by a gather of the received values restores the original array
      */
-     Vector collect( const Vector& values)
+     Vector collect( const Vector& values)const
     {
         assert( values.size() == idx_.size());
         Vector values_(values);
@@ -224,7 +233,7 @@ struct BijectiveComm
      * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
      * @note a scatter followed by a gather of the received values restores the original array
      */
-    void send_and_reduce( const Vector& gatherFrom, Vector& values)
+    void send_and_reduce( const Vector& gatherFrom, Vector& values) const
     {
         Vector values_(values.size());
         //sammeln

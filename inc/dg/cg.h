@@ -5,6 +5,10 @@
 
 #include "blas.h"
 
+#ifdef DG_BENCHMARK
+#include "backend/timer.cuh"
+#endif //DG_BENCHMARK
+
 /*!@file
  * Conjugate gradient class and functions
  */
@@ -321,7 +325,26 @@ struct Invert
         blas1::axpby( alpha[2], phi2, 1., phi); // 0. phi2 + 1. phi0 + 0.*phi1 = phi
         //blas1::axpby( 2., phi1, -1.,  phi2, phi);
         dg::blas2::symv( w, rho, phi2);
+#ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
+        Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
         unsigned number = cg( op, phi, phi2, p, eps_, nrmb_correction_);
+#ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif //MPI
+        std::cout << "# of cg iterations \t"<< number << "\t";
+        t.toc();
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif //MPI
+        std::cout<< "took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
         phi1.swap( phi2);
         phi0.swap( phi1);
         

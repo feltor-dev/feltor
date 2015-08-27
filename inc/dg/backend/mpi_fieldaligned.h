@@ -147,7 +147,7 @@ struct MPI_FieldAligned
 
 template<class LocalMatrix, class Communicator, class LocalContainer>
 template <class Field, class Limiter>
-MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz ): 
+MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()),  
     dz_(field, grid.global(), eps, limit, globalbcz)
@@ -166,7 +166,8 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     //integrate to next z-planes
     std::vector<thrust::host_vector<double> > yp(y), ym(y); 
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
-    double deltaPhi = g_.hz();
+    if(deltaPhi<=0) deltaPhi = g_.hz();
+    else assert( g_.Nz() == 1);
     for( unsigned i=0; i<grid.size(); i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];

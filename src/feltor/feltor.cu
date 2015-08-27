@@ -24,8 +24,6 @@
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
-typedef dg::DZ< dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DZ;
-
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
@@ -75,9 +73,7 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    dg::FieldAligned<dg::IDMatrix, dg::DVec> dzFA(solovev::Field(gp), grid, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR);
-    DZ dz( dzFA, solovev::Field(gp), grid, dg::normed, dg::centered);
-    eule::Feltor<DZ, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp, dz); //initialize before rolkar!
+    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
     std::cout << "Done!\n";
@@ -97,7 +93,7 @@ int main( int argc, char* argv[])
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = dzFA.evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =2 ->2*2-1
+    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =2 ->2*2-1
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning

@@ -83,7 +83,7 @@ struct RowColDistMat
     * @param y output
     */
     template<class container> 
-    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
+    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y) const
     {
         assert( x.communicator() == y.communicator());
         assert( x.communicator() == c_.communicator());
@@ -304,6 +304,13 @@ struct MatrixTraits<RowColDistMat<LI,LO, C> >
     typedef typename LI::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
+template<class LI, class LO, class C>
+struct MatrixTraits<const RowColDistMat<LI,LO, C> >
+{
+    typedef typename LI::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
+};
+
 template<class L, class C>
 struct MatrixTraits<RowDistMat<L, C> >
 {
@@ -311,7 +318,19 @@ struct MatrixTraits<RowDistMat<L, C> >
     typedef MPIMatrixTag matrix_category; //!< 
 };
 template<class L, class C>
+struct MatrixTraits<const RowDistMat<L, C> >
+{
+    typedef typename L::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
+};
+template<class L, class C>
 struct MatrixTraits<ColDistMat<L, C> >
+{
+    typedef typename L::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
+};
+template<class L, class C>
+struct MatrixTraits<const ColDistMat<L, C> >
 {
     typedef typename L::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 

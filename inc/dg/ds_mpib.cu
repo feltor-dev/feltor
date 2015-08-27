@@ -1,9 +1,8 @@
 #include <iostream>
 
-#include <cusp/print.h>
 #include <mpi.h>
 
-#include "dz.h"
+#include "ds.h"
 
 #include "backend/mpi_evaluation.h"
 #include "backend/mpi_init.h"
@@ -60,23 +59,21 @@ int main(int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     Field field( R_0, I_0);
-    dg::MPI_Grid3d g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, comm);
+    dg::MPI_Grid3d g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical, comm);
     const dg::MDVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::MPI_FieldAligned<dg::IDMatrix, dg::BijectiveComm< thrust::device_vector<int>, dg::DVec >, dg::DVec>    
-        dzFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::MDDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
 
-    dg::DZ< dg::MPI_FieldAligned<dg::IDMatrix, dg::BijectiveComm< thrust::device_vector<int>, dg::DVec >,  dg::DVec>, dg::MDMatrix, dg::MDVec > 
-        dz ( dzFA, field, g3d, dg::not_normed, dg::centered); 
-    //dg::DZ<dg::MMatrix, dg::MDVec> dz( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter());
+    dg::MDDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered); 
+    //dg::DS<dg::MMatrix, dg::MDVec> ds( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter());
     t.toc();
     if(rank==0)std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
     dg::MDVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::MDVec solution = dg::evaluate( deri, g3d);
     t.tic();
-    dz( function, derivative);
+    ds( function, derivative);
     t.toc();
     if(rank==0)std::cout << "Application of parallel Derivative took  "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., solution, -1., derivative);

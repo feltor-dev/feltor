@@ -131,8 +131,8 @@ struct NearestNeighborComm
         construct( src.n(), src.dims(), src.communicator(), src.direction());
     }
 
-    Vector collect( const Vector& input);
-    int size(); //size of values is size of input plus ghostcells
+    Vector collect( const Vector& input)const;
+    int size()const; //size of values is size of input plus ghostcells
     MPI_Comm communicator() const {return comm_;}
     int n() const{return n_;}
     const int* dims() const{return dim_;}
@@ -147,8 +147,8 @@ struct NearestNeighborComm
     bool silent_;
     Index buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
 
-    void sendrecv( HVec&, HVec&, HVec& , HVec&);
-    int buffer_size();
+    void sendrecv( HVec&, HVec&, HVec& , HVec&)const;
+    int buffer_size() const;
 };
 
 typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH;
@@ -218,14 +218,14 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
 }
 
 template<class I, class V>
-int NearestNeighborComm<I,V>::size()
+int NearestNeighborComm<I,V>::size() const
 {
     if( silent_) return 0;
     return 2*buffer_size();
 }
 
 template<class I, class V>
-int NearestNeighborComm<I,V>::buffer_size()
+int NearestNeighborComm<I,V>::buffer_size() const
 {
     switch( direction_)
     {
@@ -241,7 +241,7 @@ int NearestNeighborComm<I,V>::buffer_size()
 }
 
 template<class I, class V>
-V NearestNeighborComm<I,V>::collect( const V& input)
+V NearestNeighborComm<I,V>::collect( const V& input) const
 {
     if( silent_) return V();
         //int rank;
@@ -286,7 +286,7 @@ V NearestNeighborComm<I,V>::collect( const V& input)
 }
 
 template<class I, class V>
-void NearestNeighborComm<I,V>::sendrecv( HVec& sb1, HVec& sb2 , HVec& rb1, HVec& rb2)
+void NearestNeighborComm<I,V>::sendrecv( HVec& sb1, HVec& sb2 , HVec& rb1, HVec& rb2) const
 {
     int source, dest;
     MPI_Status status;

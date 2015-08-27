@@ -32,15 +32,18 @@ int main(int argc, char* argv[])
     dg::MPI_Grid2d g( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     
 
-    std::cout << "constructing polavg" << std::endl;
-    dg::PoloidalAverage<dg::MHVec,dg::HVec > pol(g);
-    std::cout << "constructing polavg end" << std::endl;
+    if(rank==0)std::cout << "constructing polavg" << std::endl;
+    dg::PoloidalAverage<dg::HVec, dg::IHVec > pol(g);
+    if(rank==0)std::cout << "constructing polavg end" << std::endl;
     dg::MHVec vector = dg::evaluate( function ,g), average_y( vector);
     const dg::MHVec solution = dg::evaluate( pol_average, g);
-    std::cout << "Averaging ... \n";
+    if(rank==0)std::cout << "Averaging ... \n";
     pol( vector, average_y);
     dg::blas1::axpby( 1., solution, -1., average_y, vector);
-    std::cout << "Distance to solution is: "<<        sqrt(dg::blas2::dot( vector, dg::create::weights( g), vector))<<std::endl;
+
+    dg::MHVec w2d = dg::create::weights(g);
+    double norm = dg::blas2::dot(vector, w2d, vector);
+    if(rank==0)std::cout << "Distance to solution is: "<<        sqrt(norm)<<std::endl;
 
     MPI_Finalize();
     return 0;

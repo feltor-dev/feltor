@@ -4,7 +4,6 @@
 #include <exception>
 
 #include "dg/algorithm.h"
-#include "dg/backend/polarisation.cuh"
 #include "dg/backend/typedefs.cuh"
 
 #ifdef DG_BENCHMARK

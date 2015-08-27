@@ -4,15 +4,12 @@
 #include <mpi.h>
 
 
-#include "backend/xspacelib.cuh"
-#include "backend/typedefs.cuh"
+#include "toefl.cuh"
+#include "functors.h"
+
 #include "backend/mpi_init.h"
 
-#include "algorithm.h"
-#include "functors.h"
-#include "toefl.cuh"
-
-#include "netcdf_par.h"
+//#include "netcdf_par.h"
 #include "file/nc_utilities.h"
 
 
@@ -85,13 +82,13 @@ int main( int argc, char* argv[])
     //create initial vector
     const dg::MPI_Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR, comm);
     dg::Gaussian gaussian( 1., ly/2., .1, .1, 1);
-    dg::MVec theta = dg::evaluate ( gaussian, grid);
-    std::vector<dg::MVec> y0(2, theta);
-    y0[1] = dg::MVec( dg::evaluate(dg::zero, grid) ); //omega is zero
+    dg::MHVec theta = dg::evaluate ( gaussian, grid);
+    std::vector<dg::MHVec> y0(2, theta);
+    y0[1] = dg::MHVec( dg::evaluate(dg::zero, grid) ); //omega is zero
 
     //create RHS and AB
-    dg::Toefl< dg::MMatrix, dg::MVec, dg::MPrecon> test( grid, Ra, Pr, eps); 
-    dg::AB< k, std::vector<dg::MVec> > ab( y0);
+    dg::Toefl< dg::MHMatrix, dg::MHVec, dg::MHVec> test( grid, Ra, Pr, eps); 
+    dg::AB< k, std::vector<dg::MHVec> > ab( y0);
     ab.init( test, y0, dt);
 
     int ncid;
@@ -109,7 +106,7 @@ int main( int argc, char* argv[])
     MPI_Cart_get( comm, 2, dims, periods, coords);
     size_t count[3] = {1, grid.n()*(grid.Ny()-2), grid.n()*(grid.Nx()-2)};
     size_t start[3] = {0, coords[1]*count[1], coords[0]*count[2]};
-    dg::MVec ground = dg::evaluate( groundState, grid), temperature( ground);
+    dg::MHVec ground = dg::evaluate( groundState, grid), temperature( ground);
     double time = 0;
     size_t tcount = 1;
     if(rank==0) std::cout << "Writing file toefl.nc...\n";
@@ -118,7 +115,7 @@ int main( int argc, char* argv[])
         //compute the total temperature
         dg::blas1::axpby( 1., y0[0],  0., temperature);
         dg::blas1::axpby( 1., ground, 1., temperature);
-        thrust::host_vector<double> reduc = temperature.cut_overlap();
+        thrust::host_vector<double> reduc = temperature.data();
         h = nc_put_vara_double( ncid, dataID, start, count, reduc.data());
         h = nc_put_vara_double( ncid, tvarID, &start[0], &tcount, &time);
         start[0]++;

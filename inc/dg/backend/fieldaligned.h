@@ -179,12 +179,13 @@ struct FieldAligned
     * @param limit Instance of the limiter class (Default is a limiter everywhere, 
         note that if bcz is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on bounding box
+    * @param deltaPhi Is either <0 (then it's ignored), may differ from hz() only if Nz() == 1
     * @note If there is a limiter, the boundary condition on the first/last plane is set 
         by the bcz variable from the grid and can be changed by the set_boundaries function. 
         If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR);
+    FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
 
 
     /**
@@ -244,7 +245,7 @@ struct FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp>
-    container evaluate( BinaryOp f, unsigned plane=0);
+    container evaluate( BinaryOp f, unsigned plane=0) const;
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
      *
@@ -262,7 +263,7 @@ struct FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp, class UnaryOp>
-    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
 
     void einsPlus( const container& n, container& npe);
     void einsMinus( const container& n, container& nme);
@@ -287,7 +288,7 @@ struct FieldAligned
 ///@cond
 template<class M, class container>
 template <class Field, class Limiter>
-FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz):
+FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         g_(grid), bcz_(grid.bcz())
 {
@@ -304,7 +305,9 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
   
 //     integrate field lines for all points
-    double deltaPhi = g_.hz();
+    
+    if( deltaPhi <=0) deltaPhi = g_.hz();
+    else assert( grid.Nz() == 1);
     for( unsigned i=0; i<size; i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
@@ -350,7 +353,7 @@ void FieldAligned<M,container>::set_boundaries( dg::bc bcz, const container& glo
 
 template< class M, class container>
 template< class BinaryOp>
-container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0)
+container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0) const
 {
 
     assert( p0 < g_.Nz() && g_.Nz() > 1);
@@ -380,7 +383,7 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0)
 
 template< class M, class container>
 template< class BinaryOp, class UnaryOp>
-container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds)
+container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
 {
 
     assert( g_.Nz() > 1);
