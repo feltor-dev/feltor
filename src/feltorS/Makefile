@@ -1,4 +1,4 @@
-system=home # Use as Makefile parameter!
+system=stallo # Use as Makefile parameter!
 device=gpu
 
 INCLUDE = -I../../inc  # other project libraries
@@ -89,6 +89,14 @@ LIBS    += -L/cm/shared/apps/intel/impi_5.0.3/intel64/lib -lmpi
 LIBS    +=-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
+
+ifeq ($(strip $(system)), stallo)
+INCLUDE += -I$(HOME)/local/thrust
+INCLUDE += -I$(HOME)/local/cusplibrary
+INCLUDE += -I/global/apps/netcdf/4.2.1.1/gcc/4.7.2/include/
+
+endif
+
 
 all: feltor feltor_hpc
 
