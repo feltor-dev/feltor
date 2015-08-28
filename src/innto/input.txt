@@ -7,17 +7,17 @@ The parameters in brackets lead to drift wave turbulence with
 zonal flows.
 
 ---------------------Algorithmic parameters-------------------
-1) nx (grid points in x)                =  512     (256.)
-2) ny (grid points in y)                =   512     (256.)
-3) dt (time step in units c_s/L_p)      =   0.0015625    (0.01)
+1) nx (grid points in x)                =  128     (256.)
+2) ny (grid points in y)                =   128     (256.)
+3) dt (time step in units c_s/L_p)      =   0.02   (0.01)
 ---------------------Boundary conditions----------------------
 4) ly (length of y in units of rho_s)         =   64   (64.)
-5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   0   (1.0)
+5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   2   (1.0)
 ---------------------Physical parameters----------------------
-6) mhw:1, ohw:0 (modified/ordinary HW) =   0       (1)
+6) mhw:1, ohw:0 (modified/ordinary HW) =   1       (1)
 
-7) ddd (dissip. coupling)              =   5.0     (0.5)
-8) nu  (artif. hyper-viscosity)        =   0.001   (0.001)
+7) ddd (dissip. coupling)              =   0.1     (0.5)
+8) nu  (artif. hyper-viscosity)        =   0.02   (0.001)
 9) mcv (magnetic curvature)            =   -0.0000 (-0.0005)
 -------------------------Species------------------------------
 10) n00 (perturbation amplitude)        =   .64     (1.0)

@@ -73,7 +73,7 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     //////////////////////////////////////////////////////////////
 
-      //Make grid
+     //Make grid
     dg::MPI_Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
     dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 

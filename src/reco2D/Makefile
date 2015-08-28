@@ -1,14 +1,12 @@
-system=home
+system=home # Use as Makefile parameter!
 device=gpu
 
-
 INCLUDE = -I../../inc # other project libraries
-INCLUDE+= -I../ # geometry library
-
+INCLUDE+= -I../
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_52 -w
+CFLAGS = --compiler-options -Wall -arch=sm_20 -w
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 GLFLAGS= -lGLEW
@@ -24,14 +22,14 @@ ifeq ($(strip $(device)),mpi)
 CC = mpic++
 CFLAGS = #-Wall -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-OPT	   = -O3 
+OPT	   = -O3
 endif
 
 ifeq ($(strip $(system)),home)
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
-GLFLAGS += $$(pkg-config --static --libs glfw3)
+GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr 
 LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
@@ -48,29 +46,39 @@ endif
 
 ifeq ($(strip $(system)),vsc)
 INCLUDE += -I$(HOME)/include
-INCLUDE += -I/opt/sw/hdf5/1.8.11/include
 INCLUDE += -I/opt/intel/impi/4.1.0/include64 
-INCLUDE += -I/opt/sw/netcdf/4.0.1/intel-hdf5/include
+INCLUDE += -I/opt/sw/netcdf/4.3/include
+INCLUDE += -I/opt/sw/hdf5/1.8.10-p1/include
 CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
 
-LIBS 	 = -L/opt/sw/hdf5/1.8.11/lib -lhdf5 -lhdf5_hl -lz
+LIBS 	 = -L/opt/sw/hdf5/1.8.10-p1/lib -lhdf5 -lhdf5_hl
 LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
 LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
-LIBS    += -L/opt/sw/netcdf/4.0.1/intel-hdf5/lib -lnetcdf
+LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
 
-all: heat
+all: asela asela_hpc
 
-heat: heat.cu heat.cuh 
+asela: asela.cu asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
-	
-heat_hpc: heat_hpc.cu heat.cuh 
+
+ifeq ($(strip $(device)),mpi)
+asela_hpc: asela_hpc.cpp asela.cuh 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+else
+asela_hpc: asela_hpc.cu asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 	echo "Attention: No compiler warnings are issued!" 
+endif
 	
+generator: generator.cpp 
+	g++ generator.cpp -o generator -std=c++0x -Wall
+
 .PHONY: clean
+
+doc: 
+	doxygen Doxyfile
 	
 clean:
-	rm -f heat heat_hpc 
+	rm -f asela asela_hpc 

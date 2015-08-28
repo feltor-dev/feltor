@@ -72,8 +72,6 @@ struct PoloidalAverage
             pos*=2; 
         }
         thrust::copy_n( res.begin(), res.size() - pos, res.begin() + pos);
-        //thrust::for_each(thrust::host,res.begin(), res.end(), printf_functor());
-
 
     }
   private:

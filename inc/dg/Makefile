@@ -30,7 +30,7 @@ endif
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20 
-CFLAGS+= -Xcompiler -fopenmp 
+#CFLAGS+= -Xcompiler -fopenmp 
 #CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 #CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
 #CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
