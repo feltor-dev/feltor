@@ -95,7 +95,7 @@ int main( int argc, char* argv[])
 
     //background profile
     solovev::Nprofile prof(p, gp); //initial background profile
-    std::vector<dg::MHvec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
+    std::vector<dg::MHVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
 
     //field aligning
     //dg::CONSTANT gaussianZ( 1.);
@@ -113,7 +113,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
-    dg::Karniadakis< std::vector<dg::MHvec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::MHVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
 //     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
@@ -186,7 +186,7 @@ int main( int argc, char* argv[])
     MPI_Cart_get( comm, 3, dims, periods, coords);
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
-    dg::MHvec transferD( dg::evaluate(dg::zero, grid));
+    dg::MHVec transferD( dg::evaluate(dg::zero, grid));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
     //create local interpolation matrix
     cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
