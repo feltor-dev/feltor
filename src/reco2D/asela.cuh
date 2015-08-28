@@ -16,17 +16,14 @@
 namespace eule
 {
 
-template<class container>
+template<class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu, double mue_hat, double mui_hat):
         nu_(nu), mue_hat(mue_hat), mui_hat(mui_hat), 
         w2d_( dg::create::weights(g)), v2d_( dg::create::inv_weights(g)), 
-        temp( g.size()){
-
-        LaplacianM_perp = dg::create::laplacianM( g, dg::normed);
-
-    }
+        temp( g.size()), LaplacianM_perp( g, dg::normed)
+{ }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
         for( unsigned i=0; i<x.size(); i++)
@@ -40,7 +37,6 @@ struct Diffusion
         dg::blas1::scal( y[3], -nu_/mui_hat);
 
     }
-    const dg::DMatrix& laplacianM()const {return LaplacianM_perp;}
     const container& weights(){return w2d_;}
     const container& precond(){return v2d_;}
 
@@ -48,14 +44,13 @@ struct Diffusion
     double nu_, mue_hat, mui_hat;
     container w2d_, v2d_;
     container temp;
-    dg::DMatrix LaplacianM_perp;
+    dg::Elliptic<Matrix, container, container> LaplacianM_perp;
 };
 
-template< class container=thrust::device_vector<double> >
+template< class Matrix, class container=thrust::device_vector<double> >
 struct Asela
 {
     typedef typename container::value_type value_type;
-    typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     /**
      * @brief Construct a Asela solver object
@@ -90,12 +85,6 @@ struct Asela
     const std::vector<container>& potential( ) const { return phi;}
     const container& aparallel( ) const { return apar;}
 
-    /**
-     * @brief Return the normalized negative laplacian used by this object
-     *
-     * @return cusp matrix
-     */
-    const Matrix& laplacianM( ) const { return laplaceM;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -113,27 +102,26 @@ struct Asela
     std::vector<container> expy;
 
     //matrices and solvers
-    Matrix laplaceM; //contains negative normalized laplacian
 
     dg::ArakawaX<Matrix, container> arakawa; 
     dg::Invert<container> invert_pol, invert_maxwell; 
     dg::Helmholtz<Matrix, container, container> maxwell;
 
-    dg::Elliptic< Matrix, container, container > pol; 
+    dg::Elliptic< Matrix, container, container > pol, laplaceM; 
 
     Parameters p;
 
 };
 
-template< class container>
-Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ): 
+template< class M, class container>
+Asela< M, container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ): 
     w2d( dg::create::weights(grid)),
     v2d( dg::create::inv_weights(grid)),
     one( dg::evaluate( dg::one, grid)),
     rho( dg::evaluate( dg::zero, grid)),
     omega(rho), apar(rho),
     phi( 2, rho), expy( phi), arakAN( phi), arakAU( phi), u(phi), 
-    laplaceM (dg::create::laplacianM( grid, dg::normed, dg::centered)),
+    laplaceM ( grid, dg::normed, dg::centered),
     arakawa( grid), 
     maxwell( grid),
     invert_pol( rho, rho.size(), p.eps_pol),
@@ -142,8 +130,8 @@ Asela< container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ):
     p(p)
 { }
 
-template< class container>
-void Asela< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class M, class container>
+void Asela< M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 4);
     assert( y.size() == yp.size());
@@ -186,14 +174,14 @@ void Asela< container>::operator()( std::vector<container>& y, std::vector<conta
 
 }
 
-template< class container>
-void Asela< container>::exp( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
+template< class M, class container>
+void Asela< M, container>::exp( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
 {
     for( unsigned i=0; i<howmany; i++)
         dg::blas1::transform( y[i], target[i], dg::EXP<value_type>());
 }
-template< class container>
-void Asela< container>::log( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
+template< class M, class container>
+void Asela< M, container>::log( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
 {
     for( unsigned i=0; i<howmany; i++)
         dg::blas1::transform( y[i], target[i], dg::LN<value_type>());

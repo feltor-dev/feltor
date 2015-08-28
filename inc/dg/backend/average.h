@@ -2,6 +2,7 @@
 
 #include "evaluation.cuh"
 #include "xspacelib.cuh"
+#include "average.cuh"
 #include "../blas1.h"
 
 /*! @file 
@@ -21,7 +22,7 @@ namespace dg{
 
 
 template< class container, class IndexContainer>
-struct PoloidalAverage
+struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
 {
     /**
      * @brief Construct from grid mpi object
