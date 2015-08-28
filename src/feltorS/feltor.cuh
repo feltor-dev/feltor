@@ -5,6 +5,7 @@
 #include "parameters.h"
 // #include "geometry_circ.h"
 #include "dg/average.h"
+#include "dg/backend/linspace.cuh"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -90,7 +91,8 @@ struct Feltor
     double coupling( ) {return coupling_;}
 
     std::vector<double> energy_vector( ) {return evec;}
-//     std::vector<container>& probe_vector( ) {return probevec;}
+    std::vector<container>& get_probe_vector( ) {return probevec;}
+    void update_probes();
 
     double energy_diffusion( ){ return ediff_;}
     double radial_transport( ){ return gammanex_;}
@@ -128,9 +130,9 @@ struct Feltor
     double mass_, energy_, diff_, ediff_,gammanex_,coupling_;
     std::vector<double> evec;
     //probe
-//     std::vector<container> probevec;
-//     const container Xprobe,Yprobe;
-//     Matrix probeinterp;
+     std::vector<container> probevec;
+     const container probe_coord_X, probe_coord_Y;
+     Matrix probeinterp;
 //     container probevalue;    
 //     dg::Grid1d<double> gy;
 //     const container w1d;
@@ -164,10 +166,9 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     p(p),
     evec(3),
     //probe
-//     probevec(2),
-//     Xprobe(1,p.lx*p.posX), //use blob position
-//     Yprobe(1,p.ly*p.posY),//use blob position
-//     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
+    probe_coord_X(dg::create::linspace(0.0, p.lx, p.lx * 1. / 8.)),
+    probe_coord_Y(8, 0.5 * p.ly),
+    probeinterp(dg::create::interpolation(probe_coord_X, probe_coord_Y, g, dg::NEU)),
 //     probevalue(1,0.0),
     //damping and sources
     lh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,-1.0,0.0,1.0),g)),
@@ -190,6 +191,11 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     initializene(profNi,profne); //ne = Gamma N_i
     dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+    
+    // Initialize probes with all zeros
+    probevec.push_back(container(8, 0.0));
+    probevec.push_back(container(8, 0.0));
+    probevec.push_back(container(8, 0.0));
 }
 
 template<class Matrix, class container, class P>
@@ -226,7 +232,31 @@ void Feltor<Matrix, container, P>::initializene( const container& src, container
     invert_invgammaN(invgammaNU,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
+/*
+ * Interpolate physical values at the probe positions. Update probe
+ * vectors.
+ *
+ */
+template<class Matrix, class container, class P>
+void Feltor<Matrix, container, P> :: update_probes()
+{
+    static container probe_values(8); 
+    // Electron density
+    dg::blas2::gemv(probeinterp, npe[0], probe_values);
+    probevec[0] = probe_values;
 
+    // Electric potential
+    dg::blas2::gemv(probeinterp, phi[0], probe_values);
+    probevec[1] = probe_values;
+
+    // Radial particle transport
+    dg::blas2::gemv(poisson.dyrhs(), phi[0], omega);
+    dg::blas1::pointwiseDot(omega, binv, omega); // 1/B dy phi
+    dg::blas1::pointwiseDot(npe[0], omega, omega); // 1/B N dy phi
+    dg::blas2::gemv(probeinterp, omega, probe_values);
+    probevec[2] = probe_values;
+
+}
 
 
 template<class Matrix, class container, class P>
