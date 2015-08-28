@@ -133,7 +133,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     phi( 2, chi),chii(chi),uE2(chi),// (phi,psi), (chi_i), u_ExB
     ype(4,chi), logype(ype), // y+(bgamp+profamp) , log(ype)
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
-    pol(    g, dg::not_normed,          dg::centered), 
+    pol(    g, g.bcx(), g.bcy(), dg::not_normed,          dg::centered), 
     lapperpM ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     invgamma1( g,g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered),
     invgamma2( g,g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered) ,

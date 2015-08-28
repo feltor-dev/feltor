@@ -33,20 +33,9 @@ int main( int argc, char* argv[])
 {
      ////////////////////////////////setup MPI///////////////////////////////
     MPI_Init( &argc, &argv);
-    int periods[2] = {false, false}; //non-, non-, periodic
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    int np[2];
-    if(rank==0)
-    {
-        std::cin>> np[0] >> np[1] ;
-        std::cout << "Computing with "<<np[0]<<" x "<<np[1] << " = "<<size<<std::endl;
-        assert( size == np[0]*np[1]);
-    }
-    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Comm comm;
-    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
     std::string input, geom;
@@ -68,10 +57,25 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p( v);
     if(rank==0) p.display( std::cout);
+     ////////////////////////////////setup MPI///////////////////////////////
+    int periods[2] = {false, false}; //non-, non-, periodic
+    if( p.bc_x == dg::PER) periods[0] = true;
+    if( p.bc_y == dg::PER) periods[1] = true;
+    int np[2];
+    if(rank==0)
+    {
+        std::cin>> np[0] >> np[1] ;
+        std::cout << "Computing with "<<np[0]<<" x "<<np[1] << " = "<<size<<std::endl;
+        assert( size == np[0]*np[1]);
+    }
+    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Comm comm;
+    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+    //////////////////////////////////////////////////////////////
 
       //Make grid
     dg::MPI_Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
-    dg::Grid2d<double> grid_out = dg::create::ghostless_grid( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, comm);  
+    dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::MHMatrix, dg::MHVec, dg::MHVec > feltor( grid, p); //initialize before rolkar!
@@ -176,12 +180,12 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << "First output ... \n";
     int dims[2],  coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
-    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};  
+    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[3] = {0, coords[1]*count[1],          coords[0]*count[2]}; 
     dg::MHVec transferD( dg::evaluate(dg::zero, grid));
-    dg::HHVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
     //create local interpolation matrix
-    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out, grid.local()); 
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::gemv( interpolate, y0[i].data(), transferH);
@@ -219,9 +223,9 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << "First write successful!\n";
 
     ///////////////////////////////////////Timeloop/////////////////////////////////
+#ifdef DG_BENCHMARK
     dg::Timer t;
     t.tic();
-#ifdef DG_BENCHMARK
     unsigned step = 0;
 #endif //DG_BENCHMARK
     for( unsigned i=1; i<=p.maxout; i++)
@@ -296,6 +300,7 @@ int main( int argc, char* argv[])
         if(rank==0)std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
     }
+#ifdef DG_BENCHMARK
     t.toc(); 
     unsigned hour = (unsigned)floor(t.diff()/3600);
     unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
@@ -303,6 +308,7 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     if(rank==0) std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     if(rank==0) std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+#endif //DG_BENCHMARK
     err = nc_close(ncid);
     MPI_Finalize();
     return 0;

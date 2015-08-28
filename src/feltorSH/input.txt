@@ -4,16 +4,16 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =  3(3)
-2)  nx (grid points in x)                =  50(192)
-3)  ny (grid points in y)                =  50(192) 
-4)  dt (time step in units c_s/rho_s)    =  0.1(0.01)
+1)  n  (# of x,y-polynomials)            =  1(3)
+2)  nx (grid points in x)                =  200(192)
+3)  ny (grid points in y)                =  200(192) 
+4)  dt (time step in units c_s/rho_s)    =  1.0(0.01)
 
 ----------------------------------Output parameters--------------------
-5)  n_out (# of x-y polynomials in output)  =  3
+5)  n_out (# of x-y polynomials in output)  =  1
 6)  nx_out (# grid points in output field)  =  200
 7)  ny_out (# grid points in output field)  =  200
-8)  itstp  (steps between outputs)          =  10(5)
+8)  itstp  (steps between outputs)          =  100(5)
 9) total # of outputs (excluding first)     =  100
 -------------------------Algorithmic parameters------------------------
 10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
@@ -28,15 +28,15 @@
 18) para resistivity (c)                    =  80e-7   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
 19) amp (blob amplitude)                    =  1.0   (1.0)
-20) sigma (blob variance in units of rho_s) =  5.0     (10)
+20) sigma (blob variance in units of rho_s) =  10.0     (10)
 21) x-position ( in units of lx)            =  0.25   (0.4)
 22) y-position ( in units of ly)            =  0.5   (0.5)
 23) Profile amplitude                       =  0.0  (peak amplitude)
 24) Background Prof amplitude               =  1.0   (density on the boundary)
 ---------------------------------box setup----------------
-25) lx (in rho_s)                           =  200
-26) ly (in rho_s)                           =  200
-27) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   2      (1.0)
+25) lx (in rho_s)                           =  400
+26) ly (in rho_s)                           =  400
+27) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   1      (1.0)
 28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0   (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------
 29) ordinary/modified HW (0/1)              = 1

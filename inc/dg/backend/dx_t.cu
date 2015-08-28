@@ -23,7 +23,7 @@ int main ()
     std::cin >> n>> N;
     std::cout << "# of Legendre nodes " << n <<"\n";
     std::cout << "# of cells          " << N <<"\n";
-    dg::Grid1d<double> gPER( 0, 2*M_PI, n, N, dg::PER);
+    dg::Grid1d<double> gPER( 0.1, 2*M_PI+0.1, n, N, dg::PER);
     dg::Grid1d<double> gDIR( 0, M_PI, n, N, dg::DIR);
     dg::Grid1d<double> gNEU( M_PI/2., 3*M_PI/2., n, N, dg::NEU);
     dg::Grid1d<double> gDIR_NEU( 0, M_PI/2., n, N, dg::DIR_NEU);

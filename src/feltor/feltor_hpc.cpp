@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
    
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
      dg::MPI_Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical, comm);  
-     dg::Grid3d<double> grid_out = dg::create::ghostless_grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, comm);  
+     dg::MPI_Grid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, comm);  
      
     //create RHS 
     std::cout << "Constructing Feltor...\n";
@@ -187,9 +187,9 @@ int main( int argc, char* argv[])
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
     dg::MHvec transferD( dg::evaluate(dg::zero, grid));
-    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
     //create local interpolation matrix
-    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out, grid.local()); 
+    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
     if(rank==0)std::cout << "First write ...\n";
     for( unsigned i=0; i<4; i++)
     {

@@ -120,7 +120,7 @@ struct Feltor
     dg::PoloidalAverage<container, container > polavg;
 #endif //NOT THE MPI_VERSION
 #ifdef MPI_VERSION
-    dg::PoloidalAverage<container, dg::HVec > polavg;
+    dg::PoloidalAverage<dg::HVec, dg::IHVec > polavg;
 #endif //MPI_VERSION
 
     const eule::Parameters p;

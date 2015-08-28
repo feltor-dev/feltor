@@ -7,7 +7,7 @@ INCLUDE += -I$(HOME)/include
 
 CFLAGS = #-Wall -std=c++0x 
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-LIBS = -lnetcdf
+LIBS = -lnetcdf -lhdf5 -lhdf5_hl
 
 ifeq ($(strip $(system)),leo3)
 INCLUDE += -I$(HOME)/include

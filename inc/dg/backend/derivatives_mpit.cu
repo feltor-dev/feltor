@@ -36,10 +36,10 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     unsigned n, Nx, Ny, Nz; 
-    dg::bc bcx=dg::DIR, bcy=dg::NEU_DIR, bcz=dg::PER;
+    dg::bc bcx=dg::DIR, bcz=dg::NEU_DIR, bcy=dg::PER;
     MPI_Comm comm2d;
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm2d);
-    dg::MPI_Grid2d g2d( 0, M_PI, M_PI/2., M_PI, n, Nx, Ny, bcx, bcy, comm2d);
+    dg::MPI_Grid2d g2d( 0, M_PI,0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy, comm2d);
     const Vector w2d = dg::create::weights( g2d);
 
     Matrix dx2 = dg::create::dx( g2d, dg::forward);
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     }
     MPI_Comm comm3d;
     mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm3d);
-    dg::MPI_Grid3d g3d( 0, M_PI, M_PI/2., M_PI, 0., 2*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cartesian, comm3d);
+    dg::MPI_Grid3d g3d( 0, M_PI, 0.1, 2*M_PI+0.1, M_PI/2., M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cylindrical, comm3d);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);

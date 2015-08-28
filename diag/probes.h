@@ -27,7 +27,7 @@ using namespace std;
  *
  */
 
-template<class Matrix, class container = thrust::device_vector<double> >
+template<class IMatrix, class Matrix, class container = thrust::device_vector<double> >
 struct probes
 {
     public:
@@ -44,7 +44,7 @@ struct probes
         const container x_coords;                           // Radial position of the probes
         const container y_coords;                           // Poloidal position of the probes
         const size_t num_probes;                            // Number of probes
-        Matrix probe_interp;                                // Interpolates field (nem phi) on the probe positions
+        IMatrix probe_interp;                                // Interpolates field (nem phi) on the probe positions
         Matrix dy;                                          // Derivative matrix
         dg::PoloidalAverage<container, container> pol_avg;  // Poloidal Average operator
         std::vector<std::string> fnames;                    // Vector of file names for probe output
@@ -55,9 +55,9 @@ struct probes
  * Create interpolation matrixm derivation matrix
  * Create log files
  */
-template<class Matrix, class container>
+template<class IMatrix, class Matrix, class container>
 template<class Grid2d>
-probes<Matrix, container> :: probes (container x_c, container y_c, const Grid2d& g) :
+probes<IMatrix, Matrix, container> :: probes (container x_c, container y_c, const Grid2d& g) :
     Nx(g.Nx()),
     Ny(g.Ny()),
     x_coords(x_c),
@@ -100,8 +100,8 @@ probes<Matrix, container> :: probes (container x_c, container y_c, const Grid2d&
  * Write current profiles to ne_prof.dat, phi_prof.dat
  *
  */
-template<class Matrix, class container>
-void probes<Matrix, container> :: profiles(double time, container& npe, container& phi)
+template<class IMatrix, class Matrix, class container>
+void probes<IMatrix, Matrix, container> :: profiles(double time, container& npe, container& phi)
 {
     cout << "Computing profiles " << std::endl;
 
@@ -135,8 +135,8 @@ void probes<Matrix, container> :: profiles(double time, container& npe, containe
  * npe[0] = ne, npe[1] = Ni
  * phi[0] = The real phi, phi[1]: Generalized potential
  */
-template<class Matrix, class container>
-void probes<Matrix, container> :: fluxes(double time, container& npe, container& phi)
+template<class IMatrix, class Matrix, class container>
+void probes<IMatrix, Matrix, container> :: fluxes(double time, container& npe, container& phi)
 {
     double ip_gamma_n = 0.0;
     static container phi_y(phi);

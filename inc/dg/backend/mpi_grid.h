@@ -52,6 +52,10 @@ struct MPI_Grid2d
             if(Ny%dims[1]!=0)
                 std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
             assert( Ny%dims[1] == 0);
+            if( g.bcx() == dg::PER) assert( periods[0] == true);
+            else assert( periods[0] == false);
+            if( g.bcy() == dg::PER) assert( periods[1] == true);
+            else assert( periods[1] == false);
         }
     }
 
@@ -83,6 +87,10 @@ struct MPI_Grid2d
             if(Ny%dims[1]!=0)
                 std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
             assert( Ny%dims[1] == 0);
+            if( bcx == dg::PER) assert( periods[0] == true);
+            else assert( periods[0] == false);
+            if( bcy == dg::PER) assert( periods[1] == true);
+            else assert( periods[1] == false);
         }
     }
 
@@ -315,6 +323,12 @@ struct MPI_Grid3d
             if( !(Nz%dims[2]==0))
                 std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
             assert( Nz%dims[2] == 0);
+            if( g.bcx() == dg::PER) assert( periods[0] == true);
+            else assert( periods[0] == false);
+            if( g.bcy() == dg::PER) assert( periods[1] == true);
+            else assert( periods[1] == false);
+            if( g.bcz() == dg::PER) assert( periods[2] == true);
+            else assert( periods[2] == false);
         }
     }
 
@@ -356,6 +370,12 @@ struct MPI_Grid3d
             if( !(Nz%dims[2]==0))
                 std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
             assert( Nz%dims[2] == 0);
+            if( bcx == dg::PER) assert( periods[0] == true);
+            else assert( periods[0] == false);
+            if( bcy == dg::PER) assert( periods[1] == true);
+            else assert( periods[1] == false);
+            if( bcz == dg::PER) assert( periods[2] == true);
+            else assert( periods[2] == false);
         }
     }
 

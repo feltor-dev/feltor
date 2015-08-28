@@ -16,8 +16,8 @@
 #include "dg/backend/xspacelib.cuh"
 #include "geometry.h"
 #include "init.h"
-#include "dg/backend/dz.cuh"
 #include "dg/algorithm.h"
+
 #include "dg/poisson.h"
 #include "dg/backend/functions.h"
 #include "dg/backend/interpolation.cuh"
@@ -141,13 +141,13 @@ int main( int argc, char* argv[])
         for (unsigned i=0;i<1;i++) //Nxy iterator
         {
             std::stringstream ss1,ss2;
-            ss1 << "dzerr1n" <<k*n<<"Nxy"<<pow(2,i)* Nx<<".txt";
-            ss2 << "dzerr2n" <<k*n<<"Nxy"<<pow(2,i)* Nx<<".txt";
-            std::string dzerr1fn = ss1.str();
-            std::string dzerr2fn = ss2.str();
-    //         std::cout << dzerr1fn;
-            std::ofstream dzerrfile1((char *) dzerr1fn.c_str());
-            std::ofstream dzerrfile2((char *) dzerr2fn.c_str());
+            ss1 << "dserr1n" <<k*n<<"Nxy"<<pow(2,i)* Nx<<".txt";
+            ss2 << "dserr2n" <<k*n<<"Nxy"<<pow(2,i)* Nx<<".txt";
+            std::string dserr1fn = ss1.str();
+            std::string dserr2fn = ss2.str();
+    //         std::cout << dserr1fn;
+            std::ofstream dserrfile1((char *) dserr1fn.c_str());
+            std::ofstream dserrfile2((char *) dserr2fn.c_str());
             for (unsigned zz=0;zz<1;zz++) //Nz iterator
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
@@ -163,23 +163,24 @@ int main( int argc, char* argv[])
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
-                dg::DZ<dg::DMatrix, dg::DVec> dz( field, g3d,g3d.hz(),gp.rk4eps,solovev::PsiLimiter(gp), g3d.bcx()); //choose bc of grid
+                dg::DDS::FieldAligned dsFA( field, g3d, gp.rk4eps, solovev::PsiLimiter(gp), g3d.bcx()); 
+                dg::DDS ds( dsFA, field, g3d, dg::normed, dg::centered); //choose bc of grid
                 t.toc();
                 std::cout << "-----> Creation of parallel Derivative took"<<t.diff()<<"s\n";
 
-                dg::DVec function = dg::evaluate( func, g3d),dzfunc(function);
+                dg::DVec function = dg::evaluate( func, g3d),dsfunc(function);
                 dg::DVec diff(g3d.size());
 
                 dg::DVec solution = dg::evaluate( derifunc, g3d);
-                dz.set_boundaries( dg::PER, 0, 0);
-                dz( function, dzfunc);
+                ds.set_boundaries( dg::PER, 0, 0);
+                ds( function, dsfunc);
                 //cut boundaries
-//                 dg::blas1::pointwiseDot( pupilongrid, dzfunc, dzfunc);  //damped dzfunc
-//                 dg::blas1::pointwiseDot( pupilongrid, solution, solution); //damped dzsol
+//                 dg::blas1::pointwiseDot( pupilongrid, dsfunc, dsfunc);  //damped dsfunc
+//                 dg::blas1::pointwiseDot( pupilongrid, solution, solution); //damped dssol
 
-                dg::blas1::axpby( 1., solution, -1., dzfunc,diff);
-                double normdz = dg::blas2::dot( w3d, dzfunc);
-                std::cout << "Norm dz  = "<<sqrt( normdz)<<"\n";
+                dg::blas1::axpby( 1., solution, -1., dsfunc,diff);
+                double normds = dg::blas2::dot( w3d, dsfunc);
+                std::cout << "Norm ds  = "<<sqrt( normds)<<"\n";
                 double normsol = dg::blas2::dot( w3d,solution);
                 std::cout << "Norm sol = "<<sqrt( normsol)<<"\n";
                 double normdiff = dg::blas2::dot( w3d, diff);
@@ -190,27 +191,27 @@ int main( int argc, char* argv[])
 //                 solovev::DeriTestFunction derifunc(gp,psip,psipR,psipZ,ipol,invB);
                 std::cout << "-----> Construct parallel  derivative\n";
                 t.tic();
-                dg::DVec dzRZPhifunction(g3d.size());
-                dg::DVec dzR(g3d.size());
-                dg::DVec dzZ(g3d.size());
-                dg::DVec dzPHI(g3d.size());
+                dg::DVec dsRZPhifunction(g3d.size());
+                dg::DVec dsR(g3d.size());
+                dg::DVec dsZ(g3d.size());
+                dg::DVec dsPHI(g3d.size());
                 dg::DVec BvecR = dg::evaluate( bhatR, grid);
                 dg::DVec BvecZ = dg::evaluate( bhatZ, grid);
                 dg::DVec BvecPHI = dg::evaluate( bhatP, grid);
 
-                dg::DMatrix dR   =dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::centered);
-                dg::DMatrix dZ   =dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::centered);
+                dg::DMatrix dR   =dg::create::dx( g3d, g3d.bcx(),dg::centered);
+                dg::DMatrix dZ   =dg::create::dy( g3d, g3d.bcy(),dg::centered);
                 dg::DMatrix dPHI =dg::create::dz( g3d, g3d.bcz(),dg::centered);
                 
-                dg::blas2::symv( dR, function, dzR);  
-                dg::blas2::symv( dZ, function,   dzZ); 
-                dg::blas2::symv( dPHI,function, dzPHI); 
-                dg::blas1::pointwiseDot(BvecR ,dzR,dzR); //BR*dR f
-                dg::blas1::pointwiseDot(BvecZ ,dzZ,dzZ); //BZ*dZ f
-                dg::blas1::pointwiseDot(BvecPHI ,dzPHI,dzPHI);//Bphi*dphi f
+                dg::blas2::symv( dR, function, dsR);  
+                dg::blas2::symv( dZ, function,   dsZ); 
+                dg::blas2::symv( dPHI,function, dsPHI); 
+                dg::blas1::pointwiseDot(BvecR ,dsR,dsR); //BR*dR f
+                dg::blas1::pointwiseDot(BvecZ ,dsZ,dsZ); //BZ*dZ f
+                dg::blas1::pointwiseDot(BvecPHI ,dsPHI,dsPHI);//Bphi*dphi f
                 
-                dg::blas1::axpby(1.,dzR,1.,dzZ,dzRZPhifunction); //BR*dR f + BZ*dZ f
-                dg::blas1::axpby(1.,dzPHI,1.,dzRZPhifunction,dzRZPhifunction); //BR*dR f + BZ*dZ f+Bphi*dphi f
+                dg::blas1::axpby(1.,dsR,1.,dsZ,dsRZPhifunction); //BR*dR f + BZ*dZ f
+                dg::blas1::axpby(1.,dsPHI,1.,dsRZPhifunction,dsRZPhifunction); //BR*dR f + BZ*dZ f+Bphi*dphi f
                 t.toc();
 
                 std::cout << "-----> Creation of parallel Derivative took "<<t.diff()<<"s\n";
@@ -218,12 +219,12 @@ int main( int argc, char* argv[])
                 dg::DVec diffRZPhi(g3d.size());
 
                 //cut boundaries
-//                 dg::blas1::pointwiseDot( pupilongrid,dzRZPhifunction, dzRZPhifunction);  //damped dzfunc
-//                 dg::blas1::pointwiseDot( pupilongrid, solution, solution); //damped dzsol
+//                 dg::blas1::pointwiseDot( pupilongrid,dsRZPhifunction, dsRZPhifunction);  //damped dsfunc
+//                 dg::blas1::pointwiseDot( pupilongrid, solution, solution); //damped dssol
 
-                dg::blas1::axpby( 1., solution, -1., dzRZPhifunction, diffRZPhi);
-                double normdzRZPhi = dg::blas2::dot( w3d,  dzRZPhifunction);
-                std::cout << "Norm dzRZPhi  = "<<sqrt( normdzRZPhi)<<"\n";
+                dg::blas1::axpby( 1., solution, -1., dsRZPhifunction, diffRZPhi);
+                double normdsRZPhi = dg::blas2::dot( w3d,  dsRZPhifunction);
+                std::cout << "Norm dsRZPhi  = "<<sqrt( normdsRZPhi)<<"\n";
                 std::cout << "Norm sol = "<<sqrt( normsol)<<"\n";
                 double normdiffRZPhi = dg::blas2::dot( w3d, diffRZPhi);
                 double reldiffRZPhi=sqrt( normdiffRZPhi/normsol );
@@ -233,56 +234,56 @@ int main( int argc, char* argv[])
                 std::cout <<"-----(2a) test with gradlnb" << "\n";    
                 dg::DVec gradLnBsolution = dg::evaluate( gradLnB, g3d);
                 dg::DVec lnBongrid = dg::evaluate( lnB, g3d);
-                dg::DVec dzlnBongrid(g3d.size());
+                dg::DVec dslnBongrid(g3d.size());
                 dg::DVec diff2(g3d.size());
                 dg::DVec pupilongradLnBsolution(gradLnBsolution);
 
-                dz(lnBongrid,dzlnBongrid);
+                ds(lnBongrid,dslnBongrid);
                 
                 //cut boundaries
-//                 dg::blas1::pointwiseDot( pupilongrid, dzlnBongrid, dzlnBongrid); 
+//                 dg::blas1::pointwiseDot( pupilongrid, dslnBongrid, dslnBongrid); 
 //                 dg::blas1::pointwiseDot( pupilongrid, gradLnBsolution, pupilongradLnBsolution); 
 
-                dg::blas1::axpby( 1., gradLnBsolution , -1., dzlnBongrid,diff2); //diff = gradlnB - dz(ln(B))
+                dg::blas1::axpby( 1., gradLnBsolution , -1., dslnBongrid,diff2); //diff = gradlnB - ds(ln(B))
                 //cut boundaries
 
-                double normdz2 = dg::blas2::dot( w3d, dzlnBongrid); //=  Integral (gdz(ln(B))^2 )
-                std::cout << "Norm dz  = "<<sqrt( normdz2)<<"\n";
+                double normds2 = dg::blas2::dot( w3d, dslnBongrid); //=  Integral (gds(ln(B))^2 )
+                std::cout << "Norm ds  = "<<sqrt( normds2)<<"\n";
                 double normsol2 = dg::blas2::dot( w3d,gradLnBsolution);//=  Integral (gradlnB^2 )
                 std::cout << "Norm sol = "<<sqrt( normsol2)<<"\n";
-                double normdiff2=dg::blas2::dot( w3d, diff2); //=  Integral ((gradlnB - dz(ln(B)))^2)
-                double reldiff2 =sqrt( normdiff2/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
+                double normdiff2=dg::blas2::dot( w3d, diff2); //=  Integral ((gradlnB - ds(ln(B)))^2)
+                double reldiff2 =sqrt( normdiff2/normsol2 ); ;//=  sqrt(Integral ((gradlnB - ds(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff2 <<"\n";
                 std::cout <<"-----(2b) test with gradlnb" << "\n";    
-                dg::DVec dzRlnB(g3d.size());
-                dg::DVec dzZlnB(g3d.size());
-                dg::DVec dzPHIlnB(g3d.size());
-                dg::DVec dzRZPHIlnB(g3d.size());
+                dg::DVec dsRlnB(g3d.size());
+                dg::DVec dsZlnB(g3d.size());
+                dg::DVec dsPHIlnB(g3d.size());
+                dg::DVec dsRZPHIlnB(g3d.size());
 
                 dg::DVec diff2b(g3d.size());
-                dg::blas2::symv( dR, lnBongrid, dzRlnB);  
-                dg::blas2::symv( dZ, lnBongrid,   dzZlnB); 
-                dg::blas2::symv( dPHI,lnBongrid, dzPHIlnB); 
-                dg::blas1::pointwiseDot(BvecR ,dzRlnB,dzRlnB); //BR*dR f
-                dg::blas1::pointwiseDot(BvecZ ,dzZlnB,dzZlnB); //BZ*dZ f
-                dg::blas1::pointwiseDot(BvecPHI ,dzPHIlnB,dzPHIlnB);//Bphi*dphi f
+                dg::blas2::symv( dR, lnBongrid, dsRlnB);  
+                dg::blas2::symv( dZ, lnBongrid,   dsZlnB); 
+                dg::blas2::symv( dPHI,lnBongrid, dsPHIlnB); 
+                dg::blas1::pointwiseDot(BvecR ,dsRlnB,dsRlnB); //BR*dR f
+                dg::blas1::pointwiseDot(BvecZ ,dsZlnB,dsZlnB); //BZ*dZ f
+                dg::blas1::pointwiseDot(BvecPHI ,dsPHIlnB,dsPHIlnB);//Bphi*dphi f
                 
-                dg::blas1::axpby(1.,dzRlnB,1.,dzZlnB,dzRZPHIlnB); //BR*dR f + BZ*dZ f
-                dg::blas1::axpby(1.,dzPHIlnB,1.,dzRZPHIlnB,dzRZPHIlnB); //BR*dR f + BZ*dZ f+Bphi*dphi 
+                dg::blas1::axpby(1.,dsRlnB,1.,dsZlnB,dsRZPHIlnB); //BR*dR f + BZ*dZ f
+                dg::blas1::axpby(1.,dsPHIlnB,1.,dsRZPHIlnB,dsRZPHIlnB); //BR*dR f + BZ*dZ f+Bphi*dphi 
                 
                 //cut boundaries
-//                 dg::blas1::pointwiseDot( pupilongrid, dzlnBongrid, dzlnBongrid); 
+//                 dg::blas1::pointwiseDot( pupilongrid, dslnBongrid, dslnBongrid); 
 //                 dg::blas1::pointwiseDot( pupilongrid, gradLnBsolution, pupilongradLnBsolution); 
 
-                dg::blas1::axpby( 1., gradLnBsolution , -1.,dzRZPHIlnB,diff2b); //diff = gradlnB - dz(ln(B))
+                dg::blas1::axpby( 1., gradLnBsolution , -1.,dsRZPHIlnB,diff2b); //diff = gradlnB - ds(ln(B))
                 //cut boundaries
 
-                double normdz2b = dg::blas2::dot( w3d,dzRZPHIlnB); //=  Integral (gdz(ln(B))^2 )
-                std::cout << "Norm dz  = "<<sqrt( normdz2b)<<"\n";
+                double normds2b = dg::blas2::dot( w3d,dsRZPHIlnB); //=  Integral (gds(ln(B))^2 )
+                std::cout << "Norm ds  = "<<sqrt( normds2b)<<"\n";
 //                 double normsol2b = dg::blas2::dot( w3d,pupilongradLnBsolution);//=  Integral (gradlnB^2 )
                 std::cout << "Norm sol = "<<sqrt( normsol2)<<"\n";
-                double normdiff2b=dg::blas2::dot( w3d, diff2b); //=  Integral ((gradlnB - dz(ln(B)))^2)
-                double reldiff2b =sqrt( normdiff2b/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
+                double normdiff2b=dg::blas2::dot( w3d, diff2b); //=  Integral ((gradlnB - ds(ln(B)))^2)
+                double reldiff2b =sqrt( normdiff2b/normsol2 ); ;//=  sqrt(Integral ((gradlnB - ds(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff2b <<"\n";
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(3) test with gradlnb and with (a) Arakawa and (b) Poisson discretization" << "\n";    
@@ -311,22 +312,22 @@ int main( int argc, char* argv[])
                 
                 dg::blas1::axpby( 1., pupilongradLnBsolution , -1., arakawasolution,diff3);
 
-                double normarak= dg::blas2::dot( w3d, arakawasolution); //=  Integral (gdz(ln(B))^2 )
+                double normarak= dg::blas2::dot( w3d, arakawasolution); //=  Integral (gds(ln(B))^2 )
                 std::cout << "Norm normarak  = "<<sqrt( normarak)<<"\n";
-                double normdiff3=dg::blas2::dot( w3d, diff3); //=  Integral ((gradlnB - dz(ln(B)))^2)
-                double reldiff3 =sqrt( normdiff3/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
+                double normdiff3=dg::blas2::dot( w3d, diff3); //=  Integral ((gradlnB - ds(ln(B)))^2)
+                double reldiff3 =sqrt( normdiff3/normsol2 ); ;//=  sqrt(Integral ((gradlnB - ds(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff3 <<"\n";
                 
                 dg::blas1::axpby( 1., pupilongradLnBsolution , -1., poisssolution,diff4);
 
-                double normpoiss= dg::blas2::dot( w3d, poisssolution); //=  Integral (gdz(ln(B))^2 )
+                double normpoiss= dg::blas2::dot( w3d, poisssolution); //=  Integral (gds(ln(B))^2 )
                 std::cout << "Norm normpoiss  = "<<sqrt( normpoiss)<<"\n";
-                double normdiff4=dg::blas2::dot( w3d, diff4); //=  Integral ((gradlnB - dz(ln(B)))^2)
-                double reldiff4 =sqrt( normdiff4/normsol2 ); ;//=  sqrt(Integral ((gradlnB - dz(ln(B)))^2)/Integral (gradlnB^2 ))
+                double normdiff4=dg::blas2::dot( w3d, diff4); //=  Integral ((gradlnB - ds(ln(B)))^2)
+                double reldiff4 =sqrt( normdiff4/normsol2 ); ;//=  sqrt(Integral ((gradlnB - ds(ln(B)))^2)/Integral (gradlnB^2 ))
                 std::cout << "Rel Diff = "<<reldiff4 <<"\n";
                 
-                dzerrfile1 << pow(2,zz)*Nz <<" " << reldiff << std::endl;
-                dzerrfile2 << pow(2,zz)*Nz <<" " << reldiff2 << std::endl;
+                dserrfile1 << pow(2,zz)*Nz <<" " << reldiff << std::endl;
+                dserrfile2 << pow(2,zz)*Nz <<" " << reldiff2 << std::endl;
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"----(4) test div(B) != 0 (works for NEU)"<<"\n";
                 dg::DVec bRongrid = dg::evaluate( fieldR, grid);
@@ -353,14 +354,14 @@ int main( int argc, char* argv[])
                 std::cout << "divB = "<<sqrt( normdivB2)<<"\n";
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"----(5) test grad_par (psi_p) != 0 (works for NEU)"<<"\n";
-                dg::DVec dzpsi(g3d.size());
-                dz( psipongrid, dzpsi);
-                double normdzpsi = dg::blas2::dot( w3d, dzpsi);
-                std::cout << "Norm grad_par (psi_p)  = "<<sqrt( normdzpsi)<<"\n";
+                dg::DVec dspsi(g3d.size());
+                ds( psipongrid, dspsi);
+                double normdspsi = dg::blas2::dot( w3d, dspsi);
+                std::cout << "Norm grad_par (psi_p)  = "<<sqrt( normdspsi)<<"\n";
        
              }
-            dzerrfile1.close();
-            dzerrfile2.close();
+            dserrfile1.close();
+            dserrfile2.close();
    
         }
 

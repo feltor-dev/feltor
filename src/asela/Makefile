@@ -30,7 +30,7 @@ INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
 GLFLAGS += $$(pkg-config --static --libs glfw3) 
-LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
+LIBS 	 = -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
 ifeq ($(strip $(system)),leo3)

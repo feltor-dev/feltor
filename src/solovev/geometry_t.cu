@@ -149,7 +149,7 @@ for (unsigned i=0;i<g1d.size() ;i++) {
 }
     
     //make equidistant grid from dggrid
-    dg::HMatrix equigrid = dg::create::backscatter(grid);               
+    dg::IHMatrix equigrid = dg::create::backscatter(grid);               
 
     //evaluate on valzues from devicevector on equidistant visual hvisual vector
     for( unsigned i=1; i<=20; i++){

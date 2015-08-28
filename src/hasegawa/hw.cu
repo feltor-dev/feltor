@@ -11,6 +11,7 @@
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
 #include "../toefl/parameters.h"
+#include "dg/backend/xspacelib.cuh"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -53,7 +54,7 @@ int main( int argc, char* argv[])
 
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::HW< dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, (bool)p.global); 
+    dg::HW<dg::DMatrix, dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, (bool)p.global); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
@@ -71,11 +72,11 @@ int main( int argc, char* argv[])
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     //dg::TVB< std::vector<dg::DVec> > ab( y0);
     dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
-    dg::Diffusion<dg::DVec> diffusion( grid, p.nu);
+    dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
@@ -88,6 +89,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
+    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplacianM(grid, dg::normed, dg::centered);
     while ( !glfwWindowShouldClose( w ))
     {
         if( p.bc_x == dg::PER && p.bc_y == dg::PER)
@@ -108,7 +110,8 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //transform phi
-        dg::blas2::gemv( test.laplacianM(), test.potential(), y1[1]);
+
+        dg::blas2::gemv( laplacianM, test.potential(), y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale

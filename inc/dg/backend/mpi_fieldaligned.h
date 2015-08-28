@@ -39,7 +39,7 @@ struct MPI_FieldAligned
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR );
+    MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1 );
 
     /**
      * @brief Set boundary conditions
@@ -98,7 +98,7 @@ struct MPI_FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp>
-    MPI_Vector<LocalContainer> evaluate( BinaryOp f, unsigned plane=0);
+    MPI_Vector<LocalContainer> evaluate( BinaryOp f, unsigned plane=0) const;
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
@@ -117,7 +117,7 @@ struct MPI_FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp, class UnaryOp>
-    MPI_Vector<LocalContainer> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds);
+    MPI_Vector<LocalContainer> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
 
     void einsPlus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& npe);
     void einsMinus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
@@ -237,7 +237,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
 
 template<class M, class C, class container>
 template< class BinaryOp>
-MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, unsigned p0)
+MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, unsigned p0) const
 {
     container global_vec = dz_.evaluate( f, p0);
     container vec = dg::evaluate( dg::zero, g_.local());
@@ -256,7 +256,7 @@ MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, uns
 
 template<class M, class C, class container>
 template< class BinaryOp, class UnaryOp>
-MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds)
+MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const
 {
     //let all processes integrate the fieldlines
     container global_vec = dz_.evaluate( f, g,p0, rounds);
