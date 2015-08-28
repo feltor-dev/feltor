@@ -2,7 +2,9 @@ system=home
 device=gpu
 
 INCLUDE = -I../../ # other project libraries
-INCLUDE = -I../ # other project libraries
+INCLUDE += -I../ # other project libraries
+INCLUDE += -I../../../../cusplibrary
+INCLUDE += -I../../../../thrust
 INCLUDE+= -I./backend # header files
 
 ifeq ($(strip $(system)),home)

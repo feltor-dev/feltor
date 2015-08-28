@@ -133,11 +133,12 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);
     }
 
-   // Probe IDs
+    //// Probe IDs
     std::vector<std::string> varname_probes;
-    varname_probes.push_back("probe_ne"); varname_probes.push_back("probe_phi"); varname_probes.push_back("probe_Gamma_x");
+    varname_probes.push_back("probe_ne"); 
+    varname_probes.push_back("probe_phi"); 
+    varname_probes.push_back("probe_Gamma_x");
     // Create x-dimension for probe 
-
     int ID_probes[3];
     int dim_ids_probe[2];
     dim_ids_probe[0] = EtimeID;
@@ -209,9 +210,11 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dissID, Estart, Ecount, &diss);
     err = nc_put_vara_double( ncid, dEdtID, Estart, Ecount, &dEdt);
     //probe
-    err = nc_put_vara_double(ncid, ID_probe_Ne, Estart, Ecount_probe, probe_Ne.data());
-    err = nc_put_vara_double(ncid, ID_probe_phi, Estart, Ecount_probe, probe_phi.data());
-    err = nc_put_vara_double(ncid, ID_probe_Gamma, Estart, Ecount, probe_Gamma.data());
+    for(int i = 0; i < varname_probes.size(); i++)
+    {
+        probe_value = feltor.get_probe_vector()[i];
+        err = nc_put_vara_double(ncid, ID_probes[i], Estart, Ecount, probe_value.data());
+    }
     err = nc_put_vara_double( ncid, couplingID, Estart, Ecount, &coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount, &accuracy);
 
@@ -268,12 +271,12 @@ int main( int argc, char* argv[])
 
             start_probes[0] = step;
 
-            probe_value = feltor.get_probe_vector()[0];
-            err = nc_put_vara_double( ncid, ID_probes[0], start_probes, count_probes, probe_value.data());
-            probe_value = feltor.get_probe_vector()[1];
-            err = nc_put_vara_double( ncid, ID_probes[1], start_probes, count_probes, probe_value.data());
-            probe_value = feltor.get_probe_vector()[2];
-            err = nc_put_vara_double( ncid, ID_probes[2], start_probes, count_probes, probe_value.data());
+            // Write probe output
+            for(unsigned int i = 0; i < varname_probes.size(); i++)
+            {
+                probe_value = feltor.get_probe_vector()[i];
+                err = nc_put_vara_double( ncid, ID_probes[i], start_probes, count_probes, probe_value.data());
+            }
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";

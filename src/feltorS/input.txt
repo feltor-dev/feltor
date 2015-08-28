@@ -4,12 +4,12 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =  3 (3)
+1)  n  (# of x,y-polynomials)            =  1 (3)
 2)  nx (grid points in x)                =  150(192)
 3)  ny (grid points in y)                =  150(192) 
 4)  dt (time step in units c_s/rho_s)    =0.05(0.01)
 ----------------------------------Output parameters--------------------
-5)  n_out (# of x-y polynomials in output)  =  3
+5)  n_out (# of x-y polynomials in output)  =  1
 6)  nx_out (# grid points in output field)  =  150
 7)  ny_out (# grid points in output field)  =  150
 8)  itstp  (steps between outputs)          =  100(5)

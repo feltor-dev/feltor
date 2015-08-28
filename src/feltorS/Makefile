@@ -2,21 +2,24 @@ system=home # Use as Makefile parameter!
 device=gpu
 
 INCLUDE = -I../../inc  # other project libraries
+INCLUDE += -I../../..
+INCLUDE += -I../../../thrust
+INCLUDE += -I../../../cusplibrary
 
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_50 -w
+CFLAGS = --compiler-options -Wall -arch=sm_30 -w 
 CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 GLFLAGS= -lGLEW
 OPT	   = -O2
 endif
 ifeq ($(strip $(device)),omp)
 CC = g++
-CFLAGS = -Wall -fopenmp -x c++
-CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-OPT	   = -O3
+CFLAGS = -Wall -fopenmp -x c++ 
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
+OPT	   = -O2
 endif
 ifeq ($(strip $(device)),mpi)
 CC = mpic++
@@ -29,7 +32,7 @@ ifeq ($(strip $(system)),home)
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
-GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr  -lXcursor
+GLFLAGS += -lglfw -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr  -lXcursor
 LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
