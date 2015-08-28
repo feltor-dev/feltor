@@ -33,20 +33,7 @@ int main( int argc, char* argv[])
 {
      ////////////////////////////////setup MPI///////////////////////////////
     MPI_Init( &argc, &argv);
-    int periods[2] = {false, false}; //non-, non-, periodic
-    int rank, size;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
-    int np[2];
-    if(rank==0)
-    {
-        std::cin>> np[0] >> np[1] ;
-        std::cout << "Computing with "<<np[0]<<" x "<<np[1] << " = "<<size<<std::endl;
-        assert( size == np[0]*np[1]);
-    }
-    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Comm comm;
-    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+    
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
     std::string input, geom;
@@ -69,7 +56,24 @@ int main( int argc, char* argv[])
     const eule::Parameters p( v);
     if(rank==0) p.display( std::cout);
 
-      //Make grid
+     ////////////////////////////////setup remaining MPI///////////////////////////////
+    int periods[2] = {false, false}; //non-, non-, periodic
+    if( bcy == dg::PER) periods[1] = true;
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    int np[2];
+    if(rank==0)
+    {
+        std::cin>> np[0] >> np[1] ;
+        std::cout << "Computing with "<<np[0]<<" x "<<np[1] << " = "<<size<<std::endl;
+        assert( size == np[0]*np[1]);
+    }
+    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Comm comm;
+    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+    
+     //Make grid
     dg::MPI_Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
     dg::Grid2d<double> grid_out = dg::create::ghostless_grid( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, comm);  
     //create RHS 

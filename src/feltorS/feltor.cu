@@ -13,7 +13,7 @@
 
 #include "feltor.cuh"
 #include "parameters.h"
-#include "probes.h"
+#include "../diag/probes.h"
 
 
 
@@ -58,9 +58,6 @@ int main( int argc, char* argv[])
     v2 = file::read_input( "window_params.txt");
     GLFWwindow* w = draw::glfwInitAndCreateWindow(  v2[2]*v2[3]*p.lx/p.ly, v2[1]*v2[4], "");
     draw::RenderHostData render( v2[1], v2[2]);
-
-
-
     //////////////////////////////////////////////////////////////////////////
 
     //Make grid

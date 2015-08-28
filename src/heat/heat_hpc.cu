@@ -222,6 +222,7 @@ int main( int argc, char* argv[])
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
     dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
     error = sqrt(dg::blas2::dot( w3d, T1)/normT0);
+    double diss0 =feltor.energy_diffusion(); 
     
     //Compute error to reference solution
     if (argc==5)
@@ -239,7 +240,7 @@ int main( int argc, char* argv[])
     double Se0 = evec[0];
     double senorm = evec[0]/Se0;
     double dEdtnorm = dEdt/Se0;
-    double dissnorm = diss/Se0;
+    double dissnorm = diss/diss0;
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
     err = nc_put_vara_double( ncid, energyIDs[0], Estart, Ecount, &senorm);
@@ -301,7 +302,7 @@ int main( int argc, char* argv[])
             evec = feltor.energy_vector();
             senorm = evec[0]/Se0;
             dEdtnorm = dEdt/Se0;
-            dissnorm = diss/Se0;
+            dissnorm = diss/diss0;
             err = nc_open(argv[3], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
