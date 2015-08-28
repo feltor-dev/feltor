@@ -70,9 +70,6 @@ struct PoloidalAverage
         thrust::copy_n( helper.begin(), helper.size() - pos, helper.begin() + pos);
         //copy to result
         thrust::copy( helper.begin(), helper.end(), res.begin());
-        thrust::for_each(thrust::host,res.begin(), res.end(), printf_functor());
-
-
     }
   private:
     IndexContainer invertxy, lines, dummy; //dummy contains output keys i.e. line numbers
