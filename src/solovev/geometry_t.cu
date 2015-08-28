@@ -11,7 +11,8 @@
 #include "draw/host_window.h"
 
 #include "geometry.h"
-#include "../solovev/init.h"
+#include "feltor/parameters.h"
+#include "init.h"
 
 int main( int argc, char* argv[])
 {

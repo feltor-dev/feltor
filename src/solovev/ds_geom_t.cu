@@ -15,6 +15,7 @@
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "geometry.h"
+#include "feltor/parameters.h"
 #include "init.h"
 #include "dg/algorithm.h"
 
