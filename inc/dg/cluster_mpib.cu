@@ -6,6 +6,9 @@
 
 #include "backend/timer.cuh"
 
+#include "../../src/heat/geometry_g.h"
+#include "../../src/heat/parameters.h"
+
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
 const double lz = 1.;
@@ -18,8 +21,10 @@ double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
 //double right2( double x, double y) {return sin(y);}
 double jacobian( double x, double y, double z) 
 {
-    return jacobian(x,y)*z*z;
+    return z*z*cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
+
+const double R_0 = 1000;
 double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
 double derivative( double x, double y, double z){return cos(x-R_0)*sin(y);}
 double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
@@ -31,12 +36,11 @@ typedef dg::MDVec Vector;
 
 //program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
 //outputs one line to std::cout 
-// npx, npy, npz, #procs, n, Nx, Ny, Nz, t_AXPBY, t_DOT, t_ARAKAWA, t_1xELLIPTIC
+// npx, npy, npz, #procs, n, Nx, Ny, Nz, t_AXPBY, t_DOT, t_DX, t_DY, t_ARAKAWA, t_1xELLIPTIC, t_DS
 
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    int rank;
     unsigned n, Nx, Ny, Nz; 
     int periods[3] = {false,false, false};
     if( bcx == dg::PER) periods[0] = true;
@@ -69,10 +73,8 @@ int main(int argc, char* argv[])
     dg::MPI_Grid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, dg::cartesian, comm);
     dg::Timer t;
     Vector w3d = dg::create::weights( grid);
-    Vector v3d = dg::create::inv_weights( grid);
     Vector lhs = dg::evaluate ( left, grid), jac(lhs);
     Vector rhs = dg::evaluate ( right,grid);
-    Vector x = dg::evaluate( initial, grid);
     const Vector sol = dg::evaluate( jacobian, grid );
     Vector eins = dg::evaluate( dg::one, grid );
     std::cout<< std::setprecision(6);
@@ -86,10 +88,27 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     //DOT
     t.tic();
+    double norm;
     for( unsigned i=0; i<multi; i++)
         norm = dg::blas2::dot( w3d, jac);
     t.toc();
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    norm++;//avoid compiler warning
+    //Matrix-Vector product
+    Matrix dx = dg::create::dx( grid, dg::centered);
+    t.tic(); 
+    for( unsigned i=0; i<multi; i++)
+        dg::blas2::symv( dx, rhs, jac);
+    t.toc();
+    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    //Matrix-Vector product
+    Matrix dy = dg::create::dx( grid, dg::centered);
+    t.tic(); 
+    for( unsigned i=0; i<multi; i++)
+        dg::blas2::symv( dy, rhs, jac);
+    t.toc();
+    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+
     //The Arakawa scheme
     dg::ArakawaX<Matrix, Vector> arakawa( grid);
     t.tic(); 
@@ -99,20 +118,45 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     //The Elliptic scheme
     periods[0] = false, periods[1] = false;
-    MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
-    dg::MPI_Grid3d gridEll( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER, dg::cartesian, comm);
+    MPI_Comm commEll;
+    MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &commEll);
+    dg::MPI_Grid3d gridEll( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical, commEll);
+    const Vector ellw3d = dg::create::weights(gridEll);
+    const Vector ellv3d = dg::create::inv_weights(gridEll);
     dg::Elliptic<Matrix, Vector, Vector> laplace(gridEll, dg::not_normed, dg::centered);
-    dg::CG< Vector > pcg( x, n*n*Nx*Ny);
     const Vector solution = dg::evaluate ( fct, gridEll);
     const Vector deriv = dg::evaluate( derivative, gridEll);
+    Vector x = dg::evaluate( initial, gridEll);
     Vector b = dg::evaluate ( laplace_fct, gridEll);
-    dg::blas2::symv( w3d, b, b);
+    dg::blas2::symv( ellw3d, b, b);
+    dg::CG< Vector > pcg( x, n*n*Nx*Ny);
     t.tic();
-    unsigned number = pcg(laplace, x, b, v3d, eps);
+    unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
     t.toc();
     if(rank==0)std::cout << number << " "<<t.diff()/(double)number<<" ";
+    //Application of ds
+    double gpR0  =  10, gpI0=20;
+    double inv_aspect_ratio =  0.1;
+    double gpa = gpR0*inv_aspect_ratio;
+    double Rmin=gpR0-1.0*gpa;
+    double Zmin=-1.0*gpa*1.00;
+    double Rmax=gpR0+1.0*gpa; 
+    double Zmax=1.0*gpa*1.00;
+    dg::MPI_Grid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,dg::cylindrical, commEll);
+    solovev::Field field(gpR0, gpI0);
+    dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
+    dg::MDDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
+    solovev::FuncNeu funcNEU(gpR0,gpI0);
+    Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
+
+    t.tic(); 
+    for( unsigned i=0; i<multi; i++)
+        ds.symv(function,dsTdsfb);
+    t.toc();
+    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
 
 
+    std::cout << std::endl;
     MPI_Finalize();
     return 0;
 }
