@@ -5,11 +5,11 @@
 #include <string>
 
 #include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
+#include "dg/algorithm.h"
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 
 const double T = 10;
 //is sigma the radius or the diameter
@@ -64,8 +64,8 @@ int main( int argc, char* argv[])
     dg::HVec xvec = dg::evaluate( X, grid);
     dg::HVec yvec = dg::evaluate( Y, grid);
     dg::HVec one = dg::evaluate( dg::one, grid);
-    dg::HVec w2d = dg::create::w2d( grid);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::HVec w2d = dg::create::weights( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
 
     double posX_max, posY_max;
     //get normalization

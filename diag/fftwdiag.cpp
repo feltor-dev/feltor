@@ -18,7 +18,7 @@
 
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "feltorSlab/parameters.h"
+#include "feltorS/parameters.h"
 int main( int argc, char* argv[])
 {
     if( argc != 4)
