@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
  
 
     if(rank==0)std::cout << "constructing polavg" << std::endl;
-    dg::PoloidalAverage<dg::HVec,dg::HVec > pol(g);
+    dg::PoloidalAverage<dg::MHVec,dg::MHVec > pol(g);
     if(rank==0)std::cout << "constructing polavg end" << std::endl;
     dg::MHVec vector = dg::evaluate( function ,g), average_y( vector);
     const dg::MHVec solution = dg::evaluate( pol_average, g);

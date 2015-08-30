@@ -9,7 +9,7 @@
 
 #include "backend/mpi_init.h"
 
-//#include "netcdf_par.h"
+#include "netcdf_par.h"
 #include "file/nc_utilities.h"
 
 

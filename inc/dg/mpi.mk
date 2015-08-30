@@ -2,7 +2,7 @@
 MPICXX=mpic++ -x c++
 CXXFLAGS =-Wall
 CXXFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-LIBS = -lnetcdf
+LIBS = -lnetcdf -lhdf5 -lhdf5_hl
 ifeq ($(strip $(device)),omp)
 CXXFLAGS = -fopenmp -Wall -x c++
 CXXFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP

@@ -8,9 +8,6 @@ INCLUDE+= -I../ # other project libraries
 ifeq ($(strip $(system)),home)
 
 INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
-
-#you might check the libs here, cf your glfw installation
-#GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
 GLFLAGS =$$(pkg-config --static --libs glfw3)
 ifeq ($(strip $(device)),gpu)
 GLFLAGS+= -lGLEW
