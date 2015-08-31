@@ -34,9 +34,15 @@ typedef dg::MDMatrix Matrix;
 typedef dg::MDVec Vector;
 
 
-//program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
-//outputs one line to std::cout 
-// npx, npy, npz, #procs, n, Nx, Ny, Nz, t_AXPBY, t_DOT, t_DX, t_DY, t_ARAKAWA, t_1xELLIPTIC, t_DS
+/*******************************************************************************
+program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
+outputs one line to std::cout 
+# npx npy npz #procs n Nx Ny Nz t_AXPBY t_DOT t_DX t_DY t_ARAKAWA #iterations t_1xELLIPTIC_CG t_DS
+if Nz == 1, ds is not executed
+Run with: 
+>$ echo npx npy npz n Nx Ny Nz | mpirun -#procs ./cluster_mpib 
+ 
+ *******************************************************************************/
 
 int main(int argc, char* argv[])
 {
@@ -134,26 +140,29 @@ int main(int argc, char* argv[])
     unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
     t.toc();
     if(rank==0)std::cout << number << " "<<t.diff()/(double)number<<" ";
-    //Application of ds
-    double gpR0  =  10, gpI0=20;
-    double inv_aspect_ratio =  0.1;
-    double gpa = gpR0*inv_aspect_ratio;
-    double Rmin=gpR0-1.0*gpa;
-    double Zmin=-1.0*gpa*1.00;
-    double Rmax=gpR0+1.0*gpa; 
-    double Zmax=1.0*gpa*1.00;
-    dg::MPI_Grid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,dg::cylindrical, commEll);
-    solovev::Field field(gpR0, gpI0);
-    dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
-    dg::MDDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
-    solovev::FuncNeu funcNEU(gpR0,gpI0);
-    Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
+    if( Nz > 1)
+    {
+        //Application of ds
+        double gpR0  =  10, gpI0=20;
+        double inv_aspect_ratio =  0.1;
+        double gpa = gpR0*inv_aspect_ratio;
+        double Rmin=gpR0-1.0*gpa;
+        double Zmin=-1.0*gpa*1.00;
+        double Rmax=gpR0+1.0*gpa; 
+        double Zmax=1.0*gpa*1.00;
+        dg::MPI_Grid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,dg::cylindrical, commEll);
+        solovev::Field field(gpR0, gpI0);
+        dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
+        dg::MDDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
+        solovev::FuncNeu funcNEU(gpR0,gpI0);
+        Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
 
-    t.tic(); 
-    for( unsigned i=0; i<multi; i++)
-        ds.symv(function,dsTdsfb);
-    t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+        t.tic(); 
+        for( unsigned i=0; i<multi; i++)
+            ds.symv(function,dsTdsfb);
+        t.toc();
+        if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    }
 
 
     std::cout << std::endl;
