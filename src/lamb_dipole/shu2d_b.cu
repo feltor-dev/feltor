@@ -83,8 +83,8 @@ int main()
 
             DVec y0( omega), y1( y0);
             //make solver and stepper
-            Shu<DVec> shu( grid, eps);
-            Diffusion<DVec> diffusion( grid, D);
+            Shu<DMatrix, DVec> shu( grid, eps);
+            Diffusion<DMatrix, DVec> diffusion( grid, D);
             Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
 
             shu( y0, y1);

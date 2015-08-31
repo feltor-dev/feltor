@@ -3,7 +3,6 @@
 #include "xspacelib.cuh"
 #include "ell_interpolation.cuh"
 #include "interpolation.cuh"
-#include "typedefs.cuh"
 
 double sinus( double x, double y) {return sin(x)*sin(y);}
 double sinus( double x, double y, double z) {return sin(x)*sin(y)*sin(z);}
@@ -50,11 +49,6 @@ int main()
     t.toc();
     std::cout << "Axpby took "<<t.diff()<<"s\n";
     std::cout << "Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
-    thrust::device_vector<double> forward(std::vector<double>( g.dlt().forward()));
-    t.tic();
-    dg::create::forward_transform( vector, w, forward, g);
-    t.toc();
-    std::cout << "Application of forward trafo matrix took: "<<t.diff()<<"s\n";
     }
     {
     unsigned n, Nx, Ny, Nz;

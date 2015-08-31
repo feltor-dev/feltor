@@ -1,6 +1,8 @@
 #pragma once
 
+#include "evaluation.cuh"
 #include "xspacelib.cuh"
+#include "average.cuh"
 #include "../blas1.h"
 
 /*! @file 
@@ -20,26 +22,28 @@ namespace dg{
 
 
 template< class container, class IndexContainer>
-struct PoloidalAverage
+struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
 {
     /**
      * @brief Construct from grid mpi object
      *
      * @param g 2d MPIGrid
      */
-    template<class Grid2d>
-    PoloidalAverage( const Grid2d& g) : 
-        g2d(g.ghostless()),
-        g1d( g2d.x0(),g2d.x1(),g2d.n(),g2d.Nx(),g2d.bcx()),
-        dummy( g2d.n()*g2d.Nx()),
-        helper1d(  g2d.n()*g2d.Nx()),
-        helper( g2d.size()),helper2( g2d.size()),
-        ly_(g2d.ly()) 
+    PoloidalAverage( const MPI_Grid2d& g): 
+        helper1d_( g.n()*g.Nx()), hhelper1d_(g.n()*g.Nx()),
+        recv_(hhelper1d_), ly_(g.global().ly()),
+        dummy( g.n()*g.Nx()), 
+        helper_( g.size()) 
     {
-            invertxy = create::scatterMapInvertxy( g2d.n(), g2d.Nx(), g2d.Ny());
-            lines = create::contiguousLineNumbers( g2d.n()*g2d.Nx(), g2d.n()*g2d.Ny());
-            w2d = create::weights( g2d);
-            v1d = create::inv_weights( g1d);
+        int remain[] = {false, true};
+        MPI_Cart_sub( g.communicator(), remain, &comm1d_);
+
+        invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
+        lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());
+        Grid2d<double> gTr( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx());
+        w2d = dg::create::weights( gTr);
+        Grid1d<double> g1x( 0, g.lx(), g.n(), g.Nx());
+        v1d = dg::create::inv_weights( g1x);
     }
     /**
      * @brief Compute the average in y-direction
@@ -48,39 +52,40 @@ struct PoloidalAverage
      * @param res 2D result MPIvector (may not equal src), every line contains the x-dependent average over
      the y-direction of src 
      */
-    void operator() (const container& src, container& res)
+    void operator() (const MPI_Vector<container>& src, MPI_Vector<container>& res)
     {
         assert( &src != &res);
-        const thrust::host_vector<double>& in = src.cut_overlap(); // src.without ghost
-        //weight to ensure correct integration
-        blas1::pointwiseDot( in, w2d, helper);      
-        thrust::scatter( helper.begin(), helper.end(), invertxy.begin(), helper2.begin());
-        thrust::reduce_by_key( lines.begin(), lines.end(), helper2.begin(), dummy.begin(), helper1d.begin());
-
-        blas1::axpby( 1./ly_, helper1d, 0, helper1d); // helper1d = helper1d/ly
-        //remove weights in x-direction
-        blas1::pointwiseDot( helper1d, v1d, helper1d);
+        res.data().resize( src.data().size());
+        thrust::scatter( src.data().begin(), src.data().end(), invertxy.begin(), helper_.begin());
+        //weights to ensure correct integration
+        blas1::pointwiseDot( helper_, w2d, helper_);
+        thrust::reduce_by_key( lines.begin(), lines.end(), helper_.begin(), dummy.begin(), helper1d_.begin());
+        blas1::scal( helper1d_, 1./ly_);
+        //remove 1d weights in x-direction
+        blas1::pointwiseDot( helper1d_, v1d, helper1d_);
+        //copy to host
+        thrust::copy( helper1d_.begin(), helper1d_.end(), hhelper1d_.begin());
+        //Reduce  
+        MPI_Allreduce( hhelper1d_.data(), recv_.data(), helper1d_.size(), MPI_DOUBLE, MPI_SUM, comm1d_);
+        //copy to device
+        thrust::copy( recv_.begin(), recv_.end(), helper1d_.begin());
         //copy to a full vector
-        thrust::copy( helper1d.begin(), helper1d.end(), helper.begin());
-
-        unsigned pos = helper1d.size();
-        while ( 2*pos < helper.size() )
+        thrust::copy( helper1d_.begin(), helper1d_.end(), res.data().begin());
+        unsigned pos = helper1d_.size();
+        while ( 2*pos < res.data().size() )
         {
-            thrust::copy_n( helper.begin(), pos, helper.begin() + pos);
+            thrust::copy_n( res.data().begin(), pos, res.data().begin() + pos);
             pos*=2; 
         }
-        thrust::copy_n( helper.begin(), helper.size() - pos, helper.begin() + pos);
-        //copy to result
-        res.copy_into_interior(helper);
+        thrust::copy_n( res.data().begin(), res.data().size() - pos, res.data().begin() + pos);
     }
   private:
-    IndexContainer dummy, invertxy, lines;
-    dg::Grid2d<double> g2d;
-    dg::Grid1d<double> g1d;
-    HVec helper1d ; //, dummy, invertxy, lines;
-    HVec helper,helper2;
-    HVec v1d;
-    HVec w2d;
+    container helper1d_;
+    thrust::host_vector<double> hhelper1d_, recv_;
+    MPI_Comm comm1d_;
+    IndexContainer invertxy, lines, dummy; //dummy contains output keys i.e. line numbers
+    container helper_;
+    container w2d, v1d;
     double ly_;
 };
 

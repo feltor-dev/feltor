@@ -1,6 +1,6 @@
 #ifndef _DG_TIMER_
 #define _DG_TIMER_
-
+//the <thrust/device_vector.h> header must be included before this file for the THRUST_DEVICE_SYSTEM macros to work
 namespace dg
 {
 #if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA) //if we don't use a GPU
@@ -32,7 +32,30 @@ class Timer
   private:
     double start, stop;
 };
-#else //MPI_VERSION
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP //MPI_VERSION
+#include "omp.h"
+class Timer
+{
+  public:
+    /**
+    * @brief Start timer using omp_get_wtime
+    */
+    void tic( ){ start = omp_get_wtime();}
+    /**
+    * @brief Stop timer using MPI_Wtime
+    *
+    * @param comm the communicator 
+    * @note uses MPI_Barrier(comm)
+    */
+    void toc( ){ stop = omp_get_wtime(); }
+    /*! \brief Return time elapsed between tic and toc
+     *
+     * \return Time in seconds between calls of tic and toc*/
+    double diff(){ return stop - start; }
+  private:
+    double start, stop;
+};
+#else
 
 #include <sys/time.h>
 /*! @brief Very simple tool for performance measuring
@@ -50,10 +73,49 @@ class Timer
     /*! \brief Return time elapsed between tic and toc
      *
      * \return Time in seconds between calls of tic and toc*/
-    double diff(){ return (stop.tv_sec - start.tv_sec) + 1e-6*(stop.tv_usec - start.tv_usec);}
+    double diff(){ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
 };
 #endif //MPI_VERSION
-#else //THRUST
+#else //THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA
+#ifdef MPI_VERSION
+
+class Timer
+{
+  public:
+    Timer(){
+        cudaEventCreate( &cu_sync);
+    }
+    /**
+    * @brief Start timer using MPI_Wtime
+    *
+    * @param comm the communicator 
+    * @note uses MPI_Barrier(comm)
+    */
+    void tic( MPI_Comm comm = MPI_COMM_WORLD ){ 
+    MPI_Barrier(comm); 
+    start = MPI_Wtime();}
+    /**
+    * @brief Stop timer using MPI_Wtime
+    *
+    * @param comm the communicator 
+    * @note uses MPI_Barrier(comm)
+    */
+    void toc( MPI_Comm comm = MPI_COMM_WORLD ){ 
+    cudaEventRecord( cu_sync, 0); //place event in stream
+    cudaEventSynchronize( cu_sync); //sync cpu  on event
+    MPI_Barrier(comm); //sync other cpus on event
+    stop = MPI_Wtime(); }
+    /*! \brief Return time elapsed between tic and toc
+     *
+     * \return Time in seconds between calls of tic and toc*/
+    double diff(){ return stop - start; }
+  private:
+    double start, stop;
+    cudaEvent_t cu_sync;
+};
+
+
+#else //MPI_VERSION
 
 /*! @brief Very simple tool for performance measurements using CUDA-API 
  * @ingroup utilities
@@ -91,6 +153,7 @@ class Timer
   private:
     cudaEvent_t start, stop;
 };
+#endif //MPI_VERSION
 #endif //THRUST
 
 } //namespace dg

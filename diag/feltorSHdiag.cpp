@@ -61,8 +61,8 @@ int main( int argc, char* argv[])
     dg::HVec w2d = dg::create::weights( g2d);
     
     double mass_=0.;
-    double posX,posY,posX_init,posY_init,posX_old,posY_old=0.;
-    double velX,velY,velX_old , velY_old=0.;    
+    double posX,posY,posX_init=0,posY_init=0,posX_old=0,posY_old=0.;
+    double velX,velY,velX_old=0 , velY_old=0.;    
     double accX,accY=0.;
     double deltaT = p.dt*p.itstp;
     dg::Grid1d<double > g1d( 0., p.lx,p.n_out, p.Nx_out, p.bc_x);

@@ -29,7 +29,7 @@ ifeq ($(strip $(system)),home)
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
-GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr -lXcursor
+GLFLAGS += $$(pkg-config --static --libs glfw3)
 LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
@@ -58,9 +58,9 @@ LIBS    += -L/opt/sw/netcdf/4.0.1/intel-hdf5/lib -lnetcdf
 GLFLAGS  = -lm
 endif
 
-all: dz_geom_t geometry_t geometry_diag
+all: ds_geom_t geometry_t geometry_diag
 
-dz_geom_t: dz_geom_t.cu geometry.h 
+ds_geom_t: ds_geom_t.cu geometry.h 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)  -DDGDEBUG -DDG_BENCHMARK 
 	echo "Attention: No compiler warnings are issued!" 
 
@@ -78,4 +78,4 @@ doc:
 	doxygen Doxyfile
 	
 clean:
-	rm -f geometry_diag geometry_t dz_geom_t
+	rm -f geometry_diag geometry_t ds_geom_t

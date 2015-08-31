@@ -55,13 +55,14 @@ int main( int argc, char* argv[])
 
     dg::Grid2d<double > grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bcx, p.bcy);
     //create RHS 
-    eule::Asela< dg::DVec > asela( grid, p); 
-    eule::Diffusion<dg::DVec> diffusion( grid, p.nu, 1., 1. );
+    eule::Asela< dg::DMatrix, dg::DVec > asela( grid, p); 
+    eule::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, 1., 1. );
     //create initial vector
     std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); // n_e' = gaussian
     y0[2] = y0[3] = dg::evaluate( aparallel, grid);
     dg::DVec temp( y0[2]);
-    dg::blas2::gemv( diffusion.laplacianM(), y0[2], temp); //u_e = \Delta A_parallel
+    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplaceM(grid, dg::normed, dg::centered);
+    dg::blas2::gemv( laplaceM, y0[2], temp); //u_e = \Delta A_parallel
     dg::blas1::axpby( p.dhat[0]*p.dhat[0], temp, 1., y0[2]);//w_e = \Delta A + beta/mue A
    
     asela.log( y0, y0, 2); //transform to logarithmic values
@@ -70,7 +71,7 @@ int main( int argc, char* argv[])
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
@@ -119,7 +120,7 @@ int main( int argc, char* argv[])
 
 
         //transform phi
-        dg::blas2::gemv( asela.laplacianM(), asela.potential()[0], dvisual);
+        dg::blas2::gemv(laplaceM, asela.potential()[0], dvisual);
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -141,7 +142,7 @@ int main( int argc, char* argv[])
 
 
         //transform Aparallel
-        dg::blas2::gemv( asela.laplacianM(), asela.aparallel(), dvisual);
+        dg::blas2::gemv( laplaceM, asela.aparallel(), dvisual);
         hvisual = dvisual;
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale

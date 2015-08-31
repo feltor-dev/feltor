@@ -3,31 +3,33 @@
 #include "blas.h"
 
 #include "helmholtz.h"
-#include "backend/xspacelib.cuh"
+#include "backend/typedefs.cuh"
 #include "multistep.h"
 
 #include "cg.h"
 
-template< class container>
-struct Diffusion
-{
-    Diffusion( const dg::Grid2d<double>& g, double nu):
-        w2d( dg::create::weights( g)), v2d( dg::create::inv_weights(g)) { 
-        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed); 
-        cusp::blas::scal( Laplacian_.values, -nu);
-        Laplacian = Laplacian_;
-        }
-    void operator()( const container& x, container& y)
-    {
-        //dg::blas1::axpby( 0., x, 0., y);
-        dg::blas2::gemv( Laplacian, x, y);
-    }
-    const container& weights(){return w2d;}
-    const container& precond(){return v2d;}
-  private:
-    const container w2d, v2d;
-    dg::DMatrix Laplacian;
-};
+//template< class container>
+//struct Diffusion
+//{
+//    Diffusion( const dg::Grid2d<double>& g, double nu):
+//        nu_(nu),
+//        w2d( dg::create::weights( g)), v2d( dg::create::inv_weights(g)) { 
+//        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed); 
+//        cusp::blas::scal( Laplacian_.values, -nu);
+//        Laplacian = Laplacian_;
+//        }
+//    void operator()( const container& x, container& y)
+//    {
+//        //dg::blas1::axpby( 0., x, 0., y);
+//        dg::blas2::gemv( Laplacian, x, y);
+//    }
+//    const container& weights(){return w2d;}
+//    const container& precond(){return v2d;}
+//  private:
+//    double nu_;
+//    const container w2d, v2d;
+//    dg::DMatrix Laplacian;
+//};
 
 const double eps = 1e-4;
 const double alpha = -0.5; 
@@ -71,24 +73,24 @@ int main()
     dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > maxwell( grid, alpha);
     invert( maxwell, x_, rho);
 
-    std::cout << "THIRD METHOD:\n";
-    dg::DVec x__(rho.size(), 0.);
-    Diffusion<dg::DVec> diffusion( grid, 1.);
-    dg::DVec temp (w2d);
-    dg::detail::Implicit<Diffusion<dg::DVec>, dg::DVec > implicit( alpha, diffusion,temp);
-    dg::blas2::symv( diffusion.weights(), rho, rho_);
-    number = cg( implicit, x__, rho_, diffusion.precond(), eps);
+    //std::cout << "THIRD METHOD:\n";
+    //dg::DVec x__(rho.size(), 0.);
+    //Diffusion<dg::DVec> diffusion( grid, 1.);
+    //dg::DVec temp (w2d);
+    //dg::detail::Implicit<Diffusion<dg::DVec>, dg::DVec > implicit( alpha, diffusion,temp);
+    //dg::blas2::symv( diffusion.weights(), rho, rho_);
+    //number = cg( implicit, x__, rho_, diffusion.precond(), eps);
 
     //Evaluation
     dg::blas1::axpby( 1., sol, -1., x);
     dg::blas1::axpby( 1., sol, -1., x_);
-    dg::blas1::axpby( 1., sol, -1., x__);
+    //dg::blas1::axpby( 1., sol, -1., x__);
 
     std::cout << "number of iterations:  "<<number<<std::endl;
     std::cout << "ALL METHODS SHOULD DO THE SAME!\n";
     std::cout << "error1 " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
     std::cout << "error2 " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
-    std::cout << "error3 " << sqrt( dg::blas2::dot( w2d, x__))<<std::endl;
+    //std::cout << "error3 " << sqrt( dg::blas2::dot( w2d, x__))<<std::endl;
     std::cout << "Test 3d cylincdrical norm:\n";
     dg::Grid3d<double> g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
     dg::DVec fct_ = dg::evaluate(fct, g3d );

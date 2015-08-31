@@ -360,7 +360,7 @@ struct T5rdonly
         std::string grpName = file::getName( file_, idx);//get group name
         hid_t group = H5Gopen( file_, grpName.data(), H5P_DEFAULT);
         int rank;
-        herr_t status = H5LTget_dataset_ndims( group, name, &rank);
+        status_ = H5LTget_dataset_ndims( group, name, &rank);
         hsize_t size[rank]; //get dataset size
         status_ = H5LTget_dataset_info( group, name, size, NULL, NULL);
         unsigned number =1;

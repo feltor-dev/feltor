@@ -1,49 +1,88 @@
 #include <iostream>
 #include "blas.h"
-#include "derivatives.cuh"
+#include "derivatives.h"
 #include "evaluation.cuh"
 #include "typedefs.cuh"
-#include "../elliptic.h"
+#include "sparseblockmat.cuh"
 
-const double lx = 2*M_PI;
-/*
-double function( double x, double y, double z) { return sin(3./4.*z);}
-double derivative( double x, double y, double z) { return 3./4.*cos(3./4.*z);}
-dg::bc bcz = dg::DIR_NEU;
-*/
-double function(   double x, double y, double z) { return sin(x);}
-double derivative( double x, double y, double z) { return cos(x);}
-double sinz(   double x, double y, double z) { return sin(z);}
-double cosz(   double x, double y, double z) { return cos(z);}
-dg::bc bcx = dg::DIR;
+double zero( double x, double y) { return 0;}
+double sin(  double x, double y) { return sin(x)*sin(y);}
+double cosx( double x, double y) { return cos(x)*sin(y);}
+double cosy( double x, double y) { return cos(y)*sin(x);}
+double zero( double x, double y, double z) { return 0;}
+double sin(  double x, double y, double z) { return sin(x)*sin(y)*sin(z);}
+double cosx( double x, double y, double z) { return cos(x)*sin(y)*sin(z);}
+double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
+double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 
+typedef dg::DVec Vector;
+typedef dg::EllSparseBlockMatDevice Matrix;
 
 int main()
 {
     unsigned n, Nx, Ny, Nz;
-    std::cout << "Note the supraconvergence!\n";
     std::cout << "Type in n, Nx and Ny and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
-    dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER);
-    //dg::Grid2d<double> g( 0, lx, 0, lx, n, Nx, Ny, bcx, dg::PER);
-    dg::DMatrix dx = dg::create::dx<double>( g, bcx, dg::normed, dg::centered);
-    dg::DMatrix lzM = dg::create::laplacianM_perp<double>( g, bcx, dg::PER, dg::normed, dg::forward);
-    //dg::DMatrix lzM = dg::create::laplacianM<double>( g, bcx, dg::PER, dg::normed, dg::forward);
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> lap( g, bcx, dg::PER, dg::normed);
-    dg::DVec v = dg::evaluate( function, g);
-    dg::DVec w = v;
-    const dg::DVec u = dg::evaluate( derivative, g);
+    dg::bc bcx=dg::DIR, bcz=dg::NEU_DIR, bcy=dg::PER;
+    dg::Grid2d<double> g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
+    const Vector w2d = dg::create::weights( g2d);
 
-    const dg::DVec w3d = dg::create::weights( g);
-    dg::blas2::symv( dx, v, w);
-    dg::blas1::axpby( 1., u, -1., w);
-    std::cout << "DX: Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<"\n";
-    dg::blas2::symv( lzM, v, w);
-    dg::blas1::axpby( 1., v, -1., w);
-    std::cout << "DXX(1): Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<" (Note the supraconvergence!)\n";
-    dg::blas2::symv( lap, v, w);
-    dg::blas1::axpby( 1., v, -1., w);
-    std::cout << "DXX(2): Distance to true solution: "<<sqrt(dg::blas2::dot(w, w3d, w))<<" (Note the supraconvergence!)\n";
+    Matrix dx2 = dg::create::dx( g2d, dg::forward);
+    Matrix dy2 = dg::create::dy( g2d, dg::centered);
+    Matrix jx2 = dg::create::jumpX( g2d);
+    Matrix jy2 = dg::create::jumpY( g2d);
+    Matrix m2[] = {dx2, dy2, jx2, jy2};
+    const Vector f2d = dg::evaluate( sin, g2d);
+    const Vector dx2d = dg::evaluate( cosx, g2d);
+    const Vector dy2d = dg::evaluate( cosy, g2d);
+    const Vector null2 = dg::evaluate( zero, g2d);
+    Vector sol2[] = {dx2d, dy2d, null2, null2};
+
+    std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
+    std::cout << "TEST 2D: DX, DY, JX, JY\n";
+    for( unsigned i=0; i<4; i++)
+    {
+        Vector error = f2d;
+        dg::blas2::symv( m2[i], f2d, error);
+        dg::blas1::axpby( 1., sol2[i], -1., error);
+        std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(error, w2d, error))<<"\n";
+    }
+    Vector tempX = f2d, tempY(tempX);
+    dg::blas2::symv( m2[2], f2d, tempX);
+    dg::blas2::symv( m2[3], f2d, tempY);
+    dg::blas1::axpby( 1., tempX, 1., tempY, tempY);
+    dg::blas1::axpby( 1., null2, -1., tempY);
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tempY, w2d, tempY))<<"\n";
+    dg::Grid3d<double> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cylindrical);
+    const Vector w3d = dg::create::weights( g3d);
+    Matrix dx3 = dg::create::dx( g3d, dg::forward);
+    Matrix dy3 = dg::create::dy( g3d, dg::centered);
+    Matrix dz3 = dg::create::dz( g3d, dg::backward);
+    Matrix jx3 = dg::create::jumpX( g3d);
+    Matrix jy3 = dg::create::jumpY( g3d);
+    Matrix jz3 = dg::create::jumpZ( g3d);
+    Matrix m3[] = {dx3, dy3, dz3, jx3, jy3, jz3};
+    const Vector f3d = dg::evaluate( sin, g3d);
+    const Vector dx3d = dg::evaluate( cosx, g3d);
+    const Vector dy3d = dg::evaluate( cosy, g3d);
+    const Vector dz3d = dg::evaluate( cosz, g3d);
+    const Vector null3 = dg::evaluate( zero, g2d);
+    Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
+
+    std::cout << "TEST 3D: DX, DY, DZ, JX, JY, JZ\n";
+    for( unsigned i=0; i<6; i++)
+    {
+        Vector error = f3d;
+        dg::blas2::symv( m3[i], f3d, error);
+        dg::blas1::axpby( 1., sol3[i], -1., error);
+        std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(error, w3d, error))<<"\n";
+    }
+    Vector tX = f3d, tY(tX);
+    dg::blas2::symv( m3[3], f3d, tX);
+    dg::blas2::symv( m3[4], f3d, tY);
+    dg::blas1::axpby( 1., tX, 1., tY, tY);
+    dg::blas1::axpby( 1., null3, -1., tY);
+    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tY, w3d, tY))<<"\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1
@@ -51,21 +90,5 @@ int main()
     //n = 4 -> p = 3      3
     //n = 5 -> p = 5      5
 
-    std::cout << "TEST DZ\n";
-    dg::DVec func = dg::evaluate( sinz, g);
-    dg::DVec deri = dg::evaluate( cosz, g);
-
-
-    dg::DMatrix dz = dg::create::dz( g); 
-    dg::DVec temp( func);
-    dg::blas2::gemv( dz, func, temp);
-    dg::blas1::axpby( 1., deri, -1., temp);
-    std::cout << "DZ(1):           Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
-    dg::DMatrix dz_not_normed = dg::create::dz( g, dg::PER, dg::not_normed, dg::centered); 
-    dg::blas2::gemv( dz_not_normed, func, temp);
-    const dg::DVec v3d = dg::create::inv_weights( g);
-    dg::blas1::pointwiseDot( v3d, temp, temp);
-    dg::blas1::axpby( 1., deri, -1., temp);
-    std::cout << "DZ_NotNormed(1): Distance to true solution: "<<sqrt(dg::blas2::dot(temp, w3d, temp))<<"\n";
     return 0;
 }

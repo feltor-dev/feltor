@@ -6,44 +6,41 @@
 
 #include "dg/blas.h"
 #include "dg/arakawa.h"
-#include "dg/backend/derivatives.cuh"
+#include "dg/elliptic.h"
 #include "dg/cg.h"
 
 namespace dg
 {
-template< class container>
+template< class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
-        w2d( dg::create::weights( g) ), v2d( dg::create::inv_weights(g) ) 
+        w2d( dg::create::weights( g) ), v2d( dg::create::inv_weights(g) ) ,
+        LaplacianM( g, dg::normed)
     { 
-        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed); 
-        cusp::blas::scal( Laplacian_.values, -nu);
-        Laplacian = Laplacian_;
     }
     void operator()( const container& x, container& y)
     {
-        dg::blas2::gemv( Laplacian, x, y);
+        dg::blas2::gemv( LaplacianM, x, y);
+        dg::blas1::scal( y, -nu_);
     }
     const container& weights(){return w2d;}
     const container& precond(){return v2d;}
   private:
     double nu_;
     const container w2d, v2d;
-    dg::DMatrix Laplacian;
+    dg::Elliptic<Matrix,container,container> LaplacianM;
 };
 
-template< class container=thrust::device_vector<double> >
+template< class Matrix, class container=thrust::device_vector<double> >
 struct Shu 
 {
     typedef typename container::value_type value_type;
     typedef container Vector;
-    typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
-    typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
 
     Shu( const Grid2d<value_type>& grid, double eps);
 
-    const Matrix& lap() const { return laplaceM;}
+    const Elliptic<Matrix, container, container>& lap() const { return laplaceM;}
     ArakawaX<Matrix, container>& arakawa() {return arakawa_;}
     /**
      * @brief Returns psi that belong to the last y in operator()
@@ -56,23 +53,23 @@ struct Shu
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
     container psi, w2d, v2d;
-    Matrix laplaceM;
-    ArakawaX< dg::DMatrix, container> arakawa_; 
+    Elliptic<Matrix, container, container> laplaceM;
+    ArakawaX< Matrix, container> arakawa_; 
     Invert<container> invert;
 };
 
-template< class container>
-Shu< container>::Shu( const Grid2d<value_type>& g, double eps): 
+template<class Matrix, class container>
+Shu< Matrix, container>::Shu( const Grid2d<value_type>& g, double eps): 
     psi( g.size()),
     w2d( create::weights( g)), v2d( create::inv_weights(g)),  
-    laplaceM( dg::create::laplacianM( g, not_normed)),
+    laplaceM( g, not_normed),
     arakawa_( g), 
     invert( psi, g.size(), eps)
 {
 }
 
-template< class container>
-void Shu<container>::operator()( Vector& y, Vector& yp)
+template< class Matrix, class container>
+void Shu<Matrix, container>::operator()( Vector& y, Vector& yp)
 {
     invert( laplaceM, psi, y, w2d, v2d);
     arakawa_( y, psi, yp); //A(y,psi)-> yp

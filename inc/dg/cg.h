@@ -7,7 +7,7 @@
 
 #ifdef DG_BENCHMARK
 #include "backend/timer.cuh"
-#endif
+#endif //DG_BENCHMARK
 
 /*!@file
  * Conjugate gradient class and functions

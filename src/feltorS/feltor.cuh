@@ -116,12 +116,7 @@ struct Feltor
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
     
-#ifndef MPI_VERSION
     dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
-#endif //NOT THE MPI_VERSION
-#ifdef MPI_VERSION
-    dg::PoloidalAverage<container, container > polavg;
-#endif //MPI_VERSION
 
     const eule::Parameters p;
 

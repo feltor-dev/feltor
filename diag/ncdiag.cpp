@@ -16,6 +16,7 @@
 #include "file/nc_utilities.h"
 
 #include "solovev/geometry.h"
+#include "feltor/parameters.h"
 #include "solovev/init.h"
 
 #define RADIALELECTRONDENSITYFLUX
@@ -109,8 +110,8 @@ int main( int argc, char* argv[])
     size_t start2d[3]  = {0, 0, 0};
     size_t count3d[4]  = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start3d[4]  = {0, 0, 0, 0};
-    size_t count3dp[4] = {1, 1, g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
-    size_t start3dp[4] = {0, 0, 0, 0};
+    //size_t count3dp[4] = {1, 1, g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
+    //size_t start3dp[4] = {0, 0, 0, 0};
 
 
 
@@ -149,7 +150,7 @@ int main( int argc, char* argv[])
 
     dg::HVec vor3d    = dg::evaluate( dg::zero, g3d_out);
     dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
-    dg::HMatrix fsaonrzmatrix,fsaonrzphimatrix;     
+    dg::IHMatrix fsaonrzmatrix,fsaonrzphimatrix;     
     fsaonrzmatrix    =  dg::create::interpolation(psipupilog2d ,g1d_out);    
     fsaonrzphimatrix =  dg::create::interpolation(psipupilog3d ,g1d_out);    
     
@@ -333,7 +334,7 @@ int main( int argc, char* argv[])
         const dg::HVec Rprobe(1,gp.R_0+p.boxscaleRm*gp.a*0.8);
         const dg::HVec Zprobe(1,0.0);
         const dg::HVec Phiprobe(1,M_PI);
-        dg::HMatrix probeinterp  = dg::create::interpolation( Rprobe,  Zprobe, Phiprobe, g3d_out, dg::NEU);
+        dg::IHMatrix probeinterp  = dg::create::interpolation( Rprobe,  Zprobe, Phiprobe, g3d_out, dg::NEU);
         dg::HVec probevalue(1,0.0);
         dg::blas2::gemv(probeinterp,fields3d[0],probevalue);
         std::cout << probevalue[0]<< std::endl;

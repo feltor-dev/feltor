@@ -69,7 +69,7 @@ int main( int argc, char* argv[])
      
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
+    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
     std::cout << "Done!\n";
@@ -88,7 +88,7 @@ int main( int argc, char* argv[])
     //field aligning
     //dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =3 ->3*2-1
+    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =3 ->3*2-1
 
     //no field aligning (use 2D Feltor instead!!)
     //y1[1] = dg::evaluate( init0, grid);
@@ -154,7 +154,7 @@ int main( int argc, char* argv[])
     const dg::DVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
     const dg::DVec Zprobe(1,0.);
     const dg::DVec Phiprobe(1,M_PI);
-    dg::DMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
+    dg::IDMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
     dg::DVec probevalue(1,0.);  
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
@@ -163,7 +163,7 @@ int main( int argc, char* argv[])
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
-    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::symv( interpolate, y0[i], transferD);

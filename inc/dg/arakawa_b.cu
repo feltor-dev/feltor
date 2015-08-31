@@ -4,12 +4,11 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "backend/evaluation.cuh"
+#include "backend/timer.cuh"
 #include "arakawa.h"
 #include "blas.h"
-#include "backend/typedefs.cuh"
 
-#include "backend/timer.cuh"
+
 
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
@@ -40,6 +39,8 @@ double jacobian( double x, double y)
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
+typedef dg::DVec Vector;
+typedef dg::DMatrix Matrix;
 
 int main()
 {
@@ -49,15 +50,15 @@ int main()
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    dg::DVec w2d = dg::create::weights( grid);
+    Vector w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
-    dg::DVec lhs = dg::evaluate ( left, grid), jac(lhs);
-    dg::DVec rhs = dg::evaluate ( right,grid);
-    const dg::DVec sol = dg::evaluate( jacobian, grid );
-    dg::DVec eins = dg::evaluate( dg::one, grid );
-    std::cout<< std::setprecision(2);
+    Vector lhs = dg::evaluate ( left, grid), jac(lhs);
+    Vector rhs = dg::evaluate ( right,grid);
+    const Vector sol = dg::evaluate( jacobian, grid );
+    Vector eins = dg::evaluate( dg::one, grid );
+    //std::cout<< std::setprecision(2);
 
-    dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<Matrix, Vector> arakawa( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

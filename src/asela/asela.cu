@@ -14,7 +14,7 @@
 #include "solovev/geometry.h"
 
 #include "asela.cuh"
-#include "feltor/parameters.h"
+#include "asela/parameters.h"
 
 #define TORLIM //for toroidal limiter setup
 
@@ -73,8 +73,8 @@ int main( int argc, char* argv[])
     //Make grid
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
-    std::cout << "Constructing feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    std::cout << "Constructing asela...\n";
+    eule::Asela<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > asela( grid, p,gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
     std::cout << "Done!\n";
@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
     //field aligning
     //dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 
     //no field aligning
 //     y1[1] = dg::evaluate( init0, grid);
@@ -102,17 +102,17 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
-    feltor.initializene( y0[1], y0[0]);    
+    asela.initializene( y0[1], y0[0]);    
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set we = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set wi = 0
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( feltor, rolkar, y0, p.dt);
-    karniadakis( feltor, rolkar, y0); //now energies and potential are at time 0
+    karniadakis.init( asela, rolkar, y0, p.dt);
+    karniadakis( asela, rolkar, y0); //now energies and potential are at time 0
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
     dg::ToroidalAverage<dg::HVec> toravg(grid);
 
@@ -120,8 +120,8 @@ int main( int argc, char* argv[])
     dg::Timer t;
     double time = 0;
     unsigned step = 0;
-    const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = feltor.energy(), energy0 = E0, E1 = 0, diff = 0;
+    const double mass0 = asela.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
+    double E0 = asela.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     
@@ -162,10 +162,10 @@ int main( int argc, char* argv[])
         toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw Potential
-        hvisual = feltor.potential()[0];
+        hvisual = asela.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         //transform to Vor
-        //dvisual=feltor.potential()[0];
+        //dvisual=asela.potential()[0];
         //dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
         //hvisual = y1[1];
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
@@ -184,7 +184,7 @@ int main( int argc, char* argv[])
 
 
         //draw U_e
-        hvisual = feltor.uparallel()[0]; //=U_parallel_e
+        hvisual = asela.uparallel()[0]; //=U_parallel_e
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
@@ -199,7 +199,7 @@ int main( int argc, char* argv[])
         toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw U_i
-        hvisual =feltor.uparallel()[1];
+        hvisual =asela.uparallel()[1];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
@@ -214,7 +214,7 @@ int main( int argc, char* argv[])
         toravg(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw a parallel
-        hvisual = feltor.aparallel();
+        hvisual = asela.aparallel();
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0., thrust::maximum<double>()  );
         colors.scalemin() = - colors.scalemax();
@@ -245,7 +245,7 @@ int main( int argc, char* argv[])
         //std::cin >> x;
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis( asela, rolkar, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -253,11 +253,11 @@ int main( int argc, char* argv[])
                 break;
             }
             step++;
-            feltor.energies( y0); //update energetics
-            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
-            E1 = feltor.energy();
+            asela.energies( y0); //update energetics
+            std::cout << "(m_tot-m_0)/m_0: "<< (asela.mass()-mass0)/mass_blob0<<"\t";
+            E1 = asela.energy();
             diff = (E1 - E0)/p.dt; //
-            double diss = feltor.energy_diffusion( );
+            double diss = asela.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
             E0 = E1;

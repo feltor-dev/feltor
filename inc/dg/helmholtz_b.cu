@@ -9,9 +9,9 @@
 
 #include "backend/timer.cuh"
 #include "helmholtz.h"
-#include "backend/xspacelib.cuh"
 
 #include "cg.h"
+
 
 
 const double eps = 1e-2;

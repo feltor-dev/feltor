@@ -60,7 +60,7 @@ int main( int argc, char* argv[])
 //     dg::HVec y0coo(dg::evaluate(1,0.0));
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
     dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);
-    dg::HMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
+    dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -102,7 +102,7 @@ int main( int argc, char* argv[])
     dg::HVec npe_probes(num_probes);
     dg::HVec phi_probes(num_probes);
     dg::HVec gamma_probes(num_probes);
-    dg::HMatrix probe_interp(dg::create::interpolation(xprobecoords, yprobecoords, g2d)) ;
+    dg::IHMatrix probe_interp(dg::create::interpolation(xprobecoords, yprobecoords, g2d)) ;
     dg::HMatrix dy(dg::create::dy(g2d));
     //probe netcdf file
     err1d = nc_redef(ncid1d);

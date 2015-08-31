@@ -14,4 +14,4 @@
 #include "multistep.h"
 #include "elliptic.h"
 #include "runge_kutta.h"
-#include "dz.h"
+#include "ds.h"

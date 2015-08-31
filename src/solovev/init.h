@@ -1,7 +1,7 @@
 #pragma once
 #include "geometry.h"
-#include "feltor/parameters.h"
-// #include "heat/parameters.h"
+//#include "feltor/parameters.h"
+//#include "heat/parameters.h"
 
 /*!@file
  *

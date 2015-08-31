@@ -53,18 +53,18 @@ struct Rolkar
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perpN ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
         LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered)
-//     ,dzTdzN( g, g.bcx(), g.bcy(), g.bcz(), dg::normed, dg::centered),
-//         dzTdzDIR( g, dg::DIR, dg::DIR, g.bcz(), dg::normed, dg::centered)
+//     ,dsTdsN( g, g.bcx(), g.bcy(), g.bcz(), dg::normed, dg::centered),
+//         dsTdsDIR( g, dg::DIR, dg::DIR, g.bcz(), dg::normed, dg::centered)
     {
 //         container bfield = dg::evaluate( solovev::FieldR( gp),g);
-//         dzTdzN.set_x( bfield);
-//         dzTdzDIR.set_x( bfield);
+//         dsTdsN.set_x( bfield);
+//         dsTdsDIR.set_x( bfield);
 //         bfield = dg::evaluate( solovev::FieldZ( gp),g);
-//         dzTdzN.set_y( bfield);
-//         dzTdzDIR.set_y( bfield);
+//         dsTdsN.set_y( bfield);
+//         dsTdsDIR.set_y( bfield);
 //         bfield = dg::evaluate( solovev::FieldP( gp),g);
-//         dzTdzN.set_z( bfield);
-//         dzTdzDIR.set_z( bfield);
+//         dsTdsN.set_z( bfield);
+//         dsTdsDIR.set_z( bfield);
     }
 
     /**
@@ -92,9 +92,9 @@ struct Rolkar
             dg::blas1::scal( y[i+2], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
 //             if (p.pardiss==2)
 //             {
-//             dg::blas2::gemv( dzTdzN, x[i],temp); //lapd is negative
+//             dg::blas2::gemv( dsTdsN, x[i],temp); //lapd is negative
 //             dg::blas1::axpby(  -p.nu_parallel ,temp, 1., y[i]);
-//             dg::blas2::gemv( dzTdzDIR, x[i+2],temp); //lapd is negative
+//             dg::blas2::gemv( dsTdsDIR, x[i+2],temp); //lapd is negative
 //             dg::blas1::axpby(  -p.nu_parallel ,temp, 1., y[i+2]);
 //             }
         }
@@ -141,7 +141,7 @@ struct Rolkar
     const container dampgauss_;
     
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;
-//     dg::GeneralElliptic<Matrix, container, Preconditioner> dzTdzN,dzTdzDIR;
+//     dg::GeneralElliptic<Matrix, container, Preconditioner> dsTdsN,dsTdsDIR;
 
 };
 
@@ -152,7 +152,7 @@ struct Rolkar
  * @tparam container main container to hold the vectors
  * @tparam Preconditioner class of the weights
  */
-template< class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
+template< class DS, class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
 struct Feltor
 {
     /**
@@ -164,15 +164,15 @@ struct Feltor
      * @param gp the geometry parameters
      */
     template<class Grid3d>
-    Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
+    Feltor( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp);
 
 
     /**
-     * @brief Return a dz class for evaluation purposes
+     * @brief Return a ds class for evaluation purposes
      *
      * @return 
      */
-    dg::DZ<Matrix, container> dz(){return dzN_;}
+    const DS& ds(){return dsN_;}
 
     /**
      * @brief Returns phi and psi that belong to the last solve of the polarization equation
@@ -265,11 +265,11 @@ struct Feltor
 
     std::vector<container> phi, curvphi;
     std::vector<container> npe, logn;
-    std::vector<container> dzy, curvy; 
+    std::vector<container> dsy, curvy; 
 
     //matrices and solvers
-    dg::DZ<Matrix, container> dzDIR_;
-    dg::DZ<Matrix, container> dzN_;
+    DS dsDIR_;
+    DS dsN_;
     dg::Poisson< Matrix, container> poissonN,poissonDIR; 
 
     dg::Elliptic< Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR,lapperpDIRnn; 
@@ -286,9 +286,9 @@ struct Feltor
 ///@}
 
 ///@cond
-template<class Matrix, class container, class P>
+template<class DS, class Matrix, class container, class P>
 template<class Grid>
-Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
+Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
@@ -300,9 +300,9 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     profne(dg::evaluate(solovev::Nprofile(p, gp),g)),profNi(profne),
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi),  npe(phi), logn(phi),
-    dzy( 4, chi),curvy(dzy), 
-    dzDIR_(solovev::Field(gp), g, 2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), dg::DIR),
-    dzN_(solovev::Field(gp), g,   2.*M_PI/(double)p.Nz, gp.rk4eps,solovev::PsiLimiter(gp), g.bcx()),
+    dsy( 4, chi),curvy(dsy), 
+    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR), solovev::Field(gp), g, dg::normed, dg::centered ),
+    dsN_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU), solovev::Field(gp), g, dg::normed, dg::centered ),
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
@@ -324,8 +324,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+1)); 
 }
 
-template<class Matrix, class container, class P>
-container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
+template<class DS, class Matrix, class container, class P>
+container& Feltor<DS, Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
 //     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
 //     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
@@ -354,8 +354,8 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     return phi[0];
 }
 
-template< class Matrix, class container, class P>
-container& Feltor<Matrix,container, P>::compute_psi( container& potential)
+template< class DS, class Matrix, class container, class P>
+container& Feltor<DS, Matrix,container, P>::compute_psi( container& potential)
 {
     invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
     poissonN.variationRHS(potential, omega);
@@ -365,42 +365,42 @@ container& Feltor<Matrix,container, P>::compute_psi( container& potential)
     return phi[1];    
 }
 
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
+template<class DS, class Matrix, class container, class P>
+void Feltor<DS, Matrix, container, P>::initializene( const container& src, container& target)
 { 
     invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
 
-template<class M, class V, class P>
-void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
+template<class DS, class M, class V, class P>
+void Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
 {
     for(unsigned i=0; i<2; i++)
     {
         //Parallel dynamics
-        if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);  //dz N  on limiter
-        dzN_(y[i], chi);   
-        dg::blas1::pointwiseDot(y[i+2], chi, omega);     // U dz N
-        if (p.pollim==1) dzDIR_.set_boundaries( dg::DIR, 0, 0);  //dz U  on limiter
-        dzDIR_(y[i+2], chi);  
-        dg::blas1::pointwiseDot(npe[i], chi,chi);     // N dz U
+        if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);  //ds N  on limiter
+        dsN_(y[i], chi);   
+        dg::blas1::pointwiseDot(y[i+2], chi, omega);     // U ds N
+        if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);  //ds U  on limiter
+        dsDIR_(y[i+2], chi);  
+        dg::blas1::pointwiseDot(npe[i], chi,chi);     // N ds U
         dg::blas1::axpby(1.0,chi,1.0,omega,chi);
         dg::blas1::pointwiseDot(npe[i], y[i+2], omega);     // U N
-        dg::blas1::pointwiseDot(omega, gradlnB, omega);     // U N dz ln B
-        dg::blas1::axpby( -1., chi, 1., yp[i]);             // dtN = dtN - dz U N
-        dg::blas1::axpby( 1., omega, 1., yp[i]);            // dtN = dtN + U N dz ln B
+        dg::blas1::pointwiseDot(omega, gradlnB, omega);     // U N ds ln B
+        dg::blas1::axpby( -1., chi, 1., yp[i]);             // dtN = dtN - ds U N
+        dg::blas1::axpby( 1., omega, 1., yp[i]);            // dtN = dtN + U N ds ln B
 
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);      //U^2
-        dzDIR_(omega, chi);                                 //dz U^2
-        dg::blas1::axpby( -0.5, chi, 1., yp[2+i]);          //dtU = dtU - 0.5 dz U^2
+        dsDIR_(omega, chi);                                 //ds U^2
+        dg::blas1::axpby( -0.5, chi, 1., yp[2+i]);          //dtU = dtU - 0.5 ds U^2
         //parallel force terms
-        if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);  //dz N  on limiter
-        dzN_(logn[i], omega);                                                //dz lnN
-        dg::blas1::axpby( -p.tau[i]/p.mu[i], omega, 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*dz lnN
+        if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);  //ds N  on limiter
+        dsN_(logn[i], omega);                                                //ds lnN
+        dg::blas1::axpby( -p.tau[i]/p.mu[i], omega, 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*ds lnN
 
-        if (p.pollim==1)   dzDIR_.set_boundaries( dg::DIR, 0, 0); //dz psi on limiter
-        dzDIR_(phi[i], omega);                                             //dz psi
-        dg::blas1::axpby( -1./p.mu[i], omega, 1., yp[2+i]);   //dtU = dtU - 1/(hat(mu))  *dz psi  
+        if (p.pollim==1)   dsDIR_.set_boundaries( dg::DIR, 0, 0); //ds psi on limiter
+        dsDIR_(phi[i], omega);                                             //ds psi
+        dg::blas1::axpby( -1./p.mu[i], omega, 1., yp[2+i]);   //dtU = dtU - 1/(hat(mu))  *ds psi  
 
         //Parallel dissipation
         if( p.nu_parallel != 0)
@@ -408,55 +408,55 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
                 #ifndef MPI_VERSION
                 if (p.pardiss==0)
                 {
-                    if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);
-                    dzN_.forward(y[i], omega); 
-                    dzN_.forwardT(omega,lambda);
+                    if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);
+                    dsN_.forward(y[i], omega); 
+                    dsN_.forwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
 
-                    dzN_.backward( y[i], omega); 
-                    dzN_.backwardT(omega,lambda);
+                    dsN_.backward( y[i], omega); 
+                    dsN_.backwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
-                    if (p.pollim==1) dzDIR_.set_boundaries( dg::DIR, 0, 0);         
-                    dzDIR_.forward(y[i+2], omega); 
-                    dzDIR_.forwardT(omega,lambda);
+                    if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);         
+                    dsDIR_.forward(y[i+2], omega); 
+                    dsDIR_.forwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
 
-                    dzDIR_.backward( y[i+2], omega); 
-                    dzDIR_.backwardT(omega,lambda);
+                    dsDIR_.backward( y[i+2], omega); 
+                    dsDIR_.backwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
                 }
                 #endif
                 if (p.pardiss==1)
                 {
-                    if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);
-//                     dzN_.dzz(y[i],omega);                                          //dz^2 N 
+                    if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);
+//                     dsN_.dsz(y[i],omega);                                          //ds^2 N 
 //                     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
 //         
 //                     //gradlnBcorrection
-//                     dzN_(y[i], dzy[i]);       
-//                     dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);            // dz lnB dz N
+//                     dsN_(y[i], dsy[i]);       
+//                     dg::blas1::pointwiseDot(gradlnB, dsy[i], omega);            // ds lnB ds N
 //                     dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
 
-                    dzN_.forward( y[i], omega); 
-                    dzDIR_.forwardTD(omega,lambda);
+                    dsN_.forward( y[i], omega); 
+                    dsDIR_.forwardTD(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
-                    dzN_.backward( y[i], omega); 
-                    dzDIR_.backwardTD(omega,lambda);
+                    dsN_.backward( y[i], omega); 
+                    dsDIR_.backwardTD(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
        
-                    if (p.pollim==1) dzDIR_.set_boundaries( dg::DIR, 0, 0);      
-//                     dzDIR_.dzz(y[i+2],omega);                                   
+                    if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);      
+//                     dsDIR_.dsz(y[i+2],omega);                                   
 //                     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);      
 //         
 //                     //gradlnBcorrection
-//                     dzDIR_(y[i+2], dzy[i+2]);                                   //dz U
-//                     dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);           // dz lnB dz U
+//                     dsDIR_(y[i+2], dsy[i+2]);                                   //ds U
+//                     dg::blas1::pointwiseDot(gradlnB,dsy[i+2], omega);           // ds lnB ds U
 //                     dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]); 
-                    dzDIR_.forward( y[i+2], omega); 
-                    dzN_.forwardTD(omega,lambda);
+                    dsDIR_.forward( y[i+2], omega); 
+                    dsN_.forwardTD(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
-                    dzDIR_.backward( y[i+2], omega); 
-                    dzN_.backwardTD(omega,lambda);
+                    dsDIR_.backward( y[i+2], omega); 
+                    dsN_.backwardTD(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
                 }
         }
@@ -464,8 +464,8 @@ void Feltor<M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& 
 }
 
 
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class DS, class Matrix, class container, class P>
+void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - 1
        y[1] := N_i - 1
@@ -515,31 +515,31 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //Compute parallel dissipative energy for N/////////////////////////////
         if( p.nu_parallel != 0)
         {
-                if (p.pollim==1) dzN_.set_boundaries( p.bc, 0, 0);             
+                if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);             
                 #ifndef MPI_VERSION
                 if (p.pardiss==0)
                 {
-                    dzN_.forward(y[i], omega); 
-                    dzN_.forwardT(omega,lambda);
+                    dsN_.forward(y[i], omega); 
+                    dsN_.forwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 0.,lambda,lambda); 
 
-                    dzN_.backward( y[i], omega); 
-                    dzN_.backwardT(omega,lambda);
+                    dsN_.backward( y[i], omega); 
+                    dsN_.backwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda,  1., lambda,lambda); 
                 }
                 #endif
                 if (p.pardiss==1)
                 {
-//                     dzN_.dzz(y[i],omega);                                            //dz^2 N 
-//                     dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 N 
-//                     dzN_(y[i], dzy[i]);       
-//                     dg::blas1::pointwiseDot(gradlnB, dzy[i], omega);                // dz lnB dz N
-//                     dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N
-                    dzN_.forward( y[i], omega); 
-                    dzDIR_.forwardTD(omega,lambda);
+//                     dsN_.dsz(y[i],omega);                                            //ds^2 N 
+//                     dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*ds^2 N 
+//                     dsN_(y[i], dsy[i]);       
+//                     dg::blas1::pointwiseDot(gradlnB, dsy[i], omega);                // ds lnB ds N
+//                     dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*ds lnB ds N
+                    dsN_.forward( y[i], omega); 
+                    dsDIR_.forwardTD(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
-                    dzN_.backward( y[i], omega); 
-                    dzDIR_.backwardTD(omega,lambda);
+                    dsN_.backward( y[i], omega); 
+                    dsDIR_.backwardTD(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
                 }           
         }
@@ -548,7 +548,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  
         dg::blas1::axpby(0.5*p.mu[i], omega,1., chi); //chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         if( p.nu_parallel != 0)
-            Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(dz^2 N -dz lnB dz N)
+            Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(ds^2 N -ds lnB ds N)
         else 
             Dpar[i] = 0;
 
@@ -560,38 +560,38 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //Compute parallel dissipative energy for U/////////////////////////////
         if( p.nu_parallel !=0)
         {
-                if (p.pollim==1) dzDIR_.set_boundaries( dg::DIR, 0, 0);    
+                if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);    
                 #ifndef MPI_VERSION
                 if (p.pardiss==0)
                 {
-                    dzDIR_.forward(y[i+2], omega); 
-                    dzDIR_.forwardT(omega,lambda);
+                    dsDIR_.forward(y[i+2], omega); 
+                    dsDIR_.forwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 0.,lambda,lambda); 
-                    dzDIR_.backward( y[i+2], omega); 
-                    dzDIR_.backwardT(omega,lambda);
+                    dsDIR_.backward( y[i+2], omega); 
+                    dsDIR_.backwardT(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda,  1., lambda,lambda); 
                 }
                 #endif
 
                 if (p.pardiss==1)
                 {
-/*                    dzDIR_.dzz(y[i+2],omega);                                          //dz^2 U 
-                    dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*dz^2 U 
+/*                    dsDIR_.dsz(y[i+2],omega);                                          //ds^2 U 
+                    dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*ds^2 U 
                     //gradlnBcorrection
-                    dzDIR_(y[i+2], dzy[i+2]);                                               //dz U
-                    dg::blas1::pointwiseDot(gradlnB,dzy[i+2], omega);               // dz lnB dz U
-                    dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*dz lnB dz N */  
-                    dzDIR_.forward( y[i+2], omega); 
-                    dzN_.forwardTD(omega,lambda);
+                    dsDIR_(y[i+2], dsy[i+2]);                                               //ds U
+                    dg::blas1::pointwiseDot(gradlnB,dsy[i+2], omega);               // ds lnB ds U
+                    dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*ds lnB ds N */  
+                    dsDIR_.forward( y[i+2], omega); 
+                    dsN_.forwardTD(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
-                    dzDIR_.backward( y[i+2], omega); 
-                    dzN_.backwardTD(omega,lambda);
+                    dsDIR_.backward( y[i+2], omega); 
+                    dsN_.backwardTD(omega,lambda);
                     dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
                 }   
         }
         dg::blas1::pointwiseDot( npe[i], y[i+2], omega); //N U   
         if( p.nu_parallel !=0)
-            Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(omega, w3d, lambda);      //Z*N*U nu_para *(dz^2 U -dz lnB dz U)  
+            Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(omega, w3d, lambda);      //Z*N*U nu_para *(ds^2 U -ds lnB ds U)  
         else
             Dpar[i+2] = 0;
 
@@ -680,8 +680,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
 
 //Computes curvature operator
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::curveN( container& src, container& target)
+template<class DS, class Matrix, class container, class P>
+void Feltor<DS, Matrix, container, P>::curveN( container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxlhs(), src, target); //d_R src
@@ -690,8 +690,8 @@ void Feltor<Matrix, container, P>::curveN( container& src, container& target)
     dg::blas1::pointwiseDot( curvZ, temp1, temp1);   // C^Z d_Z src
     dg::blas1::axpby( 1., temp1, 1., target ); // (C^R d_R + C^Z d_Z) src
 }
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::curveDIR( container& src, container& target)
+template<class DS, class Matrix, class container, class P>
+void Feltor<DS, Matrix, container, P>::curveDIR( container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxrhs(), src, target); //d_R src

@@ -2,7 +2,7 @@
 #include <vector>
 #include <cusp/coo_matrix.h>
 #include "grid.h"
-#include "xspacelib.cuh"
+#include "interpolation.cuh"
 #include "matrix_traits_thrust.h"
 #include "../blas2.h"
 

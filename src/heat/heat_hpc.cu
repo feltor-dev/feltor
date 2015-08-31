@@ -120,9 +120,9 @@ int main( int argc, char* argv[])
     }
     // /////////////////////create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
+    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -139,7 +139,7 @@ int main( int argc, char* argv[])
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    y1[0] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning
@@ -201,10 +201,10 @@ int main( int argc, char* argv[])
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
 
     //interpolate coarse 2 fine grid
-    dg::DMatrix interpolatec2f = dg::create::interpolation( grid_out, grid); //c2f
+    dg::IDMatrix interpolatec2f = dg::create::interpolation( grid_out, grid); //c2f
 //     cusp::ell_matrix<int, double, cusp::device_memory> interpolatec2f = dg::create::ell_interpolation( grid_out, grid);
     //interpolate fine 2 coarse grid
-    dg::DMatrix interpolatef2c = dg::create::interpolation( grid, grid_out);//f2c
+    dg::IDMatrix interpolatef2c = dg::create::interpolation( grid, grid_out);//f2c
 //     cusp::ell_matrix<int, double, cusp::device_memory> interpolatef2c = dg::create::ell_interpolation( grid, grid_out); 
     
 //     dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field

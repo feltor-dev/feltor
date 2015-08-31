@@ -68,9 +68,9 @@ int main( int argc, char* argv[])
     }
     for (unsigned i=0;i<input2.size();i++)  {
         double t = (double)(i/(input2.size()-1));
-        double omega1 = 2.*M_PI*20.;
+        //double omega1 = 2.*M_PI*20.;
         double omega2= 2.*M_PI*30.;
-        double phase = 0.5*M_PI;
+        //double phase = 0.5*M_PI;
 //         input2[i] =input1[i];  //perfectly correlated
 //         input2[i] = (-rand1[i]*0.1*cos(omega1*t)+1.);//perfectly anticorrelated
 //         input2[i] = (rand2[i]*0.001*cos(omega2*t)+3.);//perfectly uncorrelated

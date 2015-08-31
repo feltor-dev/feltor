@@ -24,8 +24,7 @@ CXX = g++
 CXXFLAGS = -Wall -x c++
 CXXFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
-#you might check the libs here, cf your glfw installation
-GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
+GLFLAGS = $$(pkg-config --static --libs glfw3)
 LIBS 	 = -lfftw3 -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 

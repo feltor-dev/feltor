@@ -4,11 +4,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "backend/evaluation.cuh"
 #include "cg.h"
-#include "backend/tensor.cuh"
-#include "backend/derivatives.cuh"
-#include "backend/typedefs.cuh"
+#include "elliptic.h"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
 const unsigned Nx = 20;  //more N means less iterations for same error
@@ -36,7 +33,7 @@ int main()
     dg::HVec v3d = dg::create::inv_weights( g3d);
     dg::HVec x3 = dg::evaluate( initial, g3d);
 
-    dg::HMatrix A3 = dg::create::laplacianM_perp( g3d, dg::not_normed); 
+    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> A3( g3d, dg::not_normed); 
     dg::HVec b3 = dg::evaluate ( laplace_fct, g3d);
     const dg::HVec solution3 = dg::evaluate ( fct, g3d);
     dg::blas2::symv( w3d, b3, b3);

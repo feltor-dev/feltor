@@ -2,111 +2,60 @@
 
 #include <cassert>
 #include <thrust/host_vector.h>
+#include <thrust/gather.h>
 #include "vector_traits.h"
 
 namespace dg
 {
 
-    /**
-     * @brief mpi Vector class 
-     *
-     * Holds ghostcells in every process to facilitate matrix vector multiplication. 
-     *
-     */
+/**
+ * @brief mpi Vector class 
+ *
+ * communication at blas1 level is needed for scalar products
+ * @tparam container underlying local container class
+ *
+ */
+template<class container>
 struct MPI_Vector
 {
+    typedef container container_type;
     /**
      * @brief construct a vector
      *
-     * @param n polynomial coefficients
-     * @param Nx local # of cells in x 
-     * @param Ny local # of cells in y
+     * @param data internal data
      * @param comm MPI communicator
      */
-    MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): 
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(1), data_( n*n*Nx*Ny), comm_(comm) {}
+    MPI_Vector( const container& data, MPI_Comm comm): 
+        data_( data), comm_(comm) {}
+    
     /**
-     * @brief construct a vector
-     *
-     * @param n polynomial coefficients
-     * @param Nx local # of cells in x 
-     * @param Ny local # of cells in y
-     * @param Nz local # of cells in z
-     * @param comm MPI communicator
-     */
-    MPI_Vector( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), data_( n*n*Nx*Ny*Nz), comm_(comm) {}
+    * @brief Conversion operator
+    *
+    * uses conversion between compatible containers
+    * @tparam OtherContainer 
+    * @param src 
+    */
+    template<class OtherContainer>
+    MPI_Vector( const MPI_Vector<OtherContainer>& src){ data_ = src.data(); comm_ = src.communicator();} 
+
     /**
      * @brief Set underlying data
      *
      * @return 
      */
-    thrust::host_vector<double>& data() {return data_;}
+    container& data() {return data_;}
     /**
      * @brief Get underlying data
      *
      * @return 
      */
-    const thrust::host_vector<double>& data() const {return data_;}
-    /**
-     * @brief Cut the ghostcells and leave interior
-     *
-     * @return  The interior without ghostcells
-     */
-    thrust::host_vector<double> cut_overlap() const;
-    /**
-     * @brief Opposite of cut_overlap, copies values into interior
-     *
-     * a cut_overlap followed by a copy_into_interior leaves the values unchanged
-     * @param src The source values
-     */
-    void copy_into_interior( const thrust::host_vector<double>& src);
-    /**
-     * @brief return local number of polynomial coefficients
-     *
-     * @return 
-     */
-    unsigned n() const {return n_;}
-    /**
-     * @brief return local number of cells in x
-     *
-     * @return 
-     */
-    unsigned Nx()const {return Nx_;}
-    /**
-     * @brief return local number of cells in y
-     *
-     * @return 
-     */
-    unsigned Ny()const {return Ny_;}
-    /**
-     * @brief return local number of cells in z
-     *
-     * @return 
-     */
-    unsigned Nz()const {return Nz_;}
+    const container& data() const {return data_;}
     /**
      * @brief Return local size
      * 
      * @return local size
      */
-    unsigned size() const{return n_*n_*Nx_*Ny_*Nz_;}
-    /**
-     * @brief Access operator
-     *
-     * @param idx linear local index
-     *
-     * @return 
-     */
-    double operator[]( unsigned idx) const {return data_[idx];}
-    /**
-     * @brief exchange data of overlapping rows
-     */
-    void x_row( );
-    /**
-     * @brief exchange data of overlapping columns
-     */
-    void x_col( );
+    unsigned size() const{return data_.size();}
 
     /**
      * @brief The communicator to which this vector belongs
@@ -122,14 +71,11 @@ struct MPI_Vector
      */
     void display( std::ostream& os) const
     {
-        for( unsigned s=0; s<Nz_; s++)
-            for( unsigned i=0; i<n_*Ny_; i++)
-            {
-                for( unsigned j=0; j<n_*Nx_; j++)
-                    os << data_[(s*n_*Ny_+i)*n_*Nx_ + j] << " ";
-                os << "\n";
-            }
+        for( unsigned j=0; j<data_.size(); j++)
+            os << data_[j] << " ";
+        os << "\n";
     }
+    double operator[](int i) const{return data_[i];}
     /**
      * @brief Disply local data
      *
@@ -140,8 +86,7 @@ struct MPI_Vector
      */
     friend std::ostream& operator<<( std::ostream& os, const MPI_Vector& v)
     {
-        os << "Vector with Nz = "<<v.Nz_<<", Ny = "<<v.Ny_
-           <<" Nx = "<<v.Nx_<<" and n = "<<v.n_<<": \n";
+        os << "Vector of size  "<<v.size()<<"\n";
         v.display(os);
         return os;
     }
@@ -151,146 +96,215 @@ struct MPI_Vector
      * @param that must have equal sizes and communicator
      */
     void swap( MPI_Vector& that){ 
-#ifdef DG_DEBUG
-        assert( n_ == that.n_);
-        assert( Nx_ == that.Nx_);
-        assert( Ny_ == that.Ny_);
-        assert( Nz_ == that.Nz_);
         assert( comm_ == that.comm_);
-#endif
         data_.swap(that.data_);
     }
   private:
-    unsigned n_, Nx_, Ny_, Nz_; //!< has to know interior 
-    thrust::host_vector<double> data_; //!< thrust host vector as data type
+    container data_; 
     MPI_Comm comm_;
 };
 
 ///@cond
-typedef MPI_Vector MVec;
-template<> 
-struct VectorTraits<MPI_Vector> {
+
+template<class container> 
+struct VectorTraits<MPI_Vector<container> > {
     typedef double value_type;
     typedef MPIVectorTag vector_category;
 };
-template<> 
-struct VectorTraits<const MPI_Vector> {
+template<class container> 
+struct VectorTraits<const MPI_Vector<container> > {
     typedef double value_type;
     typedef MPIVectorTag vector_category;
 };
 
+/////////////////////////////communicator exchanging columns//////////////////
 
-void MPI_Vector::x_col( )
+template<class Index, class Vector>
+struct NearestNeighborComm
 {
-    //shift data in zero-th dimension
-    MPI_Status status;
-    int n = n_;
-    int cols = Nx_;
-    int rows = n_*Ny_*Nz_;
-    //create buffer before sending single cells (1 is left side, 2 is right side)
-    thrust::host_vector<double> sendbuffer1( rows*n, 0);
-    thrust::host_vector<double> recvbuffer1( rows*n, 0);
-    thrust::host_vector<double> sendbuffer2( rows*n, 0);
-    thrust::host_vector<double> recvbuffer2( rows*n, 0);
-    //copy into buffers
-    for( int i=0; i<rows; i++)
-        for( int j=0; j<n; j++)
+    NearestNeighborComm( int n, const int vector_dimensions[3], MPI_Comm comm, int direction)
+    {
+        construct( n, vector_dimensions, comm, direction);
+    }
+    template< class OtherIndex, class OtherVector>
+    NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherVector>& src){
+        construct( src.n(), src.dims(), src.communicator(), src.direction());
+    }
+
+    Vector collect( const Vector& input)const;
+    int size()const; //size of values is size of input plus ghostcells
+    MPI_Comm communicator() const {return comm_;}
+    int n() const{return n_;}
+    const int* dims() const{return dim_;}
+    int direction() const {return direction_;}
+    private:
+    void construct( int n, const int vector_dimensions[3], MPI_Comm comm, int direction);
+    typedef thrust::host_vector<double> HVec;
+
+    int n_, dim_[3]; //deepness, dimensions
+    MPI_Comm comm_;
+    int direction_;
+    bool silent_;
+    Index buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
+
+    void sendrecv( HVec&, HVec&, HVec& , HVec&)const;
+    int buffer_size() const;
+};
+
+typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH;
+
+template<class I, class V>
+void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Comm comm, int direction)
+{
+    silent_=false;
+        int ndims;
+        MPI_Cartdim_get( comm, &ndims);
+        int dims[ndims], periods[ndims], coords[ndims];
+        MPI_Cart_get( comm, ndims, dims, periods, coords);
+        if( dims[direction] == 1) silent_ = true;
+    n_=n;
+    dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
+    comm_ = comm;
+    direction_ = direction;
+    assert( 0<=direction);
+    assert( direction <3);
+    thrust::host_vector<int> hbgather1(buffer_size()), hbgather2(hbgather1), hbscattr1(buffer_size()), hbscattr2(hbscattr1);
+    switch( direction)
+    {
+        case( 0):
+        for( int i=0; i<dim_[2]*dim_[1]; i++)
         {
-            sendbuffer1[i*n+j] = data_[(i*cols + 1       )*n+j];
-            sendbuffer2[i*n+j] = data_[(i*cols + cols - 2)*n+j];
+            for( int j=0; j<n_; j++)
+            {
+                hbgather1[i*n+j] = (i*dim_[0]               + j);
+                hbgather2[i*n+j] = (i*dim_[0] + dim_[0] - n + j);
+                hbscattr1[i*n+j] = (i*(2*n)                      + j);
+                hbscattr2[i*n+j] = (i*(2*n)+ (2*n) - n + j);
+            }
         }
+        break;
+        case( 1):
+        for( int i=0; i<dim_[2]; i++)
+        {
+            for( int j=0; j<n; j++)
+                for( int k=0; k<dim_[0]; k++)
+                {
+                    hbgather1[(i*n+j)*dim_[0]+k] = 
+                        (i*dim_[1] +               j)*dim_[0] + k;
+                    hbgather2[(i*n+j)*dim_[0]+k] = 
+                        (i*dim_[1] + dim_[1] - n + j)*dim_[0] + k;
+                    hbscattr1[(i*n+j)*dim_[0]+k] = 
+                        (i*(          2*n) +                       j)*dim_[0] + k;
+                    hbscattr2[(i*n+j)*dim_[0]+k] = 
+                        (i*(          2*n) + (          2*n) - n + j)*dim_[0] + k;
+                }
+        }
+        break;
+        case( 2):
+        for( int i=0; i<n; i++)
+        {
+            for( int j=0; j<dim_[0]*dim_[1]; j++)
+            {
+                hbgather1[i*dim_[0]*dim_[1]+j] =  i*dim_[0]*dim_[1]            + j;
+                hbgather2[i*dim_[0]*dim_[1]+j] = (i+dim_[2]-n)*dim_[0]*dim_[1] + j;
+                hbscattr1[i*dim_[0]*dim_[1]+j] =  i*dim_[0]*dim_[1]            + j;
+                hbscattr2[i*dim_[0]*dim_[1]+j] = (i+(  2*n)-n)*dim_[0]*dim_[1] + j;
+            }
+        }
+        break;
+    }
+    buffer_gather1 =hbgather1, buffer_gather2 =hbgather2;
+    buffer_scatter1=hbscattr1, buffer_scatter2=hbscattr2;
+}
+
+template<class I, class V>
+int NearestNeighborComm<I,V>::size() const
+{
+    if( silent_) return 0;
+    return 2*buffer_size();
+}
+
+template<class I, class V>
+int NearestNeighborComm<I,V>::buffer_size() const
+{
+    switch( direction_)
+    {
+        case( 0): //x-direction
+            return n_*dim_[1]*dim_[2];
+        case( 1): //y-direction
+            return n_*dim_[0]*dim_[2];
+        case( 2): //z-direction
+            return n_*dim_[0]*dim_[1]; //no further n_ (hide in dim_)
+        default: 
+            return 0;
+    }
+}
+
+template<class I, class V>
+V NearestNeighborComm<I,V>::collect( const V& input) const
+{
+    if( silent_) return V();
+        //int rank;
+        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //dg::Timer t;
+        //t.tic();
+    V values( size());
+    V buffer1( buffer_size());
+    V buffer2( buffer_size());
+    //V sendbuffer2( buffer_size());
+    //V recvbuffer2( buffer_size());
+        //t.toc();
+        //if(rank==0)std::cout << "Allocation   took "<<t.diff()<<"s\n";
+        //t.tic();
+    //gather values from input into sendbuffer
+    thrust::gather( buffer_gather1.begin(), buffer_gather1.end(), input.begin(), buffer1.begin());
+    thrust::gather( buffer_gather2.begin(), buffer_gather2.end(), input.begin(), buffer2.begin());
+        //t.toc();
+        //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
+        //t.tic();
+    //copy to host 
+    HVec sb1(buffer1), sb2(buffer2), rb1(buffer_size(), 0), rb2( buffer_size(), 0);
+        //t.toc();
+        //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
+        //t.tic();
+    //mpi sendrecv
+    sendrecv( sb1, sb2, rb1, rb2);
+        //t.toc();
+        //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
+        //t.tic();
+    //send data back to device
+    buffer1 = rb1, buffer2 = rb2; 
+        //t.toc();
+        //if(rank==0)std::cout << "Copy to devi took "<<t.diff()<<"s\n";
+        //t.tic();
+    //scatter received values into values array
+    thrust::scatter( buffer1.begin(), buffer1.end(), buffer_scatter1.begin(), values.begin());
+    thrust::scatter( buffer2.begin(), buffer2.end(), buffer_scatter2.begin(), values.begin());
+        //t.toc();
+        //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
+    return values;
+}
+
+template<class I, class V>
+void NearestNeighborComm<I,V>::sendrecv( HVec& sb1, HVec& sb2 , HVec& rb1, HVec& rb2) const
+{
     int source, dest;
-    MPI_Cart_shift( comm_, 0, -1, &source, &dest);
-    MPI_Sendrecv(   sendbuffer1.data(), rows*n, MPI_DOUBLE,  //sender
+    MPI_Status status;
+    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified 
+    MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
+    MPI_Sendrecv(   sb1.data(), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 3,  //destination
-                    recvbuffer2.data(), rows*n, MPI_DOUBLE, //receiver
+                    rb2.data(), buffer_size(), MPI_DOUBLE, //receiver
                     source, 3, //source
                     comm_, &status);
-    MPI_Cart_shift( comm_, 0, +1, &source, &dest);
-    MPI_Sendrecv(   sendbuffer2.data(), rows*n, MPI_DOUBLE,  //sender
+    MPI_Cart_shift( comm_, direction_, +1, &source, &dest);
+    MPI_Sendrecv(   sb2.data(), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 9,  //destination
-                    recvbuffer1.data(), rows*n, MPI_DOUBLE, //receiver
+                    rb1.data(), buffer_size(), MPI_DOUBLE, //receiver
                     source, 9, //source
                     comm_, &status);
-    //copy back into vector
-    for( int i=0; i<rows; i++)
-        for( int j=0; j<n; j++)
-        {
-            data_[(i*cols           )*n+j] = recvbuffer1[i*n+j];
-            data_[(i*cols + cols - 1)*n+j] = recvbuffer2[i*n+j];
-        }
 }
 
-void MPI_Vector::x_row( )
-{
-    //shift data in first dimension
-    MPI_Status status;
-    unsigned n = n_;
-    unsigned cols = Nx_*n_;
-    unsigned number = Nz_*Nx_*n;
-
-    thrust::host_vector<double> sendbuffer1( n*number, 0);
-    thrust::host_vector<double> recvbuffer1( n*number, 0);
-    thrust::host_vector<double> sendbuffer2( n*number, 0);
-    thrust::host_vector<double> recvbuffer2( n*number, 0);
-    //copy into buffers
-    for( unsigned s=0; s<Nz_; s++)
-        for( unsigned k=0; k<n; k++)
-            for( unsigned j=0; j<cols; j++)
-            {
-                sendbuffer1[(s*n+k)*cols+j] = 
-                    data_[((s*Ny_ + 1)*n + k)*cols + j];
-                sendbuffer2[(s*n+k)*cols+j] = 
-                    data_[((s*Ny_ + Ny_ - 2)*n + k)*cols + j];
-            }
-    int source, dest;
-    MPI_Cart_shift( comm_, 1, -1, &source, &dest);
-    //MPI_Sendrecv is good for sending in a "chain"
-    MPI_Sendrecv(   sendbuffer1.data(), n*number, MPI_DOUBLE,  //sender
-                    dest, 7,  //destination
-                    recvbuffer2.data(), n*number, MPI_DOUBLE, //receiver
-                    source, 7, //source
-                    comm_, &status);
-
-    MPI_Cart_shift( comm_, 1, +1, &source, &dest);
-    MPI_Sendrecv(   sendbuffer2.data(), n*number, MPI_DOUBLE,  //sender
-                    dest, 1,  //destination
-                    recvbuffer1.data(), n*number, MPI_DOUBLE, //receiver
-                    source, 1, //source
-                    comm_, &status);
-    //copy back into vector
-    for( unsigned s=0; s<Nz_; s++)
-        for( unsigned k=0; k<n; k++)
-            for( unsigned j=0; j<cols; j++)
-            {
-                data_[((s*Ny_    )*n + k)*cols + j] = 
-                    recvbuffer1[(s*n+k)*cols+j];
-                data_[((s*Ny_ + Ny_ - 1)*n + k)*cols + j] =
-                    recvbuffer2[(s*n+k)*cols+j]; 
-            }
-
-}
-
-thrust::host_vector<double> MPI_Vector::cut_overlap() const
-{
-    thrust::host_vector<double> reduce( n_*n_*(Nx_-2)*(Ny_-2)*Nz_, 1.);
-    for( unsigned s=0; s<Nz_; s++)
-        for( unsigned i=n_; i<(Ny_-1)*n_; i++)
-            for( unsigned j=n_; j<(Nx_-1)*n_; j++)
-                reduce[ j-n_ + (Nx_-2)*n_*( i-n_ + (Ny_-2)*n_*s)] = 
-                    data_[ j + Nx_*n_*(i + Ny_*n_*s)];
-    return reduce;
-}
-
-void MPI_Vector::copy_into_interior( const thrust::host_vector<double>& src)
-{
-    assert( src.size() == n_*n_*(Nx_-2)*(Ny_-2)*Nz_);
-    for( unsigned s=0; s<Nz_; s++)
-        for( unsigned i=n_; i<(Ny_-1)*n_; i++)
-            for( unsigned j=n_; j<(Nx_-1)*n_; j++)
-                data_[ j + Nx_*n_*(i + Ny_*n_*s)] =
-                    src[ j-n_ + (Nx_-2)*n_*( i-n_ + (Ny_-2)*n_*s)];
-}
 
 ///@endcond
 }//namespace dg

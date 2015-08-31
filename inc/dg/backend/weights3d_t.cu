@@ -3,7 +3,9 @@
 #include <cusp/print.h>
 
 #include "file/read_input.h"
-#include "xspacelib.cuh"
+#include "evaluation.cuh"
+#include "weights.cuh"
+
 #include "../blas2.h"
 
 double R_0 = 4.*M_PI;
@@ -11,6 +13,10 @@ double R_0 = 4.*M_PI;
 
 double sine( double R, double Z,double phi){ return sin(R-R_0)*sin(Z)*sin(phi)/sqrt(R);}
 
+namespace dg
+{
+typedef thrust::device_vector<double> DVec;
+}
 int main()
 {
     std::cout << "Type n, Nx, Ny, Nz\n";

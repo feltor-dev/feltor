@@ -1,5 +1,8 @@
 #pragma once
+//#include <iomanip>
 
+#include <cusp/coo_matrix.h>
+#include <cusp/csr_matrix.h>
 #include "grid.h"
 #include "evaluation.cuh"
 #include "functions.h"
@@ -13,6 +16,9 @@
   */
 
 namespace dg{
+//interpolation matrices
+typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
+typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 
 namespace create{
     ///@cond
@@ -223,10 +229,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         assert(x[i] >= g.x0() && x[i] <= g.x1());
         
         if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
+            std::cerr << std::setprecision(20);
             std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
         }
         assert( y[i] >= g.y0() && y[i] <= g.y1());
         if (!(z[i] >= g.z0() && z[i] <= g.z1())) {
+            std::cerr << std::setprecision(16);
             std::cerr << g.z0()<<"< zi = " << z[i] <<" < "<<g.z1()<<std::endl;
         }
         assert( z[i] >= g.z0() && z[i] <= g.z1());
@@ -238,9 +246,9 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         unsigned n = (unsigned)floor(xnn);
         unsigned m = (unsigned)floor(ynn);
         unsigned l = (unsigned)floor(znn);
-        n=(n==g.Nx()) ? n-1 :n;
-        m=(m==g.Ny()) ? m-1 :m;
-        l=(l==g.Nz()) ? l-1 :l;
+        //n=(n==g.Nx()) ? n-1 :n;
+        //m=(m==g.Ny()) ? m-1 :m;
+        //l=(l==g.Nz()) ? l-1 :l;
 
         //determine normalized coordinates
         double xn = 2.*xnn - (double)(2*n+1); 

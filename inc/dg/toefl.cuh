@@ -2,9 +2,6 @@
 #define _DG_TOEFL_CUH
 
 #include "algorithm.h"
-#include "blas.h"
-#include "arakawa.h"
-#include "cg.h"
 
 namespace dg
 {
@@ -46,7 +43,7 @@ void Toefl< Matrix, container, P>::operator()( std::vector<container>& y, std::v
     blas1::axpby( 1., y[1], 0., omega);
     unsigned number = invert( laplaceM, phi, omega);
     number +=0; //avoid warning
-#ifdef DG_BENHMARK
+#ifdef DG_BENCHMARK
     std::cout << "Number of pcg iterations "<<  number << "\n";
 #endif
 
