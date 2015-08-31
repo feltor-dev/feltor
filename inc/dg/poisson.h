@@ -4,7 +4,7 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/evaluation.cuh"
-#include "backend/derivatives.cuh"
+#include "backend/derivatives.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_evaluation.h"
@@ -150,29 +150,29 @@ template< class Matrix, class container>
 template< class Grid>
 Poisson<Matrix, container>::Poisson( const Grid& g ): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
-    dxlhs_(dg::create::dx( g, g.bcx(),dg::normed,dg::centered)),
-    dylhs_(dg::create::dy( g, g.bcy(),dg::normed,dg::centered)),
-    dxrhs_(dg::create::dx( g, g.bcx(),dg::normed,dg::centered)),
-    dyrhs_(dg::create::dy( g, g.bcy(),dg::normed,dg::centered))
+    dxlhs_(dg::create::dx( g, g.bcx(),dg::centered)),
+    dylhs_(dg::create::dy( g, g.bcy(),dg::centered)),
+    dxrhs_(dg::create::dx( g, g.bcx(),dg::centered)),
+    dyrhs_(dg::create::dy( g, g.bcy(),dg::centered))
 { }
 template< class Matrix, class container>
 template< class Grid>
 Poisson<Matrix, container>::Poisson( const Grid& g, bc bcx, bc bcy): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
-    dxlhs_(dg::create::dx( g, bcx,dg::normed,dg::centered)),
-    dylhs_(dg::create::dy( g, bcy,dg::normed,dg::centered)),
-    dxrhs_(dg::create::dx( g, bcx,dg::normed,dg::centered)),
-    dyrhs_(dg::create::dy( g, bcy,dg::normed,dg::centered))
+    dxlhs_(dg::create::dx( g, bcx,dg::centered)),
+    dylhs_(dg::create::dy( g, bcy,dg::centered)),
+    dxrhs_(dg::create::dx( g, bcx,dg::centered)),
+    dyrhs_(dg::create::dy( g, bcy,dg::centered))
 {
 }
 template< class Matrix, class container>
 template< class Grid>
 Poisson<Matrix, container>::Poisson(  const Grid& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
-    dxlhs_(dg::create::dx( g, bcxlhs,dg::normed,dg::centered)),
-    dylhs_(dg::create::dy( g, bcylhs,dg::normed,dg::centered)),
-    dxrhs_(dg::create::dx( g, bcxrhs,dg::normed,dg::centered)),
-    dyrhs_(dg::create::dy( g, bcyrhs,dg::normed,dg::centered))
+    dxlhs_(dg::create::dx( g, bcxlhs,dg::centered)),
+    dylhs_(dg::create::dy( g, bcylhs,dg::centered)),
+    dxrhs_(dg::create::dx( g, bcxrhs,dg::centered)),
+    dyrhs_(dg::create::dy( g, bcyrhs,dg::centered))
 {
 }
 template< class Matrix, class container>

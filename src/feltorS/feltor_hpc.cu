@@ -156,7 +156,7 @@ int main( int argc, char* argv[])
     dg::DVec transfer( dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
-    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<2; i++)
     {
         dg::blas2::gemv( interpolate, y0[i], transferD);
@@ -177,16 +177,7 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     double time = 0;
 
-    // Probes
-    size_t count_probes[2] = {1, grid_probe.n() * grid_probe.N()};
-    size_t start_probes[2] = {0, 0};
-    feltor.update_probes();
-    dg::HVec probe_value(feltor.get_probe_vector()[0]);
-    err = nc_put_vara_double( ncid, ID_probes[0], start_probes, count_probes, probe_value.data());
-    probe_value = feltor.get_probe_vector()[1];
-    err = nc_put_vara_double( ncid, ID_probes[1], start_probes, count_probes, probe_value.data());
-    probe_value = feltor.get_probe_vector()[2];
-    err = nc_put_vara_double(ncid, ID_probes[2], start_probes, count_probes, probe_value.data());
+
 
     err = nc_put_vara_double( ncid, tvarID_field, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
@@ -194,10 +185,6 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-//     double Nep=feltor.probe_vector()[0][0];
-//     double phip=feltor.probe_vector()[1][0];
-    double Nep=0.;
-    double phip=0.;
     double radtrans = feltor.radial_transport();
     double coupling = feltor.coupling();
     std::vector<double> evec = feltor.energy_vector();
@@ -208,10 +195,7 @@ int main( int argc, char* argv[])
 
     err = nc_put_vara_double( ncid, dissID, Estart, Ecount, &diss);
     err = nc_put_vara_double( ncid, dEdtID, Estart, Ecount, &dEdt);
-    //probe
-    err = nc_put_vara_double(ncid, ID_probe_Ne, Estart, Ecount_probe, probe_Ne.data());
-    err = nc_put_vara_double(ncid, ID_probe_phi, Estart, Ecount_probe, probe_phi.data());
-    err = nc_put_vara_double(ncid, ID_probe_Gamma, Estart, Ecount, probe_Gamma.data());
+
     err = nc_put_vara_double( ncid, couplingID, Estart, Ecount, &coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount, &accuracy);
 
@@ -242,15 +226,12 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
-            feltor.update_probes();
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
-//             Nep =feltor.probe_vector()[0][0];
-//             phip=feltor.probe_vector()[1][0];
             radtrans = feltor.radial_transport();
             coupling= feltor.coupling();
             err = nc_open(argv[2], NC_WRITE, &ncid);
@@ -266,14 +247,6 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
 
-            start_probes[0] = step;
-
-            probe_value = feltor.get_probe_vector()[0];
-            err = nc_put_vara_double( ncid, ID_probes[0], start_probes, count_probes, probe_value.data());
-            probe_value = feltor.get_probe_vector()[1];
-            err = nc_put_vara_double( ncid, ID_probes[1], start_probes, count_probes, probe_value.data());
-            probe_value = feltor.get_probe_vector()[2];
-            err = nc_put_vara_double( ncid, ID_probes[2], start_probes, count_probes, probe_value.data());
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";

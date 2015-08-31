@@ -1,15 +1,8 @@
 #include <iostream>
 #include <iomanip>
 
-#include <cusp/print.h>
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
-
-#include "backend/evaluation.cuh"
 #include "cg.h"
-#include "backend/tensor.cuh"
-#include "backend/derivatives.cuh"
-#include "backend/typedefs.cuh"
+#include "elliptic.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -36,9 +29,7 @@ int main()
     dg::HVec x = dg::evaluate( initial, grid);
 
     std::cout << "Create Laplacian\n";
-    //Note that this function is deprecated (use the elliptic class instead)
-    dg::HMatrix A = dg::create::laplacianM( grid, dg::not_normed, dg::forward); 
-    //cusp::print(A);
+    dg::Elliptic< dg::HMatrix, dg::HVec, dg::HVec> A( grid);
     dg::CG<dg::HVec > pcg( x, n*n*Nx*Ny);
     std::cout<<"Evaluate right hand side\n";
     dg::HVec b = dg::evaluate ( laplace_fct, grid);

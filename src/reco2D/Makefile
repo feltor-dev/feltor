@@ -27,9 +27,7 @@ endif
 
 ifeq ($(strip $(system)),home)
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
-
-#you might check the libs here, cf your glfw installation
-GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr 
+GLFLAGS += $$(pkg-config --static --libs glfw3)
 LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
@@ -58,22 +56,10 @@ LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
 
-all: asela asela_hpc
+all: asela
 
 asela: asela.cu asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
-
-ifeq ($(strip $(device)),mpi)
-asela_hpc: asela_hpc.cpp asela.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
-else
-asela_hpc: asela_hpc.cu asela.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
-	echo "Attention: No compiler warnings are issued!" 
-endif
-	
-generator: generator.cpp 
-	g++ generator.cpp -o generator -std=c++0x -Wall
 
 .PHONY: clean
 
@@ -81,4 +67,4 @@ doc:
 	doxygen Doxyfile
 	
 clean:
-	rm -f asela asela_hpc 
+	rm -f asela 

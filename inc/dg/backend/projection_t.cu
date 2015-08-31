@@ -1,9 +1,9 @@
 #include <iostream>
 #include <cusp/print.h>
-#include "typedefs.cuh"
 #include "projection.cuh"
 #include "evaluation.cuh"
 #include "blas.h"
+#include "typedefs.cuh"
 
 double sine( double x){ return sin(x);}
 double sine( double x, double y){return sin(x)*sin(y);}

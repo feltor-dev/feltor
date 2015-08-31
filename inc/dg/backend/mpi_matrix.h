@@ -1,309 +1,344 @@
 #pragma once
 
-#include <vector>
-
-#include "mpi_grid.h"
 #include "mpi_vector.h"
-#include "mpi_precon_blas.h"
-#include "operator.h"
 
-
+//the corresponding blas file for the Local matrix must be included before this file
 namespace dg
 {
+
 ///@addtogroup mpi_structures
 ///@{
-//
+
 /**
- * @brief Struct holding the boundary blocks either for the x- or y-direction
- *
- * Think of this as a block sparse matrix for just one dimension holding only boundary terms
- * which can be applied either to the x- or y-direction, i.e. it is of the form
- * \f[
- \begin{pmatrix}
- B_0 & B_1 & ... &  \\
- 0 & 0 & ... &  \\
- & & ... & \\
- &... & & B_{n-1}
- \end{pmatrix}
- \f]
- The corresponding row/col pairs read \f$ (0,0)\f$, \f$ (0,1)\f$, ..., \f$ (N_x-1,N_x-1)\f$.
- For processes, that do not hold any boundary terms the matrix can be left entirely empty
- This format is sufficient for simple dG derivatives in x and y.
- @note not all processes need boundary terms, only those which have a boundary
- *
- */
-struct BoundaryTerms
+* @brief Distributed memory matrix class
+*
+* The idea of this mpi matrix is to separate communication and computation in order to reuse existing optimized matrix formats for the computation. 
+* It can be expected that this works particularly well for cases in which the communication to computation ratio is low. 
+* This class assumes that the matrix and vector elements are distributed rowwise among mpi processes.
+* The matrix elements are then further separated into columns that are inside the domain and the ones that are outside. 
+* For the computation of the inner points no communication is needed.
+* @tparam LocalMatrixInner The class of the matrix for local computations of the inner points. 
+ doSymv(m,x,y) needs to be callable on the container class of the MPI_Vector
+* @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points. 
+ doSymv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
+* @tparam Collective The Communication class needs to gather values across processes. 
+container collect( const container& input);
+Gather points from other processes that are necessary for the outer computations.
+int size(); 
+should give the size of the vector that collect returns. If size()==0 the collect() function won't be called and
+only the inner matrix is applied.
+*/
+template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
+struct RowColDistMat
 {
     /**
-     * @brief blocks of data \f$ B_i \f$
-     *
-     * each element is a nxn block of data
-     */
-    std::vector<std::vector<double> > data_;
-    /**
-     * @brief 1D cell numbers of corresponding data_ block
-     *
-     * Has to be of equal size as data_.
-     */
-    std::vector<int> row_; 
-    /**
-     * @brief 1D cell numbers of corresponding data_ block
-     *
-     * Has to be of equal size as data_.
-     */
-    std::vector<int> col_; 
-    /**
-     * @brief Apply the boundary terms in X
-     *
-     * If data_ is empty the function will return immediately
-     * @param x input vector
-     * @param y output vector
-     */
-    void applyX( const MPI_Vector& x, MPI_Vector& y) const
-    {
-        if(data_.empty()) return;
-        unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
-        for( unsigned m=0; m<data_.size(); m++) //all blocks
-        {
-            for( unsigned s=0; s<x.Nz(); s++) //z-loop
-            for( unsigned i=1; i<rows-1; i++) //y-loop
-            for( unsigned k=0; k<n; k++)
-            for( unsigned l=0; l<n; l++)
-            for( unsigned q=0; q<n; q++) //multiplication-loop
-            {
-                y.data()[(((s*rows+i)*n+k)*cols + row_[m]+1)*n +l] = 0;
-            }
-        }
-        for( unsigned m=0; m<data_.size(); m++) //all blocks
-        {
-            for( unsigned s=0; s<x.Nz(); s++) //z-loop
-            for( unsigned i=1; i<rows-1; i++) //y-loop
-            for( unsigned k=0; k<n; k++)
-            for( unsigned l=0; l<n; l++)
-            for( unsigned q=0; q<n; q++) //multiplication-loop
-            {
-                y.data()[(((s*rows+i)*n+k)*cols + row_[m]+1)*n +l] += 
-                    data_[m][l*n+q]
-                    *x.data()[(((s*rows+i)*n+k)*cols + col_[m]+1)*n + q ];
-            }
-        }
-    }
+    * @brief Constructor 
+    *
+    * @param m_inside The local matrix for the inner elements
+    * @param m_outside A local matrix for the elements from other processes
+    * @param c The communication object
+    */
+    RowColDistMat( const LocalMatrixInner& m_inside, const LocalMatrixOuter& m_outside, const Collective& c):m_i(m_inside), m_o(m_outside), c_(c) { }
 
     /**
-     * @brief Apply the boundary terms in Y
-     *
-     * If data_ is empty the function will return immediately
-     * @param x input vector
-     * @param y output vector
-     */
-    void applyY( const MPI_Vector& x, MPI_Vector& y) const
+    * @brief Copy constructor 
+
+    * The idea is that a device matrix can be constructed by copying a host matrix.
+    *
+    * @tparam OtherMatrixInner
+    * @tparam OtherMatrixOuter
+    * @tparam OtherCollective
+    * @param src another Matrix
+    */
+    template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
+    RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):m_i(src.inner_matrix()), m_o( src.outer_matrix()), c_(src.collective())
+    { }
+    /**
+    * @brief Read access to the inner matrix
+    *
+    * @return 
+    */
+    const LocalMatrixInner& inner_matrix() const{return m_i;}
+    /**
+    * @brief Read access to the outer matrix
+    *
+    * @return 
+    */
+    const LocalMatrixOuter& outer_matrix() const{return m_o;}
+    /**
+    * @brief Read access to the communication object
+    *
+    * @return 
+    */
+    const Collective& collective() const{return c_;}
+    
+    /**
+    * @brief Matrix Vector product
+    *
+    * First the inner elements are computed with a call to doSymv then 
+    * the collect function of the communication object is called. 
+    * Finally the outer elements are added with a call to doSymv for the outer matrix
+    * @tparam container container class of the vector elements
+    * @param x input
+    * @param y output
+    */
+    template<class container> 
+    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y) const
     {
-        if(data_.empty()) return;
-        unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
-        for( unsigned m=0; m<data_.size(); m++) //all blocks
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
+        //int rank;
+        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //dg::Timer t;
+        if( c_.size() == 0) //no communication needed
         {
-            for( unsigned s=0; s<x.Nz(); s++)//z-loop
-            for( unsigned k=0; k<n; k++)
-            for( unsigned j=1; j<cols-1; j++) //x-loop
-            for( unsigned l=0; l<n; l++)
-            for( unsigned p=0; p<n; p++)
-            {
-                y.data()[(((s*rows+row_[m]+1)*n+k)*cols + j)*n +l] = 0;
-            }
+            dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
+                       typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+            return;
+
         }
-        for( unsigned m=0; m<data_.size(); m++) //all blocks
-        {
-            for( unsigned s=0; s<x.Nz(); s++)//z-loop
-            for( unsigned k=0; k<n; k++)
-            for( unsigned j=1; j<cols-1; j++) //x-loop
-            for( unsigned l=0; l<n; l++)
-            for( unsigned p=0; p<n; p++)
-            {
-                y.data()[(((s*rows+row_[m]+1)*n+k)*cols + j)*n +l] += 
-                     data_[m][k*n+p]
-                    *x.data()[(((s*rows+col_[m]+1)*n+p)*cols + j)*n + l];
-            }
-        }
+        //t.tic();
+        //1. compute inner points
+        dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
+                       typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+        //t.toc();
+        //if(rank==0)std::cout << "Inner points took "<<t.diff()<<"s\n";
+        //2. communicate outer points
+        //t.tic();
+        container temp = c_.collect( x.data());
+        //t.toc();
+        //if(rank==0)std::cout << "Collect      took "<<t.diff()<<"s\n";
+        //3. compute and add outer points
+        //t.tic();
+        dg::blas2::detail::doSymv(1., m_o, temp, 1., y.data(), 
+                       typename dg::MatrixTraits<LocalMatrixOuter>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category() );
+        //t.toc();
+        //if(rank==0)std::cout << "Outer points took "<<t.diff()<<"s\n";
     }
+
+        
+    private:
+    LocalMatrixInner m_i;
+    LocalMatrixOuter m_o;
+    Collective c_;
 };
 
 /**
- * @brief Matrix class for block matrices for 2D and 3D derivatives in X and Y direction
- *
- * Stores only one line of blocks and takes care of updating
- * ghost cells before being applied to vectors. 
- * This has a huge advantage in memory consumption over other sparse matrix formats.
- * The format is that of a sparse block matrix with equal blocks in each line
- \f[
- \begin{pmatrix}
- A & B & C &  & & \\
-   & A & B & C & & \\
-   ...\\
-   &   &   & A & B & C
-   \end{pmatrix}
-   \f]
- */
-struct MPI_Matrix
+* @brief Distributed memory matrix class
+*
+* The idea of this mpi matrix is to separate communication and computation in order to reuse existing optimized matrix formats for the computation. 
+* It can be expected that this works particularly well for cases in which the communication to computation ratio is low. 
+* This class assumes that the matrix and vector elements are distributed rowwise among mpi processes.
+* @tparam LocalMatrix The class of the matrix for local computations. 
+ symv needs to be callable on the container class of the MPI_Vector
+* @tparam Collective The Communication class needs to scatter and gather values across processes. 
+container collect( const container& input);
+Gather all points (including the ones that the process already has) necessary for the local matrix-vector
+product into one vector, such that the local matrix can be applied.
+int size(); 
+should give the size of the vector that collect returns. If size()==0 the collect() function won't be called and
+only the inner matrix is applied.
+*/
+template<class LocalMatrix, class Collective >
+struct RowDistMat
 {
+    RowDistMat( ) { }
     /**
-     * @brief Construct from boundary condition and number of blocks
-     *
-     * @param number # of blocks
-     */
-    MPI_Matrix( unsigned number): 
-        dataY_(number), dataX_(number), offset_(number, 0)
-       { }
+    * @brief Constructor 
+    *
+    * @param m The local matrix
+    * @param c The communication object
+    */
+    RowDistMat( const LocalMatrix& m, const Collective& c):m_(m), c_(c) { }
 
     /**
-     * @brief Set blocks in Y
-     *
-     * May be left empty.
-     * If set, these will be applied in the symv() function
-     * @return a reference to the internal data
-     */
-    std::vector<std::vector<double> >& dataY()    {return dataY_;}
+    * @brief Copy Constructor 
+    *
+    * @tparam OtherMatrix
+    * @tparam OtherCollective
+    * @param src The other matrix
+    */
+    template< class OtherMatrix, class OtherCollective>
+    RowDistMat( const RowDistMat<OtherMatrix, OtherCollective>& src):m_(src.matrix()), c_(src.collective())
+    { }
     /**
-     * @brief Set blocks in X
-     *
-     * May be left empty.
-     * If set, these will be applied in the symv() function
-     * @return a reference to the internal data
-     */
-    std::vector<std::vector<double> >& dataX()    {return dataX_;}
+    * @brief Access to the local matrix
+    *
+    * @return Reference to the local matrix
+    */
+    const LocalMatrix& matrix() const{return m_;}
     /**
-     * @brief Set offset
-     *
-     * Has to be of equal size than either dataY_ or dataX_
-     * The offsets are the col numbers counting from the diagonal 
-     * e.g. for a simple centered X-derivative they are -n, 0, n
-     * while for the Y-derivative they are -n*n*Nx, 0, n*n*Nx
-     * @return a reference to the internal data
-     */
-    std::vector<int>&                  offset()  {return offset_;}
+    * @brief Access to the communication object
+    *
+    * @return Reference to the collective object
+    */
+    const Collective& collective() const{return c_;}
+    
     /**
-     * @brief Set boundary terms in x
-     *
-     * May be left empty.
-     * If set, these will be applied in the symv() function
-     * @return a reference to the internal data
-     */
-    BoundaryTerms& xterm() {return xterm_;}
-    /**
-     * @brief Set boundary terms in y
-     *
-     * May be left empty.
-     * If set, these will be applied in the symv() function
-     * @return a reference to the internal data
-     */
-    BoundaryTerms& yterm() {return yterm_;}
-    /**
-     * @brief Set the normalisation 
-     *
-     * May be left empty.
-     * If set, these weights will be applied in the symv() function
-     * @return a reference to the internal data
-     */
-    MPI_Precon& precond() {return p_;}
+    * @brief Apply the matrix to an MPI_Vector
+    *
+    * @tparam container 
+    * @param x
+    * @param y
+    */
+    template<class container> 
+    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
+    {
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
+        //int rank;
+        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //dg::Timer t;
 
-    /**
-     * @brief Apply the matrix to a vector
-     *
-     * @param x input vector, const except for the boundary terms
-     * @param y output vector
-     */
-    void symv( MPI_Vector& x, MPI_Vector& y) const;
-  private:
-    MPI_Precon p_;
-    std::vector<std::vector<double> > dataY_;
-    std::vector<std::vector<double> > dataX_;
-    std::vector<int> offset_;
-    BoundaryTerms xterm_;
-    BoundaryTerms yterm_;
+        //t.tic();
+        if( c_.size() == 0) //no communication needed
+        {
+            dg::blas2::detail::doSymv( m_, x.data(), y.data(), 
+                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+            return;
+
+        }
+        container temp = c_.collect( x.data());
+        //t.toc();
+        //if(rank==0)std::cout << "collect took "<<t.diff()<<"s\n";
+        //t.tic();
+        dg::blas2::detail::doSymv( m_, temp, y.data(), 
+                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+        //t.toc();
+        //if(rank==0)std::cout << "symv    took "<<t.diff()<<"s\n";
+    }
+
+        
+    private:
+    LocalMatrix m_;
+    Collective c_;
 };
 
+/**
+* @brief Distributed memory matrix class
+*
+* The idea of this mpi matrix is to separate communication and computation in order to reuse existing optimized matrix formats for the computation. 
+* It can be expected that this works particularly well for cases in which the communication to computation ratio is low. 
+* This class assumes that the matrix and vector elements are distributed columnwise among mpi processes.
+* @tparam LocalMatrix The class of the matrix for local computations. 
+ symv needs to be callable on the container class of the MPI_Vector
+* @tparam Collective The Communication class needs to scatter and gather values across processes. 
+void send_and_reduce( const container& input, container& output);
+Sends the results of the local computations to the processes they belong to. 
+After that the results of the same lines need to be reduced.
+int size(); 
+should give the size of the vector that send_and_reduce needs. If size()==0 the send_and_reduce() function won't be called and
+only the inner matrix is applied.
+*/
+template<class LocalMatrix, class Collective >
+struct ColDistMat
+{
+    ColDistMat( ){}
+    /**
+    * @brief Constructor 
+    *
+    * @param m The local matrix
+    * @param c The communication object
+    */
+    ColDistMat( const LocalMatrix& m, const Collective& c):m_(m), c_(c)
+    { }
+    /**
+    * @brief Access to the local matrix
+    *
+    * @return Reference to the local matrix
+    */
+    const LocalMatrix& matrix() const{return m_;}
+    /**
+    * @brief Access to the communication object
+    *
+    * @return Reference to the collective object
+    */
+    const Collective& collective() const{return c_;}
+    
+    /**
+    * @brief Apply the matrix to an MPI_Vector
+    *
+    * @tparam container 
+    * @param x
+    * @param y
+    */
+    template<class container> 
+    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
+    {
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
+        if( c_.size() == 0) //no communication needed
+        {
+            dg::blas2::detail::doSymv( m_, x.data(), y.data(), 
+                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+            return;
 
-typedef MPI_Matrix MMatrix; //!< mpi matrix type
-///@}
+        }
+        container temp( c_.size());
+        dg::blas2::detail::doSymv( m_, x.data(), temp, 
+                       typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
+                       typename dg::VectorTraits<container>::vector_category(),
+                       typename dg::VectorTraits<container>::vector_category() );
+        c_.send_and_reduce( temp, y.data());
+    }
+    private:
+    LocalMatrix m_;
+    Collective c_;
+};
 
 ///@cond
-void MPI_Matrix::symv( MPI_Vector& x, MPI_Vector& y) const
+template<class LI, class LO, class C>
+struct MatrixTraits<RowColDistMat<LI,LO, C> >
 {
-#ifdef DG_DEBUG
-    assert( x.data().size() == y.data().size() );
-    assert( x.n() == y.n());
-    assert( x.Nx() == y.Nx());
-    assert( x.Ny() == y.Ny());
-    assert( x.Nz() == y.Nz());
-    assert( x.communicator() == y.communicator());
-#endif //DG_DEBUG
-    // update boundary layer if necessary
-    int rank;
-    MPI_Comm_rank(x.communicator(), &rank);
-    bool updateX = false, updateY = false;
-    for( unsigned k=0; k<dataX_.size(); k++)
-    {
-        if( !dataY_[k].empty() )
-            updateY = true;
-        if( !dataX_[k].empty() )
-            updateX = true;
-    }
-    if( updateX )
-        x.x_col(); 
-    if( updateY) 
-        x.x_row();
-    // Apply internal data
-    unsigned rows = x.Ny(), cols = x.Nx(), n = x.n();
-    for( unsigned i=0; i<y.data().size(); i++)
-        y.data()[i] = 0;
-    for( unsigned m=0; m<dataX_.size(); m++) //all blocks
-    {
-        if( !dataX_[m].empty())
-            for( unsigned s=0; s<x.Nz(); s++) //z-loop
-            for( unsigned i=1; i<rows-1; i++) //y-loop
-            for( unsigned k=0; k<n; k++)
-            for( unsigned j=1; j<cols-1; j++) //x-loop
-            for( unsigned l=0; l<n; l++)
-            for( unsigned q=0; q<n; q++) //multiplication-loop
-            {
-                y.data()[(((s*rows+i)*n+k)*cols + j)*n +l] += 
-                    dataX_[m][l*n+q]
-                    *x.data()[(((s*rows+i)*n+k)*cols + j)*n + q + offset_[m]];
-            }
-        if( !dataY_[m].empty())
-            for( unsigned s=0; s<x.Nz(); s++)
-            for( unsigned i=1; i<rows-1; i++)
-            for( unsigned k=0; k<n; k++)
-            for( unsigned j=1; j<cols-1; j++)
-            for( unsigned l=0; l<n; l++)
-            for( unsigned p=0; p<n; p++)
-            {
-                y.data()[(((s*rows+i)*n+k)*cols + j)*n +l] += 
-                     dataY_[m][k*n+p]
-                    *x.data()[(((s*rows+i)*n+p)*cols + j)*n + l + offset_[m]];
-            }
-    }
-    //apply boundary terms
-    xterm_.applyX( x,y);
-    yterm_.applyY( x,y);
-    if( !p_.data.empty())
-        dg::blas2::detail::doSymv( p_, y, y, MPIPreconTag(), MPIVectorTag(), MPIVectorTag());
-
-}
-
-
-template <>
-struct MatrixTraits<MPI_Matrix>
-{
-    typedef double value_type;
-    typedef MPIMatrixTag matrix_category;
+    typedef typename LI::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
 };
-template <>
-struct MatrixTraits<const MPI_Matrix>
+template<class LI, class LO, class C>
+struct MatrixTraits<const RowColDistMat<LI,LO, C> >
 {
-    typedef double value_type;
-    typedef MPIMatrixTag matrix_category;
+    typedef typename LI::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
 };
 
+template<class L, class C>
+struct MatrixTraits<RowDistMat<L, C> >
+{
+    typedef typename L::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
+};
+template<class L, class C>
+struct MatrixTraits<const RowDistMat<L, C> >
+{
+    typedef typename L::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
+};
+template<class L, class C>
+struct MatrixTraits<ColDistMat<L, C> >
+{
+    typedef typename L::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
+};
+template<class L, class C>
+struct MatrixTraits<const ColDistMat<L, C> >
+{
+    typedef typename L::value_type value_type;//!< value type
+    typedef MPIMatrixTag matrix_category; //!< 
+};
 ///@endcond
+
+
+//
+///@}
 
 } //namespace dg

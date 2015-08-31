@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-#include "dg/xspacelib.cuh"
+#include "dg/algorithm.h"
 #include "file/read_input.h"
 #include "file/file.h"
 #include "dg/timer.cuh"

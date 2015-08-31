@@ -1,101 +1,61 @@
 #include <iostream>
 
-//#include <cusp/ell_matrix.h>
 
 #include "blas.h"
-#include "dx.cuh"
+#include "dx.h"
+#include "sparseblockmat.cuh"
 #include "evaluation.cuh"
 #include "typedefs.cuh"
 #include "weights.cuh"
 
-const double lx = 2*M_PI;
-dg::direction dir = dg::centered;
 
-/*
 double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
-bc bcx = PER;
-*/
+double zero( double x) { return 0;}
 
-double function (double  x) {return x*(x-2*M_PI)*exp(x);}
-double derivative( double x) { return (2.*x-2*M_PI)*exp(x) + function(x);}
-dg::bc bcx = dg::DIR;
-
-
-/*
-double function( double x) { return cos(x);}
-double derivative( double x) { return -sin(x);}
-bc bcx = NEU;
-*/
-
-/*
-double function( double x) { return sin(3./4.*x);}
-double derivative( double x) { return 3./4. * sin(3./4.*x);}
-dg::bc bcx = dg::DIR_NEU;
-*/
-
-/*
-double function( double x) { return cos(3./4.*x);}
-double derivative( double x) { return -3./4.*sin(3./4.*x);}
-bc bcx = NEU_DIR;
-*/
+typedef dg::HVec Vector;
+typedef dg::EllSparseBlockMat Matrix;
 
 int main ()
 {
-    unsigned int n = 3;
-    unsigned int N = 40;
-
-    std::cout << "Note the supraconvergence!\n";
+    unsigned n, N;
     std::cout << "Type in n an Nx!\n";
     std::cin >> n>> N;
     std::cout << "# of Legendre nodes " << n <<"\n";
     std::cout << "# of cells          " << N <<"\n";
-    dg::Grid1d<double> g( 0, lx, n, N);
-    const double hx = lx/(double)N;
-  cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_symm_normed<double>( n, N, hx, bcx);
-//  cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_minus_normed<double>( n, N, hx, bcx);
-//  cusp::ell_matrix< int, double, cusp::host_memory> hm = dg::create::dx_plus_normed<double>( n, N, hx, bcx);
-    dg::HVec hv = dg::evaluate( function, g);
-    dg::HVec hw = hv;
-    const dg::HVec hu = dg::evaluate( derivative, g);
+    dg::Grid1d<double> gPER( 0.1, 2*M_PI+0.1, n, N, dg::PER);
+    dg::Grid1d<double> gDIR( 0, M_PI, n, N, dg::DIR);
+    dg::Grid1d<double> gNEU( M_PI/2., 3*M_PI/2., n, N, dg::NEU);
+    dg::Grid1d<double> gDIR_NEU( 0, M_PI/2., n, N, dg::DIR_NEU);
+    dg::Grid1d<double> gNEU_DIR( M_PI/2., M_PI, n, N, dg::NEU_DIR);
+    dg::Grid1d<double> g[] = {gPER, gDIR, gNEU, gDIR_NEU,gNEU_DIR};
 
+    std::cout << "YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
+    for( unsigned i=0; i<5; i++)
+    {
+        Matrix hs = dg::create::dx( g[i], dg::centered);
+        Matrix hf = dg::create::dx( g[i], dg::forward);
+        Matrix hb = dg::create::dx( g[i], dg::backward);
+        Matrix js = dg::create::jump( g[i].n(), g[i].N(), g[i].h(), g[i].bcx());
+        const Vector func = dg::evaluate( function, g[i]);
+        Vector error = func;
+        const Vector w1d = dg::create::weights( g[i]);
+        const Vector deri = dg::evaluate( derivative, g[i]);
+        const Vector null = dg::evaluate( zero, g[i]);
 
-//    std::cout << "Input vector: " << std::endl;
-//    for(dg::HVec::iterator it = hv.begin(); it != hv.end(); it++)
-//    {
-//        std::cout << *it << "  ";
-//    }
-//    std::cout << std::endl;
-
-    dg::blas2::symv( hm, hv, hw);
-
-//    std::cout << "True solution:" << std::endl;
-//    for(unsigned int i = 0; i < hu.size(); i++)
-//    {
-//        std::cout << hu[i] << " ";
-//    }
-//    std::cout << std::endl;
-
-//    std::cout << "Our solution:" << std::endl;
-//    for(unsigned int i = 0; i < hu.size(); i++)
-//    {
-//        std::cout << hw[i] << " ";
-//    }
-//    std::cout << std::endl;
-
-
-    dg::blas1::axpby( 1., hu, -1., hw);
-    //
-    std::cout << "Distance to true solution (cusp_matrix): "<<sqrt(dg::blas2::dot( dg::create::weights(g), hw) )<<"\n";
-
-    dg::dx_matrix hm_2(n, N, hx, bcx, dir);
-    hv = dg::evaluate(function, g);
-    hw = hv;
-    dg::blas2::symv(hm_2, hv, hw);
-    dg::blas1::axpby(1., hu, -1., hw);
-
-    std::cout << "Distance to true solution (dx_matrix): "<<sqrt(dg::blas2::dot( dg::create::weights(g), hw) )<<"\n";
-
+        dg::blas2::symv( hs, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (symmetric): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( hf, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (forward  ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( hb, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (backward ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( js, func, error);
+        dg::blas1::axpby( 1., null , -1., error);
+        std::cout << "Distance to true solution (jump     ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n\n";
+    }
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

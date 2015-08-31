@@ -3,15 +3,12 @@ device=gpu
 
 
 INCLUDE = -I../../ # other project libraries
-INCLUDE = -I../ # other project libraries
-INCLUDE+= -I. # header files
+INCLUDE+= -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
 
 INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
-
-#you might check the libs here, cf your glfw installation
-GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
+GLFLAGS =$$(pkg-config --static --libs glfw3)
 ifeq ($(strip $(device)),gpu)
 GLFLAGS+= -lGLEW
 endif
@@ -29,7 +26,7 @@ endif
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_52 
+CFLAGS = --compiler-options -Wall -arch=sm_20
 #CFLAGS+= -Xcompiler -fopenmp 
 #CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 #CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
@@ -58,11 +55,14 @@ toefl_t: toefl_t.cu toefl.cuh
 toefl_b: toefl_b.cu toefl.cuh
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
+dz_2_t: dz_2_t.cu dz.h
+	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS)   -g 
+
 %_t: %_t.cu
 	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
+	$(CC) -O3 $(CFLAGS) $< -o $@ $(INCLUDE) 
 
 dg_t: dg_t.cpp ../dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm

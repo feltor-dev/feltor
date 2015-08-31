@@ -8,8 +8,10 @@
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
 #include "dg/backend/xspacelib.cuh"
+#include "dg/backend/sparseblockmat.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/average.cuh"
+#include "dg/backend/typedefs.cuh"
 #include "file/read_input.h"
 #include "solovev/geometry.h"
 
@@ -21,7 +23,6 @@
    - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-
 
 int main( int argc, char* argv[])
 {
@@ -72,7 +73,7 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
     std::cout << "Done!\n";
@@ -92,7 +93,7 @@ int main( int argc, char* argv[])
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =2 ->2*2-1
+    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =2 ->2*2-1
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning
@@ -116,7 +117,7 @@ int main( int argc, char* argv[])
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
     dg::ToroidalAverage<dg::HVec> toravg(grid);
     //create timer
@@ -133,7 +134,7 @@ int main( int argc, char* argv[])
     const dg::DVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
     const dg::DVec Zprobe(1,0.);
     const dg::DVec Phiprobe(1,M_PI);
-    dg::DMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
+    dg::IDMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
     dg::DVec probevalue(1,0.);   
     while ( !glfwWindowShouldClose( w ))
     {

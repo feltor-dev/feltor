@@ -6,8 +6,18 @@
 #include "../functors.h"
 
 
+
+
+/**
+* @file Contains creation function to create an interpolation ell_matrix on the
+    device
+*/
+
 namespace dg
 {
+//interpolation matrices
+typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
+typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 
 namespace create
 {
@@ -237,7 +247,6 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
  */
 cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const Grid2d<double>& g  )
 {
-    //dg::Timer t;
     assert( x.size() == y.size());
     //allocate ell matrix storage
     cusp::ell_matrix<int, double, cusp::device_memory> A( x.size(), g.size(), x.size()*g.n()*g.n(), g.n()*g.n());
@@ -250,7 +259,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
             MAX_BLOCKS, 
             cusp::system::cuda::DIVIDE_INTO( A.num_rows, BLOCK_SIZE));
     const int pitch = A.column_indices.pitch; //# of cols in memory
-    assert( pitch == A.values.pitch);
+    assert( pitch == (int)A.values.pitch);
     int* Aj = thrust::raw_pointer_cast(&A.column_indices(0,0));
     double * Av = thrust::raw_pointer_cast(&A.values(0,0));
 
@@ -267,14 +276,9 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     const double* yn_ptr = thrust::raw_pointer_cast( &yn[0]);
     thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
-    //t.toc();
-    //std::cout << "Prekernel took "<<t.diff()<<"s\n";
-    //t.tic();
     detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), 
             cellX_ptr, cellY_ptr, 
             xn_ptr, yn_ptr, pitch, Aj, Av, forward_ptr);
-    //t.toc();
-    //std::cout << "   kernel took "<<t.diff()<<"s\n";
     return A;
 
 }
@@ -306,7 +310,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
             MAX_BLOCKS, 
             cusp::system::cuda::DIVIDE_INTO( A.num_rows, BLOCK_SIZE));
     const int pitch = A.column_indices.pitch; //# of cols in memory
-    assert( pitch == A.values.pitch);
+    assert( pitch == (int)A.values.pitch);
     int* Aj = thrust::raw_pointer_cast(&A.column_indices(0,0));
     double * Av = thrust::raw_pointer_cast(&A.values(0,0));
 
@@ -384,47 +388,6 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid
 
 }
 
-///@cond
-//This code is a "proof of principle implementation for a block matrix format
-//matrix -vector multiplication
-template<size_t BLOCK_SIZE>
-__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
- __global__ void forward_trafo(
-         const int n, 
-         const int Nx, 
-         const double* forward, const double* x, double *y)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
-    for( int row = thread_id; row<Nx; row += grid_size)
-    {
-        //for( unsigned j=0; j<n; j++)
-        int i=row/n, j=row%n;
-        {
-            y[i*n+j]=0;
-            for( int k=0; k<n; k++)
-                y[i*n+j] += forward[ j*n+k]*x[i*n+k];
-        }
-    }
 
-}
-
-void forward_transform( thrust::device_vector<double>& x, thrust::device_vector<double>& y, thrust::device_vector<double>& forward, const Grid2d<double>& g)
-{
-    assert( x.size() == y.size());
-    //set up kernel parameters
-    const size_t BLOCK_SIZE = 256;
-    const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( forward_trafo<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
-    const size_t NUM_BLOCKS = std::min<size_t>( 
-            MAX_BLOCKS, 
-            cusp::system::cuda::DIVIDE_INTO( x.size(), BLOCK_SIZE));
-    const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
-    double* y_ptr = thrust::raw_pointer_cast( &y[0]);
-    const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
-    forward_trafo<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( g.n(), x.size(), forward_ptr, x_ptr, y_ptr);
-}
-
-///@endcond
 } //namespace create
 } //namespace dg

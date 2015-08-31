@@ -28,14 +28,15 @@ namespace dg
             may be constructed during function call.
  */
 template< class BinaryOp>
-MPI_Vector evaluate( BinaryOp f, const MPI_Grid2d& g)
+MPI_Vector<thrust::host_vector<double> > evaluate( BinaryOp f, const MPI_Grid2d& g)
 {
-    MPI_Vector v( g.n(), g.Nx(), g.Ny(), g.communicator());
+    thrust::host_vector<double> w = evaluate( f, g.local());
+    MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
     v.data() = evaluate(f,g.local());
     return v;
 };
 ///@cond
-MPI_Vector evaluate( double(f)(double, double), const MPI_Grid2d& g)
+MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double), const MPI_Grid2d& g)
 {
     return evaluate<double(double, double)>( f, g);
 };
@@ -54,14 +55,15 @@ MPI_Vector evaluate( double(f)(double, double), const MPI_Grid2d& g)
             may be constructed during function call.
  */
 template< class TernaryOp>
-MPI_Vector evaluate( TernaryOp f, const MPI_Grid3d& g)
+MPI_Vector<thrust::host_vector<double> > evaluate( TernaryOp f, const MPI_Grid3d& g)
 {
-    MPI_Vector v( g.n(), g.Nx(), g.Ny(), g.Nz(), g.communicator());
+    thrust::host_vector<double> w = evaluate( f, g.local());
+    MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
     v.data() = evaluate(f, g.local());
     return v;
 };
 ///@cond
-MPI_Vector evaluate( double(f)(double, double, double), const MPI_Grid3d& g)
+MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double, double), const MPI_Grid3d& g)
 {
     return evaluate<double(double, double, double)>( f, g);
 };

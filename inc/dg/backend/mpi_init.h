@@ -1,4 +1,5 @@
 #pragma once
+//enums need to be included before this
 
 void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm  )
 {

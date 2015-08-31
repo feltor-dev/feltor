@@ -1,16 +1,10 @@
 #include <iostream>
 #include <iomanip>
 
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-
-#include "backend/timer.cuh"
-#include "backend/evaluation.cuh"
 #include "arakawa.h"
 #include "blas.h"
-#include "backend/typedefs.cuh"
 
-
+#include "backend/timer.cuh"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

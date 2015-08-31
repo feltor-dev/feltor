@@ -2,10 +2,9 @@
 
 #include "blas.h"
 #include "backend/timer.cuh"
+#include "backend/typedefs.cuh"
 
 #include "helmholtz.h"
-#include "backend/xspacelib.cuh"
-#include "multistep.h"
 #include "exceptions.h"
 #include "cg.h"
 #include "functors.h"

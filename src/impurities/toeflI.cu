@@ -129,7 +129,7 @@ int main( int argc, char* argv[])
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
@@ -141,6 +141,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
+    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplacianM( grid, dg::normed, dg::centered);
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
@@ -161,7 +162,7 @@ int main( int argc, char* argv[])
             render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         //transform phi
-        dg::blas2::gemv( test.laplacianM(), test.potential()[0], y1[1]);
+        dg::blas2::gemv( laplacianM, test.potential()[0], y1[1]);
         hvisual = y1[1];
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale

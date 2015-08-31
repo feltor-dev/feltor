@@ -152,7 +152,7 @@ int main( int argc, char* argv[])
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
-    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::gemv( interpolate, y0[i], transferD);

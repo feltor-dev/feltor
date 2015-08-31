@@ -2,7 +2,6 @@
 
 #include <cassert>
 
-#include "backend/matrix_traits.h"
 #include "blas.h"
 #include "elliptic.h"
 
@@ -41,7 +40,7 @@ struct Helmholtz
      */
     template<class Grid>
     Helmholtz( const Grid& g, double alpha = 1., direction dir = dg::forward):
-        laplaceM_(g, dg::DIR,dg::DIR, not_normed, dir), 
+        laplaceM_(g, not_normed, dir), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
         alpha_(alpha), isSet(false)
     { }
@@ -145,7 +144,7 @@ struct Helmholtz2
      */
     template<class Grid>
     Helmholtz2( const Grid& g, double alpha = 1., direction dir = dg::forward):
-        laplaceM_(g, dg::DIR,dg::DIR, not_normed, dir), 
+        laplaceM_(g, not_normed, dir), 
         temp_(dg::evaluate(dg::one, g)),temp2_(temp_),temp3_(temp_), chi_(temp_),
         alpha_(alpha), isSet(false)
     { }

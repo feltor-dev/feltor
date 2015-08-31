@@ -2,34 +2,22 @@
 
 #include "matrix_traits.h"
 #include "weights.cuh"
+#include "mpi_grid.h"
 
 namespace dg
 {
  
-///@addtogroup mpi_structures
-///@{
-//
-/**
- * @brief The Preconditioner structures for weights in mpi
- */
-struct MPI_Precon
-{
-    double norm; //!< norm
-    std::vector<double> data; //!< n weight coefficients
-    thrust::host_vector<double> vec; //!< 1d weights for 3d cylindrical COS (may be empty)
-};
-///@}
 
 ///@cond
-typedef MPI_Precon MPrecon;
-template <>
-struct MatrixTraits<MPI_Precon>
+
+template <class T>
+struct MatrixTraits<MPI_Vector<T> >
 {
     typedef double value_type;
     typedef MPIPreconTag matrix_category;
 };
-template <>
-struct MatrixTraits<const MPI_Precon>
+template <class T>
+struct MatrixTraits<const MPI_Vector<T> >
 {
     typedef double value_type;
     typedef MPIPreconTag matrix_category;
@@ -48,12 +36,10 @@ namespace create
 *
 * @return Preconditioner
 */
-MPI_Precon weights( const MPI_Grid2d& g)
+MPI_Vector<thrust::host_vector<double> > weights( const MPI_Grid2d& g)
 {
-    MPI_Precon p;
-    p.data = g.dlt().weights();
-    p.norm = g.hx()*g.hy()/4.;
-    return p;
+    thrust::host_vector<double> w = create::weights( g.local());
+    return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
 /**
 * @brief create Preconditioner containing 2d inverse X-space weight coefficients
@@ -62,13 +48,10 @@ MPI_Precon weights( const MPI_Grid2d& g)
 *
 * @return Preconditioner
 */
-MPI_Precon inv_weights( const MPI_Grid2d& g)
+MPI_Vector<thrust::host_vector<double> > inv_weights( const MPI_Grid2d& g)
 {
-    MPI_Precon v = weights( g);
-    v.norm = 1./v.norm;
-    for( unsigned i=0; i<v.data.size(); i++)
-        v.data[i] = 1./v.data[i];
-    return v;
+    thrust::host_vector<double> w = create::inv_weights( g.local());
+    return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
 /**
 * @brief create Preconditioner containing 3d X-space weight coefficients
@@ -77,17 +60,10 @@ MPI_Precon inv_weights( const MPI_Grid2d& g)
 *
 * @return Preconditioner
 */
-MPI_Precon weights( const MPI_Grid3d& g)
+MPI_Vector<thrust::host_vector<double> > weights( const MPI_Grid3d& g)
 {
-    MPI_Precon p;
-    p.data = g.dlt().weights();
-    p.norm = g.hz()*g.hx()*g.hy()/4.;
-    if( g.system() == cylindrical)
-    {
-        Grid1d<double> gR( g.x0(), g.x1(), g.n(), g.Nx());
-        p.vec = abscissas( gR); 
-    }
-    return p;
+    thrust::host_vector<double> w = create::weights( g.local());
+    return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
 /**
 * @brief create Preconditioner containing 3d inverse X-space weight coefficients
@@ -96,18 +72,10 @@ MPI_Precon weights( const MPI_Grid3d& g)
 *
 * @return Preconditioner
 */
-MPI_Precon inv_weights( const MPI_Grid3d& g)
+MPI_Vector<thrust::host_vector<double> > inv_weights( const MPI_Grid3d& g)
 {
-    MPI_Precon v = weights( g);
-    v.norm = 1./v.norm;
-    for( unsigned i=0; i<v.data.size(); i++)
-        v.data[i] = 1./v.data[i];
-    if( g.system() == cylindrical)
-    {
-        for( unsigned i=0; i<v.vec.size(); i++)
-            v.vec[i] = 1./v.vec[i]; 
-    }
-    return v;
+    thrust::host_vector<double> w = create::inv_weights( g.local());
+    return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
 
 ///@}

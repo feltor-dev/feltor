@@ -110,6 +110,9 @@ struct Convection
 
 template <class M, class container, class P>
 Convection<M, container, P>::Convection( const dg::Grid2d<value_type>& g, Params p, double eps_lap ): 
+    dx_per ( dg::create::dx( g, dg::PER)),
+    dy_dir ( dg::create::dy( g, dg::DIR)),
+    dy_neu ( dg::create::dy( g, dg::NEU)),
     laplaceM( g, dg::PER, dg::DIR, dg::not_normed, dg::forward),
     phi( g.size()), phi_old(phi), dxphi( phi), dyphi( phi),
     dxT( phi), source_(phi), temp( phi),
@@ -120,9 +123,6 @@ Convection<M, container, P>::Convection( const dg::Grid2d<value_type>& g, Params
     eps_( p.eps), R_(p.R), R_l_( p.R_l), L_(p.L), P_(p.P), 
     eps_lap( eps_lap)
 {
-    dx_per = dg::create::dx( g, dg::PER);
-    dy_dir = dg::create::dy( g, dg::DIR);
-    dy_neu = dg::create::dy( g, dg::NEU);
 }
 
 template<class M, class container, class P>

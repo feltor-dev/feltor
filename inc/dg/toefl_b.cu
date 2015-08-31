@@ -102,7 +102,7 @@ int main()
     //create visualisation vectors
     dg::DVec visual(  grid.size());
     dg::DVec ground = dg::evaluate ( groundState, grid), temperature( ground);
-    dg::DMatrix equidistant = dg::create::backscatter( grid );
+    dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
     colors.scale() =  1.;
     ab.init( test, y0, dt);

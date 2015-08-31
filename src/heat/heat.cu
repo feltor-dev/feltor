@@ -95,7 +95,7 @@ int main( int argc, char* argv[])
 //     dg::Invert< dg::DVec> invert( x, w3d_.size(), eps );  
 //     std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
 //     const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), grid);
-//     std::cout << " # of iterations "<< invert( ellipticsym, x, rhs ) << std::endl; //is dzTdz
+//     std::cout << " # of iterations "<< invert( ellipticsym, x, rhs ) << std::endl; //is dsTds
 //     dg::DVec solution = dg::evaluate( solovev::FuncNeu(gp.R_0, gp.I_0),grid);
 //     double normf = dg::blas2::dot( w3d_, solution);
 //     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
@@ -109,7 +109,7 @@ int main( int argc, char* argv[])
         
 //     std::cout << "MAX # iterations = " << w3d_.size() << std::endl;
 //     
-//     std::cout << " # of iterations "<< invert( ellipticsym, x, rhs ) << std::endl; //is dzTdz
+//     std::cout << " # of iterations "<< invert( ellipticsym, x, rhs ) << std::endl; //is dsTds
 //     
 //     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
 //     errinvT =dg::blas2::dot( w3d_, x);
@@ -123,9 +123,9 @@ int main( int argc, char* argv[])
     
     //create RHS     
     std::cout << "initialize feltor" << std::endl;
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     std::cout << "initialize rolkar" << std::endl;
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
@@ -147,7 +147,7 @@ int main( int argc, char* argv[])
     std::cout << "T aligning" << std::endl;  
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[0] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
+    y1[0] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
 
     //no field aligning
 //     std::cout << "No T aligning" << std::endl;      
@@ -174,7 +174,7 @@ int main( int argc, char* argv[])
    
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
 
     //create timer

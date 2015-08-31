@@ -6,17 +6,24 @@
   This file contains useful typedefs of commonly used types.
   */
 namespace dg{
+//vectors
 typedef thrust::device_vector<double> DVec; //!< Device Vector
-typedef thrust::host_vector<double> HVec; //!< Host Vector
+typedef thrust::host_vector<double>   HVec; //!< Host Vector
+typedef thrust::device_vector<int> IDVec; //!< Device index Vector
+typedef thrust::host_vector<int>   IHVec; //!< Host index Vector
+//derivative matrices
+typedef EllSparseBlockMatDevice DMatrix;
+typedef EllSparseBlockMat HMatrix;
 
-typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix; //!< default matrix
-typedef cusp::csr_matrix<int, double, cusp::host_memory> HMatrix; //!< CSR host Matrix
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-typedef cusp::csr_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for omp
-#else
-typedef cusp::csr_matrix<int, double, cusp::device_memory> DMatrix;
-//!< sec efficient matrix format for gpu and only efficient format which can handly plusT, minusT matrices!
-// typedef cusp::ell_matrix<int, double, cusp::device_memory> DMatrix; //!< most efficient matrix format for gpu
+#ifdef MPI_VERSION
+typedef MPI_Vector<thrust::device_vector<double> >  MDVec;
+typedef MPI_Vector<thrust::host_vector<double>  >   MHVec;
+
+typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH;
+typedef NearestNeighborComm<thrust::device_vector<int>, thrust::device_vector<double> > NNCD;
+
+typedef dg::RowColDistMat<dg::EllSparseBlockMat, dg::CooSparseBlockMat, dg::NNCH> MHMatrix;
+typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice, dg::CooSparseBlockMatDevice, dg::NNCD> MDMatrix;
 #endif
 
 }//namespace dg

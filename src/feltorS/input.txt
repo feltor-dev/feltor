@@ -4,16 +4,16 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =  1 (3)
-2)  nx (grid points in x)                =  50(192)
-3)  ny (grid points in y)                =  50(192) 
-4)  dt (time step in units c_s/rho_s)    =0.5(0.01)
+1)  n  (# of x,y-polynomials)            =  3 (3)
+2)  nx (grid points in x)                =  200(192)
+3)  ny (grid points in y)                =  200(192) 
+4)  dt (time step in units c_s/rho_s)    =  0.01 (0.01)
 ----------------------------------Output parameters--------------------
 5)  n_out (# of x-y polynomials in output)  =  1
 6)  nx_out (# grid points in output field)  =  150
 7)  ny_out (# grid points in output field)  =  150
-8)  itstp  (steps between outputs)          =  100(5)
-9) total # of outputs (excluding first)     =  100000
+8)  itstp  (steps between outputs)          =  10 (5)
+9) total # of outputs (excluding first)     =  1
 
 -------------------------Algorithmic parameters------------------------
 10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
@@ -33,8 +33,8 @@
 21) sigma (blob variance in units of rho_s) =  2.5     (10)
 22) x-position ( in units of lx)            =  0.5   (0.4)
 22) y-position ( in units of ly)            =  0.5   (0.5)
-24) Profile amplitude                       =  1.0  (peak amplitude)
-25) Background Prof amplitude               =  0.0   (density on the boundary)
+24) Profile amplitude                       =  2.0  (peak amplitude)
+25) Background Prof amplitude               =  1.0   (density on the boundary)
 ---------------------------------box setup----------------
 26) lx (in rho_s)                           =  64
 27) ly (in rho_s)                           =  64

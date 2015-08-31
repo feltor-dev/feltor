@@ -126,7 +126,7 @@ int main( int argc, char* argv[])
     dg::DVec dvisual( grid.size(), 0.);
     dg::DVec dvisual2( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
     //create timer
     dg::Timer t;

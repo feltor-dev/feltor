@@ -57,11 +57,11 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p( v);
     if(rank==0) p.display( std::cout);
-
-     ////////////////////////////////setup remaining MPI///////////////////////////////
+     ////////////////////////////////setup MPI///////////////////////////////
     int periods[2] = {false, false}; //non-, non-, periodic
-    if( p.bc_y == dg::PER) periods[1] = true;
 
+    if( p.bc_x == dg::PER) periods[0] = true;
+    if( p.bc_y == dg::PER) periods[1] = true;
     int np[2];
     if(rank==0)
     {
@@ -72,15 +72,16 @@ int main( int argc, char* argv[])
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
-    
+    //////////////////////////////////////////////////////////////
+
      //Make grid
     dg::MPI_Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
-    dg::Grid2d<double> grid_out = dg::create::ghostless_grid( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, comm);  
+    dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::MMatrix, dg::MVec, dg::MPrecon > feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::MHMatrix, dg::MHVec, dg::MHVec > feltor( grid, p); //initialize before rolkar!
     if(rank==0) std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::MMatrix, dg::MVec, dg::MPrecon > rolkar( grid, p);
+    eule::Rolkar<dg::MHMatrix, dg::MHVec, dg::MHVec > rolkar( grid, p);
     if(rank==0) std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -100,7 +101,7 @@ int main( int argc, char* argv[])
 //     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    std::vector<dg::MVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
+    std::vector<dg::MHVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
     
       //initialization via N_i,T_I ->n_e, t_i=t_e
     y1[1] = dg::evaluate( init0, grid);
@@ -128,7 +129,7 @@ int main( int argc, char* argv[])
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg
     std::cout << "Done!\n";
     
-    dg::Karniadakis< std::vector<dg::MVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::MHVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     if(rank==0) std::cout << "intiialize Timestepper" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     if(rank==0) std::cout << "Done!\n";    
@@ -180,12 +181,12 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << "First output ... \n";
     int dims[2],  coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
-    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};  
+    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[3] = {0, coords[1]*count[1],          coords[0]*count[2]}; 
-    dg::MVec transferD( dg::evaluate(dg::zero, grid));
-    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::MHVec transferD( dg::evaluate(dg::zero, grid));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
     //create local interpolation matrix
-    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out, grid.local()); 
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::gemv( interpolate, y0[i].data(), transferH);
@@ -223,9 +224,9 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << "First write successful!\n";
 
     ///////////////////////////////////////Timeloop/////////////////////////////////
+#ifdef DG_BENCHMARK
     dg::Timer t;
     t.tic();
-#ifdef DG_BENCHMARK
     unsigned step = 0;
 #endif //DG_BENCHMARK
     for( unsigned i=1; i<=p.maxout; i++)
@@ -300,6 +301,7 @@ int main( int argc, char* argv[])
         if(rank==0)std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
     }
+#ifdef DG_BENCHMARK
     t.toc(); 
     unsigned hour = (unsigned)floor(t.diff()/3600);
     unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
@@ -307,6 +309,7 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     if(rank==0) std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     if(rank==0) std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
+#endif //DG_BENCHMARK
     err = nc_close(ncid);
     MPI_Finalize();
     return 0;
