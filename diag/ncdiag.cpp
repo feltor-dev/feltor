@@ -111,7 +111,7 @@ int main( int argc, char* argv[])
     size_t count3d[4]  = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start3d[4]  = {0, 0, 0, 0};
     //size_t count3dp[4] = {1, 1, g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
-    //size_t start3dp[4] = {0, 0, 0, 0};
+//     size_t start3dp[4] = {0, 0, 0, 0};
 
 
 
@@ -184,7 +184,7 @@ int main( int argc, char* argv[])
     std::cin>>outlim;
     for( unsigned i=0; i<outlim; i++)//timestepping
     {
-        start3dp[0] = i; //set specific time  
+//         start3dp[0] = i; //set specific time  
         start3d[0] = i; //set specific time  
         start2d[0] = i;
         start1d[0] = i;

@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "dg/backend/xspacelib.cuh"
+#include "dg/algorithm.h"
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
 #include "file/file.h"
@@ -49,7 +50,7 @@ int main( int argc, char* argv[])
     p.display();
     dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     unsigned index = 1;
     while ( index < t5file.get_size() + 1 )
     {

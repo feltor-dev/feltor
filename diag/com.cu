@@ -86,7 +86,7 @@ int main( int argc, char* argv[])
     dg::HVec yvec = dg::evaluate( Y, grid);
     dg::HVec one = dg::evaluate( dg::one, grid);
     dg::HVec w2d = dg::create::weights( grid);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
 
     t5file.get_field( input0, "electrons", 1);
     if( p.global)
