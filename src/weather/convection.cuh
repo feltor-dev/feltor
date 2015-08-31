@@ -13,8 +13,8 @@ struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double L, double P): L_(L), P_(P),
         w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)), temp( g.size()),
-        LaplacianM_dir( g, dg::PER, dg::DIR, dg::normed, dg::forward),
-        LaplacianM_neu( g, dg::PER, dg::NEU, dg::normed, dg::forward)
+        LaplacianM_dir( g, dg::PER, dg::DIR, dg::normed, dg::centered),
+        LaplacianM_neu( g, dg::PER, dg::NEU, dg::normed, dg::centered)
     { }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
@@ -113,7 +113,7 @@ Convection<M, container, P>::Convection( const dg::Grid2d<value_type>& g, Params
     dx_per ( dg::create::dx( g, dg::PER)),
     dy_dir ( dg::create::dy( g, dg::DIR)),
     dy_neu ( dg::create::dy( g, dg::NEU)),
-    laplaceM( g, dg::PER, dg::DIR, dg::not_normed, dg::forward),
+    laplaceM( g, dg::PER, dg::DIR, dg::not_normed, dg::centered),
     phi( g.size()), phi_old(phi), dxphi( phi), dyphi( phi),
     dxT( phi), source_(phi), temp( phi),
     background_( dg::evaluate( dg::LinearY( -p.R, p.R*p.zeta), g)), 
