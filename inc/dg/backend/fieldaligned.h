@@ -302,14 +302,17 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
     std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
     y[1] = dg::evaluate( dg::coo2, g2d);
     y[2] = dg::evaluate( dg::zero, g2d);
-    thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
   
 //     integrate field lines for all points
     
     if( deltaPhi <=0) deltaPhi = g_.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
+#ifdef _OPENMP
+#pragma omp parallel for firstprivate(field)
+#endif //_OPENMP
     for( unsigned i=0; i<size; i++)
     {
+        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
 
         double phi1 = deltaPhi;

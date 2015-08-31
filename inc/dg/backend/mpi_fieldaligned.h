@@ -165,12 +165,15 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     y[2] = dg::evaluate( dg::zero, grid.local());//distance (not angle)
     //integrate to next z-planes
     std::vector<thrust::host_vector<double> > yp(y), ym(y); 
-    thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
     if(deltaPhi<=0) deltaPhi = g_.hz();
     else assert( g_.Nz() == 1 || grid.hz()==deltaPhi);
     unsigned localsize = grid.local().size();
+#ifdef _OPENMP
+#pragma omp parallel for firstprivate(field)
+#endif //_OPENMP
     for( unsigned i=0; i<localsize; i++)
     {
+        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
         double phi1 = deltaPhi;
         boxintegrator( field, g_.global(), coords, coordsP, phi1, eps, globalbcz);
