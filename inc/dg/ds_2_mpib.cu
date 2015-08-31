@@ -435,7 +435,7 @@ int main( int argc, char* argv[])
     double normf = dg::blas2::dot( w3d, function);
 // 
 //     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-    double errinvT =dg::blas2::dot( w3d, functionTinv);
+//     double errinvT =dg::blas2::dot( w3d, functionTinv);
 //     std::cout << "Norm numerical Solution "<<sqrt( errinvT)<<"\n";
 // 
 //     dg::blas1::axpby( 1., function, +1.,functionTinv);
