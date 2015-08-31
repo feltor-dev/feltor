@@ -24,8 +24,8 @@ int main()
     std::cin >> n >> Nx >> Ny;
     const dg::Grid2d<double> g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::PoloidalAverage<dg::HVec, thrust::host_vector<double> > pol(g);
-    dg::PoloidalAverage<dg::DVec, thrust::device_vector<double> > pol_device(g);
+    dg::PoloidalAverage<dg::HVec, thrust::host_vector<int > pol(g);
+    dg::PoloidalAverage<dg::DVec, thrust::device_vector<int> > pol_device(g);
     dg::Timer t;
 
     dg::HVec vector = dg::evaluate( function ,g), vector_y( vector);
