@@ -33,7 +33,9 @@ int main( int argc, char* argv[])
 {
      ////////////////////////////////setup MPI///////////////////////////////
     MPI_Init( &argc, &argv);
-    
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
     std::string input, geom;
@@ -58,10 +60,8 @@ int main( int argc, char* argv[])
 
      ////////////////////////////////setup remaining MPI///////////////////////////////
     int periods[2] = {false, false}; //non-, non-, periodic
-    if( bcy == dg::PER) periods[1] = true;
-    int rank, size;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    if( p.bc_y == dg::PER) periods[1] = true;
+
     int np[2];
     if(rank==0)
     {
