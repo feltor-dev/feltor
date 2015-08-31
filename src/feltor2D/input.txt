@@ -4,18 +4,18 @@
 
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   70 (192)
-3)  ny (grid points in y)                =   100 (192)
+2)  nx (grid points in x)                =   40 (192)
+3)  ny (grid points in y)                =   50 (192)
 4)  nz (grid points in z)                =   30(>16)
-5)  dt (time step in units c_s/rho_s)    =   5e-2  (0.01)
+5)  dt (time step in units c_s/rho_s)    =   2e-2  (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  70
-8)  ny_out (# grid points in output field)  =  100
+7)  nx_out (# grid points in output field)  =  40
+8)  ny_out (# grid points in output field)  =  50
 9)  nz_out (# grid points in output field)  =  1
 10) itstp  (steps between outputs)          =  10 (1000)
-11) total # of outputs (excluding first)    =  10000 (300)
+11) total # of outputs (excluding first)    =  1 (300)
 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)

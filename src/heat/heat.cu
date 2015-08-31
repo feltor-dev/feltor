@@ -10,13 +10,17 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
-#include "solovev/geometry.h"
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
-// #include "geometry_g.h"
+
+// for solovev equ
+#include "solovev/geometry.h"
 #include "heat/parameters.h"
+// for guenter
+// #include "geometry_g.h"
+
 
 #include "heat.cuh"
 

@@ -151,8 +151,8 @@ Asela<DS, Matrix, container, P>::Asela( const Grid& g, Parameters p, solovev::Ge
     curvphi( phi), dsphi(phi),dslogn(phi), dsun(phi),dsu2(phi),
     poissonn( phi),poissonu( phi), poissonw( phi),poissonun(phi),poissonlogn(phi), poissonphi(phi),poissonu2(phi), 
     dsy( 4, chi), curvy(dsy), //4d container
-    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR), solovev::Field(gp), g, dg::normed, dg::centered ),
-    dsN_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU), solovev::Field(gp), g, dg::normed, dg::centered ),
+    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::centered ),
+    dsN_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::centered ),
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(      g,dg::DIR, dg::DIR, dg::not_normed,      dg::centered), 

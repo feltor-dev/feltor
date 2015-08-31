@@ -6,7 +6,6 @@ INCLUDE = -I../../ # other project libraries
 INCLUDE+= -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
-
 INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
 GLFLAGS =$$(pkg-config --static --libs glfw3)
 ifeq ($(strip $(device)),gpu)
