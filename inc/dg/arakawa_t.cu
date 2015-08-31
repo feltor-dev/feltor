@@ -1,23 +1,11 @@
 #include <iostream>
 #include <iomanip>
 
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
+#include "arakawa.h"
 
-#include "preconditioner2d.cuh"
-#include "evaluation.cuh"
-#include "arakawa.cuh"
-#include "blas.h"
-#include "typedefs.cuh"
+//const double lx = 2.*M_PI;
+//const double ly = 2.*M_PI;
 
-using namespace std;
-using namespace dg;
-
-const unsigned n = 3;
-const unsigned Nx = 25;
-const unsigned Ny = 25;
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
 
 
 //choose some mean function (attention on lx and ly)
@@ -36,45 +24,58 @@ double jacobian( double x, double y)
 }
 */
 
+/*
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return sin(y)*cos(x);} 
+const double lx = 2.*M_PI;
+const double ly = 2.*M_PI;
+dg::bc bcx = dg::PER; 
+dg::bc bcy = dg::PER;
 //double right2( double x, double y) {return sin(y);}
 double jacobian( double x, double y) 
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
+*/
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
+const double lx = M_PI/2.;
+const double ly = M_PI/2.;
+double left( double x, double y) {return sin(x)*sin(y);}
+double right( double x, double y) {return sin(2*x)*sin(2*y);} 
+dg::bc bcx = dg::DIR_NEU; 
+dg::bc bcy = dg::DIR_NEU;
+//double right2( double x, double y) {return sin(y);}
+double jacobian( double x, double y) 
+{
+    return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
+}
 
 int main()
 {
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    DVec w2d = create::s2d( grid);
-    cout << "# of 2d cells                     " << Nx*Ny <<endl;
-    cout << "# of Legendre nodes per dimension "<< n <<endl;
-    cout <<fixed<< setprecision(2)<<endl;
-    DVec lhs = expand( left, grid), jac(lhs);
-    DVec rhs = expand( right, grid);
-    const DVec sol = expand ( jacobian, grid);
-    DVec eins = expand( one, grid);
+    unsigned n, Nx, Ny;
+    std::cout << "Type n, Nx and Ny! \n";
+    std::cin >> n >> Nx >> Ny;
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    dg::DVec w2d = dg::create::weights( grid);
+    std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
+    std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
+    dg::DVec lhs = dg::evaluate( left, grid), jac(lhs);
+    dg::DVec rhs = dg::evaluate( right, grid);
+    const dg::DVec sol = dg::evaluate ( jacobian, grid);
+    dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    Arakawa< DVec> arakawa( grid);
+    dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
-    //arakawa( lhs, rhs1, jac1);
-    //blas1::pointwiseDot( rhs2, jac1, jac1);
-    //arakawa( lhs, rhs2, jac2);
-    //blas1::pointwiseDot( rhs1, jac2, jac2);
-    //blas1::axpby( 1., jac1, 1., jac2, jac2);
-
-    cout << scientific;
-    cout << "Mean     Jacobian is "<<blas2::dot( eins, w2d, jac)<<"\n";
-    cout << "Mean rhs*Jacobian is "<<blas2::dot( rhs,  w2d, jac)<<"\n";
-    cout << "Mean lhs*Jacobian is "<<blas2::dot( lhs,  w2d, jac)<<"\n";
-    blas1::axpby( 1., sol, -1., jac);
-    cout << "Distance to solution "<<sqrt( blas2::dot( w2d, jac))<<endl; //don't forget sqrt when comuting errors
+    std::cout << std::scientific;
+    std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
+    std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
+    std::cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
+    dg::blas1::axpby( 1., sol, -1., jac);
+    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |     
     //n = 2 -> p = 1    |
@@ -83,7 +84,6 @@ int main()
     //n = 5 -> p = 5    |
     // quantities are all conserved to 1e-15 for periodic bc
     // for dirichlet bc these are not better conserved than normal jacobian
-
     return 0;
 }
 

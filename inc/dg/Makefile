@@ -1,13 +1,13 @@
 system=home
 device=gpu
 
-INCLUDE = -I../ # other project libraries
+
+INCLUDE = -I../../ # other project libraries
+INCLUDE+= -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
-
-INCLUDE+= -I/home/matthias/include # cusp and thrust libraries
-#you might check the libs here, cf your glfw installation
-GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
+INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
+GLFLAGS =$$(pkg-config --static --libs glfw3)
 ifeq ($(strip $(device)),gpu)
 GLFLAGS+= -lGLEW
 endif
@@ -26,55 +26,56 @@ endif
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
 CFLAGS = --compiler-options -Wall -arch=sm_20
-CFLAGS+= -Xcompiler -fopenmp 
+#CFLAGS+= -Xcompiler -fopenmp 
 #CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-else
+#CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
+#CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
+endif
+ifeq ($(strip $(device)),omp)
 CC = g++
 CFLAGS = -Wall -fopenmp -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 endif
+ifeq ($(strip $(device)),mic)
+CC = icc
+CFLAGS = -openmp -mmic -x c++
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+endif
 
-all: version cusp_thrust arakawa_t blas1_t \
-	 cg2d_b cg2d_t cg_t dlt2d_b dlt2d_t dlt_t dx_t \
-	 evaluation_b evaluation_t gamma_t host_window_t laplace_b laplace_t \
-	 operator_matrix_t operator_dynamic_b operator_t \
-	 polarisation2d_b polarisation2d_t polarisation_b polarisation_t \
-	 preconditioner2d_b preconditioner2d_t \
-	 rk2d_t rk_t tensor_b toefl_b toefl_t xspacelib_t
+CPPFILES=$(wildcard *.cpp)
+CUFILES=$(wildcard *.cu)
 
+all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-version: version.cu 
-	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
-	./$@
+include mpi.mk
 
-cusp_thrust: cusp_thrust.cu 
-	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
-	./$@
-
-host_window_t: host_window_t.cu
+toefl_t: toefl_t.cu toefl.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
+toefl_b: toefl_b.cu toefl.cuh
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
-blas%_t: blas%_t.cu blas%.h
-	$(CC) $(CFLAGS) $< -o $@ 
+dz_2_t: dz_2_t.cu dz.h
+	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS)   -g 
 
-%_t: %_t.cu %.cuh 
-	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ $(GLFLAGS) 
+%_t: %_t.cu
+	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
-%2d_t: %2d_t.cu %.cuh 
-	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
+%_b: %_b.cu 
+	$(CC) -O3 $(CFLAGS) $< -o $@ $(INCLUDE) 
 
-%_b: %_b.cu %.cuh 
-	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS)
-	echo "Attention: No compiler warnings are issued!" 
+dg_t: dg_t.cpp ../dg.h 
+	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
 
-%2d_b: %2d_b.cu %.cuh
-	$(CC) -O2 -w $(CFLAGS) $< -o $@ $(INCLUDE) -lm
-	echo "Attention: No compiler warnings are issued!" 
-
+bathRZ_t: bathRZ_t.cu 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	
 .PHONY: clean doc
+
+dz_geom_t: dz_geom_t.cu 
+	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
 doc: 
 	doxygen Doxyfile
 
 clean:
-	rm -f *_t *_b cusp_thrust version
+	rm -f *_t *_b *_mpit *_mpib 

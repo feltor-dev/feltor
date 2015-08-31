@@ -26,11 +26,11 @@ struct Coefficients
 };
 ///@cond
 template<>
-const double Coefficients<TL_EULER>::gamma_0 = 1;
+const double Coefficients<TL_EULER>::gamma_0 = 1.;
 template<>
-const double Coefficients<TL_EULER>::alpha[3] = {1., 0,0};
+const double Coefficients<TL_EULER>::alpha[3] = {1., 0.,0.};
 template<>
-const double Coefficients<TL_EULER>::beta[3] = {1., 0,0};
+const double Coefficients<TL_EULER>::beta[3] = {1., 0.,0.};
 
 template<>
 const double Coefficients<TL_ORDER2>::gamma_0 = 1.5;
@@ -67,19 +67,20 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
     const size_t rows = c.rows(), cols = c.cols();
 #ifdef TL_DEBUG
     if( c.isVoid())
-        throw Message( "Cannot work with void Matrices!\n", ping);
+        throw Message( "Cannot work with void Matrices!\n", _ping_);
     for( unsigned k=0; k<n; k++)
     {
         if( c.rows() != in[k].rows() || c.rows() != out[k].rows())
             if( c.cols() != in[k].cols() || c.cols() != out[k].cols())
-                throw Message( "Cannot multiply coefficients! Sizes not equal!", ping);
+                throw Message( "Cannot multiply coefficients! Sizes not equal!", _ping_);
         if( in[k].isVoid() || out[k].isVoid() )
-            throw Message( "Cannot work with void Matrices!\n", ping);
+            throw Message( "Cannot work with void Matrices!\n", _ping_);
     }
 #endif
-    QuadMat<T, n> temp;
-#pragma omp for 
+#pragma omp parallel for 
     for( size_t i = 0; i<rows; i++)
+    {
+        QuadMat<T, n> temp;
         for( size_t j=0; j<cols; j++)
         {
             //Matrix-Vector multiplication
@@ -93,6 +94,7 @@ void multiply_coeff( const Matrix< QuadMat<T1,n>, TL_NONE>& c,
                     out[k](i,j) += temp(k,q);
             }
         }
+    }
 }
 
 /*! @brief Multistep timestepper object 
@@ -172,7 +174,7 @@ class Karniadakis
     {
 #ifdef TL_DEBUG
         if( c_origin.isVoid())
-            throw Message( "Init coefficients first!", ping);
+            throw Message( "Init coefficients first!", _ping_);
 #endif
         multiply_coeff< n,T_k,Fourier_T>( c_inv,v,v);
     }
@@ -209,17 +211,17 @@ Karniadakis<n,T,P>::Karniadakis(
         c_inv( crows, ccols, TL_VOID), c_origin(c_inv),
         prefactor(0.),
         dt( dt)
-{}
+{ }
 template< size_t n, typename T_k, enum Padding P>
 void Karniadakis<n,T_k,P>::init_coeff( Matrix<QuadMat<T_k, n> > & coeff_origin, const double normalisation)
 {
 #ifdef TL_DEBUG
     if( normalisation < 1.)
-        throw Message( "Yield the prefactor, not its inverse!", ping);
+        throw Message( "Yield the prefactor, not its inverse!", _ping_);
     if( coeff_origin.isVoid())
-        throw Message("Your coefficients are void!", ping);
+        throw Message("Your coefficients are void!", _ping_);
     if( coeff_origin.rows() != c_origin.rows() || coeff_origin.cols() != c_origin.cols())
-        throw Message("Your coefficients have wrong size!\n", ping);
+        throw Message("Your coefficients have wrong size!\n", _ping_);
 #endif
     prefactor = normalisation; 
     if( c_origin.isVoid())
@@ -228,7 +230,7 @@ void Karniadakis<n,T_k,P>::init_coeff( Matrix<QuadMat<T_k, n> > & coeff_origin, 
         c_inv.allocate( );
     }
     else
-        throw Message("You've already initialized coefficients", ping);
+        throw Message("You've already initialized coefficients", _ping_);
 }
 template< size_t n, typename T, enum Padding P>
 template< enum stepper S>
@@ -236,7 +238,7 @@ void Karniadakis< n,T,P>::invert_coeff( )
 {
 #ifdef TL_DEBUG
     if( c_origin.isVoid())
-        throw Message( "Init your coefficients first!", ping);
+        throw Message( "Init your coefficients first!", _ping_);
 #endif
     //invert coefficients
     for(unsigned i=0; i<c_inv.rows(); i++)
@@ -251,7 +253,7 @@ void Karniadakis< n,T,P>::invert_coeff( )
             }
             invert( c_inv(i,j), c_inv(i,j));
         }
-    //std::cout << c_inv(0,0)<<std::endl;
+    //std::cout << "C_inv "<<c_inv<<std::endl;
 
 }
 
@@ -259,18 +261,19 @@ template< size_t n, typename T, enum Padding P>
 template< enum stepper S>
 void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::array< Matrix<double, P>, n> & n0)
 {
-#pragma omp for 
     for( unsigned k=0; k<n; k++)
     {
 #ifdef TL_DEBUG
         if( v0[k].isVoid()||n0[k].isVoid()) 
-            throw Message( "ERROR: Cannot work on void matrices!\n", ping);
+            throw Message( "ERROR: Cannot work on void matrices!\n", _ping_);
         if( v0[k].rows() != rows || v0[k].cols() != cols)
-            throw Message( "ERROR: One of the v0 has wrong size!\n", ping);
+            throw Message( "ERROR: One of the v0 has wrong size!\n", _ping_);
         if( n0[k].rows() != rows || n0[k].cols() != cols)
-            throw Message( "ERROR: One of the n0 has wrong size!\n", ping);
+            throw Message( "ERROR: One of the n0 has wrong size!\n", _ping_);
 #endif
+#pragma omp parallel for 
         for( size_t i = 0; i < rows; i++)
+        {
             for( size_t j = 0; j < cols; j++)
             {
                 n2[k](i,j) =  Coefficients<S>::alpha[0]*v0[k](i,j) 
@@ -280,6 +283,7 @@ void Karniadakis<n,T,P>::step_i( std::array< Matrix<double, P>, n>& v0, std::arr
                               + Coefficients<S>::beta[1]*n1[k](i,j) 
                               + Coefficients<S>::beta[2]*n2[k](i,j));
             }
+        }
         swap_fields( n2[k], v2[k]); //we want to keep v2 not n2
 
         permute_fields( n0[k], n1[k], n2[k]);

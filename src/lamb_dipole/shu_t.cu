@@ -1,16 +1,17 @@
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
 #include "draw/host_window.h"
 
-#include "dg/functors.cuh"
-#include "dg/arrvec2d.cuh"
-#include "dg/evaluation.cuh"
-#include "dg/xspacelib.cuh"
-#include "dg/rk.cuh"
-#include "dg/typedefs.cuh"
+#include "dg/functors.h"
+#include "dg/backend/evaluation.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/runge_kutta.h"
+#include "dg/multistep.h"
+#include "dg/helmholtz.h"
 
 #include "shu.cuh"
 
@@ -21,7 +22,7 @@ using namespace dg;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
-const unsigned k = 2;
+// const unsigned k = 2;
 const double D = 0.01;
 const double T = 1.;
 
@@ -36,15 +37,16 @@ int main()
     double eps;
     cout << "Type n, Nx, Ny and eps!\n";
     cin >> n >> Nx >> Ny>>eps;
-    const unsigned NT = (unsigned)(D*T*n*n*Nx*Nx/0.01/lx/lx);
+    const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
     
-    Grid<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    DVec w2d( create::w2d( grid));
+    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    DVec w2d( create::weights( grid));
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window
-    draw::HostWindow w( 600, 600);
-    glfwSetWindowTitle( "Navier Stokes");
+    std::stringstream title;
+    GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "Navier Stokes");
+    draw::RenderHostData render( 1,1);
     ////////////////////////////////////////////////////////////
     cout << "# of Legendre coefficients: " << n<<endl;
     cout << "# of grid cells:            " << Nx*Ny<<endl;
@@ -54,21 +56,20 @@ int main()
     dg::Lamb lamb( 0.5*lx, 0.5*ly, 0.2*lx, 1);
     HVec omega = evaluate ( lamb, grid);
     DVec stencil = evaluate( one, grid);
-    //DArrVec sol = evaluate< double(&)(double, double), n> ( solution, 0, lx, 0, ly, Nx, Ny);
-    DVec y0( omega), y1( y0);
-    Shu<DVec> test( grid, D, eps);
-    AB< k, DVec > ab( y0);
+    DVec y0( omega);
+    Shu<dg::DMatrix, dg::DVec> test( grid, eps);
+    Diffusion<DMatrix, DVec> diffusion( grid, D);
+    Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
 
     ////////////////////////////////glfw//////////////////////////////
     //create visualisation vectors
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
-    dg::DMatrix equidistant = dg::create::backscatter( grid, LSPACE );
-    int running = GL_TRUE;
+    dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
-    ab.init( test, y0, dt);
-    while (running)
+    ab.init( test, diffusion, y0, dt);
+    while (!glfwWindowShouldClose(w))
     {
         //transform field to an equidistant grid
         cout << "Total vorticity is: "<<blas2::dot( stencil, w2d, y0) << "\n";
@@ -79,16 +80,14 @@ int main()
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
         hvisual = visual;
-        w.draw( hvisual, n*Nx, n*Ny, colors);
+        render.renderQuad( hvisual, n*Nx, n*Ny, colors);
         //step 
-        ab( test, y0, y1, dt);
-        //thrust::swap(y0, y1);
-        y0.swap( y1);
+        ab( test,diffusion, y0 );
 
+        glfwSwapBuffers(w);
         glfwWaitEvents();
-        running = !glfwGetKey( GLFW_KEY_ESC) &&
-                    glfwGetWindowParam( GLFW_OPENED);
     }
+    glfwTerminate();
     ////////////////////////////////////////////////////////////////////
     /*
     cout << "Total vorticity is: "<< blas2::dot( stencil, w2d, y0) << "\n";

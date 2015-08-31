@@ -27,7 +27,10 @@ int main()
     gm.display(cout );
     cout << "Test of copy and assign\n";
     GhostMatrix<double, TL_NONE> gm2(gm);
+    cout << "Copied matrix: \n";
+    gm2.display();
     gm2 = gm;
+    cout << "Assigned matrix: \n";
     gm2.display();
 
     cout << "Test of void GhostMatrices and boundary init.\n";
@@ -43,7 +46,7 @@ int main()
     gm(3,0) = 7;
     gm(3,1) = 2;
     gm(3,2) = 1;
-    GhostMatrix<double, TL_NONE> ghost(4,3,TL_PERIODIC, TL_PERIODIC, false);
+    GhostMatrix<double, TL_NONE> ghost(4,3,TL_PERIODIC, TL_PERIODIC, TL_VOID);
     ghost.allocate( );
     swap_fields( ghost, gm);//OK!
     ghost.initGhostCells( );

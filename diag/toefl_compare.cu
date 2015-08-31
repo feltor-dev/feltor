@@ -3,20 +3,20 @@
 #include <vector>
 
 #include "draw/host_window.h"
-#include "dg/xspacelib.cuh"
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
-#include "dg/projection.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/algorithm.h"
+#include "dg/backend/projection.cuh"
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 
 //compare two TOEFL h5 files with equal physical parameters
 
 int main( int argc, char* argv[])
 {
-    dg::Timer t;
+    //dg::Timer t;
     if( argc != 3)
     {
         std::cerr << "Usage: "<<argv[0]<<" [file1.h5 file2.h5]\n";
@@ -26,13 +26,34 @@ int main( int argc, char* argv[])
     std::string in1, in2;
     file::T5rdonly t5file1( argv[1], in1);
     file::T5rdonly t5file2( argv[2], in2);
-    unsigned nlinks1 = t5file1.get_size();
-    unsigned nlinks2 = t5file2.get_size();
+    int layout = 0;
+    if( in1.find( "TOEFLI") != std::string::npos)
+    {
+        layout = 2;
+        std::cout << "Found Impurity file!\n";
+    }
+    else if( in1.find( "INNTO_HW") != std::string::npos)
+    {
+        layout = 3;
+        std::cout << "Found INNTO_HW file!\n";
+    }
+    else if( in1.find( "INNTO") != std::string::npos)
+    {
+        layout = 1;
+        std::cout << "Found INNTO file!\n";
+    }
+    else if( in1.find( "TOEFL") != std::string::npos)
+    {
+        layout = 0;
+        std::cout << "Found TOEFL file!\n";
+    }
+    else 
+        std::cerr << "Unknown input file format: default to 0"<<std::endl;
 
-    const Parameters p1( file::read_input( in1));
-    const Parameters p2( file::read_input( in2));
-    dg::Grid<double> grid1( 0, p1.lx, 0, p1.ly, p1.n, p1.Nx, p1.Ny, p1.bc_x, p1.bc_y);
-    dg::Grid<double> grid2( 0, p2.lx, 0, p2.ly, p2.n, p2.Nx, p2.Ny, p2.bc_x, p2.bc_y);
+    const Parameters p1( file::read_input( in1), layout);
+    const Parameters p2( file::read_input( in2), layout);
+    dg::Grid2d<double> grid1( 0, p1.lx, 0, p1.ly, p1.n, p1.Nx, p1.Ny, p1.bc_x, p1.bc_y);
+    dg::Grid2d<double> grid2( 0, p2.lx, 0, p2.ly, p2.n, p2.Nx, p2.Ny, p2.bc_x, p2.bc_y);
     if( p1.lx != p2.lx || p1.ly != p2.ly)
     {
         std::cerr << " Domain not equal!\n";
@@ -51,7 +72,7 @@ int main( int argc, char* argv[])
     //std::cout << DT1 << " "<<DT2<<" "<<DT<<" D1 "<<D1<<"D2 "<<D2<<std::endl;
     unsigned idx1=1, idx2=1;
     dg::HVec field1( grid1.size()), field2( grid2.size());
-    dg::HVec w1 = dg::create::w2d( grid1), w2 = dg::create::w2d( grid2);
+    dg::HVec w1 = dg::create::weights( grid1), w2 = dg::create::weights( grid2);
     std::cout << "Begin computation...\n";
     std::cout << "Differences \tTime \tElectrons \tIons    \tPotential\n";
     while( (idx1 <= t5file1.get_size()) && (idx2<=t5file2.get_size()))
@@ -73,7 +94,7 @@ int main( int argc, char* argv[])
         t5file2.get_field( field2, "potential", idx2);
 
         std::cout << "\t"<<2.*diff( field1, field2)/diff.sum( field1, field2)<<std::endl;
-        idx1 += 100*D1, idx2 += 100*D2;
+        idx1 += 10*D1, idx2 += 10*D2;
     }
 
     return 0;

@@ -4,12 +4,13 @@
 #include <sstream>
 
 #include "draw/host_window.h"
-#include "dg/xspacelib.cuh"
-#include "dg/timer.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/algorithm.h"
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 //#include "lamb_dipole/parameters.h"
 
 
@@ -20,7 +21,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     std::stringstream title;
     std::vector<double> v = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3], v[4], "");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( v[3]*v[2], v[4]*v[1], "");
     draw::RenderHostData render( v[1], v[2]);
 
     if( argc != 2)
@@ -35,19 +36,35 @@ int main( int argc, char* argv[])
     //std::cout <<"NLINKS "<<nlinks<<"\n";
 
     int layout = 0;
-    if( in.find( "TOEFL") != std::string::npos)
-        layout = 0;
+    if( in.find( "TOEFLI") != std::string::npos)
+    {
+        layout = 2;
+        std::cout << "Found Impurity file!\n";
+    }
+    else if( in.find( "INNTO_HW") != std::string::npos)
+    {
+        layout = 3;
+        std::cout << "Found INNTO_HW file!\n";
+    }
     else if( in.find( "INNTO") != std::string::npos)
+    {
         layout = 1;
+        std::cout << "Found INNTO file!\n";
+    }
+    else if( in.find( "TOEFL") != std::string::npos)
+    {
+        layout = 0;
+        std::cout << "Found TOEFL file!\n";
+    }
     else 
         std::cerr << "Unknown input file format: default to 0"<<std::endl;
     const Parameters p( file::read_input( in), layout);
 
     p.display();
-    dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
-    dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed, dg::XSPACE);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
+    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacianM( grid, dg::normed);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     unsigned index = 1;
@@ -91,12 +108,20 @@ int main( int argc, char* argv[])
         //std::cout << "Reading of electrons took "<<t.diff()<<"s\n";
         t.tic();
         if( p.global)
-            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+        {
+            if( in.find( "SOL") != std::string::npos)
+                std::cout << "Hello SOL\n";
+            else if( in.find( "SHU") != std::string::npos)
+                std::cout << "Hello SHU\n";
+            else
+                thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+        }
+
         dg::blas2::gemv( equi, input, visual);
 
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        colors.scale() = p.n0;
+        //colors.scale() = p.n0;
         if( v[6] > 0) colors.scale() = v[6];
         t.toc();
         //std::cout << "Computing colorscale took "<<t.diff()<<"s\n";
@@ -107,6 +132,23 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         t.toc();
         //std::cout << "Drawing took              "<<t.diff()<<"s\n";
+        if( (layout == 2 || layout == 3) && v[1]*v[2]>2 )
+        {
+            //draw ions
+            t5file.get_field( input, "ions", index);
+            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+            dg::blas2::gemv( equi, input, visual);
+            colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+            title <<"ni / "<<colors.scale()<<"\t";
+            render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+            //draw impurities
+            t5file.get_field( input, "impurities", index);
+            thrust::transform( input.begin(), input.end(), input.begin(), dg::PLUS<double>(-1));
+            dg::blas2::gemv( equi, input, visual);
+            colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
+            title <<"nz / "<<colors.scale()<<"\t";
+            render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        }
 
         //transform phi
         t.tic();

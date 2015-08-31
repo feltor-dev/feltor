@@ -18,25 +18,24 @@
  *          of analytic functions on a given grid. In 1D the discretisation
  *          simply consists of n function values per grid cell ( where n is the number
  *          of Legendre coefficients used; currently 1, 2, 3, 4 or 5) evaluated at
- *          the gaussian abscissas in the respective cell. In 2D we store all nxn 
- *          values per cell contiguously in memory. We choose x to be the contiguous direction.
+ *          the gaussian abscissas in the respective cell. In 2D and 3D we simply 
+ *          use the product space. We choose x to be the contiguous direction.
  *          The first elements of the resulting vector lie in the cell at (x0,y0) and the last
  *          in (x1, y1).
- *          The expand functions are equivalent to a call to the respective evaluate
- *          function followed by a forward dlt transformation in each cell. (i.e. a multiplication 
- *          with DLT<n>::forward)
  *      @defgroup functions Functions and Functors
  *
- *          The functions are useful in the constructor of Operator objects. 
+ *          The functions are useful mainly in the constructor of Operator objects. 
  *          The functors are useful for either vector transformations or
- *          as init functions in the evaluate or expand routines.
+ *          as init functions in the evaluate routines.
  *
- *      @defgroup creation Discrete derivatives and diagonal weight matrices
+ *      @defgroup creation Discrete derivatives 
  *      @{
- *          @defgroup lowlevel Helper functions and classes
+ *          @defgroup lowlevel Lowlevel helper functions and classes
  *              Low level helper routines.
- *          @defgroup highlevel Creation functions
+ *          @defgroup highlevel Matrix creation functions and classes
  *              High level matrix creation functions
+ *          @defgroup arakawa Arakawas scheme
+ *          @defgroup matrixoperators Classes that act as matrices in blas2 routines
  *      @}
  *      @defgroup blas Basic Linear Algebra Subprograms
  *
@@ -46,13 +45,52 @@
  *      @{
  *          @defgroup blas1 BLAS level 1 routines
  *              This group contains Vector-Vector operations.
+ *              Successive calls to blas routines are executed sequentially.
+ *              A manual synchronization of threads or devices is never needed in an application 
+ *              using these functions. All functions returning a value block until the value is ready.
  *          @defgroup blas2 BLAS level 2 routines
  *              This group contains Matrix-Vector operations.
+ *              Successive calls to blas routines are executed sequentially.
+ *              A manual synchronization of threads or devices is never needed in an application 
+ *              using these functions. All functions returning a value block until the value is ready.
  *      @}
  *      @defgroup algorithms Numerical schemes
- *          Numerical time integration and a conjugate gradient method.
+ *          Numerical time integration and a conjugate gradient method based
+ *          solely on the use of blas routines
  *      @defgroup utilities Utilities
  *          Utilities that might come in handy at some place or the other.
+ *      @{
+ *          @defgroup scatter Utility functions for reorder operations on DG-formatted vectors
+ *          @defgroup polarization Utility functions for C-style bindings of polarization solver
+ *
+ To use these funcions use code like:
+@code
+#include "dg.h"
+
+int main()
+{
+    //allocate a workspace
+    dg_workspace* w = dg_create_workspace( Nx, Ny, hx, hy, dg::DIR, dg::PER);
+    //allocate chi, x and b
+    double* chi = new double[Nx*Ny];
+    double* x = new double[Nx*Ny];
+    double* b = new double[Nx*Ny];
+    ...//compute useful values for chi
+    //assemble polarization matrix
+    dg_update_polarizability( w, chi);
+    ...//compute useful values for b and an initial guess for x
+    //solve A(chi)*x = b to a precision of 1e-4
+    dg_solve( w, x, b, 1e-4);
+    //release resources
+    dg_free_workspace( w);
+    ...
+    
+    return 0;
+}
+@endcode
+ *
+ *      @}
+ *      @defgroup mpi_structures MPI backend funcionality
  * @}
  * 
  */
@@ -61,14 +99,14 @@
  *
  * @par Design principles
  *
- * The DG library is built on top of the thrust and cusp libraries. 
+ * The DG library is built on top of the <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a> libraries. 
  * Its intention is to provide easy to use
- * functions and objects needed for the integration of the 2D gyrofluid system with a
+ * functions and objects needed for the integration of 2D and 3D partial differential equations discretized with a
  * discontinuous galerkin method.  
- * Since it is build on top of thrust, code can run on a CPU as well as a GPU by simply 
+ * Since it is built on top of <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a>, code can run on a CPU as well as a GPU by simply 
  * switching between thrust's host_vector and device_vector. 
  * The DG library uses a design pattern also employed in the cusp library and other modern C++ codes. 
- * It might be referred to as container-free numerical algorithms. 
+ * It might be referred to as <a href="http://dx.doi.org/10.1063/1.168674">container-free numerical algorithms</a>. 
  *
  * @par Typical usage
  *

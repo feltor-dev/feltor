@@ -185,7 +185,7 @@ void Convection_Solver::init( std::array< Matrix<double, TL_DFT>,2>& v, enum tar
     {
 #ifdef TL_DEBUG
         if( v[k].isVoid())
-            throw Message("You gave me a void Matrix!!", ping);
+            throw Message("You gave me a void Matrix!!", _ping_);
 #endif
         dft_drt.r2c( v[k], cdens[k]);
     }
@@ -198,7 +198,7 @@ void Convection_Solver::init( std::array< Matrix<double, TL_DFT>,2>& v, enum tar
     switch( t) //which field must be computed?
     {
         case( TEMPERATURE): 
-            throw Message( "Temperature independent", ping);
+            throw Message( "Temperature independent", _ping_);
             break;
         case( VORTICITY):
             //bring cdens and cphi in the right order
@@ -231,7 +231,7 @@ void Convection_Solver::getField( Matrix<double, TL_DFT>& m, enum target t)
 {
 #ifdef TL_DEBUG
     if(m.isVoid()) 
-        throw Message( "You may not swap in a void Matrix!\n", ping);
+        throw Message( "You may not swap in a void Matrix!\n", _ping_);
 #endif
     switch( t)
     {
@@ -264,7 +264,7 @@ void Convection_Solver::first_steps()
 
 void Convection_Solver::compute_cphi()
 {
-#pragma omp for 
+#pragma omp parallel for 
     for( size_t i = 0; i < crows; i++)
         for( size_t j = 0; j < ccols; j++)
             cphi(i,j) = phi_coeff(i,j)*cdens[1](i,j);
@@ -274,13 +274,11 @@ template< enum stepper S>
 void Convection_Solver::step_()
 {
     phi.initGhostCells(  );
-#pragma omp parallel 
-    {
-    GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, param.bc_z, TL_PERIODIC, TL_VOID};
     //1. Compute nonlinearity
-#pragma omp for 
+#pragma omp parallel for 
     for( unsigned k=0; k<2; k++)
     {
+        GhostMatrix<double, TL_DFT> ghostdens{ rows, cols, param.bc_z, TL_PERIODIC, TL_VOID};
         swap_fields( dens[k], ghostdens); //now dens[k] is void
         ghostdens.initGhostCells( );
         arakawa( phi, ghostdens, nonlinear[k]);
@@ -294,17 +292,16 @@ void Convection_Solver::step_()
     karniadakis.step_i<S>( dens, nonlinear);
     //3. solve linear equation
     //3.1. transform v_hut
-#pragma omp for 
+#pragma omp parallel for 
     for( unsigned k=0; k<2; k++)
         dft_drt.r2c( dens[k], cdens[k]);
     //3.2. perform karniadaksi step and multiply coefficients for phi
     karniadakis.step_ii( cdens);
     compute_cphi();
     //3.3. backtransform
-#pragma omp for 
+#pragma omp parallel for 
     for( unsigned k=0; k<2; k++)
         dft_drt.c2r( cdens[k], dens[k]);
-    } //omp parallel
     dft_drt.c2r( cphi,  phi); //field in phi again
 }
 

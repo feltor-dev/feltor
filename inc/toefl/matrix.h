@@ -58,7 +58,7 @@ std::istream& operator>> ( std::istream& is, Matrix<T, P>& mat);
  * from real to complex. This is solved here by the globally defined swap_fields routine that exchanges the pointers to memory of two Matrices, even if the types are different. 
  * So if you swap pointers between a real and a complex matrix you effectively made the complex matrix real and the real matrix complex. 
  * If the additional allocated memory is of concern to you, there is the 
- * allocate flag in the constructor that you can set to TL_VOID. Then no memory is allocated, the only way for such a matrix to get memory is by swapping it in from 
+ * allocate flag in the constructor that you can set to TL_VOID. Then no memory is allocated, the only way for such a matrix to get memory is by swap_ping_ it in from 
  * another matrix by the swap_fields routine. See the example code:
  * \code
  Matrix<double> m(5, 10);
@@ -190,7 +190,10 @@ class Matrix
      */
     T const * getPtr()const {return ptr;}
 
-
+    /*! @brief Copy the data linearly and without padding to a std vector
+     *
+     * @return newly instantiated vector holding a copy of the matrix data
+     */
     std::vector<T> copy() const
     {
         std::vector<T> vec( n*m);
@@ -256,9 +259,9 @@ class Matrix
     friend void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs);
     /*! @brief permute memory of matrices with the same type
      *
-     * @param first becomes second
-     * @param second becomes third
-     * @param third becomes first
+     * @param first contains third on output
+     * @param second contains first on output
+     * @param third contains second on output
      */
     friend void permute_fields<T, P>( Matrix& first, Matrix& second, Matrix& third);
     /*! @brief print a Matrix to the given outstream
@@ -293,7 +296,7 @@ void swap_fields( Matrix<T1, P1>& lhs, Matrix<T2, P2>& rhs)
 {
 #ifdef TL_DEBUG
     if( TotalNumberOf<P1>::elements(lhs.n, lhs.m)*sizeof(T1) != TotalNumberOf<P2>::elements(rhs.n, rhs.m)*sizeof(T2)) 
-        throw Message( "Swap not possible. Sizes not equal\n", ping);
+        throw Message( "Swap not possible. Sizes not equal\n", _ping_);
 #endif
     //test for self swap not necessary (not an error)
     T1 * ptr = lhs.ptr;
@@ -306,7 +309,7 @@ Matrix<T, P>::Matrix( const size_t n, const size_t m, const bool allocate): n(n)
 {
 #ifdef TL_DEBUG
     if( n==0|| m==0)
-        throw Message("Use TL_VOID to not allocate any memory!\n", ping);
+        throw Message("Use TL_VOID to not allocate any memory!\n", _ping_);
 #endif
     if( allocate)
         allocate_();
@@ -317,7 +320,7 @@ Matrix<T,P>::Matrix( const size_t n, const size_t m, const T& value):n(n),m(m),p
 {
 #ifdef TL_DEBUG
     if( n==0|| m==0)
-        throw Message("Use TL_VOID to not allocate any memory!\n", ping);
+        throw Message("Use TL_VOID to not allocate any memory!\n", _ping_);
 #endif
     allocate_();
     for( unsigned i=0; i<TotalNumberOf<P>::elements(n,m); i++)
@@ -354,9 +357,9 @@ Matrix<T, P>& Matrix<T, P>::operator=( const Matrix& src)
     {
 #ifdef TL_DEBUG
         if( n!=src.n || m!=src.m)
-            throw  Message( "Assignment error! Sizes not equal!", ping);
+            throw  Message( "Assignment error! Sizes not equal!", _ping_);
         if( ptr == NULL || src.ptr == NULL)
-            throw Message( "Assigning to or from a void matrix!", ping);
+            throw Message( "Assigning to or from a void matrix!", _ping_);
 #endif
         for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
             ptr[i] = src.ptr[i];
@@ -371,9 +374,9 @@ Matrix<T, P>& Matrix<T, P>::operator=( Matrix&& src)
     {
 #ifdef TL_DEBUG
         if( n!=src.n || m!=src.m)
-            throw  Message( "Assignment error! Sizes not equal!", ping);
+            throw  Message( "Assignment error! Sizes not equal!", _ping_);
         if( ptr == NULL || src.ptr == NULL)
-            throw Message( "Assigning to or from a void matrix!", ping);
+            throw Message( "Assigning to or from a void matrix!", _ping_);
 #endif
         ptr = src.ptr; 
         src.ptr = NULL;
@@ -388,10 +391,10 @@ void Matrix<T, P>::allocate_()
     {
         ptr = (T*)fftw_malloc( TotalNumberOf<P>::elements(n, m)*sizeof(T));
         if( ptr == NULL) 
-            throw AllocationError(n, m, ping);
+            throw AllocationError(n, m, _ping_);
     }
     else 
-        throw Message( "Memory already exists!", ping);
+        throw Message( "Memory already exists!", _ping_);
 }
 
 
@@ -401,9 +404,9 @@ T& Matrix<T, P>::operator()( const size_t i, const size_t j)
 {
 #ifdef TL_DEBUG
     if( i >= n || j >= m)
-        throw BadIndex( i,n, j,m, ping);
+        throw BadIndex( i,n, j,m, _ping_);
     if( ptr == NULL) 
-        throw Message( "Trying to access a void matrix!", ping);
+        throw Message( "Trying to access a void matrix!", _ping_);
 #endif
     return ptr[ i*TotalNumberOf<P>::columns(m) + j];
 }
@@ -413,9 +416,9 @@ const T&  Matrix<T, P>::operator()( const size_t i, const size_t j) const
 {
 #ifdef TL_DEBUG
     if( i >= n || j >= m)
-        throw BadIndex( i,n, j,m, ping);
+        throw BadIndex( i,n, j,m, _ping_);
     if( ptr == NULL) 
-        throw Message( "Trying to access a void matrix!", ping);
+        throw Message( "Trying to access a void matrix!", _ping_);
 #endif
     return ptr[ i*TotalNumberOf<P>::columns(m) + j];
 }
@@ -424,7 +427,7 @@ template <class T, enum Padding P>
 void Matrix<T, P>::zero(){
 #ifdef TL_DEBUG
     if( ptr == NULL) 
-        throw  Message( "Trying to zero a void matrix!", ping);
+        throw  Message( "Trying to zero a void matrix!", _ping_);
 #endif
     for( size_t i =0; i < TotalNumberOf<P>::elements(n, m); i++)
         ptr[i] = (T)0;
@@ -436,7 +439,7 @@ void permute_fields( Matrix<T, P>& first, Matrix<T, P>& second, Matrix<T, P>& th
 {
 #ifdef TL_DEBUG
     if( first.n!=second.n || first.m!=second.m || first.n != third.n || first.m != third.m)
-        throw  Message( "Permutation error! Sizes not equal!", ping);
+        throw  Message( "Permutation error! Sizes not equal!", _ping_);
 #endif
     T * ptr = first.ptr;
     first.ptr = third.ptr; 
@@ -449,7 +452,7 @@ std::ostream& operator<< ( std::ostream& os, const Matrix<T, P>& mat)
 {
 #ifdef TL_DEBUG
     if( mat.ptr == NULL)
-        throw  Message( "Trying to output a void matrix!\n", ping);
+        throw  Message( "Trying to output a void matrix!\n", _ping_);
 #endif
      int w = os.width();
      for( size_t i=0; i<mat.n; i++)
@@ -469,7 +472,7 @@ std::istream& operator>>( std::istream& is, Matrix<T, P>& mat)
 {
 #ifdef TL_DEBUG
     if( mat.ptr == NULL)
-        throw  Message( "Trying to write in a void matrix!\n", ping);
+        throw  Message( "Trying to write in a void matrix!\n", _ping_);
 #endif
     for( size_t i=0; i<mat.n; i++)
         for( size_t j=0; j<mat.m; j++)
@@ -482,7 +485,7 @@ const bool Matrix<T,P>::operator!= ( const Matrix& rhs) const
 {
 #ifdef TL_DEBUG
     if( n != rhs.n || m != rhs.m)
-        throw Message( "Comparison not possible! Sizes not equal!\n", ping);
+        throw Message( "Comparison not possible! Sizes not equal!\n", _ping_);
 #endif
     for( size_t i = 0; i < n; i++)
         for( size_t j = 0; j < m; j++)

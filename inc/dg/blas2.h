@@ -1,13 +1,23 @@
-#ifndef _DG_BLAS2_
-#define _DG_BLAS2_
+#pragma once 
 
-#include "blas/cusp_matrix.cuh"
-#include "blas/preconditioner.cuh"
-//#include "blas/operator.cuh"
-#include "blas/selfmade.cuh"
-#include "vector_traits.h"
-#include "matrix_traits.h"
+#include "backend/vector_traits.h"
+#include "backend/matrix_traits.h"
+#include "backend/matrix_traits_thrust.h"
+#include "backend/thrust_matrix_blas.cuh"
+#include "backend/cusp_matrix_blas.cuh"
+#include "backend/sparseblockmat.cuh"
+#include "backend/selfmade_blas.cuh"
+#ifdef MPI_VERSION
+#include "backend/mpi_matrix_blas.h"
+#include "backend/mpi_precon_blas.h"
+#endif //MPI_VERSION
+#include "backend/std_matrix_blas.cuh"
 
+
+/*!@file 
+ *
+ * blas level 2 functions
+ */
 namespace dg{
 /*! @brief BLAS Level 2 routines 
 
@@ -22,9 +32,9 @@ namespace blas2{
 /*! @brief General dot produt
  *
  * This routine computes the scalar product defined by the symmetric positive definite 
- * matrix M \f[ x^T M y = \sum_{i=0}^{N-1} x_i M_{ij} y_j \f]
+ * matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
  * ( Note that if M is not diagonal it is generally more efficient to 
- * precalculate \f[ My\f] and then call the BLAS1::dot routine!
+ * precalculate \f$ My\f$ and then call the blas1::dot() routine!
  * @param x Left Vector
  * @param m The diagonal Matrix
  * @param y Right Vector might equal Left Vector
@@ -33,7 +43,7 @@ namespace blas2{
     implicit memcpy of the result.
  */
 template< class Matrix, class Vector>
-inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const Vector& y)
+inline typename MatrixTraits<Matrix>::value_type dot( const Vector& x, const Matrix& m, const Vector& y)
 {
     return dg::blas2::detail::doDot( x, m, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
@@ -42,7 +52,8 @@ inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const 
 
 /*! @brief General dot produt
  *
- * This routine is equivalent to the call dot( x, m, x)
+ * This routine is equivalent to the call blas2::dot( x, m, x):
+ * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
  * @param m The diagonal Matrix
  * @param x Right Vector
  * @return Generalized scalar product
@@ -50,7 +61,7 @@ inline typename Matrix::value_type dot( const Vector& x, const Matrix& m, const 
     implicit memcpy of the result.
  */
 template< class Matrix, class Vector>
-inline typename Matrix::value_type dot( const Matrix& m, const Vector& x)
+inline typename MatrixTraits<Matrix>::value_type dot( const Matrix& m, const Vector& x)
 {
     return dg::blas2::detail::doDot( m, x, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
@@ -59,55 +70,61 @@ inline typename Matrix::value_type dot( const Matrix& m, const Vector& x)
 
 /*! @brief Symmetric Matrix Vector product
  *
- * This routine computes \f[ y = \alpha M x + \beta y \f]
- * where \f[ M\f] is a symmetric matrix. 
+ * This routine computes \f[ y = \alpha P x + \beta y \f]
+ * where \f$ P\f$ is a symmetric Preconditioner. 
+ * P should be diagonal since
+ * otherwise a call to symv() followed by axpby() is faster.
  * @param alpha A Scalar
- * @param m The Matrix
+ * @param P The Preconditioner
  * @param x A Vector different from y (except in the case where m is diagonal)
  * @param beta A Scalar
  * @param y contains solution on output
- * @note In an implementation you may want to check for alpha == 0 and beta == 1
- * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
-template< class Matrix, class Vector>
-inline void symv( typename MatrixTraits<Matrix>::value_type alpha, 
-                  const Matrix& m, 
+template< class Precon, class Vector>
+inline void symv( typename MatrixTraits<Precon>::value_type alpha, 
+                  const Precon& P, 
                   const Vector& x, 
-                  typename MatrixTraits<Matrix>::value_type beta, 
+                  typename MatrixTraits<Precon>::value_type beta, 
                   Vector& y)
 {
-    return dg::blas2::detail::doSymv( alpha, m, x, beta, y, 
-                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
+    dg::blas2::detail::doSymv( alpha, P, x, beta, y, 
+                       typename dg::MatrixTraits<Precon>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 
 /*! @brief Symmetric Matrix Vector product
  *
  * This routine computes \f[ y = M x \f]
- * where \f[ M\f] is a symmetric matrix. 
+ * where \f$ M\f$ is a symmetric matrix. 
  * @param m The Matrix
  * @param x A Vector different from y (except in the case where m is diagonal)
+ *      In most applications x is assumed to remain constant. 
  * @param y contains solution on output
- * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
+ * @attention Due to the SelfMadeMatrixTag and MPI_Vectors, m and x cannot be declared const
  */
-template< class Matrix, class Vector>
-inline void symv( const Matrix& m, 
-                  const Vector& x, 
-                  Vector& y)
+template< class Matrix, class Vector1, class Vector2>
+inline void symv( Matrix& m, 
+                  Vector1& x, 
+                  Vector2& y)
 {
-    return dg::blas2::detail::doSymv( m, x, y, 
+    dg::blas2::detail::doSymv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<Vector>::vector_category() );
+                       typename dg::VectorTraits<Vector1>::vector_category(),
+                       typename dg::VectorTraits<Vector2>::vector_category() );
+    return;
 }
 ///@cond
 template< class Matrix, class Vector>
-inline void mv( const Matrix& m, 
+inline void mv(   Matrix& m, 
                   const Vector& x, 
                   Vector& y)
 {
-    return dg::blas2::detail::doSymv( m, x, y, 
+    dg::blas2::detail::doSymv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
+                       typename dg::VectorTraits<const Vector>::vector_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
+    return;
 }
 ///@endcond
 
@@ -117,20 +134,20 @@ inline void mv( const Matrix& m,
  * @param m The Matrix
  * @param x A Vector different from y 
  * @param y contains the solution on output
- * @attention If a thrust::device_vector ist used then this routine is NON-BLOCKING!
  */
-template< class Matrix, class Vector>
-inline void gemv( const Matrix& m, 
-                  const Vector& x, 
-                  Vector& y)
+template< class Matrix, class Vector1, class Vector2>
+inline void gemv( Matrix& m, 
+                  Vector1& x, 
+                  Vector2& y)
 {
-    return dg::blas2::detail::doGemv( m, x, y, 
+    dg::blas2::detail::doGemv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<Vector>::vector_category() );
+                       typename dg::VectorTraits<Vector1>::vector_category(),
+                       typename dg::VectorTraits<Vector2>::vector_category() );
+    return;
 }
 ///@}
 
 } //namespace blas2
 } //namespace dg
 
-#endif //_DG_BLAS2_

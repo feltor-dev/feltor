@@ -2,20 +2,21 @@
 #include <iomanip>
 #include <vector>
 
-#include "dg/xspacelib.cuh"
-#include "dg/timer.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/algorithm.h"
+#include "dg/backend/timer.cuh"
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 //#include "lamb_dipole/parameters.h"
 
 //t2s10a020 50, 100, 150, 200, 250 posX und posY_max
 //local
 //double py[5] = { -5.16667, -21.16667, -28.8333, -38.8333, -44.8333};//global
-//double py[5] = { -14., -24.17, -35.1075, -35.4982, -27.295};//local
+double py[5] = { -14., -24.17, -35.1075, -35.4982, -27.295};//local
 //Annahme dass Punkte alle äquidistant sind
-unsigned position_to_index( double x, double y, const dg::Grid<double>& grid)
+unsigned position_to_index( double x, double y, const dg::Grid2d<double>& grid)
 {
     const unsigned Nx = grid.Nx()*grid.n(); 
     const double hx = grid.hx()/(double)grid.n();
@@ -47,9 +48,9 @@ int main( int argc, char* argv[])
         std::cerr << "Unknown input file format: default to 0"<<std::endl;
     const Parameters p( file::read_input( in), layout);
     p.display();
-    dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     unsigned index = 1;
     while ( index < t5file.get_size() + 1 )
     {

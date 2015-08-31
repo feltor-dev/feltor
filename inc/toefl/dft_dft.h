@@ -63,6 +63,37 @@ class DFT_DFT
      */
     inline void c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT>& swap);
 
+    /**
+     * @brief Compute the scalar product in fourier space
+     *
+     * @param m1 left hand side
+     * @param m2 right hand side
+     * @note the normalisation missing is 1./rows/rows/cols/cols
+     *
+     * @return the scalar product 
+     */
+    double dot( const Matrix<complex, TL_NONE>& m1, const Matrix<complex, TL_NONE>& m2)
+    {
+#ifdef TL_DEBUG
+    if( m1.rows() != m2.rows() || m1.rows() != rows)
+        throw Message( "Matrix rows don't match!", _ping_);
+    if( m1.cols() != m2.cols() || m1.cols() != cols/2+1 )
+        throw Message( "Matrix columns don't match!", _ping_);
+#endif
+        complex sum=0;
+        for( unsigned i=0; i<rows; i++)
+        {
+            sum += m1(i,0)*conj( m2(i,0));
+            for( unsigned j=1; j<cols/2; j++)
+                sum += 2.*m1(i,j)*conj( m2(i,j));
+            if( cols%2)
+                sum += m1(i,cols/2)*conj(m2(i,cols/2));
+            else
+                sum += 2.*m1(i,cols/2)*conj( m2(i,cols/2));
+        }
+        return real( sum);
+    }
+
     /*! @brief This class shall not be copied 
      *
      * Mainly because fftw_plans are not copyable
@@ -85,9 +116,9 @@ DFT_DFT::DFT_DFT( const size_t r, const size_t c, const unsigned flags):rows(r),
     forward = fftw_plan_dft_r2c_2d( rows, cols, temp.getPtr(), fftw_cast(temp.getPtr()), flags);
     backward = fftw_plan_dft_c2r_2d( rows, cols, fftw_cast(temp.getPtr()), temp.getPtr(), flags);
     if(forward == 0 )
-        throw Message( "Forward Planner routine failed!", ping);
+        throw Message( "Forward Planner routine failed!", _ping_);
     if(backward == 0 )
-        throw Message( "Backward Planner routine failed!", ping);
+        throw Message( "Backward Planner routine failed!", _ping_);
 }
 DFT_DFT::~DFT_DFT()
 {
@@ -100,9 +131,9 @@ void DFT_DFT::r2c( Matrix<double, TL_DFT>& inout, Matrix<complex, TL_NONE>& swap
 {
 #ifdef TL_DEBUG
     if( inout.rows() != rows|| inout.cols() != cols )
-        throw Message( "Matrix for transformation doesn't have the right size!", ping);
+        throw Message( "Matrix for transformation doesn't have the right size!", _ping_);
     if( swap.rows() != rows || swap.cols() != cols/2+1 ) 
-        throw Message( "Swap Matrix in r2c doesn't have the right size!", ping);
+        throw Message( "Swap Matrix in r2c doesn't have the right size!", _ping_);
 #endif
     fftw_execute_dft_r2c(forward, inout.getPtr(), fftw_cast(inout.getPtr()));
     swap_fields( inout, swap);
@@ -112,9 +143,9 @@ void DFT_DFT::c2r( Matrix<complex, TL_NONE>& inout, Matrix<double, TL_DFT>& swap
 {
 #ifdef TL_DEBUG
     if( inout.rows() != rows || inout.cols() != cols/2+1) 
-        throw Message( "Matrix for transformation doesn't have the right size!", ping);
+        throw Message( "Matrix for transformation doesn't have the right size!", _ping_);
     if( swap.rows()  != rows || swap.cols()  != cols)
-        throw Message( "Swap Matrix in 2d_c2r doesn't have the right size!", ping);
+        throw Message( "Swap Matrix in 2d_c2r doesn't have the right size!", _ping_);
 #endif
     swap_fields( inout, swap);
     fftw_execute_dft_c2r( backward, fftw_cast(swap.getPtr()), swap.getPtr());

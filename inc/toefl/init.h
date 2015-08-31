@@ -41,7 +41,6 @@ void init_gaussian( M& m, const double x0, const double y0,
     const size_t rows = m.rows(), cols = m.cols();
     const double hx = 1./(double)(cols), hy = 1./(double)(rows); 
     double x,y;
-#pragma omp for
     for( unsigned i=0; i<rows; i++)
         for( unsigned j=0; j<cols; j++)
         {

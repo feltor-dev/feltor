@@ -4,11 +4,12 @@
 #include <vector>
 #include <string>
 
-#include "dg/xspacelib.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/algorithm.h"
 #include "file/read_input.h"
 #include "file/file.h"
 
-#include "galerkin/parameters.h"
+#include "toefl/parameters.h"
 
 const double T = 10;
 //is sigma the radius or the diameter
@@ -54,7 +55,7 @@ int main( int argc, char* argv[])
         std::cerr << "Unknown input file format: default to 0"<<std::endl;
     const Parameters p( file::read_input( in), layout);
     //p.display();
-    dg::Grid<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
 
     dg::HVec input_h( grid.size());
     dg::HVec input0( input_h), input1(input0), ln0( input0), ln1(input0);
@@ -63,8 +64,8 @@ int main( int argc, char* argv[])
     dg::HVec xvec = dg::evaluate( X, grid);
     dg::HVec yvec = dg::evaluate( Y, grid);
     dg::HVec one = dg::evaluate( dg::one, grid);
-    dg::HVec w2d = dg::create::w2d( grid);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::HVec w2d = dg::create::weights( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
 
     double posX_max, posY_max;
     //get normalization
