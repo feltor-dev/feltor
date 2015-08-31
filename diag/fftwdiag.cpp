@@ -111,7 +111,7 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> energiesequi(3,dg::evaluate(dg::zero,g2d)); 
 
     double time = 0.;
-    dg::HMatrix equi = dg::create::backscatter( g2d);
+    dg::IHMatrix equi = dg::create::backscatter( g2d);
  
     //fftw setup
     const size_t rows =  g2d.n()*g2d.Ny();
@@ -129,8 +129,8 @@ int main( int argc, char* argv[])
 
     fftw_r2r_kind kind = FFTW_RODFT11; //DST & DST IV
     toefl::DRT_DFT drt_dft( rows, cols, kind);
-    hindfty = fftw_plan_dft_1d(g2d_f.Ny(), tempy, compspecy, FFTW_FORWARD,FFTW_ESTIMATE); //DST
-    hindftx = fftw_plan_r2r_1d(nx-2,       tempx, compspecx, FFTW_RODFT11,FFTW_ESTIMATE); //DST IV
+//     hindfty = fftw_plan_dft_1d(g2d_f.Ny(), tempy, compspecy, FFTW_FORWARD,FFTW_ESTIMATE); //DST
+//     hindftx = fftw_plan_r2r_1d(nx-2,       tempx, compspecx, FFTW_RODFT11,FFTW_ESTIMATE); //DST IV
 
     unsigned imin,imax;
     std::cout << "tmin = 0 tmax =" << p.maxout*p.itstp << std::endl;

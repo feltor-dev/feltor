@@ -6,11 +6,11 @@ For the CPU-Version you'll need to download [thrust]( https://github.com/thrust/
 and [cusp] (https://github.com/cusplibrary/cusplibrary/tree/0.5.0)
 ( v0.5.0 )
 
-If you want to compile for a GPU you need to install [CUDA](https://developer.nvidia.com/cuda-zone) (minimum v5.0)
+If you want to compile for a GPU you need to install [CUDA](https://developer.nvidia.com/cuda-zone) (minimum v5.0/v7.0 recommended)
 
 For the mpi version you need an mpi compiler. 
 
-Feltor compiles fine with gcc-4.6
+Feltor compiles fine with gcc-4.8
 
 If you want to have a nice OpenGL window while computing download the [draw library]( https://github.com/mwiesenberger/draw)
 which depends on OpenGL (s.a. [installation guide] (http://en.wikibooks.org/wiki/OpenGL_Programming) and [glfw] (http://www.glfw.org) 

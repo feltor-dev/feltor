@@ -22,7 +22,7 @@ using namespace dg;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
-const unsigned k = 2;
+// const unsigned k = 2;
 const double D = 0.01;
 const double T = 1.;
 
