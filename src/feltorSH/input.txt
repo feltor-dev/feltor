@@ -17,7 +17,7 @@
 9) total # of outputs (excluding first)     =  1
 -------------------------Algorithmic parameters------------------------
 10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
-11)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
+11)  eps_gamma (stop for Gamma CG)          =   1e-8 (1e-8)
 12)  eps_time ( stop for time inversion )   =   1e-12
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
@@ -34,8 +34,8 @@
 23) Profile amplitude                       =  0.0  (peak amplitude)
 24) Background Prof amplitude               =  1.0   (density on the boundary)
 ---------------------------------box setup----------------
-25) lx (in rho_s)                           =  400
-26) ly (in rho_s)                           =  400
+25) lx (in rho_s)                           =  200
+26) ly (in rho_s)                           =  200
 27) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   1      (1.0)
 28) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0   (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------

@@ -16,8 +16,8 @@
 7)  nx_out (# grid points in output field)  =  50
 8)  ny_out (# grid points in output field)  =  50
 9)  nz_out (# grid points in output field)  =  16
-10) itstp  (steps between outputs)          =  25(5)
-11) total # of outputs (excluding first)    =  4000
+10) itstp  (steps between outputs)          =  20(5)
+11) total # of outputs (excluding first)    =  1
 
 -------------------------Algorithmic parameters------------------------
 12)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)

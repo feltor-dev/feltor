@@ -307,7 +307,7 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
 //     integrate field lines for all points
     
     if( deltaPhi <=0) deltaPhi = g_.hz();
-    else assert( grid.Nz() == 1);
+    else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     for( unsigned i=0; i<size; i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];

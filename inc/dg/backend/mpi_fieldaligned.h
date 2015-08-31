@@ -167,7 +167,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     std::vector<thrust::host_vector<double> > yp(y), ym(y); 
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
     if(deltaPhi<=0) deltaPhi = g_.hz();
-    else assert( g_.Nz() == 1);
+    else assert( g_.Nz() == 1 || grid.hz()==deltaPhi);
     unsigned localsize = grid.local().size();
     for( unsigned i=0; i<localsize; i++)
     {
