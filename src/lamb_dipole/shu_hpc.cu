@@ -68,9 +68,9 @@ int main( int argc, char * argv[])
     //    dg::blas1::axpby( -meanMass, one, 1., y0);
     //}
     //make solver and stepper
-    dg::Shu<dg::DVec> shu( grid, p.eps);
+    dg::Shu<dg::DMatrix, dg::DVec> shu( grid, p.eps);
     //dg::AB< k, dg::DVec > ab( y0);
-    dg::Diffusion< dg::DVec > diff( grid, p.D);
+    dg::Diffusion< dg::DMatrix, dg::DVec > diff( grid, p.D);
     dg::Karniadakis< dg::DVec> ab( y0, y0.size(), 1e-10);
     ab.init( shu, diff, y0, p.dt);
     //ab( shu, y0, y1, p.dt);

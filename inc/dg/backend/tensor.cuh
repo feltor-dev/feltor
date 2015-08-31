@@ -52,6 +52,7 @@ struct AddIndex2d{
 * @param rhs The right hand side (1D ) 
 *
 * @return A newly allocated cusp matrix containing the tensor product
+* @note use cusp::add and cups::multiply to add and multiply matrices
 */
 template< class T>
 cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
@@ -122,9 +123,6 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
                           thrust::plus<T>());
     return A; 
 }
-//use cusp::add and cusp::subtract to add and multiply matrices
-
-
 
 
 } //namespace dg

@@ -1,5 +1,8 @@
 #pragma once
+//#include <iomanip>
 
+#include <cusp/coo_matrix.h>
+#include <cusp/csr_matrix.h>
 #include "grid.h"
 #include "evaluation.cuh"
 #include "functions.h"
@@ -7,7 +10,15 @@
 #include "tensor.cuh"
 #include "operator_tensor.cuh"
 
+/*! @file
+
+  Contains 1D, 2D and 3D matrix creation functions
+  */
+
 namespace dg{
+//interpolation matrices
+typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
+typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
 
 namespace create{
     ///@cond
@@ -50,10 +61,12 @@ std::vector<double> coefficients( double xn, unsigned n)
 
 }//namespace detail
 ///@endcond
+///@addtogroup utilities
+///@{
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector given in XSPACE to the points in XSPACE
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param g The Grid on which to operate
  *
@@ -101,7 +114,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector given in XSPACE to the points in XSPACE
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param g The Grid on which to operate
@@ -190,11 +203,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * Transforms from a vector defined on the grid to the given points 
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
+ * @param globalbcz determines what to do if values lie exactly on the boundary
  *
  * @return interpolation matrix
  * @note The values of x, y and z must lie within the boundaries of g
@@ -215,10 +229,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         assert(x[i] >= g.x0() && x[i] <= g.x1());
         
         if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
+            std::cerr << std::setprecision(20);
             std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
         }
         assert( y[i] >= g.y0() && y[i] <= g.y1());
         if (!(z[i] >= g.z0() && z[i] <= g.z1())) {
+            std::cerr << std::setprecision(16);
             std::cerr << g.z0()<<"< zi = " << z[i] <<" < "<<g.z1()<<std::endl;
         }
         assert( z[i] >= g.z0() && z[i] <= g.z1());
@@ -230,9 +246,9 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         unsigned n = (unsigned)floor(xnn);
         unsigned m = (unsigned)floor(ynn);
         unsigned l = (unsigned)floor(znn);
-        n=(n==g.Nx()) ? n-1 :n;
-        m=(m==g.Ny()) ? m-1 :m;
-        l=(l==g.Nz()) ? l-1 :l;
+        //n=(n==g.Nx()) ? n-1 :n;
+        //m=(m==g.Ny()) ? m-1 :m;
+        //l=(l==g.Nz()) ? l-1 :l;
 
         //determine normalized coordinates
         double xn = 2.*xnn - (double)(2*n+1); 
@@ -329,6 +345,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d<dou
     assert( g_new.y0() >= g_old.y0());
     assert( g_new.y1() <= g_old.y1());
     thrust::host_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
+
     thrust::host_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
     return interpolation( pointsX, pointsY, g_old);
 
@@ -344,7 +361,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d<dou
  * @param g_old The old grid
  *
  * @return Interpolation matrix
- * @note The boundaries of the old brid must lie within the boundaries of the new grid
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<double>& g_new, const Grid3d<double>& g_old)
 {
@@ -361,5 +378,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
+///@}
 }//namespace create
 } //namespace dg

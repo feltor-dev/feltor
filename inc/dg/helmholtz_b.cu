@@ -9,12 +9,12 @@
 
 #include "backend/timer.cuh"
 #include "helmholtz.h"
-#include "backend/xspacelib.cuh"
 
 #include "cg.h"
 
 
-const double eps = 1e-4;
+
+const double eps = 1e-2;
 const double alpha = -0.5; 
 double lhs( double x, double y){ return sin(x)*sin(y);}
 double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
@@ -47,34 +47,6 @@ int main()
     std::cout << "number of iterations:  "<<number<<std::endl;
     std::cout << "error " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
     std::cout << "took  " << t.diff()<<"s"<<std::endl;
-
-//cusp matrix solver
-    dg::Matrix Temp = dg::create::laplacianM( grid, dg::not_normed), diff;
-    dg::Matrix weights( grid.size(), grid.size(), grid.size());
-    thrust::sequence(weights.row_indices.begin(), weights.row_indices.end()); 
-    thrust::sequence(weights.column_indices.begin(), weights.column_indices.end()); 
-    thrust::copy( w2d.begin(), w2d.end(), weights.values.begin());
-    for( unsigned i=0; i<Temp.values.size(); i++)
-        Temp.values[i] = - alpha*Temp.values[i];
-    cusp::add( weights, Temp, diff);
-    dg::DMatrix diff_ = diff;
-
-    cusp::array1d< double, cusp::device_memory> x_( x.size(), 0.);
-    cusp::array1d< double, cusp::device_memory> b_( rho.begin(), rho.end());
-    //cusp::verbose_monitor<double> monitor( b_, x.size(), eps, eps);
-    cusp::default_monitor<double> monitor( b_, x.size(), eps, eps);
-    //cusp::identity_operator<double, cusp::device_memory> M( diff_.num_rows, diff_.num_rows);
-    cusp::precond::diagonal<double, cusp::device_memory> M( diff_);
-    //cusp::precond::bridson_ainv<double, cusp::device_memory> M( diff_, 0.1, 10, true, 1);
-    t.tic();
-    cusp::krylov::cg( diff_, x_, b_, monitor, M);
-    t.toc();
-    dg::DVec xx_(x_.begin(), x_.end());
-    dg::blas1::axpby( 1., sol, -1., xx_);
-    std::cout << "CUSP performance:\n";
-    std::cout << "error " << sqrt( dg::blas2::dot( w2d, xx_))<<std::endl;
-    std::cout << "took  " << t.diff()<<"s"<<std::endl;
-
 
 
     return 0;

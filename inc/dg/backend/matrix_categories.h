@@ -5,12 +5,12 @@ namespace dg{
 
 struct AnyMatrixTag{};
 
-struct StdMatrixTag{}; //DEPRECATED
-
 //normal matrices
 struct CuspMatrixTag: public AnyMatrixTag {};
 
 struct SelfMadeMatrixTag {}; //A selfmade matrix can with any Vector
+
+struct dx_matrixTag: public AnyMatrixTag {}; // Small banded block matrix for derivatives
 
 struct MPIMatrixTag: public AnyMatrixTag {};
 

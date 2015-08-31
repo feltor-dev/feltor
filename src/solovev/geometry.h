@@ -4,10 +4,16 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+
+#include "dg/blas.h"
+
+#include "dg/backend/functions.h"
 #include "geom_parameters.h"
+
+
 /*!@file
  *
- * Geometry objects (6 analytical quantities)
+ * Geometry objects 
  */
 namespace solovev
 {
@@ -16,12 +22,8 @@ namespace solovev
 
 /**
  * @brief \f[ \hat{\psi}_p  \f]
- */    
-struct Psip
-{
-    Psip( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psi_0(gp.psipmaxcut), alpha_( gp.alpha) {}
-/**
- * @brief \f[ \hat{\psi}_p = 
+ *
+ * \f[ \hat{\psi}_p(R,Z) = 
       \hat{R}_0\Bigg\{A \left[ 1/2 \bar{R}^2  \ln{(\bar{R}   )}-(\bar{R}^4 )/8\right]
       + \sum_{i=1}^{12} c_i\bar \psi_{pi}(\bar R, \bar Z) \Bigg\}
       =
@@ -31,53 +33,54 @@ struct Psip
       c_{11} \left[3 \bar{R}^4  \bar{Z}-4 \bar{R}^2  \bar{Z}^3\right)      +
       c_{12} \left[-(45 \bar{R}^4  \bar{Z})+60 \bar{R}^4  \bar{Z} \ln{(\bar{R}   )}-
       80 \bar{R}^2  \bar{Z}^3 \ln{(\bar{R}   )}+8  \bar{Z}^5 \right] +
-      +c_2 \bar{R}^2 +
+      c_2 \bar{R}^2 +
       c_3 \left[  \bar{Z}^2-\bar{R}^2  \ln{(\bar{R}   )} \right] +
       c_4 \left[\bar{R}^4 -4 \bar{R}^2  \bar{Z}^2 \right] +
-      +c_5 \left[3 \bar{R}^4  \ln{(\bar{R}   )}-9 \bar{R}^2  \bar{Z}^2-12 \bar{R}^2  \bar{Z}^2
+      c_5 \left[3 \bar{R}^4  \ln{(\bar{R}   )}-9 \bar{R}^2  \bar{Z}^2-12 \bar{R}^2  \bar{Z}^2
       \ln{(\bar{R}   )}+2  \bar{Z}^4\right]+
       c_6 \left[ \bar{R}^6 -12 \bar{R}^4  \bar{Z}^2+8 \bar{R}^2  \bar{Z}^4 \right]  +
-      +c_7 \left[-(15 \bar{R}^6  \ln{(\bar{R}   )})+75 \bar{R}^4  \bar{Z}^2+180 \bar{R}^4 
+      c_7 \left[-(15 \bar{R}^6  \ln{(\bar{R}   )})+75 \bar{R}^4  \bar{Z}^2+180 \bar{R}^4 
        \bar{Z}^2 \ln{(\bar{R}   )}-140 \bar{R}^2  \bar{Z}^4-120 \bar{R}^2  \bar{Z}^4 
       \ln{(\bar{R}   )}+8  \bar{Z}^6 \right] +
-      +c_8  \bar{Z}+c_9 \bar{R}^2  \bar{Z}+(\bar{R}^4 )/8 \Bigg\} \f]
+      c_8  \bar{Z}+c_9 \bar{R}^2  \bar{Z}+(\bar{R}^4 )/8 \Bigg\} \f]
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
+ *
+ */    
+struct Psip
+{
+    /**
+     * @brief Construct from given geometric parameters
+     *
+     * @param gp useful geometric parameters
+     */
+    Psip( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psi_0(gp.psipmaxcut), alpha_( gp.alpha) {}
+/**
+ * @brief \f$ \hat \psi_p(R,Z) \f$
+
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @return \f$ \hat \psi_p(R,Z) \f$
  */
     double operator()(double R, double Z)
     {    
         return psi_alt( R, Z);
     }
-    double psi_neu( double psi)
-    {
-        if( psi <= psi_0)
-            return psi;
-        else if( psi <= psi_0 + alpha_*M_PI)
-            return psi_0 + alpha_/2.*( sin( (psi-psi_0)/alpha_) + (psi-psi_0)/alpha_ );
-        else 
-            return psi_0 + alpha_*M_PI/2.;
-    }
-    double diff_psi_neu( double R, double Z)
-    {
-        double psi = psi_alt( R, Z);
-        if( psi <= psi_0)
-            return 1;
-        if( psi <= psi_0 + alpha_*M_PI)
-            return 1./2.*( cos( (psi-psi_0)/alpha_) + 1. );
-        return 0.;
-    }
-    double diffdiff_psi_neu( double R, double Z)
-    {
-        double psi = psi_alt( R, Z);
-        if( psi <= psi_0)
-            return 0;
-        if( psi <= psi_0 + alpha_*M_PI)
-            return -1./2./alpha_* sin( (psi-psi_0)/alpha_) ;
-        return 0.;
-    }
+    /**
+     * @brief \f$ \psi_p(R,Z,\phi) \equiv \psi_p(R,Z)\f$
+     *
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @param phi angle (cylindrical coordinates)
+     *
+     * @return \f$ \hat \psi_p(R,Z,\phi) \f$
+     */
     double operator()(double R, double Z, double phi)
     {    
         return operator()(R,Z);
     }
+    /**
+     * @brief Show parameters to std::cout
+     */
     void display()
     {
       std::cout << R_0_ <<"  " <<A_ <<"\n";
@@ -110,16 +113,11 @@ struct Psip
     std::vector<double> c_;
     double psi_0;
     double alpha_;
-//   double * c;
 };
 /**
- * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}  \f]
- */ 
-struct PsipR
-{
-    PsipR( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp) {}
-/**
- * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} =
+ * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} \f]
+ *
+ * \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} =
       \Bigg\{ 2 c_2 \bar{R} +(\bar{R}^3 )/2+2 c_9 \bar{R}  \bar{Z}
       +c_4 (4 \bar{R}^3 -8 \bar{R}  \bar{Z}^2)+c_{11} 
       (12 \bar{R}^3  \bar{Z}-8 \bar{R}  \bar{Z}^3 
@@ -132,7 +130,49 @@ struct PsipR
       +c_7 (-15 \bar{R}^5 +480 \bar{R}^3  \bar{Z}^2-400 \bar{R}  \bar{Z}^4-90 \bar{R}^5  
       \ln{(\bar{R}   )}+720 \bar{R}^3  \bar{Z}^2 \ln{(\bar{R}   )}-240 \bar{R}  \bar{Z}^4
       \ln{(\bar{R}   )})\Bigg\} \f]
+      with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  */ 
+struct PsipR
+{
+    /**
+     * @brief Construct from given geometric parameters
+     *
+     * @param gp useful geometric parameters
+     */
+    PsipR( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp) {}
+/**
+ * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)  \f$
+
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+    * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z)  \f$
+ */ 
+    double operator()(double R, double Z)
+    {    
+        return psipR_alt( R, Z);
+    }
+    /**
+     * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z,\phi) \equiv \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)\f$
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @param phi angle (cylindrical coordinates)
+    * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z,\phi)  \f$
+ */ 
+    double operator()(double R, double Z, double phi)
+    {    
+        return operator()(R,Z);
+    }
+
+
+    /**
+     * @brief Print parameters to std::cout
+     */
+    void display()
+    {
+      std::cout << R_0_ <<"  " <<A_ <<"\n";
+      std::cout << c_[0] <<"\n";
+    }
+  private:
     double psipR_alt(double R, double Z)
     {    
         double Rn,Rn2,Rn3,Rn5,Zn,Zn2,Zn3,Zn4,lgRn;
@@ -149,21 +189,6 @@ struct PsipR
             160.* Rn *Zn3*lgRn) *c_[11]
           );
     }
-    double operator()(double R, double Z)
-    {    
-        //return psip_.diff_psi_neu( R, Z)* psipR_alt( R,Z);
-        return psipR_alt( R, Z);
-    }
-    double operator()(double R, double Z, double phi)
-    {    
-        return operator()(R,Z);
-    }
-    void display()
-    {
-      std::cout << R_0_ <<"  " <<A_ <<"\n";
-      std::cout << c_[0] <<"\n";
-    }
-  private:
     double R_0_, A_;
     std::vector<double> c_;
     Psip psip_;
@@ -670,9 +695,13 @@ struct Field
         invB_(gp) {
     }
     /**
- * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
- \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
- \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}}  \f]
+ * @brief \f[ 
+ \begin{align}
+ \frac{d \hat{R} }{ d \varphi}  &= \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}\\
+ \frac{d \hat{Z} }{ d \varphi}  &=- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}}\\
+ \frac{d \hat{l} }{ d \varphi}  &=\frac{\hat{R}^2 \hat{B}}{\hat{I}}  
+ \end{align}
+ \f]
  */ 
     void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp)
     {
@@ -840,6 +869,9 @@ struct BHatP
     InvB   invB_;
   
 }; 
+///@} 
+///@addtogroup profiles
+///@{
 
 /**
  * @brief Delta function for poloidal flux \f$ B_Z\f$
@@ -901,9 +933,9 @@ struct FluxSurfaceAverage
       dg::HVec psipRog2d  = dg::evaluate( psipR_, g2d_);
       dg::HVec psipZog2d  = dg::evaluate( psipZ_, g2d_);
       double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );    
-      double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
+      //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
       double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
-      double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
+      //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
       double deltapsi = fabs(psipZmax/g2d_.Ny()/g2d_.n() +psipRmax/g2d_.Nx()/g2d_.n());
       //deltaf_.setepsilon(deltapsi/4.);
       deltaf_.setepsilon(deltapsi); //macht weniger Zacken
@@ -961,9 +993,9 @@ struct SafetyFactor
       dg::HVec psipRog2d  = dg::evaluate( psipR_, g2d_);
       dg::HVec psipZog2d  = dg::evaluate( psipZ_, g2d_);
       double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(), 0.,     thrust::maximum<double>()  );    
-      double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
+      //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
       double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
-      double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
+      //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
       double deltapsi = fabs(psipZmax/g2d_.Ny() +psipRmax/g2d_.Nx());
       //deltaf_.setepsilon(deltapsi/4.);
       deltaf_.setepsilon(4.*deltapsi); //macht weniger Zacken

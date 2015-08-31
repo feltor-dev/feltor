@@ -22,7 +22,7 @@ namespace dg{
  * consider 
  * \f[ y = Bhk = (B-D)hk + Dhk = (B-D)B^{-1}y + Dhk 
  *       = ( 1- DB^{-1})y + Dhk = \alpha y + \beta h k\f]
- *  where \f[ B\f] is the butcher tableau of order k+1 and \f[ D\f] its
+ *  where \f$ B\f$ is the butcher tableau of order k+1 and \f$ D\f$ its
  *  diagonal part. 
  * @tparam k Order of the method. Currently 2,3 and 4 are available
  */
@@ -81,10 +81,16 @@ const double rk_coeff<4>::beta[4] = {
 
 /**
 * @brief Struct for Runge-Kutta explicit time-integration
+* \f[
+ \begin{align}
+    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
+    k_j = f\left( u^n + \Delta t \sum_{l=1}^j a_{jl} k_l\right)
+ \end{align}
+\f]
 *
 * @ingroup algorithms
 *
-* Uses only blas1::axpby routines to integrate one step.
+* Uses only dg::blas1::axpby() routines to integrate one step.
 * The coefficients are chosen in a form that require a minimum of 
 * axpby function calls (check for alpha==0, beta==1) and else 
 * assumes that most of the work is done in the computation of the rhs.
@@ -149,6 +155,9 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
     }
 }
 
+/**
+ * @brief Thrown by the integrateRK4 function if the rhs is badly conditioned
+ */
 struct NotANumber : public std::exception
 {
     /**
@@ -172,7 +181,7 @@ struct NotANumber : public std::exception
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
  * @param rhs The right-hand-side
- * @param begin initial condition
+ * @param begin initial condition (size 3)
  * @param end (write-only) contains solution on output
  * @param T_max final time
  * @param eps_abs desired absolute accuracy
@@ -184,8 +193,8 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     Vector old_end(begin), temp(begin),diffm(begin);
     end = begin;
     if( T_max == 0) return;
-    double dt = T_max/1;
-    int NT = 1;
+    double dt = T_max/10;
+    int NT = 10;
     double error = 1e10;
     //bool flag = false; 
  

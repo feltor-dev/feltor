@@ -1,9 +1,7 @@
 /*! @file 
- * @brief vereint verschiedene Methoden zur Nullstellensuche
+ * @brief contains root finding method
  * @author Matthias Wiesenberger
- * @verbatim
- * Nullstellensuche 12.4.2010
-  @endverbatim 
+ * @date 12.4.2010
  */
 #ifndef _NULLSTELLE_
 #define _NULLSTELLE_
@@ -35,49 +33,53 @@ struct Ooops : public std::exception
   private:
     const char* c_;
 };
-/*! @brief Fehlerklasse die Grenzen für 1D Nullstellensuche sichert
+/*! @brief Exception class, that stores boundaries for 1D root finding 
+ *
+ * @ingroup utilities
  */
 class KeineNST_1D: public std::exception
 {
   private:
     double x1, x2;
   public:
-    /*! @brief Konstruktor
+    /*! @brief construct
      *
-     * \param x_min linke Grenze
-     * \param x_max rechte Grenze
-     * \param file Fehler
-     * \param line Fehler
+     * \param x_min left boundary
+     * \param x_max right boundary
      */
     KeineNST_1D(double x_min, double x_max): x1(x_min), x2(x_max){}
-    /*! @brief Anzeigemethodea auf std::cerr
+    /*! @brief display on std::cerr
      *
      * meldet %Fehler und gibt linke und rechte Grenze aus
      */
     void anzeigen() const
     {
-      std::cerr << "Zwischen " <<x1 << " und "<<x2<<" liegt keine NST!\n";
+      std::cerr << "Between " <<x1 << " and "<<x2<<" is no root!\n";
     }
+    /**
+     * @brief what string
+     *
+     * @return 
+     */
     char const* what() const throw(){ return "Failed to find root!";}
 };
 
-/*! @defgroup Nullstellensuchroutinen Nullstellensuchroutinen
- * @{
- */
-/*! @brief Bestimmung der Nullstelle einer 1-D Funktion bzw. Funktors in vorgegebenen Grenzen
+/*! @brief Find a root of a 1d function in given boundaries
  *
- * Es wird davon ausgegangen, dass ein Vorzeichenwechsel bei der NST vorliegt
- * Funktion hüpft immer näher an die NST heran, indem es am VZ prüft ob es sich links oder rechts der NST befindet
- * \param funktion Funktion oder Funktor
- * \param x_min vorzugebene linkseitige Grenze, enthält nach Ausführung die neue linke Grenze
- * \param x_max vorzugebene rechtsseitige Grenze, enthält nach Ausführung die neue rechte Grenze
- * \param aufloesung	Fehlertoleranz für die NST 
- * \return Zahl der benötigten Schritte bis zum Erreichen der Auflösung
- * \throw KeineNST_1D falls zwischen den angegebenen Grenzen keine Nullstelle liegt
- * \throw Fehler falls mit 50 Schritten die Auflösung nicht erreicht werden kann
+ * @ingroup utilities
+ * It is assumed that a sign change occurs at the root.
+ * Function jumps closer to the root by checking the sign. 
+ * \tparam UnaryOp unary function operator
+ * \param funktion Function or Functor
+ * \param x_min left boundary, contains new left boundary on execution
+ * \param x_max right boundary, contains new right boundary on execution
+ * \param aufloesung accuracy of the root finding	
+ * \return number of used steps to reach the desired accuracy
+ * \throw KeineNST_1D if no root lies between the given boundaries
+ * \throw Oooops if after 50 steps the accuracy wasn't reached
  *
  * \code nullstelle_1D(funk, x_min, x_max, aufloesung); \endcode
- * \note Falls die Nullstelle zufälligerweise exakt gefunden wird, so ist x_min = x_max!
+ * \note If the root is found exactly the x_min = x_max 
  */
 template <typename UnaryOp>           
 int bisection1d (UnaryOp& funktion, double& x_min, double& x_max, const double aufloesung) 

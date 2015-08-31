@@ -3,9 +3,8 @@
 
 #include <exception>
 
-#include "dg/backend/xspacelib.cuh"
 #include "dg/algorithm.h"
-#include "dg/backend/average.cuh"
+#include "dg/average.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -18,12 +17,11 @@
 
 namespace dg
 {
-template< class container>
+template< class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
-        w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()) { 
-        LaplacianM = dg::create::laplacianM( g, dg::normed, dg::centered); 
+        w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
         }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
@@ -43,18 +41,17 @@ struct Diffusion
     double nu_;
     const container w2d, v2d;
     container temp;
-    dg::DMatrix LaplacianM;
+    Elliptic<Matrix, container, container> LaplacianM;
 };
 
 
-template< class container=thrust::device_vector<double> >
+template< class Matrix, class container=thrust::device_vector<double> >
 struct HW
 {
     typedef std::vector<container> Vector;
     typedef typename container::value_type value_type;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     /**
      * @brief Construct a HW solver object
@@ -77,12 +74,6 @@ struct HW
      */
     const container& potential( ) const { return phi;}
 
-    /**
-     * @brief Return the normalized negative laplacian used by this object
-     *
-     * @return cusp matrix
-     */
-    const Matrix& laplacianM( ) const { return laplaceM;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -133,12 +124,10 @@ struct HW
     std::vector<container> lapy, laplapy;
 
     //matrices and solvers
-    Matrix A; //contains unnormalized laplacian if local
-    Matrix laplaceM; //contains normalized laplacian
     ArakawaX< Matrix, container> arakawa; 
-    //Polarisation2dX< thrust::host_vector<value_type> > pol; //note the host vector
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
+    Elliptic<Matrix, container, container> A, laplaceM;
 
     const container w2d, v2d, one;
     const double alpha;
@@ -152,25 +141,23 @@ struct HW
 
 };
 
-template< class container>
-HW< container>::HW( const Grid2d<value_type>& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
+template< class Matrix, class container>
+HW<Matrix, container>::HW( const Grid2d<value_type>& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
     chi( grid.size(), 0.), omega(chi), phi( chi), phi_old( chi), dyphi( chi),
     lapphiM(chi), lapy( 2, chi),  laplapy( lapy),
+    A( grid, not_normed, centered), laplaceM( grid, normed, centered),
     arakawa( grid), 
     pcg( omega, omega.size()), 
     average( grid),
     w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
     alpha( alpha), g(g), nu( nu), eps_pol(eps_pol), mhw( mhw)
 {
-    //create derivatives
-    laplaceM = create::laplacianM( grid, normed, dg::centered); //doesn't hurt to be symmetric but doesn't solver pb
-    A = create::laplacianM( grid, not_normed, dg::centered);
 
 }
 
 //computes and modifies expy!!
-template<class container>
-const container& HW< container>::polarisation( const std::vector<container>& y)
+template<class M, class container>
+const container& HW<M, container>::polarisation( const std::vector<container>& y)
 {
     //extrapolate phi and gamma_n
     blas1::axpby( 2., phi, -1.,  phi_old);
@@ -194,8 +181,8 @@ const container& HW< container>::polarisation( const std::vector<container>& y)
     return phi;
 }
 
-template< class container>
-void HW< container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template< class M, class container>
+void HW< M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

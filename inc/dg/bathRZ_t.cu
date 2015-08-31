@@ -3,6 +3,7 @@
 #include <sstream>
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/projection.cuh"
+#include "dg/backend/typedefs.cuh"
 #include "functors.h"
 #include "draw/host_window.h"
 
@@ -27,7 +28,7 @@ int main()
     dg::Grid2d<double> grid_old(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
     dg::Grid2d<double> grid_new(Rmin,Rmax,Zmin,Zmax, n_out,Nx_out,Ny_out,dg::PER,dg::PER);
     //dg::HMatrix interpolate = dg::create::interpolation( grid_new, grid_old);
-    dg::HMatrix interpolate = dg::create::projection( grid_old, grid_new);
+    dg::IHMatrix interpolate = dg::create::projection( grid_old, grid_new);
     //construct bathRZ
     dg::BathRZ bathRZ(16, 16, 1, Rmin,Zmin, gamma,eddysize,amplitude);
     //evaluate bathRZ on the dggrid on a hvector
@@ -41,9 +42,9 @@ int main()
     dg::HVec visual_old( grid_old.size());
     dg::HVec visual_new( grid_new.size());
     //make equidistant trafo matrix from dggrid
-    dg::HMatrix equigrid_old = dg::create::backscatter(grid_old);
-    dg::HMatrix equigrid_new = dg::create::backscatter(grid_new);
-    //evaluate on valzues from devicevector on equidistant visual hvisual vector
+    dg::IHMatrix equigrid_old = dg::create::backscatter(grid_old);
+    dg::IHMatrix equigrid_new = dg::create::backscatter(grid_new);
+    //evaluate on values from devicevector on equidistant visual hvisual vector
     dg::blas2::gemv( equigrid_old, hvisual_old, visual_old);
     dg::blas2::gemv( equigrid_new, hvisual_new, visual_new);
 

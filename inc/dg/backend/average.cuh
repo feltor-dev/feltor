@@ -1,13 +1,27 @@
 #pragma once
 
+#include "evaluation.cuh"
 #include "xspacelib.cuh"
+#include "../blas1.h"
 
+/*! @file 
+
+  Contains classes for poloidal and toroidal average computations.
+
+  */
 namespace dg{
-
+struct printf_functor
+{
+__host__ __device__
+void operator()(double x)
+{
+    printf("%f\n",x);
+}
+};
 /**
  * @brief Class for y average computations
  *
- * The problem is the dg format of the vector
+ * @ingroup utilities
  * @tparam container Vector class to be used
  * @tparam IndexContainer Class for scatter maps
  */
@@ -19,92 +33,58 @@ struct PoloidalAverage
      *
      * @param g 2d Grid
      */
-    PoloidalAverage( const Grid2d<double>& g):dummy( g.n()*g.Nx()), helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
+    PoloidalAverage( const Grid2d<double>& g):
+        dummy( g.n()*g.Nx()), 
+        helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
     {
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
-        //reorder = create::scatterMap( g.n(), g.Nx(), g.Ny());
         lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());
-        w2d = create::weights( g);
+        Grid2d<double> gTr( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx());
+        w2d = dg::create::weights( gTr);
         Grid1d<double> g1x( 0, g.lx(), g.n(), g.Nx());
-        v1d = create::inv_weights( g1x);
+        v1d = dg::create::inv_weights( g1x);
 
     }
     /**
      * @brief Compute the average in y-direction
      *
-     * @param src Source vector 
-     * @param res contains the result on output (may not equal src)
+     * @param src 2D Source vector 
+     * @param res 2D result vector (may not equal src), every line contains the x-dependent average over
+     the y-direction of src 
      */
     void operator() (const container& src, container& res)
     {
         assert( &src != &res);
         res.resize( src.size());
-        //weight to ensure correct integration
-        blas1::pointwiseDot( src, w2d, helper);
-        thrust::scatter( helper.begin(), helper.end(), invertxy.begin(), res.begin());
-        /*
-        //std::cout << "Result of invertXY:\n";
-        //for( unsigned i=0; i<9; i++)
-        //{
-        //    for( unsigned j=0; j<6; j++)
-        //        std::cout << res[i*6+j]<<" ";
-        //    std::cout<< "\n";
-        //}
-        //std::cout << "H1\n";
-        //compute average
-        //std::cout << "Line Numbers:\n";
-        //for( unsigned i=0; i<6; i++)
-        //{
-        //    for( unsigned j=0; j<9; j++)
-        //        std::cout << lines[i*9+j]<<" ";
-        //    std::cout<< "\n";
-        //}
-        */
-        //std::cout << "Result of Averaging:\n";
-        thrust::reduce_by_key( lines.begin(), lines.end(), res.begin(), dummy.begin(), helper1d.begin());
-        blas1::axpby( 1./ly_, helper1d, 0, helper1d);
-        //remove weights in x-direction
+        thrust::scatter( src.begin(), src.end(), invertxy.begin(), helper.begin());
+        //weights to ensure correct integration
+        blas1::pointwiseDot( helper, w2d, helper);
+        thrust::reduce_by_key( lines.begin(), lines.end(), helper.begin(), dummy.begin(), helper1d.begin());
+        blas1::scal( helper1d, 1./ly_);
+        //remove 1d weights in x-direction
         blas1::pointwiseDot( helper1d, v1d, helper1d);
-        //for( unsigned i=0; i<helper1d.size(); i++)
-            //std::cout<< helper1d[i]<<" ";
-        //std::cout << "INNER integral: "<<thrust::reduce( helper1d.begin(), helper1d.end())<<"\n";
-        thrust::copy( helper1d.begin(), helper1d.end(), helper.begin());
         //copy to a full vector
+        thrust::copy( helper1d.begin(), helper1d.end(), res.begin());
         unsigned pos = helper1d.size();
-        while ( 2*pos < helper.size() )
+        while ( 2*pos < res.size() )
         {
-            thrust::copy_n( helper.begin(), pos, helper.begin() + pos);
+            thrust::copy_n( res.begin(), pos, res.begin() + pos);
             pos*=2; 
         }
-        thrust::copy_n( helper.begin(), helper.size() - pos, helper.begin() + pos);
-        //for( unsigned i=0; i<9; i++)
-        //{
-        //    for( unsigned j=0; j<6; j++)
-        //        std::cout << helper[i*6+j]<<" ";
-        //    std::cout<< "\n";
-        //}
-
-        //invert average vector
-        //thrust::gather( reorder.begin(), reorder.end(), helper.begin(), res.begin());
-        thrust::copy( helper.begin(), helper.end(), res.begin());
-        //for( unsigned i=0; i<9; i++)
-        //{
-        //    for( unsigned j=0; j<6; j++)
-        //        std::cout << res[i*6+j]<<" ";
-        //    std::cout<< "\n";
-        //}
+        thrust::copy_n( res.begin(), res.size() - pos, res.begin() + pos);
 
     }
   private:
-    IndexContainer invertxy, reorder, lines, dummy;
+    IndexContainer invertxy, lines, dummy; //dummy contains output keys i.e. line numbers
     container helper, helper1d;
     container w2d, v1d;
     double ly_;
 };
+
 /**
  * @brief Class for phi average computations
  *
- * The problem is the dg format of the vector
+ * @ingroup utilities
  * @tparam container Vector class to be used
  */
 template< class container = thrust::host_vector<double> >

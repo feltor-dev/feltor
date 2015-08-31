@@ -4,7 +4,6 @@
 #include <exception>
 
 #include "dg/algorithm.h"
-#include "dg/backend/polarisation.cuh"
 #include "dg/backend/typedefs.cuh"
 
 #ifdef DG_BENCHMARK
@@ -161,7 +160,6 @@ struct ToeflR
     Helmholtz< Matrix, container, container > gamma1;
     ArakawaX< Matrix, container> arakawa; 
     Elliptic<Matrix, container, Preconditioner> pol;
-    //Polarisation2dX< thrust::host_vector<double>, dg::HMatrix > pol; //note the host vector
     CG<container > pcg;
 
     const Preconditioner w2d, v2d;
@@ -180,7 +178,7 @@ ToeflR< M, container,P>::ToeflR( const Grid2d<double>& grid, double kappa, doubl
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
     expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
-    gamma1(  grid, -0.5*tau),
+    gamma1(  grid, -0.5*tau, dg::centered),
     arakawa( grid), 
     pol(     grid, not_normed, dg::centered), 
     pcg( omega, omega.size()), 

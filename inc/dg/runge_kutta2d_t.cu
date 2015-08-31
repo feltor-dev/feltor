@@ -9,13 +9,6 @@
 #include "runge_kutta.h"
 #include "backend/typedefs.cuh"
 
-//#include "cg.cuh"
-//#include "laplace.cuh"
-//#include "tensor.cuh"
-
-using namespace std;
-using namespace dg;
-
 const unsigned n = 3;
 const unsigned Nx = 20;
 const unsigned Ny = 20;
@@ -37,7 +30,7 @@ template< class Vector_Type>
 struct RHS
 {
     typedef std::vector<Vector_Type> Vector;
-    RHS(const Grid2d<double>& grid): arakawa( grid), phi( evaluate( function, grid)),
+    RHS(const dg::Grid2d<double>& grid): arakawa( grid), phi( evaluate( function, grid)),
                                      temp(phi)
     { }
     void operator()(const Vector& y, Vector& yp)
@@ -49,7 +42,7 @@ struct RHS
         }
     }
   private:
-    ArakawaX<dg::DMatrix, Vector_Type> arakawa;
+    dg::ArakawaX<dg::DMatrix, Vector_Type> arakawa;
     Vector_Type phi, temp;
 };
 
@@ -58,36 +51,25 @@ int main()
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     dg::DVec w2d = dg::create::weights( grid);
     //Also test std::vector<DVec> functionality
-    cout << "# of 2d cells                     " << Nx*Ny <<endl;
-    cout << "# of Legendre nodes per dimension "<< n <<endl;
-    cout << "# of timesteps                    "<< NT <<endl;
-    //cout <<fixed<< setprecision(2)<<endl;
-    dg::DVec init = evaluate ( initial, grid );
-    const dg::DVec solution = evaluate ( result, grid);
+    std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
+    std::cout << "# of Legendre nodes per dimension "<< n <<std::endl;
+    std::cout << "# of timesteps                    "<< NT <<std::endl;
+    dg::DVec init = dg::evaluate ( initial, grid );
+    const dg::DVec solution = dg::evaluate ( result, grid);
     std::vector<dg::DVec> y0( 2, init), y1(y0);
 
     RHS<dg::DVec> rhs( grid);
 
-    //integrateRK4( rhs, y0, y1, T, 1e-10);
-    //std::vector<DVec> error(2, solution);
-    //double norm_sol = blas2::dot( w2d, solution);
-    //blas1::axpby( -1., y1, 1., error);
-    //double norm_error = blas2::dot( w2d, error);
-    //cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" \n";
-    
-    RK<k, std::vector<dg::DVec> >  rk( y0);
+    dg::RK<k, std::vector<dg::DVec> >  rk( y0);
     for( unsigned i=0; i<NT; i++)
     {
         rk( rhs, y0, y1, dt);
         y0.swap( y1);
-        //for( unsigned i=0; i<y0.size(); i++)
-        //    thrust::swap( y0[i], y1[i]); 
-            
     }
 
-    blas1::axpby( 1., solution, -1., y0[0]);
-    cout << scientific;
-    cout << "Norm of error is "<<sqrt(blas2::dot( w2d, y0[0]))<<"\n"; //never forget the sqrt when computing errors
+    dg::blas1::axpby( 1., solution, -1., y0[0]);
+    std::cout << std::scientific;
+    std::cout << "Norm of error is "<<sqrt(dg::blas2::dot( w2d, y0[0]))<<"\n"; //never forget the sqrt when computing errors
     //n = 1 -> p = 2 ( as it should be )
     //n = 2 -> p = 1 (is error dominated by error for dx(phi)?
     //n = 3 -> p = 3 

@@ -190,7 +190,10 @@ class Matrix
      */
     T const * getPtr()const {return ptr;}
 
-
+    /*! @brief Copy the data linearly and without padding to a std vector
+     *
+     * @return newly instantiated vector holding a copy of the matrix data
+     */
     std::vector<T> copy() const
     {
         std::vector<T> vec( n*m);

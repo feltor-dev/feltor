@@ -1,13 +1,14 @@
 system=home
 device=gpu
 
+
 INCLUDE = -I../../inc # other project libraries
 INCLUDE+= -I../ # geometry library
 
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20 -w
+CFLAGS = --compiler-options -Wall -arch=sm_52 -w
 CFLAGS+= -Xcompiler -fopenmp 
 CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 GLFLAGS= -lGLEW
@@ -30,7 +31,7 @@ ifeq ($(strip $(system)),home)
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
-GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr 
+GLFLAGS += $$(pkg-config --static --libs glfw3)
 LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
@@ -72,4 +73,4 @@ heat_hpc: heat_hpc.cu heat.cuh
 .PHONY: clean
 	
 clean:
-	rm -f heat heat_hpc geometry_t dz_geom_t
+	rm -f heat heat_hpc 

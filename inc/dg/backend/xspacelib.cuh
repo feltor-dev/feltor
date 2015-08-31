@@ -1,32 +1,23 @@
 #ifndef _DG_XSPACELIB_CUH_
 #define _DG_XSPACELIB_CUH_
 
-#include <thrust/device_vector.h>
+//#include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
 #include <cusp/coo_matrix.h>
-#include <cusp/ell_matrix.h>
-
-//functions for evaluation
+//
+////functions for evaluation
 #include "grid.h"
 #include "dlt.h"
-#include "evaluation.cuh"
-
-
-//creational functions
-#include "derivatives.cuh"
-#include "polarisation.cuh"
-#include "weights.cuh"
-#include "interpolation.cuh"
-
-//integral functions
-#include "typedefs.cuh"
+#include "operator.h"
+#include "operator_tensor.cuh"
+#include "tensor.cuh"
+#include "interpolation.cuh" //makes typedefs available
 
 
 /*! @file
 
-  * includes all relevant dg lib files for matrix creation and function evaluation
-  * and provides some utility functions
+  * provides some utility functions
   */
 
 namespace dg{
@@ -54,6 +45,7 @@ namespace create{
  * @param Ny # of points in y
  *
  * @return map of indices
+ * @deprecated memory layout has been changed 
  */
 thrust::host_vector<int> scatterMap(unsigned nx, unsigned ny, unsigned Nx, unsigned Ny )
 {
@@ -89,6 +81,7 @@ thrust::host_vector<int> scatterMap( unsigned n, unsigned Nx, unsigned Ny)
  * @param Ny # of points in y
  *
  * @return map of indices
+ * @deprecated memory layout has been changed
  */
 thrust::host_vector<int> gatherMap( unsigned n, unsigned Nx, unsigned Ny )
 {

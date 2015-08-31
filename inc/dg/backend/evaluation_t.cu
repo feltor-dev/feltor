@@ -30,17 +30,17 @@ const double lz = 2;
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
 
-using namespace std;
 int main()
 {
+    //This file tests not only the evaluation functions but also the weights
     unsigned n;
-    cout << "Type # of polynomial coefficients ( 1, 2,...,20)!\n";
-    cin >> n;
+    std::cout << "Type # of polynomial coefficients ( 1, 2,...,20)!\n";
+    std::cin >> n;
     unsigned N, Nx, Ny, Nz;
-    cout << "# of polynomial coefficients is: "<< n<<endl;
-    cout << "Type # of grid cells (e.g. 10, 100)! ( Nx = N, Ny = 2N, Nz = 10*N)\n";
-    cin >> N;
-    cout << "# of grid cells is: "<< N<<endl;
+    std::cout << "# of polynomial coefficients is: "<< n<<std::endl;
+    std::cout << "Type # of grid cells (e.g. 10, 100)! ( Nx = N, Ny = 2N, Nz = 10*N)\n";
+    std::cin >> N;
+    std::cout << "# of grid cells is: "<< N<<std::endl;
     Nx = N; Ny = 2*N; Nz = 10*N;
 
     dg::Grid1d<double> g1d( 0, lx, n, N);
@@ -48,28 +48,33 @@ int main()
     dg::Grid3d<double> g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER,dg::cylindrical);
 
     //test evaluation functions
-    HVec h_x = dg::evaluate( function, g1d);
-    HVec h_n = dg::evaluate( function, g2d);
-    HVec h_z = dg::evaluate( function, g3d);
-    HVec w3d = dg::create::weights( g3d);
+    const HVec h_x = dg::evaluate( function, g1d);
+    const HVec h_n = dg::evaluate( function, g2d);
+    const HVec h_z = dg::evaluate( function, g3d);
+    const HVec w1d = dg::create::weights( g1d);
+    const HVec w2d = dg::create::weights( g2d);
+    const HVec w3d = dg::create::weights( g3d);
 
     //test preconditioners
-    double normX = dg::blas2::dot( h_x, dg::create::weights(g1d), h_x);
-    double norm2X = dg::blas2::dot( dg::create::weights(g2d), h_n);
+    double normX = dg::blas2::dot( h_x, w1d, h_x);
+    double norm2X = dg::blas2::dot( w2d, h_n);
     double norm3X = dg::blas2::dot( h_z, w3d, h_z);
 
-    cout << "Square normalized 1DXnorm "<< normX <<"\n";
+    std::cout << "Square normalized 1DXnorm "<< normX <<"\n";
     double solution = (exp(4.) -exp(0))/2.;
-    cout << "Correct square norm is    "<<solution<<endl;
-    cout << "Square normalized 2DXnorm "<< norm2X<<"\n";
-    double solution2 = (exp(4.)-exp(0))/2.*(exp(4.) -exp(0))/2.;
-    cout << "Correct square norm is    "<<solution2<<endl;
+    std::cout << "Correct square norm is    "<<solution<<std::endl;
+    std::cout << "Relative 1d error is      "<<(normX-solution)/solution<<"\n\n";
 
-    cout << "Square normalized 3DXnorm   "<< norm3X<<"\n";
+    std::cout << "Square normalized 2DXnorm "<< norm2X<<"\n";
+    double solution2 = (exp(4.)-exp(0))/2.*(exp(4.) -exp(0))/2.;
+    std::cout << "Correct square norm is    "<<solution2<<std::endl;
+    std::cout << "Relative 2d error is      "<<(norm2X-solution2)/solution2<<"\n\n";
+
+    std::cout << "Square normalized 3DXnorm "<< norm3X<<"\n";
     if( g3d.system() == dg::cylindrical)
         solution = (3*exp(4.)+1.)/4.;
     double solution3 = solution2*solution;
-    cout << "Correct square norm is      "<<solution3<<endl;
-    cout << "Relative 3d error is        "<<(norm3X-solution3)/solution3<<"\n";
+    std::cout << "Correct square norm is    "<<solution3<<std::endl;
+    std::cout << "Relative 3d error is      "<<(norm3X-solution3)/solution3<<"\n";
     return 0;
 } 

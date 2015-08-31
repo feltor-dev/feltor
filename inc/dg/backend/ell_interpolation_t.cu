@@ -1,5 +1,5 @@
-#include <cusp/coo_matrix.h>
-#include <cusp/print.h>
+//#include <cusp/coo_matrix.h>
+//#include <cusp/print.h>
 #include "xspacelib.cuh"
 #include "ell_interpolation.cuh"
 #include "typedefs.cuh"
@@ -19,8 +19,8 @@ int main()
     {
     dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
     thrust::host_vector<double> vector = dg::evaluate( sinus, g);
-    dg::Matrix A = dg::create::backscatter( g);
-    A.sort_by_row_and_column();
+    dg::IHMatrix A = dg::create::backscatter( g);
+    //A.sort_by_row_and_column();
 
     thrust::host_vector<double> x( g.size()), y(x);
     for( unsigned i=0; i<g.Ny()*g.n(); i++)
@@ -63,8 +63,8 @@ int main()
     }
     {
     dg::Grid3d<double> g( -10, 10, -5, 5, -M_PI, M_PI, n, Nx, Ny, Nz);
-    dg::Matrix A = dg::create::backscatter( g);
-    A.sort_by_row_and_column();
+    dg::IHMatrix A = dg::create::backscatter( g);
+    //A.sort_by_row_and_column();
 
     thrust::host_vector<double> x( g.size()), y(x), z(x);
     for( unsigned k=0; k<g.Nz(); k++)
@@ -79,7 +79,7 @@ int main()
                         g.z0() + (k+0.5)*g.hz();
             }
     dg::DVec xd(x), yd(y), zd(z);
-    dg::DMatrix dB = dg::create::ell_interpolation( xd, yd, zd, g);
+    cusp::ell_matrix<int, double, cusp::device_memory> dB = dg::create::ell_interpolation( xd, yd, zd, g);
     dg::HVec vector = dg::evaluate( sinus, g);
     dg::DVec dv( vector), w2( vector);
     dg::HVec w(vector);

@@ -8,22 +8,21 @@
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
 #include "dg/backend/xspacelib.cuh"
+#include "dg/backend/sparseblockmat.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/average.cuh"
+#include "dg/backend/typedefs.cuh"
 #include "file/read_input.h"
 #include "solovev/geometry.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
 
-#define TORLIM //for toroidal limiter setup
-// #define TORSHEATHLIM //for toroidal sheath limiter setup (under construction)
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-
 
 int main( int argc, char* argv[])
 {
@@ -74,7 +73,7 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
     std::cout << "Done!\n";
@@ -94,7 +93,7 @@ int main( int argc, char* argv[])
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.dz().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =2 ->2*2-1
+    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =2 ->2*2-1
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning
@@ -114,11 +113,11 @@ int main( int argc, char* argv[])
     std::cout << "intiialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     std::cout << "Done!\n";
-    feltor.energies( y0);//now energies and potential are at time 0
+//     feltor.energies( y0);//now energies and potential are at time 0
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
     dg::ToroidalAverage<dg::HVec> toravg(grid);
     //create timer
@@ -131,7 +130,12 @@ int main( int argc, char* argv[])
     
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    
+     //probe
+    const dg::DVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
+    const dg::DVec Zprobe(1,0.);
+    const dg::DVec Phiprobe(1,M_PI);
+    dg::IDMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
+    dg::DVec probevalue(1,0.);   
     while ( !glfwWindowShouldClose( w ))
     {
 
@@ -255,14 +259,17 @@ int main( int argc, char* argv[])
                 break;
             }
             step++;
-            feltor.energies( y0); //update energetics
+//             feltor.energies( y0); //update energetics
+            //Compute probe values
+            dg::blas2::gemv(probeinterp,y0[0],probevalue);
+            std::cout << " Ne_p - 1  = " << probevalue[0] <<"\t";
+            dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+            std::cout << " Phi_p = " << probevalue[0] <<"\t";
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << " Ne_p  = " << feltor.probe_vector()[0][0] << 
-                         " Phi_p = " << feltor.probe_vector()[1][0] << std::endl;
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
             
             E0 = E1;

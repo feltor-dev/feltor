@@ -7,26 +7,51 @@ namespace eule{
  */
 struct Parameters
 {
-    unsigned n, Nx, Ny, Nz; 
-    double dt; 
-    unsigned n_out, Nx_out, Ny_out, Nz_out; 
-    unsigned itstp, maxout;
+    unsigned n; //!< \# of polynomial coefficients in R and Z
+    unsigned Nx; //!< \# of cells in x -direction
+    unsigned Ny; //!< \# of cells in y -direction
+    unsigned Nz; //!< \# of cells in z -direction
 
-    double eps_pol, eps_maxwell, eps_gamma, eps_time;
-    double eps_hat;
+    double dt;  //!< timestep
+    unsigned n_out;  //!< \# of polynomial coefficients in output file
+    unsigned Nx_out;  //!< \# of cells in x-direction in output file
+    unsigned Ny_out; //!< \# of cells in y-direction in output file
+    unsigned Nz_out; //!< \# of cells in z-direction in output file
+    unsigned itstp; //!< \# of steps between outputs
+    unsigned maxout; //!< \# of outputs excluding first
 
-    double mu[2];
-    double tau[2];
-    double beta;
+    double eps_pol;  //!< accuracy of polarization 
+    double eps_maxwell; //!< accuracy of induction equation
+    double eps_gamma; //!< accuracy of gamma operator
+    double eps_time;//!< accuracy of implicit timestep
+    double eps_hat;//!< 1
 
-    double nu_perp, nu_parallel, c;
+    double mu[2]; //!< mu[0] = mu_e, m[1] = mu_i
+    double tau[2]; //!< tau[0] = -1, tau[1] = tau_i
+    double beta; //!< plasma beta
+
+    double nu_perp;  //!< perpendicular diffusion
+    double nu_parallel;  //!< parallel diffusion
+    double c; //!< parallel resistivity
     
-    double amp, sigma, posX, posY, sigma_z;
-    double k_psi; 
+    double amp;  //!< blob amplitude
+    double sigma; //!< perpendicular blob width
+    double posX;  //!< perpendicular position relative to box width
+    double posY; //!< perpendicular position relative to box height
+    double sigma_z; //!< parallel blob width in units of pi
+    double k_psi; //!< mode number
 
-    double amp_source, nprofileamp, bgprofamp;
-    double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
-    enum dg::bc bc;
+    double omega_source; //!< source amplitude 
+    double nprofileamp; //!< amplitude of profile
+    double bgprofamp; //!< background profile amplitude
+    double boxscaleRp; //!< box can be larger
+    double boxscaleRm;//!< box can be larger
+    double boxscaleZp;//!< box can be larger
+    double boxscaleZm;//!< box can be larger
+
+    enum dg::bc bc; //!< global perpendicular boundary condition
+    unsigned pollim; //!< 0= no poloidal limiter, 1 = poloidal limiter
+    unsigned pardiss; //!< 0 = adjoint parallel dissipation, 1 = nonadjoint parallel dissipation
 
     /**
      * @brief constructor to make a const object
@@ -68,13 +93,14 @@ struct Parameters
             k_psi = v[27];
             nprofileamp = v[28];
             bgprofamp = v[29];
-            amp_source = v[30];
+            omega_source = v[30];
             boxscaleRp = v[31];
             boxscaleRm = v[32];
             boxscaleZp = v[33];
             boxscaleZm = v[34];
             bc = map((int)v[35]);
-
+            pollim = (unsigned)v[36];
+            pardiss = (unsigned)v[37];
         }
     }
     /**
@@ -100,7 +126,7 @@ struct Parameters
             << "    posY:         "<<posY<<"\n"
             << "    sigma_z:      "<<sigma_z<<"\n";
         os << "Profile parameters are: \n"
-            <<"     Source strength:              "<<amp_source<<"\n"
+            <<"     omega_source:              "<<omega_source<<"\n"
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
             <<"     background profile amplitude: "<<bgprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
@@ -125,7 +151,9 @@ struct Parameters
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Boundary condition is: \n"
-            <<"     global BC  =              "<<bc<<"\n";
+            <<"     global BC             =              "<<bc<<"\n"
+            <<"     Poloidal limiter      =              "<<pollim<<"\n"
+            <<"     Parallel dissipation  =              "<<pardiss<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:

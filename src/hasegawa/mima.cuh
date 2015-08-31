@@ -12,12 +12,11 @@
 
 namespace dg
 {
-template< class container>
+template< class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
-        w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()) { 
-        LaplacianM = dg::create::laplacianM( g, dg::normed, dg::symmetric); 
+        w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
         }
     void operator()( const container& x, container& y)
     {
@@ -33,18 +32,17 @@ struct Diffusion
     double nu_;
     const container w2d, v2d;
     container temp;
-    dg::DMatrix LaplacianM;
+    Elliptic<Matrix, container, container> LaplacianM;
 };
 
 
-template< class container=thrust::device_vector<double> >
+template< class Matrix, class container=thrust::device_vector<double> >
 struct Mima
 {
     typedef std::vector<container> Vector;
     typedef typename container::value_type value_type;
     typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
-    typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     /**
      * @brief Construct a Mima solver object
@@ -67,12 +65,6 @@ struct Mima
      */
     const container& potential( ) const { return phi;}
 
-    /**
-     * @brief Return the normalized negative laplacian used by this object
-     *
-     * @return cusp matrix
-     */
-    const Matrix& laplacianM( ) const { return laplaceM;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -90,7 +82,7 @@ struct Mima
     container dxxphi, dxyphi;
 
     //matrices and solvers
-    Matrix laplaceM; //contains normalized laplacian
+    Elliptic<Matrix, container, container> laplaceM;
     ArakawaX< Matrix, container> arakawa; 
     const container w2d, v2d;
     Invert<container> invert;
@@ -100,21 +92,21 @@ struct Mima
 
 };
 
-template< class container>
-Mima< container>::Mima( const Grid2d<value_type>& grid, double kappa, double eps, bool global ): 
+template< class M, class container>
+Mima< M, container>::Mima( const Grid2d<value_type>& grid, double kappa, double eps, bool global ): 
     kappa( kappa), global(global),
     phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi),
     dxxphi( phi), dxyphi(phi),
     arakawa( grid), 
     w2d( create::weights(grid)), v2d( create::inv_weights(grid)),
-    laplaceM( create::laplacianM( grid, normed, dg::symmetric)),
+    laplaceM( grid, normed, dg::centered),
     helmholtz( grid, -1),
     invert( phi, grid.size(), eps)
 {
 }
 
-template< class container>
-void Mima< container>::operator()( const container& y, container& yp)
+template<class M, class container>
+void Mima< M, container>::operator()( const container& y, container& yp)
 {
     invert( helmholtz, phi, y);
     dg::blas1::axpby( 1., phi, -1., y, omega); //omega = lap \phi

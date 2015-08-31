@@ -35,7 +35,7 @@
  *          @defgroup highlevel Matrix creation functions and classes
  *              High level matrix creation functions
  *          @defgroup arakawa Arakawas scheme
- *          @defgroup operators Classes that act as matrices in blas2 routines
+ *          @defgroup matrixoperators Classes that act as matrices in blas2 routines
  *      @}
  *      @defgroup blas Basic Linear Algebra Subprograms
  *
@@ -45,8 +45,14 @@
  *      @{
  *          @defgroup blas1 BLAS level 1 routines
  *              This group contains Vector-Vector operations.
+ *              Successive calls to blas routines are executed sequentially.
+ *              A manual synchronization of threads or devices is never needed in an application 
+ *              using these functions. All functions returning a value block until the value is ready.
  *          @defgroup blas2 BLAS level 2 routines
  *              This group contains Matrix-Vector operations.
+ *              Successive calls to blas routines are executed sequentially.
+ *              A manual synchronization of threads or devices is never needed in an application 
+ *              using these functions. All functions returning a value block until the value is ready.
  *      @}
  *      @defgroup algorithms Numerical schemes
  *          Numerical time integration and a conjugate gradient method based
@@ -55,7 +61,6 @@
  *          Utilities that might come in handy at some place or the other.
  *      @{
  *          @defgroup scatter Utility functions for reorder operations on DG-formatted vectors
- *          @defgroup operators Utility classes for the use in the Invert class
  *          @defgroup polarization Utility functions for C-style bindings of polarization solver
  *
  To use these funcions use code like:
@@ -85,6 +90,7 @@ int main()
 @endcode
  *
  *      @}
+ *      @defgroup mpi_structures MPI backend funcionality
  * @}
  * 
  */
@@ -93,14 +99,14 @@ int main()
  *
  * @par Design principles
  *
- * The DG library is built on top of the thrust and cusp libraries. 
+ * The DG library is built on top of the <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a> libraries. 
  * Its intention is to provide easy to use
- * functions and objects needed for the integration of the 2D and 3D gyrofluid system with a
+ * functions and objects needed for the integration of 2D and 3D partial differential equations discretized with a
  * discontinuous galerkin method.  
- * Since it is build on top of thrust and cusp, code can run on a CPU as well as a GPU by simply 
+ * Since it is built on top of <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a>, code can run on a CPU as well as a GPU by simply 
  * switching between thrust's host_vector and device_vector. 
  * The DG library uses a design pattern also employed in the cusp library and other modern C++ codes. 
- * It might be referred to as container-free numerical algorithms. 
+ * It might be referred to as <a href="http://dx.doi.org/10.1063/1.168674">container-free numerical algorithms</a>. 
  *
  * @par Typical usage
  *

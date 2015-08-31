@@ -19,7 +19,7 @@ endif
 ifeq ($(strip $(system)),home)
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 #you might check the libs here, cf your glfw installation
-GLFLAGS  = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lm -lXi -lXrandr
+GLFLAGS  = $$(pkg-config --static --libs glfw3)
 LIBS 	 = -lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 

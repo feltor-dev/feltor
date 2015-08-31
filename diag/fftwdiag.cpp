@@ -18,7 +18,7 @@
 
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "feltorSlab/parameters.h"
+#include "feltorS/parameters.h"
 int main( int argc, char* argv[])
 {
     if( argc != 4)
@@ -120,10 +120,18 @@ int main( int argc, char* argv[])
     toefl::Matrix<std::complex<double> > comspec( g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()/2 +1 );
     toefl::Matrix<double > squspec( g2d_f.Nx(), g2d_f.Ny());
     std::vector<double > shellspec( g2d_f.Nx());
+    std::vector<double > tempx( g2d_f.Nx());
+    std::vector<double > tempy( g2d_f.Ny());
+    std::vector<double > compspecx( g2d_f.Nx());
+    std::vector<double > compspecy( g2d_f.Ny());
+    std::vector<double > abscompspecx( g2d_f.Nx());
+    std::vector<double > abscompspecy( g2d_f.Ny());
 
-    fftw_r2r_kind kind = FFTW_RODFT11; //DST IV
+    fftw_r2r_kind kind = FFTW_RODFT11; //DST & DST IV
     toefl::DRT_DFT drt_dft( rows, cols, kind);
-    
+    hindfty = fftw_plan_dft_1d(g2d_f.Ny(), tempy, compspecy, FFTW_FORWARD,FFTW_ESTIMATE); //DST
+    hindftx = fftw_plan_r2r_1d(nx-2,       tempx, compspecx, FFTW_RODFT11,FFTW_ESTIMATE); //DST IV
+
     unsigned imin,imax;
     std::cout << "tmin = 0 tmax =" << p.maxout*p.itstp << std::endl;
     std::cout << "enter new imin(>0) and imax(<maxout):" << std::endl;
@@ -193,6 +201,10 @@ int main( int argc, char* argv[])
                     }
                 }
                 err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[j],   start1d_f, count1d_f, shellspec.data()); 
+                
+                //compute E(ky) spectrum
+
+                //compute E(kx) spectrum
                 
               }
 

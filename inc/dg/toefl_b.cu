@@ -15,8 +15,6 @@
 #include "backend/typedefs.cuh"
 
 
-using namespace std;
-using namespace dg;
 
 const unsigned n = 3;
 const unsigned Nx = 100;
@@ -86,25 +84,25 @@ int main()
 
 
     ///////////////////////////////////////////////////////////////////////
-    cout << "# of Legendre coefficients: " << n<<endl;
-    cout << "# of grid cells:            " << Nx*Ny<<endl;
-    cout << "Timestep                    " << dt << endl;
+    std::cout << "# of Legendre coefficients: " << n<<std::endl;
+    std::cout << "# of grid cells:            " << Nx*Ny<<std::endl;
+    std::cout << "Timestep                    " << dt << std::endl;
 
     //create initial vector
-    const Grid2d<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR);
+    const dg::Grid2d<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR);
     dg::Gaussian gaussian( 1., ly/2., .1, .1, 1);
     dg::DVec theta = dg::evaluate ( gaussian, grid);
-    vector<dg::DVec> y0(2, theta);
+    std::vector<dg::DVec> y0(2, theta);
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and AB
-    Toefl< dg::DMatrix, dg::DVec, dg::DVec> test( grid, Ra, Pr, eps); 
-    AB< k, vector<dg::DVec> > ab( y0);
+    dg::Toefl< dg::DMatrix, dg::DVec, dg::DVec> test( grid, Ra, Pr, eps); 
+    dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
     //create visualisation vectors
     dg::DVec visual(  grid.size());
-    dg::DVec ground = evaluate ( groundState, grid), temperature( ground);
-    dg::DMatrix equidistant = dg::create::backscatter( grid );
+    dg::DVec ground = dg::evaluate ( groundState, grid), temperature( ground);
+    dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
     colors.scale() =  1.;
     ab.init( test, y0, dt);
@@ -112,8 +110,8 @@ int main()
     while (!glfwWindowShouldClose(w))
     {
         //compute the total temperature
-        blas1::axpby( 1., y0[0],  0., temperature);
-        blas1::axpby( 1., ground, 1., temperature);
+        dg::blas1::axpby( 1., y0[0],  0., temperature);
+        dg::blas1::axpby( 1., ground, 1., temperature);
         //transform field to an equidistant grid
         dg::blas2::symv( equidistant, temperature, visual);
 

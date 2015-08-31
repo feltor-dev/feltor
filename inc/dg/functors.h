@@ -6,6 +6,10 @@
 #include <thrust/random/linear_congruential_engine.h>
 #include <thrust/random/uniform_real_distribution.h>
 #include <thrust/random/normal_distribution.h>
+#include "blas1.h"
+#include "backend/grid.h"
+#include "backend/evaluation.cuh"
+#include "backend/functions.h"
 /*!@file
  * Functors to use in dg::evaluate or dg::blas1::transform functions
  */
@@ -17,6 +21,7 @@ namespace dg
 
 /**
  * @brief Functor for the absolute maximum
+ * \f[ f(x,y) = \max(|x|,|y|)\f]
  *
  * @tparam T value-type
  */
@@ -43,6 +48,7 @@ struct AbsMax
 };
 /**
  * @brief Functor for the absolute maximum
+ * \f[ f(x,y) = \min(|x|,|y|)\f]
  *
  * @tparam T value-type
  */
@@ -106,14 +112,13 @@ struct Gaussian
                           (y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
     /**
-     * @brief Return the value of the gaussian modulated by 
-     *
+     * @brief Return the value of the gaussian modulated by a cosine
      * \f[
        f(x,y,z) = A\cos(kz)e^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})} 
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
-     * @param y z - coordinate
+     * @param z z - coordinate
      *
      * @return gaussian
      */
@@ -131,7 +136,7 @@ struct Gaussian
 /**
 * @brief The 3d gaussian
 * \f[
-f(x,y) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)} 
+f(x,y,z) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2} + \frac{(z-z_0)^2}{2\sigma_z^2}\right)} 
 \f]
 */
 struct Gaussian3d
@@ -198,7 +203,7 @@ struct Gaussian3d
 /**
  * @brief Functor returning a gaussian in x-direction
  * \f[
-   f(x,y) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2}) } 
+   f(x,y) = Ae^{-\frac{(x-x_0)^2}{2\sigma_x^2} } 
    \f]
  */
 struct GaussianX
@@ -321,8 +326,7 @@ struct GaussianZ
 
 /**
  * @brief Functor for a sin prof in x-direction
- * 
- * \f[ f(x,y) = a*x+b \f]
+ * \f[ f(x,y) = B + A(1-\sin(k_xx )) \f]
  */
 struct SinProfX
 {
@@ -335,21 +339,20 @@ struct SinProfX
      */
     SinProfX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
     /**
-     * @brief Return linear polynomial in x 
+     * @brief Return profile
      *
      * @param x x - coordinate
      * @param y y - coordinate
      
-     * @return result
+     * @return \f$ f(x,y)\f$
      */
     double operator()( double x, double y){ return bamp_+amp_*(1.-sin(x*kx_));}
   private:
     double amp_,bamp_,kx_;
 };
 /**
- * @brief Functor for a sin prof in x-direction
- * 
- * \f[ f(x,y) = a*x+b \f]
+ * @brief Functor for a exp prof in x-direction
+ * \f[ f(x,y) = B + A\exp(-x/L_n) \f]
  */
 struct ExpProfX
 {
@@ -375,8 +378,7 @@ struct ExpProfX
 };
 /**
  * @brief Functor for a linear polynomial in x-direction
- * 
- * \f[ f(x,y) = a*x+b \f]
+ * \f[ f(x,y) = ax+b \f]
  */
 struct LinearX
 {
@@ -386,7 +388,7 @@ struct LinearX
      * @param a linear coefficient 
      * @param b constant coefficient
      */
-    LinearX( double a, double b):a_(a), b_(b){}
+     LinearX( double a, double b):a_(a), b_(b){}
     /**
      * @brief Return linear polynomial in x 
      *
@@ -395,14 +397,21 @@ struct LinearX
      
      * @return result
      */
-    double operator()( double x, double y){ return a_*x+b_;}
-  private:
+   double operator()( double x, double y){ return a_*x+b_;}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     
+     * @return result
+     */
+   double operator()(double x){ return a_*x+b_;}
+   private:
     double a_,b_;
 };
 /**
  * @brief Functor for a linear polynomial in y-direction
- * 
- * \f[ f(x,y) = a*y+b) \f]
+ * \f[ f(x,y) = ay+b \f]
  */
 struct LinearY
 {
@@ -425,25 +434,42 @@ struct LinearY
   private:
     double a_,b_;
 };
-struct LHalf {
-    LHalf (double xb) : xb_(xb) {}
+
+
+/**
+ * @brief Functor for a step function using tanh
+ * \f[ f(x,y) = profamp*0.5(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
+ */
+struct TanhProfX {
+    /**
+     * @brief Construct with xb, width and sign
+     *
+     * @param xb boundary value
+     * @param width damping width
+     * @param sign sign of the Tanh, defines the damping direction
+     * @param bgampg background amplitude 
+     * @param profamp profile amplitude
+     */
+    TanhProfX(double xb, double width, int sign,double bgamp, double profamp) : xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}
+    /**
+     * @brief Return left side step function
+     *
+     * @param x x - coordianate
+     * @param y y - coordianate
+     
+
+     * @return result
+     */
     double operator() (double x, double y)
     {
-        if (x<=xb_) return 1.;
-        return 0.;
+        return profa_*0.5*(1.+s_*tanh((x-xb_)/w_))+bga_; 
     }
     private:
-     double xb_;
-};
-struct RHalf {
-    RHalf  (double xb) : xb_(xb)  {}
-    double operator() (double x, double y)
-    {
-        if (x>xb_) return 1.;
-        return 0.;
-    }
-    private:
-     double xb_;
+    double xb_;
+    double w_;
+    int s_;
+    double bga_;
+    double profa_;
 };
 /**
  * @brief Functor returning a Lamb dipole
@@ -596,6 +622,9 @@ double bessk1(double x)
     return ans; 
 }
 
+/**
+ * @brief Return a 2d vortex function 
+ */
 struct Vortex
 {
     /**
@@ -618,6 +647,22 @@ struct Vortex
         b_[1] = 0.07071067810 ;
         b_[2] = 0.07071067810 ;
     }
+    /**
+     * @brief Evaluate the vortex
+     *
+      \f[\begin{cases}
+       \frac{1}{1.2965125} u_d(
+       r(1+\frac{\beta_i^2}{g_i^2}) 
+       - R \frac{\beta_i^2}{g_i^2} J_1(g_i) \frac{r}{RJ_1(g_i)})\cos(\Theta) \text{ if } r/R < 1 \\
+      \frac{1}{1.2965125} u_dR \frac{K_1(\beta_i \frac{r}{R})}{K_1(\beta)} \cos(\Theta) \text{ else }
+      \end{cases}
+      \f]
+     * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
+     * @param x value
+     * @param y value
+     *
+     * @return the above function value
+     */
     double operator()( double x, double y)
     {
         double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
@@ -632,6 +677,23 @@ struct Vortex
                     )*cos(theta)/norm;
         return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
     }
+    /**
+     * @brief Evaluate the vortex modulated by a sine wave in z
+     *
+      \f[ \cos(k_z z)\begin{cases}
+       \frac{1}{1.2965125} u_d(
+       r(1+\frac{\beta_i^2}{g_i^2}) 
+       - R \frac{\beta_i^2}{g_i^2} J_1(g_i) \frac{r}{RJ_1(g_i)})\cos(\Theta) \text{ if } r/R < 1 \\
+      \frac{1}{1.2965125} u_dR \frac{K_1(\beta_i \frac{r}{R})}{K_1(\beta)} \cos(\Theta) \text{ else }
+      \end{cases}
+      \f]
+     * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
+     * @param x value
+     * @param y value
+     * @param z value
+     *
+     * @return the above function value
+     */
     double operator()( double x, double y, double z)
     {
         return this->operator()(x,y)*cos(kz_*z);
@@ -820,6 +882,7 @@ struct BathRZ{
 };
 /**
  * @brief Exponential
+ * \f[ f(x) = \exp(x)\f]
  *
  * @tparam T value-type
  */
@@ -852,6 +915,7 @@ struct EXP
 };
 /**
  * @brief natural logarithm
+ * \f[ f(x) = \ln(x)\f]
  *
  * @tparam T value-type
  */
@@ -876,6 +940,7 @@ struct LN
 };
 /**
  * @brief Square root 
+ * \f[ f(x) = \sqrt{x}\f]
  *
  * @tparam T value-type
  */
@@ -952,6 +1017,7 @@ struct MinMod
 
 /**
  * @brief Add a constant value
+ * \f[ f(x) = x + c\f]
  *
  * @tparam T value type
  */
@@ -978,16 +1044,30 @@ struct PLUS
     private:
     T x_;
 };
+
 /**
- * @brief returns modulo 
+ * @brief returns (positive) modulo 
+ * \f[ f(x) = x\mod m\f]
  *
  * @tparam T value type
  */
 template <class T= double>
 struct MOD
 {
-    MOD( T value): x_(value){}
+    /**
+     * @brief Construct from modulo 
+     *
+     * @param m modulo basis
+     */
+    MOD( T m): x_(m){}
 
+        /**
+         * @brief Compute mod(x, value), positively defined
+         *
+         * @param x
+         *
+         * @return 
+         */
 #ifdef __CUDACC__
     __host__ __device__
 #endif
@@ -1000,6 +1080,7 @@ struct MOD
 };
 /**
  * @brief absolute value
+ * \f[ f(x) = |x|\f]
  *
  * @tparam T value type
  */
@@ -1018,18 +1099,78 @@ struct ABS
 #endif
         T operator()(const T& x){ return fabs(x);}
 };
+/**
+ * @brief returns positive values
+ * \f[ f(x) = |x|\f]
+ *
+ * @tparam T value type
+ */
+template <class T>
+struct POSVALUE
+{
+    /**
+     * @brief Returns positive values of x
+     *
+     * @param x of x
+     *
+     * @return  x*0.5*(1+sign(x))
+     */
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+        T operator()(const T& x){
+            if (x >= 0.0) return x;
+            return 0.0;
+            }
+};
 
+/**
+ * @brief Return a constant
+ * \f[ f(x) = c\f]
+ *
+ */
 struct CONSTANT
 {
-    CONSTANT( double value): value_(value){}
+    /**
+     * @brief Construct with a value
+     *
+     * @param cte the constant value
+     *
+     */
+    CONSTANT( double cte): value_(cte){}
+
+    /**
+     * @brief constant
+     *
+     * @param x
+     *
+     * @return 
+     */
 #ifdef __CUDACC__
     __host__ __device__
 #endif
     double operator()(double x){return value_;}
+    /**
+     * @brief constant
+     *
+     * @param x
+     * @param y
+     *
+     * @return 
+     */
 #ifdef __CUDACC__
     __host__ __device__
 #endif
     double operator()(double x, double y){return value_;}
+    /**
+     * @brief constant
+     *
+     * @param x
+     * @param y
+     * @param z
+     *
+     * @return 
+     */
 #ifdef __CUDACC__
     __host__ __device__
 #endif
@@ -1037,24 +1178,18 @@ struct CONSTANT
     private:
     double value_;
 };
-struct FLOOR
-{
-#ifdef __CUDACC__
-    __host__ __device__
-#endif
-    int operator()(double x){return floor(x);}
-};
+
 /**
- * @brief returns histogram 
+ * @brief Compute a histogram on a 1D grid
  * @tparam container 
  */ 
 template <class container = thrust::host_vector<double> >
 struct Histogram
 {
      /**
-     * @brief Construct from number of bins and input vector
-     * @param g1d   grid of output vector
-     * @param in input vector
+     * @brief Construct a histogram from number of bins and an input vector
+     * @param g1d grid on which to compute the histogram ( grid.h() is the binwidth)
+     * @param in input vector (if grid.x0() < in[i] <grid.x1() it falls in a bin)
      */
     Histogram(const dg::Grid1d<double>& g1d, const std::vector<double>& in) :
     g1d_(g1d),
@@ -1074,7 +1209,20 @@ struct Histogram
         dg::blas1::scal(count_,1./Ampmax);
         
     }
+
+    /**
+     * @brief get binwidth
+     *
+     * @return 
+     */
     double binwidth() {return binwidth_;}
+    /**
+     * @brief Access computed histogram
+     *
+     * @param x
+     *
+     * @return 
+     */
     double operator()(double x)
     {    
         unsigned bin = floor((x-g1d_.x0())/binwidth_+0.5);
@@ -1089,14 +1237,19 @@ struct Histogram
     double binwidth_;
     container  count_;
 };
+
+/**
+ * @brief Compute a histogram on a 2D grid
+ * @tparam container 
+ */ 
 template <class container = thrust::host_vector<double> >
 struct Histogram2D
 {
      /**
-     * @brief Construct from number of bins and input vector
-     * @param g2d   grid of output vector
-     * @param inx input vector in x direction
-     * @param iny input vector in y direction
+     * @brief Construct a histogram from number of bins and an input vector
+     * @param g2d grid on which to compute the histogram ( grid.h() is the binwidth)
+     * @param inx input vector in x - direction (if grid.x0() < in[i] <grid.x1() it falls in a bin)
+     * @param iny input vector in y - direction (if grid.y0() < in[i] <grid.y1() it falls in a bin)
      */
     Histogram2D(const dg::Grid2d<double>& g2d, const std::vector<double>& inx,const std::vector<double>& iny) :
     g2d_(g2d),
@@ -1113,10 +1266,10 @@ struct Histogram2D
             biny = std::max(biny,(unsigned) 0);
             biny = std::min(biny,(unsigned)(g2d_.Ny()-1));
 
-                unsigned binx =floor((inx_[j]-g2d_.x0())/binwidthx_) ;
-                binx = std::max(binx,(unsigned) 0);
-                binx = std::min(binx,(unsigned)(g2d_.Nx()-1));
-                count_[biny*g2d_.Nx()+binx ]+=1.;
+            unsigned binx =floor((inx_[j]-g2d_.x0())/binwidthx_) ;
+            binx = std::max(binx,(unsigned) 0);
+            binx = std::min(binx,(unsigned)(g2d_.Nx()-1));
+            count_[biny*g2d_.Nx()+binx ]+=1.;
             
         }
         //Normalize
@@ -1125,6 +1278,14 @@ struct Histogram2D
 
     }
 
+    /**
+     * @brief Access computed histogram
+     *
+     * @param x
+     * @param y
+     *
+     * @return 
+     */
     double operator()(double x, double y)
     {
         unsigned binx = floor((x-g2d_.x0())/binwidthx_+0.5) ;

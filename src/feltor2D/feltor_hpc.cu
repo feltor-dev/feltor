@@ -7,8 +7,8 @@
 
 
 
-#include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
     dg::Grid3d<double > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1,p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); 
+    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); 
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
     std::cout << "Done!\n";
@@ -79,9 +79,9 @@ int main( int argc, char* argv[])
     //initial perturbation
    //     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
+    dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
 //     solovev::ZonalFlow init0(p, gp);
-    dg::CONSTANT init0( 0.);
+//     dg::CONSTANT init0( 0.);
 
     //averaged field aligned initializer
 //     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
@@ -105,7 +105,7 @@ int main( int argc, char* argv[])
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
-    feltor.energies(y0); //now energies and potential are at time 0
+//     feltor.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -157,7 +157,7 @@ int main( int argc, char* argv[])
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
-    dg::DMatrix interpolate = dg::create::interpolation( grid_out, grid); 
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid); 
     for( unsigned i=0; i<4; i++)
     {
         dg::blas2::symv( interpolate, y0[i], transferD);
@@ -211,7 +211,7 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
-            feltor.energies(y0);//advance potential and energies
+//             feltor.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 

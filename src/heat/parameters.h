@@ -17,11 +17,11 @@ struct Parameters
     
     double amp, sigma, posX, posY, sigma_z;
     double k_psi; 
-
+    
     double nprofileamp, bgprofamp;
     enum dg::bc bc;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
-
+    double eps_time;
     /**
      * @brief constructor to make a const object
      *
@@ -60,6 +60,7 @@ struct Parameters
             p_diff      =(unsigned) v[28];
             p_diffperp  =(unsigned) v[29];
             p_torlim    =(unsigned) v[30];
+            eps_time = v[31];
 
         }
     }
@@ -82,6 +83,7 @@ struct Parameters
         os << "Profile parameters are: \n"
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
             <<"     background profile amplitude: "<<bgprofamp<<"\n"
+            <<"     zonal modes                   "<<k_psi<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
             <<"     boxscale R-:                  "<<boxscaleRm<<"\n"
             <<"     boxscale Z+:                  "<<boxscaleZp<<"\n"
@@ -106,6 +108,8 @@ struct Parameters
             <<"     p_torlim =          "<<p_torlim<<"\n";           
         os << "Boundary condition is: \n"
             <<"     global BC  =              "<<bc<<"\n";
+        os << "PCG epsilon for time stepper: \n"
+            <<"     eps_time  =              "<<eps_time<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:

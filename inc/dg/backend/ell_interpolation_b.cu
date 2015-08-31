@@ -3,7 +3,6 @@
 #include "xspacelib.cuh"
 #include "ell_interpolation.cuh"
 #include "interpolation.cuh"
-#include "typedefs.cuh"
 
 double sinus( double x, double y) {return sin(x)*sin(y);}
 double sinus( double x, double y, double z) {return sin(x)*sin(y)*sin(z);}
@@ -45,7 +44,10 @@ int main()
     std::cout << "Application of interpolation matrix took: "<<t.diff()<<"s\n";
 
     dg::blas2::symv( A, vector, w);
+    t.tic();
     dg::blas1::axpby( 1., w, -1., w2, w2);
+    t.toc();
+    std::cout << "Axpby took "<<t.diff()<<"s\n";
     std::cout << "Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
     }
     {

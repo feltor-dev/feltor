@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "draw/host_window.h"
-#include "dg/arakawa.h"
+#include "dg/algorithm.h"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/functors.h"
@@ -87,8 +87,8 @@ int main( int argc, char* argv[])
     dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::HVec visual(  grid.size(), 0.), input( visual), input2( visual);
     dg::HVec w2d = dg::create::weights( grid);
-    dg::HMatrix equi = dg::create::backscatter( grid);
-    dg::HMatrix laplacianM = dg::create::laplacianM( grid, dg::normed);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
+    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacianM( grid, dg::normed);
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     bool running = true;

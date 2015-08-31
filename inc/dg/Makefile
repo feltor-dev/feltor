@@ -1,14 +1,13 @@
 system=home
-device=omp
+device=gpu
 
-INCLUDE = -I../ # other project libraries
+
+INCLUDE = -I../../ # other project libraries
+INCLUDE+= -I../ # other project libraries
 
 ifeq ($(strip $(system)),home)
-
 INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
-
-#you might check the libs here, cf your glfw installation
-GLFLAGS   = -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXrandr -lXi
+GLFLAGS =$$(pkg-config --static --libs glfw3)
 ifeq ($(strip $(device)),gpu)
 GLFLAGS+= -lGLEW
 endif
@@ -26,11 +25,11 @@ endif
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20 
-CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
-CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
+CFLAGS = --compiler-options -Wall -arch=sm_20
+#CFLAGS+= -Xcompiler -fopenmp 
+#CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+#CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
+#CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
 endif
 ifeq ($(strip $(device)),omp)
 CC = g++
@@ -55,40 +54,25 @@ toefl_t: toefl_t.cu toefl.cuh
 toefl_b: toefl_b.cu toefl.cuh
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
+dz_2_t: dz_2_t.cu dz.h
+	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS)   -g 
+
 %_t: %_t.cu
 	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
-#%2d_t: %2d_t.cu ../%.cuh 
-#	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
-#
-#%3d_t: %3d_t.cu ../%.cuh 
-#	$(CC) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
-
 %_b: %_b.cu 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
-
-#%2d_b: %2d_b.cu ../%.h
-#	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
-#	echo "Attention: No compiler warnings are issued!" 
-#
-#%3d_b: %3d_b.cu ../%.h
-#	$(CC) -O2 $(CFLAGS) $< -o $@ $(INCLUDE)
-#	echo "Attention: No compiler warnings are issued!" 
+	$(CC) -O3 $(CFLAGS) $< -o $@ $(INCLUDE) 
 
 dg_t: dg_t.cpp ../dg.h 
 	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
-	#g++ -O3 $(CFLAGS) $< -o $@ $(INCLUDE) -lm
 
 bathRZ_t: bathRZ_t.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 	
 .PHONY: clean doc
 
 dz_geom_t: dz_geom_t.cu 
 	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
 
 doc: 
 	doxygen Doxyfile

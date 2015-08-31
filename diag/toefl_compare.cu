@@ -5,7 +5,7 @@
 #include "draw/host_window.h"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
-#include "dg/functors.h"
+#include "dg/algorithm.h"
 #include "dg/backend/projection.cuh"
 #include "file/read_input.h"
 #include "file/file.h"
@@ -16,7 +16,7 @@
 
 int main( int argc, char* argv[])
 {
-    dg::Timer t;
+    //dg::Timer t;
     if( argc != 3)
     {
         std::cerr << "Usage: "<<argv[0]<<" [file1.h5 file2.h5]\n";
@@ -26,8 +26,6 @@ int main( int argc, char* argv[])
     std::string in1, in2;
     file::T5rdonly t5file1( argv[1], in1);
     file::T5rdonly t5file2( argv[2], in2);
-    unsigned nlinks1 = t5file1.get_size();
-    unsigned nlinks2 = t5file2.get_size();
     int layout = 0;
     if( in1.find( "TOEFLI") != std::string::npos)
     {

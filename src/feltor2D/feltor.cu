@@ -71,7 +71,7 @@ int main( int argc, char* argv[])
      dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
     std::cout << "Done!\n";
@@ -112,7 +112,6 @@ int main( int argc, char* argv[])
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
-    feltor.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
     //std::cout << "first karniadakis" << std::endl;
 
@@ -122,7 +121,7 @@ int main( int argc, char* argv[])
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
-    dg::HMatrix equi = dg::create::backscatter( grid);
+    dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
 
     //create timer
@@ -134,7 +133,12 @@ int main( int argc, char* argv[])
     double E0 = feltor.energy(), energy0 = E0, E1 = 0., diff = 0.;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    
+    //probe
+    const dg::DVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
+    const dg::DVec Zprobe(1,0.);
+    const dg::DVec Phiprobe(1,M_PI);
+    dg::IDMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
+    dg::DVec probevalue(1,0.);
     while ( !glfwWindowShouldClose( w ))
     {
 
@@ -240,12 +244,17 @@ int main( int argc, char* argv[])
                 break;
             }
             step++;
-            feltor.energies(y0);//advance potential and energies
+            //Compute probe values
+            dg::blas2::gemv(probeinterp,y0[0],probevalue);
+            std::cout << " Ne_p - 1  = " << probevalue[0] <<"\t";
+            dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+            std::cout << " Phi_p = " << probevalue[0] <<"\t";
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
             E0 = E1;
         }

@@ -6,9 +6,9 @@ INCLUDE+= -I../ # geometry library
 
 ifeq ($(strip $(device)),gpu)
 CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20 -w
+CFLAGS = --compiler-options -Wall -arch=sm_50 -w
 CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+#CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 GLFLAGS= -lGLEW
 OPT	   = -O2
 endif
@@ -29,7 +29,7 @@ ifeq ($(strip $(system)),home)
 INCLUDE += -I$(HOME)/include # cusp and thrust libraries
 
 #you might check the libs here, cf your glfw installation
-GLFLAGS += -lglfw3 -lXxf86vm -lXext -lX11 -lGLU  -lGL -lpthread -lXi -lXrandr 
+GLFLAGS += $$(pkg-config --static --libs glfw3)
 LIBS 	 = -lnetcdf #-lhdf5 -lhdf5_hl # hdf5 libraries
 endif
 
@@ -58,12 +58,39 @@ LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf -lcurl
 GLFLAGS  = -lm
 endif
 
+ifeq ($(strip $(system)),vsc2)
+INCLUDE += -I$(HOME)/include
+INCLUDE += -I/opt/intel/impi/4.1.0/include64
+INCLUDE += -I/opt/sw/netcdf/4.3.2/include
+INCLUDE += -I/opt/hdf5/1.8.9/intel/include
+CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
+
+LIBS     = -L/opt/hdf5/1.8.9/intel/lib -lhdf5 -lhdf5_hl
+LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
+LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
+LIBS    += -L/opt/sw/netcdf/4.3.2/lib -lnetcdf -lcurl
+GLFLAGS  = -lm
+endif
+
+ifeq ($(strip $(system)),vsc3)
+INCLUDE += -I$(HOME)/include
+
+INCLUDE += -I/cm/shared/apps/intel/impi_5.0.3/intel64/include
+INCLUDE +=-I/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/include
+INCLUDE +=-I/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/include
+CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
+
+LIBS     =-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/lib -lhdf5 -lhdf5_hl
+LIBS    +=-L/cm/shared/apps/intel-cluster-studio/composer_xe_2013_sp1.2.144/compiler/lib/intel64 -lirc -lsvml
+LIBS    += -L/cm/shared/apps/intel/impi_5.0.3/intel64/lib -lmpi
+LIBS    +=-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/lib -lnetcdf -lcurl
+GLFLAGS  = -lm
+endif
+
 all: feltor feltor_hpc
 
 feltor: feltor.cu ../feltor/feltor.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK -g
-	echo "Attention: No compiler warnings are issued!" 
-
 	
 ifeq ($(strip $(device)),mpi)
 feltor_hpc: feltor_hpc.cpp ../feltor/feltor.cuh 
@@ -79,15 +106,8 @@ generator: generator.cpp
 
 .PHONY: clean doc
 
-dz_geom_t: dz_geom_t.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lnetcdf -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
-	
-geometry_t: geometry_t.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lnetcdf -DDG_BENCHMARK 
-	echo "Attention: No compiler warnings are issued!" 
 doc: 
 	doxygen Doxyfile
 	
 clean:
-	rm -f feltor feltor_hpc geometry_t dz_geom_t
+	rm -f feltor feltor_hpc 

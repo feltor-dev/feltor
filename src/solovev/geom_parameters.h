@@ -13,21 +13,22 @@ namespace solovev
  */    
 struct GeomParameters
 {
-    double A,
-           R_0,
-           a, 
-           elongation,
-           triangularity,
-           alpha, //for damping width
-           rk4eps, 
-           psipmin, //for source ??
-           psipmax, //for profile
-           psipmaxcut, //for cutting
-           psipmaxlim; //for limiter
-    std::vector<double> c; 
+    double A, //!< A
+           R_0, //!< central tokamak radius
+           a,  //!<  little tokamak radius
+           elongation, //!< elongation of the magnetic surfaces
+           triangularity, //!< triangularity of the magnetic surfaces
+           alpha, //!< damping width
+           rk4eps,  //!< accuracy for the field line integration
+           psipmin, //!< for source 
+           psipmax, //!< for profile
+           psipmaxcut, //!< for cutting
+           psipmaxlim; //!< for limiter
+    std::vector<double> c;  //!< coefficients for the solovev equilibrium
      /**
-     * @brief constructor to make a const object
+     * @brief constructor to make an object
      *
+     * maps parameters from input file to parameters 
      * @param v Vector from read_input function
      */   
     GeomParameters( const std::vector< double>& v) {

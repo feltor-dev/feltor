@@ -1,6 +1,7 @@
 #pragma once
-#include "solovev/geometry.h"
-#include "parameters.h"
+// #include "solovev/geometry.h"
+#include "geometry_g.h"
+#include "heat/parameters.h"
 
 /*!@file
  *
@@ -271,9 +272,10 @@ struct ZonalFlow
     }
     double operator() (double R, double Z)
     {
-      if (psip_(R,Z)<gp_.psipmax) return (p_.amp*abs(cos(2.*M_PI*psip_(R,Z)*p_.k_psi)));
-      return 0.;
-
+//       if (psip_(R,Z)<gp_.psipmax) return p_.amp*sin(M_PI*psip_(R,Z)*psip_(R,Z));
+        return p_.amp*psip_(R,Z)*psip_(R,Z);
+//         return p_.amp*(1.+sin(M_PI*psip_(R,Z)-M_PI/2.));
+//         return  p_.amp*exp(-(psip_(R,Z)-0.5)*(psip_(R,Z)-0.5)/0.01);
     }
     double operator() (double R, double Z,double phi)
     {
@@ -288,6 +290,7 @@ struct ZonalFlow
 /**
  * @brief testfunction to test the parallel derivative \f[ f = \psi_p(R,Z) \sin{(\varphi)}\f]
  */ 
+/*
 struct TestFunction
 {
     TestFunction( eule::Parameters p,GeomParameters gp) :  
@@ -320,10 +323,12 @@ struct TestFunction
     BHatZ bhatZ_;
     BHatP bhatP_;
 };
+*/
 /**
  * @brief analyitcal solution of the parallel derivative of the testfunction
  *  \f[ \nabla_\parallel f = \psi_p(R,Z) b^\varphi \cos{(\varphi)}\f]
  */ 
+/*
 struct DeriTestFunction
 {
     DeriTestFunction( eule::Parameters p, GeomParameters gp) :
@@ -358,7 +363,7 @@ struct DeriTestFunction
     BHatR bhatR_;
     BHatZ bhatZ_;
     BHatP bhatP_;
-};
+};*/
 
 
 ///@}
