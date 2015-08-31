@@ -135,10 +135,10 @@ void boxintegrator( Field& field, const Grid& grid,
                 phi1 = (dPhiMin+dPhiMax)/2.;
                 dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
             }
-            if (coords1[0] <= grid.x0()) { coords1[0]=grid.x0();}
-            if (coords1[0] >= grid.x1()) { coords1[0]=grid.x1();}
-            if (coords1[1] <= grid.y0()) { coords1[1]=grid.y0();}
-            if (coords1[1] >= grid.y1()) { coords1[1]=grid.y1();}
+            if (!(coords1[0] > grid.x0())) { coords1[0]=grid.x0();}
+            if (!(coords1[0] < grid.x1())) { coords1[0]=grid.x1();}
+            if (!(coords1[1] > grid.y0())) { coords1[1]=grid.y0();}
+            if (!(coords1[1] < grid.y1())) { coords1[1]=grid.y1();}
         }
         else if (globalbcz == dg::NEU )
         {

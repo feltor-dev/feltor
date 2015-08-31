@@ -26,52 +26,62 @@ int main()
     dg::DVec x = dg::evaluate( function, grid);
     t.toc();
     std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
+    double gbytes=x.size()*8/1e9;
     t.tic();
     double norm = dg::blas2::dot( w2d, x);
     t.toc();
-    std::cout<<"DOT took                         " <<t.diff()<<"s   result: "<<norm<<"\n";
+    std::cout<<"DOT took                         " <<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
     dg::DVec y(x);
     dg::DMatrix M = dg::create::dx( grid, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s (centered x derivative!)\n";
+    std::cout<<"centered x derivative took       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+
     M = dg::create::dx( grid, dg::forward);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s (forward x derivative!)\n";
+    std::cout<<"forward x derivative took        "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+
     M = dg::create::dy( grid, dg::forward);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s (forward y derivative!)\n";
+    std::cout<<"forward y derivative took        "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+
     M = dg::create::dy( grid, dg::centered);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s (centered y derivative!)\n";
+    std::cout<<"centered y derivative took       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+
     M = dg::create::jumpX( grid);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"SYMV took                        "<<t.diff()<<"s (jump X!)\n";
+    std::cout<<"jump X took                      "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+
     t.tic();
     dg::blas1::axpby( 1., y, -1., x);
     t.toc();
-    std::cout<<"AXPBY took                       "<<t.diff()<<"s\n";
+    std::cout<<"AXPBY took                       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+
     t.tic();
     dg::blas1::pointwiseDot( y, x, x);
     t.toc();
-    std::cout<<"pointwiseDot took                "<<t.diff()<<"s\n";
+    std::cout<<"pointwiseDot took                "<<t.diff()<<"s\t" <<x.size()*8/1e9/t.diff()<<"GB/s\n";
     t.tic();
     norm = dg::blas2::dot( w2d, y);
     t.toc();
-    std::cout<<"DOT(w,y) took                    " <<t.diff()<<"s   result: "<<norm<<"\n";
+    std::cout<<"DOT(w,y) took                    " <<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+
     t.tic();
     norm = dg::blas2::dot( x, w2d, y);
     t.toc();
-    std::cout<<"DOT(x,w,y) took                  " <<t.diff()<<"s   result: "<<norm<<"\n";
+    std::cout<<"DOT(x,w,y) took                  " <<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+    norm++;//get rid of compiler warning
+
 
     return 0;
 }

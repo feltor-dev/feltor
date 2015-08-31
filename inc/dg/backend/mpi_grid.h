@@ -397,6 +397,7 @@ struct MPI_Grid3d
     double x1() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
+        if( coords[0] == dims[0]-1) return g.x1();
         return g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
     }
     /**
@@ -417,6 +418,7 @@ struct MPI_Grid3d
     double y1() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
+        if( coords[1] == dims[1]-1) return g.y1();
         return g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
     }
     /**
@@ -437,6 +439,7 @@ struct MPI_Grid3d
     double z1() const {
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
+        if( coords[2] == dims[2]-1) return g.z1();
         return g.z0() + g.lz()/(double)dims[2]*(double)(coords[2]+1); 
     }
     /**
@@ -609,7 +612,7 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
     coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
     coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
     coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );
-    //if point lies on boundary of last cell ... (not so good for periodic boundaries)
+    //if point lies on or over boundary of last cell shift into current cell (not so good for periodic boundaries)
     coords[0]=(coords[0]==dims[0]) ? coords[0]-1 :coords[0];
     coords[1]=(coords[1]==dims[1]) ? coords[1]-1 :coords[1];
     coords[2]=(coords[2]==dims[2]) ? coords[2]-1 :coords[2];

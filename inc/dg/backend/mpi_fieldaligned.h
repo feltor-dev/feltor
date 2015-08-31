@@ -168,7 +168,8 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
     if(deltaPhi<=0) deltaPhi = g_.hz();
     else assert( g_.Nz() == 1);
-    for( unsigned i=0; i<grid.size(); i++)
+    unsigned localsize = grid.local().size();
+    for( unsigned i=0; i<localsize; i++)
     {
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
         double phi1 = deltaPhi;
@@ -181,7 +182,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
 
 
     //determine pid of result 
-    thrust::host_vector<int> pids( grid.size());
+    thrust::host_vector<int> pids( localsize);
     thrust::host_vector<double> angle = dg::evaluate( dg::coo3, grid.local());
     for( unsigned i=0; i<pids.size(); i++)
     {
