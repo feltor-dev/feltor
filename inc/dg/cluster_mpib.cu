@@ -2,6 +2,9 @@
 #include <iomanip>
 
 #include <mpi.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif//_OPENMP
 #include "algorithm.h"
 
 #include "backend/timer.cuh"
@@ -37,7 +40,7 @@ typedef dg::MDVec Vector;
 /*******************************************************************************
 program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
 outputs one line to std::cout 
-# npx npy npz #procs n Nx Ny Nz t_AXPBY t_DOT t_DX t_DY t_ARAKAWA #iterations t_1xELLIPTIC_CG t_DS
+# npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX t_DY t_ARAKAWA #iterations t_1xELLIPTIC_CG t_DS
 if Nz == 1, ds is not executed
 Run with: 
 >$ echo npx npy npz n Nx Ny Nz | mpirun -#procs ./cluster_mpib 
@@ -55,6 +58,17 @@ int main(int argc, char* argv[])
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices == 0)
+    {
+        std::cerr << "No CUDA capable devices found"<<std::endl;
+        return -1;
+    }
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    cudaSetDevice( device);
+#endif//cuda
     int np[3];
     if( rank == 0)
     {
@@ -65,6 +79,12 @@ int main(int argc, char* argv[])
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
+
+    int num_threads = 1;
+#ifdef _OPENMP
+    num_threads = omp_get_max_threads( );
+#endif //omp
+    if(rank==0)std::cout << num_threads<<" ";
     if( rank == 0)
     {
         std::cin >> n >> Nx >> Ny >> Nz;
@@ -165,7 +185,7 @@ int main(int argc, char* argv[])
     }
 
 
-    std::cout << std::endl;
+    if(rank==0)std::cout << std::endl;
     MPI_Finalize();
     return 0;
 }
