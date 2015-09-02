@@ -8,7 +8,7 @@ GLFLAGS  = -lm
 CC=g++
 MPICC=mpicxx
 OPT=-O3
-NVCCARCH=-arch=sm_35 # fermi cards
+NVCCARCH=-arch=sm_20 #Tesla M2090
 OMPFLAG=-fopenmp
 LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
 LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
