@@ -27,8 +27,6 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
-const unsigned k = 3;//!< a change in k needs a recompilation
-
 int main( int argc, char* argv[])
 {
      ////////////////////////////////setup MPI///////////////////////////////

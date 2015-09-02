@@ -1,106 +1,23 @@
-system=home # Use as Makefile parameter!
 device=gpu
 
-INCLUDE = -I../../inc  # other project libraries
+#configure machine 
+include ../../config/default.mk
+include ../../config/*.mk 
+include ../../config/devices/devices.mk
 
-
-ifeq ($(strip $(device)),gpu)
-CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_52 -w
-CFLAGS+= -Xcompiler -fopenmp 
-CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-GLFLAGS= -lGLEW
-OPT	   = -O2
-endif
-ifeq ($(strip $(device)),omp)
-CC = g++
-CFLAGS = -Wall -fopenmp -x c++
-CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-OPT	   = -O3
-endif
-ifeq ($(strip $(device)),mpi)
-CC = mpic++
-CFLAGS = #-Wall -x c++
-CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-OPT	   = -O3 
-endif
-
-ifeq ($(strip $(system)),home)
-INCLUDE += -I$(HOME)/include # cusp and thrust libraries
-
-#you might check the libs here, cf your glfw installation
-GLFLAGS += $$(pkg-config --static --libs glfw3)
-LIBS 	 = -lnetcdf -lhdf5 -lhdf5_hl # hdf5 libraries
-endif
-
-ifeq ($(strip $(system)),leo3)
-INCLUDE += -I$(HOME)/include
-INCLUDE += -I$(UIBK_HDF5_INC)
-INCLUDE += -I$(UIBK_OPENMPI_INC)
-INCLUDE += -I$(UIBK_NETCDF_4_INC)
-
-LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
-LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
-GLFLAGS  = -lm
-endif
-
-ifeq ($(strip $(system)),vsc)
-INCLUDE += -I$(HOME)/include
-INCLUDE += -I/opt/intel/impi/4.1.0/include64 
-INCLUDE += -I/opt/sw/netcdf/4.3/include
-INCLUDE += -I/opt/sw/hdf5/1.8.10-p1/include
-CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
-
-LIBS 	 = -L/opt/sw/hdf5/1.8.10-p1/lib -lhdf5 -lhdf5_hl
-LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
-LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
-LIBS    += -L/opt/sw/netcdf/4.3/lib -lnetcdf -lcurl
-GLFLAGS  = -lm
-endif
-
-ifeq ($(strip $(system)),vsc2)
-INCLUDE += -I$(HOME)/include
-INCLUDE += -I/opt/intel/impi/4.1.0/include64
-INCLUDE += -I/opt/sw/netcdf/4.3.2/include
-INCLUDE += -I/opt/hdf5/1.8.9/intel/include
-CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
-
-LIBS     = -L/opt/hdf5/1.8.9/intel/lib -lhdf5 -lhdf5_hl
-LIBS    += -L/opt/intel/composerxe/lib/intel64 -lirc -lsvml
-LIBS    += -L/opt/intel/impi/4.1.0/lib64 -lmpi
-LIBS    += -L/opt/sw/netcdf/4.3.2/lib -lnetcdf -lcurl
-GLFLAGS  = -lm
-endif
-
-ifeq ($(strip $(system)),vsc3)
-INCLUDE += -I$(HOME)/include
-
-INCLUDE += -I/cm/shared/apps/intel/impi_5.0.3/intel64/include
-INCLUDE +=-I/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/include
-INCLUDE +=-I/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/include
-CFLAGS  += -DMPICH_IGNORE_CXX_SEEK
-
-LIBS     =-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/lib -lhdf5 -lhdf5_hl
-LIBS    +=-L/cm/shared/apps/intel-cluster-studio/composer_xe_2013_sp1.2.144/compiler/lib/intel64 -lirc -lsvml
-LIBS    += -L/cm/shared/apps/intel/impi_5.0.3/intel64/lib -lmpi
-LIBS    +=-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/lib -lnetcdf -lcurl
-GLFLAGS  = -lm
-endif
+INCLUDE+= -I../         # other src libraries
+INCLUDE+= -I../../inc   # other project libraries
 
 all: feltor feltor_hpc
 
 feltor: feltor.cu feltor.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
-
 	
-ifeq ($(strip $(device)),mpi)
 feltor_hpc: feltor_hpc.cpp feltor.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
-else
-feltor_hpc: feltor_hpc.cu feltor.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK -g
-	echo "Attention: No compiler warnings are issued!" 
-endif
+
+feltor_mpi: feltor_mpi.cu feltor.cuh 
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK 
 	
 generator: generator.cpp 
 	g++ generator.cpp -o generator -std=c++0x -Wall
@@ -111,4 +28,4 @@ doc:
 	doxygen Doxyfile
 	
 clean:
-	rm -f feltor feltor_hpc 
+	rm -f feltor feltor_hpc feltor_mpi

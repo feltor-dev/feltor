@@ -182,6 +182,7 @@ container& Asela<DS, Matrix, container, P>::polarisation( const std::vector<cont
     pol.set_chi( chi);
 
     unsigned numberg    =  invert_invgamma(invgammaN,chi,y[1]); //chi= Gamma (Ni-1)
+    numberg++;//get rid of compiler warning
     //Set gamma_ni <- do not change afterwards
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi

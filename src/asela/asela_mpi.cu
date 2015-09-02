@@ -182,7 +182,7 @@ int main( int argc, char* argv[])
     ///////////////////////////////////first output/////////////////////////////////
     int dims[3],  coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
+    size_t count[4] = {1, grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
     dg::MHVec transferD( dg::evaluate(dg::zero, grid));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
