@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
     t.tic();
     unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
     t.toc();
-    if(rank==0)std::cout << number << " "<<t.diff()/(double)number<<" ";
+    if(rank==0)std::cout << number << " "<<t.diff()/(double)number<<" "<<std::flush;
     if( Nz > 1)
     {
         //Application of ds
