@@ -119,13 +119,57 @@ struct MPI_FieldAligned
     template< class BinaryOp, class UnaryOp>
     MPI_Vector<LocalContainer> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
 
-    void einsPlus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& npe);
-    void einsMinus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
-    void einsPlusT( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& npe);
-    void einsMinusT( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
+    /**
+    * @brief Applies the interpolation to the next planes 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsPlus( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    /**
+    * @brief Applies the interpolation to the previous planes
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsMinus( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    /**
+    * @brief Applies the transposed interpolation to the previous plane 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsPlusT( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    /**
+    * @brief Applies the transposed interpolation to the next plane 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsMinusT( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    /**
+    * @brief hz is the distance between the plus and minus planes
+    *
+    * @return three-dimensional vector
+    */
     const MPI_Vector<LocalContainer>& hz()const {return hz_;}
+    /**
+    * @brief hp is the distance between the plus and current planes
+    *
+    * @return three-dimensional vector
+    */
     const MPI_Vector<LocalContainer>& hp()const {return hp_;}
+    /**
+    * @brief hm is the distance between the current and minus planes
+    *
+    * @return three-dimensional vector
+    */
     const MPI_Vector<LocalContainer>& hm()const {return hm_;}
+    /**
+    * @brief Access the underlying grid
+    *
+    * @return the grid
+    */
     const MPI_Grid3d& grid() const{return g_;}
   private:
     typedef cusp::array1d_view< typename LocalContainer::iterator> View;

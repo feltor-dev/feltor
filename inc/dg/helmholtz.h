@@ -122,7 +122,7 @@ struct Helmholtz
      *
      * @return chi
      */
-    const Vector& chi(){return chi_;}
+    const Vector& chi() const{return chi_;}
   private:
     Elliptic<Matrix, Vector, Preconditioner> laplaceM_;
     Vector temp_, chi_;
@@ -130,6 +130,20 @@ struct Helmholtz
     bool isSet;
 };
 
+/**
+ * @brief Matrix class that represents a more general Helmholtz-type operator
+ *
+ * @ingroup matrixoperators
+ *
+ * Unnormed discretization of 
+ * \f[ \left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] \f] 
+ * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
+ * Can be used by the Invert class
+ * @tparam Matrix The cusp-matrix class you want to use
+ * @tparam Vector The Vector class you want to use
+ * @tparam Preconditioner The Preconditioner class you want to use
+ * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
+ */
 template< class Matrix, class Vector, class Preconditioner> 
 struct Helmholtz2
 {
@@ -236,7 +250,7 @@ struct Helmholtz2
      *
      * @return chi
      */
-    const Vector& chi(){return chi_;}
+    const Vector& chi()const {return chi_;}
   private:
     Elliptic<Matrix, Vector, Preconditioner> laplaceM_;
     Vector temp_,temp2_,temp3_, chi_;

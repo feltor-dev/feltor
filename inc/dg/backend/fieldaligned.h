@@ -156,7 +156,7 @@ void boxintegrator( Field& field, const Grid& grid,
 * This class discretizes the operators \f$ \nabla_\parallel = 
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 cylindrical coordinates
-* @ingroup dz
+* @ingroup ds
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
@@ -265,13 +265,58 @@ struct FieldAligned
     template< class BinaryOp, class UnaryOp>
     container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
 
-    void einsPlus( const container& n, container& npe);
-    void einsMinus( const container& n, container& nme);
-    void einsPlusT( const container& n, container& npe);
-    void einsMinusT( const container& n, container& nme);
+    /**
+    * @brief Applies the interpolation to the next planes 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsPlus( const container& in, container& out);
+    /**
+    * @brief Applies the interpolation to the previous planes
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsMinus( const container& in, container& out);
+    /**
+    * @brief Applies the transposed interpolation to the previous plane 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsPlusT( const container& in, container& out);
+    /**
+    * @brief Applies the transposed interpolation to the next plane 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsMinusT( const container& in, container& out);
+
+    /**
+    * @brief hz is the distance between the plus and minus planes
+    *
+    * @return three-dimensional vector
+    */
     const container& hz()const {return hz_;}
+    /**
+    * @brief hp is the distance between the plus and current planes
+    *
+    * @return three-dimensional vector
+    */
     const container& hp()const {return hp_;}
+    /**
+    * @brief hm is the distance between the current and minus planes
+    *
+    * @return three-dimensional vector
+    */
     const container& hm()const {return hm_;}
+    /**
+    * @brief Access the underlying grid
+    *
+    * @return the grid
+    */
     const Grid3d<double>& grid() const{return g_;}
     private:
     typedef cusp::array1d_view< typename container::iterator> View;

@@ -22,28 +22,25 @@ namespace dg{
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 cylindrical coordinates
 * @ingroup ds
-* @tparam FieldAligned Engine class for interpolation
+* @tparam FieldAligned Engine class for interpolation, provides the necessary interpolation operations
 * @tparam Matrix The matrix class of the jump matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
 template< class FA, class Matrix, class container=thrust::device_vector<double> >
 struct DS
 {
-    typedef FA FieldAligned;
+    typedef FA FieldAligned;//!< typedef for easier construction of corresponding fieldaligned object
 
     /**
     * @brief Construct from a field and a grid
     *
-    * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
-    * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-    is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
-    * @param field The field to integrate
+    * @tparam InvB The inverse magnitude of the magnetic field \f$ \frac{1}{B}\f$
+    * @tparam Grid Grid Class 
+    * @param field The fieldaligned object containing interpolation matrices
+    * @param invB The inverse magentic field strength
     * @param grid The grid on which to operate
-    * @param deltaPhi Must either equal the f_.hz()() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
-    * @param eps Desired accuracy of runge kutta
-    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
-    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
-    * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
+    * @param no norm or not_normed affects the behaviour of the symv function
+    * @param dir the direction affects both the operator() and the symv function
     */
     template<class InvB, class Grid>
     DS(const FA& field, InvB invB, const Grid& grid, dg::norm no=dg::normed, dg::direction dir = dg::centered);
@@ -121,6 +118,7 @@ struct DS
     * @param dsf contains result on output (write only)
     */
     void centeredT( const container& f, container& dsf);
+
     /**
     * @brief is the negative transposed of centered
     *
@@ -128,7 +126,6 @@ struct DS
     * @param f The vector to derive
     * @param dsf contains result on output (write only)
     */
-    
     void operator()( const container& f, container& dsf);
 
 
@@ -207,6 +204,11 @@ struct DS
      */
     const container& precond()const {return v3d;}
 
+    /**
+    * @brief access the underlying Fielaligned object for evaluate
+    *
+    * @return acces to fieldaligned object
+    */
     const FA& fieldaligned() const{return f_;}
     private:
     FA f_;
@@ -455,11 +457,11 @@ struct MatrixTraits< DS<F,M, V> >
 };
 ///@endcond
 
-typedef dg::DS<dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DDS;
-typedef dg::DS<dg::FieldAligned<dg::IHMatrix, dg::HVec>, dg::HMatrix, dg::HVec> HDS;
+typedef dg::DS<dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DDS;//!< device DS type
+typedef dg::DS<dg::FieldAligned<dg::IHMatrix, dg::HVec>, dg::HMatrix, dg::HVec> HDS; //!< host DS type
 #ifdef MPI_VERSION
-typedef dg::DS< dg::MPI_FieldAligned<dg::IDMatrix, dg::BijectiveComm< dg::IDVec, dg::DVec >,  dg::DVec>, dg::MDMatrix, dg::MDVec > MDDS;
-typedef dg::DS< dg::MPI_FieldAligned<dg::IHMatrix, dg::BijectiveComm< dg::IHVec, dg::HVec >,  dg::HVec>, dg::MHMatrix, dg::MHVec > MHDS;
+typedef dg::DS< dg::MPI_FieldAligned<dg::IDMatrix, dg::BijectiveComm< dg::IDVec, dg::DVec >,  dg::DVec>, dg::MDMatrix, dg::MDVec > MDDS; //!< MPI device DS type
+typedef dg::DS< dg::MPI_FieldAligned<dg::IHMatrix, dg::BijectiveComm< dg::IHVec, dg::HVec >,  dg::HVec>, dg::MHMatrix, dg::MHVec > MHDS; //!< MPI host DS type
 #endif //MPI_VERSION
 
 

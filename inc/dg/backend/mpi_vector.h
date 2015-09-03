@@ -11,14 +11,17 @@ namespace dg
 /**
  * @brief mpi Vector class 
  *
- * communication at blas1 level is needed for scalar products
+ * The idea of this Vector class is to simply base it on an existing container class
+ * that fully supports the blas functionality. In a computation we use mpi to 
+ communicate (e.g. boundary points in matrix-vector multiplications) and use
+ the existing blas functions for the local computations. 
+ * (At the blas level 1 level communication is needed for scalar products)
  * @tparam container underlying local container class
- *
  */
 template<class container>
 struct MPI_Vector
 {
-    typedef container container_type;
+    typedef container container_type;//!< typedef to acces underlying container
     /**
      * @brief construct a vector
      *
@@ -32,8 +35,8 @@ struct MPI_Vector
     * @brief Conversion operator
     *
     * uses conversion between compatible containers
-    * @tparam OtherContainer 
-    * @param src 
+    * @tparam OtherContainer Another container class
+    * @param src the source 
     */
     template<class OtherContainer>
     MPI_Vector( const MPI_Vector<OtherContainer>& src){ data_ = src.data(); comm_ = src.communicator();} 
@@ -75,6 +78,14 @@ struct MPI_Vector
             os << data_[j] << " ";
         os << "\n";
     }
+    /**
+    * @brief Access single data points
+    *
+    * @param i index
+    *
+    * @return a value
+    * @attention if the container class is a device vector communication is needed to transfer the value from the device to the host
+    */
     double operator[](int i) const{return data_[i];}
     /**
      * @brief Disply local data

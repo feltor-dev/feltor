@@ -10,6 +10,8 @@ src/feltor/doc/
 *.sh
 *_b
 *_t
+*_mpib
+*_mpit
 *.nc
 *.py
 *.in

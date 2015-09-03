@@ -147,7 +147,7 @@ struct PsipR
       @param Z height (cylindrical coordinates)
     * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z)  \f$
  */ 
-    double operator()(double R, double Z)
+    double operator()(double R, double Z) const
     {    
         return psipR_alt( R, Z);
     }
@@ -158,7 +158,7 @@ struct PsipR
       @param phi angle (cylindrical coordinates)
     * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z,\phi)  \f$
  */ 
-    double operator()(double R, double Z, double phi)
+    double operator()(double R, double Z, double phi) const
     {    
         return operator()(R,Z);
     }
@@ -167,13 +167,13 @@ struct PsipR
     /**
      * @brief Print parameters to std::cout
      */
-    void display()
+    void display() const
     {
       std::cout << R_0_ <<"  " <<A_ <<"\n";
       std::cout << c_[0] <<"\n";
     }
   private:
-    double psipR_alt(double R, double Z)
+    double psipR_alt(double R, double Z) const
     {    
         double Rn,Rn2,Rn3,Rn5,Zn,Zn2,Zn3,Zn4,lgRn;
         Rn = R/R_0_; Rn2 = Rn*Rn; Rn3 = Rn2*Rn;  Rn5 = Rn3*Rn2; 
@@ -198,6 +198,11 @@ struct PsipR
  */ 
 struct PsipRR
 {
+    /**
+    * @brief Constructor
+    *
+    * @param gp geometric parameters
+    */
     PsipRR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp), psipR_(gp) {}
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}=
@@ -213,24 +218,39 @@ struct PsipRR
       -160  \bar{Z}^3 \ln{(\bar{R}   )})
       + c_7 (-165 \bar{R}^4 +2160 \bar{R}^2  \bar{Z}^2-640  \bar{Z}^4-450 \bar{R}^4  \ln{(\bar{R}   )}+2160 \bar{R}^2  \bar{Z}^2
       \ln{(\bar{R}   )}-240  \bar{Z}^4 \ln{(\bar{R}   )})\Bigg\}\f]
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @return value
  */ 
-    double operator()(double R, double Z)
+    double operator()(double R, double Z) const
     {    
         //double psipR = psipR_.psipR_alt( R,Z);
         //return psip_.diff_psi_neu( R, Z)* psipRR_alt( R,Z) + psip_.diffdiff_psi_neu( R, Z) *psipR;
         return psipRR_alt( R, Z);
     }
-    double operator()(double R, double Z, double phi)
+    /**
+    * @brief return operator()(R,Z)
+    *
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @param phi angle (cylindrical coordinates)
+    *
+    * @return value
+    */
+    double operator()(double R, double Z, double phi) const
     {    
         return operator()(R,Z);
     }
+    /**
+    * @brief Display the internal parameters to std::cout
+    */
     void display()
     {
       std::cout << R_0_ <<"  " <<A_ <<"\n";
       std::cout << c_[0] <<"\n";
     }
   private:
-    double psipRR_alt(double R, double Z)
+    double psipRR_alt(double R, double Z) const
     {    
        double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
        Rn = R/R_0_; Rn2 = Rn*Rn;  Rn4 = Rn2*Rn2;
