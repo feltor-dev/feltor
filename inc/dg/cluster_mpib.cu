@@ -40,7 +40,7 @@ typedef dg::MDVec Vector;
 /*******************************************************************************
 program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
 outputs one line to std::cout 
-# npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX t_DY t_ARAKAWA #iterations t_1xELLIPTIC_CG t_DS
+# npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX t_DY t_DZ t_ARAKAWA #iterations t_1xELLIPTIC_CG t_DS
 if Nz == 1, ds is not executed
 Run with: 
 >$ echo npx npy npz n Nx Ny Nz | mpirun -#procs ./cluster_mpib 
@@ -134,6 +134,16 @@ int main(int argc, char* argv[])
         dg::blas2::symv( dy, rhs, jac);
     t.toc();
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    if( Nz > 2)
+    {
+        //Matrix-Vector product
+        Matrix dz = dg::create::dz( grid, dg::centered);
+        t.tic(); 
+        for( unsigned i=0; i<multi; i++)
+            dg::blas2::symv( dz, rhs, jac);
+        t.toc();
+        if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    }
 
     //The Arakawa scheme
     dg::ArakawaX<Matrix, Vector> arakawa( grid);
