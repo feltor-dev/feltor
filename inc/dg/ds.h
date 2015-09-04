@@ -221,8 +221,9 @@ struct DS
     dg::direction dir_;
 };
 
-////////////////////////////////////DEFINITIONS////////////////////////////////////////
 ///@cond
+////////////////////////////////////DEFINITIONS////////////////////////////////////////
+
 template<class FA, class M, class container>
 template <class Field, class Grid>
 DS<FA, M,container>::DS(const FA& field, Field inverseB, const Grid& grid, dg::norm no, dg::direction dir):
@@ -455,6 +456,7 @@ struct MatrixTraits< DS<F,M, V> >
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
+
 ///@endcond
 
 typedef dg::DS<dg::FieldAligned<dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DDS;//!< device DS type

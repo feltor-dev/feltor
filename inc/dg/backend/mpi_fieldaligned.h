@@ -186,9 +186,8 @@ struct MPI_FieldAligned
 
     dg::FieldAligned<LocalMatrix, LocalContainer > dz_;
 };
-//////////////////////////////////////DEFINITIONS/////////////////////////////////////
 ///@cond
-
+//////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class LocalMatrix, class Communicator, class LocalContainer>
 template <class Field, class Limiter>
 MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 

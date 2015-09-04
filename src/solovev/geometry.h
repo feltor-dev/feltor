@@ -311,6 +311,9 @@ struct PsipZ
         //return psip_.diff_psi_neu( R, Z)* psipZ_alt( R,Z);
         return psipZ_alt(R, Z);
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()(double R, double Z, double phi)
     {    
         return operator()(R,Z);
@@ -347,6 +350,9 @@ struct PsipZZ
         //       psip_.diffdiff_psi_neu( R, Z) *psipZ*psipZ;
         return psipZZ_alt( R, Z);
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()(double R, double Z, double phi)
     {    
         return operator()(R,Z);
@@ -394,6 +400,9 @@ struct PsipRZ
         //       psip_.diffdiff_psi_neu( R, Z) *psipR_.psipR_alt(R,Z)*psipZ_.psipZ_alt(R,Z);
         return psipRZ_alt( R, Z);
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()(double R, double Z, double phi)
     {    
         return operator()(R,Z);
@@ -436,6 +445,9 @@ struct Ipol
         //sign before A changed to -
         return sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()(double R, double Z, double phi)
     {    
         //sign before A changed to -
@@ -466,6 +478,9 @@ struct InvB
         double psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
         return R/(R_0_*sqrt(ipol_(R,Z)*ipol_(R,Z) + psipR*psipR +psipZ*psipZ)) ;
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()(double R, double Z, double phi)
     {    
         double psipR = psipR_(R,Z, phi), psipZ = psipZ_(R,Z, phi);
@@ -493,6 +508,9 @@ struct LnB
     {    
       return log((R_0_*sqrt(ipol_(R,Z)*ipol_(R,Z) + psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z)))/R) ;
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()(double R, double Z, double phi)
     {    
       return log((R_0_*sqrt(ipol_(R,Z,phi)*ipol_(R,Z,phi) + psipR_(R,Z,phi)*psipR_(R,Z,phi) +psipZ_(R,Z,phi)*psipZ_(R,Z,phi)))/R) ;
@@ -523,6 +541,9 @@ struct BR
     //sign before A changed to +
     return -( Rn*Rn/invB_(R,Z)/invB_(R,Z)+ Rn *A_*psipR_(R,Z) - R  *(psipZ_(R,Z)*psipRZ_(R,Z)+psipR_(R,Z)*psipRR_(R,Z)))/(R*Rn*Rn/invB_(R,Z));
   }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
   double operator()(double R, double Z, double phi)
   { 
     double Rn;
@@ -559,6 +580,9 @@ struct BZ
     //sign before A changed to -
     return (-A_/R_0_*psipZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z)+psipZ_(R,Z)*psipZZ_(R,Z))/(Rn*Rn/invB_(R,Z));
   }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
   double operator()(double R, double Z, double phi)
   { 
       //sign before A changed to -
@@ -599,6 +623,9 @@ struct CurvatureR
 
     }
     
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()( double R, double Z, double phi)
     {
         return -2.*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi); //factor 2 stays under discussion
@@ -638,6 +665,9 @@ struct CurvatureZ
         return 2.*invB_(R,Z)*invB_(R,Z)*bR_(R,Z); //factor 2 stays under discussion
 //         return  ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bR_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()( double R, double Z, double phi)
     {
         return 2.*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi); //factor 2 stays under discussion
@@ -681,6 +711,9 @@ struct GradLnB
     {
        return gp_.R_0*invB_(R,Z)*invB_(R,Z)*(bR_(R,Z) *psipZ_(R,Z) - bZ_(R,Z)* psipR_(R,Z))/R ;
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()( double R, double Z, double phi)
     {
        return gp_.R_0*invB_(R,Z,phi)* invB_(R,Z,phi)*(bR_(R,Z,phi) *psipZ_(R,Z,phi) - bZ_(R,Z,phi)* psipR_(R,Z,phi))/R ;
@@ -715,13 +748,9 @@ struct Field
         invB_(gp) {
     }
     /**
- * @brief \f[ 
- \begin{align}
- \frac{d \hat{R} }{ d \varphi}  &= \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}\\
- \frac{d \hat{Z} }{ d \varphi}  &=- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}}\\
- \frac{d \hat{l} }{ d \varphi}  &=\frac{\hat{R}^2 \hat{B}}{\hat{I}}  
- \end{align}
- \f]
+ * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
+ \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
+ \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}}  \f]
  */ 
     void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp)
     {
@@ -745,17 +774,19 @@ struct Field
 
     }
     /**
- * @brief \f[   \frac{1}{\hat{B}} = 
+     * @brief \f[   \frac{1}{\hat{B}} = 
       \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
       + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
- */ 
+     */ 
     double operator()( double R, double Z)
     {
         //modified
 //          return invB_(R,Z)* invB_(R,Z)*ipol_(R,Z)*gp_.R_0/R;
         return invB_(R,Z);
     }
-    //inverse B
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()( double R, double Z, double phi)
     {
         return invB_(R,Z,phi);
@@ -803,6 +834,9 @@ struct FieldR
     {
         return  R_0/R*psipZ_(R,Z);
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()( double R, double Z, double phi)
     {
         return  R_0/R*psipZ_(R,Z);
@@ -822,6 +856,9 @@ struct FieldZ
     {
         return  -R_0/R*psipR_(R,Z);
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()( double R, double Z, double phi)
     {
         return  -R_0/R*psipR_(R,Z);
@@ -895,6 +932,7 @@ struct BHatP
 
 /**
  * @brief Delta function for poloidal flux \f$ B_Z\f$
+     \f[ (\nabla \psi_p)^2\delta(\psi_p(R,Z)-\psi_0) = \frac{\sqrt{ (\nabla \psi_p)^2}}{\sqrt{2\pi\varepsilon}} \exp\left(-\frac{(\psi_p(R,Z) - \psi_{0})^2}{2\varepsilon} \right)  \f]
  */
 struct DeltaFunction
 {
@@ -905,14 +943,30 @@ struct DeltaFunction
         epsilon_(epsilon),
         psivalue_(psivalue){
     }
-    void setepsilon(double temp ){epsilon_ = temp;}
-    void setpsi(double temp ){psivalue_ = temp;}
+    /**
+    * @brief Set a new \f$ \varepsilon\f$
+    *
+    * @param eps new value
+    */
+    void setepsilon(double eps ){epsilon_ = eps;}
+    /**
+    * @brief Set a new \f$ \psi_0\f$
+    *
+    * @param psi_0 new value
+    */
+    void setpsi(double psi_0 ){psivalue_ = psi_0;}
 
+    /**
+     *@brief \f[ \frac{\sqrt{ (\nabla \psi_p)^2}}{\sqrt{2\pi\varepsilon}} \exp\left(-\frac{(\psi_p(R,Z) - \psi_{0})^2}{2\varepsilon} \right)  \f]
+     */
     double operator()( double R, double Z)
     {
         return 1./sqrt(2.*M_PI*epsilon_)*
                exp(-( (psip_(R,Z)-psivalue_)* (psip_(R,Z)-psivalue_))/2./epsilon_)*sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z));
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()( double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -927,8 +981,12 @@ struct DeltaFunction
 
 /**
  * @brief Flux surface average over quantity
- * @tparam container 
  *
+ * The average is computing using the formula
+ \f[ <f>(\psi_0) = \frac{1}{V} \int dV \delta(\psi_p(R,Z)-\psi_0) (\nabla\psi_p)^2f(R,Z) \f]
+ with \f$ V = \int dV \delta(\psi_p(R,Z)-\psi_0)(\nabla\psi_p)^2\f$
+ * @tparam container  The container class of the vector to average
+
  */
 template <class container = thrust::host_vector<double> >
 struct FluxSurfaceAverage
@@ -987,6 +1045,7 @@ struct FluxSurfaceAverage
 };
 /**
  * @brief Class for the evaluation of the safety factor q
+ * \f[ q(\psi_0) = \frac{1}{2\pi} \int dV (\nabla\psi_p)^2 \delta(\psi_p-\psi_0) \alpha( R,Z) \f]
  * @tparam container 
  *
  */
@@ -1022,14 +1081,15 @@ struct SafetyFactor
     }
     /**
      * @brief Calculate the q profile over the function f which has to be the global safety factor
+     * \f[ q(\psi_0) = \frac{1}{2\pi} \int dV (\nabla\psi_p)^2 \delta(\psi_p-\psi_0) \alpha( R,Z) \f]
      *
      * @param psip0 the actual psi value for q(psi)
      */
     double operator()(double psip0)
     {
-            deltaf_.setpsi( psip0);
-            container deltafog2d = dg::evaluate( deltaf_, g2d_);    
-            double q = dg::blas2::dot( f_,w2d_,deltafog2d)/(2.*M_PI);
+        deltaf_.setpsi( psip0);
+        container deltafog2d = dg::evaluate( deltaf_, g2d_);    
+        double q = dg::blas2::dot( f_,w2d_,deltafog2d)/(2.*M_PI);
         return q;
     }
     private:
@@ -1045,6 +1105,7 @@ struct SafetyFactor
 };
 /**
  * @brief Global safety factor
+\f[ \alpha(R,Z) = \frac{R_0I_{pol}(R,Z)}{R^2(\nabla\psi_p)^2} \f]
  */
 struct Alpha
 {
@@ -1053,13 +1114,20 @@ struct Alpha
         psipZ_(gp),
         ipol_(gp),
         R_0(gp.R_0){ }
+
+    /**
+    * @brief \f[ \frac{R_0I_{pol}(R,Z)}{R^2(\nabla\psi_p)^2} \f]
+    */
     double operator()( double R, double Z)
     {
-                return (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+        return (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()( double R, double Z, double phi)
     {
-                return  (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+        return  (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
     }
     private:
     PsipR  psipR_;

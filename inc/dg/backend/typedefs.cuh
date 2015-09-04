@@ -6,6 +6,9 @@
   This file contains useful typedefs of commonly used types.
   */
 namespace dg{
+
+///@addtogroup typedefs
+///@{
 //vectors
 typedef thrust::device_vector<double> DVec; //!< Device Vector. The device can be an OpenMP parallelized cpu or a gpu. This depends on the value of the macro THRUST_DEVICE_SYSTEM, which can be either THRUST_DEVICE_SYSTEM_OMP for openMP or THRUST_DEVICE_SYSTEM_CUDA for a gpu. 
 typedef thrust::host_vector<double>   HVec; //!< Host Vector
@@ -22,9 +25,10 @@ typedef MPI_Vector<thrust::host_vector<double>  >   MHVec; //!< MPI Host Vector
 typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH; //!< host Communicator for the use in an mpi matrix for derivatives
 typedef NearestNeighborComm<thrust::device_vector<int>, thrust::device_vector<double> > NNCD; //!< device Communicator for the use in an mpi matrix for derivatives
 
-typedef dg::RowColDistMat<dg::EllSparseBlockMat, dg::CooSparseBlockMat, dg::NNCH> MHMatrix; //!< MPI Host Vector for derivatives
-typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice, dg::CooSparseBlockMatDevice, dg::NNCD> MDMatrix; //!< MPI Device Vector for derivatives
+typedef dg::RowColDistMat<dg::EllSparseBlockMat, dg::CooSparseBlockMat, dg::NNCH> MHMatrix; //!< MPI Host Matrix for derivatives
+typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice, dg::CooSparseBlockMatDevice, dg::NNCD> MDMatrix; //!< MPI Device Matrix for derivatives
 #endif
+///@}
 
 }//namespace dg
 

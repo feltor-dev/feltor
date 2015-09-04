@@ -588,9 +588,8 @@ struct MPI_Grid3d
      */
     Grid3d<double> global() const {return g;}
     /**
-     * @brief Returns the pid of the process that holds the local grid surrounding a given point
+     * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
-     * local means that there is a margin of hx, hy around the x-y planes
      * @param x X-coord
      * @param y Y-coord
      * @param z Z-coord
@@ -602,7 +601,7 @@ struct MPI_Grid3d
     Grid3d<double> g; //global grid
     MPI_Comm comm; //just an integer...
 };
-
+///@cond
 int MPI_Grid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
@@ -620,6 +619,7 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
     else
         return -1;
 }
+///@endcond
 
 ///@}
 }//namespace dg

@@ -11,6 +11,7 @@ namespace dg
 /**
  * @brief mpi Vector class 
  *
+ * @ingroup mpi_structures
  * The idea of this Vector class is to simply base it on an existing container class
  * that fully supports the blas functionality. In a computation we use mpi to 
  communicate (e.g. boundary points in matrix-vector multiplications) and use
@@ -127,26 +128,86 @@ struct VectorTraits<const MPI_Vector<container> > {
     typedef double value_type;
     typedef MPIVectorTag vector_category;
 };
+///@endcond
 
 /////////////////////////////communicator exchanging columns//////////////////
 
+/**
+* @brief Communicator for nearest neighbor communication
+*
+* exchanges a halo of given size among next neighbors in a given direction
+* @ingroup mpi_structures
+* @tparam Index the type of index container
+* @tparam Vector the vector container type
+*/
 template<class Index, class Vector>
 struct NearestNeighborComm
 {
+    /**
+    * @brief Construct 
+    *
+    * @param n size of the halo
+    * @param vector_dimensions {x, y, z} dimension (total number of points)
+    * @param comm the (cartesian) communicator 
+    * @param direction 0 is x, 1 is y, 2 is z
+    */
     NearestNeighborComm( int n, const int vector_dimensions[3], MPI_Comm comm, int direction)
     {
         construct( n, vector_dimensions, comm, direction);
     }
+
+    /**
+    * @brief Construct from other Communicator
+    *
+    * Simply copies halo size, dimensions, communicator and direction and 
+    constructs a new object
+    * @tparam OtherIndex other index type
+    * @tparam OtherVector other container type
+    * @param src source object
+    */
     template< class OtherIndex, class OtherVector>
     NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherVector>& src){
         construct( src.n(), src.dims(), src.communicator(), src.direction());
     }
 
+    /**
+    * @brief Construct a vector containing halo cells of neighboring processes
+    *
+    * No inner points are stored
+    * @param input local input vector
+    *
+    * @return new container
+    */
     Vector collect( const Vector& input)const;
+    /**
+    * @brief Size of the output of collect
+    *
+    * @return size
+    */
     int size()const; //size of values is size of input plus ghostcells
+    /**
+    * @brief The communicator used
+    *
+    * @return MPI communicator
+    */
     MPI_Comm communicator() const {return comm_;}
+    /**
+    * @brief halo size
+    *
+    * @return  halo size
+    */
     int n() const{return n_;}
+    /**
+    * @brief  The dimensionality of the input vector
+    *
+    * @return dimensions
+    */
     const int* dims() const{return dim_;}
+    /**
+    * @brief The direction of communication
+    *
+    * @return direction
+    */
     int direction() const {return direction_;}
     private:
     void construct( int n, const int vector_dimensions[3], MPI_Comm comm, int direction);
@@ -162,7 +223,9 @@ struct NearestNeighborComm
     int buffer_size() const;
 };
 
-typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH;
+typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH; //!< host Communicator for the use in an mpi matrix for derivatives
+
+///@cond
 
 template<class I, class V>
 void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Comm comm, int direction)

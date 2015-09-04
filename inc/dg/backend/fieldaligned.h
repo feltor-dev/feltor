@@ -329,8 +329,9 @@ struct FieldAligned
     container limiter_;
 };
 
+///@cond 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
-///@cond
+
 template<class M, class container>
 template <class Field, class Limiter>
 FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
@@ -623,7 +624,7 @@ void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
     }
 }
 
-///@endcond
+///@endcond 
 
 
 }//namespace dg
