@@ -105,6 +105,8 @@ EllSparseBlockMat distribute_rows( const EllSparseBlockMat& src, int coord, cons
 } //namespace detail
 
 ///@endcond
+///@addtogroup highlevel
+///@{
 
 /**
 * @brief Create a 2d derivative in the x-direction for mpi
@@ -139,7 +141,7 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d&
 * @brief Create a 2d derivative in the y-direction for mpi
 *
 * @param g A 2D mpi grid
-* @param bcx boundary condition
+* @param bcy boundary condition
 * @param dir centered, forward or backward
 *
 * @return  A mpi matrix
@@ -193,7 +195,7 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid
 * @brief Create a 2d jump in the y-direction for mpi
 *
 * @param g A 2D mpi grid
-* @param bcx boundary condition
+* @param bcy boundary condition
 *
 * @return  A mpi matrix
 */
@@ -503,6 +505,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpZ( const MPI_Grid3
 }
 
 
+///@} 
 
 
 } //namespace create

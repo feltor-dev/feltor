@@ -156,7 +156,7 @@ void boxintegrator( Field& field, const Grid& grid,
 * This class discretizes the operators \f$ \nabla_\parallel = 
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 cylindrical coordinates
-* @ingroup dz
+* @ingroup ds
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
@@ -265,13 +265,58 @@ struct FieldAligned
     template< class BinaryOp, class UnaryOp>
     container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
 
-    void einsPlus( const container& n, container& npe);
-    void einsMinus( const container& n, container& nme);
-    void einsPlusT( const container& n, container& npe);
-    void einsMinusT( const container& n, container& nme);
+    /**
+    * @brief Applies the interpolation to the next planes 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsPlus( const container& in, container& out);
+    /**
+    * @brief Applies the interpolation to the previous planes
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsMinus( const container& in, container& out);
+    /**
+    * @brief Applies the transposed interpolation to the previous plane 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsPlusT( const container& in, container& out);
+    /**
+    * @brief Applies the transposed interpolation to the next plane 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsMinusT( const container& in, container& out);
+
+    /**
+    * @brief hz is the distance between the plus and minus planes
+    *
+    * @return three-dimensional vector
+    */
     const container& hz()const {return hz_;}
+    /**
+    * @brief hp is the distance between the plus and current planes
+    *
+    * @return three-dimensional vector
+    */
     const container& hp()const {return hp_;}
+    /**
+    * @brief hm is the distance between the current and minus planes
+    *
+    * @return three-dimensional vector
+    */
     const container& hm()const {return hm_;}
+    /**
+    * @brief Access the underlying grid
+    *
+    * @return the grid
+    */
     const Grid3d<double>& grid() const{return g_;}
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
@@ -284,8 +329,9 @@ struct FieldAligned
     container limiter_;
 };
 
+///@cond 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
-///@cond
+
 template<class M, class container>
 template <class Field, class Limiter>
 FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
@@ -302,14 +348,17 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
     std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
     y[1] = dg::evaluate( dg::coo2, g2d);
     y[2] = dg::evaluate( dg::zero, g2d);
-    thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
   
 //     integrate field lines for all points
     
     if( deltaPhi <=0) deltaPhi = g_.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
+#ifdef _OPENMP
+#pragma omp parallel for firstprivate(field)
+#endif //_OPENMP
     for( unsigned i=0; i<size; i++)
     {
+        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
 
         double phi1 = deltaPhi;
@@ -575,7 +624,7 @@ void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
     }
 }
 
-///@endcond
+///@endcond 
 
 
 }//namespace dg

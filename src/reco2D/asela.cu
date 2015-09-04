@@ -20,8 +20,6 @@
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
-const unsigned k = 3; //!< a change of k needs a recompilation!
-
 double aparallel( double x, double y)
 {
     return 0.1/cosh(x)/cosh(x)*cos(1./8.*y);

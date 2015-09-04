@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
     int rank;
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    mpi_init3d( dg::NEU, dg::NEU, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     Field field( R_0, I_0);

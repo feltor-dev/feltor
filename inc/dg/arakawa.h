@@ -59,14 +59,14 @@ struct ArakawaX
     void operator()( container& lhs, container& rhs, container& result);
 
     /**
-     * @brief Return internally used 2d - x - derivative 
+     * @brief Return internally used x - derivative 
      *
      * The same as a call to dg::create::dx( g, bcx)
      * @return derivative
      */
     const Matrix& dx() {return bdxf;}
     /**
-     * @brief Return internally used 2d - y - derivative in ell format in XSPACE
+     * @brief Return internally used y - derivative
      *
      * The same as a call to dg::create::dy( g, bcy)
      * @return derivative
@@ -74,7 +74,7 @@ struct ArakawaX
     const Matrix& dy() {return bdyf;}
 
     /**
-     * @brief Compute the total variation integrand in 2D
+     * @brief Compute the total variation integrand 
      *
      * Computes \f[ (\nabla\phi)^2 \f]
      * @param phi function 

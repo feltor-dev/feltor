@@ -447,7 +447,7 @@ struct TanhProfX {
      * @param xb boundary value
      * @param width damping width
      * @param sign sign of the Tanh, defines the damping direction
-     * @param bgampg background amplitude 
+     * @param bgamp background amplitude 
      * @param profamp profile amplitude
      */
     TanhProfX(double xb, double width, int sign,double bgamp, double profamp) : xb_(xb),w_(width), s_(sign),bga_(bgamp),profa_(profamp)  {}

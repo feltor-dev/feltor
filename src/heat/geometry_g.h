@@ -9,6 +9,7 @@
 
 #include "geom_parameters_g.h"
 
+//TODO somebody document the functions as in solovev/geometry.h
 
 /*!@file
  *

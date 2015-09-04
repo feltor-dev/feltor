@@ -6,10 +6,24 @@
 
 namespace dg
 {
-//mixed derivatives for jump terms missing
+
+/**
+* @brief Ell Sparse Block Matrix format device version
+*
+* @ingroup lowlevel
+* This class holds a copy of a EllSparseBlockMat on the device, which may 
+be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It can be applied
+to device vectors and does the same thing as the host version
+*/
 struct EllSparseBlockMatDevice
 {
-    typedef double value_type;
+    /**
+    * @brief Allocate storage
+    *
+    * A device matrix has to be constructed from a host matrix. It simply
+        copies all internal data of the host matrix to the device
+        @param src  source on the host
+    */
     EllSparseBlockMatDevice( const EllSparseBlockMat& src)
     {
         data = src.data;
@@ -18,9 +32,16 @@ struct EllSparseBlockMatDevice
         n = src.n, left = src.left, right = src.right;
     }
     
+    /**
+    * @brief Apply the matrix to a vector
+    *
+    * @param x input
+    * @param y output may not equal input
+    */
+    void symv(const thrust::device_vector<double>& x, thrust::device_vector<double>& y) const;
+    private:
     typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
-    void symv(const DVec& x, DVec& y) const;
     void launch_multiply_kernel(const DVec& x, DVec& y) const;
     
     DVec data;
@@ -30,10 +51,22 @@ struct EllSparseBlockMatDevice
     int left, right;
 };
 
-//assume max one entry per line
+/**
+* @brief Coo Sparse Block Matrix format device version
+*
+* @ingroup lowlevel
+* This class holds a copy of a CooSparseBlockMat on the device, which may 
+be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thing as the host version with the difference that it applies to device vectors.
+*/
 struct CooSparseBlockMatDevice
 {
-    typedef double value_type;
+    /**
+    * @brief Allocate storage
+    *
+    * A device matrix has to be constructed from a host matrix. It simply
+        copies all internal data of the host matrix to the device
+        @param src  source on the host
+    */
     CooSparseBlockMatDevice( const CooSparseBlockMat& src)
     {
         data = src.data;
@@ -42,9 +75,18 @@ struct CooSparseBlockMatDevice
         n = src.n, left = src.left, right = src.right;
     }
     
+    /**
+    * @brief Apply the matrix to a vector
+    *
+    * @param alpha multiplies input
+    * @param x input
+    * @param beta premultiplies output
+    * @param y output may not equal input
+    */
+    void symv(double alpha, const thrust::device_vector<double>& x, double beta, thrust::device_vector<double>& y) const;
+    private:
     typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
-    void symv(double alpha, const DVec& x, double beta, DVec& y) const;
     void launch_multiply_kernel(double alpha, const DVec& x, double beta, DVec& y) const;
     
     DVec data;

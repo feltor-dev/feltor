@@ -1,32 +1,32 @@
-INCLUDE = -I../../inc/# include files
-INCLUDE += -I/$(HOME)/include
+device=gpu
 
-NVCC = nvcc
-NVCCFLAGS = --compiler-options -Wall -arch=sm_20 
+#configure machine 
+include ../../config/default.mk
+include ../../config/*.mk 
+include ../../config/devices/devices.mk
 
-GLFLAGS =$$(pkg-config --static --libs glfw3) -lGLEW
+INCLUDE+= -I../         # other src libraries
+INCLUDE+= -I../../inc   # other project libraries
 
 all: shu_t shu_b shu2d_b shu_hpc shu_dat
 
 shu_t: shu_t.cu shu.cuh 
-	$(NVCC) $< -o $@ $(NVCCFLAGS) $(INCLUDE) $(GLFLAGS) -DDG_DEBUG
+	$(CC) $< -o $@ $(CFLAGS) $(INCLUDE) $(GLFLAGS) -DDG_DEBUG
 
 shu_b: shu_b.cu shu.cuh 
-	$(NVCC) -O2 $< -o $@ $(NVCCFLAGS) -w $(INCLUDE) $(GLFLAGS)
-	echo "Attention: No compiler warnings are issued!" 
+	$(CC) $(OPT) $< -o $@ $(CFLAGS) $(INCLUDE) $(GLFLAGS)
 
 shu2d_b: shu2d_b.cu shu.cuh 
-	$(NVCC) -O2 $< -o $@ $(NVCCFLAGS) -w $(INCLUDE) 
-	echo "Attention: No compiler warnings are issued!" 
+	$(CC) $(OPT) $< -o $@ $(CFLAGS) $(INCLUDE) 
 
 shu_hpc: shu_hpc.cu shu.cuh
-	$(NVCC) -O2 $< -o $@ $(NVCCFLAGS) -w $(INCLUDE) -lhdf5 -lhdf5_hl
+	$(CC) $(OPT) $< -o $@ $(CFLAGS) $(INCLUDE) $(LIBS)
 
 shu_dat: shu_dat.cu 
-	$(NVCC) -O2 $< -o $@ $(NVCCFLAGS) -w $(INCLUDE) -lhdf5 -lhdf5_hl
+	$(CC) $(OPT) $< -o $@ $(CFLAGS) $(INCLUDE) $(LIBS)
 
 shu_time: shu_time.cu shu.cuh
-	$(NVCC) -O2 $< -o $@ $(NVCCFLAGS) -w $(INCLUDE) 
+	$(CC) $(OPT) $< -o $@ $(CFLAGS) $(INCLUDE) 
 .PHONY: clean
 
 clean:
