@@ -194,7 +194,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     Matrix ward = dg::dgtensor( g.n(), transformY, transformX);
 
     Matrix B;
-    cusp::multiply( A, ward, B);
+    cusp::multiply( A, ward, B); //braucht viel Speicher
     B.sort_by_row_and_column();
     return B;
 }

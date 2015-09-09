@@ -33,7 +33,7 @@ struct GeomParameters
      */   
     GeomParameters( const std::vector< double>& v) {
         A=v[1];
-        c.resize(13);
+        c.resize(13);//why 13, there are only 12??
         for (unsigned i=0;i<12;i++) c[i]=v[i+2];
         R_0 = v[14];
         a=R_0*v[15];
