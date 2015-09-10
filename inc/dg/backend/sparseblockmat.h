@@ -63,10 +63,16 @@ struct EllSparseBlockMat
     int n;  //!< each block has size n*n
     int left; //!< size of the left Kronecker delta
     int right; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
+
+    /**
+    * @brief Display internal data to a stream
+    *
+    * @param os the output stream
+    */
+    void display( std::ostream& os = std::cout) const;
 };
 
 
-//only one block per line assumed
 /**
 * @brief Coo Sparse Block Matrix format
 *
@@ -83,7 +89,6 @@ where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
 one-dimensional matrix. 
 @note This matrix type is used for the computation of boundary points in 
 mpi - distributed matrices 
-@attention For parallelization purposes there may not be more than one block in each line at this moment
 */
 struct CooSparseBlockMat
 {
@@ -135,6 +140,12 @@ struct CooSparseBlockMat
     * @param y output may not equal input
     */
     void symv(double alpha, const HVec& x, double beta, HVec& y) const;
+    /**
+    * @brief Display internal data to a stream
+    *
+    * @param os the output stream
+    */
+    void display(std::ostream& os = std::cout) const;
     
     HVec data;//!< The data array is of size n*n*num_different_blocks and contains the blocks
     IVec cols_idx; //!< is of size num_block_rows and contains the column indices 
@@ -216,16 +227,14 @@ if(right==1) //alle dx Ableitungen
     for( int s=0; s<left; s++)
     for( int i=1; i<num_rows-1; i++)
     {
-            int J = i+offset[d];
-    for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
-    {
-        int I = ((s*num_rows + i)*n+k)*right+j;
+        int J = i+offset[d];
+        for( int k=0; k<n; k++)
+        for( int j=0; j<right; j++)
         {
+            int I = ((s*num_rows + i)*n+k)*right+j;
             for( int q=0; q<n; q++) //multiplication-loop
                 y[I] += data[ (d*n+k)*n+q]*x[((s*num_cols + J)*n+q)*right+j];
         }
-    }
     }
     }
     for( int s=0; s<left; s++)
@@ -255,6 +264,54 @@ if(right==1) //alle dx Ableitungen
     //}
 }
 
+void EllSparseBlockMat::display( std::ostream& os) const
+{
+    os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
+    os << "num_rows         "<<num_rows<<"\n";
+    os << "num_cols         "<<num_cols<<"\n";
+    os << "blocks_per_line  "<<blocks_per_line<<"\n";
+    os << "n                "<<n<<"\n";
+    os << "left             "<<left<<"\n";
+    os << "right            "<<right<<"\n";
+    os << "Columns: \n";
+    for( int i=0; i<num_rows; i++)
+    {
+        for( int d=0; d<blocks_per_line; d++)
+            os << cols_idx[i*blocks_per_line + d] <<" ";
+        os << "\n";
+    }
+    os << "\n Data: \n";
+    for( int i=0; i<num_rows; i++)
+    {
+        for( int d=0; d<blocks_per_line; d++)
+            os << data_idx[i*blocks_per_line + d] <<" ";
+        os << "\n";
+    }
+    os << std::endl;
+    
+}
+
+void CooSparseBlockMat::display( std::ostream& os) const
+{
+    os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
+    os << "num_rows         "<<num_rows<<"\n";
+    os << "num_cols         "<<num_cols<<"\n";
+    os << "num_entries      "<<num_entries<<"\n";
+    os << "n                "<<n<<"\n";
+    os << "left             "<<left<<"\n";
+    os << "right            "<<right<<"\n";
+    os << " Columns: \n";
+    for( int i=0; i<num_entries; i++)
+        os << cols_idx[i] <<" ";
+    os << "\n Rows: \n";
+    for( int i=0; i<num_entries; i++)
+        os << rows_idx[i] <<" ";
+    os << "\n Data: \n";
+    for( int i=0; i<num_entries; i++)
+        os << data_idx[i] <<" ";
+    os << std::endl;
+    
+}
 void CooSparseBlockMat::symv( double alpha, const HVec& x, double beta, HVec& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
