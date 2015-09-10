@@ -24,7 +24,7 @@ double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
 double derivative( double x, double y, double z){return cos(x-R_0)*sin(y);}
 double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
 dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::DIR;
+dg::bc bcy = dg::PER;
 double initial( double x, double y, double z) {return sin(0);}
 
 
@@ -42,6 +42,7 @@ int main()
     dg::DVec v3d = dg::create::inv_weights( grid);
     dg::DVec x = dg::evaluate( initial, grid);
 
+    std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
     std::cout << "Create Laplacian\n";
     t.tic();
     dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
