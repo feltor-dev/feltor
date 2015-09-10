@@ -64,11 +64,15 @@ struct EllSparseBlockMat
     int left; //!< size of the left Kronecker delta
     int right; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
 
+    /**
+    * @brief Display internal data to a stream
+    *
+    * @param os the output stream
+    */
     void display( std::ostream& os = std::cout) const;
 };
 
 
-//only one block per line assumed
 /**
 * @brief Coo Sparse Block Matrix format
 *
@@ -85,7 +89,6 @@ where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
 one-dimensional matrix. 
 @note This matrix type is used for the computation of boundary points in 
 mpi - distributed matrices 
-@attention For parallelization purposes there may not be more than one block in each line at this moment
 */
 struct CooSparseBlockMat
 {
@@ -137,6 +140,11 @@ struct CooSparseBlockMat
     * @param y output may not equal input
     */
     void symv(double alpha, const HVec& x, double beta, HVec& y) const;
+    /**
+    * @brief Display internal data to a stream
+    *
+    * @param os the output stream
+    */
     void display(std::ostream& os = std::cout) const;
     
     HVec data;//!< The data array is of size n*n*num_different_blocks and contains the blocks

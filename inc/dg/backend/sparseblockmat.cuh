@@ -39,6 +39,11 @@ struct EllSparseBlockMatDevice
     * @param y output may not equal input
     */
     void symv(const thrust::device_vector<double>& x, thrust::device_vector<double>& y) const;
+    /**
+    * @brief Display internal data to a stream
+    *
+    * @param os the output stream
+    */
     void display( std::ostream& os = std::cout) const;
     private:
     typedef thrust::device_vector<double> DVec;
@@ -86,6 +91,11 @@ struct CooSparseBlockMatDevice
     * @param y output may not equal input
     */
     void symv(double alpha, const thrust::device_vector<double>& x, double beta, thrust::device_vector<double>& y) const;
+    /**
+    * @brief Display internal data to a stream
+    *
+    * @param os the output stream
+    */
     void display(std::ostream& os = std::cout) const;
     private:
     typedef thrust::device_vector<double> DVec;
@@ -322,9 +332,11 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
     for( int j=0; j<right; j++)
     {
         int I = ((s*num_rows + rows_idx[i])*n+k)*right+j;
+        double temp=0;
         for( int q=0; q<n; q++) //multiplication-loop
-            y[I]+= alpha*data[ (data_idx[i]*n + k)*n+q]*
+            temp+= data[ (data_idx[i]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i])*n+q)*right+j];
+        y[I] += alpha*temp;
     }
 }
 #else
@@ -392,8 +404,7 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
     for( int idx = thread_id; idx<size; idx += grid_size)
     {
         int s=idx/(n*right), 
-            //i = (idx/(right*n))%num_entries, 
-            k = (idx/right)%n, 
+            k=(idx/right)%n, 
             j=idx%right;
         int I = ((s*num_rows+rows_idx[entry])*n+k)*right+j;
         double temp = 0;
