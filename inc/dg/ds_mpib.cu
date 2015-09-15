@@ -12,7 +12,7 @@
 struct Field
 {
     Field( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp)
+    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp) const
     {
         for( unsigned i=0; i<y[0].size(); i++)
         {
@@ -22,15 +22,15 @@ struct Field
             yp[1][i] = -y[0][i]*y[0][i]/I_0 + R_0/I_0*y[0][i] ;
         }
     }
-    void operator()( const dg::HVec& y, dg::HVec& yp)
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double gradpsi = ((y[0]-R_0)*(y[0]-R_0) + y[1]*y[1])/I_0/I_0;
         yp[2] = y[0]*sqrt(1 + gradpsi);
         yp[0] = y[0]*y[1]/I_0;
         yp[1] = y[0]/I_0*(R_0-y[0]) ;
     }
-    double operator()( double R, double Z) {return 1;}
-    double operator()( double R, double Z, double phi) {return 1;}
+    double operator()( double R, double Z) const {return 1;}
+    double operator()( double R, double Z, double phi) const {return 1;}
     private:
     double R_0, I_0;
 };
