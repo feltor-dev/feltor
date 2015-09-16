@@ -49,7 +49,7 @@ struct Rolkar
         p(p),
         gp(gp),
         temp( dg::evaluate(dg::zero, g)),  omega(temp),        
-        dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
+        //dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perpN ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
         LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered)
@@ -132,12 +132,12 @@ struct Rolkar
      *
      * @return Vector containing damping 
      */
-    const container& damping(){return dampprof_;}
+    //const container& damping(){return dampprof_;}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
     container temp, omega;
-    const container dampprof_;
+    //const container dampprof_;
     const container dampgauss_;
     
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;

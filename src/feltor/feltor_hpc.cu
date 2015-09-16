@@ -107,7 +107,8 @@ int main( int argc, char* argv[])
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    //dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid),
+    //dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     feltor.initializene( y0[1], y0[0]);    
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0

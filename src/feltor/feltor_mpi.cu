@@ -33,6 +33,13 @@ int main( int argc, char* argv[])
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices==0){std::cerr << "No CUDA capable devices found"<<std::endl; return -1;}
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    cudaSetDevice( device);
+#endif//cuda
     int np[3];
     if(rank==0)
     {
@@ -89,8 +96,8 @@ int main( int argc, char* argv[])
     /////////////////////The initial field/////////////////////////////////////////
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+    //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
     //solovev::ZonalFlow init0(p, gp);
 
     //background profile
@@ -107,7 +114,8 @@ int main( int argc, char* argv[])
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    //dg::MDVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid),
+    //dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     feltor.initializene( y0[1], y0[0]);    
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
@@ -225,14 +233,17 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     //probe
+    double Nep=0, phip=0;
     if(rank==probeRANK) {
         dg::blas2::gemv(probeinterp,y0[0].data(),probevalue);
-        double Nep= probevalue[0] ;
+        Nep=probevalue[0] ;
         dg::blas2::gemv(probeinterp,feltor.potential()[0].data(),probevalue);
-        double phip=probevalue[0] ;
-        err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-        err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
+        phip=probevalue[0] ;
     }
+    MPI_Bcast( &Nep,1 , MPI_DOUBLE, probeRANK, grid.communicator());
+    MPI_Bcast( &phip,1 , MPI_DOUBLE, probeRANK, grid.communicator());
+    err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+    err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
     if(rank==0)std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
@@ -279,9 +290,11 @@ int main( int argc, char* argv[])
                 double Nep= probevalue[0] ;
                 dg::blas2::gemv(probeinterp,feltor.potential()[0].data(),probevalue);
                 double phip=probevalue[0] ;
-                err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-                err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
             }
+            MPI_Bcast( &Nep, 1 ,MPI_DOUBLE, probeRANK, grid.communicator());
+            MPI_Bcast( &phip,1 ,MPI_DOUBLE, probeRANK, grid.communicator());
+            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
             if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             if(rank==0)std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             if(rank==0)std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
