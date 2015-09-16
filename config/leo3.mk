@@ -13,3 +13,24 @@ OMPFLAG=-fopenmp
 LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
 LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
 endif
+#######################Submit script for gpu job################################
+##!/bin/bash
+#
+##$ -N gpu_benchmark
+##$ -o benchmark_gpu.txt
+##$ -l h_rt=00:40:00
+##$ -j yes
+##$ -cwd
+#
+##$ -l gpu=2
+#
+##reserve nodes 
+##$ -pe openmpi-2perhost 2
+##$ -l h_vmem=5G
+#
+#export FILE=benchmark_gpu.dat
+#
+#make cluster_mpib device=gpu
+#mv cluster_mpib cluster_gpub
+#echo "# npx npy npz #procs n Nx Ny Nz t_AXPBY t_DOT t_DX t_DY t_DZ t_ARAKAWA #iterations t_1xELLIPTIC_CG t_DS" > $FILE
+#echo 1 1 2  3 102 102 18 | mpirun -n 2 ./cluster_gpub >> $FILE
