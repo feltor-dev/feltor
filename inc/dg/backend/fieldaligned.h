@@ -354,7 +354,7 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
     if( deltaPhi <=0) deltaPhi = g_.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
 #ifdef _OPENMP
-#pragma omp parallel for firstprivate(field)
+#pragma omp parallel for shared(field)
 #endif //_OPENMP
     for( unsigned i=0; i<size; i++)
     {

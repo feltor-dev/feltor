@@ -16,9 +16,12 @@
   */
 
 namespace dg{
+///@addtogroup typedefs
+///@{
 //interpolation matrices
 typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
 typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
+///@}
 
 namespace create{
     ///@cond
@@ -77,6 +80,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
 
     int number = 0;
+    dg::Operator<double> forward( g.dlt().forward());
     for( unsigned i=0; i<x.size(); i++)
     {
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
@@ -97,19 +101,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n());
         //...these are the matrix coefficients with which to multiply 
+        std::vector<double> pxF(px.size(),0);
+        for( unsigned l=0; l<g.n(); l++)
+            for( unsigned k=0; k<g.n(); k++)
+                pxF[l]+= px[k]*forward(k,l);
         unsigned col_begin = n*g.n();
-        detail::add_line( A, number, i,  col_begin, px);
-        //choose layout from comments
+        detail::add_line( A, number, i,  col_begin, pxF);
     }
-    typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    
-    dg::Operator<double> forward( g.dlt().forward());
-    Matrix transformX = dg::tensor( g.N(), forward);
-
-    Matrix B( A);
-    cusp::multiply( A, transformX, B);
-    B.sort_by_row_and_column();
-    return B;
+    return A;
 }
 /**
  * @brief Create interpolation matrix
@@ -127,6 +126,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     assert( x.size() == y.size());
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
 
+    dg::Operator<double> forward( g.dlt().forward());
     int number = 0;
     for( unsigned i=0; i<x.size(); i++)
     {
@@ -165,11 +165,18 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n()), 
                             py = detail::coefficients( yn, g.n());
+        std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
+        for( unsigned l=0; l<g.n(); l++)
+            for( unsigned k=0; k<g.n(); k++)
+            {
+                pxF[l]+= px[k]*forward(k,l);
+                pyF[l]+= py[k]*forward(k,l);
+            }
         std::vector<double> pxy( g.n()*g.n());
         //these are the matrix coefficients with which to multiply 
-        for(unsigned k=0; k<py.size(); k++)
-            for( unsigned l=0; l<px.size(); l++)
-                pxy[k*px.size()+l]= py[k]*px[l];
+        for(unsigned k=0; k<pyF.size(); k++)
+            for( unsigned l=0; l<pxF.size(); l++)
+                pxy[k*px.size()+l]= pyF[k]*pxF[l];
         if (globalbcz == dg::DIR)
         {
             if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
@@ -187,16 +194,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
     if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
     if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
-    typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    dg::Operator<double> forward( g.dlt().forward());
-    Matrix transformX = dg::tensor( g.Nx(), forward);
-    Matrix transformY = dg::tensor( g.Ny(), forward);
-    Matrix ward = dg::dgtensor( g.n(), transformY, transformX);
-
-    Matrix B;
-    cusp::multiply( A, ward, B); //braucht viel Speicher
-    B.sort_by_row_and_column();
-    return B;
+    return A;
 }
 
 
@@ -220,6 +218,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     //assert( z.size() == g.size());
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
 
+    dg::Operator<double> forward( g.dlt().forward());
     int number = 0;
     for( unsigned i=0; i<x.size(); i++)
     {
@@ -270,10 +269,17 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         std::vector<double> px = detail::coefficients( xn, g.n()), 
                             py = detail::coefficients( yn, g.n()),
                             pz = detail::coefficients( zn, 1 );
+        std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
+        for( unsigned l=0; l<g.n(); l++)
+            for( unsigned k=0; k<g.n(); k++)
+            {
+                pxF[l]+= px[k]*forward(k,l);
+                pyF[l]+= py[k]*forward(k,l);
+            }
         std::vector<double> pxyz( g.n()*g.n());
         for(unsigned k=0; k<g.n(); k++)
             for( unsigned j=0; j<g.n(); j++)
-                pxyz[k*g.n()+j]= pz[0]*py[k]*px[j];
+                pxyz[k*g.n()+j]= pz[0]*pyF[k]*pxF[j];
 
         //...these are the matrix coefficients with which to multiply 
         if (globalbcz == dg::DIR)
@@ -290,19 +296,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxyz);
         //choose layout from comments
     }
-    typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
-    
-    dg::Operator<double> forward( g.dlt().forward());
-    Matrix transformX = dg::tensor( g.Nx(), forward);
-    Matrix transformY = dg::tensor( g.Ny(), forward);
-    Matrix transformZ = dg::tensor( g.Nz(), delta(1));
-    Matrix ward = dg::dgtensor( g.n(), transformY, transformX);
-    Matrix ward2 = dg::dgtensor( 1, transformZ, ward);
-
-    Matrix B;
-    cusp::multiply( A, ward2, B);
-    B.sort_by_row_and_column();
-    return B;
+    return A;
 }
 /**
  * @brief Create interpolation between two grids

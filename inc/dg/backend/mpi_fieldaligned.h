@@ -212,7 +212,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     else assert( g_.Nz() == 1 || grid.hz()==deltaPhi);
     unsigned localsize = grid.local().size();
 #ifdef _OPENMP
-#pragma omp parallel for firstprivate(field)
+#pragma omp parallel for shared(field)
 #endif //_OPENMP
     for( unsigned i=0; i<localsize; i++)
     {

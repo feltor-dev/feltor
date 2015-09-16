@@ -3,33 +3,46 @@
 #include <vector>
 #include <sstream>
 #include <cmath>
-// #define DG_DEBUG
 
 
 
-#include "dg/backend/xspacelib.cuh"
+#include "dg/algorithm.h"
 #include "dg/backend/timer.cuh"
-
+#include "dg/backend/xspacelib.cuh"
 #include "dg/backend/interpolation.cuh"
+
+
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "solovev/geometry.h"
 
 #include "feltor.cuh"
-#include "parameters.h"
-
 
 /*
    - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5. 
+   - Initializes and integrates Feltor and 
+   - writes outputs to a given outputfile using netcdf 
         density fields are the real densities in XSPACE ( not logarithmic values)
-*/
 
-const unsigned k = 3;//!< a change in k needs a recompilation
+*/
 
 int main( int argc, char* argv[])
 {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
     std::string input, geom;
@@ -40,7 +53,6 @@ int main( int argc, char* argv[])
     }
     else 
     {
-
         try{
             input = file::read_file( argv[1]);
             geom = file::read_file( argv[2]);
@@ -74,7 +86,7 @@ int main( int argc, char* argv[])
     eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
     std::cout << "Done!\n";
 
-    /////////////////////The initial field///////////////////////////////////////////
+    /////////////////////The initial field//////////////////////////////////////////
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
 //      dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
@@ -109,29 +121,30 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-    solovev::FieldR fieldR(gp);
-    solovev::FieldZ fieldZ(gp);
-    solovev::FieldP fieldP(gp);
-    dg::HVec vecR = dg::evaluate( fieldR, grid_out);
-    dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
-    dg::HVec vecP = dg::evaluate( fieldP, grid_out);
-    int vecID[3];
-    err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim_ids[1], &vecID[0]);
-    err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim_ids[1], &vecID[1]);
-    err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim_ids[1], &vecID[2]);
-    err = nc_enddef( ncid);
-    err = nc_put_var_double( ncid, vecID[0], vecR.data());
-    err = nc_put_var_double( ncid, vecID[1], vecZ.data());
-    err = nc_put_var_double( ncid, vecID[2], vecP.data());
-    err = nc_redef(ncid);
-
+    {
+        err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
+        solovev::FieldR fieldR(gp);
+        solovev::FieldZ fieldZ(gp);
+        solovev::FieldP fieldP(gp);
+        dg::HVec vecR = dg::evaluate( fieldR, grid_out);
+        dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
+        dg::HVec vecP = dg::evaluate( fieldP, grid_out);
+        int vecID[3];
+        err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dim_ids[1], &vecID[0]);
+        err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dim_ids[1], &vecID[1]);
+        err = nc_def_var( ncid, "BP", NC_DOUBLE, 3, &dim_ids[1], &vecID[2]);
+        err = nc_enddef( ncid);
+        err = nc_put_var_double( ncid, vecID[0], vecR.data());
+        err = nc_put_var_double( ncid, vecID[1], vecZ.data());
+        err = nc_put_var_double( ncid, vecID[2], vecP.data());
+        err = nc_redef(ncid);
+    }
+    
     //field IDs
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
     int dataIDs[5]; 
     for( unsigned i=0; i<5; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
-
     //energy IDs
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
@@ -181,10 +194,6 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-    dg::blas2::gemv(probeinterp,y0[0],probevalue);
-    double Nep= probevalue[0] ;
-    dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
-    double phip=probevalue[0] ;
     std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -193,15 +202,17 @@ int main( int argc, char* argv[])
 
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+    err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     //probe
+
+    dg::blas2::gemv(probeinterp,y0[0],probevalue);
+    double Nep= probevalue[0] ;
+    dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+    double phip=probevalue[0] ;
     err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
     err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
-    err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
-
-    
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
-
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
@@ -232,23 +243,23 @@ int main( int argc, char* argv[])
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
             evec = feltor.energy_vector();
-            dg::blas2::gemv(probeinterp,y0[0],probevalue);
-            Nep= probevalue[0] ;
-            dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
-            phip=probevalue[0] ;
             err = nc_open(argv[3], NC_WRITE, &ncid);
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
             for( unsigned i=0; i<5; i++)
-            {
                 err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
-            }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
-            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);         
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+
+            dg::blas2::gemv(probeinterp,y0[0],probevalue);
+            Nep= probevalue[0] ;
+            dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+            phip=probevalue[0] ;
+            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
+
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
@@ -258,7 +269,8 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         ti.toc();
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
-        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+        std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s";
+        ti.tic();
 #endif//DG_BENCHMARK
         //////////////////////////write fields////////////////////////
         start[0] = i;
@@ -275,6 +287,10 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);
+#ifdef DG_BENCHMARK
+        ti.toc();
+        std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
+#endif//DG_BENCHMARK
     }
     t.toc(); 
     unsigned hour = (unsigned)floor(t.diff()/3600);
@@ -287,4 +303,3 @@ int main( int argc, char* argv[])
     return 0;
 
 }
-
