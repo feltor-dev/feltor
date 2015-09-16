@@ -13,7 +13,10 @@ OMPFLAG=-fopenmp
 LIBS 	 = -L$(UIBK_HDF5_LIB) -lhdf5 -lhdf5_hl 
 LIBS 	+= -L$(UIBK_NETCDF_4_LIB) -lnetcdf -lcurl -lm
 endif
-#######################Submit script for gpu job################################
+##########################modules to load#############################
+#module load netcdf-4/4.3.2
+#module load cuda/5.0
+#######################Submit script for mpi+gpu job###########################
 ##!/bin/bash
 #
 ##$ -N gpu_benchmark
