@@ -184,7 +184,7 @@ struct MPI_FieldAligned
     RowDistMat<LocalMatrix, Communicator> plusT, minusT; //interpolation matrices
     //Communicator collM_, collP_;
 
-    dg::FieldAligned<LocalMatrix, LocalContainer > dz_;
+    dg::FieldAligned<LocalMatrix, LocalContainer > dz_; //only stores 2D matrix so no memory pb.
 };
 ///@cond
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
@@ -193,7 +193,7 @@ template <class Field, class Limiter>
 MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()),  
-    dz_(field, grid.global(), eps, limit, globalbcz)
+    dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
 {
     //Resize vector to local 2D grid size
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  

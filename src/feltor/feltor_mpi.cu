@@ -107,7 +107,7 @@ int main( int argc, char* argv[])
     //field aligning
     //dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3);
 
     //no field aligning (use 2D Feltor instead!!)
     //y1[1] = dg::evaluate( init0, grid);
@@ -263,7 +263,7 @@ int main( int argc, char* argv[])
             try{ karniadakis( feltor, rolkar, y0);}
             catch( dg::Fail& fail) { 
                 if(rank==0)std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                if(rank==0)std::cerr << "Does Simulation respect CFL condition?\n";
+                if(rank==0)std::cerr << "Does Simulation respect CFL condition?"<<std::endl;
                 err = nc_close(ncid);
                 MPI_Finalize();
                 return -1;
@@ -287,9 +287,9 @@ int main( int argc, char* argv[])
             if(rank==probeRANK)
             {
                 dg::blas2::gemv(probeinterp,y0[0].data(),probevalue);
-                double Nep= probevalue[0] ;
+                Nep= probevalue[0] ;
                 dg::blas2::gemv(probeinterp,feltor.potential()[0].data(),probevalue);
-                double phip=probevalue[0] ;
+                phip=probevalue[0] ;
             }
             MPI_Bcast( &Nep, 1 ,MPI_DOUBLE, probeRANK, grid.communicator());
             MPI_Bcast( &phip,1 ,MPI_DOUBLE, probeRANK, grid.communicator());

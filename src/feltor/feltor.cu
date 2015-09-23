@@ -93,7 +93,7 @@ int main( int argc, char* argv[])
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =2 ->2*2-1
+    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning
@@ -126,8 +126,8 @@ int main( int argc, char* argv[])
     double time = 0;
     unsigned step = 0;
     
-    const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = feltor.energy(), energy0 = E0, E1 = 0., diff = 0.;
+    const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();//mass_blob0 correct?
+    double E0 = feltor.energy(), energy0 = E0, E1 = 0., dEdt = 0.;
     
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
@@ -266,12 +266,12 @@ int main( int argc, char* argv[])
             std::cout << " Ne_p - 1  = " << probevalue[0] <<"\t";
             dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
             std::cout << " Phi_p = " << probevalue[0] <<"\t";
-            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
+            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             E1 = feltor.energy();
-            diff = (E1 - E0)/p.dt; //
+            dEdt = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
+            std::cout << "Accuracy: "<< 2.*fabs((dEdt-diss)/(dEdt+diss))<<" d E/dt = " << dEdt <<" Lambda =" << diss << "\n";
             
             E0 = E1;
 
