@@ -26,7 +26,6 @@ struct Field
     {
         double gradpsi = ((y[0]-R_0)*(y[0]-R_0) + y[1]*y[1])/I_0/I_0;
         yp[2] = y[0]*sqrt(1 + gradpsi);
-        //yp[2] = y[0]*y[0]/I_0/R_0; //now we integrate B\cdot\nabla
         yp[0] = y[0]*y[1]/I_0;
         yp[1] = y[0]/I_0*(R_0-y[0]) ;
     }
@@ -59,17 +58,17 @@ int main()
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    std::cout << "Yout typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
+    std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
     dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
     const dg::DVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
 
     dg::DDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
-    //dg::DS<dg::DMatrix, dg::DVec> ds( field, g3d, g3d.hz(), 1e-10, dg::DefaultLimiter(), dg::NEU);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
+
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::DVec solution = dg::evaluate( deri, g3d);
@@ -82,8 +81,15 @@ int main()
     std::cout << "Norm Solution "<<sqrt( norm)<<"\n";
     std::cout << "Relative Difference Is "<< sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm )<<"\n";
     std::cout << "Error is from the parallel derivative only if n>2\n"; //since the function is a parabola
-
-
+    dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
+    dg::GaussianZ modulate(M_PI, 2*M_PI, 1);
+    t.tic();
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 3);
+    t.toc();
+    std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
+    ds( function, derivative);
+    norm = dg::blas2::dot(w3d, derivative);
+    std::cout << "Norm Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     
     return 0;
 }

@@ -360,14 +360,12 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
     {
         thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
-
         double phi1 = deltaPhi;
         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
         phi1 =  - deltaPhi;
         boxintegrator( field, g2d, coords, coordsM, phi1, eps, globalbcz);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
-
     }
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);

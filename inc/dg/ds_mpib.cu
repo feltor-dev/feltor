@@ -29,8 +29,11 @@ struct Field
         yp[0] = y[0]*y[1]/I_0;
         yp[1] = y[0]/I_0*(R_0-y[0]) ;
     }
-    double operator()( double R, double Z) const {return 1;}
-    double operator()( double R, double Z, double phi) const {return 1;}
+    double operator()( double x, double y, double z) const
+    {
+        double gradpsi = ((x-R_0)*(x-R_0) + y*y)/I_0/I_0;
+        return  x/sqrt( 1 + gradpsi)/R_0/I_0;
+    }
     private:
     double R_0, I_0;
 };
@@ -63,10 +66,9 @@ int main(int argc, char* argv[])
     const dg::MDVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::MDDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::MDDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
 
     dg::MDDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered); 
-    //dg::DS<dg::MMatrix, dg::MDVec> ds( field, g3d, g3d.hz(), 1e-8, dg::DefaultLimiter());
     t.toc();
     if(rank==0)std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
@@ -82,6 +84,15 @@ int main(int argc, char* argv[])
     double norm2 = sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm);
     if(rank==0)std::cout << "Relative Difference Is "<< norm2<<"\n";    
     if(rank==0)std::cout << "(Error is from the parallel derivative only if n>2)\n"; //because the function is a parabola
+    dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
+    dg::GaussianZ modulate(M_PI, 2*M_PI, 1);
+    t.tic();
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 3);
+    t.toc();
+    if(rank==0)std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
+    ds( function, derivative);
+    norm = dg::blas2::dot(w3d, derivative);
+    if(rank==0)std::cout << "Norm Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
     MPI_Finalize();
     return 0;
 }
