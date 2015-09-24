@@ -247,7 +247,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
                                 pY = cp.collect( yp[1]),
                                 pZ = cp.collect( angle);
     //construt interpolation matrix
-    LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local());
+    LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     plus = ColDistMat<LocalMatrix, Communicator>(inter, cp);
     LocalMatrix interT;
     cusp::transpose( inter, interT);
@@ -271,7 +271,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     pX = cm.collect( ym[0]),
     pY = cm.collect( ym[1]),
     pZ = cm.collect( angle);
-    inter = dg::create::interpolation( pX, pY, pZ, grid.local());
+    inter = dg::create::interpolation( pX, pY, pZ, grid.local(), globalbcz);//inner points hopefully never lie exactly on local boundary
     minus = ColDistMat<LocalMatrix, Communicator>(inter, cm);
     cusp::transpose( inter, interT);
     minusT = RowDistMat<LocalMatrix, Communicator>( interT, cm);
