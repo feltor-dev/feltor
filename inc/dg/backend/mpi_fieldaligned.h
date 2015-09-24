@@ -193,7 +193,7 @@ template <class Field, class Limiter>
 MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()),  
-    dz_(field, grid.global(), eps, limit, globalbcz)
+    dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
 {
     //Resize vector to local 2D grid size
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
@@ -247,7 +247,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
                                 pY = cp.collect( yp[1]),
                                 pZ = cp.collect( angle);
     //construt interpolation matrix
-    LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local());
+    LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     plus = ColDistMat<LocalMatrix, Communicator>(inter, cp);
     LocalMatrix interT;
     cusp::transpose( inter, interT);
@@ -271,7 +271,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     pX = cm.collect( ym[0]),
     pY = cm.collect( ym[1]),
     pZ = cm.collect( angle);
-    inter = dg::create::interpolation( pX, pY, pZ, grid.local());
+    inter = dg::create::interpolation( pX, pY, pZ, grid.local(), globalbcz);//inner points hopefully never lie exactly on local boundary
     minus = ColDistMat<LocalMatrix, Communicator>(inter, cm);
     cusp::transpose( inter, interT);
     minusT = RowDistMat<LocalMatrix, Communicator>( interT, cm);
