@@ -244,7 +244,16 @@ struct Feltor
      */
     double energy_diffusion( ){ return ediff_;}
 
-
+    /**
+     * @brief 
+     \f[
+     \begin{align}
+\int_V d^3 x \left[ (1+\ln N)\Delta_\parallel N \right] = - \int_V d^3x \frac{(\nabla_\parallel N)^2}{N} , 
+\end{align}
+\f]
+     * @return energy loss by parallel electron diffusion
+     */
+    double fieldalignment() { return aligned_;}
 
   private:
 //     void curve( container& y, container& target);
@@ -280,7 +289,7 @@ struct Feltor
     const eule::Parameters p;
     const solovev::GeomParameters gp;
 
-    double mass_, energy_, diff_, ediff_;
+    double mass_, energy_, diff_, ediff_, aligned_;
     std::vector<double> evec;
 };
 ///@}
@@ -546,9 +555,19 @@ void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, st
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  
         dg::blas1::axpby(0.5*p.mu[i], omega,1., chi); //chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         if( p.nu_parallel != 0)
+        {
             Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(ds^2 N -ds lnB ds N)
+            if( i==0) //only electrons
+            {
+                dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN)
+                aligned_ = dg::blas2::dot( chi, w3d, lambda); //(1+lnN)*Delta_s N
+            }
+        }
         else 
+        {
+            if(i==0) aligned_ = 0;
             Dpar[i] = 0;
+        }
 
         //Compute perp dissipation 
         dg::blas2::gemv( lapperpN, y[i], lambda);
