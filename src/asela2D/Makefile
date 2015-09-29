@@ -13,7 +13,7 @@ all: asela asela_hpc
 asela: asela.cu ../asela/asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 	
-asela_hpc: asela_hpc.cpp ../asela/asela.cuh 
+asela_hpc: asela_hpc.cu ../asela/asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 
 asela_mpi: asela_mpi.cu ../asela/asela.cuh 

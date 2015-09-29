@@ -929,7 +929,7 @@ struct BHatP
 
 /**
  * @brief Delta function for poloidal flux \f$ B_Z\f$
-     \f[ (\nabla \psi_p)^2\delta(\psi_p(R,Z)-\psi_0) = \frac{\sqrt{ (\nabla \psi_p)^2}}{\sqrt{2\pi\varepsilon}} \exp\left(-\frac{(\psi_p(R,Z) - \psi_{0})^2}{2\varepsilon} \right)  \f]
+     \f[ |\nabla \psi_p|\delta(\psi_p(R,Z)-\psi_0) = \frac{\sqrt{ (\nabla \psi_p)^2}}{\sqrt{2\pi\varepsilon}} \exp\left(-\frac{(\psi_p(R,Z) - \psi_{0})^2}{2\varepsilon} \right)  \f]
  */
 struct DeltaFunction
 {
@@ -979,9 +979,9 @@ struct DeltaFunction
 /**
  * @brief Flux surface average over quantity
  *
- * The average is computing using the formula
- \f[ <f>(\psi_0) = \frac{1}{V} \int dV \delta(\psi_p(R,Z)-\psi_0) (\nabla\psi_p)^2f(R,Z) \f]
- with \f$ V = \int dV \delta(\psi_p(R,Z)-\psi_0)(\nabla\psi_p)^2\f$
+ * The average is computed using the formula
+ \f[ <f>(\psi_0) = \frac{1}{A} \int dV \delta(\psi_p(R,Z)-\psi_0) |\nabla\psi_p|f(R,Z) \f]
+ with \f$ A = \int dV \delta(\psi_p(R,Z)-\psi_0)|\nabla\psi_p|\f$
  * @tparam container  The container class of the vector to average
 
  */
@@ -1042,7 +1042,7 @@ struct FluxSurfaceAverage
 };
 /**
  * @brief Class for the evaluation of the safety factor q
- * \f[ q(\psi_0) = \frac{1}{2\pi} \int dV (\nabla\psi_p)^2 \delta(\psi_p-\psi_0) \alpha( R,Z) \f]
+ * \f[ q(\psi_0) = \frac{1}{2\pi} \int dV |\nabla\psi_p| \delta(\psi_p-\psi_0) \alpha( R,Z) \f]
  * @tparam container 
  *
  */
@@ -1058,7 +1058,7 @@ struct SafetyFactor
     SafetyFactor(const dg::Grid2d<double>& g2d, GeomParameters gp,   const container& f) :
     g2d_(g2d),
     gp_(gp),
-    f_(f),
+    f_(f), //why not directly use Alpha??
     psip_(gp),
     psipR_(gp),
     psipZ_(gp),
@@ -1078,7 +1078,7 @@ struct SafetyFactor
     }
     /**
      * @brief Calculate the q profile over the function f which has to be the global safety factor
-     * \f[ q(\psi_0) = \frac{1}{2\pi} \int dV (\nabla\psi_p)^2 \delta(\psi_p-\psi_0) \alpha( R,Z) \f]
+     * \f[ q(\psi_0) = \frac{1}{2\pi} \int dV |\nabla\psi_p| \delta(\psi_p-\psi_0) \alpha( R,Z) \f]
      *
      * @param psip0 the actual psi value for q(psi)
      */
@@ -1102,7 +1102,7 @@ struct SafetyFactor
 };
 /**
  * @brief Global safety factor
-\f[ \alpha(R,Z) = \frac{R_0I_{pol}(R,Z)}{R^2(\nabla\psi_p)^2} \f]
+\f[ \alpha(R,Z) = \frac{|B^\varphi|}{R^2|B^p|} = \frac{R_0I_{pol}(R,Z)}{R^2|\nabla\psi_p|} \f]
  */
 struct Alpha
 {
@@ -1113,7 +1113,7 @@ struct Alpha
         R_0(gp.R_0){ }
 
     /**
-    * @brief \f[ \frac{R_0I_{pol}(R,Z)}{R^2(\nabla\psi_p)^2} \f]
+    * @brief \f[ \frac{R_0I_{pol}(R,Z)}{R^2|\nabla\psi_p|} \f]
     */
     double operator()( double R, double Z) const
     {
