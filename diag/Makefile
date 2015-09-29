@@ -8,14 +8,13 @@ include ../config/devices/devices.mk
 INCLUDE+= -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
 
-TARGETS =  toefl_video toefl_analytics toefl_compare show com figure17 vmax toefl_radial ncdiag fftwdiag crosscoherencdiag feltorSdiag feltorSHdiag
+TARGETS =  toefl_video toefl_analytics toefl_compare show com figure17 vmax toefl_radial ncdiag filamentdiag fftwdiag crosscoherencdiag feltorSdiag feltorSHdiag
 
 all: $(TARGETS)
 
 
 toefl_video: toefl_video.cu 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl 
-	echo "Attention: No compiler warnings are issued!" 
 
 toefl_analytics: toefl_analytics.cu 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -lhdf5 -lhdf5_hl   
@@ -31,6 +30,8 @@ com: com.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 ncdiag: ncdiag.cpp
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
+filamentdiag: filamentdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 fftwdiag: fftwdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) -std=c++0x $< -o $@ $(INCLUDE) $(LIBS)  -lfftw3
