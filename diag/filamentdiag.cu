@@ -57,17 +57,6 @@ int main( int argc, char* argv[])
     //Grids
     dg::Grid3d<double > g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
     dg::Grid2d<double>  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
-    //1d grid
-    solovev::Psip psip(gp);
-    dg::HVec psipog2d   = dg::evaluate( psip, g2d_out);    
-    double psipmin = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
-    double psipmax = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(),psipmin,thrust::maximum<double>()  );
-    solovev::PsiPupil psipupil(gp,psipmax);
-    dg::HVec psipupilog2d   = dg::evaluate( psipupil, g2d_out);    
-    dg::HVec psipupilog3d   = dg::evaluate( psipupil, g3d_out);    
-    unsigned Npsi = 2;//set number of psivalues
-    std::cout << "psipmin =" << psipmin << " psipmax =" << psipmax << " Npsi =" << Npsi  <<std::endl;
-    dg::Grid1d<double>  g1d_out(psipmin  ,psipmax ,3, Npsi,dg::NEU); //one dimensional psigrid
     //--------generate nc file and define dimensions----------------
     int ncidout; 
     err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncidout);
@@ -93,44 +82,53 @@ int main( int argc, char* argv[])
     err = nc_close(ncidout);
     ////////////////////////////Define input parameters ///////////////////////////
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
-    std::vector<dg::HVec> fields3d(5,dg::evaluate(dg::zero,g3d_out));
+    std::vector<dg::HVec> fields3d_h(5,dg::evaluate(dg::zero,g3d_out));
+    std::vector<dg::DVec> fields3d_d(5,dg::evaluate(dg::zero,g3d_out));
     int dataIDs[5];
     size_t count[4]  = {1, g3d_out.Nz(), g3d_out.n()*g3d_out.Ny(), g3d_out.n()*g3d_out.Nx()};
     size_t start[4]  = {0, 0, 0, 0};
     double time=0.;
 
     ///////////////////////Define helper variables for computations////////
-    dg::HDS dsN( typename dg::HDS::FieldAligned(solovev::Field(gp), g3d_out, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g3d_out, dg::normed, dg::centered );
-    dg::HVec vor3d    = dg::evaluate( dg::zero, g3d_out);
-    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
-    const dg::HVec w3d = dg::create::weights( g3d_out);   
-    const dg::HVec w2d = dg::create::weights( g2d_out);   
-    const dg::HVec w1d = dg::create::weights( g1d_out);   
-    const dg::HVec curvR = dg::evaluate( solovev::CurvatureR(gp), g3d_out);
-    const dg::HVec curvZ = dg::evaluate( solovev::CurvatureZ(gp), g3d_out);
-    dg::Poisson<dg::HMatrix, dg::HVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
-    const dg::HVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
-    dg::HVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
-    dg::HVec temp2 = dg::evaluate(dg::zero , g3d_out) ;
-    dg::HVec npe = dg::evaluate(dg::zero , g3d_out) ; //y[0] + 1 = Ne
+    dg::DDS dsN( typename dg::DDS::FieldAligned(solovev::Field(gp), g3d_out, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g3d_out, dg::normed, dg::centered );
+    dg::DVec vor3d    = dg::evaluate( dg::zero, g3d_out);
+    dg::HVec transfer = dg::evaluate( dg::zero, g3d_out);
+    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    const dg::DVec w3d = dg::create::weights( g3d_out);   
+    const dg::DVec w2d = dg::create::weights( g2d_out);   
+    const dg::DVec curvR = dg::evaluate( solovev::CurvatureR(gp), g3d_out);
+    const dg::DVec curvZ = dg::evaluate( solovev::CurvatureZ(gp), g3d_out);
+    dg::Poisson<dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
+    const dg::DVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
+    const dg::DVec one3d    =  dg::evaluate(dg::one,g3d_out);
+    const dg::DVec one2d    =  dg::evaluate(dg::one,g2d_out);
+    dg::DVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
+    dg::DVec temp2 = dg::evaluate(dg::zero , g3d_out) ;
+    dg::DVec npe = dg::evaluate(dg::zero , g3d_out) ; //y[0] + 1 = Ne
 
-    const dg::HVec psipR =  dg::evaluate( solovev::PsipR(gp), g3d_out);
-    const dg::HVec psipRR = dg::evaluate( solovev::PsipRR(gp), g3d_out);
-    const dg::HVec psipZ =  dg::evaluate( solovev::PsipZ(gp), g3d_out);
-    const dg::HVec psipZZ = dg::evaluate( solovev::PsipZZ(gp), g3d_out);
-    const dg::HVec psipRZ = dg::evaluate( solovev::PsipRZ(gp), g3d_out);
+    //rewritten if straight fieldlines
+    dg::DVec psipR =  dg::evaluate( solovev::PsipR(gp), g3d_out);
+    dg::DVec psipZ =  dg::evaluate( solovev::PsipZ(gp), g3d_out);
     dg::blas1::pointwiseDot( psipR, psipR, temp1);
     dg::blas1::pointwiseDot( psipZ, psipZ, temp2);
     dg::blas1::axpby( 1., temp1, 1., temp2);
     dg::blas1::transform( temp2, temp2, dg::SQRT<double>());
-    const dg::HVec psipMag = temp2; //|\nabla \psi_p|
-    dg::HVec Depsip3d =  dg::evaluate(dg::zero , g3d_out) ;   
-    dg::HVec Depsip2d =  dg::evaluate(dg::zero , g2d_out) ;   
-    const dg::HVec one3d    =  dg::evaluate(dg::one,g3d_out);
-    const dg::HVec one2d    =  dg::evaluate(dg::one,g2d_out);
-    const dg::HVec one1d    =  dg::evaluate(dg::one,g1d_out);
+    dg::DVec psipMag = temp2; //|\nabla \psi_p|
+    bool straight = true;
+    if( gp.A != 0 ) straight = false;
+    for( unsigned i=0; i<gp.c.size(); i++)
+        if( gp.c[i] != 0) straight = false;
 
-    std::vector<dg::HVec> fields2d(5,dg::evaluate(dg::zero,g2d_out));
+    if( straight == true)
+    {
+        psipR = one3d;
+        psipZ = dg::evaluate(dg::zero, g3d_out);
+        psipMag = one3d;
+    }
+    dg::DVec Depsip3d =  dg::evaluate(dg::zero , g3d_out) ;   
+    dg::DVec Depsip2d =  dg::evaluate(dg::zero , g2d_out) ;   
+
+    std::vector<dg::DVec> fields2d(5,dg::evaluate(dg::zero,g2d_out));
     /////////////////////////begin timestepping/////////////////////////
     unsigned outlim = p.maxout;
     for( unsigned i=0; i<outlim; i++)//timestepping
@@ -140,27 +138,29 @@ int main( int argc, char* argv[])
         //write time data
         time += p.itstp*p.dt;
         err = nc_put_vara_double( ncidout, tvarID, start, count, &time);
-        std::cout << "Timestep = " << i << "  time = " << time << "\n";
+        std::cout << "Timestep = " << i << "/"<<outlim<<"  time = " << time << "\n";
         //---------------READ: Ne,Ni,Ue,Ui,Phi ----------------------
         for( unsigned j=0;j<5; j++)
         {
             err = nc_open( argv[1], NC_NOWRITE, &ncidin); //open 3d file
             err = nc_inq_varid(ncidin, names[j].data(), &dataIDs[j]);
-            err = nc_get_vara_double( ncidin, dataIDs[j], start, count, fields3d[j].data());
+            err = nc_get_vara_double( ncidin, dataIDs[j], start, count, fields3d_h[j].data());
+            fields3d_d[j] = fields3d_h[j];
             err = nc_close(ncidin);  //close 3d file
         }
-        dg::blas1::transform( fields3d[0], npe, dg::PLUS<double>(+1));
+        dg::blas1::transform( fields3d_d[0], npe, dg::PLUS<double>(+1));
         //get 2d density of MidPlane
         unsigned kmp = (g3d_out.Nz()/2);
-        thrust::copy( fields3d[0].begin() + kmp*g2d_out.size(), fields3d[0].begin() + (kmp+1)*g2d_out.size(), fields2d[0].begin());
+        thrust::copy( fields3d_d[0].begin() + kmp*g2d_out.size(), fields3d_d[0].begin() + (kmp+1)*g2d_out.size(), fields2d[0].begin());
         //----------------Start vorticity computation
-        dg::blas2::gemv( laplacian,fields3d[4],vor3d);
-        err = nc_put_vara_double( ncidout, dataIDs3d[0], start, count, vor3d.data());
+        dg::blas2::gemv( laplacian,fields3d_d[4],vor3d);
+        transfer = vor3d;
+        err = nc_put_vara_double( ncidout, dataIDs3d[0], start, count, transfer.data());
         //----------------Stop vorticity computation
         //--------------- Start RADIALELECTRONDENSITYFLUX computation
         //ExB term  =  1/B[phi,psi_p] term
-        dg::blas2::gemv( poisson.dxlhs(), fields3d[4], temp1); //temp1 = d_R phi
-        dg::blas2::gemv( poisson.dylhs(), fields3d[4], temp2);  //temp2 = d_Z phi
+        dg::blas2::gemv( poisson.dxlhs(), fields3d_d[4], temp1); //temp1 = d_R phi
+        dg::blas2::gemv( poisson.dylhs(), fields3d_d[4], temp2);  //temp2 = d_Z phi
         dg::blas1::pointwiseDot( psipZ, temp1, temp1);//temp1 = d_R phi d_Z psi_p
         dg::blas1::pointwiseDot( psipR, temp2, temp2); //temp2 = d_Z phi d_R psi_p 
         dg::blas1::axpby( 1.0, temp1, -1.0,temp2, Depsip3d);  //Depsip3d=[phi,psip]_RZ
@@ -169,7 +169,7 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot( curvR,  psipR, temp1);  //temp1 = K^R d_R psi
         dg::blas1::pointwiseDot( curvZ,  psipZ, temp2);  //temp2 = K^Z d_Z psi
         dg::blas1::axpby( 1.0, temp1, 1.0,temp2,  temp2);  //temp2 =K(psi_p)
-        dg::blas1::pointwiseDot(fields3d[2], fields3d[2], temp1); // temp1=U_e^2
+        dg::blas1::pointwiseDot(fields3d_d[2], fields3d_d[2], temp1); // temp1=U_e^2
         dg::blas1::pointwiseDot(temp1,temp2, temp1); // temp1=U_e^2 K(psi_p)
         dg::blas1::axpby( -1.0, temp2,1.0,  Depsip3d );  //Depsip3d = 1/B*[phi,psi_p]_RZ - K(psi_p) 
         dg::blas1::axpby(  0.5*p.mu[0], temp1, 1.0,  Depsip3d);  //Depsip3d = 1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p)
@@ -184,10 +184,10 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double(ncidout, dataIDs0d[3], start, count, &com);
         //------------------------STOP RADIALELECTRONDENSITYFLUX
         //------------------------Start NPhi Correlation computation
-        double normPhi = dg::blas2::dot(fields3d[4], w3d, fields3d[4]);
+        double normPhi = dg::blas2::dot(fields3d_d[4], w3d, fields3d_d[4]);
         dg::blas1::transform( npe, temp1, dg::LN<double>());
         double normLogN = dg::blas2::dot(temp1, w3d, temp1);
-        double correlation = dg::blas2::dot( fields3d[4], w3d, temp1)/normPhi/normLogN;  //<phi, lnN>/||phi||/||lnN||
+        double correlation = dg::blas2::dot( fields3d_d[4], w3d, temp1)/normPhi/normLogN;  //<phi, lnN>/||phi||/||lnN||
         err = nc_put_vara_double( ncidout, dataIDs0d[0], start, count, &correlation); 
         //--------------- Stop NPhi Correlation computation
         //----------------Start fieldaligned computation----------------
