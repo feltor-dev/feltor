@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: ds_geom_t geometry_t geometry_diag
 
 ds_geom_t: ds_geom_t.cu geometry.h 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)  -DDGDEBUG -DDG_BENCHMARK 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)  -DDG_BENCHMARK 
 
 geometry_t: geometry_t.cu geometry.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 

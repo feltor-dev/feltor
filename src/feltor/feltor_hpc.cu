@@ -23,6 +23,7 @@
    - writes outputs to a given outputfile using netcdf 
         density fields are the real densities in XSPACE ( not logarithmic values)
 
+<<<<<<< HEAD
 */
 
 int main( int argc, char* argv[])
