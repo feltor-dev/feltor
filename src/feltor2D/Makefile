@@ -13,7 +13,7 @@ all: feltor feltor_hpc
 feltor: feltor.cu ../feltor/feltor.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK -g
 	
-feltor_hpc: feltor_hpc.cpp ../feltor/feltor.cuh 
+feltor_hpc: feltor_hpc.cu ../feltor/feltor.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 
 feltor_mpi: feltor_mpi.cu ../feltor/feltor.cuh 
