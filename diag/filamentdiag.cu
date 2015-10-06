@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
     err = file::define_dimensions( ncidout, dim_ids, &tvarID, g3d_out);
 
     //-----------Create 0d, 1d, 2d and 3d variables ----------------
-    std::string names0d[5]  = {"correlationNphi", "Depsi_total", "fieldaligned", "com", "midplane_mass"};
+    std::string names0d[5]  = {"correlationNphi", "Depsi_total", "fieldaligned", "com_vel", "midplane_mass"};
     std::string names1d[0]  = {};
     std::string names2d[0]  = {};
     std::string names3d[1]  = {"vorticity"};
@@ -138,7 +138,7 @@ int main( int argc, char* argv[])
         //write time data
         time += p.itstp*p.dt;
         err = nc_put_vara_double( ncidout, tvarID, start, count, &time);
-        std::cout << "Timestep = " << i << "/"<<outlim<<"  time = " << time << "\n";
+        std::cout << "\rTimestep = " << i+1 << "/"<<outlim<<"  time = " << time << std::flush;
         //---------------READ: Ne,Ni,Ue,Ui,Phi ----------------------
         for( unsigned j=0;j<5; j++)
         {
@@ -175,7 +175,8 @@ int main( int argc, char* argv[])
         dg::blas1::axpby(  0.5*p.mu[0], temp1, 1.0,  Depsip3d);  //Depsip3d = 1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p)
         dg::blas1::pointwiseDot( Depsip3d, npe, Depsip3d); //Depsip3d = N_e*(1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p))
         dg::blas1::pointwiseDivide( Depsip3d, psipMag, Depsip3d); //Depsip3d = J\nabla\psi/|\nabla\psi|
-        double totalCurrent = dg::blas2::dot( Depsip3d, w3d, one3d);
+        double blobMass = dg::blas2::dot( fields3d_d[0], w3d, one3d);
+        double totalCurrent = dg::blas2::dot( Depsip3d, w3d, one3d)/blobMass;
         err = nc_put_vara_double( ncidout, dataIDs0d[1], start, count, &totalCurrent);
         thrust::copy( Depsip3d.begin() + kmp*g2d_out.size(), Depsip3d.begin() + (kmp+1)*g2d_out.size(), Depsip2d.begin()); //copy midplane
         double blob_mass_midplane = dg::blas2::dot( fields2d[0], w2d, one2d);
@@ -184,10 +185,11 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double(ncidout, dataIDs0d[3], start, count, &com);
         //------------------------STOP RADIALELECTRONDENSITYFLUX
         //------------------------Start NPhi Correlation computation
-        double normPhi = dg::blas2::dot(fields3d_d[4], w3d, fields3d_d[4]);
-        dg::blas1::transform( npe, temp1, dg::LN<double>());
-        double normLogN = dg::blas2::dot(temp1, w3d, temp1);
-        double correlation = dg::blas2::dot( fields3d_d[4], w3d, temp1)/normPhi/normLogN;  //<phi, lnN>/||phi||/||lnN||
+        dg::blas1::transform( fields3d_d[4], temp1, dg::EXP<double>());
+        dg::blas1::transform( npe, temp2, dg::PLUS<double>(0));
+        double norm1 = sqrt(dg::blas2::dot(temp1, w3d, temp1));
+        double norm2 = sqrt(dg::blas2::dot(temp2, w3d, temp2));
+        double correlation = dg::blas2::dot( temp1, w3d, temp2)/norm1/norm2;  //<phi, lnN>/||phi||/||lnN||
         err = nc_put_vara_double( ncidout, dataIDs0d[0], start, count, &correlation); 
         //--------------- Stop NPhi Correlation computation
         //----------------Start fieldaligned computation----------------
@@ -198,7 +200,7 @@ int main( int argc, char* argv[])
         //----------------Stop fieldaligned computation-----------------
         err = nc_close(ncidout);  //close netcdf files
     } //end timestepping
-    
+    std::cout << std::endl;
     return 0;
 }
 

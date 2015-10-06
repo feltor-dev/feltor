@@ -33,6 +33,8 @@ ncdiag: ncdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 filamentdiag: filamentdiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
+vmaxnc: vmaxnc.cu
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 fftwdiag: fftwdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) -std=c++0x $< -o $@ $(INCLUDE) $(LIBS)  -lfftw3
 histdiag: histdiag.cpp

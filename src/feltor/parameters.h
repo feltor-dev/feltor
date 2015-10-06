@@ -95,12 +95,24 @@ struct Parameters
             bgprofamp = v[29];
             omega_source = v[30];
             boxscaleRp = v[31];
-            boxscaleRm = v[32];
-            boxscaleZp = v[33];
-            boxscaleZm = v[34];
-            bc = map((int)v[35]);
-            pollim = (unsigned)v[36];
-            pardiss = (unsigned)v[37];
+            if(v.size() > 32)
+            {
+                boxscaleRm = v[32];
+                boxscaleZp = v[33];
+                boxscaleZm = v[34];
+                bc = map((int)v[35]);
+                pollim = (unsigned)v[36];
+                pardiss = (unsigned)v[37];
+            }
+            else //to be compatible with older versions
+            {
+                boxscaleRm = v[31];
+                boxscaleZp = v[31];
+                boxscaleZm = v[31];
+                bc = map( 1);
+                pollim = 0;
+                pardiss = 0;
+            }
         }
     }
     /**
