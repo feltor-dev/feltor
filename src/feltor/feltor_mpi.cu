@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
     /////////////////////The initial field/////////////////////////////////////////
     //background profile
     solovev::Nprofile prof(p, gp); //initial background profile
-    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
+    std::vector<dg::MDVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //perturbation 
     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1); //modulation along fieldline
     if( p.mode == 0 || p.mode == 1)
@@ -121,14 +121,14 @@ int main( int argc, char* argv[])
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
     if( p.mode == 2 || p.mode == 3)
     {
-        dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+        dg::MDVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
         dg::blas1::pointwiseDot(damping, y0[1], y0[1]); //damp with gaussprofdamp
     }
     feltor.initializene( y0[1], y0[0]);    
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////
     file::NC_Error_Handle err;
