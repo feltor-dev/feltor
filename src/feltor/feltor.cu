@@ -79,30 +79,36 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
-    //initial perturbation
-    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    //dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(p, gp);
-//     dg::CONSTANT init0( 0.);
-    
     //background profile
     solovev::Nprofile prof(p, gp); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
-    
-    //field aligning
-//     dg::CONSTANT gaussianZ( 1.);
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-//     y1[2] = dg::evaluate( gaussianZ, grid);
-//     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
-    //no field aligning
-//     y1[1] = dg::evaluate( init0, grid);
-    
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
+    //perturbation 
+    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1); //modulation along fieldline
+    if( p.mode == 0 || p.mode == 1)
+    {
+        dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+        if( p.mode == 0)
+            y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
+        if( p.mode == 1)
+            y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
+    }
+    if( p.mode == 2)
+    {
+        dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+        y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
+    }
+    if( p.mode == 3)
+    {
+        solovev::ZonalFlow init0(p, gp);
+        y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
+    }
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    //dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid),
-    //dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
+    if( p.mode == 2 || p.mode == 3)
+    {
+        dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+        dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
+    }
     std::cout << "intiialize ne" << std::endl;
     feltor.initializene( y0[1], y0[0]);    
     std::cout << "Done!\n";
@@ -126,7 +132,7 @@ int main( int argc, char* argv[])
     double time = 0;
     unsigned step = 0;
     
-    const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();//mass_blob0 correct?
+    const double mass0 = feltor.mass();
     double E0 = feltor.energy(), energy0 = E0, E1 = 0., dEdt = 0.;
     
     std::cout << "Begin computation \n";

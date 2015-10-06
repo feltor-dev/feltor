@@ -52,7 +52,7 @@ struct Parameters
     enum dg::bc bc; //!< global perpendicular boundary condition
     unsigned pollim; //!< 0= no poloidal limiter, 1 = poloidal limiter
     unsigned pardiss; //!< 0 = adjoint parallel dissipation, 1 = nonadjoint parallel dissipation
-
+    unsigned mode; //!< 0 = blob simulations (several rounds fieldaligned), 1 = straight blob simulation( 1 round fieldaligned), 2 = turbulence simulations ( 1 round fieldaligned), 
     /**
      * @brief constructor to make a const object
      *
@@ -103,6 +103,9 @@ struct Parameters
                 bc = map((int)v[35]);
                 pollim = (unsigned)v[36];
                 pardiss = (unsigned)v[37];
+                if( v.size() > 38)
+                    mode = (unsigned)v[38];
+                else mode = 0;
             }
             else //to be compatible with older versions
             {
@@ -112,6 +115,7 @@ struct Parameters
                 bc = map( 1);
                 pollim = 0;
                 pardiss = 0;
+                mode = 0;
             }
         }
     }
@@ -165,8 +169,9 @@ struct Parameters
         os << "Boundary condition is: \n"
             <<"     global BC             =              "<<bc<<"\n"
             <<"     Poloidal limiter      =              "<<pollim<<"\n"
-            <<"     Parallel dissipation  =              "<<pardiss<<"\n";
-        os << std::flush;//the endl is for the implicit flush 
+            <<"     Parallel dissipation  =              "<<pardiss<<"\n"
+            <<"     Computation mode      =              "<<mode<<"\n";
+        os << std::flush;
     }
     private:
     int layout_;
