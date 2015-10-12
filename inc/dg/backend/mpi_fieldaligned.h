@@ -119,13 +119,57 @@ struct MPI_FieldAligned
     template< class BinaryOp, class UnaryOp>
     MPI_Vector<LocalContainer> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
 
-    void einsPlus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& npe);
-    void einsMinus( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
-    void einsPlusT( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& npe);
-    void einsMinusT( const MPI_Vector<LocalContainer>& n, MPI_Vector<LocalContainer>& nme);
+    /**
+    * @brief Applies the interpolation to the next planes 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsPlus( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    /**
+    * @brief Applies the interpolation to the previous planes
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsMinus( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    /**
+    * @brief Applies the transposed interpolation to the previous plane 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsPlusT( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    /**
+    * @brief Applies the transposed interpolation to the next plane 
+    *
+    * @param in input 
+    * @param out output may not equal intpu
+    */
+    void einsMinusT( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    /**
+    * @brief hz is the distance between the plus and minus planes
+    *
+    * @return three-dimensional vector
+    */
     const MPI_Vector<LocalContainer>& hz()const {return hz_;}
+    /**
+    * @brief hp is the distance between the plus and current planes
+    *
+    * @return three-dimensional vector
+    */
     const MPI_Vector<LocalContainer>& hp()const {return hp_;}
+    /**
+    * @brief hm is the distance between the current and minus planes
+    *
+    * @return three-dimensional vector
+    */
     const MPI_Vector<LocalContainer>& hm()const {return hm_;}
+    /**
+    * @brief Access the underlying grid
+    *
+    * @return the grid
+    */
     const MPI_Grid3d& grid() const{return g_;}
   private:
     typedef cusp::array1d_view< typename LocalContainer::iterator> View;
@@ -142,15 +186,14 @@ struct MPI_FieldAligned
 
     dg::FieldAligned<LocalMatrix, LocalContainer > dz_;
 };
-//////////////////////////////////////DEFINITIONS/////////////////////////////////////
 ///@cond
-
+//////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class LocalMatrix, class Communicator, class LocalContainer>
 template <class Field, class Limiter>
 MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()),  
-    dz_(field, grid.global(), eps, limit, globalbcz)
+    dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
 {
     //Resize vector to local 2D grid size
     dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
@@ -165,12 +208,15 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     y[2] = dg::evaluate( dg::zero, grid.local());//distance (not angle)
     //integrate to next z-planes
     std::vector<thrust::host_vector<double> > yp(y), ym(y); 
-    thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
     if(deltaPhi<=0) deltaPhi = g_.hz();
     else assert( g_.Nz() == 1 || grid.hz()==deltaPhi);
     unsigned localsize = grid.local().size();
+#ifdef _OPENMP
+#pragma omp parallel for shared(field)
+#endif //_OPENMP
     for( unsigned i=0; i<localsize; i++)
     {
+        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
         double phi1 = deltaPhi;
         boxintegrator( field, g_.global(), coords, coordsP, phi1, eps, globalbcz);
@@ -201,7 +247,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
                                 pY = cp.collect( yp[1]),
                                 pZ = cp.collect( angle);
     //construt interpolation matrix
-    LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local());
+    LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     plus = ColDistMat<LocalMatrix, Communicator>(inter, cp);
     LocalMatrix interT;
     cusp::transpose( inter, interT);
@@ -225,7 +271,7 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     pX = cm.collect( ym[0]),
     pY = cm.collect( ym[1]),
     pZ = cm.collect( angle);
-    inter = dg::create::interpolation( pX, pY, pZ, grid.local());
+    inter = dg::create::interpolation( pX, pY, pZ, grid.local(), globalbcz);//inner points hopefully never lie exactly on local boundary
     minus = ColDistMat<LocalMatrix, Communicator>(inter, cm);
     cusp::transpose( inter, interT);
     minusT = RowDistMat<LocalMatrix, Communicator>( interT, cm);

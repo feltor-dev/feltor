@@ -301,38 +301,38 @@ struct ColDistMat
 template<class LI, class LO, class C>
 struct MatrixTraits<RowColDistMat<LI,LO, C> >
 {
-    typedef typename LI::value_type value_type;//!< value type
+    typedef typename MatrixTraits<LI>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
 template<class LI, class LO, class C>
 struct MatrixTraits<const RowColDistMat<LI,LO, C> >
 {
-    typedef typename LI::value_type value_type;//!< value type
+    typedef typename MatrixTraits<LI>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
 
 template<class L, class C>
 struct MatrixTraits<RowDistMat<L, C> >
 {
-    typedef typename L::value_type value_type;//!< value type
+    typedef typename MatrixTraits<L>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
 template<class L, class C>
 struct MatrixTraits<const RowDistMat<L, C> >
 {
-    typedef typename L::value_type value_type;//!< value type
+    typedef typename MatrixTraits<L>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
 template<class L, class C>
 struct MatrixTraits<ColDistMat<L, C> >
 {
-    typedef typename L::value_type value_type;//!< value type
+    typedef typename MatrixTraits<L>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
 template<class L, class C>
 struct MatrixTraits<const ColDistMat<L, C> >
 {
-    typedef typename L::value_type value_type;//!< value type
+    typedef typename MatrixTraits<L>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
 ///@endcond

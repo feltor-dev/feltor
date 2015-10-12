@@ -420,6 +420,17 @@ EllSparseBlockMat dx( const Grid1d<double>& g, bc bcx, direction dir = centered)
 {
     return dx_normed( g.n(), g.N(), g.h(), bcx, dir);
 }
+
+/**
+* @brief Create and assemble a host Matrix for the derivative in 1d
+*
+* Take the boundary condition from the grid
+* @ingroup create
+* @param g 1D grid
+* @param dir The direction of the first derivative
+*
+* @return Host Matrix 
+*/
 EllSparseBlockMat dx( const Grid1d<double>& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);

@@ -72,35 +72,35 @@ struct Poisson
     void operator()( container& lhs, container& rhs, container& result);
 
     /**
-     * @brief Return internally used 2d - x - derivative 
+     * @brief Return internally used x - derivative 
      *
      * The same as a call to dg::create::dx( g, bcx)
      * @return derivative
      */
     const Matrix& dxlhs() {return dxlhs_;}
     /**
-     * @brief Return internally used 2d - y - derivative in ell format in XSPACE
+     * @brief Return internally used y - derivative 
      *
      * The same as a call to dg::create::dy( g, bcy)
      * @return derivative
      */
     const Matrix& dylhs() {return dylhs_;}
     /**
-     * @brief Return internally used 2d - x - derivative 
+     * @brief Return internally used x - derivative 
      *
      * The same as a call to dg::create::dx( g, bcx)
      * @return derivative
      */
     const Matrix& dxrhs() {return dxrhs_;}
     /**
-     * @brief Return internally used 2d - y - derivative in ell format in XSPACE
+     * @brief Return internally used y - derivative
      *
      * The same as a call to dg::create::dy( g, bcy)
      * @return derivative
      */
     const Matrix& dyrhs() {return dyrhs_;}
     /**
-     * @brief Compute the total variation integrand in 2D, uses bc of rhs of poisson bracket
+     * @brief Compute the total variation integrand, uses bc of rhs of poisson bracket
      *
      * Computes \f[ (\nabla\phi)^2 \f]
      * @param phi function 

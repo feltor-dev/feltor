@@ -162,13 +162,10 @@ struct T5trunc
      * @brief Write one time - group
      *
      * @tparam T Type of the data-container. Must provide the data() function returning a pointer to double on the host.
-     * @param field1 The first dataset ("electrons")
-     * @param field2 The second dataset ("ions")
-     * @param field3 The third dataset ("impurities")
-     * @param field4 The fourth dataset ("potential")
+     * @param fields The datasets 
+     * @param names The names of the datasets 
      * @param time The time makes the group name
-     * @param nNx dimension in x - direction (second index)
-     * @param nNy dimension in y - direction (first index)
+     * @param dimensions the dimension its size defines the dimensionality of the dataset
      */
     template< class T>
     void write( const std::vector<T>& fields, const std::vector<std::string>& names, std::vector<unsigned> dimensions, double time)

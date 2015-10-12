@@ -177,7 +177,7 @@ class Elliptic
 };
 
 /**
- * @brief Operator that acts as a 2d negative elliptic differential operator
+ * @brief Operator that acts as a 3d negative elliptic differential operator
  *
  * @ingroup matrixoperators
  *
@@ -397,7 +397,7 @@ struct GeneralElliptic
     norm no_;
 };
 /**
- * @brief Operator that acts as a 2d negative elliptic differential operator. Is the symmetric of the GeneralElliptic with 
+ * @brief Operator that acts as a 3d negative elliptic differential operator. Is the symmetric of the GeneralElliptic with 
  * 0.5(D_+ + D_-) or vice versa
  *
  * @ingroup matrixoperators

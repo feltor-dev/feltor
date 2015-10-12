@@ -3,6 +3,7 @@
 #include <mpi.h>
 
 #include "sparseblockmat.h"
+#include "sparseblockmat.cuh"
 #include "vector_traits.h"
 #include "selfmade_blas.cuh"
 #include "thrust_vector_blas.cuh"
@@ -12,7 +13,6 @@
 #include "mpi_precon.h"
 #include "mpi_init.h"
 
-#include "sparseblockmat.cuh"
 #include "typedefs.cuh"
 #include "blas.h"
 

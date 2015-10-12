@@ -42,9 +42,8 @@ class Timer
     */
     void tic( ){ start = omp_get_wtime();}
     /**
-    * @brief Stop timer using MPI_Wtime
+    * @brief Stop timer using omp_get_wtime
     *
-    * @param comm the communicator 
     * @note uses MPI_Barrier(comm)
     */
     void toc( ){ stop = omp_get_wtime(); }

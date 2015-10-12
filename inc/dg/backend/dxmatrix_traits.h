@@ -8,6 +8,8 @@
 #include "matrix_categories.h"
 
 
+//exclude from doxygen Docu
+///@cond
 
 namespace dg{
 
@@ -36,6 +38,7 @@ namespace dg{
     };
 
 } //namespace dg
+///@endcond
 
 #endif //_DG_DXMATRIX_TRAITS
 

@@ -28,7 +28,7 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     typename VectorTraits<Vector>::value_type temp = doDot( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
     //communication
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, x.communicator());
-    MPI_Barrier(x.communicator());
+    //MPI_Barrier(x.communicator());
 
     return sum;
 }

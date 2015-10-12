@@ -31,10 +31,10 @@ inline void doGemv(
 
 template< class Matrix, class Vector>
 inline void doSymv(  
-              typename Matrix::value_type alpha, 
+              typename Vector::value_type alpha, 
               const Matrix& m,
               const Vector& x, 
-              typename Matrix::value_type beta, 
+              typename Vector::value_type beta, 
               Vector& y, 
               SelfMadeMatrixTag,
               AnyVectorTag)

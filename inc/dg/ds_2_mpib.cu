@@ -102,7 +102,7 @@ int main( int argc, char* argv[])
 
 
         dg::MPI_Grid3d g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER,dg::cylindrical, comm);
-        dg::MPI_Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn, comm);
+        dg::MPI_Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn, dg::DIR, dg::DIR, comm);
 
         if(rank==0)std::cout << "NR = " << Nxn << std::endl;
         if(rank==0)std::cout << "NZ = " << Nyn<< std::endl;

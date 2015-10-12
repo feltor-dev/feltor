@@ -8,10 +8,14 @@
  */
 namespace solovev
 {
-///@addtogroup geom
+///@addtogroup profiles
 ///@{
 /**
  * @brief Returns zero outside psipmax and inside psipmin, otherwise 1
+     \f[ \begin{cases}
+        1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
+        0  \text{ else}
+     \end{cases}\f]
  */ 
 struct Iris
 {
@@ -19,12 +23,23 @@ struct Iris
         gp_(gp),
         psip_(gp) {
         }
+
+    /**
+     * @brief 
+     \f[ \begin{cases}
+        1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
+        0  \text{ else}
+     \end{cases}\f]
+     */
     double operator( )(double R, double Z)
     {
         if( psip_(R,Z) > gp_.psipmax) return 0.;
         if( psip_(R,Z) < gp_.psipmin) return 0.;
         return 1.;
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -35,6 +50,10 @@ struct Iris
 };
 /**
  * @brief Returns zero outside psipmaxcut otherwise 1
+     \f[ \begin{cases}
+        0  \text{ if } \psi_p(R,Z) > \psi_{p,maxcut} \\
+        1  \text{ else}
+     \end{cases}\f]
  */ 
 struct Pupil
 {
@@ -42,11 +61,21 @@ struct Pupil
         gp_(gp),
         psip_(gp) {
         }
+    /**
+     * @brief 
+     \f[ \begin{cases}
+        0  \text{ if } \psi_p(R,Z) > \psi_{p,maxcut} \\
+        1  \text{ else}
+     \end{cases}\f]
+     */
     double operator( )(double R, double Z)
     {
         if( psip_(R,Z) > gp_.psipmaxcut) return 0.;
         return 1.;
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -57,6 +86,10 @@ struct Pupil
 };
 /**
  * @brief Returns psi inside psipmax and psipmax outside psipmax
+     \f[ \begin{cases}
+        \psi_{p,max}  \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
+        \psi_p(R,Z) \text{ else}
+     \end{cases}\f]
  */ 
 struct PsiPupil
 {
@@ -64,12 +97,22 @@ struct PsiPupil
         gp_(gp),
         psipmax_(psipmax),
         psip_(gp) {
-        }
+        } 
+    /**
+     * @brief 
+     \f[ \begin{cases}
+        \psi_{p,max}  \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
+        \psi_p(R,Z) \text{ else}
+     \end{cases}\f]
+     */
     double operator( )(double R, double Z)
     {
         if( psip_(R,Z) > psipmax_) return psipmax_;
         return  psip_(R,Z);
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -81,10 +124,11 @@ struct PsiPupil
 };
 /**
  * @brief Sets values to one outside psipmaxcut, zero else
+     \f[ \begin{cases}
+        1  \text{ if } \psi_p(R,Z) > \psi_{p,maxlim} \\
+        0  \text{ else}
+     \end{cases}\f]
  *
- * \f$ 1 \f$, if \f$ \psi_p(R,Z) > \psi_{p,maxcut}\f$
- *
- * \f$ 0 \f$, if \f$ \psi_p(R,Z) < \psi_{p,maxcut}\f$
  */ 
 struct PsiLimiter
 {
@@ -93,11 +137,21 @@ struct PsiLimiter
         psip_(gp) {
         }
 
+    /**
+     * @brief 
+     \f[ \begin{cases}
+        1  \text{ if } \psi_p(R,Z) > \psi_{p,maxlim} \\
+        0  \text{ else}
+     \end{cases}\f]
+     */
     double operator( )(double R, double Z)
     {
         if( psip_(R,Z) > gp_.psipmaxlim) return 1.;
         return 0.;
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -113,12 +167,13 @@ struct PsiLimiter
  * @brief Damps the outer boundary in a zone 
  * from psipmaxcut to psipmaxcut+ 4*alpha with a normal distribution
  * Returns 1 inside, zero outside and a gaussian within
+     \f[ \begin{cases}
+ 1 \text{ if } \psi_p(R,Z) < \psi_{p,max,cut}\\
+ 0 \text{ if } \psi_p(R,Z) > (\psi_{p,max,cut} + 4\alpha) \\
+ \exp\left( - \frac{(\psi_p - \psi_{p,max,cut})^2}{2\alpha^2}\right), \text{ else}
+ \end{cases}
+   \f]
  *
- * \f$ 0 \f$, if \f$ \psi_p(R,Z) > \psi_{p,max,cut} + 4\alpha \f$
- *
- * \f$ 1 \f$, if \f$ \psi_p(R,Z) < \psi_{p,max,cut}\f$
- *
- * \f$ \exp\left( - \frac{(\psi_p - \psi_{p,max,cut})^2}{2\alpha^2}\right)\f$, else
  */ 
 struct GaussianDamping
 {
@@ -126,12 +181,24 @@ struct GaussianDamping
         gp_(gp),
         psip_(gp) {
         }
+    /**
+     * @brief 
+     \f[ \begin{cases}
+ 1 \text{ if } \psi_p(R,Z) < \psi_{p,max,cut}\\
+ 0 \text{ if } \psi_p(R,Z) > (\psi_{p,max,cut} + 4\alpha) \\
+ \exp\left( - \frac{(\psi_p - \psi_{p,max,cut})^2}{2\alpha^2}\right), \text{ else}
+ \end{cases}
+   \f]
+     */
     double operator( )(double R, double Z)
     {
         if( psip_(R,Z) > gp_.psipmaxcut + 4.*gp_.alpha) return 0.;
         if( psip_(R,Z) < (gp_.psipmaxcut)) return 1.;
         return exp( -( psip_(R,Z)-gp_.psipmaxcut)*( psip_(R,Z)-gp_.psipmaxcut)/2./gp_.alpha/gp_.alpha);
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -144,12 +211,13 @@ struct GaussianDamping
  * @brief Damps the inner boundary in a zone 
  * from psipmax to psipmax+ 4*alpha with a normal distribution
  * Returns 1 inside, zero outside and a gaussian within
+     \f[ \begin{cases}
+ 1 \text{ if } \psi_p(R,Z) < (\psi_{p,max} - 4\alpha)\\
+ 0 \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
+ \exp\left( - \frac{(\psi_p - \psi_{p,max} + 4\alpha)^2}{2\alpha^2}\right), \text{ else}
+ \end{cases}
+   \f]
  *
- * \f$ 0 \f$, if \f$ \psi_p(R,Z) > \psi_{p,max} + 4\alpha \f$
- *
- * \f$ 1 \f$, if \f$ \psi_p(R,Z) < \psi_{p,max}\f$
- *
- * \f$ \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right)\f$, else
  */ 
 struct GaussianProfDamping
 {
@@ -157,12 +225,24 @@ struct GaussianProfDamping
         gp_(gp),
         psip_(gp) {
         }
+    /**
+     * @brief 
+     \f[ \begin{cases}
+ 1 \text{ if } \psi_p(R,Z) < (\psi_{p,max} - 4\alpha)\\
+ 0 \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
+ \exp\left( - \frac{(\psi_p - \psi_{p,max} + 4\alpha)^2}{2\alpha^2}\right), \text{ else}
+ \end{cases}
+   \f]
+     */
     double operator( )(double R, double Z)
     {
         if( psip_(R,Z) > gp_.psipmax ) return 0.;
         if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
         return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -175,13 +255,14 @@ struct GaussianProfDamping
  * @brief Damps the inner boundary in a zone 
  * from psipmax to psipmax+ 4*alpha with a normal distribution
  * Returns 1 inside, zero outside and a gaussian within
- * Additionaly cuts if Z < Z_xpoint
+ * Additionally cuts if Z < Z_xpoint
+     \f[ \begin{cases}
+ 1 \text{ if } \psi_p(R,Z) < (\psi_{p,max} - 4\alpha) \\
+ 0 \text{ if } \psi_p(R,Z) > \psi_{p,max} || Z < -1.1\varepsilon a  \\
+ \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right), \text{ else}
+ \end{cases}
+   \f]
  *
- * \f$ 0 \f$, if \f$ \psi_p(R,Z) > \psi_{p,max} + 4\alpha \f$
- *
- * \f$ 1 \f$, if \f$ \psi_p(R,Z) < \psi_{p,max}\f$
- *
- * \f$ \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right)\f$, else
  */ 
 struct GaussianProfXDamping
 {
@@ -189,12 +270,24 @@ struct GaussianProfXDamping
         gp_(gp),
         psip_(gp) {
         }
+    /**
+     * @brief 
+     \f[ \begin{cases}
+ 1 \text{ if } \psi_p(R,Z) < (\psi_{p,max} - 4\alpha) \\
+ 0 \text{ if } \psi_p(R,Z) > \psi_{p,max} \text{ or } Z < -1.1\varepsilon a  \\
+ \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right), \text{ else}
+ \end{cases}
+   \f]
+     */
     double operator( )(double R, double Z)
     {
-     if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
+        if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
         if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
         return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -206,7 +299,8 @@ struct GaussianProfXDamping
 
 /**
  * @brief source for quantities N ... dtlnN = ...+ source/N
- * Returns a tanh profile shifted to psipmin-3*alpha
+ * Returns a tanh profile shifted to \f$ \psi_{p,min}-3\alpha\f$
+ \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha}\right)\right) \f]
  */
 struct TanhSource
 {
@@ -215,10 +309,17 @@ struct TanhSource
         gp_(gp),
         psip_(gp) {
         }
+    /**
+     * @brief \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha}\right)\right)
+   \f]
+     */
     double operator( )(double R, double Z)
     {
         return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
@@ -255,10 +356,11 @@ struct TanhSource
 
 /**
  * @brief Returns density profile with variable peak amplitude and background amplitude 
- *
- * \f$ N(R,Z) =  A_{bg} + A_{peak}\frac{\psi_p} {\psi_p(R_0, 0)} \f$, for \f$\psi_p < \f$\psi_p_max\f$ 
- *
- * \f$ N(R,Z) =  A_{bg} \f$, else
+     *\f[ N(R,Z)=\begin{cases}
+ A_{bg} + A_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
+ A_{bg} \text{ else } 
+ \end{cases}
+   \f]
  */ 
 struct Nprofile
 {
@@ -267,11 +369,21 @@ struct Nprofile
         gp_(gp),
         psip_(gp) {
         }
+    /**
+     * @brief \f[ N(R,Z)=\begin{cases}
+ A_{bg} + A_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
+ A_{bg} \text{ else } 
+ \end{cases}
+   \f]
+     */
    double operator( )(double R, double Z)
     {
         if (psip_(R,Z)<gp_.psipmax) return p_.bgprofamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*p_.nprofileamp);
         return p_.bgprofamp;
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator( )(double R, double Z, double phi)
     {
         return (*this)(R,Z);
@@ -284,6 +396,11 @@ struct Nprofile
 
 /**
  * @brief returns zonal flow field 
+     \f[ N(R,Z)=\begin{cases}
+    A_{bg} |\cos(2\pi\psi_p(R,Z) k_\psi)| \text{ if }\psi_p < \psi_{p,max} \\
+    0 \text{ else } 
+ \end{cases}
+   \f]
  */ 
 struct ZonalFlow
 {
@@ -292,12 +409,22 @@ struct ZonalFlow
         gp_(gp),
         psip_(gp) {
     }
+    /**
+     * @brief \f[ N(R,Z)=\begin{cases}
+ A_{bg} |\cos(2\pi\psi_p(R,Z) k_\psi)| \text{ if }\psi_p < \psi_{p,max} \\
+  0 \text{ else } 
+ \end{cases}
+   \f]
+     */
     double operator() (double R, double Z)
     {
       if (psip_(R,Z)<gp_.psipmax) return (p_.amp*fabs(cos(2.*M_PI*psip_(R,Z)*p_.k_psi)));
       return 0.;
 
     }
+    /**
+    * @brief == operator()(R,Z)
+    */
     double operator() (double R, double Z,double phi)
     {
         return (*this)(R,Z);
@@ -309,7 +436,8 @@ struct ZonalFlow
 };
 
 /**
- * @brief testfunction to test the parallel derivative \f[ f = \psi_p(R,Z) \sin{(\varphi)}\f]
+ * @brief testfunction to test the parallel derivative 
+      \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
  */ 
 struct TestFunction
 {
@@ -319,6 +447,9 @@ struct TestFunction
         bhatR_(gp),
         bhatZ_(gp),
         bhatP_(gp) {}
+    /**
+     * @brief \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
+     */ 
     double operator()( double R, double Z, double phi)
     {
 //         return psip_(R,Z,phi)*sin(phi);
@@ -345,7 +476,7 @@ struct TestFunction
 };
 /**
  * @brief analyitcal solution of the parallel derivative of the testfunction
- *  \f[ \nabla_\parallel f = \psi_p(R,Z) b^\varphi \cos{(\varphi)}\f]
+ *  \f[ \nabla_\parallel(R,Z,\varphi) f = \frac{\sin(\varphi)}{R}\f]
  */ 
 struct DeriTestFunction
 {
@@ -355,6 +486,9 @@ struct DeriTestFunction
         bhatR_(gp),
         bhatZ_(gp),
         bhatP_(gp) {}
+/**
+ * @brief \f[ \nabla_\parallel f = \frac{\sin(\varphi)}{R}\f]
+ */ 
     double operator()( double R, double Z, double phi)
     {
 //         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;

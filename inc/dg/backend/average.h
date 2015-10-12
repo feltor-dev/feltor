@@ -13,14 +13,12 @@
 namespace dg{
 
 /**
- * @brief Class for y average computations
+ * @brief MPI specialized class for y average computations
  *
  * @ingroup utilities
  * @tparam container Vector class to be used
  * @tparam IndexContainer Class for scatter maps
  */
-
-
 template< class container, class IndexContainer>
 struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
 {

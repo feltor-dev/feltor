@@ -257,7 +257,17 @@ struct BijectiveComm
      * @return # of elements to send
      */
     unsigned send_size() const {return p_.values_size();}
+    /**
+    * @brief The size of the collected vector
+    *
+    * @return 
+    */
     unsigned size() const {return p_.store_size();}
+    /**
+    * @brief The internal communicator used 
+    *
+    * @return MPI Communicator
+    */
     MPI_Comm communicator() const {return p_.communicator();}
     private:
     Index idx_;

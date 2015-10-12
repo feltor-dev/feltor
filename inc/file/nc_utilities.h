@@ -137,7 +137,7 @@ int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d<d
  *
  * Dimensions are named x, and time
  * @param ncid file ID
- * @param dimIDs dimension ID
+ * @param dimsIDs dimension ID
  * @param tvarID time ID
  * @param g The 1d DG grid from which data points are generated
  *
