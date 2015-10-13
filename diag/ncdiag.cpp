@@ -254,7 +254,7 @@ int main( int argc, char* argv[])
         //----------------Stop vorticity computation
         //----------------Start Perpendicular ELECTRONDENSITYFLUX computation
         //poissonpart
-        dg::blas1::transform(fields3d[0], temp3, dg::PLUS<>(+1)); //Ne +1
+        dg::blas1::transform(fields3d[0], temp3, dg::PLUS<>(+1)); // = Ne
         poisson( fields3d[4], fields3d[0], Deperp3d); //D_perp,e = [phi,N_e]_RZ
         dg::blas1::pointwiseDot( Deperp3d, binv, Deperp3d); //D_perp,e = 1/B*[phi,N_e]_RZ              
         //curvpart
@@ -294,6 +294,13 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( -1.0, temp2,1.0,  Depsip3d );  //Depsip3d = 1/B*[phi,psi_p]_RZ - K(psi_p) 
         dg::blas1::axpby(  0.5*p.mu[0], temp1, 1.0,  Depsip3d);  //Depsip3d = 1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p)
         dg::blas1::pointwiseDot( Depsip3d, temp3, Depsip3d); //Depsip3d = N_e*(1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p))
+        //normalize by 1/|nabla psip|
+        dg::blas1::pointwiseDot( psipR, psipR, temp1);
+        dg::blas1::pointwiseDot( psipZ, psipZ, temp2);
+        dg::blas1::axpby(  1.0, temp1, 1.0,temp2,  temp1);
+        dg::blas1::transform(temp1, temp1, dg::SQRT<double>());
+        dg::blas1::pointwiseDivide( Depsip3d, temp1, Depsip3d); //Depsip3d = N_e*(1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p))
+      
         toravg(Depsip3d,Depsip2davg);
 
         solovev::FluxSurfaceAverage<dg::HVec> fsaDepsip(g2d_out,gp, Depsip2davg );
@@ -303,7 +310,10 @@ int main( int argc, char* argv[])
         dg::blas1::axpby(1.0,Depsip3d,-1.0, Depsip3dfluc, Depsip3dfluc); 
         //Same procedure for fluc
         toravg(Depsip3dfluc,Depsip2dflucavg);
+        //fluctuation
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, Depsip2dflucavg.data());
+        //toroidal avg
+        err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, Depsip2davg.data());
         solovev::FluxSurfaceAverage<dg::HVec> fsaDepsipfluc(g2d_out,gp,  Depsip2dflucavg );
         dg::HVec  Depsip1Dflucfsa = dg::evaluate(fsaDepsipfluc,g1d_out);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[8], start1d, count1d,   Depsip1Dflucfsa.data()); 
