@@ -437,14 +437,14 @@ struct PsipRZ
  */ 
 struct Ipol
 {
-    Ipol(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), psip_(gp) { }
+    Ipol(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp) { }
     /**
     * @brief \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f] 
     */ 
     double operator()(double R, double Z) const
     {    
         //sign before A changed to -
-        return sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
+        return qampl_*sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
     }
     /**
      * @brief == operator()(R,Z)
@@ -452,14 +452,14 @@ struct Ipol
     double operator()(double R, double Z, double phi) const
     {    
         //sign before A changed to -
-      return sqrt(-2.*A_*psip_(R,Z,phi)/R_0_ + 1.);
+      return  qampl_*sqrt(-2.*A_*psip_(R,Z,phi)/R_0_ + 1.);
     }
     void display() const
     {
       std::cout<< R_0_ <<"  "  << A_ <<"\n";
     }
     private:
-    double R_0_, A_;
+    double R_0_, A_,qampl_;
     Psip psip_;
 };
 
@@ -526,7 +526,7 @@ struct LnB
  */ 
 struct BR
 {
-    BR(GeomParameters gp):  R_0_(gp.R_0), A_(gp.A), psipR_(gp), psipRR_(gp),psipZ_(gp) ,psipRZ_(gp), invB_(gp) { }
+    BR(GeomParameters gp):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psipR_(gp), psipRR_(gp),psipZ_(gp) ,psipRZ_(gp), invB_(gp) { }
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
       -\frac{\hat{R}^2\hat{R}_0^{-2} \hat{B}^2+A\hat{R} \hat{R}_0^{-1}   \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)  
@@ -538,7 +538,7 @@ struct BR
     double Rn;
     Rn = R/R_0_;
     //sign before A changed to +
-    return -( Rn*Rn/invB_(R,Z)/invB_(R,Z)+ Rn *A_*psipR_(R,Z) - R  *(psipZ_(R,Z)*psipRZ_(R,Z)+psipR_(R,Z)*psipRR_(R,Z)))/(R*Rn*Rn/invB_(R,Z));
+    return -( Rn*Rn/invB_(R,Z)/invB_(R,Z)+ qampl_*qampl_*Rn *A_*psipR_(R,Z) - R  *(psipZ_(R,Z)*psipRZ_(R,Z)+psipR_(R,Z)*psipRR_(R,Z)))/(R*Rn*Rn/invB_(R,Z));
   }
     /**
      * @brief == operator()(R,Z)
@@ -548,11 +548,12 @@ struct BR
     double Rn;
     Rn = R/R_0_;
     //sign before A changed to +
-    return -( Rn*Rn/invB_(R,Z,phi)/invB_(R,Z,phi)+ Rn *A_*psipR_(R,Z,phi) - R *(psipZ_(R,Z,phi)*psipRZ_(R,Z,phi)+psipR_(R,Z,phi)*psipRR_(R,Z,phi)))/(R*Rn*Rn/invB_(R,Z,phi));
+    return -( Rn*Rn/invB_(R,Z,phi)/invB_(R,Z,phi)+ qampl_*qampl_*Rn *A_*psipR_(R,Z,phi) - R *(psipZ_(R,Z,phi)*psipRZ_(R,Z,phi)+psipR_(R,Z,phi)*psipRR_(R,Z,phi)))/(R*Rn*Rn/invB_(R,Z,phi));
   }
   private:
     double R_0_;
     double A_;
+    double qampl_;
     PsipR psipR_;
     PsipRR psipRR_;
     PsipZ psipZ_;
@@ -564,7 +565,7 @@ struct BR
  */ 
 struct BZ
 {
-    BZ( GeomParameters gp):  R_0_(gp.R_0), A_(gp.A), psipR_(gp),psipZ_(gp), psipZZ_(gp) ,psipRZ_(gp), invB_(gp) { }
+    BZ( GeomParameters gp):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psipR_(gp),psipZ_(gp), psipZZ_(gp) ,psipRZ_(gp), invB_(gp) { }
   /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
  \frac{-A \hat{R}_0^{-1}    \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}   \right)+
@@ -576,7 +577,7 @@ struct BZ
     double Rn;
     Rn = R/R_0_;
     //sign before A changed to -
-    return (-A_/R_0_*psipZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z)+psipZ_(R,Z)*psipZZ_(R,Z))/(Rn*Rn/invB_(R,Z));
+    return (-qampl_*qampl_*A_/R_0_*psipZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z)+psipZ_(R,Z)*psipZZ_(R,Z))/(Rn*Rn/invB_(R,Z));
   }
     /**
      * @brief == operator()(R,Z)
@@ -586,11 +587,12 @@ struct BZ
       //sign before A changed to -
     double Rn;
     Rn = R/R_0_;
-    return (-A_/R_0_*psipZ_(R,Z,phi) + psipR_(R,Z,phi)*psipRZ_(R,Z,phi)+psipZ_(R,Z,phi)*psipZZ_(R,Z,phi))/(Rn*Rn/invB_(R,Z,phi));
+    return (-qampl_*qampl_*A_/R_0_*psipZ_(R,Z,phi) + psipR_(R,Z,phi)*psipRZ_(R,Z,phi)+psipZ_(R,Z,phi)*psipZZ_(R,Z,phi))/(Rn*Rn/invB_(R,Z,phi));
   }
   private:
     double R_0_;
     double A_;
+    double qampl_;
     PsipR psipR_;
     PsipZ psipZ_;
     PsipZZ psipZZ_;

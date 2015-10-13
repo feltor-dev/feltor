@@ -23,7 +23,8 @@ struct GeomParameters
            psipmin, //!< for source 
            psipmax, //!< for profile
            psipmaxcut, //!< for cutting
-           psipmaxlim; //!< for limiter
+           psipmaxlim,  //!< for limiter
+           qampl; //scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
      /**
      * @brief constructor to make an object
@@ -49,6 +50,7 @@ struct GeomParameters
         psipmax= v[21];
         psipmaxcut = v[22];
         psipmaxlim = v[23];
+        qampl = v[24];
     }
     /**
      * @brief Display parameters
@@ -71,7 +73,8 @@ struct GeomParameters
             <<" psipmin       = "<<psipmin<<"\n"
             <<" psipmax       = "<<psipmax<<"\n"
             <<" psipmaxcut    = "<<psipmaxcut<<"\n"
-            <<" psipmaxlim    = "<<psipmaxlim<<"\n";
+            <<" psipmaxlim    = "<<psipmaxlim<<"\n"
+            <<" qampl    = "<<qampl<<"\n";
         os << std::flush;
 
     }
