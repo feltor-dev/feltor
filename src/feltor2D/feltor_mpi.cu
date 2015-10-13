@@ -16,8 +16,8 @@
 
 #include "solovev/geometry.h"
 
-#include "asela/asela.cuh"
-#include "asela/parameters.h"
+#include "feltor/feltor.cuh"
+#include "feltor/parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -79,10 +79,10 @@ int main( int argc, char* argv[])
    
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
     dg::MPI_Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, dg::cylindrical, comm);  
-    dg::Grid3d<double> grid_out = dg::create::ghostless_grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, comm);  
+     dg::MPI_Grid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, dg::cylindrical, comm);  
      
     //create RHS 
-    eule::Asela< dg::MHDS, dg::MHMatrix, dg::MHVec, dg::MHVec > asela( grid, p, gp); 
+    eule::Feltor< dg::MHDS, dg::MHMatrix, dg::MHVec, dg::MHVec > feltor( grid, p, gp); 
     eule::Rolkar< dg::MHMatrix, dg::MHVec, dg::MHVec > rolkar( grid, p, gp);
 
     /////////////////////The initial field////////////////////////////////////////////
@@ -99,7 +99,7 @@ int main( int argc, char* argv[])
 
     //averaged field aligned initializer
     //dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    //y1[1] = asela.ds().fieldaligned().evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    //y1[1] = feltor.dz().evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 
     //no field aligning
     y1[1] = dg::evaluate( init0, grid);
@@ -107,14 +107,14 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
-    asela.initializene(y0[1],y0[0]);    
+    feltor.initializene(y0[1],y0[0]);    
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::MHVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( asela, rolkar, y0, p.dt);
-    asela.energies(y0); //now energies and potential are at time 0
+    karniadakis.init( feltor, rolkar, y0, p.dt);
+    //feltor.energies(y0); //now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -146,10 +146,10 @@ int main( int argc, char* argv[])
     }
 
     //field IDs 
-    std::string names[6] = {"electrons", "ions", "Ue", "Ui", "potential","apar"}; 
-    int dataIDs[6]; //VARIABLE IDS
+    std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
+    int dataIDs[5]; //VARIABLE IDS
     //use global dimensionality
-    for( unsigned i=0; i<6; i++)
+    for( unsigned i=0; i<5; i++)
     {
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dimids, &dataIDs[i]);
         err = nc_var_par_access( ncid, dataIDs[i], NC_COLLECTIVE);
@@ -159,13 +159,13 @@ int main( int argc, char* argv[])
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
-    int energyID, massID, energyIDs[6], dissID, dEdtID, accuracyID;
+    int energyID, massID, energyIDs[5], dissID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_var_par_access( ncid, energyID, NC_COLLECTIVE);
     err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
     err = nc_var_par_access( ncid, massID, NC_COLLECTIVE);
-    std::string energies[6] = {"Se", "Si", "Uperp", "Upare", "Upari","Uapar"}; 
-    for( unsigned i=0; i<6; i++){
+    std::string energies[5] = {"Se", "Si", "Uperp", "Upare", "Upari"}; 
+    for( unsigned i=0; i<5; i++){
         err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);
         err = nc_var_par_access( ncid, energyIDs[i], NC_COLLECTIVE);
     }
@@ -179,41 +179,32 @@ int main( int argc, char* argv[])
     ///////////////////////////////////first output/////////////////////////////////
     int dims[3],  coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
+    size_t count[4] = {1, grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
     dg::MHVec transferD( dg::evaluate(dg::zero, grid));
-    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
     //create local interpolation matrix
-    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out, grid.local()); 
+    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
     if(rank==0)std::cout << "First output ...\n";
-    for( unsigned j=0; j<2; j++)
+    for( unsigned i=0; i<4; i++)
     {
-        dg::blas2::symv( interpolate, y0[j].data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
+        dg::blas2::symv( interpolate, y0[i].data(), transferH);
+        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
-    transferD = asela.uparallel()[0];
+    transferD = feltor.potential()[0];
     dg::blas2::symv( interpolate, transferD.data(), transferH);
-    err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
-    transferD = asela.uparallel()[1];
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
-    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-    transferD = asela.potential()[0];
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
-    err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-    transferD = asela.aparallel();
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
-    err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
+    err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data());
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    double energy0 = asela.energy(), mass0 = asela.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-    std::vector<double> evec = asela.energy_vector();
+    double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+    std::vector<double> evec = feltor.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
-    for( unsigned i=0; i<6; i++)
+    for( unsigned i=0; i<5; i++)
         err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
 
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
@@ -235,7 +226,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( asela, rolkar, y0);}
+            try{ karniadakis( feltor, rolkar, y0);}
             catch( dg::Fail& fail) { 
                 if(rank==0)std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 if(rank==0)std::cerr << "Does Simulation respect CFL condition?\n";
@@ -245,24 +236,24 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
-            asela.energies(y0);//advance potential and energies
+            //feltor.energies(y0);//advance potential and energies
             Estart[0] = step;
-            E1 = asela.energy(), mass = asela.mass(), diss = asela.energy_diffusion();
+            E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
             E0 = E1;
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
-            evec = asela.energy_vector();
+            evec = feltor.energy_vector();
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
-            for( unsigned i=0; i<6; i++)
+            for( unsigned i=0; i<5; i++)
             {
                 err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
             }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
-            if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (asela.mass()-mass0)/mass0<<"\t";
+            if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             if(rank==0)std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             if(rank==0)std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
         }
@@ -275,23 +266,14 @@ int main( int argc, char* argv[])
         //err = nc_open_par( argv[3], NC_WRITE|NC_MPIIO, comm, info, &ncid);
         //////////////////////////write fields////////////////////////
         start[0] = i;
-        for( unsigned j=0; j<2; j++)
+        for( unsigned j=0; j<4; j++)
         {
             dg::blas2::symv( interpolate, y0[j].data(), transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        transferD = asela.uparallel()[0];
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
-        transferD = asela.uparallel()[1];
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-        transferD = asela.potential()[0];
+        transferD = feltor.potential()[0];
         dg::blas2::symv( interpolate, transferD.data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-        transferD = asela.aparallel();
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 
         //err = nc_close(ncid); DONT DO IT!

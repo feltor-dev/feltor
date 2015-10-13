@@ -33,8 +33,12 @@ struct GeomParameters
      */   
     GeomParameters( const std::vector< double>& v) {
         A=v[1];
-        c.resize(13);
+        c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
         for (unsigned i=0;i<12;i++) c[i]=v[i+2];
+        c[12] = 0;
+        if( A!=0) c[12] = 1;
+        for( unsigned i=0; i<12; i++)
+            if(c[i]!=0) c[12] = 1.;
         R_0 = v[14];
         a=R_0*v[15];
         elongation=v[16];
@@ -55,7 +59,7 @@ struct GeomParameters
     {
         os << "Geometrical parameters are: \n"
             <<" A             = "<<A<<"\n";
-        for( unsigned i=0; i<12; i++)
+        for( unsigned i=0; i<13; i++)
             os<<" c"<<i+1<<"\t\t = "<<c[i]<<"\n";
 
         os  <<" R0            = "<<R_0<<"\n"

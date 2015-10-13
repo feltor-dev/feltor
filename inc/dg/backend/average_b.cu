@@ -1,11 +1,13 @@
 #include <iostream>
-#include "timer.cuh"
 #include "average.cuh"
+#include "timer.cuh"
 
 namespace dg
 {
 typedef thrust::host_vector<double> HVec;
 typedef thrust::device_vector<double> DVec;
+typedef thrust::host_vector<  int> IHVec;
+typedef thrust::device_vector<int> IDVec;
 }
 
 const double lx = 2.*M_PI;
@@ -24,8 +26,8 @@ int main()
     std::cin >> n >> Nx >> Ny;
     const dg::Grid2d<double> g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::PoloidalAverage<dg::HVec, thrust::host_vector<int > pol(g);
-    dg::PoloidalAverage<dg::DVec, thrust::device_vector<int> > pol_device(g);
+    dg::PoloidalAverage<dg::HVec, dg::IHVec > pol(g);
+    dg::PoloidalAverage<dg::DVec, dg::IDVec > pol_device(g);
     dg::Timer t;
 
     dg::HVec vector = dg::evaluate( function ,g), vector_y( vector);

@@ -91,9 +91,9 @@ EllSparseBlockMat distribute_rows( const EllSparseBlockMat& src, int coord, cons
         temp.cols_idx[i] = src.cols_idx[ coord*(chunk_size*src.blocks_per_line)+i];
         //data indices are correct but cols are still the global indices (remapping a bit clumsy)
         //first in the zeroth line the col idx might be (global)num_cols - 1 -> map that to -1
-        if( i/src.blocks_per_line == 0 && temp.cols_idx[i] == src.num_cols-1) temp.cols_idx[i] = -1; 
+        if( coord==0 && i/src.blocks_per_line == 0 && temp.cols_idx[i] == src.num_cols-1) temp.cols_idx[i] = -1; 
         //second in the last line the col idx mighty be 0 -> map to (global)num_cols
-        if( (int)i/src.blocks_per_line == temp.num_rows-1 && temp.cols_idx[i] == 0) temp.cols_idx[i] = src.num_cols;  
+        if( coord==(howmany[1]-1)&& (int)i/src.blocks_per_line == temp.num_rows-1 && temp.cols_idx[i] == 0) temp.cols_idx[i] = src.num_cols;  
         //Elements are now in the range -1, 0, 1,..., (global)num_cols
         //now shift this range to chunk range -1,..,chunk_size
         temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size ); 
@@ -105,6 +105,8 @@ EllSparseBlockMat distribute_rows( const EllSparseBlockMat& src, int coord, cons
 } //namespace detail
 
 ///@endcond
+///@addtogroup highlevel
+///@{
 
 /**
 * @brief Create a 2d derivative in the x-direction for mpi
@@ -139,7 +141,7 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d&
 * @brief Create a 2d derivative in the y-direction for mpi
 *
 * @param g A 2D mpi grid
-* @param bcx boundary condition
+* @param bcy boundary condition
 * @param dir centered, forward or backward
 *
 * @return  A mpi matrix
@@ -193,7 +195,7 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid
 * @brief Create a 2d jump in the y-direction for mpi
 *
 * @param g A 2D mpi grid
-* @param bcx boundary condition
+* @param bcy boundary condition
 *
 * @return  A mpi matrix
 */
@@ -503,6 +505,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpZ( const MPI_Grid3
 }
 
 
+///@} 
 
 
 } //namespace create

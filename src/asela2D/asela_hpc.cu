@@ -24,8 +24,6 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
-const unsigned k = 3;//!< a change in k needs a recompilation
-
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
@@ -153,7 +151,7 @@ int main( int argc, char* argv[])
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
     size_t start[4] = {0, 0, 0, 0};
-    size_t count[4] = {1., grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    size_t count[4] = {1, grid_out.Nz(), grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     dg::DVec transfer(  dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));

@@ -10,19 +10,18 @@
 
 namespace dg
 {
-///@addtogroup mpi_structures
+///@addtogroup grid
 ///@{
 
 /**
  * @brief 2D MPI Grid class 
  *
- * Represents the local grid coordinates including overlap. 
- * The grids of different processes overlap in the x- and y- coordinate. 
- * This helps when computing derivatives, but introduces additional 
- * bookkeeping in everything else. Recommended to change in future 
- * releases. 
+ * Represents the local grid coordinates and the process topology. 
+ * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
+ * @attention
+ * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
  *
- * For now one is faced with three grids in mpi computations: The global grid, which holds the global boundaries and number of grid cells, the local grid (with overlap) which is the global grid divided by the # of processes plus the ghostcells, and the local grid without ghostcells.
+ * @note Note that a single cell is never divided across processes.
  */
 struct MPI_Grid2d
 {
@@ -282,10 +281,9 @@ struct MPI_Grid2d
  * Represents the local grid coordinates and the process topology. 
  * It just divides the given box into nonoverlapping subboxes that are attributed to each process
  * @attention
- * The boundaries in the constructors are global boundaries, the boundaries given in the access functions are local boundaries, this is because the grid represents the information given to one process
+ * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
  *
- * @note Note
- * that a single cell is never divided across processes.
+ * @note Note that a single cell is never divided across processes.
  */
 struct MPI_Grid3d
 {
@@ -590,9 +588,8 @@ struct MPI_Grid3d
      */
     Grid3d<double> global() const {return g;}
     /**
-     * @brief Returns the pid of the process that holds the local grid surrounding a given point
+     * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
-     * local means that there is a margin of hx, hy around the x-y planes
      * @param x X-coord
      * @param y Y-coord
      * @param z Z-coord
@@ -604,7 +601,7 @@ struct MPI_Grid3d
     Grid3d<double> g; //global grid
     MPI_Comm comm; //just an integer...
 };
-
+///@cond
 int MPI_Grid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
@@ -622,6 +619,7 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
     else
         return -1;
 }
+///@endcond
 
 ///@}
 }//namespace dg

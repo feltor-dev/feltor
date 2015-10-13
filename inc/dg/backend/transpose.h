@@ -1,6 +1,8 @@
 #pragma once
 
+//some thoughts on how to transpose a MPI matrix 
 
+///@cond
 namespace dg
 {
 
@@ -26,5 +28,6 @@ Matrix transpose( const Matrix& src)
 {
     out = doTranspose( src, typename MatrixTraits<Matrix>::matrix_category());
 }
+///@endcond
 
 } //namespace dg

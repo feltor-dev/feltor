@@ -49,7 +49,7 @@ struct Rolkar
         p(p),
         gp(gp),
         temp( dg::evaluate(dg::zero, g)),  omega(temp),        
-        dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
+        //dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perpN ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
         LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered)
@@ -132,12 +132,12 @@ struct Rolkar
      *
      * @return Vector containing damping 
      */
-    const container& damping(){return dampprof_;}
+    //const container& damping(){return dampprof_;}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
     container temp, omega;
-    const container dampprof_;
+    //const container dampprof_;
     const container dampgauss_;
     
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;
@@ -244,7 +244,16 @@ struct Feltor
      */
     double energy_diffusion( ){ return ediff_;}
 
-
+    /**
+     * @brief 
+     \f[
+     \begin{align}
+\int_V d^3 x \left[ (1+\ln N)\Delta_\parallel N \right] = - \int_V d^3x \frac{(\nabla_\parallel N)^2}{N} , 
+\end{align}
+\f]
+     * @return energy loss by parallel electron diffusion
+     */
+    double fieldalignment() { return aligned_;}
 
   private:
 //     void curve( container& y, container& target);
@@ -280,7 +289,7 @@ struct Feltor
     const eule::Parameters p;
     const solovev::GeomParameters gp;
 
-    double mass_, energy_, diff_, ediff_;
+    double mass_, energy_, diff_, ediff_, aligned_;
     std::vector<double> evec;
 };
 ///@}
@@ -405,60 +414,59 @@ void Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<
         //Parallel dissipation
         if( p.nu_parallel != 0)
         {
-                #ifndef MPI_VERSION
-                if (p.pardiss==0)
-                {
-                    if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);
-                    dsN_.forward(y[i], omega); 
-                    dsN_.forwardT(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
+            double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]*p.tau[1]/p.c, p.nu_parallel, p.nu_parallel};
+            if (p.pardiss==0)
+            {
+                if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);
+                dsN_.forward(y[i], omega); 
+                dsN_.forwardT(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., yp[i]); 
 
-                    dsN_.backward( y[i], omega); 
-                    dsN_.backwardT(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
-                    if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);         
-                    dsDIR_.forward(y[i+2], omega); 
-                    dsDIR_.forwardT(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
+                dsN_.backward( y[i], omega); 
+                dsN_.backwardT(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., yp[i]); 
+                if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);         
+                dsDIR_.forward(y[i+2], omega); 
+                dsDIR_.forwardT(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., yp[i+2]); 
 
-                    dsDIR_.backward( y[i+2], omega); 
-                    dsDIR_.backwardT(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
-                }
-                #endif
-                if (p.pardiss==1)
-                {
-                    if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);
+                dsDIR_.backward( y[i+2], omega); 
+                dsDIR_.backwardT(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., yp[i+2]); 
+            }
+            if (p.pardiss==1)
+            {
+                if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);
 //                     dsN_.dsz(y[i],omega);                                          //ds^2 N 
-//                     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i]);       
+//                     dg::blas1::axpby( nu_parallel[i], omega, 1., yp[i]);       
 //         
 //                     //gradlnBcorrection
 //                     dsN_(y[i], dsy[i]);       
 //                     dg::blas1::pointwiseDot(gradlnB, dsy[i], omega);            // ds lnB ds N
-//                     dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i]);    
+//                     dg::blas1::axpby(-nu_parallel[i], omega, 1., yp[i]);    
 
-                    dsN_.forward( y[i], omega); 
-                    dsDIR_.forwardTD(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
-                    dsN_.backward( y[i], omega); 
-                    dsDIR_.backwardTD(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i]); 
-       
-                    if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);      
+                dsN_.forward( y[i], omega); 
+                dsDIR_.forwardTD(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., yp[i]); 
+                dsN_.backward( y[i], omega); 
+                dsDIR_.backwardTD(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., yp[i]); 
+   
+                if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);      
 //                     dsDIR_.dsz(y[i+2],omega);                                   
-//                     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[i+2]);      
+//                     dg::blas1::axpby( nu_parallel[i+2], omega, 1., yp[i+2]);      
 //         
 //                     //gradlnBcorrection
 //                     dsDIR_(y[i+2], dsy[i+2]);                                   //ds U
 //                     dg::blas1::pointwiseDot(gradlnB,dsy[i+2], omega);           // ds lnB ds U
-//                     dg::blas1::axpby(-p.nu_parallel, omega, 1., yp[i+2]); 
-                    dsDIR_.forward( y[i+2], omega); 
-                    dsN_.forwardTD(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
-                    dsDIR_.backward( y[i+2], omega); 
-                    dsN_.backwardTD(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[i+2]); 
-                }
+//                     dg::blas1::axpby(-nu_parallel[i+2], omega, 1., yp[i+2]); 
+                dsDIR_.forward( y[i+2], omega); 
+                dsN_.forwardTD(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., yp[i+2]); 
+                dsDIR_.backward( y[i+2], omega); 
+                dsN_.backwardTD(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., yp[i+2]); 
+            }
         }
     }
 }
@@ -510,47 +518,56 @@ void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, st
     dg::blas1::axpby( -1., omega, 1., chi); //chi  = + N_i U_i -N_e U_e
     dg::blas1::axpby( -1., y[2], 1., y[3], omega); //omega  = - U_e + U_i   
     double Dres = -p.c*dg::blas2::dot(omega, w3d, chi); //- C*(N_i U_i + N_e U_e)(U_i - U_e)
+    double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]*p.tau[1]/p.c, p.nu_parallel, p.nu_parallel};
     for( unsigned i=0; i<2;i++)
     {
         //Compute parallel dissipative energy for N/////////////////////////////
         if( p.nu_parallel != 0)
         {
-                if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);             
-                #ifndef MPI_VERSION
-                if (p.pardiss==0)
-                {
-                    dsN_.forward(y[i], omega); 
-                    dsN_.forwardT(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 0.,lambda,lambda); 
+            if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);             
+            if (p.pardiss==0)
+            {
+                dsN_.forward(y[i], omega); 
+                dsN_.forwardT(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 0.,lambda,lambda); 
 
-                    dsN_.backward( y[i], omega); 
-                    dsN_.backwardT(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda,  1., lambda,lambda); 
-                }
-                #endif
-                if (p.pardiss==1)
-                {
+                dsN_.backward( y[i], omega); 
+                dsN_.backwardT(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i], lambda,  1., lambda,lambda); 
+            }
+            if (p.pardiss==1)
+            {
 //                     dsN_.dsz(y[i],omega);                                            //ds^2 N 
 //                     dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*ds^2 N 
 //                     dsN_(y[i], dsy[i]);       
 //                     dg::blas1::pointwiseDot(gradlnB, dsy[i], omega);                // ds lnB ds N
 //                     dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*ds lnB ds N
-                    dsN_.forward( y[i], omega); 
-                    dsDIR_.forwardTD(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
-                    dsN_.backward( y[i], omega); 
-                    dsDIR_.backwardTD(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
-                }           
+                dsN_.forward( y[i], omega); 
+                dsDIR_.forwardTD(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., lambda,lambda); 
+                dsN_.backward( y[i], omega); 
+                dsDIR_.backwardTD(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., lambda,lambda); 
+            }           
         }
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  
         dg::blas1::axpby(0.5*p.mu[i], omega,1., chi); //chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         if( p.nu_parallel != 0)
+        {
             Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(ds^2 N -ds lnB ds N)
+            if( i==0) //only electrons
+            {
+                dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN)
+                aligned_ = dg::blas2::dot( chi, w3d, lambda); //(1+lnN)*Delta_s N
+            }
+        }
         else 
+        {
+            if(i==0) aligned_ = 0;
             Dpar[i] = 0;
+        }
 
         //Compute perp dissipation 
         dg::blas2::gemv( lapperpN, y[i], lambda);
@@ -560,34 +577,31 @@ void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, st
         //Compute parallel dissipative energy for U/////////////////////////////
         if( p.nu_parallel !=0)
         {
-                if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);    
-                #ifndef MPI_VERSION
-                if (p.pardiss==0)
-                {
-                    dsDIR_.forward(y[i+2], omega); 
-                    dsDIR_.forwardT(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 0.,lambda,lambda); 
-                    dsDIR_.backward( y[i+2], omega); 
-                    dsDIR_.backwardT(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda,  1., lambda,lambda); 
-                }
-                #endif
-
-                if (p.pardiss==1)
-                {
+            if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0);    
+            if (p.pardiss==0)
+            {
+                dsDIR_.forward(y[i+2], omega); 
+                dsDIR_.forwardT(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 0.,lambda,lambda); 
+                dsDIR_.backward( y[i+2], omega); 
+                dsDIR_.backwardT(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda,  1., lambda,lambda); 
+            }
+            if (p.pardiss==1)
+            {
 /*                    dsDIR_.dsz(y[i+2],omega);                                          //ds^2 U 
-                    dg::blas1::axpby( p.nu_parallel, omega, 0., lambda,lambda);     //lambda = nu_para*ds^2 U 
-                    //gradlnBcorrection
-                    dsDIR_(y[i+2], dsy[i+2]);                                               //ds U
-                    dg::blas1::pointwiseDot(gradlnB,dsy[i+2], omega);               // ds lnB ds U
-                    dg::blas1::axpby(-p.nu_parallel, omega, 1., lambda,lambda);     // lambda += nu_para*ds lnB ds N */  
-                    dsDIR_.forward( y[i+2], omega); 
-                    dsN_.forwardTD(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
-                    dsDIR_.backward( y[i+2], omega); 
-                    dsN_.backwardTD(omega,lambda);
-                    dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., lambda,lambda); 
-                }   
+                dg::blas1::axpby( nu_parallel[i+2], omega, 0., lambda,lambda);     //lambda = nu_para*ds^2 U 
+                //gradlnBcorrection
+                dsDIR_(y[i+2], dsy[i+2]);                                               //ds U
+                dg::blas1::pointwiseDot(gradlnB,dsy[i+2], omega);               // ds lnB ds U
+                dg::blas1::axpby(-nu_parallel[i+2], omega, 1., lambda,lambda);     // lambda += nu_para*ds lnB ds N */  
+                dsDIR_.forward( y[i+2], omega); 
+                dsN_.forwardTD(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., lambda,lambda); 
+                dsDIR_.backward( y[i+2], omega); 
+                dsN_.backwardTD(omega,lambda);
+                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., lambda,lambda); 
+            }   
         }
         dg::blas1::pointwiseDot( npe[i], y[i+2], omega); //N U   
         if( p.nu_parallel !=0)

@@ -18,6 +18,8 @@
 #include "vector_categories.h"
 #include "matrix_traits.h"
 
+//exclude from doxygen Docu
+///@cond 
 
 namespace dg
 {
@@ -740,6 +742,7 @@ struct MatrixTraits<const dx_matrix>
     typedef double value_type;
     typedef dx_matrixTag matrix_category;
 };
+///@endcond 
 
 } //namespace dg
 

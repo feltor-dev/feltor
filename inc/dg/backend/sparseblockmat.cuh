@@ -6,10 +6,24 @@
 
 namespace dg
 {
-//mixed derivatives for jump terms missing
+
+/**
+* @brief Ell Sparse Block Matrix format device version
+*
+* @ingroup lowlevel
+* This class holds a copy of a EllSparseBlockMat on the device, which may 
+be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It can be applied
+to device vectors and does the same thing as the host version
+*/
 struct EllSparseBlockMatDevice
 {
-    typedef double value_type;
+    /**
+    * @brief Allocate storage
+    *
+    * A device matrix has to be constructed from a host matrix. It simply
+        copies all internal data of the host matrix to the device
+        @param src  source on the host
+    */
     EllSparseBlockMatDevice( const EllSparseBlockMat& src)
     {
         data = src.data;
@@ -18,9 +32,22 @@ struct EllSparseBlockMatDevice
         n = src.n, left = src.left, right = src.right;
     }
     
+    /**
+    * @brief Apply the matrix to a vector
+    *
+    * @param x input
+    * @param y output may not equal input
+    */
+    void symv(const thrust::device_vector<double>& x, thrust::device_vector<double>& y) const;
+    /**
+    * @brief Display internal data to a stream
+    *
+    * @param os the output stream
+    */
+    void display( std::ostream& os = std::cout) const;
+    private:
     typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
-    void symv(const DVec& x, DVec& y) const;
     void launch_multiply_kernel(const DVec& x, DVec& y) const;
     
     DVec data;
@@ -30,10 +57,23 @@ struct EllSparseBlockMatDevice
     int left, right;
 };
 
-//assume max one entry per line
+
+/**
+* @brief Coo Sparse Block Matrix format device version
+*
+* @ingroup lowlevel
+* This class holds a copy of a CooSparseBlockMat on the device, which may 
+be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thing as the host version with the difference that it applies to device vectors.
+*/
 struct CooSparseBlockMatDevice
 {
-    typedef double value_type;
+    /**
+    * @brief Allocate storage
+    *
+    * A device matrix has to be constructed from a host matrix. It simply
+        copies all internal data of the host matrix to the device
+        @param src  source on the host
+    */
     CooSparseBlockMatDevice( const CooSparseBlockMat& src)
     {
         data = src.data;
@@ -42,9 +82,24 @@ struct CooSparseBlockMatDevice
         n = src.n, left = src.left, right = src.right;
     }
     
+    /**
+    * @brief Apply the matrix to a vector
+    *
+    * @param alpha multiplies input
+    * @param x input
+    * @param beta premultiplies output
+    * @param y output may not equal input
+    */
+    void symv(double alpha, const thrust::device_vector<double>& x, double beta, thrust::device_vector<double>& y) const;
+    /**
+    * @brief Display internal data to a stream
+    *
+    * @param os the output stream
+    */
+    void display(std::ostream& os = std::cout) const;
+    private:
     typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
-    void symv(double alpha, const DVec& x, double beta, DVec& y) const;
     void launch_multiply_kernel(double alpha, const DVec& x, double beta, DVec& y) const;
     
     DVec data;
@@ -54,6 +109,53 @@ struct CooSparseBlockMatDevice
 };
 
 ///@cond
+void EllSparseBlockMatDevice::display( std::ostream& os) const
+{
+    os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
+    os << "num_rows         "<<num_rows<<"\n";
+    os << "num_cols         "<<num_cols<<"\n";
+    os << "blocks_per_line  "<<blocks_per_line<<"\n";
+    os << "n                "<<n<<"\n";
+    os << "left             "<<left<<"\n";
+    os << "right            "<<right<<"\n";
+    os << " Columns: \n";
+    for( int i=0; i<num_rows; i++)
+    {
+        for( int d=0; d<blocks_per_line; d++)
+            os << cols_idx[i*blocks_per_line + d] <<" ";
+        os << "\n";
+    }
+    os << "\n Data: \n";
+    for( int i=0; i<num_rows; i++)
+    {
+        for( int d=0; d<blocks_per_line; d++)
+            os << data_idx[i*blocks_per_line + d] <<" ";
+        os << "\n";
+    }
+    os << std::endl;
+    
+}
+void CooSparseBlockMatDevice::display( std::ostream& os) const
+{
+    os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
+    os << "num_rows         "<<num_rows<<"\n";
+    os << "num_cols         "<<num_cols<<"\n";
+    os << "num_entries      "<<num_entries<<"\n";
+    os << "n                "<<n<<"\n";
+    os << "left             "<<left<<"\n";
+    os << "right            "<<right<<"\n";
+    os << " Columns: \n";
+    for( int i=0; i<num_entries; i++)
+        os << cols_idx[i] <<" ";
+    os << "\n Rows: \n";
+    for( int i=0; i<num_entries; i++)
+        os << rows_idx[i] <<" ";
+    os << "\n Data: \n";
+    for( int i=0; i<num_entries; i++)
+        os << data_idx[i] <<" ";
+    os << std::endl;
+    
+}
 inline void EllSparseBlockMatDevice::symv( const DVec& x, DVec& y) const
 {
     launch_multiply_kernel( x,y);
@@ -144,18 +246,19 @@ if(right==1) //alle dx Ableitungen
     {
         y[i] =0;
     }
-    //std::cout << "Difference is " <<t.diff()<<"s\n";
 #pragma omp parallel for collapse(4)
     for( int s=0; s<left; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<n; k++)
     for( int j=0; j<right; j++)
     {
+        double temp=0;
         int I = ((s*num_rows + i)*n+k)*right+j;
         for( int d=0; d<blocks_per_line; d++)
             for( int q=0; q<n; q++) //multiplication-loop
-                y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                     x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+        y[I] = temp;
     }
 
 if(left > 1)
@@ -171,10 +274,8 @@ if(left > 1)
         for( int j=0; j<right; j++)
         {
             int I = ((s*num_rows + i)*n+k)*right+j;
-            {
-                for( int q=0; q<n; q++) //multiplication-loop
-                    y[I] += data[ (d*n+k)*n+q]*x[((s*num_cols + J)*n+q)*right+j];
-            }
+            for( int q=0; q<n; q++) //multiplication-loop
+                y[I] += data[ (d*n+k)*n+q]*x[((s*num_cols + J)*n+q)*right+j];
             //double temp=0;
             //for( int d=0; d<blocks_per_line; d++)
             //    for( int q=0; q<n; q++) //multiplication-loop
@@ -202,7 +303,7 @@ else
         }
     }
     }
-} //endif
+} //endif left > 1
 #pragma omp parallel for collapse(4)
     for( int s=0; s<left; s++)
     for( int i=num_rows-1; i<num_rows; i++)
@@ -210,10 +311,12 @@ else
     for( int j=0; j<right; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right+j;
+        double temp=0; 
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
-            y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+            temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+        y[I] = temp; //do not add here because of the case num_rows==1
     }
 }
 void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& x, double beta, DVec& y) const
@@ -222,9 +325,9 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
     assert( x.size() == (unsigned)num_cols*n*left*right);
     assert( beta == 1);
 
-#pragma omp parallel for collapse(4)
-    for( int s=0; s<left; s++)
     for( int i=0; i<num_entries; i++)
+#pragma omp parallel for collapse(3)
+    for( int s=0; s<left; s++)
     for( int k=0; k<n; k++)
     for( int j=0; j<right; j++)
     {
@@ -288,26 +391,25 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
 // multiply kernel
  __global__ void coo_multiply_kernel(
          const double* data, const int* rows_idx, const int* cols_idx, const int* data_idx, 
-         const int num_rows, const int num_cols, const int num_entries,
+         const int num_rows, const int num_cols, const int entry,
          const int n, 
          const int left, const int right, 
          double alpha, const double* x, double *y
          )
 {
-    int size = left*num_entries*n*right;
+    int size = left*n*right;
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_rows/grid_size rows
     for( int idx = thread_id; idx<size; idx += grid_size)
     {
-        int s=idx/(n*num_entries*right), 
-            i = (idx/(right*n))%num_entries, 
-            k = (idx/right)%n, 
+        int s=idx/(n*right), 
+            k=(idx/right)%n, 
             j=idx%right;
-        int I = ((s*num_rows+rows_idx[i])*n+k)*right+j;
+        int I = ((s*num_rows+rows_idx[entry])*n+k)*right+j;
         double temp = 0;
-        int B = data_idx[i];
-        int J = cols_idx[i];
+        int B = data_idx[entry];
+        int J = cols_idx[entry];
         for( int q=0; q<n; q++) //multiplication-loop
             temp += data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
         y[I] += alpha*temp;
@@ -339,7 +441,7 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
     assert( beta == 1);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
-    const size_t size = left*right*num_entries*n;
+    const size_t size = left*right*n;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
     const double* data_ptr = thrust::raw_pointer_cast( &data[0]);
@@ -348,8 +450,11 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
     const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
     double* y_ptr = thrust::raw_pointer_cast( &y[0]);
-    coo_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-        data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, n, left, right, alpha, x_ptr,y_ptr);
+    for( int i=0; i<num_entries; i++)
+    {
+        coo_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left, right, alpha, x_ptr,y_ptr);
+    }
 }
 #endif
 ///@endcond

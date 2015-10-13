@@ -10,14 +10,14 @@
 
   */
 namespace dg{
-struct printf_functor
-{
-__host__ __device__
-void operator()(double x)
-{
-    printf("%f\n",x);
-}
-};
+//struct printf_functor
+//{
+//__host__ __device__
+//void operator()(double x)
+//{
+//    printf("%f\n",x);
+//}
+//};
 /**
  * @brief Class for y average computations
  *

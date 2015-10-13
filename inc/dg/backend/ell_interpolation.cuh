@@ -9,7 +9,9 @@
 
 
 /**
-* @file Contains creation function to create an interpolation ell_matrix on the
+* @file 
+
+Contains creation function to create an interpolation ell_matrix on the
     device
 */
 

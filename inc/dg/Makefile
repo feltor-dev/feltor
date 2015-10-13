@@ -1,78 +1,43 @@
-system=home
 device=gpu
 
+#configure machine 
+include ../../config/default.mk
+include ../../config/*.mk 
+include ../../config/devices/devices.mk
 
-INCLUDE = -I../../ # other project libraries
-INCLUDE+= -I../ # other project libraries
-
-ifeq ($(strip $(system)),home)
-INCLUDE+= -I$(HOME)/include  # cusp and thrust libraries
-GLFLAGS =$$(pkg-config --static --libs glfw3)
-ifeq ($(strip $(device)),gpu)
-GLFLAGS+= -lGLEW
-endif
-endif
-
-ifeq ($(strip $(system)),leo3)
-INCLUDE+= -I$(HOME)/include
-GLFLAGS   = -lm
-endif
-
-ifeq ($(strip $(system)),vsc)
-INCLUDE+= -I$(HOME)/include
-GLFLAGS   = -lm
-endif
-
-ifeq ($(strip $(device)),gpu)
-CC = nvcc
-CFLAGS = --compiler-options -Wall -arch=sm_20
-#CFLAGS+= -Xcompiler -fopenmp 
-#CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
-#CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
-#CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
-endif
-ifeq ($(strip $(device)),omp)
-CC = g++
-CFLAGS = -Wall -fopenmp -x c++
-CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-endif
-ifeq ($(strip $(device)),mic)
-CC = icc
-CFLAGS = -openmp -mmic -x c++
-CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-endif
+INCLUDE+= -I../../ # other project libraries
+INCLUDE+= -I../    # other project libraries
 
 CPPFILES=$(wildcard *.cpp)
 CUFILES=$(wildcard *.cu)
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-include mpi.mk
+
+%_mpit: %_mpit.cu 
+	$(MPICC) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
+
+%_mpib: %_mpib.cu
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) 
+
+toefl_mpib: toefl_mpib.cu toefl.cuh
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 
 toefl_t: toefl_t.cu toefl.cuh
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
 toefl_b: toefl_b.cu toefl.cuh
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-
-dz_2_t: dz_2_t.cu dz.h
-	$(CC) -O2 $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS)   -g 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
 %_t: %_t.cu
-	$(CC) -O2 $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
+	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu 
-	$(CC) -O3 $(CFLAGS) $< -o $@ $(INCLUDE) 
-
-dg_t: dg_t.cpp ../dg.h 
-	g++ -O3 -Wall -fopenmp  $< -o $@ $(INCLUDE) -lm
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) 
 
 bathRZ_t: bathRZ_t.cu 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 	
 .PHONY: clean doc
-
-dz_geom_t: dz_geom_t.cu 
-	$(CC) -O2 $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
 doc: 
 	doxygen Doxyfile
