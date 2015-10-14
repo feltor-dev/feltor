@@ -749,7 +749,7 @@ struct Field
     /**
  * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
  \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
- \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}}  \f]
+ \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I} \hat{R}_0}  \f]
  */ 
     void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp) const
     {
@@ -763,7 +763,7 @@ struct Field
     /**
  * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
  \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
- \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}}  \f]
+ \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
  */ 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
@@ -1104,7 +1104,7 @@ struct SafetyFactor
 };
 /**
  * @brief Global safety factor
-\f[ \alpha(R,Z) = \frac{|B^\varphi|}{R^2|B^p|} = \frac{R_0I_{pol}(R,Z)}{R^2|\nabla\psi_p|} \f]
+\f[ \alpha(R,Z) = \frac{|B^\varphi|}{R|B^\eta|} = \frac{I_{pol}(R,Z)}{R|\nabla\psi_p|} \f]
  */
 struct Alpha
 {
@@ -1115,18 +1115,19 @@ struct Alpha
         R_0(gp.R_0){ }
 
     /**
-    * @brief \f[ \frac{R_0I_{pol}(R,Z)}{R^2|\nabla\psi_p|} \f]
+    * @brief \f[ \frac{ I_{pol}(R,Z)}{R \sqrt{\nabla\psi_p}} \f]
     */
     double operator()( double R, double Z) const
     {
-        return (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+        return (R_0/R/R)*(1./R)*
+        (ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
     }
     /**
      * @brief == operator()(R,Z)
      */ 
     double operator()( double R, double Z, double phi) const
     {
-        return  (R_0/R/R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+        return  (1./R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
     }
     private:
     PsipR  psipR_;

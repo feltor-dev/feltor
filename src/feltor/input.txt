@@ -6,15 +6,15 @@
 @-----------------------------Space and Time discretization------------
 
 1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   160 (192)
-3)  ny (grid points in y)                =   160 (192)
+2)  nx (grid points in x)                =   320 (192)
+3)  ny (grid points in y)                =   320 (192)
 4)  nz (grid points in z)                =   16 (>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  80
-8)  ny_out (# grid points in output field)  =  80
+7)  nx_out (# grid points in output field)  =  320
+8)  ny_out (# grid points in output field)  =  320
 9)  nz_out (# grid points in output field)  =  16
 10) itstp  (steps between outputs)          =  200 (5)
 11) total # of outputs (excluding first)    =  400
@@ -42,10 +42,10 @@
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) profile source rate in units c_s/rho_s  =  0.00
-31) boxscale R+                             =  0.6 (a little larger than 1)
-32) boxscale R-                             =  0.6 (a little larger than 1)
-33) boxscale Z+                             =  0.6 (a little larger than 1)
-34) boxscale Z-                             =  0.6 (a little larger than 1)
+31) boxscale R+                             =  1.1 (a little larger than 1)
+32) boxscale R-                             =  1.1 (a little larger than 1)
+33) boxscale Z+                             =  1.1 (a little larger than 1)
+34) boxscale Z-                             =  1.1 (a little larger than 1)
 ---------------------------------global boundary condition----------------
 35) global bc (DIR (1), NEU DIR(4)  )                 =  1
 36) poloidal limiter (No (0),Yes (1))                 =  0

@@ -8,7 +8,7 @@ include ../config/devices/devices.mk
 INCLUDE+= -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
 
-TARGETS =  toefl_video toefl_analytics toefl_compare show com figure17 vmax toefl_radial ncdiag filamentdiag fftwdiag crosscoherencdiag feltorSdiag feltorSHdiag
+TARGETS =  toefl_video toefl_analytics toefl_compare show com figure17 vmax toefl_radial ncdiag filamentdiag fftwdiag crosscoherencdiag feltorSdiag feltorSHdiag feltordiag
 
 all: $(TARGETS)
 
@@ -32,6 +32,8 @@ com: com.cu
 ncdiag: ncdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 filamentdiag: filamentdiag.cu
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
+feltordiag: feltordiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 vmaxnc: vmaxnc.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
