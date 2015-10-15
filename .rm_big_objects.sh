@@ -5,7 +5,7 @@
 # BE VERY CAREFUL WITH THIS SINCE FILES WILL BE PERMANENTLY REMOVED
 # ALSO, THE HISTORY WILL BE CHANGED WHICH WILL TOTALLY UPSET EVERYONE WHO EVER CLONED THE REPOSITORY
 # after execution it's as if these objects never existed. 
-BIG_OBJECTS="src/feltorSesol/core src/feltorShw/core src/feltorShw/feltor"
+BIG_OBJECTS="src/feltorSesol/core src/feltorShw/core src/feltorShw/feltor src/feltorSesol/feltor"
 
 echo 'Removing '$BIG_OBJECTS''
 
