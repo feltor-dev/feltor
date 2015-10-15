@@ -127,27 +127,30 @@ int main( int argc, char* argv[])
 
 //         Compute flux average
     solovev::Alpha alpha(gp); // = B^phi / |nabla psip |
+    if( gp.c[12] != 0) 
+    {
     
-    std::cout << "Compute flux average of psi   "<< "\n";
-    dg::DVec psipog2d   = dg::evaluate( psip, grid);
-    dg::DVec alphaog2d   = dg::evaluate( alpha, grid); 
-    
-    double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
-    unsigned Npsi = 100;//set number of psivalues
-        std::cout << "psipmin =" << psipmin << " Npsi =" << Npsi  <<std::endl;
+        std::cout << "Compute flux average of psi   "<< "\n";
+        dg::DVec psipog2d   = dg::evaluate( psip, grid);
+        dg::DVec alphaog2d   = dg::evaluate( alpha, grid); 
+        
+        double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
+        unsigned Npsi = 100;//set number of psivalues
+            std::cout << "psipmin =" << psipmin << " Npsi =" << Npsi  <<std::endl;
 
-    dg::Grid1d<double> g1d(psipmin ,0.0, 1,Npsi,dg::DIR);
-    
-    solovev::FluxSurfaceAverage<dg::HVec> fsa1(grid,gp,psipog2d );
-    solovev::SafetyFactor<dg::HVec> qprof(grid,gp,alphaog2d );
-    dg::HVec fsaofpsip = dg::evaluate(fsa1,g1d);
-    dg::HVec sf = dg::evaluate(qprof,g1d);
-    dg::HVec abs = dg::evaluate( dg::coo1, g1d);
+        dg::Grid1d<double> g1d(psipmin ,0.0, 1,Npsi,dg::DIR);
+        
+        solovev::FluxSurfaceAverage<dg::HVec> fsa1(grid,gp,psipog2d );
+        solovev::SafetyFactor<dg::HVec> qprof(grid,gp,alphaog2d );
+        dg::HVec fsaofpsip = dg::evaluate(fsa1,g1d);
+        dg::HVec sf = dg::evaluate(qprof,g1d);
+        dg::HVec abs = dg::evaluate( dg::coo1, g1d);
 
-    
-for (unsigned i=0;i<g1d.size() ;i++) {
-    std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << sf[i]<<"\n";
-}
+        
+        for (unsigned i=0;i<g1d.size() ;i++) {
+            std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << sf[i]<<"\n";
+        }
+    }
     
     //make equidistant grid from dggrid
     dg::IHMatrix equigrid = dg::create::backscatter(grid);               
@@ -171,6 +174,14 @@ for (unsigned i=0;i<g1d.size() ;i++) {
 
     std::stringstream title;
     title << std::setprecision(2) << std::scientific;
+    for(unsigned i=1; i<=20; i++)
+    {
+
+        colors.scalemax() = (float)thrust::reduce( visual[i].begin(), visual[i].end(), -100., thrust::maximum<double>()   );
+        colors.scalemin() =  (float)thrust::reduce( visual[i].begin(), visual[i].end(), colors.scalemax() ,thrust::minimum<double>() );
+        std::cout <<names[i]<<" / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\n";
+    }
+    std::cout << std::flush;
     while (!glfwWindowShouldClose( w ))
     {
         for(unsigned i=1; i<=20; i++)
