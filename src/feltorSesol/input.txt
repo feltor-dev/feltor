@@ -4,49 +4,47 @@
 
 
 @-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =  3 (3)
-2)  nx (grid points in x)                =  200(192)
+1)  n  (# of x,y-polynomials)            =  1 (3)
+2)  nx (grid points in x)                =  150(192)
 3)  ny (grid points in y)                =  200(192) 
-4)  dt (time step in units c_s/rho_s)    =  0.01 (0.01)
+4)  dt (time step in units c_s/rho_s)    =  0.5(0.01)
 ----------------------------------Output parameters--------------------
-5)  n_out (# of x-y polynomials in output)  =  1
-6)  nx_out (# grid points in output field)  =  150
-7)  ny_out (# grid points in output field)  =  150
-8)  itstp  (steps between outputs)          =  10 (5)
-9) total # of outputs (excluding first)     =  1
-
+5)  n_out (# of x-y polynomials in output)  =  3
+6)  nx_out (# grid points in output field)  =  200
+7)  ny_out (# grid points in output field)  =  100
+8)  itstp  (steps between outputs)          =  40(5)
+9) total # of outputs (excluding first)     =  100000
 -------------------------Algorithmic parameters------------------------
-10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
+10)  eps_pol (stop for polarisation)        =   1e-4 (1e-6)
 11)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
 12)  eps_time ( stop for time inversion )   =   1e-12 
-
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  0.0   (0.0)
-15) mcv (curvature)                         =  1e-14  (0.0003)
-16) nu_perp                                 =  5e-5
-17) D  (coupling ~ mcv^2)                   =  20e-8  
+15) mcv (curvature)                         =  0.00015   (0.0003)
+16) nu_perp                                 =  8e-4
+17) D  (coupling ~ mcv^2)                   =  0.005e-8  
 18) para resistivity (C ~ D lx/d)           =  2.5e-6
-19) parallel Length (~ 2 pi q / mcv)        =  1e30   (2000000)
+19) parallel Length (~ 2 pi q / mcv)        =  1000000   (2000000)
 ------------------------Initial perturbation parameters---------------------
-20) amp (blob amplitude)                    =  0.01    (1.0)
+20) amp (blob amplitude)                    =  0.025    (1.0)
 21) sigma (blob variance in units of rho_s) =  2.5     (10)
-22) x-position ( in units of lx)            =  0.5   (0.4)
+22) x-position ( in units of lx)            =  0.333333   (0.4)
 22) y-position ( in units of ly)            =  0.5   (0.5)
-24) Profile amplitude                       =  2.0  (peak amplitude)
+24) Profile amplitude                       =  4.0  (peak amplitude)
 25) Background Prof amplitude               =  1.0   (density on the boundary)
 ---------------------------------box setup----------------
-26) lx (in rho_s)                           =  64
-27) ly (in rho_s)                           =  64
+26) lx (in rho_s)                           =  125
+27) ly (in rho_s)                           =  200
 28) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   2      (1.0)
 29) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------
 30) ordinary/modified HW (0/1)              = 1
-31) ln (in rho_s)                           = 64
+31) ln (in rho_s)                           = 100
 ---------------------------------EDGE/SOL Dynamics-------------------------------------------
-32) SOL boundary in units of lx (>1 no SOL)    = 1e13
+32) SOL boundary in units of lx (>1 no SOL)    = 0.3333333
 33) damping width                              = 0.5
-34) profile source rate in units c_s/rho_s     = 0.00
-35) source dampingb in u of lx (<1 no Source)  = 0.2
+34) profile source rate in units c_s/rho_s     = 0.05
+35) source dampingb in u of lx (<1 no Source)  = 0.1666666
 36) source damping width                       = 0.5
 @ ------------------------------------------------------------
