@@ -122,17 +122,7 @@ struct Feltor
 
     double mass_, energy_, diff_, ediff_,gammanex_,coupling_;
     std::vector<double> evec;
-    //probe
-//     std::vector<container> probevec;
-//     const container Xprobe,Yprobe;
-//     Matrix probeinterp;
-//     container probevalue;    
-//     dg::Grid1d<double> gy;
-//     const container w1d;
-//     const container oney;
-//     const container coox0,cooxlx,cooy;
-//     Matrix interpx0,interpxlx;
-    
+   
     container lh,rh,lhs,profne,profNi;
 
 };
@@ -158,12 +148,6 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     polavg(g),
     p(p),
     evec(3),
-    //probe
-//     probevec(2),
-//     Xprobe(1,p.lx*p.posX), //use blob position
-//     Yprobe(1,p.ly*p.posY),//use blob position
-//     probeinterp(dg::create::interpolation( Xprobe,  Yprobe,g, dg::NEU)),
-//     probevalue(1,0.0),
     //damping and sources
     lh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,-1.0,0.0,1.0),g)),
     rh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,1.0,0.0,1.0),g)), 
@@ -313,7 +297,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 //     dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
     //general term
     dg::blas1::pointwiseDot(omega,npe[0],omega);  // omega   = (coupling)*Ne
-    dg::blas1::axpby(0.0,lambda,1.0,omega,omega); // omega   = (coupling)*(Ne + <ne>tilde(ne))
+//     dg::blas1::axpby(0.0,lambda,1.0,omega,omega); // omega   = (coupling)*(Ne + <ne>tilde(ne))
 
     coupling_ =  z[0]*p.d/p.c* dg::blas2::dot(chi, w2d, omega);
     //Compute rhs of energy theorem
