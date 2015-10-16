@@ -177,7 +177,6 @@ struct MPI_FieldAligned
   private:
     typedef cusp::array1d_view< typename LocalContainer::iterator> View;
     typedef cusp::array1d_view< typename LocalContainer::const_iterator> cView;
-    void planeMultiplier( const M& m, const container& in, container& out, container& tempXY, int offset);
     MPI_Vector<LocalContainer> hz_, hp_, hm_; 
     LocalContainer ghostM, ghostP;
     MPI_Grid3d g_;
@@ -195,18 +194,18 @@ struct MPI_FieldAligned
 };
 ///@cond
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
-template<class LocalMatrix, class Communicator, class LocalContainer>
+template<class LocalMatrix, class CommunicatorXY, class CommunicatorZ, class LocalContainer>
 template <class Field, class Limiter>
-MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
+MPI_FieldAligned<LocalMatrix, CommunicatorXY, CommunicatorZ, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
-    g_(grid), bcz_(grid.bcz()), temp_(dg::evaluate( dg::zero, grid)), 
+    g_(grid), bcz_(grid.bcz()), temp_(dg::evaluate( dg::zero, grid.local())), 
     dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
 {
     //Resize vector to local 2D grid size
     MPI_Comm planeComm;
-    const int remain_dims[] = {1,1,0}; //true true false
-    MPI_Cart_sub( grid.communicator(), remain_dims, planeComm);
-    dg::MPI_Grid2d g2d( g_.global().x0(), g_.global().x1(), g_.global().y0(), g_.global().y1(), g_.global().n(), g_.global().Nx(), g_.global().Ny(), planeComm);  
+    int remain_dims[] = {1,1,0}; //true true false
+    MPI_Cart_sub( grid.communicator(), remain_dims, &planeComm);
+    dg::MPI_Grid2d g2d( g_.global().x0(), g_.global().x1(), g_.global().y0(), g_.global().y1(), g_.global().n(), g_.global().Nx(), g_.global().Ny(), g_.bcx(), g_.bcy(), planeComm);  
     unsigned size = g2d.size();
     limiter_ = dg::evaluate( limit, g2d.local());
     right_ = left_ = dg::evaluate( zero, g2d.local());
@@ -252,13 +251,13 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
     CommunicatorXY cp( pids, g2d.communicator());
     thrust::host_vector<double> pX = cp.collect( yp[0]),
                                 pY = cp.collect( yp[1]);
-    thrust::host_vector<int> pidsglobal( g_.size());
-    for( unsigned i=0; i<g_.Nz(); i++)
-        thrust::copy( pids.begin(), pids.begin()+localsize, pidsglobal.begin() + i*localsize);
-    commXYplus = CommunicatorXY( pidsglobal, g2d.communicator());
     //construt interpolation matrix
     plus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( plus, plusT);
+    thrust::host_vector<int> pidsglobal( g_.size());
+    for( unsigned i=0; i<g_.Nz(); i++)
+        thrust::copy( pids.begin(), pids.begin()+localsize, pidsglobal.begin() + i*localsize);
+    commXYplus_ = CommunicatorXY( pidsglobal, g2d.communicator());
 
     //do the same for the minus z-plane
     for( unsigned i=0; i<pids.size(); i++)
@@ -270,27 +269,32 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
             return;
         }
     }
-    CommunicatorXY cm( pids, g2d.communicator
-    pX = cm.collect( ym[0]),
-    pY = cm.collect( ym[1]),
-    minus = dg::create::interpolation( pX, pY, g2d, globalbcz); //inner points hopefully never lie exactly on local boundary
+    CommunicatorXY cm( pids, g2d.communicator());
+    pX = cm.collect( ym[0]);
+    pY = cm.collect( ym[1]);
+    minus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( minus, minusT);
     //copy to device
-    thrust::copy( yp[2].begin(), yp[2].end(), hp_.data().begin());
-    thrust::copy( ym[2].begin(), ym[2].end(), hm_.data().begin());
+    for( unsigned i=0; i<g_.Nz(); i++)
+    {
+        thrust::copy( yp[2].begin(), yp[2].end(), hp_.data().begin() + i*localsize);
+        thrust::copy( ym[2].begin(), ym[2].end(), hm_.data().begin() + i*localsize);
+    }
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
     for( unsigned i=0; i<g_.Nz(); i++)
         thrust::copy( pids.begin(), pids.begin()+localsize, pidsglobal.begin() + i*localsize);
-    commXYminus = CommunicatorXY( pidsglobal, g2d.communicator());
+    commXYminus_ = CommunicatorXY( pidsglobal, g2d.communicator());
     tempXYplus_.resize( commXYplus_.size());
     tempXYminus_.resize( commXYminus_.size());
     tempZ_.resize( commZ_.size());
+    int vector_dimensions[] = {(int)(g_.n()*g_.Nx()), (int)(g_.n()*g_.Ny()), (int)(g_.Nz())}; //x, y, z
+    commZ_ = CommunicatorZ( 1, vector_dimensions, g_.communicator(), 2 );
 }
 
-template<class M, class C, class container>
+template<class M, class C1,class C2, class container>
 template< class BinaryOp>
-MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, unsigned p0) const
+MPI_Vector<container> MPI_FieldAligned<M,C1,C2,container>::evaluate( BinaryOp f, unsigned p0) const
 {
     container global_vec = dz_.evaluate( f, p0);
     container vec = dg::evaluate( dg::zero, g_.local());
@@ -307,9 +311,9 @@ MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, uns
     return MPI_Vector<container>( vec, g_.communicator());
 }
 
-template<class M, class C, class container>
+template<class M, class C1, class C2, class container>
 template< class BinaryOp, class UnaryOp>
-MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const
+MPI_Vector<container> MPI_FieldAligned<M,C1,C2,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const
 {
     //let all processes integrate the fieldlines
     container global_vec = dz_.evaluate( f, g,p0, rounds);
@@ -326,170 +330,29 @@ MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, Una
     return MPI_Vector<container>( vec, g_.communicator());
 }
 
-template<class M, class C, class container>
-void MPI_FieldAligned<M,C,container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
+template<class M, class C1, class C2, class container>
+void MPI_FieldAligned<M,C1,C2,container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
 {
     //dg::blas2::detail::doSymv( plus, f, fplus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
-
-    //make ghostcells in last plane
     const container& in = f.data();
     container& out = fplus.data();
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
-    {
-        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
-        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite out
-        cusp::copy( f0, ghostPV);
-        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-        {
-            dg::blas1::axpby( 2., right_, -1, ghostP);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-        {
-            //note that hp_ is 3d and the rest 2d
-            thrust::transform( right_.begin(), right_.end(),  hp_.data().begin(), ghostM.begin(), thrust::multiplies<double>());
-            dg::blas1::axpby( 1., ghostM, 1., ghostP);
-        }
-        cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
-        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-        cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
-    }
-
-}
-
-template<class M, class C, class container>
-void MPI_FieldAligned<M,C,container>::einsMinus( const MPI_Vector<container>& f, MPI_Vector<container>& fminus ) 
-{
-    dg::blas2::detail::doSymv( minus, f, fminus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
-    //make ghostcells in first plane
-    const container& in = f.data();
-    container& out = fminus.data();
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
-    {
-        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
-        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite out
-        cusp::copy( f0, ghostMV);
-        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-        {
-            dg::blas1::axpby( 2., left_, -1, ghostM);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-        {
-            thrust::transform( left_.begin(), left_.end(), hm_.data().begin(), ghostP.begin(), thrust::multiplies<double>());
-            dg::blas1::axpby( -1, ghostP, 1., ghostM);
-        }
-        cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
-        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-        cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
-    }
-}
-template< class M, class C, class container>
-void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f, MPI_Vector<container>& fpe)
-{
-    dg::blas2::detail::doSymv( minusT, f, fpe, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
-    //make ghostcells in last plane
-    const container& in = f.data();
-    container& out = fpe.data();
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
-    {
-        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
-        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite out
-        cusp::copy( f0, ghostPV);
-        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-        {
-            dg::blas1::axpby( 2., right_, -1, ghostP);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-        {
-            //note that hp_ is 3d and the rest 2d
-            thrust::transform( right_.begin(), right_.end(),  hp_.data().begin(), ghostM.begin(), thrust::multiplies<double>());
-            dg::blas1::axpby( 1., ghostM, 1., ghostP);
-        }
-        cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
-        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-        cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
-    }
-}
-template< class M, class C, class container>
-void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f, MPI_Vector<container>& fme)
-{
-    //dg::blas2::detail::doSymv( plusT, f, fme, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
-    planeMultiplierT( plusT, f.data(), fme.data(), tempXYminus_, -1);
-    //make ghostcells in first plane
-    const container& in = f.data();
-    container& out = fme.data();
-    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
-    {
-        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
-        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
-        View ghostPV( ghostP.begin(), ghostP.end());
-        View ghostMV( ghostM.begin(), ghostM.end());
-        //overwrite out
-        cusp::copy( f0, ghostMV);
-        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-        {
-            dg::blas1::axpby( 2., left_, -1, ghostM);
-        }
-        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-        {
-            thrust::transform( left_.begin(), left_.end(), hm_.data().begin(), ghostP.begin(), thrust::multiplies<double>());
-            dg::blas1::axpby( -1, ghostP, 1., ghostM);
-        }
-        cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
-        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-        cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
-    }
-}
-template <class M, class C, class container>
-void MPI_Fieldaligned<M,C,container>::planeMultiplier( const M& m_, const container& in, container& out, container& tempXY, int offset, bool transpose) const
-{
-        std::cout << in.size()<< " " << out.size()<< " "<<m_.num_cols<<" "<<m_.num_rows<<" "<<Nz_<<std::endl;
-        assert( in.size() == m_.num_cols*Nz_);
-        assert( out.size() == m_.num_rows*Nz_);
     int size2d = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-        int rank, dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        MPI_Comm_rank( comm, &rank);
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
         int sizeXY = dims[0]*dims[1];
         int sizeZ = dims[2];
+
     //1. compute 2d interpolation in every plane and store in temp_
     if( sizeXY != 1) //communication needed
     {
-        if( !transpose)
+        for( int i0=0; i0<g_.Nz(); i0++)
         {
-            for( int i0=0; i0<g_.Nz(); i0++)
-            {
-                cView inV( in.cbegin() + i0*matrix.num_cols, in.cbegin() + (i0+1)*matrix.num_cols);
-                View tempV( tempXY.begin() + i0*plus.num_rows, tempXY.begin() + (i0+1)*plus.num_rows);
-                cusp::multiply( matrix, inV, tempV);
-            }
-            //exchange data in XY
-            commXYplus_.send_and_reduce( tempXY, temp_);
+            cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
+            View tempV( tempXYplus_.begin() + i0*plus.num_rows, tempXYplus_.begin() + (i0+1)*plus.num_rows);
+            cusp::multiply( plus, inV, tempV);
         }
+        //exchange data in XY
+        commXYplus_.send_and_reduce( tempXYplus_, temp_);
     }
     else //directly compute in temp_
     {
@@ -503,17 +366,260 @@ void MPI_Fieldaligned<M,C,container>::planeMultiplier( const M& m_, const contai
     //2. reorder results and communicate halo in z
     for( int i0=0; i0<g_.Nz(); i0++)
     {
-        int ip = i0 + offset;
-        if( ip > (int)g_.Nz()_-1) ip -= (int)g_.Nz();
+        int ip = i0 + 1;
+        if( ip > (int)g_.Nz()-1) ip -= (int)g_.Nz();
+        thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
+    }
+    if( sizeZ != 1)
+    {
+        tempZ_ = commZ_.collect( temp_);
+        thrust::copy( tempZ_.begin() + size2d, tempZ_.begin() + 2*size2d, out.begin() + (g_.Nz()-1)*size2d);
+    }
+
+    //make ghostcells in last plane
+    //unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    //if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
+    //{
+    //    unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
+    //    cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+    //    cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+    //    cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+    //    View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
+    //    View ghostPV( ghostP.begin(), ghostP.end());
+    //    View ghostMV( ghostM.begin(), ghostM.end());
+    //    //overwrite out
+    //    cusp::copy( f0, ghostPV);
+    //    if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+    //    {
+    //        dg::blas1::axpby( 2., right_, -1, ghostP);
+    //    }
+    //    if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+    //    {
+    //        //note that hp_ is 3d and the rest 2d
+    //        thrust::transform( right_.begin(), right_.end(),  hp_.data().begin(), ghostM.begin(), thrust::multiplies<double>());
+    //        dg::blas1::axpby( 1., ghostM, 1., ghostP);
+    //    }
+    //    cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
+    //    dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
+    //    cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
+    //}
+
+}
+
+template<class M, class C1, class C2, class container>
+void MPI_FieldAligned<M,C1,C2,container>::einsMinus( const MPI_Vector<container>& f, MPI_Vector<container>& fminus ) 
+{
+    const container& in = f.data();
+    container& out = fminus.data();
+    //dg::blas2::detail::doSymv( minus, f, fminus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
+    int size2d = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
+        int sizeXY = dims[0]*dims[1];
+        int sizeZ = dims[2];
+    //1. compute 2d interpolation in every plane and store in temp_
+    if( sizeXY != 1) //communication needed
+    {
+        for( int i0=0; i0<g_.Nz(); i0++)
+        {
+            cView inV( in.cbegin() + i0*minus.num_cols, in.cbegin() + (i0+1)*minus.num_cols);
+            View tempV( tempXYminus_.begin() + i0*plus.num_rows, tempXYminus_.begin() + (i0+1)*plus.num_rows);
+            cusp::multiply( minus, inV, tempV);
+        }
+        //exchange data in XY
+        commXYplus_.send_and_reduce( tempXYminus_, temp_);
+    }
+    else //directly compute in temp_
+    {
+        for( int i0=0; i0<g_.Nz(); i0++)
+        {
+            cView inV( in.cbegin() + i0*minus.num_cols, in.cbegin() + (i0+1)*minus.num_cols);
+            View tempV( temp_.begin() + i0*minus.num_rows, temp_.begin() + (i0+1)*minus.num_rows);
+            cusp::multiply( minus, inV, tempV);
+        }
+    }
+    //2. reorder results and communicate halo in z
+    for( int i0=0; i0<g_.Nz(); i0++)
+    {
+        int ip = i0 -1;
         if( ip < 0) ip += (int)g_.Nz();
         thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
     }
     if( sizeZ != 1)
     {
-        if( offset == 1)
-            thrust::copy( tempZ_.begin() + size2d, tempZ_.begin() + 2*size2d, out.begin() + (g_.Nz()-1)*size2d);
-        if( offset == -1)
-            thrust::copy( tempZ_.begin(), tempZ_.begin() + size2d, out.begin());
+        tempZ_ = commZ_.collect( temp_);
+        thrust::copy( tempZ_.begin(), tempZ_.begin() + size2d, out.begin());
+    }
+    //make ghostcells in first plane
+    //unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    //if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
+    //{
+    //    unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
+    //    cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+    //    cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+    //    cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+    //    View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
+    //    View ghostPV( ghostP.begin(), ghostP.end());
+    //    View ghostMV( ghostM.begin(), ghostM.end());
+    //    //overwrite out
+    //    cusp::copy( f0, ghostMV);
+    //    if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+    //    {
+    //        dg::blas1::axpby( 2., left_, -1, ghostM);
+    //    }
+    //    if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+    //    {
+    //        thrust::transform( left_.begin(), left_.end(), hm_.data().begin(), ghostP.begin(), thrust::multiplies<double>());
+    //        dg::blas1::axpby( -1, ghostP, 1., ghostM);
+    //    }
+    //    cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
+    //    dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
+    //    cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
+    //}
+}
+template< class M, class C1, class C2, class container>
+void MPI_FieldAligned<M,C1,C2,container>::einsMinusT( const MPI_Vector<container>& f, MPI_Vector<container>& fpe)
+{
+    //dg::blas2::detail::doSymv( minusT, f, fpe, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
+    const container& in = f.data();
+    container& out = fpe.data();
+    int size2d = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
+        int sizeXY = dims[0]*dims[1];
+        int sizeZ = dims[2];
+
+    //1. compute 2d interpolation in every plane and store in temp_
+    if( sizeXY != 1) //communication needed
+    {
+        //first exchange data in XY
+        tempXYminus_ = commXYminus_.collect( in );
+        for( int i0=0; i0<g_.Nz(); i0++)
+        {
+            cView inV( tempXYminus_.cbegin() + i0*minusT.num_cols, tempXYminus_.cbegin() + (i0+1)*minusT.num_cols);
+            View tempV( temp_.begin() + i0*minusT.num_rows, temp_.begin() + (i0+1)*minusT.num_rows);
+            cusp::multiply( minusT, inV, tempV);
+        }
+    }
+    else //directly compute in temp_
+    {
+        for( int i0=0; i0<g_.Nz(); i0++)
+        {
+            cView inV( in.cbegin() + i0*minusT.num_cols, in.cbegin() + (i0+1)*minusT.num_cols);
+            View tempV( temp_.begin() + i0*minusT.num_rows, temp_.begin() + (i0+1)*minusT.num_rows);
+            cusp::multiply( minusT, inV, tempV);
+        }
+    }
+    //2. reorder results and communicate halo in z
+    for( int i0=0; i0<g_.Nz(); i0++)
+    {
+        int ip = i0 + 1;
+        if( ip > (int)g_.Nz()-1) ip -= (int)g_.Nz();
+        thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
+    }
+    if( sizeZ != 1)
+    {
+        tempZ_ = commZ_.collect( temp_);
+        thrust::copy( tempZ_.begin() + size2d, tempZ_.begin() + 2*size2d, out.begin() + (g_.Nz()-1)*size2d);
+    }
+    //make ghostcells in last plane
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
+    {
+        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite out
+        cusp::copy( f0, ghostPV);
+        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::axpby( 2., right_, -1, ghostP);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+        {
+            //note that hp_ is 3d and the rest 2d
+            thrust::transform( right_.begin(), right_.end(),  hp_.data().begin(), ghostM.begin(), thrust::multiplies<double>());
+            dg::blas1::axpby( 1., ghostM, 1., ghostP);
+        }
+        cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
+        cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
+    }
+}
+template< class M, class C1, class C2, class container>
+void MPI_FieldAligned<M,C1, C2,container>::einsPlusT( const MPI_Vector<container>& f, MPI_Vector<container>& fme)
+{
+    //dg::blas2::detail::doSymv( plusT, f, fme, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
+    const container& in = f.data();
+    container& out = fme.data();
+    int size2d = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
+        int sizeXY = dims[0]*dims[1];
+        int sizeZ = dims[2];
+
+    //1. compute 2d interpolation in every plane and store in temp_
+    if( sizeXY != 1) //communication needed
+    {
+        //first exchange data in XY
+        tempXYplus_ = commXYplus_.collect( in);
+        for( int i0=0; i0<g_.Nz(); i0++)
+        {
+            cView inV( tempXYplus_.cbegin() + i0*plusT.num_cols, tempXYplus_.cbegin() + (i0+1)*plusT.num_cols);
+            View tempV( temp_.begin() + i0*plusT.num_rows, temp_.begin() + (i0+1)*plusT.num_rows);
+            cusp::multiply( plusT, inV, tempV);
+        }
+    }
+    else //directly compute in temp_
+    {
+        for( int i0=0; i0<g_.Nz(); i0++)
+        {
+            cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
+            View tempV( temp_.begin() + i0*plus.num_rows, temp_.begin() + (i0+1)*plus.num_rows);
+            cusp::multiply( plusT, inV, tempV);
+        }
+    }
+    //2. reorder results and communicate halo in z
+    for( int i0=0; i0<g_.Nz(); i0++)
+    {
+        int ip = i0 - 1;
+        if( ip < 0 ) ip += (int)g_.Nz();
+        thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
+    }
+    if( sizeZ != 1)
+    {
+        tempZ_ = commZ_.collect( temp_);
+        thrust::copy( tempZ_.begin(), tempZ_.begin() + size2d, out.begin());
+    }
+    //make ghostcells in first plane
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
+    {
+        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite out
+        cusp::copy( f0, ghostMV);
+        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::axpby( 2., left_, -1, ghostM);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+        {
+            thrust::transform( left_.begin(), left_.end(), hm_.data().begin(), ghostP.begin(), thrust::multiplies<double>());
+            dg::blas1::axpby( -1, ghostP, 1., ghostM);
+        }
+        cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
+        cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
     }
 }
 

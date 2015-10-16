@@ -143,6 +143,7 @@ struct VectorTraits<const MPI_Vector<container> > {
 template<class Index, class Vector>
 struct NearestNeighborComm
 {
+    NearestNeighborComm(){silent_ = true;}
     /**
     * @brief Construct 
     *
