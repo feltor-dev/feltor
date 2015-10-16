@@ -149,6 +149,45 @@ void boxintegrator( Field& field, const Grid& grid,
         else if (globalbcz == dg::PER )std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
     }
 }
+
+template<class CuspMatrix>
+struct PlaneMultiplier
+{
+    PlaneMultiplier( const CuspMatrix& m, unsigned Nz, int offset):Nz_(Nz), m_(m), offset_(offset){
+    }
+    PlaneMultiplier(){}
+    template <class Vector>
+    void symv( const Vector& in, Vector& out) const
+    {
+        std::cout << in.size()<< " " << out.size()<< " "<<m_.num_cols<<" "<<m_.num_rows<<" "<<Nz_<<std::endl;
+        assert( in.size() == m_.num_cols*Nz_);
+        assert( out.size() == m_.num_rows*Nz_);
+        typedef cusp::array1d_view< typename Vector::iterator> View;
+        typedef cusp::array1d_view< typename Vector::const_iterator> cView;
+        for( int i0=0; i0<Nz_; i0++)
+        {
+            int ip = i0 + offset_;
+            if( ip > (int)Nz_-1) ip -= (int)Nz_;
+            if( ip < 0) ip += (int)Nz_;
+
+            cView inV( in.cbegin() + ip*m_.num_cols, in.cbegin() + (ip+1)*m_.num_cols);
+            View outV( out.begin() + i0*m_.num_rows, out.begin() + (i0+1)*m_.num_rows);
+            cusp::multiply( m_, inV, outV);
+        }
+    }
+    const CuspMatrix& matrix() const {return m_;}
+    private:
+    unsigned Nz_;
+    CuspMatrix m_;
+    int offset_;
+};
+
+template<class M>
+struct MatrixTraits<PlaneMultiplier<M> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
 ////////////////////////////////////FieldAlignedCLASS////////////////////////////////////////////
 /**
 * @brief Class for the evaluation of a parallel derivative
@@ -321,7 +360,7 @@ struct FieldAligned
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
-    Matrix plus, minus, plusT, minusT; //interpolation matrices
+    PlaneMultiplier<Matrix> plus, minus, plusT, minusT; //interpolation matrices
     container hz_, hp_,hm_, ghostM, ghostP;
     dg::Grid3d<double> g_;
     dg::bc bcz_;
@@ -367,11 +406,16 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
-    plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-    minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+    M plusPlane  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
+    M minusPlane = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
 // //     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
-    cusp::transpose( plus, plusT);
-    cusp::transpose( minus, minusT);     
+    M plusTPlane, minusTPlane;
+    cusp::transpose( plusPlane, plusTPlane);
+    cusp::transpose( minusPlane, minusTPlane);     
+    plus = PlaneMultiplier<M>( plusPlane, grid.Nz(), +1);
+    minus = PlaneMultiplier<M>( minusPlane, grid.Nz(), -1);
+    plusT = PlaneMultiplier<M>( plusTPlane, grid.Nz(), -1);
+    minusT = PlaneMultiplier<M>( minusTPlane, grid.Nz(), +1);
 //     copy into h vectors
     for( unsigned i=0; i<grid.Nz(); i++)
     {
@@ -416,14 +460,14 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0) con
         unsigned im = i0-1;
         View fm( vec3d.begin() + im*g2d.size(), vec3d.begin() + (im+1)*g2d.size());
         View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
-        cusp::multiply( minus, fm, f0 );
+        cusp::multiply( minus.matrix(), fm, f0 );
     }
     for( int i0=p0-1; i0>=0; i0--)
     {
         unsigned ip = i0+1;
         View fp( vec3d.begin() + ip*g2d.size(), vec3d.begin() + (ip+1)*g2d.size());
         View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
-        cusp::multiply( plus, fp, f0 );
+        cusp::multiply( plus.matrix(), fp, f0 );
     }
     return vec3d;
 }
@@ -455,7 +499,7 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, u
         int km = i0==0?k-1:k;
         View fm( vec4dP[km].begin() + im*g2d.size(), vec4dP[km].begin() + (im+1)*g2d.size());
         View f0( vec4dP[k0].begin() + i0*g2d.size(), vec4dP[k0].begin() + (i0+1)*g2d.size());
-        cusp::multiply( minus, fm, f0 );
+        cusp::multiply( minus.matrix(), fm, f0 );
         cusp::blas::scal( f0, unary( g_.z0() + (double)(k*g_.Nz()+i0+0.5)*g_.hz() ) );
         }
         for( int i0=g_.Nz()-1; i0>=0; i0--)
@@ -465,7 +509,7 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, u
         int km = i0==g_.Nz()-1?k-1:k;
         View fp( vec4dM[km].begin() + ip*g2d.size(), vec4dM[km].begin() + (ip+1)*g2d.size());
         View f0( vec4dM[k0].begin() + i0*g2d.size(), vec4dM[k0].begin() + (i0+1)*g2d.size());
-        cusp::multiply( plus, fp, f0 );
+        cusp::multiply( plus.matrix(), fp, f0 );
         cusp::blas::scal( f0, unary( g_.z0() - (double)(k*g_.Nz()-0.5-i0)*g_.hz() ) );
         }
     }
@@ -486,6 +530,7 @@ void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
     View ghostPV( ghostP.begin(), ghostP.end());
     View ghostMV( ghostM.begin(), ghostM.end());
     cView rightV( right_.begin(), right_.end());
+    dg::blas2::detail::doSymv( plus, f, fpe, SelfMadeMatrixTag(), ThrustVectorTag(), ThrustVectorTag());
     for( unsigned i0=0; i0<g_.Nz(); i0++)
     {
         unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
@@ -493,7 +538,7 @@ void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
         cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
         cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
         View fP( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
-        cusp::multiply( plus, fp, fP);
+        //cusp::multiply( plus, fp, fP);
         //make ghostcells i.e. modify fpe in the limiter region
         if( i0==g_.Nz()-1 && bcz_ != dg::PER)
         {
@@ -522,13 +567,14 @@ void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
     View ghostPV( ghostP.begin(), ghostP.end());
     View ghostMV( ghostM.begin(), ghostM.end());
     cView leftV( left_.begin(), left_.end());
+    dg::blas2::detail::doSymv( minus, f, fme, SelfMadeMatrixTag(), ThrustVectorTag(), ThrustVectorTag());
     for( unsigned i0=0; i0<g_.Nz(); i0++)
     {
         unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
         cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
         cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
         View fM( fme.begin() + i0*size, fme.begin() + (i0+1)*size);
-        cusp::multiply( minus, fm, fM );
+        //cusp::multiply( minus, fm, fM );
         //make ghostcells
         if( i0==0 && bcz_ != dg::PER)
         {
@@ -557,6 +603,7 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
     View ghostPV( ghostP.begin(), ghostP.end());
     View ghostMV( ghostM.begin(), ghostM.end());
     cView rightV( right_.begin(), right_.end());
+    dg::blas2::detail::doSymv( minusT, f, fpe, SelfMadeMatrixTag(), ThrustVectorTag(), ThrustVectorTag());
     for( unsigned i0=0; i0<g_.Nz(); i0++)
     {
         unsigned ip = (i0==g_.Nz()-1) ? 0:i0+1;
@@ -564,7 +611,7 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
         cView fp( f.cbegin() + ip*size, f.cbegin() + (ip+1)*size);
         cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
         View fP( fpe.begin() + i0*size, fpe.begin() + (i0+1)*size);
-        cusp::multiply( minusT, fp, fP );
+        //cusp::multiply( minusT, fp, fP );
         //make ghostcells i.e. modify fpe in the limiter region
         if( i0==g_.Nz()-1 && bcz_ != dg::PER)
         {
@@ -594,13 +641,14 @@ void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
     View ghostPV( ghostP.begin(), ghostP.end());
     View ghostMV( ghostM.begin(), ghostM.end());
     cView leftV( left_.begin(), left_.end());
+    dg::blas2::detail::doSymv( plusT, f, fme, SelfMadeMatrixTag(), ThrustVectorTag(), ThrustVectorTag());
     for( unsigned i0=0; i0<g_.Nz(); i0++)
     {
         unsigned im = (i0==0) ? g_.Nz()-1:i0-1;
         cView fm( f.cbegin() + im*size, f.cbegin() + (im+1)*size);
         cView f0( f.cbegin() + i0*size, f.cbegin() + (i0+1)*size);
         View fM( fme.begin() + i0*size, fme.begin() + (i0+1)*size);
-        cusp::multiply( plusT, fm, fM );
+        //cusp::multiply( plusT, fm, fM );
         //make ghostcells
         if( i0==0 && bcz_ != dg::PER)
         {

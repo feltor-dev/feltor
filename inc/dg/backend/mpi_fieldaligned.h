@@ -14,6 +14,9 @@
 namespace dg{
 
 
+
+
+
 /**
  * @brief Class for the evaluation of a parallel derivative (MPI Version)
  *
@@ -21,7 +24,7 @@ namespace dg{
  * @tparam Matrix The matrix class of the interpolation matrix
  * @tparam container The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
  */
-template <class LocalMatrix, class Communicator, class LocalContainer>
+template <class LocalMatrix, class CommunicatorXY, class CommunicatorZ, class LocalContainer>
 struct MPI_FieldAligned
 {
     /**
@@ -174,14 +177,18 @@ struct MPI_FieldAligned
   private:
     typedef cusp::array1d_view< typename LocalContainer::iterator> View;
     typedef cusp::array1d_view< typename LocalContainer::const_iterator> cView;
+    void planeMultiplier( const M& m, const container& in, container& out, container& tempXY, int offset);
     MPI_Vector<LocalContainer> hz_, hp_, hm_; 
     LocalContainer ghostM, ghostP;
     MPI_Grid3d g_;
     dg::bc bcz_;
     LocalContainer left_, right_;
     LocalContainer limiter_;
-    ColDistMat<LocalMatrix, Communicator> plus, minus; //interpolation matrices
-    RowDistMat<LocalMatrix, Communicator> plusT, minusT; //interpolation matrices
+    LocalContainer tempXYplus_, tempXYminus_, tempZ_, temp_;
+    CommunicatorXY commXYplus_, commXYminus_;
+    CommunicatorZ  commZ_;
+    LocalMatrix plus, minus; //interpolation matrices
+    LocalMatrix plusT, minusT; //interpolation matrices
     //Communicator collM_, collP_;
 
     dg::FieldAligned<LocalMatrix, LocalContainer > dz_; //only stores 2D matrix so no memory pb.
@@ -192,25 +199,28 @@ template<class LocalMatrix, class Communicator, class LocalContainer>
 template <class Field, class Limiter>
 MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
-    g_(grid), bcz_(grid.bcz()),  
+    g_(grid), bcz_(grid.bcz()), temp_(dg::evaluate( dg::zero, grid)), 
     dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
 {
     //Resize vector to local 2D grid size
-    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
+    MPI_Comm planeComm;
+    const int remain_dims[] = {1,1,0}; //true true false
+    MPI_Cart_sub( grid.communicator(), remain_dims, planeComm);
+    dg::MPI_Grid2d g2d( g_.global().x0(), g_.global().x1(), g_.global().y0(), g_.global().y1(), g_.global().n(), g_.global().Nx(), g_.global().Ny(), planeComm);  
     unsigned size = g2d.size();
-    limiter_ = dg::evaluate( limit, g2d);
-    right_ = left_ = dg::evaluate( zero, g2d);
+    limiter_ = dg::evaluate( limit, g2d.local());
+    right_ = left_ = dg::evaluate( zero, g2d.local());
     ghostM.resize( size); ghostP.resize( size);
     //set up grid points as start for fieldline integrations 
     std::vector<thrust::host_vector<double> > y( 3);
-    y[0] = dg::evaluate( dg::coo1, grid.local());
-    y[1] = dg::evaluate( dg::coo2, grid.local());
-    y[2] = dg::evaluate( dg::zero, grid.local());//distance (not angle)
+    y[0] = dg::evaluate( dg::coo1, g2d.local());
+    y[1] = dg::evaluate( dg::coo2, g2d.local());
+    y[2] = dg::evaluate( dg::zero, g2d.local());//distance (not angle)
     //integrate to next z-planes
     std::vector<thrust::host_vector<double> > yp(y), ym(y); 
     if(deltaPhi<=0) deltaPhi = g_.hz();
     else assert( g_.Nz() == 1 || grid.hz()==deltaPhi);
-    unsigned localsize = grid.local().size();
+    unsigned localsize = g2d.size();
 #ifdef _OPENMP
 #pragma omp parallel for shared(field)
 #endif //_OPENMP
@@ -229,57 +239,53 @@ MPI_FieldAligned<LocalMatrix, Communicator, LocalContainer>::MPI_FieldAligned(Fi
 
     //determine pid of result 
     thrust::host_vector<int> pids( localsize);
-    thrust::host_vector<double> angle = dg::evaluate( dg::coo3, grid.local());
-    for( unsigned i=0; i<pids.size(); i++)
+    for( unsigned i=0; i<localsize; i++)
     {
-        angle[i] += deltaPhi;
-        if( angle[i] >= grid.global().z1()) angle[i] -= grid.global().lz();
-        pids[i]  = grid.pidOf( yp[0][i], yp[1][i], angle[i]);
+        pids[i]  = g2d.pidOf( yp[0][i], yp[1][i]);
         if( pids[i]  == -1)
         {
             std::cerr << "ERROR: PID NOT FOUND!\n";
             return;
         }
     }
-    //construct scatter operation from pids
-    Communicator cp( pids, grid.communicator());
-    thrust::host_vector<double> pX = cp.collect( yp[0]),
-                                pY = cp.collect( yp[1]),
-                                pZ = cp.collect( angle);
-    //construt interpolation matrix
-    LocalMatrix inter = dg::create::interpolation( pX, pY, pZ, grid.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
-    plus = ColDistMat<LocalMatrix, Communicator>(inter, cp);
-    LocalMatrix interT;
-    cusp::transpose( inter, interT);
-    plusT = RowDistMat<LocalMatrix, Communicator>( interT, cp);
 
-    
+    CommunicatorXY cp( pids, g2d.communicator());
+    thrust::host_vector<double> pX = cp.collect( yp[0]),
+                                pY = cp.collect( yp[1]);
+    thrust::host_vector<int> pidsglobal( g_.size());
+    for( unsigned i=0; i<g_.Nz(); i++)
+        thrust::copy( pids.begin(), pids.begin()+localsize, pidsglobal.begin() + i*localsize);
+    commXYplus = CommunicatorXY( pidsglobal, g2d.communicator());
+    //construt interpolation matrix
+    plus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
+    cusp::transpose( plus, plusT);
 
     //do the same for the minus z-plane
     for( unsigned i=0; i<pids.size(); i++)
     {
-        angle[i] -= 2.*deltaPhi;
-        if( angle[i] <= grid.global().z0()) angle[i] += grid.global().lz();
-        pids[i]  = grid.pidOf( ym[0][i], ym[1][i], angle[i]);
+        pids[i]  = g2d.pidOf( ym[0][i], ym[1][i]);
         if( pids[i] == -1)
         {
             std::cerr << "ERROR: PID NOT FOUND!\n";
             return;
         }
     }
-    Communicator cm( pids, grid.communicator());
+    CommunicatorXY cm( pids, g2d.communicator
     pX = cm.collect( ym[0]),
     pY = cm.collect( ym[1]),
-    pZ = cm.collect( angle);
-    inter = dg::create::interpolation( pX, pY, pZ, grid.local(), globalbcz);//inner points hopefully never lie exactly on local boundary
-    minus = ColDistMat<LocalMatrix, Communicator>(inter, cm);
-    cusp::transpose( inter, interT);
-    minusT = RowDistMat<LocalMatrix, Communicator>( interT, cm);
+    minus = dg::create::interpolation( pX, pY, g2d, globalbcz); //inner points hopefully never lie exactly on local boundary
+    cusp::transpose( minus, minusT);
     //copy to device
     thrust::copy( yp[2].begin(), yp[2].end(), hp_.data().begin());
     thrust::copy( ym[2].begin(), ym[2].end(), hm_.data().begin());
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
+    for( unsigned i=0; i<g_.Nz(); i++)
+        thrust::copy( pids.begin(), pids.begin()+localsize, pidsglobal.begin() + i*localsize);
+    commXYminus = CommunicatorXY( pidsglobal, g2d.communicator());
+    tempXYplus_.resize( commXYplus_.size());
+    tempXYminus_.resize( commXYminus_.size());
+    tempZ_.resize( commZ_.size());
 }
 
 template<class M, class C, class container>
@@ -323,7 +329,8 @@ MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, Una
 template<class M, class C, class container>
 void MPI_FieldAligned<M,C,container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
 {
-    dg::blas2::detail::doSymv( plus, f, fplus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
+    //dg::blas2::detail::doSymv( plus, f, fplus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
+
     //make ghostcells in last plane
     const container& in = f.data();
     container& out = fplus.data();
@@ -426,7 +433,8 @@ void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f
 template< class M, class C, class container>
 void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f, MPI_Vector<container>& fme)
 {
-    dg::blas2::detail::doSymv( plusT, f, fme, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
+    //dg::blas2::detail::doSymv( plusT, f, fme, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
+    planeMultiplierT( plusT, f.data(), fme.data(), tempXYminus_, -1);
     //make ghostcells in first plane
     const container& in = f.data();
     container& out = fme.data();
@@ -454,6 +462,58 @@ void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f,
         cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
         dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
         cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
+    }
+}
+template <class M, class C, class container>
+void MPI_Fieldaligned<M,C,container>::planeMultiplier( const M& m_, const container& in, container& out, container& tempXY, int offset, bool transpose) const
+{
+        std::cout << in.size()<< " " << out.size()<< " "<<m_.num_cols<<" "<<m_.num_rows<<" "<<Nz_<<std::endl;
+        assert( in.size() == m_.num_cols*Nz_);
+        assert( out.size() == m_.num_rows*Nz_);
+    int size2d = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        int rank, dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        MPI_Comm_rank( comm, &rank);
+        int sizeXY = dims[0]*dims[1];
+        int sizeZ = dims[2];
+    //1. compute 2d interpolation in every plane and store in temp_
+    if( sizeXY != 1) //communication needed
+    {
+        if( !transpose)
+        {
+            for( int i0=0; i0<g_.Nz(); i0++)
+            {
+                cView inV( in.cbegin() + i0*matrix.num_cols, in.cbegin() + (i0+1)*matrix.num_cols);
+                View tempV( tempXY.begin() + i0*plus.num_rows, tempXY.begin() + (i0+1)*plus.num_rows);
+                cusp::multiply( matrix, inV, tempV);
+            }
+            //exchange data in XY
+            commXYplus_.send_and_reduce( tempXY, temp_);
+        }
+    }
+    else //directly compute in temp_
+    {
+        for( int i0=0; i0<g_.Nz(); i0++)
+        {
+            cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
+            View tempV( temp_.begin() + i0*plus.num_rows, temp_.begin() + (i0+1)*plus.num_rows);
+            cusp::multiply( plus, inV, tempV);
+        }
+    }
+    //2. reorder results and communicate halo in z
+    for( int i0=0; i0<g_.Nz(); i0++)
+    {
+        int ip = i0 + offset;
+        if( ip > (int)g_.Nz()_-1) ip -= (int)g_.Nz();
+        if( ip < 0) ip += (int)g_.Nz();
+        thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
+    }
+    if( sizeZ != 1)
+    {
+        if( offset == 1)
+            thrust::copy( tempZ_.begin() + size2d, tempZ_.begin() + 2*size2d, out.begin() + (g_.Nz()-1)*size2d);
+        if( offset == -1)
+            thrust::copy( tempZ_.begin(), tempZ_.begin() + size2d, out.begin());
     }
 }
 
