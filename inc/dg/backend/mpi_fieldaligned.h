@@ -258,13 +258,10 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(
     dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
 {
     //Resize vector to local 2D grid size
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm planeComm;
     int remain_dims[] = {true,true,false}; //true true false
     MPI_Cart_sub( grid.communicator(), remain_dims, &planeComm);
     dg::MPI_Grid2d g2d( g_.global().x0(), g_.global().x1(), g_.global().y0(), g_.global().y1(), g_.global().n(), g_.global().Nx(), g_.global().Ny(), g_.bcx(), g_.bcy(), planeComm);  
-    if(rank==2)g2d.display();
     unsigned size = g2d.size();
     limiter_ = dg::evaluate( limit, g2d.local());
     right_ = left_ = dg::evaluate( zero, g2d.local());
@@ -434,32 +431,32 @@ void MPI_FieldAligned<M,C, container>::einsPlus( const MPI_Vector<container>& f,
     }
 
     //make ghostcells in last plane
-    //unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    //if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
-    //{
-    //    unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
-    //    cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-    //    cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-    //    cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-    //    View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
-    //    View ghostPV( ghostP.begin(), ghostP.end());
-    //    View ghostMV( ghostM.begin(), ghostM.end());
-    //    //overwrite out
-    //    cusp::copy( f0, ghostPV);
-    //    if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-    //    {
-    //        dg::blas1::axpby( 2., right_, -1, ghostP);
-    //    }
-    //    if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-    //    {
-    //        //note that hp_ is 3d and the rest 2d
-    //        thrust::transform( right_.begin(), right_.end(),  hp_.data().begin(), ghostM.begin(), thrust::multiplies<double>());
-    //        dg::blas1::axpby( 1., ghostM, 1., ghostP);
-    //    }
-    //    cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
-    //    dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-    //    cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
-    //}
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    if( bcz_ != dg::PER && g_.z1() == g_.global().z1())
+    {
+        unsigned i0 = g_.Nz()-1, im = g_.Nz()-2, ip = 0;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite out
+        cusp::copy( f0, ghostPV);
+        if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
+        {
+            dg::blas1::axpby( 2., right_, -1, ghostP);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
+        {
+            //note that hp_ is 3d and the rest 2d
+            thrust::transform( right_.begin(), right_.end(),  hp_.data().begin(), ghostM.begin(), thrust::multiplies<double>());
+            dg::blas1::axpby( 1., ghostM, 1., ghostP);
+        }
+        cusp::blas::axpby(  ghostPV,  outV, ghostPV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
+        cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
+    }
 
 }
 
@@ -508,31 +505,31 @@ void MPI_FieldAligned<M,C,container>::einsMinus( const MPI_Vector<container>& f,
         thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin());
     }
     //make ghostcells in first plane
-    //unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-    //if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
-    //{
-    //    unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
-    //    cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
-    //    cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
-    //    cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
-    //    View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
-    //    View ghostPV( ghostP.begin(), ghostP.end());
-    //    View ghostMV( ghostM.begin(), ghostM.end());
-    //    //overwrite out
-    //    cusp::copy( f0, ghostMV);
-    //    if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-    //    {
-    //        dg::blas1::axpby( 2., left_, -1, ghostM);
-    //    }
-    //    if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-    //    {
-    //        thrust::transform( left_.begin(), left_.end(), hm_.data().begin(), ghostP.begin(), thrust::multiplies<double>());
-    //        dg::blas1::axpby( -1, ghostP, 1., ghostM);
-    //    }
-    //    cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
-    //    dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-    //    cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
-    //}
+    unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+    if( bcz_ != dg::PER && g_.z0() == g_.global().z0())
+    {
+        unsigned i0 = 0, im = g_.Nz()-1, ip = 1;
+        cView fp( in.cbegin() + ip*size, in.cbegin() + (ip+1)*size);
+        cView f0( in.cbegin() + i0*size, in.cbegin() + (i0+1)*size);
+        cView fm( in.cbegin() + im*size, in.cbegin() + (im+1)*size);
+        View outV( out.begin() + i0*size, out.begin() + (i0+1)*size);
+        View ghostPV( ghostP.begin(), ghostP.end());
+        View ghostMV( ghostM.begin(), ghostM.end());
+        //overwrite out
+        cusp::copy( f0, ghostMV);
+        if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
+        {
+            dg::blas1::axpby( 2., left_, -1, ghostM);
+        }
+        if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
+        {
+            thrust::transform( left_.begin(), left_.end(), hm_.data().begin(), ghostP.begin(), thrust::multiplies<double>());
+            dg::blas1::axpby( -1, ghostP, 1., ghostM);
+        }
+        cusp::blas::axpby(  ghostMV,  outV, ghostMV, 1.,-1.);
+        dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
+        cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
+    }
 }
 template< class M, class C, class container>
 void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f, MPI_Vector<container>& fpe)
@@ -554,7 +551,7 @@ void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f
         {
             thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
             tempXYminus_[i0] = commXYminus_.collect( temp_[i0] );
-            cView inV( tempXYminus_[i0].cbegin(), tempXYminus_.cend() );
+            cView inV( tempXYminus_[i0].cbegin(), tempXYminus_[i0].cend() );
             View tempV( temp_[i0].begin(), temp_[i0].end() );
             cusp::multiply( minusT, inV, tempV);
         }
@@ -627,9 +624,9 @@ void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f,
         for( int i0=0; i0<g_.Nz(); i0++)
         {
             thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
-            tempXYplus_[i0] = commXYplus_.collect( temp_);
+            tempXYplus_[i0] = commXYplus_.collect( temp_[i0]);
             cView inV( tempXYplus_[i0].cbegin(), tempXYplus_[i0].cend() );
-            View tempV( temp_.begin() + i0*plusT.num_rows, temp_.begin() + (i0+1)*plusT.num_rows);
+            View tempV( temp_[i0].begin(), temp_[i0].end() );
             cusp::multiply( plusT, inV, tempV);
         }
     }
