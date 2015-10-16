@@ -135,6 +135,7 @@ void Collective::gather( const thrust::device_vector<double>& gatherFrom, thrust
 
 void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values) const 
 {
+    //std::cout << gatherFrom.size()<<" "<<store_size()<<std::endl;
     assert( gatherFrom.size() == store_size() );
     values.resize( values_size() );
     MPI_Alltoallv( 

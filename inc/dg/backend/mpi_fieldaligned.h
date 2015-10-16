@@ -12,8 +12,61 @@
 #include "../runge_kutta.h"
 
 namespace dg{
+ 
+   
+struct ZShifter
+{
+    ZShifter(){}
+    ZShifter( int size, MPI_Comm comm) 
+    {
+        number_ = size;
+        comm_ = comm;
+        sb_.resize( number_), rb_.resize( number_);
+    }
+    int number() const {return number_;}
+    int size() const {return number_;}
+    MPI_Comm communicator() const {return comm_;}
+    void sendForward( HVec& sb, HVec& rb)const
+    {
+        int source, dest;
+        MPI_Status status;
+        MPI_Cart_shift( comm_, 2, +1, &source, &dest);
+        MPI_Sendrecv(   sb.data(), number_, MPI_DOUBLE,  //sender
+                        dest, 9,  //destination
+                        rb.data(), number_, MPI_DOUBLE, //receiver
+                        source, 9, //source
+                        comm_, &status);
+    }
+    void sendBackward( HVec& sb, HVec& rb)const
+    {
+        int source, dest;
+        MPI_Status status;
+        MPI_Cart_shift( comm_, 2, -1, &source, &dest);
+        MPI_Sendrecv(   sb.data(), number_, MPI_DOUBLE,  //sender
+                        dest, 3,  //destination
+                        rb.data(), number_, MPI_DOUBLE, //receiver
+                        source, 3, //source
+                        comm_, &status);
+    }
+    void sendForward( const thrust::device_vector<double>& sb, thrust::device_vector<double>& rb)
+    {
+        sb_ = sb; 
+        sendForward( sb_, rb_);
+        rb = rb_;
+    }
+    void sendBackward( const thrust::device_vector<double>& sb, thrust::device_vector<double>& rb)
+    {
+        sb_ = sb; 
+        sendBackward( sb_, rb_);
+        rb = rb_;
+    }
+    private:
+    typedef thrust::host_vector<double> HVec;
+    HVec sb_, rb_;
+    int number_; //deepness, dimensions
+    MPI_Comm comm_;
 
-
+};
 
 
 
@@ -24,7 +77,7 @@ namespace dg{
  * @tparam Matrix The matrix class of the interpolation matrix
  * @tparam container The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
  */
-template <class LocalMatrix, class CommunicatorXY, class CommunicatorZ, class LocalContainer>
+template <class LocalMatrix, class CommunicatorXY, class LocalContainer>
 struct MPI_FieldAligned
 {
     /**
@@ -183,9 +236,10 @@ struct MPI_FieldAligned
     dg::bc bcz_;
     LocalContainer left_, right_;
     LocalContainer limiter_;
-    LocalContainer tempXYplus_, tempXYminus_, tempZ_, temp_;
+    std::vector<LocalContainer> tempXYplus_, tempXYminus_, temp_; 
+    LocalContainer tempZ_;
     CommunicatorXY commXYplus_, commXYminus_;
-    CommunicatorZ  commZ_;
+    ZShifter  commZ_;
     LocalMatrix plus, minus; //interpolation matrices
     LocalMatrix plusT, minusT; //interpolation matrices
     //Communicator collM_, collP_;
@@ -194,18 +248,23 @@ struct MPI_FieldAligned
 };
 ///@cond
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
-template<class LocalMatrix, class CommunicatorXY, class CommunicatorZ, class LocalContainer>
+template<class LocalMatrix, class CommunicatorXY, class LocalContainer>
 template <class Field, class Limiter>
-MPI_FieldAligned<LocalMatrix, CommunicatorXY, CommunicatorZ, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
+MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
-    g_(grid), bcz_(grid.bcz()), temp_(dg::evaluate( dg::zero, grid.local())), 
+    g_(grid), bcz_(grid.bcz()), 
+    tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()),
+    temp_(g_.Nz()),
     dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
 {
     //Resize vector to local 2D grid size
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm planeComm;
-    int remain_dims[] = {1,1,0}; //true true false
+    int remain_dims[] = {true,true,false}; //true true false
     MPI_Cart_sub( grid.communicator(), remain_dims, &planeComm);
     dg::MPI_Grid2d g2d( g_.global().x0(), g_.global().x1(), g_.global().y0(), g_.global().y1(), g_.global().n(), g_.global().Nx(), g_.global().Ny(), g_.bcx(), g_.bcy(), planeComm);  
+    if(rank==2)g2d.display();
     unsigned size = g2d.size();
     limiter_ = dg::evaluate( limit, g2d.local());
     right_ = left_ = dg::evaluate( zero, g2d.local());
@@ -249,15 +308,12 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, CommunicatorZ, LocalContainer>::MP
     }
 
     CommunicatorXY cp( pids, g2d.communicator());
+    commXYplus_ = cp;
     thrust::host_vector<double> pX = cp.collect( yp[0]),
                                 pY = cp.collect( yp[1]);
     //construt interpolation matrix
     plus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( plus, plusT);
-    thrust::host_vector<int> pidsglobal( g_.size());
-    for( unsigned i=0; i<g_.Nz(); i++)
-        thrust::copy( pids.begin(), pids.begin()+localsize, pidsglobal.begin() + i*localsize);
-    commXYplus_ = CommunicatorXY( pidsglobal, g2d.communicator());
 
     //do the same for the minus z-plane
     for( unsigned i=0; i<pids.size(); i++)
@@ -270,6 +326,7 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, CommunicatorZ, LocalContainer>::MP
         }
     }
     CommunicatorXY cm( pids, g2d.communicator());
+    commXYminus_ = cm;
     pX = cm.collect( ym[0]);
     pY = cm.collect( ym[1]);
     minus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
@@ -283,18 +340,18 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, CommunicatorZ, LocalContainer>::MP
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
     for( unsigned i=0; i<g_.Nz(); i++)
-        thrust::copy( pids.begin(), pids.begin()+localsize, pidsglobal.begin() + i*localsize);
-    commXYminus_ = CommunicatorXY( pidsglobal, g2d.communicator());
-    tempXYplus_.resize( commXYplus_.size());
-    tempXYminus_.resize( commXYminus_.size());
+    {
+        tempXYplus_[i].resize( commXYplus_.size());
+        tempXYminus_[i].resize( commXYminus_.size());
+        temp_[i].resize( localsize);
+    }
+    commZ_ = ZShifter( localsize, g_.communicator() );
     tempZ_.resize( commZ_.size());
-    int vector_dimensions[] = {(int)(g_.n()*g_.Nx()), (int)(g_.n()*g_.Ny()), (int)(g_.Nz())}; //x, y, z
-    commZ_ = CommunicatorZ( 1, vector_dimensions, g_.communicator(), 2 );
 }
 
-template<class M, class C1,class C2, class container>
+template<class M, class C, class container>
 template< class BinaryOp>
-MPI_Vector<container> MPI_FieldAligned<M,C1,C2,container>::evaluate( BinaryOp f, unsigned p0) const
+MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, unsigned p0) const
 {
     container global_vec = dz_.evaluate( f, p0);
     container vec = dg::evaluate( dg::zero, g_.local());
@@ -311,9 +368,9 @@ MPI_Vector<container> MPI_FieldAligned<M,C1,C2,container>::evaluate( BinaryOp f,
     return MPI_Vector<container>( vec, g_.communicator());
 }
 
-template<class M, class C1, class C2, class container>
+template<class M, class C, class container>
 template< class BinaryOp, class UnaryOp>
-MPI_Vector<container> MPI_FieldAligned<M,C1,C2,container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const
+MPI_Vector<container> MPI_FieldAligned<M,C, container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const
 {
     //let all processes integrate the fieldlines
     container global_vec = dz_.evaluate( f, g,p0, rounds);
@@ -330,8 +387,8 @@ MPI_Vector<container> MPI_FieldAligned<M,C1,C2,container>::evaluate( BinaryOp f,
     return MPI_Vector<container>( vec, g_.communicator());
 }
 
-template<class M, class C1, class C2, class container>
-void MPI_FieldAligned<M,C1,C2,container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
+template<class M, class C, class container>
+void MPI_FieldAligned<M,C, container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
 {
     //dg::blas2::detail::doSymv( plus, f, fplus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     const container& in = f.data();
@@ -348,18 +405,18 @@ void MPI_FieldAligned<M,C1,C2,container>::einsPlus( const MPI_Vector<container>&
         for( int i0=0; i0<g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
-            View tempV( tempXYplus_.begin() + i0*plus.num_rows, tempXYplus_.begin() + (i0+1)*plus.num_rows);
+            View tempV( tempXYplus_[i0].begin(), tempXYplus_[i0].end() );
             cusp::multiply( plus, inV, tempV);
+            //exchange data in XY
+            commXYplus_.send_and_reduce( tempXYplus_[i0], temp_[i0]);
         }
-        //exchange data in XY
-        commXYplus_.send_and_reduce( tempXYplus_, temp_);
     }
     else //directly compute in temp_
     {
         for( int i0=0; i0<g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
-            View tempV( temp_.begin() + i0*plus.num_rows, temp_.begin() + (i0+1)*plus.num_rows);
+            View tempV( temp_[i0].begin(), temp_[i0].end() );
             cusp::multiply( plus, inV, tempV);
         }
     }
@@ -368,12 +425,12 @@ void MPI_FieldAligned<M,C1,C2,container>::einsPlus( const MPI_Vector<container>&
     {
         int ip = i0 + 1;
         if( ip > (int)g_.Nz()-1) ip -= (int)g_.Nz();
-        thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
+        thrust::copy( temp_[ip].begin(), temp_[ip].begin() + size2d, out.begin() + i0*size2d);
     }
     if( sizeZ != 1)
     {
-        tempZ_ = commZ_.collect( temp_);
-        thrust::copy( tempZ_.begin() + size2d, tempZ_.begin() + 2*size2d, out.begin() + (g_.Nz()-1)*size2d);
+        commZ_.sendBackward( temp_[0], tempZ_);
+        thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin() + (g_.Nz()-1)*size2d);
     }
 
     //make ghostcells in last plane
@@ -406,8 +463,8 @@ void MPI_FieldAligned<M,C1,C2,container>::einsPlus( const MPI_Vector<container>&
 
 }
 
-template<class M, class C1, class C2, class container>
-void MPI_FieldAligned<M,C1,C2,container>::einsMinus( const MPI_Vector<container>& f, MPI_Vector<container>& fminus ) 
+template<class M, class C, class container>
+void MPI_FieldAligned<M,C,container>::einsMinus( const MPI_Vector<container>& f, MPI_Vector<container>& fminus ) 
 {
     const container& in = f.data();
     container& out = fminus.data();
@@ -423,18 +480,18 @@ void MPI_FieldAligned<M,C1,C2,container>::einsMinus( const MPI_Vector<container>
         for( int i0=0; i0<g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*minus.num_cols, in.cbegin() + (i0+1)*minus.num_cols);
-            View tempV( tempXYminus_.begin() + i0*plus.num_rows, tempXYminus_.begin() + (i0+1)*plus.num_rows);
+            View tempV( tempXYminus_[i0].begin(), tempXYminus_[i0].end());
             cusp::multiply( minus, inV, tempV);
+            //exchange data in XY
+            commXYminus_.send_and_reduce( tempXYminus_[i0], temp_[i0]);
         }
-        //exchange data in XY
-        commXYplus_.send_and_reduce( tempXYminus_, temp_);
     }
     else //directly compute in temp_
     {
         for( int i0=0; i0<g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*minus.num_cols, in.cbegin() + (i0+1)*minus.num_cols);
-            View tempV( temp_.begin() + i0*minus.num_rows, temp_.begin() + (i0+1)*minus.num_rows);
+            View tempV( temp_[i0].begin(), temp_[i0].end() );
             cusp::multiply( minus, inV, tempV);
         }
     }
@@ -443,12 +500,12 @@ void MPI_FieldAligned<M,C1,C2,container>::einsMinus( const MPI_Vector<container>
     {
         int ip = i0 -1;
         if( ip < 0) ip += (int)g_.Nz();
-        thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
+        thrust::copy( temp_[ip].begin(), temp_[ip].end(), out.begin() + i0*size2d);
     }
     if( sizeZ != 1)
     {
-        tempZ_ = commZ_.collect( temp_);
-        thrust::copy( tempZ_.begin(), tempZ_.begin() + size2d, out.begin());
+        commZ_.sendForward( temp_[g_.Nz()-1], tempZ_);
+        thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin());
     }
     //make ghostcells in first plane
     //unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
@@ -477,8 +534,8 @@ void MPI_FieldAligned<M,C1,C2,container>::einsMinus( const MPI_Vector<container>
     //    cusp::blas::axpby(  ghostMV,  outV, outV, 1.,1.);
     //}
 }
-template< class M, class C1, class C2, class container>
-void MPI_FieldAligned<M,C1,C2,container>::einsMinusT( const MPI_Vector<container>& f, MPI_Vector<container>& fpe)
+template< class M, class C, class container>
+void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f, MPI_Vector<container>& fpe)
 {
     //dg::blas2::detail::doSymv( minusT, f, fpe, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     const container& in = f.data();
@@ -493,11 +550,12 @@ void MPI_FieldAligned<M,C1,C2,container>::einsMinusT( const MPI_Vector<container
     if( sizeXY != 1) //communication needed
     {
         //first exchange data in XY
-        tempXYminus_ = commXYminus_.collect( in );
         for( int i0=0; i0<g_.Nz(); i0++)
         {
-            cView inV( tempXYminus_.cbegin() + i0*minusT.num_cols, tempXYminus_.cbegin() + (i0+1)*minusT.num_cols);
-            View tempV( temp_.begin() + i0*minusT.num_rows, temp_.begin() + (i0+1)*minusT.num_rows);
+            thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
+            tempXYminus_[i0] = commXYminus_.collect( temp_[i0] );
+            cView inV( tempXYminus_[i0].cbegin(), tempXYminus_.cend() );
+            View tempV( temp_[i0].begin(), temp_[i0].end() );
             cusp::multiply( minusT, inV, tempV);
         }
     }
@@ -506,7 +564,7 @@ void MPI_FieldAligned<M,C1,C2,container>::einsMinusT( const MPI_Vector<container
         for( int i0=0; i0<g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*minusT.num_cols, in.cbegin() + (i0+1)*minusT.num_cols);
-            View tempV( temp_.begin() + i0*minusT.num_rows, temp_.begin() + (i0+1)*minusT.num_rows);
+            View tempV( temp_[i0].begin() , temp_[i0].end() );
             cusp::multiply( minusT, inV, tempV);
         }
     }
@@ -515,12 +573,12 @@ void MPI_FieldAligned<M,C1,C2,container>::einsMinusT( const MPI_Vector<container
     {
         int ip = i0 + 1;
         if( ip > (int)g_.Nz()-1) ip -= (int)g_.Nz();
-        thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
+        thrust::copy( temp_[ip].begin(), temp_[ip].end(), out.begin() + i0*size2d);
     }
     if( sizeZ != 1)
     {
-        tempZ_ = commZ_.collect( temp_);
-        thrust::copy( tempZ_.begin() + size2d, tempZ_.begin() + 2*size2d, out.begin() + (g_.Nz()-1)*size2d);
+        commZ_.sendBackward( temp_[0], tempZ_);
+        thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin() + (g_.Nz()-1)*size2d);
     }
     //make ghostcells in last plane
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
@@ -550,8 +608,8 @@ void MPI_FieldAligned<M,C1,C2,container>::einsMinusT( const MPI_Vector<container
         cusp::blas::axpby(  ghostPV,  outV, outV, 1.,1.);
     }
 }
-template< class M, class C1, class C2, class container>
-void MPI_FieldAligned<M,C1, C2,container>::einsPlusT( const MPI_Vector<container>& f, MPI_Vector<container>& fme)
+template< class M, class C, class container>
+void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f, MPI_Vector<container>& fme)
 {
     //dg::blas2::detail::doSymv( plusT, f, fme, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     const container& in = f.data();
@@ -566,10 +624,11 @@ void MPI_FieldAligned<M,C1, C2,container>::einsPlusT( const MPI_Vector<container
     if( sizeXY != 1) //communication needed
     {
         //first exchange data in XY
-        tempXYplus_ = commXYplus_.collect( in);
         for( int i0=0; i0<g_.Nz(); i0++)
         {
-            cView inV( tempXYplus_.cbegin() + i0*plusT.num_cols, tempXYplus_.cbegin() + (i0+1)*plusT.num_cols);
+            thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
+            tempXYplus_[i0] = commXYplus_.collect( temp_);
+            cView inV( tempXYplus_[i0].cbegin(), tempXYplus_[i0].cend() );
             View tempV( temp_.begin() + i0*plusT.num_rows, temp_.begin() + (i0+1)*plusT.num_rows);
             cusp::multiply( plusT, inV, tempV);
         }
@@ -579,7 +638,7 @@ void MPI_FieldAligned<M,C1, C2,container>::einsPlusT( const MPI_Vector<container
         for( int i0=0; i0<g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
-            View tempV( temp_.begin() + i0*plus.num_rows, temp_.begin() + (i0+1)*plus.num_rows);
+            View tempV( temp_[i0].begin(), temp_[i0].end());
             cusp::multiply( plusT, inV, tempV);
         }
     }
@@ -588,12 +647,12 @@ void MPI_FieldAligned<M,C1, C2,container>::einsPlusT( const MPI_Vector<container
     {
         int ip = i0 - 1;
         if( ip < 0 ) ip += (int)g_.Nz();
-        thrust::copy( temp_.begin()+ip*size2d, temp_.begin() + (ip+1)*size2d, out.begin() + i0*size2d);
+        thrust::copy( temp_[ip].begin(), temp_[ip].end(), out.begin() + i0*size2d);
     }
     if( sizeZ != 1)
     {
-        tempZ_ = commZ_.collect( temp_);
-        thrust::copy( tempZ_.begin(), tempZ_.begin() + size2d, out.begin());
+        commZ_.sendForward( temp_[g_.Nz()-1], tempZ_);
+        thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin());
     }
     //make ghostcells in first plane
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();

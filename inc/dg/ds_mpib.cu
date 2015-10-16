@@ -92,7 +92,13 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    if(rank==0)std::cout << "Norm Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    if(rank==0)std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    ds.forward( function, derivative);
+    norm = dg::blas2::dot(w3d, derivative);
+    if(rank==0)std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    ds.backward( function, derivative);
+    norm = dg::blas2::dot(w3d, derivative);
+    if(rank==0)std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
     MPI_Finalize();
     return 0;
 }

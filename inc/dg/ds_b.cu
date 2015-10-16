@@ -89,7 +89,13 @@ int main()
     std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    std::cout << "Norm Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
+    std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
+    ds.forward( function, derivative);
+    norm = dg::blas2::dot(w3d, derivative);
+    std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    ds.backward( function, derivative);
+    norm = dg::blas2::dot(w3d, derivative);
+    std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
     
     return 0;
 }
