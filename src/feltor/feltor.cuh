@@ -255,7 +255,7 @@ struct Feltor
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
-    void add_parallel_dynamics( std::vector<container>& y, std::vector<container>& yp);
+    double add_parallel_dynamics( std::vector<container>& y, std::vector<container>& yp);
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
@@ -377,14 +377,14 @@ void Feltor<DS, Matrix, container, P>::initializene( const container& src, conta
 template<class DS, class M, class V, class P>
 double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
 {
-    //parallel and perpendicular energy dissipation
+    double z[2]    = {-1.0,1.0};
     double Dpar[4] = {0.0, 0.0,0.0,0.0};
     double Dperp[4] = {0.0, 0.0,0.0,0.0};
     if (p.pollim==1) dsN_.set_boundaries( p.bc, 0, 0);  //ds N  on limiter
     if (p.pollim==1) dsDIR_.set_boundaries( dg::DIR, 0, 0); //ds psi on limiter
+    //Parallel dynamics
     for(unsigned i=0; i<2; i++)
     {
-        //Parallel dynamics
         dsN_(y[i], chi);   
         dg::blas1::pointwiseDot(y[i+2], chi, omega);     // U ds N
         dsDIR_(y[i+2], chi);  
