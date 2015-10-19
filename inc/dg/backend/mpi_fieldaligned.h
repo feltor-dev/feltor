@@ -13,10 +13,20 @@
 
 namespace dg{
  
-   
+///@cond
+
+/**
+ * @brief Class to shift values in the z - direction 
+ */
 struct ZShifter
 {
     ZShifter(){}
+    /**
+     * @brief Constructor
+     *
+     * @param size number of elements to exchange between processes
+     * @param comm the communicator (cartesian)
+     */
     ZShifter( int size, MPI_Comm comm) 
     {
         number_ = size;
@@ -26,7 +36,8 @@ struct ZShifter
     int number() const {return number_;}
     int size() const {return number_;}
     MPI_Comm communicator() const {return comm_;}
-    void sendForward( HVec& sb, HVec& rb)const
+    //host and device versions
+    void sendForward( HVec& sb, HVec& rb)const //send to next plane
     {
         int source, dest;
         MPI_Status status;
@@ -37,7 +48,7 @@ struct ZShifter
                         source, 9, //source
                         comm_, &status);
     }
-    void sendBackward( HVec& sb, HVec& rb)const
+    void sendBackward( HVec& sb, HVec& rb)const //send to previous plane
     {
         int source, dest;
         MPI_Status status;
@@ -68,16 +79,19 @@ struct ZShifter
 
 };
 
+///@endcond
+
 
 
 /**
  * @brief Class for the evaluation of a parallel derivative (MPI Version)
  *
  * @ingroup dz
- * @tparam Matrix The matrix class of the interpolation matrix
- * @tparam container The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
+ * @tparam LocalMatrix The matrix class of the interpolation matrix
+ * @tparam Communicator The communicator used to exchange data in the RZ planes
+ * @tparam LocalContainer The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
  */
-template <class LocalMatrix, class CommunicatorXY, class LocalContainer>
+template <class LocalMatrix, class Communicator, class LocalContainer>
 struct MPI_FieldAligned
 {
     /**
@@ -253,19 +267,18 @@ template <class Field, class Limiter>
 MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()), 
-    tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()),
-    temp_(g_.Nz()),
+    tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz()),
     dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
 {
-    //Resize vector to local 2D grid size
+    //create communicator with all processes in plane
     MPI_Comm planeComm;
     int remain_dims[] = {true,true,false}; //true true false
     MPI_Cart_sub( grid.communicator(), remain_dims, &planeComm);
     dg::MPI_Grid2d g2d( g_.global().x0(), g_.global().x1(), g_.global().y0(), g_.global().y1(), g_.global().n(), g_.global().Nx(), g_.global().Ny(), g_.bcx(), g_.bcy(), planeComm);  
-    unsigned size = g2d.size();
+    unsigned localsize = g2d.size();
     limiter_ = dg::evaluate( limit, g2d.local());
     right_ = left_ = dg::evaluate( zero, g2d.local());
-    ghostM.resize( size); ghostP.resize( size);
+    ghostM.resize( localsize); ghostP.resize( localsize);
     //set up grid points as start for fieldline integrations 
     std::vector<thrust::host_vector<double> > y( 3);
     y[0] = dg::evaluate( dg::coo1, g2d.local());
@@ -275,7 +288,6 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(
     std::vector<thrust::host_vector<double> > yp(y), ym(y); 
     if(deltaPhi<=0) deltaPhi = g_.hz();
     else assert( g_.Nz() == 1 || grid.hz()==deltaPhi);
-    unsigned localsize = g2d.size();
 #ifdef _OPENMP
 #pragma omp parallel for shared(field)
 #endif //_OPENMP
@@ -620,9 +632,9 @@ void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f,
     //1. compute 2d interpolation in every plane and store in temp_
     if( sizeXY != 1) //communication needed
     {
-        //first exchange data in XY
         for( int i0=0; i0<g_.Nz(); i0++)
         {
+            //first exchange data in XY
             thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
             tempXYplus_[i0] = commXYplus_.collect( temp_[i0]);
             cView inV( tempXYplus_[i0].cbegin(), tempXYplus_[i0].cend() );
