@@ -135,6 +135,7 @@ void Collective::gather( const thrust::device_vector<double>& gatherFrom, thrust
 
 void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values) const 
 {
+    //std::cout << gatherFrom.size()<<" "<<store_size()<<std::endl;
     assert( gatherFrom.size() == store_size() );
     values.resize( values_size() );
     MPI_Alltoallv( 
@@ -173,7 +174,7 @@ struct BijectiveComm
     /**
      * @brief Construct empty class
      */
-    BijectiveComm( ){}
+    BijectiveComm( ){ }
     /**
      * @brief Construct from a given map 
      *
@@ -249,20 +250,23 @@ struct BijectiveComm
      *
      * @return # of elements to receive
      */
-    unsigned recv_size() const {return p_.store_size();}
+    unsigned recv_size() const {
+        return p_.store_size();}
     /**
      * @brief return # of elements the calling process has to send in a scatter process (or receive in the gather process)
      *
      * equals the size of the map given in the constructor
      * @return # of elements to send
      */
-    unsigned send_size() const {return p_.values_size();}
+    unsigned send_size() const {
+        return p_.values_size();}
     /**
     * @brief The size of the collected vector
     *
     * @return 
     */
-    unsigned size() const {return p_.store_size();}
+    unsigned size() const {
+        return p_.store_size();}
     /**
     * @brief The internal communicator used 
     *
