@@ -252,7 +252,7 @@ struct MPI_FieldAligned
     LocalContainer limiter_;
     std::vector<LocalContainer> tempXYplus_, tempXYminus_, temp_; 
     LocalContainer tempZ_;
-    CommunicatorXY commXYplus_, commXYminus_;
+    Communicator commXYplus_, commXYminus_;
     ZShifter  commZ_;
     LocalMatrix plus, minus; //interpolation matrices
     LocalMatrix plusT, minusT; //interpolation matrices
