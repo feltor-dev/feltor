@@ -26,7 +26,7 @@ struct Parameters
     double amp, sigma, posX, posY;
 
     double  nprofileamp, bgprofamp;
-    unsigned zf;
+    unsigned zf,iso;
     double solb,solw;
     double omega_source;
     enum dg::bc bc_x,bc_y;
@@ -76,6 +76,7 @@ struct Parameters
             solb = v[31];
             solw = v[32];
             omega_source = v[33];
+            iso = v[34];
             
         }
     }
@@ -94,6 +95,7 @@ struct Parameters
             <<"     Ion-temperature:  = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
             <<"     eff grav./diss f. = "<<(1.+tau[1])*sigma*sigma*sigma*mcv*amp/(nu_perp*nu_perp)<<"\n"
+            <<"     isothermal (0/1)  = "<<iso<<"\n"
             <<"     par. Resistivity: = "<<c<<"\n"
             <<"     D:                = "<<d<<"\n"
             <<"     dlocal:           = "<<dlocal<<"\n";

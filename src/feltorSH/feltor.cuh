@@ -228,6 +228,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     assert( y.size() == 4);
     assert( y.size() == yp.size());
     //transform compute n and logn and energies
+    if (p.iso == 1)    {
+        dg::blas1::scal( y[2], 0.0);
+        dg::blas1::scal( y[3], 0.0); 
+    }
+    
     for(unsigned i=0; i<4; i++)
     {
         dg::blas1::transform( y[i], ype[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //ype = y +p.bgprofamp + p.nprofileamp
@@ -238,7 +243,13 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //compute psi
     phi[1] = compute_psi(ype[3], phi[0]); //sets omega for T_perp
     //compute chii
+    if (p.iso == 0)    {
     chii   = compute_chii(ype[3], phi[0]);  
+    }
+    if (p.iso == 1)    {
+        dg::blas1::scal(chii, 0.0);
+    }
+
     
     //Compute energies
     double z[2]    = {-1.0,1.0};
@@ -247,7 +258,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     //transform compute n and logn and energies
     for(unsigned i=0; i<2; i++)
     {
-        S[i]    = z[i]*p.tau[i]*dg::blas2::dot( ype[i+2], w2d, ype[i]); // N T
+        if (p.iso == 1) S[i] = z[i]*p.tau[i]*dg::blas2::dot( logype[i], w2d, ype[i]);
+        if (p.iso == 0) S[i] = z[i]*p.tau[i]*dg::blas2::dot( ype[i+2], w2d, ype[i]); // N T
     }
     mass_ = dg::blas2::dot( one, w2d, ype[0] ); //take real ion density which is electron density!!
     double Tperp = 0.5*p.mu[1]*dg::blas2::dot( ype[1], w2d, uE2);   //= 0.5 mu_i N_i u_E^2
@@ -255,7 +267,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp;
     for(unsigned i=0; i<2; i++)
     {
-        dg::blas1::axpby(1., phi[i], p.tau[i], ype[i+2],chi); //chi = (tau_z T + psi)
+        if (p.iso == 1) {
+            dg::blas1::axpby(1.,one,1., logype[i] ,chi); //chi = (1+lnN_e)
+            dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
+        }
+        if (p.iso == 0) dg::blas1::axpby(1., phi[i], p.tau[i], ype[i+2],chi); //chi = (tau_z T + psi)
         dg::blas2::gemv( lapperpM, y[i], lambda);
         dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 N_e
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  // ( tau_z T+psi) nabla_RZ^4 N    
@@ -277,7 +293,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     dg::blas2::gemv( lapperpM, y[3], lambda);
     dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 T
     Dperp[3] += -z[1]*p.nu_perp*dg::blas2::dot(chi, w2d, omega);  // nu*Z(N chii/ T) nabla_RZ^4 T   
-    
+    if (p.iso == 1) 
     ediff_= Dperp[0]+Dperp[1]+ Dperp[2]+Dperp[3];
     
 
@@ -364,7 +380,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     dg::blas1::pointwiseDot(lambda,chii,omega); // omega = chii dy (Ti-1)
     dg::blas1::pointwiseDot(omega,ype[3],omega); // omega =Ti chii dy (Ti-1)
     dg::blas1::axpby(p.mcv,omega,1.0,yp[3]);   // dtTi +=  mcv*  chii dy (Ti-1)
-        
+     if (p.iso == 1) {
+                 dg::blas1::scal( yp[2], 0.0);
+        dg::blas1::scal( yp[3], 0.0); 
+     }
     t.toc();
 #ifdef MPI_VERSION
     int rank;

@@ -1119,7 +1119,7 @@ struct Alpha
     */
     double operator()( double R, double Z) const
     {
-        return (R_0/R/R)*(1./R)*
+        return (1./R)*
         (ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
     }
     /**
