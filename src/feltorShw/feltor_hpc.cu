@@ -116,7 +116,7 @@ int main( int argc, char* argv[])
     //energy IDs, used for small time-step diagnostic
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID, couplingID; 
+    int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID, couplingID,radtransID; 
 
     err = nc_def_var(ncid, "energy", NC_DOUBLE, 1, &EtimeID, &energyID);
     err = nc_def_var(ncid, "mass", NC_DOUBLE, 1, &EtimeID, &massID);
@@ -124,6 +124,7 @@ int main( int argc, char* argv[])
     err = nc_def_var(ncid, "dEdt", NC_DOUBLE, 1, &EtimeID, &dEdtID);
     err = nc_def_var(ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
     err = nc_def_var(ncid, "Coupling", NC_DOUBLE, 1, &EtimeID, &couplingID);  
+    err = nc_def_var(ncid, "radtrans", NC_DOUBLE, 1, &EtimeID, &radtransID);  
 
     std::string energies[3] = {"Se", "Si", "Uperp"}; 
     for(unsigned i = 0; i < 3; i++)
@@ -196,6 +197,7 @@ int main( int argc, char* argv[])
 
     err = nc_put_vara_double( ncid, couplingID, Estart, Ecount, &coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount, &accuracy);
+    err = nc_put_vara_double( ncid, radtransID, Estart, Ecount, &radtrans);
 
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
@@ -244,6 +246,7 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
             err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+            err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
 
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";

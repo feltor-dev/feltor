@@ -21,7 +21,7 @@
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  0.0   (0.0)
-15) boussinesq/non-boussinesq (0/1)         =  0
+15) non-boussinesq/boussinesq (0/1)         =  0
 16) nu_perp                                 =  5e-4
 17) D  (coupling ~ mcv^2)                   =  1e-7  
 18) para resistivity (C ~ D lx/d)           =  64e-6

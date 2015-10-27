@@ -86,7 +86,7 @@ struct Parameters
         os << "Physical parameters are: \n"
             <<"     mu_e                      = "<<mu[0]<<"\n"
             <<"     mu_i                      = "<<mu[1]<<"\n"
-            <<"     boussinesq/non-boussinesq = "<<boussinesq<<"\n"
+            <<"     non-boussinesq/boussinesq = "<<boussinesq<<"\n"
             <<"     El.-temperature:          = "<<tau[0]<<"\n"
             <<"     Ion-temperature:          = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:          = "<<nu_perp<<"\n"
