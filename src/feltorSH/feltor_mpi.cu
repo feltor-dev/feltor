@@ -299,7 +299,7 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = feltor.potential()[0];
-        dg::blas2::gemv( interpolate, transferD.data(), transferD);
+        dg::blas2::gemv( interpolate, transfer.data(), transferD);
         transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         transfer = feltor.potential()[0];
