@@ -411,7 +411,7 @@ void MPI_FieldAligned<M,C, container>::einsPlus( const MPI_Vector<container>& f,
     //1. compute 2d interpolation in every plane and store in temp_
     if( sizeXY != 1) //communication needed
     {
-        for( int i0=0; i0<g_.Nz(); i0++)
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
             View tempV( tempXYplus_[i0].begin(), tempXYplus_[i0].end() );
@@ -422,7 +422,7 @@ void MPI_FieldAligned<M,C, container>::einsPlus( const MPI_Vector<container>& f,
     }
     else //directly compute in temp_
     {
-        for( int i0=0; i0<g_.Nz(); i0++)
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
             View tempV( temp_[i0].begin(), temp_[i0].end() );
@@ -430,7 +430,7 @@ void MPI_FieldAligned<M,C, container>::einsPlus( const MPI_Vector<container>& f,
         }
     }
     //2. reorder results and communicate halo in z
-    for( int i0=0; i0<g_.Nz(); i0++)
+    for( int i0=0; i0<(int)g_.Nz(); i0++)
     {
         int ip = i0 + 1;
         if( ip > (int)g_.Nz()-1) ip -= (int)g_.Nz();
@@ -486,7 +486,7 @@ void MPI_FieldAligned<M,C,container>::einsMinus( const MPI_Vector<container>& f,
     //1. compute 2d interpolation in every plane and store in temp_
     if( sizeXY != 1) //communication needed
     {
-        for( int i0=0; i0<g_.Nz(); i0++)
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*minus.num_cols, in.cbegin() + (i0+1)*minus.num_cols);
             View tempV( tempXYminus_[i0].begin(), tempXYminus_[i0].end());
@@ -497,7 +497,7 @@ void MPI_FieldAligned<M,C,container>::einsMinus( const MPI_Vector<container>& f,
     }
     else //directly compute in temp_
     {
-        for( int i0=0; i0<g_.Nz(); i0++)
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*minus.num_cols, in.cbegin() + (i0+1)*minus.num_cols);
             View tempV( temp_[i0].begin(), temp_[i0].end() );
@@ -505,7 +505,7 @@ void MPI_FieldAligned<M,C,container>::einsMinus( const MPI_Vector<container>& f,
         }
     }
     //2. reorder results and communicate halo in z
-    for( int i0=0; i0<g_.Nz(); i0++)
+    for( int i0=0; i0<(int)g_.Nz(); i0++)
     {
         int ip = i0 -1;
         if( ip < 0) ip += (int)g_.Nz();
@@ -559,7 +559,7 @@ void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f
     if( sizeXY != 1) //communication needed
     {
         //first exchange data in XY
-        for( int i0=0; i0<g_.Nz(); i0++)
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
             tempXYminus_[i0] = commXYminus_.collect( temp_[i0] );
@@ -570,7 +570,7 @@ void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f
     }
     else //directly compute in temp_
     {
-        for( int i0=0; i0<g_.Nz(); i0++)
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*minusT.num_cols, in.cbegin() + (i0+1)*minusT.num_cols);
             View tempV( temp_[i0].begin() , temp_[i0].end() );
@@ -578,7 +578,7 @@ void MPI_FieldAligned<M,C,container>::einsMinusT( const MPI_Vector<container>& f
         }
     }
     //2. reorder results and communicate halo in z
-    for( int i0=0; i0<g_.Nz(); i0++)
+    for( int i0=0; i0<(int)g_.Nz(); i0++)
     {
         int ip = i0 + 1;
         if( ip > (int)g_.Nz()-1) ip -= (int)g_.Nz();
@@ -632,7 +632,7 @@ void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f,
     //1. compute 2d interpolation in every plane and store in temp_
     if( sizeXY != 1) //communication needed
     {
-        for( int i0=0; i0<g_.Nz(); i0++)
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             //first exchange data in XY
             thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
@@ -644,7 +644,7 @@ void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f,
     }
     else //directly compute in temp_
     {
-        for( int i0=0; i0<g_.Nz(); i0++)
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
             View tempV( temp_[i0].begin(), temp_[i0].end());
@@ -652,7 +652,7 @@ void MPI_FieldAligned<M,C,container>::einsPlusT( const MPI_Vector<container>& f,
         }
     }
     //2. reorder results and communicate halo in z
-    for( int i0=0; i0<g_.Nz(); i0++)
+    for( int i0=0; i0<(int)g_.Nz(); i0++)
     {
         int ip = i0 - 1;
         if( ip < 0 ) ip += (int)g_.Nz();
