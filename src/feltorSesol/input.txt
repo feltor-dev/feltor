@@ -34,8 +34,8 @@
 24) Profile amplitude                       =  4.0  (peak amplitude)
 25) Background Prof amplitude               =  1.0   (density on the boundary)
 ---------------------------------box setup----------------
-26) lx (in rho_s)                           =  125
-27) ly (in rho_s)                           =  200
+26) lx (in rho_s)                           =  150
+27) ly (in rho_s)                           =  300
 28) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   2      (1.0)
 29) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0      (1.0)
 ---------------------------------Zonal flow dynamics and gradient length----------------
