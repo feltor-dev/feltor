@@ -269,6 +269,15 @@ struct MPI_Grid2d
      * @return Grid object
      */
     Grid2d<double> global() const {return g;}
+    /**
+     * @brief Returns the pid of the process that holds the local grid surrounding the given point
+     *
+     * @param x X-coord
+     * @param y Y-coord
+     *
+     * @return pid of a process, or -1 if non of the grids matches
+     */
+    int pidOf( double x, double y) const;
     private:
     Grid2d<double> g; //global grid
     MPI_Comm comm; //just an integer...
@@ -602,6 +611,21 @@ struct MPI_Grid3d
     MPI_Comm comm; //just an integer...
 };
 ///@cond
+int MPI_Grid2d::pidOf( double x, double y) const
+{
+    int dims[2], periods[2], coords[2];
+    MPI_Cart_get( comm, 2, dims, periods, coords);
+    coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
+    coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
+    //if point lies on or over boundary of last cell shift into current cell (not so good for periodic boundaries)
+    coords[0]=(coords[0]==dims[0]) ? coords[0]-1 :coords[0];
+    coords[1]=(coords[1]==dims[1]) ? coords[1]-1 :coords[1];
+    int rank;
+    if( MPI_Cart_rank( comm, coords, &rank) == MPI_SUCCESS ) 
+        return rank;
+    else
+        return -1;
+}
 int MPI_Grid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];

@@ -21,7 +21,7 @@
 12)  eps_time ( stop for time inversion )   =   1e-12
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
-14) tau (Ti/Te)                             =  2.0 (0.0)
+14) tau (Ti/Te)                             =  0.0 (0.0)
 15) mcv (curvature)                         =  0.00015   (0.00015)
 16) nu_perp                                 =  1e-3
 17) D  (coupling)                           =  0.1e-7  (0.001)
@@ -45,4 +45,6 @@
 31) SOL boundary in units of lx (>1 no SOL) = 0.3
 32) damping width                           = 1.
 32) profile source rate in units c_s/rho_s  = 0.02
+---------------------------------MISC-------------------------------------------
+33) isothermal(0/1)                         = 0
 @ ------------------------------------------------------------

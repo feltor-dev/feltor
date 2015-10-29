@@ -1119,15 +1119,14 @@ struct Alpha
     */
     double operator()( double R, double Z) const
     {
-        return (R_0/R/R)*(1./R)*
-        (ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+        return (1./R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
     }
     /**
      * @brief == operator()(R,Z)
      */ 
     double operator()( double R, double Z, double phi) const
     {
-        return  (1./R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+        return operator()(R,Z);
     }
     private:
     PsipR  psipR_;
