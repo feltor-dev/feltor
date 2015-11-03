@@ -329,30 +329,17 @@ Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, sol
 template<class DS, class Matrix, class container, class P>
 container& Feltor<DS, Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
-//     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
-//     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
-//     dg::blas1::pointwiseDot( chi, binv, chi);
-//     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
-//     pol.set_chi( chi);
-// 
-//     invert_invgammaN(invgammaN,chi,y[1]); //omega= Gamma (Ni-1)    
-//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-//     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
-//         if(  number == invert_pol.get_max())
-//             throw dg::Fail( p.eps_pol);
-//     return phi[0];
-//non bousinesqu
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
     dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, omega);       //(\mu_i n_i ) /B^2
-
+    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
+    pol.set_chi( chi);
+ 
     invert_invgammaN(invgammaN,chi,y[1]); //omega= Gamma (Ni-1)    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    dg::blas1::pointwiseDivide(chi,omega,chi);
-    unsigned number = invert_pol( lapperpDIRnn, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
-        if(  number == invert_pol.get_max())
-            throw dg::Fail( p.eps_pol);
+    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+    if(  number == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);
     return phi[0];
 }
 
