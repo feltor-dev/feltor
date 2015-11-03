@@ -184,7 +184,6 @@ int main( int argc, char* argv[])
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
     dg::IDMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); //create local interpolation matrix
-    dg::IHMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
     for( unsigned i=0; i<2; i++)
     {
         dg::blas2::gemv( interpolate, y0[i].data(), transferD);
