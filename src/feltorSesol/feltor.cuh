@@ -372,10 +372,10 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::transform(omega, omega, dg::EXP<value_type>()); //omega = exp(-phi) 
         dg::blas1::pointwiseDot(omega,npe[0],lambda); //omega = (exp(-phi) )* ne
         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
-        dg::blas1::axpby(-(2./p.l_para)/sqrt(2.*M_PI*abs(p.mu[0])),lambda,1.0,yp[0]); 
+        dg::blas1::axpby(-(2./p.l_para)/sqrt(2.*M_PI*fabs(p.mu[0])),lambda,1.0,yp[0]); 
         //add the FLR term (tanh before lapl seems to work because of cancelation) (LWL vorticity correction)
 //         dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
-//         dg::blas1::axpby((sqrt(p.d)/M_PI)/sqrt(2.*M_PI*abs(p.mu[0]))*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
+//         dg::blas1::axpby((sqrt(p.d)/M_PI)/sqrt(2.*M_PI*fabs(p.mu[0]))*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR 
         dg::blas1::pointwiseDot(npe[0],rh,lambda); 
