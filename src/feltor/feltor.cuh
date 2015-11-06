@@ -129,7 +129,7 @@ struct Rolkar
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
-    container temp, omega;
+    container temp;
     const container dampgauss_;
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;
     DS& dsN_,dsDIR_;
