@@ -28,7 +28,13 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
-    MPI_Init( &argc, &argv);
+    int provided;
+    MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if( provided != MPI_THREAD_FUNNELED)
+    {
+        std::cerr << "wrong mpi-thread environment provided!\n";
+        return -1;
+    }
     int periods[3] = {false, false, true}; //non-, non-, periodic
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);

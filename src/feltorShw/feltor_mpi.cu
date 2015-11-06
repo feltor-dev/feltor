@@ -30,7 +30,13 @@
 int main( int argc, char* argv[])
 {
      ////////////////////////////////setup MPI///////////////////////////////
-    MPI_Init( &argc, &argv);
+    int provided;
+    MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if( provided != MPI_THREAD_FUNNELED)
+    {
+        std::cerr << "wrong mpi-thread environment provided!\n";
+        return -1;
+    }
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -94,9 +100,9 @@ int main( int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-//         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
+    //dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 
