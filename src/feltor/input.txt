@@ -5,18 +5,18 @@
 
 @-----------------------------Space and Time discretization------------
 
-1)  n  (# of x,y-polynomials)            =   1      (3)
-2)  nx (grid points in x)                =   120 (192)
-3)  ny (grid points in y)                =   120 (192)
-4)  nz (grid points in z)                =   16 (>16)
-5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
+1)  n  (# of x,y-polynomials)            =   3      (3)
+2)  nx (grid points in x)                =   40 (192)
+3)  ny (grid points in y)                =   40 (192)
+4)  nz (grid points in z)                =   15 (>16)
+5)  dt (time step in units c_s/rho_s)    =   2e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
-6)  n_out (# of x-y polynomials in output)  =  1
-7)  nx_out (# grid points in output field)  =  120
-8)  ny_out (# grid points in output field)  =  120
-9)  nz_out (# grid points in output field)  =  16
-10) itstp  (steps between outputs)          =  200 (5)
+6)  n_out (# of x-y polynomials in output)  =  3
+7)  nx_out (# grid points in output field)  =  40
+8)  ny_out (# grid points in output field)  =  40
+9)  nz_out (# grid points in output field)  =  15
+10) itstp  (steps between outputs)          =  10 (5)
 11) total # of outputs (excluding first)    =  400
 
 -------------------------Algorithmic parameters------------------------
@@ -30,26 +30,26 @@
 18) beta_e0                                 =  0.0    (1e-4)
 19) nu_perp                                 =  1e-3
 20) nu_parallel  (viscosity)                =  1      (0.001)
-21) para resistivity (c)                    =  1e-3   (3e-5 gives a drift wave)
+21) para resistivity (c)                    =  1e-4   (3e-5 gives a drift wave)
 ------------------------Initial perturbation parameters---------------------
-22) amp (blob amplitude)                    =  1.00    (1.0)
+22) amp (blob amplitude)                    =  0.025    (1.0)
 23) sigma (blob variance in units of rho_s) =  7.0     (10)
 24) x-position ( in units of a)             =  0.3   (0.4)
 25) y-position ( in units of a)             =  0.0   (0.5)
-26) sigma_z (variance in units of pi    )   =  2.00       (12.5 for oo)
+26) sigma_z (variance in units of pi    )   =  0.25       (12.5 for oo)
 27) k_psi (zonal modes)                     =  0.0
-28) Profile amplitude                       =  0.0  (peak amplitude)
+28) Profile amplitude                       =  4.0  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------
 30) profile source rate in units c_s/rho_s  =  0.00
-31) boxscale R+                             =  1.1 (a little larger than 1)
-32) boxscale R-                             =  1.1 (a little larger than 1)
-33) boxscale Z+                             =  1.1 (a little larger than 1)
-34) boxscale Z-                             =  1.1 (a little larger than 1)
+31) boxscale R+                             =  1.05 (a little larger than 1)
+32) boxscale R-                             =  1.05 (a little larger than 1)
+33) boxscale Z+                             =  1.05 (a little larger than 1)
+34) boxscale Z-                             =  1.05 (a little larger than 1)
 ---------------------------------global boundary condition----------------
 35) global bc (DIR (1), NEU DIR(4)  )                 =  1
 36) poloidal limiter (No (0),Yes (1))                 =  0
-37) Parallel dissipation(adj (0), nadj(1), adjdg(2))  =  0
-38) blob (0) or straight blob(1) or turbulence(2)     =  0 (0)
+37) Parallel dissipation(adj (0), nadj(1))            =  0
+38) blob (0) or straight blob(1) or turbulence(2)     =  2 (0)
 @ ------------------------------------------------------------
 

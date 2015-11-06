@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::MDDS, dg::MDMatrix, dg::MDVec, dg::MDVec > feltor(grid,p,gp);
     if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::MDMatrix, dg::MDVec, dg::MDVec > rolkar( grid, p, gp);
+    eule::Rolkar< dg::MDDS, dg::MDMatrix, dg::MDVec, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field/////////////////////////////////////////

@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
+    eule::Rolkar<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
