@@ -177,6 +177,169 @@ class Elliptic
 };
 
 /**
+ * @brief Operator that acts as a 2d negative elliptic differential operator
+ *
+ * @ingroup matrixoperators
+ *
+ * The term discretized is \f[ -\nabla \cdot ( \chi \nabla_\perp ) \f]
+ * where \f$ \nabla_\perp \f$ is the perpendicular gradient. In curvilinear
+ * coordinates that means \f[ -\frac{1}{\sqrt{g}} [\partial_x(\sqrt{g}\chi(g^{xx}\partial_x + g^{xy}\partial_y)) + \partial_y(\sqrt{g}\chi(g^{yx}\partial_x + g^{yy}\partial_y))]\f]
+ * is discretized.
+ * @tparam Matrix The Matrix class to use
+ * @tparam Vector The Vector class to use
+ * @tparam Preconditioner The Preconditioner class to use
+ * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
+ * and thus in a conjugate gradient solver. 
+ * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
+ * results
+ * @attention Pay attention to the negative sign 
+ */
+template <class Matrix, class Vector, class Preconditioner>
+class CurvilinearElliptic
+{
+    public:
+    /**
+     * @brief Construct from Grid
+     *
+     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
+     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
+     * must return instances of the Preconditioner class and 
+     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
+     * @param g The Grid, boundary conditions are taken from here
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative
+     */
+    template< class Grid>
+    Elliptic( const Grid& g, norm no = not_normed, direction dir = forward): 
+        leftx ( dg::create::dx( g, inverse( g.bcx()), inverse(dir))),
+        lefty ( dg::create::dy( g, inverse( g.bcy()), inverse(dir))),
+        rightx( dg::create::dx( g, g.bcx(), dir)),
+        righty( dg::create::dy( g, g.bcy(), dir)),
+        jumpX ( dg::create::jumpX( g, g.bcx())),
+        jumpY ( dg::create::jumpY( g, g.bcy())),
+        weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)), 
+        xchi( dg::evaluate( one, g) ), xx(xchi), temp( xx), R(xchi),
+        weights_wo_R(weights_),
+        no_(no)
+    { 
+        if( g.system() == cylindrical)
+        {
+            R = dg::evaluate( dg::coo1, g);
+            dg::blas1::pointwiseDot( R, xchi, xchi); 
+            dg::blas1::pointwiseDivide( weights_,R,weights_wo_R);
+        }
+    }
+    /**
+     * @brief Construct from grid and boundary conditions
+     *
+     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
+     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
+     * must return instances of the Preconditioner class and 
+     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
+     * @param g The Grid
+     * @param bcx boundary condition in x
+     * @param bcy boundary contition in y
+     * @param no Not normed for elliptic equations, normed else
+     * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
+     */
+    template< class Grid>
+    EllipticCurvilinear( const Grid& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
+        leftx (dg::create::dx( g, inverse(bcx), inverse(dir))),
+        lefty (dg::create::dy( g, inverse(bcy), inverse(dir))),
+        rightx(dg::create::dx( g, bcx, dir)),
+        righty(dg::create::dy( g, bcy, dir)),
+        jumpX ( dg::create::jumpX( g, bcx)),
+        jumpY ( dg::create::jumpY( g, bcy)),
+        weights_(dg::create::weights(g)), precond_(dg::create::inv_weights(g)),
+        xchi( dg::evaluate(one, g)), xx(xchi), temp( xx), R(xchi),
+        no_(no)
+    { 
+        vol = dg::evaluate( dg::coo1, g);
+        dg::blas1::pointwiseDot( R, xchi, xchi); 
+        dg::blas1::pointwiseDivide( weights_,R,weights_wo_R);
+    }
+
+    /**
+     * @brief Change Chi 
+     *
+     * @param chi The new chi
+     */
+    void set_chi( const Vector& chi)
+    {
+        dg::blas1::pointwiseDot( vol, chi, tempx); 
+        dg::blas1::pointwiseDot( tempx, gxx, chi_xx); 
+        dg::blas1::pointwiseDot( tempx, gxy, chi_xy); 
+        dg::blas1::pointwiseDot( tempx, gyy, chi_yy); 
+    }
+    /**
+     * @brief Returns the weights used to make the matrix symmetric 
+     *
+     * @return weights
+     */
+    const Preconditioner& weights()const {return weights_;}
+    /**
+     * @brief Returns the preconditioner to use in conjugate gradient
+     *
+     * In this case inverse weights are the best choice
+     * @return inverse weights
+     */
+    const Preconditioner& precond()const {return precond_;}
+
+    /**
+     * @brief Computes the polarisation term
+     *
+     * @param x left-hand-side
+     * @param y result
+     */
+    void symv( const Vector& x, Vector& y) 
+    {
+        dg::blas2::gemv( rightx, x, tempx); //R_x*f 
+        dg::blas2::gemv( righty, x, tempy); //R_y*f
+
+        dg::blas1::pointwiseDot( chi_xx, tempx, xx); 
+        dg::blas1::pointwiseDot( chi_xy, tempx, tempx); 
+        dg::blas1::pointwiseDot( chi_xy, tempy, y);
+        dg::blas1::pointwiseDot( chi_yy, tempy, tempy);
+        dg::blas1::axpby( 1., xx, 1., y, y);  //X_xx*R_x*f+X_xy*R_y*f
+        dg::blas2::gemv( leftx, y, xx);        //L_x(X_xx*R_x*f+X_xy*R_y*f)
+        dg::blas1::axpby( 1., tempx, 1., tempy, tempy);//X_xy*R_x*f+X_yy*R_y*f
+        dg::blas2::gemv( lefty, tempy, y);            //L_y(X_xx*R_x*f+X_xy*R_y*f)
+
+        dg::blas1::axpby( -1., xx, -1., y, y); //-D_xx - D_yy 
+        dg::blas2::symv( jumpX, x, temp);
+        dg::blas1::axpby( +1., temp, 1., y, y); 
+        dg::blas2::symv( jumpY, x, temp);
+        dg::blas1::axpby( +1., temp, 1., y, y); 
+        dg::blas1::pointwiseDivide( y, vol, y);
+
+        if( no_==not_normed)
+            dg::blas2::symv( weights, y, y);
+    }
+    private:
+    bc inverse( bc bound)
+    {
+        if( bound == DIR) return NEU;
+        if( bound == NEU) return DIR;
+        if( bound == DIR_NEU) return NEU_DIR;
+        if( bound == NEU_DIR) return DIR_NEU;
+        return PER;
+    }
+    direction inverse( direction dir)
+    {
+        if( dir == forward) return backward;
+        if( dir == backward) return forward;
+        return centered;
+    }
+    Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
+    Preconditioner weights_, precond_; 
+    Vector xx, tempx, tempy;
+    Vector vol, chi_xx, chi_xy, chi_yy;
+    Vector gxx, gxy, gyy;
+    norm no_;
+};
+
+
+/**
  * @brief Operator that acts as a 3d negative elliptic differential operator
  *
  * @ingroup matrixoperators
