@@ -28,7 +28,13 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
-    MPI_Init( &argc, &argv);
+    int provided;
+    MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if( provided != MPI_THREAD_FUNNELED)
+    {
+        std::cerr << "wrong mpi-thread environment provided!\n";
+        return -1;
+    }
     int periods[3] = {false, false, true}; //non-, non-, periodic
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -90,7 +96,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::MDDS, dg::MDMatrix, dg::MDVec, dg::MDVec > feltor(grid,p,gp);
     if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::MDMatrix, dg::MDVec, dg::MDVec > rolkar( grid, p, gp);
+    eule::Rolkar< dg::MDDS, dg::MDMatrix, dg::MDVec, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field/////////////////////////////////////////

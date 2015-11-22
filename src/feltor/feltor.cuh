@@ -32,7 +32,7 @@ namespace eule
  * @tparam container The Vector class 
  * @tparam Preconditioner The Preconditioner class
  */
-template<class Matrix, class container, class Preconditioner>
+template<class DS, class Matrix, class container, class Preconditioner>
 struct Rolkar
 {
 
@@ -45,26 +45,17 @@ struct Rolkar
      * @param gp the geometry parameters
      */
     template<class Grid3d>
-    Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp):
+    Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
         p(p),
         gp(gp),
-        temp( dg::evaluate(dg::zero, g)),  omega(temp),        
-        //dampprof_( dg::evaluate( solovev::GaussianProfXDamping( gp), g)),
+        temp( dg::evaluate(dg::zero, g)),       
         dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
         LaplacianM_perpN ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
-        LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered)
-//     ,dsTdsN( g, g.bcx(), g.bcy(), g.bcz(), dg::normed, dg::centered),
-//         dsTdsDIR( g, dg::DIR, dg::DIR, g.bcz(), dg::normed, dg::centered)
+        LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered),
+        dsN_(dsN),
+        dsDIR_(dsDIR)
     {
-//         container bfield = dg::evaluate( solovev::FieldR( gp),g);
-//         dsTdsN.set_x( bfield);
-//         dsTdsDIR.set_x( bfield);
-//         bfield = dg::evaluate( solovev::FieldZ( gp),g);
-//         dsTdsN.set_y( bfield);
-//         dsTdsDIR.set_y( bfield);
-//         bfield = dg::evaluate( solovev::FieldP( gp),g);
-//         dsTdsN.set_z( bfield);
-//         dsTdsDIR.set_z( bfield);
+
     }
 
     /**
@@ -81,6 +72,8 @@ struct Rolkar
            x[3] := U_i
         */
         dg::blas1::axpby( 0., x, 0, y);
+//         double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]/p.c, p.nu_parallel, p.nu_parallel};
+
         for( unsigned i=0; i<2; i++)
         {
             //not linear any more (cannot be written as y = Ax)
@@ -90,11 +83,18 @@ struct Rolkar
             dg::blas2::gemv( LaplacianM_perpDIR, x[i+2], temp);
             dg::blas2::gemv( LaplacianM_perpDIR, temp, y[i+2]);
             dg::blas1::scal( y[i+2], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
+            if (p.pardiss==0) 
+            {
+                dg::blas2::symv(dsN_, x[i],temp);
+                dg::blas1::axpby( -p.mu[0]/p.c, temp, 1., y[i]); 
+                dg::blas2::symv(dsDIR_, x[i+2],temp);
+                dg::blas1::axpby( p.nu_parallel, temp, 1., y[i+2]); 
+            }
         }
         //Resistivity
-        dg::blas1::axpby( 1., x[3], -1, x[2], omega); //U_i - U_e
-        dg::blas1::axpby( -p.c/p.mu[0], omega, 1., y[2]);  //- C/mu_e (U_i - U_e)
-        dg::blas1::axpby( -p.c/p.mu[1], omega, 1., y[3]);  //- C/mu_i (U_i - U_e)
+        dg::blas1::axpby( 1., x[3], -1, x[2], temp); //U_i - U_e
+        dg::blas1::axpby( -p.c/p.mu[0],temp, 1., y[2]);  //- C/mu_e (U_i - U_e)
+        dg::blas1::axpby( -p.c/p.mu[1], temp, 1., y[3]);  //- C/mu_i (U_i - U_e)
         //damping
         for( unsigned i=0; i<y.size(); i++){
            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
@@ -129,13 +129,10 @@ struct Rolkar
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
-    container temp, omega;
-    //const container dampprof_;
+    container temp;
     const container dampgauss_;
-    
     dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;
-//     dg::GeneralElliptic<Matrix, container, Preconditioner> dsTdsN,dsTdsDIR;
-
+    DS& dsN_,dsDIR_;
 };
 
 /**
@@ -165,7 +162,8 @@ struct Feltor
      *
      * @return 
      */
-    const DS& ds(){return dsN_;}
+    DS& ds(){return dsN_;}
+    DS& dsDIR(){return dsDIR_;}
 
     /**
      * @brief Returns phi and psi that belong to the last solve of the polarization equation
@@ -303,8 +301,8 @@ Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, sol
     w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
     phi( 2, chi), curvphi( phi),  npe(phi), logn(phi),
     dsy( 4, chi),curvy(dsy), 
-    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::centered ),
-    dsN_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::centered ),
+    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::forward ),
+    dsN_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::forward ),
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
@@ -329,30 +327,17 @@ Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, sol
 template<class DS, class Matrix, class container, class P>
 container& Feltor<DS, Matrix, container, P>::polarisation( const std::vector<container>& y)
 {
-//     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
-//     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
-//     dg::blas1::pointwiseDot( chi, binv, chi);
-//     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
-//     pol.set_chi( chi);
-// 
-//     invert_invgammaN(invgammaN,chi,y[1]); //omega= Gamma (Ni-1)    
-//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-//     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
-//         if(  number == invert_pol.get_max())
-//             throw dg::Fail( p.eps_pol);
-//     return phi[0];
-//non bousinesqu
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
     dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, omega);       //(\mu_i n_i ) /B^2
-
+    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
+    pol.set_chi( chi);
+ 
     invert_invgammaN(invgammaN,chi,y[1]); //omega= Gamma (Ni-1)    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    dg::blas1::pointwiseDivide(chi,omega,chi);
-    unsigned number = invert_pol( lapperpDIRnn, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
-        if(  number == invert_pol.get_max())
-            throw dg::Fail( p.eps_pol);
+    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+    if(  number == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);
     return phi[0];
 }
 
@@ -385,9 +370,9 @@ double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vecto
     //Parallel dynamics
     for(unsigned i=0; i<2; i++)
     {
-        dsN_(y[i], chi);   
+        dsN_.centered(y[i], chi);   
         dg::blas1::pointwiseDot(y[i+2], chi, omega);     // U ds N
-        dsDIR_(y[i+2], chi);  
+        dsDIR_.centered(y[i+2], chi);  
         dg::blas1::pointwiseDot(npe[i], chi,chi);     // N ds U
         dg::blas1::axpby(1.0,chi,1.0,omega,chi);
         dg::blas1::pointwiseDot(npe[i], y[i+2], omega);     // U N
@@ -396,98 +381,76 @@ double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vecto
         dg::blas1::axpby( 1., omega, 1., yp[i]);            // dtN = dtN + U N ds ln B
 
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);      //U^2
-        dsDIR_(omega, chi);                                 //ds U^2
+        dsDIR_.centered(omega, chi);                                 //ds U^2
         dg::blas1::axpby( -0.5, chi, 1., yp[2+i]);          //dtU = dtU - 0.5 ds U^2
         //parallel force terms
-        dsN_(logn[i], omega);                                                //ds lnN
+        dsN_.centered(logn[i], omega);                                                //ds lnN
         dg::blas1::axpby( -p.tau[i]/p.mu[i], omega, 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*ds lnN
 
-        dsDIR_(phi[i], omega);                                             //ds psi
+        dsDIR_.centered(phi[i], omega);                                             //ds psi
         dg::blas1::axpby( -1./p.mu[i], omega, 1., yp[2+i]);   //dtU = dtU - 1/(hat(mu))  *ds psi  
 
     }
     //Parallel dissipation
-    double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]*p.tau[1]/p.c, p.nu_parallel, p.nu_parallel};
+    double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]/p.c, p.nu_parallel, p.nu_parallel};
     for( unsigned i=0; i<2;i++)
     {
         //Compute parallel dissipation and dissipative energy for N///////////////
-        if( p.nu_parallel != 0) //compute \nu \Delta_\parallel in lambda and yp[]
+        if (p.pardiss==0)
         {
-            if (p.pardiss==0)
-            {
-                dsN_.forward(y[i], omega); 
-                dsN_.forwardT(omega,lambda);
-                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 0.,lambda,lambda); 
-
-                dsN_.backward( y[i], omega); 
-                dsN_.backwardT(omega,lambda);
-                dg::blas1::axpby( 0.5*nu_parallel[i], lambda,  1., lambda,lambda); 
-            }
-            if (p.pardiss==1)
-            {
-                dsN_.forward( y[i], omega); 
-                dsDIR_.forwardTD(omega,lambda);
-                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., lambda,lambda); 
-                dsN_.backward( y[i], omega); 
-                dsDIR_.backwardTD(omega,lambda);
-                dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., lambda,lambda); 
-            }           
-            dg::blas1::axpby( 1., lambda, 1., yp[i]);  //add to yp
+            dg::blas2::symv(dsN_,y[i],lambda);
+            dg::blas1::axpby( nu_parallel[i], lambda,  0., lambda,lambda); 
         }
+        if (p.pardiss==1)
+        {
+            dsN_.forward( y[i], omega); 
+            dsDIR_.forwardTD(omega,lambda);
+            dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., lambda,lambda); 
+            dsN_.backward( y[i], omega); 
+            dsDIR_.backwardTD(omega,lambda);
+            dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., lambda,lambda); 
+            dg::blas1::axpby( 1., lambda, 1., yp[i]);  //add to yp
+        }           
+
         //compute chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  
         dg::blas1::axpby(0.5*p.mu[i], omega,1., chi); //chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
-        if( p.nu_parallel != 0) //compute Dpar[i] and aligned_
+
+        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(ds^2 N -ds lnB ds N)
+        if( i==0) //only electrons
         {
-            Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(ds^2 N -ds lnB ds N)
-            if( i==0) //only electrons
-            {
-                //do not write into chi 
-                dg::blas1::axpby(1.,one,1., logn[i] ,omega); //omega = (1+lnN)
-                aligned_ = dg::blas2::dot( omega, w3d, lambda); //(1+lnN)*Delta_s N
-            }
+            //do not write into chi 
+            dg::blas1::axpby(1.,one,1., logn[i] ,omega); //omega = (1+lnN)
+            aligned_ = dg::blas2::dot( omega, w3d, lambda); //(1+lnN)*Delta_s N
         }
-        else 
-        {
-            if(i==0) aligned_ = 0;
-            Dpar[i] = 0;
-        }
+
         //Compute perp dissipation for N
         dg::blas2::gemv( lapperpN, y[i], lambda);
         dg::blas2::gemv( lapperpN, lambda, omega);//nabla_RZ^4 N_e
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w3d, omega);  
 
-        //Compute parallel dissipation and dissipative energy for U/////////////
-        if( p.nu_parallel !=0) //compute \nu \Delta_\parallel U in lambda and yp[]
+        if (p.pardiss==0)
         {
-            if (p.pardiss==0)
-            {
-                dsDIR_.forward(y[i+2], omega); 
-                dsDIR_.forwardT(omega,lambda);
-                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 0.,lambda,lambda); 
-                dsDIR_.backward( y[i+2], omega); 
-                dsDIR_.backwardT(omega,lambda);
-                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda,  1., lambda,lambda); 
-            }
-            if (p.pardiss==1)
-            {
-                dsDIR_.forward( y[i+2], omega); 
-                dsN_.forwardTD(omega,lambda);
-                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., lambda,lambda); 
-                dsDIR_.backward( y[i+2], omega); 
-                dsN_.backwardTD(omega,lambda);
-                dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., lambda,lambda); 
-            }   
-            dg::blas1::axpby( 1., lambda, 1., yp[i+2]); 
+            dg::blas2::symv(dsDIR_, y[i+2],lambda);
+            dg::blas1::axpby( nu_parallel[i+2], lambda,  1., lambda,lambda); 
         }
+        if (p.pardiss==1)
+        {
+            dsDIR_.forward( y[i+2], omega); 
+            dsN_.forwardTD(omega,lambda);
+            dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., lambda,lambda); 
+            dsDIR_.backward( y[i+2], omega); 
+            dsN_.backwardTD(omega,lambda);
+            dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., lambda,lambda); 
+            dg::blas1::axpby( 1., lambda, 1., yp[i+2]); 
+        }   
+
         //compute omega = NU
         dg::blas1::pointwiseDot( npe[i], y[i+2], omega); //N U   
-        if( p.nu_parallel !=0) //compute Dpar[i+2] 
-            Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(omega, w3d, lambda);      //Z*N*U nu_para *(ds^2 U -ds lnB ds U)  
-        else
-            Dpar[i+2] = 0;
+        Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(omega, w3d, lambda);      //Z*N*U nu_para *(ds^2 U -ds lnB ds U)  
+
         //Compute perp dissipation  for U
         dg::blas2::gemv( lapperpDIR, y[i+2], lambda);
         dg::blas2::gemv( lapperpDIR, lambda,chi);//nabla_RZ^4 U
