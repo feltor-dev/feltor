@@ -33,45 +33,60 @@ int main()
     err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
     //err = nc_create( "test.nc", NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
+    std::string conv = "CF-1.6";
+    err = nc_put_att_text( ncid, NC_GLOBAL, "Conventions", conv.size(), conv.data());
 
-    int dim_ids[4], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, g);
+    //int dim_ids[4], tvarID;
+    //err = file::define_dimensions( ncid, dim_ids, &tvarID, g);
 
-    int dataID, scalarID, vectorID[3];
-    err = nc_def_var( ncid, "data", NC_DOUBLE, 1, dim_ids, &dataID);
-    err = nc_def_var( ncid, "scalar", NC_DOUBLE, 4, dim_ids, &scalarID);
-    err = nc_def_var( ncid, "vectorX", NC_DOUBLE, 4, dim_ids, &vectorID[0]);
-    err = nc_def_var( ncid, "vectorY", NC_DOUBLE, 4, dim_ids, &vectorID[1]);
-    err = nc_def_var( ncid, "vectorZ", NC_DOUBLE, 4, dim_ids, &vectorID[2]);
-    err = nc_enddef( ncid);
-    size_t count[4] = {1, g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
-    size_t start[4] = {0, 0, 0, 0};
-    for(unsigned i=0; i<=NT; i++)
-    {
-        double time = i*h;
-        const size_t Tcount = 1;
-        const size_t Tstart = i;
-        start[0] = i;
-        data = dg::evaluate( function, g);
-        dg::blas1::scal( data, cos( time));
-        double energy = dg::blas1::dot( data, data);
-        //write scalar data point
-        err = nc_put_vara_double( ncid, dataID, start, count, &energy);
-        //write scalar field
-        err = nc_put_vara_double( ncid, scalarID, start, count, data.data());
-        //write vector field
-        HVec dataX = dg::evaluate( gradientX, g);
-        HVec dataY = dg::evaluate( gradientY, g);
-        HVec dataZ = dg::evaluate( gradientZ, g);
-        dg::blas1::scal( dataX, cos( time));
-        dg::blas1::scal( dataY, cos( time));
-        dg::blas1::scal( dataZ, cos( time));
-        err = nc_put_vara_double( ncid, vectorID[0], start, count, dataX.data());
-        err = nc_put_vara_double( ncid, vectorID[1], start, count, dataY.data());
-        err = nc_put_vara_double( ncid, vectorID[2], start, count, dataZ.data());
-        //write time
-        err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
-    }
+    //int dataID, scalarID, vectorID[3];
+    //err = nc_def_var( ncid, "data", NC_DOUBLE, 1, dim_ids, &dataID);
+    //err = nc_def_var( ncid, "scalar", NC_DOUBLE, 4, dim_ids, &scalarID);
+    //err = nc_def_var( ncid, "vectorX", NC_DOUBLE, 4, dim_ids, &vectorID[0]);
+    //err = nc_def_var( ncid, "vectorY", NC_DOUBLE, 4, dim_ids, &vectorID[1]);
+    //err = nc_def_var( ncid, "vectorZ", NC_DOUBLE, 4, dim_ids, &vectorID[2]);
+    //err = nc_enddef( ncid);
+    //size_t count[4] = {1, g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    //size_t start[4] = {0, 0, 0, 0};
+    //for(unsigned i=0; i<=NT; i++)
+    //{
+    //    double time = i*h;
+    //    const size_t Tcount = 1;
+    //    const size_t Tstart = i;
+    //    start[0] = i;
+    //    data = dg::evaluate( function, g);
+    //    dg::blas1::scal( data, cos( time));
+    //    double energy = dg::blas1::dot( data, data);
+    //    //write scalar data point
+    //    err = nc_put_vara_double( ncid, dataID, start, count, &energy);
+    //    //write scalar field
+    //    err = nc_put_vara_double( ncid, scalarID, start, count, data.data());
+    //    //write vector field
+    //    HVec dataX = dg::evaluate( gradientX, g);
+    //    HVec dataY = dg::evaluate( gradientY, g);
+    //    HVec dataZ = dg::evaluate( gradientZ, g);
+    //    dg::blas1::scal( dataX, cos( time));
+    //    dg::blas1::scal( dataY, cos( time));
+    //    dg::blas1::scal( dataZ, cos( time));
+    //    err = nc_put_vara_double( ncid, vectorID[0], start, count, dataX.data());
+    //    err = nc_put_vara_double( ncid, vectorID[1], start, count, dataY.data());
+    //    err = nc_put_vara_double( ncid, vectorID[2], start, count, dataZ.data());
+    //    //write time
+    //    err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
+    //}
+
+    dg::Grid3d<double> cylinder( 1,2, -1, 1, 0, 2*M_PI, 3, 10, 10, 20,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
+    int dim3d[3];
+    err = file::define_dimensions( ncid, dim3d, cylinder);
+    int varID;
+    int scalarID;
+    err = nc_def_var( ncid, "cylindrical", NC_DOUBLE, 3, dim3d, &scalarID);
+    std::string names( "x y z");
+    err = nc_put_att_text( ncid, scalarID, "coordinates", names.size(), names.data());
+    size_t start3d[3] = {0,0,0};
+    size_t count3d[3] = {cylinder.Nz(), cylinder.n()*cylinder.Ny(), cylinder.n()*cylinder.Nx()};
+    data = dg::evaluate( function, cylinder);
+    err = nc_put_var_double( ncid, scalarID, data.data());
 
     err = nc_close(ncid);
     return 0;
