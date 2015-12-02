@@ -75,7 +75,7 @@ int main()
     //    err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
     //}
 
-    dg::Grid3d<double> cylinder( 1,2, -1, 1, 0, 2*M_PI, 3, 10, 10, 20,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
+    dg::Grid3d<double> cylinder( 1,2, -1, 1, 0, 2*M_PI, 3, 5, 5, 20,dg::DIR, dg::DIR, dg::PER, dg::cylindrical);
     int dim3d[3];
     err = file::define_dimensions( ncid, dim3d, cylinder);
     int varID;

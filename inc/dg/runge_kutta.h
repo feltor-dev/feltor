@@ -247,17 +247,46 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
 
     if( isnan(error) )
     {
-        std::cerr << "ATTENTION: Choose more parallel planes for convergence! "<<std::endl;
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
         throw NotANumber();
     }
     if( error > eps_abs )
     {
-        std::cerr << "ATTENTION: error is "<<error<<std::endl;
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<std::endl;
         throw Fail( eps_abs);
     }
 
 
 }
+
+/**
+ * @brief Integrates the differential equation using RK4 and a fixed number of steps
+ *
+ * @ingroup algorithms
+ * @tparam RHS The right-hand side class
+ * @tparam Vector Vector-class (needs to be copyable)
+ * @param rhs The right-hand-side
+ * @param begin initial condition 
+ * @param end (write-only) contains solution on output
+ * @param T_max initial time
+ * @param T_max final time
+ * @param N number of steps 
+ */
+template< class RHS, class Vector>
+void stepperRK4(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    RK<4, Vector > rk( begin); 
+    Vector temp(begin);
+    if( T_max <= T_min) return;
+    double dt = (T_max-T_min)/(double)N;
+    end = begin;
+    for( unsigned i=0; i<N; i++)
+    {
+        rk( rhs, end, temp, dt); 
+        end.swap( temp); //end is one step further 
+    }
+}
+
 
 ///@cond
 //Euler specialisation

@@ -15,6 +15,9 @@ ds_geom_t: ds_geom_t.cu geometry.h
 
 geometry_t: geometry_t.cu geometry.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+
+conformal_t: conformal_t.cu conformal.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)
 	
 geometry_diag: geometry_diag.cu geometry.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) 

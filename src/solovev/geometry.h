@@ -599,6 +599,8 @@ struct BZ
     PsipRZ psipRZ_;  
     InvB invB_; 
 };
+
+
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}  \f]
  */ 
@@ -838,7 +840,7 @@ struct FieldR
      */ 
     double operator()( double R, double Z, double phi) const
     {
-        return  R_0/R*psipZ_(R,Z);
+        return  this->operator()(R,Z);
     }
     private:
     PsipZ  psipZ_;
@@ -860,12 +862,113 @@ struct FieldZ
      */ 
     double operator()( double R, double Z, double phi) const
     {
-        return  -R_0/R*psipR_(R,Z);
+        return  this->operator()(R,Z);
     }
     private:
     PsipR  psipR_;
     double R_0;
    
+};
+
+/**
+ * @brief \f$\theta\f$ component of magnetic field 
+ */ 
+struct FieldT
+{
+    FieldT( GeomParameters gp):  R_0_(gp.R_0), fieldR_(gp), fieldZ_(gp){}
+  /**
+ * @brief \f[  B^{\theta} = 
+ * B^R\partial_R\theta + B^Z\partial_Z\theta\f]
+ * where \f$ \theta \f$ is the geometrical poloidal angle.
+ */ 
+  double operator()(double R, double Z) const
+  { 
+      double r2 = (R-R_0_)*(R-R_0_) + Z*Z;
+      return fieldR_(R,Z)*(-Z/r2) + fieldZ_(R,Z)*(R-R_0_)/r2;
+  }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
+  double operator()(double R, double Z, double phi) const
+  { 
+      return this->operator()(R,Z);
+  }
+  private:
+    double R_0_;
+    FieldR fieldR_;
+    FieldZ fieldZ_;
+
+};
+
+/**
+ * @brief y-component of magnetic field 
+ */ 
+struct FieldY
+{
+    FieldY( GeomParameters gp): f_psi_(1.), R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    void set_f( double f_new){f_psi_=f_new;}
+  /**
+ * @brief \f[  B^y= 
+ * f(\psi) \frac{(\nabla\psi)^2}{R} \f]
+ */ 
+  double operator()(double R, double Z) const
+  { 
+      return f_psi_*(psipR_(R,Z)*psipR_(R,Z) + psipZ_(R,Z)*psipZ_(R,Z))/R;
+  }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
+  double operator()(double R, double Z, double phi) const
+  { 
+      return this->operator()(R,Z);
+  }
+  private:
+    double f_psi_, R_0_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+};
+
+struct FieldRZYT
+{
+    FieldRZYT( GeomParameters gp): fieldR_(gp), fieldZ_(gp), fieldY_(gp), fieldT_(gp){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        yp[0] =  fieldR_(y[0],y[1])/fieldT_(y[0],y[1]);
+        yp[1] =  fieldZ_(y[0],y[1])/fieldT_(y[0],y[1]);
+        yp[2] =  fieldY_(y[0],y[1])/fieldT_(y[0],y[1]);
+    }
+  private:
+    FieldR fieldR_;
+    FieldZ fieldZ_;
+    FieldT fieldT_;
+    FieldY fieldY_;
+};
+struct FieldRZtau
+{
+    FieldRZtau( GeomParameters gp): psipR_(gp), psipZ_(gp){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psi = psipR_(y[0], y[1])*psipR_(y[0],y[1])+ psipZ_(y[0],y[1]);
+        yp[0] =  psipR_(y[0],y[1])/psi;
+        yp[1] =  psipZ_(y[0],y[1])/psi;
+    }
+  private:
+    PsipR psipR_;
+    PsipZ psipZ_;
+};
+struct FieldRZY
+{
+    FieldRZY( const GeomParameters& gp): fieldR_(gp), fieldZ_(gp), fieldY_(gp){}
+    void set_f( double new_f){ fieldY_.set_f(new_f);}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        yp[0] =  fieldR_(y[0],y[1])/fieldY_(y[0],y[1]);
+        yp[1] =  fieldZ_(y[0],y[1])/fieldY_(y[0],y[1]);
+    }
+  private:
+    FieldR fieldR_;
+    FieldZ fieldZ_;
+    FieldY fieldY_;
 };
 
 /**
