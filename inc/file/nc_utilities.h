@@ -6,7 +6,6 @@
 
 #include "dg/backend/grid.h"
 #include "dg/backend/weights.cuh"
-#include "dg/backend/functions.h"
 /*!@file
  *
  * Contains Error handling class and the define_dimensions functions
@@ -209,44 +208,13 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
  */
 int define_dimensions( int ncid, int* dimsIDs, const dg::Grid3d<double>& g)
 {
+    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    dg::Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
     int retval;
-    if(g.system() == dg::cartesian)
-    {
-        dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
-        dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
-        dg::Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
-        if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx)));
-        if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy)));
-        if( (retval = define_dimension( ncid, "z", &dimsIDs[0], gz)));
-    }
-    if( g.system() == dg::cylindrical)
-    {
-        thrust::host_vector<double> pointsR = dg::evaluate( dg::coo1, g);
-        thrust::host_vector<double> pointsZ = dg::evaluate( dg::coo2, g);
-        thrust::host_vector<double> pointsP = dg::evaluate( dg::coo3, g);
-        thrust::host_vector<double> pX(pointsR);
-        thrust::host_vector<double> pY(pX);
-        thrust::host_vector<double> pZ(pX);
-        for( unsigned i=0; i<pointsR.size(); i++)
-        {
-            pX[i] = pointsR[i]*cos(pointsP[i]);
-            pY[i] = pointsR[i]*sin(pointsP[i]);
-            pZ[i] = pointsZ[i];
-        }
-        if( (retval = nc_def_dim( ncid, "CR", g.n()*g.Nx(), &dimsIDs[2])) ) { return retval;}
-        if( (retval = nc_def_dim( ncid, "CZ", g.n()*g.Ny(), &dimsIDs[1])) ) { return retval;}
-        if( (retval = nc_def_dim( ncid, "CP", g.Nz(), &dimsIDs[0])) ) { return retval;}
-        int varID[3];
-        if( (retval = nc_def_var( ncid, "x" , NC_DOUBLE, 3, dimsIDs, &varID[2]))){return retval;}
-        if( (retval = nc_put_att_text( ncid, varID[2] , "axis", 1, "X"))){return retval;}
-        if( (retval = nc_def_var( ncid, "y" , NC_DOUBLE, 3, dimsIDs, &varID[1]))){return retval;}
-        if( (retval = nc_put_att_text( ncid, varID[1] , "axis", 1, "Y"))){return retval;}
-        if( (retval = nc_def_var( ncid, "z" , NC_DOUBLE, 3, dimsIDs, &varID[0]))){return retval;}
-        if( (retval = nc_put_att_text( ncid, varID[0] , "axis", 1, "Z"))){return retval;}
-        if( (retval = nc_put_var_double( ncid, varID[2], pX.data())) ){ return retval;}
-        if( (retval = nc_put_var_double( ncid, varID[1], pY.data())) ){ return retval;}
-        if( (retval = nc_put_var_double( ncid, varID[0], pZ.data())) ){ return retval;}
-    }
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx)));
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy)));
+    if( (retval = define_dimension( ncid, "z", &dimsIDs[0], gz)));
     return retval;
 }
 

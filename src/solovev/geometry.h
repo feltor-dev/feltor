@@ -911,18 +911,20 @@ struct FieldY
  * @brief \f[  B^y= 
  * f(\psi) \frac{(\nabla\psi)^2}{R} \f]
  */ 
-  double operator()(double R, double Z) const
-  { 
-      return f_psi_*(psipR_(R,Z)*psipR_(R,Z) + psipZ_(R,Z)*psipZ_(R,Z))/R;
-  }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-  double operator()(double R, double Z, double phi) const
-  { 
-      return this->operator()(R,Z);
-  }
-  private:
+    double operator()(double R, double Z) const
+    { 
+        double psipR = psipR_(R, Z), psipZ = psipZ_(R,Z);
+        double psi2 = psipR*psipR+ psipZ*psipZ;
+        return f_psi_*(psi2)*R_0_/R;
+    }
+      /**
+       * @brief == operator()(R,Z)
+       */ 
+    double operator()(double R, double Z, double phi) const
+    { 
+        return this->operator()(R,Z);
+    }
+    private:
     double f_psi_, R_0_;
     PsipR psipR_;
     PsipZ psipZ_;
@@ -933,9 +935,10 @@ struct FieldRZYT
     FieldRZYT( GeomParameters gp): fieldR_(gp), fieldZ_(gp), fieldY_(gp), fieldT_(gp){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        yp[0] =  fieldR_(y[0],y[1])/fieldT_(y[0],y[1]);
-        yp[1] =  fieldZ_(y[0],y[1])/fieldT_(y[0],y[1]);
-        yp[2] =  fieldY_(y[0],y[1])/fieldT_(y[0],y[1]);
+        double fieldT = fieldT_(y[0],y[1]);
+        yp[0] =  fieldR_(y[0],y[1])/fieldT;
+        yp[1] =  fieldZ_(y[0],y[1])/fieldT;
+        yp[2] =  fieldY_(y[0],y[1])/fieldT;
     }
   private:
     FieldR fieldR_;
@@ -948,9 +951,10 @@ struct FieldRZtau
     FieldRZtau( GeomParameters gp): psipR_(gp), psipZ_(gp){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psi = psipR_(y[0], y[1])*psipR_(y[0],y[1])+ psipZ_(y[0],y[1]);
-        yp[0] =  psipR_(y[0],y[1])/psi;
-        yp[1] =  psipZ_(y[0],y[1])/psi;
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psi2 = psipR*psipR+ psipZ*psipZ;
+        yp[0] =  psipR/psi2;
+        yp[1] =  psipZ/psi2;
     }
   private:
     PsipR psipR_;
@@ -962,8 +966,9 @@ struct FieldRZY
     void set_f( double new_f){ fieldY_.set_f(new_f);}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        yp[0] =  fieldR_(y[0],y[1])/fieldY_(y[0],y[1]);
-        yp[1] =  fieldZ_(y[0],y[1])/fieldY_(y[0],y[1]);
+        double fieldy = fieldY_(y[0],y[1]);
+        yp[0] =  fieldR_(y[0],y[1])/fieldy;
+        yp[1] =  fieldZ_(y[0],y[1])/fieldy;
     }
   private:
     FieldR fieldR_;
