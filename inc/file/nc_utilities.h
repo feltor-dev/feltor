@@ -167,8 +167,8 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::Grid2d<double>& g)
     dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
-    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[1], gx))){ return retval;}
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[0], gy))){ return retval;}
 
     return retval;
 }

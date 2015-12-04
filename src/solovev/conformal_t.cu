@@ -54,6 +54,15 @@ try{
     solovev::ConformalRingGrid g(gp, -10, -3, n, Nx, Ny, dg::DIR);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
+    int ncid;
+    file::NC_Error_Handle err;
+    err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    int dim2d[2];
+    err = file::define_dimensions(  ncid, dim2d, g.grid());
+    int coordsID[2], onesID;
+    err = nc_def_var( ncid, "r", NC_DOUBLE, 2, dim2d, &coordsID[0]);
+    err = nc_def_var( ncid, "z", NC_DOUBLE, 2, dim2d, &coordsID[1]);
+    err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim2d, &onesID);
 
     t.tic();
     thrust::host_vector<double> pi( n*Nx, 0);
@@ -66,15 +75,6 @@ try{
     g.construct_rz(r,z );
     t.toc();
     std::cout << "RZ vector took "<<t.diff()<<"s"<<std::endl;
-    int ncid;
-    file::NC_Error_Handle err;
-    err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim2d[2];
-    err = file::define_dimensions(  ncid, dim2d, g.grid());
-    int coordsID[2], onesID;
-    err = nc_def_var( ncid, "r", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    err = nc_def_var( ncid, "z", NC_DOUBLE, 2, dim2d, &coordsID[1]);
-    err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim2d, &onesID);
 
     thrust::host_vector<double> ones = dg::evaluate( dg::one, g.grid());
     for( unsigned i=0; i<ones.size(); i++)

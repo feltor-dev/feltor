@@ -109,41 +109,41 @@ struct Fpsi
 struct FieldFinv
 {
     FieldFinv( const GeomParameters& gp, double psi_0, double psi_1):psi_0(psi_0), psi_1(psi_1), fpsi_(gp, psi_0){
-        Fpsi fpsi(gp, psi_0);
-        P_=2;
-        double x1 = 0, x1_old = 0;
-        double eps=1e10, eps_old=2e10;
-        std::cout << "In Inverse function\n";
-        thrust::host_vector<double> psi_vec;
-        while(eps < eps_old && P_ < 20)
-        {
-            eps_old = eps; 
-            x1_old = x1;
+        //Fpsi fpsi(gp, psi_0);
+        //P_=2;
+        //double x1 = 0, x1_old = 0;
+        //double eps=1e10, eps_old=2e10;
+        //std::cout << "In Inverse function\n";
+        //thrust::host_vector<double> psi_vec;
+        //while(eps < eps_old && P_ < 20)
+        //{
+        //    eps_old = eps; 
+        //    x1_old = x1;
 
-            P_+=1;
-            dg::Grid1d<double> grid( psi_0, psi_1, P_, 1);
-            psi_vec = dg::evaluate( dg::coo1, grid);
-            fpsi_neg_inv.resize( grid.size(), 0);
-            thrust::host_vector<double> w1d = dg::create::weights(grid);
-            for( unsigned i=0; i<psi_vec.size(); i++)
-            {
-                fpsi_neg_inv[i] = -1./fpsi( psi_vec[i]);
-            }
-            x1 = dg::blas1::dot( fpsi_neg_inv, w1d);
+        //    P_+=1;
+        //    dg::Grid1d<double> grid( psi_0, psi_1, P_, 1);
+        //    psi_vec = dg::evaluate( dg::coo1, grid);
+        //    fpsi_neg_inv.resize( grid.size(), 0);
+        //    thrust::host_vector<double> w1d = dg::create::weights(grid);
+        //    for( unsigned i=0; i<psi_vec.size(); i++)
+        //    {
+        //        fpsi_neg_inv[i] = -1./fpsi( psi_vec[i]);
+        //    }
+        //    x1 = dg::blas1::dot( fpsi_neg_inv, w1d);
 
-            eps = fabs(x1 - x1_old);
-            std::cout << "F1 = "<<x1<<" error "<<eps<<" with "<<P_<<" polynomials\n";
-        }
-        //take the optimum
-        P_-=1;
-        dg::Grid1d<double> grid( psi_0, psi_1, P_, 1);
-        psi_vec = dg::evaluate( dg::coo1, grid);
-        fpsi_neg_inv.resize( grid.size(), 0);
-        thrust::host_vector<double> w1d = dg::create::weights(grid);
-        for( unsigned i=0; i<psi_vec.size(); i++)
-        {
-            fpsi_neg_inv[i] = -1./fpsi( psi_vec[i]);
-        }
+        //    eps = fabs(x1 - x1_old);
+        //    std::cout << "F1 = "<<x1<<" error "<<eps<<" with "<<P_<<" polynomials\n";
+        //}
+        ////take the optimum
+        //P_-=1;
+        //dg::Grid1d<double> grid( psi_0, psi_1, P_, 1);
+        //psi_vec = dg::evaluate( dg::coo1, grid);
+        //fpsi_neg_inv.resize( grid.size(), 0);
+        //thrust::host_vector<double> w1d = dg::create::weights(grid);
+        //for( unsigned i=0; i<psi_vec.size(); i++)
+        //{
+        //    fpsi_neg_inv[i] = -1./fpsi( psi_vec[i]);
+        //}
     }
     inline void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) const { 
         ////determine normalized psi
@@ -221,13 +221,13 @@ struct ConformalRingGrid
         thrust::host_vector<double> psi_old(g2d_.n()*g2d_.Nx(), 0), psi_diff( psi_old);
         thrust::host_vector<double> w1d = dg::create::weights( g1d_);
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
-        unsigned N = 4;
+        unsigned N = 1;
         double eps = 1e10, eps_old=2e10;
         std::cout << "In psi function:\n";
         double x0=g2d_.x0(), x1 = x_vec[1];
-        while( eps <  eps_old && N < 1e6)
+        //while( eps <  eps_old && N < 1e6)
+        while( eps >  1e-10 && N < 1e6)
         {
-            N*=2;
             eps_old = eps;
             psi_old = psi_x; 
             x0 = 0, x1 = x_vec[0];
@@ -245,8 +245,9 @@ struct ConformalRingGrid
             double epsi = dg::blas2::dot( psi_diff, w1d, psi_diff);
             eps =  sqrt( epsi);
             std::cout << "Psi error is "<<eps<<" with "<<N<<" steps\n";
+            N*=2;
         }
-        psi_x = psi_old;
+        //psi_x = psi_old;
     }
     void construct_rz( thrust::host_vector<double>& r, thrust::host_vector<double>& z) const
     {

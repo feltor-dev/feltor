@@ -932,20 +932,25 @@ struct FieldY
 
 struct FieldRZYT
 {
-    FieldRZYT( GeomParameters gp): fieldR_(gp), fieldZ_(gp), fieldY_(gp), fieldT_(gp){}
+    FieldRZYT( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double fieldT = fieldT_(y[0],y[1]);
-        yp[0] =  fieldR_(y[0],y[1])/fieldT;
-        yp[1] =  fieldZ_(y[0],y[1])/fieldT;
-        yp[2] =  fieldY_(y[0],y[1])/fieldT;
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        yp[0] =  R_0_/y[0]*psipZ;//fieldR
+        yp[1] = -R_0_/y[0]*psipR;//fieldZ
+        yp[2] = (psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //fieldYbar
+        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
+        double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        yp[0] /=  fieldT;
+        yp[1] /=  fieldT;
+        yp[2] /=  fieldT;
     }
   private:
-    FieldR fieldR_;
-    FieldZ fieldZ_;
-    FieldT fieldT_;
-    FieldY fieldY_;
+    double R_0_;
+    PsipR psipR_;
+    PsipZ psipZ_;
 };
+
 struct FieldRZtau
 {
     FieldRZtau( GeomParameters gp): psipR_(gp), psipZ_(gp){}
