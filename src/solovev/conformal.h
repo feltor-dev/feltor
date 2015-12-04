@@ -69,7 +69,7 @@ struct Fpsi
             end2d_old = end2d;
             //compute new values
             N*=2;
-            dg::stepperRK4( fieldRZtau_, begin2d, end2d, psi_0, psi, N);
+            dg::stepperRK7( fieldRZtau_, begin2d, end2d, psi_0, psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
@@ -87,7 +87,7 @@ struct Fpsi
             eps_old = eps, end_old = end; //y_old = end[2];
             //compute new values
             N*=2;
-            dg::stepperRK4( fieldRZYT_, begin, end, 0., 2*M_PI, N);
+            dg::stepperRK7( fieldRZYT_, begin, end, 0., 2*M_PI, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
             //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
             //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
@@ -177,7 +177,7 @@ struct FieldFinv
             end2d_old = end2d;
             //compute new values
             N*=2;
-            dg::stepperRK4( fieldRZtau_, begin2d, end2d, psi_0, psi[0], N);
+            dg::stepperRK7( fieldRZtau_, begin2d, end2d, psi_0, psi[0], N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
@@ -192,7 +192,7 @@ struct FieldFinv
         //    eps_old = eps, end_old = end, y_old = end[2];
         //    //compute new values
         //    N*=2;
-        //    dg::stepperRK4( fieldRZYT_, begin, end, 0., 2*M_PI, N);
+        //    dg::stepperRK7( fieldRZYT_, begin, end, 0., 2*M_PI, N);
         //    //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         //    eps = fabs( (y_old - end[2]));
         //    std::cout << "F error "<<eps<<" with "<<N<<" steps\n";
@@ -200,7 +200,7 @@ struct FieldFinv
         //}
 
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
-        dg::stepperRK4( fieldRZYT_, begin, end, 0., 2*M_PI, 1e4);
+        dg::stepperRK7( fieldRZYT_, begin, end, 0., 2*M_PI, 1e4);
         eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         fpsiM[0] = - end[2]/2./M_PI;
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
@@ -278,13 +278,13 @@ struct ConformalRingGrid
             psi_old = psi_x; 
             x0 = 0, x1 = x_vec[0];
 
-            dg::stepperRK4( fpsiM_, begin, end, x0, x1, N);
+            dg::stepperRK7( fpsiM_, begin, end, x0, x1, N);
             psi_x[0] = end[0]; 
             for( unsigned i=1; i<g1d_.size(); i++)
             {
                 temp = end;
                 x0 = x_vec[i-1], x1 = x_vec[i];
-                dg::stepperRK4( fpsiM_, temp, end, x0, x1, N);
+                dg::stepperRK7( fpsiM_, temp, end, x0, x1, N);
                 psi_x[i] = end[0];
             }
             dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
@@ -292,7 +292,7 @@ struct ConformalRingGrid
             eps =  sqrt( epsi);
             std::cout << "Psi error is "<<eps<<" with "<<N<<" steps\n";
             temp = end;
-            dg::stepperRK4(fpsiM_, temp, end, x1, g2d_.x1(),N);
+            dg::stepperRK7(fpsiM_, temp, end, x1, g2d_.x1(),N);
             eps = fabs( end[0]-psi_1); 
             std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
             N*=2;
@@ -325,14 +325,14 @@ struct ConformalRingGrid
                 //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
                 fieldRZY.set_f(f_psi);
                 double y0 = 0, y1 = y_vec[0]; 
-                dg::stepperRK4( fieldRZY, begin, end, y0, y1, N);
+                dg::stepperRK7( fieldRZY, begin, end, y0, y1, N);
                 r[0+j] = end[0]; z[0+j] = end[1];
                 //std::cout <<end[0]<<" "<< end[1] <<"\n";
                 for( unsigned i=1; i<g2d_.n()*g2d_.Ny(); i++)
                 {
                     temp = end;
                     y0 = y_vec[(i-1)*Nx+j], y1 = y_vec[i*Nx+j];
-                    dg::stepperRK4( fieldRZY, temp, end, y0, y1, N);
+                    dg::stepperRK7( fieldRZY, temp, end, y0, y1, N);
                     r[i*Nx+j] = end[0]; z[i*Nx+j] = end[1];
                     //std::cout << y0<<" "<<y1<<" "<<temp[0]<<" "<<temp[1]<<" "<<end[0]<<" "<<end[1]<<"\n";
                 }

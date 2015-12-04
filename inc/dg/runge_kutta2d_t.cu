@@ -15,16 +15,17 @@ const unsigned Ny = 20;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
-const unsigned k = 7;
+const unsigned s = 17;
 const double T = 1.;
-const unsigned NT = 2*T/0.01/lx*(double)Nx; //respect courant condition
-const double dt = T/(double)NT;
+//const unsigned NT = 2*T/0.01/lx*(double)Nx; //respect courant condition
+unsigned NT = 200;
 
 
 double initial( double x, double y) { return sin(x)*sin(y); }
 double function( double x, double y){ return sin(y); }
-double result( double x, double y)  { return initial( x-cos(y)*T, y); }
+//double result( double x, double y)  { return initial( x-cos(y)*T, y); }
 double arak   ( double x, double y) { return -cos(y)*sin(y)*cos(x); }
+double result( double x, double y)  { return initial(x,y)*exp(T);}
 
 template< class Vector_Type>
 struct RHS
@@ -35,11 +36,12 @@ struct RHS
     { }
     void operator()(const Vector& y, Vector& yp)
     {
-        for( unsigned i=0; i<y.size(); i++)
-        {
-            dg::blas1::axpby( 1., y[i], 0, temp);
-            arakawa( phi, temp, yp[i]);
-        }
+        yp = y;
+        //for( unsigned i=0; i<y.size(); i++)
+        //{
+        //    dg::blas1::axpby( 1., y[i], 0, temp);
+        //    arakawa( phi, temp, yp[i]);
+        //}
     }
   private:
     dg::ArakawaX<dg::DMatrix, Vector_Type> arakawa;
@@ -48,6 +50,9 @@ struct RHS
 
 int main()
 {
+    std::cout << "Type NT!\n";
+    std::cin >> NT;
+    const double dt = T/(double)NT;
     dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     dg::DVec w2d = dg::create::weights( grid);
     //Also test std::vector<DVec> functionality
@@ -60,7 +65,7 @@ int main()
 
     RHS<dg::DVec> rhs( grid);
 
-    dg::RK<k, std::vector<dg::DVec> >  rk( y0);
+    dg::RK_classic<s, std::vector<dg::DVec> >  rk( y0);
     for( unsigned i=0; i<NT; i++)
     {
         rk( rhs, y0, y1, dt);
