@@ -18,11 +18,16 @@ namespace dg{
 
 /*! @brief coefficients for explicit RK methods
  *
- * To derive these coefficients from the butcher tableau
- * consider 
- * \f[ y = Bhk = (B-D)hk + Dhk = (B-D)B^{-1}y + Dhk 
- *       = ( 1- DB^{-1})y + Dhk = \alpha y + \beta h k\f]
- *  where \f$ B\f$ is the butcher tableau of order k+1 and \f$ D\f$ its
+ * The coefficients are in the form Cockburn proposed in his paper.
+ * It's just a reformulation in that you don't store the sequence of
+ * k_j but rather the abscissas u_j with k_j = f(u_j)
+ *  Note that if you knew all k_j you can compute this
+ *  sequence u_j via u=Bk. To derive these coefficients from the butcher tableau
+ * consider.
+ * \f[ u = Bhk = (B-D)hk + Dhk = (B-D)B^{-1}y + Dhk 
+ *       = ( 1- DB^{-1})u + Dhk = \alpha u + \beta h k\f]
+ *  where \f$ B\f$ is the butcher tableau without the c's and extended
+ *  by ones on the left and \f$ D\f$ its
  *  diagonal part. 
  * @tparam k Order of the method. Currently 2,3 and 4 are available
  */
@@ -72,6 +77,21 @@ const double rk_coeff<4>::alpha[4][4] = {
 template<>
 const double rk_coeff<4>::beta[4] = {
      0.5, 0.5, 1.0, 1./6.
+};
+//eighth order local error
+template<>
+const double rk_coeff<7>::alpha[7][7] = {
+    {1.000000000000000,                   0,                   0,                   0,                   0,                   0,                   0},    
+    {0.625000000000001,   0.375000000000000,  -0.000000000000001,   0.000000000000000,  -0.000000000000000,   0.000000000000000,   0.000000000000000}, 
+    {0.333333333333333,   0.074074074074074,   0.592592592592593,                   0,   0.000000000000000,  -0.000000000000000,  -0.000000000000000},
+    {1.355374548158960,   0.421654692748093,  -1.776066836358976,   0.999037595451923,  -0.000000000000001,   0.000000000000000,   0.000000000000000},
+    {13.711262962067266,  2.666805439585175, -12.846228501457849,   4.478902447651540,  -7.010742347846132,   0.000000000000001,   0.000000000000000},
+    {-12.494072117433580, -3.952727038946246,  8.819280646512137,   2.468068642074575,   9.475709680102206,  -3.316259812309091,  -0.000000000000000},
+    {2.404321379869533,   0.762680581960287,  -1.612602847508535,  -0.090732860145928,  -1.842119535438141,   1.088888888888889,   0.289564392373896}
+};
+template<>
+const double rk_coeff<7>::beta[7] = {
+     1.000000000000000, 0.125000000000000, 0.296296296296296, -0.125643553354930, 2.116515138991168, 0.940109451961618, 0.050000000000000 
 };
 ///@endcond
 //RHS contains Information about Vector type it uses

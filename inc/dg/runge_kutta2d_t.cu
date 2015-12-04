@@ -15,7 +15,7 @@ const unsigned Ny = 20;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
-const unsigned k = 3;
+const unsigned k = 7;
 const double T = 1.;
 const unsigned NT = 2*T/0.01/lx*(double)Nx; //respect courant condition
 const double dt = T/(double)NT;
