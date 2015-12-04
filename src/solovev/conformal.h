@@ -77,6 +77,7 @@ struct Fpsi
         //double y_old=0;
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         R_0 = begin[0] = end2d_old[0], Z_0 = begin[1] = end2d_old[1];
+        //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         eps = 1e10, eps_old = 2e10;
         N = 50;
         //double y_eps;
@@ -108,7 +109,8 @@ struct Fpsi
 
 struct FieldFinv
 {
-    FieldFinv( const GeomParameters& gp, double psi_0, double psi_1):psi_0(psi_0), psi_1(psi_1), fpsi_(gp, psi_0){
+    FieldFinv( const GeomParameters& gp, double psi_0, double psi_1): psi_0(psi_0), psi_1(psi_1), R_init( detail::find_initial_R(gp, psi_0)), fpsi_(gp, psi_0), fieldRZYT_(gp), fieldRZtau_(gp) 
+            {
         //Fpsi fpsi(gp, psi_0);
         //P_=2;
         //double x1 = 0, x1_old = 0;
@@ -160,11 +162,55 @@ struct FieldFinv
         //    sum += coeffs[i]*fpsi_neg_inv[i];
         //}
         //fpsiM[0] = sum;
-        fpsiM[0] = -1./fpsi_(psi[0]);
+
+        //fpsiM[0] = -1./fpsi_(psi[0]);
+
+        unsigned N = 50;
+        thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
+        begin2d[0] = end2d[0] = end2d_old[0] = R_init;
+        //std::cout << "In init function\n";
+        double eps = 1e10, eps_old = 2e10;
+        while( eps < eps_old && N<1e6)
+        {
+            //remember old values
+            eps_old = eps;
+            end2d_old = end2d;
+            //compute new values
+            N*=2;
+            dg::stepperRK4( fieldRZtau_, begin2d, end2d, psi_0, psi[0], N);
+            eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
+        }
+        thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
+        begin[0] = end2d_old[0], begin[1] = end2d_old[1];
+
+        //eps = 1e10; //eps_old = 2e10;
+        //N = 50;
+        //double y_old;
+        //while( eps > 1e-12 && N < 1e6)
+        //{
+        //    //remember old values
+        //    eps_old = eps, end_old = end, y_old = end[2];
+        //    //compute new values
+        //    N*=2;
+        //    dg::stepperRK4( fieldRZYT_, begin, end, 0., 2*M_PI, N);
+        //    //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+        //    eps = fabs( (y_old - end[2]));
+        //    std::cout << "F error "<<eps<<" with "<<N<<" steps\n";
+        //    //std::cout <<"error in y is "<<y_eps<<"\n";
+        //}
+
+        //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
+        dg::stepperRK4( fieldRZYT_, begin, end, 0., 2*M_PI, 1e4);
+        eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+        fpsiM[0] = - end[2]/2./M_PI;
+        //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     private:
-    double psi_0, psi_1;
+    double psi_0, psi_1, R_init;
     Fpsi fpsi_;
+    FieldRZYT fieldRZYT_;
+    FieldRZtau fieldRZtau_;
+
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned P_;
 };
@@ -245,8 +291,13 @@ struct ConformalRingGrid
             double epsi = dg::blas2::dot( psi_diff, w1d, psi_diff);
             eps =  sqrt( epsi);
             std::cout << "Psi error is "<<eps<<" with "<<N<<" steps\n";
+            temp = end;
+            dg::stepperRK4(fpsiM_, temp, end, x1, g2d_.x1(),N);
+            eps = fabs( end[0]-psi_1); 
+            std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
             N*=2;
         }
+
         //psi_x = psi_old;
     }
     void construct_rz( thrust::host_vector<double>& r, thrust::host_vector<double>& z) const

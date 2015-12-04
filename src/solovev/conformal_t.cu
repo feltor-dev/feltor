@@ -22,6 +22,9 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny\n";
     unsigned n, Nx, Ny;
     std::cin >> n>> Nx>>Ny;   
+    std::cout << "Type psi_0 and psi_1\n";
+    double psi_0, psi_1;
+    std::cin >> psi_0>> psi_1;
     std::vector<double> v, v2;
 try{ 
         if( argc==1)
@@ -51,7 +54,7 @@ try{
     t.toc();
     std::cout << f_psi<<" took "<<t.diff()<<"s"<<std::endl;
     t.tic();
-    solovev::ConformalRingGrid g(gp, -10, -3, n, Nx, Ny, dg::DIR);
+    solovev::ConformalRingGrid g(gp, psi_0, psi_1, n, Nx, Ny, dg::DIR);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
