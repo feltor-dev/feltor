@@ -4,6 +4,7 @@
 #include "dg/backend/functions.h"
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/operator.h"
+#include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
 #include "geometry.h"
@@ -295,7 +296,7 @@ struct ConformalRingGrid
 
         //psi_x = psi_old;
     }
-    void construct_rz( thrust::host_vector<double>& r, thrust::host_vector<double>& z) const
+    void construct_rz( thrust::host_vector<double>& r, thrust::host_vector<double>& z) 
     {
         assert( r.size() == g2d_.size() && z.size() == g2d_.size());
         const unsigned Nx = g2d_.n()*g2d_.Nx();
@@ -305,6 +306,11 @@ struct ConformalRingGrid
         const thrust::host_vector<double> w2d = dg::create::weights( g2d_);
         unsigned N = 1;
         double eps = 1e10, eps_old=2e10;
+        f_x.resize( g2d_.n()*g2d_.Nx());
+        FieldRZY fieldRZY(gp_);
+        detail::Fpsi fpsi( gp_, psi_0);
+        for( unsigned i=0; i<Nx; i++)
+            f_x[i] = fpsi( psi_x[i]);
         std::cout << "In grid function:\n";
         while( eps <  eps_old && N < 1e6)
         {
@@ -314,8 +320,6 @@ struct ConformalRingGrid
             for( unsigned j=0; j<Nx; j++)
             {
                 thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
-                FieldRZY fieldRZY(gp_);
-                detail::Fpsi fpsi( gp_, psi_0);
                 double f_psi = fpsi.construct_f( psi_x[j], begin[0], begin[1]);
                 //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
                 fieldRZY.set_f(f_psi);
@@ -340,19 +344,80 @@ struct ConformalRingGrid
             eps =  sqrt( er + ez);
             std::cout << "error is "<<eps<<" with "<<N<<" steps\n";
         }
+
         r = r_old, z = z_old;
+    }
+    void construct_metric()
+    {
+        r_.resize(g2d_.size()), z_.resize( g2d_.size());
+        construct_rz( r_, z_);
+        thrust::host_vector<double> r_x( r_), r_y(r_), z_x(r_), z_y(r_);
+        thrust::host_vector<double> temp0( r_), temp1(r_);
+        detail::Naive naive( g2d_);
+        naive.dx( r_, r_x), naive.dx( z_, z_x);
+        naive.dy( r_, r_y), naive.dy( z_, z_y);
+        dg::blas1::pointwiseDot( r_x, r_x, temp0);
+        dg::blas1::pointwiseDot( z_x, z_x, temp1);
+        dg::blas1::axpby( 1., temp0, 1., temp1, g_xx);
+        dg::blas1::pointwiseDot( r_x, r_y, temp0);
+        dg::blas1::pointwiseDot( z_x, z_y, temp1);
+        dg::blas1::axpby( 1., temp0, 1., temp1, g_xy);
+        dg::blas1::pointwiseDot( r_y, r_y, temp0);
+        dg::blas1::pointwiseDot( z_y, z_y, temp1);
+        dg::blas1::axpby( 1., temp0, 1., temp1, g_yy);
+        dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
+        dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
+        dg::blas1::axpby( 1., temp0, -1., temp1, vol);
+        //now invert to get contravariant elements
+        dg::blas1::pointwiseDivide( g_xx, vol, g_xx);
+        dg::blas1::pointwiseDivide( g_xy, vol, g_xy);
+        dg::blas1::pointwiseDivide( g_yy, vol, g_yy);
+        g_xx.swap( g_yy);
+        dg::blas1::scal( g_xy, -1.);
+        //compute real volume form
+        dg::blas1::transform( vol, vol, dg::SQRT<double>());
+        dg::blas1::pointwiseDot( r_, vol, r_);
+        thrust::host_vector<double> ones = dg::evaluate( dg::one, g2d_);
+        dg::blas1::pointwiseDivide( ones, r_, temp0);
+        dg::blas1::pointwiseDivide( temp0, r_, g_pp); //1/R^2
+
+        //compute error in volume element
+        // f(psi) fehlt
+        FieldY fieldY(gp_);
+        thrust::host_vector<double> by = pull_back( fieldY);
+        dg::blas1::scal( by, 1./gp_.R_0);
+        dg::blas1::axpby( 1., vol, -1., by, by);
+        double err= dg::blas1::dot( by, by);
+        std::cout << "Error of metric is "<<sqrt(err)<<"\n";
+        
+
+        
+
+    }
+    template< class BinaryOp>
+    thrust::host_vector<double> pull_back( BinaryOp f)
+    {
+        thrust::host_vector<double> vec( g2d_.size());
+        for( unsigned i=0; i<vec.size(); i++)
+            vec[i] = f( r_[i], z_[i]);
+        return vec;
+    }
+    thrust::host_vector<double> pull_back( double (f)(double,double))
+    {
+        thrust::host_vector<double> vec( g2d_.size());
+        for( unsigned i=0; i<vec.size(); i++)
+            vec[i] = f( r_[i], z_[i]);
+        return vec;
     }
 
     const dg::Grid2d<double>& grid() const{return g2d_;}
-
-
-
-
     private:
     const dg::Grid2d<double> g2d_;
     const double psi_0, psi_1;
     const GeomParameters gp_;
-    thrust::host_vector<double> psi_x;
+    thrust::host_vector<double> psi_x, f_x;
+    thrust::host_vector<double> r_, z_;
+    thrust::host_vector<double> g_xx, g_xy, g_yy, g_pp, vol;
 
 };
 

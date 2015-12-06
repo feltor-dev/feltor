@@ -100,7 +100,7 @@ try{
     t.tic();
     thrust::host_vector<double> r( n*n*Nx*Ny, 0);
     thrust::host_vector<double> z( n*n*Nx*Ny, 0);
-    g.construct_rz(r,z );
+    g.construct_metric( );
     t.toc();
     std::cout << "RZ vector took "<<t.diff()<<"s"<<std::endl;
 
