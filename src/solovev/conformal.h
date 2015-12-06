@@ -3,6 +3,7 @@
 #include "dg/backend/grid.h"
 #include "dg/backend/functions.h"
 #include "dg/backend/interpolation.cuh"
+#include "dg/backend/operator.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
 #include "geometry.h"
@@ -192,6 +193,52 @@ double find_x1( const GeomParameters& gp, double psi_0, double psi_1 )
     return -x1_old;
 
 }
+
+
+struct Naive
+{
+    Naive( const dg::Grid2d<double>& g2d): dx_(dg::create::pidxpj(g2d.n())), dy_(dx_)
+    {
+        dg::Operator<double> tx( dg::create::pipj_inv(g2d.n())), ty(tx);
+        dg::Operator<double> forward( g2d.dlt().forward()); 
+        dg::Operator<double> backward( g2d.dlt().backward());
+        tx*= 2./g2d.hx();
+        ty*= 2./g2d.hy();
+        dx_ = backward*tx*dx_*forward;
+        dy_ = backward*ty*dy_*forward;
+        Nx = g2d.Nx();
+        Ny = g2d.Ny();
+        n = g2d.n();
+    }
+    void dx( const thrust::host_vector<double>& in, thrust::host_vector<double>& out)
+    {
+        for( unsigned i=0; i<Ny*n; i++)
+            for( unsigned j=0; j<Nx; j++)
+                for( unsigned k=0; k<n; k++)
+                {
+                    out[i*Nx*n + j*n +k] = 0;
+                    for( unsigned l=0; l<n; l++)
+                        out[i*Nx*n + j*n +k] += dx_(k,l)*in[i*Nx*n+j*n+l];
+                }
+    }
+    void dy( const thrust::host_vector<double>& in, thrust::host_vector<double>& out)
+    {
+        for( unsigned i=0; i<Ny; i++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned j=0; j<Nx*n; j++)
+                {
+                    out[i*Nx*n*n + k*Nx*n +j] = 0;
+                    for( unsigned l=0; l<n; l++)
+                        out[i*Nx*n*n + k*Nx*n +j] += dy_(k,l)*in[i*Nx*n*n+l*Nx*n+j];
+                }
+    }
+
+    private:
+    dg::Operator<double> dx_, dy_;
+    unsigned Nx, Ny, n;
+
+};
+
 
 } //namespace detail
 

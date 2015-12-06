@@ -17,6 +17,11 @@
 
 #include "file/nc_utilities.h"
 
+double sineX( double x, double y) {return sin(x)*sin(y);}
+double cosineX( double x, double y) {return cos(x)*sin(y);}
+double sineY( double x, double y) {return sin(x)*sin(y);}
+double cosineY( double x, double y) {return sin(x)*cos(y);}
+
 int main( int argc, char* argv[])
 {
     std::cout << "Type n, Nx, Ny\n";
@@ -42,6 +47,26 @@ try{
             std::cout << v[i] << " ";
             std::cout << std::endl;
         return -1;}
+    std::cout << "Test naive derivatives:\n";
+    dg::Grid2d<double> g2d( 0,1,0,1, n, Nx, Ny);
+    const dg::HVec initX = dg::evaluate( sineX, g2d);
+    const dg::HVec errorX = dg::evaluate( cosineX, g2d);
+    const dg::HVec initY = dg::evaluate( sineY, g2d);
+    const dg::HVec errorY = dg::evaluate( cosineY, g2d);
+    const dg::HVec w2d = dg::create::weights(g2d);
+    dg::HVec deriX(initX), deriY(initY);
+    solovev::detail::Naive naive( g2d);
+
+    naive.dx( initX, deriX);
+    naive.dy( initY, deriY);
+    dg::blas1::axpby( 1.,deriX, -1., errorX, deriX);
+    dg::blas1::axpby( 1.,deriY, -1., errorY, deriY);
+    double errX = dg::blas2::dot( deriX, w2d, deriX);
+    double errY = dg::blas2::dot( deriY, w2d, deriY);
+    std::cout << "Errors from naive derivatives are: "<<errX<<" and "<<errY<<"\n";
+
+
+
     //write parameters from file into variables
     const solovev::GeomParameters gp(v);
     gp.display( std::cout);
