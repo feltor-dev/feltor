@@ -63,7 +63,7 @@ try{
     dg::blas1::axpby( 1.,deriY, -1., errorY, deriY);
     double errX = dg::blas2::dot( deriX, w2d, deriX);
     double errY = dg::blas2::dot( deriY, w2d, deriY);
-    std::cout << "Errors from naive derivatives are: "<<errX<<" and "<<errY<<"\n";
+    std::cout << "Errors from naive derivatives are: "<<sqrt(errX)<<" and "<<sqrt(errY)<<"\n";
 
 
 

@@ -350,7 +350,10 @@ struct ConformalRingGrid
     void construct_metric()
     {
         r_.resize(g2d_.size()), z_.resize( g2d_.size());
+        g_xx.resize(g2d_.size()), g_xy.resize( g2d_.size()), g_yy.resize( g2d_.size()), g_pp.resize( g2d_.size()), vol.resize( g2d_.size());
         construct_rz( r_, z_);
+        std::cout << "Construction successful!\n";
+        thrust::host_vector<double> w2d = dg::create::weights( g2d_);
         thrust::host_vector<double> r_x( r_), r_y(r_), z_x(r_), z_y(r_);
         thrust::host_vector<double> temp0( r_), temp1(r_);
         detail::Naive naive( g2d_);
@@ -376,19 +379,36 @@ struct ConformalRingGrid
         dg::blas1::scal( g_xy, -1.);
         //compute real volume form
         dg::blas1::transform( vol, vol, dg::SQRT<double>());
-        dg::blas1::pointwiseDot( r_, vol, r_);
+        dg::blas1::pointwiseDot( r_, vol, vol);
         thrust::host_vector<double> ones = dg::evaluate( dg::one, g2d_);
         dg::blas1::pointwiseDivide( ones, r_, temp0);
         dg::blas1::pointwiseDivide( temp0, r_, g_pp); //1/R^2
 
         //compute error in volume element
+        dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
+        dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
+        dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
+        dg::blas1::pointwiseDot( temp0, g_pp, temp0);
+        dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
+        dg::blas1::pointwiseDivide( ones, temp0, temp0);
+        dg::blas1::axpby( 1., temp0, -1., vol, temp0);
+        std::cout << "Consistency  of volume is "<<sqrt(dg::blas2::dot( temp0, w2d, temp0))<<"\n";
+
+        dg::blas1::pointwiseDivide( r_, g_xx, temp0);
+        dg::blas1::axpby( 1., temp0, -1., vol, temp0);
+        std::cout << "Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w2d, temp0))<<"\n";
         // f(psi) fehlt
         FieldY fieldY(gp_);
         thrust::host_vector<double> by = pull_back( fieldY);
+        for( unsigned i=0; i<g2d_.n()*g2d_.Ny(); i++)
+            for( unsigned j=0; j<g2d_.n()*g2d_.Nx(); j++)
+                by[i*g2d_.n()*g2d_.Nx() + j] *= f_x[j];
         dg::blas1::scal( by, 1./gp_.R_0);
-        dg::blas1::axpby( 1., vol, -1., by, by);
-        double err= dg::blas1::dot( by, by);
-        std::cout << "Error of metric is "<<sqrt(err)<<"\n";
+        dg::blas1::pointwiseDivide( g_xx, r_, temp0);
+        dg::blas1::axpby( 1., temp0, -1., by, by);
+        double err= dg::blas2::dot( by, w2d, by);
+        std::cout << "Error of g_xx is "<<sqrt(err)<<"\n";
+
         
 
         
