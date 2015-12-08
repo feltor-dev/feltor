@@ -370,7 +370,7 @@ struct ConformalRingGrid
         dg::blas1::axpby( 1., temp0, 1., temp1, g_yy);
         dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
         dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
-        dg::blas1::axpby( 1., temp0, -1., temp1, vol);
+        dg::blas1::axpby( 1., temp0, -1., temp1, vol); //determinant
         //now invert to get contravariant elements
         dg::blas1::pointwiseDivide( g_xx, vol, g_xx);
         dg::blas1::pointwiseDivide( g_xy, vol, g_xy);
@@ -388,16 +388,24 @@ struct ConformalRingGrid
         dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
         dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
         dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
+        //dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
+        dg::blas1::pointwiseDot( g_xx, g_xx, temp1);
+
+        dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
+        std::cout<< "Rel Error in Determinant is "<<sqrt( dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( temp1, w2d, temp1))<<"\n";
+        dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
+        dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
+        dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
         dg::blas1::pointwiseDot( temp0, g_pp, temp0);
         dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
         dg::blas1::pointwiseDivide( ones, temp0, temp0);
         dg::blas1::axpby( 1., temp0, -1., vol, temp0);
-        std::cout << "Consistency  of volume is "<<sqrt(dg::blas2::dot( temp0, w2d, temp0))<<"\n";
+        std::cout << "Rel Consistency  of volume is "<<sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol))<<"\n";
 
         dg::blas1::pointwiseDivide( r_, g_xx, temp0);
         dg::blas1::axpby( 1., temp0, -1., vol, temp0);
-        std::cout << "Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w2d, temp0))<<"\n";
-        // f(psi) fehlt
+        std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(vol, w2d, vol))<<"\n";
+
         FieldY fieldY(gp_);
         thrust::host_vector<double> by = pull_back( fieldY);
         for( unsigned i=0; i<g2d_.n()*g2d_.Ny(); i++)
@@ -405,9 +413,12 @@ struct ConformalRingGrid
                 by[i*g2d_.n()*g2d_.Nx() + j] *= f_x[j];
         dg::blas1::scal( by, 1./gp_.R_0);
         dg::blas1::pointwiseDivide( g_xx, r_, temp0);
-        dg::blas1::axpby( 1., temp0, -1., by, by);
-        double err= dg::blas2::dot( by, w2d, by);
-        std::cout << "Error of g_xx is "<<sqrt(err)<<"\n";
+        std::cout << "Magnitude by " << dg::blas2::dot( by, w2d, by)<<"\n";
+        std::cout << "Magnitude g_xx " << dg::blas2::dot( temp0, w2d, temp0)<<"\n";
+        dg::blas1::axpby( 1., temp0, -1., by, temp1);
+        double err= dg::blas2::dot( temp1, w2d, temp1);
+        std::cout << "Rel Error of g_xx is "<<sqrt(err/dg::blas2::dot( by, w2d, by))<<"\n";
+
 
         
 
