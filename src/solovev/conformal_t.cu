@@ -63,21 +63,32 @@ try{
     err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[3];
     err = file::define_dimensions(  ncid, dim3d, g.grid());
-    int coordsID[2], onesID;
-    err = nc_def_var( ncid, "r_xy", NC_DOUBLE, 3, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "z_xy", NC_DOUBLE, 3, dim3d, &coordsID[1]);
+    int coordsID[3], onesID;
+    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
+    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
+    err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &onesID);
 
-    thrust::host_vector<double> ones = dg::pullback( psip, g);
+    thrust::host_vector<double> psi_p = dg::pullback( psip, g);
     g.grid().display();
-    err = nc_put_var_double( ncid, onesID, ones.data());
-    err = nc_put_var_double( ncid, coordsID[0], g.r().data());
-    err = nc_put_var_double( ncid, coordsID[1], g.z().data());
+    err = nc_put_var_double( ncid, onesID, psi_p.data());
+    dg::HVec X( g.grid().size()), Y(X), P = dg::pullback( dg::coo3, g);
+    for( unsigned i=0; i<g.grid().size(); i++)
+    {
+        X[i] = g.r()[i]*cos(P[i]);
+        Y[i] = g.r()[i]*sin(P[i]);
+    }
+
+
+    err = nc_put_var_double( ncid, coordsID[0], X.data());
+    err = nc_put_var_double( ncid, coordsID[1], Y.data());
+    err = nc_put_var_double( ncid, coordsID[2], g.z().data());
     err = nc_close( ncid);
 
     std::cout << "Construction successful!\n";
 
     //compute error in volume element
+    dg::HVec ones = dg::evaluate( dg::one, g.grid());
     dg::HVec temp0( g.grid().size()), temp1(temp0);
     dg::HVec w3d = dg::create::weights( g.grid());
     dg::blas1::pointwiseDot( g.g_xx(), g.g_yy(), temp0);
@@ -91,18 +102,10 @@ try{
     dg::blas1::pointwiseDot( g.g_xx(), g.g_yy(), temp0);
     dg::blas1::pointwiseDot( g.g_xy(), g.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    std::cout << "magnitude "<<(dg::blas1::dot( w3d, temp0))<<"\n";
     dg::blas1::pointwiseDot( temp0, g.g_pp(), temp0);
-    std::cout << "magnitude g_pp "<<(dg::blas1::dot( w3d, temp0))<<"\n";
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
-    std::cout << "magnitude sqrt "<<(dg::blas1::dot( w3d, temp0))<<"\n";
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    std::cout << "magnitude g_xx "<<(dg::blas1::dot( w3d, g.g_xx()))<<"\n";
-    std::cout << "magnitude g_xy "<<(dg::blas1::dot( w3d, g.g_xy()))<<"\n";
-    std::cout << "magnitude g_yy "<<(dg::blas1::dot( w3d, g.g_yy()))<<"\n";
-    std::cout << "magnitude      "<<(dg::blas1::dot( w3d, temp0))<<"\n";
     dg::blas1::axpby( 1., temp0, -1., g.vol(), temp0);
-    std::cout << "magnitude "<<(dg::blas1::dot(  w3d, g.vol()))<<"\n";
     std::cout << "Rel Consistency  of volume is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g.vol(), w3d, g.vol()))<<"\n";
 
     dg::blas1::pointwiseDivide( g.r(), g.g_xx(), temp0);
@@ -120,8 +123,6 @@ try{
     dg::blas1::axpby( 1., temp0, -1., by, temp1);
     double error= dg::blas2::dot( temp1, w3d, temp1);
     std::cout << "Rel Error of g.g_xx() is "<<sqrt(error/dg::blas2::dot( by, w3d, by))<<"\n";
-
-
     double volume = dg::blas1::dot( g.vol(), w3d);
 
     std::cout << "TEST VOLUME IS:\n";
@@ -134,6 +135,7 @@ try{
     std::cout << "volumeXYP is "<< volume<<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
+    std::cout << "Note that the error might also come from the volume in RZP!\n";
 
 
     return 0;
