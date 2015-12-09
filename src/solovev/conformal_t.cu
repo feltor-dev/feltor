@@ -117,7 +117,7 @@ try{
     std::cout << "TEST VOLUME IS:\n";
     gp.psipmax = psi_1, gp.psipmin = psi_0;
     solovev::Iris iris( gp);
-    dg::Grid3d<double> g3d( gp.R_0 -gp.a, gp.R_0 + gp.a, -gp.a, gp.a, 0, 2*M_PI, 6, 300, 300, 10, dg::PER, dg::PER, dg::PER, dg::cylindrical);
+    dg::Grid3d<double> g3d( gp.R_0 -gp.a, gp.R_0 + gp.a, -gp.a, gp.a, 0, 2*M_PI, 3, 1200, 1200, 2, dg::PER, dg::PER, dg::PER, dg::cylindrical);
     dg::HVec w3d = dg::create::weights( g3d);
     dg::HVec vec  = dg::evaluate( iris, g3d);
     double volumeRZP = dg::blas1::dot( vec, w3d);
