@@ -68,7 +68,7 @@ try{
 
 
     //write parameters from file into variables
-    const solovev::GeomParameters gp(v);
+    solovev::GeomParameters gp(v);
     gp.display( std::cout);
     dg::Timer t;
     solovev::detail::Fpsi fpsi( gp, -10);
@@ -100,7 +100,7 @@ try{
     t.tic();
     thrust::host_vector<double> r( n*n*Nx*Ny, 0);
     thrust::host_vector<double> z( n*n*Nx*Ny, 0);
-    g.construct_metric( );
+    double volume = g.construct_metric(r,z );
     t.toc();
     std::cout << "RZ vector took "<<t.diff()<<"s"<<std::endl;
 
@@ -112,6 +112,18 @@ try{
     err = nc_put_var_double( ncid, coordsID[0], r.data());
     err = nc_put_var_double( ncid, coordsID[1], z.data());
     err = nc_close( ncid);
+
+
+    std::cout << "TEST VOLUME IS:\n";
+    gp.psipmax = psi_1, gp.psipmin = psi_0;
+    solovev::Iris iris( gp);
+    dg::Grid3d<double> g3d( gp.R_0 -gp.a, gp.R_0 + gp.a, -gp.a, gp.a, 0, 2*M_PI, 6, 300, 300, 10, dg::PER, dg::PER, dg::PER, dg::cylindrical);
+    dg::HVec w3d = dg::create::weights( g3d);
+    dg::HVec vec  = dg::evaluate( iris, g3d);
+    double volumeRZP = dg::blas1::dot( vec, w3d);
+    std::cout << "volumeXYP is "<< volume<<std::endl;
+    std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
+    std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
 
 
     return 0;

@@ -274,13 +274,13 @@ struct ConformalRingGrid
             psi_old = psi_x; 
             x0 = 0, x1 = x_vec[0];
 
-            dg::stepperRK17( fpsiM_, begin, end, x0, x1, N);
+            dg::stepperRK6( fpsiM_, begin, end, x0, x1, N);
             psi_x[0] = end[0]; 
             for( unsigned i=1; i<g1d_.size(); i++)
             {
                 temp = end;
                 x0 = x_vec[i-1], x1 = x_vec[i];
-                dg::stepperRK17( fpsiM_, temp, end, x0, x1, N);
+                dg::stepperRK6( fpsiM_, temp, end, x0, x1, N);
                 psi_x[i] = end[0];
             }
             dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
@@ -288,7 +288,7 @@ struct ConformalRingGrid
             eps =  sqrt( epsi);
             std::cout << "Psi error is "<<eps<<" with "<<N<<" steps\n";
             temp = end;
-            dg::stepperRK17(fpsiM_, temp, end, x1, g2d_.x1(),N);
+            dg::stepperRK6(fpsiM_, temp, end, x1, g2d_.x1(),N);
             eps = fabs( end[0]-psi_1); 
             std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
             N*=2;
@@ -347,11 +347,12 @@ struct ConformalRingGrid
 
         r = r_old, z = z_old;
     }
-    void construct_metric()
+    double construct_metric( thrust::host_vector<double>& r, thrust::host_vector<double>& z) 
     {
         r_.resize(g2d_.size()), z_.resize( g2d_.size());
         g_xx.resize(g2d_.size()), g_xy.resize( g2d_.size()), g_yy.resize( g2d_.size()), g_pp.resize( g2d_.size()), vol.resize( g2d_.size());
         construct_rz( r_, z_);
+        r = r_, z = z_;
         std::cout << "Construction successful!\n";
         thrust::host_vector<double> w2d = dg::create::weights( g2d_);
         thrust::host_vector<double> r_x( r_), r_y(r_), z_x(r_), z_y(r_);
@@ -410,17 +411,15 @@ struct ConformalRingGrid
         thrust::host_vector<double> by = pull_back( fieldY);
         for( unsigned i=0; i<g2d_.n()*g2d_.Ny(); i++)
             for( unsigned j=0; j<g2d_.n()*g2d_.Nx(); j++)
-                by[i*g2d_.n()*g2d_.Nx() + j] *= f_x[j];
+                by[i*g2d_.n()*g2d_.Nx() + j] *= f_x[j]*f_x[j];
         dg::blas1::scal( by, 1./gp_.R_0);
         dg::blas1::pointwiseDivide( g_xx, r_, temp0);
-        std::cout << "Magnitude by " << dg::blas2::dot( by, w2d, by)<<"\n";
-        std::cout << "Magnitude g_xx " << dg::blas2::dot( temp0, w2d, temp0)<<"\n";
         dg::blas1::axpby( 1., temp0, -1., by, temp1);
         double err= dg::blas2::dot( temp1, w2d, temp1);
         std::cout << "Rel Error of g_xx is "<<sqrt(err/dg::blas2::dot( by, w2d, by))<<"\n";
 
 
-        
+        return 2.*M_PI*dg::blas1::dot( vol, w2d);
 
         
 

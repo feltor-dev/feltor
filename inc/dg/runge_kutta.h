@@ -560,6 +560,21 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
 
 }
 
+template< class RHS, class Vector, unsigned s>
+void stepperRK(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    RK_classic<s, Vector > rk( begin); 
+    Vector temp(begin);
+    if( T_max <= T_min) return;
+    double dt = (T_max-T_min)/(double)N;
+    end = begin;
+    for( unsigned i=0; i<N; i++)
+    {
+        rk( rhs, end, temp, dt); 
+        end.swap( temp); //end is one step further 
+    }
+}
+
 /**
  * @brief Integrates the differential equation using RK4 and a fixed number of steps
  *
@@ -576,32 +591,19 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
 template< class RHS, class Vector>
 void stepperRK4(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
 {
-    RK<4, Vector > rk( begin); 
-    Vector temp(begin);
-    if( T_max <= T_min) return;
-    double dt = (T_max-T_min)/(double)N;
-    end = begin;
-    for( unsigned i=0; i<N; i++)
-    {
-        rk( rhs, end, temp, dt); 
-        end.swap( temp); //end is one step further 
-    }
+    stepperRK<RHS, Vector, 4>( rhs, begin, end, T_min, T_max, N);
 }
-
+template< class RHS, class Vector>
+void stepperRK6(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    stepperRK<RHS, Vector, 6>( rhs, begin, end, T_min, T_max, N);
+}
 template< class RHS, class Vector>
 void stepperRK17(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
 {
-    RK_classic<17, Vector > rk( begin); 
-    Vector temp(begin);
-    if( T_max <= T_min) return;
-    double dt = (T_max-T_min)/(double)N;
-    end = begin;
-    for( unsigned i=0; i<N; i++)
-    {
-        rk( rhs, end, temp, dt); 
-        end.swap( temp); //end is one step further 
-    }
+    stepperRK<RHS, Vector, 17>( rhs, begin, end, T_min, T_max, N);
 }
+
 
 
 ///@cond
