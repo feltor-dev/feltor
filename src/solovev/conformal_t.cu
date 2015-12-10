@@ -63,11 +63,12 @@ try{
     err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[3];
     err = file::define_dimensions(  ncid, dim3d, g.grid());
-    int coordsID[3], onesID;
+    int coordsID[3], onesID, defID;
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
     err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &onesID);
+    err = nc_def_var( ncid, "deformation", NC_DOUBLE, 3, dim3d, &defID);
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g);
     g.grid().display();
@@ -83,6 +84,9 @@ try{
     err = nc_put_var_double( ncid, coordsID[0], X.data());
     err = nc_put_var_double( ncid, coordsID[1], Y.data());
     err = nc_put_var_double( ncid, coordsID[2], g.z().data());
+
+    dg::blas1::pointwiseDivide( g.g_xy(), g.g_xx(), X);
+    err = nc_put_var_double( ncid, defID, X.data());
     err = nc_close( ncid);
 
     std::cout << "Construction successful!\n";
@@ -128,7 +132,7 @@ try{
     std::cout << "TEST VOLUME IS:\n";
     gp.psipmax = psi_1, gp.psipmin = psi_0;
     solovev::Iris iris( gp);
-    dg::Grid3d<double> g3d( gp.R_0 -gp.a, gp.R_0 + gp.a, -gp.a, gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER, dg::cylindrical);
+    dg::Grid3d<double> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER, dg::cylindrical);
     dg::HVec vec  = dg::evaluate( iris, g3d);
     dg::HVec g3d_weights = dg::create::weights( g3d);
     double volumeRZP = dg::blas1::dot( vec, g3d_weights);

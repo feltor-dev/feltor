@@ -169,7 +169,6 @@ struct Fpsi
         while( eps < eps_old)
         {
             eps_old = eps, r_old = r, z_old = z;
-            steps*=2;
             dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
             r[0] = end[0]; z[0] = end[1];
             //std::cout <<end[0]<<" "<< end[1] <<"\n";
@@ -185,6 +184,7 @@ struct Fpsi
             double ez = dg::blas2::dot( z_diff, w1d, z_diff);
             eps =  sqrt( er + ez);
             std::cout << "error is "<<eps<<" with "<<steps<<" steps\n";
+            steps*=2;
         }
         r = r_old, z = z_old;
         return f_psi;
@@ -471,6 +471,17 @@ struct ConformalRingGrid
 
 }//namespace solovev
 namespace dg{
+
+    /**
+     * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
+     *
+     * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
+     * @tparam TernaryOp The function object 
+     * @param f The function defined on R,Z,\phi
+     * @param g The grid
+     *
+     * @return A set of points representing F(x,y,\phi)
+     */
 template< class TernaryOp>
 thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingGrid& g)
 {
@@ -483,12 +494,22 @@ thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingG
             vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
     return vec;
 }
+///@cond
 thrust::host_vector<double> pullback( double (f)(double,double,double), const solovev::ConformalRingGrid& g)
 {
     return pullback<double(double, double, double)>( f, g);
 }
+///@endcond
 namespace create{
 
+/**
+ * @brief Create weights on a conformal grid
+ *
+ * The weights are the volume form times the weights on x,y,\phi
+ * @param g The grid
+ *
+ * @return The weights
+ */
 thrust::host_vector<double> weights( const solovev::ConformalRingGrid& g)
 {
     thrust::host_vector<double> vec = dg::create::weights( g.grid());
