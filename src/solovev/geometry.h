@@ -965,20 +965,33 @@ struct FieldRZtau
     PsipR psipR_;
     PsipZ psipZ_;
 };
+
 struct FieldRZY
 {
-    FieldRZY( const GeomParameters& gp): fieldR_(gp), fieldZ_(gp), fieldY_(gp){}
-    void set_f( double new_f){ fieldY_.set_f(new_f);}
+    FieldRZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){ f_ = f_prime_ = 1.;}
+    void set_f( double new_f){ f_ = new_f;}
+    void set_fp( double new_fp){ f_prime_ = new_fp;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double fieldy = fieldY_(y[0],y[1]);
-        yp[0] =  fieldR_(y[0],y[1])/fieldy;
-        yp[1] =  fieldZ_(y[0],y[1])/fieldy;
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
+        double psip2 = psipR*psipR+ psipZ*psipZ;
+
+        yp[0] =  psipZ/f_/psip2;
+        yp[1] =  -psipR/f_/psip2;
+        yp[2] =  ( (psipZ/y[0] - psipRZ )*y[2] 
+                   +( psipRR - psipR/y[0])*y[3] )/f_/psip2 
+            + f_prime_/f_* psipR + 2.*(psipR*psipRR + psipZ*psipRZ)/psip2 -1./y[0];
+        yp[3] =  (psipRZ*y[3] - psipZZ*y[2])/f_/psip2 
+            + f_prime_/f_* psipZ + 2.*(psipR*psipRZ + psipZ*psipZZ)/psip2;
     }
   private:
-    FieldR fieldR_;
-    FieldZ fieldZ_;
-    FieldY fieldY_;
+    double f_, f_prime_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipRR psipRR_;
+    PsipRZ psipRZ_;
+    PsipZZ psipZZ_;
 };
 
 /**
