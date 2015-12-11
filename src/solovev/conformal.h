@@ -121,7 +121,7 @@ struct Fpsi
      */
     double find_x1( double psi_1 ) const
     {
-        unsigned P=3;
+        unsigned P=8;
         double x1 = 0, x1_old = 0;
         double eps=1e10, eps_old=2e10;
         std::cout << "In x1 function\n";
@@ -164,17 +164,28 @@ struct Fpsi
         r.resize( n*N), z.resize(n*N), yr.resize(n*N), yz.resize(n*N);
 
         //compute fprime
-        double deltaPsi = (psi-psi_0)/1000.;
-        double fprime = 0, fprime_old;
+        double deltaPsi = (psi-psi_0)/100.;
+        double fofpsi[4];
+        fofpsi[1] = operator()(psi-deltaPsi);
+        fofpsi[2] = operator()(psi+deltaPsi);
+        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
         double eps = 1e10, eps_old=2e10;
         while( eps < eps_old)
         {
+            deltaPsi /=2.;
             fprime_old = fprime;
             eps_old = eps;
-            fprime  = (this->operator()( psi + deltaPsi) - this->operator()(psi-deltaPsi))/2./deltaPsi;
+            fofpsi[0] = fofpsi[1], fofpsi[3] = fofpsi[2];
+            fofpsi[1] = operator()(psi-deltaPsi);
+            fofpsi[2] = operator()(psi+deltaPsi);
+            //reuse previously computed fpsi for current fprime
+            fprime  = (+ 1./12.*fofpsi[0] 
+                       - 2./3. *fofpsi[1]
+                       + 2./3. *fofpsi[2]
+                       - 1./12.*fofpsi[3]
+                     )/deltaPsi;
             eps = fabs((fprime - fprime_old)/fprime);
-            std::cout << "rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
-            deltaPsi /=2.;
+            std::cout << "fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
         }
         fprime = fprime_old;
         //now compute f and starting values for 
@@ -325,6 +336,7 @@ struct Naive
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
+template< class container>
 struct ConformalRingGrid
 {
 
@@ -373,35 +385,29 @@ struct ConformalRingGrid
             temp = end;
             dg::stepperRK6(fpsiM_, temp, end, x1, g3d_.x1(),N);
             eps = fabs( end[0]-psi_1); 
-            std::cout << "Effective absolute Psi error is "<<eps<<" with "<<N<<" steps\n";
+            std::cout << "Effective absolute Psi error is "<<eps<<" with "<<N<<" steps\n"; //Here is a problem when psi = 0 (X-point is used)
             N*=2;
         }
-        detail::Fpsi fpsi( gp, psi_0);
         //first compute boundary points in x
-        double R_0, Z_0, f0, fp;
-        thrust::host_vector<double> yr_0, yz_0;
-        fpsi.compute_rzy( psi_0, g3d_.n(), g3d_.Ny(), r_0y, z_0y, yr_0, yz_0, 
-                                                      R_0, Z_0, f0, fp);
-        fpsi.compute_rzy( psi_1, g3d_.n(), g3d_.Ny(), r_1y, z_1y, yr_0, yz_0, 
-                                                      R_0, Z_0, f0, fp);
-        construct_rz( gp, fpsi, psi_x);
+        construct_rz( gp, psi_0, psi_x);
     }
-    const thrust::host_vector<double> r()const{return r_;}
-    const thrust::host_vector<double> z()const{return z_;}
-    const thrust::host_vector<double> f_x()const{return f_x_;}
-    const thrust::host_vector<double> g_xx()const{return g_xx_;}
-    const thrust::host_vector<double> g_yy()const{return g_yy_;}
-    const thrust::host_vector<double> g_xy()const{return g_xy_;}
-    const thrust::host_vector<double> g_pp()const{return g_pp_;}
-    const thrust::host_vector<double> vol()const{return vol_;}
+    const thrust::host_vector<double>& r()const{return r_;}
+    const thrust::host_vector<double>& z()const{return z_;}
+    const thrust::host_vector<double>& f_x()const{return f_x_;}
+    const container& g_xx()const{return g_xx_;}
+    const container& g_yy()const{return g_yy_;}
+    const container& g_xy()const{return g_xy_;}
+    const container& g_pp()const{return g_pp_;}
+    const container& vol()const{return vol_;}
     const dg::Grid3d<double>& grid() const{return g3d_;}
     private:
-    void construct_rz( const GeomParameters& gp, const detail::Fpsi& fpsi, thrust::host_vector<double>& psi_x)
+    void construct_rz( const GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
     {
+        detail::Fpsi fpsi( gp, psi_0);
         //construct f_x, fp_x, r and z and the boundaries in y 
         f_x_.resize( psi_x.size());
         r_.resize(g3d_.size()), z_.resize(g3d_.size());
-        r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
+        //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
         thrust::host_vector<double> yr_(r_), yz_(z_);
         const thrust::host_vector<double> w3d = dg::create::weights( g3d_);
         thrust::host_vector<double> f_p(f_x_);
@@ -412,14 +418,15 @@ struct ConformalRingGrid
         {
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz;
-            fpsi.compute_rzy( psi_x[i], g3d_.n(), g3d_.Ny(), ry, zy, yr, yz, r_x0[i], z_x0[i], f_x_[i], f_p[i]);
+            double R0, Z0;
+            fpsi.compute_rzy( psi_x[i], g3d_.n(), g3d_.Ny(), ry, zy, yr, yz, R0, Z0, f_x_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j]; 
                 yr_[j*Nx+i] = yr[j], yz_[j*Nx+i] = yz[j];
             }
         }
-        r_x1 = r_x0, z_x1 = z_x0; //periodic boundaries
+        //r_x1 = r_x0, z_x1 = z_x0; //periodic boundaries
         //now lift to 3D grid
         for( unsigned k=1; k<g3d_.Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
@@ -432,7 +439,7 @@ struct ConformalRingGrid
         //now construct metric
         g_xx_.resize(g3d_.size()), g_xy_.resize( g3d_.size()), g_yy_.resize( g3d_.size()), g_pp_.resize( g3d_.size()), vol_.resize( g3d_.size());
         thrust::host_vector<double> r_x( r_), r_y(r_), z_x(r_), z_y(r_);
-        thrust::host_vector<double> temp0( r_), temp1(r_);
+        thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
         thrust::host_vector<double> psipR( r_), psipZ(r_);
         PsipR psipR_(gp);
         PsipZ psipZ_(gp);
@@ -447,81 +454,27 @@ struct ConformalRingGrid
                 for( unsigned j=0; j<Nx; j++)
                 {
                     unsigned idx = k*Ny*Nx+i*Nx+j;
-                    g_xx_[idx] = f_x_[j]*f_x_[j]*(psipR[idx]*psipR[idx]+psipZ[idx]*psipZ[idx]);
-                    g_xy_[idx] = -f_x_[j]*(yr_[idx]*psipR[idx]+yz_[idx]*psipZ[idx]);
-                    g_yy_[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
-                    vol_[idx] = r_[idx]/g_xx_[idx];
+                    tempxx[idx] = f_x_[j]*f_x_[j]*(psipR[idx]*psipR[idx]+psipZ[idx]*psipZ[idx]);
+                    tempxy[idx] = -f_x_[j]*(yr_[idx]*psipR[idx]+yz_[idx]*psipZ[idx]);
+                    tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
+                    tempvol[idx] = r_[idx]/tempxx[idx];
                 }
+        g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         thrust::host_vector<double> ones = dg::evaluate( dg::one, g3d_);
-        dg::blas1::pointwiseDivide( ones, r_, temp0);
-        dg::blas1::pointwiseDivide( temp0, r_, g_pp_); //1/R^2
+        dg::blas1::pointwiseDivide( ones, r_, tempxx);
+        dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
+        g_pp_=tempxx;
 
-        //dg::EllSparseBlockMat dx = dg::create::dx( g3d_, dg::DIR, dg::centered);
-        //dg::EllSparseBlockMat dy = dg::create::dy( g3d_, dg::PER, dg::centered);
-        ////First lift the boundaries to a 3D grid
-        //thrust::host_vector<double> r_0( g3d_.size()), z_0(r_0), r_1(r_0), z_1(z_0);
-        //thrust::host_vector<double> r_tilde( r_0), z_tilde(r_0);
-        //thrust::host_vector<double> r_bar( r_0), z_bar(r_0), dx_r_bar(r_bar), dx_z_bar( r_bar);
-        //thrust::host_vector<double> x = dg::evaluate( dg::coo1, g3d_);
-        //unsigned Nx = g3d_.n()*g3d_.Nx(), Ny = g3d_.n()*g3d_.Ny();
-        //for( unsigned k=0; k<g3d_.Nz(); k++)
-        //    for( unsigned i=0; i<Ny; i++)
-        //        for( unsigned j=0; j<Nx; j++)
-        //        {
-        //            r_0[k*Ny*Nx + i*Nx + j] = r_0y[i];
-        //            r_1[k*Ny*Nx + i*Nx + j] = r_1y[i];
-        //            z_0[k*Ny*Nx + i*Nx + j] = z_0y[i];
-        //            z_1[k*Ny*Nx + i*Nx + j] = z_1y[i];
-        //        }
-        ////now compute \bar r = (R_1-R_0)/x1 * x + R_0
-        //dg::blas1::axpby( 1./g3d_.x1(), r_1, -1./g3d_.x1(), r_0, dx_r_bar);
-        //dg::blas1::pointwiseDot( x, dx_r_bar, temp0);
-        //dg::blas1::axpby( 1., temp0, 1., r_0, r_bar);
-        //dg::blas1::axpby( 1./g3d_.x1(), z_1, -1./g3d_.x1(), z_0, dx_z_bar);
-        //dg::blas1::pointwiseDot( x, dx_z_bar, temp0);
-        //dg::blas1::axpby( 1., temp0, 1., z_0, z_bar);
-        ////now compute \tilde r = r - \bar r
-        //dg::blas1::axpby( 1., r_ , -1., r_bar, r_tilde);
-        //dg::blas1::axpby( 1., z_ , -1., z_bar, z_tilde);
-        ////now compute derivatives
-        //dg::blas2::symv( dx, r_tilde, r_x);
-        //dg::blas1::axpby( 1., r_x, 1., dx_r_bar, r_x);
-        //dg::blas2::symv( dx, z_tilde, z_x);
-        //dg::blas1::axpby( 1., z_x, 1., dx_z_bar, z_x);
-        //dg::blas2::symv( dy, r_, r_y);
-        //dg::blas2::symv( dy, z_, z_y);
-        ////Now compute the linear interpolation of the boundaries
-        //dg::blas1::pointwiseDot( r_x, r_x, temp0);
-        //dg::blas1::pointwiseDot( z_x, z_x, temp1);
-        //dg::blas1::axpby( 1., temp0, 1., temp1, g_xx_);
-        //dg::blas1::pointwiseDot( r_x, r_y, temp0);
-        //dg::blas1::pointwiseDot( z_x, z_y, temp1);
-        //dg::blas1::axpby( 1., temp0, 1., temp1, g_xy_);
-        //dg::blas1::pointwiseDot( r_y, r_y, temp0);
-        //dg::blas1::pointwiseDot( z_y, z_y, temp1);
-        //dg::blas1::axpby( 1., temp0, 1., temp1, g_yy_);
-        //dg::blas1::pointwiseDot( g_xx_, g_yy_, temp0);
-        //dg::blas1::pointwiseDot( g_xy_, g_xy_, temp1);
-        //dg::blas1::axpby( 1., temp0, -1., temp1, vol_); //determinant
-        ////now invert to get contravariant elements
-        //dg::blas1::pointwiseDivide( g_xx_, vol_, g_xx_);
-        //dg::blas1::pointwiseDivide( g_xy_, vol_, g_xy_);
-        //dg::blas1::pointwiseDivide( g_yy_, vol_, g_yy_);
-        //g_xx_.swap( g_yy_);
-        //dg::blas1::scal( g_xy_, -1.);
-        ////compute real volume form
-        //dg::blas1::transform( vol_, vol_, dg::SQRT<double>());
-        //dg::blas1::pointwiseDot( r_, vol_, vol_);
 
     }
     const dg::Grid3d<double> g3d_;
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> r_, z_; //3d vector
-    thrust::host_vector<double> g_xx_, g_xy_, g_yy_, g_pp_, vol_;
+    container g_xx_, g_xy_, g_yy_, g_pp_, vol_;
     
     //The following points might also be useful for external grid generation
-    thrust::host_vector<double> r_0y, r_1y, z_0y, z_1y; //boundary points in x
-    thrust::host_vector<double> r_x0, r_x1, z_x0, z_x1; //boundary points in y
+    //thrust::host_vector<double> r_0y, r_1y, z_0y, z_1y; //boundary points in x
+    //thrust::host_vector<double> r_x0, r_x1, z_x0, z_x1; //boundary points in y
 
 };
 
@@ -539,8 +492,8 @@ namespace dg{
  *
  * @return A set of points representing F(x,y,\phi)
  */
-template< class TernaryOp>
-thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingGrid& g)
+template< class TernaryOp, class container>
+thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingGrid<container>& g)
 {
     thrust::host_vector<double> vec( g.grid().size());
     unsigned size2d = g.grid().n()*g.grid().n()*g.grid().Nx()*g.grid().Ny();
@@ -552,9 +505,10 @@ thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingG
     return vec;
 }
 ///@cond
-thrust::host_vector<double> pullback( double (f)(double,double,double), const solovev::ConformalRingGrid& g)
+template<class container>
+thrust::host_vector<double> pullback( double (f)(double,double,double), const solovev::ConformalRingGrid<container>& g)
 {
-    return pullback<double(double, double, double)>( f, g);
+    return pullback<double(double, double, double), container>( f, g);
 }
 ///@endcond
 namespace create{
@@ -567,7 +521,8 @@ namespace create{
  *
  * @return The weights
  */
-thrust::host_vector<double> weights( const solovev::ConformalRingGrid& g)
+template<class container>
+thrust::host_vector<double> weights( const solovev::ConformalRingGrid<container>& g)
 {
     thrust::host_vector<double> vec = dg::create::weights( g.grid());
     for( unsigned i=0; i<vec.size(); i++)

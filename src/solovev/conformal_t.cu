@@ -55,7 +55,7 @@ try{
     solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     t.tic();
-    solovev::ConformalRingGrid g(gp, psi_0, psi_1, n, Nx, Ny, Nz, dg::DIR);
+    solovev::ConformalRingGrid<dg::DVec> g(gp, psi_0, psi_1, n, Nx, Ny, Nz, dg::DIR);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
@@ -80,21 +80,22 @@ try{
         Y[i] = g.r()[i]*sin(P[i]);
     }
 
+    dg::DVec ones = dg::evaluate( dg::one, g.grid());
+    dg::DVec temp0( g.grid().size()), temp1(temp0);
+    dg::DVec w3d = dg::create::weights( g.grid());
 
     err = nc_put_var_double( ncid, coordsID[0], X.data());
     err = nc_put_var_double( ncid, coordsID[1], Y.data());
     err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
-    dg::blas1::pointwiseDivide( g.g_xy(), g.g_xx(), X);
+    dg::blas1::pointwiseDivide( g.g_xy(), g.g_xx(), temp0);
+    X=temp0;
     err = nc_put_var_double( ncid, defID, X.data());
     err = nc_close( ncid);
 
     std::cout << "Construction successful!\n";
 
     //compute error in volume element
-    dg::HVec ones = dg::evaluate( dg::one, g.grid());
-    dg::HVec temp0( g.grid().size()), temp1(temp0);
-    dg::HVec w3d = dg::create::weights( g.grid());
     dg::blas1::pointwiseDot( g.g_xx(), g.g_yy(), temp0);
     dg::blas1::pointwiseDot( g.g_xy(), g.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
@@ -112,29 +113,32 @@ try{
     dg::blas1::axpby( 1., temp0, -1., g.vol(), temp0);
     std::cout << "Rel Consistency  of volume is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g.vol(), w3d, g.vol()))<<"\n";
 
-    dg::blas1::pointwiseDivide( g.r(), g.g_xx(), temp0);
+    temp0=g.r();
+    dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
     dg::blas1::axpby( 1., temp0, -1., g.vol(), temp0);
     std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g.vol(), w3d, g.vol()))<<"\n";
 
     solovev::FieldY fieldY(gp);
-    thrust::host_vector<double> by = dg::pullback( fieldY, g);
+    dg::HVec by = dg::pullback( fieldY, g);
     for( unsigned k=0; k<Nz; k++)
         for( unsigned i=0; i<n*Ny; i++)
             for( unsigned j=0; j<n*Nx; j++)
                 by[k*n*n*Nx*Ny + i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
-    dg::blas1::scal( by, 1./gp.R_0);
-    dg::blas1::pointwiseDivide( g.g_xx(), g.r(), temp0);
-    dg::blas1::axpby( 1., temp0, -1., by, temp1);
+    dg::DVec by_device = by;
+    dg::blas1::scal( by_device, 1./gp.R_0);
+    temp0=g.r();
+    dg::blas1::pointwiseDivide( g.g_xx(), temp0, temp0);
+    dg::blas1::axpby( 1., temp0, -1., by_device, temp1);
     double error= dg::blas2::dot( temp1, w3d, temp1);
-    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error/dg::blas2::dot( by, w3d, by))<<"\n";
+    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error/dg::blas2::dot( by_device, w3d, by_device))<<"\n";
     double volume = dg::blas1::dot( g.vol(), w3d);
 
     std::cout << "TEST VOLUME IS:\n";
     gp.psipmax = psi_1, gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     dg::Grid3d<double> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER, dg::cylindrical);
-    dg::HVec vec  = dg::evaluate( iris, g3d);
-    dg::HVec g3d_weights = dg::create::weights( g3d);
+    dg::DVec vec  = dg::evaluate( iris, g3d);
+    dg::DVec g3d_weights = dg::create::weights( g3d);
     double volumeRZP = dg::blas1::dot( vec, g3d_weights);
     std::cout << "volumeXYP is "<< volume<<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
