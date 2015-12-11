@@ -224,13 +224,6 @@ struct MPI_Grid2d
     const DLT<double>& dlt() const{return g.dlt();}
 
     /**
-     * @brief Return cartesian
-     *
-     * No other is implemented yet
-     * @return coordinate system
-     */
-    dg::system system() const{return dg::cartesian;}
-    /**
      * @brief The total number of points
      *
      * @return n*n*Nx*Ny
@@ -310,7 +303,6 @@ struct MPI_Grid3d
      * @param Ny # of points in y
      * @param Nz # of points in z
      * @param comm mpi communicator
-     * @note in the cylindrical coordinate system x, y and z are used to denote R, Z and the angle phi
      * @attention # of polynomial coefficients in z direction is always 1
      */
     MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
@@ -357,11 +349,10 @@ struct MPI_Grid3d
      * @param bcz boundary condition in z
      * @param sys cartesian or cylindrical
      * @param comm mpi communicator
-     * @note in the cylindrical coordinate system x, y and z are used to denote R, Z and the angle phi
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz,dg::system sys, MPI_Comm comm):
-        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, sys), comm( comm)
+    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
@@ -555,12 +546,6 @@ struct MPI_Grid3d
      */
     const DLT<double>& dlt() const{return g.dlt();}
     /**
-     * @brief Return cartesian or cylindrical
-     *
-     * @return coordinate system
-     */
-    dg::system system() const {return g.system();}
-    /**
      * @brief The total local number of points
      *
      * @return n*n*Nx*Ny*Nz
@@ -588,7 +573,7 @@ struct MPI_Grid3d
      * class itself
      * @return Grid object
      */
-    Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz(), system());}
+    Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
     /**
      * @brief Return a grid global for the calling process
      *
@@ -644,6 +629,16 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
         return -1;
 }
 ///@endcond
+
+struct MPI_CylindricalGrid
+{
+    MPI_CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): g3d_(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,comm){}
+    MPI_CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):g3d_(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz,comm){}
+    MPI_CylindricalGrid( const MPI_Grid3d& grid):g3d_(grid){}
+    const MPI_Grid3d& grid()const {return g3d_;}
+    private:
+    MPI_Grid3d g3d_;
+};
 
 ///@}
 }//namespace dg

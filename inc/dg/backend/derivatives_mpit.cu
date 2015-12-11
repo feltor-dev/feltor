@@ -67,20 +67,20 @@ int main(int argc, char* argv[])
     }
     MPI_Comm comm3d;
     mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm3d);
-    dg::MPI_Grid3d g3d( 0, M_PI, 0.1, 2*M_PI+0.1, M_PI/2., M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cylindrical, comm3d);
+    dg::MPI_CylindricalGrid g3d( 0, M_PI, 0.1, 2*M_PI+0.1, M_PI/2., M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm3d);
     const Vector w3d = dg::create::weights( g3d);
-    Matrix dx3 = dg::create::dx( g3d, dg::forward);
-    Matrix dy3 = dg::create::dy( g3d, dg::centered);
-    Matrix dz3 = dg::create::dz( g3d, dg::backward);
-    Matrix jx3 = dg::create::jumpX( g3d);
-    Matrix jy3 = dg::create::jumpY( g3d);
-    Matrix jz3 = dg::create::jumpZ( g3d);
+    Matrix dx3 = dg::create::dx( g3d.grid(), dg::forward);
+    Matrix dy3 = dg::create::dy( g3d.grid(), dg::centered);
+    Matrix dz3 = dg::create::dz( g3d.grid(), dg::backward);
+    Matrix jx3 = dg::create::jumpX( g3d.grid());
+    Matrix jy3 = dg::create::jumpY( g3d.grid());
+    Matrix jz3 = dg::create::jumpZ( g3d.grid());
     Matrix m3[] = {dx3, dy3, dz3, jx3, jy3, jz3};
-    const Vector f3d = dg::evaluate( sin, g3d);
-    const Vector dx3d = dg::evaluate( cosx, g3d);
-    const Vector dy3d = dg::evaluate( cosy, g3d);
-    const Vector dz3d = dg::evaluate( cosz, g3d);
-    const Vector null3 = dg::evaluate( zero, g3d);
+    const Vector f3d = dg::evaluate( sin, g3d.grid());
+    const Vector dx3d = dg::evaluate( cosx, g3d.grid());
+    const Vector dy3d = dg::evaluate( cosy, g3d.grid());
+    const Vector dz3d = dg::evaluate( cosz, g3d.grid());
+    const Vector null3 = dg::evaluate( zero, g3d.grid());
     Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
 
     if(rank==0)std::cout << "TEST 3D: DX, DY, DZ, JX, JY, JZ\n";
