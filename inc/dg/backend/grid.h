@@ -533,16 +533,6 @@ struct Grid3d
     DLT<T> dlt_;
 };
 
-
-struct CylindricalGrid
-{
-    CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): g3d_(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
-    CylindricalGrid( const Grid3d<double>& grid):g3d_(grid){}
-    const Grid3d<double>& grid()const {return g3d_;}
-    private:
-    Grid3d<double> g3d_;
-};
-
 ///@}
 }// namespace dg
 #endif // _DG_GRID_
