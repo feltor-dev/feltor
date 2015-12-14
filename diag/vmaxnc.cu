@@ -28,7 +28,7 @@ int main( int argc, char* argv[])
         std::vector<double> v(numOut);
         err = nc_get_vara_double( ncid, varID, &start, &numOut, v.data());
 
-        std::cout << argv[i]<< " "<< *std::max_element(v.begin(), v.end()) <<"\n";
+        std::cout << argv[i]<< " " << *std::max_element(v.begin(), v.end()) <<"\n";
 
     }
 
