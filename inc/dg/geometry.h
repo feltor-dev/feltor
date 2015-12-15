@@ -1,28 +1,47 @@
 #pragma once
 
 #include <cassert>
+#include "thrust/host_vector.h"
+#include "backend/mpi_vector.h"
 
 #include "../enums.h"
+#include "geometry/geometry_traits.h"
 
 namespace dg{
 namespace geo{
 
 template<class container, class Geometry>
-void attachVolume( container& inout, const Geometry& g)
+void multiplyVolume( container& inout, const Geometry& g)
 {
-    dg::geo::detail::doAttachVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+    dg::geo::detail::doMultiplyVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+}
+template<class container, class Geometry>
+void divideVolume( container& inout, const Geometry& g)
+{
+    dg::geo::detail::doDivideVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
 }
 
 template<class container, class Geometry>
-void raiseIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g)
+void raisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g)
 {
     assert( &in1 != &out1);
     assert( &in2 != &out2);
     assert( &in2 != &in1);
-    dg::geo::detail::doRaiseIndex( in1, in2, out2, out2, g, typename dg::GeometryTraits<Geometry>::metric_category());
+    dg::geo::detail::doRaisePerpIndex( in1, in2, out2, out2, g, typename dg::GeometryTraits<Geometry>::metric_category());
 
 }
+template<class container, class Geometry>
+void multiplyPerpVolume( container& inout, const Geometry& g)
+{
+    dg::geo::detail::doMuliplyPerpVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+}
+template<class container, class Geometry>
+void dividePerpVolume( container& inout, const Geometry& g)
+{
+    dg::geo::detail::doDividePerpVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+}
 
+/*
 template<class TernaryOp, class Geometry> 
 thrust::host_vector<double> pullback( dg::system sys, TernaryOp f, const Geometry& g)
 {
@@ -33,37 +52,52 @@ thrust::host_vector<double> pullback( dg::system sys, double(f)(double, double, 
 {
     pullback<double(double, double, double), Geometry>( sys, f, g); 
 }
-template<class TernaryOp, class Geometry> 
-void pushforward( dg::system sys, TernaryOp f1, TenaryOp& f2, thrust::host_vector<double>& out1, thrust::host_vector<double>& out2, const Geometry& g)
+*/
+template<class container, class TernaryOp1, class TernaryOp2, class Geometry> 
+void pushforwardPerp( TernaryOp1 f1, TenaryOp2& f2, container& out1, container& out2, const Geometry& g)
 {
-    return doPushForward( sys, f1, f2, out1, out2, g, typename GeometryTraits<Geometry>::metric_category()); 
+    return doPushForwardPerp( f1, f2, out1, out2, g, typename GeometryTraits<Geometry>::metric_category()); 
 }
 
-template<class Geometry> 
-void pushforward( dg::system sys, double(f1)(double,double,double), double(f2)(double, double, double), thrust::host_vector<double>& out1, thrust::host_vector<double>& out2, const Geometry& g)
+template<class container, class Geometry> 
+void pushforwardPerp( dg::system sys, double(f1)(double,double,double), double(f2)(double, double, double), container& out1, container& out2, const Geometry& g)
 {
-    pushforward<double(double, double, double), Geometry>( sys, f1, f2, out1, out2, g); 
+    pushforwardPerp<container, double(double, double, double), double(double, double, double), Geometry>( f1, f2, out1, out2, g); 
 }
 
 }//namespace geo
 
 namespace create{
 
-template< class Geometry>
-thrust::host_vector<double> volume( const Geometry& g)
+namespace detail{
+template<class MemoryTag>
+struct HostVec {
+}
+template<>
+struct HostVec< SharedTag>
 {
-    thrust::host_vector<double> weights = dg::create::weights( g);
-    dg::geo::attachVolume( weights, g);
+    typedef thrust::host_vector<double> host_vector;
+}
+template<>
+struct HostVec< MPITag>
+{
+    typedef MPI_Vector<thrust::host_vector<double> > host_vector;
+}
+}//namespace detail
+
+template< class Geometry>
+typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector volume( const Geometry& g)
+{
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector weights = dg::create::weights( g);
+    dg::geo::multiplyVolume( weights, g);
     return weights;
 }
 
 template< class Geometry>
-thrust::host_vector<double> inv_volume( const Geometry& g)
+typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector inv_volume( const Geometry& g)
 {
-    thrust::host_vector<double> weights = dg::create::weights( g);
-    dg::geo::attachVolume( weights, g);
-    for( unsigned i=0; i<weights.size(); i++)
-        weights[i] = 1./weights[i];
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector weights = dg::create::inv_weights( g);
+    dg::geo::divideVolume( weights, g);
     return weights;
 }
 

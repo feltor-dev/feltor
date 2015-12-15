@@ -10,8 +10,10 @@
 
 namespace dg
 {
+struct MPITag;
 ///@addtogroup grid
 ///@{
+
 
 /**
  * @brief 2D MPI Grid class 
@@ -25,6 +27,7 @@ namespace dg
  */
 struct MPI_Grid2d
 {
+    typedef MPITag memory_category;
     /**
      * @brief Construct mpi grid
      *
@@ -289,6 +292,7 @@ struct MPI_Grid2d
  */
 struct MPI_Grid3d
 {
+    typedef MPITag memory_category;
     /**
      * @brief Construct a 3D grid
      *

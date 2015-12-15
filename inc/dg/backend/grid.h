@@ -13,6 +13,7 @@
 
 namespace dg{
 
+struct SharedTag;
 
 ///@addtogroup grid
 ///@{
@@ -24,6 +25,7 @@ namespace dg{
 template <class T>
 struct Grid1d
 {
+    typedef SharedTag memory_category;
     /**
      * @brief 1D grid
      * 
@@ -114,6 +116,7 @@ struct Grid1d
 template< class T>
 struct Grid2d
 {
+    typedef SharedTag memory_category;
     /**
      * @brief Construct a 2D grid
      *
@@ -300,6 +303,7 @@ struct Grid2d
 template< class T>
 struct Grid3d
 {
+    typedef SharedTag memory_category;
     /**
      * @brief Construct a 3D grid
      *

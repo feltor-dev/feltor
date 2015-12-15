@@ -153,6 +153,7 @@ class Elliptic
         dg::blas1::axpby( +1., temp, 1., y, y); 
         if( no_==not_normed)
             dg::blas2::symv( weights_wo_R, y, y);
+        dg::geo::attachVolume( y, y,g);
     }
     private:
     bc inverse( bc bound)

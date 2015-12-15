@@ -8,7 +8,7 @@
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
-#include "geometry.h"
+#include "solovev/geometry.h"
 
 
 
@@ -339,6 +339,7 @@ struct Naive
 template< class container>
 struct ConformalRingGrid
 {
+    typedef CurvilinearCylindricalTag metric_category;
 
     /**
      * @brief Construct 
@@ -399,6 +400,7 @@ struct ConformalRingGrid
     const container& g_xy()const{return g_xy_;}
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
+    const container& perpVol()const{return vol2d_;}
     const dg::Grid3d<double>& grid() const{return g3d_;}
     private:
     void construct_rz( const GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
@@ -460,6 +462,8 @@ struct ConformalRingGrid
                     tempvol[idx] = r_[idx]/tempxx[idx];
                 }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
+        dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
+        vol2d_ = tempvol;
         thrust::host_vector<double> ones = dg::evaluate( dg::one, g3d_);
         dg::blas1::pointwiseDivide( ones, r_, tempxx);
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
@@ -470,7 +474,7 @@ struct ConformalRingGrid
     const dg::Grid3d<double> g3d_;
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> r_, z_; //3d vector
-    container g_xx_, g_xy_, g_yy_, g_pp_, vol_;
+    container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
     
     //The following points might also be useful for external grid generation
     //thrust::host_vector<double> r_0y, r_1y, z_0y, z_1y; //boundary points in x
@@ -481,7 +485,6 @@ struct ConformalRingGrid
 
 }//namespace solovev
 namespace dg{
-
 /**
  * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
  *
@@ -492,43 +495,28 @@ namespace dg{
  *
  * @return A set of points representing F(x,y,\phi)
  */
-template< class TernaryOp, class container>
-thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingGrid<container>& g)
+template< class TernaryOp, class Geometry>
+thrust::host_vector<double> pullback( dg::system sys, TernaryOp f, const Geometry& g, CurvilinearCylindricalTag)
 {
-    thrust::host_vector<double> vec( g.grid().size());
-    unsigned size2d = g.grid().n()*g.grid().n()*g.grid().Nx()*g.grid().Ny();
-    Grid1d<double> gz( g.grid().z0(), g.grid().z1(), 1, g.grid().Nz());
+    thrust::host_vector<double> vec( g.size());
+    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
+    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
     thrust::host_vector<double> absz = create::abscissas( gz);
-    for( unsigned k=0; k<g.grid().Nz(); k++)
-        for( unsigned i=0; i<size2d; i++)
-            vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
-    return vec;
-}
-///@cond
-template<class container>
-thrust::host_vector<double> pullback( double (f)(double,double,double), const solovev::ConformalRingGrid<container>& g)
-{
-    return pullback<double(double, double, double), container>( f, g);
-}
-///@endcond
-namespace create{
-
-/**
- * @brief Create weights on a conformal grid
- *
- * The weights are the volume form times the weights on x,y,\phi
- * @param g The grid
- *
- * @return The weights
- */
-template<class container>
-thrust::host_vector<double> weights( const solovev::ConformalRingGrid<container>& g)
-{
-    thrust::host_vector<double> vec = dg::create::weights( g.grid());
-    for( unsigned i=0; i<vec.size(); i++)
-        vec[i] *= g.vol()[i];
+    if( sys == dg::cylindrical)
+    {
+        for( unsigned k=0; k<g.Nz(); k++)
+            for( unsigned i=0; i<size2d; i++)
+                vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
+    }
+    if( sys == dg::cartesian)
+    {
+        for( unsigned k=0; k<g.Nz(); k++)
+            for( unsigned i=0; i<size2d; i++)
+                vec[k*size2d+i] = f( g.r()[k*size2d+i]*cos( absz[k]), 
+                                     g.r()[k*size2d+i]*sin( absz[k]), 
+                                     g.z()[k*size2d+i]);
+    }
     return vec;
 }
 
-}//namespace create
 }//namespace dg
