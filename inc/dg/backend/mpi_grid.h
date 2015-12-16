@@ -634,15 +634,6 @@ int MPI_Grid3d::pidOf( double x, double y, double z) const
 }
 ///@endcond
 
-struct MPI_CylindricalGrid
-{
-    MPI_CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): g3d_(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,comm){}
-    MPI_CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):g3d_(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz,comm){}
-    MPI_CylindricalGrid( const MPI_Grid3d& grid):g3d_(grid){}
-    const MPI_Grid3d& grid()const {return g3d_;}
-    private:
-    MPI_Grid3d g3d_;
-};
 
 ///@}
 }//namespace dg

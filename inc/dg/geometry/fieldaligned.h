@@ -113,9 +113,14 @@ void boxintegrator( Field& field, const Grid& grid,
         thrust::host_vector<double>& coords1, 
         double& phi1, double eps, dg::bc globalbcz)
 {
-    dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
-    if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())
-         || !(coords1[1] >= grid.y0() && coords1[1] <= grid.y1()))
+    dg::integrateRK17( field, coords0, coords1, phi1, eps); //+ integration
+    //First catch periodic domain
+    if( coords[0] < grid.x0() && grid.bcx() == dg::PER) coords[0] += grid.lx();
+    if( coords[0] > grid.x1() && grid.bcx() == dg::PER) coords[0] -= grid.lx();
+    if( coords[1] < grid.y0() && grid.bcy() == dg::PER) coords[1] += grid.lx();
+    if( coords[1] > grid.y1() && grid.bcy() == dg::PER) coords[1] -= grid.lx();
+    if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())  
+         || !(coords1[1] >= grid.y0() && coords1[1] <= grid.y1())  ) //Punkt liegt immer noch außerhalb 
     {
         if( globalbcz == dg::DIR)
         {
@@ -184,8 +189,8 @@ struct FieldAligned
         by the bcz variable from the grid and can be changed by the set_boundaries function. 
         If there is no limiter the boundary condition is periodic.
     */
-    template <class Field, class Limiter>
-    FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
+    template <class Field, class Geometry, class Limiter>
+    FieldAligned(Field field, Geometry grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
 
 
     /**
@@ -333,24 +338,25 @@ struct FieldAligned
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class M, class container>
-template <class Field, class Limiter>
-FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
+template <class Field, class Geometry, class Limiter>
+FieldAligned<M,container>::FieldAligned(Field field, const Geometry& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         g_(grid), bcz_(grid.bcz())
 {
     //Resize vector to 2D grid size
-    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
+    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny(), g_.bcx(), g_.bcy());  
     unsigned size = g2d.size();
     limiter_ = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
     ghostM.resize( size); ghostP.resize( size);
     //Set starting points
-    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
-    y[1] = dg::evaluate( dg::coo2, g2d);
-    y[2] = dg::evaluate( dg::zero, g2d);
-  
-//     integrate field lines for all points
-    
+    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::coo1, grid)); // x
+    y[1] = dg::evaluate( dg::coo2, grid); //y
+    y[2] = dg::evaluate( dg::zero, grid);
+    y[3] = dg::pullback( dg::coo1, grid); //R
+    y[4] = dg::pullback( dg::coo2, grid); //Z
+    //integrate field lines for all points
+    std::vector<thrust::host_vector<double> > yp( 3, y[0]), ym(yp); 
     if( deltaPhi <=0) deltaPhi = g_.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
 #ifdef _OPENMP
@@ -358,8 +364,8 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
 #endif //_OPENMP
     for( unsigned i=0; i<size; i++)
     {
-        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+        thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
+        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i], coords[2] = y[3][i], coords[4] = y[4][i];
         double phi1 = deltaPhi;
         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
         phi1 =  - deltaPhi;
@@ -367,6 +373,7 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
+    //fange Periodische RB ab
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
 // //     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
@@ -376,7 +383,7 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
     for( unsigned i=0; i<grid.Nz(); i++)
     {
         thrust::copy( yp[2].begin(), yp[2].end(), hp_.begin() + i*g2d.size());
-        thrust::copy( ym[2].begin(), ym[2].end(), hm_.begin() + i*g2d.size());        
+        thrust::copy( ym[2].begin(), ym[2].end(), hm_.begin() + i*g2d.size());
     }
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);    //

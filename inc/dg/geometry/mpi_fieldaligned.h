@@ -263,8 +263,8 @@ struct MPI_FieldAligned
 ///@cond
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class LocalMatrix, class CommunicatorXY, class LocalContainer>
-template <class Field, class Limiter>
-MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
+template <class Field, class MPIGeometry, class Limiter>
+MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(Field field, const MPIGeometry& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()), 
     tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz()),
@@ -280,12 +280,14 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(
     right_ = left_ = dg::evaluate( zero, g2d.local());
     ghostM.resize( localsize); ghostP.resize( localsize);
     //set up grid points as start for fieldline integrations 
-    std::vector<thrust::host_vector<double> > y( 3);
-    y[0] = dg::evaluate( dg::coo1, g2d.local());
-    y[1] = dg::evaluate( dg::coo2, g2d.local());
-    y[2] = dg::evaluate( dg::zero, g2d.local());//distance (not angle)
+    std::vector<MPI_Vector<thrust::host_vector<double> > > y( 5);
+    y[0] = dg::evaluate( dg::coo1, grid);
+    y[1] = dg::evaluate( dg::coo2, grid);
+    y[2] = dg::evaluate( dg::zero, grid);//distance (not angle)
+    y[3] = dg::pullback( dg::coo1, grid);
+    y[4] = dg::pullback( dg::coo2, grid);
     //integrate to next z-planes
-    std::vector<thrust::host_vector<double> > yp(y), ym(y); 
+    std::vector<thrust::host_vector<double> > yp(3, y[0].data()), ym(yp); 
     if(deltaPhi<=0) deltaPhi = g_.hz();
     else assert( g_.Nz() == 1 || grid.hz()==deltaPhi);
 #ifdef _OPENMP
@@ -293,8 +295,8 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(
 #endif //_OPENMP
     for( unsigned i=0; i<localsize; i++)
     {
-        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+        thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
+        coords[0] = y[0].data()[i], coords[1] = y[1].data()[i], coords[2] = y[2].data()[i], coords[3] = y[3].data()[i], coords[4] = y[4].data()[i];
         double phi1 = deltaPhi;
         boxintegrator( field, g_.global(), coords, coordsP, phi1, eps, globalbcz);
         phi1 = -deltaPhi;

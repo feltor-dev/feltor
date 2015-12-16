@@ -2,6 +2,7 @@
 #define _DG_ARAKAWA_CUH
 
 #include "blas.h"
+#include "geometry.h"
 #include "enums.h"
 #include "backend/evaluation.cuh"
 #include "backend/derivatives.h"
@@ -24,7 +25,7 @@ namespace dg
  * @tparam Matrix The Matrix class to use
  * @tparam container The vector class on which to operate on. The blas2 function symv( m, x, y) must be callable and may not change x. 
  */
-template< class Matrix, class container >
+template< class Geometry, class Matrix, class container >
 struct ArakawaX
 {
     /**
@@ -34,8 +35,7 @@ struct ArakawaX
      * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
      */
-    template< class Grid>
-    ArakawaX( const Grid& g);
+    ArakawaX( Geometry g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      *
@@ -45,8 +45,7 @@ struct ArakawaX
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    template< class Grid>
-    ArakawaX( const Grid& g, bc bcx, bc bcy);
+    ArakawaX( Geometry g, bc bcx, bc bcy);
 
     /**
      * @brief Compute poisson's bracket
@@ -85,12 +84,14 @@ struct ArakawaX
     {
         blas2::symv( bdxf, phi, dxlhs);
         blas2::symv( bdyf, phi, dylhs);
-        blas1::pointwiseDot( dxlhs, dxlhs, dxlhs);
-        blas1::pointwiseDot( dylhs, dylhs, dylhs);
-        blas1::axpby( 1., dxlhs, 1., dylhs, varphi);
-        //typedef typename VectorTraits<container>::value_type value_type; 
-        //blas1::transform( varphi, varphi, dg::SQRT<value_type>() );
+        blas1::axpby( 1., dxlhs, 0., dxrhs);//save results
+        blas1::axpby( 1., dylhs, 0., dyrhs);
+        geo::raisePerpIndex( dxlhs, dylhs, varphi, helper_, grid); //input gets destroyed
+        blas1::pointwiseDot( helper_, dxrhs, helper_);
+        blas1::pointwiseDot( varphi, dylhs, varphi);
+        blas1::axpby( 1.,helper_, 1., varphi, varphi);
     }
+
     /**
      * @brief Compute the "symmetric bracket"
      *
@@ -104,46 +105,38 @@ struct ArakawaX
     {
         blas2::symv( bdxf, lhs, dxlhs);
         blas2::symv( bdyf, lhs, dylhs);
-        if( &lhs != &rhs)
-        {
-            blas2::symv( bdxf, rhs, dxrhs);
-            blas2::symv( bdyf, rhs, dyrhs);
-            blas1::pointwiseDot( dxlhs, dxrhs, dxlhs);
-            blas1::pointwiseDot( dylhs, dyrhs, dylhs);
-        }
-        else
-        {
-            blas1::pointwiseDot( dxlhs, dxlhs, dxlhs);
-            blas1::pointwiseDot( dylhs, dylhs, dylhs);
-        }
-        blas1::axpby( 1., dxlhs, 1., dylhs, result);
+        geo::raisePerpIndex( dxlhs, dylhs, helper, result, grid);
+        blas2::symv( bdxf, rhs, dxrhs);
+        blas2::symv( bdyf, rhs, dyrhs);
+        blas1::pointwiseDot( helper, dxrhs, dxrhs);
+        blas1::pointwiseDot( result, dyrhs, dyrhs);
+        blas1::axpby( 1., dxrhs, 1., dyrhs, result);
+
     }
 
   private:
     container dxlhs, dxrhs, dylhs, dyrhs, helper;
     Matrix bdxf, bdyf;
+    Geometry grid;
 };
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
-template< class Matrix, class container>
-template< class Grid>
-ArakawaX<Matrix, container>::ArakawaX( const Grid& g ): 
+template<class Geometry, class Matrix, class container>
+ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g ): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs), 
     bdxf( dg::create::dx( g, g.bcx())),
-    bdyf( dg::create::dy( g, g.bcy()))
+    bdyf( dg::create::dy( g, g.bcy())), grid( g)
 { }
-template< class Matrix, class container>
-template< class Grid>
-ArakawaX<Matrix, container>::ArakawaX( const Grid& g, bc bcx, bc bcy): 
+template<class Geometry, class Matrix, class container>
+ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g, bc bcx, bc bcy): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs),
     bdxf(dg::create::dx( g, bcx)),
-    bdyf(dg::create::dy( g, bcy))
-{
-}
+    bdyf(dg::create::dy( g, bcy)), grid(g)
+{ }
 
-template< class Matrix, class container>
-void ArakawaX< Matrix, container>::operator()( container& lhs, container& rhs, container& result)
+template< class Geometry, class Matrix, class container>
+void ArakawaX< Geometry, Matrix, container>::operator()( container& lhs, container& rhs, container& result)
 {
     //compute derivatives in x-space
     blas2::symv( bdxf, lhs, dxlhs);
@@ -180,6 +173,7 @@ void ArakawaX< Matrix, container>::operator()( container& lhs, container& rhs, c
     //now sum everything up
     blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
     blas1::axpby( 1., dxrhs, 1., result); //result + dyrhs -> result
+    geo::dividePerpVolume( result, grid);
 }
 
 }//namespace dg

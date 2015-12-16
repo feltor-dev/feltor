@@ -81,6 +81,33 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
     dg::blas1::axpby( 1., out1, 1., out2, out1);//gxx*v_x + gxy*v_y
 };
 
+template<class TernaryOp1, class TernaryOp2, class Geometry> 
+void doPushforwardPerp( TernaryOp1 f1, TenaryOp2& f2, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
+        const Geometry& g, OrthonormalCylindricalTag)
+{
+    out1 = evaluate( f1, g);
+    out2 = evaluate( f2, g);
+}
+
+template<class TernaryOp1, class TernaryOp2, class Geometry> 
+void doPushforwardPerp( TernaryOp1 f1, TenaryOp2& f2, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
+        const Geometry& g, CurvilinearCylindricalTag)
+{
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector container;
+    out1 = pullback( f1, g);
+    out2 = pullback( f2, g);
+    container temp1( out1), temp2( out2);
+    dg::blas1::pointwiseDot( g.xR(), out1, temp1);
+    dg::blas1::pointwiseDot( g.xZ(), out2, temp2);
+    dg::blas1::pointwiseDot( g.yR(), out1, out1);
+    dg::blas1::pointwiseDot( g.yZ(), out2, out2);
+    dg::blas1::axpby( 1., out1, 1., out2, out2);
+    dg::blas1::axpby( 1., temp1, 1., temp2, out1);
+}
 
 
 }//namespace detail 

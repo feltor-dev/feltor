@@ -42,8 +42,8 @@ struct DS
     * @param no norm or not_normed affects the behaviour of the symv function
     * @param dir the direction affects both the operator() and the symv function
     */
-    template<class InvB, class Grid>
-    DS(const FA& field, InvB invB, const Grid& grid, dg::norm no=dg::normed, dg::direction dir = dg::centered);
+    template<class InvB, class Geometry>
+    DS(const FA& field, InvB invB, Geometry grid, dg::norm no=dg::normed, dg::direction dir = dg::centered);
 
     /**
     * @brief Apply the derivative on a 3d vector
@@ -216,7 +216,7 @@ struct DS
     container tempP, temp0, tempM;
     container w3d, v3d;
     container invB;
-    container R_;
+    //container R_;
     dg::norm no_;
     dg::direction dir_;
 };
@@ -225,18 +225,16 @@ struct DS
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class FA, class M, class container>
-template <class Field, class Grid>
-DS<FA, M,container>::DS(const FA& field, Field inverseB, const Grid& grid, dg::norm no, dg::direction dir):
+template <class Field, class Geometry>
+DS<FA, M,container>::DS(const FA& field, Field inverseB, Geometry grid, dg::norm no, dg::direction dir):
         f_(field),
         jumpX( dg::create::jumpX( grid)),
         jumpY( dg::create::jumpY( grid)),
         tempP( dg::evaluate( dg::zero, grid)), temp0( tempP), tempM( tempP), 
-        w3d( dg::create::weights( grid)), v3d( dg::create::inv_weights( grid)),
-        invB(dg::evaluate(inverseB,grid)), R_(dg::evaluate(dg::coo1,grid)), 
+        w3d( dg::create::volume( grid)), v3d( dg::create::inv_volume( grid)),
+        invB(dg::pullback(inverseB,grid)), //R_(dg::evaluate(dg::coo1,grid)), 
         no_(no), dir_(dir)
-{
-    assert( grid.system() == dg::cylindrical);
-}
+{ }
 
 template<class F, class M, class container>
 inline void DS<F,M,container>::operator()( const container& f, container& dsf) { 
@@ -277,14 +275,14 @@ template<class F, class M, class container>
 void DS<F,M,container>::centeredT( const container& f, container& dsf)
 {               
 //     //adjoint discretisation
-        assert( &f != &dsf);    
-        dg::blas1::pointwiseDot( w3d, f, dsf);
+    assert( &f != &dsf);    
+    dg::blas1::pointwiseDot( w3d, f, dsf);
 
-        dg::blas1::pointwiseDivide( dsf, f_.hz(), dsf);
-        f_.einsPlusT( dsf, tempP);
-        f_.einsMinusT( dsf, tempM);
-        dg::blas1::axpby( 1., tempM, -1., tempP);        
-        dg::blas1::pointwiseDot( v3d, tempP, dsf); 
+    dg::blas1::pointwiseDivide( dsf, f_.hz(), dsf);
+    f_.einsPlusT( dsf, tempP);
+    f_.einsMinusT( dsf, tempM);
+    dg::blas1::axpby( 1., tempM, -1., tempP);        
+    dg::blas1::pointwiseDot( v3d, tempP, dsf); 
 
 //       dg::blas1::pointwiseDot( v3d, tempP,tempP); //make it symmetric
         //stegmeir weights
@@ -306,15 +304,15 @@ template<class F, class M, class container>
 void DS<F,M,container>::centeredTD( const container& f, container& dsf)
 {       
 //     Direct discretisation
-       assert( &f != &dsf);    
-        dg::blas1::pointwiseDot( f, invB, dsf);
-        f_.einsPlus( dsf, tempP);
-        f_.einsMinus( dsf, tempM);
-        dg::blas1::axpby( 1., tempP, -1., tempM);
-        dg::blas1::pointwiseDivide( tempM, f_.hz(), dsf);        
-        dg::blas1::pointwiseDivide( dsf, invB, dsf);
-
+    assert( &f != &dsf);    
+    dg::blas1::pointwiseDot( f, invB, dsf);
+    f_.einsPlus( dsf, tempP);
+    f_.einsMinus( dsf, tempM);
+    dg::blas1::axpby( 1., tempP, -1., tempM);
+    dg::blas1::pointwiseDivide( tempM, f_.hz(), dsf);        
+    dg::blas1::pointwiseDivide( dsf, invB, dsf);
 }
+
 template<class F, class M, class container>
 void DS<F,M,container>::forward( const container& f, container& dsf)
 {
@@ -333,6 +331,7 @@ void DS<F,M,container>::forward( const container& f, container& dsf)
 //     dg::blas1::pointwiseDot( v3d, dsf, dsf);
 //     dg::blas1::pointwiseDot( dsf, invB, dsf);
 }
+
 template<class F, class M, class container>
 void DS<F,M,container>::forwardT( const container& f, container& dsf)
 {    
@@ -343,8 +342,8 @@ void DS<F,M,container>::forwardT( const container& f, container& dsf)
     f_.einsPlusT( dsf, tempP);
     dg::blas1::axpby( -1., tempP, 1., dsf, dsf);
     dg::blas1::pointwiseDot( v3d, dsf, dsf);
-    
 }
+
 template<class F, class M, class container>
 void DS<F,M,container>::forwardTD( const container& f, container& dsf)
 {
@@ -420,23 +419,22 @@ void DS<F,M,container>::symv( const container& f, container& dsTdsf)
 //     add jump term 
 
     dg::blas2::symv( jumpX, f, temp0);
-    dg::blas1::pointwiseDivide( temp0, R_, temp0); //there is an R in the weights
-    dg::blas1::axpby(-1., temp0, 1., dsTdsf, dsTdsf);
+    //dg::blas1::pointwiseDivide( temp0, R_, temp0); //there is an R in the weights
+    dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
     dg::blas2::symv( jumpY, f, temp0);
-    dg::blas1::pointwiseDivide( temp0, R_, temp0);
-    dg::blas1::axpby(-1., temp0, 1., dsTdsf, dsTdsf);
+    //dg::blas1::pointwiseDivide( temp0, R_, temp0);
+    dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
     if( no_ == not_normed)
     {
         dg::blas1::pointwiseDot( w3d, dsTdsf, dsTdsf); //make it symmetric
     }
-
 }
 
 template< class F, class M, class container >
 void DS<F,M,container>::dss( const container& f, container& dssf)
 {
     assert( &f != &dssf);
-    f_.einsPlus( f, tempP);
+    f_.einsPlus(  f, tempP);
     f_.einsMinus( f, tempM);
     dg::blas1::pointwiseDivide( tempP, f_.hp(), tempP);
     dg::blas1::pointwiseDivide( tempP, f_.hz(), tempP);

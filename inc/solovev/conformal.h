@@ -18,8 +18,6 @@ namespace solovev
 namespace detail
 {
 
-
-
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
 struct Fpsi
@@ -280,56 +278,6 @@ struct FieldFinv
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
 };
-
-
-
-
-
-struct Naive
-{
-    Naive( const dg::Grid2d<double>& g2d): dx_(dg::create::pidxpj(g2d.n())), dy_(dx_)
-    {
-        dg::Operator<double> tx( dg::create::pipj_inv(g2d.n())), ty(tx);
-        dg::Operator<double> forward( g2d.dlt().forward()); 
-        dg::Operator<double> backward( g2d.dlt().backward());
-        tx*= 2./g2d.hx();
-        ty*= 2./g2d.hy();
-        dx_ = backward*tx*dx_*forward;
-        dy_ = backward*ty*dy_*forward;
-        Nx = g2d.Nx();
-        Ny = g2d.Ny();
-        n = g2d.n();
-    }
-    void dx( const thrust::host_vector<double>& in, thrust::host_vector<double>& out)
-    {
-        for( unsigned i=0; i<Ny*n; i++)
-            for( unsigned j=0; j<Nx; j++)
-                for( unsigned k=0; k<n; k++)
-                {
-                    out[i*Nx*n + j*n +k] = 0;
-                    for( unsigned l=0; l<n; l++)
-                        out[i*Nx*n + j*n +k] += dx_(k,l)*in[i*Nx*n+j*n+l];
-                }
-    }
-    void dy( const thrust::host_vector<double>& in, thrust::host_vector<double>& out)
-    {
-        for( unsigned i=0; i<Ny; i++)
-            for( unsigned k=0; k<n; k++)
-                for( unsigned j=0; j<Nx*n; j++)
-                {
-                    out[i*Nx*n*n + k*Nx*n +j] = 0;
-                    for( unsigned l=0; l<n; l++)
-                        out[i*Nx*n*n + k*Nx*n +j] += dy_(k,l)*in[i*Nx*n*n+l*Nx*n+j];
-                }
-    }
-
-    private:
-    dg::Operator<double> dx_, dy_;
-    unsigned Nx, Ny, n;
-
-};
-
-
 } //namespace detail
 
 
@@ -337,7 +285,7 @@ struct Naive
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct ConformalRingGrid
+struct ConformalRingGrid : public Grid3d<double>
 {
     typedef CurvilinearCylindricalTag metric_category;
 
@@ -354,19 +302,19 @@ struct ConformalRingGrid
      * @param bcx The boundary condition in x (y,z are periodic)
      */
     ConformalRingGrid( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-        g3d_( 0, detail::Fpsi(gp, psi_0).find_x1( psi_1), 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, dg::cartesian)
+        Grid3d<double>( 0, detail::Fpsi(gp, psi_0).find_x1( psi_1), 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         //compute psi(x) for a grid on x 
         detail::FieldFinv fpsiM_(gp, psi_0, psi_1);
-        dg::Grid1d<double> g1d_( g3d_.x0(), g3d_.x1(), g3d_.n(), g3d_.Nx(), g3d_.bcx());
+        dg::Grid1d<double> g1d_( x0(), x1(), n(), Nx(), bcx());
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
-        thrust::host_vector<double> psi_x(g3d_.n()*g3d_.Nx(), 0), psi_old(psi_x), psi_diff( psi_old);
+        thrust::host_vector<double> psi_x(n()*Nx(), 0), psi_old(psi_x), psi_diff( psi_old);
         thrust::host_vector<double> w1d = dg::create::weights( g1d_);
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
         unsigned N = 1;
         double eps = 1e10; //eps_old=2e10;
         std::cout << "In psi function:\n";
-        double x0=g3d_.x0(), x1 = x_vec[1];
+        double x0=x0(), x1 = x_vec[1];
         //while( eps <  eps_old && N < 1e6)
         while( eps >  1e-10 && N < 1e6)
         {
@@ -384,7 +332,7 @@ struct ConformalRingGrid
                 psi_x[i] = end[0];
             }
             temp = end;
-            dg::stepperRK6(fpsiM_, temp, end, x1, g3d_.x1(),N);
+            dg::stepperRK6(fpsiM_, temp, end, x1, x1(),N);
             eps = fabs( end[0]-psi_1); 
             std::cout << "Effective absolute Psi error is "<<eps<<" with "<<N<<" steps\n"; //Here is a problem when psi = 0 (X-point is used)
             N*=2;
@@ -394,6 +342,10 @@ struct ConformalRingGrid
     }
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
+    const thrust::host_vector<double>& xr()const{return xr_;}
+    const thrust::host_vector<double>& yr()const{return yr_;}
+    const thrust::host_vector<double>& xz()const{return xz_;}
+    const thrust::host_vector<double>& yz()const{return yz_;}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
@@ -401,27 +353,26 @@ struct ConformalRingGrid
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    const dg::Grid3d<double>& grid() const{return g3d_;}
     private:
     void construct_rz( const GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
     {
         detail::Fpsi fpsi( gp, psi_0);
         //construct f_x, fp_x, r and z and the boundaries in y 
         f_x_.resize( psi_x.size());
-        r_.resize(g3d_.size()), z_.resize(g3d_.size());
+        r_.resize(size()), z_.resize(size());
+        yr_ = r_, yz_ = z_;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
-        thrust::host_vector<double> yr_(r_), yz_(z_);
-        const thrust::host_vector<double> w3d = dg::create::weights( g3d_);
+        const thrust::host_vector<double> w3d = dg::create::weights( ;
         thrust::host_vector<double> f_p(f_x_);
 
         std::cout << "In grid function:\n";
-        unsigned Nx = g3d_.n()*g3d_.Nx(), Ny = g3d_.n()*g3d_.Ny();
+        unsigned Nx = n()*Nx(), Ny = n()*Ny();
         for( unsigned i=0; i<Nx; i++)
         {
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz;
             double R0, Z0;
-            fpsi.compute_rzy( psi_x[i], g3d_.n(), g3d_.Ny(), ry, zy, yr, yz, R0, Z0, f_x_[i], f_p[i]);
+            fpsi.compute_rzy( psi_x[i], n(), Ny(), ry, zy, yr, yz, R0, Z0, f_x_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j]; 
@@ -430,7 +381,7 @@ struct ConformalRingGrid
         }
         //r_x1 = r_x0, z_x1 = z_x0; //periodic boundaries
         //now lift to 3D grid
-        for( unsigned k=1; k<g3d_.Nz(); k++)
+        for( unsigned k=1; k<Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
             {
                 r_[k*Nx*Ny+i] = r_[(k-1)*Nx*Ny+i];
@@ -439,7 +390,7 @@ struct ConformalRingGrid
                 yz_[k*Nx*Ny+i] = yz_[(k-1)*Nx*Ny+i];
             }
         //now construct metric
-        g_xx_.resize(g3d_.size()), g_xy_.resize( g3d_.size()), g_yy_.resize( g3d_.size()), g_pp_.resize( g3d_.size()), vol_.resize( g3d_.size());
+        g_xx_.resize(size()), g_xy_.resize( size()), g_yy_.resize( size()), g_pp_.resize( size()), vol_.resize( size());
         thrust::host_vector<double> r_x( r_), r_y(r_), z_x(r_), z_y(r_);
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
         thrust::host_vector<double> psipR( r_), psipZ(r_);
@@ -451,29 +402,31 @@ struct ConformalRingGrid
             psipR[i] = psipR_(r_[i], z_[i]);
             psipZ[i] = psipZ_(r_[i], z_[i]);
         }
-        for( unsigned k=0; k<g3d_.Nz(); k++)
+        xr_ = yr_, xz_ = yz_;
+        for( unsigned k=0; k<Nz(); k++)
             for( unsigned i=0; i<Ny; i++)
                 for( unsigned j=0; j<Nx; j++)
                 {
                     unsigned idx = k*Ny*Nx+i*Nx+j;
-                    tempxx[idx] = f_x_[j]*f_x_[j]*(psipR[idx]*psipR[idx]+psipZ[idx]*psipZ[idx]);
-                    tempxy[idx] = -f_x_[j]*(yr_[idx]*psipR[idx]+yz_[idx]*psipZ[idx]);
+                    xr_[idx] = -f_x_[j]*psipR[idx];
+                    xz_[idx] = -f_x_[j]*psipZ[idx];
+                    tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
+                    tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
                     tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
                     tempvol[idx] = r_[idx]/tempxx[idx];
                 }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
         vol2d_ = tempvol;
-        thrust::host_vector<double> ones = dg::evaluate( dg::one, g3d_);
+        thrust::host_vector<double> ones = dg::evaluate( dg::one, ;
         dg::blas1::pointwiseDivide( ones, r_, tempxx);
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
         g_pp_=tempxx;
 
 
     }
-    const dg::Grid3d<double> g3d_;
     thrust::host_vector<double> f_x_; //1d vector
-    thrust::host_vector<double> r_, z_; //3d vector
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
     
     //The following points might also be useful for external grid generation
@@ -495,27 +448,16 @@ namespace dg{
  *
  * @return A set of points representing F(x,y,\phi)
  */
-template< class TernaryOp, class Geometry>
-thrust::host_vector<double> pullback( dg::system sys, TernaryOp f, const Geometry& g, CurvilinearCylindricalTag)
+template< class TernaryOp, class container>
+thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingGrid<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
     Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
     thrust::host_vector<double> absz = create::abscissas( gz);
-    if( sys == dg::cylindrical)
-    {
-        for( unsigned k=0; k<g.Nz(); k++)
-            for( unsigned i=0; i<size2d; i++)
-                vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
-    }
-    if( sys == dg::cartesian)
-    {
-        for( unsigned k=0; k<g.Nz(); k++)
-            for( unsigned i=0; i<size2d; i++)
-                vec[k*size2d+i] = f( g.r()[k*size2d+i]*cos( absz[k]), 
-                                     g.r()[k*size2d+i]*sin( absz[k]), 
-                                     g.z()[k*size2d+i]);
-    }
+    for( unsigned k=0; k<g.Nz(); k++)
+        for( unsigned i=0; i<size2d; i++)
+            vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
     return vec;
 }
 

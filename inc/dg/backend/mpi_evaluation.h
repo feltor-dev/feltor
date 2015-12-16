@@ -32,7 +32,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( BinaryOp f, const MPI_Grid2d&
 {
     thrust::host_vector<double> w = evaluate( f, g.local());
     MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
-    v.data() = evaluate(f,g.local());
+    //v.data() = evaluate(f,g.local());
     return v;
 };
 ///@cond
@@ -59,7 +59,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( TernaryOp f, const MPI_Grid3d
 {
     thrust::host_vector<double> w = evaluate( f, g.local());
     MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
-    v.data() = evaluate(f, g.local());
+    //v.data() = evaluate(f, g.local());
     return v;
 };
 ///@cond

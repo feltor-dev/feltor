@@ -41,26 +41,21 @@ void dividePerpVolume( container& inout, const Geometry& g)
     dg::geo::detail::doDividePerpVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
 }
 
-/*
-template<class TernaryOp, class Geometry> 
-thrust::host_vector<double> pullback( dg::system sys, TernaryOp f, const Geometry& g)
+template<class TernaryOp1, class TernaryOp2, class Geometry> 
+void pushforwardPerp( TernaryOp1 f1, TenaryOp2& f2, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
+        const Geometry& g)
 {
-    return doPullback( sys, f, g, typename GeometryTraits<Geometry>::metric_category()); 
-}
-template<class Geometry> 
-thrust::host_vector<double> pullback( dg::system sys, double(f)(double, double, double), const Geometry& g)
-{
-    pullback<double(double, double, double), Geometry>( sys, f, g); 
-}
-*/
-template<class container, class TernaryOp1, class TernaryOp2, class Geometry> 
-void pushforwardPerp( TernaryOp1 f1, TenaryOp2& f2, container& out1, container& out2, const Geometry& g)
-{
-    return doPushForwardPerp( f1, f2, out1, out2, g, typename GeometryTraits<Geometry>::metric_category()); 
+    return doPushForwardPerp( f1, f2, out1, out2, g, typename GeometryTraits<Geometry>::metric_category() ); 
 }
 
-template<class container, class Geometry> 
-void pushforwardPerp( dg::system sys, double(f1)(double,double,double), double(f2)(double, double, double), container& out1, container& out2, const Geometry& g)
+template<class Geometry> 
+void pushforwardPerp( dg::system sys, 
+        double(f1)(double,double,double), double(f2)(double, double, double), 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
+        const Geometry& g)
 {
     pushforwardPerp<container, double(double, double, double), double(double, double, double), Geometry>( f1, f2, out1, out2, g); 
 }
@@ -70,6 +65,7 @@ void pushforwardPerp( dg::system sys, double(f1)(double,double,double), double(f
 namespace create{
 
 namespace detail{
+
 template<class MemoryTag>
 struct HostVec {
 }
@@ -83,6 +79,7 @@ struct HostVec< MPITag>
 {
     typedef MPI_Vector<thrust::host_vector<double> > host_vector;
 }
+
 }//namespace detail
 
 template< class Geometry>

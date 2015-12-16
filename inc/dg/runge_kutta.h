@@ -487,10 +487,10 @@ struct NotANumber : public std::exception
  * @param T_max final time
  * @param eps_abs desired absolute accuracy
  */
-template< class RHS, class Vector>
-void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+template< class RHS, class Vector, unsigned s>
+void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
 {
-    RK<4, Vector > rk( begin); 
+    RK_classic<s, Vector > rk( begin); 
     Vector old_end(begin), temp(begin),diffm(begin);
     end = begin;
     if( T_max == 0) return;
@@ -558,6 +558,36 @@ void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     }
 
 
+}
+
+/**
+ * @brief Integrates the differential equation using RK4 and a rudimentary stepsize-control
+ *
+ * @ingroup algorithms
+ * Doubles the number of timesteps until the desired accuracy is reached
+ * @tparam RHS The right-hand side class
+ * @tparam Vector Vector-class (needs to be copyable)
+ * @param rhs The right-hand-side
+ * @param begin initial condition (size 3)
+ * @param end (write-only) contains solution on output
+ * @param T_max final time
+ * @param eps_abs desired absolute accuracy
+ */
+template< class RHS, class Vector>
+void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
+}
+
+template< class RHS, class Vector>
+void integrateRK6(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
+}
+template< class RHS, class Vector>
+void integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
 }
 
 template< class RHS, class Vector, unsigned s>
