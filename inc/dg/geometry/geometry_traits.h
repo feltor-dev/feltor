@@ -74,11 +74,9 @@ template <class container, class Geometry>
 void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearCylindricalTag)
 {
     dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
-    dg::blas1::pointwiseDot( g.g_xy(), in1, in1); //gyx*v_x
-    dg::blas1::pointwiseDot( g.g_xy(), in2, out2);//gxy*v_y
-    dg::blas1::pointwiseDot( g.g_yy(), in2, in2); //gyy*v_y
-    dg::blas1::axpby( 1., in1, 1., in2, out2); //gyx*v_x + gyy*v_y
-    dg::blas1::axpby( 1., out1, 1., out2, out1);//gxx*v_x + gxy*v_y
+    dg::blas1::pointwiseDot( g.g_xy(), in1, out2); //gyx*v_x
+    dg::blas1::pointwiseDot( 1., g.g_xy(), in2, 1., out1);//gxy*v_y
+    dg::blas1::pointwiseDot( 1., g.g_yy(), in2, 1., out2); //gyy*v_y
 };
 
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
@@ -101,12 +99,10 @@ void doPushforwardPerp( TernaryOp1 f1, TenaryOp2& f2,
     out1 = pullback( f1, g);
     out2 = pullback( f2, g);
     container temp1( out1), temp2( out2);
-    dg::blas1::pointwiseDot( g.xR(), out1, temp1);
-    dg::blas1::pointwiseDot( g.xZ(), out2, temp2);
-    dg::blas1::pointwiseDot( g.yR(), out1, out1);
-    dg::blas1::pointwiseDot( g.yZ(), out2, out2);
-    dg::blas1::axpby( 1., out1, 1., out2, out2);
-    dg::blas1::axpby( 1., temp1, 1., temp2, out1);
+    dg::blas1::pointwiseDot( g.xR(), temp1, out1);
+    dg::blas1::pointwiseDot( 1., g.xZ(), temp2, 1., out1);
+    dg::blas1::pointwiseDot( g.yR(), temp1, out2);
+    dg::blas1::pointwiseDot( 1., g.yZ(), temp2, 1., out2);
 }
 
 

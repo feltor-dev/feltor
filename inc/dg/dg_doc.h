@@ -54,6 +54,10 @@
  *              A manual synchronization of threads or devices is never needed in an application 
  *              using these functions. All functions returning a value block until the value is ready.
  *      @}
+ *      @defgroup geometry Geometric operations
+ *
+ *          These routines form the heart of our geometry free numerical algorithms. 
+ *          They are called by our geometric operators like the arakawa bracket. 
  *      @defgroup algorithms Numerical schemes
  *          Numerical time integration and a conjugate gradient method based
  *          solely on the use of blas routines

@@ -37,11 +37,23 @@ namespace blas1
 ///@addtogroup blas1
 ///@{
 
+/*! @brief Deep copy of a vector
+ *
+ * This routine computes \f[ y_i = x_i \f]
+ * @param x Left Vector
+ * @param y Right Vector may equal y
+ */
+template< class Vector>
+inline void copy( const Vector& x, Vector& y)
+{
+    return dg::blas1::detail::doCopy( x, y, typename dg::VectorTraits<Vector>::vector_category() );
+}
+
 /*! @brief Euclidean dot product between two Vectors
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
  * @param x Left Vector
- * @param y Right Vector may equal y
+ * @param y Right Vector may equal x
  * @return Scalar product
  * @note This routine is always executed synchronously due to the 
         implicit memcpy of the result. With mpi the result is broadcasted to all
@@ -134,6 +146,23 @@ inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
     dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
     return;
 }
+/**
+* @brief A 'new' BLAS 1 routine. 
+*
+* Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]
+* @param alpha scalar
+* @param x1 Vector x1  
+* @param x2 Vector x2 may equal x1
+* @param beta scalar
+* @param y  Vector y contains result on output ( may equal x1 or x2)
+* @note If DG_DEBUG is defined a range check shall be performed 
+*/
+template< class Vector>
+inline void pointwiseDot( typename VectorTraits<Vector>::value_type alpha, const Vector& x1, const Vector& x2, typename VectorTraits<Vector>::value_type beta, Vector& y)
+{
+    dg::blas1::detail::doPointwiseDot( alpha, x1, x2, beta, y, typename dg::VectorTraits<Vector>::vector_category() );
+}
+
 /**
 * @brief A 'new' BLAS 1 routine. 
 *

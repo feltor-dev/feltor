@@ -18,7 +18,6 @@ template< class Vector>
 typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& y, MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.size() == y.size() );
     assert( x.communicator() == y.communicator());
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
@@ -28,10 +27,19 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     typename VectorTraits<Vector>::value_type temp = doDot( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
     //communication
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, x.communicator());
-    //MPI_Barrier(x.communicator());
-
     return sum;
 }
+
+template<class Vector>
+inline void doCopy( const Vector& x, Vector& y, MPIVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x.communicator() == y.communicator());
+#endif //DG_DEBUG
+    typedef typename Vector::container_type container;
+    doCopy( x.data(), y.data(), typename VectorTraits<container>::vector_category());
+}
+
 template< class Vector>
 inline void doScal(  Vector& x, 
               typename VectorTraits<Vector>::value_type alpha, 
@@ -46,6 +54,9 @@ inline void doTransform(  const Vector& x, Vector& y,
                           UnaryOp op,
                           MPIVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x.communicator() == y.communicator());
+#endif //DG_DEBUG
     typedef typename Vector::container_type container;
     doTransform( x.data(), y.data(), op, typename VectorTraits<container>::vector_category());
 }
@@ -78,6 +89,17 @@ inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, MPIVe
 {
     typedef typename Vector::container_type container;
     doPointwiseDot( x1.data(), x2.data(), y.data(), typename VectorTraits<container>::vector_category());
+
+}
+template< class Vector>
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
+        const Vector& x1, const Vector& x2, 
+        typename VectorTraits<Vector>::value_type beta,
+        Vector& y, 
+        MPIVectorTag)
+{
+    typedef typename Vector::container_type container;
+    doPointwiseDot( alpha, x1.data(), x2.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
 
 }
 

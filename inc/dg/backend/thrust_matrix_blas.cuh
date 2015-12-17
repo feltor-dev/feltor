@@ -105,6 +105,7 @@ inline void doSymv(
                        detail::ThrustVectorDoSymv<Matrix>( alpha, beta)
                       ); 
 }
+
 template< class Matrix, class Vector>
 inline void doSymv(  
               Matrix& m, 

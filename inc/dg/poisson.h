@@ -109,13 +109,12 @@ struct Poisson
     {
         blas2::symv( dxrhs_, phi, dxrhsrhs_);
         blas2::symv( dyrhs_, phi, dyrhsrhs_);
-        blas1::axpby( 1., dxrhsrhs_, 0., dxlhslhs_);//save results
-        blas1::axpby( 1., dyrhsrhs_, 0., dylhslhs_);
-        geo::raisePerpIndex( dxrhsrhs_, dyrhsrhs_, varphi, helper_); //input gets destroyed
+        blas1::copy( dxrhsrhs_, dxlhslhs_);//save results
+        blas1::copy( dyrhsrhs_, dylhslhs_);
+        geo::raisePerpIndex( dxrhsrhs_, dyrhsrhs_, varphi, helper_, g_); //input gets destroyed
 
-        blas1::pointwiseDot( helper_, dxlhslhs_, helper_);
         blas1::pointwiseDot( varphi, dylhslhs_, varphi);
-        blas1::axpby( 1.,helper_, 1., varphi, varphi);
+        blas1::pointwiseDot( 1., helper_, dxlhslhs_,1., varphi );
         //typedef typename VectorTraits<container>::value_type value_type; 
         //blas1::transform( varphi, varphi, dg::SQRT<value_type>() );
     }
@@ -137,10 +136,9 @@ struct Poisson
         blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
         geo::raisePerpIndex( dxrhsrhs_, dyrhsrhs_, helper_, result, g_);
         
-        blas1::pointwiseDot( dxlhslhs_, helper_, helper_);   
         blas1::pointwiseDot( dylhslhs_, result, result);    
+        blas1::pointwiseDot( 1., dxlhslhs_, helper_, 1., result); //dx_lhs lhs * dy_rhs rhs + dy_lhs lhs * dx_rhs rhs
         
-        blas1::axpby( 1., helper_, 1., result,result);        //dx_lhs lhs * dy_rhs rhs + dy_lhs lhs * dx_rhs rhs
     }
 
   private:
@@ -185,10 +183,9 @@ void Poisson< Geometry, Matrix, container>::operator()( container& lhs, containe
     blas2::symv(  dxrhs_, rhs,  dxrhsrhs_); //dx_rhs rhs
     blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
     
-    blas1::pointwiseDot( dxlhslhs_, dyrhsrhs_, helper_);   //dx_lhs lhs * dy_rhs rhs
-    blas1::pointwiseDot( dylhslhs_, dxrhsrhs_, result);    //dy_lhs lhs * dx_rhs rhs
-    
-    blas1::axpby( 1., helper_, -1., result,result);        //dx_lhs lhs * dy_rhs rhs - dy_lhs lhs * dx_rhs rhs
+    blas1::pointwiseDot( dxlhslhs_, dyrhsrhs_, result);   //dx_lhs lhs * dy_rhs rhs
+    blas1::pointwiseDot( -1., dylhslhs_, dxrhsrhs_, 1., result);    //- dy_lhs lhs * dx_rhs rhs
+
     geo::multiplyVolume( result, g_);
 }
 
