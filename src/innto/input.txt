@@ -9,10 +9,10 @@ zonal flows.
 ---------------------Algorithmic parameters-------------------
 1) nx (grid points in x)                =  128     (256.)
 2) ny (grid points in y)                =   128     (256.)
-3) dt (time step in units c_s/L_p)      =   0.02   (0.01)
+3) dt (time step in units c_s/L_p)      =   0.01   (0.01)
 ---------------------Boundary conditions----------------------
 4) ly (length of y in units of rho_s)         =   64   (64.)
-5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   2   (1.0)
+5) bc_x (0:periodic, 1 Dirichlet, 2 Dir/Neu ) =   0   (1.0)
 ---------------------Physical parameters----------------------
 6) mhw:1, ohw:0 (modified/ordinary HW) =   1       (1)
 

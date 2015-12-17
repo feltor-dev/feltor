@@ -52,7 +52,7 @@ struct CylindricalGrid : public Grid3d<double>
      *
      * @return the volume element
      */
-    const container& vol(){return R_;}
+    const container& vol()const {return R_;}
     private:
     container R_;
 };

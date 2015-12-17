@@ -62,12 +62,13 @@ struct Poisson
     /**
      * @brief Compute poisson's bracket
      *
-     * Computes \f[ [f,g] := \partial_x f\partial_y g - \partial_y f\partial_x g \f]
+     * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
+     * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
      */
-    void operator()( container& lhs, container& rhs, container& result);
+    void operator()( const container& lhs, const container& rhs, container& result);
 
     /**
      * @brief Return internally used x - derivative 
@@ -100,45 +101,20 @@ struct Poisson
     /**
      * @brief Compute the total variation integrand, uses bc of rhs of poisson bracket
      *
-     * Computes \f[ (\nabla\phi)^2 \f]
+     * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
+     * in the plane of a 2x1 product space
      * @param phi function 
      * @param varphi may equal phi, contains result on output
-     * @note same as a call to bracketS( phi, phi, varphi)
      */
-    void variationRHS( container& phi, container& varphi)
+    void variationRHS( const container& phi, container& varphi)
     {
         blas2::symv( dxrhs_, phi, dxrhsrhs_);
         blas2::symv( dyrhs_, phi, dyrhsrhs_);
         blas1::copy( dxrhsrhs_, dxlhslhs_);//save results
         blas1::copy( dyrhsrhs_, dylhslhs_);
-        geo::raisePerpIndex( dxrhsrhs_, dyrhsrhs_, varphi, helper_, g_); //input gets destroyed
-
-        blas1::pointwiseDot( varphi, dylhslhs_, varphi);
-        blas1::pointwiseDot( 1., helper_, dxlhslhs_,1., varphi );
-        //typedef typename VectorTraits<container>::value_type value_type; 
-        //blas1::transform( varphi, varphi, dg::SQRT<value_type>() );
-    }
-    /**
-     * @brief Compute the "symmetric bracket"
-     *
-     * Computes \f[ [f,g] := \partial_x f\partial^x g + \partial_y f\partial^y g \f]
-
-     * @param lhs The left hand side
-     * @param rhs The right hand side (may equal lhs)
-     * @param result The result (write only, may equal lhs or rhs)
-     */
-    void bracketS( container& lhs, container& rhs, container& result)
-    {
-
-        blas2::symv(  dxlhs_, lhs,  dxlhslhs_); //dx_lhs lhs
-        blas2::symv(  dylhs_, lhs,  dylhslhs_); //dy_lhs lhs
-        blas2::symv(  dxrhs_, rhs,  dxrhsrhs_); //dx_rhs rhs
-        blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
-        geo::raisePerpIndex( dxrhsrhs_, dyrhsrhs_, helper_, result, g_);
-        
-        blas1::pointwiseDot( dylhslhs_, result, result);    
-        blas1::pointwiseDot( 1., dxlhslhs_, helper_, 1., result); //dx_lhs lhs * dy_rhs rhs + dy_lhs lhs * dx_rhs rhs
-        
+        geo::raisePerpIndex( dxlhslhs_, dylhslhs_, varphi, helper_, g_); //input gets destroyed
+        blas1::pointwiseDot( varphi, dxrhsrhs_, varphi);
+        blas1::pointwiseDot( 1., helper_, dyrhsrhs_,1., varphi );
     }
 
   private:
@@ -157,6 +133,7 @@ Poisson<Geometry, Matrix, container>::Poisson( Geometry g ):
     dxrhs_(dg::create::dx( g, g.bcx(),dg::centered)),
     dyrhs_(dg::create::dy( g, g.bcy(),dg::centered)),g_(g)
 { }
+
 template< class Geometry, class Matrix, class container>
 Poisson<Geometry, Matrix, container>::Poisson( Geometry g, bc bcx, bc bcy): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
@@ -164,8 +141,8 @@ Poisson<Geometry, Matrix, container>::Poisson( Geometry g, bc bcx, bc bcy):
     dylhs_(dg::create::dy( g, bcy,dg::centered)),
     dxrhs_(dg::create::dx( g, bcx,dg::centered)),
     dyrhs_(dg::create::dy( g, bcy,dg::centered)),g_(g)
-{
-}
+{ }
+
 template< class Geometry, class Matrix, class container>
 Poisson<Geometry, Matrix, container>::Poisson(  Geometry g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
@@ -173,10 +150,10 @@ Poisson<Geometry, Matrix, container>::Poisson(  Geometry g, bc bcxlhs, bc bcylhs
     dylhs_(dg::create::dy( g, bcylhs,dg::centered)),
     dxrhs_(dg::create::dx( g, bcxrhs,dg::centered)),
     dyrhs_(dg::create::dy( g, bcyrhs,dg::centered)),g_(g)
-{
-}
+{ }
+
 template< class Geometry, class Matrix, class container>
-void Poisson< Geometry, Matrix, container>::operator()( container& lhs, container& rhs, container& result)
+void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     blas2::symv(  dxlhs_, lhs,  dxlhslhs_); //dx_lhs lhs
     blas2::symv(  dylhs_, lhs,  dylhslhs_); //dy_lhs lhs

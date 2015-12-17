@@ -2,11 +2,10 @@
 
 #include <cusp/print.h>
 
-#include "file/read_input.h"
-#include "evaluation.cuh"
-#include "weights.cuh"
+#include "backend/evaluation.cuh"
+#include "geometry.h"
 
-#include "../blas2.h"
+#include "blas2.h"
 
 double R_0 = 4.*M_PI;
 
@@ -22,11 +21,11 @@ int main()
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    dg::Grid3d<double> grid3d( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+    dg::CylindricalGrid<dg::DVec> grid3d( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
 
     dg::DVec b = dg::evaluate( sine, grid3d);
-    dg::DVec w3d = dg::create::weights( grid3d);
-    dg::DVec v3d = dg::create::inv_weights( grid3d);
+    dg::DVec w3d = dg::create::volume( grid3d);
+    dg::DVec v3d = dg::create::inv_volume( grid3d);
 
     std::cout << "Test of w3d: "<<dg::blas2::dot(b, w3d, b)<< " sol = " << M_PI*M_PI*M_PI<< std::endl;
     std::cout << "rel diff = " <<( dg::blas2::dot(b, w3d, b) -  M_PI*M_PI*M_PI)/ M_PI*M_PI*M_PI<<std::endl;

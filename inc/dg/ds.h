@@ -2,10 +2,10 @@
 
 #include "blas.h"
 #include "backend/derivatives.h"
-#include "backend/fieldaligned.h"
+#include "geometry/fieldaligned.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_derivatives.h"
-#include "backend/mpi_fieldaligned.h"
+#include "geometry/mpi_fieldaligned.h"
 #endif //MPI_VERSION
 
 /*!@file 

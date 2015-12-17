@@ -42,7 +42,7 @@ int main()
     std::cout << "Create Laplacian...\n";
     t.tic();
     dg::DMatrix DX = dg::create::dx( grid);
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> lap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::DVec> lap(grid, dg::not_normed, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 

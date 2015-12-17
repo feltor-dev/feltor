@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../blas1.h"
+
 namespace dg
 {
 //categories

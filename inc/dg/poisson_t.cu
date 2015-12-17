@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "arakawa.h"
+#include "poisson.h"
 
 //const double lx = 2.*M_PI;
 //const double ly = 2.*M_PI;
@@ -24,18 +24,14 @@ double jacobian( double x, double y)
 }
 */
 
-double left( double x, double y) {
-    return sin(x)*cos(y);
-    //return sin(x)*x*x*cos(y);
-}
-double right( double x, double y) {
-    return sin(y)*cos(x);
-    //return sin(x)*exp(0.1*(x+y));
-} 
-const double lx = 2*M_PI;
-const double ly = 2*M_PI;
-dg::bc bcx = dg::PER; 
-dg::bc bcy = dg::PER;
+double left( double x, double y) {return sin(x)*cos(y);}
+double right( double x, double y) { return sin(y)*cos(x); } 
+const double lx = M_PI;
+const double ly = M_PI;
+dg::bc bcxlhs = dg::DIR; 
+dg::bc bcylhs = dg::NEU;
+dg::bc bcxrhs = dg::NEU; 
+dg::bc bcyrhs = dg::DIR;
 //double right2( double x, double y) {return sin(y);}
 double jacobian( double x, double y) 
 {
@@ -45,30 +41,13 @@ double variationRHS( double x, double y)
 {
     return cos(x)*cos(y)*cos(x)*cos(y) + sin(x)*sin(y)*sin(x)*sin(y); 
 }
-/*
-////These are for comparing to FD arakawa results
-//double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
-//double right( double x, double y) {return y;}
-//double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
-const double lx = M_PI/2.;
-const double ly = M_PI/2.;
-double left( double x, double y) {return sin(x)*sin(y);}
-double right( double x, double y) {return sin(2*x)*sin(2*y);} 
-dg::bc bcx = dg::DIR_NEU; 
-dg::bc bcy = dg::DIR_NEU;
-//double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y) 
-{
-    return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
-}
-*/
 
 int main()
 {
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny);
     dg::DVec w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
     std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
@@ -78,25 +57,17 @@ int main()
     const dg::DVec variation = dg::evaluate ( variationRHS, grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    dg::ArakawaX<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( grid);
-    arakawa( lhs, rhs, jac);
+    dg::Poisson<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> poisson( grid, bcxlhs, bcylhs,bcxrhs, bcyrhs );
+    poisson( lhs, rhs, jac);
 
     std::cout << std::scientific;
     std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
     std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
     std::cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
-    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
-    //periocid bc       |  dirichlet bc
-    //n = 1 -> p = 2    |     
-    //n = 2 -> p = 1    |
-    //n = 3 -> p = 3    |        3
-    //n = 4 -> p = 3    | 
-    //n = 5 -> p = 5    |
-    // quantities are all conserved to 1e-15 for periodic bc
-    // for dirichlet bc these are not better conserved than normal jacobian
-    arakawa.variation( rhs, jac);
+    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; 
+    poisson.variationRHS( rhs, jac); 
     dg::blas1::axpby( 1., variation, -1., jac);
-    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
+    std::cout << "Variation distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; 
     return 0;
 }

@@ -23,11 +23,13 @@ namespace dg
  * @ingroup matrixoperators
  *
  * The term discretized is \f[ -\nabla \cdot ( \chi \nabla_\perp ) \f]
- * where \f$ \nabla_\perp \f$ is the perpendicular gradient. In cartesian 
- * coordinates that means \f[ -\partial_x(\chi\partial_x) - \partial_y(\chi\partial_y)\f]
- * is discretized while in cylindrical coordinates
- * \f[ - \frac{1}{R}\partial_R( R\chi\partial_R) - \partial_Z(\chi\partial_Z)\f]
- * is discretized.
+ * where \f$ \nabla_\perp \f$ is the perpendicular gradient. In general 
+ * coordinates that means 
+ * \f[ -\frac{1}{\sqrt{g}}\left( 
+ * \partial_x\left(\sqrt{g}\chi \left(g^{xx}\partial_x + g^{xy}\partial_y \right)\right) 
+ + \partial_y\left(\sqrt{g}\chi \left(g^{yx}\partial_x + g^{yy}\partial_y \right)\right) \right)\f]
+ is discretized
+ * @tparam Geometry The geometry sets the metric of the grid
  * @tparam Matrix The Matrix class to use
  * @tparam Vector The Vector class to use
  * @tparam Preconditioner The Preconditioner class to use
@@ -44,7 +46,7 @@ class Elliptic
     /**
      * @brief Construct from Grid
      *
-     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
+     * @tparam Geometry The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
      * a call to dg::create::weights(g) and dg::create::inv_weights(g)
      * must return instances of the Preconditioner class and 
      * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
@@ -62,18 +64,12 @@ class Elliptic
         weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)), 
         xchi( dg::evaluate( one, g) ), tempx(xchi), tempy( xchi), gradx(xchi),
         no_(no), g_(g)
-    { 
-        if( g.system() == cylindrical)
-        {
-            R = dg::evaluate( dg::coo1, g);
-            dg::blas1::pointwiseDot( R, xchi, xchi); 
-            dg::blas1::pointwiseDivide( weights_,R,weights_wo_R);
-        }
-    }
+    { }
+
     /**
      * @brief Construct from grid and boundary conditions
      *
-     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
+     * @tparam Geometry The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
      * a call to dg::create::weights(g) and dg::create::inv_weights(g)
      * must return instances of the Preconditioner class and 
      * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
@@ -93,8 +89,7 @@ class Elliptic
         weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)),
         xchi( dg::evaluate( one, g) ), tempx(xchi), tempy( xchi), gradx(xchi),
         no_(no), g_(g)
-    { 
-    }
+    { }
 
     /**
      * @brief Change Chi 
@@ -106,6 +101,7 @@ class Elliptic
         xchi = chi;
         dg::geo::multiplyVolume( xchi, g_); 
     }
+
     /**
      * @brief Returns the weights used to make the matrix symmetric 
      *
@@ -134,23 +130,23 @@ class Elliptic
 
         dg::geo::raisePerpIndex( tempx, tempy, gradx, y, g_);
 
-        //multiply volume 
+        //multiply with chi 
         dg::blas1::pointwiseDot( xchi, gradx, gradx); //Chi*R_x*x 
-        dg::blas1::pointwiseDot( xchi, grady, y); //Chi*R_x*x 
+        dg::blas1::pointwiseDot( xchi, y, y); //Chi*R_x*x 
 
         //now take divergence
-        dg::blas2::gemv( leftx, gradx, gradx);  
-        dg::blas2::gemv( lefty, grady, y);  
+        dg::blas2::gemv( leftx, gradx, tempx);  
+        dg::blas2::gemv( lefty, y, tempy);  
+        dg::blas1::axpby( -1., tempx, -1., tempy, y); //-D_xx - D_yy 
 
         //add jump terms
-        dg::blas1::axpby( -1., gradx, -1., y, y); //-D_xx - D_yy 
         dg::blas2::symv( jumpX, x, tempx);
         dg::blas1::axpby( +1., tempx, 1., y, y); 
         dg::blas2::symv( jumpY, x, tempy);
         dg::blas1::axpby( +1., tempy, 1., y, y); 
         dg::geo::divideVolume( y, g_);
         if( no_ == not_normed)
-            dg::blas2::symv( weights, y, y);
+            dg::blas2::symv( weights_, y, y);
 
     }
     private:
@@ -182,21 +178,22 @@ class Elliptic
  * @ingroup matrixoperators
  *
  * The term discretized is 
- * \f[ -\nabla \cdot ( \mathbf \chi  \mathbf \chi \cdot \nabla ) \f]
+ * \f[ -\nabla \cdot ( \mathbf b  \mathbf b \cdot \nabla ) \f]
   In general that means 
  * \f[ 
  * \begin{align}
- * v = \chi^x \partial_x f + \chi^y\partial_y f + \chi^z \partial_z f \\
- * -\frac{1}{\sqrt{g} \left(\partial_x(\sqrt{g} \chi^x v ) + \partial_y(\sqrt{g}\chi_y v) + \partial_z(\sqrt{g} \chi_z v)\right)
+ * v = b^x \partial_x f + b^y\partial_y f + b^z \partial_z f \\
+ * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} b^x v ) + \partial_y(\sqrt{g}b_y v) + \partial_z(\sqrt{g} b_z v)\right)
  *  \end{align}
  *  \f] 
- * is discretized, with \f$ \chi^i\f$ being the contravariant components of \f$\mathbf \chi\f$ . 
+ * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
+ * @tparam Geometry The Geometry class to use
  * @tparam Matrix The Matrix class to use
  * @tparam Vector The Vector class to use
  * @tparam Preconditioner The Preconditioner class to use
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
- * @note The constructors initialize \f$ \chi_x = \chi_y = \chi_z=1\f$ 
+ * @note The constructors initialize \f$ b^x = b^y = b^z=1\f$ 
  * @attention Pay attention to the negative sign 
  */
 template< class Geometry, class Matrix, class Vector, class Preconditioner> 
@@ -205,7 +202,7 @@ struct GeneralElliptic
     /**
      * @brief Construct from Grid
      *
-     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
+     * @tparam Geometry The Grid class. A call to dg::evaluate( one, g) must return an instance of the Vector class, 
      * a call to dg::create::weights(g) and dg::create::inv_weights(g)
      * must return instances of the Preconditioner class and 
      * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
@@ -224,7 +221,7 @@ struct GeneralElliptic
         jumpY ( dg::create::jumpY( g, g.bcy())),
         weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
-        xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0), R(xchi),
+        xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
         no_(no), g_(g)
     { }
     /**
@@ -349,7 +346,7 @@ struct GeneralElliptic
         dg::blas1::axpby( +1., temp0, 1., y, y); 
         dg::geo::divideVolume( y, g_);
         if( no_==not_normed)
-            dg::blas2::symv( weights, y, y);
+            dg::blas2::symv( weights_, y, y);
     }
     private:
     bc inverse( bc bound)
@@ -379,15 +376,16 @@ struct GeneralElliptic
  * @ingroup matrixoperators
  *
  * The term discretized is 
- * \f[ -\nabla \cdot ( \mathbf \chi  \mathbf \chi \cdot \nabla ) \f]
+ * \f[ -\nabla \cdot ( \mathbf b  \mathbf b \cdot \nabla ) \f]
   In general that means 
  * \f[ 
  * \begin{align}
- * v = \chi^x \partial_x f + \chi^y\partial_y f + \chi^z \partial_z f \\
- * -\frac{1}{\sqrt{g} \left(\partial_x(\sqrt{g} \chi^x v ) + \partial_y(\sqrt{g}\chi_y v) + \partial_z(\sqrt{g} \chi_z v)\right)
+ * v = b^x \partial_x f + b^y\partial_y f + b^z \partial_z f \\
+ * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} b^x v ) + \partial_y(\sqrt{g}b_y v) + \partial_z(\sqrt{g} b_z v)\right)
  *  \end{align}
  *  \f] 
- * is discretized, with \f$ \chi^i\f$ being the contravariant components of \f$\mathbf \chi\f$ . 
+ * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
+ * @tparam Geometry The Geometry class to use
  * @tparam Matrix The Matrix class to use
  * @tparam Vector The Vector class to use
  * @tparam Preconditioner The Preconditioner class to use
@@ -410,8 +408,7 @@ struct GeneralEllipticSym
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    template< class Grid>
-    GeneralEllipticSym( const Grid& g, norm no = not_normed, direction dir = forward): 
+    GeneralEllipticSym( Geometry g, norm no = not_normed, direction dir = forward): 
         leftx ( dg::create::dx( g, inverse( g.bcx()), inverse(dir))),
         lefty ( dg::create::dy( g, inverse( g.bcy()), inverse(dir))),
         leftz ( dg::create::dz( g, inverse( g.bcz()), inverse(dir))),
@@ -542,7 +539,7 @@ struct GeneralEllipticSym
 
         dg::blas1::axpby( 1., xx, 1., yy, temp0);
         dg::blas1::axpby( 1., zz, 1., temp0, temp0); //gradpar x 
-        dg::blas1::pointwiseDot( R, temp0, temp0);
+        dg::geo::multiplyVolume( temp0, g_);
 
         dg::blas1::pointwiseDot( xchi, temp0, temp1); 
         dg::blas2::gemv( leftx, temp1, xx); 
@@ -589,7 +586,7 @@ struct GeneralEllipticSym
         dg::blas2::symv( jumpY, x, temp0);
         dg::geo::divideVolume( y, g_);
         if( no_==not_normed)
-            dg::blas2::symv( weights, y, y);
+            dg::blas2::symv( weights_, y, y);
     }
     private:
     bc inverse( bc bound)
@@ -610,6 +607,7 @@ struct GeneralEllipticSym
     Preconditioner weights_, precond_; //contain coeffs for chi multiplication
     Vector xchi, ychi, zchi, xx, yy, zz, temp0, temp1;
     norm no_;
+    Geometry g_;
 };
 ///@cond
 template< class G, class M, class V, class P>

@@ -50,12 +50,13 @@ struct ArakawaX
     /**
      * @brief Compute poisson's bracket
      *
-     * Computes \f[ [f,g] := \partial_x f\partial_x g - \partial_y f\partial_y g \f]
+     * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
+     * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
      */
-    void operator()( container& lhs, container& rhs, container& result);
+    void operator()( const container& lhs, const container& rhs, container& result);
 
     /**
      * @brief Return internally used x - derivative 
@@ -75,43 +76,20 @@ struct ArakawaX
     /**
      * @brief Compute the total variation integrand 
      *
-     * Computes \f[ (\nabla\phi)^2 \f]
+     * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
+     * in the plane of a 2x1 product space
      * @param phi function 
      * @param varphi may equal phi, contains result on output
-     * @note same as a call to bracketS( phi, phi, varphi)
      */
-    void variation( container& phi, container& varphi)
+    void variation( const container& phi, container& varphi)
     {
-        blas2::symv( bdxf, phi, dxlhs);
-        blas2::symv( bdyf, phi, dylhs);
-        blas1::axpby( 1., dxlhs, 0., dxrhs);//save results
-        blas1::axpby( 1., dylhs, 0., dyrhs);
+        blas2::symv( bdxf, phi, dxrhs);
+        blas2::symv( bdyf, phi, dyrhs);
+        blas1::copy( dxrhs, dxlhs);//save results
+        blas1::copy( dyrhs, dylhs);
         geo::raisePerpIndex( dxlhs, dylhs, varphi, helper_, grid); //input gets destroyed
-        blas1::pointwiseDot( helper_, dxrhs, helper_);
-        blas1::pointwiseDot( varphi, dylhs, varphi);
-        blas1::axpby( 1.,helper_, 1., varphi, varphi);
-    }
-
-    /**
-     * @brief Compute the "symmetric bracket"
-     *
-     * Computes \f[ [f,g] := \partial_x f\partial_x g + \partial_y f\partial_y g \f]
-
-     * @param lhs The left hand side
-     * @param rhs The right hand side (may equal lhs)
-     * @param result The result (write only, may equal lhs or rhs)
-     */
-    void bracketS( container& lhs, container& rhs, container& result)
-    {
-        blas2::symv( bdxf, lhs, dxlhs);
-        blas2::symv( bdyf, lhs, dylhs);
-        geo::raisePerpIndex( dxlhs, dylhs, helper_, result, grid);
-        blas2::symv( bdxf, rhs, dxrhs);
-        blas2::symv( bdyf, rhs, dyrhs);
-        blas1::pointwiseDot( helper_, dxrhs, dxrhs);
-        blas1::pointwiseDot( result, dyrhs, dyrhs);
-        blas1::axpby( 1., dxrhs, 1., dyrhs, result);
-
+        blas1::pointwiseDot( varphi, dxrhs, varphi);
+        blas1::pointwiseDot( 1., helper_, dyrhs,1., varphi );
     }
 
   private:
@@ -136,7 +114,7 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g, bc bcx, bc bcy):
 { }
 
 template< class Geometry, class Matrix, class container>
-void ArakawaX< Geometry, Matrix, container>::operator()( container& lhs, container& rhs, container& result)
+void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //compute derivatives in x-space
     blas2::symv( bdxf, lhs, dxlhs);

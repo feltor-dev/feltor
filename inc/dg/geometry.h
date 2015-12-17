@@ -162,7 +162,8 @@ namespace create{
 template< class Geometry>
 typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector volume( const Geometry& g)
 {
-    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector weights = dg::create::weights( g);
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector vector;
+    vector weights = dg::create::weights( g);
     dg::geo::multiplyVolume( weights, g);
     return weights;
 }

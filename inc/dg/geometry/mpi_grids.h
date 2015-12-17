@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geometry_traits.h"
 #include "../backend/mpi_grid.h"
 
 namespace dg
@@ -7,7 +8,7 @@ namespace dg
 
 struct CartesianMPIGrid2d : public MPI_Grid2d
 {
-    typedef CartesianTag metric_category; 
+    typedef OrthonormalTag metric_category; 
 
     CartesianMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): MPI_Grid2d( x0, x1, y0, y1, n, Nx, Ny, comm){}
 
@@ -17,7 +18,7 @@ struct CartesianMPIGrid2d : public MPI_Grid2d
 
 struct CartesianMPIGrid3d : public MPI_Grid3d
 {
-    typedef CartesianTag metric_category; 
+    typedef OrthonormalTag metric_category; 
 
     CartesianMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): MPI_Grid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm){}
 
@@ -44,9 +45,7 @@ struct CylindricalMPIGrid : public MPI_Grid3d
 
     const container& vol(){ return R_;}
     private:
-    thrust::host_vector<double> f_x_; //1d vector
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
-    container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
+    container R_;
 };
 
 }//namespace dg

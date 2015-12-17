@@ -29,7 +29,7 @@ int main()
     dg::HVec x = dg::evaluate( initial, grid);
 
     std::cout << "Create Laplacian\n";
-    dg::Elliptic< dg::HMatrix, dg::HVec, dg::HVec> A( grid);
+    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec, dg::HVec> A( grid);
     dg::CG<dg::HVec > pcg( x, n*n*Nx*Ny);
     std::cout<<"Evaluate right hand side\n";
     dg::HVec b = dg::evaluate ( laplace_fct, grid);

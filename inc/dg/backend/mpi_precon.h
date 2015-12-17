@@ -78,33 +78,6 @@ MPI_Vector<thrust::host_vector<double> > inv_weights( const MPI_Grid3d& g)
     return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
 
-//The volume forms 
-/**
-* @brief create Preconditioner containing 3d X-space weight coefficients
-*
-* @param g The grid 
-*
-* @return Preconditioner
-*/
-MPI_Vector<thrust::host_vector<double> > volume( const MPI_CylindricalGrid& g)
-{
-    CylindricalGrid grid( g.grid().local());
-    thrust::host_vector<double> w = create::weights( grid);
-    return MPI_Vector<thrust::host_vector<double> >( w, g.grid().communicator());
-}
-/**
-* @brief create Preconditioner containing 3d inverse X-space weight coefficients
-*
-* @param g The grid 
-*
-* @return Preconditioner
-*/
-MPI_Vector<thrust::host_vector<double> > inv_weights( const MPI_CylindricalGrid& g)
-{
-    CylindricalGrid grid( g.grid().local());
-    thrust::host_vector<double> w = create::inv_weights( grid);
-    return MPI_Vector<thrust::host_vector<double> >( w, g.grid().communicator());
-}
 ///@}
 }//namespace create
 
