@@ -2,10 +2,14 @@
 
 #include <cassert>
 #include "thrust/host_vector.h"
-#include "backend/mpi_vector.h"
-
-#include "../enums.h"
 #include "geometry/geometry_traits.h"
+#include "geometry/cartesian.h"
+#include "geometry/cylindrical.h"
+#ifdef MPI_VERSION
+#include "backend/mpi_vector.h"
+#include "geometry/mpi_grids.h"
+#endif//MPI_VERSION
+
 
 /*!@file 
  *
@@ -88,7 +92,7 @@ void raisePerpIndex( container& covX, container& covY, container& contraX, conta
 template<class container, class Geometry>
 void multiplyPerpVolume( container& inout, const Geometry& g)
 {
-    dg::geo::detail::doMuliplyPerpVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+    dg::geo::detail::doMultiplyPerpVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
 }
 
 /**
@@ -120,7 +124,7 @@ void dividePerpVolume( container& inout, const Geometry& g)
  * @param g The geometry object
  */
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void pushforwardPerp( TernaryOp1 fR, TenaryOp2& fZ, 
+void pushforwardPerp( TernaryOp1 fR, TernaryOp2& fZ, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vx, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vy,
         const Geometry& g)
@@ -136,35 +140,15 @@ void pushforwardPerp(
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
         const Geometry& g)
 {
-    pushforwardPerp<container, double(double, double, double), double(double, double, double), Geometry>( fR, fZ, out1, out2, g); 
+    pushforwardPerp<double(double, double, double), double(double, double, double), Geometry>( fR, fZ, out1, out2, g); 
 }
 ///@endcond
 
 }//namespace geo
 
-namespace create{
-
-///@cond
-namespace detail{
-
-template<class MemoryTag>
-struct HostVec {
-}
-template<>
-struct HostVec< SharedTag>
-{
-    typedef thrust::host_vector<double> host_vector;
-}
-template<>
-struct HostVec< MPITag>
-{
-    typedef MPI_Vector<thrust::host_vector<double> > host_vector;
-}
-
 ///@}
 
-}//namespace detail
-///@endcond
+namespace create{
 
 /**
  * @brief Create the volume element on the grid

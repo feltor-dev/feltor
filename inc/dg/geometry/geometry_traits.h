@@ -7,15 +7,32 @@ namespace dg
 struct CurvilinearTag{}; 
 struct CurvilinearCylindricalTag: public CurvilinearTag{}; //perpVol, vol(), g_xx, g_xy, g_yy
 struct OrthonormalCylindricalTag:public CurvilinearCylindricalTag{}; //vol()
-struct OrthonormalTag: public OrhonormalCylindricalTag{};
+struct OrthonormalTag: public OrthonormalCylindricalTag{};
 
 
 ///@cond
 template <class Geometry>
 struct GeometryTraits{
-    typedef typename Geometry::metric_category metric_category
-    typedef typename Geometry::memory_category memory_category
+    typedef typename Geometry::metric_category metric_category;
+    typedef typename Geometry::memory_category memory_category;
 };
+
+template<class MemoryTag>
+struct HostVec {
+};
+template<>
+struct HostVec< SharedTag>
+{
+    typedef thrust::host_vector<double> host_vector;
+};
+
+#ifdef MPI_VERSION
+template<>
+struct HostVec< MPITag>
+{
+    typedef MPI_Vector<thrust::host_vector<double> > host_vector;
+};
+#endif //MPI_VERSION
 
 namespace geo{
 namespace detail{
@@ -80,7 +97,7 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
 };
 
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void doPushforwardPerp( TernaryOp1 f1, TenaryOp2& f2, 
+void doPushforwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
         const Geometry& g, OrthonormalCylindricalTag)
@@ -90,7 +107,7 @@ void doPushforwardPerp( TernaryOp1 f1, TenaryOp2& f2,
 }
 
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void doPushforwardPerp( TernaryOp1 f1, TenaryOp2& f2, 
+void doPushforwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
         const Geometry& g, CurvilinearCylindricalTag)

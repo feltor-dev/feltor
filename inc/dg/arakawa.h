@@ -105,17 +105,17 @@ struct ArakawaX
     {
         blas2::symv( bdxf, lhs, dxlhs);
         blas2::symv( bdyf, lhs, dylhs);
-        geo::raisePerpIndex( dxlhs, dylhs, helper, result, grid);
+        geo::raisePerpIndex( dxlhs, dylhs, helper_, result, grid);
         blas2::symv( bdxf, rhs, dxrhs);
         blas2::symv( bdyf, rhs, dyrhs);
-        blas1::pointwiseDot( helper, dxrhs, dxrhs);
+        blas1::pointwiseDot( helper_, dxrhs, dxrhs);
         blas1::pointwiseDot( result, dyrhs, dyrhs);
         blas1::axpby( 1., dxrhs, 1., dyrhs, result);
 
     }
 
   private:
-    container dxlhs, dxrhs, dylhs, dyrhs, helper;
+    container dxlhs, dxrhs, dylhs, dyrhs, helper_;
     Matrix bdxf, bdyf;
     Geometry grid;
 };
@@ -124,13 +124,13 @@ struct ArakawaX
 //needs less memory!! and is faster
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g ): 
-    dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs), 
+    dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs), 
     bdxf( dg::create::dx( g, g.bcx())),
     bdyf( dg::create::dy( g, g.bcy())), grid( g)
 { }
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g, bc bcx, bc bcy): 
-    dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper( dxlhs),
+    dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf(dg::create::dx( g, bcx)),
     bdyf(dg::create::dy( g, bcy)), grid(g)
 { }
@@ -147,7 +147,7 @@ void ArakawaX< Geometry, Matrix, container>::operator()( container& lhs, contain
     // order is important now
     // +x (1) -> result und (2) -> blhs
     blas1::pointwiseDot( lhs, dyrhs, result);
-    blas1::pointwiseDot( lhs, dxrhs, helper);
+    blas1::pointwiseDot( lhs, dxrhs, helper_);
 
     // ++ (1) -> dyrhs and (2) -> dxrhs
     blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
@@ -159,7 +159,7 @@ void ArakawaX< Geometry, Matrix, container>::operator()( container& lhs, contain
 
     blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
     //everything which needs a dx 
-    blas1::axpby( 1./3., dxlhs, -1./3., helper);   //dxl*r - l*dxr     -> helper 
+    blas1::axpby( 1./3., dxlhs, -1./3., helper_);   //dxl*r - l*dxr     -> helper 
     //everything which needs a dy
     blas1::axpby( 1./3., result, -1./3., dylhs); //l*dyr - dyl*r     -> dylhs
 
@@ -168,7 +168,7 @@ void ArakawaX< Geometry, Matrix, container>::operator()( container& lhs, contain
     //blas1::axpby( 1., dxlhs,  -0., helper); //x+ - +x
     //blas1::axpby( 0., result, -1., dylhs);  //+x - x+
 
-    blas2::symv( bdyf, helper, result);      //dy*(dxl*r - l*dxr) -> result
+    blas2::symv( bdyf, helper_, result);      //dy*(dxl*r - l*dxr) -> result
     blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
     //now sum everything up
     blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
