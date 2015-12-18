@@ -2,11 +2,17 @@
 
 #include <cassert>
 #include "thrust/host_vector.h"
+#include "backend/evaluation.cuh"
+#include "backend/weights.cuh"
+#ifdef MPI_VERSION
+#include "backend/mpi_vector.h"
+#include "backend/mpi_evaluation.h"
+#include "backend/mpi_precon.h"
+#endif//MPI_VERSION
 #include "geometry/geometry_traits.h"
 #include "geometry/cartesian.h"
 #include "geometry/cylindrical.h"
 #ifdef MPI_VERSION
-#include "backend/mpi_vector.h"
 #include "geometry/mpi_grids.h"
 #endif//MPI_VERSION
 

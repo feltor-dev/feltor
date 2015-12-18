@@ -131,13 +131,13 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     for( unsigned i=0; i<x.size(); i++)
     {
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << "xi = " << x[i] <<std::endl;
+            std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
         }
         
         assert(x[i] >= g.x0() && x[i] <= g.x1());
         
         if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
-            std::cerr << "yi = " << y[i] <<std::endl;
+            std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
         }
         assert( y[i] >= g.y0() && y[i] <= g.y1());
 

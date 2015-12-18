@@ -8,6 +8,7 @@
 
 #include "backend/functions.h"
 #include "backend/timer.cuh"
+#include "geometry.h"
 
 struct Field
 {
@@ -59,8 +60,8 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
-    const dg::DVec w3d = dg::create::weights( g3d);
+    dg::CylindricalGrid<dg::DVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
+    const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
     dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
@@ -92,10 +93,10 @@ int main()
     std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     ds.forward( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     ds.backward( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     
     return 0;
 }

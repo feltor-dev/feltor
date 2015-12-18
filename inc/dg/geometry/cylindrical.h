@@ -35,18 +35,17 @@ struct CylindricalGrid : public Grid3d<double>
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): Grid3d<double>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){
-        R_ = dg::evaluate( dg::coo1, *this);
-    
-    }
+    CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
+        Grid3d<double>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz),
+        R_(dg::evaluate( dg::coo1, *this)){}
     /**
      * @brief Construct from existing topology
      *
      * @param grid existing grid class
      */
-    CylindricalGrid( const Grid3d<double>& grid):Grid3d<double>(grid){
-        R_ = dg::evaluate( dg::coo1, *this);
-    }
+    CylindricalGrid( const Grid3d<double>& grid):
+        Grid3d<double>(grid),
+        R_(dg::evaluate( dg::coo1, *this)){}
     /**
      * @brief The volume element
      *
@@ -73,5 +72,12 @@ thrust::host_vector<double> pullback( TernaryOp f, const CylindricalGrid<contain
 {
     return evaluate( f, g);
 }
+///@cond
+template<class container>
+thrust::host_vector<double> pullback( double(f)(double,double,double), const CylindricalGrid<container>& g)
+{
+    return pullback<double(double,double,double),container>( f, g);
+}
+///@endcond
 
 } //namespace dg

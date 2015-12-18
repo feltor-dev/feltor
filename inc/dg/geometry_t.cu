@@ -2,8 +2,8 @@
 
 #include <cusp/print.h>
 
-#include "backend/evaluation.cuh"
 #include "geometry.h"
+#include "backend/evaluation.cuh"
 
 #include "blas2.h"
 
@@ -12,18 +12,16 @@ double R_0 = 4.*M_PI;
 
 double sine( double R, double Z,double phi){ return sin(R-R_0)*sin(Z)*sin(phi)/sqrt(R);}
 
-namespace dg
-{
-typedef thrust::device_vector<double> DVec;
-}
+namespace dg { typedef thrust::device_vector<double> DVec; }
 
 //TEST geometry.h for every container and geometry that you want to use
 int main()
 {
-    std::cout << "Type n, Nx, Ny, Nz\n";
-    unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;
-    dg::CylindricalGrid<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
+    //std::cout << "Type n, Nx, Ny, Nz\n";
+    //unsigned n, Nx, Ny, Nz;
+    //std::cin >> n>> Nx>>Ny>>Nz;
+    //dg::CylindricalGrid<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
+    dg::CylindricalGrid<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::DIR, dg::DIR, dg::PER);
 
     dg::DVec b = dg::evaluate( sine, grid);
     dg::DVec vol3d = dg::create::volume( grid);

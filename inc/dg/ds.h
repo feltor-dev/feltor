@@ -1,6 +1,7 @@
 #pragma once
 
 #include "blas.h"
+#include "geometry.h"
 #include "backend/derivatives.h"
 #include "geometry/fieldaligned.h"
 #ifdef MPI_VERSION

@@ -280,7 +280,7 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(
     right_ = left_ = dg::evaluate( zero, g2d.local());
     ghostM.resize( localsize); ghostP.resize( localsize);
     //set up grid points as start for fieldline integrations 
-    std::vector<MPI_Vector<thrust::host_vector<double> > > y( 5);
+    std::vector<MPI_Vector<thrust::host_vector<double> > > y( 5, dg::evaluate(dg::zero, grid));
     y[0] = dg::evaluate( dg::coo1, grid);
     y[1] = dg::evaluate( dg::coo2, grid);
     y[2] = dg::evaluate( dg::zero, grid);//distance (not angle)

@@ -475,121 +475,19 @@ struct NotANumber : public std::exception
 };
 
 /**
- * @brief Integrates the differential equation using RK4 and a rudimentary stepsize-control
+ * @brief Integrate differential equation with a s-stage RK scheme and a fixed number of steps
  *
  * @ingroup algorithms
- * Doubles the number of timesteps until the desired accuracy is reached
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
+ * @tparam s # of stages
  * @param rhs The right-hand-side
  * @param begin initial condition (size 3)
  * @param end (write-only) contains solution on output
+ * @param T_min initial time
  * @param T_max final time
- * @param eps_abs desired absolute accuracy
+ * @param N # of steps to use
  */
-template< class RHS, class Vector, unsigned s>
-void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
-{
-    RK_classic<s, Vector > rk( begin); 
-    Vector old_end(begin), temp(begin),diffm(begin);
-    end = begin;
-    if( T_max == 0) return;
-    double dt = T_max/10;
-    int NT = 10;
-    double error = 1e10;
-    //bool flag = false; 
- 
-    while( error > eps_abs && NT < pow( 2, 18) )
-    {
-        dt /= 2.;
-        NT *= 2;
-        end = begin;
-
-        int i=0;
-        while (i<NT && NT < pow( 2, 18))
-        {
-            rk( rhs, end, temp, dt); 
-            end.swap( temp); //end is one step further 
-            dg::blas1::axpby( 1., end, -1., old_end,diffm); //abs error=oldend = end-oldend
-            error = sqrt( dg::blas1::dot( diffm, diffm));
-            if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2])        ) 
-            {
-                dt /= 2.;
-                NT *= 2;
-                i=-1;
-                end = begin;
-                #ifdef DG_DEBUG
-                    std::cout << "---------Got NaN -> choosing smaller step size and redo integration" << " NT "<<NT<<" dt "<<dt<< std::endl;
-                #endif
-            }
-            //if new integrated point outside domain
-            if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-            {
-                error = eps_abs/10;
-                #ifdef DG_DEBUG
-                    std::cout << "---------Point outside box -> stop integration" << std::endl; 
-                #endif
-                i=NT;
-            }
-            i++;
-        }  
-
-
-        old_end = end;
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
-#endif //MPI
-        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
-#endif //DG_DEBUG
-    }
-
-    if( isnan(error) )
-    {
-        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
-        throw NotANumber();
-    }
-    if( error > eps_abs )
-    {
-        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<std::endl;
-        throw Fail( eps_abs);
-    }
-
-
-}
-
-/**
- * @brief Integrates the differential equation using RK4 and a rudimentary stepsize-control
- *
- * @ingroup algorithms
- * Doubles the number of timesteps until the desired accuracy is reached
- * @tparam RHS The right-hand side class
- * @tparam Vector Vector-class (needs to be copyable)
- * @param rhs The right-hand-side
- * @param begin initial condition (size 3)
- * @param end (write-only) contains solution on output
- * @param T_max final time
- * @param eps_abs desired absolute accuracy
- */
-template< class RHS, class Vector>
-void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
-{
-    integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
-}
-
-template< class RHS, class Vector>
-void integrateRK6(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
-{
-    integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
-}
-template< class RHS, class Vector>
-void integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
-{
-    integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
-}
-
 template< class RHS, class Vector, unsigned s>
 void stepperRK(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
 {
@@ -606,7 +504,7 @@ void stepperRK(RHS& rhs, const Vector& begin, Vector& end, double T_min, double 
 }
 
 /**
- * @brief Integrates the differential equation using RK4 and a fixed number of steps
+ * @brief Integrates the differential equation using RK 4 and a fixed number of steps
  *
  * @ingroup algorithms
  * @tparam RHS The right-hand side class
@@ -623,11 +521,37 @@ void stepperRK4(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
 {
     stepperRK<RHS, Vector, 4>( rhs, begin, end, T_min, T_max, N);
 }
+/**
+ * @brief Integrates the differential equation using RK 6 and a fixed number of steps
+ *
+ * @ingroup algorithms
+ * @tparam RHS The right-hand side class
+ * @tparam Vector Vector-class (needs to be copyable)
+ * @param rhs The right-hand-side
+ * @param begin initial condition 
+ * @param end (write-only) contains solution on output
+ * @param T_max initial time
+ * @param T_max final time
+ * @param N number of steps 
+ */
 template< class RHS, class Vector>
 void stepperRK6(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
 {
     stepperRK<RHS, Vector, 6>( rhs, begin, end, T_min, T_max, N);
 }
+/**
+ * @brief Integrates the differential equation using RK 17 and a fixed number of steps
+ *
+ * @ingroup algorithms
+ * @tparam RHS The right-hand side class
+ * @tparam Vector Vector-class (needs to be copyable)
+ * @param rhs The right-hand-side
+ * @param begin initial condition 
+ * @param end (write-only) contains solution on output
+ * @param T_max initial time
+ * @param T_max final time
+ * @param N number of steps 
+ */
 template< class RHS, class Vector>
 void stepperRK17(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
 {

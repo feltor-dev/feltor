@@ -33,16 +33,16 @@ struct CylindricalMPIGrid : public MPI_Grid3d
 
     CylindricalMPIGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
         MPI_Grid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm), 
-        R_( dg::evaluate( dg::coo1, *this) { }
+        R_( dg::evaluate( dg::coo1, *this)) { }
 
     CylindricalMPIGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         MPI_Grid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
-        R_( dg::evaluate( dg::coo1, *this)
+        R_( dg::evaluate( dg::coo1, *this))
         {}
 
     CylindricalMPIGrid( const MPI_Grid3d& grid ):
         MPI_Grid3d( grid),
-        R_( dg::evaluate( dg::coo1, *this)
+        R_( dg::evaluate( dg::coo1, *this))
     {}
 
     const container& vol() const { return R_;}

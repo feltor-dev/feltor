@@ -44,6 +44,111 @@ struct NoLimiter
 };
 
 /**
+ * @brief Integrates the differential equation using a s stage RK scheme and a rudimentary stepsize-control
+ *
+ * @ingroup algorithms
+ * Doubles the number of timesteps until the desired accuracy is reached
+ * Checks for NaN errors on the way and if the fieldline diverges. The error is computed in the first three vector elements (x,y,s)
+ * @tparam RHS The right-hand side class
+ * @tparam Vector Vector-class (needs to be copyable)
+ * @param rhs The right-hand-side
+ * @param begin initial condition (size 3)
+ * @param end (write-only) contains solution on output
+ * @param T_max final time
+ * @param eps_abs desired absolute accuracy
+ */
+template< class RHS, class Vector, unsigned s>
+void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    RK_classic<s, Vector > rk( begin); 
+    Vector old_end(begin), temp(begin),diffm(begin);
+    end = begin;
+    if( T_max == 0) return;
+    double dt = T_max/10;
+    int NT = 10;
+    double error = 1e10;
+    //bool flag = false; 
+ 
+    while( error > eps_abs && NT < pow( 2, 18) )
+    {
+        dt /= 2.;
+        NT *= 2;
+        end = begin;
+
+        int i=0;
+        while (i<NT && NT < pow( 2, 18))
+        {
+            rk( rhs, end, temp, dt); 
+            end.swap( temp); //end is one step further 
+            dg::blas1::axpby( 1., end, -1., old_end,diffm); //abs error=oldend = end-oldend
+            double temp = diffm[0]*diffm[0]+diffm[1]*diffm[1]+diffm[2]*diffm[2];
+            error = sqrt( temp );
+            if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2])        ) 
+            {
+                dt /= 2.;
+                NT *= 2;
+                i=-1;
+                end = begin;
+                #ifdef DG_DEBUG
+                    std::cout << "---------Got NaN -> choosing smaller step size and redo integration" << " NT "<<NT<<" dt "<<dt<< std::endl;
+                #endif
+            }
+            //if new integrated point outside domain
+            if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+            {
+                error = eps_abs/10;
+                #ifdef DG_DEBUG
+                    std::cout << "---------Point outside box -> stop integration" << std::endl; 
+                #endif
+                i=NT;
+            }
+            i++;
+        }  
+
+
+        old_end = end;
+#ifdef DG_DEBUG
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
+        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
+#endif //DG_DEBUG
+    }
+
+    if( isnan(error) )
+    {
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
+        throw NotANumber();
+    }
+    if( error > eps_abs )
+    {
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<std::endl;
+        throw Fail( eps_abs);
+    }
+
+
+}
+
+template< class RHS, class Vector>
+void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
+}
+
+template< class RHS, class Vector>
+void integrateRK6(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
+}
+template< class RHS, class Vector>
+void integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
+}
+
+/**
  * @brief Integrate a field line to find whether the result lies inside or outside of the box
  *
  * @tparam Field Must be usable in the integrateRK4 function
@@ -113,12 +218,12 @@ void boxintegrator( Field& field, const Grid& grid,
         thrust::host_vector<double>& coords1, 
         double& phi1, double eps, dg::bc globalbcz)
 {
-    dg::integrateRK17( field, coords0, coords1, phi1, eps); //+ integration
+    dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
     //First catch periodic domain
-    if( coords[0] < grid.x0() && grid.bcx() == dg::PER) coords[0] += grid.lx();
-    if( coords[0] > grid.x1() && grid.bcx() == dg::PER) coords[0] -= grid.lx();
-    if( coords[1] < grid.y0() && grid.bcy() == dg::PER) coords[1] += grid.lx();
-    if( coords[1] > grid.y1() && grid.bcy() == dg::PER) coords[1] -= grid.lx();
+    if( coords1[0] < grid.x0() && grid.bcx() == dg::PER) coords1[0] += grid.lx();
+    if( coords1[0] > grid.x1() && grid.bcx() == dg::PER) coords1[0] -= grid.lx();
+    if( coords1[1] < grid.y0() && grid.bcy() == dg::PER) coords1[1] += grid.ly();
+    if( coords1[1] > grid.y1() && grid.bcy() == dg::PER) coords1[1] -= grid.ly();
     if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())  
          || !(coords1[1] >= grid.y0() && coords1[1] <= grid.y1())  ) //Punkt liegt immer noch außerhalb 
     {
@@ -356,7 +461,7 @@ FieldAligned<M,container>::FieldAligned(Field field, Geometry grid, double eps, 
     y[3] = dg::pullback( dg::coo1, grid); //R
     y[4] = dg::pullback( dg::coo2, grid); //Z
     //integrate field lines for all points
-    std::vector<thrust::host_vector<double> > yp( 3, y[0]), ym(yp); 
+    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2d)), ym(yp); 
     if( deltaPhi <=0) deltaPhi = g_.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
 #ifdef _OPENMP
@@ -365,7 +470,7 @@ FieldAligned<M,container>::FieldAligned(Field field, Geometry grid, double eps, 
     for( unsigned i=0; i<size; i++)
     {
         thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i], coords[2] = y[3][i], coords[4] = y[4][i];
+        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i], coords[3] = y[3][i], coords[4] = y[4][i];
         double phi1 = deltaPhi;
         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
         phi1 =  - deltaPhi;

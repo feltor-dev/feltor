@@ -33,7 +33,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cin >> eps;
     MPI_Bcast(  &eps,1 , MPI_DOUBLE, 0, comm);
 
-    dg::MPI_Grid3d grid( 0., lx, 0, ly, 0, lz, n, Nx, Ny,Nz, bcx, dg::PER,dg::PER, comm);
+    dg::CartesianMPIGrid3d grid( 0., lx, 0, ly, 0, lz, n, Nx, Ny,Nz, bcx, dg::PER,dg::PER, comm);
     const dg::MDVec w3d = dg::create::weights( grid);
     const dg::MDVec v3d = dg::create::inv_weights( grid);
     if(rank==0)std::cout<<"Expand initial condition\n";
