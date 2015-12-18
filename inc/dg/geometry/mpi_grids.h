@@ -2,6 +2,7 @@
 
 #include "geometry_traits.h"
 #include "../backend/mpi_grid.h"
+#include "cylindrical.h"
 
 namespace dg
 {
@@ -49,5 +50,29 @@ struct CylindricalMPIGrid : public MPI_Grid3d
     private:
     container R_;
 };
+
+/**
+ * @brief evaluates a cylindrical function 
+ *
+ * same as evaluate
+ * @tparam TernaryOp Ternary function object
+ * @tparam container The container class of the Cylindrical Grid
+ * @param f functor
+ * @param g geometry
+ *
+ * @return new instance of thrust vector
+ */
+template<class TernaryOp, class container>
+MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const CylindricalMPIGrid<container>& g)
+{
+    return evaluate( f, g);
+}
+///@cond
+template<class container>
+MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double,double), const CylindricalMPIGrid<container>& g)
+{
+    return pullback<double(double,double,double),container>( f, g);
+}
+///@endcond
 
 }//namespace dg

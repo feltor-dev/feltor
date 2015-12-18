@@ -258,7 +258,7 @@ struct MPI_FieldAligned
     LocalMatrix plusT, minusT; //interpolation matrices
     //Communicator collM_, collP_;
 
-    dg::FieldAligned<LocalMatrix, LocalContainer > dz_; //only stores 2D matrix so no memory pb.
+    //dg::FieldAligned<LocalMatrix, LocalContainer > dz_; //only stores 2D matrix so no memory pb.
 };
 ///@cond
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
@@ -268,7 +268,7 @@ MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()), 
     tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz()),
-    dz_(field, grid.global(), eps, limit, globalbcz, deltaPhi)
+    //dz_(field, grid.globalWithMetric(), eps, limit, globalbcz, deltaPhi)
 {
     //create communicator with all processes in plane
     MPI_Comm planeComm;
@@ -364,19 +364,43 @@ template<class M, class C, class container>
 template< class BinaryOp>
 MPI_Vector<container> MPI_FieldAligned<M,C,container>::evaluate( BinaryOp f, unsigned p0) const
 {
-    container global_vec = dz_.evaluate( f, p0);
-    container vec = dg::evaluate( dg::zero, g_.local());
-    //now take the relevant part 
-    int dims[3], periods[3], coords[3];
-    MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
-    unsigned Nx = g_.Nx()*g_.n(), Ny = g_.Ny()*g_.n(), Nz = g_.Nz();
-    for( unsigned s=0; s<Nz; s++)
-        for( unsigned i=0; i<Ny; i++)
-            for( unsigned j=0; j<Nx; j++)
-                vec[ (s*Ny+i)*Nx + j ] 
-                    = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
-                   
-    return MPI_Vector<container>( vec, g_.communicator());
+    //container global_vec = dz_.evaluate( f, p0);
+    //container vec = dg::evaluate( dg::zero, g_.local());
+    ////now take the relevant part 
+    //int dims[3], periods[3], coords[3];
+    //MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
+    //unsigned Nx = g_.Nx()*g_.n(), Ny = g_.Ny()*g_.n(), Nz = g_.Nz();
+    //for( unsigned s=0; s<Nz; s++)
+    //    for( unsigned i=0; i<Ny; i++)
+    //        for( unsigned j=0; j<Nx; j++)
+    //            vec[ (s*Ny+i)*Nx + j ] 
+    //                = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
+    //               
+    //return MPI_Vector<container>( vec, g_.communicator());
+    assert( p0 < g_.Nz() && g_.Nz() > 1);
+    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    container vec2d = dg::evaluate( binary, g2d);
+    //1. compute 2d interpolation in every plane and store in temp_
+    if( sizeXY != 1) //communication needed
+    {
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
+        {
+            cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
+            View tempV( tempXYplus_[i0].begin(), tempXYplus_[i0].end() );
+            cusp::multiply( plus, inV, tempV);
+            //exchange data in XY
+            commXYplus_.send_and_reduce( tempXYplus_[i0], temp_[i0]);
+        }
+    }
+    else //directly compute in temp_
+    {
+        for( int i0=0; i0<(int)g_.Nz(); i0++)
+        {
+            cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
+            View tempV( temp_[i0].begin(), temp_[i0].end() );
+            cusp::multiply( plus, inV, tempV);
+        }
+    }
 }
 
 template<class M, class C, class container>
