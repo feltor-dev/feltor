@@ -64,7 +64,9 @@ class Elliptic
         weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)), 
         xchi( dg::evaluate( one, g) ), tempx(xchi), tempy( xchi), gradx(xchi),
         no_(no), g_(g)
-    { }
+    { 
+        dg::geo::multiplyVolume( xchi, g_); 
+    }
 
     /**
      * @brief Construct from grid and boundary conditions
@@ -89,7 +91,9 @@ class Elliptic
         weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)),
         xchi( dg::evaluate( one, g) ), tempx(xchi), tempy( xchi), gradx(xchi),
         no_(no), g_(g)
-    { }
+    { 
+        dg::geo::multiplyVolume( xchi, g_); 
+    }
 
     /**
      * @brief Change Chi 

@@ -16,19 +16,38 @@ namespace dg
 {
 typedef thrust::device_vector<double> DVec;
 }
+
+//TEST geometry.h for every container and geometry that you want to use
 int main()
 {
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    dg::CylindricalGrid<dg::DVec> grid3d( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
+    dg::CylindricalGrid<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
 
-    dg::DVec b = dg::evaluate( sine, grid3d);
-    dg::DVec w3d = dg::create::volume( grid3d);
-    dg::DVec v3d = dg::create::inv_volume( grid3d);
+    dg::DVec b = dg::evaluate( sine, grid);
+    dg::DVec vol3d = dg::create::volume( grid);
+    double test = dg::blas2::dot( b, vol3d, b);
+    double sol = M_PI*M_PI*M_PI;
+    std::cout << "Test of volume:         "<<test<< " sol = " << sol<< "\t";
+    std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
+    dg::DVec temp = dg::create::weights( grid);
+    dg::geo::multiplyVolume( temp, grid);
+    test = dg::blas2::dot( b, temp, b);
+    std::cout << "Test of multiplyVolume: "<<test<< " sol = " << sol<< "\t";
+    std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
 
-    std::cout << "Test of w3d: "<<dg::blas2::dot(b, w3d, b)<< " sol = " << M_PI*M_PI*M_PI<< std::endl;
-    std::cout << "rel diff = " <<( dg::blas2::dot(b, w3d, b) -  M_PI*M_PI*M_PI)/ M_PI*M_PI*M_PI<<std::endl;
+    dg::DVec inv3d = dg::create::inv_volume( grid);
+    dg::blas1::pointwiseDot( vol3d, b, b);
+    test = dg::blas2::dot( b, inv3d, b);
+    std::cout << "Test of inv_volume:     "<<test<< " sol = " << sol<< "\t";
+    std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
+    temp = dg::create::inv_weights( grid);
+    dg::geo::divideVolume( temp, grid);
+    test = dg::blas2::dot( b, temp, b);
+    std::cout << "Test of divideVolume:   "<<test<< " sol = " << sol<< "\t";
+    std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
+
 
     return 0;
 }

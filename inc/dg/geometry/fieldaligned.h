@@ -2,10 +2,10 @@
 #include <cusp/transpose.h>
 #include <cusp/csr_matrix.h>
 
-#include "grid.h"
+#include "../backend/grid.h"
 #include "../blas.h"
-#include "interpolation.cuh"
-#include "functions.h"
+#include "../backend/interpolation.cuh"
+#include "../backend/functions.h"
 
 #include "../functors.h"
 #include "../nullstelle.h"
@@ -339,7 +339,7 @@ struct FieldAligned
 
 template<class M, class container>
 template <class Field, class Geometry, class Limiter>
-FieldAligned<M,container>::FieldAligned(Field field, const Geometry& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
+FieldAligned<M,container>::FieldAligned(Field field, Geometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         g_(grid), bcz_(grid.bcz())
 {

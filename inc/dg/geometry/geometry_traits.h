@@ -127,6 +127,43 @@ void doPushforwardPerp( TernaryOp1 f1, TernaryOp2 f2,
 
 }//namespace detail 
 }//namespace geo
+
+namespace create{
+namespace detail{
+
+template< class Geometry>
+typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector doCreateVolume( const Geometry& g, OrthonormalTag)
+{
+    return dg::create::weights( g);
+}
+
+template< class Geometry>
+typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector doCreateInvVolume( const Geometry& g, OrthonormalTag)
+{
+    return dg::create::inv_weights( g);
+}
+template< class Geometry>
+typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector doCreateVolume( const Geometry& g, CurvilinearTag)
+{
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vector;
+    host_vector temp = dg::create::weights( g);
+    host_vector vol = g.vol();
+    dg::blas1::pointwiseDot( vol, temp, temp);
+    return temp;
+}
+
+template< class Geometry>
+typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector doCreateInvVolume( const Geometry& g, CurvilinearTag)
+{
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vector;
+    host_vector temp = dg::create::inv_weights( g);
+    host_vector vol = g.vol();
+    dg::blas1::pointwiseDivide( temp, vol, temp);
+    return temp;
+}
+
+}//namespace detail
+}//namespace create
 ///@endcond
 
 } //namespace dg

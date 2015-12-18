@@ -1,14 +1,14 @@
 #pragma once
 
 #include "fieldaligned.h"
-#include "grid.h"
-#include "mpi_evaluation.h"
-#include "mpi_matrix.h"
-#include "mpi_matrix_blas.h"
-#include "mpi_collective.h"
-#include "mpi_grid.h"
-#include "interpolation.cuh"
-#include "functions.h"
+#include "../backend/grid.h"
+#include "../backend/mpi_evaluation.h"
+#include "../backend/mpi_matrix.h"
+#include "../backend/mpi_matrix_blas.h"
+#include "../backend/mpi_collective.h"
+#include "../backend/mpi_grid.h"
+#include "../backend/interpolation.cuh"
+#include "../backend/functions.h"
 #include "../runge_kutta.h"
 
 namespace dg{
@@ -108,8 +108,8 @@ struct MPI_FieldAligned
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
-    template <class Field, class Limiter>
-    MPI_FieldAligned(Field field, const dg::MPI_Grid3d& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1 );
+    template <class Field, class Geometry, class Limiter>
+    MPI_FieldAligned(Field field, Geometry grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1 );
 
     /**
      * @brief Set boundary conditions
@@ -264,7 +264,7 @@ struct MPI_FieldAligned
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class LocalMatrix, class CommunicatorXY, class LocalContainer>
 template <class Field, class MPIGeometry, class Limiter>
-MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(Field field, const MPIGeometry& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
+MPI_FieldAligned<LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(Field field, MPIGeometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()), 
     tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz()),
