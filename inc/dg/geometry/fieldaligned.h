@@ -427,13 +427,13 @@ struct FieldAligned
     *
     * @return the grid
     */
-    const Grid3d<double>& grid() const{return g_;}
+    const Geometry& grid() const{return g_;}
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
     container hz_, hp_,hm_, ghostM, ghostP;
-    dg::Grid3d<double> g_;
+    Geometry g_;
     dg::bc bcz_;
     container left_, right_;
     container limiter_;
@@ -442,27 +442,28 @@ struct FieldAligned
 ///@cond 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
-template<class M, class container>
-template <class Field, class Geometry, class Limiter>
+template<class Geometry, class M, class container>
+template <class Field, class Limiter>
 FieldAligned<M,container>::FieldAligned(Field field, Geometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         g_(grid), bcz_(grid.bcz())
 {
     //Resize vector to 2D grid size
-    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny(), g_.bcx(), g_.bcy());  
+
+    typename Geometry::perpendicular_grid g2d = grid.perp_grid( );
     unsigned size = g2d.size();
     limiter_ = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
     ghostM.resize( size); ghostP.resize( size);
     //Set starting points
-    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::coo1, grid)); // x
-    y[1] = dg::evaluate( dg::coo2, grid); //y
-    y[2] = dg::evaluate( dg::zero, grid);
-    y[3] = dg::pullback( dg::coo1, grid); //R
-    y[4] = dg::pullback( dg::coo2, grid); //Z
+    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::coo1, g2d)); // x
+    y[1] = dg::evaluate( dg::coo2, g2d); //y
+    y[2] = dg::evaluate( dg::zero, g2d);
+    y[3] = dg::pullback( dg::coo1, g2d); //R
+    y[4] = dg::pullback( dg::coo2, g2d); //Z
     //integrate field lines for all points
     std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2d)), ym(yp); 
-    if( deltaPhi <=0) deltaPhi = g_.hz();
+    if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
 #ifdef _OPENMP
 #pragma omp parallel for shared(field)
@@ -495,8 +496,8 @@ FieldAligned<M,container>::FieldAligned(Field field, Geometry grid, double eps, 
  
 }
 
-template<class M, class container>
-void FieldAligned<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
+template<class G, class M, class container>
+void FieldAligned<G,M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     cView left( global.cbegin(), global.cbegin() + size);
@@ -510,14 +511,13 @@ void FieldAligned<M,container>::set_boundaries( dg::bc bcz, const container& glo
     bcz_ = bcz;
 }
 
-template< class M, class container>
+template< class G, class M, class container>
 template< class BinaryOp>
-container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0) const
+container FieldAligned<G,M,container>::evaluate( BinaryOp binary, unsigned p0) const
 {
-
     assert( p0 < g_.Nz() && g_.Nz() > 1);
-    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    container vec2d = dg::evaluate( binary, g2d);
+    const typename G::perpendicular_grid g2d = g_.perp_grid();
+    container vec2d = dg::pullback( binary, g2d);
     View g0( vec2d.begin(), vec2d.end());
     container vec3d( g_.size());
     View f0( vec3d.begin() + p0*g2d.size(), vec3d.begin() + (p0+1)*g2d.size());
@@ -540,9 +540,9 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0) con
     return vec3d;
 }
 
-template< class M, class container>
+template<class G, class M, class container>
 template< class BinaryOp, class UnaryOp>
-container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
+container FieldAligned<G,M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
 {
 
     assert( g_.Nz() > 1);
@@ -591,8 +591,8 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, u
 }
 
 
-template< class M, class container>
-void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
+template< class G, class M, class container>
+void FieldAligned<G,M, container>::einsPlus( const container& f, container& fpe)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     View ghostPV( ghostP.begin(), ghostP.end());
@@ -626,8 +626,8 @@ void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
     }
 }
 
-template< class M, class container>
-void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
+template< class G,class M, class container>
+void FieldAligned<G,M, container>::einsMinus( const container& f, container& fme)
 {
     //note that thrust functions don't work on views
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
@@ -662,8 +662,8 @@ void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
     }
 }
 
-template< class M, class container>
-void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
+template< class G,class M, class container>
+void FieldAligned<G,M, container>::einsMinusT( const container& f, container& fpe)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     View ghostPV( ghostP.begin(), ghostP.end());
@@ -698,8 +698,8 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
     }
 }
 
-template< class M, class container>
-void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
+template< class G,class M, class container>
+void FieldAligned<G,M, container>::einsPlusT( const container& f, container& fme)
 {
     //note that thrust functions don't work on views
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();

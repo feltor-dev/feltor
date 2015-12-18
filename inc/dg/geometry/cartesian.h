@@ -60,6 +60,28 @@ struct CartesianGrid2d: public Grid2d<double>
 };
 
 /**
+ * @brief evaluates a two-dimensional function 
+ *
+ * same as evaluate
+ * @tparam BinaryOp Binaryy function object
+ * @param f functor
+ * @param g geometry
+ *
+ * @return new instance of thrust vector
+ */
+template<class BinaryOp>
+MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const CartesianGrid2d& g)
+{
+    return evaluate( f, g);
+}
+///@cond
+MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), const CartesianGrid2d& g)
+{
+    return pullback<double(double,double),container>( f, g);
+}
+///@endcond
+
+/**
  * @brief three-dimensional Grid with Cartesian metric
  */
 struct CartesianGrid3d: public Grid3d<double>

@@ -66,7 +66,7 @@ int main()
     t.tic();
     dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
 
-    dg::DDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
+    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 

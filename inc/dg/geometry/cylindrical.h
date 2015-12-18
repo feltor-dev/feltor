@@ -17,6 +17,7 @@ template<class container>
 struct CylindricalGrid : public Grid3d<double>
 {
     typedef OrthonormalCylindricalTag metric_category; 
+    typedef CartesianGrid2d perpendicular_grid;
     /**
      * @brief Construct a 3D grid
      *
@@ -51,6 +52,8 @@ struct CylindricalGrid : public Grid3d<double>
      *
      * @return the volume element
      */
+
+    perpendicular_grid perp_grid() const { return CartesianGrid2d( x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
     const container& vol()const {return R_;}
     private:
     container R_;
