@@ -11,7 +11,7 @@
 #include "file/nc_utilities.h"
 
 #include "feltor/parameters.h"
-#include "geometry.h"
+#include "solovev.h"
 #include "init.h"
 
 int main( int argc, char* argv[])

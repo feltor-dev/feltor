@@ -8,7 +8,8 @@
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
-#include "solovev/geometry.h"
+#include "dg/geometry.h"
+#include "solovev.h"
 
 
 
@@ -280,14 +281,17 @@ struct FieldFinv
 };
 } //namespace detail
 
+template< class container>
+struct ConformalRingGrid2d; 
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct ConformalRingGrid : public Grid3d<double>
+struct ConformalRingGrid3d : public dg::Grid3d<double>
 {
-    typedef CurvilinearCylindricalTag metric_category;
+    typedef dg::CurvilinearCylindricalTag metric_category;
+    typedef ConformalRingGrid2d<container> perpendicular_grid;
 
     /**
      * @brief Construct 
@@ -301,20 +305,20 @@ struct ConformalRingGrid : public Grid3d<double>
      * @param Nz The number of points in z-direction
      * @param bcx The boundary condition in x (y,z are periodic)
      */
-    ConformalRingGrid( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-        Grid3d<double>( 0, detail::Fpsi(gp, psi_0).find_x1( psi_1), 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+    ConformalRingGrid3d( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
+        dg::Grid3d<double>( 0, solovev::detail::Fpsi(gp, psi_0).find_x1( psi_1), 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         //compute psi(x) for a grid on x 
         detail::FieldFinv fpsiM_(gp, psi_0, psi_1);
-        dg::Grid1d<double> g1d_( x0(), x1(), n(), Nx(), bcx());
+        dg::Grid1d<double> g1d_( 0, this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
-        thrust::host_vector<double> psi_x(n()*Nx(), 0), psi_old(psi_x), psi_diff( psi_old);
+        thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
         thrust::host_vector<double> w1d = dg::create::weights( g1d_);
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
         unsigned N = 1;
         double eps = 1e10; //eps_old=2e10;
         std::cout << "In psi function:\n";
-        double x0=x0(), x1 = x_vec[1];
+        double x0=this->x0(), x1 = x_vec[1];
         //while( eps <  eps_old && N < 1e6)
         while( eps >  1e-10 && N < 1e6)
         {
@@ -332,7 +336,7 @@ struct ConformalRingGrid : public Grid3d<double>
                 psi_x[i] = end[0];
             }
             temp = end;
-            dg::stepperRK6(fpsiM_, temp, end, x1, x1(),N);
+            dg::stepperRK6(fpsiM_, temp, end, x1, this->x1(),N);
             eps = fabs( end[0]-psi_1); 
             std::cout << "Effective absolute Psi error is "<<eps<<" with "<<N<<" steps\n"; //Here is a problem when psi = 0 (X-point is used)
             N*=2;
@@ -353,6 +357,7 @@ struct ConformalRingGrid : public Grid3d<double>
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
+    perpendicular_grid perp_grid() const { return ConformalRingGrid2d<container>(*this);}
     private:
     void construct_rz( const GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
     {
@@ -362,17 +367,16 @@ struct ConformalRingGrid : public Grid3d<double>
         r_.resize(size()), z_.resize(size());
         yr_ = r_, yz_ = z_;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
-        const thrust::host_vector<double> w3d = dg::create::weights( ;
         thrust::host_vector<double> f_p(f_x_);
 
         std::cout << "In grid function:\n";
-        unsigned Nx = n()*Nx(), Ny = n()*Ny();
+        unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         for( unsigned i=0; i<Nx; i++)
         {
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz;
             double R0, Z0;
-            fpsi.compute_rzy( psi_x[i], n(), Ny(), ry, zy, yr, yz, R0, Z0, f_x_[i], f_p[i]);
+            fpsi.compute_rzy( psi_x[i], this->n(), this->Ny(), ry, zy, yr, yz, R0, Z0, f_x_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j]; 
@@ -381,7 +385,7 @@ struct ConformalRingGrid : public Grid3d<double>
         }
         //r_x1 = r_x0, z_x1 = z_x0; //periodic boundaries
         //now lift to 3D grid
-        for( unsigned k=1; k<Nz(); k++)
+        for( unsigned k=1; k<this->Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
             {
                 r_[k*Nx*Ny+i] = r_[(k-1)*Nx*Ny+i];
@@ -403,7 +407,7 @@ struct ConformalRingGrid : public Grid3d<double>
             psipZ[i] = psipZ_(r_[i], z_[i]);
         }
         xr_ = yr_, xz_ = yz_;
-        for( unsigned k=0; k<Nz(); k++)
+        for( unsigned k=0; k<this->Nz(); k++)
             for( unsigned i=0; i<Ny; i++)
                 for( unsigned j=0; j<Nx; j++)
                 {
@@ -418,12 +422,10 @@ struct ConformalRingGrid : public Grid3d<double>
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
         vol2d_ = tempvol;
-        thrust::host_vector<double> ones = dg::evaluate( dg::one, ;
+        thrust::host_vector<double> ones = dg::evaluate( dg::one, *this);
         dg::blas1::pointwiseDivide( ones, r_, tempxx);
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
         g_pp_=tempxx;
-
-
     }
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
@@ -435,9 +437,79 @@ struct ConformalRingGrid : public Grid3d<double>
 
 };
 
+/**
+ * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ */
+template< class container>
+struct ConformalRingGrid2d : public dg::Grid2d<double>
+{
+    typedef dg::CurvilinearCylindricalTag metric_category;
+    ConformalRingGrid2d( const GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
+        dg::Grid2d<double>( 0, solovev::detail::Fpsi(gp, psi_0).find_x1(psi_1), 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
+    {
+        ConformalRingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
+        f_x_ = g.f_x();
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        vol2d_=g.perpVol();
+    }
+    ConformalRingGrid2d( const ConformalRingGrid3d<container>& g):
+        dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
+    {
+        f_x_ = g.f_x();
+        unsigned s = this->size();
+        for( unsigned i=0; i<s; i++)
+        {r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
+        thrust::copy( g.g_xx().begin, g.g_xx().begin()+s, g_xx.begin())
+        thrust::copy( g.g_xy().begin, g.g_xy().begin()+s, g_xy.begin())
+        thrust::copy( g.g_yy().begin, g.g_yy().begin()+s, g_yy.begin())
+        thrust::copy( g.perpVol().begin, g.perpVol().begin()+s, vol2d_.begin())
+    }
+    const thrust::host_vector<double>& r()const{return r_;}
+    const thrust::host_vector<double>& z()const{return z_;}
+    const thrust::host_vector<double>& xr()const{return xr_;}
+    const thrust::host_vector<double>& yr()const{return yr_;}
+    const thrust::host_vector<double>& xz()const{return xz_;}
+    const thrust::host_vector<double>& yz()const{return yz_;}
+    const thrust::host_vector<double>& f_x()const{return f_x_;}
+    const container& g_xx()const{return g_xx_;}
+    const container& g_yy()const{return g_yy_;}
+    const container& g_xy()const{return g_xy_;}
+    const container& vol()const{return vol2d_;}
+    const container& perpVol()const{return vol2d_;}
+    private:
+    thrust::host_vector<double> f_x_; //1d vector
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
+    container g_xx_, g_xy_, g_yy_, vol2d_;
+};
 
 }//namespace solovev
 namespace dg{
+/**
+ * @brief This function pulls back a function defined in cartesian coordinates R,Z to the conformal coordinates x,y,\phi
+ *
+ * i.e. F(x,y) = f(R(x,y), Z(x,y))
+ * @tparam BinaryOp The function object 
+ * @param f The function defined on R,Z
+ * @param g The grid
+ *
+ * @return A set of points representing F(x,y)
+ */
+template< class BinaryOp, class container>
+thrust::host_vector<double> pullback( BinaryOp f, const solovev::ConformalRingGrid2d<container>& g)
+{
+    thrust::host_vector<double> vec( g.size());
+    for( unsigned i=0; i<size2d; i++)
+        vec[i] = f( g.r()[i], g.z()[i]);
+    return vec;
+}
+///@cond
+template<class container>
+thrust::host_vector<double> pullback( double(f)(double,double), const ConformalRingGrid2d<container>& g)
+{
+    return pullback<double(double,double),container>( f, g);
+}
+///@endcond
 /**
  * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
  *
@@ -449,7 +521,7 @@ namespace dg{
  * @return A set of points representing F(x,y,\phi)
  */
 template< class TernaryOp, class container>
-thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingGrid<container>& g)
+thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingGrid3d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -460,5 +532,12 @@ thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingG
             vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
     return vec;
 }
+///@cond
+template<class container>
+thrust::host_vector<double> pullback( double(f)(double,double,double), const ConformalRingGrid3d<container>& g)
+{
+    return pullback<double(double,double,double),container>( f, g);
+}
+///@endcond
 
 }//namespace dg

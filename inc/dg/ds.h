@@ -420,9 +420,11 @@ void DS<F,M,container>::symv( const container& f, container& dsTdsf)
 //     add jump term 
 
     dg::blas2::symv( jumpX, f, temp0);
+    dg::geo::divideVolume( temp0, f_.grid());
     //dg::blas1::pointwiseDivide( temp0, R_, temp0); //there is an R in the weights
     dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
     dg::blas2::symv( jumpY, f, temp0);
+    dg::geo::divideVolume( temp0, f_.grid());
     //dg::blas1::pointwiseDivide( temp0, R_, temp0);
     dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
     if( no_ == not_normed)

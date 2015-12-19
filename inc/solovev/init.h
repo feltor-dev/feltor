@@ -1,6 +1,5 @@
 #pragma once
-#include "geometry.h"
-//include parameters.h files before 
+#include "solovev.h"
 
 /*!@file
  *
@@ -304,8 +303,7 @@ struct GaussianProfXDamping
  */
 struct TanhSource
 {
-        TanhSource( eule::Parameters p, GeomParameters gp):
-        p_(p),
+        TanhSource( GeomParameters gp):
         gp_(gp),
         psip_(gp) {
         }
@@ -325,7 +323,6 @@ struct TanhSource
         return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
-    eule::Parameters p_;
     GeomParameters gp_;
     Psip psip_;
 };
@@ -364,11 +361,10 @@ struct TanhSource
  */ 
 struct Nprofile
 {
-     Nprofile( eule::Parameters p, GeomParameters gp):
-        p_(p),
-        gp_(gp),
-        psip_(gp) {
-        }
+     Nprofile( double bgprofamp, double peakamp, GeomParameters gp):
+         bgamp(bgprofamp), namp( peakamp),
+         gp_(gp),
+         psip_(gp) { }
     /**
      * @brief \f[ N(R,Z)=\begin{cases}
  A_{bg} + A_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
@@ -378,8 +374,9 @@ struct Nprofile
      */
    double operator( )(double R, double Z)
     {
-        if (psip_(R,Z)<gp_.psipmax) return p_.bgprofamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*p_.nprofileamp);
-        return p_.bgprofamp;
+        if (psip_(R,Z)<gp_.psipmax) 
+            return bgamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*namp);
+        return bgamp;
     }
     /**
     * @brief == operator()(R,Z)
@@ -389,7 +386,7 @@ struct Nprofile
         return (*this)(R,Z);
     }
     private:
-    eule::Parameters p_;
+    double bgamp, namp;
     GeomParameters gp_;
     Psip psip_;
 };
@@ -404,11 +401,10 @@ struct Nprofile
  */ 
 struct ZonalFlow
 {
-    ZonalFlow(  eule::Parameters p,GeomParameters gp):
-        p_(p),
+    ZonalFlow(  double amplitude, double k_psi, GeomParameters gp):
+        amp_(amplitude), k_(k_psi),
         gp_(gp),
-        psip_(gp) {
-    }
+        psip_(gp) { }
     /**
      * @brief \f[ N(R,Z)=\begin{cases}
  A_{bg} |\cos(2\pi\psi_p(R,Z) k_\psi)| \text{ if }\psi_p < \psi_{p,max} \\
@@ -418,7 +414,8 @@ struct ZonalFlow
      */
     double operator() (double R, double Z)
     {
-      if (psip_(R,Z)<gp_.psipmax) return (p_.amp*fabs(cos(2.*M_PI*psip_(R,Z)*p_.k_psi)));
+      if (psip_(R,Z)<gp_.psipmax) 
+          return (amp_*fabs(cos(2.*M_PI*psip_(R,Z)*k_)));
       return 0.;
 
     }
@@ -430,7 +427,7 @@ struct ZonalFlow
         return (*this)(R,Z);
     }
     private:
-    eule::Parameters p_;
+    double amp_, k_;
     GeomParameters gp_;
     Psip psip_;
 };
@@ -441,8 +438,7 @@ struct ZonalFlow
  */ 
 struct TestFunction
 {
-    TestFunction( eule::Parameters p,GeomParameters gp) :  
-        p_(p),
+    TestFunction( GeomParameters gp) :  
         gp_(gp),
         bhatR_(gp),
         bhatZ_(gp),
@@ -464,11 +460,10 @@ struct TestFunction
 //         return cos(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ);
 //         return sin(phi*kP); //DIR
 //         return cos(phi*kP); //NEU
-                return -cos(phi*kP)/bhatP_(R,Z,phi)/R; //NEU 2
+        return -cos(phi*kP)/bhatP_(R,Z,phi)/R; //NEU 2
 
     }
     private:
-    eule::Parameters p_;
     GeomParameters gp_;
     BHatR bhatR_;
     BHatZ bhatZ_;
@@ -480,8 +475,7 @@ struct TestFunction
  */ 
 struct DeriTestFunction
 {
-    DeriTestFunction( eule::Parameters p, GeomParameters gp) :
-        p_(p),
+    DeriTestFunction( GeomParameters gp) :
         gp_(gp),
         bhatR_(gp),
         bhatZ_(gp),
@@ -506,11 +500,10 @@ struct DeriTestFunction
 //                bhatP_(R,Z,phi)*sin(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kP;
 //         return  bhatP_(R,Z,phi)*cos(phi*kP)*kP; //DIR
 //         return  -bhatP_(R,Z,phi)*sin(phi*kP)*kP; //NEU
-                return sin(phi*kP)*kP/R; //NEU 2
+        return sin(phi*kP)*kP/R; //NEU 2
 
     }
     private:
-    eule::Parameters p_;
     GeomParameters gp_;
     BHatR bhatR_;
     BHatZ bhatZ_;

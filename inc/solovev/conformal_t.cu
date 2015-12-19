@@ -12,7 +12,6 @@
 
 #include "dg/backend/timer.cuh"
 #include "conformal.h"
-#include "feltor/parameters.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
@@ -62,7 +61,7 @@ try{
     file::NC_Error_Handle err;
     err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[3];
-    err = file::define_dimensions(  ncid, dim3d, g.grid());
+    err = file::define_dimensions(  ncid, dim3d, g);
     int coordsID[3], onesID, defID;
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
@@ -71,18 +70,18 @@ try{
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 3, dim3d, &defID);
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g);
-    g.grid().display();
+    g.display();
     err = nc_put_var_double( ncid, onesID, psi_p.data());
-    dg::HVec X( g.grid().size()), Y(X), P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g.grid().size(); i++)
+    dg::HVec X( g.size()), Y(X), P = dg::pullback( dg::coo3, g);
+    for( unsigned i=0; i<g.size(); i++)
     {
         X[i] = g.r()[i]*cos(P[i]);
         Y[i] = g.r()[i]*sin(P[i]);
     }
 
-    dg::DVec ones = dg::evaluate( dg::one, g.grid());
-    dg::DVec temp0( g.grid().size()), temp1(temp0);
-    dg::DVec w3d = dg::create::weights( g.grid());
+    dg::DVec ones = dg::evaluate( dg::one, g);
+    dg::DVec temp0( g.size()), temp1(temp0);
+    dg::DVec w3d = dg::create::weights( g);
 
     err = nc_put_var_double( ncid, coordsID[0], X.data());
     err = nc_put_var_double( ncid, coordsID[1], Y.data());
@@ -136,9 +135,9 @@ try{
     std::cout << "TEST VOLUME IS:\n";
     gp.psipmax = psi_1, gp.psipmin = psi_0;
     solovev::Iris iris( gp);
-    dg::Grid3d<double> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER, dg::cylindrical);
+    dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
     dg::DVec vec  = dg::evaluate( iris, g3d);
-    dg::DVec g3d_weights = dg::create::weights( g3d);
+    dg::DVec g3d_weights = dg::create::volume( g3d);
     double volumeRZP = dg::blas1::dot( vec, g3d_weights);
     std::cout << "volumeXYP is "<< volume<<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;

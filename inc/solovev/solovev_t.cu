@@ -10,7 +10,7 @@
 #include "file/read_input.h"
 #include "draw/host_window.h"
 
-#include "geometry.h"
+#include "solovev.h"
 #include "feltor/parameters.h"
 #include "init.h"
 
