@@ -361,63 +361,119 @@ template<class G, class M, class C, class container>
 template< class BinaryOp>
 MPI_Vector<container> MPI_FieldAligned<G,M,C,container>::evaluate( BinaryOp f, unsigned p0) const
 {
-    //container global_vec = dz_.evaluate( f, p0);
-    //container vec = dg::evaluate( dg::zero, g_.local());
-    ////now take the relevant part 
-    //int dims[3], periods[3], coords[3];
-    //MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
-    //unsigned Nx = g_.Nx()*g_.n(), Ny = g_.Ny()*g_.n(), Nz = g_.Nz();
-    //for( unsigned s=0; s<Nz; s++)
-    //    for( unsigned i=0; i<Ny; i++)
-    //        for( unsigned j=0; j<Nx; j++)
-    //            vec[ (s*Ny+i)*Nx + j ] 
-    //                = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
-    //               
-    //return MPI_Vector<container>( vec, g_.communicator());
-    assert( p0 < g_.Nz() && g_.Nz() > 1);
+    assert( p0 < g_.global().Nz() && g_.global().Nz() > 1);
     const typename G::perpendicular_grid g2d = g_.perp_grid();
-    MPI_Vector<container> vec2d = dg::pullback( binary, g2d);
-    container vec = dg::evaluate( dg::zero, g_.local());
-    //1. compute 2d interpolation in every plane and store in temp_
-    if( sizeXY != 1) //communication needed
+    MPI_Vector<container> init2d = dg::pullback( binary, g2d);
+    MPI_Vector<container> vec = dg::evaluate( dg::zero, g_);
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
+        int sizeXY = dims[0]*dims[1];
+    for( int i0=0; i0<(int)g_.Nz(); i0++)
     {
-        for( int i0=0; i0<(int)g_.Nz(); i0++)
+        //in every plane compute interpolation i - p0 times
+        container temp1( init2d.data()), temp2(init2d.data());
+        int iG = i0 + coords[2]*g_.Nz();
+        int number = p0 - iG;
+        if( number > 0)
         {
-            cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
-            View tempV( tempXYplus_[i0].begin(), tempXYplus_[i0].end() );
-            cusp::multiply( plus, inV, tempV);
-            //exchange data in XY
-            commXYplus_.send_and_reduce( tempXYplus_[i0], temp_[i0]);
+            //apply plus number times
+            for( int l=0; l<number; l++)
+            {
+                if( sizeXY != 1) //communication needed
+                {
+                    dg::blas2::symv( plus, temp1, tempXYplus_[i0]);
+                    commXYplus_.send_and_reduce( tempXYplus_[i0], temp2);
+                }
+                else
+                    dg::blas2::symv( plus, temp1, temp2)
+                temp2.swap(temp1);
+            }
         }
-    }
-    else //directly compute in temp_
-    {
-        for( int i0=0; i0<(int)g_.Nz(); i0++)
+        if(number < 0)
         {
-            cView inV( in.cbegin() + i0*plus.num_cols, in.cbegin() + (i0+1)*plus.num_cols);
-            View tempV( temp_[i0].begin(), temp_[i0].end() );
-            cusp::multiply( plus, inV, tempV);
+            //apply minus number times
+            for( int l=0; l<abs(number); l++)
+            {
+                if( sizeXY != 1)
+                {
+                    dg::blas2::symv( minus, temp1, tempXYminus_[i0]);
+                    commXYplus_.send_and_reduce( tempXYminus_[i0], temp2);
+                }
+                else 
+                    dg::blas2::symv( minus, temp1, temp2);
+                temp2.swap(temp1);
+            }
         }
+        //now result is in temp1
+        int size2d = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        thrust::copy( temp1.begin(), temp1.end(), vec.data().begin() + i0*size2d);
     }
+    return vec;
 }
 
 template<class G, class M, class C, class container>
 template< class BinaryOp, class UnaryOp>
 MPI_Vector<container> MPI_FieldAligned<G,M,C, container>::evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const
 {
+    assert( g_.global().Nz() > 1);
+    assert( rounds > 0);
     //let all processes integrate the fieldlines
-    container global_vec = dz_.evaluate( f, g,p0, rounds);
-    container vec = dg::evaluate( dg::zero, g_.local());
-    //now take the relevant part 
-    int dims[3], periods[3], coords[3];
-    MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
-    unsigned Nx = g_.Nx()*g_.n(), Ny = g_.Ny()*g_.n(), Nz = g_.Nz();
-    for( unsigned s=0; s<Nz; s++)
-        for( unsigned i=0; i<Ny; i++)
-            for( unsigned j=0; j<Nx; j++)
-                vec[ (s*Ny+i)*Nx + j ] 
-                    = global_vec[ j + Nx*(coords[0] + dims[0]*( i +Ny*(coords[1] + dims[1]*(s +Nz*coords[2])))) ];
-    return MPI_Vector<container>( vec, g_.communicator());
+    if( rounds == 1)
+    {
+        MPI_Vector<container> global_vec = evaluate( f, g,p0);
+        container& vec3d = global_vec.data();
+        //scal
+        for( unsigned i=0; i<g_.Nz(); i++)
+        {
+            View f0( vec3d.begin() + i*g2d.size(), vec3d.begin() + (i+1)*g2d.size());
+            cusp::blas::scal(f0, unary( g_.z0() + (double)(i+0.5)*g_.hz() ));
+        }
+        return global_vec;
+    }
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
+        int sizeXY = dims[0]*dims[1];
+    for( int i0=0; i0<(int)g_.Nz(); i0++)
+    {
+        //in every plane compute interpolation i - p0 times
+        container temp1( init2d.data()), temp2(init2d.data());
+        int iG = i0 + coords[2]*g_.Nz();
+        int number = p0 - iG;
+        if( number > 0)
+        {
+            //apply plus number times
+            for( int l=0; l<number; l++)
+            {
+                if( sizeXY != 1) //communication needed
+                {
+                    dg::blas2::symv( plus, temp1, tempXYplus_[i0]);
+                    commXYplus_.send_and_reduce( tempXYplus_[i0], temp2);
+                }
+                else
+                    dg::blas2::symv( plus, temp1, temp2)
+                temp2.swap(temp1);
+            }
+        }
+        if(number < 0)
+        {
+            //apply minus number times
+            for( int l=0; l<abs(number); l++)
+            {
+                if( sizeXY != 1)
+                {
+                    dg::blas2::symv( minus, temp1, tempXYminus_[i0]);
+                    commXYplus_.send_and_reduce( tempXYminus_[i0], temp2);
+                }
+                else 
+                    dg::blas2::symv( minus, temp1, temp2);
+                temp2.swap(temp1);
+            }
+        }
+        //now result is in temp1
+        int size2d = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        thrust::copy( temp1.begin(), temp1.end(), vec.data().begin() + i0*size2d);
+    }
+    return vec;
 }
 
 template<class G, class M, class C, class container>
