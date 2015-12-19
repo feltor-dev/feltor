@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
     dg::GaussianZ modulate(0, 2*M_PI, 1);
     t.tic();
-    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 1);
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 0);
     t.toc();
     if(rank==0)std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);

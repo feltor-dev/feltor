@@ -425,8 +425,9 @@ MPI_Vector<container> MPI_FieldAligned<G,M,C, container>::evaluate( BinaryOp bin
     {
         for( unsigned i0=0; i0<g_.Nz(); i0++)
         {
-            unsigned revi0 = (g_.Nz() - i0)%g_.Nz(); //reverted index
-            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+            int idx = (int)(i0+coords[2]*g_.Nz());
+            unsigned revi0 = (g_.global().Nz() - idx)%g_.global().Nz(); //reverted index
+            dg::blas1::axpby( 1., plus2d[idx], 0., result[i0]);
             dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
         }
         dg::blas1::axpby( -1., init2d.data(), 1., result[0]);

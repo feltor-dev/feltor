@@ -44,6 +44,7 @@ struct CylindricalGrid : public Grid3d<double>
      *
      * @param grid existing grid class
      */
+    //is this constructor a good idea?? You could construct a Cylindrical Grid from any other Grid Type that derives from Grid3d<double>
     CylindricalGrid( const Grid3d<double>& grid):
         Grid3d<double>(grid),
         R_(dg::evaluate( dg::coo1, *this)){}

@@ -70,7 +70,6 @@ int main()
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
-
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::DVec solution = dg::evaluate( deri, g3d);
     t.tic();
@@ -85,7 +84,7 @@ int main()
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
     dg::GaussianZ modulate(0., 2*M_PI, 1);
     t.tic();
-    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 1);
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 0);
     t.toc();
     std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);
