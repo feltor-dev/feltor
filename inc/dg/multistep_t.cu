@@ -15,7 +15,7 @@ struct RHS
     }
   private:
     double D_;
-    dg::Elliptic<Matrix, container, container> laplaceM;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, container> laplaceM;
 };
 
 template< class Matrix, class container>
@@ -39,7 +39,7 @@ struct Diffusion
   private:
     double nu_;
     const container w2d, v2d;
-    dg::Elliptic<Matrix, container, container> LaplacianM;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, container> LaplacianM;
 };
 
 

@@ -82,7 +82,7 @@ int main( )
 
 
 
-        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+        dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
         dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
         std::cout << "NR = " << Nxn << std::endl;
@@ -93,17 +93,17 @@ int main( )
 
 //        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
 //     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
-    const dg::DVec w3d = dg::create::weights( g3d);
+    const dg::DVec w3d = dg::create::volume( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
-    const dg::DVec v3d = dg::create::inv_weights( g3d);
+    const dg::DVec v3d = dg::create::inv_volume( g3d);
 
     std::cout << "computing dsDIR" << std::endl;
     dg::DDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dsNEU" << std::endl;
     dg::DDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
 
-    dg::DDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered), 
-        dsNU ( dsNUFA, field, g3d, dg::not_normed, dg::centered);
+    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered), 
+        dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
 
 //     dg::DS<dg::DMatrix, dg::DVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     

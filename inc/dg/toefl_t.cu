@@ -46,7 +46,7 @@ int main()
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and RK
-    dg::Toefl<dg::DMatrix,dg::DVec, dg::DVec> test( grid, Ra, Pr, 1e-6); 
+    dg::Toefl<dg::CartesianGrid2d, dg::DMatrix,dg::DVec, dg::DVec> test( grid, Ra, Pr, 1e-6); 
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
 
