@@ -70,14 +70,14 @@ struct CartesianGrid2d: public Grid2d<double>
  * @return new instance of thrust vector
  */
 template<class BinaryOp>
-MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const CartesianGrid2d& g)
+thrust::host_vector<double> pullback( BinaryOp f, const CartesianGrid2d& g)
 {
     return evaluate( f, g);
 }
 ///@cond
-MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), const CartesianGrid2d& g)
+thrust::host_vector<double> pullback( double(f)(double,double), const CartesianGrid2d& g)
 {
-    return pullback<double(double,double),container>( f, g);
+    return pullback<double(double,double)>( f, g);
 }
 ///@endcond
 

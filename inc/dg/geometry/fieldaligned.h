@@ -270,7 +270,7 @@ cylindrical coordinates
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class Matrix = cusp::csr_matrix<int, double, cusp::device_memory>, class container=thrust::device_vector<double> >
+template< class Geometry, class Matrix = cusp::csr_matrix<int, double, cusp::device_memory>, class container=thrust::device_vector<double> >
 struct FieldAligned
 {
 
@@ -294,7 +294,7 @@ struct FieldAligned
         by the bcz variable from the grid and can be changed by the set_boundaries function. 
         If there is no limiter the boundary condition is periodic.
     */
-    template <class Field, class Geometry, class Limiter>
+    template <class Field, class Limiter>
     FieldAligned(Field field, Geometry grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
 
 
@@ -444,7 +444,7 @@ struct FieldAligned
 
 template<class Geometry, class M, class container>
 template <class Field, class Limiter>
-FieldAligned<M,container>::FieldAligned(Field field, Geometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
+FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         g_(grid), bcz_(grid.bcz())
 {
@@ -515,77 +515,69 @@ template< class G, class M, class container>
 template< class BinaryOp>
 container FieldAligned<G,M,container>::evaluate( BinaryOp binary, unsigned p0) const
 {
-    assert( p0 < g_.Nz() && g_.Nz() > 1);
-    const typename G::perpendicular_grid g2d = g_.perp_grid();
-    container vec2d = dg::pullback( binary, g2d);
-    View g0( vec2d.begin(), vec2d.end());
-    container vec3d( g_.size());
-    View f0( vec3d.begin() + p0*g2d.size(), vec3d.begin() + (p0+1)*g2d.size());
-    //copy 2d function into given plane and then follow fieldline in both directions
-    cusp::copy( g0, f0);
-    for( unsigned i0=p0+1; i0<g_.Nz(); i0++)
-    {
-        unsigned im = i0-1;
-        View fm( vec3d.begin() + im*g2d.size(), vec3d.begin() + (im+1)*g2d.size());
-        View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
-        cusp::multiply( minus, fm, f0 );
-    }
-    for( int i0=p0-1; i0>=0; i0--)
-    {
-        unsigned ip = i0+1;
-        View fp( vec3d.begin() + ip*g2d.size(), vec3d.begin() + (ip+1)*g2d.size());
-        View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
-        cusp::multiply( plus, fp, f0 );
-    }
-    return vec3d;
+    return evaluate( binary, dg::CONSTANT(1), p0, 0);
 }
 
 template<class G, class M, class container>
 template< class BinaryOp, class UnaryOp>
 container FieldAligned<G,M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
 {
-
+    //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
+    //unary function is always such that the p0 plane is at x=0
     assert( g_.Nz() > 1);
-    container vec3d = evaluate( binary, p0);
-    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    //scal
-    for( unsigned i=0; i<g_.Nz(); i++)
-    {
-        View f0( vec3d.begin() + i*g2d.size(), vec3d.begin() + (i+1)*g2d.size());
-        cusp::blas::scal(f0, unary( g_.z0() + (double)(i+0.5)*g_.hz() ));
-    }
-    //make room for plus and minus continuation
-    std::vector<container > vec4dP( rounds, vec3d);
-    std::vector<container > vec4dM( rounds, vec3d);
-    //now follow field lines back and forth
-    for( unsigned k=1; k<rounds; k++)
+    assert( p0 < g_.Nz());
+    const typename G::perpendicular_grid g2d = g_.perp_grid();
+    container init2d = dg::pullback( binary, g2d), temp(init2d), tempP(init2d), tempM(init2d);
+    container vec3d = dg::evaluate( dg::zero, g_);
+    std::vector<container>  plus2d( g_.Nz(), (container)dg::evaluate(dg::zero, g2d) ), minus2d( plus2d), result( plus2d);
+    unsigned turns = rounds; 
+    if( turns ==0) turns++;
+    //first apply Interpolation many times, scale and store results
+    for( unsigned r=0; r<turns; r++)
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            dg::blas1::copy( init2d, tempP);
+            dg::blas1::copy( init2d, tempM);
+            unsigned rep = i0 + r*g_.Nz();
+            for(unsigned k=0; k<rep; k++)
+            {
+                dg::blas2::symv( plus, tempP, temp);
+                temp.swap( tempP);
+                dg::blas2::symv( minus, tempM, temp);
+                temp.swap( tempM);
+            }
+            dg::blas1::scal( tempP, unary(  (double)rep*g_.hz() ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*g_.hz() ) );
+            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
+            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
+        }
+    //now we have the plus and the minus filaments
+    if( rounds == 0) //there is a limiter
     {
         for( unsigned i0=0; i0<g_.Nz(); i0++)
         {
-        int im = i0==0?g_.Nz()-1:i0-1;
-        int k0 = k;
-        int km = i0==0?k-1:k;
-        View fm( vec4dP[km].begin() + im*g2d.size(), vec4dP[km].begin() + (im+1)*g2d.size());
-        View f0( vec4dP[k0].begin() + i0*g2d.size(), vec4dP[k0].begin() + (i0+1)*g2d.size());
-        cusp::multiply( minus, fm, f0 );
-        cusp::blas::scal( f0, unary( g_.z0() + (double)(k*g_.Nz()+i0+0.5)*g_.hz() ) );
-        }
-        for( int i0=g_.Nz()-1; i0>=0; i0--)
-        {
-        int ip = i0==g_.Nz()-1?0:i0+1;
-        int k0 = k;
-        int km = i0==g_.Nz()-1?k-1:k;
-        View fp( vec4dM[km].begin() + ip*g2d.size(), vec4dM[km].begin() + (ip+1)*g2d.size());
-        View f0( vec4dM[k0].begin() + i0*g2d.size(), vec4dM[k0].begin() + (i0+1)*g2d.size());
-        cusp::multiply( plus, fp, f0 );
-        cusp::blas::scal( f0, unary( g_.z0() - (double)(k*g_.Nz()-0.5-i0)*g_.hz() ) );
+            int idx = (int)i0 - (int)p0;
+            if(idx>=0)
+                result[i0] = plus2d[idx];
+            else
+                result[i0] = minus2d[abs(idx)];
+            thrust::copy( result[i0].begin(), result[i0].end(), vec3d.begin() + i0*g2d.size());
         }
     }
-    //sum up results
-    for( unsigned i=1; i<rounds; i++)
+    else //sum up plus2d and minus2d
     {
-        dg::blas1::axpby( 1., vec4dP[i], 1., vec3d);
-        dg::blas1::axpby( 1., vec4dM[i], 1., vec3d);
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            unsigned revi0 = (g_.Nz() - i0)%g_.Nz(); //reverted index
+            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
+        }
+        dg::blas1::axpby( -1., init2d, 1., result[0]);
+        for(unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            int idx = ((int)i0 -(int)p0 + g_.Nz())%g_.Nz(); //shift index
+            thrust::copy( result[idx].begin(), result[idx].end(), vec3d.begin() + i0*g2d.size());
+        }
     }
     return vec3d;
 }

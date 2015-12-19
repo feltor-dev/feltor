@@ -35,7 +35,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const CartesianMP
 ///@cond
 MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), const CartesianMPIGrid2d& g)
 {
-    return pullback<double(double,double),container>( f, g);
+    return pullback<double(double,double)>( f, g);
 }
 ///@endcond
 
