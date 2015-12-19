@@ -275,7 +275,7 @@ struct GaussianY
 /**
  * @brief Functor returning a gaussian in z-direction
  * \f[
-   f(x,y) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
+   f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
    \f]
  */
 struct GaussianZ
@@ -293,7 +293,7 @@ struct GaussianZ
      * @brief Return the value of the gaussian
      *
      * \f[
-       f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
+       f(z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}} 
        \f]
      * @param z z - coordinate
      *

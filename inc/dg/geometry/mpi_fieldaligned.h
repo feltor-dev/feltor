@@ -423,17 +423,17 @@ MPI_Vector<container> MPI_FieldAligned<G,M,C, container>::evaluate( BinaryOp bin
     }
     else //sum up plus2d and minus2d
     {
-        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        for( unsigned i0=0; i0<g_.global().Nz(); i0++)
         {
-            int idx = (int)(i0+coords[2]*g_.Nz());
-            unsigned revi0 = (g_.global().Nz() - idx)%g_.global().Nz(); //reverted index
-            dg::blas1::axpby( 1., plus2d[idx], 0., result[i0]);
+            //int idx = (int)(i0+coords[2]*g_.Nz());
+            unsigned revi0 = (g_.global().Nz() - i0)%g_.global().Nz(); //reverted index
+            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
             dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
         }
         dg::blas1::axpby( -1., init2d.data(), 1., result[0]);
         for(unsigned i0=0; i0<g_.Nz(); i0++)
         {
-            int idx = ((int)i0 -(int)p0 + g_.Nz())%g_.Nz(); //shift index
+            int idx = ((int)i0 + coords[2]*g_.Nz() -(int)p0 + g_.global().Nz())%g_.global().Nz(); //shift index
             thrust::copy( result[idx].begin(), result[idx].end(), vec3d.data().begin() + i0*g2d.size());
         }
     }

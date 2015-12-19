@@ -85,9 +85,9 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Relative Difference Is "<< norm2<<"\n";    
     if(rank==0)std::cout << "(Error is from the parallel derivative only if n>2)\n"; //because the function is a parabola
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
-    dg::GaussianZ modulate(0, 2*M_PI, 1);
+    dg::GaussianZ modulate(0, M_PI/3., 1);
     t.tic();
-    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 0);
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 2);
     t.toc();
     if(rank==0)std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);
