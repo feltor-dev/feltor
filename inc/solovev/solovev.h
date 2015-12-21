@@ -476,16 +476,15 @@ struct InvB
     */ 
     double operator()(double R, double Z) const
     {    
-        double psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
-        return R/(R_0_*sqrt(ipol_(R,Z)*ipol_(R,Z) + psipR*psipR +psipZ*psipZ)) ;
+        double psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), ipol = ipol_(R,Z);
+        return R/(R_0_*sqrt(ipol*ipol + psipR*psipR +psipZ*psipZ)) ;
     }
     /**
      * @brief == operator()(R,Z)
      */ 
     double operator()(double R, double Z, double phi) const
     {    
-        double psipR = psipR_(R,Z, phi), psipZ = psipZ_(R,Z, phi);
-        return R/(R_0_*sqrt(ipol_(R,Z,phi)*ipol_(R,Z,phi) + psipR*psipR +psipZ*psipZ)) ;
+        return operator()(R,Z);
     }
   private:
     double R_0_;
@@ -739,12 +738,8 @@ struct Field
 {
     Field( GeomParameters gp):
         gp_(gp),
-        psip_(gp),
         psipR_(gp),
-        psipRR_(gp),
         psipZ_(gp),
-        psipZZ_(gp),
-        psipRZ_(gp),
         ipol_(gp),
         invB_(gp) {
     }
@@ -769,9 +764,10 @@ struct Field
  */ 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        yp[2] =  y[0]*y[0]/invB_(y[0],y[1])/ipol_(y[0],y[1])/gp_.R_0;       //ds/dphi =  R^2 B/I/R_0_hat
-        yp[0] =  y[0]*psipZ_(y[0],y[1])/ipol_(y[0],y[1]);              //dR/dphi =  R/I Psip_Z
-        yp[1] = -y[0]*psipR_(y[0],y[1])/ipol_(y[0],y[1]) ;             //dZ/dphi = -R/I Psip_R
+        double ipol = ipol_(y[0],y[1]);
+        yp[2] =  y[0]*y[0]/invB_(y[0],y[1])/ipol/gp_.R_0;       //ds/dphi =  R^2 B/I/R_0_hat
+        yp[0] =  y[0]*psipZ_(y[0],y[1])/ipol;              //dR/dphi =  R/I Psip_Z
+        yp[1] = -y[0]*psipR_(y[0],y[1])/ipol ;             //dZ/dphi = -R/I Psip_R
 
     }
     /**
@@ -797,12 +793,8 @@ struct Field
     
     private:
     GeomParameters gp_;
-    Psip   psip_;    
     PsipR  psipR_;
-    PsipRR psipRR_;
     PsipZ  psipZ_;
-    PsipZZ psipZZ_;
-    PsipRZ psipRZ_;
     Ipol   ipol_;
     InvB   invB_;
    

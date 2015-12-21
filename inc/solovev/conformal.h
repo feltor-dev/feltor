@@ -123,7 +123,7 @@ struct Fpsi
         unsigned P=8;
         double x1 = 0, x1_old = 0;
         double eps=1e10, eps_old=2e10;
-        std::cout << "In x1 function\n";
+        //std::cout << "In x1 function\n";
         while(eps < eps_old && P < 20 && eps > 1e-15)
         {
             eps_old = eps; 
@@ -141,7 +141,7 @@ struct Fpsi
             x1 = dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x1 - x1_old)/x1);
-            std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
+            //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x1_old;
 
@@ -184,7 +184,7 @@ struct Fpsi
                        - 1./12.*fofpsi[3]
                      )/deltaPsi;
             eps = fabs((fprime - fprime_old)/fprime);
-            std::cout << "fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
+            //std::cout << "fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
         }
         fprime = fprime_old;
         //now compute f and starting values for 
@@ -223,7 +223,7 @@ struct Fpsi
             double ar = dg::blas2::dot( r, w1d, r);
             double az = dg::blas2::dot( z, w1d, z);
             eps =  sqrt( er + ez)/sqrt(ar+az);
-            std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+            //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
             steps*=2;
         }
         r = r_old, z = z_old, yr = yr_old, yz = yz_old;
@@ -317,7 +317,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
         unsigned N = 1;
         double eps = 1e10; //eps_old=2e10;
-        std::cout << "In psi function:\n";
+        //std::cout << "In psi function:\n";
         double x0=this->x0(), x1 = x_vec[1];
         //while( eps <  eps_old && N < 1e6)
         while( eps >  1e-10 && N < 1e6)
@@ -338,7 +338,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
             temp = end;
             dg::stepperRK6(fpsiM_, temp, end, x1, this->x1(),N);
             eps = fabs( end[0]-psi_1); 
-            std::cout << "Effective absolute Psi error is "<<eps<<" with "<<N<<" steps\n"; //Here is a problem when psi = 0 (X-point is used)
+            //std::cout << "Effective absolute Psi error is "<<eps<<" with "<<N<<" steps\n"; //Here is a problem when psi = 0 (X-point is used)
             N*=2;
         }
         //first compute boundary points in x
@@ -351,6 +351,9 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
+    thrust::host_vector<double> x()const{
+        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        return dg::create::abscissas(gx);}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
@@ -369,7 +372,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
         thrust::host_vector<double> f_p(f_x_);
 
-        std::cout << "In grid function:\n";
+        //std::cout << "In grid function:\n";
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         for( unsigned i=0; i<Nx; i++)
         {
@@ -458,12 +461,14 @@ struct ConformalRingGrid2d : public dg::Grid2d<double>
     {
         f_x_ = g.f_x();
         unsigned s = this->size();
+        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
+        g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
         {r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
-        thrust::copy( g.g_xx().begin, g.g_xx().begin()+s, g_xx.begin())
-        thrust::copy( g.g_xy().begin, g.g_xy().begin()+s, g_xy.begin())
-        thrust::copy( g.g_yy().begin, g.g_yy().begin()+s, g_yy.begin())
-        thrust::copy( g.perpVol().begin, g.perpVol().begin()+s, vol2d_.begin())
+        thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
+        thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
+        thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
+        thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -471,6 +476,9 @@ struct ConformalRingGrid2d : public dg::Grid2d<double>
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
+    thrust::host_vector<double> x()const{
+        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        return dg::create::abscissas(gx);}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
@@ -481,6 +489,77 @@ struct ConformalRingGrid2d : public dg::Grid2d<double>
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
+};
+
+/**
+ * @brief Integrates the equations for a field line and 1/B
+ */ 
+struct ConformalField
+{
+    ConformalField( GeomParameters gp,const thrust::host_vector<double>& x, const thrust::host_vector<double>& f_x):
+        gp_(gp),
+        psipR_(gp), psipZ_(gp),
+        ipol_(gp), invB_(gp), last_idx(0), x_(x), fx_(f_x)
+    { }
+
+    /**
+     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
+     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
+     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
+     */ 
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+        //x,y,s,R,Z
+        double psipR = psipR_(y[3],y[4]), psipZ = psipZ_(y[3],y[4]), ipol = ipol_( y[3],y[4]);
+        double fx = find_fx( y[0]);
+        yp[0] = 0;
+        yp[1] = fx*y[3]*(psipR*psipR+psipZ*psipZ)/ipol;
+        yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
+        yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
+        yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
+
+    }
+    /**
+     * @brief \f[   \frac{1}{\hat{B}} = 
+      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
+      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
+     */ 
+    double operator()( double R, double Z) const
+    {
+        return invB_(R,Z);
+    }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
+    double operator()( double R, double Z, double phi) const
+    {
+        return invB_(R,Z,phi);
+    }
+    
+    private:
+    double find_fx(double x) 
+    {
+        if( fabs(x-x_[last_idx]) < 1e-12)
+            return fx_[last_idx];
+        for( unsigned i=0; i<x_.size(); i++)
+            if( fabs(x-x_[i]) < 1e-12)
+            {
+                last_idx = i;
+                return fx_[i];
+            }
+        std::cerr << "x not found!!\n";
+        return 0;
+    }
+    
+    GeomParameters gp_;
+    PsipR  psipR_;
+    PsipZ  psipZ_;
+    Ipol   ipol_;
+    InvB   invB_;
+    int last_idx;
+    thrust::host_vector<double> x_;
+    thrust::host_vector<double> fx_;
+   
 };
 
 }//namespace solovev
@@ -499,13 +578,13 @@ template< class BinaryOp, class container>
 thrust::host_vector<double> pullback( BinaryOp f, const solovev::ConformalRingGrid2d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
-    for( unsigned i=0; i<size2d; i++)
+    for( unsigned i=0; i<g.size(); i++)
         vec[i] = f( g.r()[i], g.z()[i]);
     return vec;
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double), const ConformalRingGrid2d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double), const solovev::ConformalRingGrid2d<container>& g)
 {
     return pullback<double(double,double),container>( f, g);
 }
@@ -534,7 +613,7 @@ thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingG
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double,double), const ConformalRingGrid3d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double,double), const solovev::ConformalRingGrid3d<container>& g)
 {
     return pullback<double(double,double,double),container>( f, g);
 }

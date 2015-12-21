@@ -227,6 +227,7 @@ void boxintegrator( Field& field, const Grid& grid,
     if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())  
          || !(coords1[1] >= grid.y0() && coords1[1] <= grid.y1())  ) //Punkt liegt immer noch außerhalb 
     {
+        std::cerr << "point is somewhere else!\n";
         if( globalbcz == dg::DIR)
         {
             BoxIntegrator<Field, Grid> boxy( field, grid, eps);
@@ -471,7 +472,7 @@ FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, do
     for( unsigned i=0; i<size; i++)
     {
         thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i], coords[3] = y[3][i], coords[4] = y[4][i];
+        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i], coords[3] = y[3][i], coords[4] = y[4][i]; //x,y,s,R,Z
         double phi1 = deltaPhi;
         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
         phi1 =  - deltaPhi;
