@@ -26,11 +26,11 @@ double jacobian( double x, double y)
 
 double left( double x, double y) {
     return sin(x)*cos(y);
-    //return sin(x)*x*x*cos(y);
+    //return cos(x)*x*x*cos(y);
 }
 double right( double x, double y) {
     return sin(y)*cos(x);
-    //return sin(x)*exp(0.1*(x+y));
+    //return cos(x)*exp(0.1*(x+y));
 } 
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;

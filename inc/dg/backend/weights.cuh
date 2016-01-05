@@ -42,7 +42,6 @@ thrust::host_vector<T> abscissas( const Grid1d<T>& g)
 ///@{
 
 
-///@cond
 /**
 * @brief create host_vector containing 1d X-space weight coefficients
 *
@@ -77,6 +76,7 @@ thrust::host_vector<T> inv_weights( const Grid1d<T>& g)
     return v;
 }
 
+///@cond
 namespace detail{
 
 int get_i( unsigned n, int idx) { return idx%(n*n)/n;}
@@ -122,6 +122,7 @@ thrust::host_vector<T> inv_weights( const Grid2d<T>& g)
         v[i] = 1./v[i];
     return v;
 }
+
 /**
 * @brief create host_vector containing 3d X-space weight coefficients for integration
 *

@@ -13,6 +13,10 @@ double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
 double zero( double x) { return 0;}
 
+double functionX( double x) { return sin(x);}
+double derivativeX( double x) { return cos(x);}
+double zeroX( double x) { return 0;}
+
 typedef dg::HVec Vector;
 typedef dg::EllSparseBlockMat Matrix;
 
@@ -56,6 +60,29 @@ int main ()
         dg::blas1::axpby( 1., null , -1., error);
         std::cout << "Distance to true solution (jump     ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n\n";
     }
+    dg::GridX1d gXDIR( -M_PI, 2*M_PI+M_PI, 1./4., n, N, dg::DIR);
+        Matrix hs = dg::create::dx( gXDIR, dg::centered);
+        Matrix hf = dg::create::dx( gXDIR, dg::forward);
+        Matrix hb = dg::create::dx( gXDIR, dg::backward);
+        Matrix js = dg::create::jump( gXDIR);
+        const Vector func = dg::evaluate( function, gXDIR);
+        Vector error = func;
+        const Vector w1d = dg::create::weights( gXDIR);
+        const Vector deri = dg::evaluate( derivative, gXDIR);
+        const Vector null = dg::evaluate( zero, gXDIR);
+
+        dg::blas2::symv( hs, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (symmetric): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( hf, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (forward  ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( hb, func, error);
+        dg::blas1::axpby( 1., deri, -1., error);
+        std::cout << "Distance to true solution (backward ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
+        dg::blas2::symv( js, func, error);
+        dg::blas1::axpby( 1., null , -1., error);
+        std::cout << "Distance to true solution (jump     ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1

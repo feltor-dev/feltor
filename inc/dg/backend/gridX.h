@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include "dlt.h"
+#include "grid.h"
 #include "../enums.h"
 
 /*! @file 
@@ -18,12 +19,16 @@ struct SharedTag;
 ///@addtogroup grid
 ///@{
 /**
-* @brief 1D grid
+* @brief 1D grid for X-point topology
 *
-* @tparam T value type
+* The grid looks like 
+* |------x----------x------|
+* , where the x indicates the periodicity and - the number of points
+* The left boundary is x0 and the right x1, the inner boundaries lie at
+* x0 + f*Lx and x1-f*Lx
+* therefore f must be smaller than 0.5
 */
-template <class T>
-struct Grid1d
+struct GridX1d
 {
     typedef SharedTag memory_category;
     /**
@@ -31,14 +36,17 @@ struct Grid1d
      * 
      @param x0 left boundary
      @param x1 right boundary
+     @param f factor 0<f<0.5 divides the domain
      @param n # of polynomial coefficients
      @param N # of cells
      @param bcx boundary conditions
      */
-    Grid1d( T x0, T x1, unsigned n, unsigned N, bc bcx = PER):
-        x0_(x0), x1_(x1),
+    GridX1d( double x0, double x1, double f, unsigned n, unsigned N, bc bcx = PER):
+        x0_(x0), x1_(x1), f_(f),
         n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
+        assert( (f > 0) && (f < 0.5) );
+        assert( floor( f*(double)N ) == f*(double)N); 
         assert( x1 > x0 );
         assert( N > 0  );
         assert( n != 0 );
@@ -50,31 +58,49 @@ struct Grid1d
      *
      * @return 
      */
-    T x0() const {return x0_;}
+    double x0() const {return x0_;}
     /**
      * @brief right boundary
      *
      * @return 
      */
-    T x1() const {return x1_;}
+    double x1() const {return x1_;}
+    /**
+     * @brief Factor
+     *
+     * @return 
+     */
+    double f() const {return f_;}
     /**
      * @brief total length of interval
      *
      * @return 
      */
-    T lx() const {return lx_;}
+    double lx() const {return lx_;}
     /**
      * @brief cell size
      *
      * @return 
      */
-    T h() const {return hx_;}
+    double h() const {return hx_;}
     /**
      * @brief number of cells
      *
      * @return 
      */
     unsigned N() const {return Nx_;}
+    /**
+     * @brief number of cells in one of the outer regions
+     *
+     * @return 
+     */
+    unsigned outer_N() const {return (unsigned)(f_*(double)Nx_);}
+    /**
+     * @brief number of cells in the inner region
+     *
+     * @return 
+     */
+    unsigned inner_N() const {return (unsigned)((1.-2.*f_)*(double)Nx_);}
     /**
      * @brief number of polynomial coefficients
      *
@@ -88,7 +114,7 @@ struct Grid1d
      */
     bc bcx() const {return bcx_;}
     /**
-     * @brief The total number of points
+     * @brief the total number of points
      *
      * @return n*Nx
      */
@@ -98,23 +124,30 @@ struct Grid1d
      *
      * @return 
      */
-    const DLT<T>& dlt() const {return dlt_;}
+    const DLT<double>& dlt() const {return dlt_;}
+    Grid1d<double> grid() const{return Grid1d<double>( x0_, x1_, n_, Nx_, bcx_);}
   private:
-    T x0_, x1_;
-    T lx_;
+    double x0_, x1_, f_;
+    double lx_;
     unsigned n_, Nx_;
-    T hx_;
+    double hx_;
     bc bcx_;
-    DLT<T> dlt_;
+    DLT<double> dlt_;
 };
 
 /**
- * @brief A 2D grid class 
+ * @brief A 2D grid class with X-point topology
  *
- * @tparam T scalar value type 
+ * is of the form
+ * |--- ---------- ---|
+ * |--- ---------- ---|
+ * |--- ---------- ---|
+ * |---x----------x---|
+ * |---x----------x---|
+ *
+ * @tparam double scalar value type 
  */
-template< class T>
-struct Grid2d
+struct GridX2d
 {
     typedef SharedTag memory_category;
     /**
@@ -124,33 +157,24 @@ struct Grid2d
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
      * @param y1 upper boundary in y 
+     * @param fy factor for y-direction
      * @param n  # of polynomial coefficients per dimension
      * @param Nx # of points in x 
+     * @param Nx_topological number of rows with X-point topology
      * @param Ny # of points in y
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    Grid2d( T x0, T x1, T y0, T y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
-        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
+    GridX2d( double x0, double x1, double y0, double y1, double fy, unsigned n, unsigned Nx, unsigned Nx_topologic, unsigned Ny, bc bcx = PER, bc bcy = PER):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), f_(f), 
+        n_(n), Nx_(Nx), Nx_top_(Nx_topologic), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
+        assert( (f > 0) && (f < 0.5) );
+        assert( floor( f*(double)Ny ) == f*(double)Ny); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
-        assert( Nx > 0  && Ny > 0);
-        lx_ = (x1_-x0_), ly_ = (y1_-y0_);
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
-    }
-    /**
-     * @brief Construct a 2d grid as the product of two 1d grids
-     *
-     * @param gx Grid in x - direction
-     * @param gy Grid in y - direction
-     */
-    Grid2d( const Grid1d<T>& gx, const Grid1d<T>& gy): 
-        x0_(gx.x0()), x1_(gx.x1()), y0_(gy.x0()), y1_(gy.x1()), 
-        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n())
-    {
-        assert( gx.n() == gy.n() );
+        assert( Nx > 0  && Ny > 0 && Nx_top_ > 0);
+        assert( Nx_top_ < Nx);
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
     }
@@ -159,49 +183,49 @@ struct Grid2d
      *
      * @return 
      */
-    T x0() const {return x0_;}
+    double x0() const {return x0_;}
     /**
      * @brief Right boundary in x
      *
      * @return 
      */
-    T x1() const {return x1_;}
+    double x1() const {return x1_;}
     /**
      * @brief left boundary in y
      *
      * @return 
      */
-    T y0() const {return y0_;}
+    double y0() const {return y0_;}
     /**
      * @brief Right boundary in y 
      *
      * @return 
      */
-    T y1() const {return y1_;}
+    double y1() const {return y1_;}
     /**
      * @brief length of x 
      *
      * @return 
      */
-    T lx() const {return lx_;}
+    double lx() const {return lx_;}
     /**
      * @brief length of y
      *
      * @return 
      */
-    T ly() const {return ly_;}
+    double ly() const {return ly_;}
     /**
      * @brief cell size in x 
      *
      * @return 
      */
-    T hx() const {return hx_;}
+    double hx() const {return hx_;}
     /**
      * @brief cell size in y
      *
      * @return 
      */
-    T hy() const {return hy_;}
+    double hy() const {return hy_;}
     /**
      * @brief number of polynomial coefficients in x and y
      *
@@ -215,11 +239,29 @@ struct Grid2d
      */
     unsigned Nx() const {return Nx_;}
     /**
+     * @brief number of topological cells in x
+     *
+     * @return 
+     */
+    unsigned Nx_top() const {return Nx_top_;}
+    /**
      * @brief number of cells in y
      *
      * @return 
      */
     unsigned Ny() const {return Ny_;}
+    /**
+     * @brief number of cells in the inner region of y
+     *
+     * @return 
+     */
+    unsigned inner_Ny() const {return (unsigned)(f_*(double)Ny_);}
+    /**
+     * @brief number of cells in one of the outer regions of y
+     *
+     * @return 
+     */
+    unsigned outer_Ny() const {return (unsigned)((1.-2.*f)(double)Ny_);}
     /**
      * @brief boundary conditions in x
      *
@@ -237,15 +279,21 @@ struct Grid2d
      *
      * @return 
      */
-    Grid2d<double> local_grid() const {return *this;}
+    GridX2d<double> local_grid() const {return *this;}
+    /**
+     * @brief Return a copy without topology
+     *
+     * @return 
+     */
+    Grid2d<double> grid() const {return Grid2d<double>( x0_,x1_,y0_,y1_,n_,Nx_,Ny_,bcx_,bcy_);}
     /**
      * @brief discrete legendre trafo
      *
      * @return 
      */
-    const DLT<T>& dlt() const{return dlt_;}
+    const DLT<double>& dlt() const{return dlt_;}
     /**
-     * @brief The total number of points
+     * @brief doublehe total number of points
      *
      * @return n*n*Nx*Ny
      */
@@ -285,12 +333,13 @@ struct Grid2d
         }
     }
   private:
-    T x0_, x1_, y0_, y1_;
-    T lx_, ly_;
-    unsigned n_, Nx_, Ny_;
-    T hx_, hy_;
+    double x0_, x1_, y0_, y1_;
+    double f_;
+    double lx_, ly_;
+    unsigned n_, Nx_, Nx_top_, Ny_;
+    double hx_, hy_;
     bc bcx_, bcy_;
-    DLT<T> dlt_;
+    DLT<double> dlt_;
 };
 
 /**
@@ -298,10 +347,9 @@ struct Grid2d
  *
  * In the third dimension only 1 polynomial coefficient is used,
  * not n.
- * @tparam T scalar value type 
+ * @tparam double scalar value type 
  */
-template< class T>
-struct Grid3d
+struct GridX3d
 {
     typedef SharedTag memory_category;
     /**
@@ -311,10 +359,12 @@ struct Grid3d
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
      * @param y1 upper boundary in y 
+     * @param fy factor for y-direction
      * @param z0 lower boundary in z
      * @param z1 upper boundary in z 
      * @param n  # of polynomial coefficients per (x-,y-) dimension
      * @param Nx # of points in x 
+     * @param Nx_topological number of rows with X-point topology
      * @param Ny # of points in y
      * @param Nz # of points in z
      * @param bcx boundary condition in x
@@ -322,34 +372,17 @@ struct Grid3d
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    Grid3d( T x0, T x1, T y0, T y1, T z0, T z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1),
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
+    GridX3d( double x0, double x1, double y0, double y1, double fy, double z0, double z1, unsigned n, unsigned Nx, unsigned Nx_topological, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), f_(fy),
+        n_(n), Nx_(Nx), Nx_top_(Nx_topological), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
+        assert( (f > 0) && (f < 0.5) );
+        assert( floor( f*(double)Ny ) == f*(double)Ny); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
         assert( Nx > 0  && Ny > 0); assert( Nz > 0);
-
+        assert( Nx_top_ < Nx);
         lx_ = (x1-x0), ly_ = (y1-y0), lz_ = (z1-z0);
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
-    }
-    /**
-     * @brief Construct a 3d cartesian grid as the product of three 1d grids
-     *
-     * @param gx Grid in x - direction
-     * @param gy Grid in y - direction
-     * @param gz Grid in z - direction
-     */
-    Grid3d( const Grid1d<T>& gx, const Grid1d<T>& gy, const Grid1d<T>& gz): 
-        x0_(gx.x0()), x1_(gx.x1()),  
-        y0_(gy.x0()), y1_(gy.x1()),
-        z0_(gz.x0()), z1_(gz.x1()),
-        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), Nz_(gz.N()),
-        bcx_(gx.bcx()), bcy_( gy.bcx()), bcz_(gz.bcx()), 
-        dlt_(gx.n())
-    {
-        assert( gx.n() == gy.n() );
-        lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
     }
     /**
@@ -357,77 +390,77 @@ struct Grid3d
      *
      * @return 
      */
-    T x0() const {return x0_;}
+    double x0() const {return x0_;}
     /**
      * @brief right boundary in x
      *
      * @return 
      */
-    T x1() const {return x1_;}
+    double x1() const {return x1_;}
 
     /**
      * @brief left boundary in y 
      *
      * @return 
      */
-    T y0() const {return y0_;}
+    double y0() const {return y0_;}
     /**
      * @brief right boundary in y
      *
      * @return 
      */
-    T y1() const {return y1_;}
+    double y1() const {return y1_;}
 
     /**
      * @brief left boundary in z
      *
      * @return 
      */
-    T z0() const {return z0_;}
+    double z0() const {return z0_;}
     /**
      * @brief right boundary in z
      *
      * @return 
      */
-    T z1() const {return z1_;}
+    double z1() const {return z1_;}
 
     /**
      * @brief length in x
      *
      * @return 
      */
-    T lx() const {return lx_;}
+    double lx() const {return lx_;}
     /**
      * @brief length in y
      *
      * @return 
      */
-    T ly() const {return ly_;}
+    double ly() const {return ly_;}
     /**
      * @brief length in z
      *
      * @return 
      */
-    T lz() const {return lz_;}
+    double lz() const {return lz_;}
     
     /**
      * @brief cell size in x
      *
      * @return 
      */
-    T hx() const {return hx_;}
+    double hx() const {return hx_;}
     /**
      * @brief cell size in y
      *
      * @return 
      */
-    T hy() const {return hy_;}
+    double hy() const {return hy_;}
     /**
      * @brief cell size in z
      *
      * @return 
      */
-    T hz() const {return hz_;}
+    double hz() const {return hz_;}
     /**
      * @brief number of polynomial coefficients in x and y
      *
@@ -441,11 +474,29 @@ struct Grid3d
      */
     unsigned Nx() const {return Nx_;}
     /**
+     * @brief number of topological cells in x
+     *
+     * @return 
+     */
+    unsigned Nx_top() const {return Nx_top_;}
+    /**
      * @brief number of points in y
      *
      * @return 
      */
     unsigned Ny() const {return Ny_;}
+    /**
+     * @brief number of cells in the inner region of y
+     *
+     * @return 
+     */
+    unsigned inner_Ny() const {return (unsigned)(f_*(double)Ny_);}
+    /**
+     * @brief number of cells in one of the outer regions of y
+     *
+     * @return 
+     */
+    unsigned outer_Ny() const {return (unsigned)((1.-2.*f)(double)Ny_);}
     /**
      * @brief number of points in z
      *
@@ -471,13 +522,19 @@ struct Grid3d
      */
     bc bcz() const {return bcz_;}
     /**
+     * @brief Return a copy without topology
+     *
+     * @return 
+     */
+    Grid3d<double> grid() const {return Grid3d<double>( x0_,x1_,y0_,y1_,z0_,z1_,n_,Nx_,Ny_,Nz_,bcx_,bcy_,bcz_);}
+    /**
      * @brief discrete legendre transformation
      *
      * @return 
      */
-    const DLT<T>& dlt() const{return dlt_;}
+    const DLT<double>& dlt() const{return dlt_;}
     /**
-     * @brief The total number of points
+     * @brief doublehe total number of points
      *
      * @return n*n*Nx*Ny*Nz
      */
@@ -529,12 +586,13 @@ struct Grid3d
         }
     }
   private:
-    T x0_, x1_, y0_, y1_, z0_, z1_;
-    T lx_, ly_, lz_;
-    unsigned n_, Nx_, Ny_, Nz_;
-    T hx_, hy_, hz_;
+    double x0_, x1_, y0_, y1_, z0_, z1_;
+    double f_;
+    double lx_, ly_, lz_;
+    unsigned n_, Nx_, Nx_top_, Ny_, Nz_;
+    double hx_, hy_, hz_;
     bc bcx_, bcy_, bcz_;
-    DLT<T> dlt_;
+    DLT<double> dlt_;
 };
 
 ///@}

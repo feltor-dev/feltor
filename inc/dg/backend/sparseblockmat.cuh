@@ -29,7 +29,7 @@ struct EllSparseBlockMatDevice
         data = src.data;
         cols_idx = src.cols_idx, data_idx = src.data_idx;
         num_rows = src.num_rows, num_cols = src.num_cols, blocks_per_line = src.blocks_per_line;
-        n = src.n, left = src.left, right = src.right;
+        n = src.n, left = src.left, right = src.right, trivial = src.trivial;
     }
     
     /**
@@ -55,6 +55,7 @@ struct EllSparseBlockMatDevice
     int num_rows, num_cols, blocks_per_line;
     int n;
     int left, right;
+    bool trivial;
 };
 
 
@@ -196,51 +197,50 @@ void EllSparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) co
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
+if(trivial)
+{
     int offset[blocks_per_line];
     for( int d=0; d<blocks_per_line; d++)
         offset[d] = cols_idx[blocks_per_line+d]-1;
-if(right==1) //alle dx Ableitungen
-{
-#pragma omp parallel for 
-    for( int s=0; s<left; s++)
-    for( int i=0; i<1; i++)
-    for( int k=0; k<n; k++)
+    if(right==1) //alle dx Ableitungen
     {
-        double temp=0;
-        for( int d=0; d<blocks_per_line; d++)
-            for( int q=0; q<n; q++) //multiplication-loop
-                temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
-        y[(s*num_rows+i)*n+k]=temp;
-    }
 #pragma omp parallel for 
-    for( int s=0; s<left; s++)
-    for( int i=1; i<num_rows-1; i++)
-    for( int k=0; k<n; k++)
-    {
-        double temp=0;
-        for( int d=0; d<blocks_per_line; d++)
-            for( int q=0; q<n; q++) //multiplication-loop
-                temp+=data[(d*n + k)*n+q]*x[((s*num_cols + i+offset[d])*n+q)];
-        y[(s*num_rows+i)*n+k]=temp;
-    }
+        for( int s=0; s<left; s++)
+        for( int i=0; i<1; i++)
+        for( int k=0; k<n; k++)
+        {
+            double temp=0;
+            for( int d=0; d<blocks_per_line; d++)
+                for( int q=0; q<n; q++) //multiplication-loop
+                    temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                        x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
+            y[(s*num_rows+i)*n+k]=temp;
+        }
 #pragma omp parallel for 
-    for( int s=0; s<left; s++)
-    for( int i=num_rows-1; i<num_rows; i++)
-    for( int k=0; k<n; k++)
-    {
-        double temp=0;
-        for( int d=0; d<blocks_per_line; d++)
-            for( int q=0; q<n; q++) //multiplication-loop
-                temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
-        y[(s*num_rows+i)*n+k]=temp;
-    }
-    return;
-} //if right==1
-
-
-
+        for( int s=0; s<left; s++)
+        for( int i=1; i<num_rows-1; i++)
+        for( int k=0; k<n; k++)
+        {
+            double temp=0;
+            for( int d=0; d<blocks_per_line; d++)
+                for( int q=0; q<n; q++) //multiplication-loop
+                    temp+=data[(d*n + k)*n+q]*x[((s*num_cols + i+offset[d])*n+q)];
+            y[(s*num_rows+i)*n+k]=temp;
+        }
+#pragma omp parallel for 
+        for( int s=0; s<left; s++)
+        for( int i=num_rows-1; i<num_rows; i++)
+        for( int k=0; k<n; k++)
+        {
+            double temp=0;
+            for( int d=0; d<blocks_per_line; d++)
+                for( int q=0; q<n; q++) //multiplication-loop
+                    temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                        x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
+            y[(s*num_rows+i)*n+k]=temp;
+        }
+        return;
+    } //if right==1
 #pragma omp parallel for
     for( unsigned  i=0; i<y.size(); i++)
     {
@@ -261,49 +261,49 @@ if(right==1) //alle dx Ableitungen
         y[I] = temp;
     }
 
-if(left > 1)
-{
-    for( int d=0; d<blocks_per_line; d++)
+    if(left > 1)
     {
+        for( int d=0; d<blocks_per_line; d++)
+        {
 #pragma omp parallel for collapse(2)
-    for( int s=0; s<left; s++)
-    for( int i=1; i<num_rows-1; i++)
-    {
-        int J = i+offset[d];
-        for( int k=0; k<n; k++)
-        for( int j=0; j<right; j++)
+        for( int s=0; s<left; s++)
+        for( int i=1; i<num_rows-1; i++)
         {
-            int I = ((s*num_rows + i)*n+k)*right+j;
-            for( int q=0; q<n; q++) //multiplication-loop
-                y[I] += data[ (d*n+k)*n+q]*x[((s*num_cols + J)*n+q)*right+j];
-            //double temp=0;
-            //for( int d=0; d<blocks_per_line; d++)
-            //    for( int q=0; q<n; q++) //multiplication-loop
-            //        temp+=data[(d*n + k)*n+q]*
-            //        x[((s*num_cols + i + offset[d])*n+q)*right+j];
-            //y[((s*num_rows+i)*n+k)*right+j]=temp;
+            int J = i+offset[d];
+            for( int k=0; k<n; k++)
+            for( int j=0; j<right; j++)
+            {
+                int I = ((s*num_rows + i)*n+k)*right+j;
+                for( int q=0; q<n; q++) //multiplication-loop
+                    y[I] += data[ (d*n+k)*n+q]*x[((s*num_cols + J)*n+q)*right+j];
+                //double temp=0;
+                //for( int d=0; d<blocks_per_line; d++)
+                //    for( int q=0; q<n; q++) //multiplication-loop
+                //        temp+=data[(d*n + k)*n+q]*
+                //        x[((s*num_cols + i + offset[d])*n+q)*right+j];
+                //y[((s*num_rows+i)*n+k)*right+j]=temp;
+            }
+        }
         }
     }
-    }
-}
-else
-{
-    for( int d=0; d<blocks_per_line; d++)
+    else
     {
+        for( int d=0; d<blocks_per_line; d++)
+        {
 #pragma omp parallel for 
-    for( int i=1; i<num_rows-1; i++)
-    {
-        int J = i+offset[d];
-        for( int k=0; k<n; k++)
-        for( int j=0; j<right; j++)
+        for( int i=1; i<num_rows-1; i++)
         {
-            int I = (i*n+k)*right+j;
-            for( int q=0; q<n; q++) //multiplication-loop
-                y[I] += data[ (d*n+k)*n+q]*x[(J*n+q)*right+j];
+            int J = i+offset[d];
+            for( int k=0; k<n; k++)
+            for( int j=0; j<right; j++)
+            {
+                int I = (i*n+k)*right+j;
+                for( int q=0; q<n; q++) //multiplication-loop
+                    y[I] += data[ (d*n+k)*n+q]*x[(J*n+q)*right+j];
+            }
         }
-    }
-    }
-} //endif left > 1
+        }
+    } //endif left > 1
 #pragma omp parallel for collapse(4)
     for( int s=0; s<left; s++)
     for( int i=num_rows-1; i<num_rows; i++)
@@ -318,6 +318,24 @@ else
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
         y[I] = temp; //do not add here because of the case num_rows==1
     }
+}
+else//not-trivial
+{
+    //simplest implementation
+#pragma omp parallel for collapse(4)
+    for( int s=0; s<left; s++)
+    for( int i=0; i<num_rows; i++)
+    for( int k=0; k<n; k++)
+    for( int j=0; j<right; j++)
+    {
+        int I = ((s*num_rows + i)*n+k)*right+j;
+        y[I] =0;
+        for( int d=0; d<blocks_per_line; d++)
+        for( int q=0; q<n; q++) //multiplication-loop
+            y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+    }
+} //trivial
 }
 void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& x, double beta, DVec& y) const
 {
@@ -434,6 +452,7 @@ void EllSparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) co
     ell_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
         data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, left, right, x_ptr,y_ptr);
 }
+
 void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& x, double beta, DVec& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
