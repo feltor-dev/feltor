@@ -958,6 +958,42 @@ struct FieldRZtau
     PsipZ psipZ_;
 };
 
+struct HessianRZtau
+{
+    HessianRZtau( GeomParameters gp): zdir_(true), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){}
+    // if true goes into positive Z - direction and X else
+    void set_direction( bool zdirection) {zdir_ = zdirection;}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipRZ = psipRZ_(y[0], y[1]);
+        if( psipRZ == 0)
+        {
+            if( zdir_) { yp[0] = 0; yp[1] = 1; }
+            else      { yp[0] = 1; yp[1] = 0; }
+        }
+        else
+        {
+            double psipRR = psipRR_(y[0], y[1]), psipZZ = psipZZ_(y[0],y[1]);
+            
+            double T = psipRR + psipZZ; 
+            double D = psipZZ*psipRR - psipRZ*psipRZ;
+            double L1 = 0.5*T+sqrt( 0.25*T*T-D); // > 0
+            double L2 = 0.5*T-sqrt( 0.25*T*T-D); // < 0;  D = L1*L2
+            if( zdir_ ) { yp[0] = -psipRZ; yp[1] = psipRR - L2;}
+            else        { yp[0] = L1 - psipZZ; yp[1] = psipRZ;}
+        }
+        double vgradpsi = yp[0]*psipR_(y[0],y[1]) + yp[1]*psipZ_(y[0],y[1]);
+        yp[0] /= vgradpsi, yp[1] /= vgradpsi;
+    }
+  private:
+    bool zdir_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipRR psipRR_;
+    PsipRZ psipRZ_;
+    PsipZZ psipZZ_;
+};
+
 struct FieldRZY
 {
     FieldRZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){ f_ = f_prime_ = 1.;}

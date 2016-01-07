@@ -309,39 +309,41 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
         dg::Grid3d<double>( 0, solovev::detail::Fpsi(gp, psi_0).find_x1( psi_1), 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         //compute psi(x) for a grid on x 
-        detail::FieldFinv fpsiM_(gp, psi_0, psi_1);
+        detail::FieldFinv fpsiMinv_(gp, psi_0, psi_1);
         dg::Grid1d<double> g1d_( 0, this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
         thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
+        f_x_.resize( psi_x.size());
         thrust::host_vector<double> w1d = dg::create::weights( g1d_);
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
         unsigned N = 1;
-        double eps = 1e10; //eps_old=2e10;
-        //std::cout << "In psi function:\n";
+        double eps = 1e10, eps_old=2e10;
+        std::cout << "In psi function:\n";
         double x0=this->x0(), x1 = x_vec[1];
         //while( eps <  eps_old && N < 1e6)
-        while( eps >  1e-10 && N < 1e6)
+        while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
         {
-            //eps_old = eps;
-            psi_old = psi_x; 
+            eps_old = eps;
+            //psi_old = psi_x; 
             x0 = 0, x1 = x_vec[0];
 
-            dg::stepperRK6( fpsiM_, begin, end, x0, x1, N);
-            psi_x[0] = end[0]; 
+            dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
+            psi_x[0] = end[0]; fpsiMinv_(end,temp); f_x_[0] = temp[0];
             for( unsigned i=1; i<g1d_.size(); i++)
             {
                 temp = end;
                 x0 = x_vec[i-1], x1 = x_vec[i];
-                dg::stepperRK6( fpsiM_, temp, end, x0, x1, N);
-                psi_x[i] = end[0];
+                dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
+                psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
             }
-            temp = end;
-            dg::stepperRK6(fpsiM_, temp, end, x1, this->x1(),N);
-            eps = fabs( end[0]-psi_1); 
-            //std::cout << "Effective absolute Psi error is "<<eps<<" with "<<N<<" steps\n"; //Here is a problem when psi = 0 (X-point is used)
+            //temp = end;
+            //dg::stepperRK6(fpsiMinv_, temp, end, x1, this->x1(),N);
+            double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
+            eps = fabs( psi_1_numerical-psi_1); 
+            std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
+            std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
-        //first compute boundary points in x
         construct_rz( gp, psi_0, psi_x);
     }
     const thrust::host_vector<double>& r()const{return r_;}
@@ -366,7 +368,6 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
     {
         detail::Fpsi fpsi( gp, psi_0);
         //construct f_x, fp_x, r and z and the boundaries in y 
-        f_x_.resize( psi_x.size());
         r_.resize(size()), z_.resize(size());
         yr_ = r_, yz_ = z_;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
@@ -524,17 +525,11 @@ struct ConformalField
       \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
       + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
      */ 
-    double operator()( double R, double Z) const
-    {
-        return invB_(R,Z);
-    }
+    double operator()( double R, double Z) const { return invB_(R,Z); }
     /**
      * @brief == operator()(R,Z)
      */ 
-    double operator()( double R, double Z, double phi) const
-    {
-        return invB_(R,Z,phi);
-    }
+    double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
     
     private:
     double find_fx(double x) 
