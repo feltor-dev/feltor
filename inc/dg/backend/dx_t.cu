@@ -13,8 +13,16 @@ double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
 double zero( double x) { return 0;}
 
-double functionX( double x) { return sin(x);}
-double derivativeX( double x) { return cos(x);}
+double functionX( double x) { 
+    if( x < 0) return sin(x);
+    else if( 0 <= x && x < 2*M_PI) return cos(x);
+    else return sin(x - 2*M_PI);
+}
+double derivativeX( double x) { 
+    if( x < 0) return cos(x);
+    else if( 0 <= x && x < 2*M_PI) return -sin(x);
+    else return cos(x - 2*M_PI);
+}
 double zeroX( double x) { return 0;}
 
 typedef dg::HVec Vector;
@@ -34,7 +42,7 @@ int main ()
     dg::Grid1d<double> gNEU_DIR( M_PI/2., M_PI, n, N, dg::NEU_DIR);
     dg::Grid1d<double> g[] = {gPER, gDIR, gNEU, gDIR_NEU,gNEU_DIR};
 
-    std::cout << "YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
+    std::cout << "TEST NORMAL TOPOLOGY: YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
     for( unsigned i=0; i<5; i++)
     {
         Matrix hs = dg::create::dx( g[i], dg::centered);
@@ -60,16 +68,17 @@ int main ()
         dg::blas1::axpby( 1., null , -1., error);
         std::cout << "Distance to true solution (jump     ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n\n";
     }
+    std::cout << "TEST X-POINT TOPOLOGY: YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
     dg::GridX1d gXDIR( -M_PI, 2*M_PI+M_PI, 1./4., n, N, dg::DIR);
         Matrix hs = dg::create::dx( gXDIR, dg::centered);
         Matrix hf = dg::create::dx( gXDIR, dg::forward);
         Matrix hb = dg::create::dx( gXDIR, dg::backward);
         Matrix js = dg::create::jump( gXDIR);
-        const Vector func = dg::evaluate( function, gXDIR);
+        const Vector func = dg::evaluate( functionX, gXDIR);
         Vector error = func;
         const Vector w1d = dg::create::weights( gXDIR);
-        const Vector deri = dg::evaluate( derivative, gXDIR);
-        const Vector null = dg::evaluate( zero, gXDIR);
+        const Vector deri = dg::evaluate( derivativeX, gXDIR);
+        const Vector null = dg::evaluate( zeroX, gXDIR);
 
         dg::blas2::symv( hs, func, error);
         dg::blas1::axpby( 1., deri, -1., error);

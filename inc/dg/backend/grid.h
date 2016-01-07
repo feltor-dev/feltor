@@ -1,5 +1,4 @@
-#ifndef _DG_GRID_
-#define _DG_GRID_
+#pragma once
 
 #include <cassert>
 #include "dlt.h"
@@ -539,4 +538,3 @@ struct Grid3d
 
 ///@}
 }// namespace dg
-#endif // _DG_GRID_

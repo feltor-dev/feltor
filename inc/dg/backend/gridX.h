@@ -1,6 +1,4 @@
-#ifndef _DG_GRID_
-#define _DG_GRID_
-
+#pragma once
 #include <cassert>
 #include "dlt.h"
 #include "grid.h"
@@ -166,11 +164,11 @@ struct GridX2d
      * @param bcy boundary condition in y
      */
     GridX2d( double x0, double x1, double y0, double y1, double fy, unsigned n, unsigned Nx, unsigned Nx_topologic, unsigned Ny, bc bcx = PER, bc bcy = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), f_(f), 
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), f_(fy), 
         n_(n), Nx_(Nx), Nx_top_(Nx_topologic), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
-        assert( (f > 0) && (f < 0.5) );
-        assert( floor( f*(double)Ny ) == f*(double)Ny); 
+        assert( (f_ > 0) && (f_ < 0.5) );
+        assert( floor( f_*(double)Ny ) == f_*(double)Ny); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
         assert( Nx > 0  && Ny > 0 && Nx_top_ > 0);
@@ -255,13 +253,13 @@ struct GridX2d
      *
      * @return 
      */
-    unsigned inner_Ny() const {return (unsigned)(f_*(double)Ny_);}
+    unsigned inner_Ny() const {return (unsigned)((1.-2.*f_)*(double)Ny_);}
     /**
      * @brief number of cells in one of the outer regions of y
      *
      * @return 
      */
-    unsigned outer_Ny() const {return (unsigned)((1.-2.*f)(double)Ny_);}
+    unsigned outer_Ny() const {return (unsigned)(f_*(double)Ny_);}
     /**
      * @brief boundary conditions in x
      *
@@ -279,7 +277,7 @@ struct GridX2d
      *
      * @return 
      */
-    GridX2d<double> local_grid() const {return *this;}
+    GridX2d local_grid() const {return *this;}
     /**
      * @brief Return a copy without topology
      *
@@ -376,8 +374,8 @@ struct GridX3d
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), f_(fy),
         n_(n), Nx_(Nx), Nx_top_(Nx_topological), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
-        assert( (f > 0) && (f < 0.5) );
-        assert( floor( f*(double)Ny ) == f*(double)Ny); 
+        assert( (f_ > 0) && (f_ < 0.5) );
+        assert( floor( f_*(double)Ny ) == f_*(double)Ny); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
         assert( Nx > 0  && Ny > 0); assert( Nz > 0);
@@ -490,13 +488,13 @@ struct GridX3d
      *
      * @return 
      */
-    unsigned inner_Ny() const {return (unsigned)(f_*(double)Ny_);}
+    unsigned inner_Ny() const {return (unsigned)((1.-2.*f_)*(double)Ny_);}
     /**
      * @brief number of cells in one of the outer regions of y
      *
      * @return 
      */
-    unsigned outer_Ny() const {return (unsigned)((1.-2.*f)(double)Ny_);}
+    unsigned outer_Ny() const {return (unsigned)(f_*(double)Ny_);}
     /**
      * @brief number of points in z
      *
@@ -597,4 +595,3 @@ struct GridX3d
 
 ///@}
 }// namespace dg
-#endif // _DG_GRID_
