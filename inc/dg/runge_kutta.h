@@ -493,7 +493,7 @@ void stepperRK(RHS& rhs, const Vector& begin, Vector& end, double T_min, double 
 {
     RK_classic<s, Vector > rk( begin); 
     Vector temp(begin);
-    if( T_max <= T_min) return;
+    if( T_max == T_min){ end = begin; return;}
     double dt = (T_max-T_min)/(double)N;
     end = begin;
     for( unsigned i=0; i<N; i++)

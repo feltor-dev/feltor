@@ -960,33 +960,47 @@ struct FieldRZtau
 
 struct HessianRZtau
 {
-    HessianRZtau( GeomParameters gp): zdir_(true), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){}
+    HessianRZtau( GeomParameters gp): norm_(false), quad_(1), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){}
     // if true goes into positive Z - direction and X else
-    void set_direction( bool zdirection) {zdir_ = zdirection;}
+    void set_quadrant( int quadrant) {quad_ = quadrant;}
+    void set_norm( bool normed) {norm_ = normed;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipRZ = psipRZ_(y[0], y[1]);
         if( psipRZ == 0)
         {
-            if( zdir_) { yp[0] = 0; yp[1] = 1; }
-            else      { yp[0] = 1; yp[1] = 0; }
+            if(      quad_ == 0) { yp[0] = 1; yp[1] = 0; }
+            else if( quad_ == 1) { yp[0] = 0; yp[1] = 1; }
+            else if( quad_ == 2) { yp[0] = -1; yp[1] = 0; }
+            else if( quad_ == 3) { yp[0] = 0; yp[1] = -1; }
         }
         else
         {
             double psipRR = psipRR_(y[0], y[1]), psipZZ = psipZZ_(y[0],y[1]);
-            
             double T = psipRR + psipZZ; 
             double D = psipZZ*psipRR - psipRZ*psipRZ;
             double L1 = 0.5*T+sqrt( 0.25*T*T-D); // > 0
             double L2 = 0.5*T-sqrt( 0.25*T*T-D); // < 0;  D = L1*L2
-            if( zdir_ ) { yp[0] = -psipRZ; yp[1] = psipRR - L2;}
-            else        { yp[0] = L1 - psipZZ; yp[1] = psipRZ;}
+            if      ( quad_ == 0){ yp[0] =  L1 - psipZZ; yp[1] = psipRZ;}
+            else if ( quad_ == 1){ yp[0] = -psipRZ; yp[1] = psipRR - L2;}
+            else if ( quad_ == 2){ yp[0] =  psipZZ - L1; yp[1] = -psipRZ;}
+            else if ( quad_ == 3){ yp[0] = +psipRZ; yp[1] = L2 - psipRR;}
         }
-        double vgradpsi = yp[0]*psipR_(y[0],y[1]) + yp[1]*psipZ_(y[0],y[1]);
-        yp[0] /= vgradpsi, yp[1] /= vgradpsi;
+        if( norm_) 
+        {
+            double vgradpsi = yp[0]*psipR_(y[0],y[1]) + yp[1]*psipZ_(y[0],y[1]);
+            yp[0] /= vgradpsi, yp[1] /= vgradpsi;
+        }
+        else
+        {
+            double norm = sqrt{yp[0]*yp[0]+yp[1]*yp[1]};
+            yp[0]/= norm, yp[1]/= norm;
+        }
+
     }
   private:
-    bool zdir_;
+    bool norm_;
+    int quad_;
     PsipR psipR_;
     PsipZ psipZ_;
     PsipRR psipRR_;
