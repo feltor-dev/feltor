@@ -993,7 +993,7 @@ struct HessianRZtau
         }
         else
         {
-            double norm = sqrt{yp[0]*yp[0]+yp[1]*yp[1]};
+            double norm = sqrt(yp[0]*yp[0]+yp[1]*yp[1]);
             yp[0]/= norm, yp[1]/= norm;
         }
 

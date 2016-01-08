@@ -155,24 +155,25 @@ struct GridX2d
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
      * @param y1 upper boundary in y 
+     * @param fx factor for x-direction
      * @param fy factor for y-direction
      * @param n  # of polynomial coefficients per dimension
      * @param Nx # of points in x 
-     * @param Nx_topological number of rows with X-point topology
      * @param Ny # of points in y
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    GridX2d( double x0, double x1, double y0, double y1, double fy, unsigned n, unsigned Nx, unsigned Nx_topologic, unsigned Ny, bc bcx = PER, bc bcy = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), f_(fy), 
-        n_(n), Nx_(Nx), Nx_top_(Nx_topologic), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
+    GridX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fx),
+        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
-        assert( (f_ > 0) && (f_ < 0.5) );
-        assert( floor( f_*(double)Ny ) == f_*(double)Ny); 
+        assert( (fy_ > 0.) && (fy_ < 0.5) );
+        assert( (fx_ > 0.) && (fx_ < 1.) );
+        assert( floor( fx_*(double)Nx ) == fx_*(double)Nx); 
+        assert( floor( fy_*(double)Ny ) == fy_*(double)Ny); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
-        assert( Nx > 0  && Ny > 0 && Nx_top_ > 0);
-        assert( Nx_top_ < Nx);
+        assert( Nx_ > 0  && Ny > 0 );
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
     }
@@ -241,7 +242,13 @@ struct GridX2d
      *
      * @return 
      */
-    unsigned Nx_top() const {return Nx_top_;}
+    unsigned innner_Nx() const {return Nx_ - outer_Nx();}
+    /**
+     * @brief number of smooth rows in x
+     *
+     * @return 
+     */
+    unsigned outer_Nx() const {return (unsigned)(fx_*(double)Nx_);}
     /**
      * @brief number of cells in y
      *
@@ -253,13 +260,13 @@ struct GridX2d
      *
      * @return 
      */
-    unsigned inner_Ny() const {return (unsigned)((1.-2.*f_)*(double)Ny_);}
+    unsigned inner_Ny() const {return Ny_-2*outer_Ny();}
     /**
      * @brief number of cells in one of the outer regions of y
      *
      * @return 
      */
-    unsigned outer_Ny() const {return (unsigned)(f_*(double)Ny_);}
+    unsigned outer_Ny() const {return (unsigned)(fy_*(double)Ny_);}
     /**
      * @brief boundary conditions in x
      *
@@ -332,9 +339,9 @@ struct GridX2d
     }
   private:
     double x0_, x1_, y0_, y1_;
-    double f_;
+    double fx_, fy_;
     double lx_, ly_;
-    unsigned n_, Nx_, Nx_top_, Ny_;
+    unsigned n_, Nx__, Ny_;
     double hx_, hy_;
     bc bcx_, bcy_;
     DLT<double> dlt_;
@@ -357,12 +364,12 @@ struct GridX3d
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
      * @param y1 upper boundary in y 
-     * @param fy factor for y-direction
      * @param z0 lower boundary in z
      * @param z1 upper boundary in z 
+     * @param fx factor for x-direction
+     * @param fy factor for y-direction
      * @param n  # of polynomial coefficients per (x-,y-) dimension
      * @param Nx # of points in x 
-     * @param Nx_topological number of rows with X-point topology
      * @param Ny # of points in y
      * @param Nz # of points in z
      * @param bcx boundary condition in x
@@ -370,16 +377,17 @@ struct GridX3d
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    GridX3d( double x0, double x1, double y0, double y1, double fy, double z0, double z1, unsigned n, unsigned Nx, unsigned Nx_topological, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), f_(fy),
-        n_(n), Nx_(Nx), Nx_top_(Nx_topological), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
+    GridX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), fx_(fx), fy_(fy),
+        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
-        assert( (f_ > 0) && (f_ < 0.5) );
-        assert( floor( f_*(double)Ny ) == f_*(double)Ny); 
+        assert( (fy_ > 0.) && (fy_ < 0.5) );
+        assert( (fx_ > 0.) && (fx_ < 1.) );
+        assert( floor( fx_*(double)Nx ) == fx_*(double)Nx); 
+        assert( floor( fy_*(double)Ny ) == fy_*(double)Ny); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
-        assert( Nx > 0  && Ny > 0); assert( Nz > 0);
-        assert( Nx_top_ < Nx);
+        assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
         lx_ = (x1-x0), ly_ = (y1-y0), lz_ = (z1-z0);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
     }
@@ -476,9 +484,15 @@ struct GridX3d
      *
      * @return 
      */
-    unsigned Nx_top() const {return Nx_top_;}
+    unsigned innner_Nx() const {return Nx_ - outer_Nx();}
     /**
-     * @brief number of points in y
+     * @brief number of smooth rows in x
+     *
+     * @return 
+     */
+    unsigned outer_Nx() const {return (unsigned)(fx_*(double)Nx_);}
+    /**
+     * @brief number of cells in y
      *
      * @return 
      */
@@ -488,13 +502,13 @@ struct GridX3d
      *
      * @return 
      */
-    unsigned inner_Ny() const {return (unsigned)((1.-2.*f_)*(double)Ny_);}
+    unsigned inner_Ny() const {return Ny_-2*outer_Ny();}
     /**
      * @brief number of cells in one of the outer regions of y
      *
      * @return 
      */
-    unsigned outer_Ny() const {return (unsigned)(f_*(double)Ny_);}
+    unsigned outer_Ny() const {return (unsigned)(fy_*(double)Ny_);}
     /**
      * @brief number of points in z
      *
@@ -585,9 +599,9 @@ struct GridX3d
     }
   private:
     double x0_, x1_, y0_, y1_, z0_, z1_;
-    double f_;
+    double fx_,fy_;
     double lx_, ly_, lz_;
-    unsigned n_, Nx_, Nx_top_, Ny_, Nz_;
+    unsigned n_, Nx_, Ny_, Nz_;
     double hx_, hy_, hz_;
     bc bcx_, bcy_, bcz_;
     DLT<double> dlt_;
