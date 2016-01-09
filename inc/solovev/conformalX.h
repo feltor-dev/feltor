@@ -17,7 +17,7 @@ namespace detail
 struct FpsiX
 {
     FpsiX( const GeomParameters& gp): 
-        gp_(gp), fieldRZYT_(gp), hessianRZtau_(gp), 
+        gp_(gp), fieldRZYT_(gp), hessianRZtau_(gp)
     {
         /**
          * @brief Find R,Z of the X-point
@@ -26,8 +26,12 @@ struct FpsiX
          *
          * @return the value for R
          */
-        double R_init = 1.-1.1*gp.triangulation*gp.a/gp.R_0;
-        double Z_init = -1.1*gp.elongation*gp.a/gp.R_0;
+        //is there a more precise formula for the X-point?
+        double R_init = gp.R_0-1.1*gp.triangularity*gp.a;
+        double Z_init = -1.1*gp.elongation*gp.a;
+        std::cout << "X-point set at "<<R_init<<" "<<Z_init<<"\n";
+        Psip psip(gp_);
+        std::cout << "psi at X-point is "<<psip(R_init, Z_init)<<"\n";
         hessianRZtau_.set_norm( false);
         for( int i=0; i<4; i++)
         {
@@ -46,7 +50,8 @@ struct FpsiX
                 dg::stepperRK17( hessianRZtau_, begin2d, end2d, 0., 1., N);
                 eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
             }
-            R_i[0] = end2d_old[0], Z_i[0] = end2d_old[1];
+            R_i[i] = end2d_old[0], Z_i[i] = end2d_old[1];
+            std::cout << "Found the point "<<R_i[i]<<" "<<Z_i[i]<<"\n";
         }
         hessianRZtau_.set_norm( true);
     }
@@ -57,7 +62,8 @@ struct FpsiX
         solovev::Psip psip(gp_);
         unsigned N = 50;
         thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
-        //std::cout << "In init function\n";
+        std::cout << "In init function\n";
+        std::cout << "psi is "<<psi<<"\n";
         if( psi < 0)
         {
             for( unsigned i=0; i<2; i++)
@@ -75,7 +81,7 @@ struct FpsiX
                     dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[1+2*i], Z_i[1+2*i]), psi, N);
                     eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
                 }
-                R_0[i] = R_0[i] = end2d_old[0], Z_0[i] = Z_0[i] = end2d_old[1];
+                R_0[i] = end2d_old[0], Z_0[i] = end2d_old[1];
             }
         }
         else
@@ -95,7 +101,7 @@ struct FpsiX
                     dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[2*i], Z_i[2*i]), psi, N);
                     eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
                 }
-                R_0[i] = R_0[i] = end2d_old[0], Z_0[i] = Z_0[i] = end2d_old[1];
+                R_0[i] = end2d_old[0], Z_0[i] = end2d_old[1];
             }
         }
         double theta1 = theta( R_0[0], Z_0[0]);
@@ -110,6 +116,8 @@ struct FpsiX
     {
         double R_i[2], Z_i[2], angle;
         find_initial( psi, R_i, Z_i, angle);
+        std::cout << "Found "<< R_i[0]<<" "<<Z_i[0]<<"\n";
+        std::cout << "and   "<< R_i[1]<<" "<<Z_i[1]<<"\n";
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
         //std::cout << "In Stepper function:\n";
         //double y_old=0;
@@ -150,14 +158,19 @@ struct FpsiX
      */
     double find_x( double psi ) const
     {
-        dg::Grid1d<double> grid( psi, 0, P, 1);
+        unsigned P=10;
+        dg::Grid1d<double> grid( 0, 1, P, 1);
         if( psi>0)
         {
             dg::Grid1d<double> grid1( 0, psi, P, 1);
             grid = grid1;
         }
+        else 
+        {
+            dg::Grid1d<double> grid2( psi, 0, P, 1);
+            grid = grid2;
+        }
 
-        unsigned P=10;
         double x0 = 0, x0_old = 0;
         double eps=1e10, eps_old=2e10;
         //std::cout << "In x1 function\n";
@@ -181,34 +194,6 @@ struct FpsiX
 
     }
 
-    double f_prime( double psi) const
-    {
-        //compute fprime
-        double deltaPsi = fabs(psi)/100.;
-        double fofpsi[4];
-        fofpsi[1] = operator()(psi-deltaPsi);
-        fofpsi[2] = operator()(psi+deltaPsi);
-        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
-        double eps = 1e10, eps_old=2e10;
-        while( eps < eps_old)
-        {
-            deltaPsi /=2.;
-            fprime_old = fprime;
-            eps_old = eps;
-            fofpsi[0] = fofpsi[1], fofpsi[3] = fofpsi[2];
-            fofpsi[1] = operator()(psi-deltaPsi);
-            fofpsi[2] = operator()(psi+deltaPsi);
-            //reuse previously computed fpsi for current fprime
-            fprime  = (+ 1./12.*fofpsi[0] 
-                       - 2./3. *fofpsi[1]
-                       + 2./3. *fofpsi[2]
-                       - 1./12.*fofpsi[3]
-                     )/deltaPsi;
-            eps = fabs((fprime - fprime_old)/fprime);
-            //std::cout << "fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
-        }
-        return fprime_old;
-    }
 
     //compute the vector of r and z - values that form one psi surface
     //calls construct_f to find f and the starting point and then just integrates
@@ -276,24 +261,52 @@ struct FpsiX
 
     }
     private:
-    double theta( double R, double Z){
+    double theta( double R, double Z) const {
         double dR = R-gp_.R_0;
         if( Z >= 0)
-            return arccos( dR/sqrt( dR*dR + Z*Z));
+            return acos( dR/sqrt( dR*dR + Z*Z));
         else
-            return -arccos( dR/sqrt( dR*dR + Z*Z));
+            return -acos( dR/sqrt( dR*dR + Z*Z));
+    }
+    double f_prime( double psi) const
+    {
+        //compute fprime
+        double deltaPsi = fabs(psi)/100.;
+        double fofpsi[4];
+        fofpsi[1] = operator()(psi-deltaPsi);
+        fofpsi[2] = operator()(psi+deltaPsi);
+        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
+        double eps = 1e10, eps_old=2e10;
+        while( eps < eps_old)
+        {
+            deltaPsi /=2.;
+            fprime_old = fprime;
+            eps_old = eps;
+            fofpsi[0] = fofpsi[1], fofpsi[3] = fofpsi[2];
+            fofpsi[1] = operator()(psi-deltaPsi);
+            fofpsi[2] = operator()(psi+deltaPsi);
+            //reuse previously computed fpsi for current fprime
+            fprime  = (+ 1./12.*fofpsi[0] 
+                       - 2./3. *fofpsi[1]
+                       + 2./3. *fofpsi[2]
+                       - 1./12.*fofpsi[3]
+                     )/deltaPsi;
+            eps = fabs((fprime - fprime_old)/fprime);
+            //std::cout << "fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
+        }
+        return fprime_old;
     }
     const GeomParameters gp_;
     const FieldRZYT fieldRZYT_;
-    const HessianRZtau hessianRZtau_;
+    HessianRZtau hessianRZtau_;
     double R_i[4], Z_i[4];
 
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
-struct FieldFinv
+struct XFieldFinv
 {
-    FieldFinv( const GeomParameters& gp, unsigned N_steps = 500): 
+    XFieldFinv( const GeomParameters& gp, unsigned N_steps = 500): 
         fpsi_(gp), fieldRZYT_(gp) 
             { }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) const 
@@ -326,7 +339,7 @@ struct FieldFinv
     }
 
     private:
-    Fpsi fpsi_;
+    FpsiX fpsi_;
     FieldRZYT fieldRZYT_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
@@ -340,7 +353,7 @@ struct ConformalXGrid2d;
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct ConformalXGrid3d : public dg::GridX3d<double>
+struct ConformalXGrid3d : public dg::GridX3d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
     typedef ConformalXGrid2d<container> perpendicular_grid;
@@ -362,15 +375,16 @@ struct ConformalXGrid3d : public dg::GridX3d<double>
     ConformalXGrid3d( GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
         dg::GridX3d( 0,1, 0., 2*M_PI, 0., 2.*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER)
     { 
+        assert( psi_0 < 0 );
         //construct x-grid in two parts
-        solovev::detail::Fpsi fpsi(gp);
-        const double x0 = fpsi.find_x(psi_0);
-        const double x1 = -fx/(1.-fx)*x0;
+        solovev::detail::FpsiX fpsi(gp);
+        const double x_0 = fpsi.find_x(psi_0);
+        const double x_1 = -fx/(1.-fx)*x_0;
         const double psi1 = fpsi.find_x(1);
-        dg::GridX3d g3d( x0, x1, 0, 2*M_PI, 0, 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER);
-        *this = g3d;
+        dg::GridX3d g3d( x_0, x_1, 0, 2*M_PI, 0, 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER);
+        static_cast<dg::GridX3d>(*this) = g3d;
         //compute psi(x) for a grid on x 
-        dg::Grid1d g1d_( this->x0(), this->x1(), n, Nx, bcx);
+        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
         thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
         f_x_.resize( psi_x.size());
@@ -379,13 +393,12 @@ struct ConformalXGrid3d : public dg::GridX3d<double>
         double eps = 1e10, eps_old=2e10;
         std::cout << "In psi function:\n";
         double x0=this->x0(), x1 = x_vec[1];
-        detail::FieldFinv fpsiMinv_(gp, psi_0, 500);
+        detail::XFieldFinv fpsiMinv_(gp, 500);
         //while( eps <  eps_old && N < 1e6)
         while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
         {
-            eps_old = eps;
-            //psi_old = psi_x; 
-            x0 = 0, x1 = x_vec[0];
+            eps_old = eps; psi_old = psi_x; 
+            x0 = this->x0(), x1 = x_vec[0];
 
             thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
             dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
@@ -407,11 +420,11 @@ struct ConformalXGrid3d : public dg::GridX3d<double>
                 dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
                 psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
             }
-            //temp = end;
-            //dg::stepperRK6(fpsiMinv_, temp, end, x1, this->x1(),N);
-            double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
-            eps = fabs( psi_1_numerical-psi_1); 
-            std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
+            dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
+            eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff));
+            //double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
+            //eps = fabs( psi_1_numerical-psi_1); 
+            //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
             std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
@@ -433,14 +446,14 @@ struct ConformalXGrid3d : public dg::GridX3d<double>
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    perpendicular_grid perp_grid() const { return ConformalRingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return ConformalXGrid2d<container>(*this);}
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
     void construct_rz( const GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
     {
         //std::cout << "In grid function:\n";
-        detail::Fpsi fpsi( gp, psi_0);
+        detail::FpsiX fpsi( gp);
         r_.resize(size()), z_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
@@ -509,17 +522,23 @@ template< class container>
 struct ConformalXGrid2d : public dg::GridX2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
-    ConformalXGrid2d( const GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
-        dg::GridX2d( 0, solovev::detail::Fpsi(gp, psi_0).find_x0(), 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
+    ConformalXGrid2d( const GeomParameters gp, double psi_0, double fx, double fy, double y, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
+        dg::GridX2d( 0, 1, 0.,2*M_PI, n, Nx, Ny, bcx, bcy)
     {
-        ConformalRingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
+        solovev::detail::FpsiX fpsi(gp);
+        const double x0 = fpsi.find_x(psi_0);
+        const double x1 = -fx/(1.-fx)*x0;
+        const double psi1 = fpsi.find_x(1);
+        dg::GridX2d g2d( x0, x1, 0., 2*M_PI, fx, fy, n, Nx, Ny, bcx, bcy);
+        static_cast<GridX2d>(*this) = g2d;
+        ConformalXGrid3d<container> g( gp, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
         f_x_ = g.f_x();
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
-    ConformalRingGrid2d( const ConformalRingGrid3d<container>& g):
-        dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
+    ConformalXGrid2d( const ConformalXGrid3d<container>& g):
+        dg::GridX2d( g.x0(), g.x1(), g.y0(), g.y1(), g.fx(), g.fy(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         f_x_ = g.f_x();
         unsigned s = this->size();
@@ -551,71 +570,6 @@ struct ConformalXGrid2d : public dg::GridX2d
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
-};
-
-/**
- * @brief Integrates the equations for a field line and 1/B
- */ 
-struct ConformalField
-{
-    ConformalField( GeomParameters gp,const thrust::host_vector<double>& x, const thrust::host_vector<double>& f_x):
-        gp_(gp),
-        psipR_(gp), psipZ_(gp),
-        ipol_(gp), invB_(gp), last_idx(0), x_(x), fx_(f_x)
-    { }
-
-    /**
-     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
-     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
-     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
-     */ 
-    void operator()( const dg::HVec& y, dg::HVec& yp)
-    {
-        //x,y,s,R,Z
-        double psipR = psipR_(y[3],y[4]), psipZ = psipZ_(y[3],y[4]), ipol = ipol_( y[3],y[4]);
-        double fx = find_fx( y[0]);
-        yp[0] = 0;
-        yp[1] = fx*y[3]*(psipR*psipR+psipZ*psipZ)/ipol;
-        yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
-        yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
-        yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
-
-    }
-    /**
-     * @brief \f[   \frac{1}{\hat{B}} = 
-      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
-      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
-     */ 
-    double operator()( double R, double Z) const { return invB_(R,Z); }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
-    
-    private:
-    double find_fx(double x) 
-    {
-        if( fabs(x-x_[last_idx]) < 1e-12)
-            return fx_[last_idx];
-        for( unsigned i=0; i<x_.size(); i++)
-            if( fabs(x-x_[i]) < 1e-12)
-            {
-                last_idx = i;
-                return fx_[i];
-            }
-        std::cerr << "x not found!!\n";
-        return 0;
-    }
-    
-    GeomParameters gp_;
-    PsipR  psipR_;
-    PsipZ  psipZ_;
-    Ipol   ipol_;
-    InvB   invB_;
-    int last_idx;
-    thrust::host_vector<double> x_;
-    thrust::host_vector<double> fx_;
-   
 };
 
 }//namespace solovev

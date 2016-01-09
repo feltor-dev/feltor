@@ -226,6 +226,18 @@ struct GridX2d
      */
     double hy() const {return hy_;}
     /**
+     * @brief Factor
+     *
+     * @return 
+     */
+    double fx() const {return fx_;}
+    /**
+     * @brief Factor
+     *
+     * @return 
+     */
+    double fy() const {return fy_;}
+    /**
      * @brief number of polynomial coefficients in x and y
      *
      * @return 
@@ -242,7 +254,7 @@ struct GridX2d
      *
      * @return 
      */
-    unsigned innner_Nx() const {return Nx_ - outer_Nx();}
+    unsigned inner_Nx() const {return Nx_ - outer_Nx();}
     /**
      * @brief number of smooth rows in x
      *
@@ -341,7 +353,7 @@ struct GridX2d
     double x0_, x1_, y0_, y1_;
     double fx_, fy_;
     double lx_, ly_;
-    unsigned n_, Nx__, Ny_;
+    unsigned n_, Nx_, Ny_;
     double hx_, hy_;
     bc bcx_, bcy_;
     DLT<double> dlt_;
@@ -468,6 +480,18 @@ struct GridX3d
      */
     double hz() const {return hz_;}
     /**
+     * @brief Factor
+     *
+     * @return 
+     */
+    double fx() const {return fx_;}
+    /**
+     * @brief Factor
+     *
+     * @return 
+     */
+    double fy() const {return fy_;}
+    /**
      * @brief number of polynomial coefficients in x and y
      *
      * @return 
@@ -484,7 +508,7 @@ struct GridX3d
      *
      * @return 
      */
-    unsigned innner_Nx() const {return Nx_ - outer_Nx();}
+    unsigned inner_Nx() const {return Nx_ - outer_Nx();}
     /**
      * @brief number of smooth rows in x
      *
