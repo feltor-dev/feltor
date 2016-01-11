@@ -202,7 +202,7 @@ struct Fpsi
 
         R_0 = begin[0], Z_0 = begin[1];
         //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
-        FieldRZY fieldRZY(gp_);
+        FieldRZYRYZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
         fieldRZY.set_fp(fprime);
         unsigned steps = 1;
@@ -251,14 +251,14 @@ struct FieldFinv
 {
     FieldFinv( const GeomParameters& gp, double psi_0, unsigned N_steps = 500): 
         psi_0(psi_0), 
-        fpsi_(gp, psi_0), fieldRZYT_(gp) 
+        fpsi_(gp, psi_0), fieldRZYT_(gp), N_steps(N_steps)
             { }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) const 
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
-        dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, 500);
+        dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         fpsiM[0] = - end[2]/2./M_PI;
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";

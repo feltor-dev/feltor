@@ -933,9 +933,36 @@ struct FieldRZYT
         yp[2] = (psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //fieldYbar
         double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
         double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        //if( y[0] <= 0){ std::cerr << "Attention R is zero!!\n";
+        //    std::cerr << y[0]<<" "<<y[1]<<"\n";
+        //    std::cerr << psipR<<" "<<psipZ<<"\n";
+
+        //}
+        //if( fieldT == 0) std::cerr << "Attention fieldT is zero!!\n";
         yp[0] /=  fieldT;
         yp[1] /=  fieldT;
         yp[2] /=  fieldT;
+    }
+  private:
+    double R_0_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+};
+
+struct FieldRZY
+{
+    FieldRZY( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        yp[0] =  R_0_/y[0]*psipZ;//fieldR
+        yp[1] = -R_0_/y[0]*psipR;//fieldZ
+        yp[2] = (psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //fieldYbar
+        //double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
+        //double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        yp[0] /=  yp[1];
+        yp[2] /=  yp[1];
+        yp[1] =  1.;
     }
   private:
     double R_0_;
@@ -1008,9 +1035,9 @@ struct HessianRZtau
     PsipZZ psipZZ_;
 };
 
-struct FieldRZY
+struct FieldRZYRYZY
 {
-    FieldRZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){ f_ = f_prime_ = 1.;}
+    FieldRZYRYZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){ f_ = f_prime_ = 1.;}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const

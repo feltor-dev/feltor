@@ -98,6 +98,23 @@ struct Grid1d
      * @return 
      */
     const DLT<T>& dlt() const {return dlt_;}
+    void display( std::ostream& os = std::cout) const
+    {
+        os << "Grid parameters are: \n"
+            <<"    n  = "<<n_<<"\n"
+            <<"    N = "<<Nx_<<"\n"
+            <<"    h = "<<hx_<<"\n"
+            <<"    x0 = "<<x0_<<"\n"
+            <<"    x1 = "<<x1_<<"\n"
+            <<"    lx = "<<lx_<<"\n"
+            <<"Boundary conditions in x are: \n";
+        switch(bcx_)
+        {
+            case(dg::PER): os << "    PERIODIC \n"; break;
+            case(dg::DIR): os << "    DIRICHLET\n"; break;
+            default: os << "    Not specified!!\n"; 
+        }
+    }
   private:
     T x0_, x1_;
     T lx_;

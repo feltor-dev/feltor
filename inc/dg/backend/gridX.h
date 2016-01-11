@@ -349,6 +349,14 @@ struct GridX2d
             default: os << "    Not specified!!\n"; 
         }
     }
+  protected:
+    void init_X_boundaries( double x0, double x1)
+    {
+        x0_ = x0, x1_ = x1;
+        assert( x1 > x0 );
+        lx_ = (x1_-x0_);
+        hx_ = lx_/(double)Nx_;
+    }
   private:
     double x0_, x1_, y0_, y1_;
     double fx_, fy_;
@@ -620,6 +628,14 @@ struct GridX3d
             case(dg::DIR): os << "    DIRICHLET\n"; break;
             default: os << "    Not specified!!\n"; 
         }
+    }
+  protected:
+    void init_X_boundaries( double x0, double x1)
+    {
+        x0_ = x0, x1_ = x1;
+        assert( x1 > x0 );
+        lx_ = (x1_-x0_);
+        hx_ = lx_/(double)Nx_;
     }
   private:
     double x0_, x1_, y0_, y1_, z0_, z1_;
