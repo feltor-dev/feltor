@@ -61,8 +61,8 @@ struct FpsiX
     {
         solovev::Psip psip(gp_);
         thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
-        std::cout << "In init function\n";
-        std::cout << "psi is "<<psi<<"\n";
+        //std::cout << "In init function\n";
+        //std::cout << "psi is "<<psi<<"\n";
         if( psi < 0)
         {
             for( unsigned i=0; i<2; i++)
@@ -132,7 +132,7 @@ struct FpsiX
         find_initial( psi, R_i, Z_i);
         t.toc();
         solovev::Psip psip( gp_);
-        std::cout << "find_initial took "<<t.diff()<< "s\n";
+        //std::cout << "find_initial took "<<t.diff()<< "s\n";
         t.tic();
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
         //std::cout << "In Stepper function:\n";
@@ -174,7 +174,7 @@ struct FpsiX
         }
         double f_psi = 2.*M_PI/end_old[2];
         t.toc();
-        std::cout << "Finding f took "<<t.diff()<<"s\n";
+        //std::cout << "Finding f took "<<t.diff()<<"s\n";
         return f_psi;
     }
     double operator()( double psi)
@@ -190,14 +190,14 @@ struct FpsiX
      */
     double find_x( double psi ) 
     {
-        unsigned P=2;
+        unsigned P=10;
         double x0 = 0, x0_old = 0;
         double eps=1e10, eps_old=2e10;
         //std::cout << "In x1 function\n";
-        while(eps < eps_old && P < 20 && eps > 1e-15)
+        while(eps < eps_old && P < 20 && eps > 1e-8)
         {
             eps_old = eps; x0_old = x0;
-            P+=1;
+            P+=2;
             dg::Grid1d<double> grid( 0, 1, P, 1);
             if( psi>0)
             {
@@ -215,7 +215,7 @@ struct FpsiX
             for( unsigned i=0; i<psi_vec.size(); i++)
             {
                 f_vec[i] = this->operator()( psi_vec[i]);
-                std::cout << " "<<f_vec[i]<<"\n";
+                //std::cout << " "<<f_vec[i]<<"\n";
             }
             if( psi < 0)
                 x0 = dg::blas1::dot( f_vec, w1d);
@@ -265,7 +265,7 @@ struct FpsiX
         fieldRZY.set_fp(fprime);
         unsigned steps = 1;
         double eps = 1e10, eps_old=2e10;
-        while( eps < eps_old)
+        while( eps < eps_old && eps > 1e-10)
         {
             //begin is left const
             eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
@@ -353,7 +353,7 @@ struct XFieldFinv
         t.tic();
         fpsi_.find_initial( psi[0], R_i, Z_i);
         t.toc();
-        std::cout << "find_initial took "<<t.diff()<< "s\n";
+        //std::cout << "find_initial took "<<t.diff()<< "s\n";
         t.tic();
         begin[0] = R_i[0], begin[1] = Z_i[0];
         if( psi[0] <0 )
@@ -369,18 +369,18 @@ struct XFieldFinv
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         fpsiM[0] = - end[2]/2./M_PI;
         t.toc();
-        std::cout << "Finding f took "<<t.diff()<<"s\n";
+        //std::cout << "Finding f took "<<t.diff()<<"s\n";
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     double find_psi( double x)
     {
         assert( x > 0);
         //integrate from x0 to x, with psi(x0) = 1;
-        double x0 = fpsi_.find_x(1);
-        thrust::host_vector<double> begin( 1, 1.), end(begin), end_old(begin);
+        double x0 = fpsi_.find_x(0.1);
+        thrust::host_vector<double> begin( 1, 0.1), end(begin), end_old(begin);
         double eps = 1e10, eps_old = 2e10;
-        unsigned N = 10;
-        while( eps < eps_old && N < 1e6)
+        unsigned N = 1;
+        while( eps < eps_old && N < 1e6 &&  eps > 1e-8)
         {
             eps_old = eps, end_old = end; 
             N*=2; dg::stepperRK17( *this, begin, end, x0, x, N);
@@ -449,7 +449,7 @@ struct ConformalXGrid3d : public dg::GridX3d
         double x0=this->x0(), x1 = x_vec[1];
         detail::XFieldFinv fpsiMinv_(gp, 500);
         //while( eps <  eps_old && N < 1e6)
-        while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
+        while( fabs(eps - eps_old) >  1e-10 && N < 1e6 && eps > 1e-6)
         {
             eps_old = eps; psi_old = psi_x; 
             x0 = this->x0(), x1 = x_vec[0];
@@ -464,26 +464,29 @@ struct ConformalXGrid3d : public dg::GridX3d
                 x0 = x_vec[i-1], x1 = x_vec[i];
                 dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
                 psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
+                std::cout << "FOUND PSI "<<end[0]<<"\n";
             }
             end[0] = fpsiMinv_.find_psi( x_vec[idx]);
-            psi_x[idx] = end[0]; fpsiMinv_(end,temp); f_x_[idx] = temp[0];
             std::cout << "FOUND PSI "<<end[0]<<"\n";
-            for( unsigned i=idx+1; i<g1d_.N(); i++)
+            psi_x[idx] = end[0]; fpsiMinv_(end,temp); f_x_[idx] = temp[0];
+            for( unsigned i=idx+1; i<g1d_.size(); i++)
             {
                 temp = end;
                 x0 = x_vec[i-1], x1 = x_vec[i];
                 dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
                 psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
+                std::cout << "FOUND PSI "<<end[0]<<"\n";
             }
             dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
             eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff));
             //double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
             //eps = fabs( psi_1_numerical-psi_1); 
             //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
-            std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
+            std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
             N*=2;
         }
         construct_rz( gp, psi_0, psi_x);
+        construct_metric();
     }
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -507,6 +510,7 @@ struct ConformalXGrid3d : public dg::GridX3d
     //construct r,z,xr,xz,yr,yz,f_x
     void construct_rz( const GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
     {
+        std::cout << "CONSTRUCTING Y-POINTS\n";
         //std::cout << "In grid function:\n";
         detail::FpsiX fpsi( gp);
         r_.resize(size()), z_.resize(size());
@@ -545,6 +549,7 @@ struct ConformalXGrid3d : public dg::GridX3d
     //compute metric elements from xr, xz, yr, yz, r and z
     void construct_metric()
     {
+        std::cout << "CONSTRUCTING METRIC\n";
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         for( unsigned k=0; k<this->Nz(); k++)
