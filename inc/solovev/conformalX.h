@@ -151,7 +151,7 @@ struct FpsiX
         begin[0] = R_i[0], begin[1] = Z_i[0];
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         double eps = 1e10, eps_old = 2e10;
-        unsigned N = 16; 
+        unsigned N = 32; 
         //double y_eps;
         while( eps < eps_old && N < 1e6)
         {
@@ -233,7 +233,7 @@ struct FpsiX
                 x0 = -dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x0 - x0_old)/x0);
-            if( isnan(eps)) { eps = eps_old -1e-15; x0 = x0_old;} //near X-point integration can go wrong
+            if( isnan(eps)) { std::cerr << "Attention!!\n"; eps = eps_old -1e-15; x0 = x0_old;} //near X-point integration can go wrong
             std::cout << "X = "<<x0<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return x0_old;
@@ -291,6 +291,13 @@ struct FpsiX
                 r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
                 xr[i] = -f_psi*psipR(r[i],z[i]), xz[i] = -f_psi*psipZ(r[i],z[i]);
             }
+            temp = end;
+            dg::stepperRK17( fieldRZY, temp, end, y_vec[n*N-1], 2.*M_PI, steps);
+            if( psi <0)
+                eps = sqrt( (end[0]-R_0[0])*(end[0]-R_0[0]) + (end[1]-Z_0[0])*(end[1]-Z_0[0]));
+            else
+                eps = sqrt( (end[0]-R_0[1])*(end[0]-R_0[1]) + (end[1]-Z_0[1])*(end[1]-Z_0[1]));
+            std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
             //compute error in R,Z only
             dg::blas1::axpby( 1., r, -1., r_old, r_diff);
             dg::blas1::axpby( 1., z, -1., z_old, z_diff);
@@ -355,7 +362,7 @@ struct XFieldFinv
 {
     XFieldFinv( const GeomParameters& gp, unsigned N_steps = 500): 
         fpsi_(gp), fieldRZYT_(gp), fieldRZY_(gp) , N_steps(N_steps)
-            { }
+            { xAtOne_ = fpsi_.find_x(0.1); }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
@@ -389,7 +396,7 @@ struct XFieldFinv
     {
         assert( x > 0);
         //integrate from x0 to x, with psi(x0) = 1;
-        double x0 = fpsi_.find_x(0.1);
+        double x0 = xAtOne_; 
         thrust::host_vector<double> begin( 1, 0.1), end(begin), end_old(begin);
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 1;
@@ -409,6 +416,7 @@ struct XFieldFinv
     FieldRZY fieldRZY_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
+    double xAtOne_;
 };
 } //namespace detail
 

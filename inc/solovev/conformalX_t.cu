@@ -63,7 +63,7 @@ try{
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
     file::NC_Error_Handle err;
-    err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g.grid());
     err = file::define_dimension(  ncid, "i", dim1d, g1d);
