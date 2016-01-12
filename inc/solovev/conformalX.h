@@ -66,8 +66,7 @@ struct FpsiX
         }
         hessianRZtau_.set_norm( true);
     }
-    //finds the two starting points for the integration in y direction and the 
-    //angle between them
+    //finds the two starting points for the integration in y direction
     void find_initial( double psi, double* R_0, double* Z_0) 
     {
         solovev::Psip psip(gp_);
@@ -83,7 +82,7 @@ struct FpsiX
                 begin2d[0] = end2d[0] = end2d_old[0] = R_i[1+2*i];
                 begin2d[1] = end2d[1] = end2d_old[1] = Z_i[1+2*i];
                 double eps = 1e10, eps_old = 2e10;
-                while( eps < eps_old && N<1e6 && eps > 1e-11)
+                while( (eps < eps_old || eps > 1e-7) && N<1e6 && eps > 1e-11)
                 {
                     //remember old values
                     eps_old = eps;
@@ -105,7 +104,7 @@ struct FpsiX
                 begin2d[0] = end2d[0] = end2d_old[0] = R_i[2*i];
                 begin2d[1] = end2d[1] = end2d_old[1] = Z_i[2*i];
                 double eps = 1e10, eps_old = 2e10;
-                while( eps < eps_old && N<1e6 && eps > 1e-11)
+                while( (eps < eps_old || eps > 1e-7) && N<1e6 && eps > 1e-11)
                 {
                     //remember old values
                     eps_old = eps;
@@ -153,7 +152,7 @@ struct FpsiX
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 32; 
         //double y_eps;
-        while( eps < eps_old && N < 1e6)
+        while( (eps < eps_old || eps > 1e-7) && N < 1e6)
         {
             //remember old values
             eps_old = eps, end_old = end; //y_old = end[2];
@@ -177,11 +176,12 @@ struct FpsiX
                 //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<" "<<psip(end[0], end[1])<<"\n";
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
-            if( isnan(eps)) { eps = eps_old/2.; std::cerr << "\t error "<<eps<<"\n";} //near X-point integration can go wrong
+            if( isnan(eps)) { eps = eps_old/2.; end = end_old; std::cerr << "\t nan! error "<<eps<<"\n";} //near X-point integration can go wrong
             //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
             //std::cout << "error "<<eps<<" with "<<N<<" steps| psip "<<psip(end[0], end[1])<<"\n";
             //std::cout <<"error in y is "<<y_eps<<"\n";
         }
+        std::cout << "\t error "<<eps<<" with "<<N<<" steps| err psip "<<fabs( psip(end[0], end[1]) - psi )/psi<<"\n";
         double f_psi = 2.*M_PI/end_old[2];
         t.toc();
         //std::cout << "Finding f took "<<t.diff()<<"s\n";
@@ -204,7 +204,7 @@ struct FpsiX
         double x0 = 0, x0_old = 0;
         double eps=1e10, eps_old=2e10;
         //std::cout << "In x1 function\n";
-        while(eps < eps_old && P < 20 && eps > 1e-9)
+        while( (eps < eps_old||eps>1e-7) && P < 20 )
         {
             eps_old = eps; x0_old = x0;
             P+=2;
@@ -276,7 +276,8 @@ struct FpsiX
         fieldRZY.set_fp(fprime);
         unsigned steps = 1;
         double eps = 1e10, eps_old=2e10;
-        while( eps < eps_old && eps > 1e-11)
+        while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
+        //while( eps > 1e-10)
         {
             //begin is left const
             eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
@@ -330,7 +331,7 @@ struct FpsiX
         fofpsi[2] = operator()(psi+deltaPsi);
         double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
         double eps = 1e10, eps_old=2e10;
-        while( eps < eps_old)
+        while( eps < eps_old || eps > 1e-7)
         {
             deltaPsi /=2.;
             fprime_old = fprime;
@@ -345,8 +346,8 @@ struct FpsiX
                        - 1./12.*fofpsi[3]
                      )/deltaPsi;
             eps = fabs((fprime - fprime_old)/fprime);
-            //std::cout << "fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
         }
+        std::cout << "\t fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
         return fprime_old;
     }
     const GeomParameters gp_;
@@ -375,8 +376,9 @@ struct XFieldFinv
         t.tic();
         begin[0] = R_i[0], begin[1] = Z_i[0];
         unsigned N = N_steps;
-        if( fabs(psi[0]) < 1) N*=2;
-        if( psi[0] <0 )
+        if( psi[0] < -1. && psi[0] > -2.) N*=2;
+        if( psi[0] < 0 && psi[0] > -1.) N*=10;
+        if( psi[0] <0  )
             dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N);
         else
         {
@@ -467,8 +469,9 @@ struct ConformalXGrid3d : public dg::GridX3d
         unsigned N = 1;
         double eps = 1e10, eps_old=2e10;
         std::cout << "In psi function:\n";
-        double x0=this->x0(), x1 = x_vec[1];
+        double x0=this->x0(), x1 = x_vec[0];
         detail::XFieldFinv fpsiMinv_(gp, 500);
+        double psi_const = fpsiMinv_.find_psi( x_vec[inner_Nx()*this->n()]);
         //while( eps <  eps_old && N < 1e6)
         while( eps >  1e-8 && N < 1e6 )
         {
@@ -487,7 +490,7 @@ struct ConformalXGrid3d : public dg::GridX3d
                 psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
                 std::cout << "FOUND PSI "<<end[0]<<"\n";
             }
-            end[0] = fpsiMinv_.find_psi( x_vec[idx]);
+            end[0] = psi_const;
             std::cout << "FOUND PSI "<<end[0]<<"\n";
             psi_x[idx] = end[0]; fpsiMinv_(end,temp); f_x_[idx] = temp[0];
             for( unsigned i=idx+1; i<g1d_.size(); i++)
