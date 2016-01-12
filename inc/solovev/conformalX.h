@@ -124,10 +124,9 @@ struct FpsiX
     }
 
     //compute f for a given psi between psi0 and psi1
-    double construct_f( double psi, double& R_0, double& Z_0) 
+    double construct_f( double psi, double* R_i, double* Z_i) 
     {
         dg::Timer t;
-        double R_i[2], Z_i[2];
         t.tic();
         find_initial( psi, R_i, Z_i);
         t.toc();
@@ -138,7 +137,7 @@ struct FpsiX
         //std::cout << "In Stepper function:\n";
         //double y_old=0;
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
-        R_0 = begin[0] = R_i[0], Z_0 = begin[1] = Z_i[0];
+        begin[0] = R_i[0], begin[1] = Z_i[0];
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 16; 
@@ -179,7 +178,7 @@ struct FpsiX
     }
     double operator()( double psi)
     {
-        double R_0, Z_0; 
+        double R_0[2], Z_0[2]; 
         return construct_f( psi, R_0, Z_0);
     }
 
@@ -240,7 +239,7 @@ struct FpsiX
             thrust::host_vector<double>& yz,  
             thrust::host_vector<double>& xr, 
             thrust::host_vector<double>& xz,  
-            double& R_0, double& Z_0, double& f, double& fp ) 
+            double* R_0, double* Z_0, double& f, double& fp ) 
     {
         dg::Grid1d<double> g1d( 0, 2*M_PI, n, N, dg::PER);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, g1d);
@@ -252,13 +251,13 @@ struct FpsiX
 
         //now compute f and starting values 
         thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
-        double f_psi = construct_f( psi, begin[0], begin[1]);
+        double f_psi = construct_f( psi, R_0, Z_0);
         PsipR psipR(gp_);
         PsipZ psipZ(gp_);
-        begin[2] = f_psi * psipZ( begin[0], begin[1]);
-        begin[3] = -f_psi * psipR( begin[0], begin[1]);
+        begin[2] = f_psi * psipZ( R_0[0], Z_0[0]);
+        begin[3] = -f_psi * psipR( R_0[0], Z_0[0]);
 
-        R_0 = begin[0], Z_0 = begin[1];
+        begin[0] = R_0[0], begin[1] = Z_0[0];
         //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
         FieldRZYRYZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
@@ -505,6 +504,10 @@ struct ConformalXGrid3d : public dg::GridX3d
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
     perpendicular_grid perp_grid() const { return ConformalXGrid2d<container>(*this);}
+    const thrust::host_vector<double>& rx0()const{return r_x0;}
+    const thrust::host_vector<double>& zx0()const{return z_x0;}
+    const thrust::host_vector<double>& rx1()const{return r_x1;}
+    const thrust::host_vector<double>& zx1()const{return z_x1;}
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
@@ -515,17 +518,19 @@ struct ConformalXGrid3d : public dg::GridX3d
         detail::FpsiX fpsi( gp);
         r_.resize(size()), z_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
-        //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
+        r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
+        r_x1.resize( psi_x.size()), z_x1.resize( psi_x.size());
         thrust::host_vector<double> f_p(f_x_);
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         for( unsigned i=0; i<Nx; i++)
         {
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
-            double R0, Z0;
+            double R_0[2], Z_0[2];
             /**************************************************************/
-            fpsi.compute_rzy( psi_x[i], this->n(), this->Ny(), ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
+            fpsi.compute_rzy( psi_x[i], this->n(), this->Ny(), ry, zy, yr, yz, xr, xz, R_0, Z_0, f_x_[i], f_p[i]);
             /**************************************************************/
+            r_x0[i] = R_0[0], r_x1[i] = R_0[1], z_x0[i] = Z_0[0], z_x1[i] = Z_0[1];
             for( unsigned j=0; j<Ny; j++)
             {
                 r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j]; 
@@ -573,6 +578,7 @@ struct ConformalXGrid3d : public dg::GridX3d
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
+    thrust::host_vector<double> r_x0, r_x1, z_x0, z_x1; //boundary points in y
 };
 
 /**
