@@ -27,11 +27,22 @@ struct FpsiX
          * @return the value for R
          */
         //is there a more precise formula for the X-point?
+        Psip psip(gp_);
+        PsipR psipR(gp_);
+        PsipZ psipZ(gp_);
         double R_init = gp.R_0-1.1*gp.triangularity*gp.a;
         double Z_init = -1.1*gp.elongation*gp.a;
+        thrust::host_vector<double> X(2,0), XN(X);
+        X[0] = R_init, X[1] = Z_init;
+        for( unsigned i=0; i<3; i++)
+        {
+            hessianRZtau_.newton_iteration( X, XN);
+            XN.swap(X);
+        }
+        R_init = X[0], Z_init = X[1];
         std::cout << "X-point set at "<<R_init<<" "<<Z_init<<"\n";
-        Psip psip(gp_);
         std::cout << "psi at X-point is "<<psip(R_init, Z_init)<<"\n";
+        std::cout << "gradient at X-point is "<<psipR(R_init, Z_init)<<" "<<psipZ(R_init, Z_init)<<"\n";
         hessianRZtau_.set_norm( false);
         for( int i=0; i<4; i++)
         {
@@ -72,7 +83,7 @@ struct FpsiX
                 begin2d[0] = end2d[0] = end2d_old[0] = R_i[1+2*i];
                 begin2d[1] = end2d[1] = end2d_old[1] = Z_i[1+2*i];
                 double eps = 1e10, eps_old = 2e10;
-                while( eps < eps_old && N<1e6 && eps > 1e-10)
+                while( eps < eps_old && N<1e6 && eps > 1e-11)
                 {
                     //remember old values
                     eps_old = eps;
@@ -94,7 +105,7 @@ struct FpsiX
                 begin2d[0] = end2d[0] = end2d_old[0] = R_i[2*i];
                 begin2d[1] = end2d[1] = end2d_old[1] = Z_i[2*i];
                 double eps = 1e10, eps_old = 2e10;
-                while( eps < eps_old && N<1e6 && eps > 1e-10)
+                while( eps < eps_old && N<1e6 && eps > 1e-11)
                 {
                     //remember old values
                     eps_old = eps;
@@ -166,7 +177,7 @@ struct FpsiX
                 //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<" "<<psip(end[0], end[1])<<"\n";
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
-            if( isnan(eps)) { eps = eps_old/2.;} //near X-point integration can go wrong
+            if( isnan(eps)) { eps = eps_old/2.; std::cerr << "\t error "<<eps<<"\n";} //near X-point integration can go wrong
             //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
             //std::cout << "error "<<eps<<" with "<<N<<" steps| psip "<<psip(end[0], end[1])<<"\n";
             //std::cout <<"error in y is "<<y_eps<<"\n";
@@ -189,11 +200,11 @@ struct FpsiX
      */
     double find_x( double psi ) 
     {
-        unsigned P=10;
+        unsigned P=6;
         double x0 = 0, x0_old = 0;
         double eps=1e10, eps_old=2e10;
         //std::cout << "In x1 function\n";
-        while(eps < eps_old && P < 20 && eps > 1e-8)
+        while(eps < eps_old && P < 20 && eps > 1e-9)
         {
             eps_old = eps; x0_old = x0;
             P+=2;
@@ -222,6 +233,7 @@ struct FpsiX
                 x0 = -dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x0 - x0_old)/x0);
+            if( isnan(eps)) { eps = eps_old -1e-15; x0 = x0_old;} //near X-point integration can go wrong
             std::cout << "X = "<<x0<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return x0_old;
@@ -264,7 +276,7 @@ struct FpsiX
         fieldRZY.set_fp(fprime);
         unsigned steps = 1;
         double eps = 1e10, eps_old=2e10;
-        while( eps < eps_old && eps > 1e-10)
+        while( eps < eps_old && eps > 1e-11)
         {
             //begin is left const
             eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
@@ -355,15 +367,17 @@ struct XFieldFinv
         //std::cout << "find_initial took "<<t.diff()<< "s\n";
         t.tic();
         begin[0] = R_i[0], begin[1] = Z_i[0];
+        unsigned N = N_steps;
+        if( fabs(psi[0]) < 1) N*=2;
         if( psi[0] <0 )
-            dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N_steps);
+            dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N);
         else
         {
-            dg::stepperRK17( fieldRZY_, begin, end, begin[1], 0., N_steps/2);
+            dg::stepperRK17( fieldRZY_, begin, end, begin[1], 0., N);
             thrust::host_vector<double> temp(end);
-            dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N_steps/2);
+            dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N/2);
             temp = end; //temp[1] should be 0 now
-            dg::stepperRK17( fieldRZY_, temp, end, temp[1], Z_i[1], N_steps/2);
+            dg::stepperRK17( fieldRZY_, temp, end, temp[1], Z_i[1], N);
         }
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         fpsiM[0] = - end[2]/2./M_PI;
@@ -379,7 +393,7 @@ struct XFieldFinv
         thrust::host_vector<double> begin( 1, 0.1), end(begin), end_old(begin);
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 1;
-        while( eps < eps_old && N < 1e6 &&  eps > 1e-8)
+        while( eps < eps_old && N < 1e6 &&  eps > 1e-9)
         {
             eps_old = eps, end_old = end; 
             N*=2; dg::stepperRK17( *this, begin, end, x0, x, N);
@@ -448,7 +462,7 @@ struct ConformalXGrid3d : public dg::GridX3d
         double x0=this->x0(), x1 = x_vec[1];
         detail::XFieldFinv fpsiMinv_(gp, 500);
         //while( eps <  eps_old && N < 1e6)
-        while( fabs(eps - eps_old) >  1e-10 && N < 1e6 && eps > 1e-6)
+        while( eps >  1e-8 && N < 1e6 )
         {
             eps_old = eps; psi_old = psi_x; 
             x0 = this->x0(), x1 = x_vec[0];

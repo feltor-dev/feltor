@@ -18,6 +18,8 @@
 #include "file/nc_utilities.h"
 
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+double sine( double x) {return sin(x);}
+double cosine( double x) {return cos(x);}
 
 int main( int argc, char* argv[])
 {
@@ -56,21 +58,24 @@ try{
     solovev::ConformalXGrid2d<dg::DVec> g = g3d.perp_grid();
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    dg::Grid1d<double> g2d( g.x0(), g.x1(), 0., 2.*M_PI, g.n(), g.Nx(), 1.);
+    dg::Grid1d<double> g1d( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
+    dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
     file::NC_Error_Handle err;
     err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim3d[2], dim1d[2];
+    int dim3d[2], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g.grid());
     err = file::define_dimension(  ncid, "i", dim1d, g1d);
     int coordsID[2], onesID, defID;
-    int coord1D[4];
+    int coord1D[5];
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
     err = nc_def_var( ncid, "x_left", NC_DOUBLE, 1, dim1d, &coord1D[0]);
     err = nc_def_var( ncid, "y_left", NC_DOUBLE, 1, dim1d, &coord1D[1]);
     err = nc_def_var( ncid, "x_right", NC_DOUBLE, 1, dim1d, &coord1D[2]);
     err = nc_def_var( ncid, "y_right", NC_DOUBLE, 1, dim1d, &coord1D[3]);
+    err = nc_def_var( ncid, "f_x", NC_DOUBLE, 1, dim1d, &coord1D[4]);
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
@@ -97,6 +102,7 @@ try{
     err = nc_put_var_double( ncid, coord1D[1], g3d.zx0().data());
     err = nc_put_var_double( ncid, coord1D[2], g3d.rx1().data());
     err = nc_put_var_double( ncid, coord1D[3], g3d.zx1().data());
+    err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     dg::blas1::pointwiseDivide( g.g_xy(), g.g_xx(), temp0);

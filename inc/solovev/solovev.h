@@ -1025,6 +1025,16 @@ struct HessianRZtau
         }
 
     }
+    void newton_iteration( const dg::HVec&y, dg::HVec& yp)
+    {
+        double psipRZ = psipRZ_(y[0], y[1]);
+        double psipRR = psipRR_(y[0], y[1]), psipZZ = psipZZ_(y[0],y[1]);
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]);
+        double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+        yp[0] = y[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
+        yp[1] = y[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
+        std::cout << "iteration "<<Dinv<<" "<<(psipZZ*psipR - psipRZ*psipZ)<<" "<<(-psipRZ*psipR + psipRR*psipZ)<<"\n";
+    }
   private:
     bool norm_;
     int quad_;
