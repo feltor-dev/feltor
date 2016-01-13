@@ -29,6 +29,9 @@ int main( int argc, char* argv[])
     std::cout << "Type psi_0 \n";
     double psi_0;
     std::cin >> psi_0;
+    std::cout << "Type fx \n";
+    double fx_0;
+    std::cin >> fx_0;
     std::vector<double> v, v2;
 try{ 
         if( argc==1)
@@ -54,7 +57,7 @@ try{
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    solovev::ConformalXGrid3d<dg::DVec> g3d(gp, psi_0, 1./4., 1./10., n, Nx, Ny,Nz, dg::DIR, dg::DIR);
+    solovev::ConformalXGrid3d<dg::DVec> g3d(gp, psi_0, fx_0, 1./10., n, Nx, Ny,Nz, dg::DIR, dg::DIR);
     solovev::ConformalXGrid2d<dg::DVec> g = g3d.perp_grid();
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -67,7 +70,7 @@ try{
     int dim3d[2], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g.grid());
     err = file::define_dimension(  ncid, "i", dim1d, g1d);
-    int coordsID[2], onesID, defID;
+    int coordsID[2], onesID, defID, volID;
     int coord1D[5];
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
@@ -79,6 +82,7 @@ try{
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
+    err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g);
     g.display();
@@ -108,6 +112,8 @@ try{
     dg::blas1::pointwiseDivide( g.g_xy(), g.g_xx(), temp0);
     X=temp0;
     err = nc_put_var_double( ncid, defID, X.data());
+    X = g.vol();
+    err = nc_put_var_double( ncid, volID, X.data());
     err = nc_close( ncid);
 
     std::cout << "Construction successful!\n";
@@ -151,14 +157,16 @@ try{
     dg::blas1::axpby( 1., temp0, -1., by_device, temp1);
     double error= dg::blas2::dot( temp1, w3d, temp1);
     std::cout << "Rel Error of g.g_xx() is "<<sqrt(error/dg::blas2::dot( by_device, w3d, by_device))<<"\n";
-    double volume = dg::blas1::dot( g.vol(), w3d);
 
     std::cout << "TEST VOLUME IS:\n";
-    gp.psipmax = -1./4.*psi_0, gp.psipmin = psi_0;
+    gp.psipmax = 0., gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
-    dg::CartesianGrid2d g2d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 3, 2200, 2200, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -1.1*gp.a*gp.elongation, 2*gp.a*gp.elongation, 3, 2200, 2200, dg::PER, dg::PER);
     dg::DVec vec  = dg::evaluate( iris, g2d);
+    dg::DVec cutter = dg::pullback( iris, g), vol( cutter);
+    dg::blas1::pointwiseDot(cutter, w3d, vol);
+    double volume = dg::blas1::dot( g.vol(), vol);
     dg::DVec g2d_weights = dg::create::volume( g2d);
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);
     std::cout << "volumeXYP is "<< volume<<std::endl;

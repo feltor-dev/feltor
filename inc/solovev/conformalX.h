@@ -17,7 +17,7 @@ namespace detail
 struct FpsiX
 {
     FpsiX( const GeomParameters& gp): 
-        gp_(gp), fieldRZYT_(gp), fieldRZY_(gp), hessianRZtau_(gp)
+        gp_(gp), fieldRZYT_(gp), fieldRZY_(gp), hessianRZtau_(gp), minimalCurve_(gp)
     {
         /**
          * @brief Find R,Z of the X-point
@@ -43,14 +43,19 @@ struct FpsiX
         std::cout << "X-point set at "<<R_init<<" "<<Z_init<<"\n";
         std::cout << "psi at X-point is "<<psip(R_init, Z_init)<<"\n";
         std::cout << "gradient at X-point is "<<psipR(R_init, Z_init)<<" "<<psipZ(R_init, Z_init)<<"\n";
+        //find four points; one in each quadrant
         hessianRZtau_.set_norm( false);
+        minimalCurve_.set_norm( false);
         for( int i=0; i<4; i++)
         {
             hessianRZtau_.set_quadrant( i);
             unsigned N = 50;
-            thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
+            //thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
+            thrust::host_vector<double> begin2d( 4, 0), end2d( begin2d), end2d_old(begin2d); 
             begin2d[0] = end2d[0] = end2d_old[0] = R_init;
             begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
+            hessianRZtau_(begin2d, end2d); //find eigenvector
+            begin2d[2] = end2d[0], begin2d[3] = end2d[1];
             double eps = 1e10, eps_old = 2e10;
             while( eps < eps_old && N<1e6 && eps > 1e-15)
             {
@@ -58,19 +63,22 @@ struct FpsiX
                 eps_old = eps; end2d_old = end2d;
                 //compute new values
                 N*=2;
-                dg::stepperRK17( hessianRZtau_, begin2d, end2d, 0., 5., N);
+                //dg::stepperRK17( hessianRZtau_, begin2d, end2d, 0., 5., N);
+                dg::stepperRK17( minimalCurve_, begin2d, end2d, 0., 2., N);
                 eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
             }
-            R_i[i] = end2d_old[0], Z_i[i] = end2d_old[1];
-            std::cout << "Found the point "<<R_i[i]<<" "<<Z_i[i]<<" "<<psip(R_i[i], Z_i[i])<<"\n";
+            R_i[i] = end2d_old[0], Z_i[i] = end2d_old[1]; 
+            vR_i[i] = end2d_old[2], vZ_i[i] = end2d_old[3];
+            //std::cout << "Found the point "<<R_i[i]<<" "<<Z_i[i]<<" "<<psip(R_i[i], Z_i[i])<<"\n";
         }
         hessianRZtau_.set_norm( true);
+        minimalCurve_.set_norm( true);
     }
     //finds the two starting points for the integration in y direction
     void find_initial( double psi, double* R_0, double* Z_0) 
     {
         solovev::Psip psip(gp_);
-        thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
+        thrust::host_vector<double> begin2d( 4, 0), end2d( begin2d), end2d_old(begin2d); 
         //std::cout << "In init function\n";
         //std::cout << "psi is "<<psi<<"\n";
         if( psi < 0)
@@ -81,6 +89,8 @@ struct FpsiX
                 hessianRZtau_.set_quadrant( 1+2*i);
                 begin2d[0] = end2d[0] = end2d_old[0] = R_i[1+2*i];
                 begin2d[1] = end2d[1] = end2d_old[1] = Z_i[1+2*i];
+                begin2d[2] = end2d[2] = end2d_old[2] = vR_i[1+2*i];
+                begin2d[3] = end2d[3] = end2d_old[3] = vZ_i[1+2*i];
                 double eps = 1e10, eps_old = 2e10;
                 while( (eps < eps_old || eps > 1e-7) && N<1e6 && eps > 1e-11)
                 {
@@ -89,10 +99,13 @@ struct FpsiX
                     end2d_old = end2d;
                     //compute new values
                     N*=2;
-                    dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[1+2*i], Z_i[1+2*i]), psi, N);
+                    //dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[1+2*i], Z_i[1+2*i]), psi, N);
+                    dg::stepperRK17( minimalCurve_, begin2d, end2d, psip(R_i[1+2*i], Z_i[1+2*i]), psi, N);
                     eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
                 }
-                R_0[i] = end2d_old[0], Z_0[i] = end2d_old[1];
+                //remember last call
+                R_i[1+2*i] = R_0[i] = end2d_old[0], Z_i[1+2*i] = Z_0[i] = end2d_old[1];
+                vR_i[1+2*i] = end2d_old[2], vZ_i[1+2*i] = end2d_old[3];
             }
         }
         else
@@ -103,6 +116,8 @@ struct FpsiX
                 hessianRZtau_.set_quadrant( 2*i);
                 begin2d[0] = end2d[0] = end2d_old[0] = R_i[2*i];
                 begin2d[1] = end2d[1] = end2d_old[1] = Z_i[2*i];
+                begin2d[2] = end2d[2] = end2d_old[2] = vR_i[2*i];
+                begin2d[3] = end2d[3] = end2d_old[3] = vZ_i[2*i];
                 double eps = 1e10, eps_old = 2e10;
                 while( (eps < eps_old || eps > 1e-7) && N<1e6 && eps > 1e-11)
                 {
@@ -111,10 +126,14 @@ struct FpsiX
                     end2d_old = end2d;
                     //compute new values
                     N*=2;
-                    dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[2*i], Z_i[2*i]), psi, N);
+                    //dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[2*i], Z_i[2*i]), psi, N);
+                    dg::stepperRK17( minimalCurve_, begin2d, end2d, psip(R_i[2*i], Z_i[2*i]), psi, N);
                     eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
                 }
                 R_0[i] = end2d_old[0], Z_0[i] = end2d_old[1];
+                //remember last call
+                R_i[2*i] = R_0[i] = end2d_old[0], Z_i[2*i] = Z_0[i] = end2d_old[1];
+                vR_i[2*i] = end2d_old[2], vZ_i[2*i] = end2d_old[3];
             }
         }
         //double theta1 = theta( R_0[0], Z_0[0]);
@@ -141,8 +160,9 @@ struct FpsiX
         find_initial( psi, R_i, Z_i);
         t.toc();
         solovev::Psip psip( gp_);
+        
         //std::cout << "find_initial took "<<t.diff()<< "s\n";
-        t.tic();
+        //t.tic();
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
         //std::cout << "In Stepper function:\n";
         //double y_old=0;
@@ -181,9 +201,9 @@ struct FpsiX
             //std::cout << "error "<<eps<<" with "<<N<<" steps| psip "<<psip(end[0], end[1])<<"\n";
             //std::cout <<"error in y is "<<y_eps<<"\n";
         }
-        std::cout << "\t error "<<eps<<" with "<<N<<" steps| err psip "<<fabs( psip(end[0], end[1]) - psi )/psi<<"\n";
+        //std::cout << "\t error "<<eps<<" with "<<N<<" steps| err psip "<<fabs( psip(end[0], end[1]) - psi )/psi<<"\n";
         double f_psi = 2.*M_PI/end_old[2];
-        t.toc();
+        //t.toc();
         //std::cout << "Finding f took "<<t.diff()<<"s\n";
         return f_psi;
     }
@@ -307,7 +327,7 @@ struct FpsiX
             double ar = dg::blas2::dot( r, w1d, r);
             double az = dg::blas2::dot( z, w1d, z);
             eps =  sqrt( er + ez)/sqrt(ar+az);
-            std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+            //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
             steps*=2;
         }
         r = r_old, z = z_old, yr = yr_old, yz = yz_old, xr = xr_old, xz = xz_old;
@@ -354,7 +374,8 @@ struct FpsiX
     const FieldRZYT fieldRZYT_;
     const FieldRZY fieldRZY_;
     HessianRZtau hessianRZtau_;
-    double R_i[4], Z_i[4];
+    MinimalCurve minimalCurve_;
+    double R_i[4], Z_i[4], vR_i[4], vZ_i[4];
 
 };
 
@@ -407,7 +428,7 @@ struct XFieldFinv
             eps_old = eps, end_old = end; 
             N*=2; dg::stepperRK17( *this, begin, end, x0, x, N);
             eps = fabs( end[0]- end_old[0]);
-            std::cout << "\t error "<<eps<<" with "<<N<<" steps\n";
+            //std::cout << "\t error "<<eps<<" with "<<N<<" steps\n";
         }
         return end_old[0];
     }
@@ -454,8 +475,10 @@ struct ConformalXGrid3d : public dg::GridX3d
         assert( psi_0 < 0 );
         //construct x-grid in two parts
         solovev::detail::FpsiX fpsi(gp);
+        std::cout << "FIND X FOR PSI_0\n";
         const double x_0 = fpsi.find_x(psi_0);
         const double x_1 = -fx/(1.-fx)*x_0;
+        std::cout << "FIND X FOR PSI = 1\n";
         const double psi1 = fpsi.find_x(1);
         init_X_boundaries( x_0, x_1);
         //compute psi(x) for a grid on x 

@@ -1033,7 +1033,6 @@ struct HessianRZtau
         double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
         yp[0] = y[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
         yp[1] = y[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
-        std::cout << "iteration "<<Dinv<<" "<<(psipZZ*psipR - psipRZ*psipZ)<<" "<<(-psipRZ*psipR + psipRR*psipZ)<<"\n";
     }
   private:
     bool norm_;
@@ -1047,17 +1046,28 @@ struct HessianRZtau
 
 struct MinimalCurve
 {
-    MinimalCurve( GeomParameters gp): norm_(false), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){}
+    MinimalCurve( GeomParameters gp): norm_(false), psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){}
     void set_norm( bool normed) {norm_ = normed;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipRZ = psipRZ_(y[0], y[1]), psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]), psipRR=psipRR_(y[0], y[1]), psipZZ=psipZZ_(y[0], y[1]); 
+        //double psipRZ = psipRZ_(y[0], y[1]), psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]), psipRR=psipRR_(y[0], y[1]), psipZZ=psipZZ_(y[0], y[1]); 
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]);
         yp[0] = y[2];
         yp[1] = y[3];
-        double D2 = psipRR*y[2]*y[2] + 2.*psipRZ*y[2]*y[3] + psipZZ*y[3]*y[3];
-        double grad2 = psipR*psipR+psipZ*psipZ;
-        yp[2] = D2/(1-grad2) * psipR;
-        yp[3] = D2/(1-grad2) * psipZ;
+        //double D2 = psipRR*y[2]*y[2] + 2.*psipRZ*y[2]*y[3] + psipZZ*y[3]*y[3];
+        //double grad2 = psipR*psipR+psipZ*psipZ;
+        //yp[2] = D2/(1.+grad2) * psipR ;
+        //yp[3] = D2/(1.+grad2) * psipZ ;
+        if( psip_(y[0], y[1]) < 0)
+        {
+            yp[2] = -10.*psipR;
+            yp[3] = -10.*psipZ;
+        }
+        else
+        {
+            yp[2] = 10.*psipR;
+            yp[3] = 10.*psipZ;
+        }
 
         if( norm_) 
         {
@@ -1067,6 +1077,7 @@ struct MinimalCurve
     }
   private:
     bool norm_;
+    Psip psip_;
     PsipR psipR_;
     PsipZ psipZ_;
     PsipRR psipRR_;
