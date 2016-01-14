@@ -63,8 +63,8 @@ struct FpsiX
                 eps_old = eps; end2d_old = end2d;
                 //compute new values
                 N*=2;
-                //dg::stepperRK17( hessianRZtau_, begin2d, end2d, 0., 5., N);
-                dg::stepperRK17( minimalCurve_, begin2d, end2d, 0., 2., N);
+                dg::stepperRK17( hessianRZtau_, begin2d, end2d, 0., 5., N);
+                //dg::stepperRK17( minimalCurve_, begin2d, end2d, 0., 2., N);
                 eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
             }
             R_i[i] = end2d_old[0], Z_i[i] = end2d_old[1]; 
@@ -99,8 +99,8 @@ struct FpsiX
                     end2d_old = end2d;
                     //compute new values
                     N*=2;
-                    //dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[1+2*i], Z_i[1+2*i]), psi, N);
-                    dg::stepperRK17( minimalCurve_, begin2d, end2d, psip(R_i[1+2*i], Z_i[1+2*i]), psi, N);
+                    dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[1+2*i], Z_i[1+2*i]), psi, N);
+                    //dg::stepperRK17( minimalCurve_, begin2d, end2d, psip(R_i[1+2*i], Z_i[1+2*i]), psi, N);
                     eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
                 }
                 //remember last call
@@ -126,8 +126,8 @@ struct FpsiX
                     end2d_old = end2d;
                     //compute new values
                     N*=2;
-                    //dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[2*i], Z_i[2*i]), psi, N);
-                    dg::stepperRK17( minimalCurve_, begin2d, end2d, psip(R_i[2*i], Z_i[2*i]), psi, N);
+                    dg::stepperRK17( hessianRZtau_, begin2d, end2d, psip(R_i[2*i], Z_i[2*i]), psi, N);
+                    //dg::stepperRK17( minimalCurve_, begin2d, end2d, psip(R_i[2*i], Z_i[2*i]), psi, N);
                     eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
                 }
                 R_0[i] = end2d_old[0], Z_0[i] = end2d_old[1];

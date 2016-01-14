@@ -43,7 +43,7 @@ struct GridX1d
         x0_(x0), x1_(x1), f_(f),
         n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
-        assert( (f > 0) && (f < 0.5) );
+        assert( (f >= 0) && (f < 0.5) );
         assert( floor( f*(double)N ) == f*(double)N); 
         assert( x1 > x0 );
         assert( N > 0  );
@@ -155,8 +155,8 @@ struct GridX2d
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
      * @param y1 upper boundary in y 
-     * @param fx factor for x-direction
-     * @param fy factor for y-direction
+     * @param fx factor for x-direction (fx*Nx must be a natural number)
+     * @param fy factor for y-direction (fy*Ny must be a natural number)
      * @param n  # of polynomial coefficients per dimension
      * @param Nx # of points in x 
      * @param Ny # of points in y
@@ -167,8 +167,8 @@ struct GridX2d
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fx),
         n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
-        assert( (fy_ > 0.) && (fy_ < 0.5) );
-        assert( (fx_ > 0.) && (fx_ < 1.) );
+        assert( (fy_ >= 0.) && (fy_ < 0.5) );
+        assert( (fx_ >= 0.) && (fx_ < 1.) );
         assert( floor( fx_*(double)Nx ) == fx_*(double)Nx); 
         assert( floor( fy_*(double)Ny ) == fy_*(double)Ny); 
         assert( n != 0);
@@ -401,8 +401,8 @@ struct GridX3d
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), fx_(fx), fy_(fy),
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
-        assert( (fy_ > 0.) && (fy_ < 0.5) );
-        assert( (fx_ > 0.) && (fx_ < 1.) );
+        assert( (fy_ >= 0.) && (fy_ < 0.5) );
+        assert( (fx_ >= 0.) && (fx_ < 1.) );
         assert( floor( fx_*(double)Nx ) == fx_*(double)Nx); 
         assert( floor( fy_*(double)Ny ) == fy_*(double)Ny); 
         assert( n != 0);

@@ -449,6 +449,7 @@ EllSparseBlockMat dx( const Grid1d<double>& g, direction dir = centered)
 */
 EllSparseBlockMat dx( const GridX1d& g, bc bcx, direction dir = centered)
 {
+    if( g.outer_N() == 0) return dx( g.grid(), dg::PER, dir);
     EllSparseBlockMat DX = dx( g.grid(), bcx, dir);
     for( int i=0; i<DX.blocks_per_line; i++)
     {
@@ -490,6 +491,7 @@ EllSparseBlockMat dx( const GridX1d& g, direction dir = centered)
 */
 EllSparseBlockMat jump( const GridX1d& g, bc bcx)
 {
+    if( g.outer_N() == 0) return jump( g.n(), g.N(), g.h(), dg::PER);
     EllSparseBlockMat J = jump( g.n(),g.N(),g.h(), bcx);
     for( int i=0; i<J.blocks_per_line; i++)
     {
