@@ -438,6 +438,33 @@ EllSparseBlockMat dx( const Grid1d<double>& g, direction dir = centered)
 }
 
 /**
+* @brief Create and assemble a host Matrix for the jump in 1d
+*
+* @ingroup create
+* @param g 1D grid
+* @param bcx boundary condition
+*
+* @return Host Matrix 
+*/
+EllSparseBlockMat jump( const Grid1d<double>& g, bc bcx)
+{
+    return jump( g.n(), g.N(), g.h(), bcx);
+}
+/**
+* @brief Create and assemble a host Matrix for the jump in 1d
+*
+* Take the boundary condition from the grid
+* @ingroup create
+* @param g 1D grid 
+*
+* @return Host Matrix 
+*/
+EllSparseBlockMat jump( const Grid1d<double>& g)
+{
+    return jump( g, g.bcx());
+}
+
+/**
 * @brief Create and assemble a host Matrix for the derivative in 1d
 *
 * @ingroup create

@@ -1,36 +1,68 @@
 #include <iostream>
 #include "blas.h"
-#include "derivatives.h"
+#include "derivativesX.h"
 #include "evaluation.cuh"
 #include "typedefs.cuh"
 #include "sparseblockmat.cuh"
 
 double zero( double x, double y) { return 0;}
-double sin(  double x, double y) { return sin(x)*sin(y);}
-double cosx( double x, double y) { return cos(x)*sin(y);}
-double cosy( double x, double y) { return cos(y)*sin(x);}
 double zero( double x, double y, double z) { return 0;}
-double sin(  double x, double y, double z) { return sin(x)*sin(y)*sin(z);}
-double cosx( double x, double y, double z) { return cos(x)*sin(y)*sin(z);}
-double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
-double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
+double sin( double x, double y ) { 
+    if( x < 0)  
+    {
+        if( y < 0) return sin(x)*sin(y);
+        else if( 0 <= y && y < 2*M_PI) return sin(x)*cos(y);
+        else return sin(x)*sin(y - 2*M_PI);
+    }
+    else
+        return sin(x)*sin(y);
+}
+double cosx( double x, double y) { 
+    if( x < 0)
+    {
+        if( y < 0) return cos(x)*sin(y);
+        else if( 0 <= y && y < 2*M_PI) return cos(x)*cos(y);
+        else return cos(x)*sin(y - 2*M_PI);
+    }
+    else
+        return cos(x)*sin(y);
+}
+double cosy( double x, double y) { 
+    if( x < 0)
+    {
+        if( y < 0) return sin(x)*cos(y);
+        else if( 0 <= y && y < 2*M_PI) return -sin(x)*sin(y);
+        else return sin(x)*cos(y - 2*M_PI);
+    }
+    else
+        return sin(x)*cos(y);
+}
+double sin(  double x, double y, double z) { return sin(x,y)*sin(z);}
+double cosx( double x, double y, double z) { return cosx(x,y)*sin(z);}
+double cosy( double x, double y, double z) { return cosy(x,y)*sin(z);}
+double cosz( double x, double y, double z) { return sin(x,y)*cos(z);}
+
 
 typedef dg::DVec Vector;
-typedef dg::EllSparseBlockMatDevice Matrix;
+typedef dg::Composite<dg::EllSparseBlockMatDevice> Matrix;
 //typedef dg::HVec Vector;
-//typedef dg::EllSparseBlockMat Matrix;
+//typedef dg::Composite<dg::EllSparseBlockMat> Matrix;
 
 int main()
 {
     unsigned n, Nx, Ny, Nz;
     std::cout << "Type in n, Nx and Ny and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
-    dg::bc bcx=dg::DIR, bcz=dg::NEU_DIR, bcy=dg::PER;
-    dg::Grid2d<double> g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
+    dg::bc bcx=dg::DIR_NEU, bcy=dg::DIR, bcz = dg::PER;
+    dg::GridX2d g2d( -2.*M_PI, M_PI/2., -M_PI, 2*M_PI+M_PI, 1./5., 1./4., n, Nx, Ny, bcx, bcy);
+    //dg::GridX2d g2d( -2.*M_PI, M_PI/2., 0., 2*M_PI, 1./5., 0., n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
 
     Matrix dx2 = dg::create::dx( g2d, dg::forward);
     Matrix dy2 = dg::create::dy( g2d, dg::centered);
+    //dy2.m1.trivial = false;
+    //dy2.m2.trivial = false;
+    //dy2.display( std::cout );
     Matrix jx2 = dg::create::jumpX( g2d);
     Matrix jy2 = dg::create::jumpY( g2d);
     Matrix m2[] = {dx2, dy2, jx2, jy2};
@@ -55,7 +87,7 @@ int main()
     dg::blas1::axpby( 1., tempX, 1., tempY, tempY);
     dg::blas1::axpby( 1., null2, -1., tempY);
     std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tempY, w2d, tempY))<<"\n";
-    dg::Grid3d<double> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
+    dg::GridX3d g3d( -2.*M_PI, M_PI/2., -M_PI, 2*M_PI+M_PI, 0., 2.*M_PI, 1./5., 1./4., n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);

@@ -42,7 +42,9 @@ struct EllSparseBlockMat
     EllSparseBlockMat( int num_block_rows, int num_block_cols, int num_blocks_per_line, int num_different_blocks, int n):
         data(num_different_blocks*n*n), cols_idx( num_block_rows*num_blocks_per_line), data_idx(cols_idx.size()),
         num_rows(num_block_rows), num_cols(num_block_cols), blocks_per_line(num_blocks_per_line),
-        n(n),left(1), right(1), trivial(true){}
+        n(n),left(1), right(1), trivial(true){
+        left_[0] = 0, left_[1] = 1;
+        right_[0] = 0, right_[1] = 1;}
     
     typedef thrust::host_vector<double> HVec;  //!< typedef for easy programming
     typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
@@ -53,6 +55,8 @@ struct EllSparseBlockMat
     * @param y output may not equal input
     */
     void symv(const HVec& x, HVec& y) const;
+
+    void set_defaults_left_right(){ left_[0]=0, left_[1] = left, right_[0] = 0, right_[1] = right;}
     
     HVec data;//!< The data array is of size n*n*num_different_blocks and contains the blocks
     IVec cols_idx; //!< is of size num_block_rows*num_blocks_per_line and contains the column indices 
@@ -63,6 +67,8 @@ struct EllSparseBlockMat
     int n;  //!< each block has size n*n
     int left; //!< size of the left Kronecker delta
     int right; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
+    int left_[2];//!< matrix is applied only to columns [l_0, l_1[
+    int right_[2]; //!< matrix is applied only to rows [r_0, r_1[
     bool trivial; //!< indicates whether diagonal entries are repetitive or not
 
     /**
@@ -173,7 +179,7 @@ if( trivial)
         offset[d] = cols_idx[blocks_per_line+d]-1;
     if(right==1) //alle dx Ableitungen
     {
-        for( int s=0; s<left; s++)
+        for( int s=left_[0]; s<left_[1]; s++)
         for( int i=0; i<1; i++)
         for( int k=0; k<n; k++)
         {
@@ -184,7 +190,7 @@ if( trivial)
                         x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
             y[(s*num_rows+i)*n+k]=temp;
         }
-        for( int s=0; s<left; s++)
+        for( int s=left_[0]; s<left_[1]; s++)
         for( int i=1; i<num_rows-1; i++)
         for( int k=0; k<n; k++)
         {
@@ -194,7 +200,7 @@ if( trivial)
                     temp+=data[(d*n + k)*n+q]*x[((s*num_cols + i+offset[d])*n+q)];
             y[(s*num_rows+i)*n+k]=temp;
         }
-        for( int s=0; s<left; s++)
+        for( int s=left_[0]; s<left_[1]; s++)
         for( int i=num_rows-1; i<num_rows; i++)
         for( int k=0; k<n; k++)
         {
@@ -207,10 +213,10 @@ if( trivial)
         }
         return;
     } //if right==1
-    for( int s=0; s<left; s++)
+    for( int s=left_[0]; s<left_[1]; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_[0]; j<right_[1]; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right+j;
         y[I] =0;
@@ -219,20 +225,20 @@ if( trivial)
             y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
     }
-    for( int s=0; s<left; s++)
+    for( int s=left_[0]; s<left_[1]; s++)
     for( int i=1; i<num_rows-1; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_[0]; j<right_[1]; j++)
         y[((s*num_rows + i)*n+k)*right+j] =0;
 
     for( int d=0; d<blocks_per_line; d++)
     {
-        for( int s=0; s<left; s++)
+        for( int s=left_[0]; s<left_[1]; s++)
         for( int i=1; i<num_rows-1; i++)
         {
             int J = i+offset[d];
             for( int k=0; k<n; k++)
-            for( int j=0; j<right; j++)
+            for( int j=right_[0]; j<right_[1]; j++)
             {
                 int I = ((s*num_rows + i)*n+k)*right+j;
                 for( int q=0; q<n; q++) //multiplication-loop
@@ -240,10 +246,10 @@ if( trivial)
             }
         }
     }
-    for( int s=0; s<left; s++)
+    for( int s=left_[0]; s<left_[1]; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_[0]; j<right_[1]; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right+j;
         y[I] =0;
@@ -256,10 +262,10 @@ if( trivial)
 else //not-trivial
 {
     //simplest implementation
-    for( int s=0; s<left; s++)
+    for( int s=left_[0]; s<left_[1]; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_[0]; j<right_[1]; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right+j;
         y[I] =0;
@@ -280,7 +286,11 @@ void EllSparseBlockMat::display( std::ostream& os) const
     os << "blocks_per_line  "<<blocks_per_line<<"\n";
     os << "n                "<<n<<"\n";
     os << "left             "<<left<<"\n";
+    os << "left0             "<<left_[0]<<"\n";
+    os << "left1             "<<left_[1]<<"\n";
     os << "right            "<<right<<"\n";
+    os << "right0             "<<right_[0]<<"\n";
+    os << "right1             "<<right_[1]<<"\n";
     os << "Columns: \n";
     for( int i=0; i<num_rows; i++)
     {

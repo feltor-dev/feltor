@@ -1,5 +1,6 @@
 #pragma once
 #include <cassert>
+#include <cmath> //floor function
 #include "dlt.h"
 #include "grid.h"
 #include "../enums.h"
@@ -164,7 +165,7 @@ struct GridX2d
      * @param bcy boundary condition in y
      */
     GridX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fx),
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fy),
         n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
@@ -325,7 +326,11 @@ struct GridX2d
         os << "Grid parameters are: \n"
             <<"    n  = "<<n_<<"\n"
             <<"    Nx = "<<Nx_<<"\n"
+            <<"    inner Nx = "<<inner_Nx()<<"\n"
+            <<"    outer Nx = "<<outer_Nx()<<"\n"
             <<"    Ny = "<<Ny_<<"\n"
+            <<"    inner Ny = "<<inner_Ny()<<"\n"
+            <<"    outer Ny = "<<outer_Ny()<<"\n"
             <<"    hx = "<<hx_<<"\n"
             <<"    hy = "<<hy_<<"\n"
             <<"    x0 = "<<x0_<<"\n"
@@ -593,7 +598,11 @@ struct GridX3d
         os << "Grid parameters are: \n"
             <<"    n  = "<<n_<<"\n"
             <<"    Nx = "<<Nx_<<"\n"
+            <<"    inner Nx = "<<inner_Nx()<<"\n"
+            <<"    outer Nx = "<<outer_Nx()<<"\n"
             <<"    Ny = "<<Ny_<<"\n"
+            <<"    inner Ny = "<<inner_Ny()<<"\n"
+            <<"    outer Ny = "<<outer_Ny()<<"\n"
             <<"    Nz = "<<Nz_<<"\n"
             <<"    hx = "<<hx_<<"\n"
             <<"    hy = "<<hy_<<"\n"

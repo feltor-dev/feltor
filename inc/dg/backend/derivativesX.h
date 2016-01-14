@@ -1,6 +1,6 @@
 #pragma once
 
-#include "grid.h"
+#include "gridX.h"
 #include "dx.h"
 
 /*! @file 
@@ -8,6 +8,57 @@
   Convenience functions to create 2D derivatives
   */
 namespace dg{
+
+template<class Matrix>
+struct Composite
+{
+    template<class Matrix2>
+    Composite( const Composite<Matrix2>& src):m1(src.m1), m2(src.m2), dual(src.dual){}
+    Composite( const Matrix& m):m1(m), m2(m), dual(false){ }
+    Composite( const Matrix& m1, const Matrix& m2):m1(m1), m2(m2), dual(true){ }
+    template<class Matrix2>
+    Composite& operator=( const Composite<Matrix2>& src){ Composite c(src); 
+        *this = c; return *this;}
+    Matrix m1, m2;
+    bool dual;
+    template< class container>
+    void symv( const  container& v1, container& v2)
+    {
+        m1.symv( v1, v2);
+        if( dual)
+            m2.symv( v1, v2);
+    }
+    void display( std::ostream& os = std::cout) const
+    {
+        if( dual)
+        {
+            os << " dual matrix: \n";
+            os << " INNER MATRIX\n";
+            m1.display( os);
+            os << " OUTER MATRIX\n";
+            m2.display( os);
+        }
+        else
+        {
+            os << "single matrix: \n";
+            m1.display(os);
+        }
+    }
+};
+///@cond
+template <class Matrix>
+struct MatrixTraits<Composite<Matrix> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template <class Matrix>
+struct MatrixTraits<const Composite<Matrix> >
+{
+    typedef double value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+///@endcond
 
 
 /**
@@ -29,7 +80,7 @@ namespace create{
  *
  * @return A host matrix 
  */
-EllSparseBlockMat dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
+Composite<EllSparseBlockMat> dx( const GridX2d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -46,7 +97,7 @@ EllSparseBlockMat dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
  *
  * @return A host matrix
  */
-EllSparseBlockMat dx( const Grid2d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+Composite<EllSparseBlockMat> dx( const GridX2d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -57,13 +108,22 @@ EllSparseBlockMat dx( const Grid2d<double>& g, direction dir = centered) { retur
  *
  * @return A host matrix
  */
-EllSparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
+Composite<EllSparseBlockMat> dy( const GridX2d& g, bc bcy, direction dir = centered)
 {
-    EllSparseBlockMat dy;
-    dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    dy.right = g.n()*g.Nx();
-    dy.set_defaults_left_right();
-    return dy;
+    EllSparseBlockMat dy_inner, dy_outer;
+    GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
+    Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    dy_inner = dx( g1d_inner, bcy, dir);
+    dy_outer = dx( g1d_outer, bcy, dir);
+    dy_inner.right = g.n()*g.Nx();
+    dy_inner.right_[0] = 0;
+    dy_inner.right_[1] = g.n()*g.inner_Nx();
+    dy_outer.right_[0] = g.n()*g.inner_Nx();
+    dy_outer.right_[1] = g.n()*g.Nx();
+    dy_outer.right = g.n()*g.Nx();
+
+    Composite<EllSparseBlockMat> c( dy_inner, dy_outer);
+    return c;
 }
 
 /**
@@ -74,7 +134,7 @@ EllSparseBlockMat dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+Composite<EllSparseBlockMat> dy( const GridX2d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Matrix that contains 2d jump terms in X direction
@@ -84,7 +144,7 @@ EllSparseBlockMat dy( const Grid2d<double>& g, direction dir = centered){ return
  *
  * @return A host matrix 
  */
-EllSparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
+Composite<EllSparseBlockMat> jumpX( const GridX2d& g, bc bcx)
 {
     EllSparseBlockMat jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
@@ -101,13 +161,22 @@ EllSparseBlockMat jumpX( const Grid2d<double>& g, bc bcx)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat jumpY( const Grid2d<double>& g, bc bcy)
+Composite<EllSparseBlockMat> jumpY( const GridX2d& g, bc bcy)
 {
-    EllSparseBlockMat jy;
-    jy = jump( g.n(), g.Ny(), g.hy(), bcy);
-    jy.right = g.n()*g.Nx();
-    jy.set_defaults_left_right();
-    return jy;
+    EllSparseBlockMat jy_inner, jy_outer;
+    GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
+    Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    jy_inner = jump( g1d_inner, bcy);
+    jy_outer = jump( g1d_outer, bcy);
+    jy_inner.right = g.n()*g.Nx();
+    jy_inner.right_[0] = 0;
+    jy_inner.right_[1] = g.n()*g.inner_Nx();
+    jy_outer.right_[0] = g.n()*g.inner_Nx();
+    jy_outer.right_[1] = g.n()*g.Nx();
+    jy_outer.right = g.n()*g.Nx();
+
+    Composite<EllSparseBlockMat> c( jy_inner, jy_outer);
+    return c;
 }
 
 /**
@@ -117,7 +186,7 @@ EllSparseBlockMat jumpY( const Grid2d<double>& g, bc bcy)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat jumpX( const Grid2d<double>& g)
+Composite<EllSparseBlockMat> jumpX( const GridX2d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -129,7 +198,7 @@ EllSparseBlockMat jumpX( const Grid2d<double>& g)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat jumpY( const Grid2d<double>& g)
+Composite<EllSparseBlockMat> jumpY( const GridX2d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -144,7 +213,7 @@ EllSparseBlockMat jumpY( const Grid2d<double>& g)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat jumpX( const Grid3d<double>& g, bc bcx)
+Composite<EllSparseBlockMat> jumpX( const GridX3d& g, bc bcx)
 {
     EllSparseBlockMat jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
@@ -161,14 +230,24 @@ EllSparseBlockMat jumpX( const Grid3d<double>& g, bc bcx)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat jumpY( const Grid3d<double>& g, bc bcy)
+Composite<EllSparseBlockMat> jumpY( const GridX3d& g, bc bcy)
 {
-    EllSparseBlockMat jy;
-    jy = jump( g.n(), g.Ny(), g.hy(), bcy);
-    jy.right = g.n()*g.Nx();
-    jy.left = g.Nz();
-    jy.set_defaults_left_right();
-    return jy;
+    EllSparseBlockMat jy_inner, jy_outer;
+    GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
+    Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    jy_inner = jump( g1d_inner, bcy);
+    jy_outer = jump( g1d_outer, bcy);
+    jy_inner.right = g.n()*g.Nx();
+    jy_inner.right_[0] = 0;
+    jy_inner.right_[1] = g.n()*g.inner_Nx();
+    jy_outer.right_[0] = g.n()*g.inner_Nx();
+    jy_outer.right_[1] = g.n()*g.Nx();
+    jy_outer.right = g.n()*g.Nx();
+    jy_inner.left = jy_inner.left_[1] = g.Nz();
+    jy_outer.left = jy_outer.left_[1] = g.Nz();
+
+    Composite<EllSparseBlockMat> c( jy_inner, jy_outer);
+    return c;
 }
 
 /**
@@ -179,7 +258,7 @@ EllSparseBlockMat jumpY( const Grid3d<double>& g, bc bcy)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat jumpZ( const Grid3d<double>& g, bc bcz)
+Composite<EllSparseBlockMat> jumpZ( const GridX3d& g, bc bcz)
 {
     EllSparseBlockMat jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
@@ -195,7 +274,7 @@ EllSparseBlockMat jumpZ( const Grid3d<double>& g, bc bcz)
  *
  * @return A host matrix
  */
-EllSparseBlockMat jumpX( const Grid3d<double>& g)
+Composite<EllSparseBlockMat> jumpX( const GridX3d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -207,7 +286,7 @@ EllSparseBlockMat jumpX( const Grid3d<double>& g)
  *
  * @return A host matrix
  */
-EllSparseBlockMat jumpY( const Grid3d<double>& g)
+Composite<EllSparseBlockMat> jumpY( const GridX3d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -219,7 +298,7 @@ EllSparseBlockMat jumpY( const Grid3d<double>& g)
  *
  * @return A host matrix
  */
-EllSparseBlockMat jumpZ( const Grid3d<double>& g)
+Composite<EllSparseBlockMat> jumpZ( const GridX3d& g)
 {
     return jumpZ( g, g.bcz());
 }
@@ -234,7 +313,7 @@ EllSparseBlockMat jumpZ( const Grid3d<double>& g)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
+Composite<EllSparseBlockMat> dx( const GridX3d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -251,7 +330,7 @@ EllSparseBlockMat dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat dx( const Grid3d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+Composite<EllSparseBlockMat> dx( const GridX3d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
@@ -262,14 +341,24 @@ EllSparseBlockMat dx( const Grid3d<double>& g, direction dir = centered) { retur
  *
  * @return A host matrix 
  */
-EllSparseBlockMat dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
+Composite<EllSparseBlockMat> dy( const GridX3d& g, bc bcy, direction dir = centered)
 {
-    EllSparseBlockMat dy;
-    dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    dy.right = g.n()*g.Nx();
-    dy.left = g.Nz();
-    dy.set_defaults_left_right();
-    return dy;
+    EllSparseBlockMat dy_inner, dy_outer;
+    GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
+    Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    dy_inner = dx( g1d_inner, bcy, dir);
+    dy_outer = dx( g1d_outer, bcy, dir);
+    dy_inner.right = g.n()*g.Nx();
+    dy_inner.right_[0] = 0;
+    dy_inner.right_[1] = g.n()*g.inner_Nx();
+    dy_outer.right_[0] = g.n()*g.inner_Nx();
+    dy_outer.right_[1] = g.n()*g.Nx();
+    dy_outer.right = g.n()*g.Nx();
+    dy_inner.left = dy_inner.left_[1] = g.Nz();
+    dy_outer.left = dy_outer.left_[1] = g.Nz();
+
+    Composite<EllSparseBlockMat> c( dy_inner, dy_outer);
+    return c;
 }
 
 /**
@@ -280,7 +369,7 @@ EllSparseBlockMat dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat dy( const Grid3d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+Composite<EllSparseBlockMat> dy( const GridX3d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
@@ -291,7 +380,7 @@ EllSparseBlockMat dy( const Grid3d<double>& g, direction dir = centered){ return
  *
  * @return A host matrix 
  */
-EllSparseBlockMat dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
+Composite<EllSparseBlockMat> dz( const GridX3d& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
@@ -309,7 +398,7 @@ EllSparseBlockMat dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat dz( const Grid3d<double>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
+Composite<EllSparseBlockMat> dz( const GridX3d& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 
 
 

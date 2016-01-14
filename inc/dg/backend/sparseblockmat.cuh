@@ -30,6 +30,16 @@ struct EllSparseBlockMatDevice
         cols_idx = src.cols_idx, data_idx = src.data_idx;
         num_rows = src.num_rows, num_cols = src.num_cols, blocks_per_line = src.blocks_per_line;
         n = src.n, left = src.left, right = src.right, trivial = src.trivial;
+        left_[0] = src.left_[0], left_[1] = src.left_[1];
+        right_[0] = src.right_[0], right_[1] = src.right_[1];
+
+    }
+    EllSparseBlockMatDevice& operator=( const EllSparseBlockMat& src)
+    {
+        EllSparseBlockMatDevice m(src);
+        *this = m;
+        return *this;
+
     }
     
     /**
@@ -55,6 +65,7 @@ struct EllSparseBlockMatDevice
     int num_rows, num_cols, blocks_per_line;
     int n;
     int left, right;
+    int left_[2], right_[2];
     bool trivial;
 };
 
@@ -205,7 +216,7 @@ if(trivial)
     if(right==1) //alle dx Ableitungen
     {
 #pragma omp parallel for 
-        for( int s=0; s<left; s++)
+        for( int s=left_[0]; s<left_[1]; s++)
         for( int i=0; i<1; i++)
         for( int k=0; k<n; k++)
         {
@@ -217,7 +228,7 @@ if(trivial)
             y[(s*num_rows+i)*n+k]=temp;
         }
 #pragma omp parallel for 
-        for( int s=0; s<left; s++)
+        for( int s=left_[0]; s<left_[1]; s++)
         for( int i=1; i<num_rows-1; i++)
         for( int k=0; k<n; k++)
         {
@@ -228,7 +239,7 @@ if(trivial)
             y[(s*num_rows+i)*n+k]=temp;
         }
 #pragma omp parallel for 
-        for( int s=0; s<left; s++)
+        for( int s=left_[0]; s<left_[1]; s++)
         for( int i=num_rows-1; i<num_rows; i++)
         for( int k=0; k<n; k++)
         {
@@ -241,16 +252,18 @@ if(trivial)
         }
         return;
     } //if right==1
-#pragma omp parallel for
-    for( unsigned  i=0; i<y.size(); i++)
+#pragma omp parallel for collapse(3)
+    for( int s=left_[0]; s<left_[1]; s++)
+    for( int i=0; i<num_rows*n; i++)
+    for( int j=right_[0]; j<right_[1]; j++)
     {
-        y[i] =0;
+        y[(s*num_rows*n + i )*right +j] = 0;
     }
 #pragma omp parallel for collapse(4)
-    for( int s=0; s<left; s++)
+    for( int s=left_[0]; s<left_[1]; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_[0]; j<right_[1]; j++)
     {
         double temp=0;
         int I = ((s*num_rows + i)*n+k)*right+j;
@@ -266,12 +279,12 @@ if(trivial)
         for( int d=0; d<blocks_per_line; d++)
         {
 #pragma omp parallel for collapse(2)
-        for( int s=0; s<left; s++)
+        for( int s=left_[0]; s<left_[1]; s++)
         for( int i=1; i<num_rows-1; i++)
         {
             int J = i+offset[d];
             for( int k=0; k<n; k++)
-            for( int j=0; j<right; j++)
+            for( int j=right_[0]; j<right_[1]; j++)
             {
                 int I = ((s*num_rows + i)*n+k)*right+j;
                 for( int q=0; q<n; q++) //multiplication-loop
@@ -295,7 +308,7 @@ if(trivial)
         {
             int J = i+offset[d];
             for( int k=0; k<n; k++)
-            for( int j=0; j<right; j++)
+            for( int j=right_[0]; j<right_[1]; j++)
             {
                 int I = (i*n+k)*right+j;
                 for( int q=0; q<n; q++) //multiplication-loop
@@ -305,10 +318,10 @@ if(trivial)
         }
     } //endif left > 1
 #pragma omp parallel for collapse(4)
-    for( int s=0; s<left; s++)
+    for( int s=left_[0]; s<left_[1]; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_[0]; j<right_[1]; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right+j;
         double temp=0; 
@@ -323,10 +336,10 @@ else//not-trivial
 {
     //simplest implementation
 #pragma omp parallel for collapse(4)
-    for( int s=0; s<left; s++)
+    for( int s=left_[0]; s<left_[1]; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_[0]; j<right_[1]; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right+j;
         y[I] =0;
@@ -364,11 +377,10 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
          const double* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, const int size,
-         const int left, const int right, 
+         const int right, const int right_0, const int right_1,
          const double* x, double *y
          )
 {
-    //int size = left*num_rows*n*right;
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_rows/grid_size rows
@@ -379,6 +391,7 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
             i = (rrn)%num_rows, 
             k = (rr)%n, 
             j=row%right;
+        if( j < right_0 || j >= right_1) continue;
         int B, J;
         double temp=0;
         //y[row] = 0;
@@ -441,16 +454,16 @@ void EllSparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) co
     assert( x.size() == (unsigned)num_cols*n*left*right);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
-    const size_t size = left*right*num_rows*n;
+    const size_t size = (left_[1]-left_[0])*right*num_rows*n;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
     const double* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
-    const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
-    double* y_ptr = thrust::raw_pointer_cast( &y[0]);
+    const double* x_ptr = thrust::raw_pointer_cast( &x[left_[0]*right*num_rows*n]);
+    double* y_ptr = thrust::raw_pointer_cast( &y[left_[0]*right*num_rows*n]);
     ell_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-        data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, left, right, x_ptr,y_ptr);
+        data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right, right_[0], right_[1], x_ptr,y_ptr);
 }
 
 void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& x, double beta, DVec& y) const
