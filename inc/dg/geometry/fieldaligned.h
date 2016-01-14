@@ -220,12 +220,8 @@ void boxintegrator( Field& field, const Grid& grid,
 {
     dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
     //First catch periodic domain
-    if( coords1[0] < grid.x0() && grid.bcx() == dg::PER) coords1[0] += grid.lx();
-    if( coords1[0] > grid.x1() && grid.bcx() == dg::PER) coords1[0] -= grid.lx();
-    if( coords1[1] < grid.y0() && grid.bcy() == dg::PER) coords1[1] += grid.ly();
-    if( coords1[1] > grid.y1() && grid.bcy() == dg::PER) coords1[1] -= grid.ly();
-    if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())  
-         || !(coords1[1] >= grid.y0() && coords1[1] <= grid.y1())  ) //Punkt liegt immer noch außerhalb 
+    grid.shift_topologic( coords0[0], coords0[1], coords1[0], coords1[1]);
+    if ( !grid.contains( coords1[0], coords1[1]))   //Punkt liegt immer noch außerhalb 
     {
         std::cerr << "point is somewhere else!\n";
         if( globalbcz == dg::DIR)

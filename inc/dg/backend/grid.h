@@ -115,6 +115,22 @@ struct Grid1d
             default: os << "    Not specified!!\n"; 
         }
     }
+
+    void shift_topologic( double x0, double& x1)
+    {
+        assert( contains(x0));
+        double deltaX;
+        if( x1 > x0_) deltaX = x1 -x0_;
+        else deltaX = x1_ - x1;
+        unsigned N = floor(deltaX/lx_);
+        if( x1  > x1_ && bcx == dg::PER) x1 -= N*lx_;
+        if( x1  < x0_ && bcx == dg::PER) x1 += N*lx_;
+    }
+    bool contains( double x)
+    {
+        if( (x>=x0_ && x <= x1_)) return true; 
+        return false;
+    }
   private:
     T x0_, x1_;
     T lx_;
@@ -299,6 +315,27 @@ struct Grid2d
             case(dg::DIR): os << "    DIRICHLET\n"; break;
             default: os << "    Not specified!!\n"; 
         }
+    }
+    void shift_topologic( double x0, double y0, double& x1, double& y1)
+    {
+        assert( contains(x0, y0));
+        double deltaX;
+        if( x1 > x0_) deltaX = (x1 -x0_);
+        else deltaX = x1_ - x1;
+        unsigned N = floor(deltaX/lx_);
+        if( x1  > x1_ && bcx == dg::PER) x1 -= N*lx_;
+        if( x1  < x0_ && bcx == dg::PER) x1 += N*lx_;
+        double deltaY;
+        if( y1 > y0_) deltaY = (y1 -y0_);
+        else deltaY = y1_ - y1;
+        unsigned N = floor(deltaY/ly_);
+        if( y1  > y1_ && bcy == dg::PER) y1 -= N*ly_;
+        if( y1  < y0_ && bcy == dg::PER) y1 += N*ly_;
+    }
+    bool contains( double x, double y)
+    {
+        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
+        return false;
     }
   private:
     T x0_, x1_, y0_, y1_;
@@ -543,6 +580,34 @@ struct Grid3d
             case(dg::DIR): os << "    DIRICHLET\n"; break;
             default: os << "    Not specified!!\n"; 
         }
+    }
+    void shift_topologic( double x0, double y0, double z0, double& x1, double& y1, double& z1)
+    {
+        assert( contains(x0, y0, z0));
+        double deltaX;
+        if( x1 > x0_) deltaX = (x1 -x0_);
+        else deltaX = x1_ - x1;
+        unsigned N = floor(deltaX/lx_);
+        if( x1  > x1_ && bcx == dg::PER) x1 -= N*lx_;
+        if( x1  < x0_ && bcx == dg::PER) x1 += N*lx_;
+        double deltaY;
+        if( y1 > y0_) deltaY = (y1 -y0_);
+        else deltaY = y1_ - y1;
+        unsigned N = floor(deltaY/ly_);
+        if( y1  > y1_ && bcy == dg::PER) y1 -= N*ly_;
+        if( y1  < y0_ && bcy == dg::PER) y1 += N*ly_;
+        double deltaZ;
+        if( z1 > z0_) deltaZ = (z1 -z0_);
+        else deltaZ = z1_ - z1;
+        unsigned N = floor(deltaZ/lz_);
+        if( z1  > z1_ && bcz == dg::PER) z1 -= N*lz_;
+        if( z1  < z0_ && bcz == dg::PER) z1 += N*lz_;
+    }
+    bool contains( double x, double y, double z)
+    {
+        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_) && (z>=z0_ && z<=z1_)) 
+            return true; 
+        return false;
     }
   private:
     T x0_, x1_, y0_, y1_, z0_, z1_;

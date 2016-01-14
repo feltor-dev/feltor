@@ -125,6 +125,31 @@ struct GridX1d
      */
     const DLT<double>& dlt() const {return dlt_;}
     Grid1d<double> grid() const{return Grid1d<double>( x0_, x1_, n_, Nx_, bcx_);}
+    void shift_topologic( double x0, double& x1)
+    {
+        assert( contains(x0));
+        double deltaX;
+        double xleft = x0_ + f_*lx_;
+        double xright = x1_ - f_*lx_;
+        if( x >= xleft && x<xright)
+        {
+            if( x1 > xleft) deltaX = (x1 -xleft);
+            else deltaX = xright - x1;
+            unsigned N = floor(deltaX/(xright-xleft));
+            if( x1  > xright ) x1 -= N*lx_;
+            if( x1  < xleft ) x1 += N*lx_;
+        }
+        else if( x0 < xleft && x1 >=xleft)
+            x1 += (xright-xleft);
+        else
+            x1 -= (xright-xleft);
+
+    }
+    bool contains( double x)
+    {
+        if( (x>=x0_ && x <= x1_)) return true; 
+        return false;
+    }
   private:
     double x0_, x1_, f_;
     double lx_;
