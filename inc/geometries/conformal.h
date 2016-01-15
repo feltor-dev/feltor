@@ -9,7 +9,7 @@
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
 #include "dg/geometry.h"
-#include "solovev.h"
+#include "fields.h"
 
 
 
@@ -35,31 +35,38 @@ struct Fpsi
          *
          * @return the value for R
          */
-        solovev::Psip psip( gp);
-        double min = gp.R_0, max = gp.R_0+2*gp.a, middle;
-        double value_middle, value_max=psip(gp.R_0+2*gp.a, 0)-psi_0, value_min=psip(gp.R_0, 0) - psi_0;
-        if( value_max*value_min>=0)
-            throw dg::KeineNST_1D( min, max);
-        double eps=max-min, eps_old = 2*eps;
-        unsigned number =0;
-        while( eps<eps_old)
-        {
-            eps_old = eps;
-            value_middle = psip( middle = (min+max)/2., 0) - psi_0;
-            if( value_middle == 0)              {max = min = middle; break;}
-            else if( value_middle*value_max >0) max = middle;
-            else                                min = middle;
-            eps = max-min; number++;
-        }
-        //std::cout << eps<<" with "<<number<<" steps\n";
-        R_init = (min+max)/2;
+        R_init = gp.R_0 + 0.5*gp.a; Z_init = 0;
+        Psip psip(gp);
+        psi_0 =  psip(R_init, Z_init);
+        //solovev::Psip psip( gp);
+        //double min = gp.R_0, max = gp.R_0+2*gp.a, middle;
+        //double value_middle, value_max=psip(gp.R_0+gp.a, 0)-psi_0, value_min=psip(gp.R_0, 0) - psi_0;
+        //std::cout << value_max <<" "<<value_min<<"\n";
+        //if( value_max*value_min>=0)
+        //    throw dg::KeineNST_1D( min, max);
+        //double eps=max-min, eps_old = 2*eps;
+        //unsigned number =0;
+        //while( eps<eps_old)
+        //{
+        //    eps_old = eps;
+        //    value_middle = psip( middle = (min+max)/2., 0) - psi_0;
+        //    if( value_middle == 0)              {max = min = middle; break;}
+        //    else if( value_middle*value_max >0) max = middle;
+        //    else                                min = middle;
+        //    eps = max-min; number++;
+        //}
+        ////std::cout << eps<<" with "<<number<<" steps\n";
+        //R_init = (min+max)/2;
     }
     //finds the starting points for the integration in y direction
-    void find_initial( double psi, double& R_0, double& Z_0) const
+    void find_initial( double psi, double& R_0, double& Z_0) 
     {
         unsigned N = 50;
         thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
         begin2d[0] = end2d[0] = end2d_old[0] = R_init;
+        begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
+        Psip psip(gp_);
+        //psi_0 =  psip(R_init, Z_init);
         //std::cout << "In init function\n";
         double eps = 1e10, eps_old = 2e10;
         while( eps < eps_old && N<1e6 && eps > 1e-15)
@@ -69,14 +76,14 @@ struct Fpsi
             end2d_old = end2d;
             //compute new values
             N*=2;
-            dg::stepperRK17( fieldRZtau_, begin2d, end2d, psi_0, psi, N);
+            dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip(R_init, Z_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
-        R_0 = end2d_old[0], Z_0 = end2d_old[1];
+        R_init = R_0 = end2d_old[0], Z_init = Z_0 = end2d_old[1];
     }
 
     //compute f for a given psi between psi0 and psi1
-    double construct_f( double psi, double& R_0, double& Z_0) const
+    double construct_f( double psi, double& R_0, double& Z_0) 
     {
         find_initial( psi, R_0, Z_0);
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
@@ -103,7 +110,7 @@ struct Fpsi
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
     }
-    double operator()( double psi)const
+    double operator()( double psi)
     {
         double R_0, Z_0; 
         return construct_f( psi, R_0, Z_0);
@@ -116,7 +123,7 @@ struct Fpsi
      *
      * @return x1
      */
-    double find_x1( double psi_1 ) const
+    double find_x1( double psi_1 ) 
     {
         unsigned P=8;
         double x1 = 0, x1_old = 0;
@@ -145,7 +152,7 @@ struct Fpsi
 
     }
 
-    double f_prime( double psi) const
+    double f_prime( double psi) 
     {
         //compute fprime
         double deltaPsi = fabs(psi)/100.;
@@ -182,7 +189,7 @@ struct Fpsi
             thrust::host_vector<double>& yz,  
             thrust::host_vector<double>& xr, 
             thrust::host_vector<double>& xz,  
-            double& R_0, double& Z_0, double& f, double& fp ) const
+            double& R_0, double& Z_0, double& f, double& fp ) 
     {
         dg::Grid1d<double> g1d( 0, 2*M_PI, n, N, dg::PER);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, g1d);
@@ -241,7 +248,7 @@ struct Fpsi
     const GeomParameters gp_;
     const FieldRZYT fieldRZYT_;
     const FieldRZtau fieldRZtau_;
-    double R_init;
+    double R_init, Z_init;
     const double psi_0;
 
 };
@@ -253,7 +260,7 @@ struct FieldFinv
         psi_0(psi_0), 
         fpsi_(gp, psi_0), fieldRZYT_(gp), N_steps(N_steps)
             { }
-    void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) const 
+    void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
@@ -297,11 +304,20 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
      * @param bcx The boundary condition in x (y,z are periodic)
      */
     ConformalRingGrid3d( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-        dg::Grid3d<double>( 0, solovev::detail::Fpsi(gp, psi_0).find_x1( psi_1), 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+        dg::Grid3d<double>( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
+        solovev::detail::Fpsi fpsi( gp, psi_0);
+        double x_1 = fpsi.find_x1( psi_1);
+        if( x_1 > 0)
+            init_X_boundaries( 0., x_1);
+        else
+        {
+            init_X_boundaries( x_1, 0.);
+            std::swap( psi_0, psi_1);
+        }
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         detail::FieldFinv fpsiMinv_(gp, psi_0, 500);
-        dg::Grid1d<double> g1d_( 0, this->x1(), n, Nx, bcx);
+        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
         thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
         f_x_.resize( psi_x.size());
@@ -310,13 +326,13 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
         unsigned N = 1;
         double eps = 1e10, eps_old=2e10;
         std::cout << "In psi function:\n";
-        double x0=this->x0(), x1 = x_vec[1];
+        double x0=this->x0(), x1 = x_vec[0];
         //while( eps <  eps_old && N < 1e6)
         while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
         {
             eps_old = eps;
             //psi_old = psi_x; 
-            x0 = 0, x1 = x_vec[0];
+            x0 = this->x0(), x1 = x_vec[0];
 
             dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
             psi_x[0] = end[0]; fpsiMinv_(end,temp); f_x_[0] = temp[0];
@@ -434,8 +450,14 @@ struct ConformalRingGrid2d : public dg::Grid2d<double>
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
     ConformalRingGrid2d( const GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
-        dg::Grid2d<double>( 0, solovev::detail::Fpsi(gp, psi_0).find_x1(psi_1), 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
+        dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
+        solovev::detail::Fpsi fpsi( gp, psi_0);
+        double x_1 = fpsi.find_x1( psi_1);
+        if( x_1 > 0)
+            init_X_boundaries( 0., x_1);
+        else
+            init_X_boundaries( x_1, 0.);
         ConformalRingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         f_x_ = g.f_x();
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();

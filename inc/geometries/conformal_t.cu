@@ -11,6 +11,8 @@
 #include "draw/host_window.h"
 
 #include "dg/backend/timer.cuh"
+#include "guenther.h"
+//#include "solovev.h"
 #include "conformal.h"
 #include "dg/ds.h"
 #include "init.h"
@@ -52,7 +54,7 @@ try{
     solovev::GeomParameters gp(v);
     gp.display( std::cout);
     dg::Timer t;
-    solovev::detail::Fpsi fpsi( gp, -10);
+    //solovev::detail::Fpsi fpsi( gp, -10);
     solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing conformal grid ... \n";

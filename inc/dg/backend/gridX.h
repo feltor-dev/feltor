@@ -131,7 +131,7 @@ struct GridX1d
         double deltaX;
         double xleft = x0_ + f_*lx_;
         double xright = x1_ - f_*lx_;
-        if( x >= xleft && x<xright)
+        if( x1 >= xleft && x1<xright)
         {
             if( x1 > xleft) deltaX = (x1 -xleft);
             else deltaX = xright - x1;
