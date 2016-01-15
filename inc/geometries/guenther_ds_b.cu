@@ -1,60 +1,38 @@
 #include <iostream>
 
-#include <mpi.h>
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
-#include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
 // #include "file/nc_utilities.h"
 
-#include "backend/evaluation.cuh"
-#include "backend/timer.cuh"
-#include "blas.h"
-#include "ds.h"
-#include "backend/functions.h"
-#include "functors.h"
-#include "elliptic.h"
-#include "cg.h"
-#include "backend/interpolation.cuh"
-#include "backend/typedefs.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/evaluation.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/blas.h"
+#include "dg/ds.h"
+#include "dg/backend/functions.h"
+#include "dg/functors.h"
+#include "dg/elliptic.h"
+#include "dg/cg.h"
 // #include "draw/host_window.h"
-#include "../../src/heat/geometry_g.h"
-#include "../../src/heat/parameters.h"
+#include "guenther.h"
+#include "fields.h"
 
 
-int main( int argc, char* argv[])
+int main( )
 {
-    MPI_Init( &argc, &argv);
-    int periods[3] = {false, false, true}; //non-, non-, periodic
-    int rank, size;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
-    int np[3];
-    if(rank==0)
-    {
-        std::cout << "Type npx, npy, npz!\n";
-        std::cin>> np[0] >> np[1] >>np[2];
-        std::cout << "Computing with "<<np[0]<<" x "<<np[1]<<" x "<<np[2] << " = "<<size<<std::endl;
-        assert( size == np[0]*np[1]*np[2]);
-    }
-    MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Comm comm;
-    MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
 
     /////////////////initialize params////////////////////////////////
-     std::vector<double> v,v2,v3;
+     std::vector<double> v;
 
         try{
-            v = file::read_input("../../src/heat/input.txt");
-            v3 = file::read_input( "../../src/heat/geometry_params_g.txt"); 
+            v = file::read_input( "guenther_params.txt"); 
         }catch( toefl::Message& m){
             m.display();
             return -1;
         }
 
-    const eule::Parameters p( v);
-//     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
+    const solovev::GeomParameters gp(v);
 //     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
@@ -72,16 +50,16 @@ int main( int argc, char* argv[])
     solovev::FieldR bR_(gp);
     solovev::FieldZ bZ_(gp);
     solovev::FieldP bPhi_(gp);
-    solovev::FuncNeu funcNEU(gp.R_0,gp.I_0);
-    solovev::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    solovev::DeriNeu deriNEU(gp.R_0,gp.I_0);
-    solovev::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    solovev::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    solovev::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    solovev::Divb divb(gp.R_0,gp.I_0);
-    solovev::B Bfield(gp);
+    guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    guenther::Divb divb(gp.R_0,gp.I_0);
+    guenther::B Bfield(gp);
     
-    //std::cout << "Type n, Nx, Ny, Nz\n";
+    std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n=3, Nx=5, Ny=5, Nz=5;
     //std::cin >> n>> Nx>>Ny>>Nz;
@@ -101,38 +79,37 @@ int main( int argc, char* argv[])
 
 
 
-        dg::CylindricalMPIGrid<dg::MDVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER, comm);
-        dg::MPI_Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn, dg::DIR, dg::DIR, comm);
+        dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
+        dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
-        if(rank==0)std::cout << "NR = " << Nxn << std::endl;
-        if(rank==0)std::cout << "NZ = " << Nyn<< std::endl;
-        if(rank==0)std::cout << "Nphi = " << Nzn << std::endl;
+        std::cout << "NR = " << Nxn << std::endl;
+        std::cout << "NZ = " << Nyn<< std::endl;
+        std::cout << "Nphi = " << Nzn << std::endl;
 //            Nxn = (unsigned)ceil(Nxn*pow(2,(double)(2./n)));
 //     Nyn = (unsigned)ceil( Nyn*pow(2,(double)(2./n)));
 
 //        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
 //     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
-    const dg::MDVec w3d = dg::create::volume( g3d);
-    const dg::MDVec w2d = dg::create::weights( g2d);
-    const dg::MDVec v3d = dg::create::inv_volume( g3d);
+    const dg::DVec w3d = dg::create::volume( g3d);
+    const dg::DVec w2d = dg::create::weights( g2d);
+    const dg::DVec v3d = dg::create::inv_volume( g3d);
 
-    if(rank==0)std::cout << "computing dsDIR" << std::endl;
-    dg::MDDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
-    if(rank==0)std::cout << "computing dsNEU" << std::endl;
-    dg::MDDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
+    std::cout << "computing dsDIR" << std::endl;
+    dg::DDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
+    std::cout << "computing dsNEU" << std::endl;
+    dg::DDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
 
+    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered), 
+        dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
 
-    dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered), 
-         dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
-
-//     dg::DS<dg::DMatrix, dg::MDVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
+//     dg::DS<dg::DMatrix, dg::DVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
 //     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
     
-//     dg::DS<dg::DMatrix, dg::MDVec> ds2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
-    dg::MDVec boundary=dg::evaluate( dg::zero, g3d);
+//     dg::DS<dg::DMatrix, dg::DVec> ds2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
+    dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
-    dg::MDVec function = dg::evaluate( funcNEU, g3d) ,
+    dg::DVec function = dg::evaluate( funcNEU, g3d) ,
                         temp( function),
                         temp2( function),
                         temp3( function),
@@ -167,18 +144,18 @@ int main( int argc, char* argv[])
                         dsTds2(function);
 
 
-    dg::MDVec ones = dg::evaluate( dg::one, g3d);
-    const dg::MDVec function2 = dg::evaluate( funcNEU2, g3d);
-    const dg::MDVec solution = dg::evaluate( deriNEU, g3d);
-    const dg::MDVec solutionT = dg::evaluate( deriNEUT, g3d);
-    const dg::MDVec solutiondsz = dg::evaluate( deriNEU2, g3d);
-    const dg::MDVec solutiondsTds = dg::evaluate( deriNEUT2, g3d);
+    dg::DVec ones = dg::evaluate( dg::one, g3d);
+    const dg::DVec function2 = dg::evaluate( funcNEU2, g3d);
+    const dg::DVec solution = dg::evaluate( deriNEU, g3d);
+    const dg::DVec solutionT = dg::evaluate( deriNEUT, g3d);
+    const dg::DVec solutiondsz = dg::evaluate( deriNEU2, g3d);
+    const dg::DVec solutiondsTds = dg::evaluate( deriNEUT2, g3d);
 
-    const dg::MDVec bhatR = dg::evaluate( bR_, g3d);
-    const dg::MDVec bhatZ = dg::evaluate( bZ_, g3d);
-    const dg::MDVec bhatPhi = dg::evaluate(bPhi_, g3d);
-//     const dg::MDVec Bfield_ = dg::evaluate(Bfield, g3d);
-    const dg::MDVec gradlnB_ = dg::evaluate(gradlnB, g3d);
+    const dg::DVec bhatR = dg::evaluate( bR_, g3d);
+    const dg::DVec bhatZ = dg::evaluate( bZ_, g3d);
+    const dg::DVec bhatPhi = dg::evaluate(bPhi_, g3d);
+//     const dg::DVec Bfield_ = dg::evaluate(Bfield, g3d);
+    const dg::DVec gradlnB_ = dg::evaluate(gradlnB, g3d);
 //     dg::DMatrix dR(dg::create::dx( g3d, g3d.bcx(),dg::normed,dg::centered));
 //     dg::DMatrix dZ(dg::create::dy( g3d, g3d.bcy(),dg::normed,dg::centered));
 //     dg::DMatrix dphi(dg::create::ds( g3d, g3d.bcz(), dg::normed,dg::centered));
@@ -194,7 +171,7 @@ int main( int argc, char* argv[])
 //     dg::blas1::axpby( 1., temp, 1., temp2 ); // b^R d_R src +  b^Z d_Z src
 //     dg::blas1::axpby( 1., temp3, 1., temp2,derivativeRZPhi ); // b^R d_R src +  b^Z d_Z src + b^phi d_phi src
 // 
-//     dg::GeneralEllipticSym<dg::DMatrix, dg::MDVec, dg::MDVec> ellipticsym( g3d, dg::normed, dg::forward);
+//     dg::GeneralEllipticSym<dg::DMatrix, dg::DVec, dg::DVec> ellipticsym( g3d, dg::normed, dg::forward);
 //     ellipticsym.set_x(bhatR);
 //     ellipticsym.set_y(bhatZ );
 //     ellipticsym.set_z(bhatPhi);
@@ -294,14 +271,14 @@ int main( int argc, char* argv[])
 //     double normBds1 = dg::blas2::dot(temp2, w3d, derivativeones);
 //     double normfds1 = dg::blas2::dot(function2, w3d, derivativeones);
 // 
-    if(rank==0)std::cout << "--------------------testing ds" << std::endl;
+    std::cout << "--------------------testing ds" << std::endl;
     double norm = dg::blas2::dot( w3d, solution);
-    if(rank==0)std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
+    std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
     double err =dg::blas2::dot( w3d, derivative);
-    if(rank==0)std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
+    std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
     dg::blas1::axpby( 1., solution, -1., derivative);
     err =dg::blas2::dot( w3d, derivative);
-    if(rank==0)std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
+    std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
    
 //     std::cout << "--------------------testing ds with RZPhi method" << std::endl;
 //     std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
@@ -358,13 +335,13 @@ int main( int argc, char* argv[])
 //     errdsTds =dg::blas2::dot( w3d, dsTds);
 //     std::cout << "Relative Difference in DST is "<< sqrt( errdsTds/normdsTds )<<"\n";   
     
-    if(rank==0)std::cout << "--------------------testing dsTdsfb " << std::endl;
-    if(rank==0)std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
+    std::cout << "--------------------testing dsTdsfb " << std::endl;
+    std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
     double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
-    if(rank==0)std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+    std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
     dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
     errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
-    if(rank==0)std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
+    std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
 //   
 //     std::cout << "--------------------testing dsTdsfb with direct method" << std::endl;
 //     std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
@@ -418,17 +395,17 @@ int main( int argc, char* argv[])
 // 
 //     std::cout << "--------------------testing GeneralElliptic with inversion " << std::endl; 
 //    //set up the parallel diffusion
-//     dg::GeneralEllipticSym<dg::DMatrix, dg::MDVec, dg::MDVec> elliptic( g3d, dg::not_normed, dg::forward);
+//     dg::GeneralEllipticSym<dg::DMatrix, dg::DVec, dg::DVec> elliptic( g3d, dg::not_normed, dg::forward);
 //     elliptic.set_x(bhatR);
 //     elliptic.set_y(bhatZ );
 //     elliptic.set_z(bhatPhi);
     
     
     double eps =1e-8;   
-    dg::Invert< dg::MDVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
-    if(rank==0)std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+    dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
+    std::cout << "MAX # iterations = " << w3d.size() << std::endl;
 // 
-//    const dg::MDVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
+//    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
 // // 
 //     std::cout << " # of iterations "<< invert( elliptic, functionTinv, rhs ) << std::endl; //is dsTds 
 //   
@@ -442,21 +419,20 @@ int main( int argc, char* argv[])
 //     errinvT =dg::blas2::dot( w3d, functionTinv);
 //     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
 //     
-    if(rank==0)std::cout << "--------------------testing dsT" << std::endl; 
-    unsigned number = invert(dsNU, functionTinv2, solutiondsTds);
-    if(rank==0)std::cout << " # of iterations "<< number << std::endl; //is dsTds
-    if(rank==0)std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+    std::cout << "--------------------testing dsT" << std::endl; 
+    std::cout << " # of iterations "<< invert( dsNU, functionTinv2,solutiondsTds ) << std::endl; //is dsTds
+    std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
     double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
-    if(rank==0)std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";
+    std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";
     dg::blas1::axpby( 1., function, -1.,functionTinv2);
     errinvT2 =dg::blas2::dot( w3d, functionTinv2);
-    if(rank==0)std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
+    std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
 
 //write netcdf
 //     file::NC_Error_Handle err;
 //     int ncid,tvarID;
 //     err = nc_create( "out3.nc",NC_NETCDF4|NC_CLOBBER, &ncid);
-//     dg::MDVec transferD( dg::evaluate(dg::zero, g3d));
+//     dg::DVec transferD( dg::evaluate(dg::zero, g3d));
 //     dg::HVec transferH( dg::evaluate(dg::zero, g3d));
 // 
 //     int dim_ids[4];
@@ -591,6 +567,5 @@ int main( int argc, char* argv[])
 //     }
 // 
 //     glfwTerminate();
-    MPI_Finalize();
     return 0;
 }

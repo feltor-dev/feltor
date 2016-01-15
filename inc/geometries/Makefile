@@ -24,6 +24,12 @@ conformalX_t: conformalX_t.cu conformalX.h
 geometry_diag: geometry_diag.cu geometry.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) 
 
+%_mpib: %_mpib.cu
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) 
+
+%_b: %_b.cu 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  
+
 .PHONY: clean doc
 
 doc: 
