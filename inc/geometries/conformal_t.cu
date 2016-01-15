@@ -147,7 +147,7 @@ try{
     gp.psipmax = psi_1, gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
-    dg::CartesianGrid2d g2d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 3, 2200, 2200, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2d( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 3, 2200, 2200, dg::PER, dg::PER);
     dg::DVec vec  = dg::evaluate( iris, g2d);
     dg::DVec g2d_weights = dg::create::volume( g2d);
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);

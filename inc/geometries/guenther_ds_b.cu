@@ -107,7 +107,6 @@ int main( )
 //     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
     
 //     dg::DS<dg::DMatrix, dg::DVec> ds2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
-    dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
     dg::DVec function = dg::evaluate( funcNEU, g3d) ,
                         temp( function),

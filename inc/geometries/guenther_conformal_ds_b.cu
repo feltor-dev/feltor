@@ -1,0 +1,130 @@
+#include <iostream>
+
+#include <cusp/print.h>
+#include <cusp/csr_matrix.h>
+#include "file/read_input.h"
+// #include "file/nc_utilities.h"
+
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/evaluation.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/blas.h"
+#include "dg/backend/functions.h"
+#include "dg/functors.h"
+#include "dg/elliptic.h"
+#include "dg/cg.h"
+// #include "draw/host_window.h"
+#include "guenther.h"
+#include "fields.h"
+#include "conformal.h"
+#include "dg/ds.h"
+
+typedef dg::FieldAligned< solovev::ConformalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+
+int main( )
+{
+
+    /////////////////initialize params////////////////////////////////
+    std::cout << "Type n, Nx, Ny, Nz\n";
+    unsigned n, Nx, Ny, Nz;
+    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cout << "Type psi_0 and psi_1\n";
+    double psi_0, psi_1;
+    std::cin >> psi_0 >> psi_1;
+    std::vector<double> v;
+
+    try{
+        v = file::read_input( "guenther_params.txt"); 
+    }catch( toefl::Message& m){
+        m.display();
+        return -1;
+    }
+
+    const solovev::GeomParameters gp(v);
+//     gp.display( std::cout);
+
+    /////////////////////////////////////////////initialze fields /////////////////////
+    
+    guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    
+    //std::cout << "Type n, Nx, Ny, Nz\n";
+    //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
+    //unsigned n=3, Nx=5, Ny=5, Nz=5;
+    //std::cin >> n>> Nx>>Ny>>Nz;
+    unsigned Nxn = Nx;
+    unsigned Nyn = Ny;
+    unsigned Nzn = Nz;
+
+    const double rk4eps = 1e-8;
+    //std::cout << "Type RK4 eps (1e-8)\n";
+    //std::cin >> rk4eps;
+    for (unsigned i=1;i<2;i+=2) { 
+
+        //Nzn = unsigned(Nz*pow(2,i));
+        //Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
+        //Nyn = (unsigned)ceil(Ny*pow(2,(double)(i*2./n)));
+
+
+
+        solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
+        solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+
+        std::cout << "NR = " << Nxn << std::endl;
+        std::cout << "NZ = " << Nyn<< std::endl;
+        std::cout << "Nphi = " << Nzn << std::endl;
+        const dg::DVec w3d = dg::create::volume( g3d);
+        const dg::DVec w2d = dg::create::weights( g2d);
+        const dg::DVec v3d = dg::create::inv_volume( g3d);
+
+        std::cout << "computing ds" << std::endl;
+        DFA dsFA( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
+        dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::not_normed, dg::centered);
+
+        dg::DVec function = dg::pullback( funcNEU, g3d),
+                        derivative(function),
+                        dsTdsfb(function),
+                        functionTinv2(dg::evaluate( dg::zero, g3d));
+
+        std::cout << "--------------------testing ds" << std::endl;
+        const dg::DVec solution = dg::pullback( deriNEU, g3d);
+        double norm = dg::blas2::dot( w3d, solution);
+        std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
+        ds( function, derivative); //ds(f)
+        double err =dg::blas2::dot( w3d, derivative);
+        std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
+        dg::blas1::axpby( 1., solution, -1., derivative);
+        err =dg::blas2::dot( w3d, derivative);
+        std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
+      
+        double normdsTds = dg::blas2::dot( w3d, solutiondsTds);
+        std::cout << "--------------------testing dsTdsfb " << std::endl;
+        std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
+        ds.symv(function,dsTdsfb);
+        dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
+        double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
+        std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+        const dg::DVec solutiondsTds = dg::pullback( deriNEUT2, g3d);
+        dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
+        errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
+        std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
+        
+        
+        double eps =1e-8;   
+        dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
+        std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+        double normf = dg::blas2::dot( w3d, function);
+        std::cout << "--------------------testing dsT" << std::endl; 
+        std::cout << " # of iterations "<< invert( ds, functionTinv2,solutiondsTds ) << std::endl; //is dsTds
+        std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+        double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
+        std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";
+        dg::blas1::axpby( 1., function, -1.,functionTinv2);
+        errinvT2 =dg::blas2::dot( w3d, functionTinv2);
+        std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
+
+    }
+    
+    return 0;
+}
