@@ -304,7 +304,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
      * @param bcx The boundary condition in x (y,z are periodic)
      */
     ConformalRingGrid3d( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-        dg::Grid3d<double>( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+        dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         solovev::detail::Fpsi fpsi( gp, psi_0);
         double x_1 = fpsi.find_x1( psi_1);

@@ -11,8 +11,8 @@
 #include "draw/host_window.h"
 
 #include "dg/backend/timer.cuh"
-#include "guenther.h"
-//#include "solovev.h"
+//#include "guenther.h"
+#include "solovev.h"
 #include "conformal.h"
 #include "dg/ds.h"
 #include "init.h"
