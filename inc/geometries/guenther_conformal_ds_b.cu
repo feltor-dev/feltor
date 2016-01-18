@@ -65,16 +65,12 @@ int main( )
         //Nzn = unsigned(Nz*pow(2,i));
         //Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
         //Nyn = (unsigned)ceil(Ny*pow(2,(double)(i*2./n)));
-
-
-
         solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
         solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-
         std::cout << "NR = " << Nxn << std::endl;
         std::cout << "NZ = " << Nyn<< std::endl;
         std::cout << "Nphi = " << Nzn << std::endl;
-        const dg::DVec w3d = dg::create::volume( g3d);
+        const dg::DVec vol = dg::create::volume( g3d);
         const dg::DVec w2d = dg::create::weights( g2d);
         const dg::DVec v3d = dg::create::inv_volume( g3d);
 
@@ -82,47 +78,54 @@ int main( )
         DFA dsFA( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
         dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::not_normed, dg::centered);
 
-        dg::DVec function = dg::pullback( funcNEU, g3d),
-                        derivative(function),
+        dg::DVec function = dg::pullback( funcNEU, g3d), derivative(function),
                         dsTdsfb(function),
                         functionTinv2(dg::evaluate( dg::zero, g3d));
 
         std::cout << "--------------------testing ds" << std::endl;
         const dg::DVec solution = dg::pullback( deriNEU, g3d);
-        double norm = dg::blas2::dot( w3d, solution);
+        double norm = dg::blas2::dot( solution, vol, solution);
         std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
         ds( function, derivative); //ds(f)
-        double err =dg::blas2::dot( w3d, derivative);
+        double err =dg::blas2::dot( derivative, vol, derivative);
         std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
         dg::blas1::axpby( 1., solution, -1., derivative);
-        err =dg::blas2::dot( w3d, derivative);
+        err =dg::blas2::dot( derivative, vol, derivative);
         std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
       
-        double normdsTds = dg::blas2::dot( w3d, solutiondsTds);
+        const dg::DVec solutiondsTds = dg::pullback( deriNEUT2, g3d);
+        double normdsTds = dg::blas2::dot( vol, solutiondsTds);
         std::cout << "--------------------testing dsTdsfb " << std::endl;
         std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
         ds.symv(function,dsTdsfb);
         dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
-        double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
+        double errdsTdsfb =dg::blas2::dot( vol,dsTdsfb);
         std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
-        const dg::DVec solutiondsTds = dg::pullback( deriNEUT2, g3d);
         dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
-        errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
+        errdsTdsfb =dg::blas2::dot( vol, dsTdsfb);
         std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
         
         
-        double eps =1e-8;   
-        dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
-        std::cout << "MAX # iterations = " << w3d.size() << std::endl;
-        double normf = dg::blas2::dot( w3d, function);
-        std::cout << "--------------------testing dsT" << std::endl; 
-        std::cout << " # of iterations "<< invert( ds, functionTinv2,solutiondsTds ) << std::endl; //is dsTds
-        std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
-        double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
-        std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";
-        dg::blas1::axpby( 1., function, -1.,functionTinv2);
-        errinvT2 =dg::blas2::dot( w3d, functionTinv2);
-        std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
+        //double eps =1e-8;   
+        //dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), vol.size(), eps );  
+        //std::cout << "MAX # iterations = " << vol.size() << std::endl;
+        //double normf = dg::blas2::dot( vol, function);
+        //std::cout << "--------------------testing dsT" << std::endl; 
+        //std::cout << " # of iterations "<< invert( ds, functionTinv2,solutiondsTds ) << std::endl; //is dsTds
+        //std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
+        //double errinvT2 =dg::blas2::dot( vol, functionTinv2);
+        //std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";
+        //dg::blas1::axpby( 1., function, -1.,functionTinv2);
+        //errinvT2 =dg::blas2::dot( vol, functionTinv2);
+        //std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
+
+        dg::DVec lnB = dg::pullback( guenther::LnB(gp), g3d), gradB(lnB);
+        dg::DVec gradLnB = dg::pullback( guenther::GradLnB(gp), g3d);
+        std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
+        ds( lnB, gradB);
+        std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradB, vol, gradB))<<"\n";
+        dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
+        std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
 
     }
     

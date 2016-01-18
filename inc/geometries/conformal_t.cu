@@ -68,12 +68,13 @@ try{
     err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2];
     err = file::define_dimensions(  ncid, dim3d, g);
-    int coordsID[2], onesID, defID;
+    int coordsID[2], onesID, defID, divBID;
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
+    err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g);
     g.display();
@@ -98,7 +99,6 @@ try{
     dg::blas1::pointwiseDivide( g.g_xy(), g.g_xx(), temp0);
     X=temp0;
     err = nc_put_var_double( ncid, defID, X.data());
-    err = nc_close( ncid);
 
     std::cout << "Construction successful!\n";
 
@@ -169,9 +169,13 @@ try{
 
     ds.centeredT( B, divB);
     std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol, divB))<<"\n";
+    X = divB;
+    err = nc_put_var_double( ncid, divBID, X.data());
+
     ds.centered( lnB, gradB);
     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
     std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
+    err = nc_close( ncid);
 
 
     return 0;
