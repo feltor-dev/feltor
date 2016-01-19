@@ -330,8 +330,8 @@ struct Grid2d
         if( y1 > y0_) deltaY = (y1 -y0_);
         else deltaY = y1_ - y1;
         N = floor(deltaY/ly_);
-        if( y1  > y1_ && bcy_ == dg::PER){ y1 -= N*ly_; std::cout << y1<<" greater\n";}
-        if( y1  < y0_ && bcy_ == dg::PER){ y1 += N*ly_; std::cout << y1 <<" lesser\n";}
+        if( y1  > y1_ && bcy_ == dg::PER){ y1 -= N*ly_; }
+        if( y1  < y0_ && bcy_ == dg::PER){ y1 += N*ly_; }
     }
     bool contains( double x, double y)const
     {

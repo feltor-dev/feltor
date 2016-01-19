@@ -13,6 +13,7 @@
 #include "dg/functors.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
+#include "dg/geometry.h"
 // #include "draw/host_window.h"
 #include "guenther.h"
 #include "fields.h"
@@ -48,6 +49,8 @@ int main( )
     guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
     guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
     guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    solovev::BHatR bhatR( gp);
+    solovev::BHatZ bhatZ( gp);
     
     //std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
@@ -71,7 +74,7 @@ int main( )
         std::cout << "NZ = " << Nyn<< std::endl;
         std::cout << "Nphi = " << Nzn << std::endl;
         const dg::DVec vol = dg::create::volume( g3d);
-        const dg::DVec w2d = dg::create::weights( g2d);
+        const dg::DVec ones = dg::pullback(dg::one, g3d);
         const dg::DVec v3d = dg::create::inv_volume( g3d);
 
         std::cout << "computing ds" << std::endl;
@@ -84,10 +87,13 @@ int main( )
 
         std::cout << "--------------------testing ds" << std::endl;
         const dg::DVec solution = dg::pullback( deriNEU, g3d);
-        double norm = dg::blas2::dot( solution, vol, solution);
+        double norm = fabs(dg::blas1::dot( vol, solution));
+        std::cout << "|| function ||   "<<sqrt( fabs(dg::blas1::dot( vol, function)) )<<"\n";
+        std::cout << "|| volume   ||   "<<sqrt( dg::blas1::dot( vol, ones) )<<"\n";
         std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
         ds( function, derivative); //ds(f)
-        double err =dg::blas2::dot( derivative, vol, derivative);
+        if(norm == 0) norm =1;
+        double err = fabs(dg::blas1::dot( vol, derivative));
         std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
         dg::blas1::axpby( 1., solution, -1., derivative);
         err =dg::blas2::dot( derivative, vol, derivative);
@@ -119,13 +125,34 @@ int main( )
         //errinvT2 =dg::blas2::dot( vol, functionTinv2);
         //std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
 
-        dg::DVec lnB = dg::pullback( guenther::LnB(gp), g3d), gradB(lnB);
-        dg::DVec gradLnB = dg::pullback( guenther::GradLnB(gp), g3d);
+        const dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d); 
+        const dg::DVec B = dg::pullback( solovev::Bmodule(gp), g3d); 
+        dg::DVec gradB(lnB), temp(lnB);
+        const dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
+        std::cout << "test  "<<solovev::GradLnB(gp)(gp.R_0, 0)<<"\n";
         std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
-        ds( lnB, gradB);
+        ds( B, gradB);
+        dg::blas1::pointwiseDivide(gradB, B, gradB);
         std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradB, vol, gradB))<<"\n";
-        dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-        std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
+        dg::blas1::axpby( 1., gradB, -1., gradLnB, temp);
+        std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
+
+
+        dg::DMatrix dx = dg::create::dx( g3d);
+        dg::DMatrix dy = dg::create::dy( g3d);
+        dg::HVec hbx(function), hby(function);
+        dg::geo::pushForwardPerp( bhatR, bhatZ, hbx, hby, g3d);
+        dg::DVec bx(hbx), by(hby);
+        dg::blas2::symv( dx, lnB, derivative);
+        dg::blas2::symv( dy, lnB, temp);
+        dg::blas1::pointwiseDot( bx,  derivative, derivative);
+        dg::blas1::pointwiseDot( by,  temp, temp);
+        dg::blas1::axpby( 1., derivative, +1., temp, temp);
+        dg::blas1::axpby( 1., temp, -1., gradB, gradB);
+        dg::blas1::axpby( 1., temp, -1., gradLnB, temp);
+        std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
+        std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradB, vol, gradB))<<"\n";
+
 
     }
     

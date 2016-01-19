@@ -123,30 +123,30 @@ void dividePerpVolume( container& inout, const Geometry& g)
                v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
  * @tparam Geometry The Geometry class
- * @param fR Function in cylindrical coordinates
- * @param fZ Function in cylindrical coordinates
+ * @param vR input R-component in cylindrical coordinates
+ * @param vZ input Z-component in cylindrical coordinates
  * @param vx x-component of vector 
  * @param vy y-component of vector
  * @param g The geometry object
  */
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void pushforwardPerp( TernaryOp1 fR, TernaryOp2& fZ, 
+void pushForwardPerp( TernaryOp1 vR, TernaryOp2& vZ, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vx, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vy,
         const Geometry& g)
 {
-    return doPushForwardPerp( fR, fZ, vx, vy, g, typename GeometryTraits<Geometry>::metric_category() ); 
+    dg::geo::detail::doPushForwardPerp( vR, vZ, vx, vy, g, typename GeometryTraits<Geometry>::metric_category() ); 
 }
 
 ///@cond
 template<class Geometry> 
-void pushforwardPerp(
+void pushForwardPerp(
         double(fR)(double,double,double), double(fZ)(double, double, double), 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
         const Geometry& g)
 {
-    pushforwardPerp<double(double, double, double), double(double, double, double), Geometry>( fR, fZ, out1, out2, g); 
+    pushForwardPerp<double(double, double, double), double(double, double, double), Geometry>( fR, fZ, out1, out2, g); 
 }
 ///@endcond
 

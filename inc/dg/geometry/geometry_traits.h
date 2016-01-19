@@ -99,7 +99,7 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
 };
 
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void doPushforwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
+void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
         const Geometry& g, OrthonormalCylindricalTag)
@@ -109,7 +109,7 @@ void doPushforwardPerp( TernaryOp1 f1, TernaryOp2 f2,
 }
 
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void doPushforwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
+void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
         const Geometry& g, CurvilinearCylindricalTag)
@@ -118,10 +118,10 @@ void doPushforwardPerp( TernaryOp1 f1, TernaryOp2 f2,
     out1 = pullback( f1, g);
     out2 = pullback( f2, g);
     container temp1( out1), temp2( out2);
-    dg::blas1::pointwiseDot( g.xR(), temp1, out1);
-    dg::blas1::pointwiseDot( 1., g.xZ(), temp2, 1., out1);
-    dg::blas1::pointwiseDot( g.yR(), temp1, out2);
-    dg::blas1::pointwiseDot( 1., g.yZ(), temp2, 1., out2);
+    dg::blas1::pointwiseDot( g.xr(), temp1, out1);
+    dg::blas1::pointwiseDot( 1., g.xz(), temp2, 1., out1);
+    dg::blas1::pointwiseDot( g.yr(), temp1, out2);
+    dg::blas1::pointwiseDot( 1., g.yz(), temp2, 1., out2);
 }
 
 

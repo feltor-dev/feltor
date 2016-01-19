@@ -201,7 +201,7 @@ struct Fpsi
 
         //now compute f and starting values 
         thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
-        double f_psi = construct_f( psi, begin[0], begin[1]);
+        const double f_psi = construct_f( psi, begin[0], begin[1]);
         PsipR psipR(gp_);
         PsipZ psipZ(gp_);
         begin[2] = f_psi * psipZ( begin[0], begin[1]);
@@ -546,7 +546,7 @@ struct ConformalField
         for( unsigned i=0; i<x_.size(); i++)
             if( fabs(x-x_[i]) < 1e-12)
             {
-                last_idx = i;
+                last_idx = (int)i;
                 return fx_[i];
             }
         std::cerr << "x not found!!\n";
