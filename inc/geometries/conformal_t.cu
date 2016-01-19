@@ -169,6 +169,8 @@ int main( int argc, char* argv[])
     dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
     dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
     dg::blas1::pointwiseDivide( ones, B, B);
+        dg::DVec function = dg::pullback( guenther::FuncNeu(gp.R_0, gp.I_0), g3d), derivative(function);
+        ds( function, derivative);
 
     ds.centeredT( B, divB);
     std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol3d, divB))<<"\n";
@@ -178,7 +180,7 @@ int main( int argc, char* argv[])
     double norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    X = gradLnB;
+    X = divB;
     err = nc_put_var_double( ncid, divBID, X.data());
     std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))/norm<<"\n";
     err = nc_close( ncid);

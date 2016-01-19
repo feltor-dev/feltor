@@ -611,6 +611,7 @@ thrust::host_vector<double> pullback( TernaryOp f, const solovev::ConformalRingG
     for( unsigned k=0; k<g.Nz(); k++)
         for( unsigned i=0; i<size2d; i++)
             vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
+            //vec[k*size2d+i] = f( g.r()[i], g.z()[i], absz[k]);
     return vec;
 }
 ///@cond

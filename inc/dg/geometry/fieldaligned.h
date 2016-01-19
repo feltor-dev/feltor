@@ -67,7 +67,6 @@ void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, doubl
     double dt = T_max/10;
     int NT = 10;
     double error = 1e10;
-    //bool flag = false; 
  
     while( error > eps_abs && NT < pow( 2, 18) )
     {
@@ -94,12 +93,11 @@ void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, doubl
                 #endif
             }
             //if new integrated point outside domain
-            if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+            //if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+            if( error > 1e6)
             {
                 error = eps_abs/10;
-                #ifdef DG_DEBUG
-                    std::cout << "---------Point outside box -> stop integration" << std::endl; 
-                #endif
+                std::cerr << "---------Point outside box -> stop integration" << std::endl; 
                 i=NT;
             }
             i++;
@@ -479,6 +477,9 @@ FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, do
     //fange Periodische RB ab
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
+    std::cout << "delta Phi "<<deltaPhi<<"\n";
+    std::cout << "delta Phi "<<yp[2][0]<<"\n";
+    std::cout << "delta Phi "<<ym[2][0]<<"\n";
 // //     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
     cusp::transpose( plus, plusT);
     cusp::transpose( minus, minusT);     

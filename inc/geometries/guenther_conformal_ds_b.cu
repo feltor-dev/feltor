@@ -42,7 +42,7 @@ int main( )
     }
 
     const solovev::GeomParameters gp(v);
-//     gp.display( std::cout);
+    gp.display( std::cout);
 
     /////////////////////////////////////////////initialze fields /////////////////////
     
@@ -60,7 +60,7 @@ int main( )
     unsigned Nyn = Ny;
     unsigned Nzn = Nz;
 
-    const double rk4eps = 1e-8;
+    const double rk4eps = 1e-10;
     //std::cout << "Type RK4 eps (1e-8)\n";
     //std::cin >> rk4eps;
     for (unsigned i=1;i<2;i+=2) { 
@@ -70,6 +70,8 @@ int main( )
         //Nyn = (unsigned)ceil(Ny*pow(2,(double)(i*2./n)));
         solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
         solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+        g3d.display();
+        //g2d.display();
         std::cout << "NR = " << Nxn << std::endl;
         std::cout << "NZ = " << Nyn<< std::endl;
         std::cout << "Nphi = " << Nzn << std::endl;
@@ -85,15 +87,17 @@ int main( )
                         dsTdsfb(function),
                         functionTinv2(dg::evaluate( dg::zero, g3d));
 
+        double volume = dg::blas1::dot(vol, ones);
+        std::cout << "|| volume   ||   "<<volume<<"\n";
         std::cout << "--------------------testing ds" << std::endl;
         const dg::DVec solution = dg::pullback( deriNEU, g3d);
-        double norm = fabs(dg::blas1::dot( vol, solution));
-        std::cout << "|| function ||   "<<sqrt( fabs(dg::blas1::dot( vol, function)) )<<"\n";
-        std::cout << "|| volume   ||   "<<sqrt( dg::blas1::dot( vol, ones) )<<"\n";
+        double norm = fabs(dg::blas2::dot( vol, solution));
+        std::cout << "|| num. function ||   "<<sqrt( fabs(dg::blas2::dot( vol, function)) )<<"\n";
+        std::cout << "|| ana. function ||   "<<sqrt( volume/2.  )<<"\n";
         std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
         ds( function, derivative); //ds(f)
         if(norm == 0) norm =1;
-        double err = fabs(dg::blas1::dot( vol, derivative));
+        double err = fabs(dg::blas2::dot( vol, derivative));
         std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
         dg::blas1::axpby( 1., solution, -1., derivative);
         err =dg::blas2::dot( derivative, vol, derivative);
@@ -129,17 +133,17 @@ int main( )
         const dg::DVec B = dg::pullback( solovev::Bmodule(gp), g3d); 
         dg::DVec gradB(lnB), temp(lnB);
         const dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-        std::cout << "test  "<<solovev::GradLnB(gp)(gp.R_0, 0)<<"\n";
         std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
         ds( B, gradB);
         dg::blas1::pointwiseDivide(gradB, B, gradB);
         std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradB, vol, gradB))<<"\n";
         dg::blas1::axpby( 1., gradB, -1., gradLnB, temp);
-        std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
+        std::cout << "ds     Error of lnB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
 
 
         dg::DMatrix dx = dg::create::dx( g3d);
         dg::DMatrix dy = dg::create::dy( g3d);
+        dg::DMatrix dz = dg::create::dz( g3d);
         dg::HVec hbx(function), hby(function);
         dg::geo::pushForwardPerp( bhatR, bhatZ, hbx, hby, g3d);
         dg::DVec bx(hbx), by(hby);
@@ -150,8 +154,8 @@ int main( )
         dg::blas1::axpby( 1., derivative, +1., temp, temp);
         dg::blas1::axpby( 1., temp, -1., gradB, gradB);
         dg::blas1::axpby( 1., temp, -1., gradLnB, temp);
-        std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
-        std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradB, vol, gradB))<<"\n";
+        std::cout << "direct Error of lnB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
+        //std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradB, vol, gradB))<<"\n";
 
 
     }

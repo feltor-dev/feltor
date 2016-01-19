@@ -303,6 +303,7 @@ struct FuncNeu
     {
         double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
         return -psi*cos(phi);
+        //return cos(phi);
         //return -psi;
     }
     private:
@@ -333,6 +334,7 @@ struct DeriNeu
         double dldp = R*sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/2./sqrt(2.)/I_0;
         double psi = cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
         return psi*sin(phi)/dldp;
+        //return -sin(phi)/dldp;
         //return 0;
     }
     private:
