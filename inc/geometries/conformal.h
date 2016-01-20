@@ -621,5 +621,99 @@ thrust::host_vector<double> pullback( double(f)(double,double,double), const sol
     return pullback<double(double,double,double),container>( f, g);
 }
 ///@endcond
+//
+
+/*
+namespace create
+{
+
+int determine_lagrange4( const thrust::host_vector<double>& abs, double x, thrust::host_vector<double>& li, double length)
+{
+    const int K = 3;
+    //1. find neighbors
+    double xi[2*(unsigned)K];
+    int idx = (int)abs.size()-1;
+    if( x < abs[0] ) idx = -1;
+    for( int i=0; i<(int)abs.size()-1; i++)
+        if( abs[i] <= x && x < abs[i+1])
+            idx = i;
+    if( x > abs[abs.size()-1] ) idx = abs.size()-1;
+    for( int j=-(K-1); j<K+1; j++)
+    {
+        xi[j+K-1] = abs[ (idx +j + abs.size())%abs.size()];
+        if( idx+j <0) //catch periodicity
+        {
+            xi[j+K-1] -= length;
+        }
+        if( idx+j >(int)abs.size()-1) //catch periodicity
+            xi[j+K-1] += length;
+    }
+    //1. determine lagrange multiplies
+    for( int i=0; i<2*K; i++)
+        li[i] = 1.;
+    for( int i=0; i<2*K; i++)
+        for( int k=0; k<2*K; k++)
+        {
+            if(  k!= i)
+                li[i] *= (x-xi[k])/(xi[i] - xi[k]);
+        }
+    return idx-1;
+}
+
+int determine_column( const thrust::host_vector<double>& absx, double x )
+{
+    int idx=-1;
+    for( int i=0; i<(int)absx.size(); i++)
+        if( fabs(absx[i]-x) <= 1e-10 )
+            idx = i;
+    return idx;
+}
+
+template<class container>
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const solovev::ConformalRingGrid2d<container>& g, dg::bc bcz )
+{
+    std::cout << "Hello interpolation!\n";
+    assert( x.size() == y.size());
+    const unsigned K = 3;
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*2*K);
+
+    dg::Operator<double> forward( g.dlt().forward());
+    int number = 0;
+    thrust::host_vector<double> li(2*K,1);
+    Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx(), g.bcx());
+    Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny(), g.bcy());
+    const thrust::host_vector<double> absx = create::abscissas( gx);
+    const thrust::host_vector<double> absy = create::abscissas( gy);
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
+            std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
+        }
+        assert(x[i] >= g.x0() && x[i] <= g.x1());
+        
+        if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
+            std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
+        }
+        assert( y[i] >= g.y0() && y[i] <= g.y1());
+        //determine which points are neighbors
+        int row_begin = determine_lagrange4( absy, y[i], li, g.ly());
+        int col = determine_column( absx, x[i]);
+        if( col == -1) std::cerr << "Index not found!!\n";
+        unsigned Nx = g.n()*g.Nx();
+        unsigned Ny = g.n()*g.Ny();
+        for( unsigned k=0; k<2*K; k++)
+        {
+            A.row_indices[number] = i;
+            A.column_indices[number] = ((row_begin+k+Ny)%Ny)*Nx+col;
+            A.values[number] = li[k];
+            number++;
+        }
+    }
+    return A;
+}
+
+
+}//namespace create
+*/
 
 }//namespace dg

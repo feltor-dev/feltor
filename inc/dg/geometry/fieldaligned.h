@@ -477,9 +477,6 @@ FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, do
     //fange Periodische RB ab
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-    std::cout << "delta Phi "<<deltaPhi<<"\n";
-    std::cout << "delta Phi "<<yp[2][0]<<"\n";
-    std::cout << "delta Phi "<<ym[2][0]<<"\n";
 // //     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
     cusp::transpose( plus, plusT);
     cusp::transpose( minus, minusT);     

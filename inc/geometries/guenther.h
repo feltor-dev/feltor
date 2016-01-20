@@ -359,6 +359,17 @@ struct DeriNeuT2
     private:
     double R_0, I_0;
 };
+/**
+ * @brief \f[\Delta_\parallel f\f]
+ */
+struct FuncMinusDeriNeuT2
+{
+    FuncMinusDeriNeuT2( double R_0, double I_0): func_(R_0, I_0), der_(R_0, I_0){}
+    double operator()(double R, double Z, double phi) const { return func_(R,Z,phi) - der_(R,Z,phi); }
+    private:
+    FuncNeu func_;
+    DeriNeuT2 der_;
+};
 
 /**
  * @brief \f[\nabla_\parallel \nabla_\parallel  f\f]

@@ -44,7 +44,7 @@ struct DS
     * @param dir the direction affects both the operator() and the symv function
     */
     template<class InvB>
-    DS(const FA& field, InvB invB, dg::norm no=dg::normed, dg::direction dir = dg::centered);
+    DS(const FA& field, InvB invB, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool jumpX = true);
 
     /**
     * @brief Apply the derivative on a 3d vector
@@ -220,6 +220,7 @@ struct DS
     //container R_;
     dg::norm no_;
     dg::direction dir_;
+    bool apply_jumpX_;
 };
 
 ///@cond
@@ -227,14 +228,14 @@ struct DS
 
 template<class FA, class M, class container>
 template <class Field>
-DS<FA, M,container>::DS(const FA& field, Field inverseB, dg::norm no, dg::direction dir):
+DS<FA, M,container>::DS(const FA& field, Field inverseB, dg::norm no, dg::direction dir, bool jumpX):
         f_(field),
         jumpX( dg::create::jumpX( field.grid())),
         jumpY( dg::create::jumpY( field.grid())),
         tempP( dg::evaluate( dg::zero, field.grid())), temp0( tempP), tempM( tempP), 
         vol3d( dg::create::volume( field.grid())), inv3d( dg::create::inv_volume( field.grid())),
         invB(dg::pullback(inverseB,field.grid())), //R_(dg::evaluate(dg::coo1,grid)), 
-        no_(no), dir_(dir)
+        no_(no), dir_(dir), apply_jumpX_(jumpX)
 { }
 
 template<class F, class M, class container>
@@ -419,14 +420,18 @@ void DS<F,M,container>::symv( const container& f, container& dsTdsf)
     }
 //     add jump term 
 
-    dg::blas2::symv( jumpX, f, temp0);
-    dg::geo::divideVolume( temp0, f_.grid());
-    //dg::blas1::pointwiseDivide( temp0, R_, temp0); //there is an R in the weights
-    dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
+    if(apply_jumpX_)
+    {
+        dg::blas2::symv( jumpX, f, temp0);
+        dg::geo::divideVolume( temp0, f_.grid());
+        dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
+    }
     dg::blas2::symv( jumpY, f, temp0);
     dg::geo::divideVolume( temp0, f_.grid());
     //dg::blas1::pointwiseDivide( temp0, R_, temp0);
     dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
+    //Helmholtz
+    dg::blas1::axpby( 1., f, -1., dsTdsf, dsTdsf);
     if( no_ == not_normed)
     {
         dg::blas1::pointwiseDot( vol3d, dsTdsf, dsTdsf); //make it symmetric
