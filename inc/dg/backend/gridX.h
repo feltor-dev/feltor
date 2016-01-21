@@ -40,7 +40,7 @@ struct GridX1d
      @param N # of cells
      @param bcx boundary conditions
      */
-    GridX1d( double x0, double x1, double f, unsigned n, unsigned N, bc bcx = PER):
+    GridX1d( double x0, double x1, double f, unsigned n, unsigned N, bc bcx = NEU):
         x0_(x0), x1_(x1), f_(f),
         n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
@@ -49,6 +49,7 @@ struct GridX1d
         assert( x1 > x0 );
         assert( N > 0  );
         assert( n != 0 );
+        assert( bcx != PER);
         lx_ = (x1-x0);
         hx_ = lx_/(double)Nx_;
     }
@@ -125,13 +126,22 @@ struct GridX1d
      */
     const DLT<double>& dlt() const {return dlt_;}
     Grid1d<double> grid() const{return Grid1d<double>( x0_, x1_, n_, Nx_, bcx_);}
+
+    /**
+     * @brief Shifts a point coordinate due to topology
+     *
+     * If you want to construct a point by adding delta X to a given point
+     * x0 then the resulting coordinate x1 might be incorrect due to topologic reasons (periodic boundaries). This function corrects this coordinate
+     * @param x0 starting point (must lie inside of the grid)
+     * @param x1 end point (inout)
+     */
     void shift_topologic( double x0, double& x1)
     {
         assert( contains(x0));
         double deltaX;
         double xleft = x0_ + f_*lx_;
         double xright = x1_ - f_*lx_;
-        if( x1 >= xleft && x1<xright)
+        if( x0 >= xleft && x0<xright)
         {
             if( x1 > xleft) deltaX = (x1 -xleft);
             else deltaX = xright - x1;
@@ -141,10 +151,19 @@ struct GridX1d
         }
         else if( x0 < xleft && x1 >=xleft)
             x1 += (xright-xleft);
-        else
+        else if( x0 >= xright  && x1 < xright)
             x1 -= (xright-xleft);
 
     }
+
+    /**
+     * @brief Check if the grid contains a point
+     *
+     * @note doesn't check periodicity!!
+     * @param x point to check
+     *
+     * @return true if x is between x0 and x1, false else
+     */
     bool contains( double x)
     {
         if( (x>=x0_ && x <= x1_)) return true; 
@@ -163,11 +182,11 @@ struct GridX1d
  * @brief A 2D grid class with X-point topology
  *
  * is of the form
- * |--- ---------- ---|
- * |--- ---------- ---|
- * |--- ---------- ---|
  * |---x----------x---|
  * |---x----------x---|
+ * |--- ---------- ---|
+ * |--- ---------- ---|
+ * |--- ---------- ---|
  *
  * @tparam double scalar value type 
  */
@@ -189,7 +208,7 @@ struct GridX2d
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    GridX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+    GridX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = NEU):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fy),
         n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
@@ -200,6 +219,7 @@ struct GridX2d
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
         assert( Nx_ > 0  && Ny > 0 );
+        asssert( bcy != PER);
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
     }
@@ -378,6 +398,62 @@ struct GridX2d
             case(dg::DIR): os << "    DIRICHLET\n"; break;
             default: os << "    Not specified!!\n"; 
         }
+    }
+
+    /**
+     * @brief Shifts a point coordinate due to topology
+     *
+     * If you want to construct a point by adding (delta X, delta Y) to a given point
+     * (x0, y0) then the resulting coordinate x1 might be incorrect due to topologic reasons (periodic boundaries). This function corrects this coordinate
+     * @param x0 starting x-point (must lie inside of the grid)
+     * @param y0 starting y-point (must lie inside of the grid)
+     * @param x1 end x-point (inout)
+     * @param y1 end y-point (inout)
+     */
+    void shift_topologic( double x0, double y0, double& x1, double& y1)
+    {
+        assert( contains(x0, y0));
+        double deltaX;
+        if( x1 > x0_) deltaX = (x1 -x0_);
+        else deltaX = x1_ - x1;
+        unsigned N = floor(deltaX/lx_);
+        if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx_;
+        if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx_;
+
+        if( x0 < x0_ + fx_*(x1_-x0_) ) //if x0 is  one of the inner points
+        {
+            double deltaY;
+            double yleft = y0_ + fy_*ly_;
+            double yright = y1_ - fy_*ly_;
+            if( y0 >= yleft && y0<yright)
+            {
+                if( y1 > yleft) deltaY = (y1 -yleft);
+                else deltaY = yright - y1;
+                unsigned N = floor(deltaY/(yright-yleft));
+                if( y1  > yright ) y1 -= N*ly_;
+                if( y1  < yleft ) y1 += N*ly_;
+            }
+            else if( y0 < yleft && y1 >=yleft)
+                y1 += (yright-yleft);
+            else if( y0 >= yright  && y1 < yright)
+                y1 -= (yright-yleft);
+        }
+
+    }
+
+    /**
+     * @brief Check if the grid contains a point
+     *
+     * @note doesn't check periodicity!!
+     * @param x x-point to check
+     * @param y y-point to check
+     *
+     * @return true if (x,y) is inside the grid, false else
+     */
+    bool contains( double x, double y)
+    {
+        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
+        return false;
     }
   protected:
     void init_X_boundaries( double x0, double x1)
@@ -662,6 +738,22 @@ struct GridX3d
             case(dg::DIR): os << "    DIRICHLET\n"; break;
             default: os << "    Not specified!!\n"; 
         }
+    }
+    /**
+     * @brief Check if the grid contains a point
+     *
+     * @note doesn't check periodicity!!
+     * @param x x-point to check
+     * @param y y-point to check
+     * @param z z-point to check
+     *
+     * @return true if x is between x0 and x1, false else
+     */
+    bool contains( double x, double y, double z)const
+    {
+        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_) && (z>=z0_ && z<=z1_)) 
+            return true; 
+        return false;
     }
   protected:
     void init_X_boundaries( double x0, double x1)

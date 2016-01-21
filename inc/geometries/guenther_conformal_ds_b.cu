@@ -104,14 +104,21 @@ int main( )
         err =dg::blas2::dot( derivative, vol, derivative);
         std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
       
-        const dg::DVec solutiondsTds = dg::pullback( fmderiNEUT2, g3d);
+        const dg::DVec solutiondsTds = dg::pullback( deriNEUT2, g3d);
+        const dg::DVec B = dg::pullback( solovev::Bmodule(gp), g3d); 
         double normdsTds = dg::blas2::dot( vol, solutiondsTds);
         std::cout << "--------------------testing dsTdsfb " << std::endl;
         std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
-        ds.symv(function,dsTdsfb);
-        dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
+        ds( function, derivative); //ds(f)
+        dg::blas1::pointwiseDivide(derivative, B, derivative);
+        ds( derivative, dsTdsfb); //ds(f)
+        dg::blas1::pointwiseDot( dsTdsfb, B, dsTdsfb);
+        //ds.symv(function,dsTdsfb);
+        //dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
+        double remainder =dg::blas2::dot( vol,dsTdsfb);
         double errdsTdsfb =dg::blas2::dot( vol,dsTdsfb);
         std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+        std::cout << "   Integral          "<<remainder<<"\n";
         dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
         errdsTdsfb =dg::blas2::dot( vol, dsTdsfb);
         std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
@@ -133,7 +140,6 @@ int main( )
 
 
         const dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d); 
-        const dg::DVec B = dg::pullback( solovev::Bmodule(gp), g3d); 
         dg::DVec gradB(lnB), temp(lnB);
         const dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
         std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
@@ -171,7 +177,7 @@ int main( )
         std::cout << "direct Error of divB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
 
         dg::blas2::symv( dy, g3d.g_xx(), temp);
-        std::cout << "direct Error of by   is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
+        std::cout << "y-derivative of by   is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
 
     }
     

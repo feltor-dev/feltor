@@ -430,8 +430,6 @@ void DS<F,M,container>::symv( const container& f, container& dsTdsf)
     dg::geo::divideVolume( temp0, f_.grid());
     //dg::blas1::pointwiseDivide( temp0, R_, temp0);
     dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
-    //Helmholtz
-    dg::blas1::axpby( 1., f, -1., dsTdsf, dsTdsf);
     if( no_ == not_normed)
     {
         dg::blas1::pointwiseDot( vol3d, dsTdsf, dsTdsf); //make it symmetric
