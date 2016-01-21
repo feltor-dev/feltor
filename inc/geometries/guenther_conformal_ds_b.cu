@@ -16,7 +16,6 @@
 #include "dg/geometry.h"
 // #include "draw/host_window.h"
 #include "guenther.h"
-#include "fields.h"
 #include "conformal.h"
 #include "dg/ds.h"
 

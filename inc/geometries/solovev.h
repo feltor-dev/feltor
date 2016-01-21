@@ -497,3 +497,6 @@ struct IpolZ
 };
 
 } //namespace dg
+
+
+#include "fields.h"

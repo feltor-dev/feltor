@@ -135,7 +135,7 @@ struct GridX1d
      * @param x0 starting point (must lie inside of the grid)
      * @param x1 end point (inout)
      */
-    void shift_topologic( double x0, double& x1)
+    void shift_topologic( double x0, double& x1) const
     {
         assert( contains(x0));
         double deltaX;
@@ -164,7 +164,7 @@ struct GridX1d
      *
      * @return true if x is between x0 and x1, false else
      */
-    bool contains( double x)
+    bool contains( double x) const
     {
         if( (x>=x0_ && x <= x1_)) return true; 
         return false;
@@ -219,7 +219,7 @@ struct GridX2d
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
         assert( Nx_ > 0  && Ny > 0 );
-        asssert( bcy != PER);
+        assert( bcy != PER);
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
     }
@@ -410,7 +410,7 @@ struct GridX2d
      * @param x1 end x-point (inout)
      * @param y1 end y-point (inout)
      */
-    void shift_topologic( double x0, double y0, double& x1, double& y1)
+    void shift_topologic( double x0, double y0, double& x1, double& y1) const
     {
         assert( contains(x0, y0));
         double deltaX;
@@ -420,7 +420,7 @@ struct GridX2d
         if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx_;
         if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx_;
 
-        if( x0 < x0_ + fx_*(x1_-x0_) ) //if x0 is  one of the inner points
+        if( x0 < x1_ - fx_*(x1_-x0_) ) //if x0 is  one of the inner points
         {
             double deltaY;
             double yleft = y0_ + fy_*ly_;
@@ -450,7 +450,7 @@ struct GridX2d
      *
      * @return true if (x,y) is inside the grid, false else
      */
-    bool contains( double x, double y)
+    bool contains( double x, double y)const
     {
         if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
         return false;

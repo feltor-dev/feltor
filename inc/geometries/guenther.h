@@ -448,3 +448,5 @@ struct Divb
 };
 ///@} 
 } //namespace guenther
+
+#include "fields.h"

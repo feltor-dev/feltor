@@ -41,8 +41,8 @@ struct FpsiX
         }
         R_init = X[0], Z_init = X[1];
         std::cout << "X-point set at "<<R_init<<" "<<Z_init<<"\n";
-        std::cout << "psi at X-point is "<<psip(R_init, Z_init)<<"\n";
-        std::cout << "gradient at X-point is "<<psipR(R_init, Z_init)<<" "<<psipZ(R_init, Z_init)<<"\n";
+        //std::cout << "psi at X-point is "<<psip(R_init, Z_init)<<"\n";
+        //std::cout << "gradient at X-point is "<<psipR(R_init, Z_init)<<" "<<psipZ(R_init, Z_init)<<"\n";
         //find four points; one in each quadrant
         hessianRZtau_.set_norm( false);
         minimalCurve_.set_norm( false);
@@ -196,7 +196,9 @@ struct FpsiX
                 //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<" "<<psip(end[0], end[1])<<"\n";
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
-            if( isnan(eps)) { eps = eps_old/2.; end = end_old; std::cerr << "\t nan! error "<<eps<<"\n";} //near X-point integration can go wrong
+            if( isnan(eps)) { eps = eps_old/2.; end = end_old; 
+                //std::cerr << "\t nan! error "<<eps<<"\n";
+            } //near X-point integration can go wrong
             //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
             //std::cout << "error "<<eps<<" with "<<N<<" steps| psip "<<psip(end[0], end[1])<<"\n";
             //std::cout <<"error in y is "<<y_eps<<"\n";
@@ -254,7 +256,7 @@ struct FpsiX
 
             eps = fabs((x0 - x0_old)/x0);
             if( isnan(eps)) { std::cerr << "Attention!!\n"; eps = eps_old -1e-15; x0 = x0_old;} //near X-point integration can go wrong
-            std::cout << "X = "<<x0<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
+            //std::cout << "X = "<<x0<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return x0_old;
 
@@ -318,7 +320,7 @@ struct FpsiX
                 eps = sqrt( (end[0]-R_0[0])*(end[0]-R_0[0]) + (end[1]-Z_0[0])*(end[1]-Z_0[0]));
             else
                 eps = sqrt( (end[0]-R_0[1])*(end[0]-R_0[1]) + (end[1]-Z_0[1])*(end[1]-Z_0[1]));
-            std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
+            //std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
             //compute error in R,Z only
             dg::blas1::axpby( 1., r, -1., r_old, r_diff);
             dg::blas1::axpby( 1., z, -1., z_old, z_diff);
@@ -367,7 +369,7 @@ struct FpsiX
                      )/deltaPsi;
             eps = fabs((fprime - fprime_old)/fprime);
         }
-        std::cout << "\t fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
+        //std::cout << "\t fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
         return fprime_old;
     }
     const GeomParameters gp_;
@@ -460,14 +462,14 @@ struct ConformalXGrid3d : public dg::GridX3d
      *
      * @param gp The geometric parameters define the magnetic field
      * @param psi_0 lower boundary for psi
-     * @param psi_1 upper boundary for psi
+     * @param fx factor in x-direction
+     * @param fy factor in y-direction
      * @param n The dG number of polynomials
      * @param Nx The number of points in x-direction
-     * @param fx factor in x-direction
      * @param Ny The number of points in y-direction
-     * @param fy factor in y-direction
      * @param Nz The number of points in z-direction
-     * @param bcx The boundary condition in x (y,z are periodic)
+     * @param bcx The boundary condition in x (z is periodic)
+     * @param bcy The boundary condition in y (z is periodic)
      */
     ConformalXGrid3d( GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
         dg::GridX3d( 0,1, 0., 2*M_PI, 0., 2.*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER)
@@ -490,15 +492,16 @@ struct ConformalXGrid3d : public dg::GridX3d
         f_x_.resize( psi_x.size());
         thrust::host_vector<double> w1d = dg::create::weights( g1d_);
         unsigned N = 1;
-        double eps = 1e10, eps_old=2e10;
         std::cout << "In psi function:\n";
         double x0=this->x0(), x1 = x_vec[0];
         detail::XFieldFinv fpsiMinv_(gp, 500);
         double psi_const = fpsiMinv_.find_psi( x_vec[inner_Nx()*this->n()]);
+        double eps = 1e10;//, eps_old=2e10;
         //while( eps <  eps_old && N < 1e6)
         while( eps >  1e-8 && N < 1e6 )
         {
-            eps_old = eps; psi_old = psi_x; 
+           // eps_old = eps; 
+            psi_old = psi_x; 
             x0 = this->x0(), x1 = x_vec[0];
 
             thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
@@ -511,10 +514,10 @@ struct ConformalXGrid3d : public dg::GridX3d
                 x0 = x_vec[i-1], x1 = x_vec[i];
                 dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
                 psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
-                std::cout << "FOUND PSI "<<end[0]<<"\n";
+                //std::cout << "FOUND PSI "<<end[0]<<"\n";
             }
             end[0] = psi_const;
-            std::cout << "FOUND PSI "<<end[0]<<"\n";
+            //std::cout << "FOUND PSI "<<end[0]<<"\n";
             psi_x[idx] = end[0]; fpsiMinv_(end,temp); f_x_[idx] = temp[0];
             for( unsigned i=idx+1; i<g1d_.size(); i++)
             {
@@ -522,14 +525,16 @@ struct ConformalXGrid3d : public dg::GridX3d
                 x0 = x_vec[i-1], x1 = x_vec[i];
                 dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
                 psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
-                std::cout << "FOUND PSI "<<end[0]<<"\n";
+                //std::cout << "FOUND PSI "<<end[0]<<"\n";
             }
             dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
             eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff));
-            //double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
+            psi_1_numerical_ = psi_0 + dg::blas1::dot( f_x_, w1d);
+
             //eps = fabs( psi_1_numerical-psi_1); 
             //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
             std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
+            std::cout << "psi 1               is "<<psi_1_numerical_<<"\n"; 
             N*=2;
         }
         construct_rz( gp, psi_0, psi_x);
@@ -556,6 +561,7 @@ struct ConformalXGrid3d : public dg::GridX3d
     const thrust::host_vector<double>& zx0()const{return z_x0;}
     const thrust::host_vector<double>& rx1()const{return r_x1;}
     const thrust::host_vector<double>& zx1()const{return z_x1;}
+    double psi1()const{return psi_1_numerical_;}
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
@@ -627,6 +633,7 @@ struct ConformalXGrid3d : public dg::GridX3d
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
     thrust::host_vector<double> r_x0, r_x1, z_x0, z_x1; //boundary points in y
+    double psi_1_numerical_;
 };
 
 /**
