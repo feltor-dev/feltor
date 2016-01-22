@@ -17,9 +17,9 @@ geometry_t: geometry_t.cu geometry.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
 conformal_t: conformal_t.cu conformal.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 conformalX_t: conformalX_t.cu conformalX.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 	
 geometry_diag: geometry_diag.cu geometry.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) 
@@ -28,7 +28,7 @@ geometry_diag: geometry_diag.cu geometry.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) 
 
 %_b: %_b.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  $(LIBS)
 
 .PHONY: clean doc
 

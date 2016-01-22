@@ -87,11 +87,12 @@ int main()
     dg::blas1::axpby( 1., tempX, 1., tempY, tempY);
     dg::blas1::axpby( 1., null2, -1., tempY);
     std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tempY, w2d, tempY))<<"\n";
-    dg::GridX3d g3d( -2.*M_PI, M_PI/2., -M_PI, 2*M_PI+M_PI, 0., 2.*M_PI, 1./5., 1./4., n, Nx, Ny, Nz, bcx, bcy, bcz);
+    //dg::GridX3d g3d( -2.*M_PI, M_PI/2., -M_PI, 2*M_PI+M_PI, 0., 2.*M_PI, 1./5., 1./4., n, Nx, Ny, Nz, bcx, bcy, bcz);
+    dg::GridX3d g3d( -2.*M_PI, M_PI/2., 0., 2*M_PI, 0., 2.*M_PI, 1./5., 0., n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
-    Matrix dy3 = dg::create::dy( g3d, dg::centered);
-    Matrix dz3 = dg::create::dz( g3d, dg::backward);
+    Matrix dy3 = dg::create::dy( g3d, dg::backward);
+    Matrix dz3 = dg::create::dz( g3d, dg::centered);
     Matrix jx3 = dg::create::jumpX( g3d);
     Matrix jy3 = dg::create::jumpY( g3d);
     Matrix jz3 = dg::create::jumpZ( g3d);

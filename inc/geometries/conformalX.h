@@ -187,13 +187,10 @@ struct FpsiX
             else
             {
                 dg::stepperRK17( fieldRZY_, begin, end, begin[1], 0., N);
-                //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<" "<<psip(end[0], end[1])<<"\n";
                 thrust::host_vector<double> temp(end);
                 dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N);
-                //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<" "<<psip(end[0], end[1])<<"\n";
                 temp = end; //temp[1] should be 0 now
                 dg::stepperRK17( fieldRZY_, temp, end, temp[1], Z_i[1], N);
-                //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<" "<<psip(end[0], end[1])<<"\n";
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
             if( isnan(eps)) { eps = eps_old/2.; end = end_old; 
@@ -480,8 +477,6 @@ struct ConformalXGrid3d : public dg::GridX3d
         std::cout << "FIND X FOR PSI_0\n";
         const double x_0 = fpsi.find_x(psi_0);
         const double x_1 = -fx/(1.-fx)*x_0;
-        std::cout << "FIND X FOR PSI = 1\n";
-        const double psi1 = fpsi.find_x(1);
         init_X_boundaries( x_0, x_1);
         //compute psi(x) for a grid on x 
         dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
@@ -495,7 +490,8 @@ struct ConformalXGrid3d : public dg::GridX3d
         std::cout << "In psi function:\n";
         double x0=this->x0(), x1 = x_vec[0];
         detail::XFieldFinv fpsiMinv_(gp, 500);
-        double psi_const = fpsiMinv_.find_psi( x_vec[inner_Nx()*this->n()]);
+        const unsigned idx = inner_Nx()*this->n();
+        const double psi_const = fpsiMinv_.find_psi( x_vec[idx]);
         double eps = 1e10;//, eps_old=2e10;
         //while( eps <  eps_old && N < 1e6)
         while( eps >  1e-8 && N < 1e6 )
@@ -507,7 +503,6 @@ struct ConformalXGrid3d : public dg::GridX3d
             thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
             dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
             psi_x[0] = end[0]; fpsiMinv_(end,temp); f_x_[0] = temp[0];
-            const unsigned idx = inner_Nx()*this->n();
             for( unsigned i=1; i<idx; i++)
             {
                 temp = end;
@@ -649,7 +644,7 @@ struct ConformalXGrid2d : public dg::GridX2d
         solovev::detail::FpsiX fpsi(gp);
         const double x0 = fpsi.find_x(psi_0);
         const double x1 = -fx/(1.-fx)*x0;
-        const double psi1 = fpsi.find_x(1);
+        //const double psi1 = fpsi.find_x(1);
         init_X_boundaries( x0,x1);
         ConformalXGrid3d<container> g( gp, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
         f_x_ = g.f_x();
