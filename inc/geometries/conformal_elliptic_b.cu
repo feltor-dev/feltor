@@ -96,8 +96,8 @@ int main(int argc, char**argv)
     std::cout << "eps \t # iterations \t error \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    const dg::DVec v3d = dg::create::inv_weights( g3d);
-    unsigned number = invert(pol, x,b, vol3d, v3d );
+    //const dg::DVec v3d = dg::create::inv_weights( g3d);
+    unsigned number = invert(pol, x,b);// vol3d, v3d );
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);
