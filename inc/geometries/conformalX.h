@@ -283,12 +283,17 @@ struct FpsiX
         //now compute f and starting values 
         thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
         double f_psi = construct_f( psi, R_0, Z_0);
+        begin[0] = R_0[0], begin[1] = Z_0[0];
         PsipR psipR(gp_);
         PsipZ psipZ(gp_);
-        begin[2] = f_psi * psipZ( R_0[0], Z_0[0]);
-        begin[3] = -f_psi * psipR( R_0[0], Z_0[0]);
+        //begin[2] = f_psi * psipZ( begin[0], begin[1]);
+        //begin[3] = -f_psi * psipR(begin[0], begin[1]);
 
-        begin[0] = R_0[0], begin[1] = Z_0[0];
+        double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
+        double psip2 = psipR_*psipR_+psipZ_*psipZ_;
+        begin[2] = f_psi * (10./psip2+1.)* psipZ_;
+        begin[3] = -f_psi * (10./psip2+1.)*psipR_;
+
         //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
         FieldRZYRYZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
@@ -535,6 +540,7 @@ struct ConformalXGrid3d : public dg::GridX3d
         construct_rz( gp, psi_0, psi_x);
         construct_metric();
     }
+    const thrust::host_vector<double>& f()const{return f_;}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -565,7 +571,7 @@ struct ConformalXGrid3d : public dg::GridX3d
         std::cout << "CONSTRUCTING Y-POINTS\n";
         //std::cout << "In grid function:\n";
         detail::FpsiX fpsi( gp);
-        r_.resize(size()), z_.resize(size());
+        r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
         r_x1.resize( psi_x.size()), z_x1.resize( psi_x.size());
@@ -582,7 +588,7 @@ struct ConformalXGrid3d : public dg::GridX3d
             r_x0[i] = R_0[0], r_x1[i] = R_0[1], z_x0[i] = Z_0[0], z_x1[i] = Z_0[1];
             for( unsigned j=0; j<Ny; j++)
             {
-                r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j]; 
+                r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j], f_[j*Nx+i] = f_x_[i]; 
                 yr_[j*Nx+i] = yr[j], yz_[j*Nx+i] = yz[j];
                 xr_[j*Nx+i] = xr[j], xz_[j*Nx+i] = xz[j];
             }
@@ -592,6 +598,7 @@ struct ConformalXGrid3d : public dg::GridX3d
         for( unsigned k=1; k<this->Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
             {
+                f_[k*Nx*Ny+i] = f_[(k-1)*Nx*Ny+i];
                 r_[k*Nx*Ny+i] = r_[(k-1)*Nx*Ny+i];
                 z_[k*Nx*Ny+i] = z_[(k-1)*Nx*Ny+i];
                 yr_[k*Nx*Ny+i] = yr_[(k-1)*Nx*Ny+i];
@@ -614,7 +621,8 @@ struct ConformalXGrid3d : public dg::GridX3d
                     tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
                     tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
                     tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
-                    tempvol[idx] = r_[idx]/tempxx[idx];
+                    tempvol[idx] = r_[idx]/(10.*f_[idx]*f_[idx] + tempxx[idx]);
+                    //tempvol[idx] = r_[idx]/sqrt(tempxx[idx]*tempyy[idx]-tempxy[idx]*tempxy[idx]);
                 }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
@@ -625,7 +633,7 @@ struct ConformalXGrid3d : public dg::GridX3d
         g_pp_=tempxx;
     }
     thrust::host_vector<double> f_x_; //1d vector
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
+    thrust::host_vector<double> f_, r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
     thrust::host_vector<double> r_x0, r_x1, z_x0, z_x1; //boundary points in y
     double psi_1_numerical_;
@@ -648,7 +656,7 @@ struct ConformalXGrid2d : public dg::GridX2d
         init_X_boundaries( x0,x1);
         ConformalXGrid3d<container> g( gp, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
         f_x_ = g.f_x();
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
@@ -657,15 +665,16 @@ struct ConformalXGrid2d : public dg::GridX2d
     {
         f_x_ = g.f_x();
         unsigned s = this->size();
-        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
+        f_.resize(s), r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
-        {r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
+        {f_[i] = g.f()[i], r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
         thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
         thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
+    const thrust::host_vector<double>& f()const{return f_;}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -683,7 +692,7 @@ struct ConformalXGrid2d : public dg::GridX2d
     const container& perpVol()const{return vol2d_;}
     private:
     thrust::host_vector<double> f_x_; //1d vector
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
+    thrust::host_vector<double> f_, r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 

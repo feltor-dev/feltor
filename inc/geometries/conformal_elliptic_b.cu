@@ -64,7 +64,7 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
     file::NC_Error_Handle ncerr;
-    ncerr = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
     ncerr = file::define_dimensions(  ncid, dim2d, g2d.grid());
     int coordsID[2], psiID, functionID, function2ID;

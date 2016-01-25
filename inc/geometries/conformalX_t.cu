@@ -8,7 +8,6 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
 #include "file/read_input.h"
-#include "draw/host_window.h"
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
@@ -60,17 +59,17 @@ try{
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
     solovev::ConformalXGrid3d<dg::DVec> g3d(gp, psi_0, fx_0, 0., n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    solovev::ConformalXGrid2d<dg::DVec> g = g3d.perp_grid();
+    solovev::ConformalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    dg::Grid1d<double> g1d( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d<double> g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
     file::NC_Error_Handle err;
     err = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2], dim1d[1];
-    err = file::define_dimensions(  ncid, dim3d, g.grid());
+    err = file::define_dimensions(  ncid, dim3d, g2d.grid());
     err = file::define_dimension(  ncid, "i", dim1d, g1d);
     int coordsID[2], onesID, defID, volID, divBID;
     int coord1D[5];
@@ -87,21 +86,21 @@ try{
     err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
-    thrust::host_vector<double> psi_p = dg::pullback( psip, g);
-    g.display();
+    thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
+    g2d.display();
     err = nc_put_var_double( ncid, onesID, psi_p.data());
-    dg::HVec X( g.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g.size(); i++)
+    dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
+    for( unsigned i=0; i<g2d.size(); i++)
     {
         //X[i] = g.r()[i]*cos(P[i]);
         //Y[i] = g.r()[i]*sin(P[i]);
-        X[i] = g.r()[i];
-        Y[i] = g.z()[i];
+        X[i] = g2d.r()[i];
+        Y[i] = g2d.z()[i];
     }
 
-    dg::DVec ones = dg::evaluate( dg::one, g);
-    dg::DVec temp0( g.size()), temp1(temp0);
-    dg::DVec w3d = dg::create::weights( g);
+    dg::DVec ones = dg::evaluate( dg::one, g2d);
+    dg::DVec temp0( g2d.size()), temp1(temp0);
+    dg::DVec w3d = dg::create::weights( g2d);
 
     err = nc_put_var_double( ncid, coordsID[0], X.data());
     err = nc_put_var_double( ncid, coordsID[1], Y.data());
@@ -112,64 +111,71 @@ try{
     err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
-    dg::blas1::pointwiseDivide( g.g_xy(), g.g_xx(), temp0);
+    dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     X=temp0;
     err = nc_put_var_double( ncid, defID, X.data());
-    X = g.vol();
+    X = g2d.vol();
     err = nc_put_var_double( ncid, volID, X.data());
 
     std::cout << "Construction successful!\n";
 
     //compute error in volume element
-    dg::blas1::pointwiseDot( g.g_xx(), g.g_yy(), temp0);
-    dg::blas1::pointwiseDot( g.g_xy(), g.g_xy(), temp1);
+    const dg::DVec f_ = g2d.f();
+    dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
+    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     //dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
-    dg::blas1::pointwiseDot( g.g_xx(), g.g_xx(), temp1);
+    dg::blas1::pointwiseDot( f_, f_, temp1);
+    dg::blas1::axpby( 10., temp1, 1., g2d.g_xx(),  temp1);
+    dg::blas1::pointwiseDot( temp1, temp1, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
     std::cout<< "Rel Error in Determinant is "<<sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1))<<"\n";
 
-    dg::blas1::pointwiseDot( g.g_xx(), g.g_yy(), temp0);
-    dg::blas1::pointwiseDot( g.g_xy(), g.g_xy(), temp1);
+    dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
+    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     //dg::blas1::pointwiseDot( temp0, g.g_pp(), temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::axpby( 1., temp0, -1., g.vol(), temp0);
-    std::cout << "Rel Consistency  of volume is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g.vol(), w3d, g.vol()))<<"\n";
+    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
+    std::cout << "Rel Consistency  of volume is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g2d.vol(), w3d, g2d.vol()))<<"\n";
 
     //temp0=g.r();
     //dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
-    dg::blas1::pointwiseDivide( ones, g.g_xx(), temp0);
-    dg::blas1::axpby( 1., temp0, -1., g.vol(), temp0);
-    std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g.vol(), w3d, g.vol()))<<"\n";
-
+    dg::blas1::pointwiseDot( f_, f_, temp0);
+    dg::blas1::axpby( 10.,temp0 , 1., g2d.g_xx(), temp0);
+    dg::blas1::pointwiseDivide( ones, temp0, temp0);
+    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
+    std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()))<<"\n";
     solovev::FieldY fieldY(gp);
     //solovev::ConformalField fieldY(gp);
-    dg::HVec by = dg::pullback( fieldY, g);
+    dg::DVec fby = dg::pullback( fieldY, g2d);
+    dg::blas1::pointwiseDot( fby, f_, fby);
+    dg::blas1::pointwiseDot( fby, f_, fby);
     //for( unsigned k=0; k<Nz; k++)
-        for( unsigned i=0; i<n*Ny; i++)
-            for( unsigned j=0; j<n*Nx; j++)
-                //by[k*n*n*Nx*Ny + i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
-                by[i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
-    dg::DVec by_device = by;
-    dg::blas1::scal( by_device, 1./gp.R_0);
-    temp0=g.r();
-    dg::blas1::pointwiseDivide( g.g_xx(), temp0, temp0);
-    dg::blas1::axpby( 1., temp0, -1., by_device, temp1);
+        //for( unsigned i=0; i<n*Ny; i++)
+        //    for( unsigned j=0; j<n*Nx; j++)
+        //        //by[k*n*n*Nx*Ny + i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
+        //        fby[i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
+    //dg::DVec fby_device = fby;
+    dg::blas1::scal( fby, 1./gp.R_0);
+    temp0=g2d.r();
+    dg::blas1::pointwiseDot( temp0, fby, fby);
+    dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
+    dg::blas1::axpby( 1., temp0, -1., fby, temp1);
     double error= dg::blas2::dot( temp1, w3d, temp1);
-    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error/dg::blas2::dot( by_device, w3d, by_device))<<"\n";
+    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error/dg::blas2::dot( fby, w3d, fby))<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
     gp.psipmax = 0., gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
-    dg::CartesianGrid2d g2d( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.1*gp.a*gp.elongation, 1.1*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
-    dg::HVec vec  = dg::evaluate( iris, g2d);
-    dg::DVec cutter = dg::pullback( iris, g), vol( cutter);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.1*gp.a*gp.elongation, 1.1*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
+    dg::HVec vec  = dg::evaluate( iris, g2dC);
+    dg::DVec cutter = dg::pullback( iris, g2d), vol( cutter);
     dg::blas1::pointwiseDot(cutter, w3d, vol);
-    double volume = dg::blas1::dot( g.vol(), vol);
-    dg::HVec g2d_weights = dg::create::volume( g2d);
+    double volume = dg::blas1::dot( g2d.vol(), vol);
+    dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);
     std::cout << "volumeXYP is "<< volume<<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
@@ -179,7 +185,7 @@ try{
     ///////////////////////TEST 3d grid//////////////////////////////////////
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
-    DFA fieldaligned( solovev::ConformalField( gp, g.x(), g.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+    DFA fieldaligned( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
     dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered, false);
     dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);

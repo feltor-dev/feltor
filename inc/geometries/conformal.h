@@ -94,18 +94,18 @@ struct Fpsi
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
-        //double y_eps;
-        while( eps < eps_old && N < 1e6)
+        //double y_eps = 1;
+        while( (eps < eps_old || eps > 1e-7)&& N < 1e6)
         {
             //remember old values
-            eps_old = eps, end_old = end; //y_old = end[2];
+            eps_old = eps, end_old = end;
             //compute new values
             N*=2;
             dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-            //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
+            //y_eps = sqrt( (end_old[2] - end[2])*(end_old[2]-end[2]))/sqrt(end[2]*end[2]);
             //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
-            //std::cout <<"error in y is "<<y_eps<<"\n";
+            //std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
         }
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
@@ -128,7 +128,7 @@ struct Fpsi
         unsigned P=8;
         double x1 = 0, x1_old = 0;
         double eps=1e10, eps_old=2e10;
-        //std::cout << "In x1 function\n";
+        std::cout << "In x1 function\n";
         while(eps < eps_old && P < 20 && eps > 1e-15)
         {
             eps_old = eps; 
@@ -146,7 +146,7 @@ struct Fpsi
             x1 = dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x1 - x1_old)/x1);
-            //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
+            std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x1_old;
 
@@ -204,11 +204,13 @@ struct Fpsi
         const double f_psi = construct_f( psi, begin[0], begin[1]);
         PsipR psipR(gp_);
         PsipZ psipZ(gp_);
-        begin[2] = f_psi * psipZ( begin[0], begin[1]);
-        begin[3] = -f_psi * psipR( begin[0], begin[1]);
+        double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
+        double psip2 = psipR_*psipR_+psipZ_*psipZ_;
+        begin[2] = f_psi * (10/psip2+1.)* psipZ_;
+        begin[3] = -f_psi * (10/psip2+1.)*psipR_;
 
         R_0 = begin[0], Z_0 = begin[1];
-        //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
+        //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
         FieldRZYRYZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
         fieldRZY.set_fp(fprime);
@@ -361,6 +363,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
+    const thrust::host_vector<double>& f()const{return f_;}
     thrust::host_vector<double> x()const{
         dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
         return dg::create::abscissas(gx);}
@@ -378,7 +381,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
     {
         //std::cout << "In grid function:\n";
         detail::Fpsi fpsi( gp, psi_0);
-        r_.resize(size()), z_.resize(size());
+        r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
         thrust::host_vector<double> f_p(f_x_);
@@ -391,7 +394,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
             fpsi.compute_rzy( psi_x[i], this->n(), this->Ny(), ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
-                r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j]; 
+                r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j], f_[j*Nx+i] = f_x_[i]; 
                 yr_[j*Nx+i] = yr[j], yz_[j*Nx+i] = yz[j];
                 xr_[j*Nx+i] = xr[j], xz_[j*Nx+i] = xz[j];
             }
@@ -401,6 +404,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
         for( unsigned k=1; k<this->Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
             {
+                f_[k*Nx*Ny+i] = f_[(k-1)*Nx*Ny+i];
                 r_[k*Nx*Ny+i] = r_[(k-1)*Nx*Ny+i];
                 z_[k*Nx*Ny+i] = z_[(k-1)*Nx*Ny+i];
                 yr_[k*Nx*Ny+i] = yr_[(k-1)*Nx*Ny+i];
@@ -422,7 +426,8 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
                     tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
                     tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
                     tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
-                    tempvol[idx] = r_[idx]/tempxx[idx];
+                    //tempvol[idx] = r_[idx]/(f_[idx]*f_[idx] + tempxx[idx]);
+                    tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] - tempxy[idx]*tempxy[idx] );
                 }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
@@ -433,7 +438,7 @@ struct ConformalRingGrid3d : public dg::Grid3d<double>
         g_pp_=tempxx;
     }
     thrust::host_vector<double> f_x_; //1d vector
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
+    thrust::host_vector<double> f_, r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
     
     //The following points might also be useful for external grid generation
@@ -469,15 +474,16 @@ struct ConformalRingGrid2d : public dg::Grid2d<double>
     {
         f_x_ = g.f_x();
         unsigned s = this->size();
-        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
+        f_.resize(s), r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
-        {r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
+        {f_[i] = g.f()[i], r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
         thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
         thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
+    const thrust::host_vector<double>& f()const{return f_;}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -495,7 +501,7 @@ struct ConformalRingGrid2d : public dg::Grid2d<double>
     const container& perpVol()const{return vol2d_;}
     private:
     thrust::host_vector<double> f_x_; //1d vector
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
+    thrust::host_vector<double> f_, r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
@@ -521,7 +527,7 @@ struct ConformalField
         double psipR = psipR_(y[3],y[4]), psipZ = psipZ_(y[3],y[4]), ipol = ipol_( y[3],y[4]);
         double fx = find_fx( y[0]);
         yp[0] = 0;
-        yp[1] = fx*y[3]*(psipR*psipR+psipZ*psipZ)/ipol;
+        yp[1] = fx*y[3]*(10.+psipR*psipR+psipZ*psipZ)/ipol;
         yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
         yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
         yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
