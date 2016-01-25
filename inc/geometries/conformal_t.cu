@@ -12,7 +12,8 @@
 #include "dg/backend/timer.cuh"
 //#include "guenther.h"
 #include "solovev.h"
-#include "conformal.h"
+//#include "conformal.h"
+#include "orthogonal.h"
 #include "dg/ds.h"
 #include "init.h"
 
@@ -22,7 +23,8 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< solovev::ConformalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+//typedef dg::FieldAligned< solovev::ConformalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< solovev::OrthogonalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -58,8 +60,10 @@ int main( int argc, char* argv[])
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    //solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    //solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    solovev::OrthogonalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    solovev::OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
@@ -108,7 +112,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     //dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDot( f_, f_, temp1);
-    dg::blas1::axpby( 0.1, temp1, 1., g2d.g_xx(),  temp1);
+    dg::blas1::axpby( 1.0, temp1, 0.001, g2d.g_xx(),  temp1);
     dg::blas1::pointwiseDot( temp1, temp1, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
     std::cout<< "Rel Error in Determinant is "<<sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1))<<"\n";
@@ -125,7 +129,7 @@ int main( int argc, char* argv[])
     //temp0=g.r();
     //dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
     dg::blas1::pointwiseDot( f_, f_, temp0);
-    dg::blas1::axpby( 0.1,temp0 , 1., g2d.g_xx(), temp0);
+    dg::blas1::axpby( 1.0,temp0 , 0.001, g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
     std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()))<<"\n";
@@ -169,9 +173,11 @@ int main( int argc, char* argv[])
     /////////////////////////TEST 3d grid//////////////////////////////////////
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
-    DFA fieldaligned( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    //DFA fieldaligned( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    DFA fieldaligned( solovev::OrthogonalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
 
-    dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    //dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, solovev::OrthogonalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
     dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
     dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
     dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);

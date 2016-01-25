@@ -291,8 +291,8 @@ struct FpsiX
 
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
-        begin[2] = f_psi * (10./psip2+1.)* psipZ_;
-        begin[3] = -f_psi * (10./psip2+1.)*psipR_;
+        begin[2] = f_psi * (1./psip2+0.001)* psipZ_;
+        begin[3] = -f_psi * (1./psip2+0.001)*psipR_;
 
         //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
         FieldRZYRYZY fieldRZY(gp_);
@@ -621,7 +621,7 @@ struct ConformalXGrid3d : public dg::GridX3d
                     tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
                     tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
                     tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
-                    tempvol[idx] = r_[idx]/(10.*f_[idx]*f_[idx] + tempxx[idx]);
+                    tempvol[idx] = r_[idx]/(1.0*f_[idx]*f_[idx] + 0.001*tempxx[idx]);
                     //tempvol[idx] = r_[idx]/sqrt(tempxx[idx]*tempyy[idx]-tempxy[idx]*tempxy[idx]);
                 }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;

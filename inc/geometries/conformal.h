@@ -206,8 +206,8 @@ struct Fpsi
         PsipZ psipZ(gp_);
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
-        begin[2] = f_psi * (10/psip2+1.)* psipZ_;
-        begin[3] = -f_psi * (10/psip2+1.)*psipR_;
+        begin[2] = f_psi * (1.0/psip2+0.001)* psipZ_;
+        begin[3] = -f_psi * (1.0/psip2+0.001)*psipR_;
 
         R_0 = begin[0], Z_0 = begin[1];
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
@@ -527,7 +527,7 @@ struct ConformalField
         double psipR = psipR_(y[3],y[4]), psipZ = psipZ_(y[3],y[4]), ipol = ipol_( y[3],y[4]);
         double fx = find_fx( y[0]);
         yp[0] = 0;
-        yp[1] = fx*y[3]*(10.+psipR*psipR+psipZ*psipZ)/ipol;
+        yp[1] = fx*y[3]*(1.0+0.001*(psipR*psipR+psipZ*psipZ))/ipol;
         yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
         yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
         yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R

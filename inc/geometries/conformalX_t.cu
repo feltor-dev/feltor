@@ -126,7 +126,7 @@ try{
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     //dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDot( f_, f_, temp1);
-    dg::blas1::axpby( 10., temp1, 1., g2d.g_xx(),  temp1);
+    dg::blas1::axpby( 1., temp1, 0.001, g2d.g_xx(),  temp1);
     dg::blas1::pointwiseDot( temp1, temp1, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
     std::cout<< "Rel Error in Determinant is "<<sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1))<<"\n";
@@ -143,7 +143,7 @@ try{
     //temp0=g.r();
     //dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
     dg::blas1::pointwiseDot( f_, f_, temp0);
-    dg::blas1::axpby( 10.,temp0 , 1., g2d.g_xx(), temp0);
+    dg::blas1::axpby( 1.0,temp0 , 0.001, g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
     std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()))<<"\n";
