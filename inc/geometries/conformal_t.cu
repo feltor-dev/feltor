@@ -173,6 +173,7 @@ int main( int argc, char* argv[])
     std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
     /////////////////////////TEST 3d grid//////////////////////////////////////
+    /*
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
     //DFA fieldaligned( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
@@ -198,6 +199,7 @@ int main( int argc, char* argv[])
     X = divB;
     err = nc_put_var_double( ncid, divBID, X.data());
     std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))/norm<<"\n";
+    */
     err = nc_close( ncid);
 
 
