@@ -204,7 +204,8 @@ struct FpsiX
         double f_psi = 2.*M_PI/end_old[2];
         //t.toc();
         //std::cout << "Finding f took "<<t.diff()<<"s\n";
-        return f_psi;
+        //return f_psi;
+        return 1./f_psi;
     }
     double operator()( double psi)
     {
@@ -291,8 +292,11 @@ struct FpsiX
 
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
-        begin[2] = f_psi * (1./psip2+0.001)* psipZ_;
-        begin[3] = -f_psi * (1./psip2+0.001)*psipR_;
+        //begin[2] = f_psi * (1./psip2+0.001)* psipZ_;
+        //begin[3] = -f_psi * (1./psip2+0.001)*psipR_;
+
+        begin[2] =  1./f_psi * (1.0/psip2+0.0)* psipZ_;
+        begin[3] = -1./f_psi * (1.0/psip2+0.0)* psipR_;
 
         //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
         FieldRZYRYZY fieldRZY(gp_);
@@ -414,7 +418,8 @@ struct XFieldFinv
             dg::stepperRK17( fieldRZY_, temp, end, temp[1], Z_i[1], N);
         }
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        fpsiM[0] = - end[2]/2./M_PI;
+        //fpsiM[0] = - end[2]/2./M_PI;
+        fpsiM[0] = - 2.*M_PI/end[2];
         t.toc();
         //std::cout << "Finding f took "<<t.diff()<<"s\n";
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
@@ -528,7 +533,7 @@ struct ConformalXGrid3d : public dg::GridX3d
                 //std::cout << "FOUND PSI "<<end[0]<<"\n";
             }
             dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
-            eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff));
+            eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
             psi_1_numerical_ = psi_0 + dg::blas1::dot( f_x_, w1d);
 
             //eps = fabs( psi_1_numerical-psi_1); 
