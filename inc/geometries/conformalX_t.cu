@@ -11,7 +11,8 @@
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
-#include "conformalX.h"
+//#include "conformalX.h"
+#include "orthogonalX.h"
 #include "dg/ds.h"
 #include "init.h"
 
@@ -20,7 +21,7 @@
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< solovev::OrthogonalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -58,8 +59,8 @@ try{
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    solovev::ConformalXGrid3d<dg::DVec> g3d(gp, psi_0, fx_0, 0., n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    solovev::ConformalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    solovev::OrthogonalXGrid3d<dg::DVec> g3d(gp, psi_0, fx_0, 0., n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    solovev::OrthogonalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     dg::Grid1d<double> g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
@@ -104,10 +105,10 @@ try{
 
     err = nc_put_var_double( ncid, coordsID[0], X.data());
     err = nc_put_var_double( ncid, coordsID[1], Y.data());
-    err = nc_put_var_double( ncid, coord1D[0], g3d.rx0().data());
-    err = nc_put_var_double( ncid, coord1D[1], g3d.zx0().data());
-    err = nc_put_var_double( ncid, coord1D[2], g3d.rx1().data());
-    err = nc_put_var_double( ncid, coord1D[3], g3d.zx1().data());
+    //err = nc_put_var_double( ncid, coord1D[0], g3d.rx0().data());
+    //err = nc_put_var_double( ncid, coord1D[1], g3d.zx0().data());
+    //err = nc_put_var_double( ncid, coord1D[2], g3d.rx1().data());
+    //err = nc_put_var_double( ncid, coord1D[3], g3d.zx1().data());
     err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
@@ -185,9 +186,9 @@ try{
     ///////////////////////TEST 3d grid//////////////////////////////////////
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
-    DFA fieldaligned( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+    DFA fieldaligned( solovev::OrthogonalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
-    dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered, false);
+    dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, solovev::OrthogonalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered, false);
     dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
     dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
     dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);

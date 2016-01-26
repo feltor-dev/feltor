@@ -175,9 +175,9 @@ struct Fpsi
 
         //now compute f and starting values 
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
-        const double f_psi = construct_f( psi, begin[0], begin[1]);
+        const double f_psi = construct_f( psi, R_0, Z_0);
 
-        R_0 = begin[0], Z_0 = begin[1];
+        begin[0] = R_0, begin[1] = Z_0;
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
         FieldRZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
@@ -242,17 +242,9 @@ struct FieldFinv
     void operator()(const std::vector<thrust::host_vector<double> >& y, std::vector<thrust::host_vector<double> >& yp) 
     { 
         //y[0] = R, y[1] = Z , y[2] = psi, y[3] = g, y[4] = yr, y[5] = yz
+        this->operator()( y[2], yp[2]);
 
         thrust::host_vector<double> begin( 3, 0), end(begin);//, end_old(begin);
-        fpsi_.find_initial( y[2][0], begin[0], begin[1]);
-        //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
-        dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
-        //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        //fpsiM[0] = - end[2]/2./M_PI;
-        yp[2][0] = - end[2]/2./M_PI;
-        //yp[2][0] =  - 2.*M_PI/end[2]; // = -1/f
-
-        //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
         unsigned size = y[0].size();
         double psipR, psipZ, psipRR, psipRZ, psipZZ, psip2;
         for( unsigned i=0; i<size; i++)
@@ -332,9 +324,8 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
         }
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
-        thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
-
         //convergence utilities
+        thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
         thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
         f_x_.resize( psi_x.size());
         thrust::host_vector<double> w1d = dg::create::weights( g1d_);
