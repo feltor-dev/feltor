@@ -10,8 +10,10 @@
 #include "dg/cg.h"
 
 #include "solovev.h"
-#include "conformal.h"
-#include "conformalX.h"
+//#include "orthogonal.h"
+//#include "orthogonalX.h"
+#include "orthogonal.h"
+#include "orthogonalX.h"
 
 
 
@@ -46,16 +48,16 @@ int main(int argc, char**argv)
     dg::Timer t;
     solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
-    std::cout << "Constructing conformal grid ... \n";
+    std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
-    //solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    //dg::Elliptic<solovev::ConformalRingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    //solovev::OrthogonalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    //solovev::OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    //dg::Elliptic<solovev::OrthogonalRingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     
-    solovev::ConformalXGrid3d<dg::DVec> g3d(gp, psi_0, 0.25, 0.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    solovev::ConformalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<solovev::ConformalXGrid3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    solovev::OrthogonalXGrid3d<dg::DVec> g3d(gp, psi_0, 0.25, 0.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    solovev::OrthogonalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<solovev::OrthogonalXGrid3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     psi_1 = g3d.psi1();
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 

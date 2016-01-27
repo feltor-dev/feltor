@@ -184,32 +184,32 @@ try{
     std::cout << "Note that the error might also come from the volume in RZP!\n";
 
     ///////////////////////TEST 3d grid//////////////////////////////////////
-    std::cout << "Start DS test!"<<std::endl;
-    const dg::DVec vol3d = dg::create::volume( g3d);
-    DFA fieldaligned( solovev::OrthogonalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+    //std::cout << "Start DS test!"<<std::endl;
+    //const dg::DVec vol3d = dg::create::volume( g3d);
+    //DFA fieldaligned( solovev::OrthogonalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
-    dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, solovev::OrthogonalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered, false);
-    dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-    dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-    dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-    dg::blas1::pointwiseDivide( ones, B, B);
+    //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, solovev::OrthogonalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered, false);
+    //dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
+    //dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
+    //dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
+    //dg::blas1::pointwiseDivide( ones, B, B);
 
-    ds.centeredT( B, divB);
-    std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol3d, divB))<<"\n";
-    ds.centered( lnB, gradB);
-    dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    //test if topological shift was correct!!
-    dg::blas1::pointwiseDot(cutter, gradLnB, gradLnB);
-    std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))<<" (doesn't fullfill boundary conditions so it was cut before separatrix)\n";
+    //ds.centeredT( B, divB);
+    //std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol3d, divB))<<"\n";
+    //ds.centered( lnB, gradB);
+    //dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
+    ////test if topological shift was correct!!
+    //dg::blas1::pointwiseDot(cutter, gradLnB, gradLnB);
+    //std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))<<" (doesn't fullfill boundary conditions so it was cut before separatrix)\n";
 
-    const dg::DVec function = dg::pullback(solovev::FuncNeu(gp), g3d);
-    dg::DVec temp(function);
-    const dg::DVec derivative = dg::pullback(solovev::DeriNeu(gp), g3d);
-    ds( function, temp);
-    dg::blas1::axpby( 1., temp, -1., derivative, temp);
-    std::cout << "Error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))<<"\n";
-    X = gradB;
-    err = nc_put_var_double( ncid, divBID, X.data());
+    //const dg::DVec function = dg::pullback(solovev::FuncNeu(gp), g3d);
+    //dg::DVec temp(function);
+    //const dg::DVec derivative = dg::pullback(solovev::DeriNeu(gp), g3d);
+    //ds( function, temp);
+    //dg::blas1::axpby( 1., temp, -1., derivative, temp);
+    //std::cout << "Error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))<<"\n";
+    //X = gradB;
+    //err = nc_put_var_double( ncid, divBID, X.data());
     err = nc_close( ncid);
 
 

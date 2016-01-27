@@ -244,7 +244,6 @@ struct FieldFinv
         //y[0] = R, y[1] = Z , y[2] = psi, y[3] = g, y[4] = yr, y[5] = yz
         this->operator()( y[2], yp[2]);
 
-        thrust::host_vector<double> begin( 3, 0), end(begin);//, end_old(begin);
         unsigned size = y[0].size();
         double psipR, psipZ, psipRR, psipRZ, psipZZ, psip2;
         for( unsigned i=0; i<size; i++)
@@ -252,9 +251,9 @@ struct FieldFinv
             psipR = psipR_(y[0][i], y[1][i]), psipZ = psipZ_(y[0][i], y[1][i]);
             psipRR = psipRR_(y[0][i], y[1][i]), psipRZ = psipRZ_(y[0][i], y[1][i]), psipZZ = psipZZ_(y[0][i], y[1][i]);
             psip2 = psipR*psipR+psipZ*psipZ;
-            yp[0][i] = psipR*yp[2][0]/psip2;
-            yp[1][i] = psipZ*yp[2][0]/psip2;
-            yp[3][i] = y[4][i]*yp[2][0]/psip2*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );
+            yp[0][i] = yp[2][0]/psip2 *psipR;
+            yp[1][i] = yp[2][0]/psip2 *psipZ;
+            yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );
             yp[4][i] = yp[2][0]/psip2 *( -psipRR*y[4][i] - psipRZ*y[5][i]);
             yp[5][i] = yp[2][0]/psip2 *( -psipRZ*y[4][i] - psipZZ*y[5][i]);
         }
@@ -339,6 +338,13 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
         double R0, Z0, f0;
         fpsi.compute_rzy( psi_0, n, Ny, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
         thrust::host_vector<double> gvec(n*Ny, f0);
+        PsipR psipR_(gp);
+        PsipZ psipZ_(gp);
+        //for( unsigned i=0; i<rvec.size(); i++)
+        //{
+        //    double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
+        //    gvec[i] *= (psipR*psipR + psipZ*psipZ);
+        //}
         begin[0] = rvec, begin[1] = zvec, begin[2] = psivec; 
         begin[3] = gvec; begin[4] = yrvec, begin[5] = yzvec;
         //now we have the starting values of r, z, psi
@@ -348,8 +354,6 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
         std::cout << "In psi function:\n";
         double x0=this->x0(), x1 = x_vec[0];
         //while( eps <  eps_old && N < 1e6)
-        PsipR psipR_(gp);
-        PsipZ psipZ_(gp);
         while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
         {
             eps_old = eps; //psi_old = psi_x; 
@@ -363,8 +367,7 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
                 yr_[j*n*Nx+0] = end[4][j], yz_[j*n*Nx+0] = end[5][j];
                 xr_[j*n*Nx+0] = psipR_(end[0][j], end[1][j])/f_x_[0]; 
                 xz_[j*n*Nx+0] = psipZ_(end[0][j], end[1][j])/f_x_[0]; 
-                g_[j*n*Nx+0] = end[3][j];
-                if( g_[j*Nx+0] == 0) std::cerr << "g_ is zero!\n";
+                g_[j*n*Nx+0] = end[3][j], f_[j*n*Nx + 0] = -1./f_x_[0];
             }
 
             //////////////////////////////////////////////////
@@ -381,8 +384,7 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
                     yr_[j*n*Nx+i] = end[4][j], yz_[j*n*Nx+i] = end[5][j];
                     xr_[j*n*Nx+i] = psipR_(end[0][j], end[1][j])/f_x_[i]; 
                     xz_[j*n*Nx+i] = psipZ_(end[0][j], end[1][j])/f_x_[i]; 
-                    g_[j*n*Nx+i] = end[3][j];
-                    if( g_[j*Nx+i] == 0) std::cerr << "g_ is zero!\n";
+                    g_[j*n*Nx+i] = end[3][j], f_[j*n*Nx + i] = -1./f_x_[i];
                 }
                 //////////////////////////////////////////////////
             }
@@ -445,6 +447,8 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
     */
         //now lift to 3D grid
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
+        for( unsigned i=0; i<Nx; i++)
+            f_x_[i] = -1./f_x_[i];
         for( unsigned k=1; k<this->Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
             {
