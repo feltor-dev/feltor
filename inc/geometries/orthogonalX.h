@@ -347,6 +347,7 @@ struct FpsiX
         R_init = begin[0] = end_old[0], Z_init = begin[1] = end_old[1];
         FieldRZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
+        //fieldRZY.set_f(1./f_psi);
         eps = 1e10, eps_old=2e10, steps=1;
         while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
         {
@@ -384,8 +385,12 @@ struct FpsiX
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
             double psip2 = psipR*psipR+psipZ*psipZ;
-            yr[i] = psipZ*f/psip2;
-            yz[i] = -psipR*f/psip2;
+            //yr[i] = psipZ*f/psip2;
+            //yz[i] = -psipR*f/psip2;
+            yr[i] = psipZ*f/sqrt(psip2);
+            yz[i] = -psipR*f/sqrt(psip2);
+            //yr[i] = psipZ/f/sqrt(psip2);
+            //yz[i] = -psipR/f/sqrt(psip2);
         }
 
     }
@@ -422,7 +427,8 @@ struct XFieldFinv
             psip2 = psipR*psipR+psipZ*psipZ;
             yp[0][i] = psipR/psip2;
             yp[1][i] = psipZ/psip2;
-            yp[2][i] = y[2][i]/psip2*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );
+            //yp[2][i] = y[2][i]/psip2*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );
+            yp[2][i] = y[2][i]/psip2*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
             yp[3][i] = 1./psip2 *( -psipRR*y[3][i] - psipRZ*y[4][i]);
             yp[4][i] = 1./psip2 *( -psipRZ*y[3][i] - psipZZ*y[4][i]);
         }
@@ -544,7 +550,7 @@ struct OrthogonalXGrid3d : public dg::GridX3d
         const double psi_const = fpsiMinv_.find_psi( x_vec[idx]);
         double eps = 1e10;//, eps_old=2e10;
         //while( eps <  eps_old && N < 1e6)
-        while( eps >  1e-7 && N < 1e6 )
+        while( eps >  1e-8 && N < 1e6 )
         {
            // eps_old = eps; 
             psi_old = psi_x; 
@@ -627,6 +633,7 @@ struct OrthogonalXGrid3d : public dg::GridX3d
         detail::FpsiX fpsi(gp);
         fpsi.compute_rzy( psi_0, this->n(), this->Ny(), rvec, zvec, yrvec, yzvec, R0, Z0, f0);
         thrust::host_vector<double> gvec(Ny, f0);
+        //thrust::host_vector<double> gvec(Ny, 1./f0);
         begin[0] = rvec, begin[1] = zvec;
         begin[2] = gvec, begin[3] = yrvec, begin[4] = yzvec;
         //now we have the starting values of r, z, psi

@@ -85,6 +85,7 @@ struct Fpsi
         }
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
+        //return 1./f_psi;
     }
     double operator()( double psi)
     {
@@ -180,6 +181,7 @@ struct Fpsi
         begin[0] = R_0, begin[1] = Z_0;
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
         FieldRZY fieldRZY(gp_);
+        //fieldRZY.set_f(1./f_psi);
         fieldRZY.set_f(f_psi);
         unsigned steps = 1;
         double eps = 1e10, eps_old=2e10;
@@ -218,8 +220,12 @@ struct Fpsi
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
             double psip2 = psipR*psipR+psipZ*psipZ;
-            yr[i] = psipZ*f/psip2;
-            yz[i] = -psipR*f/psip2;
+            //yr[i] = psipZ*f/psip2;
+            //yz[i] = -psipR*f/psip2;
+            yr[i] = psipZ*f/sqrt(psip2);
+            yz[i] = -psipR*f/sqrt(psip2);
+            //yr[i] = psipZ/f/sqrt(psip2);
+            //yz[i] = -psipR/f/sqrt(psip2);
         }
 
     }
@@ -253,7 +259,8 @@ struct FieldFinv
             psip2 = psipR*psipR+psipZ*psipZ;
             yp[0][i] = yp[2][0]/psip2 *psipR;
             yp[1][i] = yp[2][0]/psip2 *psipZ;
-            yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );
+            //yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^2
+            yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
             yp[4][i] = yp[2][0]/psip2 *( -psipRR*y[4][i] - psipRZ*y[5][i]);
             yp[5][i] = yp[2][0]/psip2 *( -psipRZ*y[4][i] - psipZZ*y[5][i]);
         }
@@ -337,6 +344,7 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
         std::vector<thrust::host_vector<double> > begin(6);
         double R0, Z0, f0;
         fpsi.compute_rzy( psi_0, n, Ny, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
+        //thrust::host_vector<double> gvec(n*Ny, 1./f0);
         thrust::host_vector<double> gvec(n*Ny, f0);
         PsipR psipR_(gp);
         PsipZ psipZ_(gp);
@@ -392,7 +400,7 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
             //dg::stepperRK6(fpsiMinv_, temp, end, x1, this->x1(),N);
             double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
             eps = fabs( psi_1_numerical-psi_1); 
-            std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
+            std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; //error domainated by integration error?
             std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
@@ -477,8 +485,8 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
                     tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
                     //tempvol[idx] = r_[idx]/(f_[idx]*f_[idx] + tempxx[idx]);
                     //tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] - tempxy[idx]*tempxy[idx] );
-                    //tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] );
-                    tempvol[idx] = r_[idx]/fabs(f_[idx]*g_[idx]);
+                    tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] );
+                    //tempvol[idx] = r_[idx]/fabs(f_[idx]*g_[idx]);
                 }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
