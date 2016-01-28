@@ -10,8 +10,8 @@
 #include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
-//#include "guenther.h"
-#include "solovev.h"
+#include "guenther.h"
+//#include "solovev.h"
 //#include "conformal.h"
 #include "orthogonal.h"
 #include "dg/ds.h"
@@ -99,7 +99,8 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, coordsID[1], Y.data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
-    dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
+    //dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
+    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
     X=temp0;
     err = nc_put_var_double( ncid, defID, X.data());
 
@@ -159,7 +160,8 @@ int main( int argc, char* argv[])
     double volume = dg::blas1::dot( vol, ones3d);
 
     std::cout << "TEST VOLUME IS:\n";
-    gp.psipmax = psi_1, gp.psipmin = psi_0;
+    if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
+    else               gp.psipmax = psi_0, gp.psipmin = psi_1;
     solovev::Iris iris( gp);
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e4, 1e4, dg::PER, dg::PER);
@@ -175,17 +177,20 @@ int main( int argc, char* argv[])
     /////////////////////////TEST 3d grid//////////////////////////////////////
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
+    t.tic();
     //DFA fieldaligned( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
-    DFA fieldaligned( solovev::OrthogonalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    DFA fieldaligned( solovev::OrthogonalField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter()); 
 
     //dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
-    dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, solovev::OrthogonalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, solovev::OrthogonalField(gp, g2d, g2d.g()), dg::normed, dg::centered);
+    t.toc();
+    std::cout << "Construction took "<<t.diff()<<"s\n";
     dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
     dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
     dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
     dg::blas1::pointwiseDivide( ones, B, B);
-        dg::DVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
-        ds( function, derivative);
+    dg::DVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
+    ds( function, derivative);
 
     ds.centeredT( B, divB);
     std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol3d, divB))<<"\n";

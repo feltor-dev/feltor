@@ -384,13 +384,15 @@ struct FpsiX
         for( unsigned i=0; i<r.size(); i++)
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
-            double psip2 = psipR*psipR+psipZ*psipZ;
+            //double psip2 = psipR*psipR+psipZ*psipZ;
             //yr[i] = psipZ*f/psip2;
             //yz[i] = -psipR*f/psip2;
-            yr[i] = psipZ*f/sqrt(psip2);
-            yz[i] = -psipR*f/sqrt(psip2);
+            //yr[i] = psipZ*f/sqrt(psip2);
+            //yz[i] = -psipR*f/sqrt(psip2);
             //yr[i] = psipZ/f/sqrt(psip2);
             //yz[i] = -psipR/f/sqrt(psip2);
+            yr[i] = psipZ*f;
+            yz[i] = -psipR*f;
         }
 
     }
@@ -428,7 +430,8 @@ struct XFieldFinv
             yp[0][i] = psipR/psip2;
             yp[1][i] = psipZ/psip2;
             //yp[2][i] = y[2][i]/psip2*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );
-            yp[2][i] = y[2][i]/psip2*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
+            //yp[2][i] = y[2][i]/psip2*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
+            yp[2][i] = y[2][i]/psip2*( -(psipRR+psipZZ) );//g/gradpsi^1/2
             yp[3][i] = 1./psip2 *( -psipRR*y[3][i] - psipRZ*y[4][i]);
             yp[4][i] = 1./psip2 *( -psipRZ*y[3][i] - psipZZ*y[4][i]);
         }
@@ -528,6 +531,7 @@ struct OrthogonalXGrid3d : public dg::GridX3d
         dg::GridX3d( 0,1, 0., 2*M_PI, 0., 2.*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER)
     { 
         assert( psi_0 < 0 );
+        assert( gp.c[10] != 0);
         //construct x-grid in two parts
         solovev::detail::FpsiX fpsi(gp);
         std::cout << "FIND X FOR PSI_0\n";
@@ -592,6 +596,7 @@ struct OrthogonalXGrid3d : public dg::GridX3d
         construct_metric();
     }
     const thrust::host_vector<double>& f()const{return f_;}
+    const thrust::host_vector<double>& g()const{return g_;}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -626,7 +631,7 @@ struct OrthogonalXGrid3d : public dg::GridX3d
         thrust::host_vector<double> psi_x(Nx, 0), psi_old(psi_x), psi_diff( psi_old);
         thrust::host_vector<double> w1d = dg::create::weights( g1d_);
         //fpsiMinv utilities
-        detail::XFieldFinv fpsiMinv_(gp, 2500);
+        detail::XFieldFinv fpsiMinv_(gp, 500);
         thrust::host_vector<double> rvec( Ny), zvec(Ny), yrvec(Ny), yzvec(Ny);
         std::vector<thrust::host_vector<double> > begin(5);
         double R0[2], Z0[2], f0;
@@ -640,7 +645,7 @@ struct OrthogonalXGrid3d : public dg::GridX3d
         std::vector<thrust::host_vector<double> > end(begin), temp(begin);
         r_.resize(size()), z_.resize(size()), f_.resize(size()), g_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
-        std::cout << "In psi function:\n";
+        std::cout << "In RZ  function:\n";
         double x0=this->x0(), x1 = x_vec[0];
         const unsigned idx = inner_Nx()*this->n();
         const double psi_const = fpsiMinv_.find_psi( x_vec[idx]);
@@ -762,7 +767,7 @@ struct OrthogonalXGrid2d : public dg::GridX2d
         init_X_boundaries( x0,x1);
         OrthogonalXGrid3d<container> g( gp, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
         f_x_ = g.f_x();
-        f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        f_ = g.f(), g_ = g.g(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
@@ -771,16 +776,17 @@ struct OrthogonalXGrid2d : public dg::GridX2d
     {
         f_x_ = g.f_x();
         unsigned s = this->size();
-        f_.resize(s), r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
+        f_.resize(s), g_.resize(s), r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
-        {f_[i] = g.f()[i], r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
+        {f_[i] = g.f()[i], g_[i] = g.g()[i], r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
         thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
         thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
     const thrust::host_vector<double>& f()const{return f_;}
+    const thrust::host_vector<double>& g()const{return g_;}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -798,7 +804,7 @@ struct OrthogonalXGrid2d : public dg::GridX2d
     const container& perpVol()const{return vol2d_;}
     private:
     thrust::host_vector<double> f_x_; //1d vector
-    thrust::host_vector<double> f_, r_, z_, xr_, xz_, yr_, yz_; //2d vector
+    thrust::host_vector<double> f_, g_, r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 

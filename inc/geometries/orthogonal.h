@@ -219,13 +219,13 @@ struct Fpsi
         for( unsigned i=0; i<r.size(); i++)
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
-            double psip2 = psipR*psipR+psipZ*psipZ;
+            //double psip2 = psipR*psipR+psipZ*psipZ;
             //yr[i] = psipZ*f/psip2;
             //yz[i] = -psipR*f/psip2;
-            yr[i] = psipZ*f/sqrt(psip2);
-            yz[i] = -psipR*f/sqrt(psip2);
-            //yr[i] = psipZ/f/sqrt(psip2);
-            //yz[i] = -psipR/f/sqrt(psip2);
+            //yr[i] = psipZ*f/sqrt(psip2);
+            //yz[i] = -psipR*f/sqrt(psip2);
+            yr[i] = psipZ*f;
+            yz[i] = -psipR*f;
         }
 
     }
@@ -260,7 +260,8 @@ struct FieldFinv
             yp[0][i] = yp[2][0]/psip2 *psipR;
             yp[1][i] = yp[2][0]/psip2 *psipZ;
             //yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^2
-            yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
+            //yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
+            yp[3][i] = yp[2][0]/psip2 *y[3][i]*( -(psipRR+psipZZ) );//g
             yp[4][i] = yp[2][0]/psip2 *( -psipRR*y[4][i] - psipRZ*y[5][i]);
             yp[5][i] = yp[2][0]/psip2 *( -psipRZ*y[4][i] - psipZZ*y[5][i]);
         }
@@ -301,7 +302,7 @@ struct OrthogonalRingGrid2d;
 template< class container>
 struct OrthogonalRingGrid3d : public dg::Grid3d<double>
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
+    typedef dg::OrthogonalCylindricalTag metric_category;
     typedef OrthogonalRingGrid2d<container> perpendicular_grid;
 
     /**
@@ -405,7 +406,7 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
             N*=2;
         }
         construct_rz( gp, psi_0, psi_x);
-        construct_metric();
+        construct_metric(gp);
     }
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -415,6 +416,7 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
     const thrust::host_vector<double>& yz()const{return yz_;}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     const thrust::host_vector<double>& f()const{return f_;}
+    const thrust::host_vector<double>& g()const{return g_;}
     thrust::host_vector<double> x()const{
         dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
         return dg::create::abscissas(gx);}
@@ -471,8 +473,9 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
             }
     }
     //compute metric elements from xr, xz, yr, yz, r and z
-    void construct_metric()
+    void construct_metric( const GeomParameters& gp)
     {
+        PsipR psipR_(gp); PsipZ psipZ_(gp);
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         for( unsigned k=0; k<this->Nz(); k++)
@@ -480,13 +483,14 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
                 for( unsigned j=0; j<Nx; j++)
                 {
                     unsigned idx = k*Ny*Nx+i*Nx+j;
+                    double psipR = psipR_(r_[idx], z_[idx]), psipZ = psipZ_( r_[idx], z_[idx]);
                     tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
                     tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
                     tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
                     //tempvol[idx] = r_[idx]/(f_[idx]*f_[idx] + tempxx[idx]);
                     //tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] - tempxy[idx]*tempxy[idx] );
-                    tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] );
-                    //tempvol[idx] = r_[idx]/fabs(f_[idx]*g_[idx]);
+                    //tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] );
+                    tempvol[idx] = r_[idx]/fabs(f_[idx]*g_[idx])/(psipR*psipR + psipZ*psipZ);
                 }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
@@ -512,7 +516,7 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
 template< class container>
 struct OrthogonalRingGrid2d : public dg::Grid2d<double>
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
+    typedef dg::OrthogonalCylindricalTag metric_category;
     OrthogonalRingGrid2d( const GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
@@ -523,7 +527,7 @@ struct OrthogonalRingGrid2d : public dg::Grid2d<double>
         else
             init_X_boundaries( x_1, 0.);
         OrthogonalRingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
-        f_x_ = g.f_x();
+        f_x_ = g.f_x(), f_ = g.f(), g_ = g.g();
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
@@ -536,13 +540,14 @@ struct OrthogonalRingGrid2d : public dg::Grid2d<double>
         f_.resize(s), g_.resize(s), r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
-        {f_[i] = g.f()[i], r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
+        {f_[i] = g.f()[i], g_[i] = g.g()[i], r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
         thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
         thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
     const thrust::host_vector<double>& f()const{return f_;}
+    const thrust::host_vector<double>& g()const{return g_;}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -569,10 +574,10 @@ struct OrthogonalRingGrid2d : public dg::Grid2d<double>
  */ 
 struct OrthogonalField
 {
-    OrthogonalField( GeomParameters gp,const thrust::host_vector<double>& x, const thrust::host_vector<double>& f_x):
+    OrthogonalField( GeomParameters gp,const dg::Grid2d<double>& gXY, const thrust::host_vector<double>& g):
         gp_(gp),
         psipR_(gp), psipZ_(gp),
-        ipol_(gp), invB_(gp), last_idx(0), x_(x), fx_(f_x)
+        ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(g, gXY)) 
     { }
 
     /**
@@ -584,10 +589,11 @@ struct OrthogonalField
     {
         //x,y,s,R,Z
         double psipR = psipR_(y[3],y[4]), psipZ = psipZ_(y[3],y[4]), ipol = ipol_( y[3],y[4]);
-        double fx = find_fx( y[0]);
+        double xs = y[0],ys=y[1];
+        gXY_.shift_topologic( y[0], M_PI, xs,ys);
+        double g = dg::interpolate( xs,  ys, g_, gXY_);
         yp[0] = 0;
-        //yp[1] = fx*y[3]*(1.0+0.0*(psipR*psipR+psipZ*psipZ))/ipol;
-        yp[1] = y[3]/fx*(1.0+0.0*(psipR*psipR+psipZ*psipZ))/ipol;
+        yp[1] = y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
         yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
         yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
         yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
@@ -605,28 +611,13 @@ struct OrthogonalField
     double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
     
     private:
-    double find_fx(double x) 
-    {
-        if( fabs(x-x_[last_idx]) < 1e-12)
-            return fx_[last_idx];
-        for( unsigned i=0; i<x_.size(); i++)
-            if( fabs(x-x_[i]) < 1e-12)
-            {
-                last_idx = (int)i;
-                return fx_[i];
-            }
-        std::cerr << "x not found!!\n";
-        return 0;
-    }
-    
     GeomParameters gp_;
     PsipR  psipR_;
     PsipZ  psipZ_;
     Ipol   ipol_;
     InvB   invB_;
-    int last_idx;
-    thrust::host_vector<double> x_;
-    thrust::host_vector<double> fx_;
+    const dg::Grid2d<double> gXY_;
+    thrust::host_vector<double> g_;
    
 };
 
@@ -687,99 +678,5 @@ thrust::host_vector<double> pullback( double(f)(double,double,double), const sol
     return pullback<double(double,double,double),container>( f, g);
 }
 ///@endcond
-//
-
-/*
-namespace create
-{
-
-int determine_lagrange4( const thrust::host_vector<double>& abs, double x, thrust::host_vector<double>& li, double length)
-{
-    const int K = 3;
-    //1. find neighbors
-    double xi[2*(unsigned)K];
-    int idx = (int)abs.size()-1;
-    if( x < abs[0] ) idx = -1;
-    for( int i=0; i<(int)abs.size()-1; i++)
-        if( abs[i] <= x && x < abs[i+1])
-            idx = i;
-    if( x > abs[abs.size()-1] ) idx = abs.size()-1;
-    for( int j=-(K-1); j<K+1; j++)
-    {
-        xi[j+K-1] = abs[ (idx +j + abs.size())%abs.size()];
-        if( idx+j <0) //catch periodicity
-        {
-            xi[j+K-1] -= length;
-        }
-        if( idx+j >(int)abs.size()-1) //catch periodicity
-            xi[j+K-1] += length;
-    }
-    //1. determine lagrange multiplies
-    for( int i=0; i<2*K; i++)
-        li[i] = 1.;
-    for( int i=0; i<2*K; i++)
-        for( int k=0; k<2*K; k++)
-        {
-            if(  k!= i)
-                li[i] *= (x-xi[k])/(xi[i] - xi[k]);
-        }
-    return idx-1;
-}
-
-int determine_column( const thrust::host_vector<double>& absx, double x )
-{
-    int idx=-1;
-    for( int i=0; i<(int)absx.size(); i++)
-        if( fabs(absx[i]-x) <= 1e-10 )
-            idx = i;
-    return idx;
-}
-
-template<class container>
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const solovev::OrthogonalRingGrid2d<container>& g, dg::bc bcz )
-{
-    std::cout << "Hello interpolation!\n";
-    assert( x.size() == y.size());
-    const unsigned K = 3;
-    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*2*K);
-
-    dg::Operator<double> forward( g.dlt().forward());
-    int number = 0;
-    thrust::host_vector<double> li(2*K,1);
-    Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx(), g.bcx());
-    Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny(), g.bcy());
-    const thrust::host_vector<double> absx = create::abscissas( gx);
-    const thrust::host_vector<double> absy = create::abscissas( gy);
-    for( unsigned i=0; i<x.size(); i++)
-    {
-        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
-        }
-        assert(x[i] >= g.x0() && x[i] <= g.x1());
-        
-        if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
-            std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
-        }
-        assert( y[i] >= g.y0() && y[i] <= g.y1());
-        //determine which points are neighbors
-        int row_begin = determine_lagrange4( absy, y[i], li, g.ly());
-        int col = determine_column( absx, x[i]);
-        if( col == -1) std::cerr << "Index not found!!\n";
-        unsigned Nx = g.n()*g.Nx();
-        unsigned Ny = g.n()*g.Ny();
-        for( unsigned k=0; k<2*K; k++)
-        {
-            A.row_indices[number] = i;
-            A.column_indices[number] = ((row_begin+k+Ny)%Ny)*Nx+col;
-            A.values[number] = li[k];
-            number++;
-        }
-    }
-    return A;
-}
-
-
-}//namespace create
-*/
 
 }//namespace dg

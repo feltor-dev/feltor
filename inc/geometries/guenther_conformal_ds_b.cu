@@ -16,10 +16,12 @@
 #include "dg/geometry.h"
 // #include "draw/host_window.h"
 #include "guenther.h"
-#include "conformal.h"
+//#include "conformal.h"
+#include "orthogonal.h"
 #include "dg/ds.h"
 
-typedef dg::FieldAligned< solovev::ConformalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+//typedef dg::FieldAligned< solovev::ConformalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< solovev::OrthogonalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 int main( )
 {
@@ -60,7 +62,7 @@ int main( )
     unsigned Nyn = Ny;
     unsigned Nzn = Nz;
 
-    const double rk4eps = 1e-10;
+    const double rk4eps = 1e-6;
     //std::cout << "Type RK4 eps (1e-8)\n";
     //std::cin >> rk4eps;
     for (unsigned i=1;i<2;i+=2) { 
@@ -68,8 +70,10 @@ int main( )
         //Nzn = unsigned(Nz*pow(2,i));
         //Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
         //Nyn = (unsigned)ceil(Ny*pow(2,(double)(i*2./n)));
-        solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
-        solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+        //solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
+        //solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+        solovev::OrthogonalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
+        solovev::OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
         g3d.display();
         //g2d.display();
         std::cout << "NR = " << Nxn << std::endl;
@@ -79,11 +83,14 @@ int main( )
         const dg::DVec ones = dg::pullback(dg::one, g3d);
         const dg::DVec v3d = dg::create::inv_volume( g3d);
 
-        std::cout << "computing ds" << std::endl;
-        DFA dsFA( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
-        dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::not_normed, dg::centered, false);
+        std::cout << "Computing ds..." << std::endl;
+        //DFA dsFA( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
+        //dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::not_normed, dg::centered, false);
+        DFA dsFA( solovev::OrthogonalField( gp, g2d, g2d.g()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
+        dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, solovev::OrthogonalField(gp, g2d, g2d.g()), dg::not_normed, dg::centered, false);
 
-        dg::DVec function = dg::pullback( funcNEU, g3d), derivative(function),
+        std::cout << "ds constructed!" << std::endl;
+        dg::DVec function = dg::pullback( funcNEU, g3d), derivative(function), temp(function),
                         dsTdsfb(function),
                         functionTinv2(dg::evaluate( dg::zero, g3d));
 
@@ -108,13 +115,22 @@ int main( )
         double normdsTds = dg::blas2::dot( vol, solutiondsTds);
         std::cout << "--------------------testing dsTdsfb " << std::endl;
         std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
-        ds( function, derivative); //ds(f)
-        dg::blas1::pointwiseDivide(derivative, B, derivative);
-        ds( derivative, dsTdsfb); //ds(f)
-        dg::blas1::pointwiseDot( dsTdsfb, B, dsTdsfb);
+        //1st
+        //ds( function, derivative); //ds(f)
+        //ds( B, temp ); //ds(B)
+        //ds( derivative, dsTdsfb); //dss(f)
+        //dg::blas1::pointwiseDot(derivative, temp, derivative);
+        //dg::blas1::pointwiseDivide(derivative, B, derivative);
+        //dg::blas1::axpby( -1., derivative, 1., dsTdsfb, dsTdsfb);
+        //2nd
         //ds.symv(function,dsTdsfb);
         //dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
-        double remainder =dg::blas2::dot( vol,dsTdsfb);
+        //3rd
+        ds( function, derivative);
+        dg::blas1::pointwiseDivide( derivative, B, derivative);
+        ds(derivative, dsTdsfb);
+        dg::blas1::pointwiseDot( dsTdsfb, B, dsTdsfb);
+        double remainder =dg::blas1::dot( vol,dsTdsfb);
         double errdsTdsfb =dg::blas2::dot( vol,dsTdsfb);
         std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
         std::cout << "   Integral          "<<remainder<<"\n";
@@ -139,12 +155,12 @@ int main( )
 
 
         const dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d); 
-        dg::DVec gradB(lnB), temp(lnB);
+        dg::DVec gradB(lnB);
         const dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-        std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
+        std::cout << "ana. norm GradLnB    "<<sqrt( dg::blas2::dot( gradLnB, vol, gradLnB))<<"\n";
         ds( B, gradB);
         dg::blas1::pointwiseDivide(gradB, B, gradB);
-        std::cout << "norm GradLnB    "<<sqrt( dg::blas2::dot( gradB, vol, gradB))<<"\n";
+        std::cout << "num. norm GradLnB    "<<sqrt( dg::blas2::dot( gradB, vol, gradB))<<"\n";
         dg::blas1::axpby( 1., gradB, -1., gradLnB, temp);
         std::cout << "ds     Error of lnB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
 
@@ -174,9 +190,6 @@ int main( )
         dg::blas1::axpby( 1., derivative, +1., bmod, temp);
         dg::geo::divideVolume( temp, g3d);
         std::cout << "direct Error of divB is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
-
-        dg::blas2::symv( dy, g3d.g_xx(), temp);
-        std::cout << "y-derivative of by   is    "<<sqrt( dg::blas2::dot( temp, vol, temp))<<"\n";
 
     }
     

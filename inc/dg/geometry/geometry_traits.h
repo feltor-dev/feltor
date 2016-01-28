@@ -8,7 +8,8 @@ namespace dg
 //
 struct CurvilinearTag{}; 
 struct CurvilinearCylindricalTag: public CurvilinearTag{}; //perpVol, vol(), g_xx, g_xy, g_yy
-struct OrthonormalCylindricalTag:public CurvilinearCylindricalTag{}; //vol()
+struct OrthogonalCylindricalTag:public CurvilinearCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
+struct OrthonormalCylindricalTag:public OrthogonalCylindricalTag{}; //vol()
 struct OrthonormalTag: public OrthonormalCylindricalTag{};
 
 
@@ -87,6 +88,12 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
 {
     in1.swap( out1);
     in2.swap( out2);
+};
+template <class container, class Geometry>
+void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthogonalCylindricalTag)
+{
+    dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
+    dg::blas1::pointwiseDot( g.g_yy(), in2, out2); //gyy*v_y
 };
 
 template <class container, class Geometry>
