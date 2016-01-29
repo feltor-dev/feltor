@@ -808,7 +808,61 @@ struct OrthogonalXGrid2d : public dg::GridX2d
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
+/**
+ * @brief Integrates the equations for a field line and 1/B
+ */ 
+struct OrthogonalXField
+{
+    OrthogonalXField( solovev::GeomParameters gp,const dg::GridX2d& gXY, const thrust::host_vector<double>& g):
+        gp_(gp),
+        psipR_(gp), psipZ_(gp),
+        ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(g, gXY)) 
+    { }
+
+    /**
+     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
+     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
+     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
+     */ 
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+        //x,y,s,R,Z
+        double psipR = psipR_(y[3],y[4]), psipZ = psipZ_(y[3],y[4]), ipol = ipol_( y[3],y[4]);
+        double xs = y[0],ys=y[1];
+        gXY_.shift_topologic( y[0], M_PI, xs,ys);
+        if( !gXY_.contains(xs,ys)) ys = 1e-5*M_PI;
+        double g = dg::interpolate( xs,  ys, g_, gXY_);
+        yp[0] = 0;
+        yp[1] = y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
+        yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
+        yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
+        yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
+
+    }
+    /**
+     * @brief \f[   \frac{1}{\hat{B}} = 
+      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
+      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
+     */ 
+    double operator()( double R, double Z) const { return invB_(R,Z); }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
+    double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
+    
+    private:
+    GeomParameters gp_;
+    PsipR  psipR_;
+    PsipZ  psipZ_;
+    Ipol   ipol_;
+    InvB   invB_;
+    const dg::GridX2d gXY_;
+    thrust::host_vector<double> g_;
+   
+};
+
 }//namespace solovev
+
 namespace dg{
 
 /**

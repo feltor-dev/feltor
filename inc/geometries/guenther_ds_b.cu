@@ -249,6 +249,10 @@ int main( )
 //     dg::blas1::axpby(0.5,dsTdsbd,0.5,dsTdsfd,dsTdsfbd); 
     ds.symv(function,dsTdsfb);
     dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
+        //ds( function, temp);
+        //dg::blas1::pointwiseDot( temp, inverseB, temp);
+        //ds(temp, dsTdsfb);
+        //dg::blas1::pointwiseDivide( dsTdsfb, inverseB, dsTdsfb);
 //     ds.centeredT( derivative2, dsTds2); //dsT(ds(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
 //     ds.centeredT( ones, divbT);
@@ -336,8 +340,10 @@ int main( )
     
     std::cout << "--------------------testing dsTdsfb " << std::endl;
     std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
+    double remainder =dg::blas1::dot( w3d,dsTdsfb);
     double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
     std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+    std::cout << "   Integral          "<<remainder<<"\n";
     dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
     errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
     std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";

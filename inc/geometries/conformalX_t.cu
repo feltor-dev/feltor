@@ -113,6 +113,7 @@ try{
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     X=temp0;
     err = nc_put_var_double( ncid, defID, X.data());
     X = g2d.vol();
@@ -186,9 +187,9 @@ try{
     ///////////////////////TEST 3d grid//////////////////////////////////////
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
-    DFA fieldaligned( solovev::OrthogonalField( gp, g2d.g(), g2d), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+    DFA fieldaligned( solovev::OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
-    dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, solovev::OrthogonalField(gp, g2d.g(), g2d), dg::normed, dg::centered, false);
+    dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, solovev::OrthogonalXField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
     dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
     dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
     dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
@@ -199,15 +200,17 @@ try{
     ds.centered( lnB, gradB);
     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
     //test if topological shift was correct!!
-    dg::blas1::pointwiseDot(cutter, gradLnB, gradLnB);
-    std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))<<" (doesn't fullfill boundary conditions so it was cut before separatrix)\n";
+    //dg::blas1::pointwiseDot(cutter, gradLnB, gradLnB);
+    double norm = sqrt( dg::blas2::dot( gradB, vol3d, gradB) );
+    std::cout << "rel Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))/norm<<" (doesn't fullfill boundary conditions so it was cut before separatrix)\n";
 
     const dg::DVec function = dg::pullback(solovev::FuncNeu(gp), g3d);
     dg::DVec temp(function);
     const dg::DVec derivative = dg::pullback(solovev::DeriNeu(gp), g3d);
     ds( function, temp);
     dg::blas1::axpby( 1., temp, -1., derivative, temp);
-    std::cout << "Error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))<<"\n";
+    norm = sqrt( dg::blas2::dot( derivative, vol3d, derivative) );
+    std::cout << "rel Error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))/norm<<"\n";
     X = gradB;
     err = nc_put_var_double( ncid, divBID, X.data());
     err = nc_close( ncid);

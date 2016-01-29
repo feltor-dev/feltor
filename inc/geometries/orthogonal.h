@@ -226,6 +226,8 @@ struct Fpsi
             //yz[i] = -psipR*f/sqrt(psip2);
             yr[i] = psipZ*f;
             yz[i] = -psipR*f;
+            //yr[i] = psipZ*f/r[i]/psip2;
+            //yz[i] = -psipR*f/r[i]/psip2;
         }
 
     }
@@ -262,6 +264,7 @@ struct FieldFinv
             //yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^2
             //yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
             yp[3][i] = yp[2][0]/psip2 *y[3][i]*( -(psipRR+psipZZ) );//g
+            //yp[3][i] = yp[2][0]/psip2 *y[3][i]*(2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ ) + psipR/y[0][i] -(psipRR+psipZZ) );//g
             yp[4][i] = yp[2][0]/psip2 *( -psipRR*y[4][i] - psipRZ*y[5][i]);
             yp[5][i] = yp[2][0]/psip2 *( -psipRZ*y[4][i] - psipZZ*y[5][i]);
         }
@@ -489,8 +492,8 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
                     tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
                     //tempvol[idx] = r_[idx]/(f_[idx]*f_[idx] + tempxx[idx]);
                     //tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] - tempxy[idx]*tempxy[idx] );
-                    //tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] );
-                    tempvol[idx] = r_[idx]/fabs(f_[idx]*g_[idx])/(psipR*psipR + psipZ*psipZ);
+                    tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] );
+                    //tempvol[idx] = r_[idx]/fabs(f_[idx]*g_[idx])/(psipR*psipR + psipZ*psipZ);
                 }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
@@ -594,6 +597,7 @@ struct OrthogonalField
         double g = dg::interpolate( xs,  ys, g_, gXY_);
         yp[0] = 0;
         yp[1] = y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
+        //yp[1] = g/ipol;
         yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
         yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
         yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R

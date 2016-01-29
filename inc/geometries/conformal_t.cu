@@ -10,8 +10,8 @@
 #include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
-#include "guenther.h"
-//#include "solovev.h"
+//#include "guenther.h"
+#include "solovev.h"
 //#include "conformal.h"
 #include "orthogonal.h"
 #include "dg/ds.h"
@@ -101,6 +101,7 @@ int main( int argc, char* argv[])
 
     //dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     X=temp0;
     err = nc_put_var_double( ncid, defID, X.data());
 
