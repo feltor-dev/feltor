@@ -5,7 +5,7 @@
 // #include "geometry_circ.h"
 // #include "solovev/geometry.h"
 // #include "geometry_g.h"
-#include "solovev/init.h"
+#include "geometries/init.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -26,15 +26,14 @@ namespace eule
  * @tparam container The Vector class 
  * @tparam Preconditioner The Preconditioner class
  */
-template< class DS, class Matrix, class container, class Preconditioner>
+template< class Geometry, class DS, class Matrix, class container, class Preconditioner>
 struct Rolkar
 {
-    template<class Grid3d>
-    Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp):
+    Rolkar( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
-        dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), g, dg::normed, dg::centered ),
+        dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), dg::normed, dg::centered ),
         elliptic( g, dg::normed, dg::forward)
     {
         container bfield = dg::evaluate( solovev::FieldR( gp),g);
@@ -64,7 +63,7 @@ struct Rolkar
     const solovev::GeomParameters gp;
     const container dampprof_;
     DS dsNU_;
-    dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
+    dg::GeneralEllipticSym<Geometry, Matrix, container, Preconditioner> elliptic;
 
 };
 
@@ -123,9 +122,9 @@ Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, sol
 //     pupil(dg::evaluate( solovev::Pupil( gp), g)),
 //     pupil(dg::evaluate( solovev::GaussianProfDamping(gp ), g)),    //be aware of actual function!
     one( dg::evaluate( dg::one, g)),    
-    w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
-    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR), solovev::Field(gp), g, dg::normed, dg::centered ),
-    dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), g, dg::normed, dg::centered ),
+    w3d( dg::create::volume(g)), v3d( dg::create::inv_volume(g)),      
+    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR), solovev::Field(gp), dg::normed, dg::centered ),
+    dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), dg::normed, dg::centered ),
 //     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,  dg::centered),
 //         elliptic( g, dg::normed, dg::forward),
     p(p),
