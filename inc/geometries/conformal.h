@@ -38,6 +38,7 @@ struct Fpsi
         R_init = gp.R_0 + 0.5*gp.a; Z_init = 0;
         Psip psip(gp);
         psi_0 =  psip(R_init, Z_init);
+        //own implementation so as not to need a function object
         //solovev::Psip psip( gp);
         //double min = gp.R_0, max = gp.R_0+2*gp.a, middle;
         //double value_middle, value_max=psip(gp.R_0+gp.a, 0)-psi_0, value_min=psip(gp.R_0, 0) - psi_0;
