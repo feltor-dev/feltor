@@ -382,7 +382,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(lambda,lhs,lambda);
         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
         dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+        dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     t.toc();
 #ifdef MPI_VERSION
