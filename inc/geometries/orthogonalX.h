@@ -345,7 +345,7 @@ struct FpsiX
         }
         std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
         R_init = begin[0] = end_old[0], Z_init = begin[1] = end_old[1];
-        FieldRZY fieldRZY(gp_);
+        solovev::orthogonal::FieldRZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
         //fieldRZY.set_f(1./f_psi);
         eps = 1e10, eps_old=2e10, steps=1;
@@ -398,8 +398,8 @@ struct FpsiX
     }
     private:
     const GeomParameters gp_;
-    const FieldRZYT fieldRZYT_;
-    const FieldRZYZ fieldRZYZ_;
+    const solovev::orthogonal::FieldRZYT fieldRZYT_;
+    const solovev::orthogonal::FieldRZYZ fieldRZYZ_;
     const FieldRZtau fieldRZtau_;
     XPointer xpointer_;
     HessianRZtau hessianRZtau_;
@@ -431,7 +431,7 @@ struct XFieldFinv
             yp[1][i] = psipZ/psip2;
             //yp[2][i] = y[2][i]/psip2*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );
             //yp[2][i] = y[2][i]/psip2*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
-            yp[2][i] = y[2][i]/psip2*( -(psipRR+psipZZ) );//g/gradpsi^1/2
+            yp[2][i] = y[2][i]/psip2*( -(psipRR+psipZZ) );//g
             yp[3][i] = 1./psip2 *( -psipRR*y[3][i] - psipRZ*y[4][i]);
             yp[4][i] = 1./psip2 *( -psipRZ*y[3][i] - psipZZ*y[4][i]);
         }
@@ -487,8 +487,8 @@ struct XFieldFinv
 
     private:
     FpsiX fpsi_;
-    FieldRZYT fieldRZYT_;
-    FieldRZYZ fieldRZYZ_;
+    solovev::orthogonal::FieldRZYT fieldRZYT_;
+    solovev::orthogonal::FieldRZYZ fieldRZYZ_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
     double xAtOne_;

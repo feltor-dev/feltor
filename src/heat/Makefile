@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: heat
 
 heat: heat.cu heat.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK  -g 
 	
 heat_hpc: heat_hpc.cu heat.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK

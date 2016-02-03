@@ -573,11 +573,11 @@ struct FieldRZYRYZY
 
         yp[0] =  psipZ/f_/psip2;
         yp[1] =  -psipR/f_/psip2;
-        yp[2] =  ( (psipZ/y[0] - psipRZ )*y[2] 
-                   +( psipRR - psipR/y[0])*y[3] )/f_/psip2 
-            + f_prime_/f_* psipR + 2.*0.0*(psipR*psipRR + psipZ*psipRZ)/psip2 -1./y[0];
+        yp[2] =  (( - psipRZ )*y[2] 
+                   +( psipRR )*y[3] )/f_/psip2 
+            + f_prime_/f_* psipR + 2.*1.0*(psipR*psipRR + psipZ*psipRZ)/psip2 ;
         yp[3] =  (psipRZ*y[3] - psipZZ*y[2])/f_/psip2 
-            + f_prime_/f_* psipZ + 2.*0.0*(psipR*psipRZ + psipZ*psipZZ)/psip2;
+            + f_prime_/f_* psipZ + 2.*1.0*(psipR*psipRZ + psipZ*psipZZ)/psip2;
         //yp[0] =  psipZ*f_;//psip2;
         //yp[1] =  -psipR*f_;//psip2;
         //yp[2] =  ( (psipZ/y[0] - psipRZ )*y[2] 

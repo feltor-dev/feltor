@@ -50,7 +50,8 @@ struct GeomParameters
         psipmax= v[21];
         psipmaxcut = v[22];
         psipmaxlim = v[23];
-        qampl = v[24];
+        if( v.size() < 25) qampl = 1.;
+        else               qampl = v[24];
     }
     /**
      * @brief Display parameters

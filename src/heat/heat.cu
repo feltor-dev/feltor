@@ -152,7 +152,7 @@ int main( int argc, char* argv[])
 //     //field aligning
     std::cout << "T aligning" << std::endl;  
 //     dg::CONSTANT gaussianZ( 1.);
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    dg::GaussianZ gaussianZ( 0, p.sigma_z*M_PI, 1);
     y1[0] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
 
     //no field aligning

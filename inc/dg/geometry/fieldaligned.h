@@ -94,7 +94,7 @@ void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, doubl
             }
             //if new integrated point outside domain
             //if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-            if( error > 1e6)
+            if( end[0]*end[0] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 )
             {
                 error = eps_abs/10;
                 std::cerr << "---------Point outside box -> stop integration" << std::endl; 
@@ -364,6 +364,7 @@ struct FieldAligned
      * @param g Functor to evaluate in z
      * @param p0 The number of the plane to start
      * @param rounds The number of rounds to follow a fieldline
+     * @note g is evaluated such that p0 corresponds to z=0, p0+1 corresponds to z=hz, p0-1 to z=-hz, ...
      *
      * @return Returns an instance of container
      */

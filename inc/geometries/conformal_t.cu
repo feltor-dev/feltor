@@ -19,6 +19,24 @@
 
 #include "file/nc_utilities.h"
 
+thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d<double>& g)
+{
+    thrust::host_vector<double> out(g.size());
+    for( unsigned i=0; i<g.Ny()-1; i++)
+    for( unsigned k=0; k<g.n(); k++)
+    for( unsigned j=0; j<g.Nx(); j++)
+    for( unsigned l=0; l<g.n(); l++)
+        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+            in[((i*g.n() + k)*g.Nx() + j)*g.n()+l];
+    for( unsigned i=g.Ny()-1; i<g.Ny(); i++)
+    for( unsigned k=0; k<g.n(); k++)
+    for( unsigned j=0; j<g.Nx(); j++)
+    for( unsigned l=0; l<g.n(); l++)
+        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+            in[((0*g.n() + k)*g.Nx() + j)*g.n()+l];
+    return out;
+}
+
 double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
@@ -31,9 +49,6 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
-    std::cout << "Type psi_0 and psi_1\n";
-    double psi_0, psi_1;
-    std::cin >> psi_0>> psi_1;
     std::vector<double> v, v2;
     try{ 
         if( argc==1)
@@ -53,24 +68,28 @@ int main( int argc, char* argv[])
         return -1;}
     //write parameters from file into variables
     solovev::GeomParameters gp(v);
+    solovev::Psip psip( gp); 
+    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    std::cout << "Type psi_0 and psi_1\n";
+    double psi_0, psi_1;
+    std::cin >> psi_0>> psi_1;
     gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
-    solovev::Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
     //solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
     //solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
     solovev::OrthogonalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
     solovev::OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
     file::NC_Error_Handle err;
     err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2];
-    err = file::define_dimensions(  ncid, dim3d, g2d);
+    err = file::define_dimensions(  ncid, dim3d, g2d_periodic);
     int coordsID[2], onesID, defID, divBID;
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
@@ -81,7 +100,7 @@ int main( int argc, char* argv[])
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
     //g.display();
-    err = nc_put_var_double( ncid, onesID, psi_p.data());
+    err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
@@ -95,15 +114,15 @@ int main( int argc, char* argv[])
     dg::DVec temp0( g2d.size()), temp1(temp0);
     dg::DVec w3d = dg::create::weights( g2d);
 
-    err = nc_put_var_double( ncid, coordsID[0], X.data());
-    err = nc_put_var_double( ncid, coordsID[1], Y.data());
+    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     //dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     X=temp0;
-    err = nc_put_var_double( ncid, defID, X.data());
+    err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
 
     std::cout << "Construction successful!\n";
 
@@ -138,7 +157,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., ones, -1., g2d.vol(), temp0);
     std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()))<<"\n";
 
-    solovev::FieldY fieldY(gp);
+    solovev::conformal::FieldY fieldY(gp);
     //solovev::ConformalField fieldY(gp);
     dg::DVec fby = dg::pullback( fieldY, g2d);
     dg::blas1::pointwiseDot( fby, f_, fby);
@@ -202,8 +221,8 @@ int main( int argc, char* argv[])
     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
     X = divB;
-    err = nc_put_var_double( ncid, divBID, X.data());
-    std::cout << "Error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))/norm<<"\n";
+    err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
+    std::cout << "rel. error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))/norm<<"\n";
     err = nc_close( ncid);
 
 

@@ -180,7 +180,7 @@ struct Fpsi
 
         begin[0] = R_0, begin[1] = Z_0;
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-        FieldRZY fieldRZY(gp_);
+        solovev::orthogonal::FieldRZY fieldRZY(gp_);
         //fieldRZY.set_f(1./f_psi);
         fieldRZY.set_f(f_psi);
         unsigned steps = 1;
@@ -233,7 +233,7 @@ struct Fpsi
     }
     private:
     const GeomParameters gp_;
-    const FieldRZYT fieldRZYT_;
+    const solovev::orthogonal::FieldRZYT fieldRZYT_;
     const FieldRZtau fieldRZtau_;
     double R_init, Z_init;
 
@@ -284,7 +284,7 @@ struct FieldFinv
     }
     private:
     Fpsi fpsi_;
-    FieldRZYT fieldRZYT_;
+    solovev::orthogonal::FieldRZYT fieldRZYT_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
     double R_0_;

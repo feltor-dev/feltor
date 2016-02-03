@@ -141,7 +141,7 @@ int main( int argc, char* argv[])
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
     y1[0] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
