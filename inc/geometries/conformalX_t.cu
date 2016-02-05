@@ -78,16 +78,16 @@ try{
     std::cout << "Type psi_0 \n";
     double psi_0;
     std::cin >> psi_0;
-    std::cout << "Type fx \n";
-    double fx_0;
-    std::cin >> fx_0;
+    std::cout << "Type fx and fy \n";
+    double fx_0, fy_0;
+    std::cin >> fx_0>> fy_0;
     gp.display( std::cout);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    solovev::OrthogonalXGrid3d<dg::DVec> g3d(gp, psi_0, fx_0, 0., n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    solovev::OrthogonalXGrid3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     solovev::OrthogonalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
-    dg::GridX2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.fx(), g2d.fy(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
+    //dg::GridX2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.fx(), g2d.fy(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     dg::Grid1d<double> g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
@@ -96,7 +96,8 @@ try{
     file::NC_Error_Handle err;
     err = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2], dim1d[1];
-    err = file::define_dimensions(  ncid, dim3d, g2d_periodic.grid());
+    //err = file::define_dimensions(  ncid, dim3d, g2d_periodic.grid());
+    err = file::define_dimensions(  ncid, dim3d, g2d.grid());
     err = file::define_dimension(  ncid, "i", dim1d, g1d);
     int coordsID[2], onesID, defID, volID, divBID;
     int coord1D[5];
@@ -115,7 +116,8 @@ try{
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
     g2d.display();
-    err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
+    //err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
+    err = nc_put_var_double( ncid, onesID, g2d.g().data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
@@ -129,21 +131,26 @@ try{
     dg::DVec temp0( g2d.size()), temp1(temp0);
     dg::DVec w3d = dg::create::weights( g2d);
 
-    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
-    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
+    //err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
+    //err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
+    err = nc_put_var_double( ncid, coordsID[0], X.data());
+    err = nc_put_var_double( ncid, coordsID[1], Y.data());
     //err = nc_put_var_double( ncid, coord1D[0], g3d.rx0().data());
     //err = nc_put_var_double( ncid, coord1D[1], g3d.zx0().data());
     //err = nc_put_var_double( ncid, coord1D[2], g3d.rx1().data());
     //err = nc_put_var_double( ncid, coord1D[3], g3d.zx1().data());
-    err = nc_put_var_double( ncid, coord1D[4], periodify(g3d.f_x(), g2d_periodic).data());
+    //err = nc_put_var_double( ncid, coord1D[4], periodify(g3d.f_x(), g2d_periodic).data());
+    err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     X=temp0;
-    err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
+    //err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, defID, X.data());
     X = g2d.vol();
-    err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
+    //err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, volID, X.data());
 
     std::cout << "Construction successful!\n";
 
@@ -210,7 +217,7 @@ try{
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n";
 
-    ///////////////////////TEST 3d grid//////////////////////////////////////
+    /////////////////////////TEST 3d grid//////////////////////////////////////
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
     DFA fieldaligned( solovev::OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
@@ -238,7 +245,8 @@ try{
     norm = sqrt( dg::blas2::dot( derivative, vol3d, derivative) );
     std::cout << "rel. error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))/norm<<"\n";
     X = gradB;
-    err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
+    //err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, divBID, X.data());
     err = nc_close( ncid);
 
 

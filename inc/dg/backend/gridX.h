@@ -45,7 +45,7 @@ struct GridX1d
         n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
         assert( (f >= 0) && (f < 0.5) );
-        assert( floor( f*(double)N ) == f*(double)N); 
+        assert( fabs(outer_N() - f*(double)N) < 1e-15); 
         assert( x1 > x0 );
         assert( N > 0  );
         assert( n != 0 );
@@ -94,13 +94,13 @@ struct GridX1d
      *
      * @return 
      */
-    unsigned outer_N() const {return (unsigned)(f_*(double)Nx_);}
+    unsigned outer_N() const {return (unsigned)(floor(f_*(double)Nx_+0.5));}
     /**
      * @brief number of cells in the inner region
      *
      * @return 
      */
-    unsigned inner_N() const {return (unsigned)((1.-2.*f_)*(double)Nx_);}
+    unsigned inner_N() const {return N()-2*outer_N();}
     /**
      * @brief number of polynomial coefficients
      *
@@ -124,6 +124,30 @@ struct GridX1d
      *
      * @return 
      */
+    /**
+     * @brief Display 
+     *
+     * @param os output stream
+     */
+    void display( std::ostream& os = std::cout) const
+    {
+        os << "Grid parameters are: \n"
+            <<"    n  = "<<n_<<"\n"
+            <<"    N  = "<<Nx_<<"\n"
+            <<"    inner N = "<<inner_N()<<"\n"
+            <<"    outer N = "<<outer_N()<<"\n"
+            <<"    h  = "<<hx_<<"\n"
+            <<"    x0 = "<<x0_<<"\n"
+            <<"    x1 = "<<x1_<<"\n"
+            <<"    lx = "<<lx_<<"\n"
+            <<"Boundary conditions in x are: \n";
+        switch(bcx_)
+        {
+            case(dg::PER): os << "    PERIODIC \n"; break;
+            case(dg::DIR): os << "    DIRICHLET\n"; break;
+            default: os << "    Not specified!!\n"; 
+        }
+    }
     const DLT<double>& dlt() const {return dlt_;}
     Grid1d<double> grid() const{return Grid1d<double>( x0_, x1_, n_, Nx_, bcx_);}
 
@@ -214,8 +238,8 @@ struct GridX2d
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
         assert( (fx_ >= 0.) && (fx_ < 1.) );
-        assert( floor( fx_*(double)Nx ) == fx_*(double)Nx); 
-        assert( floor( fy_*(double)Ny ) == fy_*(double)Ny); 
+        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
+        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
         assert( Nx_ > 0  && Ny > 0 );
@@ -306,7 +330,7 @@ struct GridX2d
      *
      * @return 
      */
-    unsigned outer_Nx() const {return (unsigned)(fx_*(double)Nx_);}
+    unsigned outer_Nx() const {return (unsigned)floor(fx_*(double)Nx_+0.5);}
     /**
      * @brief number of cells in y
      *
@@ -324,7 +348,7 @@ struct GridX2d
      *
      * @return 
      */
-    unsigned outer_Ny() const {return (unsigned)(fy_*(double)Ny_);}
+    unsigned outer_Ny() const {return (unsigned)floor(fy_*(double)Ny_+0.5);}
     /**
      * @brief boundary conditions in x
      *
@@ -509,8 +533,8 @@ struct GridX3d
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
         assert( (fx_ >= 0.) && (fx_ < 1.) );
-        assert( floor( fx_*(double)Nx ) == fx_*(double)Nx); 
-        assert( floor( fy_*(double)Ny ) == fy_*(double)Ny); 
+        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
+        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
         assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
@@ -628,7 +652,7 @@ struct GridX3d
      *
      * @return 
      */
-    unsigned outer_Nx() const {return (unsigned)(fx_*(double)Nx_);}
+    unsigned outer_Nx() const {return (unsigned)floor(fx_*(double)Nx_+0.5);}
     /**
      * @brief number of cells in y
      *
@@ -646,7 +670,7 @@ struct GridX3d
      *
      * @return 
      */
-    unsigned outer_Ny() const {return (unsigned)(fy_*(double)Ny_);}
+    unsigned outer_Ny() const {return (unsigned)floor(fy_*(double)Ny_+0.5);}
     /**
      * @brief number of points in z
      *

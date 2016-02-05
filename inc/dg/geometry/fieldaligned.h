@@ -94,7 +94,7 @@ void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, doubl
             }
             //if new integrated point outside domain
             //if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-            if( end[0]*end[0] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 )
+            if( (end[4] < 1e-5) || end[4]*end[4] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[5]*end[5] > 1e10) )
             {
                 error = eps_abs/10;
                 std::cerr << "---------Point outside box -> stop integration" << std::endl; 
@@ -221,7 +221,7 @@ void boxintegrator( Field& field, const Grid& grid,
     grid.shift_topologic( coords0[0], coords0[1], coords1[0], coords1[1]);
     if ( !grid.contains( coords1[0], coords1[1]))   //Punkt liegt immer noch außerhalb 
     {
-        std::cerr << "point is somewhere else!\n";
+        std::cerr << "point "<<coords1[0]<<" "<<coords1[1]<<" "<<coords1[3]<<" "<<coords1[4]<<" is somewhere else!\n";
         if( globalbcz == dg::DIR)
         {
             BoxIntegrator<Field, Grid> boxy( field, grid, eps);

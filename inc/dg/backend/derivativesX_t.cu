@@ -51,10 +51,11 @@ typedef dg::Composite<dg::EllSparseBlockMatDevice> Matrix;
 int main()
 {
     unsigned n, Nx, Ny, Nz;
-    std::cout << "Type in n, Nx and Ny and Nz!\n";
+    std::cout << "Type in n, Nx (1./5.) and Ny (1./4.) and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::bc bcx=dg::DIR_NEU, bcy=dg::DIR, bcz = dg::PER;
     dg::GridX2d g2d( -2.*M_PI, M_PI/2., -M_PI, 2*M_PI+M_PI, 1./5., 1./4., n, Nx, Ny, bcx, bcy);
+    g2d.display(std::cout);
     //dg::GridX2d g2d( -2.*M_PI, M_PI/2., 0., 2*M_PI, 1./5., 0., n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
 

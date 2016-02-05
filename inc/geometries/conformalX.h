@@ -481,6 +481,7 @@ struct ConformalXGrid3d : public dg::GridX3d
         dg::GridX3d( 0,1, 0., 2*M_PI, 0., 2.*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER)
     { 
         assert( psi_0 < 0 );
+        assert( gp.c[10] != 0);
         //construct x-grid in two parts
         solovev::detail::FpsiX fpsi(gp);
         std::cout << "FIND X FOR PSI_0\n";

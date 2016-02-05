@@ -80,30 +80,23 @@ struct FpsiX
         xpointer_(gp), hessianRZtau_(gp), minimalCurve_(gp)
 
     {
-        //find start point for first psi surface
-        //
-        xpointer_.set_quadrant( 1);
-        double x_min = -1, x_max = 1;
-        dg::bisection1d( xpointer_, x_min, x_max, 1e-6);
-        xpointer_.point( R_init, Z_init, (x_min+x_max)/2.);
-        std::cout << "Found initial point! "<<R_init<<" "<<Z_init<<"\n";
         //////////////////////////////////////////////
         Psip psip(gp_);
         PsipR psipR(gp_);
         PsipZ psipZ(gp_);
-        double R_init = gp.R_0-1.1*gp.triangularity*gp.a;
-        double Z_init = -1.1*gp.elongation*gp.a;
+        double R_ini = gp.R_0-1.1*gp.triangularity*gp.a;
+        double Z_ini = -1.1*gp.elongation*gp.a;
         thrust::host_vector<double> X(2,0), XN(X);
-        X[0] = R_init, X[1] = Z_init;
+        X[0] = R_ini, X[1] = Z_ini;
         for( unsigned i=0; i<3; i++)
         {
             hessianRZtau_.newton_iteration( X, XN);
             XN.swap(X);
         }
-        R_init = X[0], Z_init = X[1];
-        std::cout << "X-point set at "<<R_init<<" "<<Z_init<<"\n";
-        //std::cout << "psi at X-point is "<<psip(R_init, Z_init)<<"\n";
-        //std::cout << "gradient at X-point is "<<psipR(R_init, Z_init)<<" "<<psipZ(R_init, Z_init)<<"\n";
+        R_ini = X[0], Z_ini = X[1];
+        std::cout << "X-point set at "<<R_ini<<" "<<Z_ini<<"\n";
+        //std::cout << "psi at X-point is "<<psip(R_ini, Z_ini)<<"\n";
+        //std::cout << "gradient at X-point is "<<psipR(R_ini, Z_ini)<<" "<<psipZ(R_ini, Z_ini)<<"\n";
         //find four points; one in each quadrant
         hessianRZtau_.set_norm( false);
         minimalCurve_.set_norm( false);
@@ -113,8 +106,8 @@ struct FpsiX
             unsigned N = 50;
             //thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
             thrust::host_vector<double> begin2d( 4, 0), end2d( begin2d), end2d_old(begin2d); 
-            begin2d[0] = end2d[0] = end2d_old[0] = R_init;
-            begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
+            begin2d[0] = end2d[0] = end2d_old[0] = R_ini;
+            begin2d[1] = end2d[1] = end2d_old[1] = Z_ini;
             hessianRZtau_(begin2d, end2d); //find eigenvector
             begin2d[2] = end2d[0], begin2d[3] = end2d[1];
             double eps = 1e10, eps_old = 2e10;
@@ -312,7 +305,7 @@ struct FpsiX
     //compute the vector of r and z - values that form one psi surface
     //calls construct_f to find f and the starting point and then just integrates
     //the field-line and metric from 0 to 2pi in y
-    void compute_rzy( double psi, unsigned n, unsigned N, 
+    void compute_rzy( double psi, unsigned n, unsigned N, double fy,
             thrust::host_vector<double>& r, 
             thrust::host_vector<double>& z, 
             thrust::host_vector<double>& yr, 
@@ -320,52 +313,87 @@ struct FpsiX
             double* R_0, double* Z_0, double& f ) 
     {
         assert( psi < 0);
-        dg::Grid1d<double> g1d( 0, 2*M_PI, n, N, dg::PER);
-        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, g1d);
-        thrust::host_vector<double> r_old(n*N, 0), r_diff( r_old);
-        thrust::host_vector<double> z_old(n*N, 0), z_diff( z_old);
-        const thrust::host_vector<double> w1d = dg::create::weights( g1d);
-        r.resize( n*N), z.resize(n*N), yr.resize(n*N), yz.resize(n*N);
-
-        //now compute f and starting values 
+        //find start points for first psi surface
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);
-        double f_psi = construct_f( psi, R_0, Z_0);
-
-        begin[0] = R_init, begin[1] = Z_init; end = begin;
-        unsigned steps = 1;
-        double eps = 1e10, eps_old=2e10;
-        while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
+        double R_init[2], Z_init[2];
+        for( unsigned i=0; i<2; i++)
         {
-            eps_old = eps; end_old = end;
-            dg::stepperRK17( fieldRZtau_, begin, end, Psip(gp_)(R_init, Z_init), psi, steps);
-            eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
-            //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-            if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
-            steps*=2;
+            xpointer_.set_quadrant( 2*i+1);
+            double x_min = -1, x_max = 1;
+            dg::bisection1d( xpointer_, x_min, x_max, 1e-6);
+            xpointer_.point( R_init[i], Z_init[i], (x_min+x_max)/2.);
+            std::cout << "Found initial point! "<<R_init[i]<<" "<<Z_init[i]<<"\n";
+
+            begin[0] = R_init[i], begin[1] = Z_init[i]; end = begin;
+            unsigned steps = 1;
+            double eps = 1e10, eps_old=2e10;
+            while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
+            {
+                eps_old = eps; end_old = end;
+                dg::stepperRK17( fieldRZtau_, begin, end, Psip(gp_)(R_init[i], Z_init[i]), psi, steps);
+                eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
+                //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+                if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
+                steps*=2;
+            }
+            std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
+            R_init[i] = begin[0] = end_old[0], Z_init[i] = begin[1] = end_old[1];
         }
-        std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
-        R_init = begin[0] = end_old[0], Z_init = begin[1] = end_old[1];
+        ///////////////////////////now find y coordinate line//////////////
+        dg::GridX1d g1d( -fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fy, n, N, dg::DIR);
+        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, g1d);
+        thrust::host_vector<double> r_old(g1d.size(), 0), r_diff( r_old);
+        thrust::host_vector<double> z_old(g1d.size(), 0), z_diff( z_old);
+        const thrust::host_vector<double> w1d = dg::create::weights( g1d);
+        r.resize( g1d.size()), z.resize(r.size()), yr.resize(r.size()), yz.resize(r.size());
         solovev::orthogonal::FieldRZY fieldRZY(gp_);
+        //now compute f and starting values 
+        double f_psi = construct_f( psi, R_0, Z_0);
         fieldRZY.set_f(f_psi);
         //fieldRZY.set_f(1./f_psi);
-        eps = 1e10, eps_old=2e10, steps=1;
+        unsigned steps = 1; double eps = 1e10, eps_old=2e10;
         while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
         {
-            //begin is left const
             eps_old = eps, r_old = r, z_old = z;
-            dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
-            r[0] = end[0], z[0] = end[1];
+
+            ////////////////////////bottom left region/////////////////////
+            begin[0] = R_init[1], begin[1] = Z_init[1];
+            dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[n*g1d.outer_N()-1], steps);
+            //r[n*g1d.outer_N()-1] = end[0], z[n*g1d.outer_N()-1] = end[1];
+            r[n*g1d.outer_N()-1] = end[0], z[n*g1d.outer_N()-1] = end[1];
+            for( int i=n*g1d.outer_N()-2; i>=0; i--)
+            {
+                temp = end;
+                dg::stepperRK17( fieldRZY, temp, end, y_vec[i+1], y_vec[i], steps);
+                //r[n*g1d.outer_N()-1-i] = end[0], z[n*g1d.outer_N()-1-i] = end[1];
+                r[i] = end[0], z[i] = end[1];
+            }
+            ////////////////middle region///////////////////////////
+            begin[0] = R_init[0], begin[1] = Z_init[0];
+            dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[n*g1d.outer_N()], steps);
+            r[n*g1d.outer_N()] = end[0], z[n*g1d.outer_N()] = end[1];
             //std::cout <<end[0]<<" "<< end[1] <<"\n";
-            for( unsigned i=1; i<n*N; i++)
+            for( unsigned i=n*g1d.outer_N()+1; i<n*(g1d.outer_N()+g1d.inner_N()); i++)
             {
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1];
             }
             temp = end;
-            dg::stepperRK17( fieldRZY, temp, end, y_vec[n*N-1], 2.*M_PI, steps);
-            eps = sqrt( (end[0]-R_init)*(end[0]-R_init) + (end[1]-Z_init)*(end[1]-Z_init));
+            dg::stepperRK17( fieldRZY, temp, end, y_vec[n*(g1d.outer_N()+g1d.inner_N())-1], 2.*M_PI, steps);
+            eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
             std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
+            ////////////////////bottom right region
+
+            begin[0] = R_init[1], begin[1] = Z_init[1];
+            dg::stepperRK17( fieldRZY, begin, end, 2.*M_PI, y_vec[n*(g1d.outer_N()+g1d.inner_N())], steps);
+            r[n*(g1d.outer_N()+g1d.inner_N())] = end[0], z[n*(g1d.outer_N()+g1d.inner_N())] = end[1];
+            for( unsigned i=n*(g1d.outer_N()+g1d.inner_N())+1; i<n*g1d.N(); i++)
+            {
+                temp = end;
+                dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
+                r[i] = end[0], z[i] = end[1];
+            }
             //compute error in R,Z only
             dg::blas1::axpby( 1., r, -1., r_old, r_diff);
             dg::blas1::axpby( 1., z, -1., z_old, z_diff);
@@ -404,7 +432,7 @@ struct FpsiX
     XPointer xpointer_;
     HessianRZtau hessianRZtau_;
     MinimalCurve minimalCurve_;
-    double R_init, Z_init, R_i[4], Z_i[4], vR_i[4], vZ_i[4];
+    double R_i[4], Z_i[4], vR_i[4], vZ_i[4];
 
 };
 //This struct computes -2pi/f with a fixed number of steps for all psi
@@ -528,7 +556,7 @@ struct OrthogonalXGrid3d : public dg::GridX3d
      * @param bcy The boundary condition in y (z is periodic)
      */
     OrthogonalXGrid3d( GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
-        dg::GridX3d( 0,1, 0., 2*M_PI, 0., 2.*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER)
+        dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER)
     { 
         assert( psi_0 < 0 );
         assert( gp.c[10] != 0);
@@ -636,7 +664,7 @@ struct OrthogonalXGrid3d : public dg::GridX3d
         std::vector<thrust::host_vector<double> > begin(5);
         double R0[2], Z0[2], f0;
         detail::FpsiX fpsi(gp);
-        fpsi.compute_rzy( psi_0, this->n(), this->Ny(), rvec, zvec, yrvec, yzvec, R0, Z0, f0);
+        fpsi.compute_rzy( psi_0, this->n(), this->Ny(), this->fy(), rvec, zvec, yrvec, yzvec, R0, Z0, f0);
         thrust::host_vector<double> gvec(Ny, f0);
         //thrust::host_vector<double> gvec(Ny, 1./f0);
         begin[0] = rvec, begin[1] = zvec;
@@ -758,7 +786,7 @@ struct OrthogonalXGrid2d : public dg::GridX2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
     OrthogonalXGrid2d( const GeomParameters gp, double psi_0, double fx, double fy, double y, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
-        dg::GridX2d( 0, 1, 0.,2*M_PI, n, Nx, Ny, bcx, bcy)
+        dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
     {
         solovev::detail::FpsiX fpsi(gp);
         const double x0 = fpsi.find_x(psi_0);
@@ -817,7 +845,20 @@ struct OrthogonalXField
         gp_(gp),
         psipR_(gp), psipZ_(gp),
         ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(g, gXY)) 
-    { }
+    { 
+        HessianRZtau hessianRZtau(gp);
+        R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+        Z_X = -1.1*gp.elongation*gp.a;
+        thrust::host_vector<double> X(2,0), XN(X);
+        X[0] = R_X, X[1] = Z_X;
+        for( unsigned i=0; i<3; i++)
+        {
+            hessianRZtau.newton_iteration( X, XN);
+            XN.swap(X);
+        }
+        R_X = X[0], Z_X = X[1];
+    
+    }
 
     /**
      * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
@@ -829,11 +870,23 @@ struct OrthogonalXField
         //x,y,s,R,Z
         double psipR = psipR_(y[3],y[4]), psipZ = psipZ_(y[3],y[4]), ipol = ipol_( y[3],y[4]);
         double xs = y[0],ys=y[1];
-        gXY_.shift_topologic( y[0], M_PI, xs,ys);
-        if( !gXY_.contains(xs,ys)) ys = 1e-5*M_PI;
+        if( y[4] > Z_X) //oberhalb vom X-Punkt
+            gXY_.shift_topologic( y[0], M_PI, xs,ys);
+        else 
+        {
+            if( y[1] > M_PI) //Startpunkt vermutlich in der rechten Hälfte
+                gXY_.shift_topologic( y[0], gXY_.y1()-1e-10, xs,ys);
+            else
+                gXY_.shift_topologic( y[0], gXY_.y0()+1e-10, xs,ys);
+        }
+        if( !gXY_.contains(xs,ys))
+        {
+            if(y[0] > R_X) ys = gXY_.y1()-1e-10;
+            else           ys = gXY_.y0()+1e-10;
+        }
         double g = dg::interpolate( xs,  ys, g_, gXY_);
-        yp[0] = 0;
-        yp[1] = y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
+        yp[0] =  0;
+        yp[1] =  y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
         yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
         yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
         yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
@@ -858,6 +911,7 @@ struct OrthogonalXField
     InvB   invB_;
     const dg::GridX2d gXY_;
     thrust::host_vector<double> g_;
+    double R_X, Z_X;
    
 };
 
