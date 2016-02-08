@@ -12,7 +12,7 @@
 #include "dg/backend/timer.cuh"
 //#include "guenther.h"
 #include "solovev.h"
-//#include "conformal.h"
+#include "conformal.h"
 #include "orthogonal.h"
 #include "dg/ds.h"
 #include "init.h"
@@ -41,8 +41,8 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-//typedef dg::FieldAligned< solovev::ConformalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
-typedef dg::FieldAligned< solovev::OrthogonalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< conformal::RingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+//typedef dg::FieldAligned< solovev::OrthogonalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -78,10 +78,10 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    //solovev::ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //solovev::ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    solovev::OrthogonalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    solovev::OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    //orthogonal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    //orthogonal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -110,7 +110,6 @@ int main( int argc, char* argv[])
         Y[i] = g2d.z()[i];
     }
 
-    const dg::DVec ones = dg::evaluate( dg::one, g2d);
     dg::DVec temp0( g2d.size()), temp1(temp0);
     dg::DVec w3d = dg::create::weights( g2d);
 
@@ -120,6 +119,7 @@ int main( int argc, char* argv[])
 
     //dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    const dg::DVec ones = dg::evaluate( dg::one, g2d);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     X=temp0;
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
@@ -198,11 +198,11 @@ int main( int argc, char* argv[])
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
     t.tic();
-    //DFA fieldaligned( solovev::ConformalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
-    DFA fieldaligned( solovev::OrthogonalField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    DFA fieldaligned( conformal::Field( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    //DFA fieldaligned( orthogonal::Field( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter()); 
 
-    //dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, solovev::ConformalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
-    dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, solovev::OrthogonalField(gp, g2d, g2d.g()), dg::normed, dg::centered);
+    dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, conformal::Field(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    //dg::DS<DFA, dg::DMatrix, dg::DVec> ds( fieldaligned, orthogonal::Field(gp, g2d, g2d.g()), dg::normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);

@@ -19,7 +19,7 @@
 
 int main(int argc, char**argv)
 {
-    std::cout << "Type n, Nx, Ny, Nz\n";
+    std::cout << "Type n, Nx (fx = 1./4.), Ny (fy = 0.05), Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
     std::cout << "Type psi_0 and psi_1\n";
@@ -55,7 +55,7 @@ int main(int argc, char**argv)
     //solovev::OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
     //dg::Elliptic<solovev::OrthogonalRingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     
-    solovev::OrthogonalXGrid3d<dg::DVec> g3d(gp, psi_0, 0.25, 0.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    solovev::OrthogonalXGrid3d<dg::DVec> g3d(gp, psi_0, 0.25, 0.05,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     solovev::OrthogonalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Elliptic<solovev::OrthogonalXGrid3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     psi_1 = g3d.psi1();
@@ -93,7 +93,7 @@ int main(int argc, char**argv)
     pol.set_chi( chi);
     //compute error
     dg::DVec error( solution);
-    const double eps = 1e-10;
+    const double eps = 1e-8;
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
     std::cout << "eps \t # iterations \t error \t time/iteration \n";
     std::cout << eps<<"\t";

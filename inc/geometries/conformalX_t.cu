@@ -11,7 +11,7 @@
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
-//#include "conformalX.h"
+#include "conformalX.h"
 #include "orthogonalX.h"
 #include "dg/ds.h"
 #include "init.h"
@@ -21,7 +21,7 @@
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< solovev::OrthogonalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< orthogonal::GridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX2d& g)
 {
@@ -84,8 +84,8 @@ try{
     gp.display( std::cout);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    solovev::OrthogonalXGrid3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    solovev::OrthogonalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    orthogonal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     //dg::GridX2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.fx(), g2d.fy(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -220,9 +220,9 @@ try{
     /////////////////////////TEST 3d grid//////////////////////////////////////
     std::cout << "Start DS test!"<<std::endl;
     const dg::DVec vol3d = dg::create::volume( g3d);
-    DFA fieldaligned( solovev::OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+    DFA fieldaligned( orthogonal::XField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
-    dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, solovev::OrthogonalXField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
+    dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, orthogonal::XField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
     dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
     dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
     dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);

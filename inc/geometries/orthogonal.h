@@ -13,7 +13,7 @@
 
 
 
-namespace solovev
+namespace orthogonal
 {
 
 namespace detail
@@ -23,7 +23,7 @@ namespace detail
 //good as it can, i.e. until machine precision is reached
 struct Fpsi
 {
-    Fpsi( const GeomParameters& gp): 
+    Fpsi( const solovev::GeomParameters& gp): 
         gp_(gp), fieldRZYT_(gp), fieldRZtau_(gp)
     {
         /**
@@ -35,7 +35,7 @@ struct Fpsi
          * @return the value for R
          */
         R_init = gp.R_0 + 0.5*gp.a; Z_init = 0;
-        Psip psip(gp);
+        solovev::Psip psip(gp);
     }
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0) 
@@ -44,7 +44,7 @@ struct Fpsi
         thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
         begin2d[0] = end2d[0] = end2d_old[0] = R_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
-        Psip psip(gp_);
+        solovev::Psip psip(gp_);
         //std::cout << "In init function\n";
         double eps = 1e10, eps_old = 2e10;
         while( eps < eps_old && N<1e6 && eps > 1e-15)
@@ -214,8 +214,8 @@ struct Fpsi
         }
         r = r_old, z = z_old;
         f = f_psi;
-        PsipR psipR_(gp_);
-        PsipZ psipZ_(gp_);
+        solovev::PsipR psipR_(gp_);
+        solovev::PsipZ psipZ_(gp_);
         for( unsigned i=0; i<r.size(); i++)
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
@@ -232,9 +232,9 @@ struct Fpsi
 
     }
     private:
-    const GeomParameters gp_;
+    const solovev::GeomParameters gp_;
     const solovev::orthogonal::FieldRZYT fieldRZYT_;
-    const FieldRZtau fieldRZtau_;
+    const solovev::FieldRZtau fieldRZtau_;
     double R_init, Z_init;
 
 };
@@ -242,7 +242,7 @@ struct Fpsi
 //This struct computes -2pi/f with a fixed number of steps for all psi
 struct FieldFinv
 {
-    FieldFinv( const GeomParameters& gp, unsigned N_steps = 500): 
+    FieldFinv( const solovev::GeomParameters& gp, unsigned N_steps = 500): 
         fpsi_(gp), fieldRZYT_(gp), N_steps(N_steps),
         R_0_(gp.R_0), psipR_(gp), psipZ_(gp),
         psipRR_(gp), psipZZ_(gp), psipRZ_(gp)
@@ -288,25 +288,25 @@ struct FieldFinv
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipZZ psipZZ_;
-    PsipRZ psipRZ_;
+    solovev::PsipR psipR_;
+    solovev::PsipZ psipZ_;
+    solovev::PsipRR psipRR_;
+    solovev::PsipZZ psipZZ_;
+    solovev::PsipRZ psipRZ_;
 };
 } //namespace detail
 
 template< class container>
-struct OrthogonalRingGrid2d; 
+struct RingGrid2d; 
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct OrthogonalRingGrid3d : public dg::Grid3d<double>
+struct RingGrid3d : public dg::Grid3d<double>
 {
     typedef dg::OrthogonalCylindricalTag metric_category;
-    typedef OrthogonalRingGrid2d<container> perpendicular_grid;
+    typedef RingGrid2d<container> perpendicular_grid;
 
     /**
      * @brief Construct 
@@ -320,10 +320,10 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
      * @param Nz The number of points in z-direction
      * @param bcx The boundary condition in x (y,z are periodic)
      */
-    OrthogonalRingGrid3d( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
+    RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
-        solovev::detail::Fpsi fpsi( gp);
+        orthogonal::detail::Fpsi fpsi( gp);
         double x_1 = fpsi.find_x1( psi_0, psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
@@ -350,8 +350,8 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
         fpsi.compute_rzy( psi_0, n, Ny, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
         //thrust::host_vector<double> gvec(n*Ny, 1./f0);
         thrust::host_vector<double> gvec(n*Ny, f0);
-        PsipR psipR_(gp);
-        PsipZ psipZ_(gp);
+        solovev::PsipR psipR_(gp);
+        solovev::PsipZ psipZ_(gp);
         //for( unsigned i=0; i<rvec.size(); i++)
         //{
         //    double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
@@ -429,11 +429,11 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    perpendicular_grid perp_grid() const { return OrthogonalRingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return orthogonal::RingGrid2d<container>(*this);}
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
-    void construct_rz( const GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
+    void construct_rz( const solovev::GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
     {
     /*
         //std::cout << "In grid function:\n";
@@ -476,9 +476,9 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
             }
     }
     //compute metric elements from xr, xz, yr, yz, r and z
-    void construct_metric( const GeomParameters& gp)
+    void construct_metric( const solovev::GeomParameters& gp)
     {
-        PsipR psipR_(gp); PsipZ psipZ_(gp);
+        solovev::PsipR psipR_(gp); solovev::PsipZ psipZ_(gp);
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         for( unsigned k=0; k<this->Nz(); k++)
@@ -517,25 +517,25 @@ struct OrthogonalRingGrid3d : public dg::Grid3d<double>
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct OrthogonalRingGrid2d : public dg::Grid2d<double>
+struct RingGrid2d : public dg::Grid2d<double>
 {
     typedef dg::OrthogonalCylindricalTag metric_category;
-    OrthogonalRingGrid2d( const GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
+    RingGrid2d( const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
-        solovev::detail::Fpsi fpsi( gp);
+        orthogonal::detail::Fpsi fpsi( gp);
         double x_1 = fpsi.find_x1(psi_0, psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
         else
             init_X_boundaries( x_1, 0.);
-        OrthogonalRingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
+        orthogonal::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         f_x_ = g.f_x(), f_ = g.f(), g_ = g.g();
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
-    OrthogonalRingGrid2d( const OrthogonalRingGrid3d<container>& g):
+    RingGrid2d( const RingGrid3d<container>& g):
         dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         f_x_ = g.f_x();
@@ -575,9 +575,9 @@ struct OrthogonalRingGrid2d : public dg::Grid2d<double>
 /**
  * @brief Integrates the equations for a field line and 1/B
  */ 
-struct OrthogonalField
+struct Field
 {
-    OrthogonalField( GeomParameters gp,const dg::Grid2d<double>& gXY, const thrust::host_vector<double>& g):
+    Field( solovev::GeomParameters gp,const dg::Grid2d<double>& gXY, const thrust::host_vector<double>& g):
         gp_(gp),
         psipR_(gp), psipZ_(gp),
         ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(g, gXY)) 
@@ -615,17 +615,17 @@ struct OrthogonalField
     double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
     
     private:
-    GeomParameters gp_;
-    PsipR  psipR_;
-    PsipZ  psipZ_;
-    Ipol   ipol_;
-    InvB   invB_;
+    solovev::GeomParameters gp_;
+    solovev::PsipR  psipR_;
+    solovev::PsipZ  psipZ_;
+    solovev::Ipol   ipol_;
+    solovev::InvB   invB_;
     const dg::Grid2d<double> gXY_;
     thrust::host_vector<double> g_;
    
 };
 
-}//namespace solovev
+}//namespace orthogonal
 namespace dg{
 /**
  * @brief This function pulls back a function defined in cartesian coordinates R,Z to the conformal coordinates x,y,\phi
@@ -638,7 +638,7 @@ namespace dg{
  * @return A set of points representing F(x,y)
  */
 template< class BinaryOp, class container>
-thrust::host_vector<double> pullback( BinaryOp f, const solovev::OrthogonalRingGrid2d<container>& g)
+thrust::host_vector<double> pullback( BinaryOp f, const orthogonal::RingGrid2d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -647,7 +647,7 @@ thrust::host_vector<double> pullback( BinaryOp f, const solovev::OrthogonalRingG
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double), const solovev::OrthogonalRingGrid2d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double), const orthogonal::RingGrid2d<container>& g)
 {
     return pullback<double(double,double),container>( f, g);
 }
@@ -663,7 +663,7 @@ thrust::host_vector<double> pullback( double(f)(double,double), const solovev::O
  * @return A set of points representing F(x,y,\phi)
  */
 template< class TernaryOp, class container>
-thrust::host_vector<double> pullback( TernaryOp f, const solovev::OrthogonalRingGrid3d<container>& g)
+thrust::host_vector<double> pullback( TernaryOp f, const orthogonal::RingGrid3d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -677,7 +677,7 @@ thrust::host_vector<double> pullback( TernaryOp f, const solovev::OrthogonalRing
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double,double), const solovev::OrthogonalRingGrid3d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double,double), const orthogonal::RingGrid3d<container>& g)
 {
     return pullback<double(double,double,double),container>( f, g);
 }

@@ -569,7 +569,7 @@ struct FieldRZYRYZY
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
-        double psip2 = 1.0+0.0*(psipR*psipR+ psipZ*psipZ);
+        double psip2 = 0.0+1.0*(psipR*psipR+ psipZ*psipZ);
 
         yp[0] =  psipZ/f_/psip2;
         yp[1] =  -psipR/f_/psip2;

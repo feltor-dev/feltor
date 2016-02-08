@@ -94,7 +94,7 @@ void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, doubl
             }
             //if new integrated point outside domain
             //if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-            if( (end[4] < 1e-5) || end[4]*end[4] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[5]*end[5] > 1e10) )
+            if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
             {
                 error = eps_abs/10;
                 std::cerr << "---------Point outside box -> stop integration" << std::endl; 
