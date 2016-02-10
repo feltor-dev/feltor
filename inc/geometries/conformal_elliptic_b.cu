@@ -10,8 +10,8 @@
 #include "dg/cg.h"
 
 #include "solovev.h"
-//#include "orthogonal.h"
-//#include "orthogonalX.h"
+#include "conformal.h"
+#include "conformalX.h"
 #include "orthogonal.h"
 #include "orthogonalX.h"
 
@@ -48,16 +48,16 @@ int main(int argc, char**argv)
     dg::Timer t;
     solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
-    std::cout << "Constructing orthogonal grid ... \n";
+    std::cout << "Constructing grid ... \n";
     t.tic();
 
-    //solovev::OrthogonalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //solovev::OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    //dg::Elliptic<solovev::OrthogonalRingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    //conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    //conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    //dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     
-    solovev::OrthogonalXGrid3d<dg::DVec> g3d(gp, psi_0, 0.25, 0.05,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    solovev::OrthogonalXGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<solovev::OrthogonalXGrid3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    conformal::GridX3d<dg::DVec> g3d(gp, psi_0, 0.25, 0.00,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    conformal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<conformal::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     psi_1 = g3d.psi1();
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 
@@ -69,6 +69,7 @@ int main(int argc, char**argv)
     ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
     ncerr = file::define_dimensions(  ncid, dim2d, g2d.grid());
+    //ncerr = file::define_dimensions(  ncid, dim2d, g2d);
     int coordsID[2], psiID, functionID, function2ID;
     ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
@@ -87,7 +88,8 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::pullback( dg::zero, g3d);
     const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d);
-    const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g3d);
+    //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g3d);
+    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g3d);
     const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d);
     const dg::DVec vol3d = dg::create::volume( g3d);
     pol.set_chi( chi);

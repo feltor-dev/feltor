@@ -203,8 +203,8 @@ struct FpsiX
         double f_psi = 2.*M_PI/end_old[2];
         //t.toc();
         //std::cout << "Finding f took "<<t.diff()<<"s\n";
-        //return f_psi;
-        return 1./f_psi;
+        return f_psi;
+        //return 1./f_psi;
     }
     double operator()( double psi)
     {
@@ -293,9 +293,13 @@ struct FpsiX
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
         //begin[2] = f_psi * (0./psip2+1.00)* psipZ_;
         //begin[3] = -f_psi * (0./psip2+1.00)*psipR_;
+        hessianRZtau_.set_quadrant(0);
+        if(psi<0)
+            hessianRZtau_.set_quadrant(1);
 
-        begin[2] =  1./f_psi * (1.0/psip2+0.0)* psipZ_;
-        begin[3] = -1./f_psi * (1.0/psip2+0.0)* psipR_;
+        hessianRZtau_(begin, temp);
+        begin[2] =  f_psi * psip2 * temp[1]/(psipR_*temp[0]+psipZ_*temp[1]);
+        begin[3] = -f_psi * psip2 * temp[0]/(psipR_*temp[0]+psipZ_*temp[1]);
 
         //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
         solovev::conformal::FieldRZYRYZY fieldRZYRYZY(gp_);
@@ -417,8 +421,8 @@ struct XFieldFinv
             dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
         }
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        //fpsiM[0] = - end[2]/2./M_PI;
-        fpsiM[0] = - 2.*M_PI/end[2];
+        fpsiM[0] = - end[2]/2./M_PI;
+        //fpsiM[0] = - 2.*M_PI/end[2];
         t.toc();
         //std::cout << "Finding f took "<<t.diff()<<"s\n";
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";

@@ -1070,6 +1070,92 @@ struct DeriNeu
     Psip psip_;
     BHatP bhat_;
 };
+
+struct FuncDirPer
+{
+    FuncDirPer( GeomParameters gp, double psi_0, double psi_1):
+        R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp){}
+    double operator()(double R, double Z, double phi) const {
+        double psip = psip_(R,Z);
+        return (psip-psi0_)*(psip-psi1_)*sin(theta(R,Z));
+    }
+    double dR( double R, double Z)const
+    {
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), theta_ = theta(R,Z);
+        return (2.*psip*psipR - (psi0_+psi1_)*psipR)*sin(theta_) 
+            + (psip-psi0_)*(psip-psi1_)*cos(theta_)*thetaR(R,Z);
+    }
+    double dRR( double R, double Z)const
+    {
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z), thetaR_=thetaR(R,Z);
+        double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
+        return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*sin(theta_)
+            + (2.*psip*psipR-(psi0_+psi1_)*psipR)*cos(theta_)*thetaR_
+            + (2.*psip*psipR-(psi0_+psi1_)*psipR)*cos(theta_)*thetaR_
+            + (psip-psi0_)*(psip-psi1_)*(thetaRR(R,Z)*cos(theta_)-sin(theta_)*thetaR_*thetaR_);
+            
+    }
+    double dZ( double R, double Z)const
+    {
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z);
+        return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*sin(theta_) 
+            + (psip-psi0_)*(psip-psi1_)*cos(theta_)*thetaZ(R,Z);
+    }
+    double dZZ( double R, double Z)const
+    {
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z), thetaZ_=thetaZ(R,Z);
+        double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
+        return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*sin(theta_)
+            + (2.*psip*psipZ-(psi0_+psi1_)*psipZ)*cos(theta_)*thetaZ_
+            + (2.*psip*psipZ-(psi0_+psi1_)*psipZ)*cos(theta_)*thetaZ_
+            + (psip-psi0_)*(psip-psi1_)*(-sin(theta_)*thetaZ_*thetaZ_ + cos(theta_)*thetaZZ(R,Z));
+    }
+    private:
+    double theta( double R, double Z) const {
+        double dR = R-R_0_;
+        if( Z >= 0)
+            return acos( dR/sqrt( dR*dR + Z*Z));
+        else
+            return 2.*M_PI-acos( dR/sqrt( dR*dR + Z*Z));
+    }
+    double thetaR( double R, double Z) const {
+        double dR = R-R_0_;
+        return -Z/(dR*dR+Z*Z);
+    }
+    double thetaZ( double R, double Z) const {
+        double dR = R-R_0_;
+        return dR/(dR*dR+Z*Z);
+    }
+    double thetaRR( double R, double Z) const {
+        double dR = R-R_0_;
+        return 2*Z*dR/(dR*dR+Z*Z)/(dR*dR+Z*Z);
+    }
+    double thetaZZ( double R, double Z) const { return -thetaRR(R,Z);}
+    double R_0_;
+    double psi0_, psi1_;
+    Psip psip_;
+    PsipR psipR_;
+    PsipRR psipRR_;
+    PsipZ psipZ_;
+    PsipZZ psipZZ_;
+};
+
+//takes the magnetic field as chi
+struct EllipticDirPerM
+{
+    EllipticDirPerM( GeomParameters gp, double psi_0, double psi_1): func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
+    double operator()(double R, double Z, double phi) const {
+        double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
+        return -(br*func_.dR(R,Z) + bz*func_.dZ(R,Z) + bmod_(R,Z)*( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+
+    }
+    private:
+    FuncDirPer func_;
+    Bmodule bmod_;
+    BR br_;
+    BZ bz_;
+};
+
 struct FuncDirNeu
 {
     FuncDirNeu( GeomParameters gp, double psi_0, double psi_1):
@@ -1081,26 +1167,25 @@ struct FuncDirNeu
     double dR( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
-        double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
-        return 2*psip*psipR - (psi0_+psi1_)*psipR;
-    }
-    double dZ( double R, double Z)const
-    {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
-        double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
-        return 2*psip*psipZ - (psi0_+psi1_)*psipZ;
+        return (2.*psip*psipR - (psi0_+psi1_)*psipR);
     }
     double dRR( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
         double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
-        return 2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR;
+        return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
+            
+    }
+    double dZ( double R, double Z)const
+    {
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
+        return (2*psip*psipZ - (psi0_+psi1_)*psipZ);
     }
     double dZZ( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
         double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
-        return 2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ;
+        return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
     double psi0_, psi1_;
@@ -1110,20 +1195,62 @@ struct FuncDirNeu
     PsipZ psipZ_;
     PsipZZ psipZZ_;
 };
-//takes the magnetic field as chi
+//takes the magnetic field multiplied by (1+0.5sin(theta)) as chi
+struct BmodTheta
+{
+    BmodTheta( GeomParameters gp): R_0_(gp.R_0), bmod_(gp){}
+    double operator()(double R,double Z, double phi) const{
+        return bmod_(R,Z)*(1.+0.5*sin(theta(R,Z)));
+    }
+    private:
+    double theta( double R, double Z) const {
+        double dR = R-R_0_;
+        if( Z >= 0)
+            return acos( dR/sqrt( dR*dR + Z*Z));
+        else
+            return 2.*M_PI-acos( dR/sqrt( dR*dR + Z*Z));
+    }
+    double R_0_;
+    Bmodule bmod_;
+
+};
 struct EllipticDirNeuM
 {
-    EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1): func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
+    EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1): R_0_(gp.R_0), func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
     double operator()(double R, double Z, double phi) const {
-        double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
-        return -(br*func_.dR(R,Z) + bz*func_.dZ(R,Z) + bmod_(R,Z)*( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+        double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
+        double chi = bmod*(1.+0.5*sin(theta_));
+        double chiR = br*(1.+0.5*sin(theta_)) + bmod*0.5*cos(theta_)*thetaR(R,Z);
+        double chiZ = bz*(1.+0.5*sin(theta_)) + bmod*0.5*cos(theta_)*thetaZ(R,Z);
+        //double chi = bmod;
+        //double chiR = br;
+        //double chiZ = bz;
+        return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }
     private:
+    double theta( double R, double Z) const {
+        double dR = R-R_0_;
+        if( Z >= 0)
+            return acos( dR/sqrt( dR*dR + Z*Z));
+        else
+            return 2.*M_PI-acos( dR/sqrt( dR*dR + Z*Z));
+    }
+    double thetaR( double R, double Z) const {
+        double dR = R-R_0_;
+        return -Z/(dR*dR+Z*Z);
+    }
+    double thetaZ( double R, double Z) const {
+        double dR = R-R_0_;
+        return dR/(dR*dR+Z*Z);
+    }
+    double R_0_;
     FuncDirNeu func_;
     Bmodule bmod_;
     BR br_;
     BZ bz_;
 };
+
+
 ///@} 
 } //namespace solovev

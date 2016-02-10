@@ -105,8 +105,8 @@ try{
     gp.display( std::cout);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    orthogonal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
+    conformal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    conformal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -137,8 +137,8 @@ try{
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
     g2d.display();
-    //err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
-    err = nc_put_var_double( ncid, onesID, g2d.g().data());
+    err = nc_put_var_double( ncid, onesID, periodify(psi_p, g3d_periodic).data());
+    //err = nc_put_var_double( ncid, onesID, periodify(g2d.g(), g3d_periodic).data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
