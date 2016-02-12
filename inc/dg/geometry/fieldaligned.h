@@ -216,7 +216,7 @@ void boxintegrator( Field& field, const Grid& grid,
         thrust::host_vector<double>& coords1, 
         double& phi1, double eps, dg::bc globalbcz)
 {
-    dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
+    dg::integrateRK17( field, coords0, coords1, phi1, eps); //+ integration
     //First catch periodic domain
     grid.shift_topologic( coords0[0], coords0[1], coords1[0], coords1[1]);
     if ( !grid.contains( coords1[0], coords1[1]))   //Punkt liegt immer noch außerhalb 

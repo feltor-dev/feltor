@@ -105,8 +105,8 @@ try{
     gp.display( std::cout);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    conformal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    conformal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
+    orthogonal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -170,6 +170,8 @@ try{
     err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, defID, X.data());
     X = g2d.vol();
+    Y = g2d.g_yy();
+    dg::blas1::pointwiseDot( Y, X, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, volID, X.data());
 
@@ -182,7 +184,7 @@ try{
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     //dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDot( f_, f_, temp1);
-    dg::blas1::axpby( 1., temp1, 0.001, g2d.g_xx(),  temp1);
+    dg::blas1::axpby( 0., temp1, 1.000, g2d.g_xx(),  temp1);
     dg::blas1::pointwiseDot( temp1, temp1, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
     std::cout<< "Rel Error in Determinant is "<<sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1))<<"\n";
@@ -199,7 +201,7 @@ try{
     //temp0=g.r();
     //dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
     dg::blas1::pointwiseDot( f_, f_, temp0);
-    dg::blas1::axpby( 1.0,temp0 , 0.001, g2d.g_xx(), temp0);
+    dg::blas1::axpby( 0.0,temp0 , 1.000, g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
     std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()))<<"\n";
@@ -239,35 +241,37 @@ try{
     std::cout << "Note that the error might also come from the volume in RZP!\n";
 
     ///////////////////////////TEST 3d grid//////////////////////////////////////
-    //std::cout << "Start DS test!"<<std::endl;
-    //const dg::DVec vol3d = dg::create::volume( g3d);
-    //DFA fieldaligned( orthogonal::XField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+    std::cout << "Start DS test!"<<std::endl;
+    const dg::DVec vol3d = dg::create::volume( g3d);
+    DFA fieldaligned(orthogonal::XField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+    //DFA fieldaligned( conformal::Field( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
-    //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, orthogonal::XField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
-    //dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-    //dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-    //dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-    //dg::blas1::pointwiseDivide( ones, B, B);
+    dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, orthogonal::XField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
+    //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, conformal::Field(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
+    dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
+    dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
+    const dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
+    dg::blas1::pointwiseDivide( ones, B, B);
 
-    //ds.centeredT( B, divB);
-    //std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol3d, divB))<<"\n";
-    //ds.centered( lnB, gradB);
-    //dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    ////test if topological shift was correct!!
-    ////dg::blas1::pointwiseDot(cutter, gradLnB, gradLnB);
-    //double norm = sqrt( dg::blas2::dot( gradB, vol3d, gradB) );
-    //std::cout << "rel. error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))/norm<<" (doesn't fullfill boundary conditions so it was cut before separatrix)\n";
+    ds.centeredT( B, divB);
+    std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol3d, divB))<<"\n";
+    ds.centered( lnB, gradB);
+    dg::blas1::axpby( 1., gradB, -1., gradLnB, gradB);
+    //test if topological shift was correct!!
+    X = gradB;
+    dg::blas1::pointwiseDot(cutter, gradB, gradB);
+    double norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
+    std::cout << "rel. error of lnB is    "<<sqrt( dg::blas2::dot( gradB, vol3d, gradB))/norm<<" (doesn't fullfill boundary conditions so it was cut at separatrix)\n";
 
-    //const dg::DVec function = dg::pullback(solovev::FuncNeu(gp), g3d);
-    //dg::DVec temp(function);
-    //const dg::DVec derivative = dg::pullback(solovev::DeriNeu(gp), g3d);
-    //ds( function, temp);
-    //dg::blas1::axpby( 1., temp, -1., derivative, temp);
-    //norm = sqrt( dg::blas2::dot( derivative, vol3d, derivative) );
-    //std::cout << "rel. error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))/norm<<"\n";
-    //X = gradB;
-    //err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
-    ////err = nc_put_var_double( ncid, divBID, X.data());
+    const dg::DVec function = dg::pullback(solovev::FuncNeu(gp), g3d);
+    dg::DVec temp(function);
+    const dg::DVec derivative = dg::pullback(solovev::DeriNeu(gp), g3d);
+    ds( function, temp);
+    dg::blas1::axpby( 1., temp, -1., derivative, temp);
+    norm = sqrt( dg::blas2::dot( derivative, vol3d, derivative) );
+    std::cout << "rel. error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))/norm<<"\n";
+    err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
+    //err = nc_put_var_double( ncid, divBID, X.data());
     err = nc_close( ncid);
 
 

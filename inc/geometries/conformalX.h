@@ -298,10 +298,12 @@ struct FpsiX
             hessianRZtau_.set_quadrant(1);
 
         hessianRZtau_(begin, temp);
+        //begin[2] =  f_psi * psipZ_;
+        //begin[3] = -f_psi * psipR_;
         begin[2] =  f_psi * psip2 * temp[1]/(psipR_*temp[0]+psipZ_*temp[1]);
         begin[3] = -f_psi * psip2 * temp[0]/(psipR_*temp[0]+psipZ_*temp[1]);
 
-        //std::cout <<f_psi<<" "<< psi_x[j] <<" "<< begin[0] << " "<<begin[1]<<"\t";
+        std::cout <<f_psi<<" "<< begin[2] - f_psi*psipZ_ << " "<<begin[3]+f_psi*psipR_<<"\n";
         solovev::conformal::FieldRZYRYZY fieldRZYRYZY(gp_);
         fieldRZYRYZY.set_f(f_psi);
         fieldRZYRYZY.set_fp(fprime);
