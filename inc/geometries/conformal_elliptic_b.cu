@@ -51,15 +51,15 @@ int main(int argc, char**argv)
     std::cout << "Constructing grid ... \n";
     t.tic();
 
-    conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    //conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    //conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    //dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     
-    //orthogonal::GridX3d<dg::DVec> g3d(gp, psi_0, 0.25, 1./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    //orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
-    //dg::Elliptic<orthogonal::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    //psi_1 = g3d.psi1();
-    //std::cout << "psi 1 is          "<<psi_1<<"\n";
+    conformal::GridX3d<dg::DVec> g3d(gp, psi_0, 0.25, 0./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    conformal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<conformal::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    psi_1 = g3d.psi1();
+    std::cout << "psi 1 is          "<<psi_1<<"\n";
 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
@@ -68,8 +68,8 @@ int main(int argc, char**argv)
     file::NC_Error_Handle ncerr;
     ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
-    //ncerr = file::define_dimensions(  ncid, dim2d, g2d.grid());
-    ncerr = file::define_dimensions(  ncid, dim2d, g2d);
+    ncerr = file::define_dimensions(  ncid, dim2d, g2d.grid());
+    //ncerr = file::define_dimensions(  ncid, dim2d, g2d);
     int coordsID[2], psiID, functionID, function2ID;
     ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);

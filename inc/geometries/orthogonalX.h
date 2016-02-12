@@ -78,7 +78,6 @@ struct FpsiX
     FpsiX( const solovev::GeomParameters& gp): 
         gp_(gp), fieldRZYT_(gp), fieldRZYZ_(gp), fieldRZtau_(gp), 
         xpointer_(gp), hessianRZtau_(gp), minimalCurve_(gp)
-
     {
         //////////////////////////////////////////////
         solovev::Psip psip(gp_);
