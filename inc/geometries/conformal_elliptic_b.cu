@@ -95,7 +95,7 @@ int main(int argc, char**argv)
     pol.set_chi( chi);
     //compute error
     dg::DVec error( solution);
-    const double eps = 1e-8;
+    const double eps = 1e-10;
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
     std::cout << "eps \t # iterations \t error \t time/iteration \n";
     std::cout << eps<<"\t";

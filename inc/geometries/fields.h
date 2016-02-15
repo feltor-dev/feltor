@@ -671,6 +671,33 @@ struct FieldRZY
 
 }//namespace orthogonal
 
+struct FieldRZ
+{
+    FieldRZ( GeomParameters gp): psipR_(gp), psipZ_(gp){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        yp[0] =  psipR/psipZ;
+        yp[1] = 1.;
+    }
+  private:
+    PsipR psipR_;
+    PsipZ psipZ_;
+};
+struct FieldZR
+{
+    FieldZR( GeomParameters gp): psipR_(gp), psipZ_(gp){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        yp[0] = 1.;
+        yp[1] =  psipZ/psipR;
+    }
+  private:
+    PsipR psipR_;
+    PsipZ psipZ_;
+};
+
 struct FieldRZtau
 {
     FieldRZtau( GeomParameters gp): psipR_(gp), psipZ_(gp){}
