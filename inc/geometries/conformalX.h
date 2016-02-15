@@ -482,6 +482,7 @@ struct FpsiX
             if( g1d.outer_N() != 0)
             {
                 begin[0] = R_0[1], begin[1] = Z_0[1];
+                begin[2] =  f_psi*psipZ(begin[0], begin[1]), begin[3] = -f_psi*psipR(begin[0], begin[1]);
                 unsigned i=n*(g1d.outer_N()+g1d.inner_N());
                 dg::stepperRK17( fieldRZYRYZY, begin, end, 2.*M_PI, y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
