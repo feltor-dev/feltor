@@ -10,8 +10,8 @@
 #include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
-//#include "guenther.h"
-#include "solovev.h"
+#include "guenther.h"
+//#include "solovev.h"
 #include "conformal.h"
 #include "orthogonal.h"
 #include "dg/ds.h"

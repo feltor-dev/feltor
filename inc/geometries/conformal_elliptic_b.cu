@@ -9,7 +9,8 @@
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
-#include "solovev.h"
+//#include "solovev.h"
+#include "guenther.h"
 #include "conformal.h"
 #include "conformalX.h"
 #include "orthogonal.h"
@@ -50,17 +51,9 @@ int main(int argc, char**argv)
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing grid ... \n";
     t.tic();
-
-    //conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    //dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    
-    conformal::GridX3d<dg::DVec> g3d(gp, psi_0, 0.25, 0./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    conformal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<conformal::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    psi_1 = g3d.psi1();
-    std::cout << "psi 1 is          "<<psi_1<<"\n";
-
+    conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -68,8 +61,7 @@ int main(int argc, char**argv)
     file::NC_Error_Handle ncerr;
     ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
-    ncerr = file::define_dimensions(  ncid, dim2d, g2d.grid());
-    //ncerr = file::define_dimensions(  ncid, dim2d, g2d);
+    ncerr = file::define_dimensions(  ncid, dim2d, g2d);
     int coordsID[2], psiID, functionID, function2ID;
     ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
@@ -87,27 +79,35 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::pullback( dg::zero, g3d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d);
-    //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g3d);
-    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g3d);
-    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d);
+    const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g3d);
+    const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g3d);
+    const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g3d);
     const dg::DVec vol3d = dg::create::volume( g3d);
     pol.set_chi( chi);
     //compute error
     dg::DVec error( solution);
     const double eps = 1e-10;
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
-    std::cout << "eps \t # iterations \t error \t time/iteration \n";
+    std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    //const dg::DVec v3d = dg::create::inv_weights( g3d);
     unsigned number = invert(pol, x,b);// vol3d, v3d );
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( vol3d, error);
     const double norm = dg::blas2::dot( vol3d, solution);
-    std::cout << sqrt( err/norm) << "\t" <<t.diff()/(double)number<<"s"<<std::endl;
+    std::cout << sqrt( err/norm) << "\t";
+    dg::HVec gyy = g2d.g_xx(), gxx=g2d.g_yy(), vol = g2d.vol();
+    dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
+    dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
+    dg::blas1::pointwiseDot( gxx, vol, gxx);
+    dg::blas1::pointwiseDot( gyy, vol, gyy);
+    dg::blas1::scal( gxx, g2d.hx());
+    dg::blas1::scal( gyy, g2d.hy());
+    std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
+    std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
+    std::cout<<t.diff()/(double)number<<"s"<<std::endl;
 
     X = error;
     ncerr = nc_put_var_double( ncid, psiID, X.data());

@@ -413,7 +413,7 @@ struct FpsiX
         thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
         double fprime = f_prime( psi);
         double f_psi = construct_f( psi, R_0, Z_0);
-        std::cout << "init " <<R_0[0]<<" "<<Z_0[0]<<" "<<R_0[1]<<" "<<Z_0[1]<<"\n";
+        //std::cout << "init " <<R_0[0]<<" "<<Z_0[0]<<" "<<R_0[1]<<" "<<Z_0[1]<<"\n";
         //begin[0] = R_0[0], begin[1] = Z_0[0];
         solovev::PsipR psipR(gp_);
         solovev::PsipZ psipZ(gp_);
@@ -477,7 +477,7 @@ struct FpsiX
                 eps = sqrt( (end[0]-R_0[0])*(end[0]-R_0[0]) + (end[1]-Z_0[0])*(end[1]-Z_0[0]));
             else
                 eps = sqrt( (end[0]-R_0[1])*(end[0]-R_0[1]) + (end[1]-Z_0[1])*(end[1]-Z_0[1]));
-            std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
+            //std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
             ////////////////////bottom right region
             if( g1d.outer_N() != 0)
             {
@@ -503,7 +503,7 @@ struct FpsiX
             double ar = dg::blas2::dot( r, w1d, r);
             double az = dg::blas2::dot( z, w1d, z);
             eps =  sqrt( er + ez)/sqrt(ar+az);
-            std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+            //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
             if( isnan(eps)) { eps = eps_old/2.; }
             steps*=2;
         }
