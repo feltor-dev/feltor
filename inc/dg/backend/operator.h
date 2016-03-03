@@ -2,12 +2,11 @@
 #define _DG_OPERATORS_DYN_
 
 #include <vector>
+#include <algorithm>
 #include <cmath>
 #include <iterator>
 #include <stdexcept>
-#ifdef DG_DEBUG
 #include <cassert>
-#endif
 #include "dlt.h"
 
 namespace dg{
@@ -73,6 +72,11 @@ class Operator
 #endif
     }
 
+    void zero() {
+        for( unsigned i=0; i<n_*n_; i++)
+            data_[i] = 0;
+    }
+
     /*! @brief access operator
      *
      * A range check is performed if DG_DEBUG is defined
@@ -119,6 +123,15 @@ class Operator
      */
     const std::vector<double>& data() const {return data_;}
 
+    void swap_lines( const size_t i, const size_t k)
+    {
+        assert( i< n_ && k<n_);
+        for( size_t j = 0; j<n_; j++)
+        {
+            std::swap( data_[i*n_+j], data_[k*n_+j]);
+        }
+    }
+
     /**
     * @brief Transposition
     *
@@ -126,17 +139,33 @@ class Operator
     */
     Operator transpose() const 
     {
-        T temp;
         Operator o(*this);
         for( unsigned i=0; i<n_; i++)
             for( unsigned j=0; j<i; j++)
             {
-                temp = o.data_[i*n_+j];
-                o.data_[i*n_+j] = o.data_[j*n_+i];
-                o.data_[j*n_+i] = temp;
+                std::swap( o.data_[i*n_+j], o.data_[j*n_+i]);
             }
         return o;
     }
+
+    /*! @brief two Matrices are considered equal if elements are equal
+     *
+     * @param rhs Matrix to be compared to this
+     * @return true if rhs does not equal this
+     */
+    bool operator!=( const Operator& rhs) const{
+        for( size_t i = 0; i < n_*n_; i++)
+            if( data_[i] != rhs.data_[i])
+                return true;
+        return false;
+    }
+
+    /*! @brief two Matrices are considered equal if elements are equal
+     *
+     * @param rhs Matrix to be compared to this
+     * @return true if rhs equals this
+     */
+    bool operator==( const Operator& rhs) const {return !((*this != rhs));}
 
     /**
      * @brief subtract
@@ -321,8 +350,120 @@ class Operator
 
 namespace create
 {
+namespace detail
+{
+//
+
+struct Message : public std::exception
+{
+    Message( const char * m) : message(m){}
+    char const*  what() const throw(){return message;}
+    private:
+    const char * message;
+};
+
+/*! @brief LU Decomposition with pivoting
+ */
+template< class T>
+T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
+{
+    //from numerical recipes
+    T pivot, determinant=(T)1; 
+    unsigned pivotzeile, numberOfSwaps=0;
+    const size_t n = m.size();
+    p.resize( n);
+    for( size_t j = 0; j < n; j++) //gehe Spalten /Diagonale durch
+    {
+        //compute upper matrix except for the diagonal element (the pivot)
+        for( size_t i = 0; i< j; i++)
+            for( size_t k=0; k<i; k++)
+                m(i,j)-=m(i,k)*m(k,j);
+        //compute canditates for pivot elements
+        for( size_t i = j; i< n; i++)
+            for( size_t k=0; k<j; k++)
+                m(i,j)-=m(i,k)*m(k,j);
+        //search for absolute maximum of pivot candidates
+        pivot = m(j,j);
+        pivotzeile = j;
+        for( size_t i = j+1; i < n; i++)
+            if( fabs( m(i,j)) > fabs(pivot)) 
+            {
+                pivot = m(i,j), pivotzeile = i;
+            }
+
+        if( pivot!= (T)0 )
+        {
+            if( pivotzeile != j) 
+            {
+                m.swap_lines( pivotzeile, j); 
+                numberOfSwaps++;
+            }
+            p[j] = pivotzeile;
+            //divide all elements below the diagonal by the pivot to get the lower matrix 
+            for( size_t i=j+1; i<n; i++)
+                m(i,j) /= pivot;
+            determinant*=m(j,j);
+
+        }
+        else 
+            throw Message( "Matrix is singular!!");
+    }
+    if( numberOfSwaps % 2 != 0)
+        determinant*=-1.;
+    return determinant;
+
+}
+
+template<class T>
+void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::vector<T>& b)
+{
+    assert(p.size() == lr.size() && p.size() == b.size());
+    const size_t n = p.size();
+    // Vorwärtseinsetzen 
+    for( size_t i = 0; i<n; i++)
+    {
+        //mache Zeilentausch 
+        std::swap( b[ p[i] ], b[i]);
+        for( size_t j = 0; j < i; j++)
+            b[i] -= lr(i,j)*b[j];
+    }
+    // Rückwärtseinsetzen
+    for( int i = n-1; i>=0; i--)
+    {
+        for( size_t j = i+1; j < n; j++)
+            b[i] -= lr(i,j)*b[j];
+        b[i] /= lr(i,i);
+    }
+}
+
+}//namespace detail
+
+
+
 ///@addtogroup lowlevel
 ///@{
+//
+template<class T>
+dg::Operator<T> invert( const dg::Operator<T>& in)
+{
+    dg::Operator<T> out(in);
+    const unsigned n = in.size();
+    std::vector<unsigned> pivot( n);
+    dg::Operator<T> lr(in);
+    T determinant = detail::lr_pivot( lr, pivot);
+    if( fabs(determinant ) < 1e-14) 
+        throw detail::Message( "Determinant zero!!");
+    for( unsigned i=0; i<n; i++)
+    {
+        std::vector<T> unit(n, 0);
+        unit[i] = 1;
+        detail::lr_solve( lr, pivot, unit);
+        for( unsigned j=0; j<n; j++)
+            out(j,i) = unit[j];
+    }
+    return out;
+}
+
 /**
  * @brief Create the unit matrix
  *
