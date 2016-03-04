@@ -5,9 +5,11 @@ int main()
 {
 
     dg::Operator<double> lilj = dg::create::lilj(3);
-    dg::Operator<double> pipj = dg::create::pipj(3);
+    dg::Operator<double> pidxpj = dg::create::pidxpj(3);
+    dg::Operator<double> rilj = dg::create::rilj(3);
 
-    dg::Operator<double> op = lilj + pipj;
+    dg::Operator<double> op = lilj + pidxpj;
+    //dg::Operator<double> op = pidxpj - pidxpj.transpose(); 
     //op(0,0) = 1, op(0,1) = 2, op(0,2) = 0;
     //op(1,0) = 2, op(1,1) = 4, op(1,2) = 1;
     //op(2,0) = 2, op(2,1) = 1, op(2,2) = 0;
