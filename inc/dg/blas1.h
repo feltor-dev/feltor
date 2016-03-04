@@ -37,6 +37,21 @@ namespace blas1
 ///@addtogroup blas1
 ///@{
 
+
+/**
+ * @brief Generic way to copy vectors of different types (e.g. from CPU to GPU, or double to float)
+ *
+ * @tparam Vector1 First vector type
+ * @tparam Vector2 Second vector type
+ * @param x source
+ * @param y sink
+ */
+template<class Vector1, class Vector2>
+inline void copy( const Vector1& x, Vector2& y)
+{
+    dg::blas1::detail::doCopy( x,y, typename dg::VectorTraits<Vector1>::vector_category(), typename dg::VectorTraits<Vector2>::vector_category());
+}
+
 /*! @brief Euclidean dot product between two Vectors
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]

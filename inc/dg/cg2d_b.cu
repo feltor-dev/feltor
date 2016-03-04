@@ -56,10 +56,20 @@ int main()
     dg::blas2::symv( w2d, b, b);
     //////////////////////////////////////////////////////////////////////
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
+
+    dg::Inverse<dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec>, dg::DVec> inverse( lap, x, 10, 1e-15, 0);
+
+
     
     std::cout << "... for a precision of "<< eps<<std::endl;
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg( lap, x, b, v2d, eps)<<std::endl;
+    t.toc();
+    std::cout << "... on the device took "<< t.diff()<<"s\n";
+    //dg::blas2::symv( inverse, b, x); 
+    x = dg::evaluate( initial, grid);
+    t.tic();
+    std::cout << "Number of mixed pcg iterations "<< pcg( lap, x, b, inverse, v2d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
 

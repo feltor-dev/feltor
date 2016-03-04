@@ -58,10 +58,12 @@ int main()
     dg::DVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
+    dg::Inverse<dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec>, dg::DVec> inverse( laplace, x, 10, 1e-15, 0);
     
     std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg( laplace, x, b, v3d, eps)<<std::endl;
+    //std::cout << "Number of pcg iterations "<< pcg( laplace, x, b, inverse, v3d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
     dg::DVec  error(  solution);

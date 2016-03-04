@@ -39,6 +39,12 @@ struct Axpby_Functor
     value_type alpha, beta;
 };
 
+template< class Vector1, class Vector2>
+void doCopy( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
+{
+    thrust::copy( in.begin(), in.end(), out.begin());
+}
+
 template< class Vector>
 typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {

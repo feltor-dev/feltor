@@ -664,20 +664,20 @@ struct GeneralEllipticSym
 template< class M, class V, class P>
 struct MatrixTraits< Elliptic<M, V, P> >
 {
-    typedef double value_type;
+    typedef typename VectorTraits<V>::value_type  value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 
 template< class M, class V, class P>
 struct MatrixTraits< GeneralElliptic<M, V, P> >
 {
-    typedef double value_type;
+    typedef typename VectorTraits<V>::value_type  value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 template< class M, class V, class P>
 struct MatrixTraits< GeneralEllipticSym<M, V, P> >
 {
-    typedef double value_type;
+    typedef typename VectorTraits<V>::value_type  value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 ///@endcond
