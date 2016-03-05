@@ -40,8 +40,9 @@ struct Axpby_Functor
 };
 
 template< class Vector1, class Vector2>
-void doCopy( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
+void doConvertAndCopy( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
 {
+    out.resize(in.size());
     thrust::copy( in.begin(), in.end(), out.begin());
 }
 

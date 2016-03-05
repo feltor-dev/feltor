@@ -24,10 +24,10 @@ namespace detail{
 *
 * @return a newly created Coordinate matrix holding the outer points
 */
-CooSparseBlockMat save_outer_values(EllSparseBlockMat& m)
+CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& m)
 {
     //search outer values in m
-    CooSparseBlockMat mat( m.num_rows, 2, m.n, m.left, m.right);
+    CooSparseBlockMat<double> mat( m.num_rows, 2, m.n, m.left, m.right);
     int index = m.data.size()/ m.n/m.n;
     thrust::host_vector<double> data_element(m.n*m.n, 0), zero(data_element);
     bool found=false;
@@ -67,18 +67,18 @@ CooSparseBlockMat save_outer_values(EllSparseBlockMat& m)
 * @param howmany[3] # of processes 0 is left, 1 is the middle, 2 is right
 * @return The reduced matrix
 */
-EllSparseBlockMat distribute_rows( const EllSparseBlockMat& src, int coord, const int* howmany)
+EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src, int coord, const int* howmany)
 {
     if( howmany[1] == 1)
     {
-        EllSparseBlockMat temp(src);
+        EllSparseBlockMat<double> temp(src);
         temp.left = temp.left/howmany[0];
         temp.right = temp.right/howmany[2];
         return temp;
     }
     assert( src.num_rows == src.num_cols);
     int chunk_size = src.num_rows/howmany[1];
-    EllSparseBlockMat temp(chunk_size, chunk_size, src.blocks_per_line, src.data.size()/(src.n*src.n), src.n);
+    EllSparseBlockMat<double> temp(chunk_size, chunk_size, src.blocks_per_line, src.data.size()/(src.n*src.n), src.n);
     temp.left = src.left/howmany[0];
     temp.right = src.right/howmany[2];
     //first copy data elements (even though not all might be needed it doesn't slow down things either)
@@ -117,9 +117,9 @@ EllSparseBlockMat distribute_rows( const EllSparseBlockMat& src, int coord, cons
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d& g, bc bcx, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPI_Grid2d& g, bc bcx, direction dir = centered)
 {
-    EllSparseBlockMat matrix = dg::create::dx( g.global(), bcx, dir);
+    EllSparseBlockMat<double> matrix = dg::create::dx( g.global(), bcx, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -130,11 +130,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d&
 
     int howmany[] = {dims[1], dims[0], 1}; //left, middle, right
     //distribute_rows, collective and save_outer_values are aware of howmany[1] == 1
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[0], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[0], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 0);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 
 /**
@@ -146,9 +146,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d&
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid2d& g, bc bcy, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPI_Grid2d& g, bc bcy, direction dir = centered)
 {
-    EllSparseBlockMat matrix = dg::create::dy( g.global(), bcy, dir);
+    EllSparseBlockMat<double> matrix = dg::create::dy( g.global(), bcy, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -158,11 +158,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid2d&
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {1, dims[1], dims[0]};
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[1], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[1], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 1);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 
 /**
@@ -173,9 +173,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid2d&
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid2d& g, bc bcx)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPI_Grid2d& g, bc bcx)
 {
-    EllSparseBlockMat matrix = dg::create::jumpX( g.global(), bcx);
+    EllSparseBlockMat<double> matrix = dg::create::jumpX( g.global(), bcx);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -185,11 +185,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {dims[1], dims[0], 1}; //left, middle, right
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[0], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[0], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 0);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 /**
 * @brief Create a 2d jump in the y-direction for mpi
@@ -199,9 +199,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid2d& g, bc bcy)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPI_Grid2d& g, bc bcy)
 {
-    EllSparseBlockMat matrix = dg::create::jumpY( g.global(), bcy);
+    EllSparseBlockMat<double> matrix = dg::create::jumpY( g.global(), bcy);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -211,11 +211,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {1, dims[1], dims[0]};
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[1], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[1], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 1);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 
 /**
@@ -227,9 +227,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid3d& g, bc bcx, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPI_Grid3d& g, bc bcx, direction dir = centered)
 {
-    EllSparseBlockMat matrix = dg::create::dx( g.global(), bcx, dir);
+    EllSparseBlockMat<double> matrix = dg::create::dx( g.global(), bcx, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -239,11 +239,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid3d&
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {dims[2]*dims[1], dims[0], 1};
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[0], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[0], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 0);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 /**
 * @brief Create a 3d derivative in the y-direction for mpi
@@ -254,9 +254,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid3d&
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid3d& g, bc bcy, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPI_Grid3d& g, bc bcy, direction dir = centered)
 {
-    EllSparseBlockMat matrix = dg::create::dy( g.global(), bcy, dir);
+    EllSparseBlockMat<double> matrix = dg::create::dy( g.global(), bcy, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -266,11 +266,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid3d&
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {dims[2], dims[1], dims[0]};
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[1], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[1], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 1);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 /**
 * @brief Create a 3d derivative in the z-direction for mpi
@@ -281,9 +281,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid3d&
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dz( const MPI_Grid3d& g, bc bcz, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( const MPI_Grid3d& g, bc bcz, direction dir = centered)
 {
-    EllSparseBlockMat matrix = dg::create::dz( g.global(), bcz, dir);
+    EllSparseBlockMat<double> matrix = dg::create::dz( g.global(), bcz, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -293,11 +293,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dz( const MPI_Grid3d&
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[2], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[2], howmany);
     NNCH c( 1, vector_dimensions, comm, 2);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 
 /**
@@ -308,9 +308,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> dz( const MPI_Grid3d&
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g, bc bcx)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPI_Grid3d& g, bc bcx)
 {
-    EllSparseBlockMat matrix = dg::create::jumpX( g.global(), bcx);
+    EllSparseBlockMat<double> matrix = dg::create::jumpX( g.global(), bcx);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -320,11 +320,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {dims[2]*dims[1], dims[0], 1};
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[0], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[0], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 0);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 
 /**
@@ -335,9 +335,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g, bc bcy)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPI_Grid3d& g, bc bcy)
 {
-    EllSparseBlockMat matrix = dg::create::jumpY( g.global(), bcy);
+    EllSparseBlockMat<double> matrix = dg::create::jumpY( g.global(), bcy);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -347,11 +347,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {dims[2], dims[1], dims[0]};
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[1], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[1], howmany);
     NNCH c( g.n(), vector_dimensions, comm, 1);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 /**
 * @brief Create a 3d jump in the z-direction for mpi
@@ -361,9 +361,9 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g, bc bcz)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ( const MPI_Grid3d& g, bc bcz)
 {
-    EllSparseBlockMat matrix = dg::create::jumpZ( g.global(), bcz);
+    EllSparseBlockMat<double> matrix = dg::create::jumpZ( g.global(), bcz);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
@@ -373,11 +373,11 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpZ( const MPI_Grid
     MPI_Cart_get( comm, ndims, dims, periods, coords);
 
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
-    EllSparseBlockMat inner = detail::distribute_rows(matrix, coords[2], howmany);
+    EllSparseBlockMat<double> inner = detail::distribute_rows(matrix, coords[2], howmany);
     NNCH c( 1, vector_dimensions, comm, 2);
-    CooSparseBlockMat outer = detail::save_outer_values(inner);
+    CooSparseBlockMat<double> outer = detail::save_outer_values(inner);
 
-    return RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH>( inner, outer, c);
+    return RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH>( inner, outer, c);
 }
 
 /**
@@ -388,7 +388,7 @@ RowColDistMat< EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpZ( const MPI_Grid
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPI_Grid2d& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
@@ -401,7 +401,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid2d& 
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid3d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPI_Grid3d& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
@@ -412,7 +412,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dx( const MPI_Grid3d& 
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid2d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPI_Grid2d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -424,7 +424,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid2
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid3d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPI_Grid3d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -437,7 +437,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpX( const MPI_Grid3
  *
  * @return A mpi matrix
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid2d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPI_Grid2d& g, direction dir = centered)
 {
     return dy( g, g.bcy(), dir);
 }
@@ -450,7 +450,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid2d& 
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid3d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPI_Grid3d& g, direction dir = centered)
 {
     return dy( g, g.bcy(), dir);
 }
@@ -462,7 +462,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dy( const MPI_Grid3d& 
  *
  * @return A mpi matrix
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid2d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPI_Grid2d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -474,7 +474,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid2
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid3d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPI_Grid3d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -487,7 +487,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpY( const MPI_Grid3
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dz( const MPI_Grid3d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( const MPI_Grid3d& g, direction dir = centered)
 {
     return dz( g, g.bcz(), dir);
 }
@@ -499,7 +499,7 @@ RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> dz( const MPI_Grid3d& 
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat, CooSparseBlockMat, NNCH> jumpZ( const MPI_Grid3d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ( const MPI_Grid3d& g)
 {
     return jumpZ( g, g.bcz());
 }

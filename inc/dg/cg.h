@@ -385,7 +385,7 @@ template<class SymmetricOp, class container>
 struct Inverse
 {
     typedef typename VectorTraits<container>::value_type value_type;
-    Inverse( SymmetricOp& OP, container& copyable, unsigned max_iter, value_type eps, int extrapolationType=2): 
+    Inverse( SymmetricOp& OP, container& copyable, unsigned max_iter, value_type eps, int extrapolationType=0): 
         op( OP), invert( copyable, max_iter, eps, extrapolationType, false, 1.){}
     /**
      * @brief Computes Op^{-1} b = x

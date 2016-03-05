@@ -45,12 +45,24 @@ namespace blas1
  * @tparam Vector2 Second vector type
  * @param x source
  * @param y sink
+ * @note y gets resized properly
  */
 template<class Vector1, class Vector2>
-inline void copy( const Vector1& x, Vector2& y)
+inline void convertAndCopy( const Vector1& x, Vector2& y)
 {
-    dg::blas1::detail::doCopy( x,y, typename dg::VectorTraits<Vector1>::vector_category(), typename dg::VectorTraits<Vector2>::vector_category());
+    dg::blas1::detail::doConvertAndCopy( x,y, typename dg::VectorTraits<Vector1>::vector_category(), typename dg::VectorTraits<Vector2>::vector_category());
 }
+
+
+/**
+ * @brief Invoke assignment operator
+ *
+ * @tparam Vector Vector class
+ * @param x in
+ * @param y out
+ */
+template<class Vector>
+inline void copy( const Vector& x, Vector& y){y=x;}
 
 /*! @brief Euclidean dot product between two Vectors
  *

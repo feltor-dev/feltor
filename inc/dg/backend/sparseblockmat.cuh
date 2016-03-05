@@ -15,8 +15,10 @@ namespace dg
 be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It can be applied
 to device vectors and does the same thing as the host version
 */
+template<class value_type>
 struct EllSparseBlockMatDevice
 {
+    EllSparseBlockMatDevice(){}
     /**
     * @brief Allocate storage
     *
@@ -24,7 +26,8 @@ struct EllSparseBlockMatDevice
         copies all internal data of the host matrix to the device
         @param src  source on the host
     */
-    EllSparseBlockMatDevice( const EllSparseBlockMat& src)
+    template< class OtherValueType>
+    EllSparseBlockMatDevice( const EllSparseBlockMat<OtherValueType>& src)
     {
         data = src.data;
         cols_idx = src.cols_idx, data_idx = src.data_idx;
@@ -38,7 +41,7 @@ struct EllSparseBlockMatDevice
     * @param x input
     * @param y output may not equal input
     */
-    void symv(const thrust::device_vector<double>& x, thrust::device_vector<double>& y) const;
+    void symv(const thrust::device_vector<value_type>& x, thrust::device_vector<value_type>& y) const;
     /**
     * @brief Display internal data to a stream
     *
@@ -46,11 +49,10 @@ struct EllSparseBlockMatDevice
     */
     void display( std::ostream& os = std::cout) const;
     private:
-    typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
-    void launch_multiply_kernel(const DVec& x, DVec& y) const;
+    void launch_multiply_kernel(const thrust::device_vector<value_type>& x, thrust::device_vector<value_type>& y) const;
     
-    DVec data;
+    thrust::device_vector<value_type> data;
     IVec cols_idx, data_idx; 
     int num_rows, num_cols, blocks_per_line;
     int n;
@@ -65,6 +67,7 @@ struct EllSparseBlockMatDevice
 * This class holds a copy of a CooSparseBlockMat on the device, which may 
 be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thing as the host version with the difference that it applies to device vectors.
 */
+template<class value_type>
 struct CooSparseBlockMatDevice
 {
     /**
@@ -74,7 +77,8 @@ struct CooSparseBlockMatDevice
         copies all internal data of the host matrix to the device
         @param src  source on the host
     */
-    CooSparseBlockMatDevice( const CooSparseBlockMat& src)
+    template<class OtherValueType>
+    CooSparseBlockMatDevice( const CooSparseBlockMat<OtherValueType>& src)
     {
         data = src.data;
         rows_idx = src.rows_idx, cols_idx = src.cols_idx, data_idx = src.data_idx;
@@ -90,7 +94,7 @@ struct CooSparseBlockMatDevice
     * @param beta premultiplies output
     * @param y output may not equal input
     */
-    void symv(double alpha, const thrust::device_vector<double>& x, double beta, thrust::device_vector<double>& y) const;
+    void symv(value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const;
     /**
     * @brief Display internal data to a stream
     *
@@ -98,18 +102,18 @@ struct CooSparseBlockMatDevice
     */
     void display(std::ostream& os = std::cout) const;
     private:
-    typedef thrust::device_vector<double> DVec;
     typedef thrust::device_vector<int> IVec;
-    void launch_multiply_kernel(double alpha, const DVec& x, double beta, DVec& y) const;
+    void launch_multiply_kernel(value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const;
     
-    DVec data;
+    thrust::device_vector<value_type> data;
     IVec cols_idx, rows_idx, data_idx; 
     int num_rows, num_cols, num_entries;
     int n, left, right;
 };
 
 ///@cond
-void EllSparseBlockMatDevice::display( std::ostream& os) const
+template<class value_type>
+void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
 {
     os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
     os << "num_rows         "<<num_rows<<"\n";
@@ -135,7 +139,8 @@ void EllSparseBlockMatDevice::display( std::ostream& os) const
     os << std::endl;
     
 }
-void CooSparseBlockMatDevice::display( std::ostream& os) const
+template<class value_type>
+void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
 {
     os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
     os << "num_rows         "<<num_rows<<"\n";
@@ -156,43 +161,46 @@ void CooSparseBlockMatDevice::display( std::ostream& os) const
     os << std::endl;
     
 }
-inline void EllSparseBlockMatDevice::symv( const DVec& x, DVec& y) const
+template<class value_type>
+inline void EllSparseBlockMatDevice<value_type>::symv( const thrust::device_vector<value_type>& x, thrust::device_vector<value_type>& y) const
 {
     launch_multiply_kernel( x,y);
 }
-inline void CooSparseBlockMatDevice::symv( double alpha, const DVec& x, double beta, DVec& y) const
+template<class value_type>
+inline void CooSparseBlockMatDevice<value_type>::symv( value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const
 {
     launch_multiply_kernel(alpha, x, beta, y);
 }
 
 
-template <>
-struct MatrixTraits<EllSparseBlockMatDevice>
+template <class T>
+struct MatrixTraits<EllSparseBlockMatDevice<T> >
 {
-    typedef double value_type;
+    typedef T value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template <>
-struct MatrixTraits<const EllSparseBlockMatDevice>
+template <class T>
+struct MatrixTraits<const EllSparseBlockMatDevice<T> >
 {
-    typedef double value_type;
+    typedef T value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template <>
-struct MatrixTraits<CooSparseBlockMatDevice>
+template <class T>
+struct MatrixTraits<CooSparseBlockMatDevice<T> >
 {
-    typedef double value_type;
+    typedef T value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template <>
-struct MatrixTraits<const CooSparseBlockMatDevice>
+template <class T>
+struct MatrixTraits<const CooSparseBlockMatDevice<T> >
 {
-    typedef double value_type;
+    typedef T value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-void EllSparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
+template<class value_type>
+void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const thrust::device_vector<value_type>& x, thrust::device_vector<value_type>& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -206,7 +214,7 @@ if(right==1) //alle dx Ableitungen
     for( int i=0; i<1; i++)
     for( int k=0; k<n; k++)
     {
-        double temp=0;
+        value_type temp=0;
         for( int d=0; d<blocks_per_line; d++)
             for( int q=0; q<n; q++) //multiplication-loop
                 temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
@@ -218,7 +226,7 @@ if(right==1) //alle dx Ableitungen
     for( int i=1; i<num_rows-1; i++)
     for( int k=0; k<n; k++)
     {
-        double temp=0;
+        value_type temp=0;
         for( int d=0; d<blocks_per_line; d++)
             for( int q=0; q<n; q++) //multiplication-loop
                 temp+=data[(d*n + k)*n+q]*x[((s*num_cols + i+offset[d])*n+q)];
@@ -229,7 +237,7 @@ if(right==1) //alle dx Ableitungen
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<n; k++)
     {
-        double temp=0;
+        value_type temp=0;
         for( int d=0; d<blocks_per_line; d++)
             for( int q=0; q<n; q++) //multiplication-loop
                 temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
@@ -252,7 +260,7 @@ if(right==1) //alle dx Ableitungen
     for( int k=0; k<n; k++)
     for( int j=0; j<right; j++)
     {
-        double temp=0;
+        value_type temp=0;
         int I = ((s*num_rows + i)*n+k)*right+j;
         for( int d=0; d<blocks_per_line; d++)
             for( int q=0; q<n; q++) //multiplication-loop
@@ -276,7 +284,7 @@ if(left > 1)
             int I = ((s*num_rows + i)*n+k)*right+j;
             for( int q=0; q<n; q++) //multiplication-loop
                 y[I] += data[ (d*n+k)*n+q]*x[((s*num_cols + J)*n+q)*right+j];
-            //double temp=0;
+            //value_type temp=0;
             //for( int d=0; d<blocks_per_line; d++)
             //    for( int q=0; q<n; q++) //multiplication-loop
             //        temp+=data[(d*n + k)*n+q]*
@@ -311,7 +319,7 @@ else
     for( int j=0; j<right; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right+j;
-        double temp=0; 
+        value_type temp=0; 
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
             temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
@@ -319,7 +327,8 @@ else
         y[I] = temp; //do not add here because of the case num_rows==1
     }
 }
-void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& x, double beta, DVec& y) const
+template<class value_type>
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -332,7 +341,7 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
     for( int j=0; j<right; j++)
     {
         int I = ((s*num_rows + rows_idx[i])*n+k)*right+j;
-        double temp=0;
+        value_type temp=0;
         for( int q=0; q<n; q++) //multiplication-loop
             temp+= data[ (data_idx[i]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i])*n+q)*right+j];
@@ -342,12 +351,13 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
 #else
 
 // multiply kernel
+template<class value_type>
  __global__ void ell_multiply_kernel(
-         const double* data, const int* cols_idx, const int* data_idx, 
+         const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, const int size,
          const int left, const int right, 
-         const double* x, double *y
+         const value_type* x, value_type *y
          )
 {
     //int size = left*num_rows*n*right;
@@ -362,7 +372,7 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
             k = (rr)%n, 
             j=row%right;
         int B, J;
-        double temp=0;
+        value_type temp=0;
         //y[row] = 0;
         //if( i==0||i==num_rows-1)
             for( int d=0; d<blocks_per_line; d++)
@@ -389,12 +399,13 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
 
 }
 // multiply kernel
+template<class value_type>
  __global__ void coo_multiply_kernel(
-         const double* data, const int* rows_idx, const int* cols_idx, const int* data_idx, 
+         const value_type* data, const int* rows_idx, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols, const int entry,
          const int n, 
          const int left, const int right, 
-         double alpha, const double* x, double *y
+         value_type alpha, const value_type* x, value_type *y
          )
 {
     int size = left*n*right;
@@ -407,7 +418,7 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
             k=(idx/right)%n, 
             j=idx%right;
         int I = ((s*num_rows+rows_idx[entry])*n+k)*right+j;
-        double temp = 0;
+        value_type temp = 0;
         int B = data_idx[entry];
         int J = cols_idx[entry];
         for( int q=0; q<n; q++) //multiplication-loop
@@ -417,7 +428,8 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
 
 }
 
-void EllSparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) const
+template<class value_type>
+void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const thrust::device_vector<value_type>& x, thrust::device_vector<value_type>& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -426,15 +438,17 @@ void EllSparseBlockMatDevice::launch_multiply_kernel( const DVec& x, DVec& y) co
     const size_t size = left*right*num_rows*n;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
-    const double* data_ptr = thrust::raw_pointer_cast( &data[0]);
+    const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
-    const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
-    double* y_ptr = thrust::raw_pointer_cast( &y[0]);
-    ell_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
+    const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
+    value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
+    ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
         data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, left, right, x_ptr,y_ptr);
 }
-void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& x, double beta, DVec& y) const
+
+template<class value_type>
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -444,15 +458,15 @@ void CooSparseBlockMatDevice::launch_multiply_kernel( double alpha, const DVec& 
     const size_t size = left*right*n;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
-    const double* data_ptr = thrust::raw_pointer_cast( &data[0]);
+    const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* rows_ptr = thrust::raw_pointer_cast( &rows_idx[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
-    const double* x_ptr = thrust::raw_pointer_cast( &x[0]);
-    double* y_ptr = thrust::raw_pointer_cast( &y[0]);
+    const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
+    value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
     for( int i=0; i<num_entries; i++)
     {
-        coo_multiply_kernel <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
+        coo_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
             data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left, right, alpha, x_ptr,y_ptr);
     }
 }

@@ -14,7 +14,7 @@ double derivative( double x) { return cos(x);}
 double zero( double x) { return 0;}
 
 typedef dg::HVec Vector;
-typedef dg::EllSparseBlockMat Matrix;
+typedef dg::EllSparseBlockMat<double> Matrix;
 
 int main ()
 {

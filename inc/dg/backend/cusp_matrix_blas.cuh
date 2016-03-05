@@ -6,6 +6,7 @@
 #endif //DG_DEBUG
 
 #include <cusp/multiply.h>
+#include <cusp/convert.h>
 #include <cusp/array1d.h>
 
 #include "matrix_categories.h"
@@ -17,6 +18,11 @@ namespace blas2
 {
 namespace detail
 {
+template<class Matrix1, class Matrix2>
+inline void doConvertAndCopy( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixTag)
+{
+    cusp::convert(x,y);
+}
 
 template< class Matrix, class Vector>
 inline void doSymv( Matrix& m, 
