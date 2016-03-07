@@ -13,12 +13,12 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double function(double x, double y){ return sin(y)*sin(x);}
 
-typedef float value_type;
-typedef dg::fDVec Vector;
-typedef dg::fDMatrix Matrix;
-//typedef double value_type;
-//typedef dg::DVec Vector;
-//typedef dg::DMatrix Matrix;
+//typedef float value_type;
+//typedef dg::fDVec Vector;
+//typedef dg::fDMatrix Matrix;
+typedef double value_type;
+typedef dg::DVec Vector;
+typedef dg::DMatrix Matrix;
 
 int main()
 {

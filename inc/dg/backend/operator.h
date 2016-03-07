@@ -53,7 +53,7 @@ class Operator
     Operator( InputIterator first, InputIterator last): data_(first, last)
     {
         unsigned n = std::distance( first, last);
-        n_ = (unsigned)sqrt( (double)n);
+        n_ = (unsigned)sqrt( (value_type)n);
 #ifdef DG_DEBUG
         assert( n_*n_ == n);
 #endif
@@ -66,7 +66,7 @@ class Operator
     Operator( const std::vector<T>& src): data_(src)
     {
         unsigned n = src.size();
-        n_ = (unsigned)sqrt( (double)n);
+        n_ = (unsigned)sqrt( (value_type)n);
 #ifdef DG_DEBUG
         assert( n_*n_ == n);
 #endif
@@ -121,7 +121,7 @@ class Operator
      *
      * @return 
      */
-    const std::vector<double>& data() const {return data_;}
+    const std::vector<value_type>& data() const {return data_;}
 
     void swap_lines( const size_t i, const size_t k)
     {

@@ -20,6 +20,8 @@ dg::bc bcz = dg::DIR;
 
 typedef dg::EllSparseBlockMatDevice<double> Matrix;
 typedef dg::DVec Vector;
+//typedef dg::EllSparseBlockMatDevice<float> Matrix;
+//typedef thrust::device_vector<float> Vector;
 
 int main()
 {
@@ -35,6 +37,11 @@ int main()
     Vector v = dg::evaluate( sinx, g);
     Vector w = v;
     const Vector u = dg::evaluate( cosx, g);
+
+    if( thrust::detail::is_same< dg::VectorTraits<Vector>::value_type, float>::value )
+        std::cout << "Value type is float! "<<std::endl;
+    else
+        std::cout << "Value type is double! "<<std::endl;
 
     t.tic();
     dg::blas2::symv( dx, v, w);
