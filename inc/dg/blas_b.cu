@@ -7,7 +7,6 @@
 #include "backend/timer.cuh"
 #include "blas.h"
 #include "backend/derivatives.h"
-#include "backend/derivativesX.h"
 #include "backend/evaluation.cuh"
 
 const double lx = 2.*M_PI;
@@ -21,7 +20,6 @@ int main()
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny);
-    dg::GridX2d gridX( 0., lx, 0, ly, 0.2, 0., n, Nx, Ny);
     const dg::DVec w2d = dg::create::weights( grid);
     std::cout<<"Evaluate a function on the grid\n";
     t.tic();
@@ -83,37 +81,6 @@ int main()
     t.toc();
     std::cout<<"DOT(x,w,y) took                  " <<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
     norm++;//get rid of compiler warning
-
-    dg::Composite<dg::DMatrix> Mat = dg::create::dx( gridX, dg::centered);
-    t.tic();
-    dg::blas2::symv( Mat, x, y);
-    t.toc();
-    std::cout<<"centered x Xderivative took       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
-
-    Mat = dg::create::dx( gridX, dg::forward);
-    t.tic();
-    dg::blas2::symv( Mat, x, y);
-    t.toc();
-    std::cout<<"forward x Xderivative took        "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
-
-    Mat = dg::create::dy( gridX, dg::forward);
-    t.tic();
-    dg::blas2::symv( Mat, x, y);
-    t.toc();
-    std::cout<<"forward y Xderivative took        "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
-
-    Mat = dg::create::dy( gridX, dg::centered);
-    t.tic();
-    dg::blas2::symv( Mat, x, y);
-    t.toc();
-    std::cout<<"centered y Xderivative took       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
-
-    Mat = dg::create::jumpX( gridX);
-    t.tic();
-    dg::blas2::symv( Mat, x, y);
-    t.toc();
-    std::cout<<"jump X took                      "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
-
 
     return 0;
 }

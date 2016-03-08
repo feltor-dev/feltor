@@ -291,9 +291,9 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
         thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
         coords[0] = y[0].data()[i], coords[1] = y[1].data()[i], coords[2] = y[2].data()[i], coords[3] = y[3].data()[i], coords[4] = y[4].data()[i];
         double phi1 = deltaPhi;
-        boxintegrator( field, g_.global(), coords, coordsP, phi1, eps, globalbcz);
+        boxintegrator( field, g2d.global(), coords, coordsP, phi1, eps, globalbcz);
         phi1 = -deltaPhi;
-        boxintegrator( field, g_.global(), coords, coordsM, phi1, eps, globalbcz);
+        boxintegrator( field, g2d.global(), coords, coordsM, phi1, eps, globalbcz);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }

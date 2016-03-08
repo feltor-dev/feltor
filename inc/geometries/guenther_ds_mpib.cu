@@ -69,14 +69,14 @@ int main( int argc, char* argv[])
     solovev::FieldR bR_(gp);
     solovev::FieldZ bZ_(gp);
     solovev::FieldP bPhi_(gp);
-    solovev::FuncNeu funcNEU(gp.R_0,gp.I_0);
-    solovev::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    solovev::DeriNeu deriNEU(gp.R_0,gp.I_0);
-    solovev::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    solovev::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    solovev::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    solovev::Divb divb(gp.R_0,gp.I_0);
-    solovev::B Bfield(gp);
+    guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    guenther::Divb divb(gp.R_0,gp.I_0);
+    guenther::B Bfield(gp);
     
     //std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
