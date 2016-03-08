@@ -21,9 +21,6 @@ namespace blas1
 namespace detail
 {
 
-template<class Vector>
-void doCopy( const Vector& x, Vector& y, ThrustVectorTag){y=x;}
-    
 
 template< typename value_type>
 struct Axpby_Functor

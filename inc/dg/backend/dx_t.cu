@@ -13,18 +13,6 @@ double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
 double zero( double x) { return 0;}
 
-double functionX( double x) { 
-    if( x < 0) return sin(x);
-    else if( 0 <= x && x < 2*M_PI) return cos(x);
-    else return sin(x - 2*M_PI);
-}
-double derivativeX( double x) { 
-    if( x < 0) return cos(x);
-    else if( 0 <= x && x < 2*M_PI) return -sin(x);
-    else return cos(x - 2*M_PI);
-}
-double zeroX( double x) { return 0;}
-
 typedef dg::HVec Vector;
 typedef dg::EllSparseBlockMat Matrix;
 
