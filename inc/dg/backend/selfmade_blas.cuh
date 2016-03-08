@@ -5,6 +5,13 @@ namespace dg{
 namespace blas2{
 namespace detail{
 
+
+template<class Matrix1, class Matrix2>
+inline void doTransfer( const Matrix1& x, Matrix2& y, SelfMadeMatrixTag, SelfMadeMatrixTag)
+{
+    y = (Matrix2)x; //try to invoke the explicit conversion construction
+}
+
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(  
               Matrix& m, 

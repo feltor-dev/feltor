@@ -16,7 +16,7 @@ double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
 double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 
 typedef dg::DVec Vector;
-typedef dg::EllSparseBlockMatDevice Matrix;
+typedef dg::EllSparseBlockMatDevice<double> Matrix;
 //typedef dg::HVec Vector;
 //typedef dg::EllSparseBlockMat Matrix;
 

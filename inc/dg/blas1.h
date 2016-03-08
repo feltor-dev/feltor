@@ -37,17 +37,31 @@ namespace blas1
 ///@addtogroup blas1
 ///@{
 
-/*! @brief Deep copy of a vector
+/**
+ * @brief Generic way to copy vectors of different types (e.g. from CPU to GPU, or double to float, etc.)
  *
- * This routine computes \f[ y_i = x_i \f]
- * @param x Left Vector
- * @param y Right Vector may equal y
+ * @tparam Vector1 First vector type
+ * @tparam Vector2 Second vector type
+ * @param x source
+ * @param y sink
+ * @note y gets resized properly
  */
-template< class Vector>
-inline void copy( const Vector& x, Vector& y)
+template<class Vector1, class Vector2>
+inline void transfer( const Vector1& x, Vector2& y)
 {
-    return dg::blas1::detail::doCopy( x, y, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doTransfer( x,y, typename dg::VectorTraits<Vector1>::vector_category(), typename dg::VectorTraits<Vector2>::vector_category());
 }
+
+
+/**
+ * @brief Invoke assignment operator
+ *
+ * @tparam Vector Vector class
+ * @param x in
+ * @param y out
+ */
+template<class Vector>
+inline void copy( const Vector& x, Vector& y){y=x;}
 
 /*! @brief Euclidean dot product between two Vectors
  *

@@ -13,6 +13,13 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double function(double x, double y){ return sin(y)*sin(x);}
 
+//typedef float value_type;
+//typedef dg::fDVec Vector;
+//typedef dg::fDMatrix Matrix;
+typedef double value_type;
+typedef dg::DVec Vector;
+typedef dg::DMatrix Matrix;
+
 int main()
 {
     dg::Timer t;
@@ -20,43 +27,49 @@ int main()
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny);
-    const dg::DVec w2d = dg::create::weights( grid);
+    Vector w2d;
+    dg::blas1::transfer( dg::create::weights(grid), w2d);
+
     std::cout<<"Evaluate a function on the grid\n";
     t.tic();
-    dg::DVec x = dg::evaluate( function, grid);
+    Vector x;
+    dg::blas1::transfer( dg::evaluate( function, grid), x);
     t.toc();
     std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
-    double gbytes=x.size()*8/1e9;
+    std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
+    value_type gbytes=(value_type)x.size()*sizeof(value_type)/1e9;
+    std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
     t.tic();
-    double norm = dg::blas2::dot( w2d, x);
+    value_type norm = dg::blas2::dot( w2d, x);
     t.toc();
     std::cout<<"DOT took                         " <<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
-    dg::DVec y(x);
-    dg::DMatrix M = dg::create::dx( grid, dg::centered);
+    Vector y(x);
+    Matrix M;
+    dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"centered x derivative took       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
 
-    M = dg::create::dx( grid, dg::forward);
+    dg::blas2::transfer(dg::create::dx( grid, dg::forward), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"forward x derivative took        "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
 
-    M = dg::create::dy( grid, dg::forward);
+    dg::blas2::transfer(dg::create::dy( grid, dg::forward), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"forward y derivative took        "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
 
-    M = dg::create::dy( grid, dg::centered);
+    dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"centered y derivative took       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
 
-    M = dg::create::jumpX( grid);
+    dg::blas2::transfer(dg::create::jumpX( grid), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
@@ -70,7 +83,7 @@ int main()
     t.tic();
     dg::blas1::pointwiseDot( y, x, x);
     t.toc();
-    std::cout<<"pointwiseDot took                "<<t.diff()<<"s\t" <<x.size()*8/1e9/t.diff()<<"GB/s\n";
+    std::cout<<"pointwiseDot took                "<<t.diff()<<"s\t" <<gbytes/t.diff()<<"GB/s\n";
     t.tic();
     norm = dg::blas2::dot( w2d, y);
     t.toc();
