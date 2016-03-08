@@ -385,22 +385,26 @@ template<class SymmetricOp, class container>
 struct Inverse
 {
     typedef typename VectorTraits<container>::value_type value_type;
-    Inverse( SymmetricOp& OP, container& copyable, unsigned max_iter, value_type eps, int extrapolationType=0): 
-        op( OP), invert( copyable, max_iter, eps, extrapolationType, false, 1.){}
+    Inverse( SymmetricOp& op, container& copyable, unsigned max_iter, value_type eps, int extrapolationType=0): 
+        x_(copyable), b_(copyable), op_( op), invert_( copyable, max_iter, eps, extrapolationType, false, 1.){}
     /**
      * @brief Computes Op^{-1} b = x
      *
      * @param b
      * @param x
      */
-    void symv( const container& b, container& x)
+    template<class OtherContainer>
+    void symv( const OtherContainer& b, OtherContainer& x)
     {
         //std::cout << "Number in inverse "<<invert( op, x, b, op.weights(), op.precond())<<std::endl;
-        invert( op, x, b, op.weights(), op.precond());
+        dg::blas1::transfer(b,b_);
+        invert_( op_, x_, b_, op_.weights(), op_.precond());
+        dg::blas1::transfer(x_,x);
     }
     private:
-    SymmetricOp op;
-    Invert<container> invert;
+    container x_,b_;
+    SymmetricOp op_;
+    Invert<container> invert_;
 };
 
 ///@cond

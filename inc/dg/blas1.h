@@ -39,7 +39,7 @@ namespace blas1
 
 
 /**
- * @brief Generic way to copy vectors of different types (e.g. from CPU to GPU, or double to float)
+ * @brief Generic way to copy vectors of different types (e.g. from CPU to GPU, or double to float, etc.)
  *
  * @tparam Vector1 First vector type
  * @tparam Vector2 Second vector type
@@ -48,9 +48,9 @@ namespace blas1
  * @note y gets resized properly
  */
 template<class Vector1, class Vector2>
-inline void convertAndCopy( const Vector1& x, Vector2& y)
+inline void transfer( const Vector1& x, Vector2& y)
 {
-    dg::blas1::detail::doConvertAndCopy( x,y, typename dg::VectorTraits<Vector1>::vector_category(), typename dg::VectorTraits<Vector2>::vector_category());
+    dg::blas1::detail::doTransfer( x,y, typename dg::VectorTraits<Vector1>::vector_category(), typename dg::VectorTraits<Vector2>::vector_category());
 }
 
 

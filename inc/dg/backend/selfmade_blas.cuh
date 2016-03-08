@@ -7,7 +7,7 @@ namespace detail{
 
 
 template<class Matrix1, class Matrix2>
-inline void doConvertAndCopy( const Matrix1& x, Matrix2& y, SelfMadeMatrixTag, SelfMadeMatrixTag)
+inline void doTransfer( const Matrix1& x, Matrix2& y, SelfMadeMatrixTag, SelfMadeMatrixTag)
 {
     y = (Matrix2)x; //try to invoke the explicit conversion construction
 }

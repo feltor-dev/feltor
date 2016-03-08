@@ -20,7 +20,7 @@ namespace detail{
 
 //thrust vector preconditioner
 template< class Vector1, class Vector2>
-void doConvertAndCopy( const Vector1& in, Vector2& out, ThrustMatrixTag, ThrustMatrixTag)
+void doTransfer( const Vector1& in, Vector2& out, ThrustMatrixTag, ThrustMatrixTag)
 {
     out.resize(in.size());
     thrust::copy( in.begin(), in.end(), out.begin());

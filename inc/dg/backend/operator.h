@@ -72,6 +72,9 @@ class Operator
 #endif
     }
 
+    /**
+     * @brief Assign zero to all elements
+     */
     void zero() {
         for( unsigned i=0; i<n_*n_; i++)
             data_[i] = 0;
@@ -123,6 +126,12 @@ class Operator
      */
     const std::vector<value_type>& data() const {return data_;}
 
+    /**
+     * @brief Swap two lines in the square matrix
+     *
+     * @param i first line
+     * @param k second line
+     */
     void swap_lines( const size_t i, const size_t k)
     {
         assert( i< n_ && k<n_);
@@ -350,9 +359,9 @@ class Operator
 
 namespace create
 {
+///@cond
 namespace detail
 {
-//
 
 struct Message : public std::exception
 {
@@ -362,7 +371,9 @@ struct Message : public std::exception
     const char * message;
 };
 
-/*! @brief LU Decomposition with pivoting
+/*! @brief LU Decomposition with partial pivoting
+ *
+ * @tparam T value type
  */
 template< class T>
 T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
@@ -414,6 +425,14 @@ T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
 
 }
 
+/**
+ * @brief Solve the linear system with the LU decomposition
+ *
+ * @tparam T value type
+ * @param lr result of lr_pivot
+ * @param p pivot vector
+ * @param b right hand side
+ */
 template<class T>
 void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::vector<T>& b)
 {
@@ -437,12 +456,22 @@ void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::v
 }
 
 }//namespace detail
+///@endcond
 
 
 
 ///@addtogroup lowlevel
 ///@{
 //
+/**
+ * @brief Compute the inverse of a square matrix
+ *
+ * @tparam T value type
+ * @param in input matrix
+ *
+ * @return the inverse of in if it exists
+ * @note throws a message if in is singular
+ */
 template<class T>
 dg::Operator<T> invert( const dg::Operator<T>& in)
 {

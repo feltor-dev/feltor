@@ -43,6 +43,7 @@ int main()
     t.tic();
     dg::DMatrix DX = dg::create::dx( grid);
     dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> lap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::fDMatrix, dg::fDVec, dg::fDVec> flap(grid, dg::not_normed, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -57,7 +58,9 @@ int main()
     //////////////////////////////////////////////////////////////////////
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
 
-    dg::Inverse<dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec>, dg::DVec> inverse( lap, x, 10, 1e-15, 0);
+    dg::fDVec xf;
+    dg::blas1::transfer(x,xf);
+    dg::Inverse<dg::Elliptic<dg::fDMatrix, dg::fDVec, dg::fDVec>, dg::fDVec> inverse( flap, xf, 10, 1e-15, 0);
 
 
     

@@ -19,7 +19,7 @@ namespace blas2
 namespace detail
 {
 template<class Matrix1, class Matrix2>
-inline void doConvertAndCopy( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixTag)
+inline void doTransfer( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixTag)
 {
     cusp::convert(x,y);
 }

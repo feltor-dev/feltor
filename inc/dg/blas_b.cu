@@ -28,11 +28,12 @@ int main()
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny);
     Vector w2d;
-    dg::blas1::convertAndCopy( dg::create::weights( grid), w2d);
+    dg::blas1::transfer( dg::create::weights(grid), w2d);
+
     std::cout<<"Evaluate a function on the grid\n";
     t.tic();
     Vector x;
-    dg::blas1::convertAndCopy( dg::evaluate( function, grid), x);
+    dg::blas1::transfer( dg::evaluate( function, grid), x);
     t.toc();
     std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
@@ -44,31 +45,31 @@ int main()
     std::cout<<"DOT took                         " <<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
     Vector y(x);
     Matrix M;
-    dg::blas2::convertAndCopy(dg::create::dx( grid, dg::centered), M);
+    dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"centered x derivative took       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
 
-    dg::blas2::convertAndCopy(dg::create::dx( grid, dg::forward), M);
+    dg::blas2::transfer(dg::create::dx( grid, dg::forward), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"forward x derivative took        "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
 
-    dg::blas2::convertAndCopy(dg::create::dy( grid, dg::forward), M);
+    dg::blas2::transfer(dg::create::dy( grid, dg::forward), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"forward y derivative took        "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
 
-    dg::blas2::convertAndCopy(dg::create::dy( grid, dg::centered), M);
+    dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"centered y derivative took       "<<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
 
-    dg::blas2::convertAndCopy(dg::create::jumpX( grid), M);
+    dg::blas2::transfer(dg::create::jumpX( grid), M);
     t.tic();
     dg::blas2::symv( M, x, y);
     t.toc();

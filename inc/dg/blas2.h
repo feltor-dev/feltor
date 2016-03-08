@@ -32,16 +32,16 @@ namespace blas2{
 /**
  * @brief Generic way to copy matrices of different types (e.g. from CPU to GPU, or double to float)
  *
- * @tparam Vector1 First vector type
- * @tparam Vector2 Second vector type
+ * @tparam Matrix1 First vector type
+ * @tparam Matrix2 Second vector type
  * @param x source
  * @param y sink 
  * @note y gets resized properly
  */
 template<class Matrix1, class Matrix2>
-inline void convertAndCopy( const Matrix1& x, Matrix2& y)
+inline void transfer( const Matrix1& x, Matrix2& y)
 {
-    dg::blas2::detail::doConvertAndCopy( x,y, typename dg::MatrixTraits<Matrix1>::matrix_category(), typename dg::MatrixTraits<Matrix2>::matrix_category());
+    dg::blas2::detail::doTransfer( x,y, typename dg::MatrixTraits<Matrix1>::matrix_category(), typename dg::MatrixTraits<Matrix2>::matrix_category());
 }
 
 /*! @brief General dot produt
