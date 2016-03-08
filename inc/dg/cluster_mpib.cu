@@ -10,8 +10,6 @@
 
 #include "backend/timer.cuh"
 
-#include "../../src/heat/geometry_g.h"
-#include "../../src/heat/parameters.h"
 
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
@@ -160,7 +158,7 @@ int main(int argc, char* argv[])
     dg::CylindricalMPIGrid<Vector> gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
     const Vector ellw3d = dg::create::volume(gridEll);
     const Vector ellv3d = dg::create::inv_volume(gridEll);
-    dg::Elliptic<dg::CylindricalMPIGrid<Vector>, Matrix, Vector, Vector> laplace(gridEll, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CylindricalMPIGrid<Vector>, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
     const Vector solution = dg::evaluate ( fct, gridEll);
     const Vector deriv = dg::evaluate( derivative, gridEll);
     Vector x = dg::evaluate( initial, gridEll);

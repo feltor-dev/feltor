@@ -60,7 +60,6 @@ inline void transfer( const Matrix1& x, Matrix2& y)
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type dot( const Vector& x, const Matrix& m, const Vector& y)
 {
-    THRUST_STATIC_ASSERT( (thrust::detail::is_same< typename VectorTraits<Vector>::value_type, typename MatrixTraits<Matrix>::value_type >::value) );
     return dg::blas2::detail::doDot( x, m, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
@@ -79,7 +78,6 @@ inline typename MatrixTraits<Matrix>::value_type dot( const Vector& x, const Mat
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type dot( const Matrix& m, const Vector& x)
 {
-    THRUST_STATIC_ASSERT( (thrust::detail::is_same< typename VectorTraits<Vector>::value_type, typename MatrixTraits<Matrix>::value_type >::value) );
     return dg::blas2::detail::doDot( m, x, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
@@ -104,7 +102,6 @@ inline void symv( typename MatrixTraits<Precon>::value_type alpha,
                   typename MatrixTraits<Precon>::value_type beta, 
                   Vector& y)
 {
-    THRUST_STATIC_ASSERT( (thrust::detail::is_same< typename VectorTraits<Vector>::value_type, typename MatrixTraits<Precon>::value_type >::value) );
     dg::blas2::detail::doSymv( alpha, P, x, beta, y, 
                        typename dg::MatrixTraits<Precon>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );
@@ -126,8 +123,6 @@ inline void symv( Matrix& m,
                   Vector1& x, 
                   Vector2& y)
 {
-    THRUST_STATIC_ASSERT( (thrust::detail::is_same< typename VectorTraits<Vector1>::value_type, typename MatrixTraits<Matrix>::value_type >::value) );
-    THRUST_STATIC_ASSERT( (thrust::detail::is_same< typename VectorTraits<Vector2>::value_type, typename MatrixTraits<Matrix>::value_type >::value) );
     dg::blas2::detail::doSymv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector1>::vector_category(),
@@ -140,7 +135,6 @@ inline void mv(   Matrix& m,
                   const Vector& x, 
                   Vector& y)
 {
-    THRUST_STATIC_ASSERT( (thrust::detail::is_same< typename VectorTraits<Vector>::value_type, typename MatrixTraits<Matrix>::value_type >::value) );
     dg::blas2::detail::doSymv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<const Vector>::vector_category(),
@@ -161,8 +155,6 @@ inline void gemv( Matrix& m,
                   Vector1& x, 
                   Vector2& y)
 {
-    THRUST_STATIC_ASSERT( (thrust::detail::is_same< typename VectorTraits<Vector1>::value_type, typename MatrixTraits<Matrix>::value_type >::value) );
-    THRUST_STATIC_ASSERT( (thrust::detail::is_same< typename VectorTraits<Vector1>::value_type, typename MatrixTraits<Matrix>::value_type >::value) );
     dg::blas2::detail::doGemv( m, x, y, 
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector1>::vector_category(),

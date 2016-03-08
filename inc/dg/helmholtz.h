@@ -23,10 +23,9 @@ namespace dg{
  * Can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
  * @tparam Vector The Vector class you want to use
- * @tparam Preconditioner The Preconditioner class you want to use
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
  */
-template< class Geometry, class Matrix, class Vector, class Preconditioner> 
+template< class Geometry, class Matrix, class Vector> 
 struct Helmholtz
 {
     /**
@@ -85,14 +84,14 @@ struct Helmholtz
      *
      * @return weights
      */
-    const Preconditioner& weights()const {return laplaceM_.weights();}
+    const Vector& weights()const {return laplaceM_.weights();}
     /**
-     * @brief Preconditioner to use in conjugate gradient solvers
+     * @brief Vector to use in conjugate gradient solvers
      *
      * multiply result by these coefficients to get the normed result
-     * @return Preconditioner
+     * @return Vector
      */
-    const Preconditioner& precond()const {return laplaceM_.precond();}
+    const Vector& precond()const {return laplaceM_.precond();}
     /**
      * @brief Change alpha
      *
@@ -122,7 +121,7 @@ struct Helmholtz
      */
     const Vector& chi() const{return chi_;}
   private:
-    Elliptic<Geometry, Matrix, Vector, Preconditioner> laplaceM_;
+    Elliptic<Geometry, Matrix, Vector> laplaceM_;
     Vector temp_, chi_;
     double alpha_;
     bool isSet;
@@ -139,10 +138,10 @@ struct Helmholtz
  * Can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
  * @tparam Vector The Vector class you want to use
- * @tparam Preconditioner The Preconditioner class you want to use
+ * @tparam Vector The Vector class you want to use
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
  */
-template< class Geometry, class Matrix, class Vector, class Preconditioner> 
+template< class Geometry, class Matrix, class Vector> 
 struct Helmholtz2
 {
     /**
@@ -211,14 +210,14 @@ struct Helmholtz2
      *
      * @return weights
      */
-    const Preconditioner& weights()const {return laplaceM_.weights();}
+    const Vector& weights()const {return laplaceM_.weights();}
     /**
-     * @brief Preconditioner to use in conjugate gradient solvers
+     * @brief Vector to use in conjugate gradient solvers
      *
      * multiply result by these coefficients to get the normed result
-     * @return Preconditioner
+     * @return Vector
      */
-    const Preconditioner& precond()const {return laplaceM_.precond();}
+    const Vector& precond()const {return laplaceM_.precond();}
     /**
      * @brief Change alpha
      *
@@ -248,32 +247,32 @@ struct Helmholtz2
      */
     const Vector& chi()const {return chi_;}
   private:
-    Elliptic<Geometry, Matrix, Vector, Preconditioner> laplaceM_;
+    Elliptic<Geometry, Matrix, Vector> laplaceM_;
     Vector temp_,temp2_,temp3_, chi_;
     double alpha_;
     bool isSet;
 };
 ///@cond
-template< class G, class M, class V, class P>
-struct MatrixTraits< Helmholtz<G, M, V, P> >
+template< class G, class M, class V>
+struct MatrixTraits< Helmholtz<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template< class G, class M, class V, class P>
-struct MatrixTraits< const Helmholtz<G, M, V, P> >
+template< class G, class M, class V>
+struct MatrixTraits< const Helmholtz<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template< class G, class M, class V, class P>
-struct MatrixTraits< Helmholtz2<G, M, V, P> >
+template< class G, class M, class V>
+struct MatrixTraits< Helmholtz2<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template< class G, class M, class V, class P>
-struct MatrixTraits< const Helmholtz2<G, M, V, P> >
+template< class G, class M, class V>
+struct MatrixTraits< const Helmholtz2<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
