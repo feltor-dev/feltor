@@ -81,6 +81,9 @@ class CG
      */
     template< class Matrix, class Preconditioner >
     unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
+    //version of CG where Preconditioner is not trivial
+    template< class Matrix, class Preconditioner, class SquareNorm >
+    unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
     Vector r, p, ap; 
     unsigned max_iter;
@@ -157,6 +160,264 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
     return max_iter;
 }
 
+template< class Vector>
+template< class Matrix, class Preconditioner, class SquareNorm>
+unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
+{
+    value_type nrmb = sqrt( blas2::dot( S, b));
+#ifdef DG_DEBUG
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank==0)
+#endif //MPI
+    {
+    std::cout << "Norm of S b "<<nrmb <<"\n";
+    std::cout << "Residual errors: \n";
+    }
+#endif //DG_DEBUG
+    if( nrmb == 0)
+    {
+        blas1::copy( b, x);
+        return 0;
+    }
+    blas2::symv( A,x,r);
+    blas1::axpby( 1., b, -1., r);
+    if( sqrt( blas2::dot(S,r) ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
+        return 0;
+    blas2::symv( P, r, p );//<-- compute p_0
+    value_type nrmzr_old = blas1::dot( p,r); //and store the scalar product
+    value_type alpha, nrmzr_new;
+    for( unsigned i=1; i<max_iter; i++)
+    {
+        blas2::symv( A, p, ap);
+        alpha =  nrmzr_old/blas1::dot( p, ap);
+        blas1::axpby( alpha, p, 1.,x);
+        blas1::axpby( -alpha, ap, 1., r);
+#ifdef DG_DEBUG
+#ifdef MPI_VERSION
+    if(rank==0)
+#endif //MPI
+    {
+        std::cout << "Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
+        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "(Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
+    }
+#endif //DG_DEBUG
+        if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction)) 
+            return i;
+
+        blas2::symv(P,r,ap);
+        nrmzr_new = blas1::dot( ap, r); 
+        blas1::axpby(1.,ap, nrmzr_new/nrmzr_old, p );
+
+        nrmzr_old=nrmzr_new;
+    }
+    return max_iter;
+}
+
+
+/**
+ * @brief Smart conjugate gradient solver. 
+ 
+ * Solve a symmetric linear inversion problem using a conjugate gradient method and 
+ * the last two solutions.
+ *
+ * @ingroup algorithms
+ * Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
+ * for any operator \f$\hat O\f$ that was made symmetric 
+ * by appropriate weights \f$W\f$ (s. comment below). 
+ * It uses solutions from the last two calls to 
+ * extrapolate a solution for the current call.
+ * @tparam container The Vector class to be used
+ * @note A note on weights and preconditioning. 
+ * A normalized DG-discretized derivative or operator is normally not symmetric. 
+ * The diagonal coefficient matrix that is used to make the operator 
+ * symmetric is called weights W, i.e. \f$ \hat O = W\cdot O\f$ is symmetric. 
+ * Independent from this, a preconditioner should be used to solve the
+ * symmetric matrix equation. Most often the inverse of \f$W\f$ is 
+ * a good preconditioner. 
+ */
+template<class container>
+struct Invert
+{
+    typedef typename VectorTraits<container>::value_type value_type;
+    /**
+     * @brief Constructor
+     *
+     * @param copyable Needed to construct the two previous solutions
+     * @param max_iter maximum iteration in conjugate gradient
+     * @param eps relative error in conjugate gradient
+     * @param nrmb_correction Correction factor for norm of b (cf. CG)
+     */
+    Invert(const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1): 
+        eps_(eps), nrmb_correction_(nrmb_correction),
+        phi0( copyable), phi1( copyable), phi2(phi1), cg( copyable, max_iter),
+        multiplyWeights_(multiplyWeights)
+    {
+        assert( extrapolationType <= 3 && extrapolationType >= 0);
+        switch(extrapolationType)
+        {
+            case(0): alpha[0] = 0, alpha[1] = 0, alpha[2] = 0;
+                     break;
+            case(1): alpha[0] = 1, alpha[1] = 0, alpha[2] = 0;
+                     break;
+            case(2): alpha[0] = 2, alpha[1] = -1, alpha[2] = 0;
+                     break;
+            case(3): alpha[0] = 3, alpha[1] = -3, alpha[2] = 1;
+                     break;
+            default: alpha[0] = 2, alpha[1] = -1, alpha[2] = 0;
+        }
+    }
+    /**
+    * @brief Return last solution
+    */
+    const container& get_last() const { return phi0;}
+
+    /**
+     * @brief Solve linear problem
+     *
+     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
+     * conjugate gradient method. The initial guess comes from an extrapolation 
+     * of the last solutions
+     * @tparam SymmetricOp Symmetric operator with the SelfMadeMatrixTag
+        The functions weights() and precond() need to be callable and return
+        weights and the preconditioner for the conjugate gradient method.
+        The Operator is assumed to be symmetric!
+     * @param op selfmade symmetric Matrix operator class
+     * @param phi solution (write only)
+     * @param rho right-hand-side
+     *
+     * @return number of iterations used 
+     */
+    template< class SymmetricOp >
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
+    {
+        return this->operator()(op, phi, rho, op.weights(), op.precond());
+    }
+
+    /**
+     * @brief Solve linear problem
+     *
+     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
+     * conjugate gradient method. The initial guess comes from an extrapolation 
+     * of the last solutions.
+     * @tparam SymmetricOp Symmetric matrix or operator (with the selfmade tag)
+     * @tparam Weights class of the weights container
+     * @tparam Preconditioner class of the Preconditioner
+     * @param op selfmade symmetric Matrix operator class
+     * @param phi solution (write only)
+     * @param rho right-hand-side
+     * @param w The weights that made the operator symmetric
+     * @param p The preconditioner  
+     *
+     * @return number of iterations used 
+     */
+    template< class SymmetricOp, class Weights, class Preconditioner >
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, Weights& w, Preconditioner& p)
+    {
+        assert( &rho != &phi);
+        blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi); // 1. phi0 + 0.*phi1 = phi
+        blas1::axpby( alpha[2], phi2, 1., phi); // 0. phi2 + 1. phi0 + 0.*phi1 = phi
+
+        unsigned number;
+#ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
+        Timer t;
+        t.tic();
+#endif //DG_BENCHMARK
+        if( multiplyWeights_ ) 
+        {
+            dg::blas2::symv( w, rho, phi2);
+            number = cg( op, phi, phi2, p, eps_, nrmb_correction_);
+        }
+        else
+            number = cg( op, phi, rho, p, eps_, nrmb_correction_);
+#ifdef DG_BENCHMARK
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif //MPI
+        std::cout << "# of cg iterations \t"<< number << "\t";
+        t.toc();
+#ifdef MPI_VERSION
+        if(rank==0)
+#endif //MPI
+        std::cout<< "took \t"<<t.diff()<<"s\n";
+#endif //DG_BENCHMARK
+        phi1.swap( phi2);
+        phi0.swap( phi1);
+        
+        blas1::axpby( 1., phi, 0, phi0);
+        return number;
+    }
+
+    /**
+     * @brief Set the maximum number of iterations 
+     *
+     * @param new_max New maximum number
+     */
+    void set_max( unsigned new_max) {cg.set_max( new_max);}
+    /**
+     * @brief Get the current maximum number of iterations
+     *
+     * @return the current maximum
+     */
+    unsigned get_max() const {return cg.get_max();}
+  private:
+    value_type eps_, nrmb_correction_;
+    container phi0, phi1, phi2;
+    dg::CG< container > cg;
+    value_type alpha[3];
+    bool multiplyWeights_; 
+};
+
+/**
+ * @brief This struct holds a matrix and applies its inverse to vectors 
+ *
+ * The inverse is computed with a conjugate gradient method
+ * @tparam SymmetricOp A symmetric Matrix type
+ * @tparam container The container type to use
+ */
+template<class SymmetricOp, class container>
+struct Inverse
+{
+    typedef typename VectorTraits<container>::value_type value_type;
+    Inverse( SymmetricOp& op, container& copyable, unsigned max_iter, value_type eps, int extrapolationType=0): 
+        x_(copyable), b_(copyable), op_( op), invert_( copyable, max_iter, eps, extrapolationType, false, 1.){}
+    /**
+     * @brief Computes Op^{-1} b = x
+     *
+     * @param b
+     * @param x
+     */
+    template<class OtherContainer>
+    void symv( const OtherContainer& b, OtherContainer& x)
+    {
+        //std::cout << "Number in inverse "<<invert( op, x, b, op.weights(), op.precond())<<std::endl;
+        dg::blas1::transfer(b,b_);
+        invert_( op_, x_, b_, op_.weights(), op_.precond());
+        dg::blas1::transfer(x_,x);
+    }
+    private:
+    container x_,b_;
+    SymmetricOp op_;
+    Invert<container> invert_;
+};
+
+///@cond
+template< class M, class V>
+struct MatrixTraits< Inverse< M, V > >
+{
+    typedef typename Inverse<M, V>::value_type value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+
+///@endcond
+
+
 /**
  * @brief Function version of CG class
  *
@@ -173,6 +434,7 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
  *
  * @return number of iterations
  */
+/*
 template< class Matrix, class Vector, class Preconditioner>
 unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typename VectorTraits<Vector>::value_type eps, unsigned max_iter)
 {
@@ -230,145 +492,7 @@ unsigned cg( Matrix& A, Vector& x, const Vector& b, const Preconditioner& P, typ
     }
     return max_iter;
 }
-
-
-
-
-
-/**
- * @brief Smart conjugate gradient solver. 
- 
- * Solve a symmetric linear inversion problem using a conjugate gradient method and 
- * the last two solutions.
- *
- * @ingroup algorithms
- * Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
- * for any operator \f$\hat O\f$ that was made symmetric 
- * by appropriate weights \f$W\f$ (s. comment below). 
- * It uses solutions from the last two calls to 
- * extrapolate a solution for the current call.
- * @tparam container The Vector class to be used
- * @note A note on weights and preconditioning. 
- * A normalized DG-discretized derivative or operator is normally not symmetric. 
- * The diagonal coefficient matrix that is used to make the operator 
- * symmetric is called weights W, i.e. \f$ \hat O = W\cdot O\f$ is symmetric. 
- * Independent from this, a preconditioner should be used to solve the
- * symmetric matrix equation. Most often the inverse of \f$W\f$ is 
- * a good preconditioner. 
- */
-template<class container>
-struct Invert
-{
-    /**
-     * @brief Constructor
-     *
-     * @param copyable Needed to construct the two previous solutions
-     * @param max_iter maximum iteration in conjugate gradient
-     * @param eps relative error in conjugate gradient
-     * @param nrmb_correction Correction factor for norm of b (cf. CG)
-     */
-    Invert(const container& copyable, unsigned max_iter, double eps, double nrmb_correction = 1): 
-        eps_(eps), nrmb_correction_(nrmb_correction),
-        phi0( copyable), phi1( copyable), phi2(phi1), cg( copyable, max_iter) { }
-    /**
-    * @brief Return last solution
-    */
-    const container& get_last() const { return phi0;}
-
-    /**
-     * @brief Solve linear problem
-     *
-     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
-     * conjugate gradient method. The initial guess comes from an extrapolation 
-     * of the last solutions
-     * @tparam SymmetricOp Symmetric operator with the SelfMadeMatrixTag
-        The functions weights() and precond() need to be callable and return
-        weights and the preconditioner for the conjugate gradient method.
-        The Operator is assumed to be symmetric!
-     * @param op selfmade symmetric Matrix operator class
-     * @param phi solution (write only)
-     * @param rho right-hand-side
-     *
-     * @return number of iterations used 
-     */
-    template< class SymmetricOp >
-    unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
-    {
-        return this->operator()(op, phi, rho, op.weights(), op.precond());
-    }
-
-    /**
-     * @brief Solve linear problem
-     *
-     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
-     * conjugate gradient method. The initial guess comes from an extrapolation 
-     * of the last solutions.
-     * @tparam SymmetricOp Symmetric matrix or operator (with the selfmade tag)
-     * @tparam Weights class of the weights container
-     * @tparam Preconditioner class of the Preconditioner
-     * @param op selfmade symmetric Matrix operator class
-     * @param phi solution (write only)
-     * @param rho right-hand-side
-     * @param w The weights that made the operator symmetric
-     * @param p The preconditioner  
-     *
-     * @return number of iterations used 
-     */
-    template< class SymmetricOp, class Weights, class Preconditioner >
-    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, Weights& w, Preconditioner& p )
-    {
-        //double alpha[3] = { 3., -3., 1.};
-        double alpha[3] = { 2., -1., 0.};
-//         double alpha[3] = { 1., 0., 0.};
-        assert( &rho != &phi);
-        blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi); // 1. phi0 + 0.*phi1 = phi
-        blas1::axpby( alpha[2], phi2, 1., phi); // 0. phi2 + 1. phi0 + 0.*phi1 = phi
-        //blas1::axpby( 2., phi1, -1.,  phi2, phi);
-        dg::blas2::symv( w, rho, phi2);
-#ifdef DG_BENCHMARK
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif //MPI
-        Timer t;
-        t.tic();
-#endif //DG_BENCHMARK
-        unsigned number = cg( op, phi, phi2, p, eps_, nrmb_correction_);
-#ifdef DG_BENCHMARK
-#ifdef MPI_VERSION
-        if(rank==0)
-#endif //MPI
-        std::cout << "# of cg iterations \t"<< number << "\t";
-        t.toc();
-#ifdef MPI_VERSION
-        if(rank==0)
-#endif //MPI
-        std::cout<< "took \t"<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
-        phi1.swap( phi2);
-        phi0.swap( phi1);
-        
-        blas1::axpby( 1., phi, 0, phi0);
-        return number;
-    }
-
-    /**
-     * @brief Set the maximum number of iterations 
-     *
-     * @param new_max New maximum number
-     */
-    void set_max( unsigned new_max) {cg.set_max( new_max);}
-    /**
-     * @brief Get the current maximum number of iterations
-     *
-     * @return the current maximum
-     */
-    unsigned get_max() const {return cg.get_max();}
-  private:
-    double eps_, nrmb_correction_;
-    container phi0, phi1, phi2;
-    dg::CG< container > cg;
-};
+*/
 
 } //namespace dg
 
