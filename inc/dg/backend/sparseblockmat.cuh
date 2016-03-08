@@ -199,12 +199,12 @@ struct MatrixTraits<const CooSparseBlockMatDevice<T> >
     typedef SelfMadeMatrixTag matrix_category;
 };
 ///@endcond
+} //namespace dg
 
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
 #include "sparseblockmat_omp_kernels.h"
 #else
-#include "sparseblockmat_gpu_kernels.h"
+#include "sparseblockmat_gpu_kernels.cuh"
 #endif
 
 
-} //namespace dg

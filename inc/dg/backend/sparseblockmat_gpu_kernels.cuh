@@ -3,17 +3,16 @@
 namespace dg
 {
 
-// multiply kernel
+// general multiply kernel
 template<class value_type>
  __global__ void ell_multiply_kernel(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, const int size,
-         const int left, const int right, 
+         const int right, 
          const value_type* x, value_type *y
          )
 {
-    //int size = left*num_rows*n*right;
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_rows/grid_size rows
@@ -26,43 +25,28 @@ template<class value_type>
             j=row%right;
         int B, J;
         value_type temp=0;
-        //y[row] = 0;
-        //if( i==0||i==num_rows-1)
-            for( int d=0; d<blocks_per_line; d++)
-            {
-                B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-                J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
-                for( int q=0; q<n; q++) //multiplication-loop
-                    temp +=data[ B+q]* x[(J+q)*right+j];
-                    //y[row] +=data[ B+q]* x[(J+q)*right+j];
-                y[row]=temp;
-            }
-            //wird nicht schneller!
-        //else
-        //    for( int d=0; d<blocks_per_line; d++)
-        //    {
-        //        B = (data_idx[blocks_per_line+d]*n+k)*n;
-        //        J = (s*num_cols+cols_idx[blocks_per_line+d])*n;
-        //        for( int q=0; q<n; q++) //multiplication-loop
-        //            //y[row] +=data[ B+q]* x[(J+q)*right+j];
-        //            temp +=data[ B+q]* x[(J+q)*right+j];
-        //        y[row]=temp;
-        //    }
+        for( int d=0; d<blocks_per_line; d++)
+        {
+            B = (data_idx[i*blocks_per_line+d]*n+k)*n;
+            J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+            for( int q=0; q<n; q++) //multiplication-loop
+                temp +=data[ B+q]* x[(J+q)*right+j];
+            y[row]=temp;
+        }
     }
 
 }
 
-// multiply kernel
+// multiply kernel, n=3, 3 blocks per line
 template<class value_type>
  __global__ void ell_multiply_kernel33(
          const value_type* data, const int* cols_idx, const int* data_idx, 
-         const int num_rows, const int num_cols, const int blocks_per_line,
+         const int num_rows, const int num_cols,
          const int size,
-         const int left, const int right, 
+         const int right, 
          const value_type* x, value_type *y
          )
 {
-    //int size = left*num_rows*n*right;
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_rows/grid_size rows
@@ -75,7 +59,6 @@ template<class value_type>
             j=row%right;
         int B, J;
         value_type temp=0;
-        //for( int d=0; d<blocks_per_line; d++)
         {
             B = (data_idx[i*3+0]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+0])*3;
@@ -97,13 +80,13 @@ template<class value_type>
     }
 }
 
-// multiply kernel
+// multiply kernel, n=3, 2 blocks per line
 template<class value_type>
  __global__ void ell_multiply_kernel32(
          const value_type* data, const int* cols_idx, const int* data_idx, 
-         const int num_rows, const int num_cols, const int blocks_per_line,
+         const int num_rows, const int num_cols, 
          const int size,
-         const int left, const int right, 
+         const int right, 
          const value_type* x, value_type *y
          )
 {
@@ -120,7 +103,6 @@ template<class value_type>
             j=row%right;
         int B, J;
         value_type temp=0;
-        //for( int d=0; d<blocks_per_line; d++)
         {
             B = (data_idx[i*2+0]*3+k)*3;
             J = (s*num_cols+cols_idx[i*2+0])*3;
@@ -137,17 +119,16 @@ template<class value_type>
     }
 
 }
-// multiply kernel
+
+// multiply kernel, n=3, 3 blocks per line, right = 1
 template<class value_type>
  __global__ void ell_multiply_kernel33x(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const int left, 
          const value_type* x, value_type *y
          )
 {
-    //int size = left*num_rows*n*1;
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_rows/grid_size rows
@@ -160,7 +141,6 @@ template<class value_type>
             j=row%1;
         int B, J;
         value_type temp=0;
-        //for( int d=0; d<blocks_per_line; d++)
         {
             B = (data_idx[i*3+0]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+0])*3;
@@ -182,17 +162,15 @@ template<class value_type>
     }
 }
 
-// multiply kernel
+// multiply kernel, n=3, 2 blocks per line, right = 1
 template<class value_type>
  __global__ void ell_multiply_kernel32x(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const int left, 
          const value_type* x, value_type *y
          )
 {
-    //int size = left*num_rows*n*1;
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_rows/grid_size rows
@@ -202,7 +180,6 @@ template<class value_type>
         int s=rrn/num_rows, i = (rrn)%num_rows;
         int B0,B1, J0, J1;
         value_type temp=0;
-        //for( int d=0; d<blocks_per_line; d++)
         {
             B0 = (data_idx[i*2+0]*3+k)*3;
             B1 = (data_idx[i*2+1]*3+k)*3;
@@ -219,6 +196,7 @@ template<class value_type>
     }
 
 }
+
 // multiply kernel
 template<class value_type>
  __global__ void coo_multiply_kernel(
@@ -269,21 +247,24 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const thrust::
         if( blocks_per_line == 3)
         {
             if( right == 1)
-                ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left, x_ptr,y_ptr);
+                ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
             else
-                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, 3, size, left, right, x_ptr,y_ptr);
+                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right, x_ptr,y_ptr);
         }
         else if( blocks_per_line == 2)
         {
             if( right == 1)
-                ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left, x_ptr,y_ptr);
+                ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
             else
-                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, 2, size, left, right, x_ptr,y_ptr);
+                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right, x_ptr,y_ptr);
         }
+        else
+            ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
+                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right, x_ptr,y_ptr);
     }
     else
         ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, left, right, x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right, x_ptr,y_ptr);
 }
 
 template<class value_type>
