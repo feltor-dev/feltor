@@ -9,6 +9,7 @@
 #include "geometry.h"
 
 #include "backend/timer.cuh"
+#include "../geometries/guenther.h"
 
 
 const double lx = 2*M_PI;
@@ -180,10 +181,10 @@ int main(int argc, char* argv[])
         double Rmax=gpR0+1.0*gpa; 
         double Zmax=1.0*gpa*1.00;
         dg::CylindricalMPIGrid<Vector> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
-        solovev::Field field(gpR0, gpI0);
+        guenther::Field field(gpR0, gpI0);
         dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
         dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered);
-        solovev::FuncNeu funcNEU(gpR0,gpI0);
+        guenther::FuncNeu funcNEU(gpR0,gpI0);
         Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
 
         t.tic(); 

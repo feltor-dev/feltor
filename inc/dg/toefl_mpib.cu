@@ -87,7 +87,7 @@ int main( int argc, char* argv[])
     y0[1] = dg::MHVec( dg::evaluate(dg::zero, grid) ); //omega is zero
 
     //create RHS and AB
-    dg::Toefl< dg::CartesianMPIGrid2d, dg::MHMatrix, dg::MHVec, dg::MHVec> test( grid, Ra, Pr, eps); 
+    dg::Toefl< dg::CartesianMPIGrid2d, dg::MHMatrix, dg::MHVec> test( grid, Ra, Pr, eps); 
     dg::AB< k, std::vector<dg::MHVec> > ab( y0);
     ab.init( test, y0, dt);
 

@@ -44,7 +44,7 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic<dg::CylindricalMPIGrid<dg::MDVec>, dg::MDMatrix, dg::MDVec, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CylindricalMPIGrid<dg::MDVec>, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
     dg::MDMatrix DX = dg::create::dx( grid);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";

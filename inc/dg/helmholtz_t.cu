@@ -60,7 +60,7 @@ int main()
     const dg::DVec sol = dg::evaluate( lhs, grid);
     dg::DVec x(rho.size(), 0.), rho_(rho);
 
-    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::DVec > gamma1inv( grid, alpha);
+    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv( grid, alpha);
 
     std::cout << "FIRST METHOD:\n";
     dg::CG< dg::DVec > cg(x, x.size());
@@ -70,7 +70,7 @@ int main()
     std::cout << "SECOND METHOD:\n";
     dg::DVec x_(rho.size(), 0.);
     dg::Invert<dg::DVec> invert( x_, grid.size(), eps);
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::DVec > maxwell( grid, alpha);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > maxwell( grid, alpha);
     invert( maxwell, x_, rho);
 
     //std::cout << "THIRD METHOD:\n";
@@ -97,8 +97,8 @@ int main()
     dg::DVec laplace_fct_ = dg::evaluate( laplace_fct, g3d);
     dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);
     dg::DVec temp_(fct_);
-    dg::Elliptic< dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec > laplaceM( g3d, dg::normed);
-    dg::Helmholtz< dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec > helmholtz( g3d, alpha);
+    dg::Elliptic< dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec > laplaceM( g3d, dg::normed);
+    dg::Helmholtz< dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec > helmholtz( g3d, alpha);
     dg::blas2::symv( laplaceM, fct_, temp_);
     dg::blas1::axpby( 1., laplace_fct_, -1., temp_);
     std::cout << "error Laplace " << sqrt( dg::blas2::dot( laplaceM.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;
