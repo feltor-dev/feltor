@@ -5,16 +5,13 @@
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/grid.h"
-#include "dg/backend/gridX.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
 //#include "solovev.h"
 #include "guenther.h"
 #include "conformal.h"
-#include "conformalX.h"
 #include "orthogonal.h"
-#include "orthogonalX.h"
 
 
 
@@ -53,7 +50,7 @@ int main(int argc, char**argv)
     t.tic();
     conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
     conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
