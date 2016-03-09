@@ -2,6 +2,8 @@
 
 #include "backend/vector_traits.h"
 #include "backend/thrust_vector_blas.cuh"
+//#include "backend/viennacl_vector_blas.h"
+#include "backend/cusp_vector_blas.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
 #include "backend/mpi_vector_blas.h"

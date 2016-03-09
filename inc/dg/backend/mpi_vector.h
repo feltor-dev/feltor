@@ -23,6 +23,7 @@ template<class container>
 struct MPI_Vector
 {
     typedef container container_type;//!< typedef to acces underlying container
+    MPI_Vector(){}
     /**
      * @brief construct a vector
      *
@@ -41,6 +42,13 @@ struct MPI_Vector
     */
     template<class OtherContainer>
     MPI_Vector( const MPI_Vector<OtherContainer>& src){ data_ = src.data(); comm_ = src.communicator();} 
+
+    /**
+     * @brief Set the communicator to which this vector belongs
+     *
+     * @return MPI communicator reference
+     */
+    MPI_Comm& communicator(){return comm_;}
 
     /**
      * @brief Set underlying data
