@@ -1,4 +1,3 @@
-#define CUSP_DEVICE_BLAS_SYSTEM CUSP_DEVICE_BLAS_CUBLAS
 #include <iostream>
 #include <iomanip>
 

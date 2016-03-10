@@ -165,7 +165,7 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vector;
     host_vector temp, vol;
-    dg::blas1::transfer( dg::create::weights( g), temp);
+    dg::blas1::transfer( dg::create::inv_weights( g), temp);
     dg::blas1::transfer( g.vol(), vol); //g.vol might be on device
     dg::blas1::pointwiseDivide( temp, vol, temp);
     return temp;

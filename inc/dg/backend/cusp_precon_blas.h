@@ -8,6 +8,7 @@
 
 namespace dg{
 
+    
 template<>
 struct MatrixTraits< cusp::array1d<double,cusp::device_memory> >
 {
