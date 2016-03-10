@@ -4,7 +4,6 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include <cusp/array1d.h>
 #include <cusp/print.h>
 
 #include "backend/timer.cuh"
