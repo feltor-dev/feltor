@@ -53,7 +53,8 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
+    typedef typename Vector::value_type value_type;
+    return thrust::inner_product( x.begin(), x.end(),  y.begin(), value_type(0));
 }
 template< class Vector>
 inline void doScal(  Vector& x, 
