@@ -3,15 +3,16 @@
 
 #include <mpi.h>
 #include <thrust/device_vector.h>
-#include "backend/mpi_evaluation.h"
 #include "blas1.h"
+#include "backend/mpi_evaluation.h"
 
 
 //test program that calls every blas1 function for every specialization
 double two( double x, double y){return 2.;}
 double three( double x, double y){return 3.;}
 
-typedef dg::MPI_Vector<thrust::device_vector<double> > MHVec;
+//typedef dg::MPI_Vector<thrust::device_vector<double> > MHVec;
+typedef dg::MPI_Vector<cusp::array1d<double, cusp::device_memory> > MHVec;
 
 struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 

@@ -347,8 +347,8 @@ V NearestNeighborComm<I,V>::collect( const V& input) const
         //t.tic();
     //copy to host 
     HVec sb1,sb2;
-    dg::blas1::detail::doTransfer( buffer1, sb1, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
-    dg::blas1::detail::doTransfer( buffer2, sb2, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
+    dg::blas1::detail::doTransfer( buffer1, sb1, typename VectorTraits<V>::vector_category(), ThrustVectorTag());
+    dg::blas1::detail::doTransfer( buffer2, sb2, typename VectorTraits<V>::vector_category(), ThrustVectorTag());
     HVec rb1(buffer_size(), 0), rb2( buffer_size(), 0);
         //t.toc();
         //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";

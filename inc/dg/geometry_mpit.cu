@@ -3,9 +3,9 @@
 #include <cusp/print.h>
 
 #include <mpi.h>
+#include "blas2.h"
 #include "geometry.h"
 
-#include "blas2.h"
 
 double R_0 = 4.*M_PI;
 
