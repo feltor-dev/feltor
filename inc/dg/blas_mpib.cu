@@ -34,9 +34,10 @@ int main( int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     t.tic();
-    double norm = dg::blas2::dot( w2d, x);
+    for( int i=0; i<20; i++)
+        double norm = dg::blas2::dot( w2d, x);
     t.toc();
-    if(rank==0)std::cout<<"DOT took                         " <<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
+    if(rank==0)std::cout<<"DOT took                         " <<t.diff()/20.<<"s\t"<<gbytes*20./t.diff()<<"GB/s\n";
     dg::MDVec y(x);
     dg::MDMatrix M = dg::create::dx( grid, dg::centered);
     t.tic();
@@ -72,7 +73,7 @@ int main( int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<"pointwiseDot took                "<<t.diff()<<"s\t" <<gbytes/t.diff()<<"GB/s\n";
     t.tic();
-    norm = dg::blas2::dot( w2d, y);
+    double norm = dg::blas2::dot( w2d, y);
     t.toc();
     if(rank==0)std::cout<<"DOT(w,y) took                    " <<t.diff()<<"s\t"<<gbytes/t.diff()<<"GB/s\n";
     t.tic();

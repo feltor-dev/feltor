@@ -96,7 +96,8 @@ struct CooSparseBlockMatDevice
     * @param beta premultiplies output
     * @param y output may not equal input
     */
-    void symv(value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const;
+    template<class Device>
+    void symv(value_type alpha, const Device& x, value_type beta, Device& y) const;
     /**
     * @brief Display internal data to a stream
     *
@@ -105,7 +106,8 @@ struct CooSparseBlockMatDevice
     void display(std::ostream& os = std::cout) const;
     private:
     typedef thrust::device_vector<int> IVec;
-    void launch_multiply_kernel(value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const;
+    template<class Device>
+    void launch_multiply_kernel(value_type alpha, const Device& x, value_type beta, Device& y) const;
     
     thrust::device_vector<value_type> data;
     IVec cols_idx, rows_idx, data_idx; 
@@ -170,7 +172,8 @@ inline void EllSparseBlockMatDevice<value_type>::symv( const DeviceContainer& x,
     launch_multiply_kernel( x,y);
 }
 template<class value_type>
-inline void CooSparseBlockMatDevice<value_type>::symv( value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const
+template<class DeviceContainer>
+inline void CooSparseBlockMatDevice<value_type>::symv( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
     launch_multiply_kernel(alpha, x, beta, y);
 }

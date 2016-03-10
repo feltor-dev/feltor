@@ -346,7 +346,10 @@ V NearestNeighborComm<I,V>::collect( const V& input) const
         //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
         //t.tic();
     //copy to host 
-    HVec sb1(buffer1), sb2(buffer2), rb1(buffer_size(), 0), rb2( buffer_size(), 0);
+    HVec sb1,sb2;
+    dg::blas1::detail::doTransfer( buffer1, sb1, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
+    dg::blas1::detail::doTransfer( buffer2, sb2, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
+    HVec rb1(buffer_size(), 0), rb2( buffer_size(), 0);
         //t.toc();
         //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
         //t.tic();
@@ -356,7 +359,8 @@ V NearestNeighborComm<I,V>::collect( const V& input) const
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
         //t.tic();
     //send data back to device
-    buffer1 = rb1, buffer2 = rb2; 
+    dg::blas1::detail::doTransfer( rb1, buffer1, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
+    dg::blas1::detail::doTransfer( rb2, buffer2, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
         //t.toc();
         //if(rank==0)std::cout << "Copy to devi took "<<t.diff()<<"s\n";
         //t.tic();

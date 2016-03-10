@@ -53,6 +53,16 @@ inline void doAxpby( typename Vector::value_type alpha,
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
+    if( beta == 1. )
+    {
+        cusp::blas::axpy(x,y,alpha);
+        return;
+    }
+    if( alpha == 0.)
+    {
+        cusp::blas::scal(y, beta);
+        return;
+    }
     cusp::blas::axpby(x,y,y, alpha, beta);
 }
 
@@ -69,6 +79,11 @@ inline void doAxpby( typename Vector::value_type alpha,
     assert( x.size() == y.size() );
     assert( x.size() == z.size() );
 #endif //DG_DEBUG
+    if( &y == &z)
+    {
+        doAxpby( alpha,x,beta,z, CuspVectorTag());
+        return;
+    }
     cusp::blas::axpby(x,y,z, alpha, beta);
 }
 
