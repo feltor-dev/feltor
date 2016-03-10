@@ -47,10 +47,11 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const M
 #ifdef DG_DEBUG
     assert( x.size() == y.size() && x.size() == m.size() );
 #endif //DG_DEBUG
+    typedef typename MatrixTraits<Matrix>::value_type value_type;
     return thrust::inner_product(  x.begin(), x.end(), 
                             thrust::make_zip_iterator( thrust::make_tuple( y.begin(), m.begin())  ), 
-                            (typename MatrixTraits<Matrix>::value_type)0,
-                            thrust::plus<typename MatrixTraits<Matrix>::value_type>(),
+                            value_type(0),
+                            thrust::plus<value_type>(),
                             detail::ThrustVectorDoDot<Matrix>()
                             );
 }
@@ -60,10 +61,11 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const V
 #ifdef DG_DEBUG
     assert( m.size() == x.size());
 #endif //DG_DEBUG
+    typedef typename MatrixTraits<Matrix>::value_type value_type;
     return thrust::inner_product( x.begin(), x.end(),
                                   m.begin(),
-                                (typename MatrixTraits<Matrix>::value_type)0,
-                                  thrust::plus<typename MatrixTraits<Matrix>::value_type >(),
+                                  value_type(0),
+                                  thrust::plus<value_type>(),
                                   detail::ThrustVectorDoDot<Matrix>()
             ); //very fast
 }
