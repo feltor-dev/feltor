@@ -18,9 +18,9 @@ double function(double x, double y){ return sin(y)*sin(x);}
 //typedef dg::fDMatrix Matrix;
 //typedef cusp::array1d<float, cusp::device_memory> Vector;
 typedef double value_type;
-//typedef dg::DVec Vector;
+typedef dg::DVec Vector;
 typedef dg::DMatrix Matrix;
-typedef cusp::array1d<double, cusp::device_memory> Vector;
+//typedef cusp::array1d<double, cusp::device_memory> Vector;
 
 int main()
 {

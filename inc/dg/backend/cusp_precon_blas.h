@@ -5,22 +5,26 @@
 #endif //DG_DEBUG
 
 #include <cusp/array1d.h>
+#include "matrix_traits.h"
+#include "matrix_categories.h"
 
 namespace dg{
 
     
-template<>
-struct MatrixTraits< cusp::array1d<double,cusp::device_memory> >
+/////@cond
+template<class T,class M>
+struct MatrixTraits<cusp::array1d<T,M> >
 {
-    typedef double value_type;
-    typedef CuspPreconTag matrix_category;
+    typedef typename cusp::array1d<T,M>::value_type value_type;
+    typedef CuspPreconTag matrix_category; //default is a ThrustVector
 };
-template<>
-struct MatrixTraits< cusp::array1d<float,cusp::device_memory> >
+template<class T,class M>
+struct MatrixTraits<const cusp::array1d<T,M> >
 {
-    typedef float value_type;
-    typedef CuspPreconTag matrix_category;
+    typedef typename cusp::array1d<T,M>::value_type value_type;
+    typedef CuspPreconTag matrix_category; //default is a ThrustVector
 };
+/////@endcond
 
 
 namespace blas2{
