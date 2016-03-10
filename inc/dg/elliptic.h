@@ -61,7 +61,7 @@ class Elliptic
         righty( dg::create::dy( g, g.bcy(), dir)),
         jumpX ( dg::create::jumpX( g, g.bcx())),
         jumpY ( dg::create::jumpY( g, g.bcy())),
-        weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)), 
+        volume_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)), 
         xchi( dg::evaluate( one, g) ), tempx(xchi), tempy( xchi), gradx(xchi),
         no_(no), g_(g)
     { 
@@ -88,7 +88,7 @@ class Elliptic
         righty(dg::create::dy( g,bcy, dir)),
         jumpX ( dg::create::jumpX( g, bcx)),
         jumpY ( dg::create::jumpY( g, bcy)),
-        weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)),
+        volume_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)),
         xchi( dg::evaluate( one, g) ), tempx(xchi), tempy( xchi), gradx(xchi),
         no_(no), g_(g)
     { 
@@ -111,7 +111,7 @@ class Elliptic
      *
      * @return weights
      */
-    const Vector& weights()const {return weights_;}
+    const Vector& weights()const {return volume_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      *
@@ -142,15 +142,20 @@ class Elliptic
         dg::blas2::gemv( leftx, gradx, tempx);  
         dg::blas2::gemv( lefty, y, tempy);  
         dg::blas1::axpby( -1., tempx, -1., tempy, y); //-D_xx - D_yy 
+        if( no_ == normed)
+            dg::geo::divideVolume( y, g_);
 
         //add jump terms
         dg::blas2::symv( jumpX, x, tempx);
         dg::blas1::axpby( +1., tempx, 1., y, y); 
         dg::blas2::symv( jumpY, x, tempy);
         dg::blas1::axpby( +1., tempy, 1., y, y); 
-        dg::geo::divideVolume( y, g_);
         if( no_ == not_normed)
-            dg::blas2::symv( weights_, y, y);
+        {
+            //multiply weights without the volume form
+            dg::geo::divideVolume( y, g_);
+            dg::blas2::symv( volume_, y, y);
+        }
 
     }
     private:
@@ -169,7 +174,7 @@ class Elliptic
         return centered;
     }
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
-    Vector weights_, precond_; 
+    Vector volume_, precond_; 
     Vector xchi, tempx, tempy, gradx;
     norm no_;
     Geometry g_;

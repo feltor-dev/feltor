@@ -228,7 +228,8 @@ template<class value_type>
 }
 
 template<class value_type>
-void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const thrust::device_vector<value_type>& x, thrust::device_vector<value_type>& y) const
+template<class DeviceContainer>
+void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceContainer& x, DeviceContainer& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);

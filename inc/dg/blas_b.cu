@@ -1,3 +1,4 @@
+#define CUSP_DEVICE_BLAS_SYSTEM CUSP_DEVICE_BLAS_CUBLAS
 #include <iostream>
 #include <iomanip>
 
@@ -13,12 +14,14 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double function(double x, double y){ return sin(y)*sin(x);}
 
-typedef float value_type;
-typedef dg::fDVec Vector;
-typedef dg::fDMatrix Matrix;
-//typedef double value_type;
+//typedef float value_type;
+//typedef dg::fDVec Vector;
+//typedef dg::fDMatrix Matrix;
+//typedef cusp::array1d<float, cusp::device_memory> Vector;
+typedef double value_type;
 //typedef dg::DVec Vector;
-//typedef dg::DMatrix Matrix;
+typedef dg::DMatrix Matrix;
+typedef cusp::array1d<double, cusp::device_memory> Vector;
 
 int main()
 {

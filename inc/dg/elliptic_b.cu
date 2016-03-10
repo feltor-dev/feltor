@@ -1,8 +1,10 @@
+//#define CUSP_DEVICE_BLAS_SYSTEM CUSP_DEVICE_BLAS_CUBLAS
 #include <iostream>
 #include <iomanip>
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <cusp/array1d.h>
 #include <cusp/print.h>
 
 #include "backend/timer.cuh"
@@ -10,7 +12,6 @@
 #include "backend/sparseblockmat.cuh"
 #include "backend/derivatives.h"
 #include "backend/typedefs.cuh"
-#include "backend/cusp_thrust_backend.h"
 
 #include "cg.h"
 #include "elliptic.h"
@@ -68,11 +69,11 @@ int main()
     std::cout << "Number of pcg iterations "<< pcg( laplace, x, b, v3d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
-    x = dg::evaluate( initial, grid);
-    t.tic();
-    std::cout << "Number of mixed pcg iterations "<< pcg( laplace, x, b, inverse, v3d, eps)<<std::endl;
-    t.toc();
-    std::cout << "... on the device took "<< t.diff()<<"s\n";
+    //x = dg::evaluate( initial, grid);
+    //t.tic();
+    //std::cout << "Number of mixed pcg iterations "<< pcg( laplace, x, b, inverse, v3d, eps)<<std::endl;
+    //t.toc();
+    //std::cout << "... on the device took "<< t.diff()<<"s\n";
     dg::DVec  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 

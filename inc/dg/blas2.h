@@ -4,6 +4,7 @@
 #include "backend/matrix_traits.h"
 #include "backend/matrix_traits_thrust.h"
 #include "backend/thrust_matrix_blas.cuh"
+#include "backend/cusp_precon_blas.h"
 #include "backend/cusp_matrix_blas.cuh"
 #include "backend/sparseblockmat.cuh"
 #include "backend/selfmade_blas.cuh"

@@ -6,6 +6,7 @@
 #endif //DG_DEBUG
 
 #include <thrust/inner_product.h>
+#include <thrust/reduce.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
@@ -47,14 +48,26 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorT
     thrust::copy( in.begin(), in.end(), out.begin());
 }
 
+template < class value_type>
+struct ThrustDoDot
+{
+    typedef thrust::tuple< value_type, value_type> Pair; 
+    __host__ __device__
+        value_type operator()( const Pair& p1, const Pair& p2) {
+            return thrust::get<0>(p1)*thrust::get<1>(p1) + thrust::get<0>(p2)*thrust::get<1>(p2);
+        }
+};
+
 template< class Vector>
 typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
+    typedef typename Vector::value_type value_type;
+    return thrust::inner_product( x.begin(), x.end(),  y.begin(), (value_type)0, thrust::plus<value_type>(), thrust::multiplies<value_type>());
 }
+
 template< class Vector>
 inline void doScal(  Vector& x, 
               typename Vector::value_type alpha, 

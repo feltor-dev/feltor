@@ -35,7 +35,7 @@ namespace geo{
 ///@addtogroup geometry
 ///@{
 /**
- * @brief Multiply the input with the volume element
+ * @brief Multiply the input with the volume element without the dG weights!
  *
  * Computes \f$ f = \sqrt{g}f\f$ 
  * @tparam container container class 
@@ -50,7 +50,7 @@ void multiplyVolume( container& inout, const Geometry& g)
 }
 
 /**
- * @brief Divide the input vector with the volume element
+ * @brief Divide the input vector with the volume element without the dG weights
  *
  * Computes \f$ v = v/ \sqrt{g}\f$ 
  * @tparam container container class 
@@ -157,7 +157,7 @@ void pushForwardPerp(
 namespace create{
 
 /**
- * @brief Create the volume element on the grid
+ * @brief Create the volume element on the grid (including weights!!)
  *
  * This is the same as the weights multiplied by the volume form \f$ \sqrt{g}\f$
  * @tparam Geometry Geometry class
@@ -172,7 +172,7 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
 }
 
 /**
- * @brief Create the inverse volume element on the grid
+ * @brief Create the inverse volume element on the grid (including weights!!)
  *
  * This is the same as the inv_weights divided by the volume form \f$ \sqrt{g}\f$
  * @tparam Geometry Geometry class

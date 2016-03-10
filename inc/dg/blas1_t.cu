@@ -1,3 +1,4 @@
+#define CUSP_DEVICE_BLAS_SYSTEM CUSP_DEVICE_BLAS_CUBLAS
 #include <iostream>
 #include <vector>
 
@@ -8,7 +9,8 @@ struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 
 //test program that (should ) call every blas1 function for every specialization
 
-typedef thrust::host_vector<double>  Vector;
+//typedef thrust::host_vector<double>  Vector;
+typedef cusp::array1d<double, cusp::device_memory>  Vector;
 int main()
 {
     Vector v1( 5, 2), v2( 5, 3);
