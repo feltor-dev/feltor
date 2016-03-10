@@ -29,16 +29,10 @@ toefl_b: toefl_b.cu toefl.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
 
 %_t: %_t.cu
-	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@  -lcublas
+	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) #-lcublas
-
-blas1_b: blas1_b.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  -lcublas #-lOpenCL -lcublas -lblas
-
-blas1_mpib: blas1_mpib.cu 
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE)  -lcublas #-lOpenCL -lcublas -lblas
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  
 
 bathRZ_t: bathRZ_t.cu 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 

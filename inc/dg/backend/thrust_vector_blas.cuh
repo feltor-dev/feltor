@@ -6,7 +6,6 @@
 #endif //DG_DEBUG
 
 #include <thrust/inner_product.h>
-#include <thrust/reduce.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
