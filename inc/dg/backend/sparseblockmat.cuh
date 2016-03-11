@@ -72,6 +72,7 @@ be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thin
 template<class value_type>
 struct CooSparseBlockMatDevice
 {
+    CooSparseBlockMatDevice(){}
     /**
     * @brief Allocate storage
     *
