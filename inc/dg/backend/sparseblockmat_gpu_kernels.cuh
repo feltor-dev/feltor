@@ -137,26 +137,25 @@ template<class value_type>
         int rr = row/1, rrn = rr/3;
         int s=rrn/num_rows, 
             i = (rrn)%num_rows, 
-            k = (rr)%3, 
-            j=row%1;
+            k = (rr)%3;
         int B, J;
         value_type temp=0;
         {
             B = (data_idx[i*3+0]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+0])*3;
-            temp +=data[ B+0]* x[(J+0)*1+j];
-            temp +=data[ B+1]* x[(J+1)*1+j];
-            temp +=data[ B+2]* x[(J+2)*1+j];
+            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B+1]* x[(J+1)];
+            temp +=data[ B+2]* x[(J+2)];
             B = (data_idx[i*3+1]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+1])*3;
-            temp +=data[ B+0]* x[(J+0)*1+j];
-            temp +=data[ B+1]* x[(J+1)*1+j];
-            temp +=data[ B+2]* x[(J+2)*1+j];
+            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B+1]* x[(J+1)];
+            temp +=data[ B+2]* x[(J+2)];
             B = (data_idx[i*3+2]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+2])*3;
-            temp +=data[ B+0]* x[(J+0)*1+j];
-            temp +=data[ B+1]* x[(J+1)*1+j];
-            temp +=data[ B+2]* x[(J+2)*1+j];
+            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B+1]* x[(J+1)];
+            temp +=data[ B+2]* x[(J+2)];
             y[row]=temp;
         }
     }
