@@ -5,7 +5,7 @@ include ../../config/default.mk
 include ../../config/*.mk 
 include ../../config/devices/devices.mk
 
-INCLUDE+= -I../         # other src libraries
+INCLUDE+= -I../../src   # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
 all: guenther_ds_b geometry_diag

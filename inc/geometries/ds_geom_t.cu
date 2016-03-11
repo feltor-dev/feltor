@@ -23,7 +23,6 @@
 #include "dg/backend/functions.h"
 #include "dg/backend/interpolation.cuh"
 #include "draw/host_window.h"
-#include "geom_parameters.h"
 #include "file/nc_utilities.h"
 struct InvNormR
 {
@@ -153,19 +152,19 @@ int main( int argc, char* argv[])
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 //Similar to feltor grid
-                dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
-                const dg::DVec w3d = dg::create::weights( g3d);
+                dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER);
+                const dg::DVec w3d = dg::create::volume( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(1a) test with testfunction  (works for DIR)" << "\n";
-                solovev::TestFunction func(p,gp);
-                solovev::DeriTestFunction derifunc(p,gp);
+                solovev::TestFunction func(gp);
+                solovev::DeriTestFunction derifunc(gp);
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
                 dg::DDS::FieldAligned dsFA( field, g3d, gp.rk4eps, solovev::PsiLimiter(gp), g3d.bcx()); 
-                dg::DDS ds( dsFA, field, g3d, dg::normed, dg::centered); //choose bc of grid
+                dg::DDS ds( dsFA, field, dg::normed, dg::centered); //choose bc of grid
                 t.toc();
                 std::cout << "-----> Creation of parallel Derivative took"<<t.diff()<<"s\n";
 
@@ -288,8 +287,8 @@ int main( int argc, char* argv[])
                 std::cout << "Rel Diff = "<<reldiff2b <<"\n";
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(3) test with gradlnb and with (a) Arakawa and (b) Poisson discretization" << "\n";    
-                dg::ArakawaX< dg::DMatrix, dg::DVec>    arakawa(g3d); 
-                dg::Poisson< dg::DMatrix, dg::DVec>     poiss(g3d);
+                dg::ArakawaX< dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec>    arakawa(g3d); 
+                dg::Poisson< dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec>     poiss(g3d);
                 dg::DVec invBongrid = dg::evaluate( invB, g3d);
                 dg::DVec psipongrid = dg::evaluate( psip, g3d);
                 dg::DVec invnormrongrid = dg::evaluate( invnormr, g3d);

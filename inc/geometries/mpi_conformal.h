@@ -5,24 +5,44 @@
 
 
 
-namespace solovev
+namespace conformal
 {
 
+///@cond
 template< class container>
-struct ConformalMPIRingGrid2d; 
+struct MPIRingGrid2d; 
+///@endcond
 
+/**
+ * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010 (MPI Version)
+ *
+ * @tparam container Vector class that holds metric coefficients
+ */
 template<class container>
-class ConformalMPIRingGrid3d : public MPI_Grid3d
+class MPIRingGrid3d : public MPI_Grid3d
 {
-    typedef CurvilinearCylindricalTag metric_category; 
-    typedef ConformalMPIRingGrid2d<container> perpendicular_grid;
+    typedef CurvilinearCylindricalTag metric_category; //!< metric tag
+    typedef MPIRingGrid2d<container> perpendicular_grid; //!< the two-dimensional grid
 
-    ConformalMPIRingGrid( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
+    /**
+     * @brief Construct 
+     *
+     * @param gp The geometric parameters define the magnetic field
+     * @param psi_0 lower boundary for psi
+     * @param psi_1 upper boundary for psi
+     * @param n The dG number of polynomials
+     * @param Nx The number of points in x-direction
+     * @param Ny The number of points in y-direction
+     * @param Nz The number of points in z-direction
+     * @param bcx The boundary condition in x (y,z are periodic)
+     * @param comm The mpi communicator class
+     */
+    MPIRingGrid( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         MPI_Grid3d( 0, detail::Fpsi(gp, psi_0).find_x1( psi_1), 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
         r_( dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
     {
-        ConformalRingGrid g( gp, psi_0, psi_1, n,Nx, Ny, local().Nz(), bcx);
+        RingGrid3d g( gp, psi_0, psi_1, n,Nx, Ny, local().Nz(), bcx);
         f_x_ = g.f_x();
         //divide and conquer
         int dims[3], periods[3], coords[3];
@@ -57,6 +77,10 @@ class ConformalMPIRingGrid3d : public MPI_Grid3d
     const MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
     const MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
     const MPI_Vector<thrust::host_vector<double> >& yz()const{return yz_;}
+    //these are for the Field class
+    thrust::host_vector<double> x()const{
+        dg::Grid1d<double> gx( global().x0(), global().x1(), global().n(), global().Nx());
+        return dg::create::abscissas(gx);}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     const MPI_Vector<container>& g_xx()const{return g_xx_;}
     const MPI_Vector<container>& g_yy()const{return g_yy_;}
@@ -64,18 +88,34 @@ class ConformalMPIRingGrid3d : public MPI_Grid3d
     const MPI_Vector<container>& g_pp()const{return g_pp_;}
     const MPI_Vector<container>& vol()const{return vol_;}
     const MPI_Vector<container>& perpVol()const{return vol2d_;}
-    perpendicular_grid perp_grid() const { return ConformalRingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return MPIRingGrid2d<container>(*this);}
     private:
     thrust::host_vector<double> f_x_; //1d vector
     MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //3d vector
     MPI_Vector<container> g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
 };
+
+/**
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ */
 template<class container>
-class ConformalMPIRingGrid2d : public MPI_Grid2d
+class MPIRingGrid2d : public MPI_Grid2d
 {
     typedef CurvilinearCylindricalTag metric_category; 
 
-    ConformalMPIRingGrid2d( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
+    /**
+     * @brief Construct 
+     *
+     * @param gp The geometric parameters define the magnetic field
+     * @param psi_0 lower boundary for psi
+     * @param psi_1 upper boundary for psi
+     * @param n The dG number of polynomials
+     * @param Nx The number of points in x-direction
+     * @param Ny The number of points in y-direction
+     * @param bcx The boundary condition in x (y,z are periodic)
+     * @param comm2d The 2d mpi communicator class
+     */
+    MPIRingGrid2d( GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
         MPI_Grid2d( 0, detail::Fpsi(gp, psi_0).find_x1( psi_1), 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
         r_( dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
@@ -143,4 +183,65 @@ class ConformalMPIRingGrid2d : public MPI_Grid2d
     MPI_Vector<container> g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
-}//namespace solovev
+}//namespace conformal
+
+namespace dg{
+/**
+ * @brief This function pulls back a function defined in cartesian coordinates R,Z to the conformal coordinates x,y,\phi
+ *
+ * i.e. F(x,y) = f(R(x,y), Z(x,y))
+ * @tparam BinaryOp The function object 
+ * @param f The function defined on R,Z
+ * @param g The grid
+ *
+ * @return A set of points representing F(x,y)
+ */
+template< class BinaryOp, class container>
+MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const conformal::MPIRingGrid2d<container>& g)
+{
+    thrust::host_vector<double> vec( g.size());
+    for( unsigned i=0; i<g.size(); i++)
+        vec[i] = f( g.r().data()[i], g.z().data()[i]);
+    MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
+    return v;
+}
+///@cond
+template<class container>
+thrust::host_vector<double> pullback( double(f)(double,double), const conformal::MPIRingGrid2d<container>& g)
+{
+    return pullback<double(double,double),container>( f, g);
+}
+///@endcond
+/**
+ * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
+ *
+ * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
+ * @tparam TernaryOp The function object 
+ * @param f The function defined on R,Z,\phi
+ * @param g The grid
+ *
+ * @return A set of points representing F(x,y,\phi)
+ */
+template< class TernaryOp, class container>
+thrust::host_vector<double> pullback( TernaryOp f, const conformal::MPIRingGrid3d<container>& g)
+{
+    thrust::host_vector<double> vec( g.size());
+    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
+    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
+    thrust::host_vector<double> absz = create::abscissas( gz);
+    for( unsigned k=0; k<g.Nz(); k++)
+        for( unsigned i=0; i<size2d; i++)
+            vec[k*size2d+i] = f( g.r().data()[k*size2d+i], g.z().data()[k*size2d+i], absz[k]);
+    MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
+    return v;
+}
+///@cond
+template<class container>
+thrust::host_vector<double> pullback( double(f)(double,double,double), const conformal::MPIRingGrid3d<container>& g)
+{
+    return pullback<double(double,double,double),container>( f, g);
+}
+///@endcond
+//
+
+}//namespace dg

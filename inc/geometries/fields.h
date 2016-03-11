@@ -1130,8 +1130,8 @@ struct FuncDirPer
     }
     double dZZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z), thetaZ_=thetaZ(R,Z);
-        double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
+        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z), thetaZ_=thetaZ(R,Z);
+        double psipZZ = psipZZ_(R,Z);
         return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*sin(theta_)
             + (2.*psip*psipZ-(psi0_+psi1_)*psipZ)*cos(theta_)*thetaZ_
             + (2.*psip*psipZ-(psi0_+psi1_)*psipZ)*cos(theta_)*thetaZ_
@@ -1198,20 +1198,20 @@ struct FuncDirNeu
     }
     double dRR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
-        double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
+        double psip = psip_(R,Z), psipR = psipR_(R,Z);
+        double psipRR = psipRR_(R,Z);
         return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
             
     }
     double dZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
+        double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
         return (2*psip*psipZ - (psi0_+psi1_)*psipZ);
     }
     double dZZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
-        double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
+        double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
+        double psipZZ = psipZZ_(R,Z);
         return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
