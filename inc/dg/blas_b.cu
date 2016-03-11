@@ -19,6 +19,7 @@ double function(double x, double y){ return sin(y)*sin(x);}
 //typedef cusp::array1d<float, cusp::device_memory> Vector;
 typedef double value_type;
 typedef dg::DVec Vector;
+//typedef thrust::device_vector<double> Vector;
 typedef dg::DMatrix Matrix;
 //typedef cusp::array1d<double, cusp::device_memory> Vector;
 
@@ -42,8 +43,9 @@ int main()
     value_type gbytes=(value_type)x.size()*sizeof(value_type)/1e9;
     std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
     t.tic();
+    value_type norm=0;
     for( unsigned i=0; i<20; i++)
-        value_type norm = dg::blas1::dot( w2d, x);
+        norm += dg::blas1::dot( w2d, x);
     t.toc();
     std::cout<<"DOT took                         " <<t.diff()/20.<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
     Vector y(x);
@@ -96,15 +98,18 @@ int main()
     std::cout<<"pointwiseDot took                "<<t.diff()/20<<"s\t" <<gbytes*20/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<20; i++)
-        value_type norm = dg::blas2::dot( w2d, y);
+        norm += dg::blas2::dot( w2d, y);
     t.toc();
     std::cout<<"DOT(w,y) took                    " <<t.diff()/20.<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
     t.tic();
     for( int i=0; i<20; i++)
-        value_type norm = dg::blas2::dot( x, w2d, y);
+    {
+        norm += dg::blas2::dot( x, w2d, y);
+    }
     t.toc();
     std::cout<<"DOT(x,w,y) took                  " <<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
+    std::cout<<norm<<std::endl;
 
     return 0;
 }

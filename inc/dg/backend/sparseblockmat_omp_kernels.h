@@ -40,11 +40,11 @@ void ell_multiply_kernel33(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(3)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
-    for( int k=0; k<3; k++)
     for( int j=0; j<right; j++)
+    for( int k=0; k<3; k++)
     {
         int I = ((s*num_rows + i)*3+k)*right+j;
         value_type temp = 0;
@@ -78,11 +78,11 @@ void ell_multiply_kernel32(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(3)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
-    for( int k=0; k<3; k++)
     for( int j=0; j<right; j++)
+    for( int k=0; k<3; k++)
     {
         value_type temp = 0;
         int B0 = (data_idx[i*2+0]*3+k)*3;
@@ -109,7 +109,7 @@ void ell_multiply_kernel33x(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<3; k++)
@@ -144,7 +144,7 @@ void ell_multiply_kernel32x(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<3; k++)
