@@ -13,6 +13,8 @@
 namespace dg{
 
 struct SharedTag;
+class MPI_Grid2d;
+class MPI_Grid3d;
 
 ///@addtogroup grid
 ///@{
@@ -383,6 +385,7 @@ struct Grid2d
         hx_ = lx_/(double)Nx_;
     }
   private:
+    friend class MPI_Grid2d;
     T x0_, x1_, y0_, y1_;
     T lx_, ly_;
     unsigned n_, Nx_, Ny_;
@@ -687,6 +690,7 @@ struct Grid3d
         hx_ = lx_/(double)Nx_;
     }
   private:
+    friend class MPI_Grid3d;
     T x0_, x1_, y0_, y1_, z0_, z1_;
     T lx_, ly_, lz_;
     unsigned n_, Nx_, Ny_, Nz_;

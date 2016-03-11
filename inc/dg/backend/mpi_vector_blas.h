@@ -21,7 +21,7 @@ void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag)
     //local computation 
     typedef typename Vector1::container_type container1;
     typedef typename Vector2::container_type container2;
-    doTransfer( in.data(), out.data(), typename VectorTraits<container1>::vector_category(), typename VectorTraits<container1>::vector_category());
+    doTransfer( in.data(), out.data(), typename VectorTraits<container1>::vector_category(), typename VectorTraits<container2>::vector_category());
 }
 
 template< class Vector>

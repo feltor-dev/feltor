@@ -129,7 +129,7 @@ struct Fpsi
         unsigned P=8;
         double x1 = 0, x1_old = 0;
         double eps=1e10, eps_old=2e10;
-        std::cout << "In x1 function\n";
+        //std::cout << "In x1 function\n";
         while(eps < eps_old && P < 20 && eps > 1e-15)
         {
             eps_old = eps; 
@@ -147,7 +147,7 @@ struct Fpsi
             x1 = dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x1 - x1_old)/x1);
-            std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
+            //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x1_old;
 
@@ -332,7 +332,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
         unsigned N = 1;
         double eps = 1e10, eps_old=2e10;
-        std::cout << "In psi function:\n";
+        //std::cout << "In psi function:\n";
         double x0=this->x0(), x1 = x_vec[0];
         //while( eps <  eps_old && N < 1e6)
         while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
@@ -354,8 +354,8 @@ struct RingGrid3d : public dg::Grid3d<double>
             //dg::stepperRK6(fpsiMinv_, temp, end, x1, this->x1(),N);
             double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
             eps = fabs( psi_1_numerical-psi_1); 
-            std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
-            std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
+            //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
+            //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
         construct_rz( gp, psi_0, psi_x);

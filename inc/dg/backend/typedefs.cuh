@@ -15,7 +15,7 @@ typedef cusp::array1d<double, cusp::device_memory> DVec; //!< Device Vector. The
 typedef thrust::host_vector<double>   HVec; //!< Host Vector
 //typedef thrust::device_vector<int> IDVec; //!< integer Device Vector
 typedef cusp::array1d<int, cusp::device_memory> iDVec; //!< integer Device Vector
-typedef thrust::host_vector<int>   IHVec; //!< integer Host Vector
+typedef thrust::host_vector<int>   iHVec; //!< integer Host Vector
 //derivative matrices
 typedef EllSparseBlockMatDevice<double> DMatrix; //!< Device Matrix for derivatives
 typedef EllSparseBlockMat<double> HMatrix; //!< Host Matrix for derivatives

@@ -104,8 +104,6 @@ int main( int argc, char* argv[])
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        //X[i] = g.r()[i]*cos(P[i]);
-        //Y[i] = g.r()[i]*sin(P[i]);
         X[i] = g2d.r()[i];
         Y[i] = g2d.z()[i];
     }
@@ -137,7 +135,8 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0.0, temp1, 1.0, g2d.g_xx(),  temp1);
     dg::blas1::pointwiseDot( temp1, temp1, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
-    std::cout<< "Rel Error in Determinant is "<<sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1))<<"\n";
+    double error = sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1));
+    std::cout<< "Rel Error in Determinant is "<<error<<"\n";
 
     dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
@@ -146,7 +145,8 @@ int main( int argc, char* argv[])
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    std::cout << "Rel Consistency  of volume is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g2d.vol(), w3d, g2d.vol()))<<"\n";
+    error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g2d.vol(), w3d, g2d.vol()));
+    std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     //temp0=g.r();
     //dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
@@ -155,7 +155,8 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     //dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
     dg::blas1::axpby( 1., ones, -1., g2d.vol(), temp0);
-    std::cout << "Rel Error of volume form is "<<sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()))<<"\n";
+    error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()));
+    std::cout << "Rel Error of volume form is "<<error<<"\n";
 
     solovev::conformal::FieldY fieldY(gp);
     //solovev::ConformalField fieldY(gp);
@@ -173,8 +174,8 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( temp0, fby, fby);
     dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
     dg::blas1::axpby( 1., temp0, -1., fby, temp1);
-    double error= dg::blas2::dot( temp1, w3d, temp1);
-    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error/dg::blas2::dot( fby, w3d, fby))<<"\n";
+    error= dg::blas2::dot( temp1, w3d, temp1)/dg::blas2::dot(fby,w3d,fby);
+    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error)<<"\n";
     const dg::HVec vol = dg::create::volume( g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     double volume = dg::blas1::dot( vol, ones3d);
@@ -208,22 +209,25 @@ int main( int argc, char* argv[])
     dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
     dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
     dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-    dg::blas1::pointwiseDivide( ones, B, B);
+    dg::blas1::pointwiseDivide( ones3d, B, B);
     dg::HVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
     ds( function, derivative);
 
     ds.centeredT( B, divB);
-    std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol3d, divB))<<"\n";
+    double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
+    std::cout << "Divergence of B is "<<norm<<"\n";
 
     ds.centered( lnB, gradB);
     std::cout << "num. norm of gradLnB is "<<sqrt( dg::blas2::dot( gradB,vol3d, gradB))<<"\n";
-    double norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
+    norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
     X = divB;
     err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
-    std::cout << "rel. error of lnB is    "<<sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB))/norm<<"\n";
+    double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
+    std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
     err = nc_close( ncid);
+
 
 
     return 0;

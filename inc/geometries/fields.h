@@ -1108,14 +1108,14 @@ struct FuncDirPer
     }
     double dR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), theta_ = theta(R,Z);
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_ = theta(R,Z);
         return (2.*psip*psipR - (psi0_+psi1_)*psipR)*sin(theta_) 
             + (psip-psi0_)*(psip-psi1_)*cos(theta_)*thetaR(R,Z);
     }
     double dRR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z), thetaR_=thetaR(R,Z);
-        double psipRR = psipRR_(R,Z), psipZZ = psipZZ_(R,Z);
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_=theta(R,Z), thetaR_=thetaR(R,Z);
+        double psipRR = psipRR_(R,Z);
         return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*sin(theta_)
             + (2.*psip*psipR-(psi0_+psi1_)*psipR)*cos(theta_)*thetaR_
             + (2.*psip*psipR-(psi0_+psi1_)*psipR)*cos(theta_)*thetaR_
@@ -1124,7 +1124,7 @@ struct FuncDirPer
     }
     double dZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z);
+        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z);
         return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*sin(theta_) 
             + (psip-psi0_)*(psip-psi1_)*cos(theta_)*thetaZ(R,Z);
     }
@@ -1173,7 +1173,7 @@ struct EllipticDirPerM
     EllipticDirPerM( GeomParameters gp, double psi_0, double psi_1): func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
     double operator()(double R, double Z, double phi) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
-        return -(br*func_.dR(R,Z) + bz*func_.dZ(R,Z) + bmod_(R,Z)*( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+        return -(br*func_.dR(R,Z) + bz*func_.dZ(R,Z) + bmod*( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }
     private:
@@ -1193,7 +1193,7 @@ struct FuncDirNeu
     }
     double dR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), psipZ = psipZ_(R,Z);
+        double psip = psip_(R,Z), psipR = psipR_(R,Z);
         return (2.*psip*psipR - (psi0_+psi1_)*psipR);
     }
     double dRR( double R, double Z)const

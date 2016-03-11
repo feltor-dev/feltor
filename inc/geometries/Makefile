@@ -21,6 +21,9 @@ conformalX_t: conformalX_t.cu conformalX.h
 geometry_diag: geometry_diag.cu solovev.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) 
 
+%_mpit: %_mpit.cu 
+	$(MPICC) $(INCLUDE) $(MPICFLAGS)  $< -o $@ -g $(LIBS)
+
 %_mpib: %_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) 
 
