@@ -13,8 +13,8 @@
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/mpi_init.h"
-#include "guenther.h"
-//#include "solovev.h"
+//#include "guenther.h"
+#include "solovev.h"
 #include "mpi_conformal.h"
 //#include "mpi_orthogonal.h"
 #include "dg/ds.h"

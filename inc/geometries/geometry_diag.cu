@@ -102,9 +102,9 @@ int main( int argc, char* argv[])
     solovev::Pupil pupil(gp);
     solovev::GaussianDamping dampgauss(gp);
     solovev::GaussianProfDamping dampprof(gp);
-    solovev::ZonalFlow zonalflow(p, gp);
+    solovev::ZonalFlow zonalflow(p.amp, p.k_psi, gp);
     solovev::PsiLimiter psilimiter(gp);
-    solovev::Nprofile prof(p, gp);
+    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp);
 
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
@@ -157,7 +157,7 @@ int main( int argc, char* argv[])
     unsigned npsi = 3, Npsi = 50;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d<double> grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
-    solovev::SafetyFactor<dg::HVec>     qprof(grid2d, gp, alphaog2d );
+    solovev::SafetyFactor<dg::DVec>     qprof(grid2d, gp, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
     dg::HVec abs        = dg::evaluate( dg::coo1, grid1d);
 

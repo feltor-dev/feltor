@@ -25,7 +25,7 @@ geometry_diag: geometry_diag.cu solovev.h
 	$(MPICC) $(INCLUDE) $(MPICFLAGS)  $< -o $@ -g $(LIBS)
 
 %_mpib: %_mpib.cu
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) 
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 
 %_b: %_b.cu 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  $(LIBS)
@@ -36,4 +36,4 @@ doc:
 	doxygen Doxyfile
 	
 clean:
-	rm -f geometry_diag *_t *_b
+	rm -f geometry_diag *_t *_b *_mpit *_mpib
