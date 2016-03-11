@@ -37,7 +37,22 @@ struct ZShifter
     int size() const {return number_;}
     MPI_Comm communicator() const {return comm_;}
     //host and device versions
-    void sendForward( HVec& sb, HVec& rb)const //send to next plane
+    template<class container>
+    void sendForward( const container& sb, container& rb)
+    {
+        dg::blas1::transfer( sb, sb_);
+        sendForward_( sb_, rb_);
+        dg::blas1::transfer( rb_, rb);
+    }
+    template<class container>
+    void sendBackward( const container& sb, container& rb)
+    {
+        dg::blas1::transfer( sb, sb_);
+        sendBackward_( sb_, rb_);
+        dg::blas1::transfer( rb_, rb);
+    }
+    private:
+    void sendForward_( HVec& sb, HVec& rb)const //send to next plane
     {
         int source, dest;
         MPI_Status status;
@@ -48,7 +63,7 @@ struct ZShifter
                         source, 9, //source
                         comm_, &status);
     }
-    void sendBackward( HVec& sb, HVec& rb)const //send to previous plane
+    void sendBackward_( HVec& sb, HVec& rb)const //send to previous plane
     {
         int source, dest;
         MPI_Status status;
@@ -59,19 +74,6 @@ struct ZShifter
                         source, 3, //source
                         comm_, &status);
     }
-    void sendForward( const thrust::device_vector<double>& sb, thrust::device_vector<double>& rb)
-    {
-        sb_ = sb; 
-        sendForward( sb_, rb_);
-        rb = rb_;
-    }
-    void sendBackward( const thrust::device_vector<double>& sb, thrust::device_vector<double>& rb)
-    {
-        sb_ = sb; 
-        sendBackward( sb_, rb_);
-        rb = rb_;
-    }
-    private:
     typedef thrust::host_vector<double> HVec;
     HVec sb_, rb_;
     int number_; //deepness, dimensions
@@ -313,8 +315,10 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
 
     CommunicatorXY cp( pids, g2d.communicator());
     commXYplus_ = cp;
-    thrust::host_vector<double> pX = cp.collect( yp[0]),
-                                pY = cp.collect( yp[1]);
+    thrust::host_vector<double> pX, pY;
+    dg::blas1::transfer( cp.collect( yp[0]), pX);
+    dg::blas1::transfer( cp.collect( yp[1]), pY);
+
     //construt interpolation matrix
     plus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( plus, plusT);
@@ -331,8 +335,8 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
     }
     CommunicatorXY cm( pids, g2d.communicator());
     commXYminus_ = cm;
-    pX = cm.collect( ym[0]);
-    pY = cm.collect( ym[1]);
+    dg::blas1::transfer( cm.collect( ym[0]), pX);
+    dg::blas1::transfer( cm.collect( ym[1]), pY);
     minus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( minus, minusT);
     //copy to device

@@ -221,7 +221,9 @@ void boxintegrator( Field& field, const Grid& grid,
     grid.shift_topologic( coords0[0], coords0[1], coords1[0], coords1[1]);
     if ( !grid.contains( coords1[0], coords1[1]))   //Punkt liegt immer noch außerhalb 
     {
+#ifdef DG_DEBUG
         std::cerr << "point "<<coords1[0]<<" "<<coords1[1]<<" "<<coords1[3]<<" "<<coords1[4]<<" is somewhere else!\n";
+#endif //DG_DEBUG
         if( globalbcz == dg::DIR)
         {
             BoxIntegrator<Field, Grid> boxy( field, grid, eps);

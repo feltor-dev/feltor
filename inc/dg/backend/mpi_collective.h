@@ -84,29 +84,34 @@ struct Collective
     void invert(){ sendTo_.swap( recvFrom_);}
 
     thrust::host_vector<double> scatter( const thrust::host_vector<double>& values)const;
-    void scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store) const;
-    void scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store) const;
-    void gather( const thrust::host_vector<double>& store, thrust::host_vector<double>& values) const;
-    void gather( const thrust::device_vector<double>& store, thrust::device_vector<double>& values) const;
+    template<class Device>
+    void scatter( const Device& values, Device& store) const;
+    template<class Device>
+    void gather( const Device& store, Device& values) const;
     unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
     unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
     MPI_Comm communicator() const{return comm_;}
     private:
+    void scatter_( const thrust::host_vector<double>& values, thrust::host_vector<double>& store) const;
+    void gather_( const thrust::host_vector<double>& store, thrust::host_vector<double>& values) const;
     unsigned sum;
     thrust::host_vector<int> sendTo_,   accS_;
     thrust::host_vector<int> recvFrom_, accR_;
     MPI_Comm comm_;
 };
 
-void Collective::scatter( const thrust::device_vector<double>& values, thrust::device_vector<double>& store) const
+template<class Device>
+void Collective::scatter( const Device& values, Device& store) const
 {
     //transfer to host, then scatter and transfer result to device
-    thrust::host_vector<double> hvalues(values), hstore(store.size());
-    scatter( hvalues, hstore);
+    thrust::host_vector<double> hvalues, hstore(store.size());
+    dg::blas1::detail::doTransfer( values, hvalues, typename VectorTraits<Device>::vector_category(), ThrustVectorTag()) ;
+    scatter_( hvalues, hstore);
+    dg::blas1::detail::doTransfer( hstore, store, ThrustVectorTag(), typename VectorTraits<Device>::vector_category()) ;
     thrust::copy( hstore.begin(), hstore.end(), store.begin());
 }
 
-void Collective::scatter( const thrust::host_vector<double>& values, thrust::host_vector<double>& store) const
+void Collective::scatter_( const thrust::host_vector<double>& values, thrust::host_vector<double>& store) const
 {
     assert( store.size() == store_size() );
     MPI_Alltoallv( const_cast<double*>(values.data()), 
@@ -121,19 +126,21 @@ void Collective::scatter( const thrust::host_vector<double>& values, thrust::hos
 thrust::host_vector<double> Collective::scatter( const thrust::host_vector<double>& values) const 
 {
     thrust::host_vector<double> received( store_size() );
-    scatter( values, received);
+    scatter_( values, received);
     return received;
 }
 
-void Collective::gather( const thrust::device_vector<double>& gatherFrom, thrust::device_vector<double>& values) const 
+template<class Device>
+void Collective::gather( const Device& gatherFrom, Device& values) const 
 {
     //transfer to host, then gather and transfer result to device
-    thrust::host_vector<double> hvalues(values.size()), hgatherFrom(gatherFrom);
-    gather( hgatherFrom, hvalues);
-    thrust::copy( hvalues.begin(), hvalues.end(), values.begin());
+    thrust::host_vector<double> hvalues(values.size()), hgatherFrom;
+    dg::blas1::detail::doTransfer( (gatherFrom), hgatherFrom, typename VectorTraits<Device>::vector_category(), ThrustVectorTag()) ;
+    gather_( hgatherFrom, hvalues);
+    dg::blas1::detail::doTransfer( hvalues, values, ThrustVectorTag(), typename VectorTraits<Device>::vector_category()) ;
 }
 
-void Collective::gather( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values) const 
+void Collective::gather_( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values) const 
 {
     //std::cout << gatherFrom.size()<<" "<<store_size()<<std::endl;
     assert( gatherFrom.size() == store_size() );
@@ -222,7 +229,8 @@ struct BijectiveComm
         //nach PID ordnen
         thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.begin());
         //senden
-        Vector store = p_.scatter( values_);
+        Vector store( p_.store_size());
+        p_.scatter( values_, store);
         return store;
     }
 
