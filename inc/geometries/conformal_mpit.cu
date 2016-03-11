@@ -81,7 +81,7 @@ int main( int argc, char* argv[])
     int ncid;
     file::NC_Error_Handle err;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( "test_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+    err = nc_create_par( "test_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, g2d.communicator(), info, &ncid); //MPI ON
     int dim3d[2];
     err = file::define_dimensions(  ncid, dim3d, g2d.global());
     int coordsID[2], onesID, defID, divBID;
@@ -92,9 +92,19 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
+    int dims[2], periods[2],  coords[2];
+    MPI_Cart_get( g2d.communicator(), 2, dims, periods, coords);
+    size_t count[2] = {g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
+    size_t start[2] = {coords[1]*count[0], coords[0]*count[1]};
+    err = nc_var_par_access( ncid, coordsID[0], NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, coordsID[1], NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, onesID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, defID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, divBID, NC_COLLECTIVE);
+
     dg::MHVec psi_p = dg::pullback( psip, g2d);
     //g.display();
-    err = nc_put_var_double( ncid, onesID, psi_p.data().data());
+    err = nc_put_vara_double( ncid, onesID, start, count, psi_p.data().data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
@@ -105,16 +115,16 @@ int main( int argc, char* argv[])
     dg::MHVec temp0( dg::evaluate(dg::zero, g2d)), temp1(temp0);
     dg::MHVec w3d = dg::create::weights( g2d);
 
-    err = nc_put_var_double( ncid, coordsID[0], X.data());
-    err = nc_put_var_double( ncid, coordsID[1], Y.data());
-    //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
+    err = nc_put_vara_double( ncid, coordsID[0], start,count, X.data());
+    err = nc_put_vara_double( ncid, coordsID[1], start,count, Y.data());
+    //err = nc_put_vara_double( ncid, coordsID[2], g.z().data());
 
     //dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
     const dg::MHVec ones = dg::evaluate( dg::one, g2d);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     X=temp0.data();
-    err = nc_put_var_double( ncid, defID, X.data());
+    err = nc_put_vara_double( ncid, defID, start,count, X.data());
 
     if(rank==0)std::cout << "Construction successful!\n";
 
@@ -179,10 +189,7 @@ int main( int argc, char* argv[])
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
     solovev::Iris iris( gp);
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
-        MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; //true true false
-        MPI_Cart_sub( comm, remain_dims, &planeComm);
-    dg::CartesianMPIGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::DIR, dg::PER, planeComm);
+    dg::CartesianMPIGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::DIR, dg::PER, g2d.communicator());
     dg::MHVec vec  = dg::evaluate( iris, g2dC);
     dg::MHVec R  = dg::evaluate( dg::coo1, g2dC);
     dg::MHVec g2d_weights = dg::create::volume( g2dC);
@@ -221,7 +228,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
     X = divB.data();
-    err = nc_put_var_double( ncid, divBID, X.data());
+    err = nc_put_vara_double( ncid, divBID, start,count, X.data());
     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
     if(rank==0)std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
     err = nc_close( ncid);

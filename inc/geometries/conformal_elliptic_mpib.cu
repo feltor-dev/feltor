@@ -76,14 +76,25 @@ int main(int argc, char**argv)
     ncerr = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim2d, &functionID);
     ncerr = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim2d, &function2ID);
 
+    int dims[2], periods[2],  coords[2];
+    MPI_Cart_get( g2d.communicator(), 2, dims, periods, coords);
+    size_t count[2] = {g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
+    size_t start[2] = {coords[1]*count[0], coords[0]*count[1]};
+
+    ncerr = nc_var_par_access( ncid, coordsID[0], NC_COLLECTIVE);
+    ncerr = nc_var_par_access( ncid, coordsID[1], NC_COLLECTIVE);
+    ncerr = nc_var_par_access( ncid, psiID, NC_COLLECTIVE);
+    ncerr = nc_var_par_access( ncid, functionID, NC_COLLECTIVE);
+    ncerr = nc_var_par_access( ncid, function2ID, NC_COLLECTIVE);
+
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
         X[i] = g2d.r()[i];
         Y[i] = g2d.z()[i];
     }
-    ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
-    ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
+    ncerr = nc_put_vara_double( ncid, coordsID[0], start, count, X.data());
+    ncerr = nc_put_vara_double( ncid, coordsID[1], start, count, Y.data());
     ///////////////////////////////////////////////////////////////////////////
     dg::MDVec x =    dg::pullback( dg::zero, g3d);
     const dg::MDVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g3d);
@@ -118,11 +129,11 @@ int main(int argc, char**argv)
     if(rank==0)std::cout<<t.diff()/(double)number<<"s"<<std::endl;
 
     dg::blas1::transfer( error.data(), X );
-    ncerr = nc_put_var_double( ncid, psiID, X.data());
+    ncerr = nc_put_vara_double( ncid, psiID, start, count, X.data());
     dg::blas1::transfer( x.data(), X );
-    ncerr = nc_put_var_double( ncid, functionID, X.data());
+    ncerr = nc_put_vara_double( ncid, functionID, start, count, X.data());
     dg::blas1::transfer( solution.data(), X );
-    ncerr = nc_put_var_double( ncid, function2ID, X.data());
+    ncerr = nc_put_vara_double( ncid, function2ID, start, count, X.data());
     ncerr = nc_close( ncid);
     MPI_Finalize();
 
