@@ -40,13 +40,12 @@ void ell_multiply_kernel33(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
-    for( int j=0; j<right; j++)
     for( int k=0; k<3; k++)
+    for( int j=0; j<right; j++)
     {
-        int I = ((s*num_rows + i)*3+k)*right+j;
         value_type temp = 0;
         int B0 = (data_idx[i*3+0]*3+k)*3;
         int B1 = (data_idx[i*3+1]*3+k)*3;
@@ -65,6 +64,7 @@ void ell_multiply_kernel33(
         temp +=data[ B2+0]* x[(J2+0)*right+j];
         temp +=data[ B2+1]* x[(J2+1)*right+j];
         temp +=data[ B2+2]* x[(J2+2)*right+j];
+        int I = ((s*num_rows + i)*3+k)*right+j;
         y[I]=temp;
     }
 }
@@ -78,11 +78,11 @@ void ell_multiply_kernel32(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
-    for( int j=0; j<right; j++)
     for( int k=0; k<3; k++)
+    for( int j=0; j<right; j++)
     {
         value_type temp = 0;
         int B0 = (data_idx[i*2+0]*3+k)*3;
@@ -114,7 +114,6 @@ void ell_multiply_kernel33x(
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<3; k++)
     {
-        int I = ((s*num_rows + i)*3+k);
         value_type temp = 0;
         int B0 = (data_idx[i*3+0]*3+k)*3;
         int B1 = (data_idx[i*3+1]*3+k)*3;
@@ -131,6 +130,7 @@ void ell_multiply_kernel33x(
         temp +=data[ B2+0]* x[(J2+0)];
         temp +=data[ B2+1]* x[(J2+1)];
         temp +=data[ B2+2]* x[(J2+2)];
+        int I = ((s*num_rows + i)*3+k);
         y[I]=temp;
     }
 }
@@ -149,7 +149,6 @@ void ell_multiply_kernel32x(
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<3; k++)
     {
-        int I = ((s*num_rows + i)*3+k);
         value_type temp = 0;
         int B0 = (data_idx[i*2+0]*3+k)*3;
         int B1 = (data_idx[i*2+1]*3+k)*3;
@@ -161,6 +160,7 @@ void ell_multiply_kernel32x(
         temp +=data[ B1+0]* x[(J1+0)];
         temp +=data[ B1+1]* x[(J1+1)];
         temp +=data[ B1+2]* x[(J1+2)];
+        int I = ((s*num_rows + i)*3+k);
         y[I]=temp;
     }
 

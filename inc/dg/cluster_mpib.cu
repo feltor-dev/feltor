@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     //Matrix-Vector product
-    Matrix dy = dg::create::dx( grid, dg::centered);
+    Matrix dy = dg::create::dy( grid, dg::centered);
     t.tic(); 
     for( unsigned i=0; i<multi; i++)
         dg::blas2::symv( dy, rhs, jac);
