@@ -137,26 +137,25 @@ template<class value_type>
         int rr = row/1, rrn = rr/3;
         int s=rrn/num_rows, 
             i = (rrn)%num_rows, 
-            k = (rr)%3, 
-            j=row%1;
+            k = (rr)%3;
         int B, J;
         value_type temp=0;
         {
             B = (data_idx[i*3+0]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+0])*3;
-            temp +=data[ B+0]* x[(J+0)*1+j];
-            temp +=data[ B+1]* x[(J+1)*1+j];
-            temp +=data[ B+2]* x[(J+2)*1+j];
+            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B+1]* x[(J+1)];
+            temp +=data[ B+2]* x[(J+2)];
             B = (data_idx[i*3+1]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+1])*3;
-            temp +=data[ B+0]* x[(J+0)*1+j];
-            temp +=data[ B+1]* x[(J+1)*1+j];
-            temp +=data[ B+2]* x[(J+2)*1+j];
+            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B+1]* x[(J+1)];
+            temp +=data[ B+2]* x[(J+2)];
             B = (data_idx[i*3+2]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+2])*3;
-            temp +=data[ B+0]* x[(J+0)*1+j];
-            temp +=data[ B+1]* x[(J+1)*1+j];
-            temp +=data[ B+2]* x[(J+2)*1+j];
+            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B+1]* x[(J+1)];
+            temp +=data[ B+2]* x[(J+2)];
             y[row]=temp;
         }
     }
@@ -228,7 +227,8 @@ template<class value_type>
 }
 
 template<class value_type>
-void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const thrust::device_vector<value_type>& x, thrust::device_vector<value_type>& y) const
+template<class DeviceContainer>
+void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceContainer& x, DeviceContainer& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -268,7 +268,8 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const thrust::
 }
 
 template<class value_type>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const
+template<class DeviceContainer>
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);

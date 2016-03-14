@@ -2,40 +2,37 @@
 
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
-#include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
 // #include "file/nc_utilities.h"
 
-#include "backend/evaluation.cuh"
-#include "backend/timer.cuh"
-#include "blas.h"
-#include "ds.h"
-#include "backend/functions.h"
-#include "functors.h"
-#include "elliptic.h"
-#include "cg.h"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/evaluation.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/blas.h"
+#include "dg/ds.h"
+#include "dg/backend/functions.h"
+#include "dg/functors.h"
+#include "dg/elliptic.h"
+#include "dg/cg.h"
 // #include "draw/host_window.h"
-#include "../../src/heat/geometry_g.h"
-#include "../../src/heat/parameters.h"
+#include "guenther.h"
+#include "fields.h"
 
 
 int main( )
 {
 
     /////////////////initialize params////////////////////////////////
-     std::vector<double> v,v2,v3;
+     std::vector<double> v;
 
         try{
-            v = file::read_input("../../src/heat/input.txt");
-            v3 = file::read_input( "../../src/heat/geometry_params_g.txt"); 
+            v = file::read_input( "guenther_params.txt"); 
         }catch( toefl::Message& m){
             m.display();
             return -1;
         }
 
-    const eule::Parameters p( v);
-//     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
+    const solovev::GeomParameters gp(v);
 //     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
@@ -53,14 +50,14 @@ int main( )
     solovev::FieldR bR_(gp);
     solovev::FieldZ bZ_(gp);
     solovev::FieldP bPhi_(gp);
-    solovev::FuncNeu funcNEU(gp.R_0,gp.I_0);
-    solovev::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    solovev::DeriNeu deriNEU(gp.R_0,gp.I_0);
-    solovev::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    solovev::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    solovev::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    solovev::Divb divb(gp.R_0,gp.I_0);
-    solovev::B Bfield(gp);
+    guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    guenther::Divb divb(gp.R_0,gp.I_0);
+    guenther::B Bfield(gp);
     
     std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
@@ -82,7 +79,7 @@ int main( )
 
 
 
-        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+        dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
         dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
         std::cout << "NR = " << Nxn << std::endl;
@@ -93,24 +90,23 @@ int main( )
 
 //        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
 //     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
-    const dg::DVec w3d = dg::create::weights( g3d);
+    const dg::DVec w3d = dg::create::volume( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
-    const dg::DVec v3d = dg::create::inv_weights( g3d);
+    const dg::DVec v3d = dg::create::inv_volume( g3d);
 
     std::cout << "computing dsDIR" << std::endl;
     dg::DDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dsNEU" << std::endl;
     dg::DDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
 
-    dg::DDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered), 
-        dsNU ( dsNUFA, field, g3d, dg::not_normed, dg::centered);
+    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered), 
+        dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
 
 //     dg::DS<dg::DMatrix, dg::DVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
 //     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
     
 //     dg::DS<dg::DMatrix, dg::DVec> ds2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
-    dg::DVec boundary=dg::evaluate( dg::zero, g3d);
     
     dg::DVec function = dg::evaluate( funcNEU, g3d) ,
                         temp( function),
@@ -253,6 +249,10 @@ int main( )
 //     dg::blas1::axpby(0.5,dsTdsbd,0.5,dsTdsfd,dsTdsfbd); 
     ds.symv(function,dsTdsfb);
     dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
+        //ds( function, temp);
+        //dg::blas1::pointwiseDot( temp, inverseB, temp);
+        //ds(temp, dsTdsfb);
+        //dg::blas1::pointwiseDivide( dsTdsfb, inverseB, dsTdsfb);
 //     ds.centeredT( derivative2, dsTds2); //dsT(ds(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
 //     ds.centeredT( ones, divbT);
@@ -340,8 +340,10 @@ int main( )
     
     std::cout << "--------------------testing dsTdsfb " << std::endl;
     std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
+    double remainder =dg::blas1::dot( w3d,dsTdsfb);
     double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
     std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+    std::cout << "   Integral          "<<remainder<<"\n";
     dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
     errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
     std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";

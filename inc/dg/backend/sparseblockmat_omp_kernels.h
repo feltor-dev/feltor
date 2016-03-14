@@ -40,11 +40,11 @@ void ell_multiply_kernel33(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(3)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
-    for( int k=0; k<3; k++)
     for( int j=0; j<right; j++)
+    for( int k=0; k<3; k++)
     {
         int I = ((s*num_rows + i)*3+k)*right+j;
         value_type temp = 0;
@@ -78,11 +78,11 @@ void ell_multiply_kernel32(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(3)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
-    for( int k=0; k<3; k++)
     for( int j=0; j<right; j++)
+    for( int k=0; k<3; k++)
     {
         value_type temp = 0;
         int B0 = (data_idx[i*2+0]*3+k)*3;
@@ -109,7 +109,7 @@ void ell_multiply_kernel33x(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<3; k++)
@@ -144,7 +144,7 @@ void ell_multiply_kernel32x(
          const value_type* x, value_type *y
          )
 {
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
     for( int s=0; s<left; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<3; k++)
@@ -167,7 +167,8 @@ void ell_multiply_kernel32x(
 }
 
 template<class value_type>
-void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const thrust::device_vector<value_type>& x, thrust::device_vector<value_type>& y) const
+template<class DeviceContainer>
+void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceContainer& x, DeviceContainer& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
@@ -203,7 +204,8 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const thrust::
 }
 
 template<class value_type>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const thrust::device_vector<value_type>& x, value_type beta, thrust::device_vector<value_type>& y) const
+template<class DeviceContainer>
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);

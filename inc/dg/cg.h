@@ -303,7 +303,6 @@ struct Invert
      * conjugate gradient method. The initial guess comes from an extrapolation 
      * of the last solutions.
      * @tparam SymmetricOp Symmetric matrix or operator (with the selfmade tag)
-     * @tparam Weights class of the weights container
      * @tparam Preconditioner class of the Preconditioner
      * @param op selfmade symmetric Matrix operator class
      * @param phi solution (write only)
@@ -313,8 +312,8 @@ struct Invert
      *
      * @return number of iterations used 
      */
-    template< class SymmetricOp, class Weights, class Preconditioner >
-    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, Weights& w, Preconditioner& p)
+    template< class SymmetricOp, class Preconditioner >
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const container& w, Preconditioner& p)
     {
         assert( &rho != &phi);
         blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi); // 1. phi0 + 0.*phi1 = phi
@@ -398,7 +397,7 @@ struct Inverse
     {
         //std::cout << "Number in inverse "<<invert( op, x, b, op.weights(), op.precond())<<std::endl;
         dg::blas1::transfer(b,b_);
-        invert_( op_, x_, b_, op_.weights(), op_.precond());
+        invert_( op_, x_, b_); 
         dg::blas1::transfer(x_,x);
     }
     private:

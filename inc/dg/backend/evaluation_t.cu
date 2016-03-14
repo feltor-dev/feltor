@@ -45,7 +45,7 @@ int main()
 
     dg::Grid1d<double> g1d( 0, lx, n, N);
     dg::Grid2d<double> g2d( 0, lx,0, ly,n, Nx, Ny);
-    dg::Grid3d<double> g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER,dg::cylindrical);
+    dg::Grid3d<double> g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
 
     //test evaluation functions
     const HVec h_x = dg::evaluate( function, g1d);
@@ -71,8 +71,6 @@ int main()
     std::cout << "Relative 2d error is      "<<(norm2X-solution2)/solution2<<"\n\n";
 
     std::cout << "Square normalized 3DXnorm "<< norm3X<<"\n";
-    if( g3d.system() == dg::cylindrical)
-        solution = (3*exp(4.)+1.)/4.;
     double solution3 = solution2*solution;
     std::cout << "Correct square norm is    "<<solution3<<std::endl;
     std::cout << "Relative 3d error is      "<<(norm3X-solution3)/solution3<<"\n";

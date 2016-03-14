@@ -21,6 +21,7 @@ namespace blas1
 namespace detail
 {
 
+
 template< typename value_type>
 struct Axpby_Functor
 {
@@ -52,8 +53,10 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
+    typedef typename Vector::value_type value_type;
+    return thrust::inner_product( x.begin(), x.end(),  y.begin(), value_type(0));
 }
+
 template< class Vector>
 inline void doScal(  Vector& x, 
               typename Vector::value_type alpha, 
@@ -130,6 +133,51 @@ inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, Thrus
     thrust::transform( x1.begin(), x1.end(), x2.begin(), y.begin(), 
                         thrust::multiplies<typename VectorTraits<Vector>::value_type>());
 }
+
+template < class Vector>
+struct ThrustVectorDoSymv
+{
+    typedef typename Vector::value_type value_type;
+    typedef thrust::tuple< value_type, value_type> Pair; 
+    __host__ __device__
+        ThrustVectorDoSymv( value_type alpha, value_type beta): alpha_(alpha), beta_(beta){}
+
+    __host__ __device__
+        value_type operator()( const value_type& y, const Pair& p) 
+        {
+            return alpha_*thrust::get<0>(p)*thrust::get<1>(p) + beta_*y;
+        }
+  private:
+    value_type alpha_, beta_;
+};
+
+template<class Vector>
+inline void doPointwiseDot(  
+              typename Vector::value_type alpha, 
+              const Vector& x1,
+              const Vector& x2, 
+              typename Vector::value_type beta, 
+              Vector& y, 
+              ThrustVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x1.size() == y.size() && x2.size() == y.size() );
+#endif //DG_DEBUG
+    if( alpha == 0)
+    {
+        if( beta == 1) 
+            return;
+        dg::blas1::detail::doScal(y, beta, dg::ThrustVectorTag());
+        return;
+    }
+    thrust::transform( 
+        y.begin(), y.end(),
+        thrust::make_zip_iterator( thrust::make_tuple( x1.begin(), x2.begin() )),  
+        y.begin(),
+        detail::ThrustVectorDoSymv<Vector>( alpha, beta)
+    ); 
+}
+
 template< class Vector>
 inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
 {

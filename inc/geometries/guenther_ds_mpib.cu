@@ -3,23 +3,23 @@
 #include <mpi.h>
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
-#include "dg/backend/xspacelib.cuh"
 #include "file/read_input.h"
 // #include "file/nc_utilities.h"
 
-#include "backend/evaluation.cuh"
-#include "backend/timer.cuh"
-#include "blas.h"
-#include "ds.h"
-#include "backend/functions.h"
-#include "functors.h"
-#include "elliptic.h"
-#include "cg.h"
-#include "backend/interpolation.cuh"
-#include "backend/typedefs.cuh"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/evaluation.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/blas.h"
+#include "dg/ds.h"
+#include "dg/backend/functions.h"
+#include "dg/functors.h"
+#include "dg/elliptic.h"
+#include "dg/cg.h"
+#include "dg/backend/interpolation.cuh"
+#include "dg/backend/typedefs.cuh"
 // #include "draw/host_window.h"
-#include "../../src/heat/geometry_g.h"
-#include "../../src/heat/parameters.h"
+#include "guenther.h"
+#include "fields.h"
 
 
 int main( int argc, char* argv[])
@@ -42,19 +42,16 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
 
     /////////////////initialize params////////////////////////////////
-     std::vector<double> v,v2,v3;
+     std::vector<double> v;
 
         try{
-            v = file::read_input("../../src/heat/input.txt");
-            v3 = file::read_input( "../../src/heat/geometry_params_g.txt"); 
+            v = file::read_input( "guenther_params.txt"); 
         }catch( toefl::Message& m){
             m.display();
             return -1;
         }
 
-    const eule::Parameters p( v);
-//     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
+    const solovev::GeomParameters gp(v);
 //     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
@@ -72,14 +69,14 @@ int main( int argc, char* argv[])
     solovev::FieldR bR_(gp);
     solovev::FieldZ bZ_(gp);
     solovev::FieldP bPhi_(gp);
-    solovev::FuncNeu funcNEU(gp.R_0,gp.I_0);
-    solovev::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    solovev::DeriNeu deriNEU(gp.R_0,gp.I_0);
-    solovev::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    solovev::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    solovev::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    solovev::Divb divb(gp.R_0,gp.I_0);
-    solovev::B Bfield(gp);
+    guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    guenther::Divb divb(gp.R_0,gp.I_0);
+    guenther::B Bfield(gp);
     
     //std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
@@ -101,7 +98,7 @@ int main( int argc, char* argv[])
 
 
 
-        dg::MPI_Grid3d g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER,dg::cylindrical, comm);
+        dg::CylindricalMPIGrid<dg::MDVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER, comm);
         dg::MPI_Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn, dg::DIR, dg::DIR, comm);
 
         if(rank==0)std::cout << "NR = " << Nxn << std::endl;
@@ -112,9 +109,9 @@ int main( int argc, char* argv[])
 
 //        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
 //     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
-    const dg::MDVec w3d = dg::create::weights( g3d);
+    const dg::MDVec w3d = dg::create::volume( g3d);
     const dg::MDVec w2d = dg::create::weights( g2d);
-    const dg::MDVec v3d = dg::create::inv_weights( g3d);
+    const dg::MDVec v3d = dg::create::inv_volume( g3d);
 
     if(rank==0)std::cout << "computing dsDIR" << std::endl;
     dg::MDDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
@@ -122,8 +119,8 @@ int main( int argc, char* argv[])
     dg::MDDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
 
 
-    dg::MDDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered), 
-        dsNU ( dsNUFA, field, g3d, dg::not_normed, dg::centered);
+    dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered), 
+         dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
 
 //     dg::DS<dg::DMatrix, dg::MDVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     

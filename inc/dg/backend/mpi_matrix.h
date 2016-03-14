@@ -31,6 +31,9 @@ only the inner matrix is applied.
 template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
 struct RowColDistMat
 {
+    RowColDistMat(){}
+
+
     /**
     * @brief Constructor 
     *

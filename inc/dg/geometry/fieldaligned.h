@@ -2,10 +2,10 @@
 #include <cusp/transpose.h>
 #include <cusp/csr_matrix.h>
 
-#include "grid.h"
+#include "../backend/grid.h"
 #include "../blas.h"
-#include "interpolation.cuh"
-#include "functions.h"
+#include "../backend/interpolation.cuh"
+#include "../backend/functions.h"
 
 #include "../functors.h"
 #include "../nullstelle.h"
@@ -42,6 +42,109 @@ struct NoLimiter
      */
     double operator()(double x, double y) { return 0.; }
 };
+
+/**
+ * @brief Integrates the differential equation using a s stage RK scheme and a rudimentary stepsize-control
+ *
+ * @ingroup algorithms
+ * Doubles the number of timesteps until the desired accuracy is reached
+ * Checks for NaN errors on the way and if the fieldline diverges. The error is computed in the first three vector elements (x,y,s)
+ * @tparam RHS The right-hand side class
+ * @tparam Vector Vector-class (needs to be copyable)
+ * @param rhs The right-hand-side
+ * @param begin initial condition (size 3)
+ * @param end (write-only) contains solution on output
+ * @param T_max final time
+ * @param eps_abs desired absolute accuracy
+ */
+template< class RHS, class Vector, unsigned s>
+void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    RK_classic<s, Vector > rk( begin); 
+    Vector old_end(begin), temp(begin),diffm(begin);
+    end = begin;
+    if( T_max == 0) return;
+    double dt = T_max/10;
+    int NT = 10;
+    double error = 1e10;
+ 
+    while( error > eps_abs && NT < pow( 2, 18) )
+    {
+        dt /= 2.;
+        NT *= 2;
+        end = begin;
+
+        int i=0;
+        while (i<NT && NT < pow( 2, 18))
+        {
+            rk( rhs, end, temp, dt); 
+            end.swap( temp); //end is one step further 
+            dg::blas1::axpby( 1., end, -1., old_end,diffm); //abs error=oldend = end-oldend
+            double temp = diffm[0]*diffm[0]+diffm[1]*diffm[1]+diffm[2]*diffm[2];
+            error = sqrt( temp );
+            if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2])        ) 
+            {
+                dt /= 2.;
+                NT *= 2;
+                i=-1;
+                end = begin;
+                #ifdef DG_DEBUG
+                    std::cout << "---------Got NaN -> choosing smaller step size and redo integration" << " NT "<<NT<<" dt "<<dt<< std::endl;
+                #endif
+            }
+            //if new integrated point outside domain
+            //if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+            if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
+            {
+                error = eps_abs/10;
+                std::cerr << "---------Point outside box -> stop integration" << std::endl; 
+                i=NT;
+            }
+            i++;
+        }  
+
+
+        old_end = end;
+#ifdef DG_DEBUG
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
+        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
+#endif //DG_DEBUG
+    }
+
+    if( isnan(error) )
+    {
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
+        throw NotANumber();
+    }
+    if( error > eps_abs )
+    {
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<std::endl;
+        throw Fail( eps_abs);
+    }
+
+
+}
+
+template< class RHS, class Vector>
+void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
+}
+
+template< class RHS, class Vector>
+void integrateRK6(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
+}
+template< class RHS, class Vector>
+void integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
+}
 
 /**
  * @brief Integrate a field line to find whether the result lies inside or outside of the box
@@ -113,10 +216,14 @@ void boxintegrator( Field& field, const Grid& grid,
         thrust::host_vector<double>& coords1, 
         double& phi1, double eps, dg::bc globalbcz)
 {
-    dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
-    if (    !(coords1[0] >= grid.x0() && coords1[0] <= grid.x1())
-         || !(coords1[1] >= grid.y0() && coords1[1] <= grid.y1()))
+    dg::integrateRK17( field, coords0, coords1, phi1, eps); //+ integration
+    //First catch periodic domain
+    grid.shift_topologic( coords0[0], coords0[1], coords1[0], coords1[1]);
+    if ( !grid.contains( coords1[0], coords1[1]))   //Punkt liegt immer noch außerhalb 
     {
+#ifdef DG_DEBUG
+        std::cerr << "point "<<coords1[0]<<" "<<coords1[1]<<" "<<coords1[3]<<" "<<coords1[4]<<" is somewhere else!\n";
+#endif //DG_DEBUG
         if( globalbcz == dg::DIR)
         {
             BoxIntegrator<Field, Grid> boxy( field, grid, eps);
@@ -160,7 +267,7 @@ cylindrical coordinates
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class Matrix = cusp::csr_matrix<int, double, cusp::device_memory>, class container=thrust::device_vector<double> >
+template< class Geometry, class Matrix = cusp::csr_matrix<int, double, cusp::device_memory>, class container=thrust::device_vector<double> >
 struct FieldAligned
 {
 
@@ -185,7 +292,7 @@ struct FieldAligned
         If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
+    FieldAligned(Field field, Geometry grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
 
 
     /**
@@ -259,6 +366,7 @@ struct FieldAligned
      * @param g Functor to evaluate in z
      * @param p0 The number of the plane to start
      * @param rounds The number of rounds to follow a fieldline
+     * @note g is evaluated such that p0 corresponds to z=0, p0+1 corresponds to z=hz, p0-1 to z=-hz, ...
      *
      * @return Returns an instance of container
      */
@@ -317,13 +425,13 @@ struct FieldAligned
     *
     * @return the grid
     */
-    const Grid3d<double>& grid() const{return g_;}
+    const Geometry& grid() const{return g_;}
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     Matrix plus, minus, plusT, minusT; //interpolation matrices
     container hz_, hp_,hm_, ghostM, ghostP;
-    dg::Grid3d<double> g_;
+    Geometry g_;
     dg::bc bcz_;
     container left_, right_;
     container limiter_;
@@ -332,34 +440,36 @@ struct FieldAligned
 ///@cond 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
-template<class M, class container>
+template<class Geometry, class M, class container>
 template <class Field, class Limiter>
-FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
+FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         g_(grid), bcz_(grid.bcz())
 {
     //Resize vector to 2D grid size
-    dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());  
+
+    typename Geometry::perpendicular_grid g2d = grid.perp_grid( );
     unsigned size = g2d.size();
     limiter_ = dg::evaluate( limit, g2d);
     right_ = left_ = dg::evaluate( zero, g2d);
     ghostM.resize( size); ghostP.resize( size);
     //Set starting points
-    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::coo1, g2d)), yp(y), ym(y);
-    y[1] = dg::evaluate( dg::coo2, g2d);
+    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::coo1, g2d)); // x
+    y[1] = dg::evaluate( dg::coo2, g2d); //y
     y[2] = dg::evaluate( dg::zero, g2d);
-  
-//     integrate field lines for all points
-    
-    if( deltaPhi <=0) deltaPhi = g_.hz();
+    y[3] = dg::pullback( dg::coo1, g2d); //R
+    y[4] = dg::pullback( dg::coo2, g2d); //Z
+    //integrate field lines for all points
+    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2d)), ym(yp); 
+    if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
 #ifdef _OPENMP
 #pragma omp parallel for shared(field)
 #endif //_OPENMP
     for( unsigned i=0; i<size; i++)
     {
-        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i];
+        thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
+        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i], coords[3] = y[3][i], coords[4] = y[4][i]; //x,y,s,R,Z
         double phi1 = deltaPhi;
         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
         phi1 =  - deltaPhi;
@@ -367,6 +477,7 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
+    //fange Periodische RB ab
     plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
     minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
 // //     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
@@ -376,15 +487,15 @@ FieldAligned<M,container>::FieldAligned(Field field, const dg::Grid3d<double>& g
     for( unsigned i=0; i<grid.Nz(); i++)
     {
         thrust::copy( yp[2].begin(), yp[2].end(), hp_.begin() + i*g2d.size());
-        thrust::copy( ym[2].begin(), ym[2].end(), hm_.begin() + i*g2d.size());        
+        thrust::copy( ym[2].begin(), ym[2].end(), hm_.begin() + i*g2d.size());
     }
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);    //
  
 }
 
-template<class M, class container>
-void FieldAligned<M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
+template<class G, class M, class container>
+void FieldAligned<G,M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     cView left( global.cbegin(), global.cbegin() + size);
@@ -398,89 +509,80 @@ void FieldAligned<M,container>::set_boundaries( dg::bc bcz, const container& glo
     bcz_ = bcz;
 }
 
-template< class M, class container>
+template< class G, class M, class container>
 template< class BinaryOp>
-container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0) const
+container FieldAligned<G,M,container>::evaluate( BinaryOp binary, unsigned p0) const
 {
-
-    assert( p0 < g_.Nz() && g_.Nz() > 1);
-    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    container vec2d = dg::evaluate( binary, g2d);
-    View g0( vec2d.begin(), vec2d.end());
-    container vec3d( g_.size());
-    View f0( vec3d.begin() + p0*g2d.size(), vec3d.begin() + (p0+1)*g2d.size());
-    //copy 2d function into given plane and then follow fieldline in both directions
-    cusp::copy( g0, f0);
-    for( unsigned i0=p0+1; i0<g_.Nz(); i0++)
-    {
-        unsigned im = i0-1;
-        View fm( vec3d.begin() + im*g2d.size(), vec3d.begin() + (im+1)*g2d.size());
-        View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
-        cusp::multiply( minus, fm, f0 );
-    }
-    for( int i0=p0-1; i0>=0; i0--)
-    {
-        unsigned ip = i0+1;
-        View fp( vec3d.begin() + ip*g2d.size(), vec3d.begin() + (ip+1)*g2d.size());
-        View f0( vec3d.begin() + i0*g2d.size(), vec3d.begin() + (i0+1)*g2d.size());
-        cusp::multiply( plus, fp, f0 );
-    }
-    return vec3d;
+    return evaluate( binary, dg::CONSTANT(1), p0, 0);
 }
 
-template< class M, class container>
+template<class G, class M, class container>
 template< class BinaryOp, class UnaryOp>
-container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
+container FieldAligned<G,M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
 {
-
+    //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
+    //unary function is always such that the p0 plane is at x=0
     assert( g_.Nz() > 1);
-    container vec3d = evaluate( binary, p0);
-    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-    //scal
-    for( unsigned i=0; i<g_.Nz(); i++)
-    {
-        View f0( vec3d.begin() + i*g2d.size(), vec3d.begin() + (i+1)*g2d.size());
-        cusp::blas::scal(f0, unary( g_.z0() + (double)(i+0.5)*g_.hz() ));
-    }
-    //make room for plus and minus continuation
-    std::vector<container > vec4dP( rounds, vec3d);
-    std::vector<container > vec4dM( rounds, vec3d);
-    //now follow field lines back and forth
-    for( unsigned k=1; k<rounds; k++)
+    assert( p0 < g_.Nz());
+    const typename G::perpendicular_grid g2d = g_.perp_grid();
+    container init2d = dg::pullback( binary, g2d), temp(init2d), tempP(init2d), tempM(init2d);
+    container vec3d = dg::evaluate( dg::zero, g_);
+    std::vector<container>  plus2d( g_.Nz(), (container)dg::evaluate(dg::zero, g2d) ), minus2d( plus2d), result( plus2d);
+    unsigned turns = rounds; 
+    if( turns ==0) turns++;
+    //first apply Interpolation many times, scale and store results
+    for( unsigned r=0; r<turns; r++)
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            dg::blas1::copy( init2d, tempP);
+            dg::blas1::copy( init2d, tempM);
+            unsigned rep = i0 + r*g_.Nz();
+            for(unsigned k=0; k<rep; k++)
+            {
+                dg::blas2::symv( plus, tempP, temp);
+                temp.swap( tempP);
+                dg::blas2::symv( minus, tempM, temp);
+                temp.swap( tempM);
+            }
+            dg::blas1::scal( tempP, unary(  (double)rep*g_.hz() ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*g_.hz() ) );
+            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
+            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
+        }
+    //now we have the plus and the minus filaments
+    if( rounds == 0) //there is a limiter
     {
         for( unsigned i0=0; i0<g_.Nz(); i0++)
         {
-        int im = i0==0?g_.Nz()-1:i0-1;
-        int k0 = k;
-        int km = i0==0?k-1:k;
-        View fm( vec4dP[km].begin() + im*g2d.size(), vec4dP[km].begin() + (im+1)*g2d.size());
-        View f0( vec4dP[k0].begin() + i0*g2d.size(), vec4dP[k0].begin() + (i0+1)*g2d.size());
-        cusp::multiply( minus, fm, f0 );
-        cusp::blas::scal( f0, unary( g_.z0() + (double)(k*g_.Nz()+i0+0.5)*g_.hz() ) );
-        }
-        for( int i0=g_.Nz()-1; i0>=0; i0--)
-        {
-        int ip = i0==g_.Nz()-1?0:i0+1;
-        int k0 = k;
-        int km = i0==g_.Nz()-1?k-1:k;
-        View fp( vec4dM[km].begin() + ip*g2d.size(), vec4dM[km].begin() + (ip+1)*g2d.size());
-        View f0( vec4dM[k0].begin() + i0*g2d.size(), vec4dM[k0].begin() + (i0+1)*g2d.size());
-        cusp::multiply( plus, fp, f0 );
-        cusp::blas::scal( f0, unary( g_.z0() - (double)(k*g_.Nz()-0.5-i0)*g_.hz() ) );
+            int idx = (int)i0 - (int)p0;
+            if(idx>=0)
+                result[i0] = plus2d[idx];
+            else
+                result[i0] = minus2d[abs(idx)];
+            thrust::copy( result[i0].begin(), result[i0].end(), vec3d.begin() + i0*g2d.size());
         }
     }
-    //sum up results
-    for( unsigned i=1; i<rounds; i++)
+    else //sum up plus2d and minus2d
     {
-        dg::blas1::axpby( 1., vec4dP[i], 1., vec3d);
-        dg::blas1::axpby( 1., vec4dM[i], 1., vec3d);
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            unsigned revi0 = (g_.Nz() - i0)%g_.Nz(); //reverted index
+            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
+        }
+        dg::blas1::axpby( -1., init2d, 1., result[0]);
+        for(unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            int idx = ((int)i0 -(int)p0 + g_.Nz())%g_.Nz(); //shift index
+            thrust::copy( result[idx].begin(), result[idx].end(), vec3d.begin() + i0*g2d.size());
+        }
     }
     return vec3d;
 }
 
 
-template< class M, class container>
-void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
+template< class G, class M, class container>
+void FieldAligned<G,M, container>::einsPlus( const container& f, container& fpe)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     View ghostPV( ghostP.begin(), ghostP.end());
@@ -514,8 +616,8 @@ void FieldAligned<M, container>::einsPlus( const container& f, container& fpe)
     }
 }
 
-template< class M, class container>
-void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
+template< class G,class M, class container>
+void FieldAligned<G,M, container>::einsMinus( const container& f, container& fme)
 {
     //note that thrust functions don't work on views
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
@@ -550,8 +652,8 @@ void FieldAligned<M, container>::einsMinus( const container& f, container& fme)
     }
 }
 
-template< class M, class container>
-void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
+template< class G,class M, class container>
+void FieldAligned<G,M, container>::einsMinusT( const container& f, container& fpe)
 {
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
     View ghostPV( ghostP.begin(), ghostP.end());
@@ -586,8 +688,8 @@ void FieldAligned<M, container>::einsMinusT( const container& f, container& fpe)
     }
 }
 
-template< class M, class container>
-void FieldAligned<M, container>::einsPlusT( const container& f, container& fme)
+template< class G,class M, class container>
+void FieldAligned<G,M, container>::einsPlusT( const container& f, container& fme)
 {
     //note that thrust functions don't work on views
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();

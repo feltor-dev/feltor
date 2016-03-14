@@ -8,6 +8,7 @@
 
 #include "backend/functions.h"
 #include "backend/timer.cuh"
+#include "geometry.h"
 
 struct Field
 {
@@ -59,16 +60,15 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
-    const dg::DVec w3d = dg::create::weights( g3d);
+    dg::CylindricalGrid<dg::DVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
+    const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
     dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
 
-    dg::DDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
+    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
-
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::DVec solution = dg::evaluate( deri, g3d);
@@ -82,9 +82,9 @@ int main()
     std::cout << "Relative Difference Is "<< sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm )<<"\n";
     std::cout << "Error is from the parallel derivative only if n>2\n"; //since the function is a parabola
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
-    dg::GaussianZ modulate(M_PI, 2*M_PI, 1);
+    dg::GaussianZ modulate(0., M_PI/3., 1);
     t.tic();
-    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 3);
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 2);
     t.toc();
     std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);
@@ -92,10 +92,10 @@ int main()
     std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     ds.forward( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     ds.backward( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     
     return 0;
 }

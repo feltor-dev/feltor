@@ -18,7 +18,7 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 	$(MPICC) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
 
 %_mpib: %_mpib.cu
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -g
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) 
 
 toefl_mpib: toefl_mpib.cu toefl.cuh
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
@@ -32,7 +32,7 @@ toefl_b: toefl_b.cu toefl.cuh
 	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 
 %_b: %_b.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  -g 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  
 
 bathRZ_t: bathRZ_t.cu 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 

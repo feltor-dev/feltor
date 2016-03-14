@@ -1,6 +1,6 @@
 
           * Input-File for COMPASS axisymmetric solovev equilibrium *
-                I const with X-point, Te_50eV,B0_1T,deuterium, Cref=2e-5
+                I const with X-point, Te_50eV,B0_1T,deuterium, Cref~2e-5
           -----------------------------------------------------------
           
 ----------------------Solovev coefficients----------------------
@@ -29,6 +29,7 @@
 21) psip_max                 =  0.0 (> -7.4)
 22) psip_max_cut             =  1e10
 23) psip_max_lim             =  1e10  
+24) qampl                    =  1
 
 @ ------------------------------------------------------------------------
 

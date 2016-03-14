@@ -20,7 +20,7 @@ namespace dg
 template<class Matrix, class container, class Preconditioner>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu, bool global):
+    Diffusion( const dg::CartesianGrid2d& g, double nu, bool global):
         nu_(nu), global(global), 
         w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
         temp( dg::evaluate(dg::zero, g)), expx(temp),
@@ -35,7 +35,7 @@ struct Diffusion
             dg::blas1::axpby( -nu_, y[i], 0., y[i]);
         }
     }
-    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return w2d;}
     const container& precond(){return v2d;}
 
@@ -44,7 +44,7 @@ struct Diffusion
     bool global;
     const container w2d, v2d;
     container temp, expx;
-    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perp;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner> LaplacianM_perp;
 };
 
 template< class Matrix, class container, class Preconditioner >
@@ -61,7 +61,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const Grid2d<double>& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
+    ToeflR( const CartesianGrid2d& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -94,14 +94,14 @@ struct ToeflR
      *
      * @return cusp matrix
      */
-    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM( ) { return laplaceM;}
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner>& laplacianM( ) { return laplaceM;}
 
     /**
      * @brief Return the Gamma operator used by this object
      *
      * @return Gamma operator
      */
-    dg::Helmholtz<Matrix, container, container >&  gamma() {return gamma1;}
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, container, container >&  gamma() {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -156,10 +156,10 @@ struct ToeflR
 
     //matrices and solvers
     //Elliptic<Matrix, container, Preconditioner> A; //contains unnormalized laplacian if local
-    Elliptic<Matrix, container, Preconditioner> laplaceM; //contains normalized laplacian
-    Helmholtz< Matrix, container, container > gamma1;
-    ArakawaX< Matrix, container> arakawa; 
-    Elliptic<Matrix, container, Preconditioner> pol;
+    Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner> laplaceM; //contains normalized laplacian
+    Helmholtz<dg::CartesianGrid2d,  Matrix, container, container > gamma1;
+    ArakawaX< dg::CartesianGrid2d, Matrix, container> arakawa; 
+    Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner> pol;
     CG<container > pcg;
 
     const Preconditioner w2d, v2d;
@@ -173,7 +173,7 @@ struct ToeflR
 };
 
 template< class M, class container, class P>
-ToeflR< M, container,P>::ToeflR( const Grid2d<double>& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
+ToeflR< M, container,P>::ToeflR( const dg::CartesianGrid2d& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),

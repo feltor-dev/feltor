@@ -62,13 +62,13 @@ int main(int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     Field field( R_0, I_0);
-    dg::MPI_Grid3d g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical, comm);
-    const dg::MDVec w3d = dg::create::weights( g3d);
+    dg::CylindricalMPIGrid<dg::MDVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
+    const dg::MDVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
     dg::MDDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
 
-    dg::MDDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered); 
+    dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered); 
     t.toc();
     if(rank==0)std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
@@ -85,9 +85,9 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Relative Difference Is "<< norm2<<"\n";    
     if(rank==0)std::cout << "(Error is from the parallel derivative only if n>2)\n"; //because the function is a parabola
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
-    dg::GaussianZ modulate(M_PI, 2*M_PI, 1);
+    dg::GaussianZ modulate(0, M_PI/3., 1);
     t.tic();
-    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 3);
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 2);
     t.toc();
     if(rank==0)std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);

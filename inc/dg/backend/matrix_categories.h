@@ -17,6 +17,7 @@ struct MPIMatrixTag: public AnyMatrixTag {};
 //preconditioners
 struct ThrustMatrixTag: public AnyMatrixTag {};
 
+struct CuspPreconTag: public ThrustMatrixTag {};
 struct MPIPreconTag: public AnyMatrixTag {};
 
 }//namespace dg

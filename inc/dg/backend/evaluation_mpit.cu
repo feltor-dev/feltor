@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     dg::MPI_Grid2d g2d( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER, comm2d);
 
     mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm3d);
-    dg::MPI_Grid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, dg::cylindrical, comm3d);
+    dg::MPI_Grid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
 
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
@@ -64,8 +64,6 @@ int main(int argc, char** argv)
 
     if(rank==0)std::cout << "Square normalized 3DXnorm "<< norm3d<<"\n";
     double solution = (exp(4.) -exp(0))/2.;
-    if( g3d.system() == dg::cylindrical)
-        solution = (3*exp(4.)+1.)/4.;
     double solution3 = solution2*solution;
     if(rank==0)std::cout << "Correct square norm is    "<<solution3<<std::endl;
     if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3)/solution3<<"\n";

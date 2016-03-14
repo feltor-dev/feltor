@@ -1,5 +1,4 @@
-#ifndef _DG_DERIVATIVES_CUH_
-#define _DG_DERIVATIVES_CUH_
+#pragma once
 
 #include "grid.h"
 #include "dx.h"
@@ -310,4 +309,3 @@ EllSparseBlockMat<double> dz( const Grid3d<double>& g, direction dir = centered)
 
 } //namespace dg
 
-#endif//_DG_DERIVATIVES_CUH_

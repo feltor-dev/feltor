@@ -24,11 +24,16 @@ double jacobian( double x, double y)
 }
 */
 
-/*
-double left( double x, double y) {return sin(x)*cos(y);}
-double right( double x, double y) {return sin(y)*cos(x);} 
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
+double left( double x, double y) {
+    return sin(x)*cos(y);
+    //return cos(x)*x*x*cos(y);
+}
+double right( double x, double y) {
+    return sin(y)*cos(x);
+    //return cos(x)*exp(0.1*(x+y));
+} 
+const double lx = 2*M_PI;
+const double ly = 2*M_PI;
 dg::bc bcx = dg::PER; 
 dg::bc bcy = dg::PER;
 //double right2( double x, double y) {return sin(y);}
@@ -36,7 +41,11 @@ double jacobian( double x, double y)
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
-*/
+double variationRHS( double x, double y) 
+{
+    return cos(x)*cos(y)*cos(x)*cos(y) + sin(x)*sin(y)*sin(x)*sin(y); 
+}
+/*
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
@@ -52,6 +61,7 @@ double jacobian( double x, double y)
 {
     return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
+*/
 
 int main()
 {
@@ -65,9 +75,10 @@ int main()
     dg::DVec lhs = dg::evaluate( left, grid), jac(lhs);
     dg::DVec rhs = dg::evaluate( right, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
+    const dg::DVec variation = dg::evaluate ( variationRHS, grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    dg::ArakawaX<dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     std::cout << std::scientific;
@@ -84,6 +95,8 @@ int main()
     //n = 5 -> p = 5    |
     // quantities are all conserved to 1e-15 for periodic bc
     // for dirichlet bc these are not better conserved than normal jacobian
+    arakawa.variation( rhs, jac);
+    dg::blas1::axpby( 1., variation, -1., jac);
+    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
     return 0;
 }
-

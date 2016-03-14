@@ -23,10 +23,9 @@ namespace dg{
  * Can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
  * @tparam Vector The Vector class you want to use
- * @tparam Preconditioner The Preconditioner class you want to use
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
  */
-template< class Matrix, class Vector, class Preconditioner> 
+template< class Geometry, class Matrix, class Vector> 
 struct Helmholtz
 {
     /**
@@ -38,8 +37,7 @@ struct Helmholtz
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
-    template<class Grid>
-    Helmholtz( const Grid& g, double alpha = 1., direction dir = dg::forward):
+    Helmholtz( Geometry g, double alpha = 1., direction dir = dg::forward):
         laplaceM_(g, not_normed, dir), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
         alpha_(alpha), isSet(false)
@@ -55,8 +53,7 @@ struct Helmholtz
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
-    template<class Grid>
-    Helmholtz( const Grid& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward):
+    Helmholtz( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward):
         laplaceM_(g, bcx,bcy,not_normed, dir), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
         alpha_(alpha), isSet(false)
@@ -87,14 +84,14 @@ struct Helmholtz
      *
      * @return weights
      */
-    const Preconditioner& weights()const {return laplaceM_.weights();}
+    const Vector& weights()const {return laplaceM_.weights();}
     /**
-     * @brief Preconditioner to use in conjugate gradient solvers
+     * @brief Vector to use in conjugate gradient solvers
      *
      * multiply result by these coefficients to get the normed result
-     * @return Preconditioner
+     * @return Vector
      */
-    const Preconditioner& precond()const {return laplaceM_.precond();}
+    const Vector& precond()const {return laplaceM_.precond();}
     /**
      * @brief Change alpha
      *
@@ -124,7 +121,7 @@ struct Helmholtz
      */
     const Vector& chi() const{return chi_;}
   private:
-    Elliptic<Matrix, Vector, Preconditioner> laplaceM_;
+    Elliptic<Geometry, Matrix, Vector> laplaceM_;
     Vector temp_, chi_;
     double alpha_;
     bool isSet;
@@ -141,10 +138,10 @@ struct Helmholtz
  * Can be used by the Invert class
  * @tparam Matrix The cusp-matrix class you want to use
  * @tparam Vector The Vector class you want to use
- * @tparam Preconditioner The Preconditioner class you want to use
+ * @tparam Vector The Vector class you want to use
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
  */
-template< class Matrix, class Vector, class Preconditioner> 
+template< class Geometry, class Matrix, class Vector> 
 struct Helmholtz2
 {
     /**
@@ -156,8 +153,7 @@ struct Helmholtz2
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
-    template<class Grid>
-    Helmholtz2( const Grid& g, double alpha = 1., direction dir = dg::forward):
+    Helmholtz2( Geometry g, double alpha = 1., direction dir = dg::forward):
         laplaceM_(g, not_normed, dir), 
         temp_(dg::evaluate(dg::one, g)),temp2_(temp_),temp3_(temp_), chi_(temp_),
         alpha_(alpha), isSet(false)
@@ -173,8 +169,7 @@ struct Helmholtz2
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
-    template<class Grid>
-    Helmholtz2( const Grid& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward):
+    Helmholtz2( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward):
         laplaceM_(g, bcx,bcy,not_normed, dir), 
         temp_(dg::evaluate(dg::one, g)), temp2_(temp_),temp3_(temp_),chi_(temp_),
         alpha_(alpha), isSet(false)
@@ -215,14 +210,14 @@ struct Helmholtz2
      *
      * @return weights
      */
-    const Preconditioner& weights()const {return laplaceM_.weights();}
+    const Vector& weights()const {return laplaceM_.weights();}
     /**
-     * @brief Preconditioner to use in conjugate gradient solvers
+     * @brief Vector to use in conjugate gradient solvers
      *
      * multiply result by these coefficients to get the normed result
-     * @return Preconditioner
+     * @return Vector
      */
-    const Preconditioner& precond()const {return laplaceM_.precond();}
+    const Vector& precond()const {return laplaceM_.precond();}
     /**
      * @brief Change alpha
      *
@@ -252,32 +247,32 @@ struct Helmholtz2
      */
     const Vector& chi()const {return chi_;}
   private:
-    Elliptic<Matrix, Vector, Preconditioner> laplaceM_;
+    Elliptic<Geometry, Matrix, Vector> laplaceM_;
     Vector temp_,temp2_,temp3_, chi_;
     double alpha_;
     bool isSet;
 };
 ///@cond
-template< class M, class V, class P>
-struct MatrixTraits< Helmholtz<M, V, P> >
+template< class G, class M, class V>
+struct MatrixTraits< Helmholtz<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template< class M, class V, class P>
-struct MatrixTraits< const Helmholtz<M, V, P> >
+template< class G, class M, class V>
+struct MatrixTraits< const Helmholtz<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template< class M, class V, class P>
-struct MatrixTraits< Helmholtz2<M, V, P> >
+template< class G, class M, class V>
+struct MatrixTraits< Helmholtz2<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-template< class M, class V, class P>
-struct MatrixTraits< const Helmholtz2<M, V, P> >
+template< class G, class M, class V>
+struct MatrixTraits< const Helmholtz2<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
