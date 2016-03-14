@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     if( rank == 0)
     {
         std::cin >> np[0] >> np[1]>>np[2];
-        std::cout<< np[0] <<" "<<np[1]<<" "<<np[2]<<" "<<size<<" ";
+        std::cout<< "xxx "<<np[0] <<" "<<np[1]<<" "<<np[2]<<" "<<size<<" ";
         assert( size == np[0]*np[1]*np[2]);
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
     }
 
 
-    if(rank==0)std::cout << std::endl;
+    if(rank==0)std::cout <<" XXX"<<std::endl;
     MPI_Finalize();
     return 0;
 }
