@@ -13,7 +13,7 @@
 #include "dg/backend/average.cuh"
 #include "dg/backend/typedefs.cuh"
 #include "file/read_input.h"
-#include "solovev/geometry.h"
+#include "geometries/solovev.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
@@ -70,7 +70,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
+     dg::CylindricalGrid grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!

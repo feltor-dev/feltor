@@ -30,9 +30,9 @@ namespace eule
 \f]
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
- * @tparam Preconditioner The Preconditioner class
+ * @tparam container The container class
  */
-template<class DS, class Matrix, class container, class Preconditioner>
+template<class DS, class Matrix, class container>
 struct Rolkar
 {
 
@@ -106,20 +106,20 @@ struct Rolkar
      *
      * @return 
      */
-    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perpDIR;}
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perpDIR;}
 
     /**
      * @brief Model function for Inversion
      *
      * @return weights for the inversion function in
      */
-    const Preconditioner& weights(){return LaplacianM_perpDIR.weights();}
+    const container& weights(){return LaplacianM_perpDIR.weights();}
     /**
      * @brief Model function for Inversion
      *
      * @return preconditioner for the inversion function in
      */
-    const Preconditioner& precond(){return LaplacianM_perpDIR.precond();}
+    const container& precond(){return LaplacianM_perpDIR.precond();}
     /**
      * @brief Damping used in the diffusion equations
      *
@@ -131,7 +131,7 @@ struct Rolkar
     const solovev::GeomParameters gp;
     container temp;
     const container dampgauss_;
-    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;
+    dg::Elliptic<Matrix, container, container> LaplacianM_perpN,LaplacianM_perpDIR;
     DS& dsN_,dsDIR_;
 };
 
@@ -140,9 +140,9 @@ struct Rolkar
  *
  * @tparam Matrix matrix class to use
  * @tparam container main container to hold the vectors
- * @tparam Preconditioner class of the weights
+ * @tparam container class of the weights
  */
-template< class DS, class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
+template< class DS, class Matrix, class container >
 struct Feltor
 {
     /**
@@ -261,7 +261,7 @@ struct Feltor
     container gradlnB;
     const container source, damping, one;
     container profne,profNi;
-    const Preconditioner w3d, v3d;
+    const container w3d, v3d;
 
     std::vector<container> phi, curvphi;
     std::vector<container> npe, logn;
@@ -272,8 +272,8 @@ struct Feltor
     DS dsN_;
     dg::Poisson< Matrix, container> poissonN,poissonDIR; 
 
-    dg::Elliptic< Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR,lapperpDIRnn; 
-    dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR, invgammaN;
+    dg::Elliptic< Geometry, Matrix, container > pol,lapperpN,lapperpDIR,lapperpDIRnn; 
+    dg::Helmholtz< Geometry, Matrix, container > invgammaDIR, invgammaN;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
 
