@@ -199,7 +199,7 @@ void ell_multiply_kernel33x(
     }
     }
     else 
-        ell_multiply_kernel( data, cols_ix, data_idx, num_rows, num_cols, 3, 3, left, 1, x, y);
+        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 3, 3, left, 1, x, y);
 }
 
 // multiply kernel, n=3, 2 blocks per line, right = 1
