@@ -11,7 +11,7 @@
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
-double function(double x, double y){ return sin(y)*sin(x);}
+double function(double x, double y, double z){ return sin(y)*sin(x);}
 
 //typedef float value_type;
 //typedef dg::fDVec Vector;
@@ -26,10 +26,10 @@ typedef dg::DMatrix Matrix;
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny; 
-    std::cout << "Type n, Nx and Ny\n";
-    std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny);
+    unsigned n, Nx, Ny, Nz; 
+    std::cout << "Type n, Nx, Ny and Nz\n";
+    std::cin >> n >> Nx >> Ny >> Nz;
+    dg::Grid3d<double> grid( 0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
     Vector w2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
 
@@ -57,14 +57,14 @@ int main()
     t.toc();
     std::cout<<"centered x derivative took       "<<t.diff()/20.<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
-    dg::blas2::transfer(dg::create::dx( grid, dg::forward), M);
+    dg::blas2::transfer(dg::create::dx( grid, dg::backward), M);
     t.tic();
     for( int i=0; i<20; i++)
         dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"forward x derivative took        "<<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
-    dg::blas2::transfer(dg::create::dy( grid, dg::forward), M);
+    dg::blas2::transfer(dg::create::dy( grid, dg::backward), M);
     t.tic();
     for( int i=0; i<20; i++)
         dg::blas2::symv( M, x, y);
