@@ -129,9 +129,9 @@ int main( int argc, char* argv[])
     
     //create RHS     
     std::cout << "initialize feltor" << std::endl;
-    eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     std::cout << "initialize rolkar" << std::endl;
-    eule::Rolkar<dg::CylindricalGrid<dg::DVec> , dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::CylindricalGrid<dg::DVec> , dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
@@ -200,7 +200,7 @@ int main( int argc, char* argv[])
     double normT0 = dg::blas2::dot(  w3d, T0);
     while ( !glfwWindowShouldClose( w ))
     {
-        hvisual = y0[0];  
+        dg::blas1::transfer( y0[0], hvisual);
         if (p.bc ==dg::NEU)    {
         dg::blas1::transform(hvisual,hvisual , dg::PLUS<>(-1)); //npe = N+1
         }
