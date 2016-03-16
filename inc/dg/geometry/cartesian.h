@@ -6,7 +6,8 @@
 namespace dg
 {
 
-    ///@addtogroup
+///@addtogroup grid
+///@{
 /**
  * @brief one-dimensional Grid with Cartesian metric
  */
@@ -58,12 +59,14 @@ struct CartesianGrid2d: public Grid2d<double>
      */
     CartesianGrid2d( const Grid2d<double>& grid):Grid2d<double>(grid){}
 };
+///@}
 
 /**
  * @brief evaluates a two-dimensional function 
  *
  * same as evaluate
- * @tparam BinaryOp Binaryy function object
+ * @ingroup evaluation
+ * @tparam BinaryOp Binary function object
  * @param f functor
  * @param g geometry
  *
@@ -81,6 +84,8 @@ thrust::host_vector<double> pullback( double(f)(double,double), const CartesianG
 }
 ///@endcond
 
+///@addtogroup grid
+///@{
 /**
  * @brief three-dimensional Grid with Cartesian metric
  */
@@ -115,5 +120,6 @@ struct CartesianGrid3d: public Grid3d<double>
 };
 
 //if a pullback is ever needed write an adapter class and use evaluate functions
+///@}
 
 } //namespace dg

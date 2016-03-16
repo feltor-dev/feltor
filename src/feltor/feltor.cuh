@@ -32,7 +32,7 @@ namespace eule
  * @tparam container The Vector class 
  * @tparam container The container class
  */
-template<class DS, class Matrix, class container>
+template<class Geometry, class DS, class Matrix, class container>
 struct Rolkar
 {
 
@@ -142,7 +142,7 @@ struct Rolkar
  * @tparam container main container to hold the vectors
  * @tparam container class of the weights
  */
-template< class DS, class Matrix, class container >
+template< class Geometry, class DS, class Matrix, class container >
 struct Feltor
 {
     /**
@@ -153,8 +153,7 @@ struct Feltor
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    template<class Grid3d>
-    Feltor( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp);
+    Feltor( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp);
 
 
     /**
@@ -286,9 +285,9 @@ struct Feltor
 ///@}
 
 ///@cond
-template<class DS, class Matrix, class container, class P>
+template<class Geometry, class DS, class Matrix, class container>
 template<class Grid>
-Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
+Feltor<Geometry, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
@@ -324,8 +323,8 @@ Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, sol
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+1)); 
 }
 
-template<class DS, class Matrix, class container, class P>
-container& Feltor<DS, Matrix, container, P>::polarisation( const std::vector<container>& y)
+template<class Geometry, class DS, class Matrix, class container>
+container& Feltor<DS, Matrix, container>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
@@ -341,8 +340,8 @@ container& Feltor<DS, Matrix, container, P>::polarisation( const std::vector<con
     return phi[0];
 }
 
-template< class DS, class Matrix, class container, class P>
-container& Feltor<DS, Matrix,container, P>::compute_psi( container& potential)
+template< class Geometry, class DS, class Matrix, class container>
+container& Feltor<Geometry, DS, Matrix,container>::compute_psi( container& potential)
 {
     invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
     poissonN.variationRHS(potential, omega);
@@ -352,15 +351,15 @@ container& Feltor<DS, Matrix,container, P>::compute_psi( container& potential)
     return phi[1];    
 }
 
-template<class DS, class Matrix, class container, class P>
-void Feltor<DS, Matrix, container, P>::initializene( const container& src, container& target)
+template<class Geometry, class DS, class Matrix, class container>
+void Feltor<Geometry, DS, Matrix, container>::initializene( const container& src, container& target)
 { 
     invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
 
-template<class DS, class M, class V, class P>
-double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
+template<class G, class DS, class M, class V>
+double Feltor<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
 {
     double z[2]    = {-1.0,1.0};
     double Dpar[4] = {0.0, 0.0,0.0,0.0};
@@ -461,8 +460,8 @@ double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vecto
 }
 
 
-template<class DS, class Matrix, class container, class P>
-void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class Geometry, class DS, class Matrix, class container>
+void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - 1
        y[1] := N_i - 1
@@ -580,7 +579,7 @@ void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, st
 
 
 //Computes curvature operator
-template<class DS, class Matrix, class container, class P>
+template<class Geometry, class DS, class Matrix, class container>
 void Feltor<DS, Matrix, container, P>::curveN( container& src, container& target)
 {
     container temp1(src);
@@ -590,7 +589,7 @@ void Feltor<DS, Matrix, container, P>::curveN( container& src, container& target
     dg::blas1::pointwiseDot( curvZ, temp1, temp1);   // C^Z d_Z src
     dg::blas1::axpby( 1., temp1, 1., target ); // (C^R d_R + C^Z d_Z) src
 }
-template<class DS, class Matrix, class container, class P>
+template<class Geometry, class DS, class Matrix, class container>
 void Feltor<DS, Matrix, container, P>::curveDIR( container& src, container& target)
 {
     container temp1(src);
