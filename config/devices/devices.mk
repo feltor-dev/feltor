@@ -1,13 +1,14 @@
 ifeq ($(strip $(device)),gpu)
-CC = nvcc
+ccc_:=$(CC)
+CC = nvcc --compiler-bindir $(ccc_)
 OPT=-O2
 CFLAGS+= --compiler-options -Wall $(NVCCARCH)
 CFLAGS+= -Xcompiler $(OMPFLAG)
 #CFLAGS+= -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 CFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
 CFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
-backend_:=$(MPICC)
-MPICC=nvcc --compiler-bindir $(backend_)
+mpiccc_:=$(MPICC)
+MPICC=nvcc --compiler-bindir $(mpiccc_)
 MPICFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA
 MPICFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
 MPICFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
