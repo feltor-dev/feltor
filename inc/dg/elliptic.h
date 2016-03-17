@@ -55,17 +55,9 @@ class Elliptic
      * @param dir Direction of the right first derivative
      */
     Elliptic( Geometry g, norm no = not_normed, direction dir = forward): 
-        leftx ( dg::create::dx( g, inverse( g.bcx()), inverse(dir))),
-        lefty ( dg::create::dy( g, inverse( g.bcy()), inverse(dir))),
-        rightx( dg::create::dx( g, g.bcx(), dir)),
-        righty( dg::create::dy( g, g.bcy(), dir)),
-        jumpX ( dg::create::jumpX( g, g.bcx())),
-        jumpY ( dg::create::jumpY( g, g.bcy())),
-        weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)), 
-        xchi( dg::evaluate( one, g) ), tempx(xchi), tempy( xchi), gradx(xchi),
         no_(no), g_(g)
     { 
-        dg::geo::multiplyVolume( xchi, g_); 
+        construct( g, g.bcx(), g.bcy(), dir);
     }
 
     /**
@@ -82,17 +74,9 @@ class Elliptic
      * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
      */
     Elliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
-        leftx (dg::create::dx( g, inverse(bcx), inverse(dir))),
-        lefty (dg::create::dy( g, inverse(bcy), inverse(dir))),
-        rightx(dg::create::dx( g,bcx, dir)),
-        righty(dg::create::dy( g,bcy, dir)),
-        jumpX ( dg::create::jumpX( g, bcx)),
-        jumpY ( dg::create::jumpY( g, bcy)),
-        weights_(dg::create::volume(g)), precond_(dg::create::inv_volume(g)),
-        xchi( dg::evaluate( one, g) ), tempx(xchi), tempy( xchi), gradx(xchi),
         no_(no), g_(g)
     { 
-        dg::geo::multiplyVolume( xchi, g_); 
+        construct( g, bcx, bcy, dir);
     }
 
     /**
@@ -154,6 +138,20 @@ class Elliptic
 
     }
     private:
+    void construct( Geometry g, bc bcx, bc bcy, direction dir)
+    {
+        dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), leftx);
+        dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), lefty);
+        dg::blas2::transfer( dg::create::dx( g, bcx, dir), rightx);
+        dg::blas2::transfer( dg::create::dy( g, bcy, dir), righty);
+        dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
+        dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
+        dg::blas1::transfer( dg::create::volume(g),        weights_);
+        dg::blas1::transfer( dg::create::inv_volume(g),    precond_);
+        dg::blas1::transfer( dg::evaluate( one, g),        xchi);
+        tempx = tempy = gradx = xchi;
+        dg::geo::multiplyVolume( xchi, g_); 
+    }
     bc inverse( bc bound)
     {
         if( bound == DIR) return NEU;

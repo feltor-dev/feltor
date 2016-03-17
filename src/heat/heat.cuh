@@ -2,9 +2,6 @@
 
 #include "dg/algorithm.h"
 #include "parameters.h"
-// #include "geometry_circ.h"
-// #include "solovev/geometry.h"
-// #include "geometry_g.h"
 #include "geometries/init.h"
 
 #ifdef DG_BENCHMARK

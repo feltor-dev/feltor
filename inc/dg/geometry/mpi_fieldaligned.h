@@ -88,7 +88,7 @@ struct ZShifter
 /**
  * @brief Class for the evaluation of a parallel derivative (MPI Version)
  *
- * @ingroup dz
+ * @ingroup algorithms
  * @tparam LocalMatrix The matrix class of the interpolation matrix
  * @tparam Communicator The communicator used to exchange data in the RZ planes
  * @tparam LocalContainer The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
@@ -104,10 +104,10 @@ struct MPI_FieldAligned
     is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param field The field to integrate
     * @param grid The grid on which to operate
-    * @param deltaPhi Must either equal the hz_() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
     * @param eps Desired accuracy of runge kutta
     * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
+    * @param deltaPhi Is either <0 (then it's ignored), may differ from hz() only if Nz() == 1
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>

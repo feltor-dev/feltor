@@ -23,6 +23,7 @@
    - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
+typedef dg::FieldAligned< dg::CylindricalGrid<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -73,17 +74,17 @@ int main( int argc, char* argv[])
      dg::CylindricalGrid<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalGrid<dg::DVec>, dg::DDS, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid<dg::DVec>, dg::DDS, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    eule::Rolkar<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p, gp); //initial background profile
+    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //perturbation 
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1); //modulation along fieldline
+    dg::GaussianZ gaussianZ( 0, p.sigma_z*M_PI, 1); //modulation along fieldline
     if( p.mode == 0 || p.mode == 1)
     {
         dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
@@ -99,7 +100,7 @@ int main( int argc, char* argv[])
     }
     if( p.mode == 3)
     {
-        solovev::ZonalFlow init0(p, gp);
+        solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
         y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
     }
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
@@ -138,15 +139,16 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
      //probe
-    const dg::DVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
-    const dg::DVec Zprobe(1,0.);
-    const dg::DVec Phiprobe(1,M_PI);
-    dg::IDMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
+    const dg::HVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
+    const dg::HVec Zprobe(1,0.);
+    const dg::HVec Phiprobe(1,M_PI);
+    dg::IDMatrix probeinterp;
+    dg::blas2::transfer( dg::create::interpolation( Xprobe, Zprobe, Phiprobe, grid, dg::NEU), probeinterp);
     dg::DVec probevalue(1,0.);   
     while ( !glfwWindowShouldClose( w ))
     {
 
-        hvisual = y0[0];
+        dg::blas1::transfer( y0[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();        
@@ -167,7 +169,7 @@ int main( int argc, char* argv[])
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
-        hvisual = y0[1];
+        dg::blas1::transfer( y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         //colors.scalemin() = 1.0;        
@@ -191,7 +193,7 @@ int main( int argc, char* argv[])
         //transform to Vor
         dvisual=feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        hvisual = y1[1];
+        dg::blas1::transfer( y1[1], hvisual);
 //         hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
@@ -210,7 +212,7 @@ int main( int argc, char* argv[])
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw U_e
-        hvisual = y0[2];
+        dg::blas1::transfer( y0[2], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -228,7 +230,7 @@ int main( int argc, char* argv[])
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);      
         
         //draw U_i
-        hvisual = y0[3];
+        dg::blas1::transfer( y0[3], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );

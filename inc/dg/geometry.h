@@ -75,6 +75,7 @@ void divideVolume( container& inout, const Geometry& g)
  * @param contraX (output) contravariant first component
  * @param contraY (output) contravariant second component
  * @param g The geometry object
+ * @note covX, covY, contraX and contraY may not be the same
  */
 template<class container, class Geometry>
 void raisePerpIndex( container& covX, container& covY, container& contraX, container& contraY, const Geometry& g)
@@ -125,12 +126,12 @@ void dividePerpVolume( container& inout, const Geometry& g)
  * @tparam Geometry The Geometry class
  * @param vR input R-component in cylindrical coordinates
  * @param vZ input Z-component in cylindrical coordinates
- * @param vx x-component of vector 
- * @param vy y-component of vector
+ * @param vx x-component of vector (gets properly resized)
+ * @param vy y-component of vector (gets properly resized)
  * @param g The geometry object
  */
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void pushForwardPerp( TernaryOp1 vR, TernaryOp2& vZ, 
+void pushForwardPerp( TernaryOp1 vR, TernaryOp2 vZ, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vx, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vy,
         const Geometry& g)

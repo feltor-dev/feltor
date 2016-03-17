@@ -263,11 +263,11 @@ void boxintegrator( Field& field, const Grid& grid,
 * This class discretizes the operators \f$ \nabla_\parallel = 
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 cylindrical coordinates
-* @ingroup ds
+* @ingroup algorithms
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class Geometry, class Matrix = cusp::csr_matrix<int, double, cusp::device_memory>, class container=thrust::device_vector<double> >
+template< class Geometry, class Matrix, class container >
 struct FieldAligned
 {
 

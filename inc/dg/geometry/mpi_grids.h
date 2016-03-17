@@ -55,6 +55,12 @@ struct CartesianMPIGrid3d : public MPI_Grid3d
     CartesianMPIGrid3d( const MPI_Grid3d& grid ):MPI_Grid3d( grid){}
 };
 
+
+/**
+ * @brief MPI version of Cylindrical grid
+ *
+ * @tparam container The MPI Vector container
+ */
 template<class container>
 struct CylindricalMPIGrid : public MPI_Grid3d
 {

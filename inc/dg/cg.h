@@ -39,13 +39,17 @@ class CG
 {
   public:
     typedef typename VectorTraits<Vector>::value_type value_type;//!< value type of the Vector class
+    /**
+     * @brief Allocate nothing, 
+     */
+    CG(){}
       /**
        * @brief Reserve memory for the pcg method
        *
-       * @param copy A Vector must be copy-constructible from copy
+       * @param copyable A Vector must be copy-constructible from this
        * @param max_iter Maximum number of iterations to be used
        */
-    CG( const Vector& copy, unsigned max_iter):r(copy), p(r), ap(r), max_iter(max_iter){}
+    CG( const Vector& copyable, unsigned max_iter):r(copyable), p(r), ap(r), max_iter(max_iter){}
     /**
      * @brief Set the maximum number of iterations 
      *
@@ -58,6 +62,17 @@ class CG
      * @return the current maximum
      */
     unsigned get_max() const {return max_iter;}
+
+    /**
+     * @brief Set internal storage and maximum number of iterations
+     *
+     * @param copyable
+     * @param max_iterations
+     */
+    void construct( const Vector& copyable, unsigned max_iterations) { 
+        ap = p = r = copyable;
+        max_iter = max_iterations;
+    }
     /**
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *
@@ -242,18 +257,72 @@ template<class container>
 struct Invert
 {
     typedef typename VectorTraits<container>::value_type value_type;
+
+    /**
+     * @brief Allocate nothing
+     *
+     */
+    Invert() { multiplyWeights_ = true; set_extrapolationType(2); nrmb_correction_ = 1.; }
+
     /**
      * @brief Constructor
      *
      * @param copyable Needed to construct the two previous solutions
      * @param max_iter maximum iteration in conjugate gradient
      * @param eps relative error in conjugate gradient
+     * @param extrapolationType number of last values to use for extrapolation of the current guess
+     * @param multiplyWeights if true the rhs shall be multiplied by the weights before cg is applied
      * @param nrmb_correction Correction factor for norm of b (cf. CG)
      */
-    Invert(const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1): 
-        eps_(eps), nrmb_correction_(nrmb_correction),
-        phi0( copyable), phi1( copyable), phi2(phi1), cg( copyable, max_iter),
-        multiplyWeights_(multiplyWeights)
+    Invert(const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1)
+    {
+        construct( copyable, max_iter, eps, extrapolationType, multiplyWeights, nrmb_correction);
+    }
+
+    /**
+     * @brief to be called after default constructor
+     *
+     * @param copyable Needed to construct the two previous solutions
+     * @param max_iter maximum iteration in conjugate gradient
+     * @param eps relative error in conjugate gradient
+     * @param extrapolationType number of last values to use for extrapolation of the current guess
+     * @param multiplyWeights if true the rhs shall be multiplied by the weights before cg is applied
+     * @param nrmb_correction Correction factor for norm of b (cf. CG)
+     */
+    void construct( const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.) 
+    {
+        set_size( copyable, max_iter);
+        set_accuracy( eps, nrmb_correction);
+        multiplyWeights_=multiplyWeights;
+        set_extrapolationType( extrapolationType);
+    }
+
+
+    /**
+     * @brief Set vector storage and maximum number of iterations
+     *
+     * @param assignable
+     * @param max_iterations
+     */
+    void set_size( const container& assignable, unsigned max_iterations) {
+        cg.construct(assignable, max_iterations);
+        phi0 = phi1 = phi2 = assignable;
+    }
+
+    /**
+     * @brief Set accuracy parameters for following inversions
+     *
+     * @param eps
+     * @param nrmb_correction
+     */
+    void set_accuracy( value_type eps, value_type nrmb_correction = 1.) { eps_ = eps; nrmb_correction = nrmb_correction;}
+
+    /**
+     * @brief Set the extrapolation Type for following inversions
+     *
+     * @param extrapolationType number of last values to use for next extrapolation of initial guess
+     */
+    void set_extrapolationType( int extrapolationType)
     {
         assert( extrapolationType <= 3 && extrapolationType >= 0);
         switch(extrapolationType)
@@ -269,6 +338,19 @@ struct Invert
             default: alpha[0] = 2, alpha[1] = -1, alpha[2] = 0;
         }
     }
+    /**
+     * @brief Set the maximum number of iterations 
+     *
+     * @param new_max New maximum number
+     */
+    void set_max( unsigned new_max) {cg.set_max( new_max);}
+    /**
+     * @brief Get the current maximum number of iterations
+     *
+     * @return the current maximum
+     */
+    unsigned get_max() const {return cg.get_max();}
+
     /**
     * @brief Return last solution
     */
@@ -315,6 +397,7 @@ struct Invert
     template< class SymmetricOp, class Preconditioner >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const container& w, Preconditioner& p)
     {
+        assert( phi0.size() != 0);
         assert( &rho != &phi);
         blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi); // 1. phi0 + 0.*phi1 = phi
         blas1::axpby( alpha[2], phi2, 1., phi); // 0. phi2 + 1. phi0 + 0.*phi1 = phi
@@ -353,18 +436,6 @@ struct Invert
         return number;
     }
 
-    /**
-     * @brief Set the maximum number of iterations 
-     *
-     * @param new_max New maximum number
-     */
-    void set_max( unsigned new_max) {cg.set_max( new_max);}
-    /**
-     * @brief Get the current maximum number of iterations
-     *
-     * @return the current maximum
-     */
-    unsigned get_max() const {return cg.get_max();}
   private:
     value_type eps_, nrmb_correction_;
     container phi0, phi1, phi2;
