@@ -17,7 +17,7 @@
 
 namespace dg
 {
-template<class Matrix, class container, class Preconditioner>
+template<class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::CartesianGrid2d& g, double nu, bool global):
@@ -35,7 +35,7 @@ struct Diffusion
             dg::blas1::axpby( -nu_, y[i], 0., y[i]);
         }
     }
-    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return w2d;}
     const container& precond(){return v2d;}
 
@@ -44,10 +44,10 @@ struct Diffusion
     bool global;
     const container w2d, v2d;
     container temp, expx;
-    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner> LaplacianM_perp;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM_perp;
 };
 
-template< class Matrix, class container, class Preconditioner >
+template< class Matrix, class container >
 struct ToeflR
 {
     /**
@@ -94,14 +94,14 @@ struct ToeflR
      *
      * @return cusp matrix
      */
-    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner>& laplacianM( ) { return laplaceM;}
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container>& laplacianM( ) { return laplaceM;}
 
     /**
      * @brief Return the Gamma operator used by this object
      *
      * @return Gamma operator
      */
-    dg::Helmholtz<dg::CartesianGrid2d, Matrix, container, container >&  gamma() {return gamma1;}
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, container >&  gamma() {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -155,14 +155,14 @@ struct ToeflR
     std::vector<container> expy, dxy, dyy, lapy;
 
     //matrices and solvers
-    //Elliptic<Matrix, container, Preconditioner> A; //contains unnormalized laplacian if local
-    Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner> laplaceM; //contains normalized laplacian
-    Helmholtz<dg::CartesianGrid2d,  Matrix, container, container > gamma1;
+    //Elliptic<Matrix, container> A; //contains unnormalized laplacian if local
+    Elliptic<dg::CartesianGrid2d, Matrix, container> laplaceM; //contains normalized laplacian
+    Helmholtz<dg::CartesianGrid2d,  Matrix, container> gamma1;
     ArakawaX< dg::CartesianGrid2d, Matrix, container> arakawa; 
-    Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner> pol;
+    Elliptic<dg::CartesianGrid2d, Matrix, container> pol;
     CG<container > pcg;
 
-    const Preconditioner w2d, v2d;
+    const container w2d, v2d;
     const container one;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
@@ -172,8 +172,8 @@ struct ToeflR
 
 };
 
-template< class M, class container, class P>
-ToeflR< M, container,P>::ToeflR( const dg::CartesianGrid2d& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
+template< class M, class container>
+ToeflR< M, container>::ToeflR( const dg::CartesianGrid2d& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
     chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), phi_old( phi), dyphi( phi),
@@ -189,8 +189,8 @@ ToeflR< M, container,P>::ToeflR( const dg::CartesianGrid2d& grid, double kappa, 
 {
 }
 
-template< class M, class container, class P>
-const container& ToeflR<M, container, P>::compute_vesqr( const container& potential)
+template< class M, class container>
+const container& ToeflR<M, container>::compute_vesqr( const container& potential)
 {
     assert( global);
     blas2::gemv( arakawa.dx(), potential, chi);
@@ -202,8 +202,8 @@ const container& ToeflR<M, container, P>::compute_vesqr( const container& potent
     blas1::axpby( 1., chi, 1.,  omega);
     return omega;
 }
-template< class M, class container, class P>
-const container& ToeflR<M, container, P>::compute_psi( const container& potential)
+template< class M, class container>
+const container& ToeflR<M, container>::compute_psi( const container& potential)
 {
     //compute Gamma phi[0]
     blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
@@ -232,8 +232,8 @@ const container& ToeflR<M, container, P>::compute_psi( const container& potentia
 
 
 //computes and modifies expy!!
-template<class M, class container, class P>
-const container& ToeflR< M, container, P>::polarisation( const std::vector<container>& y)
+template<class M, class container>
+const container& ToeflR< M, container>::polarisation( const std::vector<container>& y)
 {
     //USE INVERT CLASS 
     //extrapolate phi and gamma_n
@@ -307,8 +307,8 @@ const container& ToeflR< M, container, P>::polarisation( const std::vector<conta
     return phi[0];
 }
 
-template< class M, class container, class P>
-void ToeflR<M, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template< class M, class container>
+void ToeflR<M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());
@@ -376,21 +376,21 @@ void ToeflR<M, container, P>::operator()( std::vector<container>& y, std::vector
 
 }
 
-template< class M, class container, class P>
-void ToeflR< M, container, P>::exp( const std::vector<container>& y, std::vector<container>& target)
+template< class M, class container>
+void ToeflR< M, container>::exp( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
         dg::blas1::transform(y[i], target[i], dg::EXP<double>());
 }
-template< class M, class container, class P>
-void ToeflR< M, container, P>::log( const std::vector<container>& y, std::vector<container>& target)
+template< class M, class container>
+void ToeflR< M, container>::log( const std::vector<container>& y, std::vector<container>& target)
 {
     for( unsigned i=0; i<y.size(); i++)
         dg::blas1::transform( y[i], target[i], dg::LN<double>());
 }
 
-template< class M, class container, class P>
-void ToeflR<M, container, P>::divide( const container& zaehler, const container& nenner, container& result)
+template< class M, class container>
+void ToeflR<M, container>::divide( const container& zaehler, const container& nenner, container& result)
 {
     dg::blas1::pointwiseDivide( zaehler, nenner, result);
 }

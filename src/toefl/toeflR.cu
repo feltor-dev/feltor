@@ -53,8 +53,8 @@ int main( int argc, char* argv[])
 
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::DMatrix, dg::DVec, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::DMatrix, dg::DVec, dg::DVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR< dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
+    dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
@@ -98,7 +98,7 @@ int main( int argc, char* argv[])
         else
             dvisual = y0[0];
 
-        hvisual = dvisual;
+        dg::blas1::transfer( dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -110,7 +110,7 @@ int main( int argc, char* argv[])
         //transform phi
         dvisual = test.potential()[0];
         dg::blas2::gemv( test.laplacianM(), dvisual, y1[1]);
-        hvisual = y1[1];
+        dg::blas1::transfer( y1[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );

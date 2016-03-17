@@ -49,8 +49,8 @@ int main( int argc, char* argv[])
     ////////////////////////////////set up computations///////////////////////////
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::DMatrix, dg::DVec, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::DMatrix, dg::DVec, dg::DVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR< dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
+    dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
@@ -72,12 +72,14 @@ int main( int argc, char* argv[])
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
     ab.init( test, diffusion, y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
-    /////////////////////////////set up hdf5/////////////////////////////////
-    file::T5trunc t5file( argv[2], input);
-    dg::HVec output[3] = { y1[0], y1[0], y1[0]}; //intermediate transport locations
     if( p.global)
         test.exp( y1,y1); //transform to correct values
-    output[0] = y1[0], output[1] = y1[1], output[2] = test.potential()[0]; //electrons
+    /////////////////////////////set up hdf5/////////////////////////////////
+    file::T5trunc t5file( argv[2], input);
+    dg::DVec transferD[3] = { y1[0], y1[1], test.potential()[0]}; //intermediate transport locations
+    dg::HVec output[3];
+    for( int i=0;i<3; i++)
+        dg::blas1::transfer( transferD[i], output[i]);
     t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
     if( p.global) 
     {
@@ -112,7 +114,9 @@ int main( int argc, char* argv[])
         //output all three fields
         if( p.global)
             test.exp( y1,y1); //transform to correct values
-        output[0] = y1[0], output[1] = y1[1], output[2] = test.potential()[0]; //electrons
+        transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
+        for( int i=0;i<3; i++)
+            dg::blas1::transfer( transferD[i], output[i]);
         t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
 #ifdef DG_BENCHMARK
         ti.toc();
