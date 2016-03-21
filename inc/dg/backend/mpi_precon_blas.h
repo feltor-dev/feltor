@@ -13,12 +13,15 @@ namespace detail
 template< class Precon, class Vector>
 inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
+#ifdef DG_DEBUG
+    assert( x.communicator() == y.communicator());
+    assert( x.communicator() == P.communicator());
+#endif //DG_DEBUG
     //computation
     typename MatrixTraits<Precon>::value_type temp= doDot(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
     //communication
     typename MatrixTraits<Precon>::value_type sum=0;
-    MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    //MPI_Barrier(MPI_COMM_WORLD); 
+    MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, x.communicator());
 
     return sum;
 }

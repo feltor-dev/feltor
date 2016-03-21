@@ -2,13 +2,13 @@
 
 #include <mpi.h>
 
-#include "conformal.h"
+#include "orthogonal.h"
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
 
 
 
-namespace conformal
+namespace orthogonal
 {
 
 ///@cond
@@ -17,7 +17,7 @@ struct MPIRingGrid2d;
 ///@endcond
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010 (MPI Version)
+ * @brief A three-dimensional grid based on "almost-orthogonal" coordinates by Ribeiro and Scott 2010 (MPI Version)
  *
  * @tparam container Vector class that holds metric coefficients
  */
@@ -42,11 +42,13 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
      */
     MPIRingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         dg::MPI_Grid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
-        f_( dg::evaluate( dg::one, *this)), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
+        f_( dg::evaluate( dg::one, *this)), g_(f_), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
     {
         RingGrid3d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, local().Nz(), bcx);
-        f_x_ = g.f_x();
+        f_x_ = g.f1_x();
+        f2_xy_ = g.f2_xy();
+
         //divide and conquer
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
@@ -59,7 +61,8 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
                         {
                             unsigned idx1 = (s*this->n()*this->Ny()+i)*this->n()*this->Nx() + j;
                             unsigned idx2 = (((s*dims[1]+coords[1])*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            f_.data()[idx1] = g.f()[idx2];
+                            f_.data()[idx1] = g.f1()[idx2];
+                            g_.data()[idx1] = g.f2()[idx2];
                             r_.data()[idx1] = g.r()[idx2];
                             z_.data()[idx1] = g.z()[idx2];
                             xr_.data()[idx1] = g.xr()[idx2];
@@ -76,12 +79,31 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
     }
 
     //these are for the Field class
-    thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( global().x0(), global().x1(), global().n(), global().Nx());
-        return dg::create::abscissas(gx);}
-    const thrust::host_vector<double>& f_x()const{return f_x_;}
 
-    const dg::MPI_Vector<thrust::host_vector<double> >& f()const{return f_;}
+    /**
+     * @brief The f_1 vector over the global grid
+     *
+     * @return 
+     */
+    const thrust::host_vector<double>& f1_x()const{return f_x_;}
+    /**
+     * @brief The f_2 vector over the global grid
+     *
+     * @return 
+     */
+    const thrust::host_vector<double>& f2_xy()const{return f2_xy_;}
+    /**
+     * @brief The f_1 vector over the local grid
+     *
+     * @return 
+     */
+    const dg::MPI_Vector<thrust::host_vector<double> >& f1()const{return f_;}
+    /**
+     * @brief The f_2 vector over the local grid
+     *
+     * @return 
+     */
+    const dg::MPI_Vector<thrust::host_vector<double> >& f2()const{return g_;}
     perpendicular_grid perp_grid() const { return MPIRingGrid2d<LocalContainer>(*this);}
 
     const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
@@ -98,12 +120,13 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
     const dg::MPI_Vector<LocalContainer>& perpVol()const{return vol2d_;}
     private:
     thrust::host_vector<double> f_x_; //1d vector
-    dg::MPI_Vector<thrust::host_vector<double> > f_, r_, z_, xr_, xz_, yr_, yz_; //3d vector
+    thrust::host_vector<double> f2_xy_; //2d vector
+    dg::MPI_Vector<thrust::host_vector<double> > f_, g_, r_, z_, xr_, xz_, yr_, yz_; //3d vector
     dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
 };
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional grid based on "almost-orthogonal" coordinates by Ribeiro and Scott 2010
  */
 template<class LocalContainer>
 struct MPIRingGrid2d : public dg::MPI_Grid2d
@@ -124,11 +147,12 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
      */
     MPIRingGrid2d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
         dg::MPI_Grid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
-        f_( dg::evaluate( dg::one, *this)), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
+        f_( dg::evaluate( dg::one, *this)), g_(f_), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {
         RingGrid2d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, bcx);
-        f_x_ = g.f_x();
+        f_x_ = g.f1_x();
+        f2_xy_ = g.f2_xy();
         //divide and conquer
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
@@ -140,7 +164,8 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
                         {
                             unsigned idx1 = i*this->n()*this->Nx() + j;
                             unsigned idx2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            f_.data()[idx1] = g.f()[idx2];
+                            f_.data()[idx1] = g.f1()[idx2];
+                            g_.data()[idx1] = g.f2()[idx2];
                             r_.data()[idx1] = g.r()[idx2];
                             z_.data()[idx1] = g.z()[idx2];
                             xr_.data()[idx1] = g.xr()[idx2];
@@ -155,15 +180,17 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
     }
     MPIRingGrid2d( const MPIRingGrid3d<LocalContainer>& g):
         dg::MPI_Grid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
-        f_( dg::evaluate( dg::one, *this)), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
+        f_( dg::evaluate( dg::one, *this)), g_(f_), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {
-        f_x_ = g.f_x();
+        f_x_ = g.f1_x();
+        f2_xy_ = g.f2_xy();
         unsigned s = this->size();
         for( unsigned i=0; i<s; i++)
         {
             r_.data()[i]=g.r().data()[i]; 
-            f_.data()[i]=g.f().data()[i]; 
+            f_.data()[i]=g.f1().data()[i]; 
+            g_.data()[i]=g.f2().data()[i]; 
             z_.data()[i]=g.z().data()[i]; 
             xr_.data()[i]=g.xr().data()[i]; 
             xz_.data()[i]=g.xz().data()[i]; 
@@ -177,11 +204,30 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
         
     }
 
-    const dg::MPI_Vector<thrust::host_vector<double> >& f()const{return f_;}
-    const thrust::host_vector<double>& f_x()const{return f_x_;}
-    thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( global().x0(), global().x1(), global().n(), global().Nx());
-        return dg::create::abscissas(gx);}
+    /**
+     * @brief 1D version of the f_1 vector over the global 2d grid
+     *
+     * @return 
+     */
+    const thrust::host_vector<double>& f1_x()const{return f_x_;}
+    /**
+     * @brief 2D version of the f_2 vector over the global 2D grid
+     *
+     * @return 
+     */
+    const thrust::host_vector<double>& f2_xy()const{return f2_xy_;}
+    /**
+     * @brief Get the whole f_1 vector
+     *
+     * @return 
+     */
+    const dg::MPI_Vector<thrust::host_vector<double> >& f1()const{return f_;}
+    /**
+     * @brief Get the whole f_2 vector
+     *
+     * @return 
+     */
+    const dg::MPI_Vector<thrust::host_vector<double> >& f2()const{return g_;}
 
     const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& z()const{return z_;}
@@ -202,16 +248,18 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
         MPI_Cart_sub( src, remain_dims, &planeComm);
         return planeComm;
     }
-    thrust::host_vector<double> f_x_; //1d vector
-    dg::MPI_Vector<thrust::host_vector<double> > f_, r_, z_, xr_, xz_, yr_, yz_; //2d vector
+    thrust::host_vector<double> f_x_, f2_xy_; 
+    dg::MPI_Vector<thrust::host_vector<double> > f_, g_; 
+
+    dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //2d vector
     dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
-}//namespace conformal
+}//namespace orthogonal
 
 namespace dg{
 /**
- * @brief This function pulls back a function defined in cartesian coordinates R,Z to the conformal coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cartesian coordinates R,Z to the orthogonal coordinates x,y,\phi
  *
  * i.e. F(x,y) = f(R(x,y), Z(x,y))
  * @tparam BinaryOp The function object 
@@ -221,7 +269,7 @@ namespace dg{
  * @return A set of points representing F(x,y)
  */
 template< class BinaryOp, class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const conformal::MPIRingGrid2d<LocalContainer>& g)
+MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const orthogonal::MPIRingGrid2d<LocalContainer>& g)
 {
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -231,13 +279,13 @@ MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const conformal::
 }
 ///@cond
 template<class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), const conformal::MPIRingGrid2d<LocalContainer>& g)
+MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), const orthogonal::MPIRingGrid2d<LocalContainer>& g)
 {
     return pullback<double(double,double),LocalContainer>( f, g);
 }
 ///@endcond
 /**
- * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the orthogonal coordinates x,y,\phi
  *
  * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
  * @tparam TernaryOp The function object 
@@ -247,7 +295,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), con
  * @return A set of points representing F(x,y,\phi)
  */
 template< class TernaryOp, class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const conformal::MPIRingGrid3d<LocalContainer>& g)
+MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const orthogonal::MPIRingGrid3d<LocalContainer>& g)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -261,7 +309,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const conformal:
 }
 ///@cond
 template<class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double,double), const conformal::MPIRingGrid3d<LocalContainer>& g)
+MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double,double), const orthogonal::MPIRingGrid3d<LocalContainer>& g)
 {
     return pullback<double(double,double,double),LocalContainer>( f, g);
 }

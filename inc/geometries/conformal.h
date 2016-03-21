@@ -313,6 +313,7 @@ struct RingGrid3d : public dg::Grid3d<double>
     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
+        assert( bcx == dg::PER|| bcx == dg::DIR);
         conformal::detail::Fpsi fpsi( gp, psi_0);
         double x_1 = fpsi.find_x1( psi_1);
         if( x_1 > 0)
@@ -361,24 +362,26 @@ struct RingGrid3d : public dg::Grid3d<double>
         construct_rz( gp, psi_0, psi_x);
         construct_metric();
     }
+    const thrust::host_vector<double>& f_x()const{return f_x_;}
+    thrust::host_vector<double> x()const{
+        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        return dg::create::abscissas(gx);}
+
+    const thrust::host_vector<double>& f()const{return f_;}
+    perpendicular_grid perp_grid() const { return conformal::RingGrid2d<container>(*this);}
+
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    const thrust::host_vector<double>& f_x()const{return f_x_;}
-    const thrust::host_vector<double>& f()const{return f_;}
-    thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
-        return dg::create::abscissas(gx);}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    perpendicular_grid perp_grid() const { return conformal::RingGrid2d<container>(*this);}
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
@@ -488,17 +491,20 @@ struct RingGrid2d : public dg::Grid2d<double>
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
+
+    const thrust::host_vector<double>& f_x()const{return f_x_;}
+    thrust::host_vector<double> x()const{
+        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        return dg::create::abscissas(gx);}
+
     const thrust::host_vector<double>& f()const{return f_;}
+
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
-        return dg::create::abscissas(gx);}
-    const thrust::host_vector<double>& f_x()const{return f_x_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
