@@ -113,7 +113,7 @@ int main( int argc, char* argv[])
         y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
     }
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
+    dg::blas1::plus(y0[1], -1); //initialize ni-1
     if( p.mode == 2 || p.mode == 3)
     {
         dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);

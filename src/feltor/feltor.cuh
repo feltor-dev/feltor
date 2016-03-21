@@ -328,10 +328,10 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
     ///////////////////init densities//////////////////////////////
     dg::blas1::transfer( dg::pullback(solovev::Nprofile(p.bgprofamp, p.nprofileamp, gp),g), profne);
     dg::blas1::transfer(  profne ,profNi);
-    dg::blas1::transform( profNi,profNi, dg::PLUS<>(-1)); 
+    dg::blas1::plus( profNi, -1); 
     initializene(profNi, profne); //ne = Gamma N_i (needs Invert object)
-    dg::blas1::transform( profne, profne, dg::PLUS<>(+1)); 
-    dg::blas1::transform( profNi, profNi, dg::PLUS<>(+1)); 
+    dg::blas1::plus( profne, +1); 
+    dg::blas1::plus( profNi, +1); 
     //////////////////////////init weights////////////////////////////
     dg::blas1::transfer( dg::create::volume(g),     w3d);
     dg::blas1::transfer( dg::create::inv_volume(g), v3d);
@@ -341,7 +341,7 @@ template<class Geometry, class DS, class Matrix, class container>
 container& Feltor<Geometry, DS, Matrix, container>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
-    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
+    dg::blas1::plus( chi, p.mu[1]);
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
