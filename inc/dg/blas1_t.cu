@@ -38,6 +38,8 @@ int main()
     dg::blas1::transform( v1, v3, EXP());
     std::cout << "e^2 = " << v3[0] <<" (7.389056...)"<< std::endl;
     dg::blas1::scal( v2, 0.6);
+    dg::blas1::plus( v3, -7.0);
+    std::cout << "e^2-7 = " << v3[0] <<" (0.389056...)"<< std::endl;
 
     //v1 = 2, v2 = 3
 
@@ -66,6 +68,8 @@ int main()
     dg::blas1::transform( w1, w3, EXP());
     std::cout << "e^2 = " << w3[0][0] <<" (7.389056...)"<< std::endl;
     dg::blas1::scal( w2, 0.6);
+    dg::blas1::plus( w3, -7.0);
+    std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
     std::cout << "FINISHED\n\n";
 
 

@@ -40,6 +40,20 @@ struct Axpby_Functor
     value_type alpha, beta;
 };
 
+template <class value_type>
+struct Plus_Functor
+{
+    Plus_Functor( value_type alpha): alpha(alpha){}
+    
+    __host__ __device__
+        value_type operator()( const value_type& x)
+        {
+            return alpha+x;
+        }
+  private:
+    value_type alpha;
+};
+
 template< class Vector1, class Vector2>
 void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
 {
@@ -57,6 +71,14 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
     return thrust::inner_product( x.begin(), x.end(),  y.begin(), value_type(0));
 }
 
+template< class Vector, class UnaryOp>
+inline void doTransform(  const Vector& x, Vector& y,
+                          UnaryOp op,
+                          ThrustVectorTag)
+{
+    thrust::transform( x.begin(), x.end(), y.begin(), op);
+}
+
 template< class Vector>
 inline void doScal(  Vector& x, 
               typename Vector::value_type alpha, 
@@ -65,12 +87,13 @@ inline void doScal(  Vector& x,
     thrust::transform( x.begin(), x.end(), x.begin(), 
             detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
 }
-template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y,
-                          UnaryOp op,
-                          ThrustVectorTag)
+template< class Vector>
+inline void doPlus(  Vector& x, 
+              typename Vector::value_type alpha, 
+              ThrustVectorTag)
 {
-    thrust::transform( x.begin(), x.end(), y.begin(), op);
+    thrust::transform( x.begin(), x.end(), x.begin(), 
+            detail::Plus_Functor<typename Vector::value_type>( alpha));
 }
 
 template< class Vector>

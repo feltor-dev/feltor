@@ -8,7 +8,8 @@
 #include "vector_traits.h"
 
 
-//this file specializes blas1 functions when it is better than the thrust versions
+//this file specializes blas1 functions when cusp version is better than the thrust versions
+//since a cusp vector inherits from thrust and the Tag from the Thrust Tag
 namespace dg
 {
 

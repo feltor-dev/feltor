@@ -76,6 +76,20 @@ inline void doScal( std::vector<Vector>& x,
         doScal( x[i], alpha, typename VectorTraits<Vector>::vector_category());
         
 }
+
+template< class Vector>
+inline void doPlus( std::vector<Vector>& x, 
+              typename VectorTraits<Vector>::value_type alpha, 
+              StdVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x.empty());
+#endif //DG_DEBUG
+    for( unsigned i=0; i<x.size(); i++)
+        doPlus( x[i], alpha, typename VectorTraits<Vector>::vector_category());
+        
+}
+
 template<class container, class UnaryOp>
 inline void doTransform( const std::vector<container>& x, std::vector<container>& y, UnaryOp op, StdVectorTag)
 {

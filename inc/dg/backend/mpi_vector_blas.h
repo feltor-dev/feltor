@@ -49,6 +49,16 @@ inline void doScal(  Vector& x,
     typedef typename Vector::container_type container;
     doScal( x.data(), alpha, typename VectorTraits<container>::vector_category());
 }
+template< class Vector>
+inline void doPlus(  Vector& x, 
+              typename VectorTraits<Vector>::value_type alpha, 
+              MPIVectorTag)
+{
+    //local computation 
+    typedef typename Vector::container_type container;
+    doPlus( x.data(), alpha, typename VectorTraits<container>::vector_category());
+}
+
 template< class Vector, class UnaryOp>
 inline void doTransform(  const Vector& x, Vector& y,
                           UnaryOp op,

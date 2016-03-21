@@ -2,7 +2,6 @@
 
 #include "backend/vector_traits.h"
 #include "backend/thrust_vector_blas.cuh"
-//#include "backend/viennacl_vector_blas.h"
 #include "backend/cusp_vector_blas.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
@@ -144,6 +143,19 @@ template< class Vector>
 inline void scal( Vector& x, typename VectorTraits<Vector>::value_type alpha)
 {
     dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
+}
+
+/*! @brief pointwise add a scalar
+ *
+ * This routine computes \f[ x_i + \alpha \f] 
+ * @param alpha Scalar  
+ * @param x Vector x 
+ */
+template< class Vector>
+inline void plus( Vector& x, typename VectorTraits<Vector>::value_type alpha)
+{
+    dg::blas1::detail::doPlus( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
     return;
 }
 
