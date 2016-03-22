@@ -317,7 +317,10 @@ struct Invert
      * @param eps
      * @param nrmb_correction
      */
-    void set_accuracy( value_type eps, value_type nrmb_correction = 1.) { eps_ = eps; nrmb_correction = nrmb_correction;}
+    void set_accuracy( value_type eps, value_type nrmb_correction = 1.) { 
+        eps_ = eps; 
+        nrmb_correction_ = nrmb_correction;
+    }
 
     /**
      * @brief Set the extrapolation Type for following inversions

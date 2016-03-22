@@ -65,12 +65,12 @@ int main()
     
     std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg( laplace, x, b, v3d, eps)<<std::endl;
+    std::cout << "Number of mixed pcg iterations "<< pcg( laplace, x, b, inverse, v3d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
     x = dg::evaluate( initial, grid);
     t.tic();
-    std::cout << "Number of mixed pcg iterations "<< pcg( laplace, x, b, inverse, v3d, eps)<<std::endl;
+    std::cout << "Number of pcg iterations "<< pcg( laplace, x, b, v3d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
     dg::DVec  error(  solution);

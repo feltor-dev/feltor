@@ -163,7 +163,7 @@ void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, co
     blas1::pointwiseDot( dxlhslhs_, dyrhsrhs_, result);   //dx_lhs lhs * dy_rhs rhs
     blas1::pointwiseDot( -1., dylhslhs_, dxrhsrhs_, 1., result);    //- dy_lhs lhs * dx_rhs rhs
 
-    geo::multiplyVolume( result, g_);
+    geo::dividePerpVolume( result, g_);
 }
 
 }//namespace dg

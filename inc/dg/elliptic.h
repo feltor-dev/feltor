@@ -126,15 +126,19 @@ class Elliptic
         dg::blas2::gemv( leftx, gradx, tempx);  
         dg::blas2::gemv( lefty, y, tempy);  
         dg::blas1::axpby( -1., tempx, -1., tempy, y); //-D_xx - D_yy 
+        if( no_ == normed)
+            dg::geo::divideVolume( y, g_);
 
         //add jump terms
         dg::blas2::symv( jumpX, x, tempx);
         dg::blas1::axpby( +1., tempx, 1., y, y); 
         dg::blas2::symv( jumpY, x, tempy);
         dg::blas1::axpby( +1., tempy, 1., y, y); 
-        dg::geo::divideVolume( y, g_);
-        if( no_ == not_normed)
+        if( no_ == not_normed)//multiply weights without volume
+        {
             dg::blas2::symv( weights_, y, y);
+            dg::geo::divideVolume( y, g_);
+        }
 
     }
     private:
@@ -341,14 +345,18 @@ struct GeneralElliptic
 
         dg::blas1::axpby( -1., xx, -1., yy, y);
         dg::blas1::axpby( -1., zz, +1., y, y); 
+        if( no_==normed) 
+            dg::geo::divideVolume( y, g_);
         
         dg::blas2::symv( jumpX, x, temp0);
         dg::blas1::axpby( +1., temp0, 1., y, y); 
         dg::blas2::symv( jumpY, x, temp0);
         dg::blas1::axpby( +1., temp0, 1., y, y); 
-        dg::geo::divideVolume( y, g_);
         if( no_==not_normed)
+        {
+            dg::geo::divideVolume( y, g_);
             dg::blas2::symv( weights_, y, y);
+        }
     }
     private:
     bc inverse( bc bound)
@@ -582,13 +590,18 @@ struct GeneralEllipticSym
         dg::blas1::axpby( -0.5, xx, +1., y, y);
         dg::blas1::axpby( -0.5, yy, +1., y, y); 
         dg::blas1::axpby( -0.5, zz, +1., y, y); 
-        
+
+        if( no_==normed)
+            dg::geo::divideVolume( y, g_);
         dg::blas2::symv( jumpX, x, temp0);
         dg::blas1::axpby( +1., temp0, 1., y, y); 
         dg::blas2::symv( jumpY, x, temp0);
-        dg::geo::divideVolume( y, g_);
+        dg::blas1::axpby( +1., temp0, 1., y, y); 
         if( no_==not_normed)
+        {
+            dg::geo::divideVolume( y, g_);
             dg::blas2::symv( weights_, y, y);
+        }
     }
     private:
     bc inverse( bc bound)

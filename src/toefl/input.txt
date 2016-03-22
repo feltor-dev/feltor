@@ -10,7 +10,7 @@
 3)  ny (grid points in y)                =  100   (192)
 
 4)  k  (order of time integration)       =   3       (3)
-5)  dt (time step in units c_s/L_p)      =   .25  (0.01)
+5)  dt (time step in units c_s/L_p)      =   .5  (0.01)
 
 ---------------------Algorithmic parameters-------------------
 

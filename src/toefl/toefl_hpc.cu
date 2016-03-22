@@ -101,6 +101,18 @@ int main( int argc, char* argv[])
     size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
+    ///////////////////////////////////first output/////////////////////////
+    //output all three fields
+    std::vector<dg::DVec> transferD(3);
+    std::vector<dg::HVec> output(3);
+    transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
+    for( int k=0;k<3; k++)
+        dg::blas1::transfer( transferD[k], output[k]);
+    start[0] = 0;
+    for( int k=0; k<3; k++)
+        err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
@@ -109,7 +121,7 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
     unsigned step = 0;
 #endif //DG_BENCHMARK
-    for( unsigned i=0; i<p.maxout; i++)
+    for( unsigned i=1; i<=p.maxout; i++)
     {
 
 #ifdef DG_BENCHMARK
@@ -137,8 +149,6 @@ int main( int argc, char* argv[])
         //output all three fields
         if( p.global)
             test.exp( y1,y1); //transform to correct values
-        std::vector<dg::DVec> transferD(3);
-        std::vector<dg::HVec> output(3);
         transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
         for( int k=0;k<3; k++)
             dg::blas1::transfer( transferD[k], output[k]);

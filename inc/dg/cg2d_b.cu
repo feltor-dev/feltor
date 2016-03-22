@@ -66,13 +66,13 @@ int main()
     
     std::cout << "... for a precision of "<< eps<<std::endl;
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg( lap, x, b, v2d, eps)<<std::endl;
+    std::cout << "Number of mixed pcg iterations "<< pcg( lap, x, b, inverse, v2d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
     //dg::blas2::symv( inverse, b, x); 
     x = dg::evaluate( initial, grid);
     t.tic();
-    std::cout << "Number of mixed pcg iterations "<< pcg( lap, x, b, inverse, v2d, eps)<<std::endl;
+    std::cout << "Number of pcg iterations "<< pcg( lap, x, b, v2d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
 
