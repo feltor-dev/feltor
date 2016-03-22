@@ -5,6 +5,7 @@
 
 #include "file/file.h"
 #include "file/read_input.h"
+#include "file/nc_utilities.h"
 
 #include "toeflR.cuh"
 #include "dg/algorithm.h"
@@ -62,8 +63,8 @@ int main( int argc, char* argv[])
 
     if( p.global)
     {
-        dg::blas1::transform( y0[0], y0[0], dg::PLUS<double>(+1));
-        dg::blas1::transform( y0[1], y0[1], dg::PLUS<double>(+1));
+        dg::blas1::transform( y0[0], y0[0], dg::PLUS<double>( +1));
+        dg::blas1::transform( y0[1], y0[1], dg::PLUS<double>( +1));
         test.log( y0, y0); //transform to logarithmic values
     }
     //////////////////initialisation of timestepper and first step///////////////////
@@ -72,17 +73,45 @@ int main( int argc, char* argv[])
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
     ab.init( test, diffusion, y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
-    /////////////////////////////set up hdf5/////////////////////////////////
-    file::T5trunc t5file( argv[2], input);
-    dg::HVec output[3] = { y1[0], y1[0], y1[0]}; //intermediate transport locations
     if( p.global)
         test.exp( y1,y1); //transform to correct values
-    output[0] = y1[0], output[1] = y1[1], output[2] = test.potential()[0]; //electrons
-    t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
-    if( p.global) 
-    {
-        t5file.append( test.mass(), test.mass_diffusion(), test.energy(), test.energy_diffusion());
-    }
+    /////////////////////////////set up netcdf/////////////////////////////////////
+    file::NC_Error_Handle err;
+    int ncid;
+    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    int dim_ids[3], tvarID;
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    //field IDs
+    std::string names[3] = {"electrons", "ions", "potential"}; 
+    int dataIDs[3]; 
+    for( unsigned i=0; i<3; i++){
+        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
+
+    //energy IDs
+    int EtimeID, EtimevarID;
+    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    int energyID, massID, dissID, dEdtID;
+    err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
+    err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);
+    err = nc_def_var( ncid, "dissipation", NC_DOUBLE, 1, &EtimeID, &dissID);
+    err = nc_def_var( ncid, "dEdt",        NC_DOUBLE, 1, &EtimeID, &dEdtID);
+    err = nc_enddef(ncid);
+    size_t start[3] = {0, 0, 0};
+    size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    size_t Estart[] = {0};
+    size_t Ecount[] = {1};
+    //output all three fields
+    std::vector<dg::DVec> transferD(3);
+    std::vector<dg::HVec> output(3);
+    transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
+    for( int k=0;k<3; k++)
+        output[k] = transferD[k]; 
+    start[0] = 0;
+    for( int k=0; k<3; k++)
+        err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
@@ -91,7 +120,7 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
     unsigned step = 0;
 #endif //DG_BENCHMARK
-    for( unsigned i=0; i<p.maxout; i++)
+    for( unsigned i=1; i<=p.maxout; i++)
     {
 
 #ifdef DG_BENCHMARK
@@ -103,17 +132,32 @@ int main( int argc, char* argv[])
             ab( test, diffusion, y0);
             y0.swap( y1); //attention on -O3 ?
             //store accuracy details
+            time+=p.dt;
             if( p.global) 
             {
-                t5file.append( test.mass(), test.mass_diffusion(), test.energy(), test.energy_diffusion());
+                err = nc_open(argv[2], NC_WRITE, &ncid);
+                double ener=test.energy(), mass=test.mass(), diff=test.mass_diffusion(), dEdt=test.energy_diffusion();
+                err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
+                err = nc_put_vara_double( ncid, energyID,   Estart, Ecount, &ener);
+                err = nc_put_vara_double( ncid, massID,     Estart, Ecount, &mass);
+                err = nc_put_vara_double( ncid, dissID,     Estart, Ecount, &diff);
+                err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount, &dEdt);
+                err = nc_close(ncid);
             }
         }
-        time += p.itstp*p.dt;
         //output all three fields
         if( p.global)
             test.exp( y1,y1); //transform to correct values
-        output[0] = y1[0], output[1] = y1[1], output[2] = test.potential()[0]; //electrons
-        t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
+        transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
+        for( int k=0;k<3; k++)
+            output[k] = transferD[k]; 
+        err = nc_open(argv[2], NC_WRITE, &ncid);
+        start[0] = i;
+        for( int k=0; k<3; k++)
+            err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        err = nc_close(ncid);
+
 #ifdef DG_BENCHMARK
         ti.toc();
         step+=p.itstp;
