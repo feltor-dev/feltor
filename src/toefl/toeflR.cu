@@ -66,8 +66,8 @@ int main( int argc, char* argv[])
 
     if( p.global)
     {
-        dg::blas1::transform( y0[0], y0[0], dg::PLUS<double>(+1));
-        dg::blas1::transform( y0[1], y0[1], dg::PLUS<double>(+1));
+        dg::blas1::plus( y0[0], +1);
+        dg::blas1::plus( y0[1], +1);
         test.log( y0, y0); //transform to logarithmic values
     }
 
@@ -93,7 +93,7 @@ int main( int argc, char* argv[])
         if( p.global)
         {
             test.exp( y0, y1);
-            thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
+            dg::blas1::transform( y1[0], dvisual, dg::PLUS<double>(-1));
         }
         else
             dvisual = y0[0];
