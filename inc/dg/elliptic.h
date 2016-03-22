@@ -135,10 +135,7 @@ class Elliptic
         dg::blas2::symv( jumpY, x, tempy);
         dg::blas1::axpby( +1., tempy, 1., y, y); 
         if( no_ == not_normed)//multiply weights without volume
-        {
-            dg::blas2::symv( weights_, y, y);
-            dg::geo::divideVolume( y, g_);
-        }
+            dg::blas2::symv( weights_wo_vol, y, y);
 
     }
     private:
@@ -151,10 +148,12 @@ class Elliptic
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
         dg::blas1::transfer( dg::create::volume(g),        weights_);
+        dg::blas1::transfer( dg::create::volume(g),        weights_wo_vol);
         dg::blas1::transfer( dg::create::inv_volume(g),    precond_);
         dg::blas1::transfer( dg::evaluate( one, g),        xchi);
         tempx = tempy = gradx = xchi;
         dg::geo::multiplyVolume( xchi, g_); 
+        dg::geo::divideVolume( weights_wo_vol, g_);
     }
     bc inverse( bc bound)
     {
@@ -171,7 +170,7 @@ class Elliptic
         return centered;
     }
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
-    Vector weights_, precond_; 
+    Vector weights_, precond_, weights_wo_vol; 
     Vector xchi, tempx, tempy, gradx;
     norm no_;
     Geometry g_;
