@@ -73,6 +73,7 @@ struct Rolkar
         */
         dg::blas1::axpby( 0., x, 0, y);
 //         double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]/p.c, p.nu_parallel, p.nu_parallel};
+        double nu_parallel[] = {p.nu_parallel, p.nu_parallel, p.nu_parallel, p.nu_parallel};
 
         for( unsigned i=0; i<2; i++)
         {
@@ -86,9 +87,9 @@ struct Rolkar
             if (p.pardiss==0) 
             {
                 dg::blas2::symv(dsN_, x[i],temp);
-                dg::blas1::axpby( -p.mu[0]/p.c, temp, 1., y[i]); 
+                dg::blas1::axpby( nu_parallel[i], temp, 1., y[i]); 
                 dg::blas2::symv(dsDIR_, x[i+2],temp);
-                dg::blas1::axpby( p.nu_parallel, temp, 1., y[i+2]); 
+                dg::blas1::axpby( nu_parallel[i+2], temp, 1., y[i+2]); 
             }
         }
         //Resistivity
@@ -302,7 +303,7 @@ Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, sol
     phi( 2, chi), curvphi( phi),  npe(phi), logn(phi),
     dsy( 4, chi),curvy(dsy), 
     dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::forward ),
-    dsN_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::forward ),
+    dsN_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx(),(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::forward ),
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
@@ -374,7 +375,7 @@ double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vecto
         dg::blas1::pointwiseDot(y[i+2], chi, omega);     // U ds N
         dsDIR_.centered(y[i+2], chi);  
         dg::blas1::pointwiseDot(npe[i], chi,chi);     // N ds U
-        dg::blas1::axpby(1.0,chi,1.0,omega,chi);
+        dg::blas1::axpby(1.0,chi,1.0,omega,chi); //ds U N
         dg::blas1::pointwiseDot(npe[i], y[i+2], omega);     // U N
         dg::blas1::pointwiseDot(omega, gradlnB, omega);     // U N ds ln B
         dg::blas1::axpby( -1., chi, 1., yp[i]);             // dtN = dtN - ds U N
@@ -392,24 +393,25 @@ double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vecto
 
     }
     //Parallel dissipation
-    double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]/p.c, p.nu_parallel, p.nu_parallel};
+//     double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]/p.c, p.nu_parallel, p.nu_parallel};
+    double nu_parallel[] = {p.nu_parallel, p.nu_parallel, p.nu_parallel, p.nu_parallel};
     for( unsigned i=0; i<2;i++)
     {
         //Compute parallel dissipation and dissipative energy for N///////////////
         if (p.pardiss==0)
         {
-            dg::blas2::symv(dsN_,y[i],lambda);
-            dg::blas1::axpby( nu_parallel[i], lambda,  0., lambda,lambda); 
+            dg::blas2::symv(dsN_,y[i],lambda); // lambda= ds^2 N
+            dg::blas1::axpby( nu_parallel[i], lambda,  0., lambda,lambda);  //lambda = nu_parallel ds^2 N
         }
         if (p.pardiss==1)
         {
             dsN_.forward( y[i], omega); 
-            dsDIR_.forwardTD(omega,lambda);
-            dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., lambda,lambda); 
+            dsN_.forwardTD(omega,lambda);
+            dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 0., lambda,lambda);  //lambda = 0.5 nu_parallel ds^2_f N
             dsN_.backward( y[i], omega); 
-            dsDIR_.backwardTD(omega,lambda);
-            dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 1., lambda,lambda); 
-            dg::blas1::axpby( 1., lambda, 1., yp[i]);  //add to yp
+            dsN_.backwardTD(omega,chi);
+            dg::blas1::axpby( 0.5*nu_parallel[i],chi, 1., lambda,lambda);    //lambda = 0.5 nu_parallel ds^2_f N + 0.5 nu_parallel ds^2_b N
+            dg::blas1::axpby( 1., lambda, 1., yp[i]);  //add to yp //dtN += 0.5 nu_parallel ds^2_f N + 0.5 nu_parallel ds^2_b N
         }           
 
         //compute chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
@@ -434,17 +436,17 @@ double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vecto
         if (p.pardiss==0)
         {
             dg::blas2::symv(dsDIR_, y[i+2],lambda);
-            dg::blas1::axpby( nu_parallel[i+2], lambda,  1., lambda,lambda); 
+            dg::blas1::axpby( nu_parallel[i+2], lambda,  0., lambda,lambda); 
         }
         if (p.pardiss==1)
         {
             dsDIR_.forward( y[i+2], omega); 
-            dsN_.forwardTD(omega,lambda);
-            dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., lambda,lambda); 
+            dsDIR_.forwardTD(omega,lambda);
+            dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 0., lambda,lambda); //lambda = 0.5 nu_parallel ds^2_f U
             dsDIR_.backward( y[i+2], omega); 
-            dsN_.backwardTD(omega,lambda);
-            dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 1., lambda,lambda); 
-            dg::blas1::axpby( 1., lambda, 1., yp[i+2]); 
+            dsDIR_.backwardTD(omega,chi);
+            dg::blas1::axpby( 0.5*nu_parallel[i+2], chi, 1., lambda,lambda);  //lambda = 0.5 nu_parallel ds^2_f U + 0.5 nu_parallel ds^2_b U
+            dg::blas1::axpby( 1., lambda, 1., yp[i+2]); //0.5 nu_parallel ds^2_f U + 0.5 nu_parallel ds^2_b U
         }   
 
         //compute omega = NU
@@ -516,7 +518,7 @@ void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, st
         dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);                    // dtU =1/B [U,phi]_RZ  
         
         //Curvature dynamics: 
-        curveN( y[i], curvy[i]);                                     //K(N) = K(N-1)
+        curveN( y[i], curvy[i]);                                       //K(N) = K(N-1)
         curveDIR( y[i+2], curvy[2+i]);                                 //K(U) 
         curveDIR( phi[i], curvphi[i]);                                 //K(phi) 
         

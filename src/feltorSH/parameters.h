@@ -29,7 +29,7 @@ struct Parameters
     unsigned zf,iso;
     double solb,solw;
     double omega_source;
-    enum dg::bc bc_x,bc_y;
+    enum dg::bc bc_x,bc_y; 
 
     /**
      * @brief constructor to make a const object
