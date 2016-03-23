@@ -85,7 +85,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize Ni = <n> + <n>*ntilde
     if (p.iso == 1) dg::blas1::axpby( 1.,y1[2], 0., y0[3]); //initialize Ti = prof
     if (p.iso == 0) dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
+    dg::blas1::plus(y0[1], (-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
     std::cout << "intiialize ne" << std::endl;
     feltor.initializene( y0[1],y0[3], y0[0]);    //ne -bg
     std::cout << "Done!\n";    

@@ -142,9 +142,9 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1.,hvisual[16] , 1.,hvisual[14],hvisual[17]); //prof + bath
     dg::blas1::axpby( 1.,hvisual[13] , 1.,hvisual[14],hvisual[18]); //prof + zonal
     dg::blas1::axpby( 1.,hvisual[15] , 1.,hvisual[14],hvisual[19]); //prof + blob
-    dg::blas1::transform(hvisual[17], hvisual[17], dg::PLUS<>(-1)); //to n -1
-    dg::blas1::transform(hvisual[18], hvisual[18], dg::PLUS<>(-1)); //to n -1
-    dg::blas1::transform(hvisual[19], hvisual[19], dg::PLUS<>(-1)); //to n -1
+    dg::blas1::plus(hvisual[17], -1); //to n -1
+    dg::blas1::plus(hvisual[18], -1); //to n -1
+    dg::blas1::plus(hvisual[19], -1); //to n -1
     dg::blas1::pointwiseDot(hvisual[10], hvisual[17], hvisual[17]); //damped 
     dg::blas1::pointwiseDot(hvisual[10], hvisual[18], hvisual[18]); //damped 
     dg::blas1::pointwiseDot(hvisual[10], hvisual[19], hvisual[19]); //damped 
