@@ -37,7 +37,7 @@
 26) boxscale Z-                             =  1.15 (a little larger than 1)
 27) adv (adj(0), nadj(1), onadj(2),no(3))   =  3
 27) diff (a(0), na(1),
-          ona(2),d(3), da(4),no(5)))        =0
+          ona(2),d(3), da(4),no(5)))        = 0
 28) diffperp (lap(0), lap2(1) )             = 1
 ----------------------------------Tor limiter------------------------------
 29) toroidal limiter (0/1)                  =  0                       
