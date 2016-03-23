@@ -63,8 +63,8 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
                             r_.data()[idx1] = g.r()[idx2];
                             z_.data()[idx1] = g.z()[idx2];
                             xr_.data()[idx1] = g.xr()[idx2];
-                            yr_.data()[idx1] = g.xz()[idx2];
-                            xz_.data()[idx1] = g.yr()[idx2];
+                            xz_.data()[idx1] = g.xz()[idx2];
+                            yr_.data()[idx1] = g.yr()[idx2];
                             yz_.data()[idx1] = g.yz()[idx2];
                             g_xx_.data()[idx1] = g.g_xx()[idx2];
                             g_xy_.data()[idx1] = g.g_xy()[idx2];
@@ -144,8 +144,8 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
                             r_.data()[idx1] = g.r()[idx2];
                             z_.data()[idx1] = g.z()[idx2];
                             xr_.data()[idx1] = g.xr()[idx2];
-                            yr_.data()[idx1] = g.xz()[idx2];
-                            xz_.data()[idx1] = g.yr()[idx2];
+                            xz_.data()[idx1] = g.xz()[idx2];
+                            yr_.data()[idx1] = g.yr()[idx2];
                             yz_.data()[idx1] = g.yz()[idx2];
                             g_xx_.data()[idx1] = g.g_xx()[idx2];
                             g_xy_.data()[idx1] = g.g_xy()[idx2];

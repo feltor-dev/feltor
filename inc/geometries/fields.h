@@ -1102,9 +1102,12 @@ struct FuncDirPer
 {
     FuncDirPer( GeomParameters gp, double psi_0, double psi_1):
         R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp){}
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z) const {
         double psip = psip_(R,Z);
         return (psip-psi0_)*(psip-psi1_)*sin(theta(R,Z));
+    }
+    double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);
     }
     double dR( double R, double Z)const
     {
