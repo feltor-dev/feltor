@@ -123,8 +123,6 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
         blas1::axpby( 1., b, 0., x);
         return 0;
     }
-//     A.display();
-// std::cout << A[1][1][0] << std::endl;
     //r = b; blas2::symv( -1., A, x, 1.,r); //compute r_0 
     blas2::symv( A,x,r);
     blas1::axpby( 1., b, -1., r);
