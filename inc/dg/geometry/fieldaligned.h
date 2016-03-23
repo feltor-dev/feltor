@@ -97,7 +97,9 @@ void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, doubl
             if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
             {
                 error = eps_abs/10;
+                #ifdef DG_DEBUG
                 std::cerr << "---------Point outside box -> stop integration" << std::endl; 
+                #endif
                 i=NT;
             }
             i++;
@@ -216,7 +218,7 @@ void boxintegrator( Field& field, const Grid& grid,
         thrust::host_vector<double>& coords1, 
         double& phi1, double eps, dg::bc globalbcz)
 {
-    dg::integrateRK17( field, coords0, coords1, phi1, eps); //+ integration
+    dg::integrateRK4( field, coords0, coords1, phi1, eps); //+ integration
     //First catch periodic domain
     grid.shift_topologic( coords0[0], coords0[1], coords1[0], coords1[1]);
     if ( !grid.contains( coords1[0], coords1[1]))   //Punkt liegt immer noch außerhalb 

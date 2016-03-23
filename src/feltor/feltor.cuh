@@ -307,7 +307,6 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
     dg::blas1::transfer( dg::evaluate( dg::zero, g), omega ); 
     dg::blas1::transfer( dg::evaluate( dg::zero, g), lambda ); 
     dg::blas1::transfer( dg::evaluate( dg::one,  g), one);
-    std::cout << "Omegas size is "<<omega.size()<<"\n";
     phi.resize(2); phi[0] = phi[1] = chi;
     curvphi = npe = logn = phi;
     dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;

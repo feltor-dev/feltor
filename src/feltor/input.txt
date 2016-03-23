@@ -17,12 +17,12 @@
 8)  ny_out (# grid points in output field)  =  50
 9)  nz_out (# grid points in output field)  =  10
 10) itstp  (steps between outputs)          =  2 (5)
-11) total # of outputs (excluding first)    =  100
+11) total # of outputs (excluding first)    =  10
 
 -------------------------Algorithmic parameters------------------------
-12)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
-13)  eps_max (stop for induction)           =   1e-5 (1e-6)
-14)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
+12)  eps_pol (stop for polarisation)        =   1e-14 (1e-6)
+13)  eps_max (stop for induction)           =   1e-14 (1e-6)
+14)  eps_gamma (stop for Gamma CG)          =   1e-14 (1e-8)
 15)  eps_time ( stop for time inversion )   =   1e-14
 -------------------------Physical parameters----------------------------
 16) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
