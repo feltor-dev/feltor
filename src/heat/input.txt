@@ -15,7 +15,7 @@
 8)  ny_out (# grid points in output field)  = 40
 9)  nz_out (# grid points in output field)  = 20
 10) itstp  (steps between outputs)          =  10  (5)
-11) total # of outputs (excluding first)    =  1
+11) total # of outputs (excluding first)    =  10
 -------------------------Physical parameters----------------------------
 12) nu_perp                                 = 0e-5
 13) nu_parallel  (viscosity)                = 100  (0.001)
@@ -24,7 +24,7 @@
 15) sigma (blob variance in units of rho_s) =  5.0    (10)
 16) x-position ( in units of a)             =  0.8    (0.4)
 17) y-position ( in units of a)             =  0.00   (0.5)
-18) sigma_z (variance in units of R_0)      =  0.25    (12.5 for oo)
+18) sigma_z (variance in units of R_0)      =  0.025    (12.5 for oo)
 19) k_psi (zonal modes)                     =  1   
 20) Profile amplitude                       =  0.0  (peak amplitude) 
 21) Background Prof amplitude               =  1.   (density on the boundary)

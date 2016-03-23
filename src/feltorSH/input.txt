@@ -14,11 +14,11 @@
 6)  nx_out (# grid points in output field)  =  200
 7)  ny_out (# grid points in output field)  =  100
 8)  itstp  (steps between outputs)          =  2(5)
-9) total # of outputs (excluding first)     =  100
+9) total # of outputs (excluding first)     =  10
 -------------------------Algorithmic parameters------------------------
-10)  eps_pol (stop for polarisation)        =   1e-5 (1e-6)
-11)  eps_gamma (stop for Gamma CG)          =   1e-5 (1e-8)
-12)  eps_time ( stop for time inversion )   =   1e-9
+10)  eps_pol (stop for polarisation)        =   1e-14 (1e-6)
+11)  eps_gamma (stop for Gamma CG)          =   1e-14 (1e-8)
+12)  eps_time ( stop for time inversion )   =   1e-14
 -------------------------Physical parameters----------------------------
 13) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 14) tau (Ti/Te)                             =  1.0.(0.0)
@@ -46,6 +46,6 @@
 32) damping width                           = 1.
 32) profile source rate in units c_s/rho_s  = 0.02
 ---------------------------------MISC-------------------------------------------
-33) isothermal(0/1)                         = 1
+33) isothermal(0/1)                         = 0
 
 @ ------------------------------------------------------------
