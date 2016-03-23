@@ -92,7 +92,7 @@ int main( int argc, char* argv[])
     solovev::Nprofile prof(p, gp); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //perturbation 
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1); //modulation along fieldline
+    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
     if( p.mode == 0 || p.mode == 1)
     {
         dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
