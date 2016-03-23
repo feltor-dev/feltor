@@ -397,7 +397,78 @@ void FieldAligned<M,container>::set_boundaries( dg::bc bcz, const container& glo
     dg::blas1::scal( right_, scal_right);
     bcz_ = bcz;
 }
+template< class M, class container>
+template< class BinaryOp>
+container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0) const
+{
+    return evaluate( binary, dg::CONSTANT(1), p0, 0);
+}
 
+template< class M, class container>
+template< class BinaryOp, class UnaryOp>
+container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
+{
+    //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
+    //unary function is always such that the p0 plane is at x=0
+    assert( g_.Nz() > 1);
+    assert( p0 < g_.Nz());
+    const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+    container init2d = dg::evaluate( binary, g2d), temp(init2d), tempP(init2d), tempM(init2d);
+    container vec3d = dg::evaluate( dg::zero, g_);
+    std::vector<container>  plus2d( g_.Nz(), (container)dg::evaluate(dg::zero, g2d) ), minus2d( plus2d), result( plus2d);
+    unsigned turns = rounds; 
+    if( turns ==0) turns++;
+    //first apply Interpolation many times, scale and store results
+    for( unsigned r=0; r<turns; r++)
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            tempP = init2d;
+            tempM = init2d;
+            unsigned rep = i0 + r*g_.Nz();
+            for(unsigned k=0; k<rep; k++)
+            {
+                dg::blas2::symv( plus, tempP, temp);
+                temp.swap( tempP);
+                dg::blas2::symv( minus, tempM, temp);
+                temp.swap( tempM);
+            }
+            dg::blas1::scal( tempP, unary(  (double)rep*g_.hz() ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*g_.hz() ) );
+            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
+            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
+        }
+    //now we have the plus and the minus filaments
+    if( rounds == 0) //there is a limiter
+    {
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            int idx = (int)i0 - (int)p0;
+            if(idx>=0)
+                result[i0] = plus2d[idx];
+            else
+                result[i0] = minus2d[abs(idx)];
+            thrust::copy( result[i0].begin(), result[i0].end(), vec3d.begin() + i0*g2d.size());
+        }
+    }
+    else //sum up plus2d and minus2d
+    {
+        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            unsigned revi0 = (g_.Nz() - i0)%g_.Nz(); //reverted index
+            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
+        }
+        dg::blas1::axpby( -1., init2d, 1., result[0]);
+        for(unsigned i0=0; i0<g_.Nz(); i0++)
+        {
+            int idx = ((int)i0 -(int)p0 + g_.Nz())%g_.Nz(); //shift index
+            thrust::copy( result[idx].begin(), result[idx].end(), vec3d.begin() + i0*g2d.size());
+        }
+    }
+    return vec3d;
+}
+
+/*
 template< class M, class container>
 template< class BinaryOp>
 container FieldAligned<M,container>::evaluate( BinaryOp binary, unsigned p0) const
@@ -477,6 +548,7 @@ container FieldAligned<M,container>::evaluate( BinaryOp binary, UnaryOp unary, u
     }
     return vec3d;
 }
+*/
 
 
 template< class M, class container>

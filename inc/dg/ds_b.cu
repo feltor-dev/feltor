@@ -82,9 +82,9 @@ int main()
     std::cout << "Relative Difference Is "<< sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm )<<"\n";
     std::cout << "Error is from the parallel derivative only if n>2\n"; //since the function is a parabola
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
-    dg::GaussianZ modulate(M_PI, 2*M_PI, 1);
+    dg::GaussianZ modulate(0, M_PI/3., 1);
     t.tic();
-    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 3);
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 2);
     t.toc();
     std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);
