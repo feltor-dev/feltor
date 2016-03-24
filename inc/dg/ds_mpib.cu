@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
     const dg::MDVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::MDDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
+    dg::MDDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
 
     dg::MDDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered); 
     t.toc();
