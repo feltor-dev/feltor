@@ -269,7 +269,7 @@ struct Feltor
     DS dsDIR_;
     DS dsN_;
     dg::Poisson<   Geometry, Matrix, container> poissonN,poissonDIR; 
-    dg::Elliptic<  Geometry, Matrix, container > pol,lapperpN,lapperpDIR,lapperpDIRnn; 
+    dg::Elliptic<  Geometry, Matrix, container > pol,lapperpN,lapperpDIR;
     dg::Helmholtz< Geometry, Matrix, container > invgammaDIR, invgammaN;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
@@ -297,7 +297,6 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
     pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered), 
     lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
-    lapperpDIRnn ( g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered),
     invgammaDIR(   g, dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered),
     invgammaN(     g, g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered),
     p(p), gp(gp), evec(5)
@@ -346,9 +345,9 @@ container& Feltor<Geometry, DS, Matrix, container>::polarisation( const std::vec
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
  
-    invert_invgammaN(invgammaN,chi,y[1]); //omega= Gamma (Ni-1)    
-    dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+    invert_invgammaN(invgammaN,chi,y[1]);           //omega= Gamma (Ni-1)    
+    dg::blas1::axpby( -1., y[0], 1.,chi,chi);       //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
+    unsigned number = invert_pol( pol, phi[0], chi);//Gamma n_i -ne = -nabla chi nabla phi
     if(  number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
@@ -514,9 +513,8 @@ void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>
     energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1];
     //// the resistive dissipative energy
-    dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e 
-    dg::blas1::pointwiseDot( npe[1], y[3], chi);  //N_i U_i
-    dg::blas1::axpby( -1., omega, 1., chi); //chi  = + N_i U_i -N_e U_e
+    dg::blas1::pointwiseDot( npe[0], y[2], chi); //N_e U_e 
+    dg::blas1::pointwiseDot( 1., npe[1], y[3], -1., chi);  //N_i U_i - N_e U_e
     dg::blas1::axpby( -1., y[2], 1., y[3], omega); //omega  = - U_e + U_i   
     double Dres = -p.c*dg::blas2::dot(omega, w3d, chi); //- C*(N_i U_i + N_e U_e)(U_i - U_e)
     
@@ -534,7 +532,7 @@ void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>
         curveDIR( y[i+2], curvy[2+i]);                                 //K(U) 
         curveDIR( phi[i], curvphi[i]);                                 //K(phi) 
         
-        dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega);             //U K(U) 
+        dg::blas1::pointwiseDot( y[i+2], curvy[2+i], omega);             //U K(U) 
         dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K(U)
         dg::blas1::pointwiseDot( npe[i], omega, omega);                 //N U K(U)
         
@@ -599,20 +597,19 @@ void Feltor<Geometry, DS, Matrix, container>::curveN( container& src, container&
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxlhs(), src, target); //d_R src
-    dg::blas2::gemv( poissonN.dylhs(), src, temp1);  //d_Z src
     dg::blas1::pointwiseDot( curvR, target, target); // C^R d_R src
-    dg::blas1::pointwiseDot( curvZ, temp1, temp1);   // C^Z d_Z src
-    dg::blas1::axpby( 1., temp1, 1., target ); // (C^R d_R + C^Z d_Z) src
+    dg::blas2::gemv( poissonN.dylhs(), src, temp1);  //d_Z src
+    dg::blas1::pointwiseDot( 1., curvZ, temp1, 1., target);   // C^Z d_Z src + C^R d_R src
 }
+
 template<class Geometry, class DS, class Matrix, class container>
 void Feltor<Geometry, DS, Matrix, container>::curveDIR( container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxrhs(), src, target); //d_R src
-    dg::blas2::gemv( poissonN.dyrhs(), src, temp1);  //d_Z src
     dg::blas1::pointwiseDot( curvR, target, target); // C^R d_R src
-    dg::blas1::pointwiseDot( curvZ, temp1, temp1);   // C^Z d_Z src
-    dg::blas1::axpby( 1., temp1, 1., target ); // (C^R d_R + C^Z d_Z) src
+    dg::blas2::gemv( poissonN.dyrhs(), src, temp1);  //d_Z src
+    dg::blas1::pointwiseDot( 1., curvZ, temp1, 1., target);// C^Z d_Z src + C^R d_R src
 }
 
 ///@endcond
