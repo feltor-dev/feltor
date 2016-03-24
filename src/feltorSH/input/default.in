@@ -4,7 +4,6 @@
 
 
 @-----------------------------Space and Time discretization------------
-
 1)  n  (# of x,y-polynomials)            =  3(3)
 2)  nx (grid points in x)                =  100(192)
 3)  ny (grid points in y)                =  100(192) 
@@ -30,7 +29,6 @@
 18) x-position ( in units of lx)            =  0.2   (0.4)
 19) y-position ( in units of ly)            =  0.5   (0.5)
 ---------------------------------box setup----------------
-
 20) lx (in rho_s)                           =  200
 21) ly (in rho_s)                           =  200
 22) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   1   (1.0)

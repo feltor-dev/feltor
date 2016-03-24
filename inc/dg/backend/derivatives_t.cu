@@ -53,7 +53,7 @@ int main()
     dg::blas1::axpby( 1., tempX, 1., tempY, tempY);
     dg::blas1::axpby( 1., null2, -1., tempY);
     std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tempY, w2d, tempY))<<"\n";
-    dg::Grid3d<double> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cylindrical);
+    dg::Grid3d<double> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cartesian);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);
