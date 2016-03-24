@@ -25,7 +25,7 @@ geometry_diag: geometry_diag.cu solovev.h
 	$(MPICC) $(INCLUDE) $(MPICFLAGS)  $< -o $@ -g $(LIBS)
 
 %_mpib: %_mpib.cu
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ -g $(INCLUDE) $(LIBS) 
 
 %_b: %_b.cu 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  $(LIBS)

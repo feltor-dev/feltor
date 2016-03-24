@@ -13,9 +13,6 @@
 #include "conformal.h"
 #include "orthogonal.h"
 
-//const double lx = 2.*M_PI;
-//const double ly = 2.*M_PI;
-
 struct FuncDirPer2
 {
     FuncDirPer2( solovev::GeomParameters gp, double psi_0, double psi_1):
@@ -102,6 +99,12 @@ struct CurvatureDirPer
     solovev::CurvatureZ curvZ;
 };
 
+
+//typedef conformal::RingGrid3d<dg::DVec> Geometry;
+//typedef orthogonal::RingGrid3d<dg::DVec> Geometry;
+typedef conformal::RingGrid2d<dg::DVec> Geometry;
+//typedef orthogonal::RingGrid2d<dg::DVec> Geometry;
+
 int main(int argc, char** argv)
 {
     std::cout << "Type n, Nx, Ny, Nz\n";
@@ -136,10 +139,8 @@ int main(int argc, char** argv)
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    //conformal::RingGrid3d<dg::DVec> grid(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //orthogonal::RingGrid3d<dg::DVec> grid(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //conformal::RingGrid2d<dg::DVec> grid(gp, psi_0, psi_1, n, Nx, Ny, dg::DIR);
-    orthogonal::RingGrid2d<dg::DVec> grid(gp, psi_0, psi_1, n, Nx, Ny, dg::DIR);
+    //Geometry grid(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);//3d
+    Geometry grid(gp, psi_0, psi_1, n, Nx, Ny, dg::DIR); //2d
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
 
@@ -160,8 +161,7 @@ int main(int argc, char** argv)
 
     ///////////////////////////////////////////////////////////////////////
     std::cout << "TESTING ARAKAWA 3D\n";
-    //dg::ArakawaX<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> arakawa( grid);
-    dg::ArakawaX<orthogonal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<Geometry, dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
     double norm = dg::blas2::dot( vol, jac);
     std::cout << std::scientific;
@@ -181,8 +181,7 @@ int main(int argc, char** argv)
     std::cout << "Variation rel. distance to solution "<<sqrt( dg::blas2::dot( vol, jac)/norm)<<std::endl; //don't forget sqrt when comuting errors
     ///////////////////////////////////////////////////////////////////////
     std::cout << "TESTING POISSON 3D\n";
-    //dg::Poisson<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> poisson( grid);
-    dg::Poisson<orthogonal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> poisson( grid);
+    dg::Poisson<Geometry, dg::DMatrix, dg::DVec> poisson( grid);
     poisson( lhs, rhs, jac);
     norm = dg::blas2::dot( vol, jac);
     result = dg::blas2::dot( eins, vol, jac);

@@ -473,7 +473,7 @@ struct RingGrid2d : public dg::Grid2d<double>
             init_X_boundaries( x_1, 0.);
         conformal::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         f_x_ = g.f_x();
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }

@@ -16,14 +16,14 @@
 #include "mpi_conformal.h"
 #include "mpi_orthogonal.h"
 
-//const double lx = 2.*M_PI;
-//const double ly = 2.*M_PI;
-
 struct FuncDirPer2
 {
     FuncDirPer2( solovev::GeomParameters gp, double psi_0, double psi_1):
         R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), psip_(gp), psipR_(gp), psipZ_(gp){}
     double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);
+    }
+    double operator()(double R, double Z) const {
         double psip = psip_(R,Z);
         return (psip-psi0_)*(psip-psi1_)*cos(theta(R,Z));
     }
@@ -66,6 +66,9 @@ struct ArakawaDirPer
 {
     ArakawaDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1), g_(gp, psi_0, psi_1){}
     double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);
+    }
+    double operator()(double R, double Z) const {
         return f_.dR( R,Z)*g_.dZ(R,Z) - f_.dZ(R,Z)*g_.dR(R,Z);
     }
     private:
@@ -76,6 +79,9 @@ struct VariationDirPer
 {
     VariationDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1){}
     double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);}
+
+    double operator()(double R, double Z) const {
         return f_.dR( R,Z)*f_.dR(R,Z) + f_.dZ(R,Z)*f_.dZ(R,Z);
     }
     private:
@@ -86,6 +92,8 @@ struct CurvatureDirPer
 {
     CurvatureDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1), curvR(gp), curvZ(gp){}
     double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);}
+    double operator()(double R, double Z) const {
         return curvR( R,Z)*f_.dR(R,Z) + curvZ(R,Z)*f_.dZ(R,Z);
     }
     private:
@@ -93,6 +101,12 @@ struct CurvatureDirPer
     solovev::CurvatureR curvR;
     solovev::CurvatureZ curvZ;
 };
+
+
+//typedef  conformal::MPIRingGrid3d<dg::DVec> Geometry;
+//typedef orthogonal::MPIRingGrid3d<dg::DVec> Geometry;
+typedef  conformal::MPIRingGrid2d<dg::DVec> Geometry;
+//typedef orthogonal::MPIRingGrid2d<dg::DVec> Geometry;
 
 int main(int argc, char** argv)
 {
@@ -132,8 +146,11 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "Constructing grid ... \n";
     dg::Timer t;
     t.tic();
-    conformal::MPIRingGrid3d<dg::DVec> grid(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
-    //orthogonal::MPIRingGrid3d<dg::DVec> grid(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
+    //Geometry grid(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);//3d
+        MPI_Comm planeComm;
+        int remain_dims[] = {true,true,false}; //true true false
+        MPI_Cart_sub( comm, remain_dims, &planeComm);
+    Geometry grid(gp, psi_0, psi_1, n, Nx, Ny,dg::DIR, planeComm); //2d
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
 
@@ -154,8 +171,7 @@ int main(int argc, char** argv)
 
     ///////////////////////////////////////////////////////////////////////
     if(rank==0)std::cout << "TESTING ARAKAWA 3D\n";
-    dg::ArakawaX<conformal::MPIRingGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> arakawa( grid);
-    //dg::ArakawaX<orthogonal::MPIRingGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> arakawa( grid);
+    dg::ArakawaX<Geometry, dg::MDMatrix, dg::MDVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
     double norm = dg::blas2::dot( vol, jac);
     if(rank==0)std::cout << std::scientific;
@@ -175,8 +191,7 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "Variation rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
     ///////////////////////////////////////////////////////////////////////
     if(rank==0)std::cout << "TESTING POISSON 3D\n";
-    dg::Poisson<conformal::MPIRingGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> poisson( grid);
-    //dg::Poisson<orthogonal::MPIRingGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> poisson( grid);
+    dg::Poisson<Geometry, dg::MDMatrix, dg::MDVec> poisson( grid);
     poisson( lhs, rhs, jac);
     norm = dg::blas2::dot( vol, jac);
     result = dg::blas2::dot( eins, vol, jac);

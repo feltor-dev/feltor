@@ -155,7 +155,7 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
         f2_xy_ = g.f2_xy();
         //divide and conquer
         int dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
+        MPI_Cart_get( communicator(), 2, dims, periods, coords);
         init_X_boundaries( g.x0(), g.x1());
             //for( unsigned py=0; py<dims[1]; py++)
                 for( unsigned i=0; i<this->n()*this->Ny(); i++)
@@ -175,7 +175,7 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
                             g_xx_.data()[idx1] = g.g_xx()[idx2];
                             g_xy_.data()[idx1] = g.g_xy()[idx2];
                             g_yy_.data()[idx1] = g.g_yy()[idx2];
-                            vol2d_.data()[idx1] = g.vol2d()[idx2];
+                            vol2d_.data()[idx1] = g.perpVol()[idx2];
                         }
     }
     MPIRingGrid2d( const MPIRingGrid3d<LocalContainer>& g):
