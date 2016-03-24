@@ -64,7 +64,7 @@ int main()
     const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
-    dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
+    dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
 
     dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered);
     t.toc();
