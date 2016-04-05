@@ -298,7 +298,7 @@ int main( )
      //std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
      dg::blas1::axpby( 1., divbsol, -1., divbT);
      normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-     std::cout << "Relative Difference in divb is   "<<sqrt( normdivbT)<<"\n";
+     std::cout << "Relative Difference in divb is   "<<sqrt( normdivbT/normdivb)<<"\n";
      //std::cout << "-------------------- " << std::endl;
      //std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
 // 
