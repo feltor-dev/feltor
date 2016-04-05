@@ -273,6 +273,8 @@ template< class Geometry, class Matrix, class container >
 struct FieldAligned
 {
 
+    typedef Matrix InterpolationMatrix;
+
     /**
     * @brief Construct from a field and a grid
     *

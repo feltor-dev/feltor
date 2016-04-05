@@ -61,12 +61,13 @@ int main()
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
     dg::CylindricalGrid<dg::DVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
+    dg::CylindricalGrid<dg::DVec> g3d_fine( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, 3*n, 2*Nx, 2*Ny, Nz, dg::NEU, dg::NEU, dg::PER);
     const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
-    dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::DDS::FieldAligned dsFA( field, g3d_fine, 1e-10, dg::DefaultLimiter(), dg::NEU);
 
-    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered);
+    dg::DDS ds ( dsFA, g3d, field, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
