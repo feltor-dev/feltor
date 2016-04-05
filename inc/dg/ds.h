@@ -216,12 +216,16 @@ struct DS
     Matrix jumpX, jumpY;
     typename FA::InterpolationMatrix f2c, c2f, f2cT, c2fT;
     container tempP, temp0, tempM;
+    container tempPc, tempMc, temp0c;
+    container f, dsf;
     container vol3d, inv3d;
     container invB;
     //container R_;
     dg::norm no_;
     dg::direction dir_;
     bool apply_jumpX_;
+
+    container volume_;
 };
 
 ///@cond
@@ -234,6 +238,8 @@ DS<FA, M,container>::DS(const FA& field, Geometry gridc, Field inverseB, dg::nor
         jumpX( dg::create::jumpX( gridc)),
         jumpY( dg::create::jumpY( gridc)),
         tempP( dg::evaluate( dg::zero, field.grid())), temp0( tempP), tempM( tempP), 
+        tempPc( dg::evaluate( dg::zero, gridc)), temp0c( tempPc), tempMc( tempPc), 
+        f(tempP), dsf(tempP),
         vol3d( dg::create::volume( gridc)), inv3d( dg::create::inv_volume( gridc)),
         invB(dg::pullback(inverseB,field.grid())), //R_(dg::evaluate(dg::coo1,grid)), 
         no_(no), dir_(dir), apply_jumpX_(jumpX)
@@ -243,6 +249,9 @@ DS<FA, M,container>::DS(const FA& field, Geometry gridc, Field inverseB, dg::nor
     c2f = dg::create::interpolation( field.grid(), gridc);
     cusp::transpose( f2c, f2cT);
     cusp::transpose( c2f, c2fT);     
+
+    volume_ = dg::evaluate( dg::one, gridc);
+    dg::geo::multiplyVolume( volume_, gridc);
 
 
 }
@@ -263,7 +272,6 @@ void DS<F,M,container>::centered( const container& fc, container& dsfc)
 {
     //direct discretisation
     assert( &fc != &dsfc);
-    container f(tempP), dsf( tempP);
     cusp::multiply( c2f, fc, f);
     f_.einsPlus( f, tempP);
     f_.einsMinus( f, tempM);
@@ -290,7 +298,6 @@ void DS<F,M,container>::centeredT( const container& fc, container& dsfc)
 {               
 //     //adjoint discretisation
     assert( &fc != &dsfc);    
-    container f(tempP), dsf( tempP);
     dg::blas1::pointwiseDot( vol3d, fc, dsfc);
     cusp::multiply( f2cT, dsfc, dsf);
 
@@ -336,7 +343,6 @@ void DS<F,M,container>::forward( const container& fc, container& dsfc)
 {
     //direct
     assert( &fc != &dsfc);
-    container f(tempP), dsf( tempP);
     cusp::multiply( c2f, fc, f);
     f_.einsPlus( f, tempP);
     dg::blas1::axpby( 1., tempP, -1., f, tempP);
@@ -358,7 +364,6 @@ void DS<F,M,container>::forwardT( const container& fc, container& dsfc)
 {    
     //adjoint discretisation
     assert( &fc != &dsfc);
-    container f(tempP), dsf( tempP);
     dg::blas1::pointwiseDot( vol3d, fc, dsfc);
     cusp::multiply( f2cT, dsfc, dsf);
     dg::blas1::pointwiseDivide( dsf, f_.hp(), dsf);
@@ -374,7 +379,6 @@ void DS<F,M,container>::forwardTD( const container& fc, container& dsfc)
 {
     //direct discretisation
     assert( &fc != &dsfc);
-    container f(tempP), dsf( tempP);
     cusp::multiply( c2f, fc, f);
 
     dg::blas1::pointwiseDot( f, invB, dsf);
@@ -392,7 +396,6 @@ void DS<F,M,container>::backward( const container& fc, container& dsfc)
 {
     //direct
     assert( &fc != &dsfc);
-    container f(tempP), dsf( tempP);
     cusp::multiply( c2f, fc, f);
     f_.einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempM, -1., f, tempM);
@@ -415,7 +418,6 @@ void DS<F,M,container>::backwardT( const container& fc, container& dsfc)
     //adjoint discretisation
     assert( &fc != &dsfc);
     dg::blas1::pointwiseDot( vol3d, fc, dsfc);
-    container f(tempP), dsf( tempP);
     cusp::multiply( f2cT, dsfc, dsf);
 
     dg::blas1::pointwiseDivide( dsf, f_.hm(), dsf);
@@ -431,7 +433,6 @@ void DS<F,M,container>::backwardTD( const container& fc, container& dsfc)
 {
     //direct
     assert( &fc != &dsfc);
-    container f(tempP), dsf( tempP);
     cusp::multiply( c2f, fc, f);
     dg::blas1::pointwiseDot( f, invB, dsf);
     f_.einsPlus( dsf, tempM);
@@ -445,7 +446,6 @@ void DS<F,M,container>::backwardTD( const container& fc, container& dsfc)
 template< class F, class M, class container >
 void DS<F,M,container>::symv( const container& f, container& dsTdsf)
 {
-    container tempPc(f), tempMc(f), temp0c(f);
     if(dir_ == dg::centered)
     {
         centered( f, tempPc);
@@ -464,11 +464,12 @@ void DS<F,M,container>::symv( const container& f, container& dsTdsf)
     if(apply_jumpX_)
     {
         dg::blas2::symv( jumpX, f, temp0c);
-        dg::geo::divideVolume( temp0c, f_.grid());
+        dg::blas1::pointwiseDivide( temp0c, volume_, temp0c);
         dg::blas1::axpby( -1., temp0c, 1., dsTdsf, dsTdsf);
     }
     dg::blas2::symv( jumpY, f, temp0c);
-    dg::geo::divideVolume( temp0c, f_.grid());
+    //dg::geo::divideVolume( temp0c, gridc);
+    dg::blas1::pointwiseDivide( temp0c, volume_, temp0c);
     //dg::blas1::pointwiseDivide( temp0, R_, temp0);
     dg::blas1::axpby( -1., temp0c, 1., dsTdsf, dsTdsf);
     if( no_ == not_normed)

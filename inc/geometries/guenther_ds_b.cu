@@ -59,10 +59,11 @@ int main( )
     guenther::Divb divb(gp.R_0,gp.I_0);
     guenther::B Bfield(gp);
     
-    std::cout << "Type n, Nx, Ny, Nz\n";
+    std::cout << "Type fn, fN\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n=3, Nx=5, Ny=5, Nz=5;
-    //std::cin >> n>> Nx>>Ny>>Nz;
+    unsigned fn, fN;
+    std::cin >> fn>> fN;
     unsigned Nxn = Nx;
     unsigned Nyn = Ny;
     unsigned Nzn = Nz;
@@ -71,7 +72,7 @@ int main( )
     //std::cout << "Type RK4 eps (1e-8)\n";
     //std::cin >> rk4eps;
     double z0 = 0, z1 = 2.*M_PI;
-    for (unsigned i=1;i<4;i+=2) { 
+    for (unsigned i=0;i<4;i+=1) { 
 
         Nzn = unsigned(Nz*pow(2,i));
         Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
@@ -80,7 +81,7 @@ int main( )
 
 
         dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
-        dg::CylindricalGrid<dg::DVec> g3d_fein( Rmin,Rmax, Zmin,Zmax, z0, z1,  3*n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
+        dg::CylindricalGrid<dg::DVec> g3d_fein( Rmin,Rmax, Zmin,Zmax, z0, z1,  fn,fN*Nxn ,fN*Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
         dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
         std::cout << "NR = " << Nxn << std::endl;
@@ -277,9 +278,9 @@ int main( )
 // 
     std::cout << "--------------------testing ds" << std::endl;
     double norm = dg::blas2::dot( w3d, solution);
-    std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
+    //std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
     double err =dg::blas2::dot( w3d, derivative);
-    std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
+    //std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
     dg::blas1::axpby( 1., solution, -1., derivative);
     err =dg::blas2::dot( w3d, derivative);
     std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
@@ -292,13 +293,13 @@ int main( )
 //     errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);    
 //     std::cout << "Relative Difference in DS is "<< sqrt( errRZPhi/norm )<<"\n"; 
 //     
-     std::cout << "--------------------testing dsT" << std::endl;
-     std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
-     std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
+     std::cout << "--------------------testing divb" << std::endl;
+     //std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
+     //std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
      dg::blas1::axpby( 1., divbsol, -1., divbT);
      normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-     std::cout << "Relative Difference in DST is   "<<sqrt( normdivbT)<<"\n";
-     std::cout << "-------------------- " << std::endl;
+     std::cout << "Relative Difference in divb is   "<<sqrt( normdivbT)<<"\n";
+     //std::cout << "-------------------- " << std::endl;
      //std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
 // 
 //     
@@ -340,11 +341,11 @@ int main( )
 //     std::cout << "Relative Difference in DST is "<< sqrt( errdsTds/normdsTds )<<"\n";   
     
     std::cout << "--------------------testing dsTdsfb " << std::endl;
-    std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
+    //std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
     double remainder =dg::blas1::dot( w3d,dsTdsfb);
     double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
-    std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
-    std::cout << "   Integral          "<<remainder<<"\n";
+    //std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+    //std::cout << "   Integral          "<<remainder<<"\n";
     dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
     errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
     std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
@@ -425,7 +426,7 @@ int main( )
 //     errinvT =dg::blas2::dot( w3d, functionTinv);
 //     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
 //     
-    std::cout << "--------------------testing dsT" << std::endl; 
+    std::cout << "--------------------testing inversion dsTds" << std::endl; 
     std::cout << " # of iterations "<< invert( dsNU, functionTinv2,solutiondsTds ) << std::endl; //is dsTds
     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
     double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
