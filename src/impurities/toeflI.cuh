@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
+#include "parameters.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
