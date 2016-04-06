@@ -58,21 +58,25 @@ int main( )
     guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
     guenther::Divb divb(gp.R_0,gp.I_0);
     guenther::B Bfield(gp);
-    
-    std::cout << "Type fn, fN\n";
+        
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n=3, Nx=5, Ny=5, Nz=5;
-    unsigned fn, fN;
+    unsigned fn;
+    double fN;
+    std::cout << "Type n\n";
+    std::cin >> n;
+    std::cout << "Type fn, fN\n";
+
     std::cin >> fn>> fN;
     unsigned Nxn = Nx;
     unsigned Nyn = Ny;
     unsigned Nzn = Nz;
 
     double rk4eps = 1e-8;
-    //std::cout << "Type RK4 eps (1e-8)\n";
-    //std::cin >> rk4eps;
+//     std::cout << "Type RK4 eps (1e-8)\n";
+//     std::cin >> rk4eps;
     double z0 = 0, z1 = 2.*M_PI;
-    for (unsigned i=0;i<4;i+=1) { 
+    for (unsigned i=0;i<6;i+=1) { 
 
         Nzn = unsigned(Nz*pow(2,i));
         Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
@@ -408,7 +412,7 @@ int main( )
 //     elliptic.set_z(bhatPhi);
     
     
-    double eps =1e-8;   
+    double eps =1e-7;   
     dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
 // 

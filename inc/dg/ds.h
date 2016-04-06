@@ -219,6 +219,7 @@ struct DS
     container tempPc, tempMc, temp0c;
     container f, dsf;
     container vol3d, inv3d;
+    container vol3df, inv3df;
     container invB;
     //container R_;
     dg::norm no_;
@@ -241,6 +242,7 @@ DS<FA, M,container>::DS(const FA& field, Geometry gridc, Field inverseB, dg::nor
         tempPc( dg::evaluate( dg::zero, gridc)), temp0c( tempPc), tempMc( tempPc), 
         f(tempP), dsf(tempP),
         vol3d( dg::create::volume( gridc)), inv3d( dg::create::inv_volume( gridc)),
+        vol3df( dg::create::volume( field.grid())), inv3df( dg::create::inv_volume( field.grid())),
         invB(dg::pullback(inverseB,field.grid())), //R_(dg::evaluate(dg::coo1,grid)), 
         no_(no), dir_(dir), apply_jumpX_(jumpX)
 {
@@ -277,26 +279,27 @@ void DS<F,M,container>::centered( const container& fc, container& dsfc)
     f_.einsMinus( f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, f_.hz(), dsf);
+      cusp::multiply( f2c, dsf, dsfc);  
+
     
     ////adjoint discretisation
-/*    assert( &f != &dsf);    
-    dg::blas1::pointwiseDot( vol3d, f, dsf);
-    dg::blas1::pointwiseDivide( dsf, f_.hz(), dsf);
-    dg::blas1::pointwiseDivide( dsf, invB, dsf);
-
-    einsPlusT( dsf, tempP);
-    einsMinusT( dsf, tempM);
-    dg::blas1::axpby( 1., tempM, -1., tempP);
-    dg::blas1::pointwiseDot( inv3d, tempP, dsf);
-    dg::blas1::pointwiseDot( dsf, invB, dsf);  */  
-    cusp::multiply( f2c, dsf, dsfc);
-
+//     assert( &fc != &dsfc);
+//     dg::blas1::pointwiseDot( vol3d, fc, dsfc);
+//     cusp::multiply( f2cT, dsfc, dsf);
+//     dg::blas1::pointwiseDivide( dsf, f_.hz(), dsf);
+//     dg::blas1::pointwiseDivide( dsf, invB, dsf);
+//     f_.einsPlusT( dsf, tempP);
+//     f_.einsMinusT( dsf, tempM);
+//     dg::blas1::axpby( 1., tempM, -1., tempP);
+//     dg::blas1::pointwiseDot( tempP, invB, tempP);
+//     cusp::multiply( c2fT, tempP, dsfc);
+//     dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
 }
 
 template<class F, class M, class container>
 void DS<F,M,container>::centeredT( const container& fc, container& dsfc)
 {               
-//     //adjoint discretisation
+    //adjoint discretisation
     assert( &fc != &dsfc);    
     dg::blas1::pointwiseDot( vol3d, fc, dsfc);
     cusp::multiply( f2cT, dsfc, dsf);
@@ -308,7 +311,17 @@ void DS<F,M,container>::centeredT( const container& fc, container& dsfc)
 
     cusp::multiply( c2fT, tempP, dsfc);
     dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
-
+    
+    //non adjoint direct 
+//     assert( &fc != &dsfc);     
+//     cusp::multiply( c2f, fc, f);
+//     dg::blas1::pointwiseDot( f, invB, dsf);
+//     f_.einsPlus( dsf, tempP);
+//     f_.einsMinus( dsf, tempM);
+//     dg::blas1::axpby( 1., tempP, -1., tempM);
+//     dg::blas1::pointwiseDivide( tempM, f_.hz(), dsf);        
+//     dg::blas1::pointwiseDivide( dsf, invB, dsf);
+//     cusp::multiply( f2c, dsf, dsfc);  
 //       dg::blas1::pointwiseDot( inv3d, tempP,tempP); //make it symmetric
         //stegmeir weights
 //         dg::blas1::pointwiseDot( f_.hz()h, f, dsf);
