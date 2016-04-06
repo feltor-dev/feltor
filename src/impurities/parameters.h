@@ -12,7 +12,7 @@ struct Parameters
     unsigned n, Nx, Ny; 
     double dt; 
 
-    double eps_pol, eps_gamma;
+    double eps_time, eps_pol, eps_gamma;
 
     double lx, ly; 
     enum dg::bc bc_x, bc_y;
@@ -26,6 +26,7 @@ struct Parameters
     unsigned itstp; 
     unsigned maxout;
 
+    unsigned vorticity;
     unsigned mode;
     unsigned wall_pos, wall_amp, wall_sigma;
 
@@ -40,32 +41,34 @@ struct Parameters
         Nx = (unsigned)v[2];
         Ny = (unsigned)v[3];
         dt = v[4];
-        eps_pol = v[5];
-        eps_gamma = v[6];
-        lx = v[7]; 
-        ly = v[8];
-        bc_x = map((int)v[9]), bc_y = map((int)v[10]);
-        nu = v[11];
-        kappa = v[12];
-        tau[1] = v[13]; 
-        amp = v[14];
-        sigma = v[15];
-        posX = v[16];
-        posY = v[17];
-        itstp = v[18];
-        maxout = v[19];
+        eps_time = v[5];
+        eps_pol = v[6];
+        eps_gamma = v[7];
+        lx = v[8]; 
+        ly = v[9];
+        bc_x = map((int)v[10]), bc_y = map((int)v[11]);
+        nu = v[12];
+        kappa = v[13];
+        tau[1] = v[14]; 
+        amp = v[15];
+        sigma = v[16];
+        posX = v[17];
+        posY = v[18];
+        itstp = v[19];
+        maxout = v[20];
 
-        a[2] = v[20];
-        mu[2] = v[21];
-        tau[2] = v[22];
+        a[2] = v[21];
+        mu[2] = v[22];
+        tau[2] = v[23];
 
         a[0] = -1, a[1] = 1-a[2];
         mu[0] = 0, mu[1] = 1;
         tau[0] = -1;
-        mode = v[23];
-        wall_pos = v[24];
-        wall_amp = v[25];
-        wall_sigma = v[26];
+        vorticity = v[24]
+        mode = v[25];
+        wall_pos = v[26];
+        wall_amp = v[27];
+        wall_sigma = v[28];
 
     }
     /**

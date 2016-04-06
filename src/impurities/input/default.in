@@ -13,44 +13,46 @@
 
 ---------------------Algorithmic parameters-------------------
 
-5)  eps_pol (stopping for polarisation) =   1e-4  (1e-6)
-6)  eps_gamma (stopping for Gamma CG)   =   1e-8  (1e-8)
+5)  eps_time  (accuracy of time inversion) = 1e-9
+6)  eps_pol (stopping for polarisation) =   1e-4  (1e-6)
+7)  eps_gamma (stopping for Gamma CG)   =   1e-8  (1e-8)
 
 ---------------------Boundary conditions----------------------
 
-7)  lx (length of x in units of rho_s)   =   400    (128.)
-8)  ly (length of y in units of rho_s)   =   400    (64.)
-9) bc_x (0 periodic, 1 Dirichlet )      =   1      (1.0)
-10) bc_y (0 periodic, 1 Dirichlet )      =   0      (1.0)
+8)  lx (length of x in units of rho_s)   =   400    (128.)
+9)  ly (length of y in units of rho_s)   =   400    (64.)
+10) bc_x (0 periodic, 1 Dirichlet )      =   1      (1.0)
+11) bc_y (0 periodic, 1 Dirichlet )      =   0      (1.0)
 
 ---------------------Physical parameters----------------------
 
-11) nu  (viscosity)                     =   1e-3    (0.001)
-12) mcv (magnetic curvature)            =   0.0005  (0.0005)
-13) tau (Ti/Te)                         =   0.0     (0.0)
+12) nu  (viscosity)                     =   1e-3    (0.001)
+13) mcv (magnetic curvature)            =   0.0005  (0.0005)
+14) tau (Ti/Te)                         =   0.0     (0.0)
 
 ------------------Initial blob parameters---------------------
 
-14) amp (perturbation amplitude)            =  2     (1.0)
-15) sigma (blob variance in units of rho_s) =  10     (10)
-16) x-position ( in units of lx)            =  0.25   (0.4)
-17) y-position ( in units of ly)            =  0.5   (0.5)
+15) amp (perturbation amplitude)            =  2     (1.0)
+16) sigma (blob variance in units of rho_s) =  10     (10)
+17) x-position ( in units of lx)            =  0.25   (0.4)
+18) y-position ( in units of ly)            =  0.5   (0.5)
 
 ---------------------Miscellaneous----------------------------
 
-18) itstp (steps between output)            = 5      (5)
-19) # of outputs (excluding first)          = 3
+19) itstp (steps between output)            = 5      (5)
+20) # of outputs (excluding first)          = 3
 
 @ -------------------Impurities-------------------------------
 
 (set a_z 0 to get passive "trace" impurities)
-20) a_z (Z n_z0/n_e0 < 1, a_i <- 1-a_z) = 0.02 (0.1)
-21) mu_z (m_z/Z m_i)                    = 3 (48)
-22) tau_z ( tau_z/Z tau_e)              = 0
-23) initialization mode                 = 3
+21) a_z (Z n_z0/n_e0 < 1, a_i <- 1-a_z) = 0.02 (0.1)
+22) mu_z (m_z/Z m_i)                    = 3 (48)
+23) tau_z ( tau_z/Z tau_e)              = 0
+24) vorticity ( 0 -> phi~0, 1 n_e~n_i)  = 0
+25) initialization mode                 = 3
         1: const background 
         2: impurity wall 
         3: impurity blob   
-24) Wall-position                       = 0.4
-25) Wall-amplitude                      = 1
-26) Wall-sigma                          = 10
+26) Wall-position                       = 0.4
+27) Wall-amplitude                      = 1
+28) Wall-sigma                          = 10

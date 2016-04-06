@@ -15,9 +15,9 @@ namespace dg
 {
 
 template<class Geometry, class Matrix, class container>
-struct Rolkar
+struct Diffusion
 {
-    Rolkar( const Geometry& g, imp::Parameters p):
+    Diffusion( const Geometry& g, imp::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
