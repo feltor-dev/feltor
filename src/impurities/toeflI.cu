@@ -52,13 +52,13 @@ int main( int argc, char* argv[])
 
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflI< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.a_z, p.mu_z, p.tau_z, p.eps_pol, p.eps_gamma); 
+    dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.a_z, p.mu_z, p.tau_z, p.eps_pol, p.eps_gamma); 
 
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) ), y1(y0);
     //dg::blas1::axpby( 1., y0[0], 1., (dg::DVec)dg::evaluate( g, grid), y0[0]);//n_e = 1+ gaussian
-    dg::Helmholtz<dg::DMatrix, dg::DVec, dg::DVec>& gamma = test.gamma();
+    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec>& gamma = test.gamma();
     if( v[25] == 1)
     {
         gamma.alpha() = -0.5*p.tau;
@@ -151,7 +151,7 @@ int main( int argc, char* argv[])
         {
             thrust::transform( y1[i].begin(), y1[i].end(), dvisual.begin(), dg::PLUS<double>(-1));
 
-            hvisual = dvisual;
+            dg::blas1::transfer( dvisual, hvisual);
             dg::blas2::gemv( equi, hvisual, visual);
             //compute the color scale
             colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -163,7 +163,7 @@ int main( int argc, char* argv[])
         }
         //transform phi
         dg::blas2::gemv( laplacianM, test.potential()[0], y1[1]);
-        hvisual = y1[1];
+        dg::blas1::transfer( y1[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
