@@ -46,7 +46,7 @@ struct Diffusion
     const container& weights(){return LaplacianM_perp.weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
-    const eule::Parameters p;
+    const imp::Parameters p;
     container temp;    
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 
@@ -116,15 +116,15 @@ struct ToeflI
 
   private:
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
-    const container& compute_psi( container& potential, int idx);
+    const container& compute_psi( const container& potential, int idx);
     const container& polarization( const std::vector<container>& y);
 
     container chi, omega;
     const container binv; //magnetic field
 
-    std::vector<container> phi, dyphi;
+    std::vector<container> phi, dyphi, ype;
     std::vector<container> dyy, lapy;
-    std::vector<container> gammp.an;
+    std::vector<container> gamma_n;
 
     //matrices and solvers
     Helmholtz< Geometry, Matrix, container > gamma1;
@@ -142,13 +142,13 @@ struct ToeflI
 };
 
 template< class Geometry, class Matrix, class container>
-ToeflI< Geometry, Matrix, container>::ToeflI( const Grid2d<value_type>& grid, imp::Parameters p) :
+ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Parameters p) :
     chi( grid.size(), 0.), omega(chi),  
-    binv( evaluate( LinearX( kappa, 1.), grid)), 
-    phi( 3, chi), dyphi( phi),
-    gammp.an( 2, chi),
+    binv( evaluate( LinearX( p.kappa, 1.), grid)), 
+    phi( 3, chi), dyphi( phi), ype(phi),
+    gamma_n( 2, chi),
     dyy( 3, chi), lapy( dyy),
-    gamma1(  grid, -0.5*p.taui),
+    gamma1(  grid, -0.5*p.tau[1]),
     arakawa( grid), 
     pol(     grid, not_normed, centered), 
     invert_pol(      omega, omega.size(), p.eps_pol),
@@ -159,8 +159,8 @@ ToeflI< Geometry, Matrix, container>::ToeflI( const Grid2d<value_type>& grid, im
 
 
 //idx is impurity species one or two
-template< class container>
-const container& ToeflI<container>::compute_psi( container& potential, int idx)
+template< class G, class M, class container>
+const container& ToeflI<G, M, container>::compute_psi( const container& potential, int idx)
 {
     gamma1.alpha() = -0.5*p.tau[idx]*p.mu[idx];
     invert_invgamma( gamma1, phi[idx], potential);
@@ -175,12 +175,12 @@ const container& ToeflI<container>::compute_psi( container& potential, int idx)
 
 
 template<class G, class Matrix, class container>
-container& Feltor<G, Matrix, container>::polarisation( const std::vector<container>& y)
+const container& ToeflI<G, Matrix, container>::polarization( const std::vector<container>& y)
 { 
     //\chi = p.ai \p.mui n_i + p.as \p.mus n_s
     blas1::axpby( p.a[1]*p.mu[1], y[1], 0., chi); 
     blas1::axpby( p.a[2]*p.mu[2], y[2], 1., chi);
-    dg::blas1::plus( chi, ( p.a[1]*p.mu[1]+p.a[2]*p.mu[2]); 
+    dg::blas1::plus( chi, p.a[1]*p.mu[1]+p.a[2]*p.mu[2]); 
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\p.mui n_i ) /B^2
     pol.set_chi( chi);                              //set chi of polarisation: nablp.aperp (chi nablp.aperp )
@@ -189,13 +189,13 @@ container& Feltor<G, Matrix, container>::polarisation( const std::vector<contain
 
 
     gamma1.alpha() = -0.5*p.tau[1]*p.mu[1];
-    invert_invgamma( gamma1, gammp.an[0], y[1]);
+    invert_invgamma( gamma1, gamma_n[0], y[1]);
     gamma1.alpha() = -0.5*p.tau[2]*p.mu[2];
-    invert_invgamma( gamma1, gammp.an[1], y[2]);
+    invert_invgamma( gamma1, gamma_n[1], y[2]);
 
     dg::blas1::axpby( 1., y[0], 0., chi);
-    dg::blas1::axpby( -p.a[1], gammp.an[0], 1., chi);
-    dg::blas1::axpby( -p.a[2], gammp.an[1], 1., chi);
+    dg::blas1::axpby( -p.a[1], gamma_n[0], 1., chi);
+    dg::blas1::axpby( -p.a[2], gamma_n[1], 1., chi);
 
     unsigned number = invert_pol( pol, phi[0], chi);//p.ajGamma n_j + p.aiGamma n_i -ne = -nabla chi nabla phi
     if(  number == invert_pol.get_max())
@@ -203,8 +203,8 @@ container& Feltor<G, Matrix, container>::polarisation( const std::vector<contain
     return phi[0];
 }
 
-template< class container>
-void ToeflI< container>::operator()(std::vector<container>& y, std::vector<container>& yp)
+template< class G, class M, class container>
+void ToeflI< G, M, container>::operator()(std::vector<container>& y, std::vector<container>& yp)
 {
     //y[0] = N_e - 1
     //y[1] = N_i - 1
@@ -216,7 +216,8 @@ void ToeflI< container>::operator()(std::vector<container>& y, std::vector<conta
     phi[0] = polarization( y);
     phi[1] = compute_psi( phi[0], 1);
     phi[2] = compute_psi( phi[0], 2);
-    dg::blas1::transform( y[i], ype[i], dg::PLUS<>(+1)); 
+    for( int i=0; i<y.size(); i++)
+        dg::blas1::transform( y[i], ype[i], dg::PLUS<>(+1)); 
 
     //update energetics, 2% of total time
     /*
@@ -259,9 +260,9 @@ void ToeflI< container>::operator()(std::vector<container>& y, std::vector<conta
         blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
 
         blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
-        blas1::axpby( kappa, dyphi[i], 1., yp[i]);
+        blas1::axpby( p.kappa, dyphi[i], 1., yp[i]);
 
-        blas1::axpby( p.tau[i]*kappa, dyy[i], 1., yp[i]);
+        blas1::axpby( p.tau[i]*p.kappa, dyy[i], 1., yp[i]);
     }
 }
 

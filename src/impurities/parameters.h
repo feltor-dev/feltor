@@ -28,7 +28,7 @@ struct Parameters
 
     unsigned vorticity;
     unsigned mode;
-    unsigned wall_pos, wall_amp, wall_sigma;
+    double wall_pos, wall_amp, wall_sigma;
 
     /**
      * @brief constructor to make a const object
@@ -64,7 +64,7 @@ struct Parameters
         a[0] = -1, a[1] = 1-a[2];
         mu[0] = 0, mu[1] = 1;
         tau[0] = -1;
-        vorticity = v[24]
+        vorticity = v[24];
         mode = v[25];
         wall_pos = v[26];
         wall_amp = v[27];
@@ -82,6 +82,12 @@ struct Parameters
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
             <<"    Ion-temperature: = "<<tau[1]<<"\n";
+        os <<"    a_e   = "<<a[0]<<"\n"
+           <<"    mu_e  = "<<mu[0]<<"\n"
+           <<"    tau_e = "<<tau[0]<<"\n";
+        os <<"    a_i   = "<<a[1]<<"\n"
+           <<"    mu_i  = "<<mu[1]<<"\n"
+           <<"    tau_i = "<<tau[1]<<"\n";
         os <<"    a_z   = "<<a[2]<<"\n"
            <<"    mu_z  = "<<mu[2]<<"\n"
            <<"    tau_z = "<<tau[2]<<"\n";
@@ -96,9 +102,15 @@ struct Parameters
             <<"    dt = "<<dt<<"\n";
         os  <<"Blob parameters are: \n"
             << "    width:        "<<sigma<<"\n"
-            << "    amplitude:    "<<n0<<"\n"
+            << "    amplitude:    "<<amp<<"\n"
             << "    posX:         "<<posX<<"\n"
             << "    posY:         "<<posY<<"\n";
+        os << "Mode is            "<<mode<<"\n";
+        os << "Vorticity is       "<<vorticity<<"\n";
+        os << "Wall parameters are: \n"
+            << "    pos:          "<<wall_pos<<"\n"
+            << "    sigma:        "<<wall_sigma<<"\n"
+            << "    amplitude:    "<<wall_amp<<"\n";
         os << "Stopping for CG:         "<<eps_pol<<"\n"
             <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"

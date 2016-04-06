@@ -2,10 +2,12 @@
 #include <iomanip>
 #include <vector>
 
+#include "netcdf.h"
 
 #include "toeflI.cuh"
 #include "../toefl/parameters.h"
 #include "file/file.h"
+#include "file/nc_utilities.h"
 #include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
@@ -33,7 +35,7 @@ int main( int argc, char* argv[])
         v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const imp::Parameters p( v, 2);
+    const imp::Parameters p( v);
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
@@ -45,12 +47,12 @@ int main( int argc, char* argv[])
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) );
-    dg::Helmholtz<dg::DMatrix, dg::DVec, dg::DVec> & gamma = test.gamma();
+    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
     if( p.mode == 1)
     {
         if( p.vorticity == 0)
         {
-            gamma.alpha() = -0.5*p.tau;
+            gamma.alpha() = -0.5*p.tau[1];
             y0[0] = dg::evaluate( gaussian, grid);
             dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1 
             dg::DVec v2d=dg::create::inv_weights(grid);
@@ -70,15 +72,15 @@ int main( int argc, char* argv[])
         //init wall in y0[2]
         dg::GaussianX wall( p.wall_pos*grid.lx(), p.wall_sigma, p.wall_amp); 
         dg::DVec wallv = dg::evaluate( wall, grid);
-        gamma.alpha() = -0.5*p.tau_z*p.mu_z;
+        gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         dg::blas2::symv( gamma, wallv, y0[2]); 
         dg::DVec v2d=dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] != 0.)
-            dg::blas1::axpby( 1./p.a[2], y0[2], 0., y0[2]); //n_z ~1./a_z
+            dg::blas1::scal( y0[2], 1./p.a[2]); //n_z ~1./a_z
 
         //init blob in y0[1]
-        gamma.alpha() = -0.5*p.tau;
+        gamma.alpha() = -0.5*p.tau[1];
         y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]); 
         dg::blas1::pointwiseDot( v2d, y0[1], y0[1]);
@@ -111,7 +113,6 @@ int main( int argc, char* argv[])
     }
 
     //////////////////initialisation of timestepper and first step///////////////////
-    double time = 0;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
@@ -161,13 +162,13 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     //Vor
     transferD = toeflI.potential()[0];
-    dg::blas2::gemv( rolkar.laplacianM(), transferD, y0[1]);            
+    dg::blas2::gemv( diffusion.laplacianM(), transferD, y0[1]);            
     dg::blas1::transfer( y0[1], transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     double time = 0;
 
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-    err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
+    //err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 
     //size_t Estart[] = {0};
     //size_t Ecount[] = {1};
@@ -219,11 +220,11 @@ int main( int argc, char* argv[])
         }
         transferD = toeflI.potential()[0];
         dg::blas1::transfer( transferD, transferH);
-        err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
         transferD = toeflI.potential()[0];
-        dg::blas2::gemv( rolkar.laplacianM(), transferD, y0[1]);            
+        dg::blas2::gemv( diffusion.laplacianM(), transferD, y0[1]);            
         dg::blas1::transfer( y0[1], transferH);
-        err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);
 #ifdef DG_BENCHMARK
