@@ -169,7 +169,7 @@ const container& ToeflI<G, M, container>::compute_psi( const container& potentia
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
 
-    dg::blas1::axpby( 1., chi, -0.5*p.mu[idx], omega, phi[1]);             //psi  Gamma phi - 0.5 u_E^2
+    dg::blas1::axpby( 1., phi[idx], -0.5*p.mu[idx], omega, phi[idx]);   //psi  Gamma phi - 0.5 u_E^2
     return phi[idx];    
 }
 
@@ -193,9 +193,9 @@ const container& ToeflI<G, Matrix, container>::polarization( const std::vector<c
     gamma1.alpha() = -0.5*p.tau[2]*p.mu[2];
     invert_invgamma( gamma1, gamma_n[1], y[2]);
 
-    dg::blas1::axpby( 1., y[0], 0., chi);
-    dg::blas1::axpby( -p.a[1], gamma_n[0], 1., chi);
-    dg::blas1::axpby( -p.a[2], gamma_n[1], 1., chi);
+    dg::blas1::axpby( -1., y[0], 0., chi);
+    dg::blas1::axpby( +p.a[1], gamma_n[0], 1., chi);
+    dg::blas1::axpby( +p.a[2], gamma_n[1], 1., chi);
 
     unsigned number = invert_pol( pol, phi[0], chi);//p.ajGamma n_j + p.aiGamma n_i -ne = -nabla chi nabla phi
     if(  number == invert_pol.get_max())
