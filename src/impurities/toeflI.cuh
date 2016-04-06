@@ -31,7 +31,7 @@ struct Diffusion
            x[2] := N_j - 1
 
         */
-        dg::blas1::axpby( 0., x, 0, y);
+        dg::blas1::axpby( 0., x, 0., y);
         for( unsigned i=0; i<x.size(); i++)
         {
             //not linear any more (cannot be written as y = Ax)
