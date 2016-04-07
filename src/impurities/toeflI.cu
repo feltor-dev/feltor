@@ -70,6 +70,7 @@ int main( int argc, char* argv[])
         else
         {
             y0[1] = y0[0] = dg::evaluate( gaussian, grid);
+            dg::blas1::scal( y0[1], 1/p.a[1]);
             y0[2] = dg::evaluate( dg::zero, grid);
         }
     }
