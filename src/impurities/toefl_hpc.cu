@@ -201,14 +201,14 @@ int main( int argc, char* argv[])
             Estart[0] = step;
             //store accuracy details
             err = nc_open(argv[2], NC_WRITE, &ncid);
-            err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
+            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
 
             E0 = E1;
             E1 = toeflI.energy();
             mass = toeflI.mass();
             dEdt = (E1 - E0)/p.dt;
             double diss = toeflI.energy_diffusion( );
-            double accuracy = 2.*fabs(dEdt-diss)/(dEdt + diss);
+            double accuracy = 2.*fabs((dEdt-diss)/(dEdt + diss));
 
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);

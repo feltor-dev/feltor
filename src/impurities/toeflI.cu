@@ -182,7 +182,7 @@ int main( int argc, char* argv[])
             double diss = toeflI.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout << diff << " "<<diss<<"\t";
-            std::cout << "Accuracy: "<< 2.*fabs(diff-diss)/(diff+diss)<<"\n";
+            std::cout << "Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<"\n";
 
             try{ karniadakis( toeflI, diffusion, y0);}
             catch( dg::Fail& fail) { 
