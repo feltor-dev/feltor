@@ -130,8 +130,8 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    //const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    //double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
+    const double mass_blob0 = toeflI.mass();
+    double E0 = toeflI.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
@@ -175,13 +175,14 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
-               // std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
-               // E0 = E1;
-               // E1 = test.energy();
-               // diff = (E1 - E0)/p.dt;
-               // double diss = test.energy_diffusion( );
-               // std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-               // std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
+            std::cout << "(m_tot-m_0)/m_0: "<< (toeflI.mass()-mass_blob0)/mass_blob0<<"\t";
+            E0 = E1;
+            E1 = toeflI.energy();
+            diff = (E1 - E0)/p.dt;
+            double diss = toeflI.energy_diffusion( );
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout << diff << " "<<diss<<"\t";
+            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             try{ karniadakis( toeflI, diffusion, y0);}
             catch( dg::Fail& fail) { 

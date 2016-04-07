@@ -123,13 +123,13 @@ struct ToeflI
     const container binv; //magnetic field
 
     std::vector<container> phi, dyphi, ype;
-    std::vector<container> dyy, lapy;
+    std::vector<container> dyy, lny, lapy;
     std::vector<container> gamma_n;
 
     //matrices and solvers
     Helmholtz< Geometry, Matrix, container > gamma1;
     ArakawaX< Geometry, Matrix, container> arakawa; 
-    dg::Elliptic< Geometry, Matrix, container > pol; 
+    dg::Elliptic< Geometry, Matrix, container > pol, laplaceM; 
     dg::Invert<container> invert_pol, invert_invgamma;
 
     const container w2d, v2d, one;
@@ -147,13 +147,14 @@ ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Paramet
     binv( evaluate( LinearX( p.kappa, 1.), grid)), 
     phi( 3, chi), dyphi( phi), ype(phi),
     gamma_n( 2, chi),
-    dyy( 3, chi), lapy( dyy),
+    dyy( 3, chi), lny(dyy), lapy( dyy),
     gamma1(  grid, -0.5*p.tau[1]),
     arakawa( grid), 
     pol(     grid, not_normed, centered), 
+    laplaceM( grid, normed, centered),
     invert_pol(      omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
-    w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)), p(p)
+    w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)), p(p)
     { 
     }
 
@@ -217,35 +218,32 @@ void ToeflI< G, M, container>::operator()(std::vector<container>& y, std::vector
     phi[1] = compute_psi( phi[0], 1);
     phi[2] = compute_psi( phi[0], 2);
     for( int i=0; i<y.size(); i++)
+    {
         dg::blas1::transform( y[i], ype[i], dg::PLUS<>(+1)); 
+        dg::blas1::transform( ype[i], lny[i], dg::LN<double>()); 
+        dg::blas2::symv( laplaceM, y[i], chi);
+        dg::blas2::symv( laplaceM, chi, lapy[i]);
+    }
 
     //update energetics, 2% of total time
-    /*
-        exp( y, expy);
-        mass_ = blas2::dot( one, w2d, expy[0] ); //take real ion density which is electron density!!
-        double Ue = blas2::dot( y[0], w2d, expy[0]);
-        double Ui = p.a[1]*p.tau[1]*blas2::dot( y[1], w2d, expy[1]);
-        double Uz = p.a[2]*p.tau[2]*blas2::dot( y[2], w2d, expy[2]);
-        double Uphii = 0.5*p.a[1]*p.mu[1]*blas2::dot( expy[1], w2d, omega); 
-        double Uphiz = 0.5*p.a[2]*p.mu[2]*blas2::dot( expy[2], w2d, omega); 
-        energy_ = Ue + Ui + Uphii + Uphiz;
+        mass_ = blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
+        double Se = blas2::dot( ype[0], w2d, lny[0]);
+        double Si = p.a[1]*p.tau[1]*blas2::dot( ype[1], w2d, lny[1]);
+        double Sz = p.a[2]*p.tau[2]*blas2::dot( ype[2], w2d, lny[2]);
+        double Uphii = 0.5*p.a[1]*p.mu[1]*blas2::dot( ype[1], w2d, omega); 
+        double Uphiz = 0.5*p.a[2]*p.mu[2]*blas2::dot( ype[2], w2d, omega); 
+        energy_ = Se + Si + Sz + Uphii + Uphiz;
 
-        for( unsigned i=0; i<y.size(); i++)
-        {
-            thrust::transform( expy[i].begin(), expy[i].end(), expy[i].begin(), dg::PLUS<double>(-1));
-            blas2::gemv( laplaceM, expy[i], lapy[i]); //Laplace wants Dir BC!!
-        }
-        diff_ = -nu*blas2::dot( one, w2d, lapy[0]);
+        diff_ = -p.nu*blas2::dot( one, w2d, lapy[0]);
         double Gi[3];
-        Gi[0] = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, y[0]); // minus 
+        Gi[0] = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, lny[0]); // minus 
         for( unsigned i=1; i<3; i++)
-            Gi[i] = - p.tau[i]*(blas2::dot( one, w2d, lapy[i]) + blas2::dot( lapy[i], w2d, y[i])); // minus 
+            Gi[i] = - p.tau[i]*(blas2::dot( one, w2d, lapy[i]) + blas2::dot( lapy[i], w2d, lny[i])); // minus 
         double Gphi[3];
         for( unsigned i=0; i<3; i++)
             Gphi[i] = -blas2::dot( phi[i], w2d, lapy[i]);
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
-        ediff_ = nu*( Gi[0] - Gphi[0] + p.a[1]*(Gi[1] + Gphi[1]) + p.a[2]*( Gi[2] + Gphi[2]));
-        */
+        ediff_ = p.nu*( Gi[0] - Gphi[0] + p.a[1]*(Gi[1] + Gphi[1]) + p.a[2]*( Gi[2] + Gphi[2]));
 
     for( unsigned i=0; i<y.size(); i++)
     {
