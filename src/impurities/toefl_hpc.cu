@@ -133,18 +133,14 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
 
     //energy IDs
-    //int EtimeID, EtimevarID;
-    //err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    //int energyID, massID, energyIDs[3], dissID, dEdtID, accuracyID;
-    //err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
-    //err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
-    //std::string energies[3] = {"Se", "Si", "Uperp"}; 
-    //for( unsigned i=0; i<3; i++){
-    //    err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);}
-    //err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
-    //err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
-    //err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
-    //err = nc_enddef(ncid);
+    int EtimeID, EtimevarID;
+    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    int energyID, massID, dissID, dEdtID, accuracyID;
+    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
+    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
+    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
+    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
+    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
     size_t start[3] = {0, 0, 0};
@@ -168,23 +164,18 @@ int main( int argc, char* argv[])
     double time = 0;
 
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-    //err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
+    err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
 
-    //size_t Estart[] = {0};
-    //size_t Ecount[] = {1};
-    //double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+    size_t Estart[] = {0};
+    size_t Ecount[] = {1};
+    double energy0 = toeflI.energy(), mass0 = toeflI.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
 
 
-    //std::vector<double> evec = feltor.energy_vector();
-    //err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
-    //err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
-    //for( unsigned i=0; i<3; i++)
-    //    err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
-
-    //err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
-    //err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-    ////probe
-    //err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+    err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
+    err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
+    err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+    err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+    err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -205,10 +196,30 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             karniadakis( toeflI, diffusion, y0);
+            step++;
+            time += p.dt;
+            Estart[0] = step;
             //store accuracy details
-            //t5file.append( test.mass(), test.mass_diffusion(), test.energy(), test.energy_diffusion());
+            err = nc_open(argv[2], NC_WRITE, &ncid);
+            err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
+
+            E0 = E1;
+            E1 = toeflI.energy();
+            mass = toeflI.mass();
+            dEdt = (E1 - E0)/p.dt;
+            double diss = toeflI.energy_diffusion( );
+            double accuracy = 2.*fabs(dEdt-diss)/(dEdt + diss);
+
+            err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
+            err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
+            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+            err = nc_close(ncid);
+            std::cout << "(m_tot-m_0)/m_0: "<< (mass-mass0)/mass0<<"\t";
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
         }
-        time += p.itstp*p.dt;
         //output all three fields
         //////////////////////////write fields////////////////////////
         start[0] = i;
@@ -229,7 +240,6 @@ int main( int argc, char* argv[])
         err = nc_close(ncid);
 #ifdef DG_BENCHMARK
         ti.toc();
-        step+=p.itstp;
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
