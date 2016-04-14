@@ -363,20 +363,26 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( yp[i+2], binv, yp[i+2]);  //dt T = 1/B [T-1,psi]_xy
     }
     //add 2nd order FLR terms to ExB dynamics 
-    //[chi,Ni] and [2 chi,Ti] terms
-    poisson( y[1], chii, omega);  //omega  = [Ni-1,chi_i]_xy
-    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B[Ni-1,chii]_xy
-    dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += 1/B[Ni-1,chii]_xy
+    //[2 chi,Ti] terms 
     poisson( y[3], chii, omega);  //omega = [T-1,chi_i]_xy
     dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [T-1,chii]_xy
     dg::blas1::axpby(2.,omega,1.0,yp[3]); //dt T_i += 1/B [T-1, 2 chii]_xy
     
     //Moment mixing terms
-    //[lnTi,Ni chii] term
-    dg::blas1::pointwiseDot(ype[1],chii,lambda); // lambda = N_i chii
-    poisson( logype[3], lambda, omega);  //omega = [ln(Ti),Ni*chii]_xy
-    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Ni*chii]_xy
-    dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += 1/B [ln(Ti),Ni*chii]_xy
+    //[lnTi,Ni chii] term version 1
+//     dg::blas1::pointwiseDot(ype[1],chii,lambda); // lambda = N_i chii
+//     poisson( logype[3], lambda, omega);  //omega = [ln(Ti),Ni*chii]_xy
+//     dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Ni*chii]_xy
+//     dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += 1/B [ln(Ti),Ni*chii]_xy
+        //[lnTi,Ni chii] term version 2
+    poisson( logype[3], chii, omega);  //omega = [ln(Ti),chii]_xy
+    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),chii]_xy
+    dg::blas1::pointwiseDot(omega, ype[1], omega); //omega = Ni/B [ln(Ti),chii]_xy
+    dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += Ni/B [ln(Ti),chii]_xy
+    poisson( logype[3],  y[1], omega);  //omega = [ln(Ti),Ni]_xy
+    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Ni]_xy
+    dg::blas1::pointwiseDot(omega, chii, omega); //omega = chii/B [ln(Ti),Ni]_xy
+    dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += chii/B [ln(Ti),Ni]_xy
     //Ti chii [ln(chii)- ln(Ti),ln(Ni)] term
     poisson( logype[1],chii, omega);  //omega = [ln(Ni),chii]_xy
     dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ni),chii]_xy
@@ -390,12 +396,13 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     //curvature dynamics
     for(unsigned i=0; i<2; i++)
     {
-        //N*K(psi) T*K(psi)  terms
+        //N*K(psi) and T*K(psi)  terms
         dg::blas2::gemv( poisson.dyrhs(), phi[i], lambda); //lambda = dy psi
         dg::blas1::pointwiseDot(lambda,ype[i],omega); //omega =  n dy psi
         dg::blas1::axpby(p.mcv,omega,1.0,yp[i]);   // dtN +=  mcv* N dy psi
         dg::blas1::pointwiseDot(lambda,ype[i+2],omega); // T dy psi
         dg::blas1::axpby(p.mcv,omega,1.0,yp[i+2]);   // dtT +=  mcv* T dy psi
+        
         // K(T N) terms
         dg::blas2::gemv( poisson.dyrhs(), y[i], lambda); //lambda = dy (N-1)
         dg::blas1::pointwiseDot(lambda,ype[i+2],omega); //omega =  T dy (N-1)
@@ -403,8 +410,8 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas2::gemv( poisson.dyrhs(), y[i+2], lambda); //lambda = dy (T-1)
         dg::blas1::pointwiseDot(lambda,ype[i],omega); // omega = N dy (T-1)
         dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]);  //dt N += tau*mcv*N dy (T-1)
-// 
-//      //3 T*K(T) terms
+        
+        //3 T*K(T) terms
         dg::blas2::gemv( poisson.dyrhs(), y[i+2], lambda); //lambda = dy (T-1)
         dg::blas1::pointwiseDot(lambda,ype[i+2],omega); // omega = T dy (T-1)
         dg::blas1::axpby(3.*p.tau[i]*p.mcv,omega,1.0,yp[i+2]); //dt T +=  3 tau*mcv* T dy (T-1)
@@ -412,8 +419,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas2::gemv( poisson.dyrhs(), logype[i], lambda); //lambda = dy (ln(N))
         dg::blas1::pointwiseDot(lambda,ype[i+2],omega); //omega = T dy (ln(N))
         dg::blas1::pointwiseDot(omega,ype[i+2],omega); //omega =  T^2 dy (ln(N))
-        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i+2]); //dt T += tau mcv T^2 dy (ln(N)) 
-        
+        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i+2]); //dt T += tau mcv T^2 dy (ln(N))         
     }   
     //add FLR correction to curvature dynamics
     //Ni K(chii) and Ti K(3 chii) term
@@ -422,17 +428,23 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     dg::blas1::axpby(p.mcv,omega,1.0,yp[1]);   // dtNi +=  mcv* Ni dy chii
     dg::blas1::pointwiseDot(lambda,ype[3],omega); // omega = Ti dy chii
     dg::blas1::axpby(3.*p.mcv,omega,1.0,yp[3]);   // dtTi += 3.* mcv* Ti dy chii
-    //Ni chii K(lnTi + lnNi) term
+    
+//     //Ni chii K(lnTi - lnNi) term
     dg::blas1::axpby(1.,logype[1],-1.0,logype[3],omega); //omega = -ln(Ti)+ln(Ni)
     dg::blas2::gemv( poisson.dyrhs(), omega, lambda); //lambda = dy(-ln(Ti)+ln(Ni))
     dg::blas1::pointwiseDot(lambda,ype[1],omega); // omega = Ni dy(-ln(Ti)+ln(Ni))
     dg::blas1::pointwiseDot(omega,chii,omega); //omega =  Ni  chii dy(-ln(Ti)+ln(Ni))
     dg::blas1::axpby(p.mcv,omega,1.0,yp[1]);   // dtNi +=  mcv* Ni  chii dy(-ln(Ti)+ln(Ni))
-    //chii K(Ti) term
+
+    
+//     //chii K(Ti) term
+//     dg::blas2::gemv( poisson.dyrhs(), y[3], lambda); //lambda = dy (Ti-1)
+//     dg::blas1::pointwiseDot(lambda,chii,omega); //omega =  chii dy (Ti-1)
+//     dg::blas1::axpby(p.mcv,omega,1.0,yp[3]);   // dtTi +=  mcv*  chii dy (Ti-1)
     dg::blas2::gemv( poisson.dyrhs(), y[3], lambda); //lambda = dy (Ti-1)
     dg::blas1::pointwiseDot(lambda,chii,omega); //omega =  chii dy (Ti-1)
-    dg::blas1::axpby(p.mcv,omega,1.0,yp[3]);   // dtTi +=  mcv*  chii dy (Ti-1)
-    //Ti chii K(lnNi)) term
+    dg::blas1::axpby(-p.mcv,omega,1.0,yp[3]);   // dtTi +=-  mcv*  chii dy (Ti-1)
+//     //Ti chii K(lnNi)) term
     dg::blas2::gemv( poisson.dyrhs(), logype[1], lambda); //lambda = dy (ln(Ni))
     dg::blas1::pointwiseDot(lambda,chii,omega); // omega = chii dy (ln(Ni))
     dg::blas1::pointwiseDot(omega,ype[3],omega); // omega =Ti chii dy (ln(Ni))

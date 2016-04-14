@@ -189,7 +189,7 @@ struct Helmholtz2
             blas1::pointwiseDot( chi_, x, temp_); //temp = chi*x
         if( alpha_ != 0)
         {
-            blas2::symv( laplaceM_, x, y); // y = W nabla_perp^2 x
+            blas2::symv( laplaceM_, x, y); // y =- W nabla_perp^2 x
             blas1::pointwiseDivide(y, chi_, temp2_); //temp2_ = (chi^-1)*W*nabla_perp^2 x
             blas2::symv( laplaceM_.precond(), temp2_, temp3_); //temp3_ = V*(chi^-1)*W*nabla_perp^2 x
             blas2::symv( laplaceM_, temp3_, temp2_);//temp2_ = W * nabla_perp^2 *(chi^-1)*nabla_perp^2 x            
@@ -198,7 +198,7 @@ struct Helmholtz2
         {
             //y = W temp - alpha*y = W(chi + alpha nabla_perp^2)x
             blas2::symv( 1., laplaceM_.weights(), temp_, -2.*alpha_, y); 
-            //y = W(chi + alpha nabla_perp^2+  nabla_perp^2 *(chi^-1)*nabla_perp^2 )x
+            //y = W(chi + alpha nabla_perp^2+  alpha*alpha*nabla_perp^2 *(chi^-1)*nabla_perp^2 )x
             blas1::axpby( alpha_*alpha_, temp2_, 1.0, y, y);
         }
         else
