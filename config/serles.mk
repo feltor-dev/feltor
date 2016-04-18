@@ -1,4 +1,5 @@
-ifeq ($(strip $(shell hostname)),serles0)    	# uniquely identify system
+HOST = $(strip $(shell hostname))
+ifeq ($(HOST),$(filter $(HOST),serles0 serles1))       # uniquely identify system 
 INCLUDE  = -I$(HOME)/include
 INCLUDE += -I/usr/include/hdf5/serial          	# cusp and thrust libraries
 GLFLAGS =$$(pkg-config --static --libs glfw3)	# flags for glfw3
