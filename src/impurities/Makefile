@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: toeflI toefl_hpc
 
 toeflI: toeflI.cu toeflI.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK
 
 toefl_hpc: toefl_hpc.cu toeflI.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
