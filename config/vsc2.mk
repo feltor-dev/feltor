@@ -1,7 +1,7 @@
 
 ifeq ($(strip $(SGE_CELL)),vsc2)
 INCLUDE += -I$(HOME)/include
-#INCLUDE += -I/opt/intel/impi/4.1.0/include64
+INCLUDE += -I/opt/intel/impi/4.1.0/include64
 INCLUDE += -I/opt/sw/netcdf/4.3.2/include
 INCLUDE += -I/opt/hdf5/1.8.9/intel/include
 GLFLAGS  = -lm
