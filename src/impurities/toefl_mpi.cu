@@ -2,7 +2,8 @@
 #include <iomanip>
 #include <vector>
 
-#include "netcdf.h"
+#include <mpi.h> //activate mpi
+#include "netcdf_par.h"
 
 #include "toeflI.cuh"
 #include "parameters.h"
@@ -22,27 +23,64 @@
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
+    ////////////////////////////////setup MPI///////////////////////////////
+    int provided;
+    MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if( provided != MPI_THREAD_FUNNELED)
+    {
+        std::cerr << "wrong mpi-thread environment provided!\n";
+        return -1;
+    }
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    ////////////////////////Parameter initialisation//////////////////////////
+
     std::vector<double> v;
     std::string input;
     if( argc != 3)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        if(rank==0) std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else 
     {
-        v = file::read_input( argv[1]);
-        input = file::read_file( argv[1]);
+        try{
+            input = file::read_file( argv[1]);
+            v = file::read_input( argv[1]);
+        }catch( toefl::Message& m){
+            if(rank==0) m.display();
+            if(rank==0) std::cout << input << std::endl;
+            return -1;
+        }
     }
     const imp::Parameters p( v);
-    p.display( std::cout);
+    if(rank==0) p.display( std::cout);
+
+    ////////////////////////////////setup MPI///////////////////////////////
+    int periods[2] = {false, false}; //non-, non-, periodic
+
+    if( p.bc_x == dg::PER) periods[0] = true;
+    if( p.bc_y == dg::PER) periods[1] = true;
+    int np[2];
+    if(rank==0)
+    {
+        std::cin>> np[0] >> np[1] ;
+        std::cout << "Computing with "<<np[0]<<" x "<<np[1] << " = "<<size<<std::endl;
+        assert( size == np[0]*np[1]);
+    }
+    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Comm comm;
+    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+    //////////////////////////////////////////////////////////////
 
     ////////////////////////////////set up computations///////////////////////////
-    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::CartesianMPIGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
     //create RHS 
-    dg::Diffusion< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > diffusion( grid, p); 
-    dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p); 
+    dg::Diffusion< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > diffusion( grid, p);
+    dg::ToeflI< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > toeflI( grid, p);
+
+    // STICH
 
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
