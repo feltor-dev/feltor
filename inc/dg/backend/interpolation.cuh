@@ -372,6 +372,140 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
+
+cusp::coo_matrix<int, double, cusp::host_memory> scalar_interpolation( const Grid2d<double>& g_coarse, const Grid2d<double>& g_fine)
+{
+
+    assert( g_coarse.x0() >= g_fine.x0());
+    assert( g_coarse.x1() <= g_fine.x1());
+    assert( g_coarse.y0() >= g_fine.y0());
+    assert( g_coarse.y1() <= g_fine.y1());
+    assert( g_coarse.n()*g_coarse.Nx() == g_fine.Nx());
+    assert( g_coarse.n()*g_coarse.Ny() == g_fine.Ny());
+
+    thrust::host_vector<double> x = dg::evaluate( dg::coo1, g_coarse);
+    thrust::host_vector<double> y = dg::evaluate( dg::coo2, g_coarse);
+    thrust::host_vector<double> wcoarse = dg::create::weights( g_coarse);
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g_fine.size(), x.size()*g_fine.n()*g_fine.n());
+
+    int number = 0;
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        if (!(x[i] >= g_fine.x0() && x[i] <= g_fine.x1())) {
+            std::cerr << g_fine.x0()<<"< xi = " << x[i] <<" < "<<g_fine.x1()<<std::endl;
+        }
+        
+        assert(x[i] >= g_fine.x0() && x[i] <= g_fine.x1());
+        
+        if (!(y[i] >= g_fine.y0() && y[i] <= g_fine.y1())) {
+            std::cerr << g_fine.y0()<<"< yi = " << y[i] <<" < "<<g_fine.y1()<<std::endl;
+        }
+        assert( y[i] >= g_fine.y0() && y[i] <= g_fine.y1());
+
+        //determine which cell (x,y) lies in 
+
+        double xnn = (x[i]-g_fine.x0())/g_fine.hx();
+        double ynn = (y[i]-g_fine.y0())/g_fine.hy();
+        unsigned n = (unsigned)floor(xnn);
+        unsigned m = (unsigned)floor(ynn);
+        //determine normalized coordinates
+
+        //double xn =  2.*xnn - (double)(2*n+1); 
+        //double yn =  2.*ynn - (double)(2*m+1); 
+        ////interval correction
+        //if (n==g_fine.Nx()) {
+        //    n-=1;
+        //    xn = 1.;
+        //}
+        //if (m==g_fine.Ny()) {
+        //    m-=1;
+        //    yn =1.;
+        //}
+
+
+        std::vector<double> pxy( g_fine.n()*g_fine.n());
+        for( int k=0; k<g_fine.n(); k++)
+            for( int l=0; l<g_fine.n(); l++)
+            {
+                pxy[k*g_fine.n()+l] = g_fine.hx()*g_fine.hy()/4.*
+                            g_fine.dlt().weights()[ k]*
+                            g_fine.dlt().weights()[ l];
+                pxy[k*g_fine.n()+l] /= wcoarse[i];
+            }
+
+        unsigned col_begin = (m)*g_fine.Nx()*g_fine.n()*g_fine.n() + (n)*g_fine.n();
+        detail::add_line( A, number, i,  col_begin, g_fine.n(), g_fine.Nx(), pxy); 
+    }
+    return A;
+}
+
+cusp::coo_matrix<int, double, cusp::host_memory> scalar_interpolation( const Grid3d<double>& g_coarse, const Grid3d<double>& g_fine)
+{
+    assert( g_coarse.x0() >= g_fine.x0());
+    assert( g_coarse.x1() <= g_fine.x1());
+    assert( g_coarse.y0() >= g_fine.y0());
+    assert( g_coarse.y1() <= g_fine.y1());
+    assert( g_coarse.z0() >= g_fine.z0());
+    assert( g_coarse.z1() <= g_fine.z1());
+    assert( g_coarse.n()*g_coarse.Nx() == g_fine.Nx());
+    assert( g_coarse.n()*g_coarse.Ny() == g_fine.Ny());
+    assert( g_coarse.Nz() == g_fine.Nz());
+
+    thrust::host_vector<double> x = dg::evaluate( dg::coo1, g_coarse);
+    thrust::host_vector<double> y = dg::evaluate( dg::coo2, g_coarse);
+    thrust::host_vector<double> wcoarse = dg::create::weights( g_coarse);
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g_fine.size(), x.size()*g_fine.n()*g_fine.n());
+
+    int number = 0;
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        if (!(x[i] >= g_fine.x0() && x[i] <= g_fine.x1())) {
+            std::cerr << g_fine.x0()<<"< xi = " << x[i] <<" < "<<g_fine.x1()<<std::endl;
+        }
+        
+        assert(x[i] >= g_fine.x0() && x[i] <= g_fine.x1());
+        
+        if (!(y[i] >= g_fine.y0() && y[i] <= g_fine.y1())) {
+            std::cerr << g_fine.y0()<<"< yi = " << y[i] <<" < "<<g_fine.y1()<<std::endl;
+        }
+        assert( y[i] >= g_fine.y0() && y[i] <= g_fine.y1());
+
+        //determine which cell (x,y) lies in 
+
+        double xnn = (x[i]-g_fine.x0())/g_fine.hx();
+        double ynn = (y[i]-g_fine.y0())/g_fine.hy();
+        unsigned n = (unsigned)floor(xnn);
+        unsigned m = (unsigned)floor(ynn);
+        //determine normalized coordinates
+
+        //double xn =  2.*xnn - (double)(2*n+1); 
+        //double yn =  2.*ynn - (double)(2*m+1); 
+        ////interval correction
+        //if (n==g_fine.Nx()) {
+        //    n-=1;
+        //    xn = 1.;
+        //}
+        //if (m==g_fine.Ny()) {
+        //    m-=1;
+        //    yn =1.;
+        //}
+
+
+        std::vector<double> pxy( g_fine.n()*g_fine.n());
+        for( int k=0; k<g_fine.n(); k++)
+            for( int l=0; l<g_fine.n(); l++)
+            {
+                pxy[k*g_fine.n()+l] = g_fine.hz()*g_fine.hx()*g_fine.hy()/4.*
+                            g_fine.dlt().weights()[ k]*
+                            g_fine.dlt().weights()[ l];
+                pxy[k*g_fine.n()+l] /= wcoarse[i];
+            }
+
+        unsigned col_begin = (m)*g_fine.Nx()*g_fine.n()*g_fine.n() + (n)*g_fine.n();
+        detail::add_line( A, number, i,  col_begin, g_fine.n(), g_fine.Nx(), pxy); 
+    }
+    return A;
+}
 ///@}
 
 

@@ -245,7 +245,7 @@ DS<FA, M,container>::DS(const FA& field, Geometry gridc, Field inverseB, dg::nor
         no_(no), dir_(dir), apply_jumpX_(jumpX)
 {
 
-    f2c = dg::create::interpolation( gridc, field.grid());
+    f2c = dg::create::scalar_interpolation( gridc, field.grid());
     c2f = dg::create::interpolation( field.grid(), gridc);
     cusp::transpose( f2c, f2cT);
     cusp::transpose( c2f, c2fT);     
