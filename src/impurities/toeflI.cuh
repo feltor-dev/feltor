@@ -55,7 +55,9 @@ struct Diffusion
 template< class Geometry, class Matrix, class container >
 struct ToeflI
 {
-    typedef typename container::value_type value_type;
+    typedef typename dg::VectorTraits<container>::value_type value_type;
+
+    //    typedef typename container::value_type value_type; ???
 
     /**
      * @brief Construct a ToeflI solver object
@@ -262,6 +264,8 @@ void ToeflI< G, M, container>::operator()(std::vector<container>& y, std::vector
 
         blas1::axpby( p.tau[i]*p.kappa, dyy[i], 1., yp[i]);
     }
+
+
 }
 
 }//namespace dg

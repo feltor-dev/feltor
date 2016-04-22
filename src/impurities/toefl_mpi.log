@@ -1,0 +1,154 @@
+This is METAFONT, Version 2.7182818 (TeX Live 2015) (preloaded base=mf 2016.3.7)  22 APR 2016 13:22
+**toefl_mpi.cu toefl_old.cu
+(toefl_mpi.cu
+>> -iostream+#include
+! Unknown relation will be considered false.
+<to be read again> 
+                   >
+l.1 #include <iostream>
+                       
+? 
+>> false
+>> #include
+! Not implemented: (boolean)>(unknown numeric).
+<to be read again> 
+                   <
+l.2 #include <
+              iomanip>
+? 
+>> -iomanip+#include
+! Unknown relation will be considered false.
+<to be read again> 
+                   >
+l.2 #include <iomanip>
+                      
+? quit
+OK, entering batchmode...
+>> false
+>> #include
+! Not implemented: (boolean)>(unknown numeric).
+<to be read again> 
+                   <
+l.3 #include <
+              vector>
+I'm afraid I don't know how to apply that operation to that
+combination of types. Continue, and I'll return the second
+argument (see above) as the result of the operation.
+
+>> -vector+#include
+! Unknown relation will be considered false.
+<to be read again> 
+                   >
+l.3 #include <vector>
+                     
+Oh dear. I can't decide if the expression above is positive,
+negative, or zero. So this comparison test won't be `true'.
+
+>> false
+>> #include
+! Not implemented: (boolean)>(unknown numeric).
+<to be read again> 
+                   <
+l.5 #include <
+              mpi.h> //activate mpi
+I'm afraid I don't know how to apply that operation to that
+combination of types. Continue, and I'll return the second
+argument (see above) as the result of the operation.
+
+>> -mpi.h+#include
+! Unknown relation will be considered false.
+<to be read again> 
+                   >
+l.5 #include <mpi.h>
+                     //activate mpi
+Oh dear. I can't decide if the expression above is positive,
+negative, or zero. So this comparison test won't be `true'.
+
+>> false
+>> //activate.mpi#include
+! Not implemented: (boolean)>(unknown numeric).
+<to be read again> 
+                   "netcdf_par.h"
+l.6 #include "netcdf_par.h"
+                           
+I'm afraid I don't know how to apply that operation to that
+combination of types. Continue, and I'll return the second
+argument (see above) as the result of the operation.
+
+>> //activate.mpi#include
+! Isolated expression.
+<to be read again> 
+                   "netcdf_par.h"
+l.6 #include "netcdf_par.h"
+                           
+I couldn't find an `=' or `:=' after the
+expression that is shown above this error message,
+so I guess I'll just ignore it and carry on.
+
+! Extra tokens will be flushed.
+<to be read again> 
+                   "netcdf_par.h"
+l.6 #include "netcdf_par.h"
+                           
+I've just read as much of that statement as I could fathom,
+so a semicolon should have been next. It's very puzzling...
+but I'll try to get myself back together, by ignoring
+everything up to the next `;'. Please insert a semicolon
+now in front of anything that you don't want me to delete.
+(See Chapter 27 of The METAFONTbook for an example.)
+
+>> MPI_Init_thread
+! Isolated expression.
+<to be read again> 
+                   (
+l.28     MPI_Init_thread(
+                          &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+I couldn't find an `=' or `:=' after the
+expression that is shown above this error message,
+so I guess I'll just ignore it and carry on.
+
+! Extra tokens will be flushed.
+<to be read again> 
+                   (
+l.28     MPI_Init_thread(
+                          &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+I've just read as much of that statement as I could fathom,
+so a semicolon should have been next. It's very puzzling...
+but I'll try to get myself back together, by ignoring
+everything up to the next `;'. Please insert a semicolon
+now in front of anything that you don't want me to delete.
+(See Chapter 27 of The METAFONTbook for an example.)
+
+>> -MPI_THREAD_FUNNELED+provided!
+! Unknown relation will be considered false.
+<to be read again> 
+                   )
+l.29     if( provided != MPI_THREAD_FUNNELED)
+                                             
+Oh dear. I can't decide if the expression above is positive,
+negative, or zero. So this comparison test won't be `true'.
+
+! Missing `:' has been inserted.
+<to be read again> 
+                   {
+l.30     {
+          
+There should've been a colon after the condition.
+I shall pretend that one was there.
+
+)
+! Incomplete if; all text was ignored after line 30.
+<inserted text> 
+                fi
+<*> toefl_mpi.cu
+                 toefl_old.cu
+The file ended while I was skipping conditional text.
+This kind of error happens when you say `if...' and forget
+the matching `fi'. I've inserted a `fi'; this might work.
+
+! Emergency stop.
+<*> toefl_mpi.cu toefl_old.cu
+                             
+*** (job aborted, no legal end found)
+
+
