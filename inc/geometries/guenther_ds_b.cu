@@ -100,14 +100,18 @@ int main( )
     const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_volume( g3d);
 
-    std::cout << "computing dsDIR" << std::endl;
-    dg::DDS::FieldAligned dsFA( field, g3d_fein, rk4eps, dg::DefaultLimiter(), dg::DIR);
+//     std::cout << "computing dsDIR" << std::endl;
+//     dg::DDS::FieldAligned dsFA( field, g3d_fein, rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dsNEU" << std::endl;
     dg::DDS::FieldAligned dsNUFA( field, g3d_fein, rk4eps, dg::DefaultLimiter(), dg::NEU);
+    dg::Timer timer;
 
-    dg::DDS ds ( dsFA, g3d, field, dg::not_normed, dg::centered), 
-        dsNU ( dsNUFA, g3d, field, dg::not_normed, dg::centered);
-
+    timer.tic();
+    dg::DDS 
+//     ds ( dsFA, g3d, field, dg::not_normed, dg::centered), 
+        dsNU ( dsNUFA, g3d, field, dg::not_normed, dg::forward);
+    timer.toc();
+    std::cout << "Creating took " << timer.diff() << std::endl;
 //     dg::DS<dg::DMatrix, dg::DVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
 //     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
@@ -183,7 +187,7 @@ int main( )
 //     
 //     
   
-    dsNU( function, derivative); //ds(f)
+//     dsNU( function, derivative); //ds(f)
 
 //     dsNU.forward( function, derivativef); //ds(f)
 //     dsNU.backward( function, derivativeb); //ds(f)
@@ -242,7 +246,7 @@ int main( )
 //     ellipticsym.symv(function,dsTds);
 //     dg::blas1::scal(dsTds,-1.0);
 // //     ds.centeredT(ones,divbT);
-    ds.forwardT( derivativef, dsTdsf);  //dsT(ds(f))
+//     ds.forwardT( derivativef, dsTdsf);  //dsT(ds(f))
 //     ds.backwardT( derivativeb, dsTdsb); //dsT(ds(f))
 
 //     //centered
@@ -253,21 +257,21 @@ int main( )
 //     //arithmetic average
 //     dg::blas1::axpby(0.5,dsTdsb,0.5,dsTdsf,dsTdsfb);
 //     dg::blas1::axpby(0.5,dsTdsbd,0.5,dsTdsfd,dsTdsfbd); 
-    ds.symv(function,dsTdsfb);
-    dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
+//     ds.symv(function,dsTdsfb);
+//     dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
         //ds( function, temp);
         //dg::blas1::pointwiseDot( temp, inverseB, temp);
         //ds(temp, dsTdsfb);
         //dg::blas1::pointwiseDivide( dsTdsfb, inverseB, dsTdsfb);
 //     ds.centeredT( derivative2, dsTds2); //dsT(ds(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
-     ds.centeredT( ones, divbT);
+//      ds.centeredT( ones, divbT);
 //     
 //     double normdsds =dg::blas2::dot(derivative2, w3d,derivative2);
 //     double normds1ds =dg::blas2::dot(derivativeones, w3d,derivative2);
 //     double normdivBT =dg::blas2::dot(divBT, w3d,divBT);
-     double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-     double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
+//      double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+//      double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
 //     double normdsTf = dg::blas2::dot(derivativeT2, w3d, function2);
 //     double normdsT_1 = dg::blas2::dot(derivativeT2, w3d, ones);
 //     double normdsT1 = dg::blas2::dot(derivativeTones, w3d, function2);
@@ -280,14 +284,14 @@ int main( )
 //     double normBds1 = dg::blas2::dot(temp2, w3d, derivativeones);
 //     double normfds1 = dg::blas2::dot(function2, w3d, derivativeones);
 // 
-    std::cout << "--------------------testing ds" << std::endl;
-    double norm = dg::blas2::dot( w3d, solution);
-    //std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
-    double err =dg::blas2::dot( w3d, derivative);
-    //std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
-    dg::blas1::axpby( 1., solution, -1., derivative);
-    err =dg::blas2::dot( w3d, derivative);
-    std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
+//     std::cout << "--------------------testing ds" << std::endl;
+//     double norm = dg::blas2::dot( w3d, solution);
+//     //std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
+//     double err =dg::blas2::dot( w3d, derivative);
+//     //std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
+//     dg::blas1::axpby( 1., solution, -1., derivative);
+//     err =dg::blas2::dot( w3d, derivative);
+//     std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
    
 //     std::cout << "--------------------testing ds with RZPhi method" << std::endl;
 //     std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
@@ -297,15 +301,15 @@ int main( )
 //     errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);    
 //     std::cout << "Relative Difference in DS is "<< sqrt( errRZPhi/norm )<<"\n"; 
 //     
-     std::cout << "--------------------testing divb" << std::endl;
-     //std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
-     //std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
-     dg::blas1::axpby( 1., divbsol, -1., divbT);
-     normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-     std::cout << "Relative Difference in divb is   "<<sqrt( normdivbT/normdivb)<<"\n";
-     //std::cout << "-------------------- " << std::endl;
-     //std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
-// 
+//      std::cout << "--------------------testing divb" << std::endl;
+//      //std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
+//      //std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
+//      dg::blas1::axpby( 1., divbsol, -1., divbT);
+//      normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+//      std::cout << "Relative Difference in divb is   "<<sqrt( normdivbT/normdivb)<<"\n";
+//      //std::cout << "-------------------- " << std::endl;
+//      //std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
+// // 
 //     
 //     std::cout << "-------------------- " << std::endl;
 //     double normT = dg::blas2::dot( w3d, solutionT);
@@ -344,15 +348,15 @@ int main( )
 //     errdsTds =dg::blas2::dot( w3d, dsTds);
 //     std::cout << "Relative Difference in DST is "<< sqrt( errdsTds/normdsTds )<<"\n";   
     
-    std::cout << "--------------------testing dsTdsfb " << std::endl;
-    //std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
-    double remainder =dg::blas1::dot( w3d,dsTdsfb);
-    double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
-    //std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
-    //std::cout << "   Integral          "<<remainder<<"\n";
-    dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
-    errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
-    std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
+//     std::cout << "--------------------testing dsTdsfb " << std::endl;
+//     //std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
+//     double remainder =dg::blas1::dot( w3d,dsTdsfb);
+//     double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
+//     //std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+//     //std::cout << "   Integral          "<<remainder<<"\n";
+//     dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
+//     errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
+//     std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
 //   
 //     std::cout << "--------------------testing dsTdsfb with direct method" << std::endl;
 //     std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
@@ -431,7 +435,14 @@ int main( )
 //     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
 //     
     std::cout << "--------------------testing inversion dsTds" << std::endl; 
-    std::cout << " # of iterations "<< invert( dsNU, functionTinv2,solutiondsTds ) << std::endl; //is dsTds
+    timer.tic();
+    
+    unsigned iterations;
+    iterations =  invert( dsNU, functionTinv2,solutiondsTds ); //is dsTds
+    timer.toc();
+    std::cout << "inversion took " << timer.diff() << std::endl;
+    std::cout << " # of iterations "<< iterations << std::endl;
+    std::cout << " inversion/# of iterations "<<timer.diff()/iterations << std::endl;
     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
     double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
     std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";
