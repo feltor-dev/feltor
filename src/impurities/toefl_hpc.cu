@@ -5,7 +5,7 @@
 #include "netcdf.h"
 
 #include "toeflI.cuh"
-#include "../toefl/parameters.h"
+#include "parameters.h"
 #include "file/file.h"
 #include "file/nc_utilities.h"
 #include "file/read_input.h"

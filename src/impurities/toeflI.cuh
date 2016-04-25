@@ -55,7 +55,7 @@ struct Diffusion
 template< class Geometry, class Matrix, class container >
 struct ToeflI
 {
-    typedef typename container::value_type value_type;
+    typedef typename VectorTraits<container>::value_type value_type;
 
     /**
      * @brief Construct a ToeflI solver object
@@ -143,7 +143,7 @@ struct ToeflI
 
 template< class Geometry, class Matrix, class container>
 ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Parameters p) :
-    chi( grid.size(), 0.), omega(chi),  
+    chi( evaluate( dg::zero, grid )), omega(chi),  
     binv( evaluate( LinearX( p.kappa, 1.), grid)), 
     phi( 3, chi), dyphi( phi), ype(phi),
     gamma_n( 2, chi),
