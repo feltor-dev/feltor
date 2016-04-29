@@ -254,7 +254,7 @@ int main( int argc, char* argv[])
         //----------------Stop vorticity computation
         //----------------Start Perpendicular ELECTRONDENSITYFLUX computation
         //poissonpart
-        dg::blas1::transform(fields3d[0], temp3, dg::PLUS<>(+1)); //Ne +1
+        dg::blas1::transform(fields3d[0], temp3, dg::PLUS<>(+1)); // = Ne
         poisson( fields3d[4], fields3d[0], Deperp3d); //D_perp,e = [phi,N_e]_RZ
         dg::blas1::pointwiseDot( Deperp3d, binv, Deperp3d); //D_perp,e = 1/B*[phi,N_e]_RZ              
         //curvpart
@@ -311,7 +311,7 @@ int main( int argc, char* argv[])
         //Same procedure for fluc
         toravg(Depsip3dfluc,Depsip2dflucavg);
         //fluctuation
-//         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, Depsip2dflucavg.data());
+        err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, Depsip2dflucavg.data());
         //toroidal avg
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, Depsip2davg.data());
         solovev::FluxSurfaceAverage<dg::HVec> fsaDepsipfluc(g2d_out,gp,  Depsip2dflucavg );
