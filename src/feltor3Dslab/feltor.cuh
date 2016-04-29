@@ -14,6 +14,26 @@
 
 namespace eule
 {
+struct Field
+{
+    Field( double kappa): kappa_(kappa){}
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+        yp[0] = yp[1] = 0;
+        yp[2] = 1.;
+    }
+    void operator()( double x, double y)
+    {
+        return 1. + kappa_*x; 
+    }
+    void operator()( double x, double y, double z)
+    {
+        return 1. + kappa_*x; 
+    }
+    private:
+    double kappa_;
+
+};
 ///@addtogroup solver
 ///@{
 /**
@@ -280,12 +300,12 @@ struct Feltor
 template<class Grid, class DS, class Matrix, class container>
 Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p): 
     dsDIR_( typename DS::FieldAligned( 
-                solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR, (2*M_PI)/((double)p.Nz)), 
-            solovev::Field(gp), dg::normed, dg::forward ),
+                Field( p.kappa), g, 1e-10, dg::DefaultLimiter(), dg::DIR, g.hz()), 
+            Field(p.kappa), dg::normed, dg::forward ),
     dsNEU_( typename DS::FieldAligned(
-                solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx(), (2*M_PI)/((double)p.Nz)), 
-          solovev::Field(gp), dg::normed, dg::forward ),
-    poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
+                Field( p.kappa), g, 1e-10, dg::DefaultLimiter(gp), dg::NEU, g.hz()), 
+          Field(p.kappa), dg::normed, dg::forward ),
+    poissonDIR(g, dg::DIR, dg::DIR), 
     //////////the elliptic and Helmholtz operators//////////////////////////
     pol(          g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered), 
     lapperpDIR(   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
@@ -462,8 +482,8 @@ void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>
 {
     /* y[0] := N_e - 1
        y[1] := N_i - 1
-       y[2] := U_e
-       y[3] := U_i
+       y[2] := U_e - U_{bg}
+       y[3] := U_i - U_{bg}
     */
     dg::Timer t;
     t.tic();
