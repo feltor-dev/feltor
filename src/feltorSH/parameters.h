@@ -13,71 +13,56 @@ struct Parameters
     unsigned itstp, maxout;
 
     double eps_pol,  eps_gamma, eps_time;
-    double eps_hat;
 
     double mu[2];
     double tau[2];
     double mcv;
     double lx,ly;
-    double ln;
-    double dlocal;
-    double nu_perp, d, c;
+    double nu_perp;
     
     double amp, sigma, posX, posY;
 
     double  nprofileamp, bgprofamp;
-    unsigned zf;
-    double solb,solw;
-    double omega_source;
-    enum dg::bc bc_x,bc_y;
+    unsigned init, iso;
+    enum dg::bc bc_x,bc_y; 
 
     /**
      * @brief constructor to make a const object
      *
      * @param v Vector from read_input function
      */
-    Parameters( const std::vector< double>& v):layout_(0) {
-        if( layout_ == 0)
-        {
-            n  = (unsigned)v[1]; 
-            Nx = (unsigned)v[2];
-            Ny = (unsigned)v[3];
-            dt = v[4];
-            n_out = v[5];
-            Nx_out = v[6];
-            Ny_out = v[7];
-            itstp = v[8];
-            maxout = v[9];
-            eps_pol = v[10];
-            eps_gamma = v[11];
-            eps_time = v[12];
-            eps_hat = 1.;
-            mu[0] = v[13];
-            mu[1] = 1.;
-            tau[0] = -1.;
-            tau[1] = v[14];
-            mcv    =v[15];
-            nu_perp = v[16];
-            d = v[17];
-            c = v[18];            
-            amp = v[19];
-            sigma = v[20];
-            posX = v[21];
-            posY = v[22];
-            nprofileamp = v[23];
-            bgprofamp = v[24];
-            lx = v[25];
-            ly = v[26];
-            bc_x = map((int)v[27]);
-            bc_y =map((int)v[28]);
-            zf = (unsigned)v[29];
-            ln = v[30];
-            dlocal = (double)(lx*d/c);
-            solb = v[31];
-            solw = v[32];
-            omega_source = v[33];
+    Parameters( const std::vector< double>& v) {
+        n  = (unsigned)v[1]; 
+        Nx = (unsigned)v[2];
+        Ny = (unsigned)v[3];
+        dt = v[4];
+        n_out = v[5];
+        Nx_out = v[6];
+        Ny_out = v[7];
+        itstp = v[8];
+        maxout = v[9];
+        eps_pol = v[10];
+        eps_gamma = v[11];
+        eps_time = v[12];
+        mu[0] = -0.000272121;
+        mu[1] = 1.;
+        tau[0] = -1.;
+        tau[1]  = v[13];
+        mcv     = v[14];
+        nu_perp = v[15];
+        amp     = v[16];
+        sigma   = v[17];
+        posX    = v[18];
+        posY    = v[19];
+        nprofileamp = 0.;
+        bgprofamp   = 1.;
+        lx = v[20];
+        ly = v[21];
+        bc_x = map((int)v[22]);
+        bc_y = map((int)v[23]);
+        init = v[24];
+        iso =  v[25];
             
-        }
     }
     /**
      * @brief Display parameters
@@ -94,9 +79,7 @@ struct Parameters
             <<"     Ion-temperature:  = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
             <<"     eff grav./diss f. = "<<(1.+tau[1])*sigma*sigma*sigma*mcv*amp/(nu_perp*nu_perp)<<"\n"
-            <<"     par. Resistivity: = "<<c<<"\n"
-            <<"     D:                = "<<d<<"\n"
-            <<"     dlocal:           = "<<dlocal<<"\n";
+            <<"     isothermal (0/1)  = "<<iso<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    width:        "<<sigma<<"\n"
@@ -124,17 +107,9 @@ struct Parameters
             <<"     ly  =              "<<ly<<"\n"
             <<"     bcx =              "<<bc_x<<"\n"
             <<"     bcy =              "<<bc_y<<"\n";
-        os << "modified/ordinary \n"
-            <<"     zf =              "<<zf<<"\n"
-            <<"     ln =              "<<ln<<"\n";
-        os << "SOL/EDGE params \n"
-            <<"     sol boundary =    "<<solb<<"\n"
-            <<"     damping width =    "<<solw<<"\n"
-            <<"     omega_source =    "<<omega_source<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
     private:
-    int layout_;
     dg::bc map( int i)
     {
         switch( i)

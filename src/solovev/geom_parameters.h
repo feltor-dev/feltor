@@ -23,7 +23,8 @@ struct GeomParameters
            psipmin, //!< for source 
            psipmax, //!< for profile
            psipmaxcut, //!< for cutting
-           psipmaxlim; //!< for limiter
+           psipmaxlim,  //!< for limiter
+           qampl; //scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
      /**
      * @brief constructor to make an object
@@ -33,8 +34,12 @@ struct GeomParameters
      */   
     GeomParameters( const std::vector< double>& v) {
         A=v[1];
-        c.resize(13);
+        c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
         for (unsigned i=0;i<12;i++) c[i]=v[i+2];
+        c[12] = 0;
+        if( A!=0) c[12] = 1;
+        for( unsigned i=0; i<12; i++)
+            if(c[i]!=0) c[12] = 1.;
         R_0 = v[14];
         a=R_0*v[15];
         elongation=v[16];
@@ -45,6 +50,7 @@ struct GeomParameters
         psipmax= v[21];
         psipmaxcut = v[22];
         psipmaxlim = v[23];
+        qampl = v[24];
     }
     /**
      * @brief Display parameters
@@ -55,7 +61,7 @@ struct GeomParameters
     {
         os << "Geometrical parameters are: \n"
             <<" A             = "<<A<<"\n";
-        for( unsigned i=0; i<12; i++)
+        for( unsigned i=0; i<13; i++)
             os<<" c"<<i+1<<"\t\t = "<<c[i]<<"\n";
 
         os  <<" R0            = "<<R_0<<"\n"
@@ -67,7 +73,8 @@ struct GeomParameters
             <<" psipmin       = "<<psipmin<<"\n"
             <<" psipmax       = "<<psipmax<<"\n"
             <<" psipmaxcut    = "<<psipmaxcut<<"\n"
-            <<" psipmaxlim    = "<<psipmaxlim<<"\n";
+            <<" psipmaxlim    = "<<psipmaxlim<<"\n"
+            <<" qampl    = "<<qampl<<"\n";
         os << std::flush;
 
     }

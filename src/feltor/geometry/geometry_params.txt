@@ -1,10 +1,9 @@
-
           * Input-File for TJ-K axisymmetric solovev equilibrium *
     Iconst without X-point, elong AUG,  Te_10eV,B0_0.07T,deuterium,Cref_1e-5
           -----------------------------------------------------------
-          
+
 ----------------------Solovev coefficients----------------------
-1)  A                        =  0.0     
+1)  A                        =  0.0
 2)  c1                       =  0.581368551886085812520672288288
 3)  c2                       =  9.23607566649785789094195742225
 4)  c3                       = -9.18883384266873450652485522078
@@ -18,19 +17,16 @@
 12) c11                      = -0.973038553030647519376218427175
 13) c12                      =0.106151757055764515634785885428
 ----------------------geometric coefficients----------------------
-14) R0 (in units of rhos)    =  91.8842 
+14) R0 (in units of rhos)    =  91.8842
 15) inv aspect ratio (a/R0)  =  0.166667
 16) elongation               =  1.7
 17) triangularity            =  0.33
 ----------------------Miscellaneous----------------------
 18) alpha (Damping thickness)=  0.02
-19) RK4 epsilon              =  1e-2
+19) RK4 epsilon              =  1e-4
 20) psip_min                 = -1.1
 21) psip_max                 =  0.0 (> -7.4)
 22) psip_max_cut             =  1e10
 23) psip_max_lim             =  1e10
-
+24) qampl                    =  1
 @ ------------------------------------------------------------------------
-
-
-

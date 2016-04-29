@@ -30,7 +30,13 @@
 int main( int argc, char* argv[])
 {
      ////////////////////////////////setup MPI///////////////////////////////
-    MPI_Init( &argc, &argv);
+    int provided;
+    MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if( provided != MPI_THREAD_FUNNELED)
+    {
+        std::cerr << "wrong mpi-thread environment provided!\n";
+        return -1;
+    }
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -75,9 +81,9 @@ int main( int argc, char* argv[])
     dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::MHMatrix, dg::MHVec, dg::MHVec > feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::MDMatrix, dg::MDVec, dg::MDVec > feltor( grid, p); //initialize before rolkar!
     if(rank==0) std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::MHMatrix, dg::MHVec, dg::MHVec > rolkar( grid, p);
+    eule::Rolkar<dg::MDMatrix, dg::MDVec, dg::MDVec > rolkar( grid, p);
     if(rank==0) std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -94,13 +100,13 @@ int main( int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-//         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+         dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
+    //dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 
-    std::vector<dg::MHVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
+    std::vector<dg::MDVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
     
 
     //no field aligning
@@ -115,7 +121,7 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << "Done!\n";
 
     
-    dg::Karniadakis< std::vector<dg::MHVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     if(rank==0) std::cout << "intialize Timestepper" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
     if(rank==0) std::cout << "Done!\n";
@@ -180,23 +186,26 @@ int main( int argc, char* argv[])
     MPI_Cart_get( comm, 2, dims, periods, coords);
     size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};  
     size_t start[3] = {0, coords[1]*count[1],          coords[0]*count[2]}; 
-    dg::MHVec transferD( dg::evaluate(dg::zero, grid));
+    dg::MDVec transfer( dg::evaluate(dg::zero, grid));
+    dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
-    //create local interpolation matrix
-    dg::IHMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); //create local interpolation matrix
     for( unsigned i=0; i<2; i++)
     {
-        dg::blas2::gemv( interpolate, y0[i].data(), transferH);
+        dg::blas2::gemv( interpolate, y0[i].data(), transferD);
+        transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //pot
-    transferD = feltor.potential()[0];
-    dg::blas2::gemv( interpolate, transferD.data(), transferH);
+    transfer = feltor.potential()[0];
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    transferH = transferD;//transfer to host
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     //Vor
-    transferD = feltor.potential()[0];
-    dg::blas2::gemv( rolkar.laplacianM(), transferD, y1[1]);        //correct?    
-    dg::blas2::symv( interpolate,y1[1].data(), transferH);
+    transfer = feltor.potential()[0];
+    dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);        
+    dg::blas2::gemv( interpolate,y1[1].data(), transferD);
+    transferH = transferD;//transfer to host
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     double time = 0;
 
@@ -295,15 +304,18 @@ int main( int argc, char* argv[])
 //         err = nc_open(argv[2], NC_WRITE, &ncid);
         for( unsigned j=0; j<2; j++)
         {
-            dg::blas2::gemv( interpolate, y0[j].data(), transferH);
-            err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
+        dg::blas2::gemv( interpolate, y0[i].data(), transferD);
+        transferH = transferD;//transfer to host
+        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
         }
-        transferD = feltor.potential()[0];
-        dg::blas2::gemv( interpolate, transferD.data(), transferH);
+        transfer = feltor.potential()[0];
+        dg::blas2::gemv( interpolate, transfer.data(), transferD);
+        transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
-        transferD = feltor.potential()[0];
-        dg::blas2::gemv( rolkar.laplacianM(), transferD, y1[1]);        //correct?    
-        dg::blas2::symv( interpolate,y1[1].data(), transferH);
+        transfer = feltor.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);        
+        dg::blas2::gemv( interpolate,y1[1].data(), transferD);
+        transferH = transferD;//transfer to host
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 //         err = nc_close(ncid);

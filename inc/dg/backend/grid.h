@@ -68,13 +68,13 @@ struct Grid1d
      */
     T h() const {return hx_;}
     /**
-     * @brief # of cells
+     * @brief number of cells
      *
      * @return 
      */
     unsigned N() const {return Nx_;}
     /**
-     * @brief # of polynomial coefficients
+     * @brief number of polynomial coefficients
      *
      * @return 
      */
@@ -200,19 +200,19 @@ struct Grid2d
      */
     T hy() const {return hy_;}
     /**
-     * @brief # of polynomial coefficients in x and y
+     * @brief number of polynomial coefficients in x and y
      *
      * @return 
      */
     unsigned n() const {return n_;}
     /**
-     * @brief # of cells in x
+     * @brief number of cells in x
      *
      * @return 
      */
     unsigned Nx() const {return Nx_;}
     /**
-     * @brief # of cells in y
+     * @brief number of cells in y
      *
      * @return 
      */
@@ -434,25 +434,25 @@ struct Grid3d
      */
     T hz() const {return hz_;}
     /**
-     * @brief # of polynomial coefficients in x and y
+     * @brief number of polynomial coefficients in x and y
      *
      * @return 
      */
     unsigned n() const {return n_;}
     /**
-     * @brief # of points in x
+     * @brief number of points in x
      *
      * @return 
      */
     unsigned Nx() const {return Nx_;}
     /**
-     * @brief # of points in y
+     * @brief number of points in y
      *
      * @return 
      */
     unsigned Ny() const {return Ny_;}
     /**
-     * @brief # of points in z
+     * @brief number of points in z
      *
      * @return 
      */

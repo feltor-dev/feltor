@@ -18,7 +18,7 @@ inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const P
     //communication
     typename MatrixTraits<Precon>::value_type sum=0;
     MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD); 
+    //MPI_Barrier(MPI_COMM_WORLD); 
 
     return sum;
 }

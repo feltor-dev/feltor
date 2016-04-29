@@ -33,15 +33,15 @@ int main(int argc, char* argv[])
     
 
     if(rank==0)std::cout << "constructing polavg" << std::endl;
-    dg::PoloidalAverage<dg::MHVec, dg::MHVec > pol(g);
+    dg::PoloidalAverage<dg::MDVec, dg::MDVec > pol(g);
     if(rank==0)std::cout << "constructing polavg end" << std::endl;
-    dg::MHVec vector = dg::evaluate( function ,g), average_y( vector);
-    const dg::MHVec solution = dg::evaluate( pol_average, g);
+    dg::MDVec vector = dg::evaluate( function ,g), average_y( vector);
+    const dg::MDVec solution = dg::evaluate( pol_average, g);
     if(rank==0)std::cout << "Averaging ... \n";
     pol( vector, average_y);
     dg::blas1::axpby( 1., solution, -1., average_y, vector);
 
-    dg::MHVec w2d = dg::create::weights(g);
+    dg::MDVec w2d = dg::create::weights(g);
     double norm = dg::blas2::dot(vector, w2d, vector);
     if(rank==0)std::cout << "Distance to solution is: "<<        sqrt(norm)<<std::endl;
 

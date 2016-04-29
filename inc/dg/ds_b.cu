@@ -63,7 +63,7 @@ int main()
     const dg::DVec w3d = dg::create::weights( g3d);
     dg::Timer t;
     t.tic();
-    dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::DIR);
+    dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
 
     dg::DDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
     t.toc();
@@ -82,14 +82,20 @@ int main()
     std::cout << "Relative Difference Is "<< sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm )<<"\n";
     std::cout << "Error is from the parallel derivative only if n>2\n"; //since the function is a parabola
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
-    dg::GaussianZ modulate(M_PI, 2*M_PI, 1);
+    dg::GaussianZ modulate(0., M_PI/3., 1);
     t.tic();
-    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 3);
+    function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 2);
     t.toc();
     std::cout << "Fieldaligned initialization took "<<t.diff()<<"s\n";
     ds( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    std::cout << "Norm Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
+    std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
+    ds.forward( function, derivative);
+    norm = dg::blas2::dot(w3d, derivative);
+    std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    ds.backward( function, derivative);
+    norm = dg::blas2::dot(w3d, derivative);
+    std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
     
     return 0;
 }

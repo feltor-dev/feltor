@@ -251,8 +251,8 @@ struct Probe
      * @brief Create 64 datasets in a new group
      *
      * @param name group name
-     * @param i Probe array line
-     * @param j Probe array column
+     * @param imax Probe array line
+     * @param jmax Probe array column
      */
     void createSet( const char * name,  unsigned imax, unsigned jmax )
     {
