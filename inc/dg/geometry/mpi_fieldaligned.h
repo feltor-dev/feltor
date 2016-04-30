@@ -139,11 +139,11 @@ struct MPI_FieldAligned
      * @param left left boundary value 
      * @param right right boundary value
      */
-    void set_boundaries( dg::bc bcz, const LocalContainer& left, const LocalContainer& right)
+    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
     {
         bcz_ = bcz; 
-        left_ = left;
-        right_ = right;
+        left_ = left.data();
+        right_ = right.data();
     }
 
     /**

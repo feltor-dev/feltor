@@ -14,6 +14,27 @@
 namespace dg{
 
 /**
+ * @brief With the Default field ds becomes a dz
+ */
+struct DefaultField
+{
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+        yp[0] = yp[1] = 0;
+        yp[2] = 1.;
+    }
+    double operator()( double x, double y)
+    {
+        return 1.;
+    }
+    double operator()( double x, double y, double z)
+    {
+        return 1.;
+    }
+
+};
+
+/**
  * @brief Default Limiter means there is a limiter everywhere
  */
 struct DefaultLimiter

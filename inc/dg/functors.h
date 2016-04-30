@@ -458,7 +458,7 @@ struct LinearY
  * @brief Functor for a linear polynomial in z-direction
  * \f[ f(x,y,z) = az+b \f]
  */
-struct LinearY
+struct LinearZ
 {
     /**
      * @brief Construct with two coefficients
@@ -466,7 +466,7 @@ struct LinearY
      * @param a linear coefficient 
      * @param b constant coefficient
      */
-    LinearY( double a, double b):a_(a), b_(b){}
+    LinearZ( double a, double b):a_(a), b_(b){}
     /**
      * @brief Return linear polynomial in x 
      *
