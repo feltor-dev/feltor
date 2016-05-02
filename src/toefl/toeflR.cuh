@@ -17,17 +17,19 @@
 
 namespace dg
 {
-template<class Matrix, class container>
+template<class Geometry, class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::CartesianGrid2d& g, double nu, bool global):
+    Diffusion( const Geometry& g, double nu, bool global):
         nu_(nu), global(global), 
-        w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
-        temp( dg::evaluate(dg::zero, g)), expx(temp),
+        temp( dg::evaluate(dg::zero, g)), 
         LaplacianM_perp( g, dg::normed, dg::centered){
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
+        /* x[0] := N_e - 1
+         * x[2] := N_i -1 
+         */
         for( unsigned i=0; i<x.size(); i++)
         {
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
@@ -35,16 +37,16 @@ struct Diffusion
             dg::blas1::axpby( -nu_, y[i], 0., y[i]);
         }
     }
-    dg::Elliptic<dg::CartesianGrid2d, Matrix, container>& laplacianM() {return LaplacianM_perp;}
-    const container& weights(){return w2d;}
-    const container& precond(){return v2d;}
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
+    const container& weights(){return LaplacianM_perp.weights();}
+    const container& precond(){return LaplacianM_perp.precond();}
 
   private:
     double nu_;
     bool global;
     const container w2d, v2d;
-    container temp, expx;
-    dg::Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM_perp;
+    container temp;
+    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 };
 
 template< class Matrix, class container >
@@ -63,23 +65,6 @@ struct ToeflR
      */
     ToeflR( const CartesianGrid2d& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
 
-    /**
-     * @brief Exponentiate pointwise every Vector in src 
-     *
-     * @param src source
-     * @param dst destination may equal source
-     */
-    void exp( const std::vector<container>& src, std::vector<container>& dst);
-
-    /**
-     * @brief Take the natural logarithm pointwise of every Vector in src 
-     *
-     * @param src source
-     * @param dst destination may equal source
-     */
-    void log( const std::vector<container>& src, std::vector<container>& dst);
-
-    void divide( const container& zaehler, const container& nenner, container& result);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -94,14 +79,14 @@ struct ToeflR
      *
      * @return cusp matrix
      */
-    dg::Elliptic<dg::CartesianGrid2d, Matrix, container>& laplacianM( ) { return laplaceM;}
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM( ) { return laplaceM;}
 
     /**
      * @brief Return the Gamma operator used by this object
      *
      * @return Gamma operator
      */
-    dg::Helmholtz<dg::CartesianGrid2d, Matrix, container >&  gamma() {return gamma1;}
+    dg::Helmholtz<Geometry, Matrix, container >&  gamma() {return gamma1;}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -142,28 +127,24 @@ struct ToeflR
 
   private:
     //use chi and omega as helpers to compute square velocity in omega
-    const container& compute_vesqr( const container& potential);
-    //extrapolates and solves for phi[1], then adds square velocity ( omega)
     const container& compute_psi( const container& potential);
     const container& polarisation( const std::vector<container>& y);
 
     container chi, omega;
-    container gamma_n, gamma_old;
     const container binv; //magnetic field
 
-    std::vector<container> phi, phi_old, dyphi;
-    std::vector<container> expy, dxy, dyy, lapy;
+    std::vector<container> phi, dyphi, ype;
+    std::vector<container> dyy, lny, lapy;
+    container gamma_n;
 
     //matrices and solvers
-    //Elliptic<Matrix, container> A; //contains unnormalized laplacian if local
-    Elliptic<dg::CartesianGrid2d, Matrix, container> laplaceM; //contains normalized laplacian
-    Helmholtz<dg::CartesianGrid2d,  Matrix, container> gamma1;
-    ArakawaX< dg::CartesianGrid2d, Matrix, container> arakawa; 
-    Elliptic<dg::CartesianGrid2d, Matrix, container> pol;
-    CG<container > pcg;
+    Elliptic<Geometry, Matrix, container> pol, laplaceM; //contains normalized laplacian
+    Helmholtz<Geometry,  Matrix, container> gamma1;
+    ArakawaX< Geometry, Matrix, container> arakawa; 
 
-    const container w2d, v2d;
-    const container one;
+    dg::Invert<container> invert_pol, invert_invgamma;
+
+    const container w2d, v2d, one;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
     const int global;
@@ -172,78 +153,43 @@ struct ToeflR
 
 };
 
-template< class M, class container>
-ToeflR< M, container>::ToeflR( const dg::CartesianGrid2d& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
-    chi( grid.size(), 0.), omega(chi), gamma_n( chi), gamma_old( chi), 
+template< class Geometry, class M, class container>
+ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
+    chi( evaluate( dg::zero, grid)), omega(chi),
     binv( evaluate( LinearX( kappa, 1.), grid)), 
-    phi( 2, chi), phi_old( phi), dyphi( phi),
-    expy( phi), dxy( expy), dyy( dxy), lapy( dyy),
+    phi( 2, chi), dyphi( phi), ype(phi),
+    gamma_n(chi),
+    dyy(2,chi), lny( dyy), lapy(dyy),
     gamma1(  grid, -0.5*tau, dg::centered),
     arakawa( grid), 
     pol(     grid, not_normed, dg::centered), 
-    pcg( omega, omega.size()), 
-    w2d( create::weights(grid)), v2d( create::inv_weights(grid)), one( dg::evaluate( dg::one, grid)), 
-    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global),
-    laplaceM( grid, normed, dg::centered)
-    //A( grid, not_normed)
+    laplaceM( grid, normed, centered),
+    invert_pol(      omega, omega.size(), p.eps_pol),
+    invert_invgamma( omega, omega.size(), p.eps_gamma),
+    w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
+    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
 {
 }
 
-template< class M, class container>
-const container& ToeflR<M, container>::compute_vesqr( const container& potential)
+template< class G, class M, class container>
+const container& ToeflR<G, M, container>::compute_psi( const container& potential)
 {
-    assert( global);
-    blas2::gemv( arakawa.dx(), potential, chi);
-    blas2::gemv( arakawa.dy(), potential, omega);
-    blas1::pointwiseDot( binv, chi, chi);
-    blas1::pointwiseDot( binv, omega, omega);
-    blas1::pointwiseDot( chi, chi, chi);
-    blas1::pointwiseDot( omega, omega, omega);
-    blas1::axpby( 1., chi, 1.,  omega);
-    return omega;
-}
-template< class M, class container>
-const container& ToeflR<M, container>::compute_psi( const container& potential)
-{
-    //compute Gamma phi[0]
-    blas1::axpby( 2., phi[1], -1.,  phi_old[1]);
-    phi[1].swap( phi_old[1]);
+    invert_invgamma( gamma1, phi[1], potential);
 
-    blas2::symv( w2d, potential, omega);
-#ifdef DG_BENCHMARK
-    Timer t;
-    t.tic();
-#endif //DG_BENCHMARK
-    unsigned number = pcg( gamma1, phi[1], omega, v2d, eps_gamma);
-    if( number == pcg.get_max())
-        throw Fail( eps_gamma);
-#ifdef DG_BENCHMARK
-    std::cout << "# of pcg iterations for psi \t"<< number << "\t";
-    t.toc();
-    std::cout<< "took \t"<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
-    //now add -0.5v_E^2
-    if( global)
-    {
-        blas1::axpby( 1., phi[1], -0.5, compute_vesqr( potential), phi[1]);
-    }
-    return phi[1];
+    arakawa.variation(potential, omega);
+    dg::blas1::pointwiseDot( binv, omega, omega);
+    dg::blas1::pointwiseDot( binv, omega, omega);
+
+    dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
+    return phi[1];    
+}
 }
 
 
 //computes and modifies expy!!
-template<class M, class container>
-const container& ToeflR< M, container>::polarisation( const std::vector<container>& y)
+template<class G, class M, class container>
+const container& ToeflR<G, M, container>::polarisation( const std::vector<container>& y)
 {
-    //USE INVERT CLASS 
-    //extrapolate phi and gamma_n
-    blas1::axpby( 2., phi[0], -1.,  phi_old[0]);
-    blas1::axpby( 2., gamma_n, -1., gamma_old);
-    //blas1::axpby( 1., phi[1], 0.,  phi_old[1]);
-    //blas1::axpby( 0., gamma_n, 0., gamma_old);
-    gamma_n.swap( gamma_old);
-    phi[0].swap( phi_old[0]);
-
 #ifdef DG_BENCHMARK
     Timer t; 
     t.tic();
@@ -251,28 +197,23 @@ const container& ToeflR< M, container>::polarisation( const std::vector<containe
     //compute chi and polarisation
     if( global) 
     {
-        exp( y, expy);
-        blas1::pointwiseDot( binv, expy[1], chi); //\chi = n_i
+        dg::blas1::transfer( y[1], chi);
+        dg::blas1::plus( chi, 1.); 
+        blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
         blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        //A = B;  
         if( global == 1)
             pol.set_chi( chi);
-        //compute omega
-        dg::blas1::transform( expy[0], expy[0], dg::PLUS<double>(-1)); //n_e -1
-        dg::blas1::transform( expy[1], omega, dg::PLUS<double>(-1)); //n_i -1
     }
     else
     {
         blas1::axpby( 1., y[1], 0., omega); //n_i = omega
     }
-    blas2::symv( w2d, omega, omega); 
 #ifdef DG_BENCHMARK
     t.toc();
     std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
     t.tic();
 #endif 
-    //Attention!! gamma1 wants Dirichlet BC
-    unsigned number = pcg( gamma1, gamma_n, omega, v2d, eps_gamma);
+    invert_invgamma( gamma1, gamma_n, y[1]);
     if( number == pcg.get_max())
         throw Fail( eps_gamma);
 #ifdef DG_BENCHMARK
@@ -283,7 +224,7 @@ const container& ToeflR< M, container>::polarisation( const std::vector<containe
 #endif 
     if( global)
     {
-        blas1::axpby( -1., expy[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
+        blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
         if( global == 2)
             divide( omega, expy[1], omega);
         blas2::symv( w2d, omega, omega);
@@ -359,40 +300,7 @@ void ToeflR<M, container>::operator()( std::vector<container>& y, std::vector<co
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
 
-    //add laplacians
-    //for( unsigned i=0; i<y.size(); i++)
-    //{
-    //    blas2::gemv( laplaceM, y[i], lapy[i]);
-    //    if( global)
-    //    {
-    //        blas1::pointwiseDot( dxy[i], dxy[i], dxy[i]);
-    //        blas1::pointwiseDot( dyy[i], dyy[i], dyy[i]);
-    //        //now sum all 3 terms up 
-    //        blas1::axpby( -1., dyy[i], 1., lapy[i]); //behold the minus
-    //        blas1::axpby( -1., dxy[i], 1., lapy[i]); //behold the minus
-    //    }
-    //    //blas1::axpby( -nu, lapy[i], 1., yp[i]); //rescale 
-    //}
 
-}
-
-template< class M, class container>
-void ToeflR< M, container>::exp( const std::vector<container>& y, std::vector<container>& target)
-{
-    for( unsigned i=0; i<y.size(); i++)
-        dg::blas1::transform(y[i], target[i], dg::EXP<double>());
-}
-template< class M, class container>
-void ToeflR< M, container>::log( const std::vector<container>& y, std::vector<container>& target)
-{
-    for( unsigned i=0; i<y.size(); i++)
-        dg::blas1::transform( y[i], target[i], dg::LN<double>());
-}
-
-template< class M, class container>
-void ToeflR<M, container>::divide( const container& zaehler, const container& nenner, container& result)
-{
-    dg::blas1::pointwiseDivide( zaehler, nenner, result);
 }
 
 }//namespace dg
