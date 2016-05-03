@@ -176,7 +176,9 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, dou
 template< class G, class M, class container>
 const container& ToeflR<G, M, container>::compute_psi( const container& potential)
 {
-    invert_invgamma( gamma1, phi[1], potential);
+    unsigned number = invert_invgamma( gamma1, phi[1], potential);
+    if(  number == invert_invgamma.get_max())
+        throw dg::Fail( eps_gamma);
 
     arakawa.variation(potential, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
@@ -197,9 +199,13 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
     blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
     blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
     pol.set_chi( chi);
-    invert_invgamma( gamma1, gamma_n, y[1]);
+    unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
+    if(  number == invert_invgamma.get_max())
+        throw dg::Fail( eps_gamma);
     blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
-    invert_pol( pol, phi[0], omega);
+    number = invert_pol( pol, phi[0], omega);
+    if(  number == invert_pol.get_max())
+        throw dg::Fail( eps_pol);
     return phi[0];
 }
 
