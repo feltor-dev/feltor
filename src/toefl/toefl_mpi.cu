@@ -171,13 +171,13 @@ int main( int argc, char* argv[])
             y0.swap( y1); //attention on -O3 ?
             //store accuracy details
             {
-                std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
+                if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
                 E0 = E1;
                 E1 = test.energy();
                 diff = (E1 - E0)/p.dt;
                 double diss = test.energy_diffusion( );
-                std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-                std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
+                if(rank==0)std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+                if(rank==0)std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
             }
             time+=p.dt;
             {
