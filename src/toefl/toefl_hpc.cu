@@ -50,8 +50,8 @@ int main( int argc, char* argv[])
     ////////////////////////////////set up computations///////////////////////////
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
+    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
@@ -61,20 +61,12 @@ int main( int argc, char* argv[])
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
 
-    if( p.global)
-    {
-        dg::blas1::plus( y0[0], +1);
-        dg::blas1::plus( y0[1], +1);
-        test.log( y0, y0); //transform to logarithmic values
-    }
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
     ab.init( test, diffusion, y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
-    if( p.global)
-        test.exp( y1,y1); //transform to correct values
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -114,6 +106,8 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
+    const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
+    double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     dg::Timer t;
     t.tic();
     try
@@ -133,8 +127,16 @@ int main( int argc, char* argv[])
             ab( test, diffusion, y0);
             y0.swap( y1); //attention on -O3 ?
             //store accuracy details
+            {
+                std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
+                E0 = E1;
+                E1 = test.energy();
+                diff = (E1 - E0)/p.dt;
+                double diss = test.energy_diffusion( );
+                std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+                std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
+            }
             time+=p.dt;
-            if( p.global) 
             {
                 err = nc_open(argv[2], NC_WRITE, &ncid);
                 double ener=test.energy(), mass=test.mass(), diff=test.mass_diffusion(), dEdt=test.energy_diffusion();
@@ -147,8 +149,6 @@ int main( int argc, char* argv[])
             }
         }
         //output all three fields
-        if( p.global)
-            test.exp( y1,y1); //transform to correct values
         transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
         for( int k=0;k<3; k++)
             dg::blas1::transfer( transferD[k], output[k]);

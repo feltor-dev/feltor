@@ -53,8 +53,8 @@ int main( int argc, char* argv[])
 
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
+    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
@@ -64,12 +64,6 @@ int main( int argc, char* argv[])
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
 
-    if( p.global)
-    {
-        dg::blas1::plus( y0[0], +1);
-        dg::blas1::plus( y0[1], +1);
-        test.log( y0, y0); //transform to logarithmic values
-    }
 
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
@@ -90,13 +84,7 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
-        if( p.global)
-        {
-            test.exp( y0, y1);
-            dg::blas1::transform( y1[0], dvisual, dg::PLUS<double>(-1));
-        }
-        else
-            dvisual = y0[0];
+        dvisual = y0[0];
 
         dg::blas1::transfer( dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
@@ -131,7 +119,6 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
-            if( p.global)
             {
                 std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
                 E0 = E1;

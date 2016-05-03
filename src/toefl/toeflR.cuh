@@ -32,9 +32,11 @@ struct Diffusion
          */
         for( unsigned i=0; i<x.size(); i++)
         {
-            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
-            dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            dg::blas1::axpby( -nu_, y[i], 0., y[i]);
+            //dg::blas2::gemv( LaplacianM_perp, x[i], temp);
+            //dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            //dg::blas1::axpby( -nu_, y[i], 0., y[i]);
+            dg::blas2::gemv( LaplacianM_perp, x[i], y[i]);
+            dg::blas1::scal( y[i], nu_);
         }
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
@@ -49,7 +51,7 @@ struct Diffusion
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 };
 
-template< class Matrix, class container >
+template< class Geometry,  class Matrix, class container >
 struct ToeflR
 {
     /**
@@ -63,7 +65,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const CartesianGrid2d& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
+    ToeflR( const Geometry& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
 
 
     /**
@@ -164,8 +166,8 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, dou
     arakawa( grid), 
     pol(     grid, not_normed, dg::centered), 
     laplaceM( grid, normed, centered),
-    invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgamma( omega, omega.size(), p.eps_gamma),
+    invert_pol(      omega, omega.size(), eps_pol),
+    invert_invgamma( omega, omega.size(), eps_gamma),
     w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
 {
@@ -183,102 +185,57 @@ const container& ToeflR<G, M, container>::compute_psi( const container& potentia
     dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }
-}
 
 
 //computes and modifies expy!!
 template<class G, class M, class container>
 const container& ToeflR<G, M, container>::polarisation( const std::vector<container>& y)
 {
-#ifdef DG_BENCHMARK
-    Timer t; 
-    t.tic();
-#endif
     //compute chi and polarisation
-    if( global) 
-    {
-        dg::blas1::transfer( y[1], chi);
-        dg::blas1::plus( chi, 1.); 
-        blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
-        blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        if( global == 1)
-            pol.set_chi( chi);
-    }
-    else
-    {
-        blas1::axpby( 1., y[1], 0., omega); //n_i = omega
-    }
-#ifdef DG_BENCHMARK
-    t.toc();
-    std::cout<< "Polarisation assembly took "<<t.diff()<<"s\n";
-    t.tic();
-#endif 
+    dg::blas1::transfer( y[1], chi);
+    dg::blas1::plus( chi, 1.); 
+    blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
+    blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
+    pol.set_chi( chi);
     invert_invgamma( gamma1, gamma_n, y[1]);
-    if( number == pcg.get_max())
-        throw Fail( eps_gamma);
-#ifdef DG_BENCHMARK
-    std::cout << "# of pcg iterations for n_i \t"<< number <<"\t";
-    t.toc();
-    std::cout<< "took \t"<<t.diff()<<"s\n";
-    t.tic();
-#endif 
-    if( global)
-    {
-        blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
-        if( global == 2)
-            divide( omega, expy[1], omega);
-        blas2::symv( w2d, omega, omega);
-    }
-    else
-    {
-        blas1::axpby( -1, y[0], 1., gamma_n, chi); 
-        gamma1.alpha() = -tau;
-        blas2::symv( gamma1, chi, omega); //apply \Gamma_0^-1 ( gamma_n - n_e)
-        gamma1.alpha() = -0.5*tau;
-    }
-    number = pcg( pol, phi[0], omega, v2d, eps_pol);
-    if( number == pcg.get_max())
-        throw Fail( eps_pol);
-#ifdef DG_BENCHMARK
-    std::cout << "# of pcg iterations for phi \t"<< number <<"\t";
-    t.toc();
-    std::cout<< "took \t"<<t.diff()<<"s\n";
-#endif //DG_DEBUG
-
+    blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
+    invert_pol( pol, phi[0], omega);
     return phi[0];
 }
 
-template< class M, class container>
-void ToeflR<M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template< class G, class M, class container>
+void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
+    //y[0] = N_e - 1
+    //y[1] = N_i - 1
     assert( y.size() == 2);
     assert( y.size() == yp.size());
 
     phi[0] = polarisation( y);
     phi[1] = compute_psi( phi[0]);
 
-    //update energetics, 2% of total time
-    if( global)
+    for( unsigned i=0; i<y.size(); i++)
     {
-        exp( y, expy);
-        mass_ = blas2::dot( one, w2d, expy[0] ); //take real ion density which is electron density!!
-        double Ue = blas2::dot( y[0], w2d, expy[0]);
-        double Ui = tau*blas2::dot( y[1], w2d, expy[1]);
-        double Uphi = 0.5*blas2::dot( expy[1], w2d, omega); 
+        dg::blas1::transform( y[i], ype[i], dg::PLUS<double>(1.));
+        dg::blas1::transform( ype[i], lny[i], dg::LN<double>()); 
+        dg::blas2::symv( laplaceM, y[i], lapy[i]);
+    }
+
+    //update energetics, 2% of total time
+    {
+        mass_ = blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
+        double Ue = blas2::dot( lny[0], w2d, ype[0]);
+        double Ui = tau*blas2::dot( lny[1], w2d, ype[1]);
+        double Uphi = 0.5*blas2::dot( ype[1], w2d, omega); 
         energy_ = Ue + Ui + Uphi;
 
-        for( unsigned i=0; i<y.size(); i++)
-        {
-            dg::blas1::transform( expy[i], expy[i], dg::PLUS<double>(-1));
-            blas2::gemv( laplaceM, expy[i], lapy[i]); //Laplace wants Dir BC!!
-        }
-        diff_ = -nu*blas2::dot( one, w2d, lapy[0]);
-        double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, y[0]); // minus 
-        double Gi = - tau*(blas2::dot( one, w2d, lapy[1]) + blas2::dot( lapy[1], w2d, y[1])); // minus 
+        diff_ = nu*blas2::dot( one, w2d, lapy[0]);
+        double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, lny[0]); // minus 
+        double Gi = - tau*(blas2::dot( one, w2d, lapy[1]) + blas2::dot( lapy[1], w2d, lny[1])); // minus 
         double Gphi = -blas2::dot( phi[0], w2d, lapy[0]);
         double Gpsi = -blas2::dot( phi[1], w2d, lapy[1]);
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
-        ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
+        ediff_ = -nu*( Ge + Gi - Gphi + Gpsi);
     }
 
     for( unsigned i=0; i<y.size(); i++)
@@ -290,13 +247,12 @@ void ToeflR<M, container>::operator()( std::vector<container>& y, std::vector<co
     //compute derivatives
     for( unsigned i=0; i<y.size(); i++)
     {
-        blas2::gemv( arakawa.dx(), y[i], dxy[i]);
         blas2::gemv( arakawa.dy(), y[i], dyy[i]);
         blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
+        blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
+        blas1::axpby( kappa, dyphi[i], 1., yp[i]);
     }
     // curvature terms
-    blas1::axpby( kappa, dyphi[0], 1., yp[0]);
-    blas1::axpby( kappa, dyphi[1], 1., yp[1]);
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
 
