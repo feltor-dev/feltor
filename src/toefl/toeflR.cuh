@@ -28,7 +28,7 @@ struct Diffusion
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
-         * x[2] := N_i -1 
+         * x[2] := N_i - 1 
          */
         for( unsigned i=0; i<x.size(); i++)
         {
@@ -36,7 +36,7 @@ struct Diffusion
             //dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             //dg::blas1::axpby( -nu_, y[i], 0., y[i]);
             dg::blas2::gemv( LaplacianM_perp, x[i], y[i]);
-            dg::blas1::scal( y[i], nu_);
+            dg::blas1::scal( y[i], -nu_);
         }
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
@@ -241,7 +241,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         double Gphi = -blas2::dot( phi[0], w2d, lapy[0]);
         double Gpsi = -blas2::dot( phi[1], w2d, lapy[1]);
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
-        ediff_ = -nu*( Ge + Gi - Gphi + Gpsi);
+        ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
 
     for( unsigned i=0; i<y.size(); i++)
