@@ -75,9 +75,9 @@ int main( int argc, char* argv[])
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
     //field IDs
-    std::string names[3] = {"electrons", "ions", "potential"}; 
-    int dataIDs[3]; 
-    for( unsigned i=0; i<3; i++){
+    std::string names[4] = {"electrons", "ions", "potential", "vorticity"}; 
+    int dataIDs[4]; 
+    for( unsigned i=0; i<4; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
 
     //energy IDs
@@ -95,14 +95,15 @@ int main( int argc, char* argv[])
     size_t Ecount[] = {1};
     ///////////////////////////////////first output/////////////////////////
     //output all three fields
-    std::vector<dg::DVec> transferD(3);
-    std::vector<dg::HVec> output(3);
-    transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
-    for( int k=0;k<3; k++)
-        dg::blas1::transfer( transferD[k], output[k]);
+    std::vector<dg::DVec> transferD(4);
+    std::vector<dg::HVec> output(4);
+    transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0], transferD[3] = test.potential()[0]; //electrons
     start[0] = 0;
-    for( int k=0; k<3; k++)
+    for( int k=0;k<4; k++)
+    {
+        dg::blas1::transfer( transferD[k], output[k]);
         err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
+    }
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
@@ -148,13 +149,14 @@ int main( int argc, char* argv[])
                 err = nc_close(ncid);
             }
         }
-        //output all three fields
+        //output all three fields and vorticity
         transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
-        for( int k=0;k<3; k++)
+        dg::blas2::symv( diffusion.laplacianM(), transferD[2], transferD[3]);
+        for( int k=0;k<4; k++)
             dg::blas1::transfer( transferD[k], output[k]);
         err = nc_open(argv[2], NC_WRITE, &ncid);
         start[0] = i;
-        for( int k=0; k<3; k++)
+        for( int k=0; k<4; k++)
             err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);
