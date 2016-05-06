@@ -120,7 +120,7 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);
     err = nc_def_var( ncid, "dissipation", NC_DOUBLE, 1, &EtimeID, &dissID);
     err = nc_def_var( ncid, "dEdt",        NC_DOUBLE, 1, &EtimeID, &dEdtID);
-    for(unsigned i=0; i<3; i++)
+    for(unsigned i=0; i<4; i++)
         err = nc_var_par_access( ncid, dataIDs[i], NC_COLLECTIVE);
     err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
     err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);

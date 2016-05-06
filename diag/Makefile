@@ -37,6 +37,8 @@ feltordiag: feltordiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 feltorSHdiag: feltorSHdiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+toeflRdiag: toeflRdiag.cu
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 feltorSHvmaxdiag: feltorSHvmaxdiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 feltorSHvmaxisodiag: feltorSHvmaxisodiag.cu
