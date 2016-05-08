@@ -18,7 +18,6 @@
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
-const unsigned k = 3; //!< a change of k needs a recompilation!
 
 int main( int argc, char* argv[])
 {
@@ -45,18 +44,13 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////
     const Parameters p( v);
     p.display( std::cout);
-    if( p.k != k)
-    {
-        std::cerr << "ERROR: k doesn't match: "<<k<<" vs. "<<p.k<<"\n";
-        return -1;
-    }
 
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     dg::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
     dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
     //create initial vector
-    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
+    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
