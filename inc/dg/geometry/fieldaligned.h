@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <cusp/transpose.h>
 #include <cusp/csr_matrix.h>
 
@@ -138,7 +139,7 @@ void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, doubl
 #endif //DG_DEBUG
     }
 
-    if( isnan(error) )
+    if( std::isnan( error) )
     {
         std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
         throw NotANumber();

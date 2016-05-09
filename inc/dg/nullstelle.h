@@ -8,31 +8,9 @@
 
 #include <exception>
 #include <math.h>
+#include "exceptions.h"
 namespace dg{
 
-/**
- * @brief Class you might want to throw in case of a non convergence
- *
- * @ingroup utilities
- */
-struct Ooops : public std::exception
-{
-
-    /**
-     * @brief Construct from error string
-     *
-     * @param c error string
-     */
-    Ooops( const char * c): c_( c) {}
-    /**
-     * @brief What string
-     *
-     * @return error string 
-     */
-    char const* what() const throw(){ return c_;}
-  private:
-    const char* c_;
-};
 /*! @brief Exception class, that stores boundaries for 1D root finding 
  *
  * @ingroup utilities
