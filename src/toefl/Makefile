@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: toeflR toefl_hpc
 
 toeflR: toeflR.cu toeflR.cuh 
-	$(CC) -std=c++11 $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK  -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -L/home/matthias/Projekte/jsoncpp/src/lib_json -ljsoncpp -DDG_BENCHMARK  -g
 
 toefl_hpc: toefl_hpc.cu toeflR.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK

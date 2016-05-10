@@ -1,7 +1,7 @@
 #ifndef _DG_PARAMETERS_ 
 #define _DG_PARAMETERS_
 #include "dg/enums.h"
-#include "json/json.hpp"
+#include "json/json.h"
 
 /**
  * @brief Provide a mapping between input file and named parameters
@@ -62,31 +62,31 @@ struct Parameters
      *
      * @param js json object
      */
-    Parameters( const nlohmann::json& js) {
-        n  = js["n"].get<unsigned>();
-        Nx = js["Nx"].get<unsigned>();
-        Ny = js["Ny"].get<unsigned>();
-        dt = js["dt"].get<double>();
-        n_out  = js["n_out"].get<unsigned>();
-        Nx_out = js["Nx_out"].get<unsigned>();
-        Ny_out = js["Ny_out"].get<unsigned>();
-        itstp = js["itstp"].get<unsigned>();
-        maxout = js["maxout"].get<unsigned>();
+    Parameters( const Json::Value& js) {
+        n  = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        dt = js["dt"].asDouble();
+        n_out  = js["n_out"].asUInt();
+        Nx_out = js["Nx_out"].asUInt();
+        Ny_out = js["Ny_out"].asUInt();
+        itstp = js["itstp"].asUInt();
+        maxout = js["maxout"].asUInt();
 
-        eps_pol = js["eps_pol"];
-        eps_gamma = js["eps_gamma"];
-        eps_time = js["eps_time"];
-        tau = js["tau"];
-        kappa = js["curvature"];
-        nu = js["nu_perp"];
-        amp = js["amplitude"];
-        sigma = js["sigma"];
-        posX = js["posX"];
-        posY = js["posY"];
-        lx = js["lx"];
-        ly = js["ly"];
-        bc_x = dg::str2bc(js["bc_x"]);
-        bc_y = dg::str2bc(js["bc_y"]);
+        eps_pol = js["eps_pol"].asDouble();
+        eps_gamma = js["eps_gamma"].asDouble();
+        eps_time = js["eps_time"].asDouble();
+        tau = js["tau"].asDouble();
+        kappa = js["curvature"].asDouble();
+        nu = js["nu_perp"].asDouble();
+        amp = js["amplitude"].asDouble();
+        sigma = js["sigma"].asDouble();
+        posX = js["posX"].asDouble();
+        posY = js["posY"].asDouble();
+        lx = js["lx"].asDouble();
+        ly = js["ly"].asDouble();
+        bc_x = dg::str2bc(js["bc_x"].asString());
+        bc_y = dg::str2bc(js["bc_y"].asString());
         init = 0;
         global = 1;
     }

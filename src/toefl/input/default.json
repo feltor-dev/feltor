@@ -1,5 +1,5 @@
 {
-    "n" : "3",  "comment_": "number of polynomials",
+    "n" : "3",  //"comment_": "number of polynomials",
     "Nx" : "100", 
     "Ny" : "100", 
     "dt" : "3.0", 
@@ -7,7 +7,7 @@
     "Nx_out" : "100", 
     "Ny_out" : "100", 
     "itstp"  : "2", 
-    "maxout" : "100", "comment_": "number of outputs excluding first",
+    "maxout" : "100", //"comment_": "number of outputs excluding first",
     "eps_pol"   : "1e-6", 
     "eps_gamma" : "1e-7", 
     "eps_time"  : "1e-10",
