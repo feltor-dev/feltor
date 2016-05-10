@@ -1,6 +1,7 @@
 #ifndef _DG_PARAMETERS_ 
 #define _DG_PARAMETERS_
 #include "dg/enums.h"
+#include "json/json.hpp"
 
 /**
  * @brief Provide a mapping between input file and named parameters
@@ -56,6 +57,40 @@ struct Parameters
         init = v[24];
         global = v[25];
     }
+    /**
+     * @brief constructor to make a const object
+     *
+     * @param js json object
+     */
+    Parameters( const nlohmann::json& js) {
+        n  = js["n"].get<unsigned>();
+        Nx = js["Nx"].get<unsigned>();
+        Ny = js["Ny"].get<unsigned>();
+        dt = js["dt"].get<double>();
+        n_out  = js["n_out"].get<unsigned>();
+        Nx_out = js["Nx_out"].get<unsigned>();
+        Ny_out = js["Ny_out"].get<unsigned>();
+        itstp = js["itstp"].get<unsigned>();
+        maxout = js["maxout"].get<unsigned>();
+
+        eps_pol = js["eps_pol"];
+        eps_gamma = js["eps_gamma"];
+        eps_time = js["eps_time"];
+        tau = js["tau"];
+        kappa = js["curvature"];
+        nu = js["nu_perp"];
+        amp = js["amplitude"];
+        sigma = js["sigma"];
+        posX = js["posX"];
+        posY = js["posY"];
+        lx = js["lx"];
+        ly = js["ly"];
+        bc_x = dg::str2bc(js["bc_x"]);
+        bc_y = dg::str2bc(js["bc_y"]);
+        init = 0;
+        global = 1;
+    }
+    
     /**
      * @brief Display parameters
      *

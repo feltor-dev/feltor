@@ -56,7 +56,6 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v;
     std::string input;
     if( argc != 3)
     {
@@ -65,10 +64,10 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const Parameters p( v);
+    nlohmann::json js(input);
+    const Parameters p( js);
     if(rank==0)p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
