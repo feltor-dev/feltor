@@ -34,10 +34,13 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    std::cout << js<<std::endl;
+    const Parameters p( js);
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////

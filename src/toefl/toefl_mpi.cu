@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
     {
         input = file::read_file( argv[1]);
     }
-    nlohmann::json js(input);
+    Json::Value js(input);
     const Parameters p( js);
     if(rank==0)p.display( std::cout);
 

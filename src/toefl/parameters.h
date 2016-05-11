@@ -88,7 +88,10 @@ struct Parameters
         bc_x = dg::str2bc(js["bc_x"].asString());
         bc_y = dg::str2bc(js["bc_y"].asString());
         init = 0;
-        global = 1;
+        if( js.get("equations", "global") == "global") global = 1;
+        else if( js.get("equations", "global") == "local") global = 0;
+        else global = 1;
+
     }
     
     /**
@@ -102,7 +105,7 @@ struct Parameters
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
             <<"    Ion-temperature: = "<<tau<<"\n";
-        char local[] = "LOCAL" , glo[] = "GLOBAL";
+        char local[] = "LOCAL " , glo[] = "GLOBAL ";
         os  <<"Mode is:   \n"
             <<"    "<<(global?glo:local)<<global<<"\n";
         //char per[] = "PERIODIC", dir[] = "DIRICHLET", neu[] = "NEUMANN";

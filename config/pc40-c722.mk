@@ -9,5 +9,5 @@ MPICC=mpic++#                                   # the mpi compiler
 OPT=-O3#                                        # the optimization flag for the host
 NVCCARCH=-arch sm_20#                           # nvcc gpu compute capability
 OMPFLAG=-fopenmp#                               # openmp flag for CC and MPICC
-LIBS=-lnetcdf -lhdf5 -lhdf5_hl#                 # netcdf library for file output
+LIBS= -L$(HOME)/include/json/../../src/lib_json -ljsoncpp -lnetcdf -lhdf5 -lhdf5_hl#                 # netcdf library for file output
 endif
