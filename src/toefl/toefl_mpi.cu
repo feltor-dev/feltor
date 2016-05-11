@@ -66,7 +66,9 @@ int main( int argc, char* argv[])
     {
         input = file::read_file( argv[1]);
     }
-    Json::Value js(input);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
     const Parameters p( js);
     if(rank==0)p.display( std::cout);
 

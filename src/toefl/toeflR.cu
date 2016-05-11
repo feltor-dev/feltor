@@ -24,16 +24,17 @@ int main( int argc, char* argv[])
     //Parameter initialisation
     std::vector<double> v2;
     std::stringstream title;
+    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.txt");
-        is >> js;
+        reader.parse(is,js,false);
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        is >> js;
+        reader.parse(is,js,false);
     }
     else
     {
