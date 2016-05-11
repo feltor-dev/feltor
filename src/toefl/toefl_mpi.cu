@@ -69,6 +69,7 @@ int main( int argc, char* argv[])
     Json::Reader reader;
     Json::Value js;
     reader.parse( input, js, false);
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     if(rank==0)p.display( std::cout);
 

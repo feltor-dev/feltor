@@ -40,6 +40,7 @@ int main( int argc, char* argv[])
     Json::Value js;
     reader.parse( input, js, false);
     std::cout << js<<std::endl;
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     p.display( std::cout);
 
@@ -130,7 +131,7 @@ int main( int argc, char* argv[])
                 E1 = test.energy();
                 diff = (E1 - E0)/p.dt;
                 double diss = test.energy_diffusion( );
-                std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+                std::cout << "diff diss: "<< diff<<" "<<diss<<"\t";
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
             }
             time+=p.dt;

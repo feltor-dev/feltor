@@ -180,11 +180,14 @@ const container& ToeflR<G, M, container>::compute_psi( const container& potentia
     if(  number == invert_invgamma.get_max())
         throw dg::Fail( eps_gamma);
 
-    arakawa.variation(potential, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
+    arakawa.variation(potential, omega); //needed also in local energy theorem
+    if(global)
+    {
+        dg::blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::pointwiseDot( binv, omega, omega);
 
-    dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
+        dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
+    }
     return phi[1];    
 }
 
@@ -194,11 +197,14 @@ template<class G, class M, class container>
 const container& ToeflR<G, M, container>::polarisation( const std::vector<container>& y)
 {
     //compute chi and polarisation
-    dg::blas1::transfer( y[1], chi);
-    dg::blas1::plus( chi, 1.); 
-    blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
-    blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-    pol.set_chi( chi);
+    if(global)
+    {
+        dg::blas1::transfer( y[1], chi);
+        dg::blas1::plus( chi, 1.); 
+        blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
+        blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
+        pol.set_chi( chi);
+    }
     unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
     if(  number == invert_invgamma.get_max())
         throw dg::Fail( eps_gamma);
@@ -228,16 +234,31 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     }
 
     //update energetics, 2% of total time
+    mass_ = blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
+    diff_ = nu*blas2::dot( one, w2d, lapy[0]);
+    if(global)
     {
-        mass_ = blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
         double Ue = blas2::dot( lny[0], w2d, ype[0]);
         double Ui = tau*blas2::dot( lny[1], w2d, ype[1]);
         double Uphi = 0.5*blas2::dot( ype[1], w2d, omega); 
         energy_ = Ue + Ui + Uphi;
 
-        diff_ = nu*blas2::dot( one, w2d, lapy[0]);
         double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, lny[0]); // minus 
         double Gi = - tau*(blas2::dot( one, w2d, lapy[1]) + blas2::dot( lapy[1], w2d, lny[1])); // minus 
+        double Gphi = -blas2::dot( phi[0], w2d, lapy[0]);
+        double Gpsi = -blas2::dot( phi[1], w2d, lapy[1]);
+        //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
+        ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
+    }
+    else
+    {
+        double Ue = 0.5*blas2::dot( y[0], w2d, y[0]);
+        double Ui = 0.5*tau*blas2::dot( y[1], w2d, y[1]);
+        double Uphi = 0.5*blas2::dot( one, w2d, omega); 
+        energy_ = Ue + Ui + Uphi;
+
+        double Ge = - blas2::dot( y[0], w2d, lapy[0]); // minus 
+        double Gi = - tau*(blas2::dot( y[1], w2d, lapy[1])); // minus 
         double Gphi = -blas2::dot( phi[0], w2d, lapy[0]);
         double Gpsi = -blas2::dot( phi[1], w2d, lapy[1]);
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
@@ -247,7 +268,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     for( unsigned i=0; i<y.size(); i++)
     {
         arakawa( y[i], phi[i], yp[i]);
-        blas1::pointwiseDot( binv, yp[i], yp[i]);
+        if(global) blas1::pointwiseDot( binv, yp[i], yp[i]);
     }
 
     //compute derivatives
@@ -255,7 +276,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     {
         blas2::gemv( arakawa.dy(), y[i], dyy[i]);
         blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
-        blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
+        if(global) blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
         blas1::axpby( kappa, dyphi[i], 1., yp[i]);
     }
     // curvature terms
