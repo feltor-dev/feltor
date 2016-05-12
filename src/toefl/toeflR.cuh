@@ -20,8 +20,8 @@ namespace dg
 template<class Geometry, class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const Geometry& g, double nu, bool global):
-        nu_(nu), global(global), 
+    Diffusion( const Geometry& g, double nu):
+        nu_(nu), 
         temp( dg::evaluate(dg::zero, g)), 
         LaplacianM_perp( g, dg::normed, dg::centered){
     }
@@ -45,7 +45,6 @@ struct Diffusion
 
   private:
     double nu_;
-    bool global;
     const container w2d, v2d;
     container temp;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
@@ -65,7 +64,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const Geometry& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global);
+    ToeflR( const Geometry& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations);
 
 
     /**
@@ -149,14 +148,14 @@ struct ToeflR
     const container w2d, v2d, one;
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
-    const int global;
+    const std::string equations;
 
     double mass_, energy_, diff_, ediff_;
 
 };
 
 template< class Geometry, class M, class container>
-ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, int global ): 
+ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations ): 
     chi( evaluate( dg::zero, grid)), omega(chi),
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), dyphi( phi), ype(phi),
@@ -169,19 +168,20 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, dou
     invert_pol(      omega, omega.size(), eps_pol),
     invert_invgamma( omega, omega.size(), eps_gamma),
     w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
-    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), global( global)
+    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), equations( equations)
 {
 }
 
 template< class G, class M, class container>
 const container& ToeflR<G, M, container>::compute_psi( const container& potential)
 {
+    if(equations == "ralf") return potential;
     unsigned number = invert_invgamma( gamma1, phi[1], potential);
     if(  number == invert_invgamma.get_max())
         throw dg::Fail( eps_gamma);
 
     arakawa.variation(potential, omega); //needed also in local energy theorem
-    if(global)
+    if(equations == "global")
     {
         dg::blas1::pointwiseDot( binv, omega, omega);
         dg::blas1::pointwiseDot( binv, omega, omega);
@@ -197,7 +197,7 @@ template<class G, class M, class container>
 const container& ToeflR<G, M, container>::polarisation( const std::vector<container>& y)
 {
     //compute chi and polarisation
-    if(global)
+    if(equations == "global")
     {
         dg::blas1::transfer( y[1], chi);
         dg::blas1::plus( chi, 1.); 
@@ -205,11 +205,16 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
         blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
         pol.set_chi( chi);
     }
-    unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
-    if(  number == invert_invgamma.get_max())
-        throw dg::Fail( eps_gamma);
-    blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
-    number = invert_pol( pol, phi[0], omega);
+    if( equations != "ralf")
+    {
+        unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
+        if(  number == invert_invgamma.get_max())
+            throw dg::Fail( eps_gamma);
+        blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
+    }
+    else 
+        blas1::transfer( y[1], omega);
+    unsigned number = invert_pol( pol, phi[0], omega);
     if(  number == invert_pol.get_max())
         throw dg::Fail( eps_pol);
     return phi[0];
@@ -219,7 +224,7 @@ template< class G, class M, class container>
 void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     //y[0] = N_e - 1
-    //y[1] = N_i - 1
+    //y[1] = N_i - 1 || y[1] = Omega
     assert( y.size() == 2);
     assert( y.size() == yp.size());
 
@@ -236,7 +241,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     //update energetics, 2% of total time
     mass_ = blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
     diff_ = nu*blas2::dot( one, w2d, lapy[0]);
-    if(global)
+    if(equations == "global")
     {
         double Ue = blas2::dot( lny[0], w2d, ype[0]);
         double Ui = tau*blas2::dot( lny[1], w2d, ype[1]);
@@ -268,7 +273,13 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     for( unsigned i=0; i<y.size(); i++)
     {
         arakawa( y[i], phi[i], yp[i]);
-        if(global) blas1::pointwiseDot( binv, yp[i], yp[i]);
+        if(equations == "global") blas1::pointwiseDot( binv, yp[i], yp[i]);
+    }
+    if(equations == "ralf")
+    {
+        blas2::gemv( arakawa.dy(), lny[0], dyy[0]);
+        dg::blas1::axpby( -1., dyy[0], 1., yp[1]);
+        return;
     }
 
     //compute derivatives
@@ -276,7 +287,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     {
         blas2::gemv( arakawa.dy(), y[i], dyy[i]);
         blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
-        if(global) blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
+        if(equations == "global") blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
         blas1::axpby( kappa, dyphi[i], 1., yp[i]);
     }
     // curvature terms

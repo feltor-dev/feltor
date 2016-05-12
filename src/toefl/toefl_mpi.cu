@@ -77,8 +77,8 @@ int main( int argc, char* argv[])
     dg::MPI_Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
     dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
-    dg::ToeflR< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.equations); 
+    dg::Diffusion<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> diffusion( grid, p.nu);
     //create initial vector
     dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); 
     std::vector<dg::MDVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
@@ -86,6 +86,9 @@ int main( int argc, char* argv[])
     {
         dg::MDVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
+    }
+    if( p.equations == "ralf"){
+        y0[1] = dg::evaluate( dg::zero, grid);
     }
 
     //////////////////initialisation of timestepper and first step///////////////////

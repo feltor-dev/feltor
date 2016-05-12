@@ -1,5 +1,6 @@
 #ifndef _DG_PARAMETERS_ 
 #define _DG_PARAMETERS_
+#include <string>
 #include "dg/enums.h"
 #include "json/json.h"
 
@@ -22,7 +23,7 @@ struct Parameters
     double lx, ly; 
     enum dg::bc bc_x, bc_y;
 
-    int init, global;
+    std::string init, equations;
 
     /**
      * @brief constructor to make a const object
@@ -54,8 +55,10 @@ struct Parameters
         ly = v[21];
         bc_x = map((int)v[22]); 
         bc_y = map((int)v[23]);
-        init = v[24];
-        global = v[25];
+        init = "blob";
+        if( v[25] == 1) 
+            equations = "global";
+        else equations = "local";
     }
     /**
      * @brief constructor to make a const object
@@ -87,11 +90,8 @@ struct Parameters
         ly = js["ly"].asDouble();
         bc_x = dg::str2bc(js["bc_x"].asString());
         bc_y = dg::str2bc(js["bc_y"].asString());
-        init = 0;
-        if( js.get("equations", "global") == "global") global = 1;
-        else if( js.get("equations", "global") == "local") global = 0;
-        else global = 1;
-
+        init = "blob";
+        equations = js.get("equations", "global").asString();
     }
     
     /**
@@ -105,11 +105,8 @@ struct Parameters
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
             <<"    Ion-temperature: = "<<tau<<"\n";
-        char local[] = "LOCAL " , glo[] = "GLOBAL ";
         os  <<"Mode is:   \n"
-            <<"    "<<(global?glo:local)<<global<<"\n";
-        //char per[] = "PERIODIC", dir[] = "DIRICHLET", neu[] = "NEUMANN";
-        //char dir_neu[] = "DIR_NEU", neu_dir[] = "NEU_DIR";
+            <<"    "<<equations<<"\n";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";
