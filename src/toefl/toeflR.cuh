@@ -213,7 +213,7 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
         blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
     }
     else 
-        blas1::transfer( y[1], omega);
+        blas1::axpby( -1. ,y[1], 0., omega);
     unsigned number = invert_pol( pol, phi[0], omega);
     if(  number == invert_pol.get_max())
         throw dg::Fail( eps_pol);
