@@ -68,7 +68,7 @@ int main( int argc, char* argv[])
     }
     Json::Reader reader;
     Json::Value js;
-    reader.parse( input, js, false);
+    reader.parse( input, js, false); //read input without comments
     input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     if(rank==0)p.display( std::cout);
@@ -103,7 +103,7 @@ int main( int argc, char* argv[])
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( argv[2],NC_NETCDF4|NC_MPIIO|NC_CLOBBER,comm,info, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
+    const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION}; //write maybe to json file!?
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
