@@ -64,7 +64,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const Geometry& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations);
+    ToeflR( const Geometry& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations, bool exb );
 
 
     /**
@@ -149,13 +149,14 @@ struct ToeflR
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
     const std::string equations;
+    bool exb_compression;
 
     double mass_, energy_, diff_, ediff_;
 
 };
 
 template< class Geometry, class M, class container>
-ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations ): 
+ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations, bool exb ): 
     chi( evaluate( dg::zero, grid)), omega(chi),
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), dyphi( phi), ype(phi),
@@ -168,7 +169,7 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, dou
     invert_pol(      omega, omega.size(), eps_pol),
     invert_invgamma( omega, omega.size(), eps_gamma),
     w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
-    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), equations( equations)
+    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), equations( equations), exb_compression(exb)
 {
 }
 
@@ -282,15 +283,15 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         return;
     }
 
-    //compute derivatives
+    //compute derivatives and exb compression
     for( unsigned i=0; i<y.size(); i++)
     {
         blas2::gemv( arakawa.dy(), y[i], dyy[i]);
         blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
         if(equations == "global") blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
-        blas1::axpby( kappa, dyphi[i], 1., yp[i]);
+        if( exb_compression) blas1::axpby( kappa, dyphi[i], 1., yp[i]);
     }
-    // curvature terms
+    // diamagnetic compression
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
 
