@@ -344,10 +344,10 @@ struct RingGrid3d : public dg::Grid3d<double>
             //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
-//         thrust::host_vector<double> psi_x(n*Nx, 0);
         construct_rz( gp, psi_0, psi_x);
         construct_metric();
     }
+    //produces segmentation fault!
 //     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
 //         dg::Grid3d<double>( psi_0, psi_1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
 //     { 
