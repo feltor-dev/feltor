@@ -12,7 +12,7 @@
 #include "dg/backend/timer.cuh"
 //#include "guenther.h"
 #include "solovev.h"
-#include "conformal.h"
+#include "flux.h"
 #include "orthogonal.h"
 #include "dg/ds.h"
 #include "init.h"
@@ -41,7 +41,7 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< conformal::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
+typedef dg::FieldAligned< flux::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 //typedef dg::FieldAligned< orthogonal::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 
 int main( int argc, char* argv[])
@@ -76,10 +76,10 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
-    std::cout << "Constructing conformal grid ... \n";
+    std::cout << "Constructing flux grid ... \n";
     t.tic();
-    conformal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    flux::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    flux::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //orthogonal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
     //orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
@@ -87,7 +87,7 @@ int main( int argc, char* argv[])
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
     file::NC_Error_Handle err;
-    err = nc_create( "conformal.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( "flux.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2];
     err = file::define_dimensions(  ncid, dim3d, g2d_periodic);
     int coordsID[2], onesID, defID, divBID;
@@ -159,7 +159,7 @@ int main( int argc, char* argv[])
     error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()));
     std::cout << "Rel Error of volume form is "<<error<<"\n";
 
-    solovev::conformal::FieldY fieldY(gp);
+    solovev::flux::FieldY fieldY(gp);
     //solovev::ConformalField fieldY(gp);
     dg::HVec fby = dg::pullback( fieldY, g2d);
     dg::blas1::pointwiseDot( fby, f_, fby);
@@ -200,10 +200,10 @@ int main( int argc, char* argv[])
     std::cout << "Start DS test!"<<std::endl;
     const dg::HVec vol3d = dg::create::volume( g3d);
     t.tic();
-    DFA fieldaligned( conformal::Field( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    DFA fieldaligned( flux::Field( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
     //DFA fieldaligned( orthogonal::Field( gp, g2d, g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
 
-    dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, conformal::Field(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, flux::Field(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
     //dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, orthogonal::Field(gp, g2d, g2d.f2_xy()), dg::normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";

@@ -15,6 +15,11 @@ ds_geom_t: ds_geom_t.cu solovev.h
 
 conformal_t: conformal_t.cu conformal.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+flux_t: flux_t.cu flux.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+orthogonal_t: orthogonal_t.cu orthogonal.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+
 conformalX_t: conformalX_t.cu conformalX.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 	
