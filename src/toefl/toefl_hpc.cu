@@ -34,24 +34,31 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    std::cout << js<<std::endl;
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const Parameters p( js);
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.equations, p.exb); 
+    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
     //create initial vector
-    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); 
+    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
         dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
+    }
+    if( p.equations == "ralf"){
+        y0[1] = dg::evaluate( dg::zero, grid);
     }
 
     //////////////////initialisation of timestepper and first step///////////////////
@@ -127,7 +134,7 @@ int main( int argc, char* argv[])
                 E1 = test.energy();
                 diff = (E1 - E0)/p.dt;
                 double diss = test.energy_diffusion( );
-                std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+                std::cout << "diff diss: "<< diff<<" "<<diss<<"\t";
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
             }
             time+=p.dt;

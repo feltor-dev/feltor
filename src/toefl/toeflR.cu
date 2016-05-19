@@ -24,16 +24,17 @@ int main( int argc, char* argv[])
     //Parameter initialisation
     std::vector<double> v2;
     std::stringstream title;
-    nlohmann::json js;
+    Json::Reader reader;
+    Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.txt");
-        js = nlohmann::json::parse(is);
+        reader.parse(is,js,false);
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        js = nlohmann::json::parse(is);
+        reader.parse(is,js,false);
     }
     else
     {
@@ -50,15 +51,18 @@ int main( int argc, char* argv[])
 
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.equations, p.exb); 
+    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
     //create initial vector
-    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
         dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
+    }
+    if( p.equations == "ralf"){
+        y0[1] = dg::evaluate( dg::zero, grid);
     }
 
 

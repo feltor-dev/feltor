@@ -93,6 +93,16 @@ int define_time( int ncid, const char* name, int* dimID, int* tvarID)
     return retval;
 }
 
+int define_limited_time( int ncid, const char* name, int size, int* dimID, int* tvarID)
+{
+    int retval;
+    if( (retval = nc_def_dim( ncid, name, size, dimID)) ){ return retval;}
+    if( (retval = nc_def_var( ncid, name, NC_DOUBLE, 1, dimID, tvarID))){return retval;}
+    std::string t = "time since start"; //needed for paraview to recognize timeaxis
+    if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
+    return retval;
+}
+
 /**
  * @brief Define a 1d dimension variable together with its data points
  *

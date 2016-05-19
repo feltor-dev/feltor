@@ -1,7 +1,8 @@
 #ifndef _DG_PARAMETERS_ 
 #define _DG_PARAMETERS_
+#include <string>
 #include "dg/enums.h"
-#include "json/json.hpp"
+#include "json/json.h"
 
 /**
  * @brief Provide a mapping between input file and named parameters
@@ -22,7 +23,8 @@ struct Parameters
     double lx, ly; 
     enum dg::bc bc_x, bc_y;
 
-    int init, global;
+    std::string init, equations;
+    bool exb, diamagnetic;
 
     /**
      * @brief constructor to make a const object
@@ -54,41 +56,45 @@ struct Parameters
         ly = v[21];
         bc_x = map((int)v[22]); 
         bc_y = map((int)v[23]);
-        init = v[24];
-        global = v[25];
+        init = "blob";
+        if( v[25] == 1) 
+            equations = "global";
+        else equations = "local";
     }
     /**
      * @brief constructor to make a const object
      *
      * @param js json object
      */
-    Parameters( const nlohmann::json& js) {
-        n  = js["n"].get<unsigned>();
-        Nx = js["Nx"].get<unsigned>();
-        Ny = js["Ny"].get<unsigned>();
-        dt = js["dt"].get<double>();
-        n_out  = js["n_out"].get<unsigned>();
-        Nx_out = js["Nx_out"].get<unsigned>();
-        Ny_out = js["Ny_out"].get<unsigned>();
-        itstp = js["itstp"].get<unsigned>();
-        maxout = js["maxout"].get<unsigned>();
+    Parameters( const Json::Value& js) {
+        n  = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        dt = js["dt"].asDouble();
+        n_out  = js["n_out"].asUInt();
+        Nx_out = js["Nx_out"].asUInt();
+        Ny_out = js["Ny_out"].asUInt();
+        itstp = js["itstp"].asUInt();
+        maxout = js["maxout"].asUInt();
 
-        eps_pol = js["eps_pol"];
-        eps_gamma = js["eps_gamma"];
-        eps_time = js["eps_time"];
-        tau = js["tau"];
-        kappa = js["curvature"];
-        nu = js["nu_perp"];
-        amp = js["amplitude"];
-        sigma = js["sigma"];
-        posX = js["posX"];
-        posY = js["posY"];
-        lx = js["lx"];
-        ly = js["ly"];
-        bc_x = dg::str2bc(js["bc_x"]);
-        bc_y = dg::str2bc(js["bc_y"]);
-        init = 0;
-        global = 1;
+        eps_pol = js["eps_pol"].asDouble();
+        eps_gamma = js["eps_gamma"].asDouble();
+        eps_time = js["eps_time"].asDouble();
+        tau = js["tau"].asDouble();
+        kappa = js["curvature"].asDouble();
+        nu = js["nu_perp"].asDouble();
+        amp = js["amplitude"].asDouble();
+        sigma = js["sigma"].asDouble();
+        posX = js["posX"].asDouble();
+        posY = js["posY"].asDouble();
+        lx = js["lx"].asDouble();
+        ly = js["ly"].asDouble();
+        bc_x = dg::str2bc(js["bc_x"].asString());
+        bc_y = dg::str2bc(js["bc_y"].asString());
+        init = "blob";
+        equations = js.get("equations", "global").asString();
+        exb = js["compression"].get( "exb", true).asBool();
+        diamagnetic = js["compression"].get( "diamagnetic", true).asBool();
     }
     
     /**
@@ -102,11 +108,10 @@ struct Parameters
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
             <<"    Ion-temperature: = "<<tau<<"\n";
-        char local[] = "LOCAL" , glo[] = "GLOBAL";
-        os  <<"Mode is:   \n"
-            <<"    "<<(global?glo:local)<<global<<"\n";
-        //char per[] = "PERIODIC", dir[] = "DIRICHLET", neu[] = "NEUMANN";
-        //char dir_neu[] = "DIR_NEU", neu_dir[] = "NEU_DIR";
+        os << "Equation parameters are: \n"
+            <<"    "<<equations<<"\n"
+            <<"    exb         "<<exb<<"\n"
+            <<"    diamagnetic "<<diamagnetic<<"\n";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";
