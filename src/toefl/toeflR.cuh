@@ -278,7 +278,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     }
     if(equations == "ralf")
     {
-        blas2::gemv( arakawa.dy(), lny[0], dyy[0]);
+        blas2::gemv( arakawa.dy(), y[0], dyy[0]);
         dg::blas1::axpby( -1., dyy[0], 1., yp[1]);
         return;
     }
