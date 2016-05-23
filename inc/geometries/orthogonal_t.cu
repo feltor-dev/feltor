@@ -88,12 +88,14 @@ int main( int argc, char* argv[])
     err = nc_create( "orthognal.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2];
     err = file::define_dimensions(  ncid, dim3d, g2d_periodic);
-    int coordsID[2], onesID, defID, divBID;
+    int coordsID[2], onesID, defID, confID,volID,divBID;
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
+    err = nc_def_var( ncid, "conformalratio", NC_DOUBLE, 2, dim3d, &confID);
+    err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
@@ -113,12 +115,15 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
-    //dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
-    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    //compute and write deformation into netcdf
+    dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
-    dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     X=temp0;
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
+    //compute and write conformalratio into netcdf
+    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    X=temp0;
+    err = nc_put_var_double( ncid, confID, periodify(X, g2d_periodic).data());
 
     std::cout << "Construction successful!\n";
 
@@ -142,6 +147,8 @@ int main( int argc, char* argv[])
     //dg::blas1::pointwiseDot( temp0, g.g_pp(), temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
+        X=temp0;
+    err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
     error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g2d.vol(), w3d, g2d.vol()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
@@ -151,7 +158,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( f_, f_, temp0);
     dg::blas1::axpby( 0.0,temp0 , 1.0, g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    //dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
+//     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
     dg::blas1::axpby( 1., ones, -1., g2d.vol(), temp0);
     error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()));
     std::cout << "Rel Error of volume form is "<<error<<"\n";
@@ -183,7 +190,9 @@ int main( int argc, char* argv[])
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
     solovev::Iris iris( gp);
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::PER, dg::PER);
+//     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::PER, dg::PER);
+        dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
+
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec R  = dg::evaluate( dg::coo1, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
