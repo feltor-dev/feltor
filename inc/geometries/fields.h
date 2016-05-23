@@ -589,7 +589,6 @@ struct FieldRZYRYZY
         
         yp[0] =  (y[0]/fnorm)*(psipZ);
         yp[1] =  -(y[0]/fnorm)*(psipR);
-        //not all terms included in yp[2] and yp[3]
         yp[2] =  (y[0]/fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
          + f_prime_/f_* psipR 
          + ipolR/ipol
