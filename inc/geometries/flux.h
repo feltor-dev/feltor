@@ -92,7 +92,8 @@ struct Fpsi
         double f_psi = 2.*M_PI/end_old[2];
 //         double f_psi = 1./end_old[2];
 // double f_psi = 1.;
-//         std::cout << "fpsi = "<< f_psi<< std::endl;
+
+        //std::cout << "fpsi = "<< f_psi<< std::endl;
         return f_psi;
     }
     double operator()( double psi)
@@ -100,6 +101,7 @@ struct Fpsi
 //         double R_0, Z_0; 
 //         return construct_f( psi, R_0, Z_0);
         return 1.;
+
     }
 
     /**
@@ -132,7 +134,7 @@ struct Fpsi
             x1 = dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x1 - x1_old)/x1);
-            //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
+            std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x1_old;
 
@@ -141,10 +143,11 @@ struct Fpsi
     double f_prime( double psi) 
     {
         //compute fprime
+        double R_0, Z_0;
         double deltaPsi = fabs(psi)/100.;
         double fofpsi[4];
-        fofpsi[1] = operator()(psi-deltaPsi);
-        fofpsi[2] = operator()(psi+deltaPsi);
+        fofpsi[1] = construct_f(psi-deltaPsi, R_0, Z_0);
+        fofpsi[2] = construct_f(psi+deltaPsi, R_0, Z_0);
         double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
         double eps = 1e10, eps_old=2e10;
         while( eps < eps_old)
@@ -153,8 +156,8 @@ struct Fpsi
             fprime_old = fprime;
             eps_old = eps;
             fofpsi[0] = fofpsi[1], fofpsi[3] = fofpsi[2];
-            fofpsi[1] = operator()(psi-deltaPsi);
-            fofpsi[2] = operator()(psi+deltaPsi);
+            fofpsi[1] = construct_f(psi-deltaPsi, R_0, Z_0);
+            fofpsi[2] = construct_f(psi+deltaPsi, R_0, Z_0);
             //reuse previously computed fpsi for current fprime
             fprime  = (+ 1./12.*fofpsi[0] 
                        - 2./3. *fofpsi[1]
@@ -256,13 +259,14 @@ struct FieldFinv
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
-//         std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
+
+        //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-//         fpsiM[0] = - end[2]/2./M_PI;
-//         fpsiM[0] = -1./2./M_PI;
-        fpsiM[0] = -1.;
-//         std::cout <<"-1/fpsi ="<<fpsiM[0]<<"\n";
+        //fpsiM[0] = - end[2]/2./M_PI;
+        //fpsiM[0] = -1./2./M_PI;
+        fpsiM[0] = -1;
+        //std::cout <<"-1/fpsi ="<<fpsiM[0]<<"\n";
     }
     private:
     double psi_0;
@@ -347,7 +351,7 @@ struct RingGrid3d : public dg::Grid3d<double>
             double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
             eps = fabs( psi_1_numerical-psi_1); 
             //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
-            //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
+            std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
         construct_rz( gp, psi_0, psi_x);
