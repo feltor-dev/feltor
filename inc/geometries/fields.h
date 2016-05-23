@@ -467,7 +467,7 @@ struct FieldY
     void set_f( double f_new){f_psi_=f_new;}
   /**
  * @brief \f[  B^y= 
- * f(\psi) \frac{(\nabla\psi)^2}{R} \f]
+ * I(\psi) \frac{(\nabla\psi)^2}{ q R^2} \f]
  */ 
     double operator()(double R, double Z) const
     { 
@@ -543,26 +543,33 @@ struct FieldRZYZ
  */ 
 struct FieldRZY
 {
-    FieldRZY( GeomParameters gp): f_(1.), R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    FieldRZY( GeomParameters gp): f_(1.), R_0_(gp.R_0), psipR_(gp), psipZ_(gp),ipol_(gp){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        yp[0] = +psipZ/(psipR*psipR+psipZ*psipZ);//fieldR
-        yp[1] = -psipR/(psipR*psipR+psipZ*psipZ);//fieldZ
+        double ipol=ipol_(y[0], y[1]);
+        double fnorm = ipol*f_;        
+        yp[0] =  (y[0]/fnorm)*(psipZ);
+        yp[1] =  -(y[0]/fnorm)*(psipR);
     }
   private:
     double f_;
     double R_0_;
     PsipR psipR_;
     PsipZ psipZ_;
+    Ipol ipol_;
 };
 /**
  * @brief 
  * \f[  d R/d y   =   B^R/B^y \f], 
  * \f[  d Z/d y   =   B^Z/B^y \f],
- * \f[  d y_R/d y =   .. \f], 
- * \f[  d y_Z/d y =   ..\f],
+ * \f[  d y_R/d y =   .\frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial R \partial Z} y_R
+    -\frac{\partial^2 \psi_p}{\partial^2 R} y_Z)\right] + 
+    \frac{\partial \psi_p}{\partial R} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)-\frac{1}{R} \f], 
+ * \f[  d y_Z/d y =   - \frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial Z^2} y_R\right)
+    -\frac{\partial^2 \psi_p}{\partial R \partial Z} y_Z\right]+ 
+    \frac{\partial \psi_p}{\partial Z} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)\f],
  */ 
 struct FieldRZYRYZY
 {
@@ -575,19 +582,19 @@ struct FieldRZYRYZY
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
-//         double psip2 = 0.0+1.0*(psipR*psipR+ psipZ*psipZ);
         double ipol=ipol_(y[0], y[1]);
         double ipolR=ipolR_(y[0], y[1]);
         double ipolZ=ipolZ_(y[0], y[1]);
-
-        yp[0] =  (y[0]/ipol/f_)*(psipZ);
-        yp[1] =  -(y[0]/ipol/f_)*(psipR);
+        double fnorm = ipol*f_;
+        
+        yp[0] =  (y[0]/fnorm)*(psipZ);
+        yp[1] =  -(y[0]/fnorm)*(psipR);
         //not all terms included in yp[2] and yp[3]
-        yp[2] =  (y[0]/ipol/f_)*(-psipRZ*y[2]+ psipRR*y[3])+
+        yp[2] =  (y[0]/fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
          + f_prime_/f_* psipR 
          + ipolR/ipol
          -1./y[0] ;
-        yp[3] =  (y[0]/ipol/f_)*( psipRZ*y[3]- psipZZ*y[2])+
+        yp[3] =  (y[0]/fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
          + f_prime_/f_* psipZ 
          + ipolZ/ipol;
     }
@@ -623,7 +630,6 @@ struct FieldY
         double psipR = psipR_(R, Z), psipZ = psipZ_(R,Z);
         double psi2 = 0.0+1.0*(psipR*psipR+ psipZ*psipZ);
         return f_psi_*(psi2)*R_0_/R;
-        //return (psi2)*R_0_/R/f_psi_;
     }
       /**
        * @brief == operator()(R,Z)

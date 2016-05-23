@@ -92,14 +92,16 @@ struct Fpsi
         double f_psi = 2.*M_PI/end_old[2];
 //         double f_psi = 1./end_old[2];
 // double f_psi = 1.;
+
         //std::cout << "fpsi = "<< f_psi<< std::endl;
         return f_psi;
     }
     double operator()( double psi)
     {
-        double R_0, Z_0; 
-        //return construct_f( psi, R_0, Z_0);
-        return 1;
+//         double R_0, Z_0; 
+//         return construct_f( psi, R_0, Z_0);
+        return 1.;
+
     }
 
     /**
@@ -191,11 +193,15 @@ struct Fpsi
         const double f_psi = construct_f( psi, begin[0], begin[1]);
         solovev::PsipR psipR(gp_);
         solovev::PsipZ psipZ(gp_);
+        solovev::Ipol ipol(gp_);
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
-        begin[2] = f_psi * (0.0/psip2+1.0)* psipZ_;
-        begin[3] = -f_psi * (0.0/psip2+1.0)*psipR_;
-
+        double ipol_ = ipol( begin[0], begin[1]);
+        //initial conditions:
+        //y_R(R_0,Z_0)
+        begin[2] = f_psi * ipol_/begin[0]*( psipZ_/psip2);
+        //y_Z(R_0,Z_0)
+        begin[3] = -f_psi * ipol_/begin[0]*( psipR_/psip2);
         R_0 = begin[0], Z_0 = begin[1];
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
         solovev::flux::FieldRZYRYZY fieldRZY(gp_);
@@ -253,6 +259,7 @@ struct FieldFinv
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
+
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
@@ -360,6 +367,7 @@ struct RingGrid3d : public dg::Grid3d<double>
 //         construct_rz( gp, psi_0, psi_x);
 //         construct_metric();
 //     }
+
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     thrust::host_vector<double> x()const{
         dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
