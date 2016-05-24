@@ -17,6 +17,8 @@ conformal_t: conformal_t.cu conformal.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 flux_t: flux_t.cu flux.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+flux2_t: flux2_t.cu flux2.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 orthogonal_t: orthogonal_t.cu orthogonal.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 

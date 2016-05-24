@@ -456,6 +456,160 @@ struct FieldT
 
 };
 
+namespace flux2{
+
+/**
+ * @brief y-component of magnetic field 
+ */ 
+struct FieldY
+{
+    FieldY( GeomParameters gp): f_psi_(1.), R_0_(gp.R_0),ipol_(gp){}
+    void set_f( double f_new){f_psi_=f_new;}
+  /**
+ * @brief \f[  B^y= 
+ * I(\psi) \frac{(\nabla\psi)^2}{ q R^2} \f]
+ */ 
+    double operator()(double R, double Z) const
+    { 
+        double ipol=ipol_(R, Z);
+        return ipol*R_0_/R/R;
+        
+    }
+      /**
+       * @brief == operator()(R,Z)
+       */ 
+    double operator()(double R, double Z, double phi) const
+    { 
+        return this->operator()(R,Z);
+    }
+    private:
+    double f_psi_, R_0_;
+    Ipol ipol_;
+};
+/**
+ * @brief 
+ * \f[  d R/d \theta =   B^R/B^\theta \f], 
+ * \f[  d Z/d \theta =   B^Z/B^\theta \f],
+ * \f[  d y/d \theta =   B^y/B^\theta\f]
+ */ 
+struct FieldRZYT
+{
+    FieldRZYT( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp),ipol_(gp){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double ipol=ipol_(y[0], y[1]);
+        yp[0] =  R_0_/y[0]*psipZ;//fieldR
+        yp[1] = -R_0_/y[0]*psipR;//fieldZ
+        yp[2] =ipol*R_0_/y[0]/y[0]; //fieldYbar
+        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
+        double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        yp[0] /=  fieldT;
+        yp[1] /=  fieldT;
+        yp[2] /=  fieldT;
+    }
+  private:
+    double R_0_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    Ipol ipol_;
+};
+
+struct FieldRZYZ
+{
+    FieldRZYZ( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp),ipol_(gp){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double ipol=ipol_(y[0], y[1]);
+
+        yp[0] =  psipZ;//fieldR
+        yp[1] = -psipR;//fieldZ
+        yp[2] = ipol; //fieldYbar
+        yp[0] /=  yp[1];
+        yp[2] /=  yp[1];
+        yp[1] =  1.;
+    }
+  private:
+    double R_0_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    Ipol ipol_;
+};
+/**
+ * @brief 
+ * \f[  d R/d y =   B^R/B^y \f], 
+ * \f[  d Z/d y =   B^Z/B^y \f],
+ */ 
+struct FieldRZY
+{
+    FieldRZY( GeomParameters gp): f_(1.), R_0_(gp.R_0), psipR_(gp), psipZ_(gp),ipol_(gp){}
+    void set_f(double f){ f_ = f;}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double ipol=ipol_(y[0], y[1]);
+        double fnorm = ipol;        
+        yp[0] =  (y[0]/fnorm)*(psipZ);
+        yp[1] =  -(y[0]/fnorm)*(psipR);
+    }
+  private:
+    double f_;
+    double R_0_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    Ipol ipol_;
+};
+/**
+ * @brief 
+ * \f[  d R/d y   =   B^R/B^y \f], 
+ * \f[  d Z/d y   =   B^Z/B^y \f],
+ * \f[  d y_R/d y =  \frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial R \partial Z} y_R
+    -\frac{\partial^2 \psi_p}{\partial^2 R} y_Z)\right] + 
+    \frac{\partial \psi_p}{\partial R} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)-\frac{1}{R} \f], 
+ * \f[  d y_Z/d y =   - \frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial Z^2} y_R\right)
+    -\frac{\partial^2 \psi_p}{\partial R \partial Z} y_Z\right]+ 
+    \frac{\partial \psi_p}{\partial Z} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)\f],
+ */ 
+struct FieldRZYRYZY
+{
+    FieldRZYRYZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), ipol_(gp), ipolR_(gp), ipolZ_(gp)
+    { f_ = f_prime_ = 1.;}
+    void set_f( double new_f){ f_ = new_f;}
+    void set_fp( double new_fp){ f_prime_ = new_fp;}
+    
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
+        double ipol=ipol_(y[0], y[1]);
+        double ipolR=ipolR_(y[0], y[1]);
+        double ipolZ=ipolZ_(y[0], y[1]);
+        double fnorm = ipol;
+        
+        yp[0] = (y[0]/fnorm)*(psipZ);
+        yp[1] = -(y[0]/fnorm)*(psipR);
+        yp[2] = (y[0]/fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
+//             + f_prime_/f_* psipR
+            + ipolR/ipol
+            -1./y[0] ;
+        yp[3] = (y[0]/fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
+//             + f_prime_/f_* psipZ
+            + ipolZ/ipol;
+    }
+  private:
+    double f_, f_prime_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipRR psipRR_;
+    PsipRZ psipRZ_;
+    PsipZZ psipZZ_;
+    Ipol ipol_;
+    IpolR ipolR_;
+    IpolZ ipolZ_;
+
+};
+}//namespace flux
 namespace flux{
 
 /**
@@ -564,7 +718,7 @@ struct FieldRZY
  * @brief 
  * \f[  d R/d y   =   B^R/B^y \f], 
  * \f[  d Z/d y   =   B^Z/B^y \f],
- * \f[  d y_R/d y =   .\frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial R \partial Z} y_R
+ * \f[  d y_R/d y =  \frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial R \partial Z} y_R
     -\frac{\partial^2 \psi_p}{\partial^2 R} y_Z)\right] + 
     \frac{\partial \psi_p}{\partial R} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)-\frac{1}{R} \f], 
  * \f[  d y_Z/d y =   - \frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial Z^2} y_R\right)
@@ -587,15 +741,15 @@ struct FieldRZYRYZY
         double ipolZ=ipolZ_(y[0], y[1]);
         double fnorm = ipol*f_;
         
-        yp[0] =  (y[0]/fnorm)*(psipZ);
-        yp[1] =  -(y[0]/fnorm)*(psipR);
-        yp[2] =  (y[0]/fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
-         + f_prime_/f_* psipR 
-         + ipolR/ipol
-         -1./y[0] ;
-        yp[3] =  (y[0]/fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
-         + f_prime_/f_* psipZ 
-         + ipolZ/ipol;
+        yp[0] = (y[0]/fnorm)*(psipZ);
+        yp[1] = -(y[0]/fnorm)*(psipR);
+        yp[2] = (y[0]/fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
+            + f_prime_/f_* psipR
+            + ipolR/ipol
+            -1./y[0] ;
+        yp[3] = (y[0]/fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
+            + f_prime_/f_* psipZ
+            + ipolZ/ipol;
     }
   private:
     double f_, f_prime_;
@@ -610,7 +764,6 @@ struct FieldRZYRYZY
 
 };
 }//namespace flux
-
 namespace conformal{
 
 /**
