@@ -282,12 +282,12 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         arakawa.variation(phi[0], omega); 
         double Ue = blas2::dot( one, w2d, lny[0]);
         double Uphi = 0.5*blas2::dot( one, w2d, omega); 
-        energy_ = Ue + Uphi;
+        energy_ = Ue - Uphi;
 
         dg::blas1::pointwiseDivide( lapy[0], ype[0], omega);
         double Ge = - blas2::dot( one, w2d, omega); // minus 
         double Gphi = -blas2::dot( phi[0], w2d, lapy[1]);
-        ediff_ = nu* (Ge - Gphi) ;
+        ediff_ = nu* (Ge + Gphi) ;
     }
 
     for( unsigned i=0; i<y.size(); i++)
@@ -325,7 +325,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     if( equations == "ralf_global")
     {
         blas1::pointwiseDivide( dyy[0], ype[0], dyy[0]);
-        blas1::axpby( kappa, dyy[0], 1., yp[1]);
+        blas1::axpby( -kappa, dyy[0], 1., yp[1]);
         return;
     }
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
