@@ -93,9 +93,9 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
-    err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
-    err = nc_def_var( ncid, "conformalratio", NC_DOUBLE, 2, dim3d, &confID);
-    err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
+    err = nc_def_var( ncid, "d", NC_DOUBLE, 2, dim3d, &defID);
+    err = nc_def_var( ncid, "Rc", NC_DOUBLE, 2, dim3d, &confID);
+    err = nc_def_var( ncid, "vol", NC_DOUBLE, 2, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);

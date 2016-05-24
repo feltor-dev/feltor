@@ -472,8 +472,9 @@ struct FieldY
     double operator()(double R, double Z) const
     { 
         double ipol=ipol_(R, Z);
-        return ipol*R_0_/R/R;
-        
+//         return ipol*R_0_/R/R;
+                return f_psi_*ipol*R_0_/R/R;
+
     }
       /**
        * @brief == operator()(R,Z)
@@ -549,7 +550,9 @@ struct FieldRZY
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double ipol=ipol_(y[0], y[1]);
-        double fnorm = ipol;        
+        double fnorm = ipol;       
+//                 double fnorm = ipol*f_;        
+
         yp[0] =  (y[0]/fnorm)*(psipZ);
         yp[1] =  -(y[0]/fnorm)*(psipR);
     }
@@ -585,16 +588,17 @@ struct FieldRZYRYZY
         double ipol=ipol_(y[0], y[1]);
         double ipolR=ipolR_(y[0], y[1]);
         double ipolZ=ipolZ_(y[0], y[1]);
-        double fnorm = ipol;
-        
+//         double fnorm = ipol;
+                double fnorm = ipol*f_;
+
         yp[0] = (y[0]/fnorm)*(psipZ);
         yp[1] = -(y[0]/fnorm)*(psipR);
         yp[2] = (y[0]/fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
-//             + f_prime_/f_* psipR
+            + f_prime_/f_* psipR
             + ipolR/ipol
             -1./y[0] ;
         yp[3] = (y[0]/fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
-//             + f_prime_/f_* psipZ
+            + f_prime_/f_* psipZ
             + ipolZ/ipol;
     }
   private:
@@ -627,6 +631,7 @@ struct FieldY
     { 
         double ipol=ipol_(R, Z);
         return f_psi_*ipol*R_0_/R/R;
+//         return f_psi_*ipol*R_0_/R;
         
     }
       /**
@@ -656,6 +661,7 @@ struct FieldRZYT
         yp[0] =  R_0_/y[0]*psipZ;//fieldR
         yp[1] = -R_0_/y[0]*psipR;//fieldZ
         yp[2] =ipol*R_0_/y[0]/y[0]; //fieldYbar
+// yp[2] =ipol*R_0_/y[0]; //fieldYbar
         double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
         double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
         yp[0] /=  fieldT;
@@ -750,6 +756,15 @@ struct FieldRZYRYZY
         yp[3] = (y[0]/fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
             + f_prime_/f_* psipZ
             + ipolZ/ipol;
+//                 yp[0] = (1./fnorm)*(psipZ);
+//         yp[1] = -(1./fnorm)*(psipR);
+//         yp[2] = (1./fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
+//             + f_prime_/f_* psipR
+//             + ipolR/ipol
+//              ;
+//         yp[3] = (1./fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
+//             + f_prime_/f_* psipZ
+//             + ipolZ/ipol;
     }
   private:
     double f_, f_prime_;

@@ -13,7 +13,7 @@
 
 
 
-namespace flux
+namespace flux2
 {
 
 namespace detail
@@ -94,7 +94,8 @@ struct Fpsi
     }
     double operator()( double psi)
     {
-        return 1.;
+        double R_0, Z_0; 
+        return construct_f( psi, R_0, Z_0);
 
     }
 
@@ -123,7 +124,8 @@ struct Fpsi
             thrust::host_vector<double> w1d = dg::create::weights(grid);
             for( unsigned i=0; i<psi_vec.size(); i++)
             {
-                f_vec[i] = this->operator()( psi_vec[i]);
+                f_vec[i] =1./this->operator()( psi_vec[i]);
+//                 f_vec[i] =this->operator()( psi_vec[i]);
             }
             x1 = dg::blas1::dot( f_vec, w1d);
 
@@ -192,13 +194,12 @@ struct Fpsi
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
         double ipol_ = ipol( begin[0], begin[1]);
         //initial conditions:
-        begin[2] = f_psi * ipol_/begin[0]*( psipZ_/psip2);        //y_R(R_0,Z_0)
+        begin[2] = f_psi *ipol_/begin[0]*( psipZ_/psip2);         //y_R(R_0,Z_0)
         begin[3] = -f_psi * ipol_/begin[0]*( psipR_/psip2);       //y_Z(R_0,Z_0)
-//         begin[2] = f_psi * ipol_*( psipZ_/psip2);        //y_R(R_0,Z_0)
-//         begin[3] = -f_psi * ipol_*( psipR_/psip2);       //y_Z(R_0,Z_0)
+
         R_0 = begin[0], Z_0 = begin[1];
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-        solovev::flux::FieldRZYRYZY fieldRZY(gp_);
+        solovev::flux2::FieldRZYRYZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
         fieldRZY.set_fp(fprime);
         unsigned steps = 1;
@@ -209,16 +210,16 @@ struct Fpsi
             eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
             dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
             r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
-
-            xr[0] = -psipR(r[0],z[0]), xz[0] = -psipZ(r[0],z[0]);
+//             xr[0] = -f_psi*psipR(r[0],z[0]), xz[0] = -f_psi*psipZ(r[0],z[0]);
+            xr[0] = -1./f_psi*psipR(r[0],z[0]), xz[0] = -1./f_psi*psipZ(r[0],z[0]);
             //std::cout <<end[0]<<" "<< end[1] <<"\n";
             for( unsigned i=1; i<n*N; i++)
             {
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
-
-                xr[i] = -psipR(r[i],z[i]), xz[i] = -psipZ(r[i],z[i]);
+//                 xr[i] = -f_psi*psipR(r[i],z[i]), xz[i] = -f_psi*psipZ(r[i],z[i]);
+                xr[i] = -1./f_psi*psipR(r[i],z[i]), xz[i] = -1./f_psi*psipZ(r[i],z[i]);
             }
             //compute error in R,Z only
             dg::blas1::axpby( 1., r, -1., r_old, r_diff);
@@ -237,7 +238,7 @@ struct Fpsi
     }
     private:
     const solovev::GeomParameters gp_;
-    const solovev::flux::FieldRZYT fieldRZYT_;
+    const solovev::flux2::FieldRZYT fieldRZYT_;
     const solovev::FieldRZtau fieldRZtau_;
     double R_init, Z_init;
     const double psi_0;
@@ -259,12 +260,14 @@ struct FieldFinv
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        fpsiM[0] = -1;
+//         fpsiM[0] = - end[2]/2./M_PI;
+     fpsiM[0] = - 1./(end[2]/2./M_PI);
+        
     }
     private:
     double psi_0;
     Fpsi fpsi_;
-    solovev::flux::FieldRZYT fieldRZYT_;
+    solovev::flux2::FieldRZYT fieldRZYT_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
 };
@@ -302,7 +305,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         assert( bcx == dg::PER|| bcx == dg::DIR);
-        flux::detail::Fpsi fpsi( gp, psi_0);
+        flux2::detail::Fpsi fpsi( gp, psi_0);
         double x_1 = fpsi.find_x1( psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
@@ -367,7 +370,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         return dg::create::abscissas(gx);}
 
     const thrust::host_vector<double>& f()const{return f_;}
-    perpendicular_grid perp_grid() const { return flux::RingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return flux2::RingGrid2d<container>(*this);}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -464,13 +467,13 @@ struct RingGrid2d : public dg::Grid2d<double>
     RingGrid2d( const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
-        flux::detail::Fpsi fpsi( gp, psi_0);
+        flux2::detail::Fpsi fpsi( gp, psi_0);
         double x_1 = fpsi.find_x1( psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
         else
             init_X_boundaries( x_1, 0.);
-        flux::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
+        flux2::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         f_x_ = g.f_x();
         f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
@@ -580,7 +583,7 @@ struct Field
    
 };
 
-}//namespace flux
+}//namespace flux2
 namespace dg{
 /**
  * @brief This function pulls back a function defined in cartesian coordinates R,Z to the flux coordinates x,y,\phi
@@ -593,7 +596,7 @@ namespace dg{
  * @return A set of points representing F(x,y)
  */
 template< class BinaryOp, class container>
-thrust::host_vector<double> pullback( BinaryOp f, const flux::RingGrid2d<container>& g)
+thrust::host_vector<double> pullback( BinaryOp f, const flux2::RingGrid2d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -602,7 +605,7 @@ thrust::host_vector<double> pullback( BinaryOp f, const flux::RingGrid2d<contain
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double), const flux::RingGrid2d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double), const flux2::RingGrid2d<container>& g)
 {
     return pullback<double(double,double),container>( f, g);
 }
@@ -618,7 +621,7 @@ thrust::host_vector<double> pullback( double(f)(double,double), const flux::Ring
  * @return A set of points representing F(x,y,\phi)
  */
 template< class TernaryOp, class container>
-thrust::host_vector<double> pullback( TernaryOp f, const flux::RingGrid3d<container>& g)
+thrust::host_vector<double> pullback( TernaryOp f, const flux2::RingGrid3d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -632,7 +635,7 @@ thrust::host_vector<double> pullback( TernaryOp f, const flux::RingGrid3d<contai
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double,double), const flux::RingGrid3d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double,double), const flux2::RingGrid3d<container>& g)
 {
     return pullback<double(double,double,double),container>( f, g);
 }
