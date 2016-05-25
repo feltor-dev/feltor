@@ -309,6 +309,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
         blas2::gemv( arakawa.dy(), y[0], dyy[0]);
+        dg::blas1::axpby( -friction, y[1], 1., yp[1]);
         dg::blas1::axpby( -1., dyy[0], 1., yp[1]);
         return;
     }

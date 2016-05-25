@@ -94,7 +94,7 @@ struct Parameters
         init = "blob";
         equations = js.get("equations", "global").asString();
         boussinesq = js.get("boussinesq", "false").asBool();
-        friction = js.get("friction",1.).asDouble();
+        friction = js.get("friction",0.).asDouble();
     }
     
     /**
