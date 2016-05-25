@@ -16,7 +16,7 @@ struct Parameters
     unsigned maxout;
 
     double eps_pol, eps_gamma, eps_time;
-    double tau, kappa, nu;
+    double tau, kappa, friction, nu;
 
     double amp, sigma, posX, posY;
 
@@ -94,6 +94,7 @@ struct Parameters
         init = "blob";
         equations = js.get("equations", "global").asString();
         boussinesq = js.get("boussinesq", "false").asBool();
+        friction = js.get("friction",1.).asDouble();
     }
     
     /**
