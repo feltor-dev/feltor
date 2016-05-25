@@ -614,6 +614,7 @@ struct FieldRZYRYZY
 
 };
 }//namespace flux
+
 namespace flux{
 
 /**
@@ -630,8 +631,8 @@ struct FieldY
     double operator()(double R, double Z) const
     { 
         double ipol=ipol_(R, Z);
-        return f_psi_*ipol*R_0_/R/R;
-//         return f_psi_*ipol*R_0_/R;
+        double fnorm=f_psi_*ipol/R;
+        return fnorm*R_0_/R;
         
     }
       /**
@@ -658,10 +659,10 @@ struct FieldRZYT
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double ipol=ipol_(y[0], y[1]);
+        double fac=ipol/y[0];
         yp[0] =  R_0_/y[0]*psipZ;//fieldR
         yp[1] = -R_0_/y[0]*psipR;//fieldZ
-        yp[2] =ipol*R_0_/y[0]/y[0]; //fieldYbar
-// yp[2] =ipol*R_0_/y[0]; //fieldYbar
+        yp[2] =fac*R_0_/y[0]; //fieldYbar
         double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
         double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
         yp[0] /=  fieldT;
@@ -685,7 +686,7 @@ struct FieldRZYZ
 
         yp[0] =  psipZ;//fieldR
         yp[1] = -psipR;//fieldZ
-        yp[2] = ipol; //fieldYbar
+        yp[2] =   ipol; //fieldYbar
         yp[0] /=  yp[1];
         yp[2] /=  yp[1];
         yp[1] =  1.;
@@ -709,9 +710,9 @@ struct FieldRZY
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double ipol=ipol_(y[0], y[1]);
-        double fnorm = ipol*f_;        
-        yp[0] =  (y[0]/fnorm)*(psipZ);
-        yp[1] =  -(y[0]/fnorm)*(psipR);
+        double fnorm = y[0]/ipol/f_;       
+        yp[0] =  (psipZ)*fnorm;
+        yp[1] = -(psipR)*fnorm;
     }
   private:
     double f_;
@@ -722,8 +723,8 @@ struct FieldRZY
 };
 /**
  * @brief 
- * \f[  d R/d y   =   B^R/B^y \f], 
- * \f[  d Z/d y   =   B^Z/B^y \f],
+ * \f[  d R/d y   =   B^R/B^y = \frac{q R}{I} \frac{\partial \psi_p}{\partial Z} \f], 
+ * \f[  d Z/d y   =   B^Z/B^y =    -\frac{q R}{I} \frac{\partial \psi_p}{\partial R} \f],
  * \f[  d y_R/d y =  \frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial R \partial Z} y_R
     -\frac{\partial^2 \psi_p}{\partial^2 R} y_Z)\right] + 
     \frac{\partial \psi_p}{\partial R} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)-\frac{1}{R} \f], 
@@ -745,26 +746,13 @@ struct FieldRZYRYZY
         double ipol=ipol_(y[0], y[1]);
         double ipolR=ipolR_(y[0], y[1]);
         double ipolZ=ipolZ_(y[0], y[1]);
-        double fnorm = ipol*f_;
-        
-        yp[0] = (y[0]/fnorm)*(psipZ);
-        yp[1] = -(y[0]/fnorm)*(psipR);
-        yp[2] = (y[0]/fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
-            + f_prime_/f_* psipR
-            + ipolR/ipol
-            -1./y[0] ;
-        yp[3] = (y[0]/fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
-            + f_prime_/f_* psipZ
-            + ipolZ/ipol;
-//                 yp[0] = (1./fnorm)*(psipZ);
-//         yp[1] = -(1./fnorm)*(psipR);
-//         yp[2] = (1./fnorm)*(-psipRZ*y[2]+ psipRR*y[3])+
-//             + f_prime_/f_* psipR
-//             + ipolR/ipol
-//              ;
-//         yp[3] = (1./fnorm)*( psipRZ*y[3]- psipZZ*y[2])+
-//             + f_prime_/f_* psipZ
-//             + ipolZ/ipol;
+        double fnorm =y[0]/ipol/f_; //=R/(I/q)
+
+        yp[0] = (psipZ)*fnorm;
+        yp[1] = -(psipR)*fnorm;
+        yp[2] = (-psipRZ*y[2]+ psipRR*y[3])*fnorm+ f_prime_/f_*psipR + ipolR/ipol -1./y[0] ;
+        yp[3] = ( psipRZ*y[3]- psipZZ*y[2])*fnorm+ f_prime_/f_*psipZ + ipolZ/ipol;
+
     }
   private:
     double f_, f_prime_;
@@ -797,6 +785,7 @@ struct FieldY
         double psipR = psipR_(R, Z), psipZ = psipZ_(R,Z);
         double psi2 = 0.0+1.0*(psipR*psipR+ psipZ*psipZ);
         return f_psi_*(psi2)*R_0_/R;
+        
     }
       /**
        * @brief == operator()(R,Z)

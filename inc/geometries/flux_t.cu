@@ -133,14 +133,11 @@ int main( int argc, char* argv[])
     const dg::HVec f_ = g2d.f();
     dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
-    dg::blas1::axpby( 1., temp0, -1., temp1, temp0); //temp0=g = g_xx g_yy - g_xy^2
-    //dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
-    //dg::blas1::pointwiseDot( f_, f_, temp1);
-    temp1 = ones;
-    dg::blas1::axpby( 0.0, temp1, 1.0, g2d.g_xx(),  temp1); 
-    dg::blas1::pointwiseDivide( temp1, g2d.g_yy(), temp1);
-    dg::blas1::pointwiseDivide( temp1, g2d.r(), temp1);
-    dg::blas1::pointwiseDot( temp1, temp1, temp1);
+    dg::blas1::axpby( 1., temp0, -1., temp1, temp0); //temp0=1/g = g^xx g^yy - g^xy^2
+    solovev::flux::FieldY fieldY(gp);
+    dg::HVec fby = dg::pullback( fieldY, g2d);//?
+    dg::blas1::scal( fby, 1./gp.R_0);//=1/sqrt(g)
+    dg::blas1::pointwiseDot( fby, fby, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0); ////temp0= g_xx g_yy - g_xy^2 - g
     double error = sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1));
     std::cout<< "Rel Error in Determinant is "<<error<<"\n";
@@ -148,42 +145,19 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    //dg::blas1::pointwiseDot( temp0, g.g_pp(), temp0);
-    dg::blas1::transform( temp0, temp0, dg::SQRT<double>()); //temp0=sqrt(g) = sqrt(g_xx g_yy - g_xy^2)
-    dg::blas1::pointwiseDivide( ones, temp0, temp0); //temp0=1/sqrt(g)
+    dg::blas1::transform( temp0, temp0, dg::SQRT<double>()); //temp0=1/sqrt(g) = sqrt(g^xx g^yy - g^xy^2)
+    dg::blas1::pointwiseDivide( ones, temp0, temp0); //temp0=sqrt(g)
     X=temp0;
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
-    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
+    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0); //temp0 = sqrt(g)-vol
     error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g2d.vol(), w3d, g2d.vol()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
-    //temp0=g.r();
-    //dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
-    dg::blas1::pointwiseDot( f_, f_, temp0);
-    dg::blas1::axpby( 0.0,temp0 , 1.0, g2d.g_xx(), temp0);
-    dg::blas1::pointwiseDivide( ones, temp0, temp0); //temp0= |nabla psi|^2 f^2
-//        dg::blas1::pointwiseDot( temp0,g2d.r(), temp0);
-//     dg::blas1::axpby( 1., ones, -1., g2d.vol(), temp0);
+    dg::blas1::pointwiseDivide(ones,fby,temp1); //=sqrt(g)
+    dg::blas1::axpby( 1., temp1, -1., g2d.vol(), temp0);
     error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()));
     std::cout << "Rel Error of volume form is "<<error<<"\n";
 
-    solovev::flux::FieldY fieldY(gp);
-    dg::HVec fby = dg::pullback( fieldY, g2d);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    //for( unsigned k=0; k<Nz; k++)
-        //for( unsigned i=0; i<n*Ny; i++)
-        //    for( unsigned j=0; j<n*Nx; j++)
-        //        //by[k*n*n*Nx*Ny + i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
-        //        fby[i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
-    //dg::HVec fby_device = fby;
-    dg::blas1::scal( fby, 1./gp.R_0);
-    temp0=g2d.r();
-    dg::blas1::pointwiseDot( temp0, fby, fby); // B^y*f^2*R/R_0 !=  f^3 Ipol/R
-    dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
-    dg::blas1::axpby( 1., temp0, -1., fby, temp1);
-    error= dg::blas2::dot( temp1, w3d, temp1)/dg::blas2::dot(fby,w3d,fby);
-    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error)<<"\n";
     const dg::HVec vol = dg::create::volume( g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     double volume = dg::blas1::dot( vol, ones3d);
