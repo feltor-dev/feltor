@@ -123,7 +123,7 @@ struct Fpsi
             thrust::host_vector<double> w1d = dg::create::weights(grid);
             for( unsigned i=0; i<psi_vec.size(); i++)
             {
-                f_vec[i] = this->operator()( psi_vec[i]);
+                f_vec[i] = this->operator()( psi_vec[i]); // is psi
             }
             x1 = dg::blas1::dot( f_vec, w1d);
 
@@ -191,11 +191,11 @@ struct Fpsi
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
         double ipol_ = ipol( begin[0], begin[1]);
+        double fnorm = f_psi * ipol_/begin[0];
         //initial conditions:
-        begin[2] = f_psi * ipol_/begin[0]*( psipZ_/psip2);        //y_R(R_0,Z_0)
-        begin[3] = -f_psi * ipol_/begin[0]*( psipR_/psip2);       //y_Z(R_0,Z_0)
-//         begin[2] = f_psi * ipol_*( psipZ_/psip2);        //y_R(R_0,Z_0)
-//         begin[3] = -f_psi * ipol_*( psipR_/psip2);       //y_Z(R_0,Z_0)
+        begin[2] = fnorm*( psipZ_/psip2);        //y_R(R_0,Z_0)
+        begin[3] = -fnorm*( psipR_/psip2);       //y_Z(R_0,Z_0)
+
         R_0 = begin[0], Z_0 = begin[1];
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
         solovev::flux::FieldRZYRYZY fieldRZY(gp_);
@@ -203,13 +203,13 @@ struct Fpsi
         fieldRZY.set_fp(fprime);
         unsigned steps = 1;
         double eps = 1e10, eps_old=2e10;
+        //compute metric relevant elements
         while( eps < eps_old)
         {
             //begin is left const
             eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
             dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
             r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
-
             xr[0] = -psipR(r[0],z[0]), xz[0] = -psipZ(r[0],z[0]);
             //std::cout <<end[0]<<" "<< end[1] <<"\n";
             for( unsigned i=1; i<n*N; i++)
@@ -217,7 +217,6 @@ struct Fpsi
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
-
                 xr[i] = -psipR(r[i],z[i]), xz[i] = -psipZ(r[i],z[i]);
             }
             //compute error in R,Z only
