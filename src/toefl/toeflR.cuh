@@ -64,7 +64,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const Geometry& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations, bool exb );
+    ToeflR( const Geometry& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations, bool boussinesq );
 
 
     /**
@@ -149,14 +149,14 @@ struct ToeflR
     const double eps_pol, eps_gamma; 
     const double kappa, nu, tau;
     const std::string equations;
-    bool exb_compression;
+    bool boussinesq;
 
     double mass_, energy_, diff_, ediff_;
 
 };
 
 template< class Geometry, class M, class container>
-ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations, bool exb ): 
+ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations, bool boussinesq ): 
     chi( evaluate( dg::zero, grid)), omega(chi),
     binv( evaluate( LinearX( kappa, 1.), grid)), 
     phi( 2, chi), dyphi( phi), ype(phi),
@@ -169,7 +169,7 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, dou
     invert_pol(      omega, omega.size(), eps_pol),
     invert_invgamma( omega, omega.size(), eps_gamma),
     w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
-    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), equations( equations), exb_compression(exb)
+    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), equations( equations), boussinesq(boussinesq)
 {
 }
 
@@ -198,13 +198,14 @@ template<class G, class M, class container>
 const container& ToeflR<G, M, container>::polarisation( const std::vector<container>& y)
 {
     //compute chi and polarisation
-    if(equations == "global")
+    if(equations == "global" )
     {
         dg::blas1::transfer( y[1], chi);
         dg::blas1::plus( chi, 1.); 
         blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
         blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        pol.set_chi( chi);
+        if( !boussinesq) 
+            pol.set_chi( chi);
     }
     if( equations != "ralf")
     {
@@ -215,6 +216,8 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
     }
     else 
         blas1::axpby( -1. ,y[1], 0., omega);
+    if( boussinesq) 
+        blas1::pointwiseDivide( omega, chi, omega);
     unsigned number = invert_pol( pol, phi[0], omega);
     if(  number == invert_pol.get_max())
         throw dg::Fail( eps_pol);
@@ -289,7 +292,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         blas2::gemv( arakawa.dy(), y[i], dyy[i]);
         blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
         if(equations == "global") blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
-        if( exb_compression) blas1::axpby( kappa, dyphi[i], 1., yp[i]);
+        blas1::axpby( kappa, dyphi[i], 1., yp[i]);
     }
     // diamagnetic compression
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);

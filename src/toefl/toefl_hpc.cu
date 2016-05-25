@@ -47,7 +47,7 @@ int main( int argc, char* argv[])
     ////////////////////////////////set up computations///////////////////////////
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.equations, p.exb); 
+    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.equations, p.boussinesq); 
     dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
     //create initial vector
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
@@ -108,7 +108,7 @@ int main( int argc, char* argv[])
     err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
+    double E0 = test.energy(), E1 = 0, diff = 0;
     dg::Timer t;
     t.tic();
     try
