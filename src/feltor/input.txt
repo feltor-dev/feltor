@@ -5,10 +5,10 @@
 
 @-----------------------------Space and Time discretization------------
 
-1)  n  (# of x,y-polynomials)            =   3      (3)
-2)  nx (grid points in x)                =   40 (192)
-3)  ny (grid points in y)                =   40 (192)
-4)  nz (grid points in z)                =   15 (>16)
+1)  n  (# of x,y-polynomials)            =   1      (3)
+2)  nx (grid points in x)                =   500 (192)
+3)  ny (grid points in y)                =   500 (192)
+4)  nz (grid points in z)                =   10 (>16)
 5)  dt (time step in units c_s/rho_s)    =   2e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
@@ -49,7 +49,7 @@
 ---------------------------------global boundary condition----------------
 35) global bc (DIR (1), NEU DIR(4)  )                 =  1
 36) poloidal limiter (No (0),Yes (1))                 =  0
-37) Parallel dissipation(adj (0), nadj(1))            =  0
+37) Parallel dissipation(adj (0), nadj(1))            =  1
 38) blob (0) or straight blob(1) or turbulence(2)     =  2 (0)
 @ ------------------------------------------------------------
 
