@@ -37,15 +37,16 @@ int main()
     double eps;
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
-    dg::Grid3d<double> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER, dg::cylindrical);
-    dg::DVec w3d = dg::create::weights( grid);
-    dg::DVec v3d = dg::create::inv_weights( grid);
+    dg::CylindricalGrid<dg::DVec> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER);
+    dg::DVec w3d = dg::create::volume( grid);
+    dg::DVec v3d = dg::create::inv_volume( grid);
     dg::DVec x = dg::evaluate( initial, grid);
 
     std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
     std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CylindricalGrid<dg::fDVec>, dg::fDMatrix, dg::fDVec> flaplace(grid, dg::not_normed, dg::centered);
     dg::DMatrix DX = dg::create::dx( grid);
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
@@ -58,8 +59,16 @@ int main()
     dg::DVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
+    dg::fDVec fx;
+    dg::blas1::transfer(x,fx);
+    dg::Inverse<dg::Elliptic<dg::CylindricalGrid<dg::fDVec>, dg::fDMatrix, dg::fDVec>, dg::fDVec> inverse( flaplace, fx, 10, 1e-15, 0);
     
     std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
+    t.tic();
+    std::cout << "Number of mixed pcg iterations "<< pcg( laplace, x, b, inverse, v3d, eps)<<std::endl;
+    t.toc();
+    std::cout << "... on the device took "<< t.diff()<<"s\n";
+    x = dg::evaluate( initial, grid);
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg( laplace, x, b, v3d, eps)<<std::endl;
     t.toc();

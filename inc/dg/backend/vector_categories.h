@@ -15,6 +15,8 @@ struct StdVectorTag:public AnyVectorTag {};
  */
 struct ThrustVectorTag: public AnyVectorTag {};
 
+struct CuspVectorTag: public ThrustVectorTag {};
+
 struct MPIVectorTag: public AnyVectorTag{};
 
 

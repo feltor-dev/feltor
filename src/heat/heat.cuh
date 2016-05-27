@@ -2,10 +2,7 @@
 
 #include "dg/algorithm.h"
 #include "parameters.h"
-// #include "geometry_circ.h"
-// #include "solovev/geometry.h"
-// #include "geometry_g.h"
-#include "solovev/init.h"
+#include "geometries/init.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -24,17 +21,16 @@ namespace eule
  *
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
- * @tparam Preconditioner The Preconditioner class
+ * @tparam container The container class
  */
-template< class DS, class Matrix, class container, class Preconditioner>
+template< class Geometry, class DS, class Matrix, class container>
 struct Rolkar
 {
-    template<class Grid3d>
-    Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp):
+    Rolkar( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp):
         p(p),
         gp(gp),
         dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
-        dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), g, dg::normed, dg::centered ),
+        dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), dg::normed, dg::centered ),
         elliptic( g, dg::normed, dg::forward)
     {
         container bfield = dg::evaluate( solovev::FieldR( gp),g);
@@ -57,18 +53,18 @@ struct Rolkar
         }
     }
     const container& damping(){return dampprof_;}
-    const Preconditioner& weights(){return elliptic.weights();}
-    const Preconditioner& precond(){return elliptic.precond();}
+    const container& weights(){return elliptic.weights();}
+    const container& precond(){return elliptic.precond();}
   private:
     const eule::Parameters p;
     const solovev::GeomParameters gp;
     const container dampprof_;
     DS dsNU_;
-    dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
+    dg::GeneralEllipticSym<Geometry, Matrix, container> elliptic;
 
 };
 
-template< class DS, class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
+template< class DS, class Matrix, class container >
 struct Feltor
 {
     //typedef std::vector<container> Vector;
@@ -98,13 +94,13 @@ struct Feltor
     const container binv, gradlnB;
 //     ,pupil;
     const container  one;
-    const Preconditioner w3d, v3d;
+    const container w3d, v3d;
 
     //matrices and solvers
     DS dsDIR_, dsNU_;
 
-//     dg::Elliptic< Matrix, container, Preconditioner > lapperp; 
-//     dg::GeneralEllipticSym<Matrix, container, Preconditioner> elliptic;
+//     dg::Elliptic< Matrix, container > lapperp; 
+//     dg::GeneralEllipticSym<Matrix, container> elliptic;
 
     const eule::Parameters p;
     const solovev::GeomParameters gp;
@@ -114,18 +110,18 @@ struct Feltor
 
 };
 
-template<class DS, class Matrix, class container, class P>
+template<class DS, class Matrix, class container>
 template<class Grid>
-Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
+Feltor<DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), tmo(chi),
     binv( dg::evaluate(solovev::Field(gp) , g) ),
     gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
 //     pupil(dg::evaluate( solovev::Pupil( gp), g)),
 //     pupil(dg::evaluate( solovev::GaussianProfDamping(gp ), g)),    //be aware of actual function!
     one( dg::evaluate( dg::one, g)),    
-    w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)),      
-    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR), solovev::Field(gp), g, dg::normed, dg::centered ),
-    dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), g, dg::normed, dg::centered ),
+    w3d( dg::create::volume(g)), v3d( dg::create::inv_volume(g)),      
+    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR), solovev::Field(gp), dg::normed, dg::centered ),
+    dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), dg::normed, dg::centered ),
 //     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,  dg::centered),
 //         elliptic( g, dg::normed, dg::forward),
     p(p),
@@ -142,8 +138,8 @@ Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, sol
 
 
 
-template<class DS, class M, class V, class P>
-void Feltor<DS, M, V, P>::energies( std::vector<V>& y)
+template<class DS, class M, class V>
+void Feltor<DS, M, V>::energies( std::vector<V>& y)
 {
     double S[1]    = {0.0};    
     double Dpar[1] = {0.0};
@@ -217,8 +213,8 @@ void Feltor<DS, M, V, P>::energies( std::vector<V>& y)
 
 
 //do not overwrite y
-template<class DS, class Matrix, class container, class P>
-void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class DS, class Matrix, class container>
+void Feltor<DS, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := T - 1 or T
     */

@@ -29,10 +29,10 @@ struct Diffusion
   private:
     double nu_;
     const container w2d, v2d;
-    dg::Elliptic<Matrix,container,container> LaplacianM;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix,container> LaplacianM;
 };
 
-template< class Matrix, class container=thrust::device_vector<double> >
+template< class Matrix, class container >
 struct Shu 
 {
     typedef typename container::value_type value_type;
@@ -41,7 +41,7 @@ struct Shu
     Shu( const Grid2d<value_type>& grid, double eps);
 
     const Elliptic<Matrix, container, container>& lap() const { return laplaceM;}
-    ArakawaX<Matrix, container>& arakawa() {return arakawa_;}
+    ArakawaX<CartesianGrid2d, Matrix, container>& arakawa() {return arakawa_;}
     /**
      * @brief Returns psi that belong to the last y in operator()
      *
@@ -53,8 +53,8 @@ struct Shu
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
     container psi, w2d, v2d;
-    Elliptic<Matrix, container, container> laplaceM;
-    ArakawaX< Matrix, container> arakawa_; 
+    Elliptic<CartesianGrid2d, Matrix, container> laplaceM;
+    ArakawaX<CartesianGrid2d, Matrix, container> arakawa_; 
     Invert<container> invert;
 };
 

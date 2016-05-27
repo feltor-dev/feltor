@@ -93,6 +93,16 @@ int define_time( int ncid, const char* name, int* dimID, int* tvarID)
     return retval;
 }
 
+int define_limited_time( int ncid, const char* name, int size, int* dimID, int* tvarID)
+{
+    int retval;
+    if( (retval = nc_def_dim( ncid, name, size, dimID)) ){ return retval;}
+    if( (retval = nc_def_var( ncid, name, NC_DOUBLE, 1, dimID, tvarID))){return retval;}
+    std::string t = "time since start"; //needed for paraview to recognize timeaxis
+    if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
+    return retval;
+}
+
 /**
  * @brief Define a 1d dimension variable together with its data points
  *
@@ -167,8 +177,8 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::Grid2d<double>& g)
     dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
-    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
-    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[1], gx))){ return retval;}
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[0], gy))){ return retval;}
 
     return retval;
 }

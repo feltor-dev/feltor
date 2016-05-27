@@ -16,10 +16,10 @@
 #include "dg/cg.h"
 
 // for solovev equ
-#include "solovev/geometry.h"
+#include "geometries/solovev.h"
 #include "heat/parameters.h"
 // for guenter
-// #include "geometry_g.h"
+// #include "geometries/guenther.h"
 
 
 #include "heat.cuh"
@@ -29,6 +29,8 @@
    - integrates the Feltor - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
+
+typedef dg::FieldAligned< dg::CylindricalGrid<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -77,10 +79,10 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, dg::cylindrical);  
+     dg::CylindricalGrid<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
 
-//     dg::DVec w3d_ = dg::create::weights( grid);
-//     dg::DVec v3d_ = dg::create::inv_weights( grid);
+//     dg::DVec w3d_ = dg::create::volume( grid);
+//     dg::DVec v3d_ = dg::create::inv_volume( grid);
 //     dg::DVec x = dg::evaluate( dg::zero, grid);
 //     set up the parallel diffusion
 
@@ -127,9 +129,9 @@ int main( int argc, char* argv[])
     
     //create RHS     
     std::cout << "initialize feltor" << std::endl;
-    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     std::cout << "initialize rolkar" << std::endl;
-    eule::Rolkar<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::CylindricalGrid<dg::DVec> , dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
@@ -144,13 +146,13 @@ int main( int argc, char* argv[])
     
     //background profile
     std::cout << "T background" << std::endl;
-    solovev::Nprofile prof(p, gp); //initial background profile
+    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     
 //     //field aligning
     std::cout << "T aligning" << std::endl;  
 //     dg::CONSTANT gaussianZ( 1.);
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
     y1[0] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1 //3 rounds for blob
 
     //no field aligning
@@ -194,11 +196,11 @@ int main( int argc, char* argv[])
     dg::DVec T1 = dg::evaluate( dg::one, grid);  
 
     dg::blas1::axpby( 1., y0[0], 0., T0); //initialize ni
-    dg::DVec w3d =  dg::create::weights(grid);
+    dg::DVec w3d =  dg::create::volume(grid);
     double normT0 = dg::blas2::dot(  w3d, T0);
     while ( !glfwWindowShouldClose( w ))
     {
-        hvisual = y0[0];  
+        dg::blas1::transfer( y0[0], hvisual);
         if (p.bc ==dg::NEU)    {
         dg::blas1::transform(hvisual,hvisual , dg::PLUS<>(-1)); //npe = N+1
         }

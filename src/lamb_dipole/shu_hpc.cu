@@ -88,7 +88,10 @@ int main( int argc, char * argv[])
     file::T5trunc t5file( argv[2], input);
     double time = 0;
     unsigned step = 0;
-    dg::HVec output[3] = { ab.last(), ab.last(), shu.potential()}; //intermediate transport locations
+    dg::DVec transferD[3] = { ab.last(), ab.last(), shu.potential()}; //intermediate transport locations
+    dg::HVec output[3];
+    for( int i=0;i<3; i++)
+        dg::blas1::transfer( transferD[i], output[i]);
     t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
     t5file.append( vorticity, enstrophy, energy, variation);
     try{
@@ -113,7 +116,9 @@ int main( int argc, char * argv[])
         step+=p.itstp;
         time += p.itstp*p.dt;
         //output all fields
-        output[0] = ab.last(), output[1] = ab.last(), output[2] = shu.potential(); 
+        transferD[0] = ab.last(), transferD[1] = ab.last(), transferD[2] = shu.potential(); 
+        for( int i=0;i<3; i++)
+            dg::blas1::transfer( transferD[i], output[i]);
         t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
         ti.toc();
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;

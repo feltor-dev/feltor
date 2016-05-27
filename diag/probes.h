@@ -63,10 +63,13 @@ probes<IMatrix, Matrix, container> :: probes (container x_c, container y_c, cons
     x_coords(x_c),
     y_coords(y_c),
     num_probes(x_coords.size()),
-    probe_interp(dg::create::interpolation(x_coords, y_coords, g, dg::NEU)),
     dy(dg::create::dy(g)),
     pol_avg(g)
 { 
+    thrust::host_vector<double> t1, t2;
+    dg::blas1::transfer( x_c, t1);
+    dg::blas1::transfer( y_c, t2);
+    dg::blas2::transfer( dg::create::interpolation( t1, t2, g, dg::NEU), probe_interp);
     assert(x_coords.size () == y_coords.size());
     ofstream of;
     stringstream fn;

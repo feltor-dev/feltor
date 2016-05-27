@@ -1,6 +1,10 @@
 project description: 2d global blobs. This code produced results for the paper
 "Radial convection of finite ion temperature, high amplitude plasma blobs"
 
-Problems: Uses the old deprecated file format. 
-    Invert class not used. 
-    Diffusion on ln N and not N as in original 
+The input.txt file is assumed unchanging by git with the command 
+git update-index --assume-unchanged input.txt 
+If you ever need to commit a change in input.txt use
+git update-index --no-assume-unchanged input.txt
+
+Problems: Invert class not used. 
+          Diffusion on ln N and not N as in original 

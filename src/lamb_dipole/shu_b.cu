@@ -91,14 +91,14 @@ int main()
     ab.init( shu, diffusion, y0, p.dt);
     ab( shu, diffusion, y0); //make potential ready
     //cout << "Press any key to start!\n";
-    double x; 
+    //double x; 
     //cin >> x;
     while (!glfwWindowShouldClose(w) && time < p.maxout*p.itstp*p.dt)
     {
         dg::blas2::symv( equidistant, ab.last(), visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
-        hvisual = visual;
+        dg::blas1::transfer( visual, hvisual);
         render.renderQuad( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
         title << "Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step";
         glfwSetWindowTitle(w, title.str().c_str());

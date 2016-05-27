@@ -23,14 +23,12 @@ namespace eule
  *
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
- * @tparam Preconditioner The Preconditioner class
  */
 
-template<class Matrix, class container, class Preconditioner>
+template<class Geometry, class Matrix, class container>
 struct Rolkar
 {
-    template<class Grid2d>
-    Rolkar( const Grid2d& g, eule::Parameters p):
+    Rolkar( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
@@ -50,17 +48,17 @@ struct Rolkar
             dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
         }
     }
-    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perp;}
-    const Preconditioner& weights(){return LaplacianM_perp.weights();}
-    const Preconditioner& precond(){return LaplacianM_perp.precond();}
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
+    const container& weights(){return LaplacianM_perp.weights();}
+    const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
     container temp;    
-    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perp;
+    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 
 };
 
-template< class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
+template< class Geometry, class Matrix, class container>
 struct Feltor
 {
     //typedef std::vector<container> Vector;
@@ -69,8 +67,7 @@ struct Feltor
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
-    template<class Grid2d>
-    Feltor( const Grid2d& g, eule::Parameters p);
+    Feltor( const Geometry& g, eule::Parameters p);
 
 
     /**
@@ -104,15 +101,15 @@ struct Feltor
     container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta,Niavg; //dont use them as helper
     const container binv;
     const container one;
-    const Preconditioner w2d, v2d;
+    const container w2d, v2d;
     std::vector<container> phi;
     std::vector<container> npe, logn; 
 
     //matrices and solvers
-    dg::Poisson< Matrix, container> poisson; 
+    dg::Poisson< Geometry, Matrix, container> poisson; 
 
-    dg::Elliptic< Matrix, container, Preconditioner > pol,lapperp; 
-    dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR,invgammaNU;
+    dg::Elliptic< Geometry, Matrix, container > pol,lapperpM; 
+    dg::Helmholtz< Geometry, Matrix, container > invgammaDIR,invgammaNU;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
     
@@ -127,9 +124,8 @@ struct Feltor
 
 };
 
-template<class Matrix, class container, class P>
-template<class Grid>
-Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p): 
+template<class Grid, class Matrix, class container>
+Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p): 
     chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),
     phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
@@ -139,7 +135,7 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
     pol(    g, g.bcx(), g.bcy(), dg::not_normed,          dg::centered), 
-    lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
+    lapperpM ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     invgammaDIR( g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaNU(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(         omega, omega.size(), p.eps_pol),
@@ -171,8 +167,8 @@ Feltor<Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p):
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
 }
 
-template<class Matrix, class container, class P>
-container& Feltor<Matrix, container, P>::polarisation( const std::vector<container>& y)
+template<class G, class Matrix, class container>
+container& Feltor<G, Matrix, container>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-(bgamp+profamp)) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i n_i
@@ -188,8 +184,8 @@ container& Feltor<Matrix, container, P>::polarisation( const std::vector<contain
     return phi[0];
 }
 
-template< class Matrix, class container, class P>
-container& Feltor<Matrix,container, P>::compute_psi( container& potential)
+template< class G, class Matrix, class container>
+container& Feltor<G, Matrix,container>::compute_psi( container& potential)
 {
     invert_invgammaPhi(invgammaDIR,chi,potential);                 //chi  = Gamma phi
     poisson.variationRHS(potential, omega);
@@ -199,8 +195,8 @@ container& Feltor<Matrix,container, P>::compute_psi( container& potential)
     return phi[1];    
 }
 
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::initializene( const container& src, container& target)
+template<class G, class Matrix, class container>
+void Feltor<G, Matrix, container>::initializene( const container& src, container& target)
 { 
     invert_invgammaN(invgammaNU,target,src); //=ne-1 = Gamma (ni-1)    
 }
@@ -208,8 +204,8 @@ void Feltor<Matrix, container, P>::initializene( const container& src, container
 
 
 
-template<class Matrix, class container, class P>
-void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class G, class Matrix, class container>
+void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
        y[1] := N_i - (p.bgprofamp + p.nprofileamp)
@@ -255,8 +251,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
 
         //---------- perp dissipation 
 
-        dg::blas2::gemv( lapperp, y[i], lambda);
-        dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
+        dg::blas2::gemv( lapperpM, y[i], lambda);
+        dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 N_e
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 N_e
         
         //----------ExB surface terms 
@@ -353,7 +349,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
     }
     //edge - sol boundary
-    if (p.solb*p.lx<p.lx) 
+    if (p.solb<1.) 
     {
         dg::blas1::pointwiseDot(omega,lh,omega); //omega = lh*omega
     }
@@ -364,7 +360,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
     dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
     //edge - sol boundary
-    if (p.solb*p.lx<p.lx) 
+    if (p.solb<1.) 
     {   
         //BOHM SHEATH BC closure
         //dt N_e
@@ -374,7 +370,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(lambda,rh,lambda); //lambda =rh*(exp(-phi) )* ne
         dg::blas1::axpby(-(2./p.l_para)/sqrt(2.*M_PI*fabs(p.mu[0])),lambda,1.0,yp[0]); 
         //add the FLR term (tanh before lapl seems to work because of cancelation) (LWL vorticity correction)
-//         dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
+//         dg::blas2::gemv( lapperpM,lambda, omega); //nabla_perp^2 rh*(ne-1)
 //         dg::blas1::axpby((sqrt(p.d)/M_PI)/sqrt(2.*M_PI*fabs(p.mu[0]))*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR 
@@ -382,11 +378,11 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(-sqrt(1.+p.tau[1])*(2./p.l_para),lambda,1.0,yp[1]);
         //add the FLR term (tanh before lapl seems to work because of cancelation)
         dg::blas1::pointwiseDot( y[0],rh,lambda); //rh*(ne-1)
-        dg::blas2::gemv( lapperp,lambda, omega); //nabla_perp^2 rh*(ne-1)
-        dg::blas1::axpby(sqrt(1.+p.tau[1])*(2./p.l_para)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+        dg::blas2::gemv( lapperpM,lambda, omega); //-nabla_perp^2 rh*(ne-1)
+        dg::blas1::axpby(-sqrt(1.+p.tau[1])*(2./p.l_para)*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     //Density source terms
-    if (p.omega_source>1e-14) 
+    if (p.omega_source>0.) 
     {
         dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0_source - <ne>
         //dtN_e
@@ -396,7 +392,7 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //add the FLR term (tanh and postrans before lapl seems to work because of cancelation) (LWL vorticity correction)
 //         dg::blas1::pointwiseDot(lambda,lhs,lambda);
 //         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());   
-//         dg::blas2::gemv( lapperp, lambda, omega);
+//         dg::blas2::gemv( lapperpM, lambda, omega);
 //         dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR
@@ -404,8 +400,8 @@ void Feltor<Matrix, container, P>::operator()( std::vector<container>& y, std::v
         //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
         dg::blas1::pointwiseDot(lambda,lhs,lambda);
         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
-        dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+        dg::blas2::gemv( lapperpM, lambda, omega);
+        dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
     }
     t.toc();
 #ifdef MPI_VERSION

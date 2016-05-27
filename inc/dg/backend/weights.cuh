@@ -42,7 +42,6 @@ thrust::host_vector<T> abscissas( const Grid1d<T>& g)
 ///@{
 
 
-///@cond
 /**
 * @brief create host_vector containing 1d X-space weight coefficients
 *
@@ -77,6 +76,7 @@ thrust::host_vector<T> inv_weights( const Grid1d<T>& g)
     return v;
 }
 
+///@cond
 namespace detail{
 
 int get_i( unsigned n, int idx) { return idx%(n*n)/n;}
@@ -122,11 +122,10 @@ thrust::host_vector<T> inv_weights( const Grid2d<T>& g)
         v[i] = 1./v[i];
     return v;
 }
+
 /**
 * @brief create host_vector containing 3d X-space weight coefficients for integration
 *
-* If cylindrical coordinates are used the coefficients are multiplied by R
-* to give the correct volume form.
 * @tparam T value type
 * @param g The grid 
 *
@@ -141,15 +140,9 @@ thrust::host_vector<T> weights( const Grid3d<T>& g)
         v[i] = g.hz()*g.hx()*g.hy()/4.*
                g.dlt().weights()[detail::get_i(g.n(), g.Nx(), i)]*
                g.dlt().weights()[detail::get_j(g.n(), g.Nx(), i)];
-    if( g.system() == cylindrical)
-    {
-        Grid1d<T> gR( g.x0(), g.x1(), g.n(), g.Nx());
-        thrust::host_vector<T> absc( abscissas( gR)); 
-        for( unsigned i=0; i<g.size(); i++)
-            v[i] *= absc[i%(g.n()*g.Nx())];
-    }
     return v;
 }
+
 /**
 * @brief create host_vector containing 3d X-space inverse weight coefficients
 *

@@ -19,7 +19,7 @@ int main()
     Matrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 
-    std::vector<double> x( g.size()), y(x);
+    thrust::host_vector<double> x( g.size()), y(x);
     for( unsigned i=0; i<g.Ny()*g.n(); i++)
         for( unsigned j=0; j<g.Nx()*g.n(); j++)
         {
@@ -48,6 +48,30 @@ int main()
     }
     if( passed)
         std::cout << "2D TEST PASSED!\n";
+
+
+    passed = true;
+    thrust::host_vector<double> xs = dg::evaluate( dg::coo1, g); 
+    thrust::host_vector<double> ys = dg::evaluate( dg::coo2, g); 
+    thrust::host_vector<double> xF = dg::create::forward_transform( xs, g);
+    thrust::host_vector<double> yF = dg::create::forward_transform( ys, g);
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        double xi = dg::interpolate(x[i],y[i], xF, g);
+        double yi = dg::interpolate(x[i],y[i], yF, g);
+        if( x[i] - xi > 1e-14)
+        {
+            std::cerr << "X NOT EQUAL "<<i<<"\t"<<x[i]<<"  \t"<<xi<<"\n";
+            passed = false;
+        }
+        if( y[i] - yi > 1e-14)
+        {
+            std::cerr << "Y NOT EQUAL "<<i<<"\t"<<y[i]<<"  \t"<<yi<<"\n";
+            passed = false;
+        }
+    }
+    if( passed)
+        std::cout << "2D INTERPOLATE TEST PASSED!\n";
     }
     ////////////////////////////////////////////////////////////////////////////
     {

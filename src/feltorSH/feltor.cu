@@ -66,29 +66,16 @@ int main( int argc, char* argv[])
      dg::Grid2d<double > grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p);
+    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
-    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(p, gp);
-//     dg::CONSTANT init0( 0.);
-//      dg::Vortex init0(  p.posX*p.lx, p.posY*p.ly, 0, p.sigma, p.amp);   
-    //background profile
-//     solovev::Nprofile prof(p, gp); //initial background profile
-//    dg::CONSTANT prof(p.bgprofamp );
-    //
-//     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-//     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-//     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
-//     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    
+
+    dg::CONSTANT prof(p.bgprofamp );
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
    
    //initialization via N_i,T_I ->n_e, t_i=t_e
@@ -99,7 +86,11 @@ int main( int argc, char* argv[])
     if (p.iso == 0) dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
     std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1],y0[3], y0[0]);    //ne -bg
+
+    if( p.init == 0)
+        feltor.initializene( y0[1],y0[3], y0[0]);    //ne -bg
+    else  
+        dg::blas1::axpby( 1., y0[1], 0., y0[0], y0[0]); // for Omega*=0
     std::cout << "Done!\n";    
     
     std::cout << "intialize ti=te" << std::endl;
@@ -111,11 +102,17 @@ int main( int argc, char* argv[])
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni
         dg::blas1::pointwiseDot(y0[1],y0[3],y1[3]); // = Ni Ti
         dg::blas1::transform(y1[3], y1[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi = Pi - bg^2
-        feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+        if( p.init == 0)
+            feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
         //compute ti-bg = ((pi-bg^2) +bg^2)/ne -bg
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //=ne    
         dg::blas1::pointwiseDivide(y0[2],y0[0],y0[2]);
+        
+
+        if( p.init != 0)
+            dg::blas1::axpby( 1., y0[3], 0., y0[2], y0[2]); //for Omega*=0
+
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
         dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
@@ -148,7 +145,7 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
         //draw Ne-1
-        hvisual = y0[0];
+        dg::blas1::transfer( y0[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -158,7 +155,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw Ni-1
-        hvisual = y0[1];
+        dg::blas1::transfer( y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -169,7 +166,7 @@ int main( int argc, char* argv[])
 
         
         //draw potential
-        hvisual = feltor.potential()[0];
+        dg::blas1::transfer( feltor.potential()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
@@ -178,7 +175,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw Te-1
-        hvisual = y0[2];
+        dg::blas1::transfer( y0[2], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -188,7 +185,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw Ti-1
-        hvisual = y0[3];
+        dg::blas1::transfer( y0[3], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -201,7 +198,7 @@ int main( int argc, char* argv[])
         //transform to Vor
         dvisual=feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        hvisual = y1[1];
+        dg::blas1::transfer( y1[1], hvisual);
          //hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
