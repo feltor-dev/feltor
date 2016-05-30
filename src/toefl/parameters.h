@@ -16,7 +16,7 @@ struct Parameters
     unsigned maxout;
 
     double eps_pol, eps_gamma, eps_time;
-    double tau, kappa, nu;
+    double tau, kappa, friction, nu;
 
     double amp, sigma, posX, posY;
 
@@ -24,7 +24,7 @@ struct Parameters
     enum dg::bc bc_x, bc_y;
 
     std::string init, equations;
-    bool exb, diamagnetic;
+    bool boussinesq;
 
     /**
      * @brief constructor to make a const object
@@ -93,8 +93,8 @@ struct Parameters
         bc_y = dg::str2bc(js["bc_y"].asString());
         init = "blob";
         equations = js.get("equations", "global").asString();
-        exb = js["compression"].get( "exb", true).asBool();
-        diamagnetic = js["compression"].get( "diamagnetic", true).asBool();
+        boussinesq = js.get("boussinesq", "false").asBool();
+        friction = js.get("friction",0.).asDouble();
     }
     
     /**
@@ -110,8 +110,7 @@ struct Parameters
             <<"    Ion-temperature: = "<<tau<<"\n";
         os << "Equation parameters are: \n"
             <<"    "<<equations<<"\n"
-            <<"    exb         "<<exb<<"\n"
-            <<"    diamagnetic "<<diamagnetic<<"\n";
+            <<"    boussinesq  "<<boussinesq<<"\n";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";

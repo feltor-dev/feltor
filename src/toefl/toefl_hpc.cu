@@ -47,7 +47,7 @@ int main( int argc, char* argv[])
     ////////////////////////////////set up computations///////////////////////////
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.equations); 
+    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
     dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
     //create initial vector
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
@@ -57,11 +57,12 @@ int main( int argc, char* argv[])
         dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-    if( p.equations == "ralf_local" || p.equations == "ralf_global"){
+    if( p.equations == "ralf" || p.equations == "ralf_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
 
     //////////////////initialisation of timestepper and first step///////////////////
+    std::cout << "init timestepper...\n";
     double time = 0;
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);

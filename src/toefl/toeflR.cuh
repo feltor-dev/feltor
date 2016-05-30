@@ -5,6 +5,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/backend/typedefs.cuh"
+#include "parameters.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -64,7 +65,7 @@ struct ToeflR
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    ToeflR( const Geometry& g, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations);
+    ToeflR( const Geometry& g, const Parameters& p );
 
 
     /**
@@ -147,38 +148,42 @@ struct ToeflR
 
     const container w2d, v2d, one;
     const double eps_pol, eps_gamma; 
-    const double kappa, nu, tau;
+    const double kappa, friction, nu, tau;
     const std::string equations;
+    bool boussinesq;
 
     double mass_, energy_, diff_, ediff_;
 
 };
 
 template< class Geometry, class M, class container>
-ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, double kappa, double nu, double tau, double eps_pol, double eps_gamma, std::string equations): 
+ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters& p ): 
     chi( evaluate( dg::zero, grid)), omega(chi),
-    binv( evaluate( LinearX( kappa, 1.), grid)), 
+    binv( evaluate( LinearX( p.kappa, 1.), grid)), 
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy),
     gamma_n(chi),
     pol(     grid, not_normed, dg::centered), 
     laplaceM( grid, normed, centered),
-    gamma1(  grid, -0.5*tau, dg::centered),
+    gamma1(  grid, -0.5*p.tau, dg::centered),
     arakawa( grid), 
-    invert_pol(      omega, omega.size(), eps_pol),
-    invert_invgamma( omega, omega.size(), eps_gamma),
+    invert_pol(      omega, omega.size(), p.eps_pol),
+    invert_invgamma( omega, omega.size(), p.eps_gamma),
     w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
-    eps_pol(eps_pol), eps_gamma( eps_gamma), kappa(kappa), nu(nu), tau( tau), equations( equations)
+    eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
 {
 }
 
 template< class G, class M, class container>
 const container& ToeflR<G, M, container>::compute_psi( const container& potential)
 {
-    if(equations == "ralf_local" || equations == "ralf_global") return potential;
-    unsigned number = invert_invgamma( gamma1, phi[1], potential);
-    if(  number == invert_invgamma.get_max())
-        throw dg::Fail( eps_gamma);
+    if(equations == "ralf") return potential;
+    if( equations == "local" || equations == "global")
+    {
+        unsigned number = invert_invgamma( gamma1, phi[1], potential);
+        if(  number == invert_invgamma.get_max())
+            throw dg::Fail( eps_gamma);
+    }
 
     arakawa.variation(potential, omega); //needed also in local energy theorem
     if(equations == "global")
@@ -188,6 +193,8 @@ const container& ToeflR<G, M, container>::compute_psi( const container& potentia
 
         dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
     }
+    if( equations == "ralf_global") 
+        dg::blas1::axpby( 0.5, omega, 0., phi[1]);
     return phi[1];    
 }
 
@@ -197,13 +204,21 @@ template<class G, class M, class container>
 const container& ToeflR<G, M, container>::polarisation( const std::vector<container>& y)
 {
     //compute chi and polarisation
-    if(equations == "global")
+    if(equations == "global" )
     {
         dg::blas1::transfer( y[1], chi);
         dg::blas1::plus( chi, 1.); 
         blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
         blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
-        pol.set_chi( chi);
+        if( !boussinesq) 
+            pol.set_chi( chi);
+    }
+    if(equations == "ralf_global" )
+    {
+        dg::blas1::transfer( y[0], chi);
+        dg::blas1::plus( chi, 1.); 
+        if( !boussinesq) 
+            pol.set_chi( chi);
     }
     if( equations == "local" || equations == "global")
     {
@@ -212,8 +227,11 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
             throw dg::Fail( eps_gamma);
         blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
     }
-    else  //ralf_local and ralf_global
+    else 
         blas1::axpby( -1. ,y[1], 0., omega);
+    if( equations == "global" || equations == "ralf_global")
+        if( boussinesq) 
+            blas1::pointwiseDivide( omega, chi, omega);
     unsigned number = invert_pol( pol, phi[0], omega);
     if(  number == invert_pol.get_max())
         throw dg::Fail( eps_pol);
@@ -255,7 +273,13 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
-    else if(equations == "local")
+    else if(equations == "ralf_global" || equations == "ralf")
+    {
+        energy_ = 0.5*blas2::dot( y[0], w2d, y[0]);
+        double Ge = - blas2::dot( y[0], w2d, lapy[0]);
+        ediff_ = nu* Ge;
+    }
+    else
     {
         double Ue = 0.5*blas2::dot( y[0], w2d, y[0]);
         double Ui = 0.5*tau*blas2::dot( y[1], w2d, y[1]);
@@ -269,37 +293,32 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
-    else if(equations == "ralf_local")
+    if( equations == "ralf_global")
     {
-        double Ue = 0.5*blas2::dot( y[0], w2d, y[0]);
-        energy_ = Ue;
-
-        double Ge = - blas2::dot( y[0], w2d, lapy[0]); // minus 
-        ediff_ = nu* Ge;
+        arakawa(y[0], phi[0], yp[0]);
+        arakawa(y[1], phi[0], yp[1]);
+        arakawa(y[0], phi[1], omega);
+        dg::blas1::axpby( 1., omega, 1., yp[1]);
+        dg::blas1::axpby( -friction, y[1], 1., yp[1]);
+        dg::blas2::gemv( arakawa.dy(), y[0], omega);
+        dg::blas1::axpby( -1., omega, 1., yp[1]);
+        return;
     }
-    else if(equations == "ralf_global")
+    if( equations == "ralf")
     {
-        arakawa.variation(phi[0], omega); 
-        double Ue = blas2::dot( one, w2d, lny[0]);
-        double Uphi = 0.5*blas2::dot( one, w2d, omega); 
-        energy_ = Ue - Uphi;
-
-        dg::blas1::pointwiseDivide( lapy[0], ype[0], omega);
-        double Ge = - blas2::dot( one, w2d, omega); // minus 
-        double Gphi = -blas2::dot( phi[0], w2d, lapy[1]);
-        ediff_ = nu* (Ge + Gphi) ;
+        arakawa(y[0], phi[0], yp[0]);
+        arakawa(y[1], phi[0], yp[1]);
+        blas2::gemv( arakawa.dy(), y[0], dyy[0]);
+        dg::blas1::axpby( -friction, y[1], 1., yp[1]);
+        dg::blas1::axpby( -1., dyy[0], 1., yp[1]);
+        return;
     }
+
 
     for( unsigned i=0; i<y.size(); i++)
     {
         arakawa( y[i], phi[i], yp[i]);
-        if(equations == "global" || equations == "ralf_global") blas1::pointwiseDot( binv, yp[i], yp[i]);
-    }
-    if(equations == "ralf_local")
-    {
-        blas2::gemv( arakawa.dy(), y[0], dyy[0]);
-        dg::blas1::axpby( -kappa, dyy[0], 1., yp[1]);
-        return;
+        if(equations == "global") blas1::pointwiseDot( binv, yp[i], yp[i]);
     }
 
     //compute derivatives and exb compression
@@ -307,30 +326,14 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
     {
         blas2::gemv( arakawa.dy(), y[i], dyy[i]);
         blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
-    }
-
-    if(equations == "global") 
-        for( unsigned i=0; i<y.size(); i++)
-            blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
-
-    if( equations == "ralf_global")
-    {
-        blas1::pointwiseDot( dyphi[0], ype[0], dyphi[0]);
-        blas1::pointwiseDot( dyphi[1], y[1], dyphi[1]);
-    }
-    for( unsigned i=0; i<y.size(); i++)
+        if(equations == "global") blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
         blas1::axpby( kappa, dyphi[i], 1., yp[i]);
+    }
     // diamagnetic compression
     blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
-    if( equations == "ralf_global")
-    {
-        blas1::pointwiseDivide( dyy[0], ype[0], dyy[0]);
-        blas1::axpby( -kappa, dyy[0], 1., yp[1]);
-        return;
-    }
     blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
 
-
+    return;
 }
 
 }//namespace dg
