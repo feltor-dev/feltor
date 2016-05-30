@@ -348,15 +348,15 @@ struct RingGrid3d : public dg::Grid3d<double>
         std::vector<thrust::host_vector<double> > begin(6);
         double R0, Z0, f0;
         fpsi.compute_rzy( psi_0, n, Ny, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
-        //thrust::host_vector<double> gvec(n*Ny, 1./f0);
-        thrust::host_vector<double> gvec(n*Ny, f0);
+        thrust::host_vector<double> gvec(n*Ny, 1./f0);
+//         thrust::host_vector<double> gvec(n*Ny, f0);
         solovev::PsipR psipR_(gp);
         solovev::PsipZ psipZ_(gp);
-        //for( unsigned i=0; i<rvec.size(); i++)
-        //{
-        //    double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
-        //    gvec[i] *= (psipR*psipR + psipZ*psipZ);
-        //}
+        for( unsigned i=0; i<rvec.size(); i++)
+        {
+           double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
+           gvec[i] *= (psipR*psipR + psipZ*psipZ);
+        }
         begin[0] = rvec, begin[1] = zvec, begin[2] = psivec; 
         begin[3] = gvec; begin[4] = yrvec, begin[5] = yzvec;
         //now we have the starting values of r, z, psi

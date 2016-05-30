@@ -23,8 +23,8 @@ namespace detail
 //good as it can, i.e. until machine precision is reached
 struct Fpsi
 {
-    Fpsi( const solovev::GeomParameters& gp, double psi_0): 
-        gp_(gp), fieldRZYT_(gp), fieldRZtau_(gp), psi_0(psi_0) 
+    Fpsi( const solovev::GeomParameters& gp, double psi_0, double deltapsi): 
+        gp_(gp), fieldRZYT_(gp), fieldRZtau_(gp), psi_0(psi_0), deltapsi(deltapsi) 
     {
         /**
          * @brief Find R such that \f$ \psi_p(R,0) = psi_0\f$
@@ -94,7 +94,7 @@ struct Fpsi
     }
     double operator()( double psi)
     {
-        return 1.;
+        return 1./deltapsi;
 
     }
 
@@ -165,6 +165,14 @@ struct Fpsi
     }
 
     //compute the vector of r and z - values that form one psi surface
+//     void compute_rzy( double psi, unsigned n, unsigned N, 
+//             thrust::host_vector<double>& r, 
+//             thrust::host_vector<double>& z, 
+//             thrust::host_vector<double>& yr, 
+//             thrust::host_vector<double>& yz,  
+//             thrust::host_vector<double>& xr, 
+//             thrust::host_vector<double>& xz,  
+//             double& R_0, double& Z_0, double& f, double& fp ) 
     void compute_rzy( double psi, unsigned n, unsigned N, 
             thrust::host_vector<double>& r, 
             thrust::host_vector<double>& z, 
@@ -193,11 +201,11 @@ struct Fpsi
         double ipol_ = ipol( begin[0], begin[1]);
         double fnorm = f_psi * ipol_/begin[0];
         //initial conditions:
-        begin[2] = fnorm*( psipZ_/psip2);        //y_R(R_0,Z_0)
+        begin[2] =  fnorm*( psipZ_/psip2);        //y_R(R_0,Z_0)
         begin[3] = -fnorm*( psipR_/psip2);       //y_Z(R_0,Z_0)
 
         R_0 = begin[0], Z_0 = begin[1];
-        //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
+//         std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
         solovev::flux::FieldRZYRYZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
         fieldRZY.set_fp(fprime);
@@ -210,14 +218,14 @@ struct Fpsi
             eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
             dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
             r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
-            xr[0] = -psipR(r[0],z[0]), xz[0] = -psipZ(r[0],z[0]);
+            xr[0] = -psipR(r[0],z[0])/deltapsi, xz[0] = -psipZ(r[0],z[0])/deltapsi;
             //std::cout <<end[0]<<" "<< end[1] <<"\n";
             for( unsigned i=1; i<n*N; i++)
             {
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
-                xr[i] = -psipR(r[i],z[i]), xz[i] = -psipZ(r[i],z[i]);
+                xr[i] = -psipR(r[i],z[i])/deltapsi, xz[i] = -psipZ(r[i],z[i])/deltapsi;
             }
             //compute error in R,Z only
             dg::blas1::axpby( 1., r, -1., r_old, r_diff);
@@ -240,15 +248,16 @@ struct Fpsi
     const solovev::FieldRZtau fieldRZtau_;
     double R_init, Z_init;
     const double psi_0;
+    const double deltapsi;
 
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
 struct FieldFinv
 {
-    FieldFinv( const solovev::GeomParameters& gp, double psi_0, unsigned N_steps = 500): 
-        psi_0(psi_0), 
-        fpsi_(gp, psi_0), fieldRZYT_(gp), N_steps(N_steps)
+    FieldFinv( const solovev::GeomParameters& gp, double psi_0, double deltapsi, unsigned N_steps = 500): 
+        psi_0(psi_0), deltapsi(deltapsi), 
+        fpsi_(gp, psi_0,deltapsi), fieldRZYT_(gp), N_steps(N_steps)
             { }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
@@ -258,10 +267,11 @@ struct FieldFinv
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        fpsiM[0] = -1;
+        fpsiM[0] = -1.*deltapsi;
     }
     private:
     double psi_0;
+    double deltapsi;
     Fpsi fpsi_;
     solovev::flux::FieldRZYT fieldRZYT_;
     thrust::host_vector<double> fpsi_neg_inv;
@@ -301,8 +311,10 @@ struct RingGrid3d : public dg::Grid3d<double>
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         assert( bcx == dg::PER|| bcx == dg::DIR);
-        flux::detail::Fpsi fpsi( gp, psi_0);
+        double deltapsi= psi_0-psi_1;
+        flux::detail::Fpsi fpsi( gp, psi_0,deltapsi);
         double x_1 = fpsi.find_x1( psi_1);
+        
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
         else
@@ -311,8 +323,8 @@ struct RingGrid3d : public dg::Grid3d<double>
             std::swap( psi_0, psi_1);
         }
         //compute psi(x) for a grid on x and call construct_rzy for all psi
-        detail::FieldFinv fpsiMinv_(gp, psi_0, 500);
-        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
+        detail::FieldFinv fpsiMinv_(gp, psi_0, deltapsi,500);
+        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx); //x0=-x_1  x1=0
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
         thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
         f_x_.resize( psi_x.size());
@@ -325,11 +337,11 @@ struct RingGrid3d : public dg::Grid3d<double>
         //while( eps <  eps_old && N < 1e6)
         while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
         {
+
             eps_old = eps;
             //psi_old = psi_x; 
             x0 = this->x0(), x1 = x_vec[0];
-
-            dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
+             dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N); //= int_x0^x1 dx
             psi_x[0] = end[0]; fpsiMinv_(end,temp); f_x_[0] = temp[0];
             for( unsigned i=1; i<g1d_.size(); i++)
             {
@@ -346,19 +358,10 @@ struct RingGrid3d : public dg::Grid3d<double>
             std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
-        construct_rz( gp, psi_0, psi_x);
+        construct_rz( gp, psi_0, psi_x,deltapsi);
         construct_metric();
     }
-    //produces segmentation fault!
-//     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-//         dg::Grid3d<double>( psi_0, psi_1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
-//     { 
-//         assert( bcx == dg::PER|| bcx == dg::DIR);
-//         dg::Grid1d<double> g1d_(  psi_0, psi_1, n, Nx, bcx);
-//         thrust::host_vector<double> psi_x = dg::evaluate( dg::coo1, g1d_);
-//         construct_rz( gp, psi_0, psi_x);
-//         construct_metric();
-//     }
+
 
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     thrust::host_vector<double> x()const{
@@ -383,10 +386,10 @@ struct RingGrid3d : public dg::Grid3d<double>
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
-    void construct_rz( const solovev::GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
+    void construct_rz( const solovev::GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x, double deltapsi)
     {
         //std::cout << "In grid function:\n";
-        detail::Fpsi fpsi( gp, psi_0);
+        detail::Fpsi fpsi( gp, psi_0,deltapsi);
         r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
@@ -397,6 +400,8 @@ struct RingGrid3d : public dg::Grid3d<double>
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
+
+//             fpsi.compute_rzy( psi_x[i], this->n(), this->Ny(), ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
             fpsi.compute_rzy( psi_x[i], this->n(), this->Ny(), ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
@@ -463,7 +468,8 @@ struct RingGrid2d : public dg::Grid2d<double>
     RingGrid2d( const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
-        flux::detail::Fpsi fpsi( gp, psi_0);
+        double deltapsi=psi_0-psi_1;
+        flux::detail::Fpsi fpsi( gp, psi_0, deltapsi);
         double x_1 = fpsi.find_x1( psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);

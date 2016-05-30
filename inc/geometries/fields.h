@@ -750,8 +750,8 @@ struct FieldRZYRYZY
 
         yp[0] = (psipZ)*fnorm;
         yp[1] = -(psipR)*fnorm;
-        yp[2] = (-psipRZ*y[2]+ psipRR*y[3])*fnorm+ f_prime_/f_*psipR + ipolR/ipol -1./y[0] ;
-        yp[3] = ( psipRZ*y[3]- psipZZ*y[2])*fnorm+ f_prime_/f_*psipZ + ipolZ/ipol;
+        yp[2] = (-psipRZ*y[2]+ psipRR*y[3])*fnorm + f_prime_/f_*psipR + ipolR/ipol -1./y[0] ;
+        yp[3] = ( psipRZ*y[3]- psipZZ*y[2])*fnorm + f_prime_/f_*psipZ + ipolZ/ipol;
 
     }
   private:

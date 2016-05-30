@@ -202,35 +202,35 @@ int main( int argc, char* argv[])
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
-    /////////////////////////TEST 3d grid//////////////////////////////////////
-    std::cout << "Start DS test!"<<std::endl;
-    const dg::HVec vol3d = dg::create::volume( g3d);
-    t.tic();
-    DFA fieldaligned( orthogonal::Field( gp, g2d, g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
-
-    dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, orthogonal::Field(gp, g2d, g2d.f2_xy()), dg::normed, dg::centered);
-    t.toc();
-    std::cout << "Construction took "<<t.diff()<<"s\n";
-    dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-    dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-    dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-    dg::blas1::pointwiseDivide( ones3d, B, B);
-    dg::HVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
-    ds( function, derivative);
-
-    ds.centeredT( B, divB);
-    double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "Divergence of B is "<<norm<<"\n";
-
-    ds.centered( lnB, gradB);
-    std::cout << "num. norm of gradLnB is "<<sqrt( dg::blas2::dot( gradB,vol3d, gradB))<<"\n";
-    norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
-    dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    X = divB;
-    err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
-    double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
-    std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
+//     /////////////////////////TEST 3d grid//////////////////////////////////////
+//     std::cout << "Start DS test!"<<std::endl;
+//     const dg::HVec vol3d = dg::create::volume( g3d);
+//     t.tic();
+//     DFA fieldaligned( orthogonal::Field( gp, g2d, g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
+// 
+//     dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, orthogonal::Field(gp, g2d, g2d.f2_xy()), dg::normed, dg::centered);
+//     t.toc();
+//     std::cout << "Construction took "<<t.diff()<<"s\n";
+//     dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
+//     dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
+//     dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
+//     dg::blas1::pointwiseDivide( ones3d, B, B);
+//     dg::HVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
+//     ds( function, derivative);
+// 
+//     ds.centeredT( B, divB);
+//     double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
+//     std::cout << "Divergence of B is "<<norm<<"\n";
+// 
+//     ds.centered( lnB, gradB);
+//     std::cout << "num. norm of gradLnB is "<<sqrt( dg::blas2::dot( gradB,vol3d, gradB))<<"\n";
+//     norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
+//     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
+//     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
+//     X = divB;
+//     err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
+//     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
+//     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
     err = nc_close( ncid);
 
 
