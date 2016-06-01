@@ -15,6 +15,16 @@ ds_geom_t: ds_geom_t.cu solovev.h
 
 conformal_t: conformal_t.cu conformal.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+	
+boozer_t: boozer_t.cu boozer.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+	
+hamada_t: hamada_t.cu hamada.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+	
+equalarc_t: equalarc_t.cu equalarc.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+	
 flux_t: flux_t.cu flux.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 	

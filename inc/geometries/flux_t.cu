@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "d",    NC_DOUBLE, 2, dim3d, &defID);
-    err = nc_def_var( ncid, "Rc", NC_DOUBLE, 2, dim3d, &confID);
+    err = nc_def_var( ncid, "R", NC_DOUBLE, 2, dim3d, &confID);
     err = nc_def_var( ncid, "vol", NC_DOUBLE, 2, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 

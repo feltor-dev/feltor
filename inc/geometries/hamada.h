@@ -13,7 +13,7 @@
 
 
 
-namespace flux
+namespace hamada
 {
 
 namespace detail
@@ -38,6 +38,26 @@ struct Fpsi
         R_init = gp.R_0 + 0.5*gp.a; Z_init = 0;
         solovev::Psip psip(gp);
         psi_0 =  psip(R_init, Z_init);
+        //own implementation so as not to need a function object
+        //solovev::Psip psip( gp);
+        //double min = gp.R_0, max = gp.R_0+2*gp.a, middle;
+        //double value_middle, value_max=psip(gp.R_0+gp.a, 0)-psi_0, value_min=psip(gp.R_0, 0) - psi_0;
+        //std::cout << value_max <<" "<<value_min<<"\n";
+        //if( value_max*value_min>=0)
+        //    throw dg::KeineNST_1D( min, max);
+        //double eps=max-min, eps_old = 2*eps;
+        //unsigned number =0;
+        //while( eps<eps_old)
+        //{
+        //    eps_old = eps;
+        //    value_middle = psip( middle = (min+max)/2., 0) - psi_0;
+        //    if( value_middle == 0)              {max = min = middle; break;}
+        //    else if( value_middle*value_max >0) max = middle;
+        //    else                                min = middle;
+        //    eps = max-min; number++;
+        //}
+        ////std::cout << eps<<" with "<<number<<" steps\n";
+        //R_init = (min+max)/2;
     }
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0) 
@@ -88,14 +108,12 @@ struct Fpsi
             //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
             //std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
         }
-        
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
     }
     double operator()( double psi)
     {
         return 1./deltapsi;
-
     }
 
     /**
@@ -123,12 +141,12 @@ struct Fpsi
             thrust::host_vector<double> w1d = dg::create::weights(grid);
             for( unsigned i=0; i<psi_vec.size(); i++)
             {
-                f_vec[i] = this->operator()( psi_vec[i]); // is psi
+                f_vec[i] = this->operator()( psi_vec[i]);
             }
             x1 = dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x1 - x1_old)/x1);
-            std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
+            //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x1_old;
 
@@ -137,11 +155,10 @@ struct Fpsi
     double f_prime( double psi) 
     {
         //compute fprime
-        double R_0, Z_0;
         double deltaPsi = fabs(psi)/100.;
         double fofpsi[4];
-        fofpsi[1] = construct_f(psi-deltaPsi, R_0, Z_0);
-        fofpsi[2] = construct_f(psi+deltaPsi, R_0, Z_0);
+        fofpsi[1] = operator()(psi-deltaPsi);
+        fofpsi[2] = operator()(psi+deltaPsi);
         double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
         double eps = 1e10, eps_old=2e10;
         while( eps < eps_old)
@@ -150,8 +167,8 @@ struct Fpsi
             fprime_old = fprime;
             eps_old = eps;
             fofpsi[0] = fofpsi[1], fofpsi[3] = fofpsi[2];
-            fofpsi[1] = construct_f(psi-deltaPsi, R_0, Z_0);
-            fofpsi[2] = construct_f(psi+deltaPsi, R_0, Z_0);
+            fofpsi[1] = operator()(psi-deltaPsi);
+            fofpsi[2] = operator()(psi+deltaPsi);
             //reuse previously computed fpsi for current fprime
             fprime  = (+ 1./12.*fofpsi[0] 
                        - 2./3. *fofpsi[1]
@@ -165,14 +182,6 @@ struct Fpsi
     }
 
     //compute the vector of r and z - values that form one psi surface
-//     void compute_rzy( double psi, unsigned n, unsigned N, 
-//             thrust::host_vector<double>& r, 
-//             thrust::host_vector<double>& z, 
-//             thrust::host_vector<double>& yr, 
-//             thrust::host_vector<double>& yz,  
-//             thrust::host_vector<double>& xr, 
-//             thrust::host_vector<double>& xz,  
-//             double& R_0, double& Z_0, double& f, double& fp ) 
     void compute_rzy( double psi, unsigned n, unsigned N, 
             thrust::host_vector<double>& r, 
             thrust::host_vector<double>& z, 
@@ -195,23 +204,19 @@ struct Fpsi
         const double f_psi = construct_f( psi, begin[0], begin[1]);
         solovev::PsipR psipR(gp_);
         solovev::PsipZ psipZ(gp_);
-        solovev::Ipol ipol(gp_);
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
-        double ipol_ = ipol( begin[0], begin[1]);
-        double fnorm = f_psi * ipol_/begin[0];
-        //initial conditions:
-        begin[2] =  fnorm*( psipZ_/psip2);        //y_R(R_0,Z_0)
-        begin[3] = -fnorm*( psipR_/psip2);       //y_Z(R_0,Z_0)
+        double Rfac =  begin[0]/gp_.R_0;
+        begin[2] =   Rfac*f_psi*( psipZ_/psip2);
+        begin[3] = - Rfac*f_psi*( psipR_/psip2);
 
         R_0 = begin[0], Z_0 = begin[1];
-//         std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-        solovev::flux::FieldRZYRYZY fieldRZY(gp_);
+        //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
+        solovev::hamada::FieldRZYRYZY fieldRZY(gp_);
         fieldRZY.set_f(f_psi);
         fieldRZY.set_fp(fprime);
         unsigned steps = 1;
         double eps = 1e10, eps_old=2e10;
-        //compute metric relevant elements
         while( eps < eps_old)
         {
             //begin is left const
@@ -219,13 +224,13 @@ struct Fpsi
             dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
             r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
             xr[0] = -psipR(r[0],z[0])/deltapsi, xz[0] = -psipZ(r[0],z[0])/deltapsi;
-            //std::cout <<end[0]<<" "<< end[1] <<"\n";
             for( unsigned i=1; i<n*N; i++)
             {
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
                 xr[i] = -psipR(r[i],z[i])/deltapsi, xz[i] = -psipZ(r[i],z[i])/deltapsi;
+
             }
             //compute error in R,Z only
             dg::blas1::axpby( 1., r, -1., r_old, r_diff);
@@ -244,7 +249,7 @@ struct Fpsi
     }
     private:
     const solovev::GeomParameters gp_;
-    const solovev::flux::FieldRZYT fieldRZYT_;
+    const solovev::hamada::FieldRZYT fieldRZYT_;
     const solovev::FieldRZtau fieldRZtau_;
     double R_init, Z_init;
     const double psi_0;
@@ -257,23 +262,23 @@ struct FieldFinv
 {
     FieldFinv( const solovev::GeomParameters& gp, double psi_0, double deltapsi, unsigned N_steps = 500): 
         psi_0(psi_0), deltapsi(deltapsi), 
-        fpsi_(gp, psi_0,deltapsi), fieldRZYT_(gp), N_steps(N_steps)
+        fpsi_(gp, psi_0, deltapsi), fieldRZYT_(gp), N_steps(N_steps)
             { }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
-
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         fpsiM[0] = -1.*deltapsi;
+        //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     private:
     double psi_0;
     double deltapsi;
     Fpsi fpsi_;
-    solovev::flux::FieldRZYT fieldRZYT_;
+    solovev::hamada::FieldRZYT fieldRZYT_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
 };
@@ -285,7 +290,7 @@ struct RingGrid2d;
 ///@endcond
 
 /**
- * @brief A three-dimensional grid based on "almost-flux" coordinates by Ribeiro and Scott 2010
+ * @brief A three-dimensional grid based on "almost-hamada" coordinates by Ribeiro and Scott 2010
  *
  * @tparam container Vector class that holds metric coefficients
  */
@@ -312,9 +317,8 @@ struct RingGrid3d : public dg::Grid3d<double>
     { 
         assert( bcx == dg::PER|| bcx == dg::DIR);
         double deltapsi= psi_0-psi_1;
-        flux::detail::Fpsi fpsi( gp, psi_0,deltapsi);
+        hamada::detail::Fpsi fpsi( gp, psi_0, deltapsi);
         double x_1 = fpsi.find_x1( psi_1);
-        
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
         else
@@ -324,7 +328,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         }
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         detail::FieldFinv fpsiMinv_(gp, psi_0, deltapsi,500);
-        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx); //x0=-x_1  x1=0
+        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
         thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
         f_x_.resize( psi_x.size());
@@ -337,11 +341,11 @@ struct RingGrid3d : public dg::Grid3d<double>
         //while( eps <  eps_old && N < 1e6)
         while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
         {
-
             eps_old = eps;
             //psi_old = psi_x; 
             x0 = this->x0(), x1 = x_vec[0];
-             dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N); //= int_x0^x1 dx
+
+            dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
             psi_x[0] = end[0]; fpsiMinv_(end,temp); f_x_[0] = temp[0];
             for( unsigned i=1; i<g1d_.size(); i++)
             {
@@ -355,21 +359,19 @@ struct RingGrid3d : public dg::Grid3d<double>
             double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
             eps = fabs( psi_1_numerical-psi_1); 
             //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
-            std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
+            //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
         construct_rz( gp, psi_0, psi_x,deltapsi);
         construct_metric();
     }
-
-
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     thrust::host_vector<double> x()const{
         dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
         return dg::create::abscissas(gx);}
 
     const thrust::host_vector<double>& f()const{return f_;}
-    perpendicular_grid perp_grid() const { return flux::RingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return hamada::RingGrid2d<container>(*this);}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -457,7 +459,7 @@ struct RingGrid3d : public dg::Grid3d<double>
 };
 
 /**
- * @brief A two-dimensional grid based on "almost-flux" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional grid based on "almost-hamada" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
 struct RingGrid2d : public dg::Grid2d<double>
@@ -467,13 +469,13 @@ struct RingGrid2d : public dg::Grid2d<double>
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
         double deltapsi=psi_0-psi_1;
-        flux::detail::Fpsi fpsi( gp, psi_0, deltapsi);
+        hamada::detail::Fpsi fpsi( gp, psi_0, deltapsi);
         double x_1 = fpsi.find_x1( psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
         else
             init_X_boundaries( x_1, 0.);
-        flux::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
+        hamada::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         f_x_ = g.f_x();
         f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
@@ -583,10 +585,10 @@ struct Field
    
 };
 
-}//namespace flux
+}//namespace hamada
 namespace dg{
 /**
- * @brief This function pulls back a function defined in cartesian coordinates R,Z to the flux coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cartesian coordinates R,Z to the hamada coordinates x,y,\phi
  *
  * i.e. F(x,y) = f(R(x,y), Z(x,y))
  * @tparam BinaryOp The function object 
@@ -596,7 +598,7 @@ namespace dg{
  * @return A set of points representing F(x,y)
  */
 template< class BinaryOp, class container>
-thrust::host_vector<double> pullback( BinaryOp f, const flux::RingGrid2d<container>& g)
+thrust::host_vector<double> pullback( BinaryOp f, const hamada::RingGrid2d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -605,13 +607,13 @@ thrust::host_vector<double> pullback( BinaryOp f, const flux::RingGrid2d<contain
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double), const flux::RingGrid2d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double), const hamada::RingGrid2d<container>& g)
 {
     return pullback<double(double,double),container>( f, g);
 }
 ///@endcond
 /**
- * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the flux coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the hamada coordinates x,y,\phi
  *
  * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
  * @tparam TernaryOp The function object 
@@ -621,7 +623,7 @@ thrust::host_vector<double> pullback( double(f)(double,double), const flux::Ring
  * @return A set of points representing F(x,y,\phi)
  */
 template< class TernaryOp, class container>
-thrust::host_vector<double> pullback( TernaryOp f, const flux::RingGrid3d<container>& g)
+thrust::host_vector<double> pullback( TernaryOp f, const hamada::RingGrid3d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -635,7 +637,7 @@ thrust::host_vector<double> pullback( TernaryOp f, const flux::RingGrid3d<contai
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double,double), const flux::RingGrid3d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double,double), const hamada::RingGrid3d<container>& g)
 {
     return pullback<double(double,double,double),container>( f, g);
 }
