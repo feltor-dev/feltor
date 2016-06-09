@@ -27,10 +27,10 @@ src/feltor/doc/
 \#*
 
 # GNU Global
-/GPATH
-/GRTAGS
-/GSYMS
-/GTAGS
+**/GPATH
+**/GRTAGS
+**/GSYMS
+**/GTAGS
 
 # compile objects
 *.o

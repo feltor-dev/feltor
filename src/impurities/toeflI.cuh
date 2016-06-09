@@ -57,8 +57,6 @@ struct ToeflI
 {
     typedef typename dg::VectorTraits<container>::value_type value_type;
 
-    //    typedef typename container::value_type value_type; ???
-
     /**
      * @brief Construct a ToeflI solver object
      *
@@ -138,14 +136,12 @@ struct ToeflI
 
     double mass_, energy_, diff_, ediff_;
 
-    imp::Parameters p;
-
-
+    const imp::Parameters p;
 };
 
 template< class Geometry, class Matrix, class container>
-ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Parameters p) :
-    chi( grid.size(), 0.), omega(chi),  
+ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Parameters p):
+    chi( dg::evaluate(dg::one,grid)), omega(chi),
     binv( evaluate( LinearX( p.kappa, 1.), grid)), 
     phi( 3, chi), dyphi( phi), ype(phi),
     gamma_n( 2, chi),
@@ -156,7 +152,10 @@ ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Paramet
     laplaceM( grid, normed, centered),
     invert_pol(      omega, omega.size(), p.eps_pol),
     invert_invgamma( omega, omega.size(), p.eps_gamma),
-    w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)), p(p)
+    w2d( create::volume(grid)),
+    v2d( create::inv_volume(grid)),
+    one( dg::evaluate(dg::one, grid)),
+    p(p)
     { 
     }
 

@@ -7,7 +7,7 @@
 
 #include "toeflI.cuh"
 #include "parameters.h"
-//#include "file/file.h"
+#include "file/file.h"
 #include "file/nc_utilities.h"
 #include "file/read_input.h"
 
@@ -45,7 +45,6 @@ int main( int argc, char* argv[])
 
     int periods[2] = {false, true}; //non-, periodic
     int np[2];
-
     if(rank==0)
     {
         std::cin>> np[0] >> np[1] ;
@@ -55,6 +54,7 @@ int main( int argc, char* argv[])
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v;
     std::string input;
@@ -72,15 +72,15 @@ int main( int argc, char* argv[])
     if(rank==0)p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
-    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::CartesianMPIGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
     //create RHS 
-    dg::Diffusion< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > diffusion( grid, p); 
-    dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p); 
-
-    //create initial vector
+    dg::Diffusion< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > diffusion( grid, p);
+    dg::ToeflI< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > toeflI( grid, p);
+    /////////////////////The initial field///////////////////////////////////////////
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) );
-    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
+    std::vector<dg::MDVec> y0(3, dg::evaluate(dg::zero,grid) );
+    dg::Helmholtz<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> & gamma = toeflI.gamma();
+
     if( p.mode == 1)
     {
         if( p.vorticity == 0)
@@ -88,7 +88,7 @@ int main( int argc, char* argv[])
             gamma.alpha() = -0.5*p.tau[1];
             y0[0] = dg::evaluate( gaussian, grid);
             dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1 
-            dg::DVec v2d=dg::create::inv_weights(grid);
+            dg::MDVec v2d=dg::create::inv_weights(grid);
             dg::blas2::symv( v2d, y0[1], y0[1]);
 
             dg::blas1::scal( y0[1], 1./p.a[1]); //n_i ~1./a_i n_e
@@ -105,10 +105,10 @@ int main( int argc, char* argv[])
     {
         //init wall in y0[2]
         dg::GaussianX wall( p.wall_pos*grid.lx(), p.wall_sigma, p.wall_amp); 
-        dg::DVec wallv = dg::evaluate( wall, grid);
+        dg::MDVec wallv = dg::evaluate( wall, grid);
         gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         dg::blas2::symv( gamma, wallv, y0[2]); 
-        dg::DVec v2d=dg::create::inv_weights(grid);
+        dg::MDVec v2d=dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] != 0.)
             dg::blas1::scal( y0[2], 1./p.a[2]); //n_z ~1./a_z
@@ -135,7 +135,7 @@ int main( int argc, char* argv[])
         gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[2]); 
-        dg::DVec v2d=dg::create::inv_weights(grid);
+        dg::MDVec v2d=dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] == 0)
         {
@@ -147,7 +147,7 @@ int main( int argc, char* argv[])
     }
 
     //////////////////initialisation of timestepper and first step///////////////////
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -155,8 +155,6 @@ int main( int argc, char* argv[])
 
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
-
-    // err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
@@ -166,7 +164,7 @@ int main( int argc, char* argv[])
     err = nc_redef(ncid);
 
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid.global());
     err = nc_enddef(ncid);
     err = nc_redef(ncid);
 
@@ -197,41 +195,43 @@ int main( int argc, char* argv[])
     err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     if(rank==0)std::cout << "First output ... \n";
-    size_t start[3] = {0, 0, 0};
+
+    int dims[2],  coords[2];
+    MPI_Cart_get( comm, 2, dims, periods, coords);
+
     size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
-    dg::DVec transferD( dg::evaluate(dg::zero, grid));
-    dg::HVec transferH( dg::evaluate(dg::zero, grid));
+    size_t start[3] = {0, coords[1]*count[1], coords[0]*count[2]};
+
+    dg::MDVec transfer( dg::evaluate(dg::zero, grid));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid.local()));
+
     for( unsigned i=0; i<3; i++)
     {
-        dg::blas1::transfer( y0[i], transferH);
+        dg::blas1::transfer( y0[i].data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
-    //pot
-    transferD = toeflI.potential()[0];
-    dg::blas1::transfer( transferD, transferH);
+    //Potential
+    transfer = toeflI.potential()[0];
+    dg::blas1::transfer( transfer.data(), transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-    //Vor
-    transferD = toeflI.potential()[0];
-    dg::blas2::gemv( diffusion.laplacianM(), transferD, y0[1]);            
-    dg::blas1::transfer( y0[1], transferH);
+    //Vorticity
+    transfer = toeflI.potential()[0];
+    dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);
+    dg::blas1::transfer( y0[1].data(), transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     double time = 0;
-
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
-
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = toeflI.energy(), mass0 = toeflI.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-
-
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
-    // err = nc_close(ncid);
     if(rank==0)std::cout << "First write successful!\n";
+
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
@@ -272,7 +272,6 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
-            // err = nc_close(ncid); DONT DO IT
             if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (mass-mass0)/mass0<<"\t";
             if(rank==0)std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             if(rank==0)std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
@@ -288,21 +287,19 @@ int main( int argc, char* argv[])
         //output all three fields
         //////////////////////////write fields////////////////////////
         start[0] = i;
-        // err = nc_open(argv[2], NC_WRITE, &ncid);
         for( unsigned j=0; j<3; j++)
         {
-            dg::blas1::transfer( y0[j], transferH);
+            dg::blas1::transfer( y0[j].data(), transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        transferD = toeflI.potential()[0];
-        dg::blas1::transfer( transferD, transferH);
+        transfer = toeflI.potential()[0];
+        dg::blas1::transfer( transfer.data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-        transferD = toeflI.potential()[0];
-        dg::blas2::gemv( diffusion.laplacianM(), transferD, y0[1]);            
-        dg::blas1::transfer( y0[1], transferH);
+        transfer = toeflI.potential()[0];
+        dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);
+        dg::blas1::transfer( y0[1].data(), transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-        // err = nc_close(ncid); DONT DO IT
 
 #ifdef DG_BENCHMARK
         ti.toc();
@@ -323,10 +320,9 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     if(rank==0)std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
 
-    err = nc_close(ncid); // DO IT!
+    err = nc_close(ncid);
     MPI_Finalize();
 
     return 0;
-
 }
 
