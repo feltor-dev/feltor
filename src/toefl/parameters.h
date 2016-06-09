@@ -93,7 +93,7 @@ struct Parameters
         bc_y = dg::str2bc(js["bc_y"].asString());
         init = "blob";
         equations = js.get("equations", "global").asString();
-        boussinesq = js.get("boussinesq", "false").asBool();
+        boussinesq = js.get("boussinesq", false).asBool();
         friction = js.get("friction",0.).asDouble();
     }
     
