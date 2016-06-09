@@ -77,7 +77,7 @@ int main( int argc, char* argv[])
     dg::Diffusion< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > diffusion( grid, p);
     dg::ToeflI< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > toeflI( grid, p);
     /////////////////////The initial field///////////////////////////////////////////
-    dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    dg::Gaussian gaussian( p.posX*p.lx(), p.posY*p.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::MDVec> y0(3, dg::evaluate(dg::zero,grid) );
     dg::Helmholtz<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> & gamma = toeflI.gamma();
 
