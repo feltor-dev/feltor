@@ -1128,20 +1128,26 @@ struct FieldRZY
 
 struct FieldRZYRYZY
 {
-    FieldRZYRYZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), invB_(gp), BR_(gp), BZ_(gp), R_0_(gp.R_0){ f_ = f_prime_ = 1.;}
+    FieldRZYRYZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), invB_(gp), BR_(gp), BZ_(gp), ipol_(gp), ipolR_(gp), ipolZ_(gp), R_0_(gp.R_0){ f_ = f_prime_ = 1.;}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double ipol=ipol_(y[0], y[1]);
+        double ipolR = ipolR_(y[0], y[1]), ipolZ = ipolZ_(y[0],y[1]);
+        double br = BR_(y[0],y[1]), bz  = BZ_(y[0],y[1]);
         double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
         double B=1./invB_(y[0], y[1]);
         
         yp[0] =   (R_0_*psipZ/y[0])/(f_*B*B);
         yp[1] =  -(R_0_*psipR/y[0])/(f_*B*B);
-        yp[2] =  (-psipRZ*y[2] + psipRR*y[3])/(y[0]/R_0_*f_*B*B) + f_prime_/f_* psipR + 2.*BR_(y[0],y[1])/B +1/y[0];
-        yp[3] =  (psipRZ*y[3] - psipZZ*y[2])/(y[0]/R_0_*f_*B*B) + f_prime_/f_* psipZ  + 2.*BZ_(y[0],y[1])/B;
-
+        yp[2] = (-psipRZ*y[2] + psipRR*y[3])/(y[0]/R_0_*f_*B*B) + f_prime_/f_* psipR + 2.*br/B  +1/y[0];
+//                    - R_0_/(y[0]*y[0]*f_*B*B)*ipolR + R_0_*ipol/(y[0]*y[0]*y[0]*f_*B*B);
+        yp[3] =  (psipRZ*y[3] - psipZZ*y[2])/(y[0]/R_0_*f_*B*B) + f_prime_/f_* psipZ  + 2.*bz/B  ;
+//                    - R_0_/(y[0]*y[0]*f_*B*B)*ipolZ;
+        yp[2]*=y[0]/R_0_;
+        yp[3]*=y[0]/R_0_;
     }
   private:
     double f_, f_prime_;
@@ -1153,9 +1159,10 @@ struct FieldRZYRYZY
     InvB invB_;
     BR BR_;
     BZ BZ_;
+    Ipol ipol_;
+    IpolR ipolR_;
+    IpolZ ipolZ_;
     double R_0_;
-
-
 };
 }//namespace boozer
 namespace hamada{
