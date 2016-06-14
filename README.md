@@ -1,5 +1,6 @@
 <hr>
 <h3> Welcome to the FELTOR project!</h3>
+FELTOR ist licensed under the very permissive MIT license. 
 
 For the CPU-Version you'll need to download [thrust]( https://github.com/thrust/thrust/tree/1.8.1) (v1.8.1)
 
