@@ -8,6 +8,7 @@
 
 #include <exception>
 #include <math.h>
+#include "exceptions.h"
 namespace dg{
 
 /*! @brief Exception class, that stores boundaries for 1D root finding

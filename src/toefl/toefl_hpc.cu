@@ -22,8 +22,6 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
-const unsigned k = 3;//!< a change in k needs a recompilation
-
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
@@ -36,45 +34,40 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    std::cout << js<<std::endl;
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const Parameters p( js);
     p.display( std::cout);
-    if( p.k != k)
-    {
-        std::cerr << "ERROR: k doesn't match: "<<k<<" (code) vs. "<<p.k<<" (input)\n";
-        return -1;
-    }
 
     ////////////////////////////////set up computations///////////////////////////
     dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
+    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
+    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
     //create initial vector
-    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); 
+    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
         dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-
-    if( p.global)
-    {
-        dg::blas1::plus( y0[0], +1);
-        dg::blas1::plus( y0[1], +1);
-        test.log( y0, y0); //transform to logarithmic values
+    if( p.equations == "ralf" || p.equations == "ralf_global"){
+        y0[1] = dg::evaluate( dg::zero, grid);
     }
+
     //////////////////initialisation of timestepper and first step///////////////////
+    std::cout << "init timestepper...\n";
     double time = 0;
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
     ab.init( test, diffusion, y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
-    if( p.global)
-        test.exp( y1,y1); //transform to correct values
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -83,9 +76,9 @@ int main( int argc, char* argv[])
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
     //field IDs
-    std::string names[3] = {"electrons", "ions", "potential"}; 
-    int dataIDs[3]; 
-    for( unsigned i=0; i<3; i++){
+    std::string names[4] = {"electrons", "ions", "potential", "vorticity"}; 
+    int dataIDs[4]; 
+    for( unsigned i=0; i<4; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
 
     //energy IDs
@@ -103,17 +96,20 @@ int main( int argc, char* argv[])
     size_t Ecount[] = {1};
     ///////////////////////////////////first output/////////////////////////
     //output all three fields
-    std::vector<dg::DVec> transferD(3);
-    std::vector<dg::HVec> output(3);
-    transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
-    for( int k=0;k<3; k++)
-        dg::blas1::transfer( transferD[k], output[k]);
+    std::vector<dg::DVec> transferD(4);
+    std::vector<dg::HVec> output(4);
+    transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0], transferD[3] = test.potential()[0]; //electrons
     start[0] = 0;
-    for( int k=0; k<3; k++)
+    for( int k=0;k<4; k++)
+    {
+        dg::blas1::transfer( transferD[k], output[k]);
         err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
+    }
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
+    const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
+    double E0 = test.energy(), E1 = 0, diff = 0;
     dg::Timer t;
     t.tic();
     try
@@ -133,8 +129,16 @@ int main( int argc, char* argv[])
             ab( test, diffusion, y0);
             y0.swap( y1); //attention on -O3 ?
             //store accuracy details
+            {
+                std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
+                E0 = E1;
+                E1 = test.energy();
+                diff = (E1 - E0)/p.dt;
+                double diss = test.energy_diffusion( );
+                std::cout << "diff diss: "<< diff<<" "<<diss<<"\t";
+                std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
+            }
             time+=p.dt;
-            if( p.global) 
             {
                 err = nc_open(argv[2], NC_WRITE, &ncid);
                 double ener=test.energy(), mass=test.mass(), diff=test.mass_diffusion(), dEdt=test.energy_diffusion();
@@ -146,15 +150,14 @@ int main( int argc, char* argv[])
                 err = nc_close(ncid);
             }
         }
-        //output all three fields
-        if( p.global)
-            test.exp( y1,y1); //transform to correct values
+        //output all three fields and vorticity
         transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0]; //electrons
-        for( int k=0;k<3; k++)
+        dg::blas2::symv( diffusion.laplacianM(), transferD[2], transferD[3]);
+        for( int k=0;k<4; k++)
             dg::blas1::transfer( transferD[k], output[k]);
         err = nc_open(argv[2], NC_WRITE, &ncid);
         start[0] = i;
-        for( int k=0; k<3; k++)
+        for( int k=0; k<4; k++)
             err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);

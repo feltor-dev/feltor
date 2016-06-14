@@ -65,5 +65,4 @@ struct Ooops : public std::exception
     const char* c_;
 };
 
-
 }//namespace dg

@@ -139,11 +139,11 @@ struct MPI_FieldAligned
      * @param left left boundary value 
      * @param right right boundary value
      */
-    void set_boundaries( dg::bc bcz, const LocalContainer& left, const LocalContainer& right)
+    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
     {
         bcz_ = bcz; 
-        left_ = left;
-        right_ = right;
+        left_ = left.data();
+        right_ = right.data();
     }
 
     /**
@@ -156,7 +156,25 @@ struct MPI_FieldAligned
      * @param scal_left left scaling factor
      * @param scal_right right scaling factor
      */
-    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right);
+    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
+    {
+        bcz_ = bcz;
+        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        if( g_.z0() == g_.global().z0())
+        {
+            cView left( global.data().cbegin(), global.data().cbegin() + size);
+            View leftView( left_.begin(), left_.end());
+            cusp::copy( left, leftView);
+            dg::blas1::scal( left_, scal_left);
+        }
+        if( g_.z1() == g_.global().z1())
+        {
+            cView right( global.data().cbegin()+(g_.Nz()-1)*size, global.data().cbegin() + g_.Nz()*size);
+            View rightView( right_.begin(), right_.end());
+            cusp::copy( right, rightView);
+            dg::blas1::scal( right_, scal_right);
+        }
+    }
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines

@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <cusp/transpose.h>
 #include <cusp/csr_matrix.h>
 
@@ -12,6 +13,27 @@
 #include "../runge_kutta.h"
 
 namespace dg{
+
+/**
+ * @brief With the Default field ds becomes a dz
+ */
+struct DefaultField
+{
+    void operator()( const dg::HVec& y, dg::HVec& yp)
+    {
+        yp[0] = yp[1] = 0;
+        yp[2] = 1.;
+    }
+    double operator()( double x, double y)
+    {
+        return 1.;
+    }
+    double operator()( double x, double y, double z)
+    {
+        return 1.;
+    }
+
+};
 
 /**
  * @brief Default Limiter means there is a limiter everywhere
@@ -117,7 +139,7 @@ void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, doubl
 #endif //DG_DEBUG
     }
 
-    if( isnan(error) )
+    if( std::isnan( error) )
     {
         std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
         throw NotANumber();

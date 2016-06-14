@@ -207,8 +207,8 @@ struct Fpsi
         solovev::PsipZ psipZ(gp_);
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
-        begin[2] = f_psi * (0.0/psip2+1.0)* psipZ_;
-        begin[3] = -f_psi * (0.0/psip2+1.0)*psipR_;
+        begin[2] = f_psi*(0.0/psip2+1.0)* psipZ_;
+        begin[3] = -f_psi*(0.0/psip2+1.0)*psipR_;
 
         R_0 = begin[0], Z_0 = begin[1];
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
