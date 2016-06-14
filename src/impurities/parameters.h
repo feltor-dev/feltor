@@ -1,6 +1,7 @@
-
 #pragma once
+//#include <string>
 #include "dg/enums.h"
+#include "json/json.h"
 
 namespace imp
 {
@@ -9,7 +10,8 @@ namespace imp
  */
 struct Parameters
 {
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
+    unsigned n_out, Nx_out, Ny_out;
     double dt; 
 
     double eps_time, eps_pol, eps_gamma;
@@ -46,7 +48,8 @@ struct Parameters
         eps_gamma = v[7];
         lx = v[8]; 
         ly = v[9];
-        bc_x = map((int)v[10]), bc_y = map((int)v[11]);
+        bc_x = map((int)v[10]),
+        bc_y = map((int)v[11]);
         nu = v[12];
         kappa = v[13];
         tau[1] = v[14]; 
@@ -69,8 +72,53 @@ struct Parameters
         wall_pos = v[26];
         wall_amp = v[27];
         wall_sigma = v[28];
-
     }
+    /**
+     * @brief constructor to make a const object
+     *
+     * @param js json object
+     */
+    Parameters( const Json::Value& js) {
+        n  = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        dt = js["dt"].asDouble();
+        n_out  = js["n_out"].asUInt();
+        Nx_out = js["Nx_out"].asUInt();
+        Ny_out = js["Ny_out"].asUInt();
+        itstp = js["itstp"].asUInt();
+        maxout = js["maxout"].asUInt();
+
+        eps_pol = js["eps_pol"].asDouble();
+        eps_gamma = js["eps_gamma"].asDouble();
+        eps_time = js["eps_time"].asDouble();
+        kappa = js["kappa"].asDouble();
+        nu = js["nu"].asDouble();
+        amp = js["amp"].asDouble();
+        sigma = js["sigma"].asDouble();
+        posX = js["posX"].asDouble();
+        posY = js["posY"].asDouble();
+        lx = js["lx"].asDouble();
+        ly = js["ly"].asDouble();
+        bc_x = dg::str2bc(js["bc_x"].asString());
+        bc_y = dg::str2bc(js["bc_y"].asString());
+        tau[1] = js["tau"].asDouble();
+        a[2] = js["a_z"].asDouble();
+        mu[2] =  js["mu_z"].asDouble();
+        tau[2] = js["tau_z"].asDouble();
+
+        a[0] = -1, a[1] = 1-a[2];
+        mu[0] = 0, mu[1] = 1;
+        tau[0] = -1;
+        vorticity = js["vorticity"].asDouble();
+        mode = js["mode"].asUInt();
+        wall_pos = js["wall_pos"].asDouble();
+        wall_amp = js["wall_amp"].asDouble();
+        wall_sigma = js["wall_sigma"].asDouble();
+    }
+
+
+
     /**
      * @brief Display parameters
      *
@@ -163,7 +211,3 @@ struct Parameters
     }
 };
 }//namespace imp
-
-
-    
-

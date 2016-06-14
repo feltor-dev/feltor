@@ -35,7 +35,13 @@ int main( int argc, char* argv[])
         v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const imp::Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    std::cout << js<<std::endl;
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const imp::Parameters p( js);
+    //const imp::Parameters p( v);
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////

@@ -6,4 +6,5 @@ OPT=-O3                                      # the optimization flag for the hos
 OMPFLAG=-fopenmp                             # openmp flag for CC and MPICC
 LIBS=-lnetcdf -lcurl -lhdf5 -lhdf5_hl               # netcdf library for file output
 GLFLAGS = -lglfw -lGL
+JSONLIB = -ljsoncpp
 endif
