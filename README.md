@@ -1,36 +1,22 @@
 <hr>
 <h3> Welcome to the FELTOR project!</h3>
-FELTOR ist licensed under the very permissive MIT license. 
+<h4> 1. License </h4>
+FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
-For the CPU-Version you'll need to download [thrust]( https://github.com/thrust/thrust/tree/1.8.1) (v1.8.1)
+<h4> 2. Dependencies </h4>
+Our code only depends on external libraries that are themselves openly available. We note here that we do not distribute copies of these libraries. The user has to obtain these according to his/her needs. 
 
-and [cusp] (https://github.com/cusplibrary/cusplibrary/tree/0.5.0)
-( v0.5.0 )
-
-If you want to compile for a GPU you need to install [CUDA](https://developer.nvidia.com/cuda-zone) (minimum v7.0 recommended)
-However, we explicitely note that you need CUDA and a GPU only if you 
-want to actually use them. It's possible to use FELTOR completely without these.
-
-For the mpi version you need an mpi compiler. 
-
-Feltor compiles fine with gcc-4.8
-
-If you want to have a nice OpenGL window while computing download the [draw library]( https://github.com/mwiesenberger/draw)
-which depends on OpenGL (s.a. [installation guide] (http://en.wikibooks.org/wiki/OpenGL_Programming) and [glfw] (http://www.glfw.org) 
-
-If you want to write to the disk install [netcdf4] (http://www.unidata.ucar.edu/software/netcdf/docs/index.html), which is based on hdf5.
-If you intend to use the mpi parallelized programs you need to build
+The most basic applications depend on [thrust]( https://github.com/thrust/thrust) and [cusp] (https://github.com/cusplibrary/cusplibrary) and distributed under the Apache-2.0 license. The minimum requirement to compile and run an application is a working C++ compiler and a CPU. 
+Our GPU backend uses the [Nvidia-CUDA](https://developer.nvidia.com/cuda-zone) programming environment and in order to compile and run the program a user needs the nvcc CUDA compiler (available free of charge) and a NVidia GPU. However, we explicitly note here that due to the modular design of our software a user does not necessarily have to possess a GPU nor the nvcc compiler. The CPU version of the backend is equally valid and provides the same functionality. 
+For data output we use the [NetCDF](http://www.unidata.ucar.edu/software/netcdf/) library under an MIT - like license. The [HDF5](https://www.hdfgroup.org/HDF5/) library also uses a very permissive license.  Data input needs [JsonCpp](https://www.github.com/open-source-parsers/jsoncpp) distributed under the MIT license. Some rendering applications in FELTOR use the [draw library]( https://github.com/mwiesenberger/draw) (developed by us also under MIT), 
+which depends on OpenGL (s.a. [installation guide] (http://en.wikibooks.org/wiki/OpenGL_Programming) and [glfw] (http://www.glfw.org), an OpenGL development library under a BSD-like license. The documentation can be generated with Doxygen, however, Doxygen itself is not part of FELTOR. 
+If the user intends to use the MPI backend an implementation library of the mpi standard is required. Note that for the mpi versions of applications you need to build
 hdf5 and netcdf with the --enable-parallel flag. Do NOT use the pnetcdf library, which
-uses the classic netcdf file format. 
+uses the classic netcdf file format.  The OpenMP standard is natively supported by most recent C++ compilers.
 
-We start to use JSON as a file format for input files in our application.
-You will want to download and install the open-source parser jsoncpp (https://github.com/open-source-parsers/jsoncpp) version 0.10.6
-
-The documentation can be built with doxygen. However, Doxygen itself is not part 
-of our library. 
-
-
-If you want to compile applications in FELTOR you will want to check the 
+<h4> 3. Compilation </h4>
+To simplify the compilation process we use the GNU Make utility, a standard build automation tool that automatically builds the executable program. 
+You will want to check the 
 config folder. Here, machine specific Makefile variables are defined. 
 The default.mk file gives an example. You can use the default 
 if you create an include folder in your home directory and create 
