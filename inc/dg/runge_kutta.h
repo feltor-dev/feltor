@@ -580,7 +580,7 @@ int integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double
     RK_classic<s, Vector > rk( begin); 
     Vector old_end(begin), temp(begin);
     end = begin;
-    if( T_max == 0) return;
+    if( T_max == 0) return 0;
     double dt = T_max/10;
     int NT = 10;
     double error = 1e10;
@@ -605,7 +605,7 @@ int integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double
             end.swap( temp); //end is one step further 
             i++;
         }  
-        error = rhs.error( end, end_old);
+        error = rhs.error( end, old_end);
         old_end = end;
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
@@ -635,18 +635,18 @@ int integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double
 template< class RHS, class Vector>
 int integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
 {
-    integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
 }
 
 template< class RHS, class Vector>
 int integrateRK6(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
 {
-    integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
 }
 template< class RHS, class Vector>
 int integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
 {
-    integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
 }
 
 ///@cond
