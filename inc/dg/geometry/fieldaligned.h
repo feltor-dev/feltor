@@ -24,7 +24,12 @@ struct DefaultField
         yp[0] = yp[1] = 0;
         yp[2] = 1.;
     }
-    double operator()( double x, double y)
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ return true;}
+    double operator()( double x, double y) //1/B
     {
         return 1.;
     }
@@ -64,111 +69,6 @@ struct NoLimiter
      */
     double operator()(double x, double y) { return 0.; }
 };
-
-/**
- * @brief Integrates the differential equation using a s stage RK scheme and a rudimentary stepsize-control
- *
- * @ingroup algorithms
- * Doubles the number of timesteps until the desired accuracy is reached
- * Checks for NaN errors on the way and if the fieldline diverges. The error is computed in the first three vector elements (x,y,s)
- * @tparam RHS The right-hand side class
- * @tparam Vector Vector-class (needs to be copyable)
- * @param rhs The right-hand-side
- * @param begin initial condition (size 3)
- * @param end (write-only) contains solution on output
- * @param T_max final time
- * @param eps_abs desired absolute accuracy
- */
-template< class RHS, class Vector, unsigned s>
-void integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
-{
-    RK_classic<s, Vector > rk( begin); 
-    Vector old_end(begin), temp(begin),diffm(begin);
-    end = begin;
-    if( T_max == 0) return;
-    double dt = T_max/10;
-    int NT = 10;
-    double error = 1e10;
- 
-    while( error > eps_abs && NT < pow( 2, 18) )
-    {
-        dt /= 2.;
-        NT *= 2;
-        end = begin;
-
-        int i=0;
-        while (i<NT && NT < pow( 2, 18))
-        {
-            rk( rhs, end, temp, dt); 
-            end.swap( temp); //end is one step further 
-            dg::blas1::axpby( 1., end, -1., old_end,diffm); //abs error=oldend = end-oldend
-            double temp = diffm[0]*diffm[0]+diffm[1]*diffm[1]+diffm[2]*diffm[2];
-            error = sqrt( temp );
-            if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2])        ) 
-            {
-                dt /= 2.;
-                NT *= 2;
-                i=-1;
-                end = begin;
-                #ifdef DG_DEBUG
-                    std::cout << "---------Got NaN -> choosing smaller step size and redo integration" << " NT "<<NT<<" dt "<<dt<< std::endl;
-                #endif
-            }
-            //if new integrated point outside domain
-            //if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-            if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
-            {
-                error = eps_abs/10;
-                #ifdef DG_DEBUG
-                std::cerr << "---------Point outside box -> stop integration" << std::endl; 
-                #endif
-                i=NT;
-            }
-            i++;
-        }  
-
-
-        old_end = end;
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
-#endif //MPI
-        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
-#endif //DG_DEBUG
-    }
-
-    if( std::isnan( error) )
-    {
-        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
-        throw NotANumber();
-    }
-    if( error > eps_abs )
-    {
-        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<std::endl;
-        throw Fail( eps_abs);
-    }
-
-
-}
-
-template< class RHS, class Vector>
-void integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
-{
-    integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
-}
-
-template< class RHS, class Vector>
-void integrateRK6(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
-{
-    integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
-}
-template< class RHS, class Vector>
-void integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
-{
-    integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
-}
 
 /**
  * @brief Integrate a field line to find whether the result lies inside or outside of the box

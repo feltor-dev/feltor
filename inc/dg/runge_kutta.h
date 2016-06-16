@@ -559,6 +559,95 @@ void stepperRK17(RHS& rhs, const Vector& begin, Vector& end, double T_min, doubl
 }
 
 
+/**
+ * @brief Integrates the differential equation using a s stage RK scheme and a rudimentary stepsize-control
+ *
+ * @ingroup algorithms
+ * Doubles the number of timesteps until the desired accuracy is reached
+ *
+ * @tparam RHS The right-hand side class. There must be the function bool monitor( const Vector& end); available which is called after every step. Return true if everything is ok and false if the integrator certainly fails.
+ * The other function is the double error( const Vector& end0, const Vector& end1); which computes the error norm in which the integrator should converge. 
+ * @tparam Vector Vector-class (needs to be copyable)
+ * @param rhs The right-hand-side
+ * @param begin initial condition (size 3)
+ * @param end (write-only) contains solution on output
+ * @param T_max time difference
+ * @param eps_abs desired absolute accuracy
+ */
+template< class RHS, class Vector, unsigned s>
+int integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    RK_classic<s, Vector > rk( begin); 
+    Vector old_end(begin), temp(begin);
+    end = begin;
+    if( T_max == 0) return;
+    double dt = T_max/10;
+    int NT = 10;
+    double error = 1e10;
+ 
+    while( error > eps_abs && NT < pow( 2, 18) )
+    {
+        dt /= 2.;
+        NT *= 2;
+        end = begin;
+
+        int i=0;
+        while (i<NT)
+        {
+            rk( rhs, end, temp, dt); 
+            if( !rhs.monitor( temp ) )  //sanity check
+            {
+                #ifdef DG_DEBUG
+                    std::cout << "---------Got sanity error -> choosing smaller step size and redo integration" << " NT "<<NT<<" dt "<<dt<< std::endl;
+                #endif
+                break;
+            }
+            end.swap( temp); //end is one step further 
+            i++;
+        }  
+        error = rhs.error( end, end_old);
+        old_end = end;
+#ifdef DG_DEBUG
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
+        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
+#endif //DG_DEBUG
+    }
+
+    if( std::isnan( error) )
+    {
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;
+        return -1;
+    }
+    if( error > eps_abs )
+    {
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<std::endl;
+        return -2;
+    }
+    return 0;
+
+
+}
+
+template< class RHS, class Vector>
+int integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
+}
+
+template< class RHS, class Vector>
+int integrateRK6(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
+}
+template< class RHS, class Vector>
+int integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+{
+    integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
+}
 
 ///@cond
 //Euler specialisation
