@@ -29,41 +29,6 @@ struct Parameters
     /**
      * @brief constructor to make a const object
      *
-     * @param v Vector from read_input function
-     */
-    Parameters( const std::vector< double>& v) {
-        n  = (unsigned)v[1]; 
-        Nx = (unsigned)v[2];
-        Ny = (unsigned)v[3];
-        dt = v[4];
-        n_out = v[5];
-        Nx_out = v[6];
-        Ny_out = v[7];
-        itstp = v[8];
-        maxout = v[9];
-
-        eps_pol = v[10];
-        eps_gamma = v[11];
-        eps_time = v[12];
-        tau = v[13];
-        kappa = v[14];
-        nu = v[15];
-        amp = v[16];
-        sigma = v[17];
-        posX = v[18];
-        posY = v[19];
-        lx = v[20]; 
-        ly = v[21];
-        bc_x = map((int)v[22]); 
-        bc_y = map((int)v[23]);
-        init = "blob";
-        if( v[25] == 1) 
-            equations = "global";
-        else equations = "local";
-    }
-    /**
-     * @brief constructor to make a const object
-     *
      * @param js json object
      */
     Parameters( const Json::Value& js) {
