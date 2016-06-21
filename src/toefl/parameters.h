@@ -72,6 +72,7 @@ struct Parameters
         os << "Physical parameters are: \n"
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
+            <<"    Friction:        = "<<friction<<"\n"
             <<"    Ion-temperature: = "<<tau<<"\n";
         os << "Equation parameters are: \n"
             <<"    "<<equations<<"\n"
