@@ -37,7 +37,27 @@ struct Heaviside2d
     double x_,y_;
 };
 
-
+/*! Diagnostics program for the toefl code. 
+ *
+ * It reads in the produced netcdf file and outputs a new netcdf file with timeseries of
+ * posX: COM x-position
+ * posY: COM y-position
+ * velX: COM x-velocity
+ * velY: COM y-velocity
+ * accX: COM x-acceleration
+ * accY: COM y-acceleration
+ * velCOM: absolute value of the COM velocity
+ * posXmax: maximum amplitude x-position
+ * posYmax: maximum amplitude y-position
+ * velXmax: maximum amplitude x-velocity
+ * velYmax: maximum amplitude y-velocity
+ * maxamp: value of the maximum amplitude
+ * compactness_ne: compactness of the density field
+ * Ue: entropy electrons
+ * Ui: entropy ions
+ * Uphi: exb energy
+ * mass: mass of the blob without background
+ */
 int main( int argc, char* argv[])
 {
     if( argc != 3)
