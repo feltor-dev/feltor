@@ -14,7 +14,7 @@ double derivative( double x) { return cos(x);}
 double zero( double x) { return 0;}
 
 typedef dg::HVec Vector;
-typedef dg::EllSparseBlockMat Matrix;
+typedef dg::EllSparseBlockMat<double> Matrix;
 
 int main ()
 {
@@ -30,7 +30,7 @@ int main ()
     dg::Grid1d<double> gNEU_DIR( M_PI/2., M_PI, n, N, dg::NEU_DIR);
     dg::Grid1d<double> g[] = {gPER, gDIR, gNEU, gDIR_NEU,gNEU_DIR};
 
-    std::cout << "YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
+    std::cout << "TEST NORMAL TOPOLOGY: YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
     for( unsigned i=0; i<5; i++)
     {
         Matrix hs = dg::create::dx( g[i], dg::centered);

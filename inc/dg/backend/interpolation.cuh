@@ -110,6 +110,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     }
     return A;
 }
+
 /**
  * @brief Create interpolation matrix
  *
@@ -131,13 +132,13 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     for( unsigned i=0; i<x.size(); i++)
     {
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << "xi = " << x[i] <<std::endl;
+            std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
         }
         
         assert(x[i] >= g.x0() && x[i] <= g.x1());
         
         if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
-            std::cerr << "yi = " << y[i] <<std::endl;
+            std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
         }
         assert( y[i] >= g.y0() && y[i] <= g.y1());
 
@@ -196,6 +197,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
     return A;
 }
+
 
 
 /**
@@ -371,5 +373,89 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
 
 }
 ///@}
+
+
+thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const Grid2d<double>& g)
+{
+    thrust::host_vector<double> out(in.size(), 0);
+    dg::Operator<double> forward( g.dlt().forward());
+    for( unsigned i=0; i<g.Ny(); i++)
+    for( unsigned k=0; k<g.n(); k++)
+    for( unsigned j=0; j<g.Nx(); j++)
+    for( unsigned l=0; l<g.n(); l++)
+    for( unsigned m=0; m<g.n(); m++)
+    for( unsigned o=0; o<g.n(); o++)
+        out[((i*g.n() + k)*g.Nx() + j)*g.n() + l] += forward(k,o)*forward( l, m)*in[((i*g.n() + o)*g.Nx() + j)*g.n() + m];
+    return out;
+
+}
 }//namespace create
+
+/**
+ * @brief Interpolate a single point
+ *
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates
+ * @param x X-coordinate of interpolation point
+ * @param y Y-coordinate of interpolation point
+ * @param v The vector to interpolate in LSPACE
+ * @param g The Grid on which to operate
+ *
+ * @return interpolated point
+ */
+double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d<double>& g )
+{
+    assert( v.size() == g.size());
+
+    dg::Operator<double> forward( g.dlt().forward());
+    if (!(x >= g.x0() && x <= g.x1())) {
+        std::cerr << g.x0()<<"< xi = " << x <<" < "<<g.x1()<<std::endl;
+    }
+    
+    assert(x >= g.x0() && x <= g.x1());
+    
+    if (!(y >= g.y0() && y <= g.y1())) {
+        std::cerr << g.y0()<<"< yi = " << y <<" < "<<g.y1()<<std::endl;
+    }
+    assert( y >= g.y0() && y <= g.y1());
+
+    //determine which cell (x,y) lies in 
+
+    double xnn = (x-g.x0())/g.hx();
+    double ynn = (y-g.y0())/g.hy();
+    unsigned n = (unsigned)floor(xnn);
+    unsigned m = (unsigned)floor(ynn);
+    //determine normalized coordinates
+
+    double xn =  2.*xnn - (double)(2*n+1); 
+    double yn =  2.*ynn - (double)(2*m+1); 
+    //interval correction
+    if (n==g.Nx()) {
+        n-=1;
+        xn = 1.;
+    }
+    if (m==g.Ny()) {
+        m-=1;
+        yn =1.;
+    }
+    //evaluate 2d Legendre polynomials at (xn, yn)...
+    std::vector<double> px = create::detail::coefficients( xn, g.n()), 
+                        py = create::detail::coefficients( yn, g.n());
+    //std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
+    //for( unsigned l=0; l<g.n(); l++)
+    //    for( unsigned k=0; k<g.n(); k++)
+    //    {
+    //        pxF[l]+= px[k]*forward(k,l);
+    //        pyF[l]+= py[k]*forward(k,l);
+    //    }
+    //these are the matrix coefficients with which to multiply 
+    unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
+    //multiply x 
+    double value = 0;
+    for( unsigned i=0; i<g.n(); i++)
+        for( unsigned j=0; j<g.n(); j++)
+            value += v[col_begin + i*g.Nx()*g.n() + j]*px[j]*py[i];
+            //value += v[col_begin + i*g.Nx()*g.n() + j]*pxF[j]*pyF[i];
+    return value;
+}
+
 } //namespace dg

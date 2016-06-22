@@ -32,7 +32,7 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
-typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice, dg::CooSparseBlockMatDevice, dg::NNCD> Matrix;
+typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice<double>, dg::CooSparseBlockMatDevice<double>, dg::NNCD> Matrix;
 typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 
 int main(int argc, char* argv[])
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
     mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    dg::MPI_Grid3d g( 0, lx, 0, lx,0,lx, n, Nx, Ny,Nz, bcx, bcy,bcz,dg::cartesian, comm);
+    dg::MPI_Grid3d g( 0, lx, 0, lx,0,lx, n, Nx, Ny,Nz, bcx, bcy,bcz, comm);
     const Vector w3d = dg::create::weights(g);
     dg::Timer t;
     if(rank==0)std::cout << "TEST DX \n";

@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
     mpi_init3d( bcx, bcy,dg::PER, n, Nx, Ny,Nz, comm);
-    dg::MPI_Grid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, dg::cartesian, comm);
+    dg::MPI_Grid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::Timer t;
     Vector w3d = dg::create::weights( grid);
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     Vector eins = dg::evaluate( dg::one, grid );
     std::cout<< std::setprecision(3);
 
-    dg::ArakawaX<Matrix, Vector> arakawa( grid);
+    dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

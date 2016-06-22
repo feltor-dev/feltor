@@ -8,25 +8,23 @@ namespace dg
 
 ///@cond
 //Garcia equations with switched x <-> y  and phi -> -phi
-template<class Matrix, class container, class Preconditioner >
+template<class Geometry, class Matrix, class container >
 struct Toefl
 {
-    template<class Grid>
-    Toefl( const Grid& ,  double R, double P, double eps);
+    Toefl( Geometry g ,  double R, double P, double eps);
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
   private:
-    Elliptic<Matrix, container, Preconditioner> laplaceM;
+    Elliptic<Geometry, Matrix, container> laplaceM;
     container omega, phi, phi_old, dxtheta, dxphi;
-    ArakawaX<Matrix, container> arakawaX; 
+    ArakawaX<Geometry, Matrix, container> arakawaX; 
     Invert<container > invert;
 
     double Ra, Pr;
 };
 
-template< class Matrix, class container, class Prec>
-template< class Grid>
-Toefl<Matrix, container, Prec>::Toefl( const Grid& grid, double R, double P, double eps): 
+template< class Grid, class Matrix, class container>
+Toefl<Grid, Matrix, container>::Toefl( Grid grid, double R, double P, double eps): 
     laplaceM( grid, not_normed, dg::centered),
     omega( dg::evaluate(one, grid) ), phi(omega), phi_old( phi), 
     dxtheta(omega), dxphi(omega), 
@@ -34,8 +32,8 @@ Toefl<Matrix, container, Prec>::Toefl( const Grid& grid, double R, double P, dou
     invert( omega, grid.size(), eps), Ra(R), Pr(P)
 { }
 
-template< class Matrix, class container, class P>
-void Toefl< Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template< class G, class Matrix, class container>
+void Toefl< G, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

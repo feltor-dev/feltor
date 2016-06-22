@@ -3,9 +3,8 @@
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
 #include "parameters.h"
-// #include "geometry_circ.h"
-#include "solovev/geometry.h"
-#include "solovev/init.h"
+#include "geometries/solovev.h"
+#include "geometries/init.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -30,9 +29,9 @@ namespace eule
 \f]
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
- * @tparam Preconditioner The Preconditioner class
+ * @tparam container The container class
  */
-template<class DS, class Matrix, class container, class Preconditioner>
+template<class Geometry, class DS, class Matrix, class container>
 struct Rolkar
 {
 
@@ -44,18 +43,16 @@ struct Rolkar
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    template<class Grid3d>
-    Rolkar( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
+    Rolkar( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
         p(p),
         gp(gp),
-        temp( dg::evaluate(dg::zero, g)),       
-        dampgauss_( dg::evaluate( solovev::GaussianDamping( gp), g)),
-        LaplacianM_perpN ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
-        LaplacianM_perpDIR ( g,dg::DIR, dg::DIR, dg::normed, dg::centered),
+        LaplacianM_perpN  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered),
+        LaplacianM_perpDIR( g, dg::DIR, dg::DIR, dg::normed, dg::centered),
         dsN_(dsN),
         dsDIR_(dsDIR)
     {
-
+        dg::blas1::transfer( dg::evaluate( dg::zero, g), temp);
+        dg::blas1::transfer( dg::pullback( solovev::GaussianDamping(gp), g), dampgauss_);
     }
 
     /**
@@ -107,20 +104,20 @@ struct Rolkar
      *
      * @return 
      */
-    dg::Elliptic<Matrix, container, Preconditioner>& laplacianM() {return LaplacianM_perpDIR;}
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perpDIR;}
 
     /**
      * @brief Model function for Inversion
      *
      * @return weights for the inversion function in
      */
-    const Preconditioner& weights(){return LaplacianM_perpDIR.weights();}
+    const container& weights(){return LaplacianM_perpDIR.weights();}
     /**
      * @brief Model function for Inversion
      *
      * @return preconditioner for the inversion function in
      */
-    const Preconditioner& precond(){return LaplacianM_perpDIR.precond();}
+    const container& precond(){return LaplacianM_perpDIR.precond();}
     /**
      * @brief Damping used in the diffusion equations
      *
@@ -131,8 +128,8 @@ struct Rolkar
     const eule::Parameters p;
     const solovev::GeomParameters gp;
     container temp;
-    const container dampgauss_;
-    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_perpN,LaplacianM_perpDIR;
+    container dampgauss_;
+    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perpN,LaplacianM_perpDIR;
     DS& dsN_,dsDIR_;
 };
 
@@ -141,9 +138,9 @@ struct Rolkar
  *
  * @tparam Matrix matrix class to use
  * @tparam container main container to hold the vectors
- * @tparam Preconditioner class of the weights
+ * @tparam container class of the weights
  */
-template< class DS, class Matrix, class container=thrust::device_vector<double>, class Preconditioner = thrust::device_vector<double> >
+template< class Geometry, class DS, class Matrix, class container >
 struct Feltor
 {
     /**
@@ -154,8 +151,7 @@ struct Feltor
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    template<class Grid3d>
-    Feltor( const Grid3d& g, eule::Parameters p, solovev::GeomParameters gp);
+    Feltor( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp);
 
 
     /**
@@ -258,11 +254,12 @@ struct Feltor
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
-    const container binv, curvR, curvZ;
+    //these should be considered const
+    container binv, curvR, curvZ;
     container gradlnB;
-    const container source, damping, one;
-    container profne,profNi;
-    const Preconditioner w3d, v3d;
+    container source, damping, one;
+    container profne, profNi;
+    container w3d, v3d;
 
     std::vector<container> phi, curvphi;
     std::vector<container> npe, logn;
@@ -271,10 +268,9 @@ struct Feltor
     //matrices and solvers
     DS dsDIR_;
     DS dsN_;
-    dg::Poisson< Matrix, container> poissonN,poissonDIR; 
-
-    dg::Elliptic< Matrix, container, Preconditioner > pol,lapperpN,lapperpDIR,lapperpDIRnn; 
-    dg::Helmholtz< Matrix, container, Preconditioner > invgammaDIR, invgammaN;
+    dg::Poisson<   Geometry, Matrix, container> poissonN,poissonDIR; 
+    dg::Elliptic<  Geometry, Matrix, container > pol,lapperpN,lapperpDIR;
+    dg::Helmholtz< Geometry, Matrix, container > invgammaDIR, invgammaN;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
 
@@ -287,63 +283,78 @@ struct Feltor
 ///@}
 
 ///@cond
-template<class DS, class Matrix, class container, class P>
-template<class Grid>
-Feltor<DS, Matrix, container, P>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
-    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
-    binv( dg::evaluate(solovev::Field(gp) , g) ),
-    curvR( dg::evaluate( solovev::CurvatureR(gp), g)),
-    curvZ( dg::evaluate(solovev::CurvatureZ(gp), g)),
-    gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
-    source( dg::evaluate(solovev::TanhSource(p, gp), g)),
-    damping( dg::evaluate( solovev::GaussianDamping(gp ), g)), 
-    one( dg::evaluate( dg::one, g)),    
-    profne(dg::evaluate(solovev::Nprofile(p, gp),g)),profNi(profne),
-    w3d( dg::create::weights(g)), v3d( dg::create::inv_weights(g)), 
-    phi( 2, chi), curvphi( phi),  npe(phi), logn(phi),
-    dsy( 4, chi),curvy(dsy), 
-    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::forward ),
-    dsN_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx(),(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g, dg::normed, dg::forward ),
-    poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
+template<class Grid, class DS, class Matrix, class container>
+Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
+    dsDIR_( typename DS::FieldAligned( 
+                solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR, (2*M_PI)/((double)p.Nz)), 
+            solovev::Field(gp), dg::normed, dg::forward ),
+    dsN_( typename DS::FieldAligned(
+                solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx(), (2*M_PI)/((double)p.Nz)), 
+          solovev::Field(gp), dg::normed, dg::forward ),
+    poissonN(  g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
-    pol(    g, dg::DIR, dg::DIR, dg::not_normed,          dg::centered), 
-    lapperpN (   g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
-    lapperpDIR ( g,dg::DIR, dg::DIR,     dg::normed,         dg::centered),
-    lapperpDIRnn ( g,dg::DIR, dg::DIR,     dg::not_normed,         dg::centered),
-    invgammaDIR( g,dg::DIR, dg::DIR,-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invgammaN(   g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invert_pol(         omega, omega.size(), p.eps_pol),
-    invert_invgammaN(   omega, omega.size(), p.eps_gamma),
-    invert_invgammaPhi( omega, omega.size(), p.eps_gamma),
-    p(p),
-    gp(gp),
-    evec(5)
+    //////////the elliptic and Helmholtz operators//////////////////////////
+    pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered), 
+    lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
+    lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
+    invgammaDIR(   g, dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered),
+    invgammaN(     g, g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered),
+    p(p), gp(gp), evec(5)
 {
-    dg::blas1::transform(profNi,profNi, dg::PLUS<>(-1)); 
-    initializene(profNi,profne); //ne = Gamma N_i
-    dg::blas1::transform(profne,profne, dg::PLUS<>(+1)); 
-    dg::blas1::transform(profNi,profNi, dg::PLUS<>(+1)); 
+    ////////////////////////////init temporaries///////////////////
+    dg::blas1::transfer( dg::evaluate( dg::zero, g), chi ); 
+    dg::blas1::transfer( dg::evaluate( dg::zero, g), omega ); 
+    dg::blas1::transfer( dg::evaluate( dg::zero, g), lambda ); 
+    dg::blas1::transfer( dg::evaluate( dg::one,  g), one);
+    phi.resize(2); phi[0] = phi[1] = chi;
+    curvphi = npe = logn = phi;
+    dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;
+    curvy = dsy;
+    //////////////////////////init invert objects///////////////////
+    invert_pol.construct(         omega, omega.size(), p.eps_pol  ); 
+    invert_invgammaN.construct(   omega, omega.size(), p.eps_gamma); 
+    invert_invgammaPhi.construct( omega, omega.size(), p.eps_gamma); 
+    //////////////////////////////init fields /////////////////////
+    dg::blas1::transfer(  dg::pullback(solovev::Field(gp),           g), binv);
+    dg::blas1::transfer(  dg::pullback(solovev::GradLnB(gp),         g), gradlnB);
+    dg::blas1::transfer(  dg::pullback(solovev::TanhSource(gp),      g), source);
+    dg::blas1::transfer(  dg::pullback(solovev::GaussianDamping(gp), g), damping);
+    ////////////////////////////transform curvature components////////
+    typename dg::HostVec< typename dg::GeometryTraits<Grid>::memory_category>::host_vector tempX, tempY;
+    dg::geo::pushForwardPerp(solovev::CurvatureR(gp), solovev::CurvatureZ(gp), tempX, tempY, g);
+    dg::blas1::transfer(  tempX, curvR);
+    dg::blas1::transfer(  tempY, curvZ);
+    ///////////////////init densities//////////////////////////////
+    dg::blas1::transfer( dg::pullback(solovev::Nprofile(p.bgprofamp, p.nprofileamp, gp),g), profne);
+    dg::blas1::transfer(  profne ,profNi);
+    dg::blas1::plus( profNi, -1); 
+    initializene(profNi, profne); //ne = Gamma N_i (needs Invert object)
+    dg::blas1::plus( profne, +1); 
+    dg::blas1::plus( profNi, +1); 
+    //////////////////////////init weights////////////////////////////
+    dg::blas1::transfer( dg::create::volume(g),     w3d);
+    dg::blas1::transfer( dg::create::inv_volume(g), v3d);
 }
 
-template<class DS, class Matrix, class container, class P>
-container& Feltor<DS, Matrix, container, P>::polarisation( const std::vector<container>& y)
+template<class Geometry, class DS, class Matrix, class container>
+container& Feltor<Geometry, DS, Matrix, container>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
-    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]));
+    dg::blas1::plus( chi, p.mu[1]);
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
  
-    invert_invgammaN(invgammaN,chi,y[1]); //omega= Gamma (Ni-1)    
-    dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+    invert_invgammaN(invgammaN,chi,y[1]);           //omega= Gamma (Ni-1)    
+    dg::blas1::axpby( -1., y[0], 1.,chi,chi);       //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
+    unsigned number = invert_pol( pol, phi[0], chi);//Gamma n_i -ne = -nabla chi nabla phi
     if(  number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
 }
 
-template< class DS, class Matrix, class container, class P>
-container& Feltor<DS, Matrix,container, P>::compute_psi( container& potential)
+template< class Geometry, class DS, class Matrix, class container>
+container& Feltor<Geometry, DS, Matrix,container>::compute_psi( container& potential)
 {
     invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
     poissonN.variationRHS(potential, omega);
@@ -353,15 +364,15 @@ container& Feltor<DS, Matrix,container, P>::compute_psi( container& potential)
     return phi[1];    
 }
 
-template<class DS, class Matrix, class container, class P>
-void Feltor<DS, Matrix, container, P>::initializene( const container& src, container& target)
+template<class Geometry, class DS, class Matrix, class container>
+void Feltor<Geometry, DS, Matrix, container>::initializene( const container& src, container& target)
 { 
     invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
 
-template<class DS, class M, class V, class P>
-double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
+template<class G, class DS, class M, class V>
+double Feltor<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
 {
     double z[2]    = {-1.0,1.0};
     double Dpar[4] = {0.0, 0.0,0.0,0.0};
@@ -463,8 +474,8 @@ double Feltor<DS, M, V, P>::add_parallel_dynamics( std::vector<V>& y, std::vecto
 }
 
 
-template<class DS, class Matrix, class container, class P>
-void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class Geometry, class DS, class Matrix, class container>
+void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - 1
        y[1] := N_i - 1
@@ -502,9 +513,8 @@ void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, st
     energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1];
     //// the resistive dissipative energy
-    dg::blas1::pointwiseDot( npe[0], y[2], omega); //N_e U_e 
-    dg::blas1::pointwiseDot( npe[1], y[3], chi);  //N_i U_i
-    dg::blas1::axpby( -1., omega, 1., chi); //chi  = + N_i U_i -N_e U_e
+    dg::blas1::pointwiseDot( npe[0], y[2], chi); //N_e U_e 
+    dg::blas1::pointwiseDot( 1., npe[1], y[3], -1., chi);  //N_i U_i - N_e U_e
     dg::blas1::axpby( -1., y[2], 1., y[3], omega); //omega  = - U_e + U_i   
     double Dres = -p.c*dg::blas2::dot(omega, w3d, chi); //- C*(N_i U_i + N_e U_e)(U_i - U_e)
     
@@ -522,7 +532,7 @@ void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, st
         curveDIR( y[i+2], curvy[2+i]);                                 //K(U) 
         curveDIR( phi[i], curvphi[i]);                                 //K(phi) 
         
-        dg::blas1::pointwiseDot(y[i+2], curvy[2+i], omega);             //U K(U) 
+        dg::blas1::pointwiseDot( y[i+2], curvy[2+i], omega);             //U K(U) 
         dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K(U)
         dg::blas1::pointwiseDot( npe[i], omega, omega);                 //N U K(U)
         
@@ -582,25 +592,24 @@ void Feltor<DS, Matrix, container, P>::operator()( std::vector<container>& y, st
 
 
 //Computes curvature operator
-template<class DS, class Matrix, class container, class P>
-void Feltor<DS, Matrix, container, P>::curveN( container& src, container& target)
+template<class Geometry, class DS, class Matrix, class container>
+void Feltor<Geometry, DS, Matrix, container>::curveN( container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxlhs(), src, target); //d_R src
-    dg::blas2::gemv( poissonN.dylhs(), src, temp1);  //d_Z src
     dg::blas1::pointwiseDot( curvR, target, target); // C^R d_R src
-    dg::blas1::pointwiseDot( curvZ, temp1, temp1);   // C^Z d_Z src
-    dg::blas1::axpby( 1., temp1, 1., target ); // (C^R d_R + C^Z d_Z) src
+    dg::blas2::gemv( poissonN.dylhs(), src, temp1);  //d_Z src
+    dg::blas1::pointwiseDot( 1., curvZ, temp1, 1., target);   // C^Z d_Z src + C^R d_R src
 }
-template<class DS, class Matrix, class container, class P>
-void Feltor<DS, Matrix, container, P>::curveDIR( container& src, container& target)
+
+template<class Geometry, class DS, class Matrix, class container>
+void Feltor<Geometry, DS, Matrix, container>::curveDIR( container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxrhs(), src, target); //d_R src
-    dg::blas2::gemv( poissonN.dyrhs(), src, temp1);  //d_Z src
     dg::blas1::pointwiseDot( curvR, target, target); // C^R d_R src
-    dg::blas1::pointwiseDot( curvZ, temp1, temp1);   // C^Z d_Z src
-    dg::blas1::axpby( 1., temp1, 1., target ); // (C^R d_R + C^Z d_Z) src
+    dg::blas2::gemv( poissonN.dyrhs(), src, temp1);  //d_Z src
+    dg::blas1::pointwiseDot( 1., curvZ, temp1, 1., target);// C^Z d_Z src + C^R d_R src
 }
 
 ///@endcond

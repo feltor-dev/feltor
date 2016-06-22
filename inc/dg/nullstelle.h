@@ -8,31 +8,9 @@
 
 #include <exception>
 #include <math.h>
+#include "exceptions.h"
 namespace dg{
 
-/**
- * @brief Class you might want to throw in case of a non convergence
- *
- * @ingroup utilities
- */
-struct Ooops : public std::exception
-{
-
-    /**
-     * @brief Construct from error string
-     *
-     * @param c error string
-     */
-    Ooops( const char * c): c_( c) {}
-    /**
-     * @brief What string
-     *
-     * @return error string 
-     */
-    char const* what() const throw(){ return c_;}
-  private:
-    const char* c_;
-};
 /*! @brief Exception class, that stores boundaries for 1D root finding 
  *
  * @ingroup utilities
@@ -92,7 +70,7 @@ int bisection1d (UnaryOp& funktion, double& x_min, double& x_max, const double a
     if(wert_oben*wert_unten>=0) 
         throw KeineNST_1D(x_min, x_max);
     
-    int j_max = 50;
+    int j_max = 60;
     for(int j=0; j<j_max; j++)
     {
         wert_mitte = funktion( mitte=(x_min+x_max)/2.0 );

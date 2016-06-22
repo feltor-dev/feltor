@@ -16,7 +16,9 @@ double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
 double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 
 typedef dg::DVec Vector;
-typedef dg::EllSparseBlockMatDevice Matrix;
+typedef dg::EllSparseBlockMatDevice<double> Matrix;
+//typedef dg::HVec Vector;
+//typedef dg::EllSparseBlockMat Matrix;
 
 int main()
 {
@@ -39,7 +41,7 @@ int main()
     Vector sol2[] = {dx2d, dy2d, null2, null2};
 
     std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
-    std::cout << "TEST 2D: DX, DY, JX, JY\n";
+    std::cout << "TEST 2D: DX, DY, JX, JY, JXY\n";
     for( unsigned i=0; i<4; i++)
     {
         Vector error = f2d;
@@ -53,7 +55,7 @@ int main()
     dg::blas1::axpby( 1., tempX, 1., tempY, tempY);
     dg::blas1::axpby( 1., null2, -1., tempY);
     std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tempY, w2d, tempY))<<"\n";
-    dg::Grid3d<double> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cartesian);
+    dg::Grid3d<double> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);
@@ -66,10 +68,10 @@ int main()
     const Vector dx3d = dg::evaluate( cosx, g3d);
     const Vector dy3d = dg::evaluate( cosy, g3d);
     const Vector dz3d = dg::evaluate( cosz, g3d);
-    const Vector null3 = dg::evaluate( zero, g2d);
+    const Vector null3 = dg::evaluate( zero, g3d);
     Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
 
-    std::cout << "TEST 3D: DX, DY, DZ, JX, JY, JZ\n";
+    std::cout << "TEST 3D: DX, DY, DZ, JX, JY, JZ, JXY\n";
     for( unsigned i=0; i<6; i++)
     {
         Vector error = f3d;

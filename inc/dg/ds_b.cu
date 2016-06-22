@@ -8,20 +8,11 @@
 
 #include "backend/functions.h"
 #include "backend/timer.cuh"
+#include "geometry.h"
 
 struct Field
 {
     Field( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp) const
-    {
-        for( unsigned i=0; i<y[0].size(); i++)
-        {
-            double gradpsi = ((y[0][i]-R_0)*(y[0][i]-R_0) + y[1][i]*y[1][i])/I_0/I_0;
-            yp[2][i] = y[0][i]*sqrt(1 + gradpsi);
-            yp[0][i] = y[0][i]*y[1][i]/I_0;
-            yp[1][i] = -y[0][i]*y[0][i]/I_0 + R_0/I_0*y[0][i] ;
-        }
-    }
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double gradpsi = ((y[0]-R_0)*(y[0]-R_0) + y[1]*y[1])/I_0/I_0;
@@ -33,6 +24,22 @@ struct Field
     {
         double gradpsi = ((x-R_0)*(x-R_0) + y*y)/I_0/I_0;
         return  x/sqrt( 1 + gradpsi)/R_0/I_0;
+    }
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2]) ) 
+        {
+            return false;
+        }
+        //if new integrated point outside domain
+        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        {
+            return false;
+        }
+        return true;
     }
     private:
     double R_0, I_0;
@@ -59,16 +66,15 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
-    dg::Grid3d<double> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);
-    const dg::DVec w3d = dg::create::weights( g3d);
+    dg::CylindricalGrid<dg::DVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
+    const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
     dg::DDS::FieldAligned dsFA( field, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
 
-    dg::DDS ds ( dsFA, field, g3d, dg::not_normed, dg::centered);
+    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
-
 
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::DVec solution = dg::evaluate( deri, g3d);
@@ -92,10 +98,10 @@ int main()
     std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     ds.forward( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     ds.backward( function, derivative);
     norm = dg::blas2::dot(w3d, derivative);
-    std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     
     return 0;
 }

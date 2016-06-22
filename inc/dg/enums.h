@@ -1,4 +1,5 @@
 #pragma once
+#include "exceptions.h"
 
 /*! @file 
   
@@ -19,6 +20,22 @@ enum bc{
     NEU_DIR = 3, //!< Neumann on left, Dirichlet on right boundary
     NEU = 4 //!< Neumann on both boundaries
 };
+
+bc str2bc( std::string s)
+{
+    if( s=="PER"||s=="per"||s=="periodic"||s=="Periodic")
+        return PER;
+    if( s=="DIR"||s=="dir"||s=="dirichlet"||s=="Dirichlet")
+        return DIR;
+    if( s=="NEU"||s=="neu"||s=="neumann"||s=="Neumann")
+        return NEU;
+    if( s=="NEU_DIR"||s=="neu_dir")
+        return NEU_DIR;
+    if( s=="DIR_NEU"||s=="dir_neu")
+        return DIR_NEU;
+    throw Ooops( "No matching boundary condition!");
+}
+
 /**
  * @brief Switch between normalisations
  *

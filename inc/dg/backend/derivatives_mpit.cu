@@ -7,6 +7,7 @@
 #include "vector_traits.h"
 #include "selfmade_blas.cuh"
 #include "thrust_vector_blas.cuh"
+#include "cusp_vector_blas.h"
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
 #include "mpi_matrix.h"
@@ -27,10 +28,12 @@ double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
 double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 
 
-//typedef dg::RowColDistMat<dg::EllSparseBlockMat, dg::CooSparseBlockMat, dg::NNCH> Matrix;
+//typedef dg::RowColDistMat<dg::EllSparseBlockMat<double>, dg::CooSparseBlockMat<double>, dg::NNCH> Matrix;
 //typedef dg::MPI_Vector<thrust::host_vector<double> > Vector;
-typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice, dg::CooSparseBlockMatDevice, dg::NNCD> Matrix;
-typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
+//typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice<double>, dg::CooSparseBlockMatDevice<double>, dg::NNCD> Matrix;
+//typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
+typedef dg::MDMatrix Matrix;
+typedef dg::MDVec Vector;
 
 int main(int argc, char* argv[])
 {
@@ -67,7 +70,7 @@ int main(int argc, char* argv[])
     }
     MPI_Comm comm3d;
     mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm3d);
-    dg::MPI_Grid3d g3d( 0, M_PI, 0.1, 2*M_PI+0.1, M_PI/2., M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, dg::cylindrical, comm3d);
+    dg::MPI_Grid3d g3d( 0, M_PI, 0.1, 2*M_PI+0.1, M_PI/2., M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm3d);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);

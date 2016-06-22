@@ -60,7 +60,7 @@ int main(int argc, char* argv[] )
 
     if(rank==0)std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
-    dg::Elliptic<dg::MDMatrix, dg::MDVec, dg::MDVec> pol( grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> pol( grid, dg::not_normed, dg::centered);
     pol.set_chi( chi);
     t.toc();
     if(rank==0)std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";

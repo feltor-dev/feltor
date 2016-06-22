@@ -1,5 +1,4 @@
-#ifndef _DG_GRID_
-#define _DG_GRID_
+#pragma once
 
 #include <cassert>
 #include "dlt.h"
@@ -13,6 +12,9 @@
 
 namespace dg{
 
+struct SharedTag;
+class MPI_Grid2d;
+class MPI_Grid3d;
 
 ///@addtogroup grid
 ///@{
@@ -24,6 +26,7 @@ namespace dg{
 template <class T>
 struct Grid1d
 {
+    typedef SharedTag memory_category;
     /**
      * @brief 1D grid
      * 
@@ -97,6 +100,56 @@ struct Grid1d
      * @return 
      */
     const DLT<T>& dlt() const {return dlt_;}
+    void display( std::ostream& os = std::cout) const
+    {
+        os << "Grid parameters are: \n"
+            <<"    n  = "<<n_<<"\n"
+            <<"    N = "<<Nx_<<"\n"
+            <<"    h = "<<hx_<<"\n"
+            <<"    x0 = "<<x0_<<"\n"
+            <<"    x1 = "<<x1_<<"\n"
+            <<"    lx = "<<lx_<<"\n"
+            <<"Boundary conditions in x are: \n";
+        switch(bcx_)
+        {
+            case(dg::PER): os << "    PERIODIC \n"; break;
+            case(dg::DIR): os << "    DIRICHLET\n"; break;
+            default: os << "    Not specified!!\n"; 
+        }
+    }
+
+    /**
+     * @brief Shifts a point coordinate due to topology
+     *
+     * If you want to construct a point by adding delta X to a given point
+     * x0 then the resulting coordinate x1 might be incorrect due to topologic reasons (periodic boundaries). This function corrects this coordinate
+     * @param x0 starting point (must lie inside of the grid)
+     * @param x1 end point (inout)
+     */
+    void shift_topologic( double x0, double& x1)const
+    {
+        assert( contains(x0));
+        double deltaX;
+        if( x1 > x0_) deltaX = x1 -x0_;
+        else deltaX = x1_ - x1;
+        unsigned N = floor(deltaX/lx_);
+        if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx_;
+        if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx_;
+    }
+
+    /**
+     * @brief Check if the grid contains a point
+     *
+     * @note Doesn't check periodicity!!
+     * @param x point to check
+     *
+     * @return true if x is between x0 and x1, false else
+     */
+    bool contains( double x)const
+    {
+        if( (x>=x0_ && x <= x1_)) return true; 
+        return false;
+    }
   private:
     T x0_, x1_;
     T lx_;
@@ -114,6 +167,7 @@ struct Grid1d
 template< class T>
 struct Grid2d
 {
+    typedef SharedTag memory_category;
     /**
      * @brief Construct a 2D grid
      *
@@ -129,7 +183,7 @@ struct Grid2d
      */
     Grid2d( T x0, T x1, T y0, T y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
-        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n), sys_(cartesian)
+        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
@@ -145,7 +199,7 @@ struct Grid2d
      */
     Grid2d( const Grid1d<T>& gx, const Grid1d<T>& gy): 
         x0_(gx.x0()), x1_(gx.x1()), y0_(gy.x0()), y1_(gy.x1()), 
-        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n()), sys_(cartesian)
+        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n())
     {
         assert( gx.n() == gy.n() );
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
@@ -234,19 +288,13 @@ struct Grid2d
      *
      * @return 
      */
-    Grid2d<double> local_grid() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
+    Grid2d<double> local_grid() const {return *this;}
     /**
      * @brief discrete legendre trafo
      *
      * @return 
      */
     const DLT<T>& dlt() const{return dlt_;}
-    /**
-     * @brief So far always returns cartesian
-     *
-     * @return cartesian
-     */
-    dg::system system() const{return sys_;}
     /**
      * @brief The total number of points
      *
@@ -287,18 +335,67 @@ struct Grid2d
             default: os << "    Not specified!!\n"; 
         }
     }
+    /**
+     * @brief Shifts a point coordinate due to topology
+     *
+     * If you want to construct a point by adding (delta X, delta Y) to a given point
+     * (x0, y0) then the resulting coordinate (x1, y1) might be incorrect due to topologic reasons (periodic boundaries). This function corrects this coordinate
+     * @param x0 starting x-point (must lie inside of the grid)
+     * @param y0 starting y-point (must lie inside of the grid)
+     * @param x1 end x-point (inout)
+     * @param y1 end y-point (inout)
+     */
+    void shift_topologic( double x0, double y0, double& x1, double& y1)const
+    {
+        assert( contains(x0, y0));
+        double deltaX;
+        if( x1 > x0_) deltaX = (x1 -x0_);
+        else deltaX = x1_ - x1;
+        unsigned N = floor(deltaX/lx_);
+        if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx_;
+        if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx_;
+
+        double deltaY;
+        if( y1 > y0_) deltaY = (y1 -y0_);
+        else deltaY = y1_ - y1;
+        N = floor(deltaY/ly_);
+        if( y1  > y1_ && bcy_ == dg::PER){ y1 -= N*ly_; }
+        if( y1  < y0_ && bcy_ == dg::PER){ y1 += N*ly_; }
+    }
+    /**
+     * @brief Check if the grid contains a point
+     *
+     * @note doesn't check periodicity!!
+     * @param x x-point to check
+     * @param x y-point to check
+     *
+     * @return true if point is inside, false else
+     */
+    bool contains( double x, double y)const
+    {
+        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
+        return false;
+    }
+  protected:
+    void init_X_boundaries( double x0, double x1)
+    {
+        x0_ = x0, x1_ = x1;
+        assert( x1 > x0 );
+        lx_ = (x1_-x0_);
+        hx_ = lx_/(double)Nx_;
+    }
   private:
+    friend class MPI_Grid2d;
     T x0_, x1_, y0_, y1_;
     T lx_, ly_;
     unsigned n_, Nx_, Ny_;
     T hx_, hy_;
     bc bcx_, bcy_;
     DLT<T> dlt_;
-    dg::system sys_;
 };
 
 /**
- * @brief A 3D grid class  for cartesian or cylindrical coordinates
+ * @brief A 3D grid class  for cartesian coordinates
  *
  * In the third dimension only 1 polynomial coefficient is used,
  * not n.
@@ -307,6 +404,7 @@ struct Grid2d
 template< class T>
 struct Grid3d
 {
+    typedef SharedTag memory_category;
     /**
      * @brief Construct a 3D grid
      *
@@ -323,13 +421,11 @@ struct Grid3d
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      * @param bcz boundary condition in z
-     * @param sys cartesian or cylindrical
-     * @note in the cylindrical coordinate system x, y and z are used to denote R, Z and the angle phi
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    Grid3d( T x0, T x1, T y0, T y1, T z0, T z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER, system sys = cartesian):
+    Grid3d( T x0, T x1, T y0, T y1, T z0, T z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1),
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n), sys_(sys)
+        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
         assert( n != 0);
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
@@ -351,7 +447,7 @@ struct Grid3d
         z0_(gz.x0()), z1_(gz.x1()),
         n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), Nz_(gz.N()),
         bcx_(gx.bcx()), bcy_( gy.bcx()), bcz_(gz.bcx()), 
-        dlt_(gx.n()), sys_(cartesian)
+        dlt_(gx.n())
     {
         assert( gx.n() == gy.n() );
         lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
@@ -482,12 +578,6 @@ struct Grid3d
      */
     const DLT<T>& dlt() const{return dlt_;}
     /**
-     * @brief current coordinate system used
-     *
-     * @return 
-     */
-    dg::system system() const {return sys_;}
-    /**
      * @brief The total number of points
      *
      * @return n*n*Nx*Ny*Nz
@@ -539,17 +629,75 @@ struct Grid3d
             default: os << "    Not specified!!\n"; 
         }
     }
+
+    /**
+     * @brief Shifts a point coordinate due to topology
+     *
+     * If you want to construct a point by adding (delta X, delta Y, delta Z) to a given point
+     * (x0, y0, z0) then the resulting coordinate (x1, y1, z1) might be incorrect due to topologic reasons (periodic boundaries). This function corrects this coordinate
+     * @param x0 starting x-point (must lie inside of the grid)
+     * @param y0 starting y-point (must lie inside of the grid)
+     * @param z0 starting y-point (must lie inside of the grid)
+     * @param x1 end x-point (inout)
+     * @param y1 end y-point (inout)
+     * @param z1 end z-point (inout)
+     */
+    void shift_topologic( double x0, double y0, double z0, double& x1, double& y1, double& z1)const
+    {
+        assert( contains(x0, y0, z0));
+        double deltaX;
+        if( x1 > x0_) deltaX = (x1 -x0_);
+        else deltaX = x1_ - x1;
+        unsigned N = floor(deltaX/lx_);
+        if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx_;
+        if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx_;
+        double deltaY;
+        if( y1 > y0_) deltaY = (y1 -y0_);
+        else deltaY = y1_ - y1;
+        N = floor(deltaY/ly_);
+        if( y1  > y1_ && bcy_ == dg::PER) y1 -= N*ly_;
+        if( y1  < y0_ && bcy_ == dg::PER) y1 += N*ly_;
+        double deltaZ;
+        if( z1 > z0_) deltaZ = (z1 -z0_);
+        else deltaZ = z1_ - z1;
+        N = floor(deltaZ/lz_);
+        if( z1  > z1_ && bcz_ == dg::PER) z1 -= N*lz_;
+        if( z1  < z0_ && bcz_ == dg::PER) z1 += N*lz_;
+    }
+
+    /**
+     * @brief Check if the grid contains a point
+     *
+     * @note doesn't check periodicity!!
+     * @param x x-point to check
+     * @param y y-point to check
+     * @param z z-point to check
+     *
+     * @return true if x is between x0 and x1, false else
+     */
+    bool contains( double x, double y, double z)const
+    {
+        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_) && (z>=z0_ && z<=z1_)) 
+            return true; 
+        return false;
+    }
+  protected:
+    void init_X_boundaries( double x0, double x1)
+    {
+        x0_ = x0, x1_ = x1;
+        assert( x1 > x0 );
+        lx_ = (x1_-x0_);
+        hx_ = lx_/(double)Nx_;
+    }
   private:
+    friend class MPI_Grid3d;
     T x0_, x1_, y0_, y1_, z0_, z1_;
     T lx_, ly_, lz_;
     unsigned n_, Nx_, Ny_, Nz_;
     T hx_, hy_, hz_;
     bc bcx_, bcy_, bcz_;
     DLT<T> dlt_;
-    dg::system sys_;
 };
-
 
 ///@}
 }// namespace dg
-#endif // _DG_GRID_

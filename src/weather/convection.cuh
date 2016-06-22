@@ -11,7 +11,7 @@
 template< class Matrix, class container, class Preconditioner>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double L, double P): L_(L), P_(P),
+    Diffusion( const dg::CartesianGrid2d& g, double L, double P): L_(L), P_(P),
         w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)), temp( g.size()),
         LaplacianM_dir( g, dg::PER, dg::DIR, dg::normed, dg::centered),
         LaplacianM_neu( g, dg::PER, dg::NEU, dg::normed, dg::centered)
@@ -37,7 +37,7 @@ struct Diffusion
     double L_, P_;
     const container w2d, v2d;
     container temp;
-    dg::Elliptic<Matrix, container, Preconditioner> LaplacianM_dir, LaplacianM_neu;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner> LaplacianM_dir, LaplacianM_neu;
 };
 
 struct Source
@@ -77,7 +77,7 @@ struct Convection
      *
      * @return cusp matrix
      */
-    const dg::Elliptic<Matrix, container, Preconditioner>& laplacianM( ) const { return laplaceM;}
+    const dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner>& laplacianM( ) const { return laplaceM;}
     /**
      * @brief Returns phi that belong to the last y in operator()
      *
@@ -92,7 +92,7 @@ struct Convection
     const container& compute_phi( const container& omega);
 
     Matrix dx_per, dy_dir, dy_neu;
-    dg::Elliptic<Matrix, container, Preconditioner> laplaceM;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container, Preconditioner> laplaceM;
 
 
     container phi, phi_old, dxphi, dyphi;

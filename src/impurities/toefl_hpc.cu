@@ -2,10 +2,12 @@
 #include <iomanip>
 #include <vector>
 
+#include "netcdf.h"
 
 #include "toeflI.cuh"
-#include "../toefl/parameters.h"
+#include "parameters.h"
 #include "file/file.h"
+#include "file/nc_utilities.h"
 #include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
@@ -14,11 +16,9 @@
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5. 
-        density fields are the real densities in XSPACE ( not logarithmic values)
+   - writes outputs to a given outputfile using netcdf. 
 */
 
-const unsigned k = 3;//!< a change in k needs a recompilation
 
 int main( int argc, char* argv[])
 {
@@ -35,99 +35,150 @@ int main( int argc, char* argv[])
         v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const Parameters p( v, 2);
+    const imp::Parameters p( v);
     p.display( std::cout);
-    if( p.k != k)
-    {
-        std::cerr << "ERROR: k doesn't match: "<<k<<" (code) vs. "<<p.k<<" (input)\n";
-        return -1;
-    }
 
     ////////////////////////////////set up computations///////////////////////////
-    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflI< dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.a_z, p.mu_z, p.tau_z, p.eps_pol, p.eps_gamma); 
+    dg::Diffusion< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > diffusion( grid, p); 
+    dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p); 
 
     //create initial vector
-    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) ), y1(y0);
-    //dg::blas1::axpby( 1., y0[0], 1., (dg::DVec)dg::evaluate( g, grid), y0[0]);//n_e = 1+ gaussian
-    dg::Helmholtz<dg::DMatrix, dg::DVec, dg::DVec> & gamma = test.gamma();
-    if( v[25] == 1)
+    dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) );
+    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
+    if( p.mode == 1)
     {
-        gamma.alpha() = -0.5*p.tau;
-        y0[0] = dg::evaluate( g, grid);
-        dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1 
-        dg::DVec v2d=dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[1], y0[1]);
-        dg::blas1::axpby( 1./(1.-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
-        y0[2] = dg::evaluate( dg::one, grid);
-        dg::blas1::axpby( 1., y0[2], 1., y0[0]);
-        dg::blas1::axpby( 1., y0[2], 1., y0[1]);
+        if( p.vorticity == 0)
+        {
+            gamma.alpha() = -0.5*p.tau[1];
+            y0[0] = dg::evaluate( gaussian, grid);
+            dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1 
+            dg::DVec v2d=dg::create::inv_weights(grid);
+            dg::blas2::symv( v2d, y0[1], y0[1]);
+
+            dg::blas1::scal( y0[1], 1./p.a[1]); //n_i ~1./a_i n_e
+            y0[2] = dg::evaluate( dg::zero, grid);
+        }
+        else
+        {
+            y0[1] = y0[0] = dg::evaluate( gaussian, grid);
+            dg::blas1::scal( y0[1], 1/p.a[1]);
+            y0[2] = dg::evaluate( dg::zero, grid);
+        }
     }
-    if( v[25] == 2) 
+    if( p.mode == 2) 
     {
         //init wall in y0[2]
-        dg::GaussianX wall( v[26]*grid.lx(), v[28], v[27]); //position, sigma, amplitude
+        dg::GaussianX wall( p.wall_pos*grid.lx(), p.wall_sigma, p.wall_amp); 
         dg::DVec wallv = dg::evaluate( wall, grid);
-        gamma.alpha() = -0.5*p.tau_z*p.mu_z;
+        gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         dg::blas2::symv( gamma, wallv, y0[2]); 
         dg::DVec v2d=dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[2], y0[2]);
-        if( p.a_z != 0.)
-            dg::blas1::axpby( 1./p.a_z, y0[2], 0., y0[2]); //n_z ~1./a_z
+        if( p.a[2] != 0.)
+            dg::blas1::scal( y0[2], 1./p.a[2]); //n_z ~1./a_z
 
         //init blob in y0[1]
-        gamma.alpha() = -0.5*p.tau;
-        y0[0] = dg::evaluate( g, grid);
+        gamma.alpha() = -0.5*p.tau[1];
+        y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]); 
-        dg::blas2::symv( v2d, y0[1], y0[1]);
-        if( p.a_z == 1)
+        dg::blas1::pointwiseDot( v2d, y0[1], y0[1]);
+        if( p.a[2] == 1)
         {
             std::cerr << "No blob with trace ions possible!\n";
             return -1;
         }
-        dg::blas1::axpby( 1./(1-p.a_z), y0[1], 0., y0[1]); //n_i ~1./a_i n_e
+        dg::blas1::scal( y0[1], 1./p.a[1]); //n_i ~1./a_i n_e
 
         //sum up
-        if( p.a_z != 0)
+        if( p.a[2] != 0)
             dg::blas1::axpby( 1., wallv, 1., y0[0]); //add wall to blob in n_e
-        dg::DVec one = dg::evaluate( dg::one, grid);
-        for( unsigned i=0; i<3; i++)
-            dg::blas1::axpby( 1., one, 1., y0[i]);
         
     }
-    if( v[25] == 3) 
+    if( p.mode == 3) 
     {
-        gamma.alpha() = -0.5*p.tau_z*p.mu_z;
-        y0[0] = dg::evaluate( g, grid);
+        gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
+        y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[2]); 
         dg::DVec v2d=dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[2], y0[2]);
-        if( p.a_z == 0)
+        if( p.a[2] == 0)
         {
             std::cerr << "No impurity blob with trace impurities possible!\n";
             return -1;
         }
-        dg::blas1::axpby( 1./p.a_z, y0[2], 0., y0[2]); //n_z ~1./a_z n_e
-        y0[1] = dg::evaluate( dg::one, grid);
-        dg::blas1::axpby( 1., y0[1], 1., y0[0]);
-        dg::blas1::axpby( 1., y0[1], 1., y0[2]);
+        dg::blas1::axpby( 1./p.a[2], y0[2], 0., y0[2]); //n_z ~1./a_z n_e
+        y0[1] = dg::evaluate( dg::zero, grid);
     }
 
-    test.log( y0, y0); //transform to logarithmic values
     //////////////////initialisation of timestepper and first step///////////////////
+    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    karniadakis.init( toeflI, diffusion, y0, p.dt);
+    /////////////////////////////set up netcdf/////////////////////////////////////
+    file::NC_Error_Handle err;
+    int ncid;
+    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
+    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
+    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
+    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
+    int dim_ids[3], tvarID;
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    //field IDs
+    std::string names[5] = {"electrons", "ions", "impurties","potential","vor"}; 
+    int dataIDs[5]; 
+    for( unsigned i=0; i<5; i++){
+        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
+
+    //energy IDs
+    int EtimeID, EtimevarID;
+    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    int energyID, massID, dissID, dEdtID, accuracyID;
+    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
+    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
+    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
+    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
+    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
+    ///////////////////////////////////first output/////////////////////////
+    std::cout << "First output ... \n";
+    size_t start[3] = {0, 0, 0};
+    size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    dg::DVec transferD( dg::evaluate(dg::zero, grid));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid));
+    for( unsigned i=0; i<3; i++)
+    {
+        dg::blas1::transfer( y0[i], transferH);
+        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
+    }
+    //pot
+    transferD = toeflI.potential()[0];
+    dg::blas1::transfer( transferD, transferH);
+    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
+    //Vor
+    transferD = toeflI.potential()[0];
+    dg::blas2::gemv( diffusion.laplacianM(), transferD, y0[1]);            
+    dg::blas1::transfer( y0[1], transferH);
+    err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     double time = 0;
-    dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    ab.init( test, y0, p.dt);
-    ab( test, y1);
-    /////////////////////////////set up hdf5/////////////////////////////////
-    file::T5trunc t5file( argv[2], input);
-    dg::HVec output[4] = { y1[0], y1[0], y1[0], y1[0]}; //intermediate transport locations
-    test.exp( y1,y1); //transform to correct values
-    output[0] = y1[0], output[1] = y1[1], output[2] = y1[2], output[3] = test.potential()[0]; //electrons
-    t5file.write( output[0], output[1], output[2], output[3], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
-    t5file.append( test.mass(), test.mass_diffusion(), test.energy(), test.energy_diffusion());
+
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
+
+    size_t Estart[] = {0};
+    size_t Ecount[] = {1};
+    double energy0 = toeflI.energy(), mass0 = toeflI.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+
+
+    err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
+    err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
+    err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+    err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+    err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+    err = nc_close(ncid);
+    std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
@@ -145,18 +196,51 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            ab( test, y1);
+            karniadakis( toeflI, diffusion, y0);
+            step++;
+            time += p.dt;
+            Estart[0] = step;
             //store accuracy details
-            t5file.append( test.mass(), test.mass_diffusion(), test.energy(), test.energy_diffusion());
+            err = nc_open(argv[2], NC_WRITE, &ncid);
+            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
+
+            E0 = E1;
+            E1 = toeflI.energy();
+            mass = toeflI.mass();
+            dEdt = (E1 - E0)/p.dt;
+            double diss = toeflI.energy_diffusion( );
+            double accuracy = 2.*fabs((dEdt-diss)/(dEdt + diss));
+
+            err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
+            err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
+            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
+            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+            err = nc_close(ncid);
+            std::cout << "(m_tot-m_0)/m_0: "<< (mass-mass0)/mass0<<"\t";
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
         }
-        time += p.itstp*p.dt;
         //output all three fields
-        test.exp( y1,y1); //transform to correct values
-        output[0] = y1[0], output[1] = y1[1], output[2] = y1[2], output[3] = test.potential()[0]; //electrons
-        t5file.write( output[0], output[1], output[2], output[3], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
+        //////////////////////////write fields////////////////////////
+        start[0] = i;
+        err = nc_open(argv[2], NC_WRITE, &ncid);
+        for( unsigned j=0; j<3; j++)
+        {
+            dg::blas1::transfer( y0[j], transferH);
+            err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
+        }
+        transferD = toeflI.potential()[0];
+        dg::blas1::transfer( transferD, transferH);
+        err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
+        transferD = toeflI.potential()[0];
+        dg::blas2::gemv( diffusion.laplacianM(), transferD, y0[1]);            
+        dg::blas1::transfer( y0[1], transferH);
+        err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        err = nc_close(ncid);
 #ifdef DG_BENCHMARK
         ti.toc();
-        step+=p.itstp;
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK

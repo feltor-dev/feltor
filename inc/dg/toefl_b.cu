@@ -6,8 +6,8 @@
 #include <thrust/device_vector.h>
 
 #include "backend/timer.cuh"
-#include "draw/device_window.cuh"
-//#include "draw/host_window.h"
+//#include "draw/device_window.cuh"
+#include "draw/host_window.h"
 
 #include "algorithm.h"
 #include "toefl.cuh"
@@ -80,7 +80,7 @@ int main()
     title << " temperature / "<<1. <<" time 0";
     GLFWwindow* w = draw::glfwInitAndCreateWindow(1000, 200, title.str().c_str());
     title.str("");
-    draw::RenderDeviceData render(1,1);
+    draw::RenderHostData render(1,1);
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -96,7 +96,7 @@ int main()
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and AB
-    dg::Toefl< dg::DMatrix, dg::DVec, dg::DVec> test( grid, Ra, Pr, eps); 
+    dg::Toefl< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> test( grid, Ra, Pr, eps); 
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
     //create visualisation vectors

@@ -11,7 +11,7 @@
  *      @defgroup grid Grid objects
  *
  *          Objects that store topological information about the grid. Currently
- *          we only use equidistant, orthogonal grids in 1D, 2D and 3D. 
+ *          we only use equidistant, orthogonal dG grids in 1D, 2D and 3D. 
  *      @defgroup evaluation Function discretization
  *          
  *          The function discretisation routines compute the DG discretisation
@@ -37,7 +37,7 @@
  *          @defgroup arakawa Arakawas scheme
  *          @defgroup matrixoperators Classes that act as matrices in blas2 routines
  *      @}
- *      @defgroup blas Basic Linear Algebra Subprograms
+ *      @defgroup blas Basic Linear Algebra and Geometric Subprograms
  *
  *          These routines form the heart of our container free numerical algorithms. 
  *          They are called by all our numerical algorithms like conjugate gradient or 
@@ -53,6 +53,10 @@
  *              Successive calls to blas routines are executed sequentially.
  *              A manual synchronization of threads or devices is never needed in an application 
  *              using these functions. All functions returning a value block until the value is ready.
+ *          @defgroup geometry Geometric operations
+ *
+               These routines form the heart of our geometry free numerical algorithms. 
+               They are called by our geometric operators like the arakawa bracket. 
  *      @}
  *      @defgroup algorithms Numerical schemes
  *          Numerical time integration and a conjugate gradient method based

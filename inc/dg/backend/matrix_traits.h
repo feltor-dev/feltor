@@ -4,6 +4,8 @@
 #include "matrix_categories.h"
 namespace dg{
 
+    //Note to developpers: if you have problems with the compiler choosing CuspMatrixTag even if you don't want it to and you specialized the MatrixTraits for 
+    //your matrix try to specialize for const Matrix as well
 ///@cond
 template< class Matrix>
 struct MatrixTraits {

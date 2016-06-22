@@ -19,11 +19,17 @@ namespace blas2{
 namespace detail{
 
 //thrust vector preconditioner
+template< class Vector1, class Vector2>
+void doTransfer( const Vector1& in, Vector2& out, ThrustMatrixTag, ThrustMatrixTag)
+{
+    out.resize(in.size());
+    thrust::copy( in.begin(), in.end(), out.begin());
+}
 
 template < class Vector>
 struct ThrustVectorDoDot
 {
-    typedef typename Vector::value_type value_type;
+    typedef typename VectorTraits<Vector>::value_type value_type;
     typedef thrust::tuple< value_type, value_type> Pair; 
     __host__ __device__
         value_type operator()( const value_type & x, const Pair& p) {
@@ -36,28 +42,30 @@ struct ThrustVectorDoDot
 };
 
 template< class Matrix, class Vector>
-inline typename Matrix::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
+inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() && x.size() == m.size() );
 #endif //DG_DEBUG
+    typedef typename MatrixTraits<Matrix>::value_type value_type;
     return thrust::inner_product(  x.begin(), x.end(), 
                             thrust::make_zip_iterator( thrust::make_tuple( y.begin(), m.begin())  ), 
-                            0.0,
-                            thrust::plus<double>(),
+                            value_type(0),
+                            thrust::plus<value_type>(),
                             detail::ThrustVectorDoDot<Matrix>()
                             );
 }
 template< class Matrix, class Vector>
-inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::ThrustMatrixTag, dg::ThrustVectorTag)
+inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::ThrustMatrixTag, dg::ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( m.size() == x.size());
 #endif //DG_DEBUG
+    typedef typename MatrixTraits<Matrix>::value_type value_type;
     return thrust::inner_product( x.begin(), x.end(),
                                   m.begin(),
-                                  0.0,
-                                  thrust::plus<double>(),
+                                  value_type(0),
+                                  thrust::plus<value_type>(),
                                   detail::ThrustVectorDoDot<Matrix>()
             ); //very fast
 }
@@ -65,7 +73,7 @@ inline typename Matrix::value_type doDot( const Matrix& m, const Vector& x, dg::
 template < class Vector>
 struct ThrustVectorDoSymv
 {
-    typedef typename Vector::value_type value_type;
+    typedef typename VectorTraits<Vector>::value_type value_type;
     typedef thrust::tuple< value_type, value_type> Pair; 
     __host__ __device__
         ThrustVectorDoSymv( value_type alpha, value_type beta): alpha_(alpha), beta_(beta){}
@@ -81,10 +89,10 @@ struct ThrustVectorDoSymv
 
 template< class Matrix, class Vector>
 inline void doSymv(  
-              typename Matrix::value_type alpha, 
+              typename MatrixTraits<Matrix>::value_type alpha, 
               const Matrix& m,
               const Vector& x, 
-              typename Matrix::value_type beta, 
+              typename MatrixTraits<Matrix>::value_type beta, 
               Vector& y, 
               ThrustMatrixTag,
               ThrustVectorTag)
@@ -105,6 +113,7 @@ inline void doSymv(
                        detail::ThrustVectorDoSymv<Matrix>( alpha, beta)
                       ); 
 }
+
 template< class Matrix, class Vector>
 inline void doSymv(  
               Matrix& m, 

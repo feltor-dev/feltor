@@ -1,12 +1,13 @@
 #include <iostream>
 #include <iomanip>
 
-#include "dg/timer.cuh"
-#include "dg/functors.cuh"
-#include "dg/evaluation.cuh"
-#include "dg/rk.cuh"
-#include "dg/xspacelib.cuh"
-#include "dg/typedefs.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/algorithm.h"
+#include "dg/functors.h"
+#include "dg/backend/evaluation.cuh"
+#include "dg/runge_kutta.h"
+#include "dg/backend/xspacelib.cuh"
+#include "dg/backend/typedefs.cuh"
 
 #include "shu.cuh"
 #include "parameters.h"
@@ -30,10 +31,10 @@ int main( int argc, char * argv[])
     std::cin >> dt0;
     std::cout << "k n dt Nx eps vort enstr energy\n";
     Grid2d<double> grid( 0, 1, 0, 1, n, Nx, Ny, dg::PER, dg::PER);
-    DVec w2d( create::w2d(grid));
+    DVec w2d( create::weights(grid));
     dg::Lamb lamb( 0.5, 0.8, 0.1, 1.);
     const HVec omega = evaluate ( lamb, grid);
-    Shu<DVec> shu( grid, eps);
+    Shu<dg::DMatrix, dg::DVec> shu( grid, eps);
     const DVec stencil = evaluate( one, grid);
     for(unsigned i=0; i<6;i++)
     {
@@ -44,8 +45,7 @@ int main( int argc, char * argv[])
         //make solver and stepper
         AB< 1, DVec > ab( y0);
         ab.init( shu, y0, dt);
-        ab( shu, y0, y1, dt);
-        y0.swap( y1); //y1 now contains value at zero time
+        ab( shu, y1);
 
         double vorticity = blas2::dot( stencil, w2d, y1);
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
@@ -56,8 +56,7 @@ int main( int argc, char * argv[])
         try{
         for( unsigned i=0; i<NT; i++)
         {
-            ab( shu, y0, y1, dt);
-            y0.swap( y1); 
+            ab( shu, y1);
         }
         }
         catch( dg::Fail& fail) { 
@@ -79,8 +78,7 @@ int main( int argc, char * argv[])
         //make solver and stepper
         AB< 2, DVec > ab( y0);
         ab.init( shu, y0, dt);
-        ab( shu, y0, y1, dt);
-        y0.swap( y1); //y1 now contains value at zero time
+        ab( shu, y1);
 
         double vorticity = blas2::dot( stencil, w2d, y1);
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
@@ -91,8 +89,7 @@ int main( int argc, char * argv[])
         try{
         for( unsigned i=0; i<NT; i++)
         {
-            ab( shu, y0, y1, dt);
-            y0.swap( y1); 
+            ab( shu, y1);
         }
         }
         catch( dg::Fail& fail) { 
@@ -114,8 +111,7 @@ int main( int argc, char * argv[])
         //make solver and stepper
         AB< 3, DVec > ab( y0);
         ab.init( shu, y0, dt);
-        ab( shu, y0, y1, dt);
-        y0.swap( y1); //y1 now contains value at zero time
+        ab( shu, y1);
 
         double vorticity = blas2::dot( stencil, w2d, y1);
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
@@ -126,8 +122,7 @@ int main( int argc, char * argv[])
         try{
         for( unsigned i=0; i<NT; i++)
         {
-            ab( shu, y0, y1, dt);
-            y0.swap( y1); 
+            ab( shu,y1);
         }
         }
         catch( dg::Fail& fail) { 
@@ -149,8 +144,7 @@ int main( int argc, char * argv[])
         //make solver and stepper
         AB< 4, DVec > ab( y0);
         ab.init( shu, y0, dt);
-        ab( shu, y0, y1, dt);
-        y0.swap( y1); //y1 now contains value at zero time
+        ab( shu, y1);
 
         double vorticity = blas2::dot( stencil, w2d, y1);
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
@@ -161,8 +155,7 @@ int main( int argc, char * argv[])
         try{
         for( unsigned i=0; i<NT; i++)
         {
-            ab( shu, y0, y1, dt);
-            y0.swap( y1); 
+            ab( shu, y1);
         }
         }
         catch( dg::Fail& fail) { 

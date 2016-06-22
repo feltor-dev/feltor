@@ -26,6 +26,7 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
+typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
@@ -78,17 +79,20 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
    
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
-    dg::MPI_Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, dg::cylindrical, comm);  
-     dg::MPI_Grid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, dg::cylindrical, comm);  
+
+    dg::CylindricalMPIGrid<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, comm);  
+    dg::CylindricalMPIGrid<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, comm);  
      
-    //create RHS 
-    eule::Feltor< dg::MHDS, dg::MHMatrix, dg::MHVec, dg::MHVec > feltor( grid, p, gp); 
-    eule::Rolkar< dg::MHMatrix, dg::MHVec, dg::MHVec > rolkar( grid, p, gp);
+    if(rank==0)std::cout << "Constructing Feltor...\n";
+    eule::Feltor<dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
+    if(rank==0)std::cout << "Constructing Rolkar...\n";
+    eule::Rolkar< dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field////////////////////////////////////////////
     //background profile
     solovev::Nprofile prof(p, gp); //initial background profile
-    std::vector<dg::MHVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
+    std::vector<dg::MDVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
 
     //initial perturbation
     //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
@@ -112,7 +116,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
-    dg::Karniadakis< std::vector<dg::MHVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
     //feltor.energies(y0); //now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
@@ -181,7 +185,7 @@ int main( int argc, char* argv[])
     MPI_Cart_get( comm, 3, dims, periods, coords);
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
-    dg::MHVec transferD( dg::evaluate(dg::zero, grid));
+    dg::MDVec transferD( dg::evaluate(dg::zero, grid));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
     //create local interpolation matrix
     cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 

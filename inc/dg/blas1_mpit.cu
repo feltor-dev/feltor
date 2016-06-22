@@ -3,15 +3,18 @@
 
 #include <mpi.h>
 #include <thrust/device_vector.h>
-#include "backend/mpi_evaluation.h"
 #include "blas1.h"
+#include "backend/mpi_evaluation.h"
 
 
 //test program that calls every blas1 function for every specialization
 double two( double x, double y){return 2.;}
 double three( double x, double y){return 3.;}
 
-typedef dg::MPI_Vector<thrust::device_vector<double> > MHVec;
+//typedef dg::MPI_Vector<thrust::device_vector<double> > MHVec;
+typedef dg::MPI_Vector<cusp::array1d<double, cusp::device_memory> > MHVec;
+
+struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 
 int main( int argc, char* argv[])
 {
@@ -43,41 +46,68 @@ int main( int argc, char* argv[])
     dg::MPI_Grid2d g( 0,1,0,1, 3,12,12, comm);
     if( rank == 0)
         g.display();
-    const MHVec v1 = dg::evaluate( two, g);
+    MHVec v1 = dg::evaluate( two, g);
     MHVec v2 = dg::evaluate( three, g); 
     MHVec v3(v1);
     unsigned gsize = g.global().n()*g.global().n()*g.global().Nx()*g.global().Ny();
 
-    double temp;
-    temp = dg::blas1::dot(v1,v2);
-    if(rank==0)std::cout << gsize*2*3<<" = "<<temp << std::endl;
+    double temp = dg::blas1::dot(v1,v2);
+    if(rank==0)std::cout << "(2*3) = "<<temp/gsize << " (6)\n"; 
     dg::blas1::axpby( 2., v1, 3., v2, v3);
-    if(rank==0)std::cout << "2*2+ 3*3 = " << v3[0] << " (13)"<<std::endl;
+    if(rank==0)std::cout << "2*2+ 3*3 = " << v3[0] <<" (13)\n";
     dg::blas1::axpby( 0., v1, 3., v2, v3);
-    if(rank==0)std::cout << "0*2+ 3*3 = " << v3[0] << " (9)" <<std::endl;
+    if(rank==0)std::cout << "0*2+ 3*3 = " << v3[0] <<" (9)\n";
     dg::blas1::axpby( 2., v1, 0., v2, v3);
-    if(rank==0)std::cout << "2*2+ 0*3 = " << v3[0] << " (4)" <<std::endl;
+    if(rank==0)std::cout << "2*2+ 0*3 = " << v3[0] <<" (4)\n";
     dg::blas1::pointwiseDot( v1, v2, v3);
-    if(rank==0)std::cout << "2*3 = "<<v3[0]<<" (6)" <<std::endl;
+    if(rank==0)std::cout << "2*3 = "<<v3[0]<<" (6)\n";
+    dg::blas1::pointwiseDot( 2., v1, v2, -4., v3);
+    if(rank==0)std::cout << "2*2*3 -4*6 = "<<v3[0]<<" (-12)\n";
     dg::blas1::axpby( 2., v1, 3., v2);
-    if(rank==0)std::cout << "2*2+ 3*3 = " << v2[0] <<" (13)" << std::endl;
-    dg::blas1::axpby( 2., v1, 0., v2);
-    if(rank==0)std::cout << "2*2+ 0 = " << v2[0] <<" (4)" << std::endl;
-    dg::blas1::axpby( 0., v1, 1., v2);
-    if(rank==0)std::cout << "4 = " << v2[0] <<" (4)" << std::endl;
+    if(rank==0)std::cout << "2*2+ 3*3 = " << v2[0] <<" (13)\n";
+    dg::blas1::axpby( 2.5, v1, 0., v2);
+    if(rank==0)std::cout << "2.5*2+ 0 = " << v2[0] <<" (5)\n";
+    dg::blas1::copy( v2, v1);
+    if(rank==0)std::cout << "5 = " << v1[0] <<" (5)"<< std::endl;
+    dg::blas1::scal( v1, 0.4);
+    if(rank==0)std::cout << "5*0.4 = " << v1[0] <<" (2)"<< std::endl;
+    dg::blas1::transform( v1, v3, EXP());
+    if(rank==0)std::cout << "e^2 = " << v3[0] <<" (7.389056...)"<< std::endl;
+    dg::blas1::scal( v2, 0.6);
+    dg::blas1::plus( v3, -7.0);
+    if(rank==0)std::cout << "e^2-7 = " << v3[0] <<" (0.389056...)"<< std::endl;
 
+    //v1 = 2, v2 = 3
 
     if(rank==0)std::cout << "Test std::vector \n";
     std::vector<MHVec > w1( 2, v1), w2(2, v2), w3( w2);
-    temp = dg::blas1::dot(w1,w2);
-    if(rank==0)std::cout << gsize*2*(2*4)<< " = " <<temp<<std::endl;
+    temp = dg::blas1::dot( w1, w2);
+    if(rank==0)std::cout << "2*(2*3) = "<<temp/gsize << " (12)\n"; 
     dg::blas1::axpby( 2., w1, 3., w2, w3);
-    if(rank==0)std::cout << " 2*2 + 3*4 = " <<w3[0][0] <<" (16)"<<std::endl;
+    if(rank==0)std::cout << "2*2+ 3*3 = " << w3[0][0] <<" (13)\n";
+    dg::blas1::axpby( 0., w1, 3., w2, w3);
+    if(rank==0)std::cout << "0*2+ 3*3 = " << w3[0][0] <<" (9)\n";
+    dg::blas1::axpby( 2., w1, 0., w2, w3);
+    if(rank==0)std::cout << "2*2+ 0*3 = " << w3[0][0] <<" (4)\n";
     dg::blas1::pointwiseDot( w1, w2, w3);
-    if(rank==0)std::cout << " 2*4 = " <<w3[0][0] <<" (8)"<<std::endl;
+    if(rank==0)std::cout << "2*3 = "<<w3[0][0]<<" (6)\n";
+    dg::blas1::pointwiseDot( 2., w1, w2, -4., w3);
+    if(rank==0)std::cout << "2*2*3 -4*6 = "<<w3[0][0]<<" (-12)\n";
     dg::blas1::axpby( 2., w1, 3., w2);
-    if(rank==0)std::cout << " 2*2 + 3*4 = " <<w2[0][0] <<" (16)"<<std::endl;
+    if(rank==0)std::cout << "2*2+ 3*3 = " << w2[0][0] <<" (13)\n";
+    dg::blas1::axpby( 2.5, w1, 0., w2);
+    if(rank==0)std::cout << "2.5*2+ 0 = " << w2[0][0] <<" (5)\n";
+    dg::blas1::copy( w2, w1);
+    if(rank==0)std::cout << "5 = " << w1[0][0] <<" (5)"<< std::endl;
+    dg::blas1::scal( w1, 0.4);
+    if(rank==0)std::cout << "5*0.5 = " << w1[0][0] <<" (2)"<< std::endl;
+    dg::blas1::transform( w1, w3, EXP());
+    if(rank==0)std::cout << "e^2 = " << w3[0][0] <<" (7.389056...)"<< std::endl;
+    dg::blas1::scal( w2, 0.6);
+    dg::blas1::plus( w3, -7.0);
+    if(rank==0)std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
     if(rank==0)std::cout << "FINISHED\n\n";
+
 
 
     MPI_Finalize();

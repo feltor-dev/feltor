@@ -33,7 +33,7 @@ namespace create
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat dx_symm(int n, int N, double h, bc bcx)
+EllSparseBlockMat<double> dx_symm(int n, int N, double h, bc bcx)
 {
 
     Operator<double> l = create::lilj(n);
@@ -71,7 +71,7 @@ EllSparseBlockMat dx_symm(int n, int N, double h, bc bcx)
     //assemble the matrix
     if( bcx != PER)
     {
-        EllSparseBlockMat A(N, N, 3, 6, n);
+        EllSparseBlockMat<double> A(N, N, 3, 6, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -105,7 +105,7 @@ EllSparseBlockMat dx_symm(int n, int N, double h, bc bcx)
     }
     else //periodic
     {
-        EllSparseBlockMat A(N, N, 3, 3, n);
+        EllSparseBlockMat<double> A(N, N, 3, 3, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -134,7 +134,7 @@ EllSparseBlockMat dx_symm(int n, int N, double h, bc bcx)
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat dx_plus( int n, int N, double h, bc bcx )
+EllSparseBlockMat<double> dx_plus( int n, int N, double h, bc bcx )
 {
 
     Operator<double> l = create::lilj(n);
@@ -162,7 +162,7 @@ EllSparseBlockMat dx_plus( int n, int N, double h, bc bcx )
     //assemble the matrix
     if( bcx != PER)
     {
-        EllSparseBlockMat A(N, N, 2, 5, n);
+        EllSparseBlockMat<double> A(N, N, 2, 5, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -191,7 +191,7 @@ EllSparseBlockMat dx_plus( int n, int N, double h, bc bcx )
     }
     else //periodic
     {
-        EllSparseBlockMat A(N, N, 2, 2, n);
+        EllSparseBlockMat<double> A(N, N, 2, 2, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -219,7 +219,7 @@ EllSparseBlockMat dx_plus( int n, int N, double h, bc bcx )
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat dx_minus( int n, int N, double h, bc bcx )
+EllSparseBlockMat<double> dx_minus( int n, int N, double h, bc bcx )
 {
     Operator<double> l = create::lilj(n);
     Operator<double> r = create::rirj(n);
@@ -247,7 +247,7 @@ EllSparseBlockMat dx_minus( int n, int N, double h, bc bcx )
     //assemble the matrix
     if(bcx != dg::PER)
     {
-        EllSparseBlockMat A(N, N, 2, 5, n);
+        EllSparseBlockMat<double> A(N, N, 2, 5, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -276,7 +276,7 @@ EllSparseBlockMat dx_minus( int n, int N, double h, bc bcx )
     }
     else //periodic
     {
-        EllSparseBlockMat A(N, N, 2, 2, n);
+        EllSparseBlockMat<double> A(N, N, 2, 2, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -304,7 +304,7 @@ EllSparseBlockMat dx_minus( int n, int N, double h, bc bcx )
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat jump( int n, int N, double h, bc bcx)
+EllSparseBlockMat<double> jump( int n, int N, double h, bc bcx)
 {
     Operator<double> l = create::lilj(n);
     Operator<double> r = create::rirj(n);
@@ -331,7 +331,7 @@ EllSparseBlockMat jump( int n, int N, double h, bc bcx)
     //assemble the matrix
     if(bcx != dg::PER)
     {
-        EllSparseBlockMat A(N, N, 3, 6, n);
+        EllSparseBlockMat<double> A(N, N, 3, 6, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -365,7 +365,7 @@ EllSparseBlockMat jump( int n, int N, double h, bc bcx)
     }
     else //periodic
     {
-        EllSparseBlockMat A(N, N, 3, 3, n);
+        EllSparseBlockMat<double> A(N, N, 3, 3, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -395,7 +395,7 @@ EllSparseBlockMat jump( int n, int N, double h, bc bcx)
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
+EllSparseBlockMat<double> dx_normed( int n, int N, double h, bc bcx, direction dir )
 {
     if( dir == centered)
         return create::dx_symm(n, N, h, bcx);
@@ -403,7 +403,7 @@ EllSparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
         return create::dx_plus(n, N, h, bcx);
     else if (dir == backward)
         return create::dx_minus(n, N, h, bcx);
-    return EllSparseBlockMat();
+    return EllSparseBlockMat<double>();
 }
 
 /**
@@ -416,7 +416,7 @@ EllSparseBlockMat dx_normed( int n, int N, double h, bc bcx, direction dir )
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat dx( const Grid1d<double>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<double> dx( const Grid1d<double>& g, bc bcx, direction dir = centered)
 {
     return dx_normed( g.n(), g.N(), g.h(), bcx, dir);
 }
@@ -431,10 +431,38 @@ EllSparseBlockMat dx( const Grid1d<double>& g, bc bcx, direction dir = centered)
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat dx( const Grid1d<double>& g, direction dir = centered)
+EllSparseBlockMat<double> dx( const Grid1d<double>& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
+
+/**
+* @brief Create and assemble a host Matrix for the jump in 1d
+*
+* @ingroup create
+* @param g 1D grid
+* @param bcx boundary condition
+*
+* @return Host Matrix 
+*/
+EllSparseBlockMat<double> jump( const Grid1d<double>& g, bc bcx)
+{
+    return jump( g.n(), g.N(), g.h(), bcx);
+}
+/**
+* @brief Create and assemble a host Matrix for the jump in 1d
+*
+* Take the boundary condition from the grid
+* @ingroup create
+* @param g 1D grid 
+*
+* @return Host Matrix 
+*/
+EllSparseBlockMat<double> jump( const Grid1d<double>& g)
+{
+    return jump( g, g.bcx());
+}
+
 
 ///@}
 } //namespace create

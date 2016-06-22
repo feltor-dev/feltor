@@ -81,9 +81,9 @@ int main( int argc, char* argv[])
     dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::MDMatrix, dg::MDVec, dg::MDVec > feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > feltor( grid, p); //initialize before rolkar!
     if(rank==0) std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::MDMatrix, dg::MDVec, dg::MDVec > rolkar( grid, p);
+    eule::Rolkar<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > rolkar( grid, p);
     if(rank==0) std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -193,19 +193,19 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<2; i++)
     {
         dg::blas2::gemv( interpolate, y0[i].data(), transferD);
-        transferH = transferD;//transfer to host
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //pot
     transfer = feltor.potential()[0];
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
-    transferH = transferD;//transfer to host
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     //Vor
     transfer = feltor.potential()[0];
     dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);        
     dg::blas2::gemv( interpolate,y1[1].data(), transferD);
-    transferH = transferD;//transfer to host
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     double time = 0;
 
@@ -305,17 +305,17 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<2; j++)
         {
             dg::blas2::gemv( interpolate, y0[j].data(), transferD);
-            transferH = transferD;//transfer to host
+            dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = feltor.potential()[0];
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
-        transferH = transferD;//transfer to host
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
         transfer = feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);        //correct?    
         dg::blas2::gemv( interpolate,y1[1].data(), transferD);
-        transferH = transferD;//transfer to host
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 //         err = nc_close(ncid);
