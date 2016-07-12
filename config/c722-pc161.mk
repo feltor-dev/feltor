@@ -10,4 +10,5 @@ OPT=-O3#                                        # the optimization flag for the 
 NVCCARCH=-arch=sm_35#                           # nvcc gpu compute capability
 OMPFLAG=-fopenmp#                               # openmp flag for CC and MPICC
 LIBS=-lnetcdf -lhdf5 -lhdf5_hl#                 # netcdf library for file output
+JSONLIB=-L$(HOME)/include/json/../../src/lib_json -ljsoncpp # json library for input parameters
 endif

@@ -554,6 +554,22 @@ struct Field
      * @brief == operator()(R,Z)
      */ 
     double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        //compute error in x,y,s
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( isnan(end[1]) || isnan(end[2]) || isnan(end[3])||isnan( end[4]) ) 
+        {
+            return false;
+        }
+        if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
+        {
+            return false;
+        }
+        return true;
+    }
     
     private:
     double find_fx(double x) 

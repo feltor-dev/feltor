@@ -12,12 +12,9 @@
 #endif
 
 
-//TODO es wäre besser, wenn ToeflR auch einen Zeitschritt berechnen würde 
-// dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
-// (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
-
 namespace dg
 {
+
 template<class Geometry, class Matrix, class container>
 struct Diffusion
 {
@@ -58,12 +55,7 @@ struct ToeflR
      * @brief Construct a ToeflR solver object
      *
      * @param g The grid on which to operate
-     * @param kappa The curvature
-     * @param nu The artificial viscosity
-     * @param tau The ion temperature
-     * @param eps_pol stopping criterion for polarisation equation
-     * @param eps_gamma stopping criterion for Gamma operator
-     * @param global local or global computation
+     * @param p The parameters
      */
     ToeflR( const Geometry& g, const Parameters& p );
 
@@ -93,6 +85,8 @@ struct ToeflR
     /**
      * @brief Compute the right-hand side of the toefl equations
      *
+     * y[0] = N_e - 1, 
+     * y[1] = N_i - 1 || y[1] = Omega
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
