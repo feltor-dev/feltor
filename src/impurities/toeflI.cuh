@@ -14,7 +14,6 @@
 
 namespace dg
 {
-
 template<class Geometry, class Matrix, class container>
 struct Diffusion
 {
@@ -215,7 +214,7 @@ void ToeflI< G, M, container>::operator()(std::vector<container>& y, std::vector
     phi[0] = polarization( y);
     phi[1] = compute_psi( phi[0], 1);
     phi[2] = compute_psi( phi[0], 2);
-    for( int i=0; i<y.size(); i++)
+    for( unsigned i=0; i<y.size(); i++)
     {
         dg::blas1::transform( y[i], ype[i], dg::PLUS<>(+1)); 
         dg::blas1::transform( ype[i], lny[i], dg::LN<double>()); 
