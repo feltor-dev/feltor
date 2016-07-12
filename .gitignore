@@ -34,3 +34,7 @@ src/feltor/doc/
 
 # compile objects
 *.o
+toefl_hpc
+toeflI
+toeflR
+toefl_mpi
