@@ -17,3 +17,4 @@ MPICFLAGS+=-D_FORCE_INLINES
 NVCCFLAGS+=-D_FORCE_INLINES # workaround for bug in cuda 7.5 in conjunction with string.h of glibc 2.23
 JSONLIB = -L/usr/local/json/lib/x86_64-linux-gnu -ljsoncpp
 endif
+
