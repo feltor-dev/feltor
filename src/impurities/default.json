@@ -6,8 +6,8 @@
     "n_out"  : 3,   //# x-y polynomials in output
     "Nx_out" : 100, //# grid points in x in output fields
     "Ny_out" : 100, //# grid points in y in output fields
-    "itstp"  : 5,   //# steps between outputs (5)
-    "maxout" : 300, //# outputs excluding first
+    "itstp"  : 2,   //# steps between outputs (5)
+    "maxout" : 100, //# outputs excluding first
     "eps_time"  : 1e-9, //accuracy of implicit time-stepper (1e-8)
     "eps_pol"   : 1e-4, //accuracy of polarisation solver
     "eps_gamma" : 1e-8, //accuracy of Gamma (1e-6)
@@ -22,8 +22,8 @@
     "posX"  : 0.25, //blob x-position in units of lx (0.4)
     "posY"  : 0.5,  //blob y-position in units of ly
     "tau" : 3.0,  //Ti/Te
-    "tau_z" : 0.0, //tau_z/Z tau_e
-    "a_z"   : 0.00, //(Z n_z0/n_e0 < 1, a_i <- 1-a_z) (0.1)
+    "tau_z" : 0., //tau_z/Z tau_e
+    "a_z"   : 0., //(Z n_z0/n_e0 < 1, a_i <- 1-a_z) (0.1)
     "mu_z"  : 3., // (m_z/Z m_i) (48)
     "vorticity" : 0., // ( 0 -> phi~0, 1 n_e~n_i)
     "mode"  : 2, // (init mode; 1:const back, 2: impurity wall, 3: impurity blob)

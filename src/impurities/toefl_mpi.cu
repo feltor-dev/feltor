@@ -13,8 +13,8 @@
 #include "file/nc_utilities.h"
 
 
-//#include "dg/algorithm.h"
-//#include "dg/backend/xspacelib.cuh"
+//#include "dg/algorithm.h"             // needed?
+//#include "dg/backend/xspacelib.cuh"   // needed?
 
 #include "dg/backend/timer.cuh"
 
@@ -59,8 +59,6 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
 
     ////////////////////////Parameter initialisation//////////////////////////
-    //switch to json!!!
-
     std::vector<double> v;
     std::string input;
     if( argc != 3)
@@ -73,7 +71,12 @@ int main( int argc, char* argv[])
         v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
-    const imp::Parameters p( v);
+    //    const imp::Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const imp::Parameters p( js);
     if(rank==0)p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
@@ -85,7 +88,7 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     dg::Gaussian gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     //    std::vector<dg::MDVec> y0(3, dg::evaluate(dg::zero,grid) );
-    std::vector<dg::MDVec> y0(3, dg::evaluate( gaussian, grid)); // e3r ? y1( y0);
+    std::vector<dg::MDVec> y0(3, dg::evaluate( gaussian, grid)), y1(y0); // e3r ? y1( y0);
     dg::Helmholtz<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> & gamma = toeflI.gamma();
 
     if( p.mode == 1)
@@ -158,6 +161,7 @@ int main( int argc, char* argv[])
     double time = 0;
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, y0, p.dt);
+    y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -216,8 +220,8 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     //Vorticity
     transfer = toeflI.potential()[0];
-    dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);
-    dg::blas2::gemv( interpolate,y0[1].data(), transferD);
+    dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);
+    dg::blas2::gemv( interpolate,y1[1].data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
@@ -250,10 +254,10 @@ int main( int argc, char* argv[])
         dg::Timer ti;
         ti.tic();
 #endif//DG_BENCHMARK
-
         for( unsigned j=0; j<p.itstp; j++)
         {
             karniadakis( toeflI, diffusion, y0);
+            y0.swap(y1);
             step++;
             time += p.dt;
             Estart[0] = step;
@@ -299,8 +303,8 @@ int main( int argc, char* argv[])
         dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
         transfer = toeflI.potential()[0];
-        dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);        //correct?
-        dg::blas2::gemv( interpolate,y0[1].data(), transferD);
+        dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?
+        dg::blas2::gemv( interpolate, y1[1].data(), transferD);
         dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -309,7 +313,6 @@ int main( int argc, char* argv[])
         ti.toc();
         if(rank==0)std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
-
     }
     }
     catch( dg::Fail& fail) { 
@@ -323,7 +326,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
     if(rank==0)std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
     if(rank==0)std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
-
     nc_close(ncid);
     MPI_Finalize();
 
