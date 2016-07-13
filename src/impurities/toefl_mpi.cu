@@ -80,12 +80,12 @@ int main( int argc, char* argv[])
     dg::CartesianMPIGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
     dg::CartesianMPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);
     //create RHS 
-    dg::Diffusion< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > diffusion( grid, p.nu);
+    dg::Diffusion< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > diffusion( grid, p);
     dg::ToeflI< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > toeflI( grid, p);
     /////////////////////The initial field///////////////////////////////////////////
-    dg::Gaussian gaussian( p.posX*p.lx(), p.posY*p.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    dg::Gaussian gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     //    std::vector<dg::MDVec> y0(3, dg::evaluate(dg::zero,grid) );
-    std::vector<dg::MDVec> y0(3, dg::evaluate( g, grid)); // e3r ? y1( y0);
+    std::vector<dg::MDVec> y0(3, dg::evaluate( gaussian, grid)); // e3r ? y1( y0);
     dg::Helmholtz<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> & gamma = toeflI.gamma();
 
     if( p.mode == 1)
@@ -215,7 +215,7 @@ int main( int argc, char* argv[])
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     //Vorticity
-    transfer = test.potential()[0];
+    transfer = toeflI.potential()[0];
     dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);
     dg::blas2::gemv( interpolate,y0[1].data(), transferD);
     dg::blas1::transfer( transferD, transferH);

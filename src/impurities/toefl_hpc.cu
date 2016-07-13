@@ -48,7 +48,7 @@ int main( int argc, char* argv[])
     ////////////////////////////////set up computations///////////////////////////
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::Diffusion< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > diffusion( grid, p); 
+    dg::Diffusion< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > diffusion( grid, p);
     dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p); 
 
     //create initial vector
