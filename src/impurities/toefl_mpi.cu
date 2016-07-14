@@ -176,6 +176,8 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "accuracy",    NC_DOUBLE, 1, &EtimeID, &accuracyID);
     for( unsigned i=0; i<5; i++)
         err = nc_var_par_access( ncid, dataIDs[i], NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, tvarID,     NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
     err = nc_var_par_access( ncid, energyID,   NC_COLLECTIVE);
     err = nc_var_par_access( ncid, massID,     NC_COLLECTIVE);
     err = nc_var_par_access( ncid, dissID,     NC_COLLECTIVE);
@@ -186,7 +188,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "First output ... \n";
     int dims[2],  coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
-    size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
     size_t start[3] = {0, coords[1]*count[1], coords[0]*count[2]};
     dg::MDVec transfer( dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));
@@ -202,13 +204,12 @@ int main( int argc, char* argv[])
     transfer = toeflI.potential()[0];
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
-    err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     //Vorticity
     transfer = toeflI.potential()[0];
     dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);
     dg::blas2::gemv( interpolate, y1[1].data(), transferD);
     dg::blas1::transfer( transferD, transferH);
-    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, tvarID,     start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
@@ -221,7 +222,6 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
     if(rank==0)std::cout << "First write successful!\n";
-
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
