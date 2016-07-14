@@ -2,29 +2,23 @@
 #include <iomanip>
 #include <vector>
 
-#include "netcdf.h"
-
 #include "toeflI.cuh"
 #include "parameters.h"
-//#include "file/file.h"
 
 #include "file/nc_utilities.h"
 #include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
 
-
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using netcdf. 
+   - writes outputs to a given outputfile using netcdf4.
 */
-
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
-    std::vector<double> v;
+    ////////////////////////Parameter initialisation//////////////////////////
     std::string input;
     if( argc != 3)
     {
@@ -33,27 +27,23 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        v = file::read_input( argv[1]);
         input = file::read_file( argv[1]);
     }
     Json::Reader reader;
     Json::Value js;
-    reader.parse( input, js, false);
-    std::cout << js<<std::endl;
+    reader.parse( input, js, false); //read input without comments
     input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);
-    //const imp::Parameters p( v);
     p.display( std::cout);
-
     ////////////////////////////////set up computations///////////////////////////
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::CartesianGrid2d grid_out( 0, p.lx, 0, p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     //create RHS 
     dg::Diffusion< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > diffusion( grid, p);
     dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p); 
-
-    //create initial vector
-    dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) );
+    /////////////////////The initial field///////////////////////////////////////////
+    dg::Gaussian gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    std::vector<dg::DVec> y0(3, dg::evaluate(dg::one, grid)), y1( y0);
     dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
     if( p.mode == 1)
     {
@@ -121,64 +111,67 @@ int main( int argc, char* argv[])
     }
 
     //////////////////initialisation of timestepper and first step///////////////////
+    std::cout << "init timestepper...\n";
+    double time = 0;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, y0, p.dt);
+    y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
+    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version",    NC_INT, 1, &version[0]);
+    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
-    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     //field IDs
-    std::string names[5] = {"electrons", "ions", "impurties","potential","vor"}; 
+    std::string names[5] = {"electrons", "ions", "impurities", "potential", "vorticity"};
     int dataIDs[5]; 
-    for( unsigned i=0; i<5; i++){
-        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
-
+    for( unsigned i=0; i<5; i++)
+        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);
     //energy IDs
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     int energyID, massID, dissID, dEdtID, accuracyID;
-    err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
-    err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
-    err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
-    err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
-    err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
+    err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
+    err = nc_def_var( ncid, "mass",        NC_DOUBLE, 1, &EtimeID, &massID);
+    err = nc_def_var( ncid, "dissipation", NC_DOUBLE, 1, &EtimeID, &dissID);
+    err = nc_def_var( ncid, "dEdt",        NC_DOUBLE, 1, &EtimeID, &dEdtID);
+    err = nc_def_var( ncid, "accuracy",    NC_DOUBLE, 1, &EtimeID, &accuracyID);
+    err = nc_enddef(ncid);
     ///////////////////////////////////first output/////////////////////////
     std::cout << "First output ... \n";
     size_t start[3] = {0, 0, 0};
-    size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
-    dg::DVec transferD( dg::evaluate(dg::zero, grid));
-    dg::HVec transferH( dg::evaluate(dg::zero, grid));
+    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    dg::DVec transfer(  dg::evaluate(dg::zero, grid));
+    dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
+    dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid);
     for( unsigned i=0; i<3; i++)
     {
-        dg::blas1::transfer( y0[i], transferH);
+        dg::blas2::symv( interpolate, y0[i], transferD);
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
-    //pot
-    transferD = toeflI.potential()[0];
+    //Potential
+    transfer = toeflI.potential()[0];
+    dg::blas2::symv( interpolate, transfer, transferD);
     dg::blas1::transfer( transferD, transferH);
-    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-    //Vor
-    transferD = toeflI.potential()[0];
-    dg::blas2::gemv( diffusion.laplacianM(), transferD, y0[1]);            
-    dg::blas1::transfer( y0[1], transferH);
+    err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+    //Vorticity
+    transfer = toeflI.potential()[0];
+    dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);
+    dg::blas2::symv( interpolate, y1[1], transferD);
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-    double time = 0;
-
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);
-
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     double energy0 = toeflI.energy(), mass0 = toeflI.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
-
-
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
@@ -204,25 +197,25 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             karniadakis( toeflI, diffusion, y0);
+            y0.swap( y1);
             step++;
             time += p.dt;
             Estart[0] = step;
-            //store accuracy details
-            err = nc_open(argv[2], NC_WRITE, &ncid);
-            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
-
             E0 = E1;
             E1 = toeflI.energy();
             mass = toeflI.mass();
             dEdt = (E1 - E0)/p.dt;
-            double diss = toeflI.energy_diffusion( );
-            double accuracy = 2.*fabs((dEdt-diss)/(dEdt + diss));
+            diss = toeflI.energy_diffusion( );
+            accuracy = 2.*fabs((dEdt-diss)/(dEdt + diss));
 
-            err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
-            err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
-            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
-            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+            //store accuracy details
+            err = nc_open(argv[2], NC_WRITE, &ncid);
+            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
+            err = nc_put_vara_double( ncid, energyID,   Estart, Ecount, &E1);
+            err = nc_put_vara_double( ncid, massID,     Estart, Ecount, &mass);
+            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount, &diss);
+            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount, &dEdt);
+            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount, &accuracy);
             err = nc_close(ncid);
             std::cout << "(m_tot-m_0)/m_0: "<< (mass-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
@@ -234,19 +227,21 @@ int main( int argc, char* argv[])
         err = nc_open(argv[2], NC_WRITE, &ncid);
         for( unsigned j=0; j<3; j++)
         {
-            dg::blas1::transfer( y0[j], transferH);
+            dg::blas2::symv( interpolate, y0[j], transferD);
+            dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        transferD = toeflI.potential()[0];
+        transfer = toeflI.potential()[0];
+        dg::blas2::symv( interpolate, transfer, transferD);
         dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-        transferD = toeflI.potential()[0];
-        dg::blas2::gemv( diffusion.laplacianM(), transferD, y0[1]);            
-        dg::blas1::transfer( y0[1], transferH);
+        transfer = toeflI.potential()[0];
+        dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?
+        dg::blas2::symv( interpolate,y1[1], transferD);
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);
-
 #ifdef DG_BENCHMARK
         ti.toc();
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
