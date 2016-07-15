@@ -10,7 +10,7 @@ namespace dg
 /**
 * @brief Ell Sparse Block Matrix format
 *
-* @ingroup lowlevel
+* @ingroup sparsematrix
 * The basis of this format is the ell sparse matrix format, i.e. a format
 where the numer of entries per line is fixed. 
 * The clue is that instead of a values array we use an index array with 
@@ -85,7 +85,7 @@ struct EllSparseBlockMat
 /**
 * @brief Coo Sparse Block Matrix format
 *
-* @ingroup lowlevel
+* @ingroup sparsematrix
 * The basis of this format is the well-known coordinate sparse matrix format.
 * The clue is that instead of a values array we use an index array with 
 indices into a data array that contains the actual blocks. This safes storage if the number

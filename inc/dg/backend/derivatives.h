@@ -15,7 +15,7 @@ namespace dg{
  */
 namespace create{
 
-///@addtogroup highlevel
+///@addtogroup creation
 ///@{
 
 //dx, dy, jumpX, jumpY

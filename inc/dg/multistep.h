@@ -29,7 +29,7 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 * @brief Struct for Adams-Bashforth explicit multistep time-integration
 * \f[ u^{n+1} = u^n + \Delta t\sum_{j=0}^k b_j f\left(u^{n-j}\right) \f]
 *
-* @ingroup algorithms
+* @ingroup time
 *
 * Computes \f[ u_{n+1} = u_n + dt\sum_{j=0}^k b_j f(u_{n-j}) \f]
 * Uses only blas1::axpby routines to integrate one step
@@ -188,7 +188,7 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * Uses blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step. 
 * Uses a conjugate gradient method for the implicit operator  
-* @ingroup algorithms
+* @ingroup time
 * @tparam Vector The Argument type used in the Functor class
 */
 template<class Vector>
@@ -350,7 +350,7 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
 /**
  * @brief Semi implicit Runge Kutta method after Yoh and Zhong (AIAA 42, 2004)
  *
- * @ingroup algorithms
+ * @ingroup time
  * @tparam Vector Vector class to use
  */
 template <class Vector>

@@ -21,7 +21,7 @@ namespace dg{
 * @brief Functor class for the preconditioned conjugate gradient method to solve
 * \f[ Ax=b\f]
 *
- @ingroup algorithms
+ @ingroup invert
  @tparam Vector The Vector class: needs to model Assignable 
 
  The following 3 pseudo - BLAS routines need to be callable 
@@ -238,7 +238,7 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
  * Solve a symmetric linear inversion problem using a conjugate gradient method and 
  * the last two solutions.
  *
- * @ingroup algorithms
+ * @ingroup invert
  * Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
  * for any operator \f$\hat O\f$ that was made symmetric 
  * by appropriate weights \f$W\f$ (s. comment below). 
@@ -451,6 +451,7 @@ struct Invert
  * @brief This struct holds a matrix and applies its inverse to vectors 
  *
  * The inverse is computed with a conjugate gradient method
+ * @ingroup invert
  * @tparam SymmetricOp A symmetric Matrix type
  * @tparam container The container type to use
  */
@@ -494,7 +495,7 @@ struct MatrixTraits< Inverse< M, V > >
 /**
  * @brief Function version of CG class
  *
- * @ingroup algorithms
+ * @ingroup invert 
  * @tparam Matrix Matrix type
  * @tparam Vector Vector type (must be constructible from given size)
  * @tparam Preconditioner Preconditioner type

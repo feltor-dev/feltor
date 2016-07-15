@@ -6,7 +6,7 @@
 
 namespace dg
 {
-///@addtogroup grid
+///@addtogroup basicgrids
 ///@{
 
 struct CartesianMPIGrid2d : public MPI_Grid2d
@@ -24,7 +24,7 @@ struct CartesianMPIGrid2d : public MPI_Grid2d
  * @brief evaluates a two-dimensional function 
  *
  * same as evaluate
- * @ingroup evaluation
+ * @ingroup pullbacks
  * @tparam BinaryOp Binary function object
  * @param f functor
  * @param g geometry
@@ -43,7 +43,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), con
 }
 ///@endcond
 
-///@addtogroup grid
+///@addtogroup basicgrids
 ///@{
 struct CartesianMPIGrid3d : public MPI_Grid3d
 {
@@ -97,7 +97,7 @@ struct CylindricalMPIGrid : public MPI_Grid3d
  * @brief evaluates a cylindrical function 
  *
  * same as evaluate, i.e. assumes that the function is given in cylindrical coordinates
- * @ingroup evaluation
+ * @ingroup pullbacks
  * @tparam TernaryOp Ternary function object
  * @tparam container The container class of the Cylindrical Grid
  * @param f functor

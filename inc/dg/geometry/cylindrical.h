@@ -7,7 +7,7 @@
 
 namespace dg
 {
-///@addtogroup grid
+///@addtogroup basicgrids
 ///@{
 
 /**
@@ -67,7 +67,7 @@ struct CylindricalGrid : public Grid3d<double>
  * @brief evaluates a cylindrical function 
  *
  * same as evaluate, i.e. assumes that function is given in cylindrical coordinates
- * @ingroup evaluation
+ * @ingroup pullbacks
  * @tparam TernaryOp Ternary function object
  * @tparam container The container class of the Cylindrical Grid
  * @param f functor

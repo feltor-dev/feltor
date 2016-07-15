@@ -105,7 +105,7 @@ EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src,
 } //namespace detail
 
 ///@endcond
-///@addtogroup highlevel
+///@addtogroup creation
 ///@{
 
 /**

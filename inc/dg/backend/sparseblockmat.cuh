@@ -10,7 +10,7 @@ namespace dg
 /**
 * @brief Ell Sparse Block Matrix format device version
 *
-* @ingroup lowlevel
+* @ingroup sparsematrix
 * This class holds a copy of a EllSparseBlockMat on the device, which may 
 be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It can be applied
 to device vectors and does the same thing as the host version
@@ -65,7 +65,7 @@ struct EllSparseBlockMatDevice
 /**
 * @brief Coo Sparse Block Matrix format device version
 *
-* @ingroup lowlevel
+* @ingroup sparsematrix
 * This class holds a copy of a CooSparseBlockMat on the device, which may 
 be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thing as the host version with the difference that it applies to device vectors.
 */
