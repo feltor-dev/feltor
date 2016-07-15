@@ -2,6 +2,7 @@
 
 #include "backend/vector_traits.h"
 #include "backend/matrix_traits.h"
+#include "backend/cusp_precon_blas.h"
 #include "backend/matrix_traits_thrust.h"
 #include "backend/thrust_matrix_blas.cuh"
 #include "backend/cusp_matrix_blas.cuh"
@@ -28,6 +29,21 @@ namespace dg{
 namespace blas2{
 ///@addtogroup blas2
 ///@{
+
+/**
+ * @brief Generic way to copy matrices of different types (e.g. from CPU to GPU, or double to float)
+ *
+ * @tparam Matrix1 First vector type
+ * @tparam Matrix2 Second vector type
+ * @param x source
+ * @param y sink 
+ * @note y gets resized properly
+ */
+template<class Matrix1, class Matrix2>
+inline void transfer( const Matrix1& x, Matrix2& y)
+{
+    dg::blas2::detail::doTransfer( x,y, typename dg::MatrixTraits<Matrix1>::matrix_category(), typename dg::MatrixTraits<Matrix2>::matrix_category());
+}
 
 /*! @brief General dot produt
  *

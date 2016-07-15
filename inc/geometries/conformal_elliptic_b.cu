@@ -5,22 +5,19 @@
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/grid.h"
-#include "dg/backend/gridX.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
-//#include "solovev.h"
-#include "guenther.h"
+#include "solovev.h"
+//#include "guenther.h"
 #include "conformal.h"
-#include "conformalX.h"
 #include "orthogonal.h"
-#include "orthogonalX.h"
 
 
 
 int main(int argc, char**argv)
 {
-    std::cout << "Type n, Nx (fx = 1./4.), Ny (fy = 1./22.), Nz\n";
+    std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
     std::cout << "Type psi_0 and psi_1\n";
@@ -51,9 +48,12 @@ int main(int argc, char**argv)
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing grid ... \n";
     t.tic();
-    conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+//     conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+//     conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+//     dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    orthogonal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    orthogonal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<orthogonal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -98,7 +98,7 @@ int main(int argc, char**argv)
     double err = dg::blas2::dot( vol3d, error);
     const double norm = dg::blas2::dot( vol3d, solution);
     std::cout << sqrt( err/norm) << "\t";
-    dg::HVec gyy = g2d.g_xx(), gxx=g2d.g_yy(), vol = g2d.vol();
+    dg::DVec gyy = g2d.g_xx(), gxx=g2d.g_yy(), vol = g2d.vol();
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);
@@ -109,11 +109,11 @@ int main(int argc, char**argv)
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout<<t.diff()/(double)number<<"s"<<std::endl;
 
-    X = error;
+    dg::blas1::transfer( error, X );
     ncerr = nc_put_var_double( ncid, psiID, X.data());
-    X = x;
+    dg::blas1::transfer( x, X );
     ncerr = nc_put_var_double( ncid, functionID, X.data());
-    X = solution;
+    dg::blas1::transfer( solution, X );
     ncerr = nc_put_var_double( ncid, function2ID, X.data());
     ncerr = nc_close( ncid);
 

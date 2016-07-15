@@ -14,6 +14,16 @@ namespace dg
 namespace blas1{
 namespace detail{
 
+template< class Vector1, class Vector2>
+void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag)
+{
+    out.communicator() = in.communicator();
+    //local computation 
+    typedef typename Vector1::container_type container1;
+    typedef typename Vector2::container_type container2;
+    doTransfer( in.data(), out.data(), typename VectorTraits<container1>::vector_category(), typename VectorTraits<container2>::vector_category());
+}
+
 template< class Vector>
 typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& y, MPIVectorTag)
 {
@@ -30,16 +40,6 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     return sum;
 }
 
-template<class Vector>
-inline void doCopy( const Vector& x, Vector& y, MPIVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x.communicator() == y.communicator());
-#endif //DG_DEBUG
-    typedef typename Vector::container_type container;
-    doCopy( x.data(), y.data(), typename VectorTraits<container>::vector_category());
-}
-
 template< class Vector>
 inline void doScal(  Vector& x, 
               typename VectorTraits<Vector>::value_type alpha, 
@@ -49,6 +49,16 @@ inline void doScal(  Vector& x,
     typedef typename Vector::container_type container;
     doScal( x.data(), alpha, typename VectorTraits<container>::vector_category());
 }
+template< class Vector>
+inline void doPlus(  Vector& x, 
+              typename VectorTraits<Vector>::value_type alpha, 
+              MPIVectorTag)
+{
+    //local computation 
+    typedef typename Vector::container_type container;
+    doPlus( x.data(), alpha, typename VectorTraits<container>::vector_category());
+}
+
 template< class Vector, class UnaryOp>
 inline void doTransform(  const Vector& x, Vector& y,
                           UnaryOp op,

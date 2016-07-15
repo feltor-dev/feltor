@@ -97,6 +97,6 @@ int main()
     // for dirichlet bc these are not better conserved than normal jacobian
     arakawa.variation( rhs, jac);
     dg::blas1::axpby( 1., variation, -1., jac);
-    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
+    std::cout << "Variation distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
     return 0;
 }

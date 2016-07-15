@@ -2,6 +2,7 @@
 
 #include "backend/vector_traits.h"
 #include "backend/thrust_vector_blas.cuh"
+#include "backend/cusp_vector_blas.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
 #include "backend/mpi_vector_blas.h"
@@ -37,17 +38,31 @@ namespace blas1
 ///@addtogroup blas1
 ///@{
 
-/*! @brief Deep copy of a vector
+/**
+ * @brief Generic way to copy vectors of different types (e.g. from CPU to GPU, or double to float, etc.)
  *
- * This routine computes \f[ y_i = x_i \f]
- * @param x Left Vector
- * @param y Right Vector may equal y
+ * @tparam Vector1 First vector type
+ * @tparam Vector2 Second vector type
+ * @param x source
+ * @param y sink
+ * @note y gets resized properly
  */
-template< class Vector>
-inline void copy( const Vector& x, Vector& y)
+template<class Vector1, class Vector2>
+inline void transfer( const Vector1& x, Vector2& y)
 {
-    return dg::blas1::detail::doCopy( x, y, typename dg::VectorTraits<Vector>::vector_category() );
+    dg::blas1::detail::doTransfer( x,y, typename dg::VectorTraits<Vector1>::vector_category(), typename dg::VectorTraits<Vector2>::vector_category());
 }
+
+
+/**
+ * @brief Invoke assignment operator
+ *
+ * @tparam Vector Vector class
+ * @param x in
+ * @param y out
+ */
+template<class Vector>
+inline void copy( const Vector& x, Vector& y){y=x;}
 
 /*! @brief Euclidean dot product between two Vectors
  *
@@ -128,6 +143,19 @@ template< class Vector>
 inline void scal( Vector& x, typename VectorTraits<Vector>::value_type alpha)
 {
     dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
+}
+
+/*! @brief pointwise add a scalar
+ *
+ * This routine computes \f[ x_i + \alpha \f] 
+ * @param alpha Scalar  
+ * @param x Vector x 
+ */
+template< class Vector>
+inline void plus( Vector& x, typename VectorTraits<Vector>::value_type alpha)
+{
+    dg::blas1::detail::doPlus( x, alpha, typename dg::VectorTraits<Vector>::vector_category() );
     return;
 }
 

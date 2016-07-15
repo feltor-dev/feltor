@@ -123,9 +123,9 @@ int main( int argc, char* argv[])
     }
     // /////////////////////create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p,gp); 
+    eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p,gp); 
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -213,7 +213,7 @@ int main( int argc, char* argv[])
 //     dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field
     transferD =y0[0]; // dont interpolate field
     err = nc_open(argv[3], NC_WRITE, &ncid);
-    transferH =transferD;
+    dg::blas1::transfer(transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());        
 
     double time = 0;
@@ -333,7 +333,7 @@ int main( int argc, char* argv[])
 
 //         dg::blas2::symv( interpolatec2f, y0[0], transferD); //interpolate field
         transferD =y0[0]; //dont interpolate field
-        transferH =transferD;
+        dg::blas1::transfer(transferD, transferH);
         err = nc_open(argv[3], NC_WRITE, &ncid);
         err = nc_put_vara_double( ncid, dataIDs[0], start, count, transferH.data());        
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);

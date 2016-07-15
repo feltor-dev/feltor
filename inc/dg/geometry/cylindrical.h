@@ -7,6 +7,8 @@
 
 namespace dg
 {
+///@addtogroup grid
+///@{
 
 /**
  * @brief three-dimensional Grid with Cartesian metric
@@ -60,10 +62,12 @@ struct CylindricalGrid : public Grid3d<double>
     container R_;
 };
 
+///@}
 /**
  * @brief evaluates a cylindrical function 
  *
- * same as evaluate
+ * same as evaluate, i.e. assumes that function is given in cylindrical coordinates
+ * @ingroup evaluation
  * @tparam TernaryOp Ternary function object
  * @tparam container The container class of the Cylindrical Grid
  * @param f functor

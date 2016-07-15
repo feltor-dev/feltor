@@ -36,7 +36,7 @@ int main( int argc, char* argv[])
     dg::MDVec x = dg::evaluate( initial, grid);
 
     if( rank == 0) std::cout << "Create symmetric Laplacian\n";
-    dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec, dg::MDVec> A ( grid, dg::not_normed); 
+    dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> A ( grid, dg::not_normed); 
 
     dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny);
     if( rank == 0) std::cout<<"Expand right hand side\n";

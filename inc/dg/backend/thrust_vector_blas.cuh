@@ -21,9 +21,6 @@ namespace blas1
 namespace detail
 {
 
-template<class Vector>
-void doCopy( const Vector& x, Vector& y, ThrustVectorTag){y=x;}
-    
 
 template< typename value_type>
 struct Axpby_Functor
@@ -43,14 +40,45 @@ struct Axpby_Functor
     value_type alpha, beta;
 };
 
+template <class value_type>
+struct Plus_Functor
+{
+    Plus_Functor( value_type alpha): alpha(alpha){}
+    
+    __host__ __device__
+        value_type operator()( const value_type& x)
+        {
+            return alpha+x;
+        }
+  private:
+    value_type alpha;
+};
+
+template< class Vector1, class Vector2>
+void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
+{
+    out.resize(in.size());
+    thrust::copy( in.begin(), in.end(), out.begin());
+}
+
 template< class Vector>
 typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    return thrust::inner_product( x.begin(), x.end(),  y.begin(), 0.0);
+    typedef typename Vector::value_type value_type;
+    return thrust::inner_product( x.begin(), x.end(),  y.begin(), value_type(0));
 }
+
+template< class Vector, class UnaryOp>
+inline void doTransform(  const Vector& x, Vector& y,
+                          UnaryOp op,
+                          ThrustVectorTag)
+{
+    thrust::transform( x.begin(), x.end(), y.begin(), op);
+}
+
 template< class Vector>
 inline void doScal(  Vector& x, 
               typename Vector::value_type alpha, 
@@ -59,12 +87,13 @@ inline void doScal(  Vector& x,
     thrust::transform( x.begin(), x.end(), x.begin(), 
             detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
 }
-template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y,
-                          UnaryOp op,
-                          ThrustVectorTag)
+template< class Vector>
+inline void doPlus(  Vector& x, 
+              typename Vector::value_type alpha, 
+              ThrustVectorTag)
 {
-    thrust::transform( x.begin(), x.end(), y.begin(), op);
+    thrust::transform( x.begin(), x.end(), x.begin(), 
+            detail::Plus_Functor<typename Vector::value_type>( alpha));
 }
 
 template< class Vector>

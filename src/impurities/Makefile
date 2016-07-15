@@ -16,6 +16,9 @@ toeflI: toeflI.cu toeflI.cuh
 toefl_hpc: toefl_hpc.cu toeflI.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 
+toefl_mpi: toefl_mpi.cu toeflI.cuh 
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+
 generator: generator.cpp
 	g++ generator.cpp -o generator -std=c++0x -Wall
 

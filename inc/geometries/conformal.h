@@ -129,7 +129,7 @@ struct Fpsi
         unsigned P=8;
         double x1 = 0, x1_old = 0;
         double eps=1e10, eps_old=2e10;
-        std::cout << "In x1 function\n";
+        //std::cout << "In x1 function\n";
         while(eps < eps_old && P < 20 && eps > 1e-15)
         {
             eps_old = eps; 
@@ -147,7 +147,7 @@ struct Fpsi
             x1 = dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x1 - x1_old)/x1);
-            std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
+            //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x1_old;
 
@@ -207,8 +207,8 @@ struct Fpsi
         solovev::PsipZ psipZ(gp_);
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
         double psip2 = psipR_*psipR_+psipZ_*psipZ_;
-        begin[2] = f_psi * (0.0/psip2+1.0)* psipZ_;
-        begin[3] = -f_psi * (0.0/psip2+1.0)*psipR_;
+        begin[2] = f_psi*(0.0/psip2+1.0)* psipZ_;
+        begin[3] = -f_psi*(0.0/psip2+1.0)*psipR_;
 
         R_0 = begin[0], Z_0 = begin[1];
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
@@ -282,17 +282,21 @@ struct FieldFinv
 };
 } //namespace detail
 
+///@cond
 template< class container>
 struct RingGrid2d; 
+///@endcond
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ *
+ * @tparam container Vector class that holds metric coefficients
  */
 template< class container>
 struct RingGrid3d : public dg::Grid3d<double>
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
-    typedef RingGrid2d<container> perpendicular_grid;
+    typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
+    typedef RingGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
 
     /**
      * @brief Construct 
@@ -309,6 +313,7 @@ struct RingGrid3d : public dg::Grid3d<double>
     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
+        assert( bcx == dg::PER|| bcx == dg::DIR);
         conformal::detail::Fpsi fpsi( gp, psi_0);
         double x_1 = fpsi.find_x1( psi_1);
         if( x_1 > 0)
@@ -328,7 +333,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
         unsigned N = 1;
         double eps = 1e10, eps_old=2e10;
-        std::cout << "In psi function:\n";
+        //std::cout << "In psi function:\n";
         double x0=this->x0(), x1 = x_vec[0];
         //while( eps <  eps_old && N < 1e6)
         while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
@@ -350,31 +355,33 @@ struct RingGrid3d : public dg::Grid3d<double>
             //dg::stepperRK6(fpsiMinv_, temp, end, x1, this->x1(),N);
             double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
             eps = fabs( psi_1_numerical-psi_1); 
-            std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
-            std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
+            //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
+            //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
         construct_rz( gp, psi_0, psi_x);
         construct_metric();
     }
+    const thrust::host_vector<double>& f_x()const{return f_x_;}
+    thrust::host_vector<double> x()const{
+        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        return dg::create::abscissas(gx);}
+
+    const thrust::host_vector<double>& f()const{return f_;}
+    perpendicular_grid perp_grid() const { return conformal::RingGrid2d<container>(*this);}
+
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    const thrust::host_vector<double>& f_x()const{return f_x_;}
-    const thrust::host_vector<double>& f()const{return f_;}
-    thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
-        return dg::create::abscissas(gx);}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    perpendicular_grid perp_grid() const { return conformal::RingGrid2d<container>(*this);}
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
@@ -449,7 +456,7 @@ struct RingGrid3d : public dg::Grid3d<double>
 };
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
 struct RingGrid2d : public dg::Grid2d<double>
@@ -466,7 +473,7 @@ struct RingGrid2d : public dg::Grid2d<double>
             init_X_boundaries( x_1, 0.);
         conformal::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         f_x_ = g.f_x();
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
@@ -484,17 +491,20 @@ struct RingGrid2d : public dg::Grid2d<double>
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
+
+    const thrust::host_vector<double>& f_x()const{return f_x_;}
+    thrust::host_vector<double> x()const{
+        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        return dg::create::abscissas(gx);}
+
     const thrust::host_vector<double>& f()const{return f_;}
+
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
-        return dg::create::abscissas(gx);}
-    const thrust::host_vector<double>& f_x()const{return f_x_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
@@ -544,6 +554,22 @@ struct Field
      * @brief == operator()(R,Z)
      */ 
     double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        //compute error in x,y,s
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( isnan(end[1]) || isnan(end[2]) || isnan(end[3])||isnan( end[4]) ) 
+        {
+            return false;
+        }
+        if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
+        {
+            return false;
+        }
+        return true;
+    }
     
     private:
     double find_fx(double x) 
@@ -629,98 +655,5 @@ thrust::host_vector<double> pullback( double(f)(double,double,double), const con
 }
 ///@endcond
 //
-
-/*
-namespace create
-{
-
-int determine_lagrange4( const thrust::host_vector<double>& abs, double x, thrust::host_vector<double>& li, double length)
-{
-    const int K = 3;
-    //1. find neighbors
-    double xi[2*(unsigned)K];
-    int idx = (int)abs.size()-1;
-    if( x < abs[0] ) idx = -1;
-    for( int i=0; i<(int)abs.size()-1; i++)
-        if( abs[i] <= x && x < abs[i+1])
-            idx = i;
-    if( x > abs[abs.size()-1] ) idx = abs.size()-1;
-    for( int j=-(K-1); j<K+1; j++)
-    {
-        xi[j+K-1] = abs[ (idx +j + abs.size())%abs.size()];
-        if( idx+j <0) //catch periodicity
-        {
-            xi[j+K-1] -= length;
-        }
-        if( idx+j >(int)abs.size()-1) //catch periodicity
-            xi[j+K-1] += length;
-    }
-    //1. determine lagrange multiplies
-    for( int i=0; i<2*K; i++)
-        li[i] = 1.;
-    for( int i=0; i<2*K; i++)
-        for( int k=0; k<2*K; k++)
-        {
-            if(  k!= i)
-                li[i] *= (x-xi[k])/(xi[i] - xi[k]);
-        }
-    return idx-1;
-}
-
-int determine_column( const thrust::host_vector<double>& absx, double x )
-{
-    int idx=-1;
-    for( int i=0; i<(int)absx.size(); i++)
-        if( fabs(absx[i]-x) <= 1e-10 )
-            idx = i;
-    return idx;
-}
-
-template<class container>
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const solovev::ConformalRingGrid2d<container>& g, dg::bc bcz )
-{
-    std::cout << "Hello interpolation!\n";
-    assert( x.size() == y.size());
-    const unsigned K = 3;
-    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*2*K);
-
-    dg::Operator<double> forward( g.dlt().forward());
-    int number = 0;
-    thrust::host_vector<double> li(2*K,1);
-    Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx(), g.bcx());
-    Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny(), g.bcy());
-    const thrust::host_vector<double> absx = create::abscissas( gx);
-    const thrust::host_vector<double> absy = create::abscissas( gy);
-    for( unsigned i=0; i<x.size(); i++)
-    {
-        if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
-            std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
-        }
-        assert(x[i] >= g.x0() && x[i] <= g.x1());
-        
-        if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
-            std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
-        }
-        assert( y[i] >= g.y0() && y[i] <= g.y1());
-        //determine which points are neighbors
-        int row_begin = determine_lagrange4( absy, y[i], li, g.ly());
-        int col = determine_column( absx, x[i]);
-        if( col == -1) std::cerr << "Index not found!!\n";
-        unsigned Nx = g.n()*g.Nx();
-        unsigned Ny = g.n()*g.Ny();
-        for( unsigned k=0; k<2*K; k++)
-        {
-            A.row_indices[number] = i;
-            A.column_indices[number] = ((row_begin+k+Ny)%Ny)*Nx+col;
-            A.values[number] = li[k];
-            number++;
-        }
-    }
-    return A;
-}
-
-
-}//namespace create
-*/
 
 }//namespace dg

@@ -274,6 +274,11 @@ struct MPI_Grid2d
      * @return pid of a process, or -1 if non of the grids matches
      */
     int pidOf( double x, double y) const;
+    protected:
+    void init_X_boundaries( double global_x0, double global_x1)
+    {
+        g.init_X_boundaries(global_x0, global_x1);
+    }
     private:
     Grid2d<double> g; //global grid
     MPI_Comm comm; //just an integer...
@@ -595,6 +600,11 @@ struct MPI_Grid3d
      * @return pid of a process, or -1 if non of the grids matches
      */
     int pidOf( double x, double y, double z) const;
+    protected:
+    void init_X_boundaries( double global_x0, double global_x1)
+    {
+        g.init_X_boundaries(global_x0, global_x1);
+    }
     private:
     Grid3d<double> g; //global grid
     MPI_Comm comm; //just an integer...

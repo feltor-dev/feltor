@@ -37,7 +37,22 @@ struct ZShifter
     int size() const {return number_;}
     MPI_Comm communicator() const {return comm_;}
     //host and device versions
-    void sendForward( HVec& sb, HVec& rb)const //send to next plane
+    template<class container>
+    void sendForward( const container& sb, container& rb)
+    {
+        dg::blas1::transfer( sb, sb_);
+        sendForward_( sb_, rb_);
+        dg::blas1::transfer( rb_, rb);
+    }
+    template<class container>
+    void sendBackward( const container& sb, container& rb)
+    {
+        dg::blas1::transfer( sb, sb_);
+        sendBackward_( sb_, rb_);
+        dg::blas1::transfer( rb_, rb);
+    }
+    private:
+    void sendForward_( HVec& sb, HVec& rb)const //send to next plane
     {
         int source, dest;
         MPI_Status status;
@@ -48,7 +63,7 @@ struct ZShifter
                         source, 9, //source
                         comm_, &status);
     }
-    void sendBackward( HVec& sb, HVec& rb)const //send to previous plane
+    void sendBackward_( HVec& sb, HVec& rb)const //send to previous plane
     {
         int source, dest;
         MPI_Status status;
@@ -59,19 +74,6 @@ struct ZShifter
                         source, 3, //source
                         comm_, &status);
     }
-    void sendForward( const thrust::device_vector<double>& sb, thrust::device_vector<double>& rb)
-    {
-        sb_ = sb; 
-        sendForward( sb_, rb_);
-        rb = rb_;
-    }
-    void sendBackward( const thrust::device_vector<double>& sb, thrust::device_vector<double>& rb)
-    {
-        sb_ = sb; 
-        sendBackward( sb_, rb_);
-        rb = rb_;
-    }
-    private:
     typedef thrust::host_vector<double> HVec;
     HVec sb_, rb_;
     int number_; //deepness, dimensions
@@ -86,7 +88,7 @@ struct ZShifter
 /**
  * @brief Class for the evaluation of a parallel derivative (MPI Version)
  *
- * @ingroup dz
+ * @ingroup algorithms
  * @tparam LocalMatrix The matrix class of the interpolation matrix
  * @tparam Communicator The communicator used to exchange data in the RZ planes
  * @tparam LocalContainer The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
@@ -102,10 +104,10 @@ struct MPI_FieldAligned
     is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param field The field to integrate
     * @param grid The grid on which to operate
-    * @param deltaPhi Must either equal the hz_() value of the grid or a fictive deltaPhi if the grid is 2D and Nz=1
     * @param eps Desired accuracy of runge kutta
     * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
+    * @param deltaPhi Is either <0 (then it's ignored), may differ from hz() only if Nz() == 1
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
@@ -137,11 +139,11 @@ struct MPI_FieldAligned
      * @param left left boundary value 
      * @param right right boundary value
      */
-    void set_boundaries( dg::bc bcz, const LocalContainer& left, const LocalContainer& right)
+    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
     {
         bcz_ = bcz; 
-        left_ = left;
-        right_ = right;
+        left_ = left.data();
+        right_ = right.data();
     }
 
     /**
@@ -154,7 +156,25 @@ struct MPI_FieldAligned
      * @param scal_left left scaling factor
      * @param scal_right right scaling factor
      */
-    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right);
+    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
+    {
+        bcz_ = bcz;
+        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        if( g_.z0() == g_.global().z0())
+        {
+            cView left( global.data().cbegin(), global.data().cbegin() + size);
+            View leftView( left_.begin(), left_.end());
+            cusp::copy( left, leftView);
+            dg::blas1::scal( left_, scal_left);
+        }
+        if( g_.z1() == g_.global().z1())
+        {
+            cView right( global.data().cbegin()+(g_.Nz()-1)*size, global.data().cbegin() + g_.Nz()*size);
+            View rightView( right_.begin(), right_.end());
+            cusp::copy( right, rightView);
+            dg::blas1::scal( right_, scal_right);
+        }
+    }
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
@@ -291,9 +311,9 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
         thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
         coords[0] = y[0].data()[i], coords[1] = y[1].data()[i], coords[2] = y[2].data()[i], coords[3] = y[3].data()[i], coords[4] = y[4].data()[i];
         double phi1 = deltaPhi;
-        boxintegrator( field, g_.global(), coords, coordsP, phi1, eps, globalbcz);
+        boxintegrator( field, g2d.global(), coords, coordsP, phi1, eps, globalbcz);
         phi1 = -deltaPhi;
-        boxintegrator( field, g_.global(), coords, coordsM, phi1, eps, globalbcz);
+        boxintegrator( field, g2d.global(), coords, coordsM, phi1, eps, globalbcz);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
@@ -313,8 +333,10 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
 
     CommunicatorXY cp( pids, g2d.communicator());
     commXYplus_ = cp;
-    thrust::host_vector<double> pX = cp.collect( yp[0]),
-                                pY = cp.collect( yp[1]);
+    thrust::host_vector<double> pX, pY;
+    dg::blas1::transfer( cp.collect( yp[0]), pX);
+    dg::blas1::transfer( cp.collect( yp[1]), pY);
+
     //construt interpolation matrix
     plus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( plus, plusT);
@@ -331,8 +353,8 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
     }
     CommunicatorXY cm( pids, g2d.communicator());
     commXYminus_ = cm;
-    pX = cm.collect( ym[0]);
-    pY = cm.collect( ym[1]);
+    dg::blas1::transfer( cm.collect( ym[0]), pX);
+    dg::blas1::transfer( cm.collect( ym[1]), pY);
     minus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( minus, minusT);
     //copy to device

@@ -3,7 +3,6 @@
 #include "blas.h"
 #include "geometry.h"
 #include "backend/derivatives.h"
-#include "backend/derivativesX.h"
 #include "geometry/fieldaligned.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_derivatives.h"
@@ -23,12 +22,12 @@ namespace dg{
 * This class discretizes the operators \f$ \nabla_\parallel = 
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 cylindrical coordinates
-* @ingroup ds
-* @tparam FieldAligned Engine class for interpolation, provides the necessary interpolation operations
+* @ingroup algorithms
+* @tparam FA Engine class for interpolation, provides the necessary interpolation operations
 * @tparam Matrix The matrix class of the jump matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class FA, class Matrix, class container=thrust::device_vector<double> >
+template< class FA, class Matrix, class container >
 struct DS
 {
     typedef FA FieldAligned;//!< typedef for easier construction of corresponding fieldaligned object
@@ -469,8 +468,8 @@ struct MatrixTraits< DS<F,M, V> >
 typedef dg::DS<dg::FieldAligned<dg::CylindricalGrid<dg::DVec>, dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DDS;//!< device DS type
 typedef dg::DS<dg::FieldAligned<dg::CylindricalGrid<dg::HVec>, dg::IHMatrix, dg::HVec>, dg::HMatrix, dg::HVec> HDS; //!< host DS type
 #ifdef MPI_VERSION
-typedef dg::DS< dg::MPI_FieldAligned<dg::CylindricalMPIGrid<dg::MDVec>, dg::IDMatrix, dg::BijectiveComm< dg::IDVec, dg::DVec >, dg::DVec>, dg::MDMatrix, dg::MDVec > MDDS; //!< MPI device DS type
-typedef dg::DS< dg::MPI_FieldAligned<dg::CylindricalMPIGrid<dg::MHVec>, dg::IHMatrix, dg::BijectiveComm< dg::IHVec, dg::HVec >, dg::HVec>, dg::MHMatrix, dg::MHVec > MHDS; //!< MPI host DS type
+typedef dg::DS< dg::MPI_FieldAligned<dg::CylindricalMPIGrid<dg::MDVec>, dg::IDMatrix, dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec>, dg::MDMatrix, dg::MDVec > MDDS; //!< MPI device DS type
+typedef dg::DS< dg::MPI_FieldAligned<dg::CylindricalMPIGrid<dg::MHVec>, dg::IHMatrix, dg::BijectiveComm< dg::iHVec, dg::HVec >, dg::HVec>, dg::MHMatrix, dg::MHVec > MHDS; //!< MPI host DS type
 #endif //MPI_VERSION
 ///@}
 

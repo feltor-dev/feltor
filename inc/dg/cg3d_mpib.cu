@@ -42,7 +42,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Create Laplacian\n";
     dg::Timer t;
     t.tic();
-    dg::Elliptic<dg::CartesianMPIGrid3d, dg::MDMatrix, dg::MDVec, dg::MDVec> A ( grid, dg::not_normed); 
+    dg::Elliptic<dg::CartesianMPIGrid3d, dg::MDMatrix, dg::MDVec> A ( grid, dg::not_normed); 
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 

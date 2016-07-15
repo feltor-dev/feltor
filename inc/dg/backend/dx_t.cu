@@ -13,20 +13,8 @@ double function( double x) { return sin(x);}
 double derivative( double x) { return cos(x);}
 double zero( double x) { return 0;}
 
-double functionX( double x) { 
-    if( x < 0) return sin(x);
-    else if( 0 <= x && x < 2*M_PI) return cos(x);
-    else return sin(x - 2*M_PI);
-}
-double derivativeX( double x) { 
-    if( x < 0) return cos(x);
-    else if( 0 <= x && x < 2*M_PI) return -sin(x);
-    else return cos(x - 2*M_PI);
-}
-double zeroX( double x) { return 0;}
-
 typedef dg::HVec Vector;
-typedef dg::EllSparseBlockMat Matrix;
+typedef dg::EllSparseBlockMat<double> Matrix;
 
 int main ()
 {
@@ -54,36 +42,6 @@ int main ()
         const Vector w1d = dg::create::weights( g[i]);
         const Vector deri = dg::evaluate( derivative, g[i]);
         const Vector null = dg::evaluate( zero, g[i]);
-
-        dg::blas2::symv( hs, func, error);
-        dg::blas1::axpby( 1., deri, -1., error);
-        std::cout << "Distance to true solution (symmetric): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
-        dg::blas2::symv( hf, func, error);
-        dg::blas1::axpby( 1., deri, -1., error);
-        std::cout << "Distance to true solution (forward  ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
-        dg::blas2::symv( hb, func, error);
-        dg::blas1::axpby( 1., deri, -1., error);
-        std::cout << "Distance to true solution (backward ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
-        dg::blas2::symv( js, func, error);
-        dg::blas1::axpby( 1., null , -1., error);
-        std::cout << "Distance to true solution (jump     ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n\n";
-    }
-    std::cout << "TEST X-POINT TOPOLOGY: YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
-    double fx;
-    dg::GridX1d gXDIR( -M_PI, 2*M_PI+M_PI, 1./4., n, N, dg::DIR);
-    dg::GridX1d gXDIR0( 0, 2*M_PI, 0., n, N, dg::DIR);
-    dg::GridX1d g2[] = {gXDIR, gXDIR0};
-    for( unsigned i=0; i<2; i++)
-    {
-        Matrix hs = dg::create::dx( g2[i], dg::centered);
-        Matrix hf = dg::create::dx( g2[i], dg::forward);
-        Matrix hb = dg::create::dx( g2[i], dg::backward);
-        Matrix js = dg::create::jump( g2[i]);
-        const Vector func = dg::evaluate( functionX, g2[i]);
-        Vector error = func;
-        const Vector w1d = dg::create::weights( g2[i]);
-        const Vector deri = dg::evaluate( derivativeX, g2[i]);
-        const Vector null = dg::evaluate( zeroX, g2[i]);
 
         dg::blas2::symv( hs, func, error);
         dg::blas1::axpby( 1., deri, -1., error);

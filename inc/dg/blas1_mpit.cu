@@ -3,15 +3,16 @@
 
 #include <mpi.h>
 #include <thrust/device_vector.h>
-#include "backend/mpi_evaluation.h"
 #include "blas1.h"
+#include "backend/mpi_evaluation.h"
 
 
 //test program that calls every blas1 function for every specialization
 double two( double x, double y){return 2.;}
 double three( double x, double y){return 3.;}
 
-typedef dg::MPI_Vector<thrust::device_vector<double> > MHVec;
+//typedef dg::MPI_Vector<thrust::device_vector<double> > MHVec;
+typedef dg::MPI_Vector<cusp::array1d<double, cusp::device_memory> > MHVec;
 
 struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 
@@ -73,6 +74,8 @@ int main( int argc, char* argv[])
     dg::blas1::transform( v1, v3, EXP());
     if(rank==0)std::cout << "e^2 = " << v3[0] <<" (7.389056...)"<< std::endl;
     dg::blas1::scal( v2, 0.6);
+    dg::blas1::plus( v3, -7.0);
+    if(rank==0)std::cout << "e^2-7 = " << v3[0] <<" (0.389056...)"<< std::endl;
 
     //v1 = 2, v2 = 3
 
@@ -101,6 +104,8 @@ int main( int argc, char* argv[])
     dg::blas1::transform( w1, w3, EXP());
     if(rank==0)std::cout << "e^2 = " << w3[0][0] <<" (7.389056...)"<< std::endl;
     dg::blas1::scal( w2, 0.6);
+    dg::blas1::plus( w3, -7.0);
+    if(rank==0)std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
     if(rank==0)std::cout << "FINISHED\n\n";
 
 

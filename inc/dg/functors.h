@@ -394,6 +394,16 @@ struct LinearX
      *
      * @param x x - coordinate
      * @param y y - coordinate
+     * @param z z - coordinate
+     
+     * @return result
+     */
+   double operator()( double x, double y, double z){ return a_*x+b_;}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
      
      * @return result
      */
@@ -425,12 +435,48 @@ struct LinearY
     /**
      * @brief Return linear polynomial in x 
      *
-     * @param x x - coordianate
-     * @param y y - coordianate
+     * @param x x - coordinate
+     * @param y y - coordinate
+     * @param z z - coordinate
+     
+     * @return result
+     */
+    double operator()( double x, double y, double z){ return a_*y+b_;}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
      
      * @return result
      */
     double operator()( double x, double y){ return a_*y+b_;}
+  private:
+    double a_,b_;
+};
+/**
+ * @brief Functor for a linear polynomial in z-direction
+ * \f[ f(x,y,z) = az+b \f]
+ */
+struct LinearZ
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param a linear coefficient 
+     * @param b constant coefficient
+     */
+    LinearZ( double a, double b):a_(a), b_(b){}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     * @param z z - coordinate
+     
+     * @return result
+     */
+    double operator()( double x, double y, double z){ return a_*z+b_;}
   private:
     double a_,b_;
 };

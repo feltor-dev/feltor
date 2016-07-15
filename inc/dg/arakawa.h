@@ -98,8 +98,6 @@ struct ArakawaX
     Geometry grid;
 };
 
-//idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
-//needs less memory!! and is faster
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g ): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs), 

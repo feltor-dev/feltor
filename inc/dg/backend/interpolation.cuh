@@ -4,7 +4,6 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/csr_matrix.h>
 #include "grid.h"
-#include "gridX.h"
 #include "evaluation.cuh"
 #include "functions.h"
 #include "creation.cuh"
@@ -373,104 +372,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
-/**
- * @brief Create interpolation matrix
- *
- * The matrix, when applied to a vector, interpolates its values to the given coordinates
- * @param x X-coordinates of interpolation points
- * @param g The Grid on which to operate
- *
- * @return interpolation matrix
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const GridX1d& g)
-{
-    return interpolation( x, g.grid());
-}
-/**
- * @brief Create interpolation matrix
- *
- * The matrix, when applied to a vector, interpolates its values to the given coordinates
- * @param x X-coordinates of interpolation points
- * @param y Y-coordinates of interpolation points
- * @param g The Grid on which to operate
- * @param globalbcz NEU for common interpolation. DIR for zeros at Box
- *
- * @return interpolation matrix
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const GridX2d& g , dg::bc globalbcz = dg::NEU)
-{
-    return interpolation( x,y,g.grid(),globalbcz);
-}
-
-
-/**
- * @brief Create interpolation matrix
- *
- * The matrix, when applied to a vector, interpolates its values to the given coordinates
- * @param x X-coordinates of interpolation points
- * @param y Y-coordinates of interpolation points
- * @param z Z-coordinates of interpolation points
- * @param g The Grid on which to operate
- * @param globalbcz determines what to do if values lie exactly on the boundary
- *
- * @return interpolation matrix
- * @note The values of x, y and z must lie within the boundaries of g
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const GridX3d& g, dg::bc globalbcz= dg::NEU)
-{
-    return interpolation( x,y,z,g.grid(),globalbcz);
-}
-/**
- * @brief Create interpolation between two grids
- *
- * This matrix can be applied to vectors defined on the old grid to obtain
- * its values on the new grid.
- * 
- * @param g_new The new points 
- * @param g_old The old grid
- *
- * @return Interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX1d& g_new, const GridX1d& g_old)
-{
-    return interpolation(g_new.grid(), g_old.grid());
-
-}
-/**
- * @brief Create interpolation between two grids
- *
- * This matrix can be applied to vectors defined on the old grid to obtain
- * its values on the new grid.
- * 
- * @param g_new The new points 
- * @param g_old The old grid
- *
- * @return Interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX2d& g_new, const GridX2d& g_old)
-{
-    return interpolation( g_new.grid(), g_old.grid());
-}
-
-/**
- * @brief Create interpolation between two grids
- *
- * This matrix can be applied to vectors defined on the old grid to obtain
- * its values on the new grid.
- * 
- * @param g_new The new points 
- * @param g_old The old grid
- *
- * @return Interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX3d& g_new, const GridX3d& g_old)
-{
-    return interpolation(g_new.grid(), g_old.grid());
-
-}
 ///@}
 
 
@@ -487,10 +388,6 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
         out[((i*g.n() + k)*g.Nx() + j)*g.n() + l] += forward(k,o)*forward( l, m)*in[((i*g.n() + o)*g.Nx() + j)*g.n() + m];
     return out;
 
-}
-thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const GridX2d& g)
-{
-    return forward_transform( in, g.grid());
 }
 }//namespace create
 
@@ -561,8 +458,4 @@ double interpolate( double x, double y,  const thrust::host_vector<double>& v, c
     return value;
 }
 
-double interpolate( double x, double y,  const thrust::host_vector<double>& v, const GridX2d& g )
-{ 
-    return interpolate(x,y,v,g.grid());
-}
 } //namespace dg

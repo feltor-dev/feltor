@@ -29,8 +29,8 @@ int main( int argc, char* argv[])
     mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
 
     dg::CylindricalMPIGrid<dg::MDVec> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, comm);
-    const dg::MDVec w3d = dg::create::weights( grid);
-    const dg::MDVec v3d = dg::create::inv_weights( grid);
+    const dg::MDVec w3d = dg::create::volume( grid);
+    const dg::MDVec v3d = dg::create::inv_volume( grid);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     double eps=1e-6;
@@ -44,7 +44,7 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic<dg::CylindricalMPIGrid<dg::MDVec>, dg::MDMatrix, dg::MDVec, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CylindricalMPIGrid<dg::MDVec>, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
     dg::MDMatrix DX = dg::create::dx( grid);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";

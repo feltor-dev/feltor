@@ -79,7 +79,7 @@ int main()
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<float>() );
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers
-        hvisual = visual;
+        dg::blas1::transfer(visual, hvisual);
         render.renderQuad( hvisual, n*Nx, n*Ny, colors);
         //step 
         ab( test,diffusion, y0 );

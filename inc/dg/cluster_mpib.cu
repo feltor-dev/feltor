@@ -9,9 +9,8 @@
 #include "geometry.h"
 
 #include "backend/timer.cuh"
+#include "../geometries/guenther.h"
 
-#include "../../src/heat/geometry_g.h"
-#include "../../src/heat/parameters.h"
 
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
@@ -74,7 +73,7 @@ int main(int argc, char* argv[])
     if( rank == 0)
     {
         std::cin >> np[0] >> np[1]>>np[2];
-        std::cout<< np[0] <<" "<<np[1]<<" "<<np[2]<<" "<<size<<" ";
+        std::cout<< "xxx "<<np[0] <<" "<<np[1]<<" "<<np[2]<<" "<<size<<" ";
         assert( size == np[0]*np[1]*np[2]);
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
@@ -129,7 +128,7 @@ int main(int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     //Matrix-Vector product
-    Matrix dy = dg::create::dx( grid, dg::centered);
+    Matrix dy = dg::create::dy( grid, dg::centered);
     t.tic(); 
     for( unsigned i=0; i<multi; i++)
         dg::blas2::symv( dy, rhs, jac);
@@ -160,7 +159,7 @@ int main(int argc, char* argv[])
     dg::CylindricalMPIGrid<Vector> gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
     const Vector ellw3d = dg::create::volume(gridEll);
     const Vector ellv3d = dg::create::inv_volume(gridEll);
-    dg::Elliptic<dg::CylindricalMPIGrid<Vector>, Matrix, Vector, Vector> laplace(gridEll, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CylindricalMPIGrid<Vector>, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
     const Vector solution = dg::evaluate ( fct, gridEll);
     const Vector deriv = dg::evaluate( derivative, gridEll);
     Vector x = dg::evaluate( initial, gridEll);
@@ -182,10 +181,10 @@ int main(int argc, char* argv[])
         double Rmax=gpR0+1.0*gpa; 
         double Zmax=1.0*gpa*1.00;
         dg::CylindricalMPIGrid<Vector> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
-        solovev::Field field(gpR0, gpI0);
+        guenther::Field field(gpR0, gpI0);
         dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
         dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered);
-        solovev::FuncNeu funcNEU(gpR0,gpI0);
+        guenther::FuncNeu funcNEU(gpR0,gpI0);
         Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
 
         t.tic(); 
@@ -196,7 +195,7 @@ int main(int argc, char* argv[])
     }
 
 
-    if(rank==0)std::cout << std::endl;
+    if(rank==0)std::cout <<" XXX"<<std::endl;
     MPI_Finalize();
     return 0;
 }

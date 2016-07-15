@@ -10,7 +10,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
-#include "solovev/geometry.h"
+#include "geometries/solovev.h"
 
 #include "feltor/feltor.cuh"
 #include "feltor/parameters.h"
@@ -22,6 +22,7 @@
 */
 
 
+typedef dg::FieldAligned< dg::CylindricalGrid<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
@@ -68,12 +69,12 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, dg::cylindrical);  
+     dg::CylindricalGrid<dg::DVec > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
+    eule::Rolkar<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -86,7 +87,7 @@ int main( int argc, char* argv[])
 
     
     //background profile
-    solovev::Nprofile prof(p, gp); //initial background profile
+    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     
     //averaged field aligned initializer
@@ -101,7 +102,8 @@ int main( int argc, char* argv[])
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+    dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     std::cout << "initialize ne" << std::endl;
     feltor.initializene( y0[1], y0[0]);    
     std::cout << "Done!\n";
@@ -134,16 +136,16 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     //probe
-    const dg::DVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
-    const dg::DVec Zprobe(1,0.);
-    const dg::DVec Phiprobe(1,M_PI);
+    const dg::HVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
+    const dg::HVec Zprobe(1,0.);
+    const dg::HVec Phiprobe(1,M_PI);
     dg::IDMatrix probeinterp(dg::create::interpolation( Xprobe,  Zprobe,Phiprobe,grid, dg::NEU));
     dg::DVec probevalue(1,0.);
     while ( !glfwWindowShouldClose( w ))
     {
 
         //hvisual = karniadakis.last()[0];
-        hvisual = y0[0];
+        dg::blas1::transfer( y0[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();        
@@ -158,7 +160,7 @@ int main( int argc, char* argv[])
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
         //hvisual = karniadakis.last()[1];
-        hvisual = y0[1];
+        dg::blas1::transfer( y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         //colors.scalemin() = 1.0;        
@@ -176,7 +178,7 @@ int main( int argc, char* argv[])
 //         dvisual=feltor.potential()[0];
 //         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
 //         hvisual = y1[1];
-        hvisual = feltor.potential()[0];
+        dg::blas1::transfer( feltor.potential()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -188,7 +190,7 @@ int main( int argc, char* argv[])
 
         //draw U_e
         //hvisual = karniadakis.last()[2];
-        hvisual = y0[2];
+        dg::blas1::transfer( y0[2], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -199,7 +201,7 @@ int main( int argc, char* argv[])
 
         //draw U_i
         //hvisual = karniadakis.last()[3];
-        hvisual = y0[3];
+        dg::blas1::transfer( y0[3], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         //colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -213,7 +215,7 @@ int main( int argc, char* argv[])
         //transform to Vor
         dvisual=feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        hvisual = y1[1];
+        dg::blas1::transfer( y1[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );

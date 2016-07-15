@@ -255,13 +255,13 @@ int main( )
         //dg::blas1::pointwiseDivide( dsTdsfb, inverseB, dsTdsfb);
 //     ds.centeredT( derivative2, dsTds2); //dsT(ds(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
-//     ds.centeredT( ones, divbT);
+     ds.centeredT( ones, divbT);
 //     
 //     double normdsds =dg::blas2::dot(derivative2, w3d,derivative2);
 //     double normds1ds =dg::blas2::dot(derivativeones, w3d,derivative2);
 //     double normdivBT =dg::blas2::dot(divBT, w3d,divBT);
-//     double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-//     double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
+     double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+     double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
 //     double normdsTf = dg::blas2::dot(derivativeT2, w3d, function2);
 //     double normdsT_1 = dg::blas2::dot(derivativeT2, w3d, ones);
 //     double normdsT1 = dg::blas2::dot(derivativeTones, w3d, function2);
@@ -291,14 +291,14 @@ int main( )
 //     errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);    
 //     std::cout << "Relative Difference in DS is "<< sqrt( errRZPhi/norm )<<"\n"; 
 //     
-//     std::cout << "--------------------testing dsT" << std::endl;
-//     std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
-//     std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
-//     dg::blas1::axpby( 1., divbsol, -1., divbT);
-//     normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-//     std::cout << "Relative Difference in DST is   "<<sqrt( normdivbT)<<"\n";
-//     std::cout << "-------------------- " << std::endl;
-//     std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
+     std::cout << "--------------------testing dsT" << std::endl;
+     std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
+     std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
+     dg::blas1::axpby( 1., divbsol, -1., divbT);
+     normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+     std::cout << "Relative Difference in DST is   "<<sqrt( normdivbT)<<"\n";
+     std::cout << "-------------------- " << std::endl;
+     //std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
 // 
 //     
 //     std::cout << "-------------------- " << std::endl;

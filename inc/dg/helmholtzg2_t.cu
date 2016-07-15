@@ -44,9 +44,9 @@ int main()
 
     const dg::DVec chi = dg::evaluate( dg::LinearX(1.0,1.0), grid2d);
     
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::DVec > gamma1inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
-    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::DVec > gamma2inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
-    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::DVec > lapperp(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
+    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
+    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > lapperp(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
     gamma2inv.set_chi(chi); 
     
 
@@ -87,8 +87,8 @@ int main()
     dg::DVec laplace_fct_ = dg::evaluate( laplace_fct, g3d);
     dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);
     dg::DVec temp_(fct_);
-    dg::Elliptic< dg::DMatrix, dg::DVec, dg::DVec > laplaceM( g3d, dg::normed);
-    dg::Helmholtz< dg::DMatrix, dg::DVec, dg::DVec > helmholtz( g3d, alpha);
+    dg::Elliptic< dg::DMatrix, dg::DVec > laplaceM( g3d, dg::normed);
+    dg::Helmholtz< dg::DMatrix, dg::DVec > helmholtz( g3d, alpha);
     dg::blas2::symv( laplaceM, fct_, temp_);
     dg::blas1::axpby( 1., laplace_fct_, -1., temp_);
     std::cout << "error Laplace " << sqrt( dg::blas2::dot( laplaceM.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;

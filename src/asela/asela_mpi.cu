@@ -100,7 +100,7 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT init0( 0.);
 
     //averaged field aligned initializer
-    dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
+    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
     y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->3*2-1
 
 

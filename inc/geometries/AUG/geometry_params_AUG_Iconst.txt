@@ -28,4 +28,6 @@
 20) psip_min                 = -50.
 21) psip_max                 =  0.0 (0.0)
 22) psip_max_cut             =  -0.5  (critical psip for limiter, -1 < psip < psipmax)
+23) psip_max_lim             = 0
+24) qampl                    = 1
 @ ------------------------------------------------------------------------

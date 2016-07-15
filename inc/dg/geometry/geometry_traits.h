@@ -17,7 +17,7 @@ struct OrthonormalTag: public OrthonormalCylindricalTag{};
 template <class Geometry>
 struct GeometryTraits{
     typedef typename Geometry::metric_category metric_category;
-    typedef typename Geometry::memory_category memory_category;
+    typedef typename Geometry::memory_category memory_category; //either shared or distributed
 };
 
 template<class MemoryTag>
@@ -153,8 +153,9 @@ template< class Geometry>
 typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector doCreateVolume( const Geometry& g, CurvilinearTag)
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vector;
-    host_vector temp = dg::create::weights( g);
-    host_vector vol = g.vol();
+    host_vector temp, vol;
+    dg::blas1::transfer( dg::create::weights( g), temp);
+    dg::blas1::transfer( g.vol(), vol); //g.vol might be on device
     dg::blas1::pointwiseDot( vol, temp, temp);
     return temp;
 }
@@ -163,8 +164,9 @@ template< class Geometry>
 typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector doCreateInvVolume( const Geometry& g, CurvilinearTag)
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vector;
-    host_vector temp = dg::create::inv_weights( g);
-    host_vector vol = g.vol();
+    host_vector temp, vol;
+    dg::blas1::transfer( dg::create::inv_weights( g), temp);
+    dg::blas1::transfer( g.vol(), vol); //g.vol might be on device
     dg::blas1::pointwiseDivide( temp, vol, temp);
     return temp;
 }

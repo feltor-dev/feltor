@@ -42,7 +42,8 @@ int main()
     std::cout << "Create Laplacian...\n";
     t.tic();
     dg::DMatrix DX = dg::create::dx( grid);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::DVec> lap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid2d, dg::fDMatrix, dg::fDVec> flap(grid, dg::not_normed, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -56,8 +57,20 @@ int main()
     dg::blas2::symv( w2d, b, b);
     //////////////////////////////////////////////////////////////////////
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
+
+    dg::fDVec xf;
+    dg::blas1::transfer(x,xf);
+    dg::Inverse<dg::Elliptic<dg::CartesianGrid2d, dg::fDMatrix, dg::fDVec>, dg::fDVec> inverse( flap, xf, 10, 1e-15, 0);
+
+
     
     std::cout << "... for a precision of "<< eps<<std::endl;
+    t.tic();
+    std::cout << "Number of mixed pcg iterations "<< pcg( lap, x, b, inverse, v2d, eps)<<std::endl;
+    t.toc();
+    std::cout << "... on the device took "<< t.diff()<<"s\n";
+    //dg::blas2::symv( inverse, b, x); 
+    x = dg::evaluate( initial, grid);
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg( lap, x, b, v2d, eps)<<std::endl;
     t.toc();

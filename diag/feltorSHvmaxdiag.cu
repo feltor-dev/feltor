@@ -68,6 +68,8 @@ int main( int argc, char* argv[])
             if (p.tau[1]==4.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
             if (p.tau[1]==2.) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
             if (p.tau[1]==1.) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
+            if (p.tau[1]==0.5) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
+            if (p.tau[1]==0.1) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
             if (p.tau[1]==0.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
         }
         if (p.sigma==20.)
@@ -75,6 +77,8 @@ int main( int argc, char* argv[])
             if (p.tau[1]==4.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
             if (p.tau[1]==2.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
             if (p.tau[1]==1.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+            if (p.tau[1]==0.5) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+            if (p.tau[1]==0.1) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
             if (p.tau[1]==0.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
         }
         if (p.sigma==5.)
@@ -82,7 +86,7 @@ int main( int argc, char* argv[])
             if (p.tau[1]==4.) 
             {
                 if (p.amp==2.) gammathrealdpe =16./sqrt(dpe*p.mcv/p.sigma);
-                if (p.amp==1.) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
+                if (p.amp==1.) gammathrealdpe =13./sqrt(dpe*p.mcv/p.sigma);
                 if (p.amp==0.5) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
                 if (p.amp==0.1) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
             }
@@ -94,6 +98,8 @@ int main( int argc, char* argv[])
                 if (p.amp==0.1) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
             }
             if (p.tau[1]==1.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+            if (p.tau[1]==0.5) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+            if (p.tau[1]==0.1) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
             if (p.tau[1]==0.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
         }
 
@@ -101,7 +107,8 @@ int main( int argc, char* argv[])
 
         std::vector<double>::iterator timepoint;
         timepoint=std::lower_bound (vt.begin() ,vt.end() ,gammathrealdpe );
-        gammathrealdpe = sqrt(dpe*p.mcv/p.sigma);
+//         gammathrealdpe = sqrt(dpe*p.mcv/p.sigma);
+        gammathrealdpe = sqrt((1.+p.tau[1])*dpe*p.mcv/p.sigma);
 //         std::cout <<  " timep " << *timepoint << std::endl;
         unsigned timepos = std::distance(vt.begin(), timepoint );
 //         std::cout <<  " timeposition " << std::distance(vt.begin(), timepoint ) << std::endl;        

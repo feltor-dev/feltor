@@ -102,9 +102,9 @@ int main( int argc, char* argv[])
     solovev::Pupil pupil(gp);
     solovev::GaussianDamping dampgauss(gp);
     solovev::GaussianProfDamping dampprof(gp);
-    solovev::ZonalFlow zonalflow(p, gp);
+    solovev::ZonalFlow zonalflow(p.amp, p.k_psi, gp);
     solovev::PsiLimiter psilimiter(gp);
-    solovev::Nprofile prof(p, gp);
+    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp);
 
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
@@ -142,9 +142,9 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1.,hvisual[16] , 1.,hvisual[14],hvisual[17]); //prof + bath
     dg::blas1::axpby( 1.,hvisual[13] , 1.,hvisual[14],hvisual[18]); //prof + zonal
     dg::blas1::axpby( 1.,hvisual[15] , 1.,hvisual[14],hvisual[19]); //prof + blob
-    dg::blas1::transform(hvisual[17], hvisual[17], dg::PLUS<>(-1)); //to n -1
-    dg::blas1::transform(hvisual[18], hvisual[18], dg::PLUS<>(-1)); //to n -1
-    dg::blas1::transform(hvisual[19], hvisual[19], dg::PLUS<>(-1)); //to n -1
+    dg::blas1::plus(hvisual[17], -1); //to n -1
+    dg::blas1::plus(hvisual[18], -1); //to n -1
+    dg::blas1::plus(hvisual[19], -1); //to n -1
     dg::blas1::pointwiseDot(hvisual[10], hvisual[17], hvisual[17]); //damped 
     dg::blas1::pointwiseDot(hvisual[10], hvisual[18], hvisual[18]); //damped 
     dg::blas1::pointwiseDot(hvisual[10], hvisual[19], hvisual[19]); //damped 
@@ -157,7 +157,7 @@ int main( int argc, char* argv[])
     unsigned npsi = 3, Npsi = 50;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d<double> grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
-    solovev::SafetyFactor<dg::HVec>     qprof(grid2d, gp, alphaog2d );
+    solovev::SafetyFactor<dg::DVec>     qprof(grid2d, gp, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
     dg::HVec abs        = dg::evaluate( dg::coo1, grid1d);
 

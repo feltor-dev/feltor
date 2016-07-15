@@ -35,7 +35,7 @@ namespace geo{
 ///@addtogroup geometry
 ///@{
 /**
- * @brief Multiply the input with the volume element
+ * @brief Multiply the input with the volume element without the dG weights!
  *
  * Computes \f$ f = \sqrt{g}f\f$ 
  * @tparam container container class 
@@ -50,7 +50,7 @@ void multiplyVolume( container& inout, const Geometry& g)
 }
 
 /**
- * @brief Divide the input vector with the volume element
+ * @brief Divide the input vector with the volume element without the dG weights
  *
  * Computes \f$ v = v/ \sqrt{g}\f$ 
  * @tparam container container class 
@@ -75,6 +75,7 @@ void divideVolume( container& inout, const Geometry& g)
  * @param contraX (output) contravariant first component
  * @param contraY (output) contravariant second component
  * @param g The geometry object
+ * @note covX, covY, contraX and contraY may not be the same
  */
 template<class container, class Geometry>
 void raisePerpIndex( container& covX, container& covY, container& contraX, container& contraY, const Geometry& g)
@@ -125,12 +126,12 @@ void dividePerpVolume( container& inout, const Geometry& g)
  * @tparam Geometry The Geometry class
  * @param vR input R-component in cylindrical coordinates
  * @param vZ input Z-component in cylindrical coordinates
- * @param vx x-component of vector 
- * @param vy y-component of vector
+ * @param vx x-component of vector (gets properly resized)
+ * @param vy y-component of vector (gets properly resized)
  * @param g The geometry object
  */
 template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void pushForwardPerp( TernaryOp1 vR, TernaryOp2& vZ, 
+void pushForwardPerp( TernaryOp1 vR, TernaryOp2 vZ, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vx, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vy,
         const Geometry& g)
@@ -157,7 +158,7 @@ void pushForwardPerp(
 namespace create{
 
 /**
- * @brief Create the volume element on the grid
+ * @brief Create the volume element on the grid (including weights!!)
  *
  * This is the same as the weights multiplied by the volume form \f$ \sqrt{g}\f$
  * @tparam Geometry Geometry class
@@ -172,7 +173,7 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
 }
 
 /**
- * @brief Create the inverse volume element on the grid
+ * @brief Create the inverse volume element on the grid (including weights!!)
  *
  * This is the same as the inv_weights divided by the volume form \f$ \sqrt{g}\f$
  * @tparam Geometry Geometry class

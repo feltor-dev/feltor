@@ -24,6 +24,7 @@ double Y( double x, double y) {return y;}
 struct Heaviside2d
 {
     Heaviside2d( double sigma):sigma2_(sigma*sigma/4.), x_(0), y_(0){}
+//     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
     void set_origin( double x0, double y0){ x_=x0, y_=y0;}
     double operator()(double x, double y)
     {
@@ -90,6 +91,8 @@ int main( int argc, char* argv[])
     dg::DVec helper(dg::evaluate(dg::zero,g2d));
     dg::DVec helper2(dg::evaluate(dg::zero,g2d));
     dg::DVec helper3(dg::evaluate(dg::zero,g2d));
+    dg::DVec helper4(dg::evaluate(dg::zero,g2d));
+    dg::DVec target(dg::evaluate(dg::zero,g2d));
     dg::DVec helper1d(dg::evaluate(dg::zero,g1d));
     
     dg::HVec transfer2d(dg::evaluate(dg::zero,g2d));
@@ -140,7 +143,7 @@ int main( int argc, char* argv[])
     const double hy = g2d.hy()/(double)g2d.n();
     unsigned Nx = p.Nx*p.n; 
     //routiens to compute ti
-    dg::Invert<dg::DVec> invert_invgamma2( helper, helper.size(), 1e-2);
+    dg::Invert<dg::DVec> invert_invgamma2( helper, helper.size(), 1e-3);
     dg::Helmholtz2< dg::DMatrix, dg::DVec, dg::DVec > invgamma2( g2d,g2d.bcx(), g2d.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered);
     dg::DVec binv(dg::evaluate( dg::LinearX( p.mcv, 1.), g2d) );
     dg::DVec B2(dg::evaluate( dg::one, g2d));
@@ -284,52 +287,73 @@ int main( int argc, char* argv[])
 //         transfer2d = helper2;
 // 
 //         err_out = nc_put_vara_double( ncid_out, names2dID[2], start2d, count2d, transfer2d.data());
-
-     
-//         //Compute ion temperature with phi=0
+// 
+//      
+// //         //Compute ion temperature with phi=0
 //         dg::blas1::pointwiseDivide(B2,tpe[1],helper);        //helper  = B^2/Ti
 //         invgamma2.set_chi(helper);                           //helmholtz2 chi = B^2/Ti
-//         dg::blas1::pointwiseDot( npe[1],tpe[1],helper3);     //helper3 = P_i
-//         dg::blas1::pointwiseDot( helper3, binv, helper2);
-//         dg::blas1::pointwiseDot( helper2, binv, helper2);    //helper2 = P_i/B^2    
-//         polti.set_chi(helper2); //elliptic chi =  P_i/B^2    
-//         dg::blas1::transform(helper3,helper3, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));//P_i -amp^2
-//         invert_invgamma2(invgamma2,helper2,helper3); //solve for p_i_tilde -amp^2        
-//         dg::blas1::pointwiseDot(helper2,helper,helper2); //target = B^2/Ti target        
-//         dg::blas1::transform(helper2,helper2, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //helper2=pi_tilde
 // 
-//         dg::blas2::symv(polti,phi,helper3); //nabla(P_i/B^2 (nabla_perp phi));
-//         dg::blas1::axpby(1.0, helper2, -2.0*p.mu[1], helper3,helper2);//2 nabla(P_i/B^2 (nabla_perp phi)) + p_i_tilde
+//         //Solve (pi = gamma1^dagger + gamma2^dagger Pi)
+// //         invert_invgamma2(invgamma2,helper2,helper3); //solve for p_i_tilde -amp^2        
+// //         dg::blas1::pointwiseDot(helper2,helper,helper2); //target = B^2/Ti target        
+// //         dg::blas1::transform(helper2,helper2, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); 
+//         dg::blas1::transform( tpe[1], helper2, dg::PLUS<>( -1.0*(p.bgprofamp + p.nprofileamp))); //t_i_tilde
+//         dg::blas1::pointwiseDivide(helper2,B2,helper2); //chi=t_i_tilde/b^2 
+//         polti.set_chi(one);
+//         dg::blas2::gemv(polti,helper2,helper3);
+//         dg::blas1::pointwiseDivide(helper3,helper,helper2); //-Ti/B^2 lap T_i_tilde/B^2
+//         dg::blas2::gemv(polti,helper2,target);//target = + lap (Ti/B^2 lap T_i_tilde/B)
+//         dg::blas1::pointwiseDot( npe[1],tpe[1],helper4);     //helper3 = P_i
+//         dg::blas1::transform(helper4,helper4, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));//Pi_tilde = P_i -amp^2
+//         dg::blas1::axpby(1.0,helper4 ,-(1.-p.tau[1]*0.5*p.mcv*p.mcv*(p.bgprofamp + p.nprofileamp))*(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.tau[1],helper3,helper3);  
+//         dg::blas1::axpby(1.0, helper3, -(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.tau[1]*p.tau[1]*0.25,target, helper3); 
+//         dg::blas1::axpby(1.0, helper3, (p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.tau[1]*2.*p.mcv*p.mcv*(1.-0.5*p.tau[1]*(p.bgprofamp + p.nprofileamp)*p.mcv*p.mcv),one, helper3); 
+//         invert_invgamma2(invgamma2,target,helper3); //=Ti/B^2(p_i_tilde_bar) = bar(Gamma)_dagger { P_i_tilde + a tau_i lap T_i_tilde/B^2  - a tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)   }
+//         dg::blas1::pointwiseDot(target,helper,target); //target = B^2/Ti target = (p_i_tilde) 
+//         dg::blas1::transform(target,target, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //pi_bar
 // 
-//         
+//         //set up polarisation term
+//         dg::blas1::pointwiseDot( npe[1],tpe[1],helper4);     //helper3 = P_i
+//         dg::blas1::pointwiseDot( helper4, binv, helper2);
+//         dg::blas1::pointwiseDot( helper2, binv, helper2);    //helper2 = P_i/B^2   
+//         polti.set_chi(helper2); //elliptic chi =  P_i/B^2    for polarisation
+// 
+//         //helper2=pi_tilde
+//         dg::blas2::symv(polti,phi,helper3); //-nabla(P_i/B^2 (nabla_perp phi));
+//         dg::blas1::axpby(1.0, target, -2.0*p.mu[1], helper3,helper2);//pi  =  2 nabla(P_i/B^2 (nabla_perp phi)) + p_i_bar
 //         dg::blas1::pointwiseDivide(helper2,npe[0],helper2); //ti=(pi-amp^2)/ne
-//         
-//          //compute Omega_d
+// //         
+// //          //compute Omega_d
 //                 dg::blas1::transform(helper2,helper, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
-//                 
+// //                 
 //         polti.set_chi(one);
 //         dg::blas2::symv(polti,helper,helper3); //nabla(nabla_perp p_i/B^2 );
 //         dg::blas1::scal(helper3,-1.0*p.tau[1]);
-//         
-//         //write t_i into 2dnetcdf
+// //         
+// //         //write t_i into 2dnetcdf
 //         transfer2d = helper2;
 //         err_out = nc_put_vara_double( ncid_out, names2dID[0], start2d, count2d, transfer2d.data());
 //         //write Omega_d into 2dnetcdf
 //         transfer2d = helper3;
 //         err_out = nc_put_vara_double( ncid_out, names2dID[1], start2d, count2d, transfer2d.data());
-        
+//               
+//         
         
         //compute Omega_E and write Omega_E into 2dnetcdf
-//         dg::blas1::pointwiseDot( npe[1],one,helper3); //P_i
-//         dg::blas1::pointwiseDot( helper3, binv, helper2);
-//         dg::blas1::pointwiseDot( helper2, binv, helper2);   
-//         polti.set_chi(helper2);
-//         dg::blas2::symv(polti,phi,helper3); 
-//         dg::blas1::scal(helper3,-1.0*p.mu[1]);
-//         transfer2d = helper3;
-//         err_out = nc_put_vara_double( ncid_out, names2dID[3], start2d, count2d, transfer2d.data());
-        /*
+        dg::blas1::pointwiseDot( npe[1],one,helper3); 
+        dg::blas1::pointwiseDot( helper3, binv, helper2);
+        dg::blas1::pointwiseDot( helper2, binv, helper2);   
+        polti.set_chi(helper2);
+        dg::blas2::symv(polti,phi,helper3); 
+        dg::blas1::scal(helper3,-1.0*p.mu[1]);
+        polti.set_chi(one);
+        dg::blas2::symv(polti,phi,helper); 
+        dg::blas1::pointwiseDot(helper,helper2,helper);
+        dg::blas1::axpby(1.0,helper3,p.mu[1],helper,helper3);
+        transfer2d = helper3;
+        err_out = nc_put_vara_double( ncid_out, names2dID[3], start2d, count2d, transfer2d.data());
 
+  /*
         
         //get max position and value(x,y_max) of electron temperature
 //         dg::blas2::gemv( equi, helper2, helper);
@@ -359,10 +383,7 @@ int main( int argc, char* argv[])
         heavy = dg::evaluate( heavi, g2d);
 //         std::cout <<std::scientific<< dg::blas2::dot( heavy, w2d, npe[0])/normalize << std::endl;
         compactness_ne =  dg::blas2::dot( heavy, w2d, npe[0])/normalize ;
-        err_out = nc_put_vara_double( ncid_out, namescomID[10], start1d, count1d, &compactness_ne);      
-
-        
-
+        err_out = nc_put_vara_double( ncid_out, namescomID[10], start1d, count1d, &compactness_ne);            
     }
     err_out = nc_close(ncid_out);
     err = nc_close(ncid);
