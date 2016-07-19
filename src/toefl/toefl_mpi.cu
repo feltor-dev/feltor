@@ -161,6 +161,7 @@ int main( int argc, char* argv[])
     dg::blas2::gemv( interpolate,y1[1].data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     //err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
@@ -194,6 +195,7 @@ int main( int argc, char* argv[])
                 if(rank==0)std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
             }
             time+=p.dt;
+            Estart[0] += 1;
             {
                 //err = nc_open(argv[2], NC_WRITE, &ncid);
                 double ener=test.energy(), mass=test.mass(), diff=test.mass_diffusion(), dEdt=test.energy_diffusion();

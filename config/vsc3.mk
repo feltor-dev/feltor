@@ -10,6 +10,7 @@ MPICC=mpiicc
 OPT=-O3 -xHost
 MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
 OMPFLAG=-openmp
+JSONLIB=-L$(HOME)/include/json/../../src/lib_json -ljsoncpp # json library for input parameters
 LIBS    +=-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/lib -lhdf5 -lhdf5_hl
 LIBS    +=-L/cm/shared/apps/intel-cluster-studio/composer_xe_2013_sp1.2.144/compiler/lib/intel64 -lirc -lsvml
 LIBS    += -L/cm/shared/apps/intel/impi_5.0.3/intel64/lib -lmpi
