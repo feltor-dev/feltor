@@ -211,7 +211,7 @@ struct Fpsi
             dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
             r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
             xr[0] = -psipR(r[0],z[0]), xz[0] = -psipZ(r[0],z[0]);
-            //std::cout <<end[0]<<" "<< end[1] <<"\n";
+            std::cout <<end[0]<<" "<< end[1] <<"\n";
             for( unsigned i=1; i<n*N; i++)
             {
                 temp = end;
@@ -298,7 +298,7 @@ struct RingGrid3d : public dg::Grid3d<double>
      * @param bcx The boundary condition in x (y,z are periodic)
      */
     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-        dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+        dg::Grid3d<double>( 0., 1., 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         assert( bcx == dg::PER|| bcx == dg::DIR);
         flux::detail::Fpsi fpsi( gp, psi_0);
@@ -337,6 +337,7 @@ struct RingGrid3d : public dg::Grid3d<double>
                 x0 = x_vec[i-1], x1 = x_vec[i];
                 dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
                 psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
+// 		std::cout << f_x_[i] << std::endl;
             }
             //temp = end;
             //dg::stepperRK6(fpsiMinv_, temp, end, x1, this->x1(),N);
@@ -349,16 +350,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         construct_rz( gp, psi_0, psi_x);
         construct_metric();
     }
-    //produces segmentation fault!
-//     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-//         dg::Grid3d<double>( psi_0, psi_1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
-//     { 
-//         assert( bcx == dg::PER|| bcx == dg::DIR);
-//         dg::Grid1d<double> g1d_(  psi_0, psi_1, n, Nx, bcx);
-//         thrust::host_vector<double> psi_x = dg::evaluate( dg::coo1, g1d_);
-//         construct_rz( gp, psi_0, psi_x);
-//         construct_metric();
-//     }
+
 
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     thrust::host_vector<double> x()const{
