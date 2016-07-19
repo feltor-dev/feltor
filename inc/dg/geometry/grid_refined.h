@@ -2,6 +2,7 @@
 
 #include "dg/backend/grid.h"
 #include "dg/backend/interpolation.cuh"
+#include "cusp/transpose.h"
 
 
 namespace dg
@@ -40,29 +41,48 @@ namespace detail
  * @param n number of polynomial coefficients in the grid
  * @param Nx original number of cells
  * @param side 0 is left-side, 1 is right-side, rest is both sides
+ * @param idx (write-only) contains indices of corresponding grid points in associated grid if cell is not refined (-1 if the cell is refined)
  *
  * @return A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
  */
-thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned n, unsigned Nx, int side)
+thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned n, unsigned Nx_old, int side, thrust::host_vector<int>& idx)
 {
-    thrust::host_vector< double> left( n*(Nx+add_x), 1), right(left);
+    //there are add_x+1 finer cells per refined cell ...
+    thrust::host_vector< double> left( n*(Nx_old+add_x), 1), right(left);
+    thrust::host_vector<int> i_left( n*(Nx_old+add_x), -1), i_right(i_left);
     for( unsigned k=0; k<n; k++)//the original cell and the additional ones
         left[k] = pow( 2, add_x);
     for( unsigned i=0; i<add_x; i++) 
     for( unsigned k=0; k<n; k++)
         left[(i+1)*n+k] = pow( 2, add_x-i);
+    for( int i=(int)n*(add_x+1); i<(int)i_left.size(); i++)
+        i_left[i] = i-n*add_x;
     //mirror left into right
     for( unsigned i=0; i<right.size(); i++)
         right[i] = left[ (left.size()-1)-i];
-    thrust::host_vector< double> both( n*(Nx+2*add_x), 1);
+    for( int i=0; i<(int)(i_right.size()-n*(add_x+1)); i++)
+        i_right[i] = i;
+    thrust::host_vector< double> both( n*(Nx_old+2*add_x), 1);
+    thrust::host_vector< int> i_both(both.size(), -1);
     for( unsigned i=0; i<left.size(); i++)
         both[i] *= left[i];
     for( unsigned i=0; i<right.size(); i++)
         both[i+n*add_x] *= right[i];
+
+    for( int i=(int)(n*(add_x+1)); i<(int)(i_both.size()-n*(add_x+1)); i++)
+        i_both[i] = i-n*add_x;
+
     if( side == 0)
+    {
+        idx = i_left;
         return left;
+    }
     else if( side == 1)
+    {
+        idx = i_right;
         return right;
+    }
+    idx = i_both;
     return both;
 }
 
@@ -100,16 +120,74 @@ struct Grid2d : public dg::Grid2d<double>
         dg::Grid2d<double>( x0, x1, y0, y1, n, n_new(Nx, add_x, bcx), n_new(Ny, add_y, bcy), bcx, bcy), 
         g_assoc_( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy)
     {
-        thrust::host_vector< double> wx2d = dg::evaluate( dg::one, *this), wy2d(wx2d);
-        for( unsigned i=0; i<this->Ny(); i++)
-        for( unsigned k=0; k<this->n(); k++)
-        for( unsigned j=0; j<this->Nx(); j++)
-        for( unsigned l=0; l<this->n(); l++)
+        wx_.resize( this->size()), wy_.resize( this->size());
+        absX_.resize( this->size()), absY_.resize( this->size());
+        thrust::host_vector<double> weightsX, weightsY, absX, absY;
+        thrust::host_vector<int> idxX, idxY;
+        if( bcx != dg::PER && bcy != dg::PER)
         {
-
+            if( c == CORNER_LL)
+            {
+                 weightsX = detail::exponential_ref( add_x, n, Nx, 0, idxX);
+                 weightsY = detail::exponential_ref( add_y, n, Ny, 1, idxY);
+            }
+            else if( c == CORNER_LR)
+            {
+                 weightsX = detail::exponential_ref( add_x, n, Nx, 1, idxX);
+                 weightsY = detail::exponential_ref( add_y, n, Ny, 1, idxY);
+            }
+            else if( c == CORNER_UR)
+            {
+                 weightsX = detail::exponential_ref( add_x, n, Nx, 1, idxX);
+                 weightsY = detail::exponential_ref( add_y, n, Ny, 0, idxY);
+            }
+            else if( c == CORNER_UL)
+            {
+                 weightsX = detail::exponential_ref( add_x, n, Nx, 0, idxX);
+                 weightsY = detail::exponential_ref( add_y, n, Ny, 0, idxY);
+            }
         }
-
-
+        else if( bcx == dg::PER && bcy != dg::PER)
+        {
+            if( c == CORNER_LL || c == CORNER_LR)
+            {
+                 weightsX = detail::exponential_ref( add_x, n, Nx, 2, idxX);
+                 weightsY = detail::exponential_ref( add_y, n, Ny, 1, idxY);
+            }
+            else if( c == CORNER_UL || c == CORNER_UR)
+            {
+                 weightsX = detail::exponential_ref( add_x, n, Nx, 2, idxX);
+                 weightsY = detail::exponential_ref( add_y, n, Ny, 0, idxY);
+            }
+        }
+        else if( bcx != dg::PER && bcy == dg::PER)
+        {
+            if( c == CORNER_LL || c == CORNER_UL)
+            {
+                 weightsX = detail::exponential_ref( add_x, n, Nx, 0, idxX);
+                 weightsY = detail::exponential_ref( add_y, n, Ny, 2, idxY);
+            }
+            else if( c == CORNER_UR || c == CORNER_LR)
+            {
+                 weightsX = detail::exponential_ref( add_x, n, Nx, 1, idxX);
+                 weightsY = detail::exponential_ref( add_y, n, Ny, 2, idxY);
+            }
+        }
+        else if( bcx == dg::PER && bcy == dg::PER)
+        {
+            weightsX = detail::exponential_ref( add_x, n, Nx, 2, idxX);
+            weightsY = detail::exponential_ref( add_y, n, Ny, 2, idxY);
+        }
+        absX = detail::ref_abscissas( x0, x1, n, n_new( Nx, add_x, bcx), weightsX);
+        absY = detail::ref_abscissas( y0, y1, n, n_new( Ny, add_y, bcy), weightsY);
+        for( unsigned i=0; i<weightsY.size(); i++)
+        for( unsigned j=0; j<weightsX.size(); j++)
+        {
+            wx_[i*weightsX.size()+j] = weightsX[j];
+            wy_[i*weightsX.size()+j] = weightsY[i];
+            absX_[i*weightsX.size()+j] = absX[j];
+            absY_[i*weightsX.size()+j] = absY[i];
+        }
 
 
     }
@@ -121,8 +199,9 @@ struct Grid2d : public dg::Grid2d<double>
         if( bc == dg::PER) return N + 2*factor; 
         return N + factor;
     }
-    thrust::host_vector<double> wx_, wy_;
-    std::vector<bool> coincide_;
+    thrust::host_vector<double> wx_, wy_; //weights
+    thrust::host_vector<double> absX_, absY_; //abscissas 
+    thrust::host_vector<int> assocX_, assocY_;//indices of associated grid points
     dg::Grid2d<double> g_assoc_;
 };
 
@@ -134,19 +213,21 @@ struct Grid3d : public dg::Grid3d<double>
 }//namespace refined
 
 
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_new, const dg::Grid2d<double>& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_fine, const dg::Grid2d<double>& g_coarse)
 {
     //assert( g_new.associated() == g_old); //make sure the associated grid is the same
     return cusp::coo_matrix<int, double, cusp::host_memory>();
 
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::Grid2d<double>& g_new, const dg::refined::Grid2d& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::Grid2d<double>& g_coarse, const dg::refined::Grid2d& g_fine)
 {
     //assert( g_new == g_old.associated());
-    return cusp::coo_matrix<int, double, cusp::host_memory>();
-
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine, g_coarse), A;
+    cusp::transpose( temp, A);
+    return A;
 }
+
 cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::refined::Grid2d& g)
 {
     return cusp::coo_matrix<int, double, cusp::host_memory>();
