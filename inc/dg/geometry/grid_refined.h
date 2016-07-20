@@ -50,6 +50,13 @@ thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned n, unsigne
     //there are add_x+1 finer cells per refined cell ...
     thrust::host_vector< double> left( n*(Nx_old+add_x), 1), right(left);
     thrust::host_vector<int> i_left( n*(Nx_old+add_x), -1), i_right(i_left);
+    if( add_x == 0)
+    {
+        idx.resize( n*Nx_old);
+        for( unsigned i=0; i<n*Nx_old; i++)
+            idx[i] = i;
+        return left;
+    }
     for( unsigned k=0; k<n; k++)//the original cell and the additional ones
         left[k] = pow( 2, add_x);
     for( unsigned i=0; i<add_x; i++) 
@@ -116,8 +123,25 @@ thrust::host_vector<double> ref_abscissas( double x0, double x1, unsigned n, uns
  */
 struct Grid2d : public dg::Grid2d<double>
 {
-    Grid2d( corner c, unsigned add_x, unsigned add_y, double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER): 
-        dg::Grid2d<double>( x0, x1, y0, y1, n, n_new(Nx, add_x, bcx), n_new(Ny, add_y, bcy), bcx, bcy), 
+    /**
+     * @brief Refine a corner of a grid
+     *
+     * @param c
+     * @param add_x Add number of cells to the existing one
+     * @param add_y Add number of cells to the existing one
+     * @param x0
+     * @param x1
+     * @param y0
+     * @param y1
+     * @param n
+     * @param Nx
+     * @param Ny
+     * @param bcx
+     * @param bcy
+     */
+    Grid2d( corner c, unsigned add_x, unsigned add_y, 
+            double x0, double x1, double y0, double y1, 
+            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d<double>( x0, x1, y0, y1, n, n_new(Nx, add_x, bcx), n_new(Ny, add_y, bcy), bcx, bcy), 
         g_assoc_( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy)
     {
         wx_.resize( this->size()), wy_.resize( this->size());
@@ -187,11 +211,56 @@ struct Grid2d : public dg::Grid2d<double>
             wy_[i*weightsX.size()+j] = weightsY[i];
             absX_[i*weightsX.size()+j] = absX[j];
             absY_[i*weightsX.size()+j] = absY[i];
+            assocX_[i*weightsX.size()+j] = idxX[j];
+            assocY_[i*weightsX.size()+j] = idxX[i];
         }
-
-
+        //normalize weights
+        dg::blas1::scal( wx_, (double)Nx/(double)this->Nx() );
+        dg::blas1::scal( wy_, (double)Ny/(double)this->Ny() );
     }
+
+    /**
+     * @brief The grid that this object refines
+     *
+     * @return  2d grid
+     */
     dg::Grid2d<double> associated()const {return g_assoc_;}
+    /**
+     * @brief Return the abscissas in X-direction 
+     *
+     * @return A 2d vector
+     */
+    const thrust::host_vector<double>& abscissasX() const {return absX_;} 
+    /**
+     * @brief Return the abscissas in Y-direction 
+     *
+     * @return A 2d vector
+     */
+    const thrust::host_vector<double>& abscissasY() const {return absY_;} 
+    /**
+     * @brief Return the weights in X-direction 
+     *
+     * @return A 2d vector
+     */
+    const thrust::host_vector<double>& weightsX() const {return wx_;} 
+    /**
+     * @brief Return the weights in Y-direction 
+     *
+     * @return A 2d vector
+     */
+    const thrust::host_vector<double>& weightsY() const {return wy_;} 
+    /**
+     * @brief Return the X-indices (1d) of grid points in the old grid that correspond to points in the fine grid
+     *
+     * @return vector with -1 if the x-coordinate is refined and idx if the point is not 
+     */
+    const thrust::host_vector<int>& idxX() const {return assocX_;} 
+    /**
+     * @brief Return the Y-indices (1d) of grid points in the old grid that correspond to points in the fine grid
+     *
+     * @return vector with -1 if the y-coordinate is refined and idx if the point is not 
+     */
+    const thrust::host_vector<int>& idxY() const {return assocY_;} 
 
     private:
     unsigned n_new( unsigned N, unsigned factor, dg::bc bc)
@@ -213,17 +282,131 @@ struct Grid3d : public dg::Grid3d<double>
 }//namespace refined
 
 
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_fine, const dg::Grid2d<double>& g_coarse)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_fine)
 {
-    //assert( g_new.associated() == g_old); //make sure the associated grid is the same
-    return cusp::coo_matrix<int, double, cusp::host_memory>();
+    dg::Grid2d<double> g = g_fine.associated();
+    //determine number of refined cells
+    thrust::host_vector<int> idxX = g_fine.idxX();
+    thrust::host_vector<int> idxY = g_fine.idxY();
+    thrust::host_vector<double> x = g_fine.abscissasX();
+    thrust::host_vector<double> y = g_fine.abscissasY();
+    //const unsigned n = g_fine.n();
+    //unsigned num_nonzeroes=0;
+    //for( unsigned i=0; i<idxX.size(); i++)
+    //{
+    //    if( idxX[i] < 0 && idxY[i] < 0)
+    //        num_nonzeroes += n*n;
+    //    else if( (idxX[i] < 0 && idxY[i] >= 0 ) || (idxX[i] >= 0 && idxY[i] < 0) ) 
+    //        num_nonzeroes += n;
+    //    else
+    //        num_nonzeroes += 1;
+    //}
+    //cusp::coo_matrix<int, double, cusp::host_memory> A( g.size(), g_coarse.size(), num_nonzeroes);
+    std::vector<double> gauss_nodes = g.dlt().abscissas(); 
+    dg::Operator<double> forward( g.dlt().forward());
+    cusp::array1d<double, cusp::host_memory> values;
+    cusp::array1d<int, cusp::host_memory> row_indices;
+    cusp::array1d<int, cusp::host_memory> column_indices;
+
+    for( unsigned i=0; i<x.size(); i++)
+    {
+        double xnn = (x[i]-g.x0())/g.hx();
+        double ynn = (y[i]-g.y0())/g.hy();
+        unsigned nn = (unsigned)floor(xnn);
+        unsigned mm = (unsigned)floor(ynn);
+        //determine normalized coordinates
+        double xn =  2.*xnn - (double)(2*nn+1); 
+        double yn =  2.*ynn - (double)(2*mm+1); 
+        //interval correction
+        if (nn==g.Nx()) {
+            nn-=1;
+            xn = 1.;
+        }
+        if (mm==g.Ny()) {
+            mm-=1;
+            yn =1.;
+        }
+        //Test if the point is a Gauss point since then no interpolation is needed
+        int idxX = idxY = -1;
+        for( unsigned k=0; k<g.n(); k++)
+        {
+            if( fabs( xn - gauss_nodes[k]) < 1e-14)
+                idxX = nn*g.n() + k; //determine which grid line it is
+            if( fabs( yn - gauss_nodes[k]) < 1e-14)
+                idxY = mm*g.n() + k;
+        }
+        if( idxX < 0 && idxY < 0 ) //there is no corresponding point
+        {
+            //evaluate 2d Legendre polynomials at (xn, yn)...
+            std::vector<double> px = detail::coefficients( xn, g.n()), 
+                                py = detail::coefficients( yn, g.n());
+            std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                {
+                    pxF[l]+= px[k]*forward(k,l);
+                    pyF[l]+= py[k]*forward(k,l);
+                }
+            std::vector<double> pxy( g.n()*g.n());
+            //these are the matrix coefficients with which to multiply 
+            for(unsigned k=0; k<pyF.size(); k++)
+                for( unsigned l=0; l<pxF.size(); l++)
+                    pxy[k*px.size()+l]= pyF[k]*pxF[l];
+            for( unsigned k=0; k<g.n(); k++)
+                for( unsigned l=0; l<g.n(); l++)
+                {
+                    A.row_indices.append( i);
+                    A.column_indices.append( (mm*g.n()+k)*n*g.Nx() + nn*g.n() + l);
+                    A.values.append( pxy[k*g.n()+l]);
+                }
+        }
+        else if ( idxX < 0 && idxY >=0) //there is a corresponding line
+        {
+            std::vector<double> px = detail::coefficients( xn, g.n());
+            std::vector<double> pxF(g.n(),0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                    pxF[l]+= px[k]*forward(k,l);
+            for( unsigned l=0; l<g.n(); l++)
+            {
+                row_indices.append( i);
+                column_indices.append( (idxY)*g.Nx()*g.n() + nn*g.n() + l);
+                values.append( pxF[l]);
+            }
+        }
+        else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
+        {
+            std::vector<double> py = detail::coefficients( yn, g.n());
+            std::vector<double> pyF(g.n(),0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                    pyF[l]+= py[k]*forward(k,l);
+            for( unsigned k=0; k<g.n(); k++)
+            {
+                row_indices.append(i);
+                column_indices.append((m*g.n()+k)*g.Nx()*g.n() + idxX);
+                values.append(pyF[k]);
+            }
+        }
+        else //the point already exists
+        {
+            row_indices.append(i);
+            column_indices.append(idxY*g.Nx()*g.n() + idxX); 
+            values.append(1.);
+        }
+
+    }
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), values.size());
+    A.row_indices = row_indices; A.column_indices = colum_indices; A.values = values;
+
+    
+    return A;
 
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::Grid2d<double>& g_coarse, const dg::refined::Grid2d& g_fine)
+cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::Grid2d& g_fine)
 {
-    //assert( g_new == g_old.associated());
-    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine, g_coarse), A;
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
     cusp::transpose( temp, A);
     return A;
 }

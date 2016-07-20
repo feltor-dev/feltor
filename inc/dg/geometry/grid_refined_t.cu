@@ -8,6 +8,7 @@ int main ()
     std::cout<< "BOTH SIDES:\n";
     thrust::host_vector<double> left, right, both, left_abs, right_abs, both_abs;
     thrust::host_vector<int> i_both, i_left, i_right;
+    //don't forget to test the case add_x = 0 once in a while!
     both = dg::refined::detail::exponential_ref( 3, 2, 5, 2, i_both);
     both_abs = dg::refined::detail::ref_abscissas( 10, 20, 2, 11, both);
     double sum = 0;

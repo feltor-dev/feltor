@@ -31,7 +31,7 @@ class DLT
      */
     const std::vector<T>& weights()const {return w_;}
     /**
-     * @brief Return Gauss-Legendre nodes
+     * @brief Return Gauss-Legendre nodes on the interval [-1,1]
      *
      * @return nodes
      */
