@@ -74,6 +74,7 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+
     dg::CONSTANT prof(p.bgprofamp );
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
    
@@ -116,6 +117,11 @@ int main( int argc, char* argv[])
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
         dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg 
+	
+	//for ne=ni=1
+	dg::blas1::scal(y0[0], 0.); // =ne-bg
+        dg::blas1::scal(y0[1], 0.); // =ne-bg
+
     }
     std::cout << "Done!\n";
 
