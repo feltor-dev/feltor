@@ -310,20 +310,6 @@ struct Field
     /**
      * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
      \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
-     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I} \hat{R}_0}  \f]
-     */ 
-    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp) const
-    {
-        for( unsigned i=0; i<y[0].size(); i++)
-        {
-            yp[2][i] =  y[0][i]*y[0][i]/invB_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i])/gp_.R_0;//ds/dphi =  R^2 B/I/R_0_hat
-            yp[0][i] =  y[0][i]*psipZ_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]);               //dR/dphi =  R/I Psip_Z
-            yp[1][i] = -y[0][i]*psipR_(y[0][i],y[1][i])/ipol_(y[0][i],y[1][i]) ;              //dZ/dphi = -R/I Psip_R
-        }
-    }
-    /**
-     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
-     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
      \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
      */ 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
@@ -353,6 +339,22 @@ struct Field
         return invB_(R,Z,phi);
 
 //         return invB_(R,Z,phi)*invB_(R,Z,phi)*ipol_(R,Z,phi)*gp_.R_0/R;
+    }
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2]) ) 
+        {
+            return false;
+        }
+        //if new integrated point outside domain
+        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        {
+            return false;
+        }
+        return true;
     }
     
     private:

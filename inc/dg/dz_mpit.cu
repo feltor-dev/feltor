@@ -36,11 +36,11 @@ int main(int argc, char **argv)
     MPI_Init(&argc, &argv);
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( dg::PER, dg::PER, dg::NEU, n, Nx, Ny, Nz, comm);
+    mpi_init3d( dg::DIR, dg::DIR, dg::NEU, n, Nx, Ny, Nz, comm);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    dg::CartesianMPIGrid3d g3d( 0, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU, comm);
-    dg::CartesianMPIGrid2d perp_grid( 0, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR, comm);
+    dg::CartesianMPIGrid3d g3d( -1, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU, comm);
+    dg::CartesianMPIGrid2d perp_grid( -1, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR, comm);
     const dg::MDVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
@@ -48,6 +48,7 @@ int main(int argc, char **argv)
 
     dg::MDDS ds ( dsFA, dg::DefaultField(), dg::not_normed, dg::centered);
     t.toc();
+    if(rank==0)std::cout << "TEST STRAIGHT FIELD LINES AND BOUNDARIES IN Z\n";
     if(rank==0)std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
     dg::MDVec function = dg::evaluate( func, g3d), derivative(function);

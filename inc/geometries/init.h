@@ -374,8 +374,8 @@ struct Nprofile
      */
    double operator( )(double R, double Z)
     {
-        if (psip_(R,Z)<gp_.psipmax) 
-            return bgamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*namp);
+        if (psip_(R,Z)<gp_.psipmax) return bgamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*namp);
+	if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return bgamp;
         return bgamp;
     }
     /**

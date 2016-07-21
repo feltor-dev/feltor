@@ -218,8 +218,9 @@ struct Fpsi
             eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
             dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
             r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
-            xr[0] = -psipR(r[0],z[0])/deltapsi, xz[0] = -psipZ(r[0],z[0])/deltapsi;
-            //std::cout <<end[0]<<" "<< end[1] <<"\n";
+            xr[0] = -psipR(r[0],z[0]), xz[0] = -psipZ(r[0],z[0]);
+            std::cout <<end[0]<<" "<< end[1] <<"\n";
+
             for( unsigned i=1; i<n*N; i++)
             {
                 temp = end;
@@ -308,7 +309,7 @@ struct RingGrid3d : public dg::Grid3d<double>
      * @param bcx The boundary condition in x (y,z are periodic)
      */
     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-        dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+        dg::Grid3d<double>( 0., 1., 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         assert( bcx == dg::PER|| bcx == dg::DIR);
         double deltapsi= psi_0-psi_1;
@@ -349,6 +350,7 @@ struct RingGrid3d : public dg::Grid3d<double>
                 x0 = x_vec[i-1], x1 = x_vec[i];
                 dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
                 psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
+// 		std::cout << f_x_[i] << std::endl;
             }
             //temp = end;
             //dg::stepperRK6(fpsiMinv_, temp, end, x1, this->x1(),N);
@@ -556,6 +558,22 @@ struct Field
      * @brief == operator()(R,Z)
      */ 
     double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        //compute error in x,y,s
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( isnan(end[1]) || isnan(end[2]) || isnan(end[3])||isnan( end[4]) ) 
+        {
+            return false;
+        }
+        if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
+        {
+            return false;
+        }
+        return true;
+    }
     
     private:
     double find_fx(double x) 

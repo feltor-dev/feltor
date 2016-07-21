@@ -8,7 +8,7 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../         # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
-all: feltor feltor_hpc
+all: feltor feltor_hpc 
 
 feltor: feltor.cu feltor.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 

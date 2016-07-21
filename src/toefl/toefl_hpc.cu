@@ -139,6 +139,7 @@ int main( int argc, char* argv[])
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
             }
             time+=p.dt;
+            Estart[0] += 1;
             {
                 err = nc_open(argv[2], NC_WRITE, &ncid);
                 double ener=test.energy(), mass=test.mass(), diff=test.mass_diffusion(), dEdt=test.energy_diffusion();
