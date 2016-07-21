@@ -126,76 +126,129 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d<double>& g , dg::bc globalbcz = dg::NEU)
 {
     assert( x.size() == y.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
-
+    std::vector<double> gauss_nodes = g.dlt().abscissas(); 
     dg::Operator<double> forward( g.dlt().forward());
-    int number = 0;
-    for( unsigned i=0; i<x.size(); i++)
+    cusp::array1d<double, cusp::host_memory> values;
+    cusp::array1d<int, cusp::host_memory> row_indices;
+    cusp::array1d<int, cusp::host_memory> column_indices;
+
+    for( int i=0; i<(int)x.size(); i++)
     {
+        //assert that point is inside the grid boundaries
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
             std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
         }
-        
         assert(x[i] >= g.x0() && x[i] <= g.x1());
-        
         if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
             std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
         }
         assert( y[i] >= g.y0() && y[i] <= g.y1());
 
         //determine which cell (x,y) lies in 
-
         double xnn = (x[i]-g.x0())/g.hx();
         double ynn = (y[i]-g.y0())/g.hy();
-        unsigned n = (unsigned)floor(xnn);
-        unsigned m = (unsigned)floor(ynn);
+        unsigned nn = (unsigned)floor(xnn);
+        unsigned mm = (unsigned)floor(ynn);
         //determine normalized coordinates
-
-        double xn =  2.*xnn - (double)(2*n+1); 
-        double yn =  2.*ynn - (double)(2*m+1); 
+        double xn =  2.*xnn - (double)(2*nn+1); 
+        double yn =  2.*ynn - (double)(2*mm+1); 
         //interval correction
-        if (n==g.Nx()) {
-            n-=1;
+        if (nn==g.Nx()) {
+            nn-=1;
             xn = 1.;
         }
-        if (m==g.Ny()) {
-            m-=1;
+        if (mm==g.Ny()) {
+            mm-=1;
             yn =1.;
         }
-
-
-        //evaluate 2d Legendre polynomials at (xn, yn)...
-        std::vector<double> px = detail::coefficients( xn, g.n()), 
-                            py = detail::coefficients( yn, g.n());
-        std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
-        for( unsigned l=0; l<g.n(); l++)
-            for( unsigned k=0; k<g.n(); k++)
-            {
-                pxF[l]+= px[k]*forward(k,l);
-                pyF[l]+= py[k]*forward(k,l);
-            }
-        std::vector<double> pxy( g.n()*g.n());
-        //these are the matrix coefficients with which to multiply 
-        for(unsigned k=0; k<pyF.size(); k++)
-            for( unsigned l=0; l<pxF.size(); l++)
-                pxy[k*px.size()+l]= pyF[k]*pxF[l];
-        if (globalbcz == dg::DIR)
+        //Test if the point is a Gauss point since then no interpolation is needed
+        int idxX =-1, idxY = -1;
+        for( unsigned k=0; k<g.n(); k++)
         {
-            if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
-//             if ( fabs(x[i]-g.x0())<1e-10 || fabs(x[i]-g.x1())<1e-10  || fabs(y[i]-g.y0())<1e-10  || fabs(y[i]-g.y1())<1e-10)
+            if( fabs( xn - gauss_nodes[k]) < 1e-14)
+                idxX = nn*g.n() + k; //determine which grid column it is
+            if( fabs( yn - gauss_nodes[k]) < 1e-14)
+                idxY = mm*g.n() + k;  //determine grid line
+        }
+        if( idxX < 0 && idxY < 0 ) //there is no corresponding point
+        {
+            //evaluate 2d Legendre polynomials at (xn, yn)...
+            std::vector<double> px = detail::coefficients( xn, g.n()), 
+                                py = detail::coefficients( yn, g.n());
+            std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                {
+                    pxF[l]+= px[k]*forward(k,l);
+                    pyF[l]+= py[k]*forward(k,l);
+                }
+            std::vector<double> pxy( g.n()*g.n());
+            //these are the matrix coefficients with which to multiply 
+            for(unsigned k=0; k<pyF.size(); k++)
+                for( unsigned l=0; l<pxF.size(); l++)
+                    pxy[k*px.size()+l]= pyF[k]*pxF[l];
+            if (globalbcz == dg::DIR)
             {
-                //zeroe boundary values 
-                for(unsigned k=0; k<py.size(); k++)
-                for( unsigned l=0; l<px.size(); l++)
-                    pxy[k*px.size()+l]= 0; 
+                if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
+    //             if ( fabs(x[i]-g.x0())<1e-10 || fabs(x[i]-g.x1())<1e-10  || fabs(y[i]-g.y0())<1e-10  || fabs(y[i]-g.y1())<1e-10)
+                {
+                    //zeroe boundary values 
+                    for(unsigned k=0; k<py.size(); k++)
+                    for( unsigned l=0; l<px.size(); l++)
+                        pxy[k*px.size()+l]= 0; 
+                }
+            }
+            for( unsigned k=0; k<g.n(); k++)
+                for( unsigned l=0; l<g.n(); l++)
+                {
+                    row_indices.push_back( i);
+                    column_indices.push_back( (mm*g.n()+k)*g.n()*g.Nx()+nn*g.n() + l);
+                    values.push_back( pxy[k*g.n()+l]);
+                }
+        }
+        else if ( idxX < 0 && idxY >=0) //there is a corresponding line
+        {
+            std::vector<double> px = detail::coefficients( xn, g.n());
+            std::vector<double> pxF(g.n(),0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                    pxF[l]+= px[k]*forward(k,l);
+            for( unsigned l=0; l<g.n(); l++)
+            {
+                row_indices.push_back( i);
+                column_indices.push_back( (idxY)*g.Nx()*g.n() + nn*g.n() + l);
+                values.push_back( pxF[l]);
             }
         }
-        unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
-        detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxy); 
+        else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
+        {
+            std::vector<double> py = detail::coefficients( yn, g.n());
+            std::vector<double> pyF(g.n(),0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                    pyF[l]+= py[k]*forward(k,l);
+            for( unsigned k=0; k<g.n(); k++)
+            {
+                row_indices.push_back(i);
+                column_indices.push_back((mm*g.n()+k)*g.Nx()*g.n() + idxX);
+                values.push_back(pyF[k]);
+            }
+        }
+        else //the point already exists
+        {
+            row_indices.push_back(i);
+            column_indices.push_back(idxY*g.Nx()*g.n() + idxX); 
+            values.push_back(1.);
+        }
+
     }
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), values.size());
+    A.row_indices = row_indices; A.column_indices = column_indices; A.values = values;
+
     if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
     if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
     if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
+    
     return A;
 }
 
@@ -204,7 +257,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * The matrix, when applied to a vector, interpolates its values to the given coordinates
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates. In z-direction only a nearest neighbor interpolation is used
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
@@ -218,85 +271,134 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
-    //assert( z.size() == g.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n()*g.n());
-
+    std::vector<double> gauss_nodes = g.dlt().abscissas(); 
     dg::Operator<double> forward( g.dlt().forward());
-    int number = 0;
-    for( unsigned i=0; i<x.size(); i++)
+    cusp::array1d<double, cusp::host_memory> values;
+    cusp::array1d<int, cusp::host_memory> row_indices;
+    cusp::array1d<int, cusp::host_memory> column_indices;
+
+    for( int i=0; i<(int)x.size(); i++)
     {
+        //assert that point is inside the grid boundaries
         if (!(x[i] >= g.x0() && x[i] <= g.x1())) {
             std::cerr << g.x0()<<"< xi = " << x[i] <<" < "<<g.x1()<<std::endl;
-        }
-        assert(x[i] >= g.x0() && x[i] <= g.x1());
-        
+        } assert(x[i] >= g.x0() && x[i] <= g.x1());
         if (!(y[i] >= g.y0() && y[i] <= g.y1())) {
             std::cerr << g.y0()<<"< yi = " << y[i] <<" < "<<g.y1()<<std::endl;
-        }
-        assert( y[i] >= g.y0() && y[i] <= g.y1());
+        } assert( y[i] >= g.y0() && y[i] <= g.y1());
         if (!(z[i] >= g.z0() && z[i] <= g.z1())) {
             std::cerr << g.z0()<<"< zi = " << z[i] <<" < "<<g.z1()<<std::endl;
-        }
-        assert( z[i] >= g.z0() && z[i] <= g.z1());
+        } assert( z[i] >= g.z0() && z[i] <= g.z1());
 
         //determine which cell (x,y) lies in 
         double xnn = (x[i]-g.x0())/g.hx();
         double ynn = (y[i]-g.y0())/g.hy();
         double znn = (z[i]-g.z0())/g.hz();
-        unsigned n = (unsigned)floor(xnn);
-        unsigned m = (unsigned)floor(ynn);
-        unsigned l = (unsigned)floor(znn);
-        //n=(n==g.Nx()) ? n-1 :n;
-        //m=(m==g.Ny()) ? m-1 :m;
-        //l=(l==g.Nz()) ? l-1 :l;
-
+        unsigned nn = (unsigned)floor(xnn);
+        unsigned mm = (unsigned)floor(ynn);
+        unsigned ll = (unsigned)floor(znn);
         //determine normalized coordinates
-        double xn = 2.*xnn - (double)(2*n+1); 
-        double yn = 2.*ynn - (double)(2*m+1); 
-        double zn = 2.*znn - (double)(2*l+1); 
-        if (n==g.Nx()) {
-            n-=1;
+        double xn = 2.*xnn - (double)(2*nn+1); 
+        double yn = 2.*ynn - (double)(2*mm+1); 
+        //interval correction
+        if (nn==g.Nx()) {
+            nn-=1;
             xn = 1.;
         }
-        if (m==g.Ny()) {
-            m-=1;
+        if (mm==g.Ny()) {
+            mm-=1;
             yn =1.;
         }
-         if (l==g.Nz()) {
-            l-=1;
-            zn =1.;
+        if (ll==g.Nz()) {
+            ll-=1;
         }
-        //evaluate 2d Legendre polynomials at (xn, yn)...
-        std::vector<double> px = detail::coefficients( xn, g.n()), 
-                            py = detail::coefficients( yn, g.n()),
-                            pz = detail::coefficients( zn, 1 );
-        std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
-        for( unsigned l=0; l<g.n(); l++)
+        //Test if the point is a Gauss point since then no interpolation is needed
+        int idxX =-1, idxY = -1;
+        for( unsigned k=0; k<g.n(); k++)
+        {
+            if( fabs( xn - gauss_nodes[k]) < 1e-14)
+                idxX = nn*g.n() + k; //determine which grid column it is
+            if( fabs( yn - gauss_nodes[k]) < 1e-14)
+                idxY = mm*g.n() + k;  //determine grid line
+        } //in z-direction we don't interpolate
+        if( idxX < 0 && idxY < 0 ) //there is no corresponding point
+        {
+            //evaluate 2d Legendre polynomials at (xn, yn)...
+            std::vector<double> px = detail::coefficients( xn, g.n()), 
+                                py = detail::coefficients( yn, g.n());
+            std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                {
+                    pxF[l]+= px[k]*forward(k,l);
+                    pyF[l]+= py[k]*forward(k,l);
+                }
+            std::vector<double> pxyz( g.n()*g.n());
+            //these are the matrix coefficients with which to multiply 
+            for(unsigned k=0; k<pyF.size(); k++)
+                for( unsigned l=0; l<pxF.size(); l++)
+                    pxyz[k*g.n()+l]= 1.*pyF[k]*pxF[l];
+            if (globalbcz == dg::DIR)
+            {
+                if ( x[i]==g.x0() || x[i]==g.x1()  ||y[i]==g.y0()  || y[i]==g.y1())
+                {
+                    //zeroe boundary values 
+                    for(unsigned k=0; k<g.n(); k++)
+                    for(unsigned l=0; l<g.n(); l++)
+                        pxyz[k*g.n()+l]= 0; 
+                }
+            }
+            for( unsigned k=0; k<g.n(); k++)
+                for( unsigned l=0; l<g.n(); l++)
+                {
+                    row_indices.push_back( i);
+                    column_indices.push_back( ((ll*g.Ny()+mm)*g.n()+k)*g.n()*g.Nx()+nn*g.n() + l);
+                    values.push_back( pxyz[k*g.n()+l]);
+                }
+        }
+        else if ( idxX < 0 && idxY >=0) //there is a corresponding line
+        {
+            std::vector<double> px = detail::coefficients( xn, g.n());
+            std::vector<double> pxF(g.n(),0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                    pxF[l]+= px[k]*forward(k,l);
+            for( unsigned l=0; l<g.n(); l++)
+            {
+                row_indices.push_back( i);
+                column_indices.push_back( (ll*g.Ny()*g.n() + idxY)*g.Nx()*g.n() + nn*g.n() + l);
+                values.push_back( pxF[l]);
+            }
+        }
+        else if ( idxX >= 0 && idxY < 0) //there is a corresponding column
+        {
+            std::vector<double> py = detail::coefficients( yn, g.n());
+            std::vector<double> pyF(g.n(),0);
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                    pyF[l]+= py[k]*forward(k,l);
             for( unsigned k=0; k<g.n(); k++)
             {
-                pxF[l]+= px[k]*forward(k,l);
-                pyF[l]+= py[k]*forward(k,l);
-            }
-        std::vector<double> pxyz( g.n()*g.n());
-        for(unsigned k=0; k<g.n(); k++)
-            for( unsigned j=0; j<g.n(); j++)
-                pxyz[k*g.n()+j]= pz[0]*pyF[k]*pxF[j];
-
-        //...these are the matrix coefficients with which to multiply 
-        if (globalbcz == dg::DIR)
-        {
-            if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
-            {
-                //zeroe boundary values 
-                for(unsigned k=0; k<g.n(); k++)
-                    for( unsigned j=0; j<g.n(); j++)
-                        pxyz[k*g.n()+j]= 0;
+                row_indices.push_back(i);
+                column_indices.push_back(((ll*g.Ny()+mm)*g.n()+k)*g.Nx()*g.n() + idxX);
+                values.push_back(pyF[k]);
             }
         }
-        unsigned col_begin = ((l*g.Ny()+ m)*g.Nx()*g.n() + n)*g.n();
-        detail::add_line( A, number, i,  col_begin, g.n(), g.Nx(), pxyz);
-        //choose layout from comments
+        else //the point already exists
+        {
+            row_indices.push_back(i);
+            column_indices.push_back((ll*g.Ny()*g.n()+idxY)*g.Nx()*g.n() + idxX); 
+            values.push_back(1.);
+        }
+
     }
+    cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), values.size());
+    A.row_indices = row_indices; A.column_indices = column_indices; A.values = values;
+
+    if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
+    if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
+    if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
+    
     return A;
 }
 /**
@@ -395,7 +497,6 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
 /**
  * @brief Interpolate a single point
  *
- * The matrix, when applied to a vector, interpolates its values to the given coordinates
  * @param x X-coordinate of interpolation point
  * @param y Y-coordinate of interpolation point
  * @param v The vector to interpolate in LSPACE
