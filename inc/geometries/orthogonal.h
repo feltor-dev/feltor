@@ -219,13 +219,13 @@ struct Fpsi
         for( unsigned i=0; i<r.size(); i++)
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
-            //double psip2 = psipR*psipR+psipZ*psipZ;
+            double psip2 = psipR*psipR+psipZ*psipZ;
             //yr[i] = psipZ*f/psip2;
             //yz[i] = -psipR*f/psip2;
-            //yr[i] = psipZ*f/sqrt(psip2);
-            //yz[i] = -psipR*f/sqrt(psip2);
-            yr[i] = psipZ*f;
-            yz[i] = -psipR*f;
+            yr[i] = psipZ*f/sqrt(psip2);
+            yz[i] = -psipR*f/sqrt(psip2);
+            //yr[i] = psipZ*f;
+            //yz[i] = -psipR*f;
             //yr[i] = psipZ*f/r[i]/psip2;
             //yz[i] = -psipR*f/r[i]/psip2;
         }
@@ -408,7 +408,7 @@ struct RingGrid3d : public dg::Grid3d<double>
             //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
-        construct_rz( gp, psi_0, psi_x);
+        construct_rz( );
         construct_metric(gp);
     }
 
@@ -451,11 +451,9 @@ struct RingGrid3d : public dg::Grid3d<double>
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    //call the construct_rzy function for all psi_x and lift to 3d grid
-    //construct r,z,xr,xz,yr,yz,f_x
-    void construct_rz( const solovev::GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
+    void construct_rz( )
     {
-        //now lift to 3D grid
+        //lift to 3D grid
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         for( unsigned i=0; i<Nx; i++)
             f_x_[i] = -1./f_x_[i];
@@ -523,13 +521,8 @@ struct RingGrid2d : public dg::Grid2d<double>
     RingGrid2d( const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
-        orthogonal::detail::Fpsi fpsi( gp);
-        double x_1 = fpsi.find_x1(psi_0, psi_1);
-        if( x_1 > 0)
-            init_X_boundaries( 0., x_1);
-        else
-            init_X_boundaries( x_1, 0.);
         orthogonal::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
+        init_X_boundaries( g.x0(), g.x1());
         f_x_ = g.f1_x(), f_ = g.f1(), g_ = g.f2();
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
