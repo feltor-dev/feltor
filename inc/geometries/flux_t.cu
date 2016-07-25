@@ -120,11 +120,11 @@ int main( int argc, char* argv[])
     //compute and write deformation into netcdf
     dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
-    X=temp0;
+    X=g2d.g_yy();
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
     //compute and write conformalratio into netcdf
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
-    X=temp0;
+    X=g2d.g_xx();
     err = nc_put_var_double( ncid, confID, periodify(X, g2d_periodic).data());
 
     std::cout << "Construction successful!\n";
@@ -136,7 +136,9 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0); //temp0=1/g = g^xx g^yy - g^xy^2
     solovev::flux::FieldY fieldY(gp);
     dg::HVec fby = dg::pullback( fieldY, g2d);//?
-    dg::blas1::scal( fby, 1./gp.R_0);//=1/sqrt(g)
+    dg::blas1::pointwiseDot( f_, fby,fby);
+//         dg::blas1::scal( fby, 2.*M_PI);
+
     dg::blas1::pointwiseDot( fby, fby, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0); ////temp0= g_xx g_yy - g_xy^2 - g
     double error = sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1));

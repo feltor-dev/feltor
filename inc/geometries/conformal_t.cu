@@ -119,11 +119,12 @@ int main( int argc, char* argv[])
     //compute and write deformation into netcdf
     dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
-    X=temp0;
+    X=g2d.g_yy();
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
     //compute and write conformalratio into netcdf
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
-    X=temp0;
+    X=g2d.g_xx();
+
     err = nc_put_var_double( ncid, confID, periodify(X, g2d_periodic).data());
     std::cout << "Construction successful!\n";
 

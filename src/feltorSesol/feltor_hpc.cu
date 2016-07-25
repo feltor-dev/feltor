@@ -30,9 +30,10 @@ int main( int argc, char* argv[])
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
     std::string input, geom;
-    if( argc != 3)
+    if( argc != 3 && argc != 4)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [input.txt] [output.nc]\n";
+	std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
     else 
@@ -82,17 +83,60 @@ int main( int argc, char* argv[])
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 
     std::vector<dg::DVec> y0(2, dg::evaluate(prof, grid)), y1(y0); 
-    //no field aligning
-    y1[1] = dg::evaluate( init0, grid);
-    dg::blas1::pointwiseDot(y1[1], y0[1], y1[1]);
+    dg::HVec temp(dg::evaluate(dg::zero,grid));
+    double time = 0;
+    
+    if (argc ==3){
+      y1[1] = dg::evaluate( init0, grid);
+      dg::blas1::pointwiseDot(y1[1], y0[1], y1[1]);
 
-    dg::blas1::axpby(1., y1[1], 1., y0[1]); //initialize ni
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-//     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
-    std::cout << "intiialize ne" << std::endl;
-    feltor.initializene(y0[1], y0[0]);    
-    std::cout << "Done!\n";
+      dg::blas1::axpby(1., y1[1], 1., y0[1]); //initialize ni
+      dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+  //     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+      std::cout << "intiialize ne" << std::endl;
+      feltor.initializene(y0[1], y0[0]);    
+      std::cout << "Done!\n";
+    }
+    if (argc==4) {
+      file::NC_Error_Handle errIN;
+      int ncidIN;
+      errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
+      ///////////////////read in and show inputfile und geomfile//////////////////
+      size_t lengthIN;
+      errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
+      std::string inputIN( lengthIN, 'x');
+      errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
+      std::cout << "input "<<inputIN<<std::endl;    
+      const eule::Parameters pIN(file::read_input( inputIN));
+      pIN.display( std::cout);
+      size_t count2dIN[3]  = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+      size_t start2dIN[3]  = {0, 0, 0};
+      std::string namesIN[2] = {"electrons", "ions"}; 
+      
+      int dataIDsIN[2];     
+      int timeIDIN;
+      double  timeIN;
+      size_t stepsIN;
+      /////////////////////The initial field///////////////////////////////////////////
+      /////////////////////Get time length and initial data///////////////////////////
+      errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
+      errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
+      stepsIN-=1;
+      start2dIN[0] = stepsIN/pIN.itstp;
+      std::cout << "stepsin= "<< stepsIN <<  std::endl;
+      std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;
+      errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
+      errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
+      std::cout << "timein= "<< timeIN <<  std::endl;
+      time=timeIN;
+      errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, temp.data());
+      y0[0]=temp;
+      errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
+      errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, temp.data());
+      y0[1]=temp;
+      errIN = nc_close(ncidIN);
 
+    }
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
@@ -173,7 +217,6 @@ int main( int argc, char* argv[])
     dg::blas2::symv( interpolate,y1[1], transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-    double time = 0;
 
 
 

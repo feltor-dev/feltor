@@ -175,6 +175,7 @@ void EllSparseBlockMat<value_type>::symv(const thrust::host_vector<value_type>& 
     assert( y.size() == (unsigned)num_rows*n*left*right);
     assert( x.size() == (unsigned)num_cols*n*left*right);
 
+    /* //THIS IMPLEMENTATION IS NOT VALID SINCE NOT ALL MATRICES ARE TRIVIAL (E.G. X-POINT
     int offset[blocks_per_line];
     for( int d=0; d<blocks_per_line; d++)
         offset[d] = cols_idx[blocks_per_line+d]-1;
@@ -259,19 +260,20 @@ if(right==1) //alle dx Ableitungen
             y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
     }
+*/
     //simplest implementation
-    //for( int s=0; s<left; s++)
-    //for( int i=0; i<num_rows; i++)
-    //for( int k=0; k<n; k++)
-    //for( int j=0; j<right; j++)
-    //{
-    //    int I = ((s*num_rows + i)*n+k)*right+j;
-    //    y[I] =0;
-    //    for( int d=0; d<blocks_per_line; d++)
-    //    for( int q=0; q<n; q++) //multiplication-loop
-    //        y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-    //            x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
-    //}
+    for( int s=0; s<left; s++)
+    for( int i=0; i<num_rows; i++)
+    for( int k=0; k<n; k++)
+    for( int j=0; j<right; j++)
+    {
+        int I = ((s*num_rows + i)*n+k)*right+j;
+        y[I] =0;
+        for( int d=0; d<blocks_per_line; d++)
+        for( int q=0; q<n; q++) //multiplication-loop
+            y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+    }
 }
 
 template<class T>
