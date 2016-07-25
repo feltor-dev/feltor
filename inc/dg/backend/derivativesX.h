@@ -84,7 +84,8 @@ Composite<EllSparseBlockMat<double> > dx( const GridX2d& g, bc bcx, direction di
 {
     EllSparseBlockMat<double>  dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left = g.n()*g.Ny();
+    dx.left_size = g.n()*g.Ny();
+    dx.set_default_range();
     return dx;
 }
 
@@ -114,12 +115,12 @@ Composite<EllSparseBlockMat<double> > dy( const GridX2d& g, bc bcy, direction di
     Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     dy_inner = dx( g1d_inner, bcy, dir);
     dy_outer = dx( g1d_outer, bcy, dir);
-    dy_inner.right = g.n()*g.Nx();
-    dy_inner.right_[0] = 0;
-    dy_inner.right_[1] = g.n()*g.inner_Nx();
-    dy_outer.right_[0] = g.n()*g.inner_Nx();
-    dy_outer.right_[1] = g.n()*g.Nx();
-    dy_outer.right = g.n()*g.Nx();
+    dy_inner.right_size = g.n()*g.Nx();
+    dy_inner.right_range[0] = 0;
+    dy_inner.right_range[1] = g.n()*g.inner_Nx();
+    dy_outer.right_range[0] = g.n()*g.inner_Nx();
+    dy_outer.right_range[1] = g.n()*g.Nx();
+    dy_outer.right_size = g.n()*g.Nx();
 
     Composite<EllSparseBlockMat<double> > c( dy_inner, dy_outer);
     return c;
@@ -147,7 +148,8 @@ Composite<EllSparseBlockMat<double> > jumpX( const GridX2d& g, bc bcx)
 {
     EllSparseBlockMat<double>  jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left = g.n()*g.Ny();
+    jx.left_size = g.n()*g.Ny();
+    jx.set_default_range();
     return jx;
 }
 
@@ -166,12 +168,12 @@ Composite<EllSparseBlockMat<double> > jumpY( const GridX2d& g, bc bcy)
     Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     jy_inner = jump( g1d_inner, bcy);
     jy_outer = jump( g1d_outer, bcy);
-    jy_inner.right = g.n()*g.Nx();
-    jy_inner.right_[0] = 0;
-    jy_inner.right_[1] = g.n()*g.inner_Nx();
-    jy_outer.right_[0] = g.n()*g.inner_Nx();
-    jy_outer.right_[1] = g.n()*g.Nx();
-    jy_outer.right = g.n()*g.Nx();
+    jy_inner.right_size = g.n()*g.Nx();
+    jy_inner.right_range[0] = 0;
+    jy_inner.right_range[1] = g.n()*g.inner_Nx();
+    jy_outer.right_range[0] = g.n()*g.inner_Nx();
+    jy_outer.right_range[1] = g.n()*g.Nx();
+    jy_outer.right_size = g.n()*g.Nx();
 
     Composite<EllSparseBlockMat<double> > c( jy_inner, jy_outer);
     return c;
@@ -215,7 +217,8 @@ Composite<EllSparseBlockMat<double> > jumpX( const GridX3d& g, bc bcx)
 {
     EllSparseBlockMat<double>  jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left = g.n()*g.Ny()*g.Nz();
+    jx.left_size = g.n()*g.Ny()*g.Nz();
+    jx.set_default_range();
     return jx;
 }
 
@@ -234,14 +237,14 @@ Composite<EllSparseBlockMat<double> > jumpY( const GridX3d& g, bc bcy)
     Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     jy_inner = jump( g1d_inner, bcy);
     jy_outer = jump( g1d_outer, bcy);
-    jy_inner.right = g.n()*g.Nx();
-    jy_inner.right_[0] = 0;
-    jy_inner.right_[1] = g.n()*g.inner_Nx();
-    jy_outer.right_[0] = g.n()*g.inner_Nx();
-    jy_outer.right_[1] = g.n()*g.Nx();
-    jy_outer.right = g.n()*g.Nx();
-    jy_inner.left = jy_inner.left_[1] = g.Nz();
-    jy_outer.left = jy_outer.left_[1] = g.Nz();
+    jy_inner.right_size = g.n()*g.Nx();
+    jy_inner.right_range[0] = 0;
+    jy_inner.right_range[1] = g.n()*g.inner_Nx();
+    jy_outer.right_range[0] = g.n()*g.inner_Nx();
+    jy_outer.right_range[1] = g.n()*g.Nx();
+    jy_outer.right_size = g.n()*g.Nx();
+    jy_inner.left_size = jy_inner.left_range[1] = g.Nz();
+    jy_outer.left_size = jy_outer.left_range[1] = g.Nz();
 
     Composite<EllSparseBlockMat<double> > c( jy_inner, jy_outer);
     return c;
@@ -259,7 +262,8 @@ Composite<EllSparseBlockMat<double> > jumpZ( const GridX3d& g, bc bcz)
 {
     EllSparseBlockMat<double>  jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
-    jz.right = g.n()*g.Nx()*g.n()*g.Ny();
+    jz.right_size = g.n()*g.Nx()*g.n()*g.Ny();
+    jz.set_default_range();
     return jz;
 }
 
@@ -313,7 +317,8 @@ Composite<EllSparseBlockMat<double> > dx( const GridX3d& g, bc bcx, direction di
 {
     EllSparseBlockMat<double>  dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left = g.n()*g.Ny()*g.Nz();
+    dx.left_size = g.n()*g.Ny()*g.Nz();
+    dx.set_default_range();
     return dx;
 }
 
@@ -343,14 +348,14 @@ Composite<EllSparseBlockMat<double> > dy( const GridX3d& g, bc bcy, direction di
     Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     dy_inner = dx( g1d_inner, bcy, dir);
     dy_outer = dx( g1d_outer, bcy, dir);
-    dy_inner.right = g.n()*g.Nx();
-    dy_inner.right_[0] = 0;
-    dy_inner.right_[1] = g.n()*g.inner_Nx();
-    dy_outer.right_[0] = g.n()*g.inner_Nx();
-    dy_outer.right_[1] = g.n()*g.Nx();
-    dy_outer.right = g.n()*g.Nx();
-    dy_inner.left = dy_inner.left_[1] = g.Nz();
-    dy_outer.left = dy_outer.left_[1] = g.Nz();
+    dy_inner.right_size = g.n()*g.Nx();
+    dy_inner.right_range[0] = 0;
+    dy_inner.right_range[1] = g.n()*g.inner_Nx();
+    dy_outer.right_range[0] = g.n()*g.inner_Nx();
+    dy_outer.right_range[1] = g.n()*g.Nx();
+    dy_outer.right_size = g.n()*g.Nx();
+    dy_inner.left_size = dy_inner.left_range[1] = g.Nz();
+    dy_outer.left_size = dy_outer.left_range[1] = g.Nz();
 
     Composite<EllSparseBlockMat<double> > c( dy_inner, dy_outer);
     return c;
@@ -379,7 +384,8 @@ Composite<EllSparseBlockMat<double> > dz( const GridX3d& g, bc bcz, direction di
 {
     EllSparseBlockMat<double>  dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
-    dz.right = g.n()*g.n()*g.Nx()*g.Ny();
+    dz.right_size = g.n()*g.n()*g.Nx()*g.Ny();
+    dz.set_default_range();
     return dz;
 
 }

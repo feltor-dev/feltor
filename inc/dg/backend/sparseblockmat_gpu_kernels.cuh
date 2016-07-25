@@ -243,11 +243,11 @@ template<class value_type>
 template<class DeviceContainer>
 void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceContainer& x, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left*right);
-    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
+    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
-    const size_t size = left*right*num_rows*n; //number of lines
+    const size_t size = left_size*right_size*num_rows*n; //number of lines
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
     const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
@@ -261,37 +261,37 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceCo
     {
         if( blocks_per_line == 3)
         {
-            if( right == 1)
+            if( right_size == 1)
                 ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left_ptr, right_ptr, x_ptr,y_ptr);
             else
-                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right, left_ptr, right_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, left_ptr, right_ptr, x_ptr,y_ptr);
         }
         else if( blocks_per_line == 2)
         {
-            if( right == 1)
+            if( right_size == 1)
                 ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left_ptr, right_ptr, x_ptr,y_ptr);
             else
-                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right, left_ptr, right_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, left_ptr, right_ptr, x_ptr,y_ptr);
         }
         else
             ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right, left_ptr, right_ptr, x_ptr,y_ptr);
+                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right_size, left_ptr, right_ptr, x_ptr,y_ptr);
     }
     else
         ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right, left_ptr, right_ptr, x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, left_ptr, right_ptr, x_ptr,y_ptr);
 }
 
 template<class value_type>
 template<class DeviceContainer>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left*right);
-    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
+    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     assert( beta == 1);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
-    const size_t size = left*right*n;
+    const size_t size = left_size*right_size*n;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
     const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
@@ -303,7 +303,7 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
     for( int i=0; i<num_entries; i++)
     {
         coo_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left, right, alpha, x_ptr,y_ptr);
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left_size, right_size, alpha, x_ptr,y_ptr);
     }
 }
 

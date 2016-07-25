@@ -44,9 +44,9 @@ double cosz( double x, double y, double z) { return sin(x,y)*cos(z);}
 
 
 typedef dg::DVec Vector;
-typedef dg::Composite<dg::EllSparseBlockMatDevice> Matrix;
+typedef dg::Composite<dg::EllSparseBlockMatDevice<double> > Matrix;
 //typedef dg::HVec Vector;
-//typedef dg::Composite<dg::EllSparseBlockMat> Matrix;
+//typedef dg::Composite<dg::EllSparseBlockMat<double> > Matrix;
 
 int main()
 {

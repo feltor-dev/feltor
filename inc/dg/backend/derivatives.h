@@ -33,7 +33,8 @@ EllSparseBlockMat<double> dx( const Grid2d<double>& g, bc bcx, direction dir = c
 {
     EllSparseBlockMat<double> dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left = g.n()*g.Ny();
+    dx.left_size = g.n()*g.Ny();
+    dx.set_default_range();
     return dx;
 }
 
@@ -60,7 +61,8 @@ EllSparseBlockMat<double> dy( const Grid2d<double>& g, bc bcy, direction dir = c
 {
     EllSparseBlockMat<double> dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    dy.right = g.n()*g.Nx();
+    dy.right_size = g.n()*g.Nx();
+    dy.set_default_range();
     return dy;
 }
 
@@ -86,7 +88,8 @@ EllSparseBlockMat<double> jumpX( const Grid2d<double>& g, bc bcx)
 {
     EllSparseBlockMat<double> jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left = g.n()*g.Ny();
+    jx.left_size = g.n()*g.Ny();
+    jx.set_default_range();
     return jx;
 }
 
@@ -102,7 +105,8 @@ EllSparseBlockMat<double> jumpY( const Grid2d<double>& g, bc bcy)
 {
     EllSparseBlockMat<double> jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
-    jy.right = g.n()*g.Nx();
+    jy.right_size = g.n()*g.Nx();
+    jy.set_default_range();
     return jy;
 }
 
@@ -144,7 +148,8 @@ EllSparseBlockMat<double> jumpX( const Grid3d<double>& g, bc bcx)
 {
     EllSparseBlockMat<double> jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left = g.n()*g.Ny()*g.Nz();
+    jx.left_size = g.n()*g.Ny()*g.Nz();
+    jx.set_default_range();
     return jx;
 }
 
@@ -160,8 +165,9 @@ EllSparseBlockMat<double> jumpY( const Grid3d<double>& g, bc bcy)
 {
     EllSparseBlockMat<double> jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
-    jy.right = g.n()*g.Nx();
-    jy.left = g.Nz();
+    jy.right_size = g.n()*g.Nx();
+    jy.left_size = g.Nz();
+    jy.set_default_range();
     return jy;
 }
 
@@ -177,7 +183,8 @@ EllSparseBlockMat<double> jumpZ( const Grid3d<double>& g, bc bcz)
 {
     EllSparseBlockMat<double> jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
-    jz.right = g.n()*g.Nx()*g.n()*g.Ny();
+    jz.right_size = g.n()*g.Nx()*g.n()*g.Ny();
+    jz.set_default_range();
     return jz;
 }
 
@@ -231,7 +238,8 @@ EllSparseBlockMat<double> dx( const Grid3d<double>& g, bc bcx, direction dir = c
 {
     EllSparseBlockMat<double> dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left = g.n()*g.Ny()*g.Nz();
+    dx.left_size = g.n()*g.Ny()*g.Nz();
+    dx.set_default_range();
     return dx;
 }
 
@@ -258,8 +266,9 @@ EllSparseBlockMat<double> dy( const Grid3d<double>& g, bc bcy, direction dir = c
 {
     EllSparseBlockMat<double> dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    dy.right = g.n()*g.Nx();
-    dy.left = g.Nz();
+    dy.right_size = g.n()*g.Nx();
+    dy.left_size = g.Nz();
+    dy.set_default_range();
     return dy;
 }
 
@@ -286,7 +295,8 @@ EllSparseBlockMat<double> dz( const Grid3d<double>& g, bc bcz, direction dir = c
 {
     EllSparseBlockMat<double> dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
-    dz.right = g.n()*g.n()*g.Nx()*g.Ny();
+    dz.right_size = g.n()*g.n()*g.Nx()*g.Ny();
+    dz.set_default_range();
     return dz;
 
 }

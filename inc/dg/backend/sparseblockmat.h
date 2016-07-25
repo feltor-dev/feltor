@@ -66,7 +66,11 @@ struct EllSparseBlockMat
     * @param y output may not equal input
     */
     void symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const;
-    void set_range(){ left_range[0]=right_range[0]=0; 
+    /**
+     * @brief Sets ranges from 0 to left_size and 0 to right_size
+     */
+    void set_default_range(){ 
+        left_range[0]=right_range[0]=0; 
         left_range[1]=left_size;
         right_range[1]=right_size;
     }
