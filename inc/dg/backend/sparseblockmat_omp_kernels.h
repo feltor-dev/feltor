@@ -8,15 +8,16 @@ void ell_multiply_kernel(
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, 
          const int left, const int right, 
+         const int* left_range, const int* right_range,
          const value_type* x, value_type *y
          )
 {
     //simplest implementation
 #pragma omp parallel for collapse(4)
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_range[0]; j<right_range[1]; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right+j;
         y[I] =0;
@@ -37,6 +38,7 @@ void ell_multiply_kernel33(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols, 
          const int left, const int right, 
+         const int* left_range, const int* right_range,
          const value_type* x, value_type *y
          )
 {
@@ -50,10 +52,10 @@ void ell_multiply_kernel33(
     if( trivial)
     {
 #pragma omp parallel for 
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<3; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_range[0]; j<right_range[1]; j++)
     {
         value_type temp = 0;
         int B0 = (data_idx[i*3+0]*3+k)*3;
@@ -77,10 +79,10 @@ void ell_multiply_kernel33(
         y[I]=temp;
     }
 #pragma omp parallel for collapse(2)
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=1; i<num_rows-1; i++)
     for( int k=0; k<3; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_range[0]; j<right_range[1]; j++)
     {
         value_type temp = 0;
         int B0 = (0*3+k)*3;
@@ -104,10 +106,10 @@ void ell_multiply_kernel33(
         y[I]=temp;
     }
 #pragma omp parallel for 
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<3; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_range[0]; j<right_range[1]; j++)
     {
         value_type temp = 0;
         int B0 = (data_idx[i*3+0]*3+k)*3;
@@ -132,7 +134,7 @@ void ell_multiply_kernel33(
     }
     }
     else 
-        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 3, 3, left, right, x, y);
+        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 3, 3, left, right,left_range, right_range,  x, y);
 }
 
 // multiply kernel, n=3, 2 blocks per line
@@ -141,6 +143,7 @@ void ell_multiply_kernel32(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int left, const int right, 
+         const int* left_range, const int* right_range,
          const value_type* x, value_type *y
          )
 {
@@ -157,10 +160,10 @@ void ell_multiply_kernel32(
     if( forward || backward )
     {
 #pragma omp parallel for 
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<3; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_range[0]; j<right_range[1]; j++)
     {
         value_type temp = 0;
         int B0 = (data_idx[i*2+0]*3+k)*3;
@@ -177,10 +180,10 @@ void ell_multiply_kernel32(
         y[I]=temp;
     }
 #pragma omp parallel for collapse(2)
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=1; i<num_rows-1; i++)
     for( int k=0; k<3; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_range[0]; j<right_range[1]; j++)
     {
         value_type temp = 0;
         int B0 = (0*3+k)*3;
@@ -197,10 +200,10 @@ void ell_multiply_kernel32(
         y[I]=temp;
     }
 #pragma omp parallel for 
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<3; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_range[0]; j<right_range[1]; j++)
     {
         value_type temp = 0;
         int B0 = (data_idx[i*2+0]*3+k)*3;
@@ -218,7 +221,7 @@ void ell_multiply_kernel32(
     }
     }
     else
-        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 2, 3, left, right, x, y);
+        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 2, 3, left, right,left_range, right_range,  x, y);
 
 }
 // multiply kernel, n=3, 3 blocks per line, right = 1
@@ -227,6 +230,7 @@ void ell_multiply_kernel33x(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int left,
+         const int* left_range, const int* right_range,
          const value_type* x, value_type *y
          )
 {
@@ -240,7 +244,7 @@ void ell_multiply_kernel33x(
     if( trivial)
     {
 #pragma omp parallel for
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<3; k++)
     {
@@ -267,7 +271,7 @@ void ell_multiply_kernel33x(
     }
 
 #pragma omp parallel for// collapse(2)
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=1; i<num_rows-1; i++)
     for( int k=0; k<3; k++)
     {
@@ -292,7 +296,7 @@ void ell_multiply_kernel33x(
         y[I]=temp;
     }
 #pragma omp parallel for
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<3; k++)
     {
@@ -320,7 +324,7 @@ void ell_multiply_kernel33x(
     }
     }
     else 
-        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 3, 3, left, 1, x, y);
+        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 3, 3, left, 1,left_range, right_range,  x, y);
 }
 
 // multiply kernel, n=3, 2 blocks per line, right = 1
@@ -329,6 +333,7 @@ void ell_multiply_kernel32x(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int left, 
+         const int* left_range, const int* right_range,
          const value_type* x, value_type *y
          )
 {
@@ -345,7 +350,7 @@ void ell_multiply_kernel32x(
     if( forward || backward )
     {
 #pragma omp parallel for
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<3; k++)
     {
@@ -364,7 +369,7 @@ void ell_multiply_kernel32x(
         y[I]=temp;
     }
 #pragma omp parallel for
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=1; i<num_rows-1; i++)
     for( int k=0; k<3; k++)
     {
@@ -383,7 +388,7 @@ void ell_multiply_kernel32x(
         y[I]=temp;
     }
 #pragma omp parallel for
-    for( int s=0; s<left; s++)
+    for( int s=left_range[0]; s<left_range[1]; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<3; k++)
     {
@@ -403,7 +408,7 @@ void ell_multiply_kernel32x(
     }
     }
     else
-        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 2, 3, left, 1, x, y);
+        ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 2, 3, left, 1, left_range, right_range, x, y);
 
 
 }
@@ -420,29 +425,31 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceCo
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
     const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
     value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
+    const int* left_ptr = thrust::raw_pointer_cast( &left_range[0]);
+    const int* right_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 3)
     {
         if( blocks_per_line == 3)
         {
             if( right == 1)
-                ell_multiply_kernel33x<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left, x_ptr,y_ptr);
+                ell_multiply_kernel33x<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left, left_ptr, right_ptr, x_ptr,y_ptr);
             else
-                ell_multiply_kernel33<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left, right, x_ptr,y_ptr);
+                ell_multiply_kernel33<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left, right,left_ptr, right_ptr,  x_ptr,y_ptr);
         }
         else if( blocks_per_line == 2)
         {
             if( right == 1)
-                ell_multiply_kernel32x<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left, x_ptr,y_ptr);
+                ell_multiply_kernel32x<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left,left_ptr, right_ptr,  x_ptr,y_ptr);
             else
-                ell_multiply_kernel32<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left, right, x_ptr,y_ptr);
+                ell_multiply_kernel32<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left, right,left_ptr, right_ptr,  x_ptr,y_ptr);
         }
         else
             ell_multiply_kernel<value_type>( 
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, left, right, x_ptr,y_ptr);
+                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, left, right,left_ptr, right_ptr,  x_ptr,y_ptr);
     }
     else
         ell_multiply_kernel<value_type>  ( 
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left, right, x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left, right,left_ptr, right_ptr,  x_ptr,y_ptr);
 }
 
 template<class value_type>

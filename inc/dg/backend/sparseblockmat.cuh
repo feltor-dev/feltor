@@ -32,7 +32,8 @@ struct EllSparseBlockMatDevice
         data = src.data;
         cols_idx = src.cols_idx, data_idx = src.data_idx;
         num_rows = src.num_rows, num_cols = src.num_cols, blocks_per_line = src.blocks_per_line;
-        n = src.n, left = src.left, right = src.right;
+        n = src.n, left_size = src.left_size, right_size = src.right_size;
+        left_range = src.left_range; right_range = src.right_range;
     }
     
     /**
@@ -58,7 +59,8 @@ struct EllSparseBlockMatDevice
     IVec cols_idx, data_idx; 
     int num_rows, num_cols, blocks_per_line;
     int n;
-    int left, right;
+    int left_size, right_size;
+    IVec left_range, right_range;
 };
 
 
@@ -86,7 +88,7 @@ struct CooSparseBlockMatDevice
         data = src.data;
         rows_idx = src.rows_idx, cols_idx = src.cols_idx, data_idx = src.data_idx;
         num_rows = src.num_rows, num_cols = src.num_cols, num_entries = src.num_entries;
-        n = src.n, left = src.left, right = src.right;
+        n = src.n, left_size = src.left_size, right_size = src.right_size;
     }
     
     /**
@@ -113,7 +115,7 @@ struct CooSparseBlockMatDevice
     thrust::device_vector<value_type> data;
     IVec cols_idx, rows_idx, data_idx; 
     int num_rows, num_cols, num_entries;
-    int n, left, right;
+    int n, left_size, right_size;
 };
 
 ///@cond
@@ -125,8 +127,12 @@ void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
     os << "num_cols         "<<num_cols<<"\n";
     os << "blocks_per_line  "<<blocks_per_line<<"\n";
     os << "n                "<<n<<"\n";
-    os << "left             "<<left<<"\n";
-    os << "right            "<<right<<"\n";
+    os << "left_size             "<<left_size<<"\n";
+    os << "left_range_0          "<<left_range[0]<<"\n";
+    os << "left_range_1          "<<left_range[1]<<"\n";
+    os << "right_size            "<<right_size<<"\n";
+    os << "right_range_0         "<<right_range[0]<<"\n";
+    os << "right_range_1         "<<right_range[1]<<"\n";
     os << " Columns: \n";
     for( int i=0; i<num_rows; i++)
     {
@@ -152,8 +158,8 @@ void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
     os << "num_cols         "<<num_cols<<"\n";
     os << "num_entries      "<<num_entries<<"\n";
     os << "n                "<<n<<"\n";
-    os << "left             "<<left<<"\n";
-    os << "right            "<<right<<"\n";
+    os << "left_size             "<<left_size<<"\n";
+    os << "right_size            "<<right_size<<"\n";
     os << " Columns: \n";
     for( int i=0; i<num_entries; i++)
         os << cols_idx[i] <<" ";
