@@ -7,38 +7,39 @@ int main ()
 {
     std::cout<< "BOTH SIDES:\n";
     thrust::host_vector<double> left, right, both, left_abs, right_abs, both_abs;
-    thrust::host_vector<int> i_both, i_left, i_right;
     //don't forget to test the case add_x = 0 once in a while!
-    both = dg::refined::detail::exponential_ref( 3, 2, 5, 2, i_both);
-    both_abs = dg::refined::detail::ref_abscissas( 10, 20, 2, 11, both);
+    dg::Grid1d<double> g( 0,1, 2,4, dg::PER);
+    int node;
+    std::cout<< "Type node to refine 0,..,4!\n";
+    std::cin >> node;
+    int new_N = dg::refined::detail::exponential_ref( 3, node, g, both, both_abs);
     double sum = 0;
-    for( unsigned i=0; i<both.size(); i++)
+    for( unsigned i=0; i<new_N*g.n(); i++)
     {
-        std::cout << both[i] <<"\t"<<i_both[i]<< "\t" <<both_abs[i] << std::endl;
-        sum += 1./both[i]/2.;
+        std::cout << both[i] << "\t" <<both_abs[i] << std::endl;
+        sum += 1./both[i]/g.n();
     }
-    std::cout << "SUM IS: "<<sum<<" (5)\n";
+    std::cout << "SUM IS: "<<sum<<" ("<<new_N<<")\n";
     std::cout<< "LEFT SIDE:\n";
-    left = dg::refined::detail::exponential_ref( 2, 3, 5, 0, i_left);
-    left_abs = dg::refined::detail::ref_abscissas( 10, 20, 3, 7, left);
+    dg::Grid1d<double> gl( 0,1, 2,5, dg::DIR);
+    new_N = dg::refined::detail::exponential_ref( 2, 0, gl, left, left_abs);
     sum = 0;
-    for( unsigned i=0; i<left.size(); i++)
+    for( unsigned i=0; i<new_N*gl.n(); i++)
     {
-        std::cout << left[i] <<"\t"<<i_left[i]<<"\t"<<left_abs[i]<<std::endl;
-        sum += 1./left[i]/3.;
+        std::cout << left[i] <<"\t"<<left_abs[i]<<std::endl;
+        sum += 1./left[i]/gl.n();
     }
-    std::cout << "SUM IS: "<<sum<<" (5)\n";
+    std::cout << "SUM IS: "<<sum<<" ("<<new_N<<")\n";
     std::cout<< "RIGHT SIDE:\n";
-    right = dg::refined::detail::exponential_ref( 5, 1, 5, 1, i_right);
-    right_abs = dg::refined::detail::ref_abscissas( 10, 20, 1, 10, right);
+    dg::Grid1d<double> gr( 0,1, 1, 5, dg::DIR);
+    new_N = dg::refined::detail::exponential_ref( 5, gr.N(), gr, right, right_abs);
     sum =0;
-    for( unsigned i=0; i<right.size(); i++)
+    for( unsigned i=0; i<new_N*gr.n(); i++)
     {
-        std::cout << right[i] <<"\t"<<i_right[i]<<"\t"<<both_abs[i]<< std::endl;
-        sum += 1./right[i]/1.;
+        std::cout << right[i] <<"\t"<<both_abs[i]<< std::endl;
+        sum += 1./right[i]/gr.n();
     }
-
-    std::cout << "SUM IS: "<<sum<<" (5)\n";
+    std::cout << "SUM IS: "<<sum<<" ("<<new_N<<")\n";
 
     return 0;
 }

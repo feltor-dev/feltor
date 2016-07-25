@@ -35,59 +35,74 @@ namespace detail
 {
 
 /**
- * @brief Create 1d refinement weights for the exponential refinement at a corner
+ * @brief Create 1d refinement weights and abscissas for the exponential refinement around a node 
  *
- * @param add_x number of additional cells 
- * @param n number of polynomial coefficients in the grid
- * @param Nx original number of cells
- * @param side 0 is left-side, 1 is right-side, rest is both sides
+ * There will be two refined cells at the end except if a corner node is 
+ * given and the boundary condition is not periodic. We count nodes from
+ * 0 (left corner) to N (right corner). 
+ * @param add_x number of additional cells in the cells idx-1 and idx
+ * @param node The cells node-1 and node will be refined
+ * @param g The 1d grid to refine
  *
- * @return A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
+ * @param weights A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
+ * @param abscissas A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
+ * @return the new number of cells
  */
-thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned n, unsigned Nx_old, int side)
+int exponential_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
 {
+    if( add_x == 0)
+    {
+        thrust::host_vector<double> w_( g.size(), 1);
+        thrust::host_vector<double> abs_= dg::create::abscissas(g);
+        weights = w_; abscissas = abs_; 
+        return g.N();
+    }
+    assert( node <= g.N());
     //there are add_x+1 finer cells per refined cell ...
-    thrust::host_vector< double> left( n*(Nx_old+add_x), 1), right(left);
-    if( add_x == 0) { return left; }
-    for( unsigned k=0; k<n; k++)//the original cell and the additional ones
+    thrust::host_vector< double> left( g.size()+g.n()*add_x, 1), right(left);
+    for( unsigned k=0; k<g.n(); k++)//the original cell and the additional ones
         left[k] = pow( 2, add_x);
     for( unsigned i=0; i<add_x; i++) 
-    for( unsigned k=0; k<n; k++)
-        left[(i+1)*n+k] = pow( 2, add_x-i);
+    for( unsigned k=0; k<g.n(); k++)
+        left[(i+1)*g.n()+k] = pow( 2, add_x-i);
     //mirror left into right
     for( unsigned i=0; i<right.size(); i++)
         right[i] = left[ (left.size()-1)-i];
-    thrust::host_vector< double> both( n*(Nx_old+2*add_x), 1);
+    thrust::host_vector< double> both( g.size()+2*g.n()*add_x, 1);
     for( unsigned i=0; i<left.size(); i++)
         both[i] *= left[i];
     for( unsigned i=0; i<right.size(); i++)
-        both[i+n*add_x] *= right[i];
+        both[i+g.n()*add_x] *= right[i];
+    if(      node == 0     && g.bcx() != dg::PER) { weights = left; }
+    else if( node == g.N() && g.bcx() != dg::PER) { weights = right; }
+    else if((node == g.N() || node == 0) && g.bcx() == dg::PER) { weights = both; }
+    else 
+    {
+        thrust::host_vector<double> w_ = both;
+        //now shift indices so that refinement is around nodes
+        for( unsigned i=0; i<both.size(); i++)
+            w_[((add_x+node)*g.n()+i)%both.size()] = both[i];
+        weights = w_;
+    }
 
-    if( side == 0) { return left; }
-    else if( side == 1) { return right; }
-    return both;
-}
+    //normalize weights
+    unsigned Nx_new = weights.size()/g.n();
+    for( unsigned i=0;i<weights.size(); i++)
+        weights[i] *= (double)g.N()/(double)Nx_new;
 
-thrust::host_vector<double> ref_abscissas( double x0, double x1, unsigned n, unsigned Nx_new, thrust::host_vector<double>& weights)
-{
-    assert( weights.size() == n*Nx_new);
-    Grid1d<double> g(x0, x1, n, Nx_new);
-    thrust::host_vector<double> boundaries(Nx_new+1), abs(n*Nx_new);
-    double lx = x1-x0;
-    double Nx_old = 0.;
-    for( unsigned i=0; i<weights.size(); i++)
-        Nx_old += 1./weights[i]/(double)n;
-    boundaries[0] = x0;
+    thrust::host_vector<double> boundaries(Nx_new+1), abs(g.n()*Nx_new);
+    boundaries[0] = g.x0();
     for( unsigned i=0; i<Nx_new; i++)
     {
-        boundaries[i+1] = boundaries[i] + lx/Nx_old/weights[n*i];
-        for( unsigned j=0; j<n; j++)
+        boundaries[i+1] = boundaries[i] + g.lx()/(double)Nx_new/weights[g.n()*i];
+        for( unsigned j=0; j<g.n(); j++)
         {
-            abs[i*n+j] =  (boundaries[i+1]+boundaries[i])/2. + 
+            abs[i*g.n()+j] =  (boundaries[i+1]+boundaries[i])/2. + 
                 (boundaries[i+1]-boundaries[i])/2.*g.dlt().abscissas()[j];
         }
     }
-    return abs;
+    abscissas = abs;
+    return Nx_new;
 
 }
 
@@ -119,6 +134,7 @@ struct Grid2d : public dg::Grid2d<double>
             unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d<double>( x0, x1, y0, y1, n, n_new(Nx, add_x, bcx), n_new(Ny, add_y, bcy), bcx, bcy), 
         g_assoc_( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy)
     {
+        /*
         wx_.resize( this->size()), wy_.resize( this->size());
         absX_.resize( this->size()), absY_.resize( this->size());
         thrust::host_vector<double> weightsX, weightsY, absX, absY;
@@ -186,9 +202,7 @@ struct Grid2d : public dg::Grid2d<double>
             absX_[i*weightsX.size()+j] = absX[j];
             absY_[i*weightsX.size()+j] = absY[i];
         }
-        //normalize weights
-        dg::blas1::scal( wx_, (double)Nx/(double)this->Nx() );
-        dg::blas1::scal( wy_, (double)Ny/(double)this->Ny() );
+        */
     }
 
     /**
@@ -245,12 +259,10 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refine
 {
     dg::Grid2d<double> g = g_fine.associated();
     //determine number of refined cells
-    thrust::host_vector<int> idxX = g_fine.idxX();
-    thrust::host_vector<int> idxY = g_fine.idxY();
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
     
-    return interpolation( x,y, g);
+    return dg::create::interpolation( x,y, g);
 
 }
 
