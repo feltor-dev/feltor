@@ -11,17 +11,6 @@ namespace refined
 {
 
 /**
- * @brief Corner mode of grid - refinement using exponential refinement
- */
-enum corner
-{
-    CORNER_LL, //!< lower left corner
-    CORNER_LR, //!< lower right corner
-    CORNER_UL, //!< upper left corner
-    CORNER_UR //!< upper right corner
-};
-
-/**
  * @brief Constant refinement in one direction 
  */
 enum direction
@@ -151,80 +140,26 @@ struct Grid2d : public dg::Grid2d<double>
      * @param bcx
      * @param bcy
      */
-    Grid2d( corner c, unsigned add_x, unsigned add_y, 
+    Grid2d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
             double x0, double x1, double y0, double y1, 
             unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d<double>( x0, x1, y0, y1, n, n_new(Nx, add_x, bcx), n_new(Ny, add_y, bcy), bcx, bcy), 
+        wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy)
     {
-        /*
-        wx_.resize( this->size()), wy_.resize( this->size());
-        absX_.resize( this->size()), absY_.resize( this->size());
-        thrust::host_vector<double> weightsX, weightsY, absX, absY;
-        if( bcx != dg::PER && bcy != dg::PER)
-        {
-            if( c == CORNER_LL)
+        Grid1d<double> gx( x0, x1, n, Nx, bcx);
+        Grid1d<double> gy( y0, y1, n, Ny, bcy);
+        thrust::host_vector<double> wx, ax, wy, ay;
+        detail::exponential_ref( add_x, node_x, gx, wx, ax);
+        detail::exponential_ref( add_y, node_y, gy, wy, ay);
+        //now make product space
+        for( unsigned i=0; i<wy.size(); i++)
+            for( unsigned j=0; j<wx.size(); j++)
             {
-                 weightsX = detail::exponential_ref( add_x, n, Nx, 0);
-                 weightsY = detail::exponential_ref( add_y, n, Ny, 1);
+                wx_[i*wx.size()+j] = wx[j];
+                wy_[i*wx.size()+j] = wy[i];
+                absX_[i*wx.size()+j] = ax[j];
+                absY_[i*wx.size()+j] = ay[i];
             }
-            else if( c == CORNER_LR)
-            {
-                 weightsX = detail::exponential_ref( add_x, n, Nx, 1);
-                 weightsY = detail::exponential_ref( add_y, n, Ny, 1);
-            }
-            else if( c == CORNER_UR)
-            {
-                 weightsX = detail::exponential_ref( add_x, n, Nx, 1);
-                 weightsY = detail::exponential_ref( add_y, n, Ny, 0);
-            }
-            else if( c == CORNER_UL)
-            {
-                 weightsX = detail::exponential_ref( add_x, n, Nx, 0);
-                 weightsY = detail::exponential_ref( add_y, n, Ny, 0);
-            }
-        }
-        else if( bcx == dg::PER && bcy != dg::PER)
-        {
-            if( c == CORNER_LL || c == CORNER_LR)
-            {
-                 weightsX = detail::exponential_ref( add_x, n, Nx, 2);
-                 weightsY = detail::exponential_ref( add_y, n, Ny, 1);
-            }
-            else if( c == CORNER_UL || c == CORNER_UR)
-            {
-                 weightsX = detail::exponential_ref( add_x, n, Nx, 2);
-                 weightsY = detail::exponential_ref( add_y, n, Ny, 0);
-            }
-        }
-        else if( bcx != dg::PER && bcy == dg::PER)
-        {
-            if( c == CORNER_LL || c == CORNER_UL)
-            {
-                 weightsX = detail::exponential_ref( add_x, n, Nx, 0);
-                 weightsY = detail::exponential_ref( add_y, n, Ny, 2);
-            }
-            else if( c == CORNER_UR || c == CORNER_LR)
-            {
-                 weightsX = detail::exponential_ref( add_x, n, Nx, 1);
-                 weightsY = detail::exponential_ref( add_y, n, Ny, 2);
-            }
-        }
-        else if( bcx == dg::PER && bcy == dg::PER)
-        {
-            weightsX = detail::exponential_ref( add_x, n, Nx, 2);
-            weightsY = detail::exponential_ref( add_y, n, Ny, 2);
-        }
-        absX = detail::ref_abscissas( x0, x1, n, n_new( Nx, add_x, bcx), weightsX);
-        absY = detail::ref_abscissas( y0, y1, n, n_new( Ny, add_y, bcy), weightsY);
-        for( unsigned i=0; i<weightsY.size(); i++)
-        for( unsigned j=0; j<weightsX.size(); j++)
-        {
-            wx_[i*weightsX.size()+j] = weightsX[j];
-            wy_[i*weightsX.size()+j] = weightsY[i];
-            absX_[i*weightsX.size()+j] = absX[j];
-            absY_[i*weightsX.size()+j] = absY[i];
-        }
-        */
     }
 
     /**

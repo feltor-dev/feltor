@@ -76,8 +76,23 @@ struct GridX2d : public dg::GridX2d
             unsigned n, unsigned Nx, unsigned Ny, 
             bc bcx = dg::PER, bc bcy = dg::PER) : dg::GridX2d( x0, x1, y0, y1, 
                 fx_new(Nx, add_x, fx), fy_new(Ny, add_y, fy), n, nx_new(Nx, add_x, fx), ny_new(Ny, add_y, fy), bcx, bcy), 
+        wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, fx, fy, n, Nx, Ny, bcx, bcy)
     {
+        Grid1d<double>  gx( x0, x1, n, Nx, bcx);
+        GridX1d         gy( y0, y1, fy, n, Ny, bcy);
+        thrust::host_vector<double> wx, ax, wy, ay;
+        detail::exponential_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax);
+        detail::exponential_Xref( add_y, gy, wy, ay);
+        //now make product space
+        for( unsigned i=0; i<wy.size(); i++)
+            for( unsigned j=0; j<wx.size(); j++)
+            {
+                wx_[i*wx.size()+j] = wx[j];
+                wy_[i*wx.size()+j] = wy[i];
+                absX_[i*wx.size()+j] = ax[j];
+                absY_[i*wx.size()+j] = ay[i];
+            }
     }
 
     /**
