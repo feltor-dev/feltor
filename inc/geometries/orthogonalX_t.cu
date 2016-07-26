@@ -11,7 +11,7 @@
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
-#include "conformalX.h"
+#include "orthogonalX.h"
 #include "dg/ds.h"
 #include "init.h"
 
@@ -20,7 +20,7 @@
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< conformal::GridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< orthogonal::GridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -70,7 +70,7 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
 
 int main( int argc, char* argv[])
 {
-    std::cout << "Type n, Nx, Ny, Nz (Nx must be divided by 4 and Ny by 10) \n";
+    std::cout << "Type n, Nx, Ny, Nz \n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
     std::vector<double> v, v2;
@@ -98,14 +98,14 @@ try{
     std::cout << "Type psi_0 \n";
     double psi_0;
     std::cin >> psi_0;
-    std::cout << "Type fx and fy \n";
+    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
     double fx_0, fy_0;
     std::cin >> fx_0>> fy_0;
     gp.display( std::cout);
-    std::cout << "Constructing conformal grid ... \n";
+    std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    conformal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    conformal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
+    orthogonal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -176,17 +176,12 @@ try{
 
     std::cout << "Construction successful!\n";
 
-    //compute error in volume element (in conformal grid g^xx is the volume element)
-    dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
+    //compute error in volume element
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
-    dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    dg::blas1::transfer( g2d.g_xx(),  temp1);
-    dg::blas1::pointwiseDot( temp1, temp1, temp1);
-    dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
-    double error = sqrt( dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( temp1, w2d, temp1));
-    std::cout<< "Rel Error in Determinant is "<<error<<"\n";
+    double error = sqrt( dg::blas2::dot( temp1, w2d, temp1));
+    std::cout<< "    Error in Off-diagonal is "<<error<<"\n";
 
-    //compute error in determinant vs volume form
+    //compare determinant vs volume form
     dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
@@ -198,26 +193,33 @@ try{
     error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( g2d.vol(), w2d, g2d.vol()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
-    //compare g^xx to volume form
-    dg::blas1::transfer( g2d.g_xx(), temp0);
-    dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    error=sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w2d, g2d.vol()));
-    std::cout << "Rel Error of volume form is "<<error<<"\n";
-
-    //alternative method for computing g_xx
+    //alternative method to compute volume
+    solovev::PsipR psipR( gp);
+    solovev::PsipZ psipZ( gp);
+    dg::DVec psipR_ = dg::pullback(psipR, g2d);
+    dg::DVec psipZ_ = dg::pullback(psipZ, g2d);
+    dg::DVec psip2_(psipR_);
+    dg::blas1::pointwiseDot( psipR_, psipR_, psipR_);
+    dg::blas1::pointwiseDot( psipZ_, psipZ_, psipZ_);
+    dg::blas1::axpby( 1., psipR_, 1., psipZ_, psip2_);
     const dg::DVec f_ = g2d.f();
-    solovev::conformal::FieldY fieldY(gp);
-    dg::DVec fby = dg::pullback( fieldY, g2d);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    dg::blas1::scal( fby, 1./gp.R_0);
-    temp0=g2d.r();
-    dg::blas1::pointwiseDot( temp0, fby, fby); // B^y*f^2*R/R_0 != |nabla psi^2| f^3
-    dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0); 
-    dg::blas1::axpby( 1., temp0, -1., fby, temp1);
-    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(fby,w2d,fby);
-    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error)<<"\n";
+    const dg::DVec g_ = g2d.g();
+    dg::blas1::pointwiseDot( f_, psip2_, temp1);
+    dg::blas1::pointwiseDot( f_, temp1, temp1);
+    dg::blas1::axpby( 1., g2d.g_xx(), -1., temp1, temp1);
+    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_xx(),w2d,g2d.g_xx());
+    std::cout << "Rel Error of g_xx is "<<sqrt(error)<<"\n";
+    dg::blas1::pointwiseDot( g_, psip2_, temp1);
+    dg::blas1::pointwiseDot( g_,  temp1, temp1);
+    dg::blas1::axpby( 1., g2d.g_yy(), -1., temp1, temp1);
+    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_yy(),w2d,g2d.g_yy());
+    std::cout << "Rel Error of g_yy is "<<sqrt(error)<<"\n";
+    dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
+    dg::blas1::pointwiseDot( f_, psip2_, temp1);
+    dg::blas1::pointwiseDot( g_, temp1 , temp1);
+    dg::blas1::axpby( 1., temp0, -1., temp1, temp1);
+    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(temp0,w2d,temp0);
+    std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.1*gp.a*gp.elongation, 1.1*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);

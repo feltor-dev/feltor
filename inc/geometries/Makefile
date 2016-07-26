@@ -36,6 +36,9 @@ orthogonal_t: orthogonal_t.cu orthogonal.h
 
 conformalX_t: conformalX_t.cu conformalX.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+
+orthogonalX_t: orthogonalX_t.cu orthogonalX.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 	
 geometry_diag: geometry_diag.cu solovev.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "dg/backend/grid.h"
 #include "dg/backend/gridX.h"
 #include "dg/backend/interpolationX.cuh"
-#include "dg/nullstelle.h"
+#include "dg/backend/evaluationX.cuh"
+#include "dg/backend/weightsX.cuh"
 
 #include "orthogonal.h"
 
@@ -421,10 +421,10 @@ struct FpsiX
             double psip2 = psipR*psipR+psipZ*psipZ;
             //yr[i] = psipZ*f/psip2;
             //yz[i] = -psipR*f/psip2;
-            //yr[i] = psipZ*f/sqrt(psip2);
-            //yz[i] = -psipR*f/sqrt(psip2);
-            yr[i] = psipZ/f/sqrt(psip2);
-            yz[i] = -psipR/f/sqrt(psip2);
+            yr[i] = psipZ*f/sqrt(psip2);
+            yz[i] = -psipR*f/sqrt(psip2);
+            //yr[i] = psipZ/f/sqrt(psip2);
+            //yz[i] = -psipR/f/sqrt(psip2);
             //yr[i] = psipZ*f;
             //yz[i] = -psipR*f;
         }
@@ -672,7 +672,13 @@ struct GridX3d : public dg::GridX3d
         detail::FpsiX fpsi(gp);
         fpsi.compute_rzy( psi_0, this->n(), this->Ny(), this->fy(), rvec, zvec, yrvec, yzvec, R0, Z0, f0);
         thrust::host_vector<double> gvec(Ny, f0);
-        //thrust::host_vector<double> gvec(Ny, 1./f0);
+        solovev::PsipR psipR_(gp);
+        solovev::PsipZ psipZ_(gp);
+        for( unsigned i=0; i<rvec.size(); i++)
+        {
+           double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
+           gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ);
+        }
         begin[0] = rvec, begin[1] = zvec;
         begin[2] = gvec, begin[3] = yrvec, begin[4] = yzvec;
         //now we have the starting values of r, z, psi
@@ -684,8 +690,6 @@ struct GridX3d : public dg::GridX3d
         const unsigned idx = inner_Nx()*this->n();
         const double psi_const = fpsiMinv_.find_psi( x_vec[idx]);
         //while( eps <  eps_old && N < 1e6)
-        solovev::PsipR psipR_(gp);
-        solovev::PsipZ psipZ_(gp);
         double eps = 1e10;
         unsigned N=1; 
         while( eps >  1e-8 && N < 1e6 )
