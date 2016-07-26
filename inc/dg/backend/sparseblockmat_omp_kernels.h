@@ -230,7 +230,7 @@ void ell_multiply_kernel33x(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int left_size,
-         const int* left_range, const int* right_range,
+         const int* left_range, 
          const value_type* x, value_type *y
          )
 {
@@ -324,7 +324,10 @@ void ell_multiply_kernel33x(
     }
     }
     else 
+    {
+        int right_range[2] = {0,1};
         ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 3, 3, left_size, 1,left_range, right_range,  x, y);
+    }
 }
 
 // multiply kernel, n=3, 2 blocks per line, right_size = 1
@@ -333,7 +336,7 @@ void ell_multiply_kernel32x(
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int left_size, 
-         const int* left_range, const int* right_range,
+         const int* left_range,
          const value_type* x, value_type *y
          )
 {
@@ -408,7 +411,10 @@ void ell_multiply_kernel32x(
     }
     }
     else
+    {
+        int right_range[2] = {0,1};
         ell_multiply_kernel( data, cols_idx, data_idx, num_rows, num_cols, 2, 3, left_size, 1, left_range, right_range, x, y);
+    }
 
 
 }
@@ -432,14 +438,14 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceCo
         if( blocks_per_line == 3)
         {
             if( right_size == 1)
-                ell_multiply_kernel33x<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel33x<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left_size, left_range_ptr, x_ptr,y_ptr);
             else
                 ell_multiply_kernel33<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,left_range_ptr, right_range_ptr,  x_ptr,y_ptr);
         }
         else if( blocks_per_line == 2)
         {
             if( right_size == 1)
-                ell_multiply_kernel32x<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left_size,left_range_ptr, right_range_ptr,  x_ptr,y_ptr);
+                ell_multiply_kernel32x<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left_size, left_range_ptr, x_ptr,y_ptr);
             else
                 ell_multiply_kernel32<value_type> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,left_range_ptr, right_range_ptr,  x_ptr,y_ptr);
         }

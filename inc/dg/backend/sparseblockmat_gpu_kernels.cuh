@@ -25,16 +25,16 @@ template<class value_type>
             i = (rrn)%num_rows, 
             k = (rr)%n, 
             j=right_range[0]+row%right_;
-        int B, J;
         value_type temp=0;
         for( int d=0; d<blocks_per_line; d++)
         {
-            B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-            J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+            int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
+            int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
             for( int q=0; q<n; q++) //multiplication-loop
                 temp +=data[ B+q]* x[(J+q)*right+j];
-            y[((s*num_rows+i)*n+k)*right+j]=temp;
         }
+        int idx = ((s*num_rows+i)*n+k)*right+j;
+        y[idx]=temp;
     }
 
 }
@@ -61,26 +61,26 @@ template<class value_type>
             i = (rrn)%num_rows, 
             k = (rr)%3, 
             j=right_range[0]+row%right_;
-        int B, J;
         value_type temp=0;
         {
-            B = (data_idx[i*3+0]*3+k)*3;
-            J = (s*num_cols+cols_idx[i*3+0])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            int B = (data_idx[i*3  ]*3+k)*3;
+            int J = (s*num_cols+cols_idx[i*3  ])*3;
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
             B = (data_idx[i*3+1]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+1])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
             B = (data_idx[i*3+2]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+2])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
-            y[((s*num_rows+i)*3+k)*right+j]=temp;
         }
+        int idx = ((s*num_rows+i)*3+k)*right+j;
+        y[idx]=temp;
     }
 }
 
@@ -102,26 +102,25 @@ template<class value_type>
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
-        int rr = row/right_, rrn = rr/3;
-        int s=left_range[0]+rrn/num_rows, 
-            i = (rrn)%num_rows, 
-            k = (rr)%3, 
+        int rr = row/right_; 
+        int rrn = rr/3, k = rr%3;
+        int s=left_range[0]+rrn/num_rows, i = (rrn)%num_rows, 
             j=right_range[0]+row%right_;
-        int B, J;
+        int idx = ((s*num_rows+i)*3+k)*right+j;
         value_type temp=0;
         {
-            B = (data_idx[i*2+0]*3+k)*3;
-            J = (s*num_cols+cols_idx[i*2+0])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            int B = (data_idx[i*2+0]*3+k)*3;
+            int J = (s*num_cols+cols_idx[i*2+0])*3;
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
             B = (data_idx[i*2+1]*3+k)*3;
             J = (s*num_cols+cols_idx[i*2+1])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
-            y[((s*num_rows+i)*3+k)*right+j]=temp;
         }
+        y[idx]=temp;
     }
 
 }
@@ -132,7 +131,7 @@ template<class value_type>
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const int* left_range, const int* right_range,
+         const int left_range0, 
          const value_type* x, value_type *y
          )
 {
@@ -141,30 +140,28 @@ template<class value_type>
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
-        int rr = row/1, rrn = rr/3;
-        int s=left_range[0]+rrn/num_rows, 
-            i = (rrn)%num_rows, 
-            k = (rr)%3;
-        int B, J;
+        int rrn = row/3, k = row%3;
+        int s=left_range0+rrn/num_rows, i = (rrn)%num_rows;
         value_type temp=0;
         {
-            B = (data_idx[i*3+0]*3+k)*3;
-            J = (s*num_cols+cols_idx[i*3+0])*3;
-            temp +=data[ B+0]* x[(J+0)];
+            int B = (data_idx[i*3  ]*3+k)*3;
+            int J = (s*num_cols+cols_idx[i*3+0])*3;
+            temp +=data[ B+0]* x[(J  )];
             temp +=data[ B+1]* x[(J+1)];
             temp +=data[ B+2]* x[(J+2)];
             B = (data_idx[i*3+1]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+1])*3;
-            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B  ]* x[(J  )];
             temp +=data[ B+1]* x[(J+1)];
             temp +=data[ B+2]* x[(J+2)];
             B = (data_idx[i*3+2]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+2])*3;
-            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B  ]* x[(J  )];
             temp +=data[ B+1]* x[(J+1)];
             temp +=data[ B+2]* x[(J+2)];
-            y[((s*num_rows+i)*3+k)]=temp;
         }
+        int idx = (s*num_rows+i)*3+k;
+        y[idx] = temp;
     }
 }
 
@@ -174,7 +171,7 @@ template<class value_type>
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const int* left_range, const int* right_range,
+         const int left_range0,
          const value_type* x, value_type *y
          )
 {
@@ -184,22 +181,23 @@ template<class value_type>
     for( int row = thread_id; row<size; row += grid_size)
     {
         int rrn = row/3, k = (row%3);
-        int s=left_range[0] + rrn/num_rows, i = (rrn)%num_rows;
+        int s=left_range0 + rrn/num_rows, i = (rrn)%num_rows;
+        int idx=(s*num_rows+i)*3+k;
         int B0,B1, J0, J1;
         value_type temp=0;
         {
-            B0 = (data_idx[i*2+0]*3+k)*3;
+            B0 = (data_idx[i*2  ]*3+k)*3;
             B1 = (data_idx[i*2+1]*3+k)*3;
             J0 = (s*num_cols+cols_idx[i*2+0])*3;
             J1 = (s*num_cols+cols_idx[i*2+1])*3;
-            temp +=data[ B0+0]* x[(J0+0)];
+            temp +=data[ B0  ]* x[(J0  )];
             temp +=data[ B0+1]* x[(J0+1)];
             temp +=data[ B0+2]* x[(J0+2)];
-            temp +=data[ B1+0]* x[(J1+0)];
+            temp +=data[ B1  ]* x[(J1  )];
             temp +=data[ B1+1]* x[(J1+1)];
             temp +=data[ B1+2]* x[(J1+2)];
-            y[((s*num_rows+i)*3+k)]=temp;
         }
+        y[idx]=temp;
     }
 
 }
@@ -250,31 +248,31 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceCo
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
     const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
     value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
-    const int* left_ptr = thrust::raw_pointer_cast( &left_range[0]);
-    const int* right_ptr = thrust::raw_pointer_cast( &right_range[0]);
+    const int* left_range_ptr = thrust::raw_pointer_cast( &left_range[0]);
+    const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 3)
     {
         if( blocks_per_line == 3)
         {
             if( right_size == 1)
-                ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left_ptr, right_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left_range[0], x_ptr,y_ptr);
             else
-                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, left_ptr, right_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
         }
         else if( blocks_per_line == 2)
         {
             if( right_size == 1)
-                ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left_ptr, right_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left_range[0], x_ptr,y_ptr);
             else
-                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, left_ptr, right_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
         }
         else
             ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right_size, left_ptr, right_ptr, x_ptr,y_ptr);
+                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
     }
     else
         ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, left_ptr, right_ptr, x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
 }
 
 template<class value_type>
