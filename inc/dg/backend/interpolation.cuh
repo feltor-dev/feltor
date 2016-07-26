@@ -478,6 +478,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
 ///@}
 
 
+/**
+ * @brief Transform a vector from XSPACE to LSPACE
+ *
+ * @param in input
+ * @param g grid
+ *
+ * @return the vector in LSPACE
+ */
 thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const Grid2d<double>& g)
 {
     thrust::host_vector<double> out(in.size(), 0);
@@ -490,8 +498,8 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
     for( unsigned o=0; o<g.n(); o++)
         out[((i*g.n() + k)*g.Nx() + j)*g.n() + l] += forward(k,o)*forward( l, m)*in[((i*g.n() + o)*g.Nx() + j)*g.n() + m];
     return out;
-
 }
+
 }//namespace create
 
 /**

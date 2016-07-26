@@ -417,15 +417,15 @@ struct FpsiX
         for( unsigned i=0; i<r.size(); i++)
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
-            //double psip2 = psipR*psipR+psipZ*psipZ;
+            double psip2 = psipR*psipR+psipZ*psipZ;
             //yr[i] = psipZ*f/psip2;
             //yz[i] = -psipR*f/psip2;
             //yr[i] = psipZ*f/sqrt(psip2);
             //yz[i] = -psipR*f/sqrt(psip2);
-            //yr[i] = psipZ/f/sqrt(psip2);
-            //yz[i] = -psipR/f/sqrt(psip2);
-            yr[i] = psipZ*f;
-            yz[i] = -psipR*f;
+            yr[i] = psipZ/f/sqrt(psip2);
+            yz[i] = -psipR/f/sqrt(psip2);
+            //yr[i] = psipZ*f;
+            //yz[i] = -psipR*f;
         }
 
     }
