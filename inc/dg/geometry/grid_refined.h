@@ -1,8 +1,8 @@
 #pragma once
 
+#include "cusp/transpose.h"
 #include "dg/backend/grid.h"
 #include "dg/backend/interpolation.cuh"
-#include "cusp/transpose.h"
 
 
 namespace dg
@@ -34,6 +34,71 @@ enum direction
 namespace detail
 {
 
+thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx)
+{
+    if( add_x == 0)
+    {
+        thrust::host_vector<double> w_( n*N, 1);
+        return w_;
+    }
+    assert( node <= N);
+    //there are add_x+1 finer cells per refined cell ...
+    thrust::host_vector< double> left( n*N+n*add_x, 1), right(left);
+    for( unsigned k=0; k<n; k++)//the original cell and the additional ones
+        left[k] = pow( 2, add_x);
+    for( unsigned i=0; i<add_x; i++) 
+        for( unsigned k=0; k<n; k++)
+            left[(i+1)*n+k] = pow( 2, add_x-i);
+    //mirror left into right
+    for( unsigned i=0; i<right.size(); i++)
+        right[i] = left[ (left.size()-1)-i];
+    thrust::host_vector< double> both( n*N+2*n*add_x, 1);
+    for( unsigned i=0; i<left.size(); i++)
+        both[i] *= left[i];
+    for( unsigned i=0; i<right.size(); i++)
+        both[i+n*add_x] *= right[i];
+    if(      node == 0     && bcx != dg::PER) { return left; }
+    else if( node == N && bcx != dg::PER) { return right; }
+    else if((node == N || node == 0) && bcx == dg::PER) { return both; }
+    else 
+    {
+        thrust::host_vector<double> w_ = both;
+        //now shift indices so that refinement is around nodes
+        for( unsigned i=0; i<both.size(); i++)
+            w_[((add_x+node)*n+i)%both.size()] = both[i];
+        return w_;
+    }
+}
+
+/**
+ * @brief Normalize the given weights and compute the abscissas of the grid
+ *
+ * @param g The grid to be refined
+ * @param weights the unnormalized weights
+ *
+ * @return The abscissas of the new grid
+ */
+thrust::host_vector<double> normalize_weights_and_compute_abscissas( const Grid1d<double>& g, thrust::host_vector<double>& weights)
+{
+    //normalize weights
+    unsigned Nx_new = weights.size()/g.n();
+    for( unsigned i=0;i<weights.size(); i++)
+        weights[i] *= (double)g.N()/(double)Nx_new;
+
+    thrust::host_vector<double> boundaries(Nx_new+1), abs(g.n()*Nx_new);
+    boundaries[0] = g.x0();
+    for( unsigned i=0; i<Nx_new; i++)
+    {
+        boundaries[i+1] = boundaries[i] + g.lx()/(double)Nx_new/weights[g.n()*i];
+        for( unsigned j=0; j<g.n(); j++)
+        {
+            abs[i*g.n()+j] =  (boundaries[i+1]+boundaries[i])/2. + 
+                (boundaries[i+1]-boundaries[i])/2.*g.dlt().abscissas()[j];
+        }
+    }
+    return abs;
+}
+
 /**
  * @brief Create 1d refinement weights and abscissas for the exponential refinement around a node 
  *
@@ -57,53 +122,10 @@ int exponential_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thr
         weights = w_; abscissas = abs_; 
         return g.N();
     }
-    assert( node <= g.N());
-    //there are add_x+1 finer cells per refined cell ...
-    thrust::host_vector< double> left( g.size()+g.n()*add_x, 1), right(left);
-    for( unsigned k=0; k<g.n(); k++)//the original cell and the additional ones
-        left[k] = pow( 2, add_x);
-    for( unsigned i=0; i<add_x; i++) 
-    for( unsigned k=0; k<g.n(); k++)
-        left[(i+1)*g.n()+k] = pow( 2, add_x-i);
-    //mirror left into right
-    for( unsigned i=0; i<right.size(); i++)
-        right[i] = left[ (left.size()-1)-i];
-    thrust::host_vector< double> both( g.size()+2*g.n()*add_x, 1);
-    for( unsigned i=0; i<left.size(); i++)
-        both[i] *= left[i];
-    for( unsigned i=0; i<right.size(); i++)
-        both[i+g.n()*add_x] *= right[i];
-    if(      node == 0     && g.bcx() != dg::PER) { weights = left; }
-    else if( node == g.N() && g.bcx() != dg::PER) { weights = right; }
-    else if((node == g.N() || node == 0) && g.bcx() == dg::PER) { weights = both; }
-    else 
-    {
-        thrust::host_vector<double> w_ = both;
-        //now shift indices so that refinement is around nodes
-        for( unsigned i=0; i<both.size(); i++)
-            w_[((add_x+node)*g.n()+i)%both.size()] = both[i];
-        weights = w_;
-    }
-
-    //normalize weights
+    weights = exponential_ref( add_x, node, g.n(), g.N(), g.bcx());
     unsigned Nx_new = weights.size()/g.n();
-    for( unsigned i=0;i<weights.size(); i++)
-        weights[i] *= (double)g.N()/(double)Nx_new;
-
-    thrust::host_vector<double> boundaries(Nx_new+1), abs(g.n()*Nx_new);
-    boundaries[0] = g.x0();
-    for( unsigned i=0; i<Nx_new; i++)
-    {
-        boundaries[i+1] = boundaries[i] + g.lx()/(double)Nx_new/weights[g.n()*i];
-        for( unsigned j=0; j<g.n(); j++)
-        {
-            abs[i*g.n()+j] =  (boundaries[i+1]+boundaries[i])/2. + 
-                (boundaries[i+1]-boundaries[i])/2.*g.dlt().abscissas()[j];
-        }
-    }
-    abscissas = abs;
+    abscissas = normalize_weights_and_compute_abscissas( g, weights);
     return Nx_new;
-
 }
 
 }//namespace detail
@@ -255,6 +277,8 @@ struct Grid3d : public dg::Grid3d<double>
 }//namespace refined
 
 
+namespace create{
+
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_fine)
 {
     dg::Grid2d<double> g = g_fine.associated();
@@ -282,5 +306,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::refined::G
     C.sort_by_row_and_column();
     return C; 
 }
+}//namespace create
 
 }//namespace dg
