@@ -22,7 +22,7 @@ namespace create{
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const GridX1d<double>& g)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const GridX1d& g)
 {
     return interpolation( x, g.grid());
 }
@@ -38,7 +38,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const GridX2d<double>& g , dg::bc globalbcz = dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const GridX2d& g , dg::bc globalbcz = dg::NEU)
 {
     return interpolation( x,y, g.grid(), globalbcz);
 }
@@ -58,7 +58,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @return interpolation matrix
  * @note The values of x, y and z must lie within the boundaries of g
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const GridX3d<double>& g, dg::bc globalbcz= dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const GridX3d& g, dg::bc globalbcz= dg::NEU)
 {
     return interpolation( x,y,z, g.grid(), globalbcz);
 }
@@ -75,7 +75,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX1d<double>& g_new, const GridX1d<double>& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX1d& g_new, const GridX1d& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }
@@ -91,7 +91,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX1d<do
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX2d<double>& g_new, const GridX2d<double>& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX2d& g_new, const GridX2d& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }
@@ -108,7 +108,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX2d<do
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX3d<double>& g_new, const GridX3d<double>& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX3d& g_new, const GridX3d& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }
@@ -122,7 +122,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX3d<do
  *
  * @return the vector in LSPACE
  */
-thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const GridX2d<double>& g)
+thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const GridX2d& g)
 {
     return forward_transform( in, g.grid());
 }
@@ -138,7 +138,7 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
  *
  * @return interpolated point
  */
-double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d<double>& g )
+double interpolate( double x, double y,  const thrust::host_vector<double>& v, const GridX2d& g )
 {
     return interpolate( x,y,v,g.grid());
 }

@@ -2,6 +2,8 @@
 
 #include "dg/backend/grid.h"
 #include "dg/backend/gridX.h"
+#include "dg/backend/evaluationX.cuh"
+#include "dg/backend/weightsX.cuh"
 #include "conformal.h"
 
 

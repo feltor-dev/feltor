@@ -166,11 +166,11 @@ try{
 
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    X=temp0;
+    dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, defID, X.data());
-    X = g2d.vol();
-    Y = g2d.g_yy();
+    dg::blas1::transfer( g2d.vol(), X);
+    dg::blas1::transfer( g2d.g_yy(),Y);
     dg::blas1::pointwiseDot( Y, X, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, volID, X.data());

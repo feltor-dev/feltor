@@ -1,7 +1,7 @@
 #include <iostream>
 #include "blas.h"
 #include "derivativesX.h"
-#include "evaluation.cuh"
+#include "evaluationX.cuh"
 #include "typedefs.cuh"
 #include "sparseblockmat.cuh"
 

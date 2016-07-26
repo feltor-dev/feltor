@@ -3,6 +3,8 @@
 #include <cassert>
 
 #include "gridX.h"
+#include "dx.h"
+#include "weightsX.cuh"
 #include "sparseblockmat.h"
 
 /*! @file 

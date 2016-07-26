@@ -2,6 +2,7 @@
 
 #include "dg/backend/grid.h"
 #include "dg/backend/gridX.h"
+#include "dg/backend/interpolationX.cuh"
 #include "dg/nullstelle.h"
 
 #include "orthogonal.h"
