@@ -114,7 +114,7 @@ try{
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
     file::NC_Error_Handle err;
-    err = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( "orthogonalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[3], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
     //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
@@ -222,7 +222,8 @@ try{
     std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.1*gp.a*gp.elongation, 1.1*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
+    g2dC.display(std::cout);
     gp.psipmax = 0., gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
@@ -234,6 +235,7 @@ try{
     std::cout << "volumeXYP is "<< volume<<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
+    std::cout << "Note that the error might also be because the regions in the RZ grid and the orthogonal grid are not the same!\n";
     std::cout << "Note that the error might also come from the volume in RZP!\n";
 
    // ///////////////////////////TEST 3d grid//////////////////////////////////////

@@ -114,7 +114,7 @@ try{
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
     file::NC_Error_Handle err;
-    err = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( "conformalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[3], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
     //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
@@ -220,7 +220,7 @@ try{
     std::cout << "Rel Error of g.g_xx() is "<<sqrt(error)<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.1*gp.a*gp.elongation, 1.1*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2.0*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
