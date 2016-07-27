@@ -23,41 +23,11 @@ namespace detail
 //good as it can, i.e. until machine precision is reached
 struct Fpsi
 {
-    Fpsi( const solovev::GeomParameters& gp, double psi_0): 
-        gp_(gp), fieldRZYT_(gp), fieldRZtau_(gp), psi_0(psi_0) 
+    Fpsi( const solovev::GeomParameters& gp): 
+        gp_(gp), fieldRZYT_(gp), fieldRZtau_(gp) 
     {
-        /**
-         * @brief Find R such that \f$ \psi_p(R,0) = psi_0\f$
-         *
-         * Searches the range R_0 to R_0 + 2*gp.a
-         * @param gp The geometry parameters
-         * @param psi_0 The intended value for psi_p
-         *
-         * @return the value for R
-         */
         R_init = gp.R_0 + 0.5*gp.a; Z_init = 0;
         solovev::Psip psip(gp);
-        psi_0 =  psip(R_init, Z_init);
-        //own implementation so as not to need a function object
-        //solovev::Psip psip( gp);
-        //double min = gp.R_0, max = gp.R_0+2*gp.a, middle;
-        //double value_middle, value_max=psip(gp.R_0+gp.a, 0)-psi_0, value_min=psip(gp.R_0, 0) - psi_0;
-        //std::cout << value_max <<" "<<value_min<<"\n";
-        //if( value_max*value_min>=0)
-        //    throw dg::KeineNST_1D( min, max);
-        //double eps=max-min, eps_old = 2*eps;
-        //unsigned number =0;
-        //while( eps<eps_old)
-        //{
-        //    eps_old = eps;
-        //    value_middle = psip( middle = (min+max)/2., 0) - psi_0;
-        //    if( value_middle == 0)              {max = min = middle; break;}
-        //    else if( value_middle*value_max >0) max = middle;
-        //    else                                min = middle;
-        //    eps = max-min; number++;
-        //}
-        ////std::cout << eps<<" with "<<number<<" steps\n";
-        //R_init = (min+max)/2;
     }
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0) 
@@ -67,17 +37,14 @@ struct Fpsi
         begin2d[0] = end2d[0] = end2d_old[0] = R_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
         solovev::Psip psip(gp_);
-        //psi_0 =  psip(R_init, Z_init);
         //std::cout << "In init function\n";
         double eps = 1e10, eps_old = 2e10;
         while( eps < eps_old && N<1e6 && eps > 1e-15)
         {
             //remember old values
-            eps_old = eps;
-            end2d_old = end2d;
+            eps_old = eps; end2d_old = end2d;
             //compute new values
-            N*=2;
-            dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip(R_init, Z_init), psi, N);
+            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip(R_init, Z_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         R_init = R_0 = end2d_old[0], Z_init = Z_0 = end2d_old[1];
@@ -120,11 +87,12 @@ struct Fpsi
     /**
      * @brief This function computes the integral x_1 = -\int_{\psi_0}^{\psi_1} f(\psi) d\psi to machine precision
      *
+     * @param psi_0 lower boundary 
      * @param psi_1 upper boundary 
      *
      * @return x1
      */
-    double find_x1( double psi_1 ) 
+    double find_x1( double psi_0, double psi_1 ) 
     {
         unsigned P=8;
         double x1 = 0, x1_old = 0;
@@ -206,29 +174,28 @@ struct Fpsi
         solovev::PsipR psipR(gp_);
         solovev::PsipZ psipZ(gp_);
         double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
-        double psip2 = psipR_*psipR_+psipZ_*psipZ_;
-        begin[2] = f_psi*(0.0/psip2+1.0)* psipZ_;
-        begin[3] = -f_psi*(0.0/psip2+1.0)*psipR_;
+        begin[2] = f_psi* psipZ_;
+        begin[3] = -f_psi*psipR_;
 
         R_0 = begin[0], Z_0 = begin[1];
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-        solovev::conformal::FieldRZYRYZY fieldRZY(gp_);
-        fieldRZY.set_f(f_psi);
-        fieldRZY.set_fp(fprime);
+        solovev::conformal::FieldRZYRYZY fieldRZYRYZY(gp_);
+        fieldRZYRYZY.set_f(f_psi);
+        fieldRZYRYZY.set_fp(fprime);
         unsigned steps = 1;
         double eps = 1e10, eps_old=2e10;
         while( eps < eps_old)
         {
             //begin is left const
             eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
-            dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
+            dg::stepperRK17( fieldRZYRYZY, begin, end, 0, y_vec[0], steps);
             r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
             xr[0] = -f_psi*psipR(r[0],z[0]), xz[0] = -f_psi*psipZ(r[0],z[0]);
             //std::cout <<end[0]<<" "<< end[1] <<"\n";
             for( unsigned i=1; i<n*N; i++)
             {
                 temp = end;
-                dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
+                dg::stepperRK17( fieldRZYRYZY, temp, end, y_vec[i-1], y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
                 xr[i] = -f_psi*psipR(r[i],z[i]), xz[i] = -f_psi*psipZ(r[i],z[i]);
             }
@@ -252,16 +219,13 @@ struct Fpsi
     const solovev::conformal::FieldRZYT fieldRZYT_;
     const solovev::FieldRZtau fieldRZtau_;
     double R_init, Z_init;
-    const double psi_0;
-
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
 struct FieldFinv
 {
-    FieldFinv( const solovev::GeomParameters& gp, double psi_0, unsigned N_steps = 500): 
-        psi_0(psi_0), 
-        fpsi_(gp, psi_0), fieldRZYT_(gp), N_steps(N_steps)
+    FieldFinv( const solovev::GeomParameters& gp, unsigned N_steps = 500): 
+        fpsi_(gp), fieldRZYT_(gp), N_steps(N_steps)
             { }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
@@ -274,7 +238,6 @@ struct FieldFinv
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     private:
-    double psi_0;
     Fpsi fpsi_;
     solovev::conformal::FieldRZYT fieldRZYT_;
     thrust::host_vector<double> fpsi_neg_inv;
@@ -314,8 +277,8 @@ struct RingGrid3d : public dg::Grid3d<double>
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         assert( bcx == dg::PER|| bcx == dg::DIR);
-        conformal::detail::Fpsi fpsi( gp, psi_0);
-        double x_1 = fpsi.find_x1( psi_1);
+        conformal::detail::Fpsi fpsi( gp);
+        double x_1 = fpsi.find_x1( psi_0, psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
         else
@@ -324,7 +287,7 @@ struct RingGrid3d : public dg::Grid3d<double>
             std::swap( psi_0, psi_1);
         }
         //compute psi(x) for a grid on x and call construct_rzy for all psi
-        detail::FieldFinv fpsiMinv_(gp, psi_0, 500);
+        detail::FieldFinv fpsiMinv_(gp, 500);
         dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
         thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
@@ -359,7 +322,7 @@ struct RingGrid3d : public dg::Grid3d<double>
             //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
             N*=2;
         }
-        construct_rz( gp, psi_0, psi_x);
+        construct_rz( gp, psi_x);
         construct_metric();
     }
     const thrust::host_vector<double>& f_x()const{return f_x_;}
@@ -385,10 +348,10 @@ struct RingGrid3d : public dg::Grid3d<double>
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
-    void construct_rz( const solovev::GeomParameters& gp, double psi_0, thrust::host_vector<double>& psi_x)
+    void construct_rz( const solovev::GeomParameters& gp, thrust::host_vector<double>& psi_x)
     {
         //std::cout << "In grid function:\n";
-        detail::Fpsi fpsi( gp, psi_0);
+        detail::Fpsi fpsi( gp);
         r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());

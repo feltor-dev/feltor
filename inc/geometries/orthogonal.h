@@ -26,14 +26,6 @@ struct Fpsi
     Fpsi( const solovev::GeomParameters& gp): 
         gp_(gp), fieldRZYT_(gp), fieldRZtau_(gp)
     {
-        /**
-         * @brief Find R such that \f$ \psi_p(R,0) = psi_0\f$
-         *
-         * Searches the range R_0 to R_0 + 2*gp.a
-         * @param gp The geometry parameters
-         *
-         * @return the value for R
-         */
         R_init = gp.R_0 + 0.5*gp.a; Z_init = 0;
         solovev::Psip psip(gp);
     }
@@ -85,7 +77,6 @@ struct Fpsi
         }
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
-        //return 1./f_psi;
     }
     double operator()( double psi)
     {
@@ -96,7 +87,7 @@ struct Fpsi
     /**
      * @brief This function computes the integral x_1 = -\int_{\psi_0}^{\psi_1} f(\psi) d\psi to machine precision
      *
-     * @param psi_0 upper boundary 
+     * @param psi_0 lower boundary 
      * @param psi_1 upper boundary 
      *
      * @return x1
@@ -240,6 +231,7 @@ struct Fpsi
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
+//and provides the Nemov algorithm for orthogonal grid
 struct FieldFinv
 {
     FieldFinv( const solovev::GeomParameters& gp, unsigned N_steps = 500): 

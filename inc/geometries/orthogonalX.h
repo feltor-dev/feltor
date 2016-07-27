@@ -4,6 +4,7 @@
 #include "dg/backend/interpolationX.cuh"
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/weightsX.cuh"
+#include "utilitiesX.h"
 
 #include "orthogonal.h"
 
@@ -14,63 +15,6 @@ namespace orthogonal
 
 namespace detail
 {
-
-struct XPointer
-{
-    XPointer( const solovev::GeomParameters& gp): fieldRZtau_(gp), psip_(gp){
-        solovev::HessianRZtau hessianRZtau(gp);
-        R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-        Z_X = -1.1*gp.elongation*gp.a;
-        thrust::host_vector<double> X(2,0), XN(X);
-        X[0] = R_X, X[1] = Z_X;
-        for( unsigned i=0; i<3; i++)
-        {
-            hessianRZtau.newton_iteration( X, XN);
-            XN.swap(X);
-        }
-        R_X = X[0], Z_X = X[1];
-        std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
-        R_i[0] = R_X + 1, Z_i[0] = Z_X;
-        R_i[1] = R_X    , Z_i[1] = Z_X + 1;
-        R_i[2] = R_X - 1, Z_i[2] = Z_X;
-        R_i[3] = R_X    , Z_i[3] = Z_X - 1;
-    }
-    void set_quadrant( int quad){quad_ = quad;}
-    double operator()( double x) const
-    {
-        thrust::host_vector<double> begin(2), end(2), end_old(2);
-        begin[0] = R_i[quad_], begin[1] = Z_i[quad_];
-        double eps = 1e10, eps_old = 2e10;
-        unsigned N=10;
-        if( quad_ == 0 || quad_ == 2) { begin[1] += x;}
-        else if( quad_ == 1 || quad_ == 3) { begin[0] += x;}
-
-        double psi0 = psip_(begin[0], begin[1]);
-        while( (eps < eps_old || eps > 1e-4 ) && eps > 1e-7)
-        {
-            eps_old = eps; end_old = end;
-            N*=2; dg::stepperRK17( fieldRZtau_, begin, end, psi0, 0, N);
-            eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
-            if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
-        }
-        //std::cout<< end_old[0]  - R_X << "\t";
-        //std::cout<< end_old[1]  - Z_X << std::endl;
-        if( quad_ == 0 || quad_ == 2){ return end_old[1] - Z_X;}
-        return end_old[0] - R_X;
-    }
-    void point( double& R, double& Z, double x)
-    {
-        if( quad_ == 0 || quad_ == 2){ R = R_i[quad_], Z= Z_i[quad_] +x;}
-        else if (quad_ == 1 || quad_ == 3) { R = R_i[quad_] + x, Z = Z_i[quad_];}
-    }
-
-    private:
-    int quad_;
-    solovev::FieldRZtau fieldRZtau_;
-    solovev::Psip psip_;
-    double R_X, Z_X;
-    double R_i[4], Z_i[4];
-};
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
@@ -322,7 +266,7 @@ struct FpsiX
             double x_min = -1, x_max = 1;
             dg::bisection1d( xpointer_, x_min, x_max, 1e-6);
             xpointer_.point( R_init[i], Z_init[i], (x_min+x_max)/2.);
-            std::cout << "Found initial point! "<<R_init[i]<<" "<<Z_init[i]<<"\n";
+            //std::cout << "Found initial point! "<<R_init[i]<<" "<<Z_init[i]<<"\n";
 
             begin[0] = R_init[i], begin[1] = Z_init[i]; end = begin;
             unsigned steps = 1;
