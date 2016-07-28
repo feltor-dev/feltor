@@ -257,7 +257,7 @@ struct FpsiX
             thrust::host_vector<double>& z, 
             thrust::host_vector<double>& yr, 
             thrust::host_vector<double>& yz,  
-            double* R_0, double* Z_0, double& f ) 
+            double* R_0, double* Z_0, double& f_psi ) 
     {
         assert( psi < 0);
         //find start points for first psi surface
@@ -288,38 +288,32 @@ struct FpsiX
         ///////////////////////////now find y coordinate line//////////////
         thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
-        //const thrust::host_vector<double> w1d = dg::create::weights( g1d);
-        r.resize( y_vec.size()), z.resize(r.size()), yr.resize(r.size()), yz.resize(r.size());
+        r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size());
         solovev::orthogonal::FieldRZY fieldRZY(gp_);
         //now compute f and starting values 
-        double f_psi = construct_f( psi, R_0, Z_0);
+        f_psi = construct_f( psi, R_0, Z_0);
         fieldRZY.set_f(f_psi);
-        //fieldRZY.set_f(1./f_psi);
         unsigned steps = 1; double eps = 1e10, eps_old=2e10;
         while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
         {
             eps_old = eps, r_old = r, z_old = z;
-
-            ////////////////////////bottom left region/////////////////////
+            //////////////////////bottom left region/////////////////////
             if( nodeX0 != 0)
             {
                 begin[0] = R_init[1], begin[1] = Z_init[1];
                 dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[nodeX0-1], steps);
-                //r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
                 r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
             }
             for( int i=nodeX0-2; i>=0; i--)
             {
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i+1], y_vec[i], steps);
-                //r[nodeX0-1-i] = end[0], z[nodeX0-1-i] = end[1];
                 r[i] = end[0], z[i] = end[1];
             }
             ////////////////middle region///////////////////////////
             begin[0] = R_init[0], begin[1] = Z_init[0];
             dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[nodeX0], steps);
             r[nodeX0] = end[0], z[nodeX0] = end[1];
-            //std::cout <<end[0]<<" "<< end[1] <<"\n";
             for( unsigned i=nodeX0+1; i<nodeX1; i++)
             {
                 temp = end;
@@ -356,21 +350,20 @@ struct FpsiX
             steps*=2;
         }
         r = r_old, z = z_old;
-        f = f_psi;
         solovev::PsipR psipR_(gp_);
         solovev::PsipZ psipZ_(gp_);
         for( unsigned i=0; i<r.size(); i++)
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
             double psip2 = psipR*psipR+psipZ*psipZ;
-            //yr[i] = psipZ*f/psip2;
-            //yz[i] = -psipR*f/psip2;
-            yr[i] = psipZ*f/sqrt(psip2);
-            yz[i] = -psipR*f/sqrt(psip2);
-            //yr[i] = psipZ/f/sqrt(psip2);
-            //yz[i] = -psipR/f/sqrt(psip2);
-            //yr[i] = psipZ*f;
-            //yz[i] = -psipR*f;
+            //yr[i] = psipZ*f_psi/psip2;
+            //yz[i] = -psipR*f_psi/psip2;
+            yr[i] = psipZ*f_psi/sqrt(psip2);
+            yz[i] = -psipR*f_psi/sqrt(psip2);
+            //yr[i] = psipZ/f_psi/sqrt(psip2);
+            //yz[i] = -psipR/f_psi/sqrt(psip2);
+            //yr[i] = psipZ*f_psi;
+            //yz[i] = -psipR*f_psi;
         }
 
     }
@@ -501,7 +494,7 @@ void construct_rz( XFieldFinv fpsiMinv,
     double R0[2], Z0[2], f0;
     detail::FpsiX fpsi(gp);
     fpsi.compute_rzy( psi_0, y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
-    //////////////////////////compute gvec/////////////////////
+    //////compute gvec/////////////////////
     thrust::host_vector<double> gvec(y_vec.size(), f0);
     solovev::PsipR psipR_(gp);
     solovev::PsipZ psipZ_(gp);
@@ -510,9 +503,9 @@ void construct_rz( XFieldFinv fpsiMinv,
          double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
          gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ);
     }
-    ///////////////////////////////////////////////////////////
     begin[0] = rvec, begin[1] = zvec;
     begin[2] = gvec, begin[3] = yrvec, begin[4] = yzvec;
+    ///////////////////////////////////////////////////////////
     ///////////////now we have the starting values of r, z, psi
     std::vector<thrust::host_vector<double> > end(begin), temp(begin);
     const unsigned size2d = psi_x.size()*y_vec.size();
@@ -520,12 +513,10 @@ void construct_rz( XFieldFinv fpsiMinv,
     r.resize(size2d), z.resize(size2d), g.resize(size2d); yr = r, yz = z;
     std::cout << "In RZ  function:\n";
     double psi0, psi1;
-    //while( eps <  eps_old && N < 1e6)
     double eps = 1e10;
     unsigned N=1; 
     while( eps >  1e-8 && N < 1e6 )
     {
-       // eps_old = eps; 
         r0_old = r0_x; 
         psi0 = psi_0, psi1 = psi_x[0];
         //////////////////////////////////////////////////
@@ -537,7 +528,6 @@ void construct_rz( XFieldFinv fpsiMinv,
             yr[j*Nx+0] = end[3][j], yz[j*Nx+0] = end[4][j];
              g[j*Nx+0] = end[2][j]; 
         }
-
         //////////////////////////////////////////////////
         for( unsigned i=1; i<psi_x.size(); i++)
         {
@@ -589,7 +579,8 @@ struct GridX3d : public dg::GridX3d
      * @param bcy The boundary condition in y (z is periodic)
      */
     GridX3d( solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
-        dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER)
+        dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
+        f_( this->size()), g_(f_), r_(f_), z_(f_), xr_(f_), xz_(f_), yr_(f_), yz_(f_)
     { 
         assert( psi_0 < 0 );
         assert( gp.c[10] != 0);
@@ -598,15 +589,48 @@ struct GridX3d : public dg::GridX3d
         std::cout << "FIND X FOR PSI_0\n";
         const double x_0 = fpsi.find_x(psi_0);
         const double x_1 = -fx/(1.-fx)*x_0;
+        std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
         init_X_boundaries( x_0, x_1);
         //compute psi(x) for a grid on x 
         dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
-        std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
-        //g1d_.display();
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_), psi_x;
         detail::XFieldFinv fpsiMinv_(gp, 500);
         dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
-        construct_rz( gp, psi_0, psi_x);
+        ////////////////////////////
+        dg::GridX1d gY1d( -this->fy()*2.*M_PI/(1.-2.*this->fy()), 2*M_PI+this->fy()*2.*M_PI/(1.-2.*this->fy()), this->fy(), this->n(), this->Ny(), dg::DIR);
+        unsigned Mx = this->n()*this->Nx(), My = this->n()*this->Ny();
+        thrust::host_vector<double> rvec, zvec, yrvec, yzvec, gvec;
+        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
+        orthogonal::detail::construct_rz( fpsiMinv_, gp, 
+                psi_0, psi_x, y_vec, 
+                gY1d.n()*gY1d.outer_N(), 
+                gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), 
+                rvec, zvec, yrvec, yzvec, gvec);
+        solovev::PsipR psipR_(gp);
+        solovev::PsipZ psipZ_(gp);
+        for( unsigned i=0; i<psi_x.size(); i++)
+            for( unsigned j=0; j<y_vec.size(); j++)
+            {
+                xr_[j*Mx+i] = psipR_(rvec[j*Mx+i],zvec[j*Mx+i])/f_x_[i]; 
+                xz_[j*Mx+i] = psipZ_(rvec[j*Mx+i],zvec[j*Mx+i])/f_x_[i]; 
+                 f_[j*Mx + i] = -1./f_x_[i];
+            }
+        //r_x1 = r_x0, z_x1 = z_x0; //periodic boundaries
+        //now lift to 3D grid
+        for( unsigned i=0; i<psi_x.size(); i++)
+            f_x_[i] = -1./f_x_[i];
+        for( unsigned k=0; k<this->Nz(); k++)
+            for( unsigned i=0; i<Mx*My; i++)
+            {
+                f_[k*Mx*My+i] = f_[i];
+                g_[k*Mx*My+i] = gvec[i];
+                r_[k*Mx*My+i] = rvec[i];
+                z_[k*Mx*My+i] = zvec[i];
+                yr_[k*Mx*My+i] = yrvec[i];
+                yz_[k*Mx*My+i] = yzvec[i];
+                xr_[k*Mx*My+i] = xr_[i];
+                xz_[k*Mx*My+i] = xz_[i];
+            }
         construct_metric();
     }
     const thrust::host_vector<double>& f()const{return f_;}
@@ -634,50 +658,6 @@ struct GridX3d : public dg::GridX3d
     const thrust::host_vector<double>& zx1()const{return z_x1;}
     double psi1()const{return psi_1_numerical_;}
     private:
-    //call the construct_rzy function for all psi_x and lift to 3d grid
-    //construct r,z,xr,xz,yr,yz,f_x
-    void construct_rz( const solovev::GeomParameters& gp, double psi_0, thrust::host_vector<double>& x_vec)
-    {
-        //x_vec contains psi(x) values
-        // convergence utilities
-        dg::Grid1d<double> g1d_( this->x0(), this->x1(), this->n(), this->Nx(), this->bcx());
-        unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
-        thrust::host_vector<double> psi_x(Nx, 0), psi_old(psi_x), psi_diff( psi_old);
-        thrust::host_vector<double> w1d = dg::create::weights( g1d_);
-        //fpsiMinv utilities
-        detail::XFieldFinv fpsiMinv_(gp, 500);
-        thrust::host_vector<double> rvec, zvec, yrvec, yzvec, gvec;
-        dg::GridX1d gY1d( -this->fy()*2.*M_PI/(1.-2.*this->fy()), 2*M_PI+this->fy()*2.*M_PI/(1.-2.*this->fy()), this->fy(), this->n(), this->Ny(), dg::DIR);
-        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
-        orthogonal::detail::construct_rz( fpsiMinv_, gp, psi_0, x_vec, y_vec, 
-                gY1d.n()*gY1d.inner_N(), gY1d.n()*gY1d.outer_N(), 
-                rvec, zvec, yrvec, yzvec, gvec);
-        solovev::PsipR psipR_(gp);
-        solovev::PsipZ psipZ_(gp);
-        for( unsigned i=0; i<x_vec.size(); i++)
-            for( unsigned j=0; j<y_vec.size(); j++)
-            {
-                xr_[j*Nx+i] = psipR_(rvec[j*Nx+i], zvec[j*Nx+i])/f_x_[i]; 
-                xz_[j*Nx+i] = psipZ_(rvec[j*Nx+i], zvec[j*Nx+i])/f_x_[i]; 
-                 f_[j*Nx + i] = -1./f_x_[i];
-            }
-        //r_x1 = r_x0, z_x1 = z_x0; //periodic boundaries
-        //now lift to 3D grid
-        for( unsigned i=0; i<x_vec.size(); i++)
-            f_x_[i] = -1./f_x_[i];
-        for( unsigned k=1; k<this->Nz(); k++)
-            for( unsigned i=0; i<Nx*Ny; i++)
-            {
-                f_[k*Nx*Ny+i] = f_[(k-1)*Nx*Ny+i];
-                g_[k*Nx*Ny+i] = g_[(k-1)*Nx*Ny+i];
-                r_[k*Nx*Ny+i] = r_[(k-1)*Nx*Ny+i];
-                z_[k*Nx*Ny+i] = z_[(k-1)*Nx*Ny+i];
-                yr_[k*Nx*Ny+i] = yr_[(k-1)*Nx*Ny+i];
-                yz_[k*Nx*Ny+i] = yz_[(k-1)*Nx*Ny+i];
-                xr_[k*Nx*Ny+i] = xr_[(k-1)*Nx*Ny+i];
-                xz_[k*Nx*Ny+i] = xz_[(k-1)*Nx*Ny+i];
-            }
-    }
     //compute metric elements from xr, xz, yr, yz, r and z
     void construct_metric()
     {

@@ -116,7 +116,7 @@ void construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters& g
         }
         dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
         //eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
-        eps = sqrt( dg::blas1::dot( psi_diff, psi_diff)/ dg::blas2::dot( psi_x, psi_x));
+        eps = sqrt( dg::blas1::dot( psi_diff, psi_diff)/ dg::blas1::dot( psi_x, psi_x));
         //psi_1_numerical_ = psi_0 + dg::blas1::dot( f_x_, w1d);
 
         //eps = fabs( psi_1_numerical-psi_1); 
