@@ -4,6 +4,7 @@
 #include "dg/backend/interpolationX.cuh"
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/weightsX.cuh"
+#include "dg/runge_kutta.h"
 #include "utilitiesX.h"
 
 #include "orthogonal.h"
@@ -247,9 +248,11 @@ struct FpsiX
 
 
     //compute the vector of r and z - values that form one psi surface
-    //calls construct_f to find f and the starting point and then just integrates
+    //calls construct_f to find f and the starting point is computed 
+    //on the perpendicular line and then just integrates
     //the field-line and metric from 0 to 2pi in y
-    void compute_rzy( double psi, unsigned n, unsigned N, double fy,
+    void compute_rzy( double psi, const thrust::host_vector<double>& y_vec, 
+            const unsigned nodeX0, const unsigned nodeX1,
             thrust::host_vector<double>& r, 
             thrust::host_vector<double>& z, 
             thrust::host_vector<double>& yr, 
@@ -257,6 +260,7 @@ struct FpsiX
             double* R_0, double* Z_0, double& f ) 
     {
         assert( psi < 0);
+        assert( g1d.size() == y_vec.size());
         //find start points for first psi surface
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);
         double R_init[2], Z_init[2];
@@ -267,7 +271,6 @@ struct FpsiX
             dg::bisection1d( xpointer_, x_min, x_max, 1e-6);
             xpointer_.point( R_init[i], Z_init[i], (x_min+x_max)/2.);
             //std::cout << "Found initial point! "<<R_init[i]<<" "<<Z_init[i]<<"\n";
-
             begin[0] = R_init[i], begin[1] = Z_init[i]; end = begin;
             unsigned steps = 1;
             double eps = 1e10, eps_old=2e10;
@@ -284,11 +287,9 @@ struct FpsiX
             R_init[i] = begin[0] = end_old[0], Z_init[i] = begin[1] = end_old[1];
         }
         ///////////////////////////now find y coordinate line//////////////
-        dg::GridX1d g1d( -fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fy, n, N, dg::DIR);
-        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, g1d);
         thrust::host_vector<double> r_old(g1d.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(g1d.size(), 0), z_diff( z_old);
-        const thrust::host_vector<double> w1d = dg::create::weights( g1d);
+        //const thrust::host_vector<double> w1d = dg::create::weights( g1d);
         r.resize( g1d.size()), z.resize(r.size()), yr.resize(r.size()), yz.resize(r.size());
         solovev::orthogonal::FieldRZY fieldRZY(gp_);
         //now compute f and starting values 
@@ -301,44 +302,44 @@ struct FpsiX
             eps_old = eps, r_old = r, z_old = z;
 
             ////////////////////////bottom left region/////////////////////
-            if( g1d.outer_N() != 0)
+            if( nodeX0 != 0)
             {
                 begin[0] = R_init[1], begin[1] = Z_init[1];
-                dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[n*g1d.outer_N()-1], steps);
-                //r[n*g1d.outer_N()-1] = end[0], z[n*g1d.outer_N()-1] = end[1];
-                r[n*g1d.outer_N()-1] = end[0], z[n*g1d.outer_N()-1] = end[1];
+                dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[nodeX0-1], steps);
+                //r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
+                r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
             }
-            for( int i=n*g1d.outer_N()-2; i>=0; i--)
+            for( int i=nodeX0-2; i>=0; i--)
             {
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i+1], y_vec[i], steps);
-                //r[n*g1d.outer_N()-1-i] = end[0], z[n*g1d.outer_N()-1-i] = end[1];
+                //r[nodeX0-1-i] = end[0], z[nodeX0-1-i] = end[1];
                 r[i] = end[0], z[i] = end[1];
             }
             ////////////////middle region///////////////////////////
             begin[0] = R_init[0], begin[1] = Z_init[0];
-            dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[n*g1d.outer_N()], steps);
-            r[n*g1d.outer_N()] = end[0], z[n*g1d.outer_N()] = end[1];
+            dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[nodeX0], steps);
+            r[nodeX0] = end[0], z[nodeX0] = end[1];
             //std::cout <<end[0]<<" "<< end[1] <<"\n";
-            for( unsigned i=n*g1d.outer_N()+1; i<n*(g1d.outer_N()+g1d.inner_N()); i++)
+            for( unsigned i=nodeX0+1; i<; i++)
             {
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1];
             }
             temp = end;
-            dg::stepperRK17( fieldRZY, temp, end, y_vec[n*(g1d.outer_N()+g1d.inner_N())-1], 2.*M_PI, steps);
+            dg::stepperRK17( fieldRZY, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
             eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
             std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
             ////////////////////bottom right region
 
-            if( g1d.outer_N() != 0)
+            if( nodeX0!= 0)
             {
                 begin[0] = R_init[1], begin[1] = Z_init[1];
-                dg::stepperRK17( fieldRZY, begin, end, 2.*M_PI, y_vec[n*(g1d.outer_N()+g1d.inner_N())], steps);
-                r[n*(g1d.outer_N()+g1d.inner_N())] = end[0], z[n*(g1d.outer_N()+g1d.inner_N())] = end[1];
+                dg::stepperRK17( fieldRZY, begin, end, 2.*M_PI, y_vec[nodeX1], steps);
+                r[nodeX1] = end[0], z[nodeX1] = end[1];
             }
-            for( unsigned i=n*(g1d.outer_N()+g1d.inner_N())+1; i<n*g1d.N(); i++)
+            for( unsigned i=nodeX1+1; i<n*g1d.N(); i++)
             {
                 temp = end;
                 dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
@@ -347,10 +348,10 @@ struct FpsiX
             //compute error in R,Z only
             dg::blas1::axpby( 1., r, -1., r_old, r_diff);
             dg::blas1::axpby( 1., z, -1., z_old, z_diff);
-            double er = dg::blas2::dot( r_diff, w1d, r_diff);
-            double ez = dg::blas2::dot( z_diff, w1d, z_diff);
-            double ar = dg::blas2::dot( r, w1d, r);
-            double az = dg::blas2::dot( z, w1d, z);
+            double er = dg::blas1::dot( r_diff, r_diff);
+            double ez = dg::blas1::dot( z_diff, z_diff);
+            double ar = dg::blas1::dot( r, r);
+            double az = dg::blas1::dot( z, z);
             eps =  sqrt( er + ez)/sqrt(ar+az);
             std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
             steps*=2;
@@ -379,13 +380,15 @@ struct FpsiX
     const solovev::orthogonal::FieldRZYT fieldRZYT_;
     const solovev::orthogonal::FieldRZYZ fieldRZYZ_;
     const solovev::FieldRZtau fieldRZtau_;
-    XPointer xpointer_;
+    dg::detail::XPointer xpointer_;
     solovev::HessianRZtau hessianRZtau_;
     solovev::MinimalCurve minimalCurve_;
     double R_i[4], Z_i[4], vR_i[4], vZ_i[4];
 
 };
+
 //This struct computes -2pi/f with a fixed number of steps for all psi
+//and serves as the functor in Nemov's algorithm
 struct XFieldFinv
 {
     XFieldFinv( const solovev::GeomParameters& gp, unsigned N_steps = 500): 
@@ -396,8 +399,6 @@ struct XFieldFinv
     void operator()(const std::vector<thrust::host_vector<double> >& y, std::vector<thrust::host_vector<double> >& yp) 
     { 
         //y[0] = R, y[1] = Z , y[2] = g, y[3] = yr, y[4] = yz
-        //this->operator()( y[2], yp[2]);
-
         unsigned size = y[0].size();
         double psipR, psipZ, psipRR, psipRZ, psipZZ, psip2;
         for( unsigned i=0; i<size; i++)
@@ -477,6 +478,88 @@ struct XFieldFinv
     solovev::PsipZZ psipZZ_;
     solovev::PsipRZ psipRZ_;
 };
+
+//this function 
+template<class XFieldFinv>
+void construct_rz( XFieldFinv fpsiMinv, 
+        const solovev::GeomParameters& gp, 
+        double psi_0,  //innermost flux surface
+        const thrust::host_vector<double>& psi_x,  //psi(x)
+        const thrust::host_vector<double>& y_vec,  //y discretization
+        const unsigned nodeX0, const unsigned nodeX1,
+        thrust::host_vector<double>& r, 
+        thrust::host_vector<double>& z, 
+        thrust::host_vector<double>& yr, 
+        thrust::host_vector<double>& yz,  
+        thrust::host_vector<double>& g,  
+    )
+{
+    thrust::host_vector<double> r0_x(psi_x.size(), 0), r0_old(r0_x), r0_diff( r0_old);
+    //////////////////////compute fpsiMinv initial values
+    thrust::host_vector<double> rvec( y_vec.size()), zvec(rvec), yrvec(rvec), yzvec(rvec);
+    std::vector<thrust::host_vector<double> > begin(5);
+    //compute innermost flux surface 
+    double R0[2], Z0[2], f0;
+    detail::FpsiX fpsi(gp);
+    fpsi.compute_rzy( psi_0, y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
+    //////////////////////////compute gvec/////////////////////
+    thrust::host_vector<double> gvec(Ny, f0);
+    solovev::PsipR psipR_(gp);
+    solovev::PsipZ psipZ_(gp);
+    for( unsigned i=0; i<rvec.size(); i++)
+    {
+         double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
+         gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ);
+    }
+    ///////////////////////////////////////////////////////////
+    begin[0] = rvec, begin[1] = zvec;
+    begin[2] = gvec, begin[3] = yrvec, begin[4] = yzvec;
+    ///////////////now we have the starting values of r, z, psi
+    std::vector<thrust::host_vector<double> > end(begin), temp(begin);
+    r.resize(size()), z.resize(size()), g.resize(size()); yr = r_, yz = z_;
+    std::cout << "In RZ  function:\n";
+    double x0=this->x0(), x1 = psi_x[0];
+    //while( eps <  eps_old && N < 1e6)
+    double eps = 1e10;
+    unsigned N=1; 
+    while( eps >  1e-8 && N < 1e6 )
+    {
+       // eps_old = eps; 
+        r0_old = r0_x; 
+        //x0 = this->x0(), x1 = psi_x[0];
+        x0 = psi_0, x1 = psi_x[0];
+        //////////////////////////////////////////////////
+        dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
+        r0_x[0] = end[0][0]; //R
+        for( unsigned j=0; j<y_vec.size(); j++)
+        {
+             r[j*Nx+0] = end[0][j],  z[j*Nx+0]  = end[1][j];
+            yr[j*Nx+0] = end[3][j], yz[j*Nx+0] = end[4][j];
+             g[j*Nx+0] = end[2][j]; 
+        }
+
+        //////////////////////////////////////////////////
+        for( unsigned i=1; i<g1d_.size(); i++)
+        {
+            temp = end;
+            x0 = psi_x[i-1], x1 = psi_x[i];
+            //////////////////////////////////////////////////
+            dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
+            r0_x[i] = end[0][0]; //R
+            for( unsigned j=0; j<y_vec.siz(); j++)
+            {
+                 r[j*Nx+i] = end[0][j],  z[j*Nx+i] = end[1][j];
+                yr[j*Nx+i] = end[3][j], yz[j*Nx+i] = end[4][j];
+                 g[j*Nx+i] = end[2][j];
+            }
+            //////////////////////////////////////////////////
+        }
+        dg::blas1::axpby( 1., r0_x, -1., r0_old, r0_diff);
+        eps = sqrt( dg::blas1::dot( r0_diff, r0_diff)/ dg::blas1::dot( r0_x, r0_x));
+        std::cout << "Effective R  error is "<<eps<<" with "<<N<<" steps\n"; 
+        N*=2;
+    }
+}
 } //namespace detail
 
 template< class container>
@@ -519,57 +602,10 @@ struct GridX3d : public dg::GridX3d
         //compute psi(x) for a grid on x 
         dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
         std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
-        g1d_.display();
-        thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
-        thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
-        f_x_.resize( psi_x.size());
-        thrust::host_vector<double> w1d = dg::create::weights( g1d_);
-        unsigned N = 1;
-        std::cout << "In psi function:\n";
-        double x0=this->x0(), x1 = x_vec[0];
+        //g1d_.display();
+        thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_), psi_x;
         detail::XFieldFinv fpsiMinv_(gp, 500);
-        const unsigned idx = inner_Nx()*this->n();
-        const double psi_const = fpsiMinv_.find_psi( x_vec[idx]);
-        double eps = 1e10;//, eps_old=2e10;
-        //while( eps <  eps_old && N < 1e6)
-        while( eps >  1e-8 && N < 1e6 )
-        {
-           // eps_old = eps; 
-            psi_old = psi_x; 
-            x0 = this->x0(), x1 = x_vec[0];
-
-            thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
-            dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
-            psi_x[0] = end[0]; fpsiMinv_(end,temp); f_x_[0] = temp[0];
-            for( unsigned i=1; i<idx; i++)
-            {
-                temp = end;
-                x0 = x_vec[i-1], x1 = x_vec[i];
-                dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
-                psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
-                //std::cout << "FOUND PSI "<<end[0]<<"\n";
-            }
-            end[0] = psi_const;
-            //std::cout << "FOUND PSI "<<end[0]<<"\n";
-            psi_x[idx] = end[0]; fpsiMinv_(end,temp); f_x_[idx] = temp[0];
-            for( unsigned i=idx+1; i<g1d_.size(); i++)
-            {
-                temp = end;
-                x0 = x_vec[i-1], x1 = x_vec[i];
-                dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
-                psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
-                //std::cout << "FOUND PSI "<<end[0]<<"\n";
-            }
-            dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
-            eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
-            psi_1_numerical_ = psi_0 + dg::blas1::dot( f_x_, w1d);
-
-            //eps = fabs( psi_1_numerical-psi_1); 
-            //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
-            std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
-            std::cout << "psi 1               is "<<psi_1_numerical_<<"\n"; 
-            N*=2;
-        }
+        dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
         construct_rz( gp, psi_0, psi_x);
         construct_metric();
     }
@@ -614,7 +650,9 @@ struct GridX3d : public dg::GridX3d
         std::vector<thrust::host_vector<double> > begin(5);
         double R0[2], Z0[2], f0;
         detail::FpsiX fpsi(gp);
-        fpsi.compute_rzy( psi_0, this->n(), this->Ny(), this->fy(), rvec, zvec, yrvec, yzvec, R0, Z0, f0);
+        dg::GridX1d gY1d( -this->fy()*2.*M_PI/(1.-2.*this->fy()), 2*M_PI+this->fy()*2.*M_PI/(1.-2.*this->fy()), this->fy(), this->n(), this->Ny(), dg::DIR);
+        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
+        fpsi.compute_rzy( psi_0, gY1d, y_vec, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
         thrust::host_vector<double> gvec(Ny, f0);
         solovev::PsipR psipR_(gp);
         solovev::PsipZ psipZ_(gp);
