@@ -15,7 +15,7 @@
 
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "feltorS/parameters.h"
+#include "feltorSesol/parameters.h"
 // #include "probes.h"
 
 int main( int argc, char* argv[])
@@ -48,12 +48,15 @@ int main( int argc, char* argv[])
     dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::Grid1d<double > g1d( 0., p.lx,p.n, p.Nx, p.bc_x);
     double time = 0.;
+    
+    dg::HVec w2d = dg::create::weights( g2d);
 
     std::vector<dg::HVec> npe(2,dg::evaluate(dg::zero,g2d));
     dg::HVec phi(dg::evaluate(dg::zero,g2d));
     dg::HVec vor(dg::evaluate(dg::zero,g2d));
     std::vector<dg::HVec> logn(2,dg::evaluate(dg::zero,g2d));
     dg::HVec temp(dg::evaluate(dg::zero,g2d));
+    dg::HVec temp2(dg::evaluate(dg::zero,g2d));
     dg::HVec one(dg::evaluate(dg::one,g2d));
     dg::HVec temp1d(dg::evaluate(dg::zero,g1d));
     dg::HVec xcoo(dg::evaluate(dg::coo1,g1d));
@@ -61,7 +64,8 @@ int main( int argc, char* argv[])
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
     dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
-    
+    dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
+
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
     size_t start2d[3]  = {0, 0, 0};
@@ -107,6 +111,7 @@ int main( int argc, char* argv[])
     //probe netcdf file
     err1d = nc_redef(ncid1d);
     int npe_probesID[num_probes],phi_probesID[num_probes],gamma_probesID[num_probes];
+    int T_perp_zonalID;
     std::string npe_probes_names[num_probes] ;
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
@@ -124,6 +129,8 @@ int main( int argc, char* argv[])
         gamma_probes_names[i] =ss3.str();
         err1d = nc_def_var( ncid1d, gamma_probes_names[i].data(),    NC_DOUBLE, 1, &timeID, &gamma_probesID[i]);
     }
+    err1d = nc_def_var( ncid1d, "Uperpz",    NC_DOUBLE, 1, &timeID, &T_perp_zonalID);
+
     err1d = nc_enddef(ncid1d);   
     err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
    
@@ -162,6 +169,10 @@ int main( int argc, char* argv[])
             dg::blas2::gemv(interp,temp,temp1d); 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[3],   start1d, count1d, temp1d.data()); 
             polavg(phi,temp);
+	    //comute zonal Ekin	    
+	    poisson.variationRHS(temp,temp2);
+	    double T_perp_zonal = 0.5*dg::blas2::dot( npe[1], w2d, temp2);   
+    
             dg::blas2::gemv(interp,temp,temp1d); 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[4],   start1d, count1d, temp1d.data()); 
             polavg(vor,temp);
@@ -193,7 +204,9 @@ int main( int argc, char* argv[])
                 err1d= nc_put_vara_double( ncid1d, phi_probesID[i], start1d, count1d, &phi_probes[i]);
                 err1d= nc_put_vara_double( ncid1d, gamma_probesID[i], start1d, count1d, &gamma_probes[i]);
             }
-            err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);                    
+            err1d = nc_put_vara_double( ncid1d, T_perp_zonalID, start1d, count1d, &T_perp_zonal);
+            err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);        
+	    
     }
     err = nc_close(ncid);
     
