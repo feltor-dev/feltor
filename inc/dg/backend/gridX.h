@@ -202,6 +202,8 @@ struct GridX1d
     DLT<double> dlt_;
 };
 
+struct GridX3d; //forward declare 3d version
+
 /**
  * @brief A 2D grid class with X-point topology
  *
@@ -249,6 +251,16 @@ struct GridX2d
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
     }
+    /**
+     * @brief Reduce from a 3d grid
+     *
+     * This takes the x and y dimension from the 3d grid.
+     * Note that this is possible because all our grids are product space grids  and only the first two dimensions are dG discretized.
+     *
+     * @param g The 3d counterpart
+     */
+    GridX2d( const GridX3d& g);
+
     /**
      * @brief Left boundary in x
      *
@@ -798,6 +810,9 @@ struct GridX3d
     bc bcx_, bcy_, bcz_;
     DLT<double> dlt_;
 };
+
+GridX2d::GridX2d( const GridX3d& g) : x0_(g.x0()), x1_(g.x1()), y0_(g.y0()), y1_(g.y1()), fx_(g.fx()), fy_(g.fy()), n_(g.n()), Nx_(g.Nx()), Ny_(g.Ny()), bcx_(g.bcx()), bcy_(g.bcy()), dlt_(g.n())
+{}
 
 ///@}
 }// namespace dg

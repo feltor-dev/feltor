@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "grid_refined.h"
+#include "refined_grid.h"
 
 
 int main ()

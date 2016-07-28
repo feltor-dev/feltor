@@ -1,6 +1,6 @@
 #pragma once
 
-#include "grid_refined.h"
+#include "refined_grid.h"
 #include "dg/backend/gridX.h"
 
 
@@ -49,6 +49,8 @@ int exponential_Xref( unsigned add_x, const GridX1d& g, thrust::host_vector<doub
 
 }//namespace detail
 
+
+struct GridX3d;
 /**
  * @brief Refined grid 
  */
@@ -94,6 +96,15 @@ struct GridX2d : public dg::GridX2d
                 absY_[i*wx.size()+j] = ay[i];
             }
     }
+
+    /**
+     * @brief Reduce from a  3d grid 
+     *
+     * This is possible because all our grids are product space grids. 
+     *
+     * @param g The 3d grid
+     */
+    GridX2d( const dg::refined::GridX3d& g);
 
     /**
      * @brief The grid that this object refines
@@ -257,6 +268,19 @@ struct GridX3d : public dg::GridX3d
     thrust::host_vector<double> absX_, absY_; //abscissas 
     dg::GridX3d g_assoc_;
 };
+
+GridX2d::GridX2d( const dg::refined::GridX3d& g) : 
+    dg::GridX2d( g.x0(), g.x1(), g.y0(), g.y1(), g.fx(), g.fy(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy()),
+    g_assoc_( g.associated())
+{
+    for(unsigned i=0; i<this->size(); i++)
+    {
+        wx_[i] = g.weightsX()[i];
+        wy_[i] = g.weightsY()[i];
+        absX_[i] = g.abscissasX()[i];
+        absY_[i] = g.abscissasY()[i];
+    }
+}
 }//namespace refined
 
 namespace create{

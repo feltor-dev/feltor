@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "gridX_refined.h"
+#include "refined_gridX.h"
 
 
 int main ()

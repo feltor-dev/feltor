@@ -582,30 +582,35 @@ struct GridX3d : public dg::GridX3d
         dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
         f_( this->size()), g_(f_), r_(f_), z_(f_), xr_(f_), xz_(f_), yr_(f_), yz_(f_)
     { 
+        /////////////////////discretize x-direction and construct psi(x)
         assert( psi_0 < 0 );
         assert( gp.c[10] != 0);
-        //construct x-grid in two parts
         orthogonal::detail::FpsiX fpsi(gp);
         std::cout << "FIND X FOR PSI_0\n";
         const double x_0 = fpsi.find_x(psi_0);
         const double x_1 = -fx/(1.-fx)*x_0;
         std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
         init_X_boundaries( x_0, x_1);
-        //compute psi(x) for a grid on x 
+        ////////////compute psi(x) for a grid on x 
         dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_), psi_x;
         detail::XFieldFinv fpsiMinv_(gp, 500);
         dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
-        ////////////////////////////
+        /////////////////discretize y-direction and construct rest
         dg::GridX1d gY1d( -this->fy()*2.*M_PI/(1.-2.*this->fy()), 2*M_PI+this->fy()*2.*M_PI/(1.-2.*this->fy()), this->fy(), this->n(), this->Ny(), dg::DIR);
-        unsigned Mx = this->n()*this->Nx(), My = this->n()*this->Ny();
         thrust::host_vector<double> rvec, zvec, yrvec, yzvec, gvec;
         thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
+        orthogonal::detail::construct_rz( fpsiMinv_, gp, 
+                psi_0, psi_x, y_vec, 
+                this->n()*this->outer_Ny(), 
+                this->n()*(this->inner_Ny()+this->outer_Ny()), 
+                rvec, zvec, yrvec, yzvec, gvec);
         orthogonal::detail::construct_rz( fpsiMinv_, gp, 
                 psi_0, psi_x, y_vec, 
                 gY1d.n()*gY1d.outer_N(), 
                 gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), 
                 rvec, zvec, yrvec, yzvec, gvec);
+        unsigned Mx = this->n()*this->Nx(), My = this->n()*this->Ny();
         solovev::PsipR psipR_(gp);
         solovev::PsipZ psipZ_(gp);
         for( unsigned i=0; i<psi_x.size(); i++)
@@ -615,15 +620,14 @@ struct GridX3d : public dg::GridX3d
                 xz_[j*Mx+i] = psipZ_(rvec[j*Mx+i],zvec[j*Mx+i])/f_x_[i]; 
                  f_[j*Mx + i] = -1./f_x_[i];
             }
-        //r_x1 = r_x0, z_x1 = z_x0; //periodic boundaries
-        //now lift to 3D grid
         for( unsigned i=0; i<psi_x.size(); i++)
             f_x_[i] = -1./f_x_[i];
+        //r_x1 = r_x0, z_x1 = z_x0; //periodic boundaries
+        //now lift to 3D grid
         for( unsigned k=0; k<this->Nz(); k++)
             for( unsigned i=0; i<Mx*My; i++)
             {
-                f_[k*Mx*My+i] = f_[i];
-                g_[k*Mx*My+i] = gvec[i];
+                f_[k*Mx*My+i] = f_[i]; g_[k*Mx*My+i] = gvec[i];
                 r_[k*Mx*My+i] = rvec[i];
                 z_[k*Mx*My+i] = zvec[i];
                 yr_[k*Mx*My+i] = yrvec[i];
