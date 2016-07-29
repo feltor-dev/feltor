@@ -141,8 +141,7 @@ struct GridX2d : public dg::GridX2d
     {
         double alpha = (x1-x0)/this->lx();
         double beta = (x0*this->x1()-x1*this->x0())/this->lx();
-        for( unsigned i=0; i<wx_.size(); i++)
-            wx_[i]*=alpha;
+        //weights are invariant?
         for( unsigned i=0; i<absX_.size(); i++)
             absX_[i]=alpha*absX_[i]+beta;
         dg::GridX2d::init_X_boundaries( x0, x1);
@@ -260,8 +259,7 @@ struct GridX3d : public dg::GridX3d
     {
         double alpha = (x1-x0)/this->lx();
         double beta = (x0*this->x1()-x1*this->x0())/this->lx();
-        for( unsigned i=0; i<wx_.size(); i++)
-            wx_[i]*=alpha;
+        //weights are invariant under linear transformation?
         for( unsigned i=0; i<absX_.size(); i++)
             absX_[i]=alpha*absX_[i]+beta;
         dg::GridX3d::init_X_boundaries( x0, x1);
