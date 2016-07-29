@@ -1182,8 +1182,8 @@ struct FieldRZYRYZY
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double ipol=ipol_(y[0], y[1]);
-        double ipolR = ipolR_(y[0], y[1]), ipolZ = ipolZ_(y[0],y[1]);
+//         double ipol=ipol_(y[0], y[1]);
+//         double ipolR = ipolR_(y[0], y[1]), ipolZ = ipolZ_(y[0],y[1]);
         double br = BR_(y[0],y[1]), bz  = BZ_(y[0],y[1]);
         double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
         double B=1./invB_(y[0], y[1]);

@@ -41,11 +41,14 @@ int main( int argc, char* argv[])
     std::cout << "input "<<input<<std::endl;
     
     const eule::Parameters p(file::read_input( input));
-    
+   
     ///////////////////////////////////////////////////////////////////////////
+    
     //Grids
     dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d<double > g2d_in( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     dg::Grid1d<double > g1d( 0., p.lx,p.n, p.Nx, p.bc_x);
+    
     double time = 0.;
     
     dg::HVec w2d = dg::create::weights( g2d);
@@ -56,6 +59,7 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> logn(2,dg::evaluate(dg::zero,g2d));
     dg::HVec temp(dg::evaluate(dg::zero,g2d));
     dg::HVec temp2(dg::evaluate(dg::zero,g2d));
+    dg::HVec temp_in(dg::evaluate(dg::zero,g2d_in));
     dg::HVec one(dg::evaluate(dg::one,g2d));
     dg::HVec temp1d(dg::evaluate(dg::zero,g1d));
     dg::HVec xcoo(dg::evaluate(dg::coo1,g1d));
@@ -63,24 +67,26 @@ int main( int argc, char* argv[])
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
     dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
+    dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
 
+
     //2d field
-    size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
+    size_t count2d[3]  = {1, g2d_in.n()*g2d_in.Ny(), g2d_in.n()*g2d_in.Nx()};
     size_t start2d[3]  = {0, 0, 0};
     std::string names[4] = {"electrons", "ions",  "potential","vor"}; 
     int dataIDs[4]; 
     //1d profiles
     file::NC_Error_Handle err1d;
-    int ncid1d,dim_ids1d[2],dataIDs1d[7], tvarID1d;
-    std::string names1d[7] =  {"neavg", "Niavg",  "ln(ne)avg","ln(Ni)avg","potentialavg","voravg","x_"}; 
+    int ncid1d,dim_ids1d[2],dataIDs1d[8], tvarID1d;
+    std::string names1d[8] =  {"neavg", "Niavg",  "ln(ne)avg","ln(Ni)avg","potentialavg","voravg","x_","vyavg"}; 
     size_t count1d[2]  = {1, g2d.n()*g2d.Nx()};
     size_t start1d[2]  = {0, 0};    
     err1d = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid1d);
     err1d= nc_put_att_text( ncid1d, NC_GLOBAL, "inputfile", input.size(), input.data());
     err1d= file::define_dimensions( ncid1d, dim_ids1d, &tvarID1d, g1d);
 
-    for( unsigned i=0; i<7; i++){
+    for( unsigned i=0; i<8; i++){
         err1d = nc_def_var( ncid1d, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
     err1d = nc_close(ncid1d); 
@@ -88,11 +94,11 @@ int main( int argc, char* argv[])
 
     
     unsigned imin,imax;
-    imin=0;
+    imin= 0;
 //     std::cout << "tmin = 0 tmax =" << p.maxout*p.itstp << std::endl;
 //     std::cout << "enter new imin(>0) and imax(<maxout):" << std::endl;
 //     std::cin >> imin >> imax;
-//     time = imin*p.itstp;
+    time = imin*p.itstp;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
 
@@ -133,13 +139,11 @@ int main( int argc, char* argv[])
 
     err1d = nc_enddef(ncid1d);   
     err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
-       err = nc_inq_varid(ncid, names[0].data(), &dataIDs[0]);
+    err = nc_inq_varid(ncid, names[0].data(), &dataIDs[0]);
     size_t steps;
     err = nc_inq_dimlen(ncid, dataIDs[0], &steps);
     steps-=1;
     imax = steps/p.itstp;
-    err = nc_inq_varid(ncid, "time", &timeID);
-    err = nc_get_vara_double( ncid, timeID,start2d, count2d, &time);
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
             start2d[0] = i;
@@ -149,13 +153,18 @@ int main( int argc, char* argv[])
             std::cout << "time = "<< time <<  std::endl;
 
             err = nc_inq_varid(ncid, names[0].data(), &dataIDs[0]);
-            err = nc_get_vara_double( ncid, dataIDs[0], start2d, count2d, npe[0].data());
+            err = nc_get_vara_double( ncid, dataIDs[0], start2d, count2d, temp_in.data());
+            dg::blas2::gemv( interp_in, temp_in,npe[0]);
             err = nc_inq_varid(ncid, names[1].data(), &dataIDs[1]);
-            err = nc_get_vara_double( ncid, dataIDs[1], start2d, count2d, npe[1].data());
+            err = nc_get_vara_double( ncid, dataIDs[1], start2d, count2d,  temp_in.data());
+            dg::blas2::gemv( interp_in, temp_in,npe[1]);
             err = nc_inq_varid(ncid, names[2].data(), &dataIDs[2]);
-            err = nc_get_vara_double( ncid, dataIDs[2], start2d, count2d, phi.data());
+            err = nc_get_vara_double( ncid, dataIDs[2], start2d, count2d,  temp_in.data());
+            dg::blas2::gemv( interp_in, temp_in,phi);
             err = nc_inq_varid(ncid, names[3].data(), &dataIDs[3]);
-            err = nc_get_vara_double( ncid, dataIDs[3], start2d, count2d, vor.data());
+            err = nc_get_vara_double( ncid, dataIDs[3], start2d, count2d,  temp_in.data());
+            dg::blas2::gemv( interp_in, temp_in,vor);
+
             dg::blas1::transform(npe[0], npe[0], dg::PLUS<>(p.bgprofamp + p.nprofileamp));
             dg::blas1::transform(npe[1], npe[1], dg::PLUS<>(p.bgprofamp + p.nprofileamp));
             dg::blas1::transform( npe[0], logn[0], dg::LN<double>());
@@ -174,8 +183,8 @@ int main( int argc, char* argv[])
             polavg(logn[1],temp);
             dg::blas2::gemv(interp,temp,temp1d); 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[3],   start1d, count1d, temp1d.data()); 
-            polavg(phi,temp);
-            //comute zonal Ekin	    
+            polavg(phi,temp);            
+            //comute zonal Ekin     
             poisson.variationRHS(temp,temp2);
             double T_perp_zonal = 0.5*dg::blas2::dot( npe[1], w2d, temp2);   
     
@@ -185,20 +194,28 @@ int main( int argc, char* argv[])
             dg::blas2::gemv(interp,temp,temp1d); 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[5],   start1d, count1d, temp1d.data()); 
 
-            err1d = nc_put_vara_double( ncid1d, dataIDs1d[6],   start1d, count1d, xcoo.data()); 
-            
+            err1d = nc_put_vara_double( ncid1d, dataIDs1d[6],   start1d, count1d, xcoo.data());             
+            dg::blas2::gemv(poisson.dxrhs(),phi,temp);
+            polavg(temp,temp2);            
+            dg::blas2::gemv(interp,temp2,temp1d); 
+            err1d = nc_put_vara_double( ncid1d, dataIDs1d[7],   start1d, count1d, temp1d.data()); 
+
             //compute probe values by interpolation
             //normalize
                 polavg(npe[0],temp);
                 dg::blas1::pointwiseDivide(npe[0],temp,temp);
                 dg::blas1::axpby(1.0,temp,-1.0,one,temp);
             dg::blas2::gemv(probe_interp, temp, npe_probes);
+
                 polavg(phi,temp);
                 dg::blas1::pointwiseDivide(phi,temp,temp);
                 dg::blas1::axpby(1.0,temp,-1.0,one,temp);
             dg::blas2::gemv(probe_interp, temp, phi_probes);
+
             dg::blas2::gemv(dy, phi, temp);
+
             dg::blas2::gemv(probe_interp, temp, gamma_probes);
+
 //             dg::blas2::gemv(probe_interp, npe[0], npe_probes);
 //             dg::blas2::gemv(probe_interp, phi, phi_probes);
 //             dg::blas2::gemv(dy, phi, temp);
@@ -212,11 +229,10 @@ int main( int argc, char* argv[])
             }
             err1d = nc_put_vara_double( ncid1d, T_perp_zonalID, start1d, count1d, &T_perp_zonal);
             err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);        
-	    
+        
     }
     err = nc_close(ncid);
     
     err1d = nc_close(ncid1d);
     return 0;
 }
-
