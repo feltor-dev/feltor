@@ -136,6 +136,18 @@ struct GridX2d : public dg::GridX2d
      * @return A 2d vector
      */
     const thrust::host_vector<double>& weightsY() const {return wy_;} 
+    protected:
+    void init_X_boundaries( double x0, double x1)
+    {
+        double alpha = (x1-x0)/this->lx();
+        double beta = (x0*this->x1()-x1*this->x0())/this->lx();
+        for( unsigned i=0; i<wx_.size(); i++)
+            wx_[i]*=alpha;
+        for( unsigned i=0; i<absX_.size(); i++)
+            absX_[i]=alpha*absX_[i]+beta;
+        dg::GridX2d::init_X_boundaries( x0, x1);
+
+    }
 
     private:
     unsigned nx_new( unsigned Nx, unsigned add_x, double fx)
@@ -243,6 +255,17 @@ struct GridX3d : public dg::GridX3d
      * @return A 2d vector
      */
     const thrust::host_vector<double>& weightsY() const {return wy_;} 
+    protected:
+    void init_X_boundaries( double x0, double x1)
+    {
+        double alpha = (x1-x0)/this->lx();
+        double beta = (x0*this->x1()-x1*this->x0())/this->lx();
+        for( unsigned i=0; i<wx_.size(); i++)
+            wx_[i]*=alpha;
+        for( unsigned i=0; i<absX_.size(); i++)
+            absX_[i]=alpha*absX_[i]+beta;
+        dg::GridX3d::init_X_boundaries( x0, x1);
+    }
 
     private:
     unsigned nx_new( unsigned Nx, unsigned add_x, double fx)

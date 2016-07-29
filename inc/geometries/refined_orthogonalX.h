@@ -54,13 +54,16 @@ struct GridX3d : public dg::refined::GridX3d
         std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
         init_X_boundaries( x_0, x_1);
         ////////////compute psi(x) for a grid on x 
-        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
-        thrust::host_vector<double> x_vec = this->abscissasX(), psi_x;
+        thrust::host_vector<double> x_vec(this->n()*this->Nx()), psi_x; 
+        for(unsigned i=0; i<x_vec.size(); i++) {
+            x_vec[i] = this->abscissasX()[i];
+            std::cout << x_vec[i]<<std::endl;}
         detail::XFieldFinv fpsiMinv_(gp, 500);
         dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
         /////////////////discretize y-direction and construct rest
         thrust::host_vector<double> rvec, zvec, yrvec, yzvec, gvec;
-        thrust::host_vector<double> y_vec = this->abscissasY();
+        thrust::host_vector<double> y_vec(this->n()*this->Ny());
+        for(unsigned i=0; i<y_vec.size(); i++) y_vec[i] = this->abscissasY()[i];
         orthogonal::detail::construct_rz( fpsiMinv_, gp, 
                 psi_0, psi_x, y_vec, 
                 this->n()*this->outer_Ny(), 

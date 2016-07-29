@@ -228,7 +228,6 @@ try{
 
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
-    g2dC.display(std::cout);
     gp.psipmax = 0., gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     dg::HVec vec  = dg::evaluate( iris, g2dC);

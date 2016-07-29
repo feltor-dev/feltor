@@ -479,7 +479,7 @@ struct GridX2d
         return false;
     }
   protected:
-    void init_X_boundaries( double x0, double x1)
+    virtual void init_X_boundaries( double x0, double x1)
     {
         x0_ = x0, x1_ = x1;
         assert( x1 > x0 );
@@ -764,7 +764,7 @@ struct GridX3d
         return false;
     }
   protected:
-    void init_X_boundaries( double x0, double x1)
+    virtual void init_X_boundaries( double x0, double x1)
     {
         x0_ = x0, x1_ = x1;
         assert( x1 > x0 );
