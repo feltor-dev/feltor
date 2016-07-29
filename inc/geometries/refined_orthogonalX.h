@@ -63,7 +63,7 @@ struct GridX3d : public dg::refined::GridX3d
         /////////////////discretize y-direction and construct rest
         thrust::host_vector<double> rvec, zvec, yrvec, yzvec, gvec;
         thrust::host_vector<double> y_vec(this->n()*this->Ny());
-        for(unsigned i=0; i<y_vec.size(); i++) y_vec[i] = this->abscissasY()[i];
+        for(unsigned i=0; i<y_vec.size(); i++) y_vec[i] = this->abscissasY()[i*x_vec.size()];
         orthogonal::detail::construct_rz( fpsiMinv_, gp, 
                 psi_0, psi_x, y_vec, 
                 this->n()*this->outer_Ny(), 
