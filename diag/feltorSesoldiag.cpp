@@ -41,7 +41,6 @@ int main( int argc, char* argv[])
     std::cout << "input "<<input<<std::endl;
     
     const eule::Parameters p(file::read_input( input));
-    p.display();
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids
@@ -89,10 +88,11 @@ int main( int argc, char* argv[])
 
     
     unsigned imin,imax;
-    std::cout << "tmin = 0 tmax =" << p.maxout*p.itstp << std::endl;
-    std::cout << "enter new imin(>0) and imax(<maxout):" << std::endl;
-    std::cin >> imin >> imax;
-    time = imin*p.itstp;
+    imin=0;
+//     std::cout << "tmin = 0 tmax =" << p.maxout*p.itstp << std::endl;
+//     std::cout << "enter new imin(>0) and imax(<maxout):" << std::endl;
+//     std::cin >> imin >> imax;
+//     time = imin*p.itstp;
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
 
@@ -133,7 +133,13 @@ int main( int argc, char* argv[])
 
     err1d = nc_enddef(ncid1d);   
     err1d = nc_open( argv[2], NC_WRITE, &ncid1d);
-   
+       err = nc_inq_varid(ncid, names[0].data(), &dataIDs[0]);
+    size_t steps;
+    err = nc_inq_dimlen(ncid, dataIDs[0], &steps);
+    steps-=1;
+    imax = steps/p.itstp;
+    err = nc_inq_varid(ncid, "time", &timeID);
+    err = nc_get_vara_double( ncid, timeID,start2d, count2d, &time);
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
             start2d[0] = i;
@@ -169,9 +175,9 @@ int main( int argc, char* argv[])
             dg::blas2::gemv(interp,temp,temp1d); 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[3],   start1d, count1d, temp1d.data()); 
             polavg(phi,temp);
-	    //comute zonal Ekin	    
-	    poisson.variationRHS(temp,temp2);
-	    double T_perp_zonal = 0.5*dg::blas2::dot( npe[1], w2d, temp2);   
+            //comute zonal Ekin	    
+            poisson.variationRHS(temp,temp2);
+            double T_perp_zonal = 0.5*dg::blas2::dot( npe[1], w2d, temp2);   
     
             dg::blas2::gemv(interp,temp,temp1d); 
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[4],   start1d, count1d, temp1d.data()); 

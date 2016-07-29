@@ -176,28 +176,21 @@ struct BZ
     PsipRZ psipRZ_;  
     InvB invB_; 
 };
-
-
 /**
- * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}  \f]
+ * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} \f]
  */ 
-struct CurvatureR
+struct CurvatureNablaBR
 {
-    CurvatureR( GeomParameters gp):
+    CurvatureNablaBR( GeomParameters gp):
         gp_(gp),
-        psip_(gp),
-        psipR_(gp), psipZ_(gp),
-        psipZZ_(gp), psipRZ_(gp),
-        ipol_(gp),
         invB_(gp),
         bZ_(gp) { }
     /**
-     * @brief \f[ \mathcal{\hat{K}}^{\hat{R}} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
+     * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
      */ 
     double operator()( double R, double Z) const
     {
-        return -2.*invB_(R,Z)*invB_(R,Z)*bZ_(R,Z); //factor 2 stays under discussion
-//         return -ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bZ_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
+        return -invB_(R,Z)*invB_(R,Z)*bZ_(R,Z); 
     }
     
     /**
@@ -205,63 +198,116 @@ struct CurvatureR
      */ 
     double operator()( double R, double Z, double phi) const
     {
-        return -2.*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi); //factor 2 stays under discussion
-//         return -ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
+        return -invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi); 
     }
     private:    
     GeomParameters gp_;
-    Psip   psip_;    
-    PsipR  psipR_;
-    PsipZ  psipZ_;
-    PsipZZ psipZZ_;
-    PsipRZ psipRZ_;
-    Ipol   ipol_;
     InvB   invB_;
     BZ bZ_;    
 };
 /**
- * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}  \f]
+ * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B}  \f]
  */ 
-struct CurvatureZ
+struct CurvatureNablaBZ
 {
-    CurvatureZ( GeomParameters gp):
+    CurvatureNablaBZ( GeomParameters gp):
         gp_(gp),
-        psip_(gp),
-        psipR_(gp),
-        psipRR_(gp),
-        psipZ_(gp),
-        psipRZ_(gp),
-        ipol_(gp),
         invB_(gp),
         bR_(gp) { }
  /**
- * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
+ * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
  */    
     double operator()( double R, double Z) const
     {
-        return 2.*invB_(R,Z)*invB_(R,Z)*bR_(R,Z); //factor 2 stays under discussion
-//         return  ipol_(R,Z)*invB_(R,Z)*invB_(R,Z)*invB_(R,Z)*bR_(R,Z)*gp_.R_0/R; //factor 2 stays under discussion
+        return invB_(R,Z)*invB_(R,Z)*bR_(R,Z);
     }
     /**
      * @brief == operator()(R,Z)
      */ 
     double operator()( double R, double Z, double phi) const
     {
-        return 2.*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi); //factor 2 stays under discussion
-//         return ipol_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi)*gp_.R_0/R; //factor 2 stays under discussion
+        return invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi);
     }
     private:    
     GeomParameters gp_;
-    Psip   psip_;    
-    PsipR  psipR_;
-    PsipRR  psipRR_;
-    PsipZ  psipZ_;    
-    PsipRZ psipRZ_;
-    Ipol   ipol_;
     InvB   invB_;
     BR bR_;   
 };
-
+    /**
+     * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} \f]
+     */ 
+struct CurvatureKappaR
+{
+    /**
+     * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} =0  \f]
+     */ 
+    double operator()( double R, double Z) const
+    {
+        return  0.;
+    }
+    
+    /**
+     * @brief == operator()(R,Z)
+     */ 
+    double operator()( double R, double Z, double phi) const
+    {
+        return 0.;
+    }
+};
+/**
+ * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}}  \f]
+ */ 
+struct CurvatureKappaZ
+{
+    CurvatureKappaZ( GeomParameters gp):
+        gp_(gp),
+        invB_(gp) { }
+ /**
+ * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f]
+ */    
+    double operator()( double R, double Z) const
+    {
+        return invB_(R,Z)/R;
+    }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
+    double operator()( double R, double Z, double phi) const
+    {
+        return invB_(R,Z,phi)/R;
+    }
+    private:    
+    GeomParameters gp_;
+    InvB   invB_;
+};
+/**
+ * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  \f]
+ */ 
+struct DivCurvatureKappa
+{
+    DivCurvatureKappa( GeomParameters gp):
+        gp_(gp),
+        invB_(gp),
+        bZ_(gp){ }
+ /**
+ * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f]
+ */    
+    double operator()( double R, double Z) const
+    {
+        return bZ_(R,Z)*invB_(R,Z)*invB_(R,Z)/R;
+    }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
+    double operator()( double R, double Z, double phi) const
+    {
+        return  bZ_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)/R;
+    }
+    private:    
+    GeomParameters gp_;
+    InvB   invB_;
+    BZ bZ_;    
+};
 /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} \f]
  */ 
