@@ -234,6 +234,22 @@ struct Field
         return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
         
     }
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2]) ) 
+        {
+            return false;
+        }
+        //if new integrated point outside domain
+        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        {
+            return false;
+        }
+        return true;
+    }
     private:
     double R_0, I_0;
    
