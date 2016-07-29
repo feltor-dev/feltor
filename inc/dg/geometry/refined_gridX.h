@@ -138,22 +138,22 @@ struct GridX2d : public dg::GridX2d
     const thrust::host_vector<double>& weightsY() const {return wy_;} 
 
     private:
-    unsigned nx_new( unsigned Nx, unsigned add_x, unsigned fx)
+    unsigned nx_new( unsigned Nx, unsigned add_x, double fx)
     {
-        if( fx==0 ) return Nx; 
+        if( fx==0 ) return Nx + add_x ; 
         return Nx + 2*add_x;
     }
-    unsigned ny_new( unsigned Ny, unsigned add_y, unsigned fy)
+    unsigned ny_new( unsigned Ny, unsigned add_y, double fy)
     {
-        if( fy==0 ) return Ny; 
+        if( fy==0 ) return Ny * 2*add_y; 
         return Ny + 4*add_y;
     }
-    unsigned fx_new( unsigned Nx, unsigned add_x, unsigned fx)
+    double fx_new( unsigned Nx, unsigned add_x, double fx)
     {
         if( fx==0 ) return 0; 
         return (fx*(double)Nx + (double)add_x)/((double)Nx+2.*add_x);
     }
-    unsigned fy_new( unsigned Ny, unsigned add_y, unsigned fy)
+    double fy_new( unsigned Ny, unsigned add_y, double fy)
     {
         if( fy==0 ) return 0; 
         return (fy*(double)Ny + (double)add_y)/((double)Ny+4.*add_y);
@@ -190,7 +190,8 @@ struct GridX3d : public dg::GridX3d
             double x0, double x1, double y0, double y1, double z0, double z1,
             double fx, double fy, 
             unsigned n, unsigned Nx, unsigned Ny, unsigned Nz,
-            bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : dg::GridX3d( x0, x1, y0, y1, z0, z1,
+            bc bcx = dg::PER, bc bcy = dg::NEU, bc bcz = dg::PER) : 
+               dg::GridX3d( x0, x1, y0, y1, z0, z1,
                 fx_new(Nx, add_x, fx), fy_new(Ny, add_y, fy), n, nx_new(Nx, add_x, fx), ny_new(Ny, add_y, fy), Nz, bcx, bcy, bcz), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1,z0,z1, fx, fy, n, Nx, Ny, Nz, bcx, bcy, bcz)
@@ -244,25 +245,25 @@ struct GridX3d : public dg::GridX3d
     const thrust::host_vector<double>& weightsY() const {return wy_;} 
 
     private:
-    unsigned nx_new( unsigned Nx, unsigned add_x, unsigned fx)
+    unsigned nx_new( unsigned Nx, unsigned add_x, double fx)
     {
-        if( fx==0 ) return Nx; 
+        if( fx==0 ) return Nx + add_x; 
         return Nx + 2*add_x;
     }
-    unsigned ny_new( unsigned Ny, unsigned add_y, unsigned fy)
+    unsigned ny_new( unsigned Ny, unsigned add_y, double fy)
     {
-        if( fy==0 ) return Ny; 
+        if( fy==0 ) return Ny + 2*add_y; 
         return Ny + 4*add_y;
     }
-    unsigned fx_new( unsigned Nx, unsigned add_x, unsigned fx)
+    double fx_new( unsigned Nx, unsigned add_x, double fx)
     {
         if( fx==0 ) return 0; 
-        return (fx*(double)Nx + (double)add_x)/((double)Nx+2.*add_x);
+        return (fx*(double)Nx + (double)add_x)/(double)(Nx+2.*add_x);
     }
-    unsigned fy_new( unsigned Ny, unsigned add_y, unsigned fy)
+    double fy_new( unsigned Ny, unsigned add_y, double fy)
     {
         if( fy==0 ) return 0; 
-        return (fy*(double)Ny + (double)add_y)/((double)Ny+4.*add_y);
+        return (fy*(double)Ny + (double)add_y)/(double)(Ny+4.*add_y);
     }
     thrust::host_vector<double> wx_, wy_; //weights
     thrust::host_vector<double> absX_, absY_; //abscissas 
@@ -271,6 +272,7 @@ struct GridX3d : public dg::GridX3d
 
 GridX2d::GridX2d( const dg::refined::GridX3d& g) : 
     dg::GridX2d( g.x0(), g.x1(), g.y0(), g.y1(), g.fx(), g.fy(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy()),
+    wx_( this->size()), wy_(this->size()), absX_(this->size()), absY_(this->size()),
     g_assoc_( g.associated())
 {
     for(unsigned i=0; i<this->size(); i++)

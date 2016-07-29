@@ -110,12 +110,7 @@ struct Grid1d
             <<"    x1 = "<<x1_<<"\n"
             <<"    lx = "<<lx_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
     }
 
     /**
@@ -321,19 +316,9 @@ struct Grid2d
             <<"    lx = "<<lx_<<"\n"
             <<"    ly = "<<ly_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
         os <<"Boundary conditions in y are: \n";
-        switch(bcy_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcy_, os);
     }
     /**
      * @brief Shifts a point coordinate due to topology
@@ -608,26 +593,11 @@ struct Grid3d
             <<"    ly = "<<ly_<<"\n"
             <<"    lz = "<<lz_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
         os <<"Boundary conditions in y are: \n";
-        switch(bcy_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcy_, os);
         os <<"Boundary conditions in z are: \n";
-        switch(bcz_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcz_, os);
     }
 
     /**

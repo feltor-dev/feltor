@@ -141,12 +141,7 @@ struct GridX1d
             <<"    x1 = "<<x1_<<"\n"
             <<"    lx = "<<lx_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
     }
     const DLT<double>& dlt() const {return dlt_;}
     Grid1d<double> grid() const{return Grid1d<double>( x0_, x1_, n_, Nx_, bcx_);}
@@ -423,19 +418,9 @@ struct GridX2d
             <<"    lx = "<<lx_<<"\n"
             <<"    ly = "<<ly_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
         os <<"Boundary conditions in y are: \n";
-        switch(bcy_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcy_, os);
     }
 
     /**
@@ -541,7 +526,7 @@ struct GridX3d
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    GridX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
+    GridX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = NEU, bc bcz = PER):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), fx_(fx), fy_(fy),
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
@@ -756,26 +741,11 @@ struct GridX3d
             <<"    ly = "<<ly_<<"\n"
             <<"    lz = "<<lz_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
-        os <<"Boundary conditions in y are: \n";
-        switch(bcy_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
-        os <<"Boundary conditions in z are: \n";
-        switch(bcz_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
+        os << "Boundary conditions in y are: \n";
+        display_bc( bcy_, os);
+        os << "Boundary conditions in z are: \n";
+        display_bc( bcz_, os);
     }
     /**
      * @brief Check if the grid contains a point
