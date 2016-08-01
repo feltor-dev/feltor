@@ -539,7 +539,7 @@ struct GridX3d : public dg::GridX3d
         //g1d_.display();
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_), psi_x;
         detail::XFieldFinv fpsiMinv_(gp, 500);
-        dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
+        psi_1_numerical_ = dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
         construct_rz( gp, psi_0, psi_x);
         construct_metric();
     }

@@ -595,7 +595,7 @@ struct GridX3d : public dg::GridX3d
         dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_), psi_x;
         detail::XFieldFinv fpsiMinv_(gp, 500);
-        dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
+        psi_1_numerical_ = dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
         /////////////////discretize y-direction and construct rest
         dg::GridX1d gY1d( -this->fy()*2.*M_PI/(1.-2.*this->fy()), 2*M_PI+this->fy()*2.*M_PI/(1.-2.*this->fy()), this->fy(), this->n(), this->Ny(), dg::DIR);
         thrust::host_vector<double> rvec, zvec, yrvec, yzvec, gvec;

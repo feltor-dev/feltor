@@ -69,8 +69,9 @@ struct XPointer
 
 //compute psi(x) and f(x) for given discretization of x and a fpsiMinv functor
 //doesn't integrate over the x-point
+//returns psi_1
 template <class XFieldFinv>
-void construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters& gp, 
+double construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters& gp, 
         const double psi_0, const double x_0, const thrust::host_vector<double>& x_vec, const double x_1, unsigned idxX,
         thrust::host_vector<double>& psi_x, 
         thrust::host_vector<double>& f_x_)
@@ -84,6 +85,7 @@ void construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters& g
     double x0, x1;
     //const unsigned idxX = inner_Nx()*this->n();
     const double psi_const = fpsiMinv.find_psi( x_vec[idxX]);
+    double psi_1_numerical;
     double eps = 1e10;//, eps_old=2e10;
     //while( eps <  eps_old && N < 1e6)
     while( eps >  1e-8 && N < 1e6 )
@@ -114,6 +116,9 @@ void construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters& g
             psi_x[i] = end[0]; fpsiMinv(end,temp); f_x_[i] = temp[0];
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
+        temp = end;
+        dg::stepperRK6(fpsiMinv, temp, end, x1, x_1,N);
+        psi_1_numerical = end[0];
         dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
         //eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
         eps = sqrt( dg::blas1::dot( psi_diff, psi_diff)/ dg::blas1::dot( psi_x, psi_x));
@@ -125,6 +130,7 @@ void construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters& g
         //std::cout << "psi 1               is "<<psi_1_numerical_<<"\n"; 
         N*=2;
     }
+    return psi_1_numerical;
 }
 } //namespace detail
 } //namespace dg

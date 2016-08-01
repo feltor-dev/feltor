@@ -60,7 +60,7 @@ struct GridX3d : public dg::refined::GridX3d
             //std::cout << x_vec[i]<<std::endl;
         }
         detail::XFieldFinv fpsiMinv_(gp, 500);
-        dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
+        psi_1_numerical_ = dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, this->x0(), x_vec, this->x1(), this->inner_Nx()*this->n(), psi_x, f_x_);
         /////////////////discretize y-direction and construct rest
         thrust::host_vector<double> rvec, zvec, yrvec, yzvec, gvec;
         thrust::host_vector<double> y_vec(this->n()*this->Ny());
