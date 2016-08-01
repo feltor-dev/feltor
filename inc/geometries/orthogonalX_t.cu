@@ -20,7 +20,7 @@
 
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< orthogonal::GridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< orthogonal::GridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -107,10 +107,10 @@ try{
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    //orthogonal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    //orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
-    orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
+    //orthogonal::GridX3d<dg::HVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    //orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
+    orthogonal::refined::GridX3d<dg::HVec> g3d(add_x, add_y, gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::refined::GridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -152,9 +152,11 @@ try{
         Y[i] = g2d.z()[i];
     }
 
-    dg::DVec ones = dg::evaluate( dg::one, g2d);
-    dg::DVec temp0( g2d.size()), temp1(temp0);
-    dg::DVec w2d = dg::create::weights( g2d);
+    dg::HVec ones = dg::evaluate( dg::one, g2d);
+    dg::HVec temp0( g2d.size()), temp1(temp0);
+    dg::HVec w2d = dg::create::weights( g2d);
+    //dg::blas1::pointwiseDot( g2d.weightsX(), w2d, w2d);
+    //dg::blas1::pointwiseDot( g2d.weightsY(), w2d, w2d);
 
     err = nc_put_var_double( ncid, coordsID[0], periodify(X, g3d_periodic).data());
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g3d_periodic).data());
@@ -184,6 +186,7 @@ try{
     //compute error in volume element
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     double error = sqrt( dg::blas2::dot( temp1, w2d, temp1));
+   // double error = sqrt( dg::blas1::dot( temp1, temp1));
     std::cout<< "    Error in Off-diagonal is "<<error<<"\n";
 
     //compare determinant vs volume form
@@ -196,34 +199,44 @@ try{
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
     error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( g2d.vol(), w2d, g2d.vol()));
+    //error = sqrt(dg::blas1::dot( temp0, temp0)/dg::blas1::dot( g2d.vol(), g2d.vol()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     //alternative method to compute volume
     solovev::PsipR psipR( gp);
     solovev::PsipZ psipZ( gp);
-    dg::DVec psipR_ = dg::pullback(psipR, g2d);
-    dg::DVec psipZ_ = dg::pullback(psipZ, g2d);
-    dg::DVec psip2_(psipR_);
+    dg::HVec psipR_ = dg::pullback(psipR, g2d);
+    dg::HVec psipZ_ = dg::pullback(psipZ, g2d);
+    dg::HVec psip2_(psipR_);
     dg::blas1::pointwiseDot( psipR_, psipR_, psipR_);
     dg::blas1::pointwiseDot( psipZ_, psipZ_, psipZ_);
     dg::blas1::axpby( 1., psipR_, 1., psipZ_, psip2_);
-    const dg::DVec f_ = g2d.f();
-    const dg::DVec g_ = g2d.g();
-    dg::blas1::pointwiseDot( f_, psip2_, temp1);
-    dg::blas1::pointwiseDot( f_, temp1, temp1);
+    const dg::HVec f_ = g2d.f();
+    const dg::HVec g_ = g2d.g();
+    dg::blas1::pointwiseDot( f_, f_, temp1);
+    dg::blas1::pointwiseDot( psip2_, temp1, temp1);
+    dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
+    dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
     dg::blas1::axpby( 1., g2d.g_xx(), -1., temp1, temp1);
     error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_xx(),w2d,g2d.g_xx());
+    //error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(g2d.g_xx(),g2d.g_xx());
     std::cout << "Rel Error of g_xx is "<<sqrt(error)<<"\n";
-    dg::blas1::pointwiseDot( g_, psip2_, temp1);
-    dg::blas1::pointwiseDot( g_,  temp1, temp1);
+    dg::blas1::pointwiseDot( g_, g_, temp1);
+    dg::blas1::pointwiseDot( psip2_,  temp1, temp1);
+    dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
+    dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
     dg::blas1::axpby( 1., g2d.g_yy(), -1., temp1, temp1);
     error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_yy(),w2d,g2d.g_yy());
+    //error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(g2d.g_yy(),g2d.g_yy());
     std::cout << "Rel Error of g_yy is "<<sqrt(error)<<"\n";
     dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
     dg::blas1::pointwiseDot( f_, psip2_, temp1);
     dg::blas1::pointwiseDot( g_, temp1 , temp1);
+    dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
+    dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp1);
     error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(temp0,w2d,temp0);
+    //error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(temp0,temp0);
     std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
@@ -231,7 +244,8 @@ try{
     gp.psipmax = 0., gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
-    dg::DVec cutter = dg::pullback( iris, g2d), vol( cutter);
+    dg::HVec cutter = dg::pullback( iris, g2d), vol( cutter);
+    w2d = dg::create::weights( g2d);//make weights w/o refined weights
     dg::blas1::pointwiseDot(cutter, w2d, vol);
     double volume = dg::blas1::dot( g2d.vol(), vol);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
@@ -244,15 +258,15 @@ try{
 
    // ///////////////////////////TEST 3d grid//////////////////////////////////////
    // std::cout << "Start DS test!"<<std::endl;
-   // const dg::DVec vol3d = dg::create::volume( g3d);
+   // const dg::HVec vol3d = dg::create::volume( g3d);
    // //DFA fieldaligned(orthogonal::XField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
    // DFA fieldaligned( conformal::Field( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
-   // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, orthogonal::XField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
-   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, conformal::Field(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
-   // dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-   // dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-   // const dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
+   // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, orthogonal::XField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
+   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, conformal::Field(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
+   // dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
+   // dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
+   // const dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
    // dg::blas1::pointwiseDivide( ones, B, B);
 
    // ds.centeredT( B, divB);
@@ -265,9 +279,9 @@ try{
    // double norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
    // std::cout << "rel. error of lnB is    "<<sqrt( dg::blas2::dot( gradB, vol3d, gradB))/norm<<" (doesn't fullfill boundary conditions so it was cut at separatrix)\n";
 
-   // const dg::DVec function = dg::pullback(solovev::FuncNeu(gp), g3d);
-   // dg::DVec temp(function);
-   // const dg::DVec derivative = dg::pullback(solovev::DeriNeu(gp), g3d);
+   // const dg::HVec function = dg::pullback(solovev::FuncNeu(gp), g3d);
+   // dg::HVec temp(function);
+   // const dg::HVec derivative = dg::pullback(solovev::DeriNeu(gp), g3d);
    // ds( function, temp);
    // dg::blas1::axpby( 1., temp, -1., derivative, temp);
    // norm = sqrt( dg::blas2::dot( derivative, vol3d, derivative) );
