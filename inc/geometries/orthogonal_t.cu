@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
-    std::cout << "Constructing orthogonal grid grid ... \n";
+    std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
     orthogonal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);

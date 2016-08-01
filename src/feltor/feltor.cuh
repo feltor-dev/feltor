@@ -245,8 +245,8 @@ struct Feltor
 
   private:
 //     void curve( container& y, container& target);
-    void curveN( container& y, container& target);
-    void curveDIR( container& y, container& target);
+    void vecdotnablaN(const container& x, const container& y, container& z, container& target);
+    void vecdotnablaDIR(const container& x, const container& y, container& z, container& target);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
@@ -255,15 +255,15 @@ struct Feltor
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
     //these should be considered const
-    container binv, curvR, curvZ;
+    container binv, curvX, curvY, curvKappaX, curvKappaY,divCurvKappa;
     container gradlnB;
     container source, damping, one;
     container profne, profNi;
     container w3d, v3d;
 
-    std::vector<container> phi, curvphi;
+    std::vector<container> phi, curvphi,curvkappaphi;
     std::vector<container> npe, logn;
-    std::vector<container> dsy, curvy; 
+    std::vector<container> dsy, curvy,curvkappay; 
 
     //matrices and solvers
     DS dsDIR_;
@@ -307,9 +307,9 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
     dg::blas1::transfer( dg::evaluate( dg::zero, g), lambda ); 
     dg::blas1::transfer( dg::evaluate( dg::one,  g), one);
     phi.resize(2); phi[0] = phi[1] = chi;
-    curvphi = npe = logn = phi;
+    curvphi =curvkappaphi = npe = logn = phi;
     dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;
-    curvy = dsy;
+    curvy = curvkappay =dsy;
     //////////////////////////init invert objects///////////////////
     invert_pol.construct(         omega, omega.size(), p.eps_pol  ); 
     invert_invgammaN.construct(   omega, omega.size(), p.eps_gamma); 
@@ -321,9 +321,15 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
     dg::blas1::transfer(  dg::pullback(solovev::GaussianDamping(gp), g), damping);
     ////////////////////////////transform curvature components////////
     typename dg::HostVec< typename dg::GeometryTraits<Grid>::memory_category>::host_vector tempX, tempY;
-    dg::geo::pushForwardPerp(solovev::CurvatureR(gp), solovev::CurvatureZ(gp), tempX, tempY, g);
-    dg::blas1::transfer(  tempX, curvR);
-    dg::blas1::transfer(  tempY, curvZ);
+    dg::geo::pushForwardPerp(solovev::CurvatureNablaBR(gp), solovev::CurvatureNablaBZ(gp), tempX, tempY, g);
+    dg::blas1::transfer(  tempX, curvX);
+    dg::blas1::transfer(  tempY, curvY);
+    dg::geo::pushForwardPerp(solovev::CurvatureKappaR(), solovev::CurvatureKappaZ(gp), tempX, tempY, g);
+    dg::blas1::transfer(  tempX, curvKappaX);
+    dg::blas1::transfer(  tempY, curvKappaY);
+    dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
+    dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
+    dg::blas1::transfer(  dg::pullback(solovev::DivCurvatureKappa(gp), g), divCurvKappa);
     ///////////////////init densities//////////////////////////////
     dg::blas1::transfer( dg::pullback(solovev::Nprofile(p.bgprofamp, p.nprofileamp, gp),g), profne);
     dg::blas1::transfer(  profne ,profNi);
@@ -528,32 +534,45 @@ void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>
         dg::blas1::pointwiseDot( yp[2+i], binv, yp[2+i]);                    // dtU =1/B [U,phi]_RZ  
         
         //Curvature dynamics: 
-        curveN( y[i], curvy[i]);                                       //K(N) = K(N-1)
-        curveDIR( y[i+2], curvy[2+i]);                                 //K(U) 
-        curveDIR( phi[i], curvphi[i]);                                 //K(phi) 
+        vecdotnablaN(curvX, curvY, y[i], curvy[i]);            //K(N) = K(N-1)
+        vecdotnablaDIR(curvX, curvY,  y[i+2], curvy[2+i]);     //K(U) = K(U)
+        vecdotnablaDIR(curvX, curvY, phi[i], curvphi[i]);      //K(phi) 
+        vecdotnablaN(curvKappaX, curvKappaY, y[i], curvkappay[i]);            //K_kappa(N) = K_kappa(N-1)
+        vecdotnablaDIR(curvKappaX, curvKappaY,  y[i+2], curvkappay[2+i]);     //K_kappa(U) 
+        vecdotnablaDIR(curvKappaX, curvKappaY, phi[i], curvkappaphi[i]);      //K_kappa(phi) 
         
-        dg::blas1::pointwiseDot( y[i+2], curvy[2+i], omega);             //U K(U) 
-        dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K(U)
-        dg::blas1::pointwiseDot( npe[i], omega, omega);                 //N U K(U)
+        dg::blas1::pointwiseDot( y[i+2], curvkappay[2+i], omega);             //U K_kappa(U) 
+        dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K_kappa(U)
+        dg::blas1::pointwiseDot( npe[i], omega, omega);                 //N U K_kappa(U)
         
-        dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);    //dtN = dtN - (hat(mu)) N U K(U)
-        dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[2+i]);//dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
+        dg::blas1::axpby( -2.*p.mu[i], omega, 1., yp[i]);               //dtN = dtN - 2 (hat(mu)) N U K(U)
+        dg::blas1::axpby( -p.mu[i], chi, 1., yp[2+i]);           //dtU = dtU -  (hat(mu)) U^2 K(U)
 
-        curveN( logn[i], omega);                           //K(ln N) 
-        dg::blas1::pointwiseDot(y[i+2], omega, omega);       //U K(ln N)
-        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);    //dtU = dtU - tau U K(lnN)
+        vecdotnablaN(curvKappaX, curvKappaY, logn[i], omega);      //K_kappa(ln N) 
+        dg::blas1::pointwiseDot(y[i+2], omega, omega);       //U K_kappa(ln N)
+        dg::blas1::axpby( -2.*p.tau[i], omega, 1., yp[2+i]);    //dtU = dtU - 2.*tau U K_kappa(lnN)
         
-        dg::blas1::pointwiseDot( y[i+2], curvy[i], omega);   //U K( N)
-        dg::blas1::pointwiseDot( y[i+2], omega, chi);        //U^2K( N)
-        dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[i]);     //dtN = dtN - 0.5 mu U^2 K(N)
+        dg::blas1::pointwiseDot( y[i+2], curvkappay[i], omega);   //U K_kappa( N)
+        dg::blas1::pointwiseDot( y[i+2], omega, chi);        //U^2 K_kappa( N)
+        dg::blas1::axpby( -p.mu[i], chi, 1., yp[i]);     //dtN = dtN - mu U^2 K_kappa(N)
 
         dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);         //dtN = dtN - tau K(N)
-        dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);  //dtU = dtU - 2 tau K(U)
+        dg::blas1::axpby( -p.tau[i], curvy[2+i], 1., yp[2+i]);     //dtU = dtU - tau K(U)
         dg::blas1::pointwiseDot(npe[i],curvphi[i], omega);         //N K(psi)
         dg::blas1::axpby( -1., omega, 1., yp[i]);                  //dtN= dtN - N K(psi)
 
-        dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);       //U K(phi)
-        dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);               //dtU = dtU -0.5 U K(psi)
+        dg::blas1::pointwiseDot( y[i+2], curvkappaphi[i], omega);  //U K_kappa(psi)
+        dg::blas1::axpby( -1., omega, 1., yp[2+i]);               //dtU = dtU -U K(psi)
+        
+        dg::blas1::axpby( -2.*p.tau[i], curvkappay[2+i], 1., yp[2+i]);    //dtU = dtU -2.*tau K_kappa(U)
+        
+        // div(K_kappa) terms
+        dg::blas1::pointwiseDot(y[i+2],divCurvKappa,omega);              // U div(K_kappa)
+        dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                //dtU = dtU -tau U div(K_kappa)        
+        dg::blas1::pointwiseDot(y[i+2],omega,omega);                     // U^2 div(K_kappa)
+        dg::blas1::pointwiseDot(npe[i],omega,omega);                     // N U^2 div(K_kappa)
+        dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);                //dtN = dtN -hat(mu) N U^2 div(K_kappa)
+
     }
     //parallel dynamics
     double Dpar_plus_perp = add_parallel_dynamics( y, yp);
@@ -593,23 +612,23 @@ void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>
 
 //Computes curvature operator
 template<class Geometry, class DS, class Matrix, class container>
-void Feltor<Geometry, DS, Matrix, container>::curveN( container& src, container& target)
+void Feltor<Geometry, DS, Matrix, container>::vecdotnablaN(const container& vecX, const container& vecY, container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxlhs(), src, target); //d_R src
-    dg::blas1::pointwiseDot( curvR, target, target); // C^R d_R src
+    dg::blas1::pointwiseDot( vecX, target, target); // C^R d_R src
     dg::blas2::gemv( poissonN.dylhs(), src, temp1);  //d_Z src
-    dg::blas1::pointwiseDot( 1., curvZ, temp1, 1., target);   // C^Z d_Z src + C^R d_R src
+    dg::blas1::pointwiseDot( 1., vecY, temp1, 1., target);   // C^Z d_Z src + C^R d_R src
 }
 
 template<class Geometry, class DS, class Matrix, class container>
-void Feltor<Geometry, DS, Matrix, container>::curveDIR( container& src, container& target)
+void Feltor<Geometry, DS, Matrix, container>::vecdotnablaDIR(const container& vecX, const container& vecY,  container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxrhs(), src, target); //d_R src
-    dg::blas1::pointwiseDot( curvR, target, target); // C^R d_R src
+    dg::blas1::pointwiseDot( vecX, target, target); // C^R d_R src
     dg::blas2::gemv( poissonN.dyrhs(), src, temp1);  //d_Z src
-    dg::blas1::pointwiseDot( 1., curvZ, temp1, 1., target);// C^Z d_Z src + C^R d_R src
+    dg::blas1::pointwiseDot( 1., vecY, temp1, 1., target);// C^Z d_Z src + C^R d_R src
 }
 
 ///@endcond

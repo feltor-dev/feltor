@@ -117,14 +117,16 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
     //compute and write deformation into netcdf
+    std::cout <<" "<< g2d.x1() <<" "<< g2d.x0() <<std::endl;
     dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
-    X=g2d.g_yy();
+    X=temp0;
+//     dg::blas1::scal(X,g2d.x1()); //normalise
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
     //compute and write conformalratio into netcdf
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
-    X=g2d.g_xx();
-
+    X=temp0;
+//     dg::blas1::scal(X,g2d.x1()*g2d.x1()); //normalise
     err = nc_put_var_double( ncid, confID, periodify(X, g2d_periodic).data());
     std::cout << "Construction successful!\n";
 
