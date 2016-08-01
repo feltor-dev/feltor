@@ -208,9 +208,11 @@ int main( int argc, char* argv[])
             dg::blas2::gemv(probe_interp, temp, npe_probes);
 
                 polavg(phi,temp);
-                dg::blas1::pointwiseDivide(phi,temp,temp);
-                dg::blas1::axpby(1.0,temp,-1.0,one,temp);
-            dg::blas2::gemv(probe_interp, temp, phi_probes);
+                //do not normalise to fluctuations if <phi>=0
+//                 dg::blas1::pointwiseDivide(phi,temp,temp);
+//                 dg::blas1::axpby(1.0,temp,-1.0,one,temp);
+//             dg::blas2::gemv(probe_interp, temp, phi_probes);
+                dg::blas2::gemv(probe_interp, phi, phi_probes);
 
             dg::blas2::gemv(dy, phi, temp);
 
@@ -220,6 +222,7 @@ int main( int argc, char* argv[])
 //             dg::blas2::gemv(probe_interp, phi, phi_probes);
 //             dg::blas2::gemv(dy, phi, temp);
 //             dg::blas2::gemv(probe_interp, temp, gamma_probes);
+            
             //write data in netcdf file
             err1d = nc_put_vara_double( ncid1d, timevarID, start1d, count1d, &time);
             for( unsigned i=0; i<num_probes; i++){
