@@ -150,7 +150,7 @@ class Elliptic
         dg::blas1::transfer( dg::create::volume(g),        weights_);
         dg::blas1::transfer( dg::create::volume(g),        weights_wo_vol);
         dg::blas1::transfer( dg::create::inv_volume(g),    precond_);
-        dg::blas1::transfer( dg::evaluate( one, g),        xchi);
+        dg::blas1::transfer( dg::evaluate( dg::one, g),    xchi);
         tempx = tempy = gradx = xchi;
         dg::geo::multiplyVolume( xchi, g_); 
         dg::geo::divideVolume( weights_wo_vol, g_);

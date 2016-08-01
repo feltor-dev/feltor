@@ -6,6 +6,8 @@
 #include "dg/backend/timer.cuh"
 #include "dg/backend/grid.h"
 #include "dg/backend/gridX.h"
+#include "dg/backend/derivativesX.h"
+#include "dg/backend/evaluationX.cuh"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
@@ -13,7 +15,7 @@
 #include "conformal.h"
 #include "conformalX.h"
 #include "orthogonal.h"
-#include "orthogonalX.h"
+#include "refined_orthogonalX.h"
 
 
 
@@ -51,9 +53,12 @@ int main(int argc, char**argv)
     std::cout << "Constructing grid ... \n";
     t.tic();
 
-    conformal::GridX3d<dg::DVec> g3d(gp, psi_0, 0.25, 0./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    conformal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<conformal::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec, dg::DVec> pol( g3d, dg::not_normed, dg::forward);
+    std::cout << "Type add_x and add_y \n";
+    double add_x, add_y;
+    std::cin >> add_x >> add_y;
+    orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::forward);
     psi_1 = g3d.psi1();
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 
@@ -101,7 +106,10 @@ int main(int argc, char**argv)
     double err = dg::blas2::dot( vol3d, error);
     const double norm = dg::blas2::dot( vol3d, solution);
     std::cout << sqrt( err/norm) << "\t";
-    dg::HVec gyy = g2d.g_xx(), gxx=g2d.g_yy(), vol = g2d.vol();
+    dg::HVec gyy, gxx, vol; 
+    dg::blas1::transfer( g2d.g_xx(), gyy);
+    dg::blas1::transfer( g2d.g_yy(), gxx); 
+    dg::blas1::transfer( g2d.vol() , vol);
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);
@@ -116,11 +124,11 @@ int main(int argc, char**argv)
     std::cout << hyX << "\t";
     std::cout<<t.diff()/(double)number<<"s"<<std::endl;
 
-    X = error;
+    dg::blas1::transfer( error, X);
     ncerr = nc_put_var_double( ncid, psiID, X.data());
-    X = x;
+    dg::blas1::transfer( x, X);
     ncerr = nc_put_var_double( ncid, functionID, X.data());
-    X = solution;
+    dg::blas1::transfer( solution, X);
     ncerr = nc_put_var_double( ncid, function2ID, X.data());
     ncerr = nc_close( ncid);
 

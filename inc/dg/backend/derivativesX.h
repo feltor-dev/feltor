@@ -12,6 +12,7 @@ namespace dg{
 template<class Matrix>
 struct Composite
 {
+    Composite( ):m1(), m2(), dual(false){ }
     template<class Matrix2>
     Composite( const Composite<Matrix2>& src):m1(src.m1), m2(src.m2), dual(src.dual){}
     Composite( const Matrix& m):m1(m), m2(m), dual(false){ }
@@ -19,8 +20,6 @@ struct Composite
     template<class Matrix2>
     Composite& operator=( const Composite<Matrix2>& src){ Composite c(src); 
         *this = c; return *this;}
-    Matrix m1, m2;
-    bool dual;
     template< class container>
     void symv( const  container& v1, container& v2)
     {
@@ -44,6 +43,8 @@ struct Composite
             m1.display(os);
         }
     }
+    Matrix m1, m2;
+    bool dual;
 };
 ///@cond
 template <class Matrix>
