@@ -166,9 +166,10 @@ struct Grid2d : public dg::Grid2d<double>
     /**
      * @brief The grid that this object refines
      *
+     * This function is vitual so that derived classes can also construct the associated grid 
      * @return  2d grid
      */
-    dg::Grid2d<double> associated()const {return g_assoc_;}
+    virtual const dg::Grid2d<double>& associated()const {return g_assoc_;}
     /**
      * @brief Return the abscissas in X-direction 
      *

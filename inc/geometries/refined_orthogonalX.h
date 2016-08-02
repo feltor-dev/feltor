@@ -42,7 +42,8 @@ struct GridX3d : public dg::refined::GridX3d
      */
     GridX3d( unsigned add_x, unsigned add_y, solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
         dg::refined::GridX3d( add_x, add_y, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
-        f_( this->size()), g_(f_), r_(f_), z_(f_), xr_(f_), xz_(f_), yr_(f_), yz_(f_)
+        f_( this->size()), g_(f_), r_(f_), z_(f_), xr_(f_), xz_(f_), yr_(f_), yz_(f_),
+        g_assoc_( gp, psi_0, fx, fy, n, Nx, Ny, Nz, bcx, bcy)
     { 
         /////////////////////discretize x-direction and construct psi(x)
         assert( psi_0 < 0 );
@@ -99,6 +100,11 @@ struct GridX3d : public dg::refined::GridX3d
             }
         construct_metric();
     }
+
+
+    const orthogonal::GridX3d<container>& associated() const{ return g_assoc_;}
+
+
     const thrust::host_vector<double>& f()const{return f_;}
     const thrust::host_vector<double>& g()const{return g_;}
     const thrust::host_vector<double>& r()const{return r_;}
@@ -153,6 +159,7 @@ struct GridX3d : public dg::refined::GridX3d
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
     thrust::host_vector<double> r_x0, r_x1, z_x0, z_x1; //boundary points in y
     double psi_1_numerical_;
+    orthogonal::GridX3d<container> g_assoc_;
 };
 
 /**
@@ -162,8 +169,9 @@ template< class container>
 struct GridX2d : public dg::refined::GridX2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
-    GridX2d( unsigned add_x, unsigned add_y, const solovev::GeomParameters gp, double psi_0, double fx, double fy, double y, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
-        dg::refined::GridX2d( add_x, add_y, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
+    GridX2d( unsigned add_x, unsigned add_y, const solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
+        dg::refined::GridX2d( add_x, add_y, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy),
+        g_assoc_( gp, psi_0, fx, fy, n, Nx, Ny, bcx, bcy) 
     {
         orthogonal::detail::FpsiX fpsi(gp);
         const double x0 = fpsi.find_x(psi_0);
@@ -176,7 +184,7 @@ struct GridX2d : public dg::refined::GridX2d
         vol2d_=g.perpVol();
     }
     GridX2d( const GridX3d<container>& g):
-        dg::refined::GridX2d(g)
+        dg::refined::GridX2d(g), g_assoc_(g.associated())
     {
         f_x_ = g.f_x();
         unsigned s = this->size();
@@ -189,6 +197,7 @@ struct GridX2d : public dg::refined::GridX2d
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
+    const orthogonal::GridX2d<container>& associated()const{return g_assoc_;}
     const thrust::host_vector<double>& f()const{return f_;}
     const thrust::host_vector<double>& g()const{return g_;}
     const thrust::host_vector<double>& r()const{return r_;}
@@ -210,6 +219,7 @@ struct GridX2d : public dg::refined::GridX2d
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> f_, g_, r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
+    orthogonal::GridX2d<container> g_assoc_;
 };
 
 }//namespace refined

@@ -111,9 +111,10 @@ struct GridX2d : public dg::GridX2d
     /**
      * @brief The grid that this object refines
      *
+     * This function is vitual so that derived classes can also construct the associated grid 
      * @return  2d grid
      */
-    dg::GridX2d associated()const {return g_assoc_;}
+    virtual const dg::GridX2d& associated()const {return g_assoc_;}
     /**
      * @brief Return the abscissas in X-direction 
      *
@@ -229,9 +230,10 @@ struct GridX3d : public dg::GridX3d
     /**
      * @brief The grid that this object refines
      *
+     * This function is vitual so that derived classes can also construct the associated grid 
      * @return  2d grid
      */
-    dg::GridX3d associated()const {return g_assoc_;}
+    virtual const dg::GridX3d& associated()const {return g_assoc_;}
     /**
      * @brief Return the abscissas in X-direction 
      *

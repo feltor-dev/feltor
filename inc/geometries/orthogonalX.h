@@ -637,6 +637,7 @@ struct GridX3d : public dg::GridX3d
             }
         construct_metric();
     }
+
     const thrust::host_vector<double>& f()const{return f_;}
     const thrust::host_vector<double>& g()const{return g_;}
     const thrust::host_vector<double>& r()const{return r_;}
@@ -702,7 +703,7 @@ template< class container>
 struct GridX2d : public dg::GridX2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
-    GridX2d( const solovev::GeomParameters gp, double psi_0, double fx, double fy, double y, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
+    GridX2d( const solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
         dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
     {
         orthogonal::detail::FpsiX fpsi(gp);
