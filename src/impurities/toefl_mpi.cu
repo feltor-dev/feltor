@@ -100,7 +100,7 @@ int main( int argc, char* argv[])
     if( p.mode == 2) 
     {
         //init wall in y0[2]
-        dg::GaussianX wall( p.wall_pos*grid.lx(), p.wall_sigma, p.wall_amp); 
+        dg::GaussianX wall( p.wall_pos*p.lx, p.wall_sigma, p.wall_amp);
         dg::MDVec wallv = dg::evaluate( wall, grid);
         gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         dg::blas2::symv( gamma, wallv, y0[2]);

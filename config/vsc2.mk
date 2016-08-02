@@ -1,17 +1,14 @@
 
 ifeq ($(strip $(SGE_CELL)),vsc2)
-INCLUDE += -I$(HOME)/include
-INCLUDE += -I/opt/intel/impi/4.1.0/include64
-INCLUDE += -I/opt/sw/netcdf/4.3.2/include
-INCLUDE += -I/opt/hdf5/1.8.9/intel/include
 GLFLAGS  = -lm
 CC=icc
 MPICC=mpiicc 
 OPT=-O3
 MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
 OMPFLAG=-openmp
-LIBS     = -L/opt/hdf5/1.8.9/intel/lib -lhdf5 -lhdf5_hl
-LIBS    += -L/opt/sw/netcdf/4.3.2/lib -lnetcdf -lcurl
+LIBS   = -lhdf5 -lhdf5_hl
+LIBS  += -lnetcdf -lcurl
+JSONLIB = -ljsoncpp
 endif
 
 
