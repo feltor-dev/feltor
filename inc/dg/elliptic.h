@@ -93,6 +93,7 @@ class Elliptic
     /**
      * @brief Returns the weights used to make the matrix symmetric 
      *
+     * i.e. the volume form 
      * @return weights
      */
     const Vector& weights()const {return weights_;}

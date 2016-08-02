@@ -1,7 +1,9 @@
 #pragma once
 
-#include "refined_grid.h"
+#include "cusp/transpose.h"
+#include "dg/backend/weightsX.cuh"
 #include "dg/backend/gridX.h"
+#include "refined_grid.h"
 
 
 namespace dg
@@ -321,8 +323,26 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refine
 
 cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::GridX2d& g_fine)
 {
+    //form the adjoint
+    thrust::host_vector<double> w_f = dg::create::weights( g_fine);
+    thrust::host_vector<double> v_c = dg::create::inv_weights( g_fine.associated() );
+    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
+    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
+    for( int i =0; i<(int)w_f.size(); i++)
+    {
+        Wf.row_indices[i] = Wf.column_indices[i] = i;
+        Wf.values[i] = w_f[i]/g_fine.weightsX()[i]/g_fine.weightsY()[i];
+    }
+    for( int i =0; i<(int)v_c.size(); i++)
+    {
+        Vc.row_indices[i] = Vc.column_indices[i] = i;
+        Vc.values[i] = v_c[i];
+    }
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
     cusp::transpose( temp, A);
+    cusp::multiply( A, Wf, temp);
+    cusp::multiply( Vc, temp, A);
+    A.sort_by_row_and_column();
     return A;
 }
 
@@ -349,8 +369,26 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refine
 
 cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::GridX3d& g_fine)
 {
+    //form the adjoint
+    thrust::host_vector<double> w_f = dg::create::weights( g_fine);
+    thrust::host_vector<double> v_c = dg::create::inv_weights( g_fine.associated() );
+    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
+    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
+    for( int i =0; i<(int)w_f.size(); i++)
+    {
+        Wf.row_indices[i] = Wf.column_indices[i] = i;
+        Wf.values[i] = w_f[i]/g_fine.weightsX()[i]/g_fine.weightsY()[i];
+    }
+    for( int i =0; i<(int)v_c.size(); i++)
+    {
+        Vc.row_indices[i] = Vc.column_indices[i] = i;
+        Vc.values[i] = v_c[i];
+    }
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
     cusp::transpose( temp, A);
+    cusp::multiply( A, Wf, temp);
+    cusp::multiply( Vc, temp, A);
+    A.sort_by_row_and_column();
     return A;
 }
 

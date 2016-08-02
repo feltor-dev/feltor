@@ -2,6 +2,7 @@
 
 #include "cusp/transpose.h"
 #include "dg/backend/grid.h"
+#include "dg/backend/weights.cuh"
 #include "dg/backend/interpolation.cuh"
 
 
@@ -216,19 +217,45 @@ namespace create{
 
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_fine)
 {
-    dg::Grid2d<double> g = g_fine.associated();
+    dg::Grid2d<double> g_coarse = g_fine.associated();
     //determine number of refined cells
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
     
-    return dg::create::interpolation( x,y, g);
+    return dg::create::interpolation( x,y, g_coarse);
 
 }
 
+/**
+ * @brief Create the adjoint of the interpolation 
+ *
+ * The adjoint is formed with respect to the volume form of the fine grid
+ * @param g_fine The fine grid
+ *
+ * @return 
+ */
 cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::Grid2d& g_fine)
 {
+    //form the adjoint
+    thrust::host_vector<double> w_f = dg::create::weights( g_fine);
+    thrust::host_vector<double> v_c = dg::create::inv_weights( g_fine.associated() );
+    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
+    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
+    for( int i =0; i<(int)w_f.size(); i++)
+    {
+        Wf.row_indices[i] = Wf.column_indices[i] = i;
+        Wf.values[i] = w_f[i]/g_fine.weightsX()[i]/g_fine.weightsY()[i];
+    }
+    for( int i =0; i<(int)v_c.size(); i++)
+    {
+        Vc.row_indices[i] = Vc.column_indices[i] = i;
+        Vc.values[i] = v_c[i];
+    }
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
     cusp::transpose( temp, A);
+    cusp::multiply( A, Wf, temp);
+    cusp::multiply( Vc, temp, A);
+    A.sort_by_row_and_column();
     return A;
 }
 

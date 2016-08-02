@@ -1,6 +1,11 @@
 #include <iostream>
 
 #include "refined_grid.h"
+#include "../blas.h"
+#include "dg/backend/typedefs.cuh"
+
+
+double function( double x, double y){return sin(x)*cos(y);}
 
 
 int main ()
@@ -40,6 +45,36 @@ int main ()
         sum += 1./right[i]/gr.n();
     }
     std::cout << "SUM IS: "<<sum<<" ("<<new_N<<")\n";
+
+    dg::refined::Grid2d g2d( 0,0,3,3, 0., 2*M_PI, 0., 2*M_PI, 3, 20, 20);
+    dg::HVec vec( g2d.size());
+    dg::HVec w2d = dg::create::weights( g2d);
+    dg::blas1::pointwiseDivide( w2d, g2d.weightsX(), w2d);
+    dg::blas1::pointwiseDivide( w2d, g2d.weightsY(), w2d);
+    for( unsigned i=0; i<g2d.size(); i++)
+        vec[i] = function( g2d.abscissasX()[i], g2d.abscissasY()[i]);
+    double integral = dg::blas2::dot( vec, w2d, vec);
+    std::cout << "error of integral is "<<integral-M_PI*M_PI<<std::endl;
+    dg::IHMatrix Q = dg::create::interpolation( g2d);
+    dg::Grid2d<double> g2d_c = g2d.associated();
+    dg::HVec w2d_c = dg::create::weights( g2d_c);
+    dg::HVec vec_c = dg::evaluate( function, g2d_c);
+    integral = dg::blas2::dot( vec_c, w2d_c, vec_c);
+    std::cout << "error of integral is "<<integral-M_PI*M_PI<<std::endl;
+    dg::HVec vec_cf(vec);
+    dg::blas2::gemv( Q, vec_c, vec_cf);//here gemv instead of symv is important
+    integral = dg::blas2::dot( vec_cf, w2d, vec_cf);
+    std::cout << "error of interpolated integral is "<<integral-M_PI*M_PI<<std::endl;
+    dg::IHMatrix P = dg::create::projection( g2d);
+    dg::blas2::gemv( P, vec_cf, vec_c);
+    integral = dg::blas2::dot( vec_c, w2d_c, vec_c);
+    std::cout << "error of projected integral is "<<integral-M_PI*M_PI<<std::endl;
+
+    dg::IHMatrix S = dg::create::smoothing( g2d);
+    dg::HVec smoothed(vec);
+    dg::blas2::symv( S, vec, smoothed);
+    integral = dg::blas2::dot( smoothed, w2d, smoothed);
+    std::cout << "error of smoothed integral is "<<integral-M_PI*M_PI<<std::endl;
 
     return 0;
 }
