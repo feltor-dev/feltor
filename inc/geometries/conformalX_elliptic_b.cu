@@ -3,12 +3,14 @@
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
+#include "dg/geometry/refined_grid.h"
+#include "dg/geometry/refined_gridX.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/grid.h"
 #include "dg/backend/gridX.h"
 #include "dg/backend/derivativesX.h"
 #include "dg/backend/evaluationX.cuh"
-#include "dg/elliptic.h"
+#include "dg/refined_elliptic.h"
 #include "dg/cg.h"
 
 #include "solovev.h"
@@ -58,7 +60,8 @@ int main(int argc, char**argv)
     std::cin >> add_x >> add_y;
     orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    //dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     psi_1 = g3d.psi1();
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 
@@ -69,7 +72,7 @@ int main(int argc, char**argv)
     file::NC_Error_Handle ncerr;
     ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
-    ncerr = file::define_dimensions(  ncid, dim2d, g2d.grid());
+    ncerr = file::define_dimensions(  ncid, dim2d, g2d.associated().grid());
     int coordsID[2], psiID, functionID, function2ID;
     ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
@@ -77,20 +80,22 @@ int main(int argc, char**argv)
     ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
     ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
 
-    dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d.size(); i++)
+    dg::HVec X( g2d.associated().size()), Y(X); //P = dg::pullback( dg::coo3, g);
+    for( unsigned i=0; i<g2d.associated().size(); i++)
     {
-        X[i] = g2d.r()[i];
-        Y[i] = g2d.z()[i];
+        X[i] = g2d.associated().r()[i];
+        Y[i] = g2d.associated().z()[i];
     }
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     ///////////////////////////////////////////////////////////////////////////
-    dg::DVec x =    dg::pullback( dg::zero, g3d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d);
-    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g3d);
-    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d);
-    const dg::DVec vol3d = dg::create::volume( g3d);
+    dg::DVec x =    dg::pullback( dg::zero, g3d.associated());
+    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d.associated());
+    dg::DVec bmod(b);
+    pol.compute_rhs( b, bmod);
+    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g3d.associated());
+    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
+    const dg::DVec vol3d = dg::create::volume( g3d.associated());
     pol.set_chi( chi);
     //compute error
     dg::DVec error( solution);
@@ -99,7 +104,7 @@ int main(int argc, char**argv)
     std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    unsigned number = invert(pol, x,b);// vol3d, v3d );
+    unsigned number = invert(pol, x,bmod);// vol3d, v3d );
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);

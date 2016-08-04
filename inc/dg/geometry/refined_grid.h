@@ -24,6 +24,51 @@ enum direction
 namespace detail
 {
 
+/**
+ * @brief Divide cells in an equally distributed number of new cells
+ *
+ * @param add_x the number of cells to add 
+ * @param node the node around which to refine
+ * @param n polynomials
+ * @param N # of cells
+ * @param bcx boundary condition
+ *
+ * @return Weights
+ */
+thrust::host_vector<double> equidist_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx)
+{
+    if( add_x == 0)
+    {
+        thrust::host_vector<double> w_( n*N, 1);
+        return w_;
+    }
+    assert( node <= N);
+    //there are add_x+1 finer cells per refined cell ...
+    thrust::host_vector< double> left( n*N+n*add_x, 1), right(left);
+    for( unsigned i=0; i<add_x+1; i++)//the original cell and the additional ones
+        for( unsigned k=0; k<n; k++)
+            left[i*n+k] = add_x + 1;
+    //mirror left into right
+    for( unsigned i=0; i<right.size(); i++)
+        right[i] = left[ (left.size()-1)-i];
+    thrust::host_vector< double> both( n*N+2*n*add_x, 1);
+    for( unsigned i=0; i<left.size(); i++)
+        both[i] *= left[i];
+    for( unsigned i=0; i<right.size(); i++)
+        both[i+n*add_x] *= right[i];
+    if(      node == 0     && bcx != dg::PER) { return left; }
+    else if( node == N && bcx != dg::PER) { return right; }
+    else if((node == N || node == 0) && bcx == dg::PER) { return both; }
+    else 
+    {
+        thrust::host_vector<double> w_ = both;
+        //now shift indices so that refinement is around nodes
+        for( unsigned i=0; i<both.size(); i++)
+            w_[((add_x+node)*n+i)%both.size()] = both[i];
+        return w_;
+    }
+}
+
 thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx)
 {
     if( add_x == 0)
@@ -118,6 +163,35 @@ int exponential_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thr
     return Nx_new;
 }
 
+/**
+ * @brief Create 1d refinement weights and abscissas for the equidist refinement around a node 
+ *
+ * There will be two refined cells at the end except if a corner node is 
+ * given and the boundary condition is not periodic. We count nodes from
+ * 0 (left corner) to N (right corner). 
+ * @param add_x number of additional cells in the cells idx-1 and idx
+ * @param node The cells node-1 and node will be refined
+ * @param g The 1d grid to refine
+ *
+ * @param weights A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
+ * @param abscissas A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
+ * @return the new number of cells
+ */
+int equidist_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
+{
+    if( add_x == 0)
+    {
+        thrust::host_vector<double> w_( g.size(), 1);
+        thrust::host_vector<double> abs_= dg::create::abscissas(g);
+        weights = w_; abscissas = abs_; 
+        return g.N();
+    }
+    weights = equidist_ref( add_x, node, g.n(), g.N(), g.bcx());
+    unsigned Nx_new = weights.size()/g.n();
+    abscissas = normalize_weights_and_compute_abscissas( g, weights);
+    return Nx_new;
+}
+
 }//namespace detail
 
 /**
@@ -150,8 +224,8 @@ struct Grid2d : public dg::Grid2d<double>
         Grid1d<double> gx( x0, x1, n, Nx, bcx);
         Grid1d<double> gy( y0, y1, n, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
-        detail::exponential_ref( add_x, node_x, gx, wx, ax);
-        detail::exponential_ref( add_y, node_y, gy, wy, ay);
+        detail::equidist_ref( add_x, node_x, gx, wx, ax);
+        detail::equidist_ref( add_y, node_y, gy, wy, ay);
         //now make product space
         for( unsigned i=0; i<wy.size(); i++)
             for( unsigned j=0; j<wx.size(); j++)

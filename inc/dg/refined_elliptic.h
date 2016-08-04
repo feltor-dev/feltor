@@ -1,15 +1,7 @@
 #pragma once
 
-#include "blas.h"
-#include "geometry.h"
+#include "elliptic.h"
 #include "geometry/refined_grid.h"
-#include "enums.h"
-#include "backend/evaluation.cuh"
-#include "backend/derivatives.h"
-#ifdef MPI_VERSION
-#include "backend/mpi_derivatives.h"
-#include "backend/mpi_evaluation.h"
-#endif
 
 /*! @file 
 
@@ -34,15 +26,9 @@ class RefinedElliptic
      * @param dir Direction of the right first derivative
      */
     RefinedElliptic( Geometry g, norm no = not_normed, direction dir = forward): 
-        no_(no), elliptic_( g, normed, dir)
+        no_(no), elliptic_( g, no, dir)
     { 
-        dg::blas2::transfer( dg::create::interpolation( g), Q_);
-        dg::blas2::transfer( dg::create::projection( g), P_);
-        dg::blas2::transfer( dg::create::interpolationT( g), QT_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp1_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp2_);
-        dg::blas1::transfer( dg::create::weights( g.associated()), weights_);
-        dg::blas1::transfer( dg::create::inv_weights( g.associated()), inv_weights_);
+        construct( g, g.bcx(), g.bcy(), dir);
     }
 
     /**
@@ -59,15 +45,9 @@ class RefinedElliptic
      * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
      */
     RefinedElliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
-        no_(no), elliptic_( g, bcx, bcy, normed, dir), no_(no)
+        no_(no), elliptic_( g, bcx, bcy, no, dir)
     { 
-        dg::blas2::transfer( dg::create::interpolation( g), Q_);
-        dg::blas2::transfer( dg::create::interpolationT( g), QT_);
-        dg::blas2::transfer( dg::create::projection( g), P_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp1_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp2_);
-        dg::blas1::transfer( dg::create::weights( g.associated()), weights_);
-        dg::blas1::transfer( dg::create::inv_weights( g.associated()), inv_weights_);
+        construct( g, bcx, bcy, dir);
     }
 
     /**
@@ -77,7 +57,8 @@ class RefinedElliptic
      */
     void set_chi( const Vector& chi)
     {
-        elliptic_.set_chi( chi);
+        dg::blas2::gemv( Q_, chi, temp1_);
+        elliptic_.set_chi( temp1_);
     }
 
     /**
@@ -102,27 +83,60 @@ class RefinedElliptic
      */
     void symv( const Vector& x, Vector& y) 
     {
-        dg::blas2::gemv( Q_, x, temp1_;) 
+        dg::blas2::gemv( Q_, x, temp1_); 
         elliptic_.symv( temp1_, temp2_);
-        dg::blas2::gemv( P_, temp2_, y); 
-        if( no_ == not_normed)
+        if( no_ == normed) 
         {
-            dg::blas2::symv( weights, y, y);
+            dg::blas2::gemv( P_, temp2_, y); 
+            return;
+        }
+        else 
+        {
+            dg::blas2::gemv( QT_, temp2_, y);
+            return;
         }
     }
+
+    /**
+     * @brief Compute the Right hand side
+     *
+     * P\sqrt{g} Q \rho
+     * @param rhs the original right hand side
+     * @param rhs_mod the modified right hand side of the same size (may equal rhs)
+     */
+    void compute_rhs( const Vector& rhs, Vector& rhs_mod )
+    {
+        dg::blas2::gemv( Q_, rhs, temp1_);
+        dg::blas1::pointwiseDot( vol_, temp1_, temp1_);
+        dg::blas2::gemv( QT_, temp1_, rhs_mod);
+        dg::blas2::symv( inv_weights_, rhs_mod, rhs_mod);
+    }
     private:
+    void construct( Geometry g, bc bcx, bc bcy, direction dir)
+    {
+        dg::blas2::transfer( dg::create::interpolation( g), Q_);
+        dg::blas2::transfer( dg::create::interpolationT( g), QT_);
+        dg::blas2::transfer( dg::create::projection( g), P_);
+
+        dg::blas1::transfer( dg::evaluate( dg::one, g), temp1_);
+        dg::blas1::transfer( dg::evaluate( dg::one, g), temp2_);
+        dg::blas1::transfer( dg::create::weights( g.associated()), weights_);
+        dg::blas1::transfer( dg::create::inv_weights( g.associated()), inv_weights_);
+        dg::blas1::transfer( dg::create::volume( g), vol_);
+        dg::blas1::transfer( dg::create::inv_volume( g), inv_vol_);
+    }
     norm no_;
     IMatrix P_, Q_, QT_;
-    Elliptic<Geometry, Matrix, container> elliptic_;
-    container temp1_, temp2_;
-    container weights_, inv_weights_;
-    Geometry g_;
+    Elliptic<Geometry, Matrix, Vector> elliptic_;
+    Vector temp1_, temp2_;
+    Vector weights_, inv_weights_;
+    Vector vol_, inv_vol_;
 };
 
 
 ///@cond
-template< class G, class M, class V>
-struct MatrixTraits< RefinedElliptic<G, M, V> >
+template< class G, class IM, class M, class V>
+struct MatrixTraits< RefinedElliptic<G, IM, M, V> >
 {
     typedef typename VectorTraits<V>::value_type  value_type;
     typedef SelfMadeMatrixTag matrix_category;

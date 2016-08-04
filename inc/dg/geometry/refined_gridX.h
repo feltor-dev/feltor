@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cusp/transpose.h"
+#include "dg/backend/interpolation.cuh"
 #include "dg/backend/weightsX.cuh"
 #include "dg/backend/gridX.h"
 #include "refined_grid.h"
@@ -148,7 +149,6 @@ struct GridX2d : public dg::GridX2d
         for( unsigned i=0; i<absX_.size(); i++)
             absX_[i]=alpha*absX_[i]+beta;
         dg::GridX2d::init_X_boundaries( x0, x1);
-
     }
 
     private:
@@ -367,7 +367,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refine
     dg::GridX3d g = g_fine.associated();
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
-    return dg::create::interpolation( x,y, g.grid());
+    thrust::host_vector<double> z = dg::evaluate( dg::coo3, g_fine.grid());
+    return dg::create::interpolation( x,y,z, g.grid());
 }
 
 cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refined::GridX3d& g_fine)
