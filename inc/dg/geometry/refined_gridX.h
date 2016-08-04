@@ -315,12 +315,16 @@ namespace create{
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::GridX2d& g_fine)
 {
     dg::GridX2d g = g_fine.associated();
-    //determine number of refined cells
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
-    
     return dg::create::interpolation( x,y, g.grid());
 
+}
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refined::GridX2d& g_fine)
+{
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
+    cusp::transpose( temp, A);
+    return A;
 }
 
 cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::GridX2d& g_fine)
@@ -360,13 +364,17 @@ cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::refined::G
 
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::GridX3d& g_fine)
 {
-    dg::GridX2d g = g_fine.associated();
-    //determine number of refined cells
+    dg::GridX3d g = g_fine.associated();
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
-    
     return dg::create::interpolation( x,y, g.grid());
+}
 
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refined::GridX3d& g_fine)
+{
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
+    cusp::transpose( temp, A);
+    return A;
 }
 
 cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::GridX3d& g_fine)

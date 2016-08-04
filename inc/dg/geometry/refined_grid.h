@@ -219,12 +219,16 @@ namespace create{
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_fine)
 {
     dg::Grid2d<double> g_coarse = g_fine.associated();
-    //determine number of refined cells
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
-    
     return dg::create::interpolation( x,y, g_coarse);
 
+}
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refined::Grid2d& g_fine)
+{
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
+    cusp::transpose( temp, A);
+    return A;
 }
 
 /**

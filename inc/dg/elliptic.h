@@ -106,6 +106,16 @@ class Elliptic
     const Vector& precond()const {return precond_;}
 
     /**
+     * @brief Check if object is normed or not
+     *
+     * @return  true if normed and false else
+     */
+    bool normed() const{ 
+        if( no_ == normed) return true; 
+        return false;
+    }
+
+    /**
      * @brief Computes the polarisation term
      *
      * @param x left-hand-side
