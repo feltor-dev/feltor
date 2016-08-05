@@ -55,10 +55,12 @@ int main(int argc, char**argv)
     std::cout << "Constructing grid ... \n";
     t.tic();
 
-    std::cout << "Type add_x and add_y \n";
+    std::cout << "Type add_x and add_y  and howmany_x and howmany_y\n";
     double add_x, add_y;
     std::cin >> add_x >> add_y;
-    orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    double howmanyX, howmanyY;
+    std::cin >> howmanyX >> howmanyY;
+    orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     //dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
