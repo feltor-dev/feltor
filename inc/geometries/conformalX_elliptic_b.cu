@@ -63,7 +63,8 @@ int main(int argc, char**argv)
     orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     //dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    //dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::AltRefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     psi_1 = g3d.psi1();
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 
@@ -93,11 +94,11 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::pullback( dg::zero, g3d.associated());
     const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d.associated());
-    dg::DVec bmod(b);
-    pol.compute_rhs( b, bmod);
     const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g3d.associated());
     const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
+    //const dg::DVec vol3d = dg::create::weights( g3d.associated());
     const dg::DVec vol3d = dg::create::volume( g3d.associated());
+    const dg::DVec inv_vol3d = dg::create::inv_volume( g3d.associated());
     pol.set_chi( chi);
     //compute error
     dg::DVec error( solution);
@@ -106,7 +107,10 @@ int main(int argc, char**argv)
     std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    unsigned number = invert(pol, x,bmod);// vol3d, v3d );
+    dg::DVec bmod(b);
+    pol.compute_rhs( b, bmod);
+    unsigned number = invert(pol, x,bmod);
+    //unsigned number = invert(pol, x,bmod, vol3d, inv_vol3d );
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);
