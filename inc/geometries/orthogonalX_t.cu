@@ -101,15 +101,15 @@ try{
     std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
     double fx_0, fy_0;
     std::cin >> fx_0>> fy_0;
-    std::cout << "Type add_x and add_y and howmanyX and howmanyY \n";
-    double add_x, add_y, howmanyX, howmanyY;
-    std::cin >> add_x >> add_y >> howmanyX >> howmanyY;
+    std::cout << "Type add_x and add_y \n";
+    double add_x, add_y;
+    std::cin >> add_x >> add_y;
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
     //orthogonal::GridX3d<dg::HVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
-    orthogonal::refined::GridX3d<dg::HVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::refined::GridX3d<dg::HVec> g3d(add_x, add_y, gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
@@ -141,7 +141,6 @@ try{
 
     thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
     g2d.display();
-    dg::blas1::transfer( g2d.g_yy(), psi_p);
     err = nc_put_var_double( ncid, onesID, periodify(psi_p, g3d_periodic).data());
     //err = nc_put_var_double( ncid, onesID, periodify(g2d.g(), g3d_periodic).data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
@@ -171,14 +170,14 @@ try{
     //err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
-    //dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
-    //dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    dg::blas1::transfer( g2d.g_xx(), X);
+    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    dg::blas1::axpby( 1., ones, -1., temp0, temp0);
+    dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, defID, X.data());
     dg::blas1::transfer( g2d.vol(), X);
-    //dg::blas1::transfer( g2d.g_yy(),Y);
-    //dg::blas1::pointwiseDot( Y, X, X);
+    dg::blas1::transfer( g2d.g_yy(),Y);
+    dg::blas1::pointwiseDot( Y, X, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, volID, X.data());
 

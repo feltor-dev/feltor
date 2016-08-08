@@ -50,7 +50,7 @@ geometry_diag: geometry_diag.cu solovev.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ -g $(INCLUDE) $(LIBS) 
 
 %_b: %_b.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  $(LIBS) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  $(LIBS)
 
 .PHONY: clean doc
 
