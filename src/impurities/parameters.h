@@ -92,9 +92,9 @@ struct Parameters
         eps_pol = js["eps_pol"].asDouble();
         eps_gamma = js["eps_gamma"].asDouble();
         eps_time = js["eps_time"].asDouble();
-        kappa = js["kappa"].asDouble();
-        nu = js["nu"].asDouble();
-        amp = js["amp"].asDouble();
+        kappa = js["curvature"].asDouble();
+        nu = js["nu_perp"].asDouble();
+        amp = js["amplitude"].asDouble();
         sigma = js["sigma"].asDouble();
         posX = js["posX"].asDouble();
         posY = js["posY"].asDouble();
