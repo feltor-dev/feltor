@@ -62,8 +62,8 @@ int main(int argc, char**argv)
     std::cin >> howmanyX >> howmanyY;
     orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22.,  n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
-    //dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    //dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     psi_1 = g3d.psi1();
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 
@@ -92,21 +92,36 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::pullback( dg::zero, g3d.associated());
+    dg::DVec x_fine =    dg::pullback( dg::zero, g3d);
     const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d.associated());
     dg::DVec bmod(b);
-    pol.compute_rhs( b, bmod);
     const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g3d.associated());
     const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
-    const dg::DVec vol3d = dg::create::volume( g3d.associated());
-    pol.set_chi( chi);
+    const dg::DVec vol3d = dg::create::volume( g3d);
+    dg::HVec inv_vol3d = dg::create::inv_weights( g3d);
+    //dg::blas1::pointwiseDivide( inv_vol3d, g3d.weightsX(), inv_vol3d);
+    //dg::blas1::pointwiseDivide( inv_vol3d, g3d.weightsY(), inv_vol3d);
+    //dg::HVec inv_vol3d = dg::create::inv_volume( g3d);
+    const dg::DVec v3d( inv_vol3d);
+    const dg::IDMatrix Q = dg::create::interpolation( g3d);
+    const dg::IDMatrix P = dg::create::projection( g3d);
+    dg::DVec chi_fine = dg::pullback( dg::zero, g3d), b_fine(chi_fine);
+    dg::blas2::gemv( Q, chi, chi_fine);
+    dg::blas2::gemv( Q, b, b_fine);
+    //pol.set_chi( chi);
+    pol.set_chi( chi_fine);
     //compute error
     dg::DVec error( solution);
     const double eps = 1e-10;
-    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
+    //dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
+    dg::Invert<dg::DVec > invert( x_fine, n*n*Nx*Ny*Nz, eps);
     std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    unsigned number = invert(pol, x,bmod);// vol3d, v3d );
+    //pol.compute_rhs( b, bmod);
+    //unsigned number = invert(pol, x,bmod);// vol3d, v3d );
+    unsigned number = invert(pol, x_fine ,b_fine, vol3d, v3d );
+    dg::blas2::gemv( P, x_fine, x);
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);
