@@ -66,7 +66,7 @@ int main(int argc, char**argv)
     orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    //dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g3d, dg::not_normed, dg::centered);
     psi_1 = g3d.psi1();
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 
@@ -100,12 +100,13 @@ int main(int argc, char**argv)
     dg::DVec bmod(b);
     const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g3d.associated());
     const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
-    const dg::DVec vol3d = dg::create::volume( g3d);
-    dg::HVec inv_vol3d = dg::create::inv_weights( g3d);
+    const dg::DVec vol3dFINE = dg::create::volume( g3d);
+    dg::HVec inv_vol3dFINE = dg::create::inv_weights( g3d);
+    const dg::DVec vol3d = dg::create::volume( g3d.associated());
     //dg::blas1::pointwiseDivide( inv_vol3d, g3d.weightsX(), inv_vol3d);
     //dg::blas1::pointwiseDivide( inv_vol3d, g3d.weightsY(), inv_vol3d);
     //dg::HVec inv_vol3d = dg::create::inv_volume( g3d);
-    const dg::DVec v3d( inv_vol3d);
+    const dg::DVec v3dFINE( inv_vol3dFINE);
     const dg::IDMatrix Q = dg::create::interpolation( g3d);
     const dg::IDMatrix P = dg::create::projection( g3d);
     dg::DVec chi_fine = dg::pullback( dg::zero, g3d), b_fine(chi_fine);
@@ -113,6 +114,7 @@ int main(int argc, char**argv)
     dg::blas2::gemv( Q, b, b_fine);
     //pol.set_chi( chi);
     pol.set_chi( chi_fine);
+    pol_refined.set_chi( chi);
     //compute error
     dg::DVec error( solution);
     const double eps = 1e-10;
@@ -121,9 +123,9 @@ int main(int argc, char**argv)
     std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    //pol.compute_rhs( b, bmod);
-    //unsigned number = invert(pol, x,bmod);// vol3d, v3d );
-    unsigned number = invert(pol, x_fine ,b_fine, vol3d, v3d );
+    pol_refined.compute_rhs( b, bmod);
+    //unsigned number = invert(pol_refined, x,bmod);// vol3d, v3d );
+    unsigned number = invert(pol, x_fine ,b_fine, vol3dFINE, v3dFINE );
     dg::blas2::gemv( P, x_fine, x);
     std::cout <<number<<"\t";
     t.toc();
