@@ -114,7 +114,7 @@ int main(int argc, char**argv)
     dg::DVec error( solution);
     const double eps = 1e-10;
     //dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
-    dg::Invert<dg::DVec > invert( x_fine, n*n*Nx*Ny*Nz, eps);
+    dg::Invert<dg::DVec > invert( x_fine, x_fine.size(), eps);
     std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();

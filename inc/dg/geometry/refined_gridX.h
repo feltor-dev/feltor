@@ -121,10 +121,10 @@ struct GridX2d : public dg::GridX2d
         Grid1d<double>  gx( x0, x1, n, Nx, bcx);
         GridX1d         gy( y0, y1, fy, n, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
-        //detail::equidist_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax, howmanyX);
-        //detail::equidist_Xref( add_y, gy, wy, ay, howmanyY);
-        detail::exponential_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax);
-        detail::exponential_Xref( add_y, gy, wy, ay);
+        detail::equidist_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax, howmanyX);
+        detail::equidist_Xref( add_y, gy, wy, ay, howmanyY);
+        //detail::exponential_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax);
+        //detail::exponential_Xref( add_y, gy, wy, ay);
         //now make product space
         for( unsigned i=0; i<wy.size(); i++)
             for( unsigned j=0; j<wx.size(); j++)
@@ -249,10 +249,10 @@ struct GridX3d : public dg::GridX3d
         Grid1d<double>  gx( x0, x1, n, Nx, bcx);
         GridX1d         gy( y0, y1, fy, n, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
-        //detail::equidist_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax, howmanyX);
-        //detail::equidist_Xref( add_y, gy, wy, ay, howmanyY);
-        detail::exponential_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax);
-        detail::exponential_Xref( add_y, gy, wy, ay);
+        detail::equidist_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax, howmanyX);
+        detail::equidist_Xref( add_y, gy, wy, ay, howmanyY);
+        //detail::exponential_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax);
+        //detail::exponential_Xref( add_y, gy, wy, ay);
         //now make product space
         for( unsigned s=0; s<Nz; s++)
             for( unsigned i=0; i<wy.size(); i++)
