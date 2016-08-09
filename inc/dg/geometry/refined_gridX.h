@@ -112,14 +112,14 @@ struct GridX2d : public dg::GridX2d
     GridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, 
             double x0, double x1, double y0, double y1, 
             double fx, double fy, 
-            unsigned n, unsigned Nx, unsigned Ny, 
+            unsigned n_ref, unsigned n, unsigned Nx, unsigned Ny, 
             bc bcx = dg::PER, bc bcy = dg::PER) : dg::GridX2d( x0, x1, y0, y1, 
-                fx_new(Nx, add_x*howmanyX, fx), fy_new(Ny, add_y*howmanyY, fy), n, nx_new(Nx, add_x*howmanyX, fx), ny_new(Ny, add_y*howmanyY, fy), bcx, bcy), 
+                fx_new(Nx, add_x*howmanyX, fx), fy_new(Ny, add_y*howmanyY, fy), n_ref, nx_new(Nx, add_x*howmanyX, fx), ny_new(Ny, add_y*howmanyY, fy), bcx, bcy), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, fx, fy, n, Nx, Ny, bcx, bcy)
     {
-        Grid1d<double>  gx( x0, x1, n, Nx, bcx);
-        GridX1d         gy( y0, y1, fy, n, Ny, bcy);
+        Grid1d<double>  gx( x0, x1, n_ref, Nx, bcx);
+        GridX1d         gy( y0, y1, fy, n_ref, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
         detail::equidist_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax, howmanyX);
         detail::equidist_Xref( add_y, gy, wy, ay, howmanyY);
@@ -239,15 +239,15 @@ struct GridX3d : public dg::GridX3d
     GridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX,  unsigned howmanyY,
             double x0, double x1, double y0, double y1, double z0, double z1,
             double fx, double fy, 
-            unsigned n, unsigned Nx, unsigned Ny, unsigned Nz,
+            unsigned n_ref, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz,
             bc bcx = dg::PER, bc bcy = dg::NEU, bc bcz = dg::PER) : 
                dg::GridX3d( x0, x1, y0, y1, z0, z1,
-                fx_new(Nx, add_x*howmanyX, fx), fy_new(Ny, add_y*howmanyY, fy), n, nx_new(Nx, add_x*howmanyX, fx), ny_new(Ny, add_y*howmanyY, fy), Nz, bcx, bcy, bcz), 
+                fx_new(Nx, add_x*howmanyX, fx), fy_new(Ny, add_y*howmanyY, fy), n_ref, nx_new(Nx, add_x*howmanyX, fx), ny_new(Ny, add_y*howmanyY, fy), Nz, bcx, bcy, bcz), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1,z0,z1, fx, fy, n, Nx, Ny, Nz, bcx, bcy, bcz)
     {
-        Grid1d<double>  gx( x0, x1, n, Nx, bcx);
-        GridX1d         gy( y0, y1, fy, n, Ny, bcy);
+        Grid1d<double>  gx( x0, x1, n_ref, Nx, bcx);
+        GridX1d         gy( y0, y1, fy, n_ref, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
         detail::equidist_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax, howmanyX);
         detail::equidist_Xref( add_y, gy, wy, ay, howmanyY);

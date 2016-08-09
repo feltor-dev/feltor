@@ -40,10 +40,10 @@ struct GridX3d : public dg::refined::GridX3d
      * @param bcx The boundary condition in x (z is periodic)
      * @param bcy The boundary condition in y (z is periodic)
      */
-    GridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
-        dg::refined::GridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
+    GridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
+        dg::refined::GridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, n_old, Nx, Ny, Nz, bcx, bcy, dg::PER),
         f_( this->size()), g_(f_), r_(f_), z_(f_), xr_(f_), xz_(f_), yr_(f_), yz_(f_),
-        g_assoc_( gp, psi_0, fx, fy, n, Nx, Ny, Nz, bcx, bcy)
+        g_assoc_( gp, psi_0, fx, fy, n_old, Nx, Ny, Nz, bcx, bcy)
     { 
         /////////////////////discretize x-direction and construct psi(x)
         assert( psi_0 < 0 );
@@ -169,9 +169,9 @@ template< class container>
 struct GridX2d : public dg::refined::GridX2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
-    GridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
-        dg::refined::GridX2d( add_x, add_y, howmanyX, howmanyY, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy),
-        g_assoc_( gp, psi_0, fx, fy, n, Nx, Ny, bcx, bcy) 
+    GridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
+        dg::refined::GridX2d( add_x, add_y, howmanyX, howmanyY, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, n_old, Nx, Ny, bcx, bcy),
+        g_assoc_( gp, psi_0, fx, fy, n_old, Nx, Ny, bcx, bcy) 
     {
         orthogonal::detail::FpsiX fpsi(gp);
         const double x0 = fpsi.find_x(psi_0);
