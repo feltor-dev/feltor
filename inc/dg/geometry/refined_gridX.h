@@ -96,13 +96,17 @@ struct GridX2d : public dg::GridX2d
     /**
      * @brief Refine a corner of a grid
      *
-     * @param c
      * @param add_x Add number of cells to the existing one
      * @param add_y Add number of cells to the existing one
+     * @param howmanyX Add number of cells to the existing one
+     * @param howmanyY Add number of cells to the existing one
      * @param x0
      * @param x1
      * @param y0
      * @param y1
+     * @param fx
+     * @param fy
+     * @param n_ref The new number of polynomial coefficients
      * @param n
      * @param Nx
      * @param Ny
@@ -125,6 +129,31 @@ struct GridX2d : public dg::GridX2d
         detail::equidist_Xref( add_y, gy, wy, ay, howmanyY);
         //detail::exponential_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax);
         //detail::exponential_Xref( add_y, gy, wy, ay);
+        //now make product space
+        for( unsigned i=0; i<wy.size(); i++)
+            for( unsigned j=0; j<wx.size(); j++)
+            {
+                wx_[i*wx.size()+j] = wx[j];
+                wy_[i*wx.size()+j] = wy[i];
+                absX_[i*wx.size()+j] = ax[j];
+                absY_[i*wx.size()+j] = ay[i];
+            }
+    }
+
+    GridX2d( unsigned multiple_x, unsigned multiple_y, 
+            double x0, double x1, double y0, double y1, 
+            double fx, double fy, 
+            unsigned n_ref, unsigned n, unsigned Nx, unsigned Ny, 
+            bc bcx = dg::PER, bc bcy = dg::PER) : 
+        dg::GridX2d( x0, x1, y0, y1, fx, fy, n_ref, multiple_x*Nx, multiple_y*Ny, bcx, bcy), 
+        wx_(size()), wy_(size()), absX_(size()), absY_(size()),
+        g_assoc_( x0, x1, y0, y1, fx, fy, n, Nx, Ny, bcx, bcy)
+    {
+        Grid1d<double>  gx( x0, x1, n_ref, Nx, bcx);
+        Grid1d<double>  gy( y0, y1, n_ref, Ny, bcy);
+        thrust::host_vector<double> wx, ax, wy, ay;
+        detail::linear_ref(  multiple_x, gx, wx, ax);
+        detail::linear_ref(  multiple_y, gy, wy, ay);
         //now make product space
         for( unsigned i=0; i<wy.size(); i++)
             for( unsigned j=0; j<wx.size(); j++)
@@ -253,6 +282,31 @@ struct GridX3d : public dg::GridX3d
         detail::equidist_Xref( add_y, gy, wy, ay, howmanyY);
         //detail::exponential_ref(  add_x, g_assoc_.inner_Nx(), gx, wx, ax);
         //detail::exponential_Xref( add_y, gy, wy, ay);
+        //now make product space
+        for( unsigned s=0; s<Nz; s++)
+            for( unsigned i=0; i<wy.size(); i++)
+                for( unsigned j=0; j<wx.size(); j++)
+                {
+                    wx_[(s*wy.size()+i)*wx.size()+j] = wx[j];
+                    wy_[(s*wy.size()+i)*wx.size()+j] = wy[i];
+                    absX_[(s*wy.size()+i)*wx.size()+j] = ax[j];
+                    absY_[(s*wy.size()+i)*wx.size()+j] = ay[i];
+                }
+    }
+    GridX3d( unsigned multiple_x, unsigned multiple_y, 
+            double x0, double x1, double y0, double y1, double z0, double z1,
+            double fx, double fy, 
+            unsigned n_ref, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz,
+            bc bcx = dg::PER, bc bcy = dg::NEU, bc bcz = dg::PER) : 
+        dg::GridX3d( x0, x1, y0, y1, z0, z1, fx, fy, n_ref, multiple_x*Nx, multiple_y*Ny, Nz, bcx, bcy, bcz), 
+        wx_(size()), wy_(size()), absX_(size()), absY_(size()),
+        g_assoc_( x0, x1, y0, y1, z0, z1,fx, fy, n, Nx, Ny, Nz, bcx, bcy, bcz)
+    {
+        Grid1d<double>  gx( x0, x1, n_ref, Nx, bcx);
+        Grid1d<double>  gy( y0, y1, n_ref, Ny, bcy);
+        thrust::host_vector<double> wx, ax, wy, ay;
+        detail::linear_ref(  multiple_x, gx, wx, ax);
+        detail::linear_ref(  multiple_y, gy, wy, ay);
         //now make product space
         for( unsigned s=0; s<Nz; s++)
             for( unsigned i=0; i<wy.size(); i++)

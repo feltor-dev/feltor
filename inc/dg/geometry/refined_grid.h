@@ -126,6 +126,26 @@ thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned node, unsi
 }
 
 /**
+ * @brief Refine every cell in the grid by an integer number of new cells
+ *
+ * @param multiple_x
+ * @param n
+ * @param N
+ * @param bcx
+ *
+ * @return 
+ */
+thrust::host_vector<double> linear_ref( unsigned multiple_x, unsigned n, unsigned N, dg::bc bcx)
+{
+    assert( multiple_x > 1);
+    //there are add_x+1 finer cells per refined cell ...
+    thrust::host_vector< double> left( n*N*multiple_x, 1);
+    for( unsigned k=0; k<left.size(); k++)
+        left[k] = (double)multiple_x;
+    return left;
+}
+
+/**
  * @brief Normalize the given weights and compute the abscissas of the grid
  *
  * @param g The grid to be refined
@@ -186,15 +206,16 @@ int exponential_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thr
 /**
  * @brief Create 1d refinement weights and abscissas for the equidist refinement around a node 
  *
- * There will be two refined cells at the end except if a corner node is 
+ * There will be two*howmany refined cells at the end except if a corner node is 
  * given and the boundary condition is not periodic. We count nodes from
  * 0 (left corner) to N (right corner). 
  * @param add_x number of additional cells in the cells idx-1 and idx
  * @param node The cells node-1 and node will be refined
  * @param g The 1d grid to refine
  *
- * @param weights A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
- * @param abscissas A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
+ * @param weights A 1d vector of size n*(Nx+add_x*howmany) for one-sided refinement and n*(Nx+2*add_x*howmany)) for two-sided refinement
+ * @param abscissas A 1d vector of size n*(Nx+add_x*howmany) for one-sided refinement and n*(Nx+2*add_x*howmany)) for two-sided refinement
+ * @param howmany  number of cells around a node to refine
  * @return the new number of cells
  */
 int equidist_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas, unsigned howmany)
@@ -214,6 +235,23 @@ int equidist_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust
 int equidist_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
 {
     return equidist_ref( add_x, node, g, weights, abscissas, 1);
+}
+/**
+ * @brief Create 1d refinement weights and abscissas for the linear refinement 
+ *
+ * @param multiple_x number of additional cells in the cells 
+ * @param g The 1d grid to refine
+ *
+ * @param weights A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
+ * @param abscissas A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
+ * @return the new number of cells
+ */
+int linear_ref( unsigned multiple_x, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
+{
+    weights = linear_ref( multiple_x, g.n(), g.N(), g.bcx());
+    unsigned Nx_new = weights.size()/g.n();
+    abscissas = normalize_weights_and_compute_abscissas( g, weights);
+    return Nx_new;
 }
 
 }//namespace detail
@@ -264,6 +302,44 @@ struct Grid2d : public dg::Grid2d<double>
             }
     }
 
+    /**
+     * @brief Refine a all cells of a grid
+     *
+     * @param c
+     * @param multiple_x Add number of cells to the existing one
+     * @param multiple_y Add number of cells to the existing one
+     * @param x0
+     * @param x1
+     * @param y0
+     * @param y1
+     * @param n
+     * @param n_old
+     * @param Nx
+     * @param Ny
+     * @param bcx
+     * @param bcy
+     */
+    Grid2d( unsigned multiple_x, unsigned multiple_y,
+            double x0, double x1, double y0, double y1, unsigned n,
+            unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d<double>( x0, x1, y0, y1, n, multiple_x*Nx, multiple_y*Ny, bcx, bcy), 
+        wx_(size()), wy_(size()), absX_(size()), absY_(size()),
+        g_assoc_( x0, x1, y0, y1, n_old, Nx, Ny, bcx, bcy)
+    {
+        Grid1d<double> gx( x0, x1, n, Nx, bcx);
+        Grid1d<double> gy( y0, y1, n, Ny, bcy);
+        thrust::host_vector<double> wx, ax, wy, ay;
+        detail::linear_ref( multiple_x, gx, wx, ax);
+        detail::linear_ref( multiple_y, gy, wy, ay);
+        //now make product space
+        for( unsigned i=0; i<wy.size(); i++)
+            for( unsigned j=0; j<wx.size(); j++)
+            {
+                wx_[i*wx.size()+j] = wx[j];
+                wy_[i*wx.size()+j] = wy[i];
+                absX_[i*wx.size()+j] = ax[j];
+                absY_[i*wx.size()+j] = ay[i];
+            }
+    }
     /**
      * @brief The grid that this object refines
      *

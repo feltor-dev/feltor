@@ -18,7 +18,8 @@ int main ()
     }
     std::cout << "SUM IS: "<<sum<<" ("<<new_N<<")\n";
 
-    dg::refined::GridX3d g3d( 4,4,1,1, 0.,1., 0.,2.*M_PI, 0.,1., 0.25, 0.1, 5, 3, 12, 80, 10);
+    //dg::refined::GridX3d g3d( 4,4,1,1, 0.,1., 0.,2.*M_PI, 0.,1., 0.25, 0.1, 5, 3, 12, 80, 10);
+    dg::refined::GridX3d g3d( 4,4, 0.,1., 0.,2.*M_PI, 0.,1., 0.25, 0.1, 5, 3, 12, 80, 10);
     dg::refined::GridX2d g2d( g3d);
     g3d.display();
     g2d.display();

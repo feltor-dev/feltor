@@ -18,7 +18,7 @@ int main ()
     int node;
     std::cout<< "Type node to refine 0,..,4!\n";
     std::cin >> node;
-    int new_N = dg::refined::detail::equidist_ref( 3, node, g, both, both_abs, 2);
+    int new_N = dg::refined::detail::equidist_ref( 3, node, g, both, both_abs, 1);
     double sum = 0;
     for( unsigned i=0; i<new_N*g.n(); i++)
     {
@@ -47,7 +47,8 @@ int main ()
     }
     std::cout << "SUM IS: "<<sum<<" ("<<new_N<<")\n";
 
-    dg::refined::Grid2d g2d_f( 0,0, 3,3, 2,2, 0., 2*M_PI, 0., 2*M_PI, 3, 20, 20);
+    //dg::refined::Grid2d g2d_f( 0,0, 3,3, 2,2, 0., 2*M_PI, 0., 2*M_PI, 3, 20, 20);
+    dg::refined::Grid2d g2d_f( 3,3, 0., 2*M_PI, 0., 2*M_PI, 5, 3, 20, 20);
     dg::Grid2d<double> g2d_c = g2d_f.associated();
     dg::HVec w2d_c = dg::create::weights( g2d_c);
     dg::HVec vec_c = dg::evaluate( function, g2d_c);
