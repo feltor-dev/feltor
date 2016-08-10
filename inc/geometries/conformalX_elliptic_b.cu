@@ -59,11 +59,13 @@ int main(int argc, char**argv)
     t.tic();
 
     std::cout << "Type add_x and add_y  and howmany_x and howmany_y\n";
+    //std::cout << "Type muliple_x and multiple_y \n";
     double add_x, add_y;
     std::cin >> add_x >> add_y;
     double howmanyX, howmanyY;
     std::cin >> howmanyX >> howmanyY;
     orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g3d, dg::not_normed, dg::centered);
@@ -118,15 +120,15 @@ int main(int argc, char**argv)
     //compute error
     dg::DVec error( solution);
     const double eps = 1e-10;
-    //dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
-    dg::Invert<dg::DVec > invert( x_fine, x_fine.size(), eps);
     std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
+    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
     pol_refined.compute_rhs( b, bmod);
-    //unsigned number = invert(pol_refined, x,bmod);// vol3d, v3d );
-    unsigned number = invert(pol, x_fine ,b_fine, vol3dFINE, v3dFINE );
-    dg::blas2::gemv( P, x_fine, x);
+    unsigned number = invert(pol_refined, x,bmod);// vol3d, v3d );
+    //dg::Invert<dg::DVec > invert( x_fine, x_fine.size(), eps);
+    //unsigned number = invert(pol, x_fine ,b_fine, vol3dFINE, v3dFINE );
+    //dg::blas2::gemv( P, x_fine, x);
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);

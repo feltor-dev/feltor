@@ -137,7 +137,7 @@ thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned node, unsi
  */
 thrust::host_vector<double> linear_ref( unsigned multiple_x, unsigned n, unsigned N, dg::bc bcx)
 {
-    assert( multiple_x > 1);
+    assert( multiple_x >= 1);
     //there are add_x+1 finer cells per refined cell ...
     thrust::host_vector< double> left( n*N*multiple_x, 1);
     for( unsigned k=0; k<left.size(); k++)
