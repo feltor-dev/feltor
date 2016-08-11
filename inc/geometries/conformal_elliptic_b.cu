@@ -58,10 +58,10 @@ int main(int argc, char**argv)
 //     conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
 //     conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
 //     dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    orthogonal::refined::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    orthogonal::refined::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<orthogonal::refined::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<orthogonal::refined::RingGrid3d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g3d, dg::not_normed, dg::centered);
+    conformal::refined::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    conformal::refined::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<conformal::refined::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<conformal::refined::RingGrid3d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g3d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
