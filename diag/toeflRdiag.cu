@@ -287,8 +287,8 @@ int main( int argc, char* argv[])
         err_out = nc_put_vara_double( ncid_out, namescomID[10], start0d, count0d, &compactness_ne);            
         /////////////////BLOB energetics/////////////////
         double Ue, Ui, Uphi;
-        for( unsigned i=0; i<2; i++)
-            dg::blas1::transform( npe[i], lnn[i], dg::LN<double>()); 
+        for( unsigned j=0; j<2; j++)
+            dg::blas1::transform( npe[j], lnn[j], dg::LN<double>()); 
         arakawa.variation(phi, helper); 
         if(p.equations == "global" || p.equations == "ralf_global")
         {

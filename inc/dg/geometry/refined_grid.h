@@ -256,6 +256,7 @@ int linear_ref( unsigned multiple_x, const Grid1d<double>& g, thrust::host_vecto
 
 }//namespace detail
 
+struct Grid3d;
 /**
  * @brief Refined grid 
  */
@@ -339,6 +340,15 @@ struct Grid2d : public dg::Grid2d<double>
                 absY_[i*wx.size()+j] = ay[i];
             }
     }
+
+    /**
+     * @brief Reduce from a  3d grid 
+     *
+     * This is possible because all our grids are product space grids. 
+     *
+     * @param g The 3d grid
+     */
+    Grid2d( const dg::refined::Grid3d& g);
     /**
      * @brief The grid that this object refines
      *
@@ -370,6 +380,17 @@ struct Grid2d : public dg::Grid2d<double>
      * @return A 2d vector
      */
     const thrust::host_vector<double>& weightsY() const {return wy_;} 
+
+    protected:
+    void init_X_boundaries( double x0, double x1)
+    {
+        double alpha = (x1-x0)/this->lx();
+        double beta = (x0*this->x1()-x1*this->x0())/this->lx();
+        //weights are invariant
+        for( unsigned i=0; i<absX_.size(); i++)
+            absX_[i]=alpha*absX_[i]+beta;
+        dg::Grid2d<double>::init_X_boundaries( x0, x1);
+    }
 
     private:
     unsigned n_new( unsigned N, unsigned factor, dg::bc bc)
@@ -505,6 +526,16 @@ struct Grid3d : public dg::Grid3d<double>
      * @return A 2d vector
      */
     const thrust::host_vector<double>& weightsY() const {return wy_;} 
+    protected:
+    void init_X_boundaries( double x0, double x1)
+    {
+        double alpha = (x1-x0)/this->lx();
+        double beta = (x0*this->x1()-x1*this->x0())/this->lx();
+        //weights are invariant under linear transformation
+        for( unsigned i=0; i<absX_.size(); i++)
+            absX_[i]=alpha*absX_[i]+beta;
+        dg::Grid3d<double>::init_X_boundaries( x0, x1);
+    }
 
     private:
     unsigned n_new( unsigned N, unsigned factor, dg::bc bc)
@@ -517,6 +548,21 @@ struct Grid3d : public dg::Grid3d<double>
     dg::Grid3d<double> g_assoc_;
 
 };
+
+Grid2d::Grid2d( const dg::refined::Grid3d& g) : 
+    dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy()),
+    wx_( this->size()), wy_(this->size()), absX_(this->size()), absY_(this->size()),
+    g_assoc_( g.associated())
+{
+    for(unsigned i=0; i<this->size(); i++)
+    {
+        wx_[i] = g.weightsX()[i];
+        wy_[i] = g.weightsY()[i];
+        absX_[i] = g.abscissasX()[i];
+        absY_[i] = g.abscissasY()[i];
+    }
+}
+
 }//namespace refined
 
 

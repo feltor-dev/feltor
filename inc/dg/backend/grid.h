@@ -154,6 +154,10 @@ struct Grid1d
     DLT<T> dlt_;
 };
 
+template< class T>
+struct Grid3d; //forward declare 3d version
+
+
 /**
  * @brief A 2D grid class 
  *
@@ -200,6 +204,8 @@ struct Grid2d
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
     }
+
+    Grid2d( const Grid3d<T>& g);
     /**
      * @brief Left boundary in x
      *
@@ -362,7 +368,7 @@ struct Grid2d
         return false;
     }
   protected:
-    void init_X_boundaries( double x0, double x1)
+    virtual void init_X_boundaries( double x0, double x1)
     {
         x0_ = x0, x1_ = x1;
         assert( x1 > x0 );
@@ -652,7 +658,7 @@ struct Grid3d
         return false;
     }
   protected:
-    void init_X_boundaries( double x0, double x1)
+    virtual void init_X_boundaries( double x0, double x1)
     {
         x0_ = x0, x1_ = x1;
         assert( x1 > x0 );
@@ -668,6 +674,10 @@ struct Grid3d
     bc bcx_, bcy_, bcz_;
     DLT<T> dlt_;
 };
+
+template<class T>
+Grid2d<T>::Grid2d( const Grid3d<T>& g) : x0_(g.x0()), x1_(g.x1()), y0_(g.y0()), y1_(g.y1()), n_(g.n()), Nx_(g.Nx()), Ny_(g.Ny()), bcx_(g.bcx()), bcy_(g.bcy()), dlt_(g.n())
+{}
 
 ///@}
 }// namespace dg
