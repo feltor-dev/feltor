@@ -14,7 +14,6 @@
 #include "dg/cg.h"
 
 #include "solovev.h"
-#include "conformal.h"
 #include "conformalX.h"
 #include "orthogonal.h"
 #include "refined_orthogonalX.h"
