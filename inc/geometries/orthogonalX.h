@@ -602,11 +602,6 @@ struct GridX3d : public dg::GridX3d
         thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
         orthogonal::detail::construct_rz( fpsiMinv_, gp, 
                 psi_0, psi_x, y_vec, 
-                this->n()*this->outer_Ny(), 
-                this->n()*(this->inner_Ny()+this->outer_Ny()), 
-                rvec, zvec, yrvec, yzvec, gvec);
-        orthogonal::detail::construct_rz( fpsiMinv_, gp, 
-                psi_0, psi_x, y_vec, 
                 gY1d.n()*gY1d.outer_N(), 
                 gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), 
                 rvec, zvec, yrvec, yzvec, gvec);
@@ -668,19 +663,15 @@ struct GridX3d : public dg::GridX3d
     {
         std::cout << "CONSTRUCTING METRIC\n";
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
-        unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
-        for( unsigned k=0; k<this->Nz(); k++)
-            for( unsigned i=0; i<Ny; i++)
-                for( unsigned j=0; j<Nx; j++)
-                {
-                    unsigned idx = k*Ny*Nx+i*Nx+j;
-                    tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
-                    tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
-                    tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
-                    //tempvol[idx] = r_[idx]/(1.0*f_[idx]*f_[idx] + 0.001*tempxx[idx]);
-                    tempvol[idx] = r_[idx]/sqrt(tempxx[idx]*tempyy[idx]-tempxy[idx]*tempxy[idx]);
-                    //tempvol[idx] = r_[idx]/fabs(f_[idx]*g_[idx]);
-                }
+        for( unsigned idx=0; idx<this->size(); idx++)
+        {
+            tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
+            tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
+            tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
+            //tempvol[idx] = r_[idx]/(1.0*f_[idx]*f_[idx] + 0.001*tempxx[idx]);
+            tempvol[idx] = r_[idx]/sqrt(tempxx[idx]*tempyy[idx]-tempxy[idx]*tempxy[idx]);
+            //tempvol[idx] = r_[idx]/fabs(f_[idx]*g_[idx]);
+        }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
         vol2d_ = tempvol;

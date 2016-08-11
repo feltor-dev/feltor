@@ -151,70 +151,6 @@ struct Fpsi
         return fprime_old;
     }
 
-    //compute the vector of r and z - values that form one psi surface
-    void compute_rzy( double psi, unsigned n, unsigned N, 
-            thrust::host_vector<double>& r, 
-            thrust::host_vector<double>& z, 
-            thrust::host_vector<double>& yr, 
-            thrust::host_vector<double>& yz,  
-            thrust::host_vector<double>& xr, 
-            thrust::host_vector<double>& xz,  
-            double& R_0, double& Z_0, double& f, double& fp ) 
-    {
-        dg::Grid1d<double> g1d( 0, 2*M_PI, n, N, dg::PER);
-        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, g1d);
-        thrust::host_vector<double> r_old(n*N, 0), r_diff( r_old), yr_old(r_old), xr_old(r_old);
-        thrust::host_vector<double> z_old(n*N, 0), z_diff( z_old), yz_old(r_old), xz_old(z_old);
-        const thrust::host_vector<double> w1d = dg::create::weights( g1d);
-        r.resize( n*N), z.resize(n*N), yr.resize(n*N), yz.resize(n*N), xr.resize(n*N), xz.resize(n*N);
-        double fprime = f_prime( psi);
-
-        //now compute f and starting values 
-        thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
-        const double f_psi = construct_f( psi, begin[0], begin[1]);
-        solovev::PsipR psipR(gp_);
-        solovev::PsipZ psipZ(gp_);
-        double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
-        begin[2] = f_psi* psipZ_;
-        begin[3] = -f_psi*psipR_;
-
-        R_0 = begin[0], Z_0 = begin[1];
-        //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-        solovev::conformal::FieldRZYRYZY fieldRZYRYZY(gp_);
-        fieldRZYRYZY.set_f(f_psi);
-        fieldRZYRYZY.set_fp(fprime);
-        unsigned steps = 1;
-        double eps = 1e10, eps_old=2e10;
-        while( eps < eps_old)
-        {
-            //begin is left const
-            eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
-            dg::stepperRK17( fieldRZYRYZY, begin, end, 0, y_vec[0], steps);
-            r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
-            xr[0] = -f_psi*psipR(r[0],z[0]), xz[0] = -f_psi*psipZ(r[0],z[0]);
-            //std::cout <<end[0]<<" "<< end[1] <<"\n";
-            for( unsigned i=1; i<n*N; i++)
-            {
-                temp = end;
-                dg::stepperRK17( fieldRZYRYZY, temp, end, y_vec[i-1], y_vec[i], steps);
-                r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
-                xr[i] = -f_psi*psipR(r[i],z[i]), xz[i] = -f_psi*psipZ(r[i],z[i]);
-            }
-            //compute error in R,Z only
-            dg::blas1::axpby( 1., r, -1., r_old, r_diff);
-            dg::blas1::axpby( 1., z, -1., z_old, z_diff);
-            double er = dg::blas2::dot( r_diff, w1d, r_diff);
-            double ez = dg::blas2::dot( z_diff, w1d, z_diff);
-            double ar = dg::blas2::dot( r, w1d, r);
-            double az = dg::blas2::dot( z, w1d, z);
-            eps =  sqrt( er + ez)/sqrt(ar+az);
-            //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-            steps*=2;
-        }
-        r = r_old, z = z_old, yr = yr_old, yz = yz_old, xr = xr_old, xz = xz_old;
-        f = f_psi;
-
-    }
     private:
     const solovev::GeomParameters gp_;
     const solovev::conformal::FieldRZYT fieldRZYT_;
@@ -324,17 +260,20 @@ struct RingGrid3d : public dg::Grid3d<double>
     {
         //std::cout << "In grid function:\n";
         detail::Fpsi fpsi( gp);
+        solovev::conformal::FieldRZYRYZY fieldRZYRYZY(gp);
         r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
         thrust::host_vector<double> f_p(f_x_);
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
+        dg::Grid1d<double> g1d( 0., 2.*M_PI, this->n(), this->Ny());
+        const thrust::host_vector<double> y_vec = dg::create::abscissas( g1d);
         for( unsigned i=0; i<Nx; i++)
         {
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            fpsi.compute_rzy( psi_x[i], this->n(), this->Ny(), ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
+            dg::detail::compute_rzy( fpsi, fieldRZYRYZY, gp, psi_x[i], y_vec, ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j], f_[j*Nx+i] = f_x_[i]; 
@@ -360,18 +299,14 @@ struct RingGrid3d : public dg::Grid3d<double>
     void construct_metric()
     {
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
-        unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
-        for( unsigned k=0; k<this->Nz(); k++)
-            for( unsigned i=0; i<Ny; i++)
-                for( unsigned j=0; j<Nx; j++)
-                {
-                    unsigned idx = k*Ny*Nx+i*Nx+j;
-                    tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
-                    tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
-                    tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
-                    //tempvol[idx] = r_[idx]/(f_[idx]*f_[idx] + tempxx[idx]);
-                    tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] - tempxy[idx]*tempxy[idx] );
-                }
+        for( unsigned idx=0; idx<this->size(); idx++)
+        {
+            tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
+            tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
+            tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
+            //tempvol[idx] = r_[idx]/(f_[idx]*f_[idx] + tempxx[idx]);
+            tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] - tempxy[idx]*tempxy[idx] );
+        }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
         vol2d_ = tempvol;
