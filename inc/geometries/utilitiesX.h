@@ -72,18 +72,15 @@ struct XPointer
 //returns psi_1
 template <class XFieldFinv>
 double construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters& gp, 
-        const double psi_0, const double x_0, const thrust::host_vector<double>& x_vec, const double x_1, unsigned idxX,
+        const double psi_0, const double x_0, const thrust::host_vector<double>& x_vec, const double x_1, unsigned idxX, //idxX is the index of the Xpoint
         thrust::host_vector<double>& psi_x, 
         thrust::host_vector<double>& f_x_)
 {
     f_x_.resize( x_vec.size()), psi_x.resize( x_vec.size());
     thrust::host_vector<double> psi_old(psi_x), psi_diff( psi_old);
-    //thrust::host_vector<double> w1d = dg::create::weights( g1d_);
     unsigned N = 1;
     std::cout << "In psi function:\n";
-    //double x0=this->x0(), x1 = x_vec[0];
     double x0, x1;
-    //const unsigned idxX = inner_Nx()*this->n();
     const double psi_const = fpsiMinv.find_psi( x_vec[idxX]);
     double psi_1_numerical;
     double eps = 1e10;//, eps_old=2e10;

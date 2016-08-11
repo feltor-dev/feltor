@@ -10,6 +10,7 @@
 #include "dg/nullstelle.h"
 #include "dg/geometry.h"
 #include "fields.h"
+#include "utilities.h"
 
 
 
@@ -290,38 +291,9 @@ struct RingGrid3d : public dg::Grid3d<double>
         detail::FieldFinv fpsiMinv_(gp, 500);
         dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
-        thrust::host_vector<double> psi_x(n*Nx, 0), psi_old(psi_x), psi_diff( psi_old);
-        f_x_.resize( psi_x.size());
-        thrust::host_vector<double> w1d = dg::create::weights( g1d_);
-        thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
-        unsigned N = 1;
-        double eps = 1e10, eps_old=2e10;
-        //std::cout << "In psi function:\n";
-        double x0=this->x0(), x1 = x_vec[0];
-        //while( eps <  eps_old && N < 1e6)
-        while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
-        {
-            eps_old = eps;
-            //psi_old = psi_x; 
-            x0 = this->x0(), x1 = x_vec[0];
+        thrust::host_vector<double> psi_x;
+        dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, psi_1, this->x0(), x_vec, this->x1(), psi_x, f_x_);
 
-            dg::stepperRK6( fpsiMinv_, begin, end, x0, x1, N);
-            psi_x[0] = end[0]; fpsiMinv_(end,temp); f_x_[0] = temp[0];
-            for( unsigned i=1; i<g1d_.size(); i++)
-            {
-                temp = end;
-                x0 = x_vec[i-1], x1 = x_vec[i];
-                dg::stepperRK6( fpsiMinv_, temp, end, x0, x1, N);
-                psi_x[i] = end[0]; fpsiMinv_(end,temp); f_x_[i] = temp[0];
-            }
-            //temp = end;
-            //dg::stepperRK6(fpsiMinv_, temp, end, x1, this->x1(),N);
-            double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
-            eps = fabs( psi_1_numerical-psi_1); 
-            //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
-            //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
-            N*=2;
-        }
         construct_rz( gp, psi_x);
         construct_metric();
     }
