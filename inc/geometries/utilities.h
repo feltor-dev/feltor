@@ -51,6 +51,7 @@ void construct_psi_values( FieldFinv fpsiMinv, const solovev::GeomParameters& gp
 }
 
 //compute the vector of r and z - values that form one psi surface
+//assumes that the initial line is perpendicular 
 template <class Fpsi, class FieldRZYRYZY>
 void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY, 
         const solovev::GeomParameters& gp,
