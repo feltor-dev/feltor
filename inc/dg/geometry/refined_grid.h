@@ -305,7 +305,6 @@ struct Grid2d : public dg::Grid2d<double>
     /**
      * @brief Refine a all cells of a grid
      *
-     * @param c
      * @param multiple_x Add number of cells to the existing one
      * @param multiple_y Add number of cells to the existing one
      * @param x0
@@ -383,9 +382,139 @@ struct Grid2d : public dg::Grid2d<double>
     dg::Grid2d<double> g_assoc_;
 };
 
-template< class container>
 struct Grid3d : public dg::Grid3d<double>
 {
+    /**
+     * @brief Refine a corner of a grid
+     *
+     * @param add_x Add number of cells to the existing one
+     * @param add_y Add number of cells to the existing one
+     * @param x0
+     * @param x1
+     * @param y0
+     * @param y1
+     * @param z0
+     * @param z1
+     * @param n
+     * @param Nx
+     * @param Ny
+     * @param Nz
+     * @param bcx
+     * @param bcy
+     * @param bcz
+     */
+    Grid3d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
+            unsigned howmanyX, unsigned howmanyY,
+            double x0, double x1, double y0, double y1, double z0, double z1, 
+            unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : dg::Grid3d<double>( x0, x1, y0, y1, z0, z1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), Nz, bcx, bcy, bcz), 
+        wx_(size()), wy_(size()), absX_(size()), absY_(size()),
+        g_assoc_( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz)
+    {
+        //assert( howmanyX <= node_x && howmanyX <= Nx - node_x);
+        //assert( howmanyY <= node_y && howmanyY <= Ny - node_y);
+        Grid1d<double> gx( x0, x1, n, Nx, bcx);
+        Grid1d<double> gy( y0, y1, n, Ny, bcy);
+        thrust::host_vector<double> wx, ax, wy, ay;
+        detail::equidist_ref( add_x, node_x, gx, wx, ax, howmanyX);
+        detail::equidist_ref( add_y, node_y, gy, wy, ay, howmanyY);
+        //now make product space
+        for( unsigned s=0; s<Nz; s++)
+            for( unsigned i=0; i<wy.size(); i++)
+                for( unsigned j=0; j<wx.size(); j++)
+                {
+                    wx_[(s*wy.size()+i)*wx.size()+j] = wx[j];
+                    wy_[(s*wy.size()+i)*wx.size()+j] = wy[i];
+                    absX_[(s*wy.size()+i)*wx.size()+j] = ax[j];
+                    absY_[(s*wy.size()+i)*wx.size()+j] = ay[i];
+                }
+    }
+
+    /**
+     * @brief Refine a all cells of a grid
+     *
+     * @param multiple_x Add number of cells to the existing one
+     * @param multiple_y Add number of cells to the existing one
+     * @param x0
+     * @param x1
+     * @param y0
+     * @param y1
+     * @param z0
+     * @param z1
+     * @param n
+     * @param n_old
+     * @param Nx
+     * @param Ny
+     * @param Nz
+     * @param bcx
+     * @param bcy
+     * @param bcz
+     */
+    Grid3d( unsigned multiple_x, unsigned multiple_y,
+            double x0, double x1, double y0, double y1, double z0, double z1, 
+            unsigned n,
+            unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, 
+            bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : 
+        dg::Grid3d<double>( x0, x1, y0, y1, z0, z1, n, multiple_x*Nx, multiple_y*Ny, Nz, bcx, bcy, bcz), 
+        wx_(size()), wy_(size()), absX_(size()), absY_(size()),
+        g_assoc_( x0, x1, y0, y1, z0, z1, n_old, Nx, Ny, Nz, bcx, bcy, bcz)
+    {
+        Grid1d<double> gx( x0, x1, n, Nx, bcx);
+        Grid1d<double> gy( y0, y1, n, Ny, bcy);
+        thrust::host_vector<double> wx, ax, wy, ay;
+        detail::linear_ref( multiple_x, gx, wx, ax);
+        detail::linear_ref( multiple_y, gy, wy, ay);
+        //now make product space
+        for( unsigned s=0; s<Nz; s++)
+            for( unsigned i=0; i<wy.size(); i++)
+                for( unsigned j=0; j<wx.size(); j++)
+                {
+                    wx_[(s*wy.size()+i)*wx.size()+j] = wx[j];
+                    wy_[(s*wy.size()+i)*wx.size()+j] = wy[i];
+                    absX_[(s*wy.size()+i)*wx.size()+j] = ax[j];
+                    absY_[(s*wy.size()+i)*wx.size()+j] = ay[i];
+                }
+    }
+    /**
+     * @brief The grid that this object refines
+     *
+     * This function is vitual so that derived classes can also construct the associated grid 
+     * @return  2d grid
+     */
+    virtual const dg::Grid3d<double>& associated()const {return g_assoc_;}
+    /**
+     * @brief Return the abscissas in X-direction 
+     *
+     * @return A 2d vector
+     */
+    const thrust::host_vector<double>& abscissasX() const {return absX_;} 
+    /**
+     * @brief Return the abscissas in Y-direction 
+     *
+     * @return A 2d vector
+     */
+    const thrust::host_vector<double>& abscissasY() const {return absY_;} 
+    /**
+     * @brief Return the weights in X-direction 
+     *
+     * @return A 2d vector
+     */
+    const thrust::host_vector<double>& weightsX() const {return wx_;} 
+    /**
+     * @brief Return the weights in Y-direction 
+     *
+     * @return A 2d vector
+     */
+    const thrust::host_vector<double>& weightsY() const {return wy_;} 
+
+    private:
+    unsigned n_new( unsigned N, unsigned factor, dg::bc bc)
+    {
+        if( bc == dg::PER) return N + 2*factor; 
+        return N + factor;
+    }
+    thrust::host_vector<double> wx_, wy_; //weights
+    thrust::host_vector<double> absX_, absY_; //abscissas 
+    dg::Grid3d<double> g_assoc_;
 
 };
 }//namespace refined
@@ -395,10 +524,10 @@ namespace create{
 
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_fine)
 {
-    dg::Grid2d<double> g_coarse = g_fine.associated();
+    dg::Grid2d<double> g = g_fine.associated();
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
-    return dg::create::interpolation( x,y, g_coarse);
+    return dg::create::interpolation( x,y, g);
 
 }
 cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refined::Grid2d& g_fine)
@@ -408,14 +537,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refin
     return A;
 }
 
-/**
- * @brief Create the adjoint of the interpolation 
- *
- * The adjoint is formed with respect to the volume form of the fine grid
- * @param g_fine The fine grid
- *
- * @return 
- */
 cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::Grid2d& g_fine)
 {
     //form the adjoint
@@ -450,6 +571,58 @@ cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::refined::G
     C.sort_by_row_and_column();
     return C; 
 }
+
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid3d& g_fine)
+{
+    dg::Grid3d<double> g = g_fine.associated();
+    thrust::host_vector<double> x = g_fine.abscissasX();
+    thrust::host_vector<double> y = g_fine.abscissasY();
+    thrust::host_vector<double> z = dg::evaluate( dg::coo3, g_fine);
+    return dg::create::interpolation( x,y,z, g);
+}
+
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refined::Grid3d& g_fine)
+{
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
+    cusp::transpose( temp, A);
+    return A;
+}
+
+cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::Grid3d& g_fine)
+{
+    //form the adjoint
+    thrust::host_vector<double> w_f = dg::create::weights( g_fine);
+    thrust::host_vector<double> v_c = dg::create::inv_weights( g_fine.associated() );
+    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
+    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
+    for( int i =0; i<(int)w_f.size(); i++)
+    {
+        Wf.row_indices[i] = Wf.column_indices[i] = i;
+        Wf.values[i] = w_f[i]/g_fine.weightsX()[i]/g_fine.weightsY()[i];
+    }
+    for( int i =0; i<(int)v_c.size(); i++)
+    {
+        Vc.row_indices[i] = Vc.column_indices[i] = i;
+        Vc.values[i] = v_c[i];
+    }
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
+    cusp::transpose( temp, A);
+    cusp::multiply( A, Wf, temp);
+    cusp::multiply( Vc, temp, A);
+    A.sort_by_row_and_column();
+    return A;
+}
+
+cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::refined::Grid3d& g)
+{
+    cusp::coo_matrix<int, double, cusp::host_memory> A = interpolation(g);
+    cusp::coo_matrix<int, double, cusp::host_memory> B = projection(g);
+    cusp::coo_matrix<int, double, cusp::host_memory> C;
+    cusp::multiply( A, B, C);
+    C.sort_by_row_and_column();
+    return C; 
+}
+
 }//namespace create
 
 }//namespace dg

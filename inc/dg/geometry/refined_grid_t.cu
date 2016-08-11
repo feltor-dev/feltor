@@ -93,5 +93,8 @@ int main ()
     double error = dg::blas2::dot( vec_c, w2d_c, vec_c);
     std::cout << "error of derivative is "<<error<<std::endl;
 
+    dg::refined::Grid3d g3d_f( 3,3, 0., 2*M_PI, 0., 2*M_PI, 0., 2*M_PI, 5, 3, 20, 20, 20);
+    g3d_f.display();
+
     return 0;
 }
