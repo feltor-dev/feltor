@@ -33,7 +33,7 @@ struct EllSparseBlockMatDevice
         cols_idx = src.cols_idx, data_idx = src.data_idx;
         num_rows = src.num_rows, num_cols = src.num_cols, blocks_per_line = src.blocks_per_line;
         n = src.n, left_size = src.left_size, right_size = src.right_size;
-        left_range = src.left_range; right_range = src.right_range;
+        right_range = src.right_range;
     }
     
     /**
@@ -60,7 +60,7 @@ struct EllSparseBlockMatDevice
     int num_rows, num_cols, blocks_per_line;
     int n;
     int left_size, right_size;
-    IVec left_range, right_range;
+    IVec right_range;
 };
 
 
@@ -128,8 +128,6 @@ void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
     os << "blocks_per_line  "<<blocks_per_line<<"\n";
     os << "n                "<<n<<"\n";
     os << "left_size             "<<left_size<<"\n";
-    os << "left_range_0          "<<left_range[0]<<"\n";
-    os << "left_range_1          "<<left_range[1]<<"\n";
     os << "right_size            "<<right_size<<"\n";
     os << "right_range_0         "<<right_range[0]<<"\n";
     os << "right_range_1         "<<right_range[1]<<"\n";

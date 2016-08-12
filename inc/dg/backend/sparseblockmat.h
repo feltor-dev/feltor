@@ -43,9 +43,9 @@ struct EllSparseBlockMat
     EllSparseBlockMat( int num_block_rows, int num_block_cols, int num_blocks_per_line, int num_different_blocks, int n):
         data(num_different_blocks*n*n), cols_idx( num_block_rows*num_blocks_per_line), data_idx(cols_idx.size()),
         num_rows(num_block_rows), num_cols(num_block_cols), blocks_per_line(num_blocks_per_line),
-        n(n),left_size(1), right_size(1), left_range(2), right_range(2){
-            left_range[0]=right_range[0]=0;
-            left_range[1]=right_range[1]=1;
+        n(n),left_size(1), right_size(1), right_range(2){
+            right_range[0]=0;
+            right_range[1]=1;
         }
 
     template< class OtherValueType>
@@ -55,7 +55,7 @@ struct EllSparseBlockMat
         cols_idx = src.cols_idx, data_idx = src.data_idx;
         num_rows = src.num_rows, num_cols = src.num_cols, blocks_per_line = src.blocks_per_line;
         n = src.n, left_size = src.left_size, right_size = src.right_size;
-        left_range = src.left_range; right_range = src.right_range;
+        right_range = src.right_range;
     }
     
     typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
@@ -70,8 +70,7 @@ struct EllSparseBlockMat
      * @brief Sets ranges from 0 to left_size and 0 to right_size
      */
     void set_default_range(){ 
-        left_range[0]=right_range[0]=0; 
-        left_range[1]=left_size;
+        right_range[0]=0; 
         right_range[1]=right_size;
     }
     
@@ -84,7 +83,6 @@ struct EllSparseBlockMat
     int n;  //!< each block has size n*n
     int left_size; //!< size of the left Kronecker delta
     int right_size; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
-    IVec left_range; //!< range 
     IVec right_range; //!< range 
 
     /**
@@ -190,7 +188,7 @@ void EllSparseBlockMat<value_type>::symv(const thrust::host_vector<value_type>& 
     assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
 
     //simplest implementation
-    for( int s=left_range[0]; s<left_range[1]; s++)
+    for( int s=0; s<left_size; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
     for( int j=right_range[0]; j<right_range[1]; j++)
@@ -213,8 +211,6 @@ void EllSparseBlockMat<T>::display( std::ostream& os) const
     os << "blocks_per_line  "<<blocks_per_line<<"\n";
     os << "n                "<<n<<"\n";
     os << "left_size             "<<left_size<<"\n";
-    os << "left_range_0          "<<left_range[0]<<"\n";
-    os << "left_range_1          "<<left_range[1]<<"\n";
     os << "right_size            "<<right_size<<"\n";
     os << "right_range_0         "<<right_range[0]<<"\n";
     os << "right_range_1         "<<right_range[1]<<"\n";

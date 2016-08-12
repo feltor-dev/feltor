@@ -10,7 +10,7 @@ template<class value_type>
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, const int size,
          const int right, 
-         const int* left_range, const int* right_range,
+         const int* right_range,
          const value_type* x, value_type *y
          )
 {
@@ -21,7 +21,7 @@ template<class value_type>
     for( int row = thread_id; row<size; row += grid_size)
     {
         int rr = row/right_, rrn = rr/n;
-        int s=left_range[0]+rrn/num_rows, 
+        int s=rrn/num_rows, 
             i = (rrn)%num_rows, 
             k = (rr)%n, 
             j=right_range[0]+row%right_;
@@ -46,7 +46,7 @@ template<class value_type>
          const int num_rows, const int num_cols,
          const int size,
          const int right, 
-         const int* left_range, const int* right_range,
+         const int* right_range,
          const value_type* x, value_type *y
          )
 {
@@ -57,7 +57,7 @@ template<class value_type>
     for( int row = thread_id; row<size; row += grid_size)
     {
         int rr = row/right_, rrn = rr/3;
-        int s=left_range[0]+rrn/num_rows, 
+        int s=rrn/num_rows, 
             i = (rrn)%num_rows, 
             k = (rr)%3, 
             j=right_range[0]+row%right_;
@@ -91,7 +91,7 @@ template<class value_type>
          const int num_rows, const int num_cols, 
          const int size,
          const int right, 
-         const int* left_range, const int* right_range,
+         const int* right_range,
          const value_type* x, value_type *y
          )
 {
@@ -104,7 +104,7 @@ template<class value_type>
     {
         int rr = row/right_; 
         int rrn = rr/3, k = rr%3;
-        int s=left_range[0]+rrn/num_rows, i = (rrn)%num_rows, 
+        int s=rrn/num_rows, i = (rrn)%num_rows, 
             j=right_range[0]+row%right_;
         int idx = ((s*num_rows+i)*3+k)*right+j;
         value_type temp=0;
@@ -131,7 +131,6 @@ template<class value_type>
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const int left_range0, 
          const value_type* x, value_type *y
          )
 {
@@ -141,7 +140,7 @@ template<class value_type>
     for( int row = thread_id; row<size; row += grid_size)
     {
         int rrn = row/3, k = row%3;
-        int s=left_range0+rrn/num_rows, i = (rrn)%num_rows;
+        int s=rrn/num_rows, i = (rrn)%num_rows;
         value_type temp=0;
         {
             int B = (data_idx[i*3  ]*3+k)*3;
@@ -171,7 +170,6 @@ template<class value_type>
          const value_type* data, const int* cols_idx, const int* data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const int left_range0,
          const value_type* x, value_type *y
          )
 {
@@ -181,7 +179,7 @@ template<class value_type>
     for( int row = thread_id; row<size; row += grid_size)
     {
         int rrn = row/3, k = (row%3);
-        int s=left_range0 + rrn/num_rows, i = (rrn)%num_rows;
+        int s=rrn/num_rows, i = (rrn)%num_rows;
         int idx=(s*num_rows+i)*3+k;
         int B0,B1, J0, J1;
         value_type temp=0;
@@ -240,7 +238,7 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceCo
     assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
-    const size_t size = (left_range[1]-left_range[0])*(right_range[1]-right_range[0])*num_rows*n; //number of lines
+    const size_t size = (left_size)*(right_range[1]-right_range[0])*num_rows*n; //number of lines
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
     const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
@@ -248,31 +246,30 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceCo
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
     const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
     value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
-    const int* left_range_ptr = thrust::raw_pointer_cast( &left_range[0]);
     const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 3)
     {
         if( blocks_per_line == 3)
         {
             if( right_size == 1)
-                ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left_range[0], x_ptr,y_ptr);
+                ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
             else
-                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr, x_ptr,y_ptr);
         }
         else if( blocks_per_line == 2)
         {
             if( right_size == 1)
-                ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, left_range[0], x_ptr,y_ptr);
+                ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
             else
-                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr, x_ptr,y_ptr);
         }
         else
             ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
+                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right_size, right_range_ptr, x_ptr,y_ptr);
     }
     else
         ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, left_range_ptr, right_range_ptr, x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, right_range_ptr, x_ptr,y_ptr);
 }
 
 template<class value_type>
