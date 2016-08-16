@@ -38,3 +38,6 @@ toefl_hpc
 toeflI
 toeflR
 toefl_mpi
+
+# astyle
+*.orig
