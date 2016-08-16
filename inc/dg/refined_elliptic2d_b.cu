@@ -48,21 +48,23 @@ int main()
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
     dg::refined::CartesianGrid2d<dg::DVec> grid( multiple_x, multiple_y, 0, lx, 0, ly, n_ref, n, Nx, Ny, bcx, bcy);
     //evaluate on fine grid
-    dg::DVec w2d = dg::create::weights( grid);
-    dg::DVec v2d = dg::create::inv_weights( grid);
+    dg::DVec w2dFINE = dg::create::volume( grid);
+    dg::DVec v2dFINE = dg::create::inv_weights( grid);
     //evaluate on coarse grid
-    dg::DVec w2dC = dg::create::weights( grid.associated());
-    dg::DVec v2dC = dg::create::inv_weights( grid.associated());
+    dg::DVec w2d = dg::create::volume( grid.associated());
+    dg::DVec v2d = dg::create::inv_weights( grid.associated());
     //create interpolation and projection matrices
     dg::IDMatrix Q = dg::create::interpolation( grid);
     dg::IDMatrix P = dg::create::projection( grid);
     //create functions A(chi) x = b
     dg::DVec x =        dg::evaluate( initial, grid.associated());
-    dg::DVec b =        dg::evaluate( initial, grid.associated());
+    dg::DVec b =        dg::evaluate( rhs, grid.associated());
     dg::DVec bFINE =    dg::evaluate( rhs, grid);
     dg::DVec xFINE =    dg::evaluate( rhs, grid);
     dg::blas2::gemv( P, bFINE, b);
-    dg::DVec chi =  dg::evaluate( pol, grid);
+    dg::DVec chi     =  dg::evaluate( pol, grid.associated());
+    dg::DVec chiFINE =  dg::evaluate( pol, grid);
+    dg::blas2::gemv( Q, chi, chiFINE);
     dg::DVec temp = x;
 
 
@@ -70,7 +72,7 @@ int main()
     t.tic();
     {
     dg::RefinedElliptic<dg::refined::CartesianGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol( grid, dg::not_normed, dg::centered);
-    pol.set_chi( chi);
+    pol.set_chi( chiFINE);
     t.toc();
     std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
@@ -79,53 +81,59 @@ int main()
 
     std::cout << eps<<" ";
     t.tic();
-    std::cout << " "<< invert( pol, x, b);
+    std::cout << " "<< invert( pol, x, b, w2d,v2d);
     t.toc();
     //std::cout << "Took "<<t.diff()<<"s\n";
     }
 
-    //compute error
-    const dg::DVec solution = dg::evaluate( sol, grid);
-    const dg::DVec derivati = dg::evaluate( der, grid);
+    //compute errorFINE
+    const dg::DVec solutionFINE = dg::evaluate( sol, grid);
+    const dg::DVec derivatiFINE = dg::evaluate( der, grid);
+    dg::DVec errorFINE( solutionFINE);
+    const dg::DVec solution = dg::evaluate( sol, grid.associated());
+    const dg::DVec derivati = dg::evaluate( der, grid.associated());
     dg::DVec error( solution);
 
     dg::blas2::gemv( Q, x, xFINE);
-    dg::blas1::axpby( 1.,xFINE,-1., solution, error);
+    dg::blas1::axpby( 1.,xFINE,-1., solutionFINE, errorFINE);
+    double errFINE = dg::blas2::dot( w2dFINE, errorFINE);
+    dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
-    //std::cout << "L2 Norm2 of Error is                       " << err << std::endl;
-    const double norm = dg::blas2::dot( w2d, solution);
-    std::cout << " "<<sqrt( err/norm);
+    const double norm = dg::blas2::dot( w2dFINE, solutionFINE);
+    std::cout << " "<<sqrt( err/norm) << " " <<sqrt(errFINE/norm);
     {
     dg::RefinedElliptic<dg::refined::CartesianGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward);
-    pol_forward.set_chi( chi);
+    pol_forward.set_chi( chiFINE);
     x = temp;
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
     std::cout << " "<< invert_fw( pol_forward, x, b);
     dg::blas2::gemv( Q, x, xFINE);
-    dg::blas1::axpby( 1.,xFINE,-1., solution, error);
+    dg::blas1::axpby( 1.,xFINE,-1., solutionFINE, errorFINE);
+    errFINE = dg::blas2::dot( w2dFINE, errorFINE);
+    dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
-    std::cout << " "<<sqrt( err/norm);
+    std::cout << " "<<sqrt( err/norm) << " " <<sqrt(errFINE/norm);
     }
 
     {
     dg::RefinedElliptic<dg::refined::CartesianGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward);
-    pol_backward.set_chi( chi);
+    pol_backward.set_chi( chiFINE);
     x = temp;
     dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
     std::cout << " "<< invert_bw( pol_backward, x, b);
     dg::blas2::gemv( Q, x, xFINE);
-    dg::blas1::axpby( 1.,xFINE,-1., solution, error);
-    err = dg::blas2::dot( w2d, error);
+    dg::blas1::axpby( 1.,xFINE,-1., solutionFINE, errorFINE);
+    err = dg::blas2::dot( w2dFINE, errorFINE);
     std::cout << " "<<sqrt( err/norm)<<std::endl;
     }
 
 
     dg::DMatrix DX = dg::create::dx( grid);
-    dg::blas2::symv( DX, xFINE, error);
-    dg::blas1::axpby( 1.,derivati,-1., error);
-    err = dg::blas2::dot( w2d, error);
-    //std::cout << "L2 Norm2 of Error in derivative is         " << err << std::endl;
-    const double norm_der = dg::blas2::dot( w2d, derivati);
+    dg::blas2::symv( DX, xFINE, errorFINE);
+    dg::blas1::axpby( 1.,derivatiFINE,-1., errorFINE);
+    err = dg::blas2::dot( w2dFINE, errorFINE);
+    //std::cout << "L2 Norm2 of Error in derivatiFINEve is         " << err << std::endl;
+    const double norm_der = dg::blas2::dot( w2dFINE, derivatiFINE);
     std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm_der)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
 
