@@ -109,7 +109,7 @@ try{
     t.tic();
     //orthogonal::GridX3d<dg::HVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
-    orthogonal::refined::GridX3d<dg::HVec> g3d(add_x, add_y, gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::refined::GridX3d<dg::HVec> g3d(add_x, add_y, 1,1, gp, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 

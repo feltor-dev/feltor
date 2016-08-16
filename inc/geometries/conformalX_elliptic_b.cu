@@ -62,8 +62,8 @@ int main(int argc, char**argv)
     std::cin >> add_x >> add_y;
     double howmanyX, howmanyY;
     std::cin >> howmanyX >> howmanyY;
-    orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g3d, dg::not_normed, dg::centered);
@@ -94,14 +94,14 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     ///////////////////////////////////////////////////////////////////////////
-    dg::DVec x =    dg::pullback( dg::zero, g3d.associated());
+    dg::DVec x =         dg::pullback( dg::zero, g3d.associated());
     dg::DVec x_fine =    dg::pullback( dg::zero, g3d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d.associated());
+    const dg::DVec b =        dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d.associated());
     const dg::DVec bFINE =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d);
     dg::DVec bmod(b);
-    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g3d.associated());
+    const dg::DVec chi =      dg::pullback( solovev::BmodTheta(gp), g3d.associated());
     const dg::DVec chiFINE =  dg::pullback( solovev::BmodTheta(gp), g3d);
-    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
+    const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
     const dg::DVec solutionFINE = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d);
     const dg::DVec vol3dFINE = dg::create::volume( g3d);
     dg::HVec inv_vol3dFINE = dg::create::inv_weights( g3d);
