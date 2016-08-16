@@ -20,7 +20,7 @@ struct Diffusion
     Diffusion( const Geometry& g, imp::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g, g.bcx(), g.bcy(), dg::normed, dg::centered)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -48,7 +48,6 @@ struct Diffusion
     const imp::Parameters p;
     container temp;    
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
-
 };
 
 template< class Geometry, class Matrix, class container >
@@ -174,7 +173,7 @@ const container& ToeflI<G, M, container>::compute_psi( const container& potentia
 
 template<class G, class Matrix, class container>
 const container& ToeflI<G, Matrix, container>::polarization( const std::vector<container>& y)
-{ 
+{
     //\chi = p.ai \p.mui n_i + p.as \p.mus n_s
     blas1::axpby( p.a[1]*p.mu[1], y[1], 0., chi); 
     blas1::axpby( p.a[2]*p.mu[2], y[2], 1., chi);
@@ -183,12 +182,9 @@ const container& ToeflI<G, Matrix, container>::polarization( const std::vector<c
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\p.mui n_i ) /B^2
     pol.set_chi( chi);                              //set chi of polarisation: nablp.aperp (chi nablp.aperp )
 
-
-
-
     gamma1.alpha() = -0.5*p.tau[1]*p.mu[1];
     invert_invgamma( gamma1, gamma_n[0], y[1]);
-    gamma1.alpha() = -0.5*p.tau[2]*p.mu[2];
+    gamma1.alpha() = -0.5*p.tau[  2]*p.mu[2];
     invert_invgamma( gamma1, gamma_n[1], y[2]);
 
     dg::blas1::axpby( -1., y[0], 0., chi);
@@ -259,8 +255,6 @@ void ToeflI< G, M, container>::operator()(std::vector<container>& y, std::vector
 
         blas1::axpby( p.tau[i]*p.kappa, dyy[i], 1., yp[i]);
     }
-
-
 }
 
 }//namespace dg

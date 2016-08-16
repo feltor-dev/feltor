@@ -125,7 +125,6 @@ int define_dimension( int ncid, const char* name, int* dimID, const double * poi
     if( (retval = nc_redef(ncid))) {return retval;} //not necessary for NetCDF4 files
     return retval;
 }
-
 /**
  * @brief Define a 1d dimension variable together with its data points
  *
