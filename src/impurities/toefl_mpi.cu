@@ -232,7 +232,7 @@ int main( int argc, char* argv[])
     unsigned step = 0;
 #endif //DG_BENCHMARK
 
-    for( unsigned i=0; i<p.maxout; i++)
+    for( unsigned i=1; i<p.maxout; i++)
     {
 
 #ifdef DG_BENCHMARK
@@ -255,11 +255,11 @@ int main( int argc, char* argv[])
 
             //store accuracy details
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
-            err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
-            err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
-            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
-            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+            err = nc_put_vara_double( ncid, energyID,   Estart, Ecount, &E1);
+            err = nc_put_vara_double( ncid, massID,     Estart, Ecount, &mass);
+            err = nc_put_vara_double( ncid, dissID,     Estart, Ecount, &diss);
+            err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount, &dEdt);
+            err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount, &accuracy);
             if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (mass-mass0)/mass0<<"\t";
             if(rank==0)std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             if(rank==0)std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
@@ -281,7 +281,7 @@ int main( int argc, char* argv[])
             dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        transfer = toeflI.potential()[0];
+        transfer = test.potential()[0];
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
         dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
