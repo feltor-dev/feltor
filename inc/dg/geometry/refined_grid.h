@@ -4,6 +4,10 @@
 #include "dg/backend/grid.h"
 #include "dg/backend/weights.cuh"
 #include "dg/backend/interpolation.cuh"
+#include "dg/blas.h"
+
+#include "cartesian.h"
+#include "cylindrical.h"
 
 
 namespace dg
@@ -563,7 +567,59 @@ Grid2d::Grid2d( const dg::refined::Grid3d& g) :
     }
 }
 
+
+template<class container>
+struct CartesianGrid2d : public dg::refined::Grid2d
+{
+    typedef OrthogonalCylindricalTag metric_category; 
+    CartesianGrid2d( unsigned multiple_x, unsigned multiple_y, double x0, double x1, double y0, double y1, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): Grid2d(multiple_x, multiple_y,x0,x1,y0,y1,n,n_old,Nx,Ny,bcx,bcy), g_assoc_(x0,x1,y0,y1,n_old,Nx,Ny,bcx,bcy){ 
+        dg::blas1::transfer( weightsX(), g_xx_);
+        dg::blas1::transfer( weightsY(), g_yy_);
+        dg::blas1::transfer( weightsX(), vol2d_);
+        dg::blas1::pointwiseDot( g_xx_,g_yy_,vol2d_);
+        dg::blas1::pointwiseDot( g_xx_,g_xx_,g_xx_);
+        dg::blas1::pointwiseDot( g_yy_,g_yy_,g_yy_);
+        dg::blas1::pointwiseDivide( vol2d_, g_xx_, vol2d_);
+        dg::blas1::pointwiseDivide( vol2d_, g_yy_, vol2d_);
+    }
+    const dg::CartesianGrid2d& associated() const {return g_assoc_;}
+    const container& g_xx()const{return g_xx_;}
+    const container& g_yy()const{return g_yy_;}
+    const container& vol()const{return vol2d_;}
+    const container& perpVol()const{return vol2d_;}
+    private:
+    container g_xx_, g_yy_, vol2d_;
+    dg::CartesianGrid2d g_assoc_;
+};
+
+
 }//namespace refined
+/**
+ * @brief This function pulls back a function defined in cartesian coordinates to refined cartesian coordinates x,y,\phi
+ *
+ * i.e. F(x,y) = f(R(x,y), Z(x,y))
+ * @tparam BinaryOp The function object 
+ * @param f The function defined on R,Z
+ * @param g The grid
+ *
+ * @return A set of points representing F(x,y)
+ */
+template< class BinaryOp, class container>
+thrust::host_vector<double> pullback( BinaryOp f, const dg::refined::CartesianGrid2d<container>& g)
+{
+    thrust::host_vector<double> vec( g.size());
+    for( unsigned i=0; i<g.size(); i++)
+        vec[i] = f( g.abscissasX()[i], g.abscissasY()[i]);
+    return vec;
+}
+
+///@cond
+template<class container>
+thrust::host_vector<double> pullback( double(f)(double,double), const dg::refined::CartesianGrid2d<container>& g)
+{
+    return pullback<double(double,double),container>( f, g);
+}
+///@endcond
 
 
 namespace create{

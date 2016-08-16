@@ -57,8 +57,9 @@ class RefinedElliptic
      */
     void set_chi( const Vector& chi)
     {
-        dg::blas2::gemv( Q_, chi, temp1_);
-        elliptic_.set_chi( temp1_);
+        //dg::blas2::gemv( Q_, chi, temp1_);
+        //elliptic_.set_chi( temp1_);
+        elliptic_.set_chi( chi);
     }
 
     /**
@@ -106,8 +107,9 @@ class RefinedElliptic
      */
     void compute_rhs( const Vector& rhs, Vector& rhs_mod )
     {
-        dg::blas2::gemv( Q_, rhs, temp1_);
-        dg::blas1::pointwiseDot( vol_, temp1_, temp1_);
+        //dg::blas2::gemv( Q_, rhs, temp1_);
+        //dg::blas1::pointwiseDot( vol_, temp1_, temp1_);
+        dg::blas1::pointwiseDot( vol_, rhs, temp1_);
         dg::blas2::gemv( QT_, temp1_, rhs_mod);
         dg::blas2::symv( inv_weights_, rhs_mod, rhs_mod);
     }
