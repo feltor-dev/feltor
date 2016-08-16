@@ -3,7 +3,6 @@
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
-#include "dg/geometry/refined_grid.h"
 #include "dg/geometry/refined_gridX.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/grid.h"
@@ -107,9 +106,6 @@ int main(int argc, char**argv)
     const dg::DVec vol3dFINE = dg::create::volume( g3d);
     dg::HVec inv_vol3dFINE = dg::create::inv_weights( g3d);
     const dg::DVec vol3d = dg::create::volume( g3d.associated());
-    //dg::blas1::pointwiseDivide( inv_vol3d, g3d.weightsX(), inv_vol3d);
-    //dg::blas1::pointwiseDivide( inv_vol3d, g3d.weightsY(), inv_vol3d);
-    //dg::HVec inv_vol3d = dg::create::inv_volume( g3d);
     const dg::DVec v3dFINE( inv_vol3dFINE);
     const dg::IDMatrix Q = dg::create::interpolation( g3d);
     const dg::IDMatrix P = dg::create::projection( g3d);
@@ -125,12 +121,13 @@ int main(int argc, char**argv)
     dg::DVec error( solution);
     dg::DVec errorFINE( solutionFINE);
     const double eps = 1e-10;
-    std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
+    std::cout << "eps \t # iterations \t errorCOARSE \t errorFINE \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
     pol_refined.compute_rhs( bFINE, bmod);
     unsigned number = invert(pol_refined, x,bmod);// vol3d, v3d );
+    dg::blas2::gemv( Q, x, x_fine);
     //dg::Invert<dg::DVec > invert( x_fine, x_fine.size(), eps);
     //unsigned number = invert(pol, x_fine ,b_fine, vol3dFINE, v3dFINE );
     //unsigned number = invert(pol, x_fine ,bFINE, vol3dFINE, v3dFINE );
@@ -138,12 +135,12 @@ int main(int argc, char**argv)
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);
-    //dg::blas1::axpby( 1.,x_fine,-1., solutionFINE, errorFINE);
-    //double err = dg::blas2::dot( vol3dFINE, errorFINE);
+    dg::blas1::axpby( 1.,x_fine,-1., solutionFINE, errorFINE);
+    double errFINE = dg::blas2::dot( vol3dFINE, errorFINE);
     double err = dg::blas2::dot( vol3d, error);
     const double norm = dg::blas2::dot( vol3d, solution);
-    //const double norm = dg::blas2::dot( vol3dFINE, solutionFINE);
-    std::cout << sqrt( err/norm) << "\t";
+    const double normFINE = dg::blas2::dot( vol3dFINE, solutionFINE);
+    std::cout << sqrt( err/norm) << "\t"<<sqrt( errFINE/normFINE)<<"\t";
     dg::HVec gyy, gxx, vol; 
     dg::blas1::transfer( g2d.g_xx(), gyy);
     dg::blas1::transfer( g2d.g_yy(), gxx); 
@@ -154,8 +151,8 @@ int main(int argc, char**argv)
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d.hx());
     dg::blas1::scal( gyy, g2d.hy());
-    double hxX = dg::interpolate( 0,  0, gxx, g2d);
-    double hyX = dg::interpolate( 0,  0, gyy, g2d);
+    double hxX = dg::interpolate( 0, 0, gxx, g2d);
+    double hyX = dg::interpolate( 0, 0, gyy, g2d);
     std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";
