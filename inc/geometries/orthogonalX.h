@@ -267,7 +267,7 @@ struct FpsiX
         {
             xpointer_.set_quadrant( 2*i+1);
             double x_min = -1, x_max = 1;
-            dg::bisection1d( xpointer_, x_min, x_max, 1e-6);
+            dg::bisection1d( xpointer_, x_min, x_max, 1e-8);
             xpointer_.point( R_init[i], Z_init[i], (x_min+x_max)/2.);
             //std::cout << "Found initial point! "<<R_init[i]<<" "<<Z_init[i]<<"\n";
             begin[0] = R_init[i], begin[1] = Z_init[i]; end = begin;
@@ -446,7 +446,7 @@ struct XFieldFinv
         thrust::host_vector<double> begin( 1, 0.1), end(begin), end_old(begin);
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 1;
-        while( eps < eps_old && N < 1e6 &&  eps > 1e-9)
+        while( (eps <  eps_old || eps > 1e-8) && eps > 1e-14)
         {
             eps_old = eps, end_old = end; 
             N*=2; dg::stepperRK17( *this, begin, end, x0, x, N);
@@ -486,7 +486,6 @@ void construct_rz( XFieldFinv fpsiMinv,
         thrust::host_vector<double>& g
     )
 {
-    thrust::host_vector<double> r0_x(psi_x.size(), 0), r0_old(r0_x), r0_diff( r0_old);
     //////////////////////compute fpsiMinv initial values
     thrust::host_vector<double> rvec( y_vec.size()), zvec(rvec), yrvec(rvec), yzvec(rvec);
     std::vector<thrust::host_vector<double> > begin(5);
@@ -511,20 +510,20 @@ void construct_rz( XFieldFinv fpsiMinv,
     const unsigned size2d = psi_x.size()*y_vec.size();
     const unsigned Nx = psi_x.size();
     r.resize(size2d), z.resize(size2d), g.resize(size2d); yr = r, yz = z;
+    thrust::host_vector<double> g_old(g), g_diff( g);
     std::cout << "In RZ  function:\n";
     double psi0, psi1;
     double eps = 1e10;
     unsigned N=1; 
-    while( eps >  1e-8 && N < 1e6 )
+    while( eps >  1e-13 && N < 1e6 )
     {
-        r0_old = r0_x; 
+        g_old = g;
         psi0 = psi_0, psi1 = psi_x[0];
         //////////////////////////////////////////////////
-        dg::stepperRK6( fpsiMinv, begin, end, psi0, psi1, N);
-        r0_x[0] = end[0][0]; //R
+        dg::stepperRK17( fpsiMinv, begin, end, psi0, psi1, N);
         for( unsigned j=0; j<y_vec.size(); j++)
         {
-             r[j*Nx+0] = end[0][j],  z[j*Nx+0]  = end[1][j];
+             r[j*Nx+0] = end[0][j],  z[j*Nx+0] = end[1][j];
             yr[j*Nx+0] = end[3][j], yz[j*Nx+0] = end[4][j];
              g[j*Nx+0] = end[2][j]; 
         }
@@ -534,8 +533,7 @@ void construct_rz( XFieldFinv fpsiMinv,
             temp = end;
             psi0 = psi_x[i-1], psi1 = psi_x[i];
             //////////////////////////////////////////////////
-            dg::stepperRK6( fpsiMinv, temp, end, psi0, psi1, N);
-            r0_x[i] = end[0][0]; //R
+            dg::stepperRK17( fpsiMinv, temp, end, psi0, psi1, N);
             for( unsigned j=0; j<y_vec.size(); j++)
             {
                  r[j*Nx+i] = end[0][j],  z[j*Nx+i] = end[1][j];
@@ -544,9 +542,9 @@ void construct_rz( XFieldFinv fpsiMinv,
             }
             //////////////////////////////////////////////////
         }
-        dg::blas1::axpby( 1., r0_x, -1., r0_old, r0_diff);
-        eps = sqrt( dg::blas1::dot( r0_diff, r0_diff)/ dg::blas1::dot( r0_x, r0_x));
-        std::cout << "Effective R  error is "<<eps<<" with "<<N<<" steps\n"; 
+        dg::blas1::axpby( 1., g, -1., g_old, g_diff);
+        eps = sqrt( dg::blas1::dot( g_diff, g_diff)/ dg::blas1::dot( g, g));
+        std::cout << "Effective g error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
 }

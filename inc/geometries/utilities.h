@@ -22,8 +22,8 @@ void construct_psi_values( FieldFinv fpsiMinv, const solovev::GeomParameters& gp
     double eps = 1e10, eps_old=2e10;
     //std::cout << "In psi function:\n";
     double x0=x_0, x1 = x_vec[0];
-    //while( eps <  eps_old && N < 1e6)
-    while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
+    //while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
+    while( (eps <  eps_old || eps > 1e-8) && eps > 1e-14) //1e-8 < eps < 1e-14
     {
         eps_old = eps;
         //psi_old = psi_x; 

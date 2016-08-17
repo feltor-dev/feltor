@@ -62,8 +62,8 @@ int main(int argc, char**argv)
     std::cin >> add_x >> add_y;
     double howmanyX, howmanyY;
     std::cin >> howmanyX >> howmanyY;
-    //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     orthogonal::refined::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Elliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
     dg::RefinedElliptic<orthogonal::refined::GridX3d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g3d, dg::not_normed, dg::centered);
@@ -120,7 +120,7 @@ int main(int argc, char**argv)
     //compute error
     dg::DVec error( solution);
     dg::DVec errorFINE( solutionFINE);
-    const double eps = 1e-10;
+    const double eps = 1e-11;
     std::cout << "eps \t # iterations \t errorCOARSE \t errorFINE \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();

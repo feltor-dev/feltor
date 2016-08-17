@@ -17,7 +17,7 @@ struct XPointer
         Z_X = -1.1*gp.elongation*gp.a;
         thrust::host_vector<double> X(2,0), XN(X);
         X[0] = R_X, X[1] = Z_X;
-        for( unsigned i=0; i<3; i++)
+        for( unsigned i=0; i<6; i++)
         {
             hessianRZtau.newton_iteration( X, XN);
             XN.swap(X);
@@ -40,7 +40,7 @@ struct XPointer
         else if( quad_ == 1 || quad_ == 3) { begin[0] += x;}
 
         double psi0 = psip_(begin[0], begin[1]);
-        while( (eps < eps_old || eps > 1e-4 ) && eps > 1e-7)
+        while( (eps < eps_old || eps > 1e-4 ) && eps > 1e-10)
         {
             eps_old = eps; end_old = end;
             N*=2; 
@@ -82,23 +82,23 @@ double construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters&
     std::cout << "In psi function:\n";
     double x0, x1;
     const double psi_const = fpsiMinv.find_psi( x_vec[idxX]);
-    double psi_1_numerical;
-    double eps = 1e10;//, eps_old=2e10;
-    //while( eps <  eps_old && N < 1e6)
-    while( eps >  1e-8 && N < 1e6 )
+    double psi_1_numerical=0;
+    double eps = 1e10, eps_old=2e10;
+    while( (eps <  eps_old || eps > 1e-8) && eps > 1e-13) //1e-8 < eps < 1e-14
+    //while( eps >  1e-9 && N < 1e6 )
     {
-       // eps_old = eps; 
+        eps_old = eps; 
         psi_old = psi_x; 
         x0 = x_0, x1 = x_vec[0];
 
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
-        dg::stepperRK6( fpsiMinv, begin, end, x0, x1, N);
+        dg::stepperRK17( fpsiMinv, begin, end, x0, x1, N);
         psi_x[0] = end[0]; fpsiMinv(end,temp); f_x_[0] = temp[0];
         for( unsigned i=1; i<idxX; i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
-            dg::stepperRK6( fpsiMinv, temp, end, x0, x1, N);
+            dg::stepperRK17( fpsiMinv, temp, end, x0, x1, N);
             psi_x[i] = end[0]; fpsiMinv(end,temp); f_x_[i] = temp[0];
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
@@ -109,20 +109,18 @@ double construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters&
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
-            dg::stepperRK6( fpsiMinv, temp, end, x0, x1, N);
+            dg::stepperRK17( fpsiMinv, temp, end, x0, x1, N);
             psi_x[i] = end[0]; fpsiMinv(end,temp); f_x_[i] = temp[0];
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
         temp = end;
-        dg::stepperRK6(fpsiMinv, temp, end, x1, x_1,N);
+        dg::stepperRK17(fpsiMinv, temp, end, x1, x_1,N);
         psi_1_numerical = end[0];
         dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
         //eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
         eps = sqrt( dg::blas1::dot( psi_diff, psi_diff)/ dg::blas1::dot( psi_x, psi_x));
         //psi_1_numerical_ = psi_0 + dg::blas1::dot( f_x_, w1d);
 
-        //eps = fabs( psi_1_numerical-psi_1); 
-        //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; 
         std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
         //std::cout << "psi 1               is "<<psi_1_numerical_<<"\n"; 
         N*=2;
