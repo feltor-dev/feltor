@@ -59,6 +59,7 @@ struct GeomParameters
      */
     void display( std::ostream& os = std::cout ) const
     {
+        os << std::setprecision(16);
         os << "Geometrical parameters are: \n"
             <<" A             = "<<A<<"\n";
         for( unsigned i=0; i<13; i++)
@@ -75,6 +76,7 @@ struct GeomParameters
             <<" psipmaxcut    = "<<psipmaxcut<<"\n"
             <<" psipmaxlim    = "<<psipmaxlim<<"\n"
             <<" qampl    = "<<qampl<<"\n";
+        os << std::setprecision(6);
         os << std::flush;
 
     }

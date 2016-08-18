@@ -64,7 +64,7 @@ struct Psip
  */
     double operator()(double R, double Z) const
     {    
-        return psi_alt( R, Z);
+        return psi_horner( R, Z);
     }
     /**
      * @brief \f$ \psi_p(R,Z,\phi) \equiv \psi_p(R,Z)\f$
@@ -109,6 +109,30 @@ struct Psip
               + c_[10] *( 3. * Rn4*Zn - 4. * Rn2*Zn3)
               + c_[11] *(-45.* Rn4*Zn + 60.* Rn4*Zn* lgRn - 80.* Rn2*Zn3* lgRn + 8. * Zn5)            
                       );
+    }
+    double psi_horner(double R, double Z) const
+    {
+        const double Rn = R/R_0_, Zn = Z/R_0_;
+        const double lgRn = log(Rn);
+        double a0,a1, b0,b1, d0, d1;
+        a0 = 8.*c_[11]+8*c_[6]*Zn;
+        a1 = 2.*c_[4] +Zn*a0;
+        a0 = c_[9] + Zn*a1;
+        a1 = c_[2] + Zn*a0;
+        a0 = c_[7] + Zn*a1;
+        a1 = c_[0] + Zn*a0; //////
+        b0 = -12.*c_[5] + 75.*c_[6] + 180.*c_[6]*lgRn;
+        b1 = 3.*c_[10] - 45.*c_[11]+60.*c_[11]*lgRn + Zn*b0;
+        b0 = 1./8.-A_/8. + c_[3] + 3.*c_[4]*lgRn + Rn*Rn*(c_[5] - 15.*c_[6]*lgRn)+Zn*b1;
+        b1 = c_[1] + 0.5*A_*lgRn - c_[2]*lgRn + Rn*Rn*b0; 
+        b0 = Rn*Rn*b1;//////
+        d0 = 8.*c_[5] - 140.*c_[6]-120.*c_[6]*lgRn;
+        d1 = -4.*c_[10] - 80.*c_[11]*lgRn + Zn*d0;
+        d0 = -4.*c_[3]-9.*c_[4]-12.*c_[4]*lgRn + Zn*d1;
+        d1 = c_[8] - 3.*c_[9]*lgRn + Zn*d0;
+        d0 = Rn*Rn*Zn*d1; /////
+
+        return  R_0_*(a1 + b0 + d0);
     }
     double R_0_, A_;
     std::vector<double> c_;
