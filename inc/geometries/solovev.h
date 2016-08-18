@@ -64,7 +64,7 @@ struct Psip
  */
     double operator()(double R, double Z) const
     {    
-        return psi_horner( R, Z);
+        return psi_alt( R, Z);
     }
     /**
      * @brief \f$ \psi_p(R,Z,\phi) \equiv \psi_p(R,Z)\f$
@@ -112,6 +112,7 @@ struct Psip
     }
     double psi_horner(double R, double Z) const
     {
+        //qampl is missing!!
         const double Rn = R/R_0_, Zn = Z/R_0_;
         const double lgRn = log(Rn);
         double a0,a1, b0,b1, d0, d1;

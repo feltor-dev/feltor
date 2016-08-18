@@ -67,9 +67,9 @@ int main( int argc, char* argv[])
     const double R_H = gp.R_0-gp.triangularity*gp.a;
     const double Z_H = gp.elongation*gp.a;
     const double alpha_ = asin(gp.triangularity);
-    const double N1 = -(1.+alpha_)/(gp.a/gp.R_0*gp.elongation*gp.elongation)*(1.+alpha_);
-    const double N2 = -(1.-alpha_)/(gp.a/gp.R_0*gp.elongation*gp.elongation)*(1.-alpha_);
-    const double N3 = -gp.elongation/(gp.a/gp.R_0*cos(alpha_)*cos(alpha_));
+    const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
+    const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
+    const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
     std::cout << "TEST ACCURACY OF PSI\n";
     std::cout << "psip( 1+e,0)           "<<psip(gp.R_0 + gp.a, 0.)<<"\n";
     std::cout << "psip( 1-e,0)           "<<psip(gp.R_0 - gp.a, 0.)<<"\n";
@@ -80,8 +80,8 @@ int main( int argc, char* argv[])
     std::cout << "psipR( 1-de,ke)        "<<psipR(R_H,Z_H)<<"\n";
     std::cout << "psipR( 1-1.1de,-1.1ke) "<<psipR(R_X,Z_X)<<"\n";
     std::cout << "psipZ( 1-1.1de,-1.1ke) "<<psipZ(R_X,Z_X)<<"\n";
-    std::cout << "psipZZ( 1+e,0)         "<<psipZZ(gp.R_0+gp.a,0)+N1*psipR(gp.R_0+gp.a,0)<<"\n";
-    std::cout << "psipZZ( 1-e,0)         "<<psipZZ(gp.R_0-gp.a,0)+N2*psipR(gp.R_0-gp.a,0)<<"\n";
+    std::cout << "psipZZ( 1+e,0)         "<<psipZZ(gp.R_0+gp.a,0.)+N1*psipR(gp.R_0+gp.a,0)<<"\n";
+    std::cout << "psipZZ( 1-e,0)         "<<psipZZ(gp.R_0-gp.a,0.)+N2*psipR(gp.R_0-gp.a,0)<<"\n";
     std::cout << "psipRR( 1-de,ke)       "<<psipRR(R_H,Z_H)+N3*psipZ(R_H,Z_H)<<"\n";
 
     //Feltor quantities
