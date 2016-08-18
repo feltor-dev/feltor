@@ -22,8 +22,11 @@ struct XPointer
             hessianRZtau.newton_iteration( X, XN);
             XN.swap(X);
         }
+        std::cout << "X-point error  "<<R_X-X[0]<<" "<<Z_X-X[1]<<"\n";
         R_X = X[0], Z_X = X[1];
         std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
+        std::cout << "better triangularity would be "<<std::setprecision(16)<< -(R_X-gp.R_0)/1.1/gp.a<<"\n";
+        std::cout << "better elongation    would be "<<std::setprecision(16)<< -Z_X/1.1/gp.a<<"\n";
         R_i[0] = R_X + dist_, Z_i[0] = Z_X;
         R_i[1] = R_X    , Z_i[1] = Z_X + dist_;
         R_i[2] = R_X - dist_, Z_i[2] = Z_X;

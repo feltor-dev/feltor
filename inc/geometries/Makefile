@@ -13,6 +13,9 @@ all: guenther_ds_b geometry_diag
 ds_geom_t: ds_geom_t.cu solovev.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)  -DDG_BENCHMARK 
 
+solovev_t: solovev_t.cu solovev.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS)  -DDG_BENCHMARK 
+
 conformal_t: conformal_t.cu conformal.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 	

@@ -24,8 +24,8 @@ int main( int argc, char* argv[])
     try{ 
         if( argc==1)
         {
-            v = file::read_input( "../feltor/input.txt");
-            v2 = file::read_input( "geometry_params.txt"); 
+            v = file::read_input( "../../src/feltor/input.txt");
+            v2 = file::read_input( "geometry_params_Xpoint.txt"); 
         }
         else
         {
@@ -62,6 +62,27 @@ int main( int argc, char* argv[])
     solovev::InvB invB(gp);
     solovev::BR bR(gp);
     solovev::BZ bZ(gp);
+    const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+    const double Z_X = -1.1*gp.elongation*gp.a;
+    const double R_H = gp.R_0-gp.triangularity*gp.a;
+    const double Z_H = gp.elongation*gp.a;
+    const double alpha_ = asin(gp.triangularity);
+    const double N1 = -(1.+alpha_)/(gp.a/gp.R_0*gp.elongation*gp.elongation)*(1.+alpha_);
+    const double N2 = -(1.-alpha_)/(gp.a/gp.R_0*gp.elongation*gp.elongation)*(1.-alpha_);
+    const double N3 = -gp.elongation/(gp.a/gp.R_0*cos(alpha_)*cos(alpha_));
+    std::cout << "TEST ACCURACY OF PSI\n";
+    std::cout << "psip( 1+e,0)           "<<psip(gp.R_0 + gp.a, 0.)<<"\n";
+    std::cout << "psip( 1-e,0)           "<<psip(gp.R_0 - gp.a, 0.)<<"\n";
+    std::cout << "psip( 1-de,ke)         "<<psip(R_H, Z_H)<<"\n";
+    std::cout << "psip( 1-1.1de,-1.1ke)  "<<psip(R_X, Z_X)<<"\n";
+    std::cout << "psipZ( 1+e,0)          "<<psipZ(gp.R_0 + gp.a, 0.)<<"\n";
+    std::cout << "psipZ( 1-e,0)          "<<psipZ(gp.R_0 - gp.a, 0.)<<"\n";
+    std::cout << "psipR( 1-de,ke)        "<<psipR(R_H,Z_H)<<"\n";
+    std::cout << "psipR( 1-1.1de,-1.1ke) "<<psipR(R_X,Z_X)<<"\n";
+    std::cout << "psipZ( 1-1.1de,-1.1ke) "<<psipZ(R_X,Z_X)<<"\n";
+    std::cout << "psipZZ( 1+e,0)         "<<psipZZ(gp.R_0+gp.a,0)+N1*psipR(gp.R_0+gp.a,0)<<"\n";
+    std::cout << "psipZZ( 1-e,0)         "<<psipZZ(gp.R_0-gp.a,0)+N2*psipR(gp.R_0-gp.a,0)<<"\n";
+    std::cout << "psipRR( 1-de,ke)       "<<psipRR(R_H,Z_H)+N3*psipZ(R_H,Z_H)<<"\n";
 
     //Feltor quantities
     solovev::CurvatureR curvatureR(gp);
@@ -74,9 +95,9 @@ int main( int argc, char* argv[])
     solovev::Pupil pupil(gp);
     solovev::GaussianDamping dampgauss(gp);
     solovev::GaussianProfDamping dampprof(gp);
-    solovev::ZonalFlow zonalflow(p, gp);
+    solovev::ZonalFlow zonalflow(p.amp, p.k_psi, gp);
     solovev::PsiLimiter psilimiter(gp);
-    solovev::Nprofile prof(p, gp);
+    solovev::Nprofile prof(p.bgprofamp,p.amp, gp);
 //     solovev::Gradient prof(p, gp);
 
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
@@ -140,16 +161,16 @@ int main( int argc, char* argv[])
 
         dg::Grid1d<double> g1d(psipmin ,0.0, 1,Npsi,dg::DIR);
         
-        solovev::FluxSurfaceAverage<dg::HVec> fsa1(grid,gp,psipog2d );
-        solovev::SafetyFactor<dg::HVec> qprof(grid,gp,alphaog2d );
+        solovev::FluxSurfaceAverage<dg::DVec> fsa1(grid,gp,psipog2d );
+        solovev::SafetyFactor<dg::DVec> qprof(grid,gp,alphaog2d );
         dg::HVec fsaofpsip = dg::evaluate(fsa1,g1d);
         dg::HVec sf = dg::evaluate(qprof,g1d);
         dg::HVec abs = dg::evaluate( dg::coo1, g1d);
 
         
-        for (unsigned i=0;i<g1d.size() ;i++) {
-            std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << sf[i]<<"\n";
-        }
+        //for (unsigned i=0;i<g1d.size() ;i++) {
+        //    std::cout << "psip_ref = " << abs[i] << "  psip_fsa = " << fsaofpsip[i]<< " rel error = " << ( fsaofpsip[i]-abs[i])/abs[i] << "  q = " << sf[i]<<"\n";
+        //}
     }
     
     //make equidistant grid from dggrid
