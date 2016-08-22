@@ -289,7 +289,7 @@ struct FpsiX
         thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
         r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size());
-        solovev::orthogonal::FieldRZY fieldRZY(gp_);
+        solovev::conformal::FieldRZY fieldRZY(gp_);
         //now compute f and starting values 
         f_psi = construct_f( psi, R_0, Z_0);
         fieldRZY.set_f(f_psi);
@@ -369,8 +369,8 @@ struct FpsiX
     }
     private:
     const solovev::GeomParameters gp_;
-    const solovev::orthogonal::FieldRZYT fieldRZYT_;
-    const solovev::orthogonal::FieldRZYZ fieldRZYZ_;
+    const solovev::conformal::FieldRZYT fieldRZYT_;
+    const solovev::conformal::FieldRZYZ fieldRZYZ_;
     const solovev::FieldRZtau fieldRZtau_;
     dg::detail::XPointer xpointer_;
     solovev::HessianRZtau hessianRZtau_;
@@ -458,8 +458,8 @@ struct XFieldFinv
 
     private:
     FpsiX fpsi_;
-    solovev::orthogonal::FieldRZYT fieldRZYT_;
-    solovev::orthogonal::FieldRZYZ fieldRZYZ_;
+    solovev::conformal::FieldRZYT fieldRZYT_;
+    solovev::conformal::FieldRZYZ fieldRZYZ_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
     double xAtOne_;
@@ -489,19 +489,22 @@ void construct_rz( XFieldFinv fpsiMinv,
     //////////////////////compute fpsiMinv initial values
     thrust::host_vector<double> rvec( y_vec.size()), zvec(rvec), yrvec(rvec), yzvec(rvec);
     std::vector<thrust::host_vector<double> > begin(5);
-    //compute innermost flux surface 
-    double R0[2], Z0[2], f0;
-    detail::FpsiX fpsi(gp);
-    fpsi.compute_rzy( psi_0, y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
+    ////compute innermost flux surface 
+    //double R0[2], Z0[2], f0;
+    //detail::FpsiX fpsi(gp);
+    //fpsi.compute_rzy( psi_0, y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
+    double f0;
+    dg::detail::SeparatriX sep(gp);
+    sep.compute_rzy(y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, f0);
     //////compute gvec/////////////////////
-    thrust::host_vector<double> gvec(y_vec.size(), f0);
-    solovev::PsipR psipR_(gp);
-    solovev::PsipZ psipZ_(gp);
-    for( unsigned i=0; i<rvec.size(); i++)
-    {
-         double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
-         gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ);
-    }
+    thrust::host_vector<double> gvec(y_vec.size(), f0); //conformal
+    //solovev::PsipR psipR_(gp);
+    //solovev::PsipZ psipZ_(gp);
+    //for( unsigned i=0; i<rvec.size(); i++)
+    //{
+    //     double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
+    //     gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
+    //}
     begin[0] = rvec, begin[1] = zvec;
     begin[2] = gvec, begin[3] = yrvec, begin[4] = yzvec;
     ///////////////////////////////////////////////////////////
@@ -515,12 +518,48 @@ void construct_rz( XFieldFinv fpsiMinv,
     double psi0, psi1;
     double eps = 1e10;
     unsigned N=1; 
+    /*
     while( eps >  1e-13 && N < 1e6 )
     {
         g_old = g;
         psi0 = psi_0, psi1 = psi_x[0];
         //////////////////////////////////////////////////
         dg::stepperRK17( fpsiMinv, begin, end, psi0, psi1, N);
+        for( unsigned j=0; j<y_vec.size(); j++)
+        {
+             r[j*Nx+0] = end[0][j],  z[j*Nx+0] = end[1][j];
+            yr[j*Nx+0] = end[3][j], yz[j*Nx+0] = end[4][j];
+             g[j*Nx+0] = end[2][j]; 
+        }
+        //////////////////////////////////////////////////
+        for( unsigned i=1; i<psi_x.size(); i++)
+        {
+            temp = end;
+            psi0 = psi_x[i-1], psi1 = psi_x[i];
+            //////////////////////////////////////////////////
+            dg::stepperRK17( fpsiMinv, temp, end, psi0, psi1, N);
+            for( unsigned j=0; j<y_vec.size(); j++)
+            {
+                 r[j*Nx+i] = end[0][j],  z[j*Nx+i] = end[1][j];
+                yr[j*Nx+i] = end[3][j], yz[j*Nx+i] = end[4][j];
+                 g[j*Nx+i] = end[2][j];
+            }
+            //////////////////////////////////////////////////
+        }
+        dg::blas1::axpby( 1., g, -1., g_old, g_diff);
+        eps = sqrt( dg::blas1::dot( g_diff, g_diff)/ dg::blas1::dot( g, g));
+        std::cout << "Effective g error is "<<eps<<" with "<<N<<" steps\n"; 
+        N*=2;
+    }
+    */
+    while( eps >  1e-13 && N < 1e6 )
+    {
+        g_old = g;
+        psi0 = 0., psi1 = psi_x[0];
+        unsigned factor = 0;
+        for( unsigned i=0; i<psi_x.size(); i++) if( psi_x[i]<0) factor++;
+        //////////////////////////////////////////////////
+        dg::stepperRK17( fpsiMinv, begin, end, psi0, psi1, factor*N);
         for( unsigned j=0; j<y_vec.size(); j++)
         {
              r[j*Nx+0] = end[0][j],  z[j*Nx+0] = end[1][j];
