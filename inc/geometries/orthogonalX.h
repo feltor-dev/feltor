@@ -289,7 +289,7 @@ struct FpsiX
         thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
         r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size());
-        solovev::conformal::FieldRZY fieldRZY(gp_);
+        solovev::orthogonal::FieldRZY fieldRZY(gp_);
         //now compute f and starting values 
         f_psi = construct_f( psi, R_0, Z_0);
         fieldRZY.set_f(f_psi);
@@ -369,8 +369,8 @@ struct FpsiX
     }
     private:
     const solovev::GeomParameters gp_;
-    const solovev::conformal::FieldRZYT fieldRZYT_;
-    const solovev::conformal::FieldRZYZ fieldRZYZ_;
+    const solovev::orthogonal::FieldRZYT fieldRZYT_;
+    const solovev::orthogonal::FieldRZYZ fieldRZYZ_;
     const solovev::FieldRZtau fieldRZtau_;
     dg::detail::XPointer xpointer_;
     solovev::HessianRZtau hessianRZtau_;
@@ -458,8 +458,8 @@ struct XFieldFinv
 
     private:
     FpsiX fpsi_;
-    solovev::conformal::FieldRZYT fieldRZYT_;
-    solovev::conformal::FieldRZYZ fieldRZYZ_;
+    solovev::orthogonal::FieldRZYT fieldRZYT_;
+    solovev::orthogonal::FieldRZYZ fieldRZYZ_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
     double xAtOne_;
@@ -498,13 +498,14 @@ void construct_rz( XFieldFinv fpsiMinv,
     sep.compute_rzy(y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, f0);
     //////compute gvec/////////////////////
     thrust::host_vector<double> gvec(y_vec.size(), f0); //conformal
-    //solovev::PsipR psipR_(gp);
-    //solovev::PsipZ psipZ_(gp);
-    //for( unsigned i=0; i<rvec.size(); i++)
-    //{
-    //     double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
-    //     gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
-    //}
+    solovev::PsipR psipR_(gp);
+    solovev::PsipZ psipZ_(gp);
+    for( unsigned i=0; i<rvec.size(); i++)
+    {
+         double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
+         gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
+         //gvec[i] /= (psipR*psipR + psipZ*psipZ); 
+    }
     begin[0] = rvec, begin[1] = zvec;
     begin[2] = gvec, begin[3] = yrvec, begin[4] = yzvec;
     ///////////////////////////////////////////////////////////
@@ -552,7 +553,7 @@ void construct_rz( XFieldFinv fpsiMinv,
         N*=2;
     }
     */
-    while( eps >  1e-13 && N < 1e6 )
+    while( eps >  1e-9 && N < 1e6 )
     {
         g_old = g;
         psi0 = 0., psi1 = psi_x[0];

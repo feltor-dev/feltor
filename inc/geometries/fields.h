@@ -1285,8 +1285,8 @@ struct FieldRZYT
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         yp[0] =  R_0_/y[0]*psipZ;//fieldR
         yp[1] = -R_0_/y[0]*psipR;//fieldZ
-        //yp[2] = (1.0))*R_0_/y[0]; //fieldYbar
-        yp[2] = sqrt(psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //fieldYbar
+        //yp[2] = R_0_/y[0]; 
+        yp[2] = sqrt(psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //equalarc
         //yp[2] =(psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //fieldYbar
         //yp[2] =1.0*R_0_/y[0]/y[0]; //fieldYbar
         double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
@@ -1309,12 +1309,9 @@ struct FieldRZYZ
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         yp[0] =  psipZ;//fieldR
         yp[1] = -psipR;//fieldZ
-        //yp[2] = (1.0+0.0*(psipR*psipR+psipZ*psipZ)); //fieldYbar
-        yp[2] = sqrt(psipR*psipR+psipZ*psipZ); //fieldYbar
+        //yp[2] = 1.0; //fieldYbar
+        yp[2] = sqrt(psipR*psipR+psipZ*psipZ); //equalarc
         //yp[2] = (psipR*psipR+psipZ*psipZ); //fieldYbar
-        //yp[2] = (1.0)/y[0]; //fieldYbar
-        //double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
-        //double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
         yp[0] /=  yp[1];
         yp[2] /=  yp[1];
         yp[1] =  1.;
@@ -1334,8 +1331,8 @@ struct FieldRZY
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         //yp[0] = +psipZ/f_;//fieldR
         //yp[1] = -psipR/f_;//fieldZ
-        yp[0] = +psipZ/sqrt(psipR*psipR+psipZ*psipZ)/f_;//fieldR
-        yp[1] = -psipR/sqrt(psipR*psipR+psipZ*psipZ)/f_;//fieldZ
+        yp[0] = +psipZ/sqrt(psipR*psipR+psipZ*psipZ)/f_;//equalarc
+        yp[1] = -psipR/sqrt(psipR*psipR+psipZ*psipZ)/f_;//equalarc
         //yp[0] = +psipZ/(psipR*psipR+psipZ*psipZ)/f_;//fieldR
         //yp[1] = -psipR/(psipR*psipR+psipZ*psipZ)/f_;//fieldZ
         //yp[0] = +psipZ*y[0]/f_;//fieldR

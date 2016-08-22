@@ -87,7 +87,6 @@ double construct_psi_values( XFieldFinv fpsiMinv, const solovev::GeomParameters&
     double psi_1_numerical=0;
     double eps = 1e10, eps_old=2e10;
     while( (eps <  eps_old || eps > 1e-8) && eps > 1e-11) //1e-8 < eps < 1e-14
-    //while( eps >  1e-9 && N < 1e6 )
     {
         eps_old = eps; 
         psi_old = psi_x; 
@@ -179,13 +178,14 @@ struct SeparatriX
             double eps = 1e10, eps_old = 2e10;
             double y=0, y_old=0;
             //difference to X-point isn't much better than 1e-5
-            while( (eps < eps_old || eps > 1e-9))
+            while( (eps < eps_old || eps > 5e-5))
             {
                 eps_old = eps; N*=2; y_old=y;
                 dg::stepperRK17( fieldRZYZ_, begin2d, end2d, Z_i[i], Z_X, N);
                 y=end2d[2];
                 eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X));
                 eps = fabs(y-y_old);
+                std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)<<"\n";
             }
             //remember last call
             y_i[i] = end2d[2]; 
@@ -213,7 +213,7 @@ struct SeparatriX
         thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
         r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size());
-        solovev::conformal::FieldRZY fieldRZY(gp_);
+        solovev::orthogonal::FieldRZY fieldRZY(gp_);
         //now compute f and starting values 
         f_psi = construct_f( );
         y_i[0]*=f_psi, y_i[1]*=f_psi, y_i[2]*=f_psi, y_i[3]*=f_psi;
@@ -283,10 +283,10 @@ struct SeparatriX
             double psip2 = psipR*psipR+psipZ*psipZ;
             //yr[i] = psipZ*f_psi/psip2;
             //yz[i] = -psipR*f_psi/psip2;
-            //yr[i] = psipZ*f_psi/sqrt(psip2);//equalarc
-            //yz[i] = -psipR*f_psi/sqrt(psip2);//equalarc
-            yr[i] = psipZ*f_psi; //conformal
-            yz[i] = -psipR*f_psi;//conformal
+            yr[i] = psipZ*f_psi/sqrt(psip2);//equalarc
+            yz[i] = -psipR*f_psi/sqrt(psip2);//equalarc
+            //yr[i] = psipZ*f_psi; //conformal
+            //yz[i] = -psipR*f_psi;//conformal
         }
 
     }
@@ -316,8 +316,8 @@ struct SeparatriX
         return 2.*M_PI/(y_i[0]+end_old[2]+y_i[1]);
     }
     const solovev::GeomParameters gp_;
-    const solovev::conformal::FieldRZYT fieldRZYT_;
-    const solovev::conformal::FieldRZYZ fieldRZYZ_;
+    const solovev::orthogonal::FieldRZYT fieldRZYT_;
+    const solovev::orthogonal::FieldRZYZ fieldRZYZ_;
     unsigned N_steps_;
     double R_i[4], Z_i[4], y_i[4];
 
